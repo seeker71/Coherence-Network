@@ -1,0 +1,32 @@
+; yaml-meaning-ingestion-band.fk - YAML file decoded into queryable Form nodes.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/grammars/yaml.fk
+
+section [form.action] {
+    let repo_root = form-capsule-root(83, 1, 9, 4);
+    let file_kind = form-dynamic-kind(repo_root, 1);
+    let decoder_kind = form-dynamic-kind(repo_root, 2);
+    let field_kind = form-dynamic-kind(repo_root, 3);
+    let yaml_kind = form-dynamic-ref(repo_root, file_kind, 1);
+    let yaml_decoder = form-dynamic-ref(repo_root, decoder_kind, 1);
+    let ast_field = form-dynamic-ref(repo_root, field_kind, 1);
+    let size_field = form-dynamic-ref(repo_root, field_kind, 2);
+
+    def repo_find_field(fields, key) = if nil?(fields) then empty else if node_eq(fsc-repo-field-key(head(fields)), key) then head(fields) else repo_find_field(tail(fields), key);
+    def repo_meaning_node(meaning, key) = fsc-repo-field-value(repo_find_field(fsc-repo-meaning-fields(meaning), key));
+    def repo_meaning_int(meaning, key) = fsc-repo-field-value-int(repo_find_field(fsc-repo-meaning-fields(meaning), key));
+    def score_int(value, want, score) = if eq(value, want) then score else 0;
+    def score_positive(value, score) = if gt(value, 0) then score else 0;
+    def score_node(value, want, score) = if node_eq(value, want) then score else 0;
+
+    let text = read_file("form-samples/demo-pipeline.yml");
+    let ast = parse-yaml("form/form-samples/demo-pipeline.yml", text);
+    let meaning = fsc-repo-meaning(yaml_decoder, list(fsc-repo-field-node(ast_field, ast), fsc-repo-field-int(size_field, str_len(text))));
+    let doc = fsc-repo-text-document(yaml_kind, text, meaning);
+    let file = fsc-repo-file-from-text("form/form-samples/demo-pipeline.yml", yaml_kind, "application/yaml", text, doc);
+    let stored = fsc-repo-file-sensed(file);
+    let stored_meaning = fsc-repo-document-structure(stored);
+    let stored_ast = repo_meaning_node(stored_meaning, ast_field);
+
+    sum(list(score_node(fsc-repo-document-kind(stored), yaml_kind, 100), score_int(repo_meaning_int(stored_meaning, size_field), str_len(text), 200), score_positive(len(node_children(stored_ast)), 300), score_positive(fsc-repo-text-document-line-count(stored), 400)));
+}

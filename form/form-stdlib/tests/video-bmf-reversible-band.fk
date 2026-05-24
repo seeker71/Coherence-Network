@@ -1,0 +1,34 @@
+; video-bmf-reversible-band.fk - canonical video metadata reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/video-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn video-rt (rule-name objects)
+        (bmf-roundtrip (video-bmf-find-rule rule-name video-bmf-rules) objects))
+
+    (defn video-source-for (format width height fps)
+        (list (video-src-keyword format)
+              (video-src-int width)
+              (video-src-keyword "x")
+              (video-src-int height)
+              (video-src-keyword "fps")
+              (video-src-int fps)))
+
+    (let mp4-rt (video-rt "mp4" (video-source-for "mp4" "1920" "1080" "30")))
+    (let mov-rt (video-rt "mov" (video-source-for "mov" "0" "0" "0")))
+    (let mkv-rt (video-rt "mkv" (video-source-for "mkv" "0" "0" "0")))
+    (let webm-rt (video-rt "webm" (video-source-for "webm" "0" "0" "0")))
+    (let avi-rt (video-rt "avi" (video-source-for "avi" "1920" "1080" "30")))
+    (let mpeg-rt (video-rt "mpeg" (video-source-for "mpeg" "0" "0" "0")))
+    (let mpg-rt (video-rt "mpg" (video-source-for "mpg" "0" "0" "0")))
+    (let flv-rt (video-rt "flv" (video-source-for "flv" "0" "0" "0")))
+
+    (sum
+        (list (rt-score mp4-rt) (rt-score mov-rt)
+              (rt-score mkv-rt) (rt-score webm-rt)
+              (rt-score avi-rt) (rt-score mpeg-rt)
+              (rt-score mpg-rt) (rt-score flv-rt))))

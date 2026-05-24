@@ -1,0 +1,153 @@
+; form-action-bmf-migrated-bmf-rewrite.fk - rebuild
+; form-action-migrated-bmf-band through shared BMF action helpers.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+;          form-stdlib/source-compiler.fk
+
+(do
+    (let captures (form-action-bmf-ident "captures"))
+    (let kind (form-action-bmf-ident "kind"))
+    (let value (form-action-bmf-ident "value"))
+
+    (let node-let
+        (form-action-bmf-let "MIGRATED-BMF-NODE"
+            (form-action-bmf-call4 "make_nodeid"
+                (form-action-bmf-int "1")
+                (form-action-bmf-int "2")
+                (form-action-bmf-int "101")
+                (form-action-bmf-int "44"))))
+
+    (let atom-def
+        (form-action-bmf-def "migrated-atom" (list "kind" "value")
+            (form-action-bmf-call2 "bmf-atom" kind value)))
+
+    (let pattern-def
+        (form-action-bmf-def "migrated-pattern" (empty)
+            (form-action-bmf-call3 "list"
+                (form-action-bmf-string "sequence")
+                (form-action-bmf-call2 "object-lit"
+                    (form-action-bmf-string "literal")
+                    (form-action-bmf-string "let"))
+                (form-action-bmf-call3 "list"
+                    (form-action-bmf-string "capture")
+                    (form-action-bmf-string "name")
+                    (form-action-bmf-call2 "object-lit"
+                        (form-action-bmf-string "name")
+                        (form-action-bmf-string ""))))))
+
+    (let rule-action-def
+        (form-action-bmf-def "migrated-rule-action" (list "captures")
+            (form-action-bmf-call2 "intern_node"
+                (form-action-bmf-ident "MIGRATED-BMF-NODE")
+                (form-action-bmf-call1 "list"
+                    (form-action-bmf-call1 "intern_trivial_string"
+                        (form-action-bmf-call2 "bmf-collection-value"
+                            captures
+                            (form-action-bmf-string "name")))))))
+
+    (let rule-def
+        (form-action-bmf-def "migrated-rule" (empty)
+            (form-action-bmf-call3 "list"
+                (form-action-bmf-string "migrated-binding")
+                (form-action-bmf-call0 "migrated-pattern")
+                (form-action-bmf-ident "migrated-rule-action"))))
+
+    (let spec-def
+        (form-action-bmf-def "migrated-spec" (empty)
+            (form-action-bmf-call3 "bmf-rule-spec"
+                (form-action-bmf-string "migrated-binding")
+                (form-action-bmf-call0 "migrated-pattern")
+                (form-action-bmf-ident "migrated-rule-action"))))
+
+    (let source-def
+        (form-action-bmf-def "migrated-source" (empty)
+            (form-action-bmf-call2 "list"
+                (form-action-bmf-call2 "migrated-atom"
+                    (form-action-bmf-string "literal")
+                    (form-action-bmf-string "let"))
+                (form-action-bmf-call2 "migrated-atom"
+                    (form-action-bmf-string "name")
+                    (form-action-bmf-string "sample")))))
+
+    (let apply-def
+        (form-action-bmf-def "migrated-apply" (empty)
+            (form-action-bmf-call2 "apply-object-rule"
+                (form-action-bmf-call0 "migrated-rule")
+                (form-action-bmf-call0 "migrated-source"))))
+
+    (let matched
+        (form-action-bmf-call0 "migrated-apply"))
+    (let result
+        (form-action-bmf-call2 "cap-get"
+            (form-action-bmf-call1 "match-caps" matched)
+            (form-action-bmf-string "result")))
+    (let recipe
+        (form-action-bmf-call1 "bmf-object-value" result))
+    (let child
+        (form-action-bmf-call1 "head"
+            (form-action-bmf-call1 "node_children" recipe)))
+    (let spec
+        (form-action-bmf-call0 "migrated-spec"))
+
+    (let score-def
+        (form-action-bmf-def "migrated-score" (empty)
+            (form-action-bmf-call2 "add"
+                (form-action-bmf-call2 "add"
+                    (form-action-bmf-if
+                        (form-action-bmf-call1 "match?" matched)
+                        (form-action-bmf-int "100")
+                        (form-action-bmf-int "0"))
+                    (form-action-bmf-call1 "str_len"
+                        (form-action-bmf-call1 "node_value" child)))
+                (form-action-bmf-call2 "add"
+                    (form-action-bmf-call1 "len"
+                        (form-action-bmf-call1 "bmf-object-source-span" result))
+                    (form-action-bmf-call1 "len"
+                        (form-action-bmf-call2 "nth" spec (form-action-bmf-int "1")))))))
+
+    (let final-score (form-action-bmf-call0 "migrated-score"))
+
+    (let do-rt
+        (form-action-bmf-do-roundtrip
+            (list
+                node-let atom-def pattern-def rule-action-def rule-def spec-def
+                source-def apply-def score-def final-score)))
+    (let program (form-action-bmf-roundtrip-program do-rt))
+
+    ; The emitted program depends on ambient BMF engine helpers. Until those
+    ; helpers are bundled as a Form module, run the payload in the ambient
+    ; runtime and prove that the BMF object program roundtrips.
+    (let MIGRATED-BMF-NODE (make_nodeid 1 2 101 44))
+    (defn migrated-atom (kind value) (bmf-atom kind value))
+    (defn migrated-pattern (_x)
+        (list "sequence"
+              (object-lit "literal" "let")
+              (list "capture" "name" (object-lit "name" ""))))
+    (defn migrated-rule-action (captures)
+        (intern_node MIGRATED-BMF-NODE
+            (list
+                (intern_trivial_string
+                    (bmf-collection-value captures "name")))))
+    (defn migrated-rule (_x)
+        (list "migrated-binding" (migrated-pattern 0) migrated-rule-action))
+    (defn migrated-spec (_x)
+        (bmf-rule-spec "migrated-binding" (migrated-pattern 0) migrated-rule-action))
+    (defn migrated-source (_x)
+        (list (migrated-atom "literal" "let")
+              (migrated-atom "name" "sample")))
+    (defn migrated-apply (_x)
+        (apply-object-rule (migrated-rule 0) (migrated-source 0)))
+    (defn migrated-score (_x)
+        (do
+            (let matched (migrated-apply 0))
+            (let result (cap-get (match-caps matched) "result"))
+            (let recipe (bmf-object-value result))
+            (let child (head (node_children recipe)))
+            (let spec (migrated-spec 0))
+            (add
+                (add (if (match? matched) 100 0)
+                     (str_len (node_value child)))
+                (add (len (bmf-object-source-span result))
+                     (len (nth spec 1)))))))
+
+    (form-action-bmf-proof-score (migrated-score 0) do-rt program)

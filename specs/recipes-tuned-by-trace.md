@@ -2,11 +2,11 @@
 idea_id: knowledge-and-resonance
 status: active
 source:
-  - file: experiments/local-llm-cell-v0/substrate_bridge.py
+  - file: seedbank/local-llm-cell-v0/substrate_bridge.py
     symbols: [witness(), select_strategy(), STRATEGY_FIRED, publish_strategy_trace(), find_traces_for_recipe(), efficacy_signature()]
-  - file: experiments/local-llm-cell-v0/organ.py
+  - file: seedbank/local-llm-cell-v0/organ.py
     symbols: [Cell, Cell.perceive(), pick_strategy(), pick_strategy_informed(), STRATEGIES]
-  - file: experiments/local-llm-cell-v0/strategy_efficacy_demo.py
+  - file: seedbank/local-llm-cell-v0/strategy_efficacy_demo.py
     symbols: [main()]
   - file: docs/vision-kb/concepts/lc-traces-teach-the-recipe.md
     symbols: ["The Four Participants" — cell / recipe / witness-trace / substrate-aggregation]
@@ -20,12 +20,12 @@ requirements:
   - "Cell.perceive() snapshots sense_before BEFORE inhabit-blend modifies the spectrum, and snapshots sense_after on the NEXT perceive(); a single-perceive call publishes no trace"
   - "The publish-trace path is the cell's choice — Cell carries a publish_traces=True default but every call point honors the cell's setting"
 done_when:
-  - "experiments/local-llm-cell-v0/strategy_efficacy_demo.py runs end-to-end exit 0; emits at least 4 strategy_fired traces; prints a per-recipe efficacy signature table"
+  - "seedbank/local-llm-cell-v0/strategy_efficacy_demo.py runs end-to-end exit 0; emits at least 4 strategy_fired traces; prints a per-recipe efficacy signature table"
   - "After the demo: efficacy_signature('observer') returns n ≥ 1 with a finite spectrum/desire mean-delta vector"
   - "Single perceive() call (no prior firing) returns a normal moment but appends no new line to _field_traces.jsonl"
   - "pick_strategy_informed(spec, desire, STRATEGIES, alpha=0.0) equals pick_strategy(spec, desire, STRATEGIES) byte-for-byte"
   - "all tests pass"
-test: "cd experiments/local-llm-cell-v0 && python3 strategy_efficacy_demo.py"
+test: "cd seedbank/local-llm-cell-v0 && python3 strategy_efficacy_demo.py"
 constraints:
   - "No new DB tables; trace store stays _field_traces.jsonl. Substrate ORM indexing of traces by recipe-ref is a follow-up (GAP-W1 in traces-teach-the-recipe.form)"
   - "Cell sovereignty: any cell can disable trace-publication (publish_traces=False) at any time; no aggregator reads traces from cells that did not publish"
@@ -114,13 +114,13 @@ efficacy_signature_result:
 
 ## Files to Create/Modify
 
-- `experiments/local-llm-cell-v0/substrate_bridge.py` — add `STRATEGY_FIRED` constant, `publish_strategy_trace()`, `find_traces_for_recipe()`, `efficacy_signature()`, `efficacy_alignment()`. The existing `select_strategy()` stays unchanged.
-- `experiments/local-llm-cell-v0/organ.py` — `Cell.__init__` adds `publish_traces: bool = True` and `self._last_strategy_snapshot: dict | None = None`; `Cell.perceive()` captures sense_before before the inhabit-blend, and when a prior snapshot exists publishes the trace with sense_after equal to the just-computed reading. Add module-level `pick_strategy_informed(spectrum, desire, presets, alpha=0.5)`.
-- `experiments/local-llm-cell-v0/strategy_efficacy_demo.py` — new demo: instantiates a cell, fires several strategies in sequence (using `inhabit()`), perceives at each step so traces accumulate, prints a per-recipe efficacy signature table, and exits 0.
+- `seedbank/local-llm-cell-v0/substrate_bridge.py` — add `STRATEGY_FIRED` constant, `publish_strategy_trace()`, `find_traces_for_recipe()`, `efficacy_signature()`, `efficacy_alignment()`. The existing `select_strategy()` stays unchanged.
+- `seedbank/local-llm-cell-v0/organ.py` — `Cell.__init__` adds `publish_traces: bool = True` and `self._last_strategy_snapshot: dict | None = None`; `Cell.perceive()` captures sense_before before the inhabit-blend, and when a prior snapshot exists publishes the trace with sense_after equal to the just-computed reading. Add module-level `pick_strategy_informed(spectrum, desire, presets, alpha=0.5)`.
+- `seedbank/local-llm-cell-v0/strategy_efficacy_demo.py` — new demo: instantiates a cell, fires several strategies in sequence (using `inhabit()`), perceives at each step so traces accumulate, prints a per-recipe efficacy signature table, and exits 0.
 
 ## Acceptance Tests
 
-The demo IS the test (no formal pytest suite exists for `experiments/`). Acceptance criteria run in `strategy_efficacy_demo.py`:
+The demo IS the test (no formal pytest suite exists for `seedbank/`). Acceptance criteria run in `strategy_efficacy_demo.py`:
 
 1. After firing 5 strategies across 6 perceive() calls, `_field_traces.jsonl` gains ≥ 4 lines whose `what.kind == "strategy_fired"`.
 2. `efficacy_signature("observer")` returns `n >= 1` and all-finite vectors.
@@ -131,14 +131,14 @@ The demo IS the test (no formal pytest suite exists for `experiments/`). Accepta
 ## Verification
 
 ```bash
-cd experiments/local-llm-cell-v0 && python3 strategy_efficacy_demo.py
+cd seedbank/local-llm-cell-v0 && python3 strategy_efficacy_demo.py
 ```
 
 Expected last-line on success: `efficacy loop verified — N traces published, M recipes signatured`.
 
 ## Out of Scope
 
-- **Substrate ORM indexing** of traces by recipe-ref (GAP-W1 in `traces-teach-the-recipe.form`). The jsonl scan is fine for cell-altitude reads at experimental scale; the ORM table is the follow-up for field-altitude queries.
+- **Substrate ORM indexing** of traces by recipe-ref (GAP-W1 in `traces-teach-the-recipe.form`). The jsonl scan is fine for seed-scale reads; the ORM table is the follow-up for field-altitude queries.
 - **Field-altitude aggregation** (across multiple cells' published traces). The jsonl is per-process; cross-process aggregation needs a shared store. Follow-up.
 - **Operator-arm clustering** (`candidate_recipes` in the .form file) — discovering new strategies from operator-fallback firings. Needs more accumulated signal; defer to the watching practice naming when the cluster shape is ready.
 - **Web UI** for browsing the efficacy table. The watch script (`scripts/sense_strategy_efficacy.py`) is the surface for now.

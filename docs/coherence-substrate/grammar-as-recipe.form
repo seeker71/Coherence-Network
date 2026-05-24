@@ -35,7 +35,7 @@ form modality_shape = {
 };
 
 # Source coordinates the parser stamps onto every node. Same discipline
-# as experiments/memory-as-framebuffer-v0/'s `track!(field, expr)` macro
+# as seedbank/memory-as-framebuffer-v0/'s `track!(field, expr)` macro
 # stamping `crc32(file:line)` on every heap write — the parser stamps
 # the source range on every recipe-tree node as part of the parse
 # itself, never as a separate pass. The kernel ignores the overlay
@@ -135,7 +135,7 @@ defn emit(emission, tree) = do {
 # json-grammar.form, ...) composes its rules from.
 #
 # Until now they have lived as host classes in
-# experiments/local-llm-cell-v0/bmf.py (Literal, Sequence, Star, Opt,
+# seedbank/local-llm-cell-v0/bmf.py (Literal, Sequence, Star, Opt,
 # Choice, Capture — Python dataclasses with .match(stream) methods).
 # This section names them as Form Blueprint shapes — substrate-resident,
 # content-addressed, walkable through any kernel that implements the

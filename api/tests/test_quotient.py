@@ -1,6 +1,6 @@
 """Tests for the QUOTIENT arm — Python kernel.
 
-Mirrors ``experiments/form-kernel-ts/src/quotient.test.ts``. The core
+Mirrors ``form/form-kernel-ts/src/quotient.test.ts``. The core
 promise: two representatives equivalent under a quotient's relation
 receive the SAME NodeID — content-addressing IS the quotient.
 

@@ -1,0 +1,69 @@
+; tests/python-bmf-scanner-real-syntax-band.fk - Python scanner real syntax band.
+;
+; This proof keeps the Python BMF sensing path on actual Python surface
+; forms: comments, decorators, async defs, annotations, single/double/triple
+; strings, prefixed strings, in-place operators, walrus, booleans, ellipsis.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn scanner-real-obj (source-objects index) (nth source-objects index))
+    (defn scanner-real-kind (source-objects index)
+        (bmf-object-kind (scanner-real-obj source-objects index)))
+    (defn scanner-real-value (source-objects index)
+        (bmf-object-value (scanner-real-obj source-objects index)))
+    (defn scanner-real-span (source-objects index)
+        (head (bmf-object-source-span (scanner-real-obj source-objects index))))
+    (defn score-str (actual want score) (if (str_eq actual want) score 0))
+    (defn score-int (actual want score) (if (eq actual want) score 0))
+
+    (let source "# leading comment
+@decorator
+async def run(x: int = 1):
+    text = 'one'
+    more = \"two\"
+    doc = '''three
+four'''
+    raw = r\"raw\"
+    blob = b\"abc\"
+    view = fr\"{x}\"
+    tmpl = t\"{x}\"
+    mat @= other
+    total **= 2
+    left //= 3
+    ok := True
+    tail = ...
+")
+    (let source-objects (python-source-scan-text source))
+
+    (sum
+        (list
+            (score-int (len source-objects) 49 100)
+            (score-str (scanner-real-kind source-objects 0) "py-op" 200)
+            (score-str (scanner-real-value source-objects 0) "@" 300)
+            (score-str (scanner-real-kind source-objects 2) "py-keyword" 400)
+            (score-str (scanner-real-value source-objects 2) "async" 500)
+            (score-str (scanner-real-value source-objects 3) "def" 600)
+            (score-str (scanner-real-value source-objects 8) "int" 700)
+            (score-str (scanner-real-kind source-objects 15) "py-string" 800)
+            (score-str (scanner-real-value source-objects 15) "one" 900)
+            (score-str (scanner-real-kind source-objects 21) "py-string" 1000)
+            (score-str (scanner-real-value source-objects 21) "three
+four" 1100)
+            (score-str (scanner-real-kind source-objects 24) "py-string" 1200)
+            (score-str (scanner-real-value source-objects 24) "raw" 1300)
+            (score-str (scanner-real-kind source-objects 27) "py-bytes" 1400)
+            (score-str (scanner-real-value source-objects 27) "abc" 1500)
+            (score-str (scanner-real-kind source-objects 30) "py-fstring" 1600)
+            (score-str (scanner-real-value source-objects 30) "{x}" 1700)
+            (score-str (scanner-real-kind source-objects 33) "py-tstring" 1750)
+            (score-str (scanner-real-value source-objects 33) "{x}" 1800)
+            (score-str (scanner-real-value source-objects 35) "@=" 1850)
+            (score-str (scanner-real-value source-objects 38) "**=" 1900)
+            (score-str (scanner-real-value source-objects 41) "//=" 2000)
+            (score-str (scanner-real-value source-objects 44) ":=" 2100)
+            (score-str (scanner-real-kind source-objects 45) "py-keyword" 2200)
+            (score-str (scanner-real-value source-objects 45) "True" 2300)
+            (score-str (scanner-real-value source-objects 48) "..." 2400)
+            (score-int (fsc-repo-text-line-number (scanner-real-span source-objects 0)) 2 2400)
+            (score-int (fsc-repo-text-line-number (scanner-real-span source-objects 48)) 16 2500))))

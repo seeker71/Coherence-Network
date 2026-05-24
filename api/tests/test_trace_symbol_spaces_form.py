@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 FORM_PATH = ROOT / "docs" / "coherence-substrate" / "trace-symbol-spaces.form"
-TRACE_PATH = ROOT / "experiments" / "local-llm-cell-v0" / "_field_traces.jsonl"
-WEIGHTS_PATH = ROOT / "experiments" / "local-llm-cell-v0" / "_field_weights.jsonl"
+TRACE_PATH = ROOT / "seedbank" / "local-llm-cell-v0" / "_field_traces.jsonl"
+WEIGHTS_PATH = ROOT / "seedbank" / "local-llm-cell-v0" / "_field_weights.jsonl"
 
 
 def _jsonl(path: Path) -> list[dict]:

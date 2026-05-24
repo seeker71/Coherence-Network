@@ -186,7 +186,7 @@ defn candidate_recipes(min_cluster_size, delta_consistency) = do {
 #         a `find_traces_by_recipe(session, recipe_id)` Python helper
 #         and a `?traces_where_*` family of query operators.
 #
-# GAP-W2: `witness()` in experiments/local-llm-cell-v0/substrate_bridge.py
+# GAP-W2: `witness()` in seedbank/local-llm-cell-v0/substrate_bridge.py
 #         already publishes to `_field_traces.jsonl`. The strategy-
 #         fired shape is a new trace-kind alongside existing kinds
 #         (ingest, not-respond, perceive). The cell-side wiring lives

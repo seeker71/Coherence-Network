@@ -1,0 +1,104 @@
+; media-rich-metadata-band.fk - reversible container metadata objects
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk
+
+(do
+    (defn media-field (node index)
+        (node_value (nth (node_children node) index)))
+
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 10 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn first-node (rt)
+        (bmf-object-value (bmf-roundtrip-first-object rt)))
+
+    (let svg-rt
+        (bmf-roundtrip
+            (image-bmf-find-rule "svg-viewbox" image-bmf-rules)
+            (list (image-src-keyword "svg") (image-src-int "320") (image-src-keyword "x")
+                  (image-src-int "240") (image-src-keyword "viewBox")
+                  (image-src-string "0 0 320 240"))))
+
+    (let gif-rt
+        (bmf-roundtrip
+            (image-bmf-find-rule "gif-loop" image-bmf-rules)
+            (list (image-src-keyword "gif") (image-src-int "80") (image-src-keyword "x")
+                  (image-src-int "60") (image-src-keyword "frames") (image-src-int "12")
+                  (image-src-keyword "loop") (image-src-int "0"))))
+
+    (let jpeg-rt
+        (bmf-roundtrip
+            (image-bmf-find-rule "jpeg-orientation" image-bmf-rules)
+            (list (image-src-keyword "jpeg") (image-src-int "4000") (image-src-keyword "x")
+                  (image-src-int "3000") (image-src-keyword "orientation") (image-src-int "6"))))
+
+    (let flac-rt
+        (bmf-roundtrip
+            (audio-bmf-find-rule "flac-metadata" audio-bmf-rules)
+            (list (audio-src-keyword "flac") (audio-src-int "96000") (audio-src-keyword "hz")
+                  (audio-src-int "2") (audio-src-keyword "channels")
+                  (audio-src-int "24") (audio-src-keyword "bits")
+                  (audio-src-keyword "metadata") (audio-src-string "album=field"))))
+
+    (let ogg-rt
+        (bmf-roundtrip
+            (audio-bmf-find-rule "ogg-metadata" audio-bmf-rules)
+            (list (audio-src-keyword "ogg") (audio-src-int "48000") (audio-src-keyword "hz")
+                  (audio-src-int "6") (audio-src-keyword "channels")
+                  (audio-src-int "16") (audio-src-keyword "bits")
+                  (audio-src-keyword "metadata") (audio-src-string "opus=voice"))))
+
+    (let id3-rt
+        (bmf-roundtrip
+            (audio-bmf-find-rule "id3-metadata" audio-bmf-rules)
+            (list (audio-src-keyword "id3") (audio-src-keyword "metadata")
+                  (audio-src-string "title=signal"))))
+
+    (let mp4-rt
+        (bmf-roundtrip
+            (video-bmf-find-rule "mp4-duration" video-bmf-rules)
+            (list (video-src-keyword "mp4") (video-src-int "1920") (video-src-keyword "x")
+                  (video-src-int "1080") (video-src-keyword "fps") (video-src-int "30")
+                  (video-src-keyword "duration") (video-src-int "123456")
+                  (video-src-keyword "ms"))))
+
+    (let webm-rt
+        (bmf-roundtrip
+            (video-bmf-find-rule "webm-duration" video-bmf-rules)
+            (list (video-src-keyword "webm") (video-src-int "1280") (video-src-keyword "x")
+                  (video-src-int "720") (video-src-keyword "fps") (video-src-int "60")
+                  (video-src-keyword "duration") (video-src-int "654321")
+                  (video-src-keyword "ms"))))
+
+    (let mkv-rt
+        (bmf-roundtrip
+            (video-bmf-find-rule "mkv-duration" video-bmf-rules)
+            (list (video-src-keyword "mkv") (video-src-int "3840") (video-src-keyword "x")
+                  (video-src-int "2160") (video-src-keyword "fps") (video-src-int "24")
+                  (video-src-keyword "duration") (video-src-int "222000")
+                  (video-src-keyword "ms"))))
+
+    (let svg-node (first-node svg-rt))
+    (let gif-node (first-node gif-rt))
+    (let jpeg-node (first-node jpeg-rt))
+    (let flac-node (first-node flac-rt))
+    (let ogg-node (first-node ogg-rt))
+    (let id3-node (first-node id3-rt))
+    (let mp4-node (first-node mp4-rt))
+    (let webm-node (first-node webm-rt))
+    (let mkv-node (first-node mkv-rt))
+
+    (sum
+        (list (rt-score svg-rt) (rt-score gif-rt) (rt-score jpeg-rt)
+              (rt-score flac-rt) (rt-score ogg-rt) (rt-score id3-rt)
+              (rt-score mp4-rt) (rt-score webm-rt) (rt-score mkv-rt)
+              (media-field svg-node 1) (media-field svg-node 2)
+              (str_len (media-field svg-node 4))
+              (media-field gif-node 3) (str_to_int (media-field gif-node 4))
+              (str_to_int (media-field jpeg-node 4))
+              (media-field flac-node 1) (str_len (media-field flac-node 4))
+              (media-field ogg-node 2) (str_len (media-field ogg-node 4))
+              (str_len (media-field id3-node 4))
+              (media-field mp4-node 4) (media-field webm-node 4)
+              (media-field mkv-node 4))))

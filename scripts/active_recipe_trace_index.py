@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TRACES_PATH = REPO_ROOT / "experiments" / "local-llm-cell-v0" / "_field_traces.jsonl"
+TRACES_PATH = REPO_ROOT / "seedbank" / "local-llm-cell-v0" / "_field_traces.jsonl"
 
 BAND_NAMES = (
     "ground",

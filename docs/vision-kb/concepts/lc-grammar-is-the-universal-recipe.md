@@ -97,7 +97,7 @@ case of the same operation:
 **1. Code.** Python, TypeScript, Rust, Go, RPN — each a programming
 language with a syntax tree. The body has [`language-cells.md`](../../coherence-substrate/language-cells.md)
 naming this; the TS reference implementation lives at
-`experiments/form-kernel-ts/src/languages.ts`. Cross-language
+`form/form-kernel-ts/src/languages.ts`. Cross-language
 equivalence: `lambda x: x+1` / `(x: number) => x + 1` / `|x| x + 1`
 parse to one Blueprint NodeID once their respective grammars run.
 

@@ -1,0 +1,12 @@
+; form-bml-maintenance-dialect.fk - BML-shaped stdlib authoring surface.
+; The source compiler lowers this section to ordinary Form before execution.
+
+section [form.bml] {
+    let FORM_BML_LABEL = "maintenance";
+    def bml_square(n) = mul(n, n);
+    def bml_inc(n) = add(n, 1);
+    def bml_pair(a, b) = list(a, b);
+    def bml_choose(n) = if gt(n, 3) then bml_square(n) else bml_inc(n);
+}
+
+(add (bml_choose 4) (len (bml_pair 1 2)))

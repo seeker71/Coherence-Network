@@ -1,0 +1,24 @@
+; form-action-migrated-core-band.fk - migrated core/test pattern in form.action.
+; The source compiler lowers this BML-shaped action section above the kernel.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+section [form.action] {
+    def migrated_square(n) = mul(n, n);
+    def migrated_double(n) = mul(n, 2);
+    def migrated_cell_origin(c) = cell-origin(c);
+    def migrated_cell_value_plus_origin(c) = add(cell-value(c), migrated_cell_origin(c));
+    def migrated_task_score(t) = if task-ready?(t) then task-step(t) else 0;
+
+    let migrated_numbers = list(1, 2, 3, 4);
+    let migrated_squares = map(migrated_square, list(2, 3, 4));
+    let migrated_cell = cell("migrated", 11, 5, migrated_cell_origin);
+    let migrated_task = task-cell("resolved", 9, migrated_double, empty, task-undo);
+
+    let migrated_list_score = add(sum(migrated_numbers), product(list(2, 3, 4)));
+    let migrated_cell_score = add(migrated_cell_value_plus_origin(migrated_cell), cell-undo(migrated_cell));
+    let migrated_task_score_value = migrated_task_score(migrated_task);
+    let migrated_total = add(add(migrated_list_score, sum(migrated_squares)), add(migrated_cell_score, migrated_task_score_value));
+}
+
+migrated_total

@@ -1,0 +1,74 @@
+; video-format-signatures.fk - byte video container sensing
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/video-bmf.fk
+
+(do
+    (defn video-format (node) (node_value (nth (node_children node) 0)))
+    (defn video-width (node) (node_value (nth (node_children node) 1)))
+    (defn video-height (node) (node_value (nth (node_children node) 2)))
+    (defn video-fps (node) (node_value (nth (node_children node) 3)))
+
+    (defn format-score (node want score)
+        (if (str_eq (video-format node) want) score 0))
+
+    (let mp4-bytes
+        (list 0 0 0 24 102 116 121 112 105 115 111 109
+              0 0 0 0 105 115 111 109 109 112 52 50))
+
+    (let mov-bytes
+        (list 0 0 0 20 102 116 121 112 113 116 32 32
+              0 0 0 0 113 116 32 32))
+
+    (let mkv-bytes
+        (list 26 69 223 163 0 0 0 0 66 130 136 109
+              97 116 114 111 115 107 97 0 0 0 0 0
+              109 97 116 114 111 115 107 97))
+
+    (let webm-bytes
+        (list 26 69 223 163 0 0 0 0 66 130 132 119
+              101 98 109 0 0 0 0 0 0 0 0 0
+              119 101 98 109))
+
+    (let avi-bytes
+        (list 82 73 70 70 0 0 0 0 65 86 73 32
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0 0 0 0 0
+              53 130 0 0
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0
+              128 7 0 0 56 4 0 0))
+
+    (let mpeg-bytes
+        (list 0 0 1 186 68 0 4 0 4 1))
+
+    (let mpg-bytes
+        (list 0 0 1 179 25 0 0 0))
+
+    (let flv-bytes
+        (list 70 76 86 1 5 0 0 0 9))
+
+    (let mp4 (video-detect-bytes mp4-bytes))
+    (let mov (video-detect-bytes mov-bytes))
+    (let mkv (video-detect-bytes mkv-bytes))
+    (let webm (video-detect-bytes webm-bytes))
+    (let avi (video-detect-bytes avi-bytes))
+    (let mpeg (video-detect-bytes mpeg-bytes))
+    (let mpg (video-detect-bytes mpg-bytes))
+    (let flv (video-detect-bytes flv-bytes))
+
+    (let avi-score
+        (add (format-score avi "avi" 50)
+        (add (video-width avi)
+        (add (video-height avi)
+             (video-fps avi)))))
+
+    (sum
+        (list (format-score mp4 "mp4" 10)
+              (format-score mov "mov" 20)
+              (format-score mkv "mkv" 30)
+              (format-score webm "webm" 40)
+              avi-score
+              (format-score mpeg "mpeg" 60)
+              (format-score mpg "mpg" 70)
+              (format-score flv "flv" 80))))

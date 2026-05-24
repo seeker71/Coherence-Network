@@ -1,0 +1,867 @@
+; compiler.fk - shared Form compiler object and runtime cells
+;
+; Source languages lower through the same three bands:
+;   source objects -> compiler objects -> executable program objects.
+; The kernel sees only Form data and host access primitives.
+
+(do
+    ;; --- compiler object cells --------------------------------------
+
+    (defn compiler-object (kind value source inverse)
+        (cell kind value source inverse))
+
+    (defn compiler-object? (x)
+        (cell? x))
+
+    (defn compiler-object-kind (x) (cell-kind x))
+    (defn compiler-object-value (x) (cell-value x))
+    (defn compiler-object-source (x) (cell-origin x))
+
+    (defn compiler-undo (x)
+        (cell-undo x))
+
+    (defn compiler-identity-inverse (x)
+        (cell-origin x))
+
+    (defn compiler-unit (language name sections)
+        (compiler-object "compiler-unit"
+                         (list language name sections)
+                         sections
+                         compiler-identity-inverse))
+
+    (defn compiler-unit-language (x) (nth (cell-value x) 0))
+    (defn compiler-unit-name (x) (nth (cell-value x) 1))
+    (defn compiler-unit-sections (x) (nth (cell-value x) 2))
+
+    (defn compiler-section (language name items)
+        (compiler-object "compiler-section"
+                         (list language name items)
+                         items
+                         compiler-identity-inverse))
+
+    (defn compiler-section-language (x) (nth (cell-value x) 0))
+    (defn compiler-section-name (x) (nth (cell-value x) 1))
+    (defn compiler-section-items (x) (nth (cell-value x) 2))
+
+    (defn compiler-rule (language name pattern action)
+        (compiler-object "compiler-rule"
+                         (list language name pattern action)
+                         pattern
+                         compiler-identity-inverse))
+
+    (defn compiler-rule-language (x) (nth (cell-value x) 0))
+    (defn compiler-rule-name (x) (nth (cell-value x) 1))
+    (defn compiler-rule-pattern (x) (nth (cell-value x) 2))
+    (defn compiler-rule-action (x) (nth (cell-value x) 3))
+
+    ;; --- multi-section Form source objects --------------------------
+    ;; A source file can carry several dialect sections as Form objects:
+    ;; a readable BMF second, a recipe section, serialized objects, or any
+    ;; other supported language section. The parser for this shape lives in
+    ;; Form binaries above the kernel; this module defines the object model.
+
+    (defn form-source (name sections)
+        (compiler-object "form-source"
+                         (list name sections)
+                         sections
+                         compiler-identity-inverse))
+
+    (defn form-source-name (src) (nth (cell-value src) 0))
+    (defn form-source-sections (src) (nth (cell-value src) 1))
+
+    (defn form-source-section-by-dialect-list (sections dialect)
+        (if (nil? sections) (empty)
+            (if (str_eq (form-section-dialect (head sections)) dialect)
+                (head sections)
+                (form-source-section-by-dialect-list (tail sections) dialect))))
+
+    (defn form-source-section-by-dialect (src dialect)
+        (form-source-section-by-dialect-list (form-source-sections src) dialect))
+
+    (defn form-bmf-second (language section-object)
+        (form-section (str_concat language ".bmf") section-object))
+
+    (defn form-rule-recipe-section (language rules)
+        (form-section (str_concat language ".recipes")
+                      (compiler-section language "recipes" rules)))
+
+    ;; --- BMF compiler model objects ---------------------------------
+    ;; Mirrors the proven BMF source classes: Rule, Sequence, Branch,
+    ;; Repeat, Tag, RuleCall, MethodCall, Primitive, CharRange, CharChain.
+
+    (defn comp-bmf-rule (name args item process)
+        (list "comp-bmf-rule" name args item process))
+
+    (defn comp-bmf-sequence (items)
+        (list "comp-bmf-sequence" items))
+
+    (defn comp-bmf-branch (items)
+        (list "comp-bmf-branch" items))
+
+    (defn comp-bmf-repeat (item min max)
+        (list "comp-bmf-repeat" item min max))
+
+    (defn comp-bmf-tag (name item)
+        (list "comp-bmf-tag" name item))
+
+    (defn comp-bmf-rule-call (name args)
+        (list "comp-bmf-rule-call" name args))
+
+    (defn comp-bmf-method-call (name args)
+        (list "comp-bmf-method-call" name args))
+
+    (defn comp-bmf-primitive (name args)
+        (list "comp-bmf-primitive" name args))
+
+    (defn comp-bmf-char-range (first last)
+        (list "comp-bmf-char-range" first last))
+
+    (defn comp-bmf-char-chain (value)
+        (list "comp-bmf-char-chain" value))
+
+    (defn comp-bmf-char-chain-strip (value strip-before strip-after)
+        (list "comp-bmf-char-chain" value strip-before strip-after))
+
+    (defn comp-bmf-inline (item)
+        (list "comp-bmf-inline" item))
+
+    (defn comp-bmf-literal (kind value)
+        (list "comp-bmf-literal" kind value))
+
+    (defn comp-bmf-char (value)
+        (list "comp-bmf-char" value))
+
+    (defn comp-bmf-process (code result-type)
+        (list "comp-bmf-process" code result-type))
+
+    (defn comp-bmf-attribute (fields code)
+        (list "comp-bmf-attribute" fields code))
+
+    (defn comp-bmf-syntax (name extension goal rules methods primitives)
+        (list "comp-bmf-syntax" name extension goal rules methods primitives))
+
+    (defn comp-bmf-call-name (call)
+        (nth call 1))
+
+    (defn comp-bmf-call-args (call)
+        (nth call 2))
+
+    ;; --- BMF syntax written as a BMF second --------------------------
+
+    (defn bmf-src-name (value) (bmf-atom "bmf-name" value))
+    (defn bmf-src-string (value) (bmf-atom "bmf-string" value))
+    (defn bmf-src-char (value) (bmf-atom "bmf-char" value))
+    (defn bmf-src-int (value) (bmf-atom "bmf-int" value))
+    (defn bmf-src-float (value) (bmf-atom "bmf-float" value))
+    (defn bmf-src-field (value) (bmf-atom "bmf-field" value))
+    (defn bmf-src-args (value) (bmf-atom "bmf-args" value))
+    (defn bmf-src-fields (value) (bmf-atom "bmf-fields" value))
+    (defn bmf-src-code (value) (bmf-atom "bmf-code" value))
+    (defn bmf-src-op (value) (bmf-atom "bmf-op" value))
+
+    (defn bmf-kw (value) (object-lit "bmf-keyword" value))
+    (defn bmf-op (value) (object-lit "bmf-op" value))
+    (defn bmf-ref (name) (object-lit "bmf-ref" name))
+    (defn bmf-name (capture-name) (list "capture" capture-name (object-lit "bmf-name" "")))
+    (defn bmf-string-lit (capture-name) (list "capture" capture-name (object-lit "bmf-string" "")))
+    (defn bmf-pattern-lit (capture-name) (list "capture" capture-name (object-lit "bmf-pattern" "")))
+    (defn bmf-rules-lit (capture-name) (list "capture" capture-name (object-lit "bmf-rules" "")))
+
+    (defn bmf-meta-cap (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn bmf-emit-rule-source (objects)
+        (bmf-rule-spec
+            (bmf-meta-cap objects "name")
+            (bmf-meta-cap objects "pattern")
+            (bmf-meta-cap objects "action")))
+
+    (defn bmf-emit-reversible-rule-source (objects)
+        (bmf-reversible-rule-spec
+            (bmf-meta-cap objects "name")
+            (bmf-meta-cap objects "pattern")
+            (bmf-meta-cap objects "action")
+            (bmf-meta-cap objects "reverse")))
+
+    (defn bmf-emit-literal-source (objects)
+        (bmf-terminal (bmf-meta-cap objects "value")))
+
+    (defn bmf-emit-capture-source (objects)
+        (bmf-capture
+            (bmf-meta-cap objects "name")
+            (bmf-meta-cap objects "kind")))
+
+    (defn bmf-emit-section-source (objects)
+        (bmf-section
+            (bmf-meta-cap objects "dialect")
+            (bmf-meta-cap objects "rules")))
+
+    (defn bmf-emit-node-source (objects)
+        (compiler-object "bmf-source-node" objects objects compiler-identity-inverse))
+
+    ;; --- BMF source object compiler ----------------------------------
+    ;; These rules compile completed BMF source objects into the same
+    ;; component model used by BML and language adapters.
+
+    (defn bmf-compile-char-chain (objects)
+        (comp-bmf-char-chain (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-char-range (objects)
+        (comp-bmf-char-range
+            (bmf-meta-cap objects "first")
+            (bmf-meta-cap objects "last")))
+
+    (defn bmf-compile-rule-call (objects)
+        (comp-bmf-rule-call
+            (bmf-meta-cap objects "name")
+            (empty)))
+
+    (defn bmf-compile-primitive (objects)
+        (comp-bmf-primitive
+            (bmf-meta-cap objects "name")
+            (empty)))
+
+    (defn bmf-compile-sequence-two (objects)
+        (comp-bmf-sequence
+            (list
+                (bmf-meta-cap objects "left")
+                (bmf-meta-cap objects "right"))))
+
+    (defn bmf-compile-branch-two (objects)
+        (comp-bmf-branch
+            (list
+                (bmf-meta-cap objects "left")
+                (bmf-meta-cap objects "right"))))
+
+    (defn bmf-compile-repeat-zero (objects)
+        (comp-bmf-repeat
+            (bmf-meta-cap objects "item")
+            0
+            2147483647))
+
+    (defn bmf-compile-repeat-one (objects)
+        (comp-bmf-repeat
+            (bmf-meta-cap objects "item")
+            1
+            2147483647))
+
+    (defn bmf-compile-optional (objects)
+        (comp-bmf-repeat
+            (bmf-meta-cap objects "item")
+            0
+            1))
+
+    (defn bmf-compile-tag (objects)
+        (comp-bmf-tag
+            (bmf-meta-cap objects "name")
+            (bmf-meta-cap objects "item")))
+
+    (defn bmf-compile-method-call (objects)
+        (do
+            (let call (bmf-meta-cap objects "call"))
+            (comp-bmf-method-call
+                (comp-bmf-call-name call)
+                (comp-bmf-call-args call))))
+
+    (defn bmf-compile-rule (objects)
+        (do
+            (let call (bmf-meta-cap objects "call"))
+            (comp-bmf-rule
+                (comp-bmf-call-name call)
+                (comp-bmf-call-args call)
+                (bmf-meta-cap objects "item")
+                (empty))))
+
+    (defn bmf-compile-bmf-char-int (objects)
+        (comp-bmf-char (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-bmf-char-quoted (objects)
+        (comp-bmf-char (bmf-meta-cap objects "value")))
+
+    (defn bmf-char-compiled-value (compiled-char)
+        (nth compiled-char 1))
+
+    (defn bmf-compile-bmf-lit (objects)
+        (comp-bmf-char-chain-strip
+            (bmf-meta-cap objects "value")
+            (bmf-meta-cap objects "strip-before")
+            (bmf-meta-cap objects "strip-after")))
+
+    (defn bmf-compile-bmf-range-single (objects)
+        (do
+            (let first (bmf-meta-cap objects "first"))
+            (comp-bmf-char-range
+                (bmf-char-compiled-value first)
+                (bmf-char-compiled-value first))))
+
+    (defn bmf-compile-bmf-range (objects)
+        (comp-bmf-char-range
+            (bmf-char-compiled-value (bmf-meta-cap objects "first"))
+            (bmf-char-compiled-value (bmf-meta-cap objects "last"))))
+
+    (defn bmf-compile-bmf-literal-int (objects)
+        (comp-bmf-literal "int" (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-bmf-literal-float (objects)
+        (comp-bmf-literal "float" (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-bmf-literal-string (objects)
+        (comp-bmf-literal "string" (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-bmf-literal-field (objects)
+        (comp-bmf-literal "field" (bmf-meta-cap objects "value")))
+
+    (defn bmf-compile-bmf-call (objects)
+        (comp-bmf-rule-call
+            (bmf-meta-cap objects "name")
+            (bmf-meta-cap objects "args")))
+
+    (defn bmf-compile-bmf-call-base (objects)
+        (bmf-meta-cap objects "call"))
+
+    (defn bmf-compile-bmf-inline (objects)
+        (comp-bmf-inline (bmf-meta-cap objects "expr")))
+
+    (defn bmf-compile-bmf-tag-named (objects)
+        (comp-bmf-tag (bmf-meta-cap objects "name") (empty)))
+
+    (defn bmf-compile-bmf-tag-anon (_objects)
+        (comp-bmf-tag "" (empty)))
+
+    (defn bmf-compile-bmf-expr-one (objects)
+        (bmf-meta-cap objects "term"))
+
+    (defn bmf-compile-bmf-expr-branch (objects)
+        (comp-bmf-branch
+            (list
+                (bmf-meta-cap objects "left")
+                (bmf-meta-cap objects "right"))))
+
+    (defn bmf-compile-bmf-term-one (objects)
+        (bmf-meta-cap objects "factor"))
+
+    (defn bmf-compile-bmf-term-sequence (objects)
+        (comp-bmf-sequence
+            (list
+                (bmf-meta-cap objects "left")
+                (bmf-meta-cap objects "right"))))
+
+    (defn bmf-compile-bmf-factor-item (objects)
+        (bmf-meta-cap objects "item"))
+
+    (defn bmf-compile-bmf-factor-call (objects)
+        (bmf-meta-cap objects "call"))
+
+    (defn bmf-compile-bmf-factor-tag-item (objects)
+        (comp-bmf-tag
+            (nth (bmf-meta-cap objects "tag") 1)
+            (bmf-meta-cap objects "item")))
+
+    (defn bmf-compile-bmf-item-method-bare (objects)
+        (bmf-meta-cap objects "item"))
+
+    (defn bmf-compile-bmf-item-method (objects)
+        (do
+            (let call (bmf-meta-cap objects "call"))
+            (comp-bmf-method-call
+                (comp-bmf-call-name call)
+                (comp-bmf-call-args call))))
+
+    (defn bmf-compile-bmf-item-bare (objects)
+        (bmf-meta-cap objects "item"))
+
+    (defn bmf-compile-bmf-item-star (objects)
+        (comp-bmf-repeat (bmf-meta-cap objects "item") 0 2147483647))
+
+    (defn bmf-compile-bmf-item-plus (objects)
+        (comp-bmf-repeat (bmf-meta-cap objects "item") 1 2147483647))
+
+    (defn bmf-compile-bmf-item-slash (objects)
+        (comp-bmf-sequence
+            (list
+                (comp-bmf-repeat
+                    (bmf-meta-cap objects "item")
+                    (if (str_eq (bmf-meta-cap objects "mode") "+") 1 0)
+                    2147483647)
+                (bmf-meta-cap objects "next"))))
+
+    (defn bmf-compile-bmf-opt (objects)
+        (comp-bmf-repeat (bmf-meta-cap objects "expr") 0 1))
+
+    (defn bmf-compile-bmf-must (objects)
+        (comp-bmf-repeat
+            (bmf-meta-cap objects "expr")
+            (str_to_int (bmf-meta-cap objects "low"))
+            (str_to_int (bmf-meta-cap objects "high"))))
+
+    (defn bmf-compile-bmf-attribute (objects)
+        (comp-bmf-attribute
+            (bmf-meta-cap objects "fields")
+            (bmf-meta-cap objects "code")))
+
+    (defn bmf-compile-bmf-rule-full (objects)
+        (do
+            (let call (bmf-meta-cap objects "call"))
+            (comp-bmf-rule
+                (comp-bmf-call-name call)
+                (comp-bmf-call-args call)
+                (bmf-meta-cap objects "item")
+                (empty))))
+
+    (let bmf-compiler-rules
+        (list
+            (list "char-chain"
+                  (list "capture" "value" (object-lit "bmf-string" ""))
+                  bmf-compile-char-chain
+                  bmf-identity-inverse)
+            (list "char-range"
+                  (list "sequence"
+                        (list "capture" "first" (object-lit "bmf-char" ""))
+                        (bmf-op "..")
+                        (list "capture" "last" (object-lit "bmf-char" "")))
+                  bmf-compile-char-range
+                  bmf-identity-inverse)
+            (list "rule-call"
+                  (list "capture" "name" (object-lit "bmf-name" ""))
+                  bmf-compile-rule-call
+                  bmf-identity-inverse)
+            (list "primitive"
+                  (list "sequence"
+                        (bmf-op "<<prim")
+                        (list "capture" "name" (object-lit "bmf-name" ""))
+                        (bmf-op ">>"))
+                  bmf-compile-primitive
+                  bmf-identity-inverse)
+            (list "sequence-two"
+                  (list "sequence"
+                        (list "capture" "left" (object-lit "char-chain" ""))
+                        (list "capture" "right" (object-lit "rule-call" "")))
+                  bmf-compile-sequence-two
+                  bmf-identity-inverse)
+            (list "branch-two"
+                  (list "sequence"
+                        (list "capture" "left" (object-lit "char-chain" ""))
+                        (bmf-op "|")
+                        (list "capture" "right" (object-lit "rule-call" "")))
+                  bmf-compile-branch-two
+                  bmf-identity-inverse)
+            (list "repeat-zero"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "rule-call" ""))
+                        (bmf-op "*"))
+                  bmf-compile-repeat-zero
+                  bmf-identity-inverse)
+            (list "repeat-one"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "rule-call" ""))
+                        (bmf-op "+"))
+                  bmf-compile-repeat-one
+                  bmf-identity-inverse)
+            (list "optional"
+                  (list "sequence"
+                        (bmf-op "[")
+                        (list "capture" "item" (object-lit "rule-call" ""))
+                        (bmf-op "]"))
+                  bmf-compile-optional
+                  bmf-identity-inverse)
+            (list "tag"
+                  (list "sequence"
+                        (bmf-op "$")
+                        (list "capture" "name" (object-lit "bmf-name" ""))
+                        (bmf-op ":")
+                        (list "capture" "item" (object-lit "rule-call" "")))
+                  bmf-compile-tag
+                  bmf-identity-inverse)
+            (list "method-call"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "rule-call" ""))
+                        (bmf-op ".")
+                        (list "capture" "call" (object-lit "rule-call" "")))
+                  bmf-compile-method-call
+                  bmf-identity-inverse)
+            (list "rule"
+                  (list "sequence"
+                        (list "capture" "call" (object-lit "rule-call" ""))
+                        (bmf-op "::=")
+                        (list "capture" "item" (object-lit "sequence-two" ""))
+                        (bmf-op ";"))
+                  bmf-compile-rule
+                  bmf-identity-inverse)
+            (list "BMFChar-int"
+                  (list "sequence"
+                        (bmf-op "\\")
+                        (list "capture" "value" (object-lit "bmf-int" "")))
+                  bmf-compile-bmf-char-int
+                  bmf-identity-inverse)
+            (list "BMFChar-quoted"
+                  (list "sequence"
+                        (bmf-op "'")
+                        (list "capture" "value" (object-lit "bmf-char" ""))
+                        (bmf-op "'"))
+                  bmf-compile-bmf-char-quoted
+                  bmf-identity-inverse)
+            (list "BMFLit"
+                  (list "sequence"
+                        (list "capture" "strip-before" (object-lit "bmf-int" ""))
+                        (list "capture" "value" (object-lit "bmf-string" ""))
+                        (list "capture" "strip-after" (object-lit "bmf-int" "")))
+                  bmf-compile-bmf-lit
+                  bmf-identity-inverse)
+            (list "BMFRange-single"
+                  (list "capture" "first" (object-lit "BMFChar-int" ""))
+                  bmf-compile-bmf-range-single
+                  bmf-identity-inverse)
+            (list "BMFRange"
+                  (list "sequence"
+                        (list "capture" "first" (object-lit "BMFChar-quoted" ""))
+                        (bmf-op "..")
+                        (list "capture" "last" (object-lit "BMFChar-quoted" "")))
+                  bmf-compile-bmf-range
+                  bmf-identity-inverse)
+            (list "BMFBasis-range"
+                  (list "capture" "item" (object-lit "BMFRange" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFBasis-lit"
+                  (list "capture" "item" (object-lit "BMFLit" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFBasis-call"
+                  (list "capture" "item" (object-lit "BMFCallBase" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFLiteral-int"
+                  (list "capture" "value" (object-lit "bmf-int" ""))
+                  bmf-compile-bmf-literal-int
+                  bmf-identity-inverse)
+            (list "BMFLiteral-float"
+                  (list "capture" "value" (object-lit "bmf-float" ""))
+                  bmf-compile-bmf-literal-float
+                  bmf-identity-inverse)
+            (list "BMFLiteral-string"
+                  (list "capture" "value" (object-lit "bmf-string" ""))
+                  bmf-compile-bmf-literal-string
+                  bmf-identity-inverse)
+            (list "BMFLiteral-field"
+                  (list "sequence"
+                        (bmf-op "#")
+                        (list "capture" "value" (object-lit "bmf-field" "")))
+                  bmf-compile-bmf-literal-field
+                  bmf-identity-inverse)
+            (list "BMFCall"
+                  (list "sequence"
+                        (list "capture" "name" (object-lit "bmf-name" ""))
+                        (list "capture" "args" (object-lit "bmf-args" "")))
+                  bmf-compile-bmf-call
+                  bmf-identity-inverse)
+            (list "BMFCallBase"
+                  (list "capture" "call" (object-lit "BMFCall" ""))
+                  bmf-compile-bmf-call-base
+                  bmf-identity-inverse)
+            (list "BMFPrim"
+                  (list "sequence"
+                        (bmf-op "<<prim")
+                        (list "capture" "name" (object-lit "bmf-name" ""))
+                        (bmf-op ">>"))
+                  bmf-compile-primitive
+                  bmf-identity-inverse)
+            (list "BMFInline"
+                  (list "sequence"
+                        (bmf-op "<<")
+                        (list "capture" "expr" (object-lit "BMFExpr" ""))
+                        (bmf-op ">>"))
+                  bmf-compile-bmf-inline
+                  bmf-identity-inverse)
+            (list "BMFTag"
+                  (list "sequence"
+                        (bmf-op "$")
+                        (list "capture" "name" (object-lit "bmf-name" ""))
+                        (bmf-op ":"))
+                  bmf-compile-bmf-tag-named
+                  bmf-identity-inverse)
+            (list "BMFTag-anon"
+                  (bmf-op ":")
+                  bmf-compile-bmf-tag-anon
+                  bmf-identity-inverse)
+            (list "BMFExpr-one"
+                  (list "capture" "term"
+                        (list "choice"
+                              (object-lit "BMFTerm" "")
+                              (object-lit "BMFTerm-one" "")))
+                  bmf-compile-bmf-expr-one
+                  bmf-identity-inverse)
+            (list "BMFExpr"
+                  (list "sequence"
+                        (list "capture" "left"
+                              (list "choice"
+                                    (object-lit "BMFTerm" "")
+                                    (object-lit "BMFTerm-one" "")))
+                        (bmf-op "|")
+                        (list "capture" "right"
+                              (list "choice"
+                                    (object-lit "BMFTerm" "")
+                                    (object-lit "BMFTerm-one" ""))))
+                  bmf-compile-bmf-expr-branch
+                  bmf-identity-inverse)
+            (list "BMFTerm-one"
+                  (list "capture" "factor" (object-lit "BMFFactor" ""))
+                  bmf-compile-bmf-term-one
+                  bmf-identity-inverse)
+            (list "BMFTerm"
+                  (list "sequence"
+                        (list "capture" "left"
+                              (list "choice"
+                                    (object-lit "BMFFactor" "")
+                                    (object-lit "BMFFactor-call" "")
+                                    (object-lit "BMFFactor-tag" "")))
+                        (list "capture" "right"
+                              (list "choice"
+                                    (object-lit "BMFFactor" "")
+                                    (object-lit "BMFFactor-call" "")
+                                    (object-lit "BMFFactor-tag" ""))))
+                  bmf-compile-bmf-term-sequence
+                  bmf-identity-inverse)
+            (list "BMFFactor"
+                  (list "capture" "item" (object-lit "BMFItemMethod" ""))
+                  bmf-compile-bmf-factor-item
+                  bmf-identity-inverse)
+            (list "BMFFactor-call"
+                  (list "sequence"
+                        (bmf-op "@")
+                        (list "capture" "call" (object-lit "BMFCallBase" "")))
+                  bmf-compile-bmf-factor-call
+                  bmf-identity-inverse)
+            (list "BMFFactor-tag"
+                  (list "sequence"
+                        (list "capture" "tag" (object-lit "BMFTag" ""))
+                        (list "capture" "item" (object-lit "BMFItemMethod" "")))
+                  bmf-compile-bmf-factor-tag-item
+                  bmf-identity-inverse)
+            (list "BMFItemMethod"
+                  (list "capture" "item" (object-lit "BMFItem" ""))
+                  bmf-compile-bmf-item-method-bare
+                  bmf-identity-inverse)
+            (list "BMFItemMethod-call"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "BMFItem" ""))
+                        (bmf-op ".")
+                        (list "capture" "call" (object-lit "BMFCallBase" "")))
+                  bmf-compile-bmf-item-method
+                  bmf-identity-inverse)
+            (list "BMFItem"
+                  (list "capture" "item" (object-lit "BMFBasis-lit" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFItem-opt"
+                  (list "capture" "item" (object-lit "BMFOpt" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFItem-must"
+                  (list "capture" "item" (object-lit "BMFMust" ""))
+                  bmf-compile-bmf-item-bare
+                  bmf-identity-inverse)
+            (list "BMFItem-star"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "BMFBasis-call" ""))
+                        (bmf-op "*"))
+                  bmf-compile-bmf-item-star
+                  bmf-identity-inverse)
+            (list "BMFItem-plus"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "BMFBasis-call" ""))
+                        (bmf-op "+"))
+                  bmf-compile-bmf-item-plus
+                  bmf-identity-inverse)
+            (list "BMFItem-slash"
+                  (list "sequence"
+                        (list "capture" "item" (object-lit "BMFBasis-call" ""))
+                        (bmf-op "\\")
+                        (list "capture" "mode" (object-lit "bmf-op" ""))
+                        (list "capture" "next" (object-lit "BMFItem" "")))
+                  bmf-compile-bmf-item-slash
+                  bmf-identity-inverse)
+            (list "BMFOpt"
+                  (list "sequence"
+                        (bmf-op "[")
+                        (list "capture" "expr" (object-lit "BMFExpr-one" ""))
+                        (bmf-op "]"))
+                  bmf-compile-bmf-opt
+                  bmf-identity-inverse)
+            (list "BMFMust"
+                  (list "sequence"
+                        (list "capture" "low" (object-lit "bmf-int" ""))
+                        (bmf-op "(")
+                        (list "capture" "expr" (object-lit "BMFExpr-one" ""))
+                        (bmf-op ")")
+                        (list "capture" "high" (object-lit "bmf-int" "")))
+                  bmf-compile-bmf-must
+                  bmf-identity-inverse)
+            (list "BMFAttribute"
+                  (list "sequence"
+                        (list "capture" "fields" (object-lit "bmf-fields" ""))
+                        (list "capture" "code" (object-lit "bmf-code" "")))
+                  bmf-compile-bmf-attribute
+                  bmf-identity-inverse)
+            (list "BMFRule"
+                  (list "sequence"
+                        (list "capture" "call" (object-lit "BMFCall" ""))
+                        (bmf-op "::=")
+                        (list "capture" "item"
+                              (list "choice"
+                                    (object-lit "BMFPrim" "")
+                                    (object-lit "BMFInline" "")
+                                    (object-lit "BMFExpr" "")
+                                    (object-lit "BMFExpr-one" "")))
+                        (bmf-op ";"))
+                  bmf-compile-bmf-rule-full
+                  bmf-identity-inverse)))
+
+    (defn bmf-compiler-rule-name (r) (head r))
+
+    (defn bmf-compiler-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (bmf-compiler-rule-name (head rules)) rule-name)
+                (head rules)
+                (bmf-compiler-find-rule rule-name (tail rules)))))
+
+    (let bmf-reference-rule-names
+        (list
+            "BMFRule" "BMFLit" "BMFRange" "BMFChar-int" "BMFChar-quoted"
+            "BMFBasis-range" "BMFBasis-lit" "BMFBasis-call"
+            "BMFLiteral-int" "BMFLiteral-float" "BMFLiteral-string" "BMFLiteral-field"
+            "BMFCall" "BMFCallBase" "BMFPrim" "BMFInline" "BMFTag" "BMFTag-anon"
+            "BMFExpr" "BMFExpr-one" "BMFTerm" "BMFTerm-one" "BMFFactor"
+            "BMFFactor-call" "BMFFactor-tag" "BMFItemMethod" "BMFItemMethod-call"
+            "BMFItem" "BMFItem-opt" "BMFItem-must" "BMFItem-star" "BMFItem-plus"
+            "BMFItem-slash" "BMFOpt" "BMFMust" "BMFAttribute"))
+
+    (defn bmf-compiler-has-rule? (rule-name)
+        (if (nil? (bmf-compiler-find-rule rule-name bmf-compiler-rules)) false true))
+
+    (defn bmf-reference-covered-count-loop (names)
+        (if (nil? names) 0
+            (add (if (bmf-compiler-has-rule? (head names)) 1 0)
+                 (bmf-reference-covered-count-loop (tail names)))))
+
+    (defn bmf-reference-covered-count (_x)
+        (bmf-reference-covered-count-loop bmf-reference-rule-names))
+
+    (defn apply-bmf-compiler-rule (rule-name objects)
+        (apply-object-rule (bmf-compiler-find-rule rule-name bmf-compiler-rules) objects))
+
+    section [bmf.bmf] {
+      rule-reversible ::= $name:name "::=" $pattern:pattern "=>" $action:name "<=" $reverse:name ";" => bmf-emit-reversible-rule-source;
+      rule ::= $name:name "::=" $pattern:pattern "=>" $action:name ";" => bmf-emit-rule-source;
+      literal ::= $value:string => bmf-emit-literal-source;
+      capture ::= "$" $name:name ":" $kind:name => bmf-emit-capture-source;
+      section ::= "section" "[" $dialect:name "]" "{" $rules:rules "}" => bmf-emit-section-source;
+      bmf-rule ::= bmf-call "::=" bmf-rule-body ";" cut => bmf-emit-rule-source;
+      bmf-rule-body ::= bmf-prim "|" bmf-inline "|" bmf-expr => bmf-emit-node-source;
+      bmf-lit ::= bmf-bang-prefix string bmf-bang-suffix => bmf-emit-literal-source;
+      bmf-range ::= bmf-char ".." bmf-char => bmf-emit-node-source;
+      bmf-range-single ::= bmf-char => bmf-emit-node-source;
+      bmf-char-int ::= "\\" cut int => bmf-emit-node-source;
+      bmf-char-quoted ::= "'" cut bmf-char-body "'" => bmf-emit-node-source;
+      bmf-char-body ::= "\\" bmf-escape-char "|" char-range => bmf-emit-node-source;
+      bmf-basis ::= bmf-range "|" bmf-lit "|" bmf-call-base => bmf-emit-node-source;
+      bmf-literal ::= float "|" int "|" string "|" "#" cut field-name => bmf-emit-node-source;
+      bmf-call ::= $base:name bmf-call-args => bmf-emit-node-source;
+      bmf-call-args ::= "(" cut bmf-arg-list ")" => bmf-emit-node-source;
+      bmf-call-base ::= bmf-call => bmf-emit-node-source;
+      bmf-prim ::= "<<prim" spc id ">>" => bmf-emit-node-source;
+      bmf-inline ::= "<<" bmf-expr ">>" => bmf-emit-node-source;
+      bmf-tag ::= "$" $tag:name cut ":" => bmf-emit-node-source;
+      bmf-anonymous-tag ::= ":" => bmf-emit-node-source;
+      bmf-expr ::= bmf-term bmf-expr-tail => bmf-emit-node-source;
+      bmf-expr-tail ::= "|" bmf-term => bmf-emit-node-source;
+      bmf-term ::= bmf-factor bmf-term-tail => bmf-emit-node-source;
+      bmf-term-tail ::= bmf-factor => bmf-emit-node-source;
+      bmf-factor ::= bmf-tag bmf-factor-body => bmf-emit-node-source;
+      bmf-factor-body ::= "@" cut bmf-call-base "|" bmf-item-method => bmf-emit-node-source;
+      bmf-item-method ::= bmf-item "." cut bmf-call-base => bmf-emit-node-source;
+      bmf-item-method-bare ::= bmf-item => bmf-emit-node-source;
+      bmf-item ::= bmf-item-body bmf-repeat-suffix => bmf-emit-node-source;
+      bmf-item-body ::= bmf-opt "|" bmf-basis "|" bmf-must => bmf-emit-node-source;
+      bmf-repeat-suffix ::= "*" "|" "+" "|" "\\" bmf-repeat-mode bmf-item => bmf-emit-node-source;
+      bmf-repeat-mode ::= "+" "|" "*" "|" nil => bmf-emit-node-source;
+      bmf-opt ::= "[" cut bmf-expr "]" => bmf-emit-node-source;
+      bmf-must ::= int "(" bmf-expr ")" int => bmf-emit-node-source;
+      bmf-attribute ::= id-list code-block => bmf-emit-node-source;
+    }
+
+    (let bmf-recipe-section
+        (form-rule-recipe-section "bmf"
+            (list
+                (compiler-rule "bmf" "rule" "BMF rule source objects" bmf-emit-rule-source)
+                (compiler-rule "bmf" "literal" "BMF literal source object" bmf-emit-literal-source)
+                (compiler-rule "bmf" "capture" "BMF capture source object" bmf-emit-capture-source)
+                (compiler-rule "bmf" "section" "BMF section source object" bmf-emit-section-source))))
+
+    (let bmf-form-source
+        (form-source "bmf" (list bmf-bmf-second bmf-recipe-section)))
+
+    ;; --- instruction program objects --------------------------------
+
+    (defn comp-op (name value inverse)
+        (compiler-object "compiler-op"
+                         (list name value)
+                         value
+                         inverse))
+
+    (defn comp-op-name (op) (nth (cell-value op) 0))
+    (defn comp-op-value (op) (nth (cell-value op) 1))
+
+    (defn comp-op-identity-inverse (op)
+        (cell-origin op))
+
+    (defn comp-program (language ops)
+        (compiler-object "compiler-program"
+                         (list language ops)
+                         ops
+                         compiler-identity-inverse))
+
+    (defn comp-program-language (p) (nth (cell-value p) 0))
+    (defn comp-program-ops (p) (nth (cell-value p) 1))
+
+    ;; --- small reversible VM surface --------------------------------
+
+    (defn comp-vm-state (stack snapshots mode)
+        (list "comp-vm-state" stack snapshots mode))
+
+    (defn comp-vm-stack (s) (nth s 1))
+    (defn comp-vm-snapshots (s) (nth s 2))
+    (defn comp-vm-mode (s) (nth s 3))
+
+    (defn comp-vm-with-stack (s stack)
+        (comp-vm-state stack (comp-vm-snapshots s) (comp-vm-mode s)))
+
+    (defn comp-vm-with-snapshots (s snapshots)
+        (comp-vm-state (comp-vm-stack s) snapshots (comp-vm-mode s)))
+
+    (defn comp-vm-with-mode (s mode)
+        (comp-vm-state (comp-vm-stack s) (comp-vm-snapshots s) mode))
+
+    (defn comp-vm-push (s value)
+        (comp-vm-with-stack s (cons value (comp-vm-stack s))))
+
+    (defn comp-vm-pop-value (s)
+        (head (comp-vm-stack s)))
+
+    (defn comp-vm-pop-state (s)
+        (comp-vm-with-stack s (tail (comp-vm-stack s))))
+
+    (defn comp-vm-save (s)
+        (comp-vm-with-snapshots s (cons (comp-vm-stack s) (comp-vm-snapshots s))))
+
+    (defn comp-vm-restore (s)
+        (comp-vm-state (head (comp-vm-snapshots s))
+                       (tail (comp-vm-snapshots s))
+                       (comp-vm-mode s)))
+
+    (defn comp-vm-discard (s)
+        (comp-vm-with-snapshots s (tail (comp-vm-snapshots s))))
+
+    (defn comp-vm-empty (_x)
+        (comp-vm-state (empty) (empty) "run"))
+
+    0)

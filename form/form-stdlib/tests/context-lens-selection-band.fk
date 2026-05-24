@@ -1,0 +1,98 @@
+; context-lens-selection-band.fk - context requirements choose reverse lenses.
+; Authored in form.action; source-compiler.fk lowers it above the kernel.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk
+
+section [form.action] {
+    let CONTEXT_SELECT_COUNT = make_nodeid(8, 45, 2, 2);
+
+    def select_count(value) = intern_node(CONTEXT_SELECT_COUNT, list(intern_trivial_int(value)));
+    def select_count_value(node) = node_value(head(node_children(node)));
+    def source_value(source, index) = bmf-object-value(nth(source, index));
+
+    def lower_natural_node(rule_name, source) {
+        let match = apply-object-rule(natural-bmf-find-rule(rule_name, natural-bmf-rules), source);
+        let object = cap-get(match-caps(match), "result");
+        bmf-object-value(object);
+    }
+
+    def parse_natural_rule(rule_name, source, ctx) {
+        let node = lower_natural_node(rule_name, source);
+        let kids = node_children(node);
+        let subject = node_value(nth(kids, 0));
+        list(bmf-anchor-resolve(ctx, subject, subject), select_count(node_value(nth(kids, 1))));
+    }
+
+    def emit_natural_en(node, anchor, ctx) = list(natural-src-word("the"), natural-src-word(bmf-symbol-name(ctx, anchor, anchor)), natural-src-word("is"), natural-src-int(int_to_str(select_count_value(node))), natural-src-punct("."));
+    def parse_natural_en(source, ctx) = parse_natural_rule(natural-rule-fact-the-is(), source, ctx);
+    def emit_natural_en_general(node, anchor, ctx) = list(natural-src-word(bmf-symbol-name(ctx, anchor, anchor)), natural-src-word("is"), natural-src-int(int_to_str(select_count_value(node))), natural-src-punct("."));
+    def parse_natural_en_general(source, ctx) = parse_natural_rule(natural-rule-fact-is(), source, ctx);
+    def emit_natural_id(node, anchor, ctx) = list(natural-src-word(bmf-symbol-name(ctx, anchor, anchor)), natural-src-word("adalah"), natural-src-int(int_to_str(select_count_value(node))), natural-src-punct("."));
+    def parse_natural_id(source, ctx) = parse_natural_rule(natural-rule-fact-id-adalah(), source, ctx);
+    def emit_natural_math(node, anchor, ctx) = list(natural-src-word(bmf-symbol-name(ctx, anchor, anchor)), natural-src-word("equals"), natural-src-int(int_to_str(select_count_value(node))), natural-src-punct("."));
+    def parse_natural_math(source, ctx) = parse_natural_rule(natural-rule-fact-equals(), source, ctx);
+
+    def emit_image_svg(node, anchor, ctx) = list(image-src-keyword("svg"), image-src-int(int_to_str(select_count_value(node))), image-src-keyword("x"), image-src-int(int_to_str(mul(select_count_value(node), 2))), image-src-keyword("viewBox"), image-src-string(bmf-symbol-name(ctx, anchor, anchor)));
+    def parse_image_svg(source, ctx) = list(bmf-anchor-resolve(ctx, source_value(source, 5), ""), select_count(str_to_int(source_value(source, 1))));
+    def emit_image_gif(node, anchor, ctx) = list(image-src-keyword("gif"), image-src-int(int_to_str(select_count_value(node))), image-src-keyword("x"), image-src-int(int_to_str(mul(select_count_value(node), 2))), image-src-keyword("frames"), image-src-int("3"));
+    def parse_image_gif(source, ctx) = list("concept/count", select_count(str_to_int(source_value(source, 1))));
+    def emit_image_generic(node, anchor, ctx) = list(image-src-keyword("jpg"), image-src-int(int_to_str(select_count_value(node))), image-src-keyword("x"), image-src-int(int_to_str(mul(select_count_value(node), 2))));
+    def parse_image_generic(source, ctx) = list("concept/count", select_count(str_to_int(source_value(source, 1))));
+
+    def rt_score(rt, node, anchor) = add(if str_eq(bmf-lens-roundtrip-anchor(rt), anchor) then 10 else 0, if node_eq(bmf-lens-roundtrip-node(rt), node) then 20 else 0);
+    def word_score(source, index, want, score) = if str_eq(source_value(source, index), want) then score else 0;
+    def surface_node_score(found, expected, score) = if node_eq(bmf-surface-contract-node(found), bmf-surface-contract-node(expected)) then score else 0;
+
+    let anchor = "concept/count";
+    let node = select_count(13);
+
+    let natural_en_ctx = natural-symbol-context(bmf-locale-en-us(), bmf-register-plain(), bmf-environment-general(), bmf-lens-assertion(), list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.count", list("count"))));
+    let natural_id_ctx = natural-symbol-context(bmf-locale-id-id(), bmf-register-plain(), bmf-environment-general(), bmf-lens-assertion(), list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.jumlah", list("jumlah"))));
+    let natural_math_ctx = natural-symbol-context(bmf-locale-en-us(), bmf-register-math(), "proof", bmf-lens-assertion(), list(bmf-symbol-binding(anchor, bmf-domain-natural(), bmf-lens-assertion(), "natural.cardinality", list("count"))));
+    let image_svg_ctx = image-symbol-context("svg", bmf-lens-metadata(), list(bmf-symbol-binding(anchor, bmf-domain-image(), bmf-lens-metadata(), "image.count", list("count-viewbox"))));
+    let image_gif_ctx = image-symbol-context("gif", bmf-lens-metadata(), list(bmf-symbol-binding(anchor, bmf-domain-image(), bmf-lens-metadata(), "image.count", list("count-gif"))));
+    let image_open_ctx = bmf-symbol-context(bmf-domain-image(), bmf-lens-metadata(), list(bmf-symbol-binding(anchor, bmf-domain-image(), bmf-lens-metadata(), "image.count", list("count-open"))));
+
+    let natural_domain = bmf-domain-contract(bmf-domain-natural(), bmf-domain-kind-language(), empty);
+    let image_domain = bmf-domain-contract(bmf-domain-image(), bmf-domain-kind-media(), empty);
+
+    let natural_en_general_surface = bmf-surface-contract(bmf-surface-ref(1), bmf-domain-natural(), bmf-lens-assertion(), bmf-media-text-plain(), list(bmf-lens-property(bmf-context-key-locale(), bmf-locale-en-us())), natural-bmf-rules, list("parse", "emit", "roundtrip"));
+    let natural_en_surface = bmf-surface-contract(bmf-surface-ref(2), bmf-domain-natural(), bmf-lens-assertion(), bmf-media-text-plain(), list(bmf-lens-property(bmf-context-key-locale(), bmf-locale-en-us()), bmf-lens-property(bmf-context-key-register(), bmf-register-plain())), natural-bmf-rules, list("parse", "emit", "roundtrip"));
+    let natural_id_surface = bmf-surface-contract(bmf-surface-ref(3), bmf-domain-natural(), bmf-lens-assertion(), bmf-media-text-plain(), list(bmf-lens-property(bmf-context-key-locale(), bmf-locale-id-id())), natural-bmf-rules, list("parse", "emit", "roundtrip"));
+    let natural_math_surface = bmf-surface-contract(bmf-surface-ref(4), bmf-domain-natural(), bmf-lens-assertion(), bmf-media-text-plain(), list(bmf-lens-property(bmf-context-key-locale(), bmf-locale-en-us()), bmf-lens-property(bmf-context-key-register(), bmf-register-math())), natural-bmf-rules, list("parse", "emit", "roundtrip"));
+    let image_generic_surface = bmf-surface-contract(bmf-surface-ref(5), bmf-domain-image(), bmf-lens-metadata(), bmf-media-octet-stream(), empty, image-bmf-rules, list("parse", "emit", "roundtrip"));
+    let image_svg_surface = bmf-surface-contract(bmf-surface-ref(6), bmf-domain-image(), bmf-lens-metadata(), bmf-media-image-svg(), list(bmf-lens-property(bmf-context-key-media-type(), bmf-media-image-svg())), image-bmf-rules, list("parse", "emit", "roundtrip"));
+    let image_gif_surface = bmf-surface-contract(bmf-surface-ref(7), bmf-domain-image(), bmf-lens-metadata(), bmf-media-image-gif(), list(bmf-lens-property(bmf-context-key-media-type(), bmf-media-image-gif())), image-bmf-rules, list("parse", "emit", "roundtrip"));
+
+    let natural_en_general_contract = bmf-lens-contract(natural_en_general_surface, emit_natural_en_general, parse_natural_en_general, natural-bmf-find-rule(natural-rule-fact-is(), natural-bmf-rules));
+    let natural_en_contract = bmf-lens-contract(natural_en_surface, emit_natural_en, parse_natural_en, natural-bmf-find-rule(natural-rule-fact-the-is(), natural-bmf-rules));
+    let natural_id_contract = bmf-lens-contract(natural_id_surface, emit_natural_id, parse_natural_id, natural-bmf-find-rule(natural-rule-fact-id-adalah(), natural-bmf-rules));
+    let natural_math_contract = bmf-lens-contract(natural_math_surface, emit_natural_math, parse_natural_math, natural-bmf-find-rule(natural-rule-fact-equals(), natural-bmf-rules));
+    let image_generic_contract = bmf-lens-contract(image_generic_surface, emit_image_generic, parse_image_generic, image-bmf-find-rule(image-rule-jpg(), image-bmf-rules));
+    let image_svg_contract = bmf-lens-contract(image_svg_surface, emit_image_svg, parse_image_svg, image-bmf-find-rule(image-rule-svg-viewbox(), image-bmf-rules));
+    let image_gif_contract = bmf-lens-contract(image_gif_surface, emit_image_gif, parse_image_gif, image-bmf-find-rule(image-rule-gif(), image-bmf-rules));
+
+    let domains = list(natural_domain, image_domain);
+    let surfaces = list(natural_en_general_surface, natural_en_surface, natural_id_surface, natural_math_surface, image_generic_surface, image_svg_surface, image_gif_surface);
+    let contracts = list(natural_en_general_contract, natural_en_contract, natural_id_contract, natural_math_contract, image_generic_contract, image_svg_contract, image_gif_contract);
+    let space = bmf-translation-space(domains, surfaces, contracts);
+
+    let en_surface = bmf-translation-space-find-surface(space, bmf-domain-natural(), bmf-lens-assertion(), natural_en_ctx, empty);
+    let id_surface = bmf-translation-space-find-surface(space, bmf-domain-natural(), bmf-lens-assertion(), natural_id_ctx, empty);
+    let math_surface = bmf-translation-space-find-surface(space, bmf-domain-natural(), bmf-lens-assertion(), natural_math_ctx, empty);
+    let svg_surface = bmf-translation-space-find-surface(space, bmf-domain-image(), bmf-lens-metadata(), image_svg_ctx, empty);
+    let gif_surface = bmf-translation-space-find-surface(space, bmf-domain-image(), bmf-lens-metadata(), image_gif_ctx, empty);
+    let image_open_surface = bmf-translation-space-find-surface(space, bmf-domain-image(), bmf-lens-metadata(), image_open_ctx, empty);
+
+    let en_rt = bmf-translation-space-roundtrip(space, bmf-domain-natural(), bmf-lens-assertion(), node, anchor, natural_en_ctx, empty);
+    let id_rt = bmf-translation-space-roundtrip(space, bmf-domain-natural(), bmf-lens-assertion(), node, anchor, natural_id_ctx, empty);
+    let math_rt = bmf-translation-space-roundtrip(space, bmf-domain-natural(), bmf-lens-assertion(), node, anchor, natural_math_ctx, empty);
+    let svg_rt = bmf-translation-space-roundtrip(space, bmf-domain-image(), bmf-lens-metadata(), node, anchor, image_svg_ctx, empty);
+    let gif_rt = bmf-translation-space-roundtrip(space, bmf-domain-image(), bmf-lens-metadata(), node, anchor, image_gif_ctx, empty);
+    let image_open_rt = bmf-translation-space-roundtrip(space, bmf-domain-image(), bmf-lens-metadata(), node, anchor, image_open_ctx, empty);
+
+    let roundtrip_score = sum(list(rt_score(en_rt, node, anchor), rt_score(id_rt, node, anchor), rt_score(math_rt, node, anchor), rt_score(svg_rt, node, anchor), rt_score(gif_rt, node, anchor), rt_score(image_open_rt, node, anchor)));
+    let surface_score = sum(list(word_score(bmf-lens-roundtrip-source(en_rt), 2, "is", 100), word_score(bmf-lens-roundtrip-source(id_rt), 1, "adalah", 200), word_score(bmf-lens-roundtrip-source(math_rt), 1, "equals", 300), word_score(bmf-lens-roundtrip-source(svg_rt), 0, "svg", 400), word_score(bmf-lens-roundtrip-source(gif_rt), 0, "gif", 500), word_score(bmf-lens-roundtrip-source(image_open_rt), 0, "jpg", 600)));
+    let contract_score = sum(list(surface_node_score(en_surface, natural_en_surface, 10), surface_node_score(id_surface, natural_id_surface, 20), surface_node_score(math_surface, natural_math_surface, 30), surface_node_score(svg_surface, image_svg_surface, 40), surface_node_score(gif_surface, image_gif_surface, 50), surface_node_score(image_open_surface, image_generic_surface, 60)));
+    sum(list(roundtrip_score, surface_score, contract_score));
+}

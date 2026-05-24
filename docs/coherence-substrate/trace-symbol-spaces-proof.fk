@@ -3,7 +3,7 @@
 ; Build the native kernel CLI, then execute this Form recipe object:
 ;
 ;   mkdir -p .cache
-;   cd experiments/form-kernel-go && go build -o ../../.cache/form-cli .
+;   cd form/form-kernel-go && go build -o ../../.cache/form-cli .
 ;   cd ../.. && ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
 
 (do
@@ -39,4 +39,4 @@
                                             (contains trace "2026-05-21T02:56:35.741852+00:00")))))))))))
 
     (active-recipe-trace-proof
-        (read_file "experiments/local-llm-cell-v0/_field_traces.jsonl")))
+        (read_file "seedbank/local-llm-cell-v0/_field_traces.jsonl")))

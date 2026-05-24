@@ -44,7 +44,7 @@ result
 
 **Run it:**
 ```bash
-cd experiments/form-kernel-ts
+cd form/form-kernel-ts
 ./scripts/parity_suite.sh
 ```
 
@@ -120,7 +120,7 @@ The substrate-talking Python (api/app/services/substrate/*.py) uses classes, imp
 
 ```bash
 # Build the native binary once
-cd experiments/form-kernel-rust
+cd form/form-kernel-rust
 cargo build --release
 
 # Compile + run a Python file

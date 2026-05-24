@@ -1,0 +1,936 @@
+; grammars/bml.fk - BML object compiler and runtime support
+;
+; Reference shape: the 2000 BML/JBML compiler lowers BMF matches into
+; component objects, then into an instruction stream for a backtracking VM.
+; This file keeps that shape in Form data so Python, Go, Rust, TypeScript,
+; and future languages can reuse the same compiler bands.
+
+(do
+    ;; --- BML object categories --------------------------------------
+
+    (let BML-AST-PACKAGE       (make_nodeid 1 2 100 1))
+    (let BML-AST-IMPORT        (make_nodeid 1 2 100 2))
+    (let BML-AST-CLASS         (make_nodeid 1 2 100 3))
+    (let BML-AST-INTERFACE     (make_nodeid 1 2 100 4))
+    (let BML-AST-TEMPLATE      (make_nodeid 1 2 100 5))
+    (let BML-AST-SECTION       (make_nodeid 1 2 100 6))
+    (let BML-AST-FIELD         (make_nodeid 1 2 100 7))
+    (let BML-AST-CONST         (make_nodeid 1 2 100 8))
+    (let BML-AST-METHOD        (make_nodeid 1 2 100 9))
+    (let BML-AST-RETURN        (make_nodeid 1 2 100 10))
+    (let BML-AST-INT           (make_nodeid 1 2 100 11))
+    (let BML-AST-STRING        (make_nodeid 1 2 100 12))
+    (let BML-AST-NAME          (make_nodeid 1 2 100 13))
+    (let BML-AST-ADD           (make_nodeid 1 2 100 14))
+    (let BML-AST-CHOOSE        (make_nodeid 1 2 100 15))
+    (let BML-AST-FAIL          (make_nodeid 1 2 100 16))
+    (let BML-AST-CUT           (make_nodeid 1 2 100 17))
+    (let BML-AST-SAVE          (make_nodeid 1 2 100 18))
+    (let BML-AST-RESTORE       (make_nodeid 1 2 100 19))
+    (let BML-AST-DISCARD       (make_nodeid 1 2 100 20))
+    (let BML-AST-THROW         (make_nodeid 1 2 100 21))
+    (let BML-AST-IF            (make_nodeid 1 2 100 22))
+    (let BML-AST-WHILE         (make_nodeid 1 2 100 23))
+    (let BML-AST-FOR           (make_nodeid 1 2 100 24))
+    (let BML-AST-WITH          (make_nodeid 1 2 100 25))
+    (let BML-AST-TRY           (make_nodeid 1 2 100 26))
+    (let BML-AST-BLOCK         (make_nodeid 1 2 100 27))
+    (let BML-AST-BREAK         (make_nodeid 1 2 100 28))
+    (let BML-AST-CONTINUE      (make_nodeid 1 2 100 29))
+    (let BML-AST-CHAR          (make_nodeid 1 2 100 32))
+    (let BML-AST-ARRAY         (make_nodeid 1 2 100 33))
+
+    ;; --- source objects ---------------------------------------------
+
+    (defn bml-src-keyword (value) (bmf-atom "bml-keyword" value))
+    (defn bml-src-name (value) (bmf-atom "bml-name" value))
+    (defn bml-src-op (value) (bmf-atom "bml-op" value))
+    (defn bml-src-int (value) (bmf-atom "bml-int" value))
+    (defn bml-src-string (value) (bmf-atom "bml-string" value))
+    (defn bml-src-prop (value) (bmf-atom "bml-property" value))
+    (defn bml-src-list (value) (bmf-atom "bml-list" value))
+    (defn bml-src-code (value) (bmf-atom "bml-code" value))
+
+    (defn bml-kw (value) (object-lit "bml-keyword" value))
+    (defn bml-op (value) (object-lit "bml-op" value))
+    (defn bml-ref (name) (object-lit "bml-ref" name))
+    (defn bml-name (capture-name) (list "capture" capture-name (object-lit "bml-name" "")))
+    (defn bml-int-lit (capture-name) (list "capture" capture-name (object-lit "bml-int" "")))
+    (defn bml-string-lit (capture-name) (list "capture" capture-name (object-lit "bml-string" "")))
+    (defn bml-prop (capture-name) (list "capture" capture-name (object-lit "bml-property" "")))
+
+    ;; --- AST helpers --------------------------------------------------
+
+    (defn bml-cap-str (objects capture-name)
+        (intern_trivial_string (bmf-collection-value objects capture-name)))
+
+    (defn bml-cap-int (objects capture-name)
+        (intern_trivial_int (str_to_int (bmf-collection-value objects capture-name))))
+
+    (defn bml-ast-int (n)
+        (intern_node BML-AST-INT (list (intern_trivial_int n))))
+
+    (defn bml-ast-string (s)
+        (intern_node BML-AST-STRING (list (intern_trivial_string s))))
+
+    (defn bml-ast-name (s)
+        (intern_node BML-AST-NAME (list (intern_trivial_string s))))
+
+    (defn bml-ast-add (left right)
+        (intern_node BML-AST-ADD (list left right)))
+
+    (defn bml-ast-package (name)
+        (intern_node BML-AST-PACKAGE (list (intern_trivial_string name))))
+
+    (defn bml-ast-import (name star)
+        (intern_node BML-AST-IMPORT
+                     (list (intern_trivial_string name)
+                           (intern_trivial_string star))))
+
+    (defn bml-ast-interface (name parent body)
+        (intern_node BML-AST-INTERFACE
+                     (list (intern_trivial_string name)
+                           (intern_trivial_string parent)
+                           body)))
+
+    (defn bml-ast-return (expr)
+        (intern_node BML-AST-RETURN (list expr)))
+
+    (defn bml-ast-block (items)
+        (intern_node BML-AST-BLOCK items))
+
+    (defn bml-ast-method (name body)
+        (intern_node BML-AST-METHOD (list (intern_trivial_string name) body)))
+
+    (defn bml-ast-class (name base sections)
+        (intern_node BML-AST-CLASS
+                     (list (intern_trivial_string name)
+                           (intern_trivial_string base)
+                           sections)))
+
+    (defn bml-ast-section (properties body)
+        (intern_node BML-AST-SECTION (list properties body)))
+
+    (defn bml-ast-field (field-type name)
+        (intern_node BML-AST-FIELD
+                     (list (intern_trivial_string field-type)
+                           (intern_trivial_string name))))
+
+    (defn bml-ast-const (const-type name value)
+        (intern_node BML-AST-CONST
+                     (list (intern_trivial_string const-type)
+                           (intern_trivial_string name)
+                           value)))
+
+    (defn bml-ast-choose (branches)
+        (intern_node BML-AST-CHOOSE branches))
+
+    (defn bml-ast-fail (_x) (intern_node BML-AST-FAIL (empty)))
+    (defn bml-ast-cut (_x) (intern_node BML-AST-CUT (empty)))
+    (defn bml-ast-save (_x) (intern_node BML-AST-SAVE (empty)))
+    (defn bml-ast-restore (_x) (intern_node BML-AST-RESTORE (empty)))
+    (defn bml-ast-discard (_x) (intern_node BML-AST-DISCARD (empty)))
+    (defn bml-ast-break (label)
+        (intern_node BML-AST-BREAK (list (intern_trivial_string label))))
+    (defn bml-ast-continue (label)
+        (intern_node BML-AST-CONTINUE (list (intern_trivial_string label))))
+    (defn bml-ast-throw (expr)
+        (intern_node BML-AST-THROW (list expr)))
+    (defn bml-ast-try (body handler)
+        (intern_node BML-AST-TRY (list body handler)))
+    (defn bml-ast-char (value)
+        (intern_node BML-AST-CHAR (list (intern_trivial_string value))))
+    (defn bml-ast-array (items)
+        (intern_node BML-AST-ARRAY items))
+
+    ;; --- BML compiler component objects -----------------------------
+    ;; BML support is a compiler band above the kernel. Source sections
+    ;; reduce into reversible BMF object cells whose values are these
+    ;; generic BML component objects. Later runtime passes can lower the
+    ;; component values into BMA ops or into a denser authoring dialect.
+
+    (defn comp-bml-component (kind fields)
+        (list "comp-bml-component" kind fields))
+
+    (defn comp-bml-kind (component)
+        (nth component 1))
+
+    (defn comp-bml-fields (component)
+        (nth component 2))
+
+    (defn bml-comp-one (kind objects field)
+        (comp-bml-component kind (list (bmf-collection-value objects field))))
+
+    (defn bml-comp-two (kind objects a b)
+        (comp-bml-component kind
+            (list
+                (bmf-collection-value objects a)
+                (bmf-collection-value objects b))))
+
+    (defn bml-comp-three (kind objects a b c)
+        (comp-bml-component kind
+            (list
+                (bmf-collection-value objects a)
+                (bmf-collection-value objects b)
+                (bmf-collection-value objects c))))
+
+    (defn bml-comp-four (kind objects a b c d)
+        (comp-bml-component kind
+            (list
+                (bmf-collection-value objects a)
+                (bmf-collection-value objects b)
+                (bmf-collection-value objects c)
+                (bmf-collection-value objects d))))
+
+    (defn bml-compile-package (objects)
+        (bml-comp-one "Package" objects "name"))
+
+    (defn bml-compile-import (objects)
+        (bml-comp-two "Import" objects "name" "star"))
+
+    (defn bml-compile-binary-type (objects)
+        (bml-comp-two "BinaryType" objects "name" "fields"))
+
+    (defn bml-compile-class (objects)
+        (bml-comp-four "Class" objects "name" "properties" "supers" "body"))
+
+    (defn bml-compile-interface (objects)
+        (bml-comp-four "Interface" objects "name" "properties" "parent" "body"))
+
+    (defn bml-compile-template (objects)
+        (bml-comp-three "Template" objects "parameters" "kind" "body"))
+
+    (defn bml-compile-section (objects)
+        (bml-comp-three "Section" objects "name" "properties" "body"))
+
+    (defn bml-compile-syntax (objects)
+        (bml-comp-three "Syntax" objects "name" "rules" "attributes"))
+
+    (defn bml-compile-field (objects)
+        (bml-comp-three "Field" objects "type" "name" "properties"))
+
+    (defn bml-compile-const (objects)
+        (bml-comp-four "Const" objects "type" "name" "properties" "value"))
+
+    (defn bml-compile-enum (objects)
+        (bml-comp-four "Enum" objects "name" "properties" "base" "values"))
+
+    (defn bml-compile-method (objects)
+        (bml-comp-four "Method" objects "return" "name" "properties" "body"))
+
+    (defn bml-compile-parameter (objects)
+        (bml-comp-three "Parameter" objects "type" "name" "properties"))
+
+    (defn bml-compile-property (objects)
+        (bml-comp-two "Property" objects "name" "value"))
+
+    (defn bml-compile-statement (objects)
+        (bml-comp-three "Statement" objects "kind" "value" "body"))
+
+    (defn bml-compile-expression (objects)
+        (bml-comp-three "Expression" objects "kind" "left" "right"))
+
+    (defn bml-compile-asm (objects)
+        (bml-comp-three "Asm" objects "locals" "statements" "blocks"))
+
+    (defn bml-compile-main-rule (objects)
+        (bml-comp-one "MainRule" objects "item"))
+
+    (defn bml-compile-file (objects)
+        (bml-comp-one "File" objects "items"))
+
+    (let bml-reference-rule-names
+        (list
+            "bmlCommentLine" "bmlCommentNest" "File" "MainRule" "Package" "Import"
+            "BinaryType" "NamingConventions" "TypeNamingDecl" "TypeNamingConventions"
+            "OperatorNamingConventions" "OpNamingDecl" "OperatorGroupNameDecl"
+            "DefaultMethods" "ClassUse" "BMLClassUse" "ClassDecl" "Class" "SuperClass"
+            "ClassSection" "Syntax" "ClassBlock" "Interface" "ParentInterface"
+            "MemberField" "FieldDefinition" "InterfaceRef" "ArrayDefinition" "Field"
+            "Method" "Parameter" "InterfaceSection" "InterfaceBlock" "ClassInterface"
+            "Template" "TemplateParameter" "Range" "PackageName" "ClassName" "FieldName"
+            "LabelName" "OpSym" "OpName" "MethodName" "TemplateArgument" "FullClassName"
+            "Label" "Constant" "Const" "EnumConst" "Enum" "Guid" "Property"
+            "TemplateProperty" "ClassDefProperty" "ClassDefSingletonProperty"
+            "ClassDefUniqueProperty" "ClassDefStructProperty" "ClassDefNoObjectProperty"
+            "ClassDefDynamicProperty" "ClassDefAliasProperty" "ClassDefOuterProperty"
+            "LibraryProperty" "ForwardInterfaceProperty" "ForwardNameProperty"
+            "AbstractProperty" "StaticProperty" "ClassProperty" "HiddenProperty"
+            "DefaultProperty" "NameProperty" "GuidProperty" "MethodProperty"
+            "OperatorProperty" "OperatorCostProperty" "CoercionOperatorProperty"
+            "FinalMethodProperty" "ReassignMethodProperty" "NativeMethodProperty"
+            "ExceptionMethodProperty" "ExplicitMethodProperty" "ExternMethodProperty"
+            "ArrayProperty" "StrictArrayProperty" "RelaxedArrayProperty"
+            "ExclusiveArrayProperty" "SharedArrayProperty" "ParameterProperty"
+            "InParameterProperty" "OutParameterProperty" "InOutParameterProperty"
+            "AssignParameterProperty" "MemberProperty" "GetMemberProperty"
+            "PutMemberProperty" "DelegateMemberProperty" "InlineMemberProperty"
+            "ConstMemberProperty" "AccessProperty" "PublicAccessProperty"
+            "PrivateAccessProperty" "ProtectedAccessProperty" "Properties" "spc"
+            "Statement" "CodeBlock" "ExpressionStatement" "BMLLabel" "For" "While"
+            "Loop" "CaseExpr" "Case" "Switch" "SwitchBlock" "Select" "Fail" "With"
+            "Choose" "If" "Return" "Break" "Continue" "Try" "Throw" "asmId"
+            "asmClassUse" "Asm" "asmBlock" "asmLocalDecl" "asmStatement" "asmArgument"
+            "asmConst" "asmLabelDecl" "asmMethodRef" "asmMethodSignature" "asmReg"
+            "op" "Expression" "BaseExpr" "Identifier" "LocalField" "ConstExpression"
+            "float" "Char" "Array" "Block" "Anonymous" "Arguments"
+            "TypeCastOp" "SelectOp" "ItemAtOp" "IfOp" "BMFRule" "BMFLit" "BMFRange"
+            "BMFChar" "BMFBasis" "BMFLiteral" "BMFCall" "BMFCallBase" "BMFPrim"
+            "BMFInline" "BMFTag" "BMFExpr" "BMFTerm" "BMFFactor" "BMFItemMethod"
+            "BMFItem" "BMFOpt" "BMFMust" "BMFAttribute"))
+
+    (let bml-compiler-rules
+        (list
+            (list "bml-package"
+                  (list "sequence" (bml-kw "package") (list "capture" "name" (object-lit "bml-name" "")) (bml-op ";"))
+                  bml-compile-package
+                  bmf-identity-inverse)
+            (list "bml-import"
+                  (list "sequence" (bml-kw "import") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "star" (object-lit "bml-op" "")) (bml-op ";"))
+                  bml-compile-import
+                  bmf-identity-inverse)
+            (list "bml-binary-type"
+                  (list "sequence" (bml-kw "binary") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "fields" (object-lit "bml-list" "")))
+                  bml-compile-binary-type
+                  bmf-identity-inverse)
+            (list "bml-class"
+                  (list "sequence" (bml-kw "class") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (list "capture" "supers" (object-lit "bml-list" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-class
+                  bmf-identity-inverse)
+            (list "bml-interface"
+                  (list "sequence" (bml-kw "interface") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (list "capture" "parent" (object-lit "bml-name" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-interface
+                  bmf-identity-inverse)
+            (list "bml-template"
+                  (list "sequence" (bml-kw "template") (list "capture" "parameters" (object-lit "bml-list" "")) (list "capture" "kind" (object-lit "bml-name" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-template
+                  bmf-identity-inverse)
+            (list "bml-section"
+                  (list "sequence" (bml-kw "section") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-section
+                  bmf-identity-inverse)
+            (list "bml-syntax"
+                  (list "sequence" (bml-kw "syntax") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "rules" (object-lit "bml-list" "")) (list "capture" "attributes" (object-lit "bml-list" "")))
+                  bml-compile-syntax
+                  bmf-identity-inverse)
+            (list "bml-field"
+                  (list "sequence" (list "capture" "type" (object-lit "bml-name" "")) (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (bml-op ";"))
+                  bml-compile-field
+                  bmf-identity-inverse)
+            (list "bml-const"
+                  (list "sequence" (bml-kw "const") (list "capture" "type" (object-lit "bml-name" "")) (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (bml-op "=") (list "capture" "value" (object-lit "bml-int" "")))
+                  bml-compile-const
+                  bmf-identity-inverse)
+            (list "bml-enum"
+                  (list "sequence" (bml-kw "enum") (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (list "capture" "base" (object-lit "bml-name" "")) (list "capture" "values" (object-lit "bml-list" "")))
+                  bml-compile-enum
+                  bmf-identity-inverse)
+            (list "bml-method"
+                  (list "sequence" (list "capture" "return" (object-lit "bml-name" "")) (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-method
+                  bmf-identity-inverse)
+            (list "bml-parameter"
+                  (list "sequence" (list "capture" "type" (object-lit "bml-name" "")) (list "capture" "name" (object-lit "bml-name" "")) (list "capture" "properties" (object-lit "bml-list" "")))
+                  bml-compile-parameter
+                  bmf-identity-inverse)
+            (list "bml-property"
+                  (list "sequence" (list "capture" "name" (object-lit "bml-property" "")) (list "capture" "value" (object-lit "bml-name" "")))
+                  bml-compile-property
+                  bmf-identity-inverse)
+            (list "bml-statement"
+                  (list "sequence" (list "capture" "kind" (object-lit "bml-keyword" "")) (list "capture" "value" (object-lit "bml-name" "")) (list "capture" "body" (object-lit "bml-list" "")))
+                  bml-compile-statement
+                  bmf-identity-inverse)
+            (list "bml-expression"
+                  (list "sequence" (list "capture" "kind" (object-lit "bml-name" "")) (list "capture" "left" (object-lit "bml-name" "")) (list "capture" "right" (object-lit "bml-name" "")))
+                  bml-compile-expression
+                  bmf-identity-inverse)
+            (list "bml-asm"
+                  (list "sequence" (bml-kw "asm") (list "capture" "locals" (object-lit "bml-list" "")) (list "capture" "statements" (object-lit "bml-list" "")) (list "capture" "blocks" (object-lit "bml-list" "")))
+                  bml-compile-asm
+                  bmf-identity-inverse)
+            (list "bml-main-rule"
+                  (list "capture" "item" (object-lit "bml-list" ""))
+                  bml-compile-main-rule
+                  bmf-identity-inverse)
+            (list "bml-file"
+                  (list "capture" "items" (object-lit "bml-list" ""))
+                  bml-compile-file
+                  bmf-identity-inverse)))
+
+    (defn bml-compiler-rule-name (r) (head r))
+
+    (defn bml-compiler-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (bml-compiler-rule-name (head rules)) rule-name)
+                (head rules)
+                (bml-compiler-find-rule rule-name (tail rules)))))
+
+    (defn bml-compiler-has-rule? (rule-name)
+        (if (nil? (bml-compiler-find-rule rule-name bml-compiler-rules)) false true))
+
+    (defn bml-compiler-rule-count-loop (rules)
+        (if (nil? rules) 0
+            (add 1 (bml-compiler-rule-count-loop (tail rules)))))
+
+    (defn bml-compiler-rule-count (_x)
+        (bml-compiler-rule-count-loop bml-compiler-rules))
+
+    (defn bml-reference-rule-count (_x)
+        (len bml-reference-rule-names))
+
+    (defn apply-bml-compiler-rule (rule-name objects)
+        (apply-object-rule (bml-compiler-find-rule rule-name bml-compiler-rules) objects))
+
+    ;; --- BMF rule emitters ------------------------------------------
+
+    (defn bml-emit-class-header (objects)
+        (bml-ast-class
+            (bmf-collection-value objects "name")
+            (bmf-collection-value objects "base")
+            (intern_node BML-AST-BLOCK (empty))))
+
+    (defn bml-source-class-header (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "class")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ":")
+                  (bml-src-name (node_value (head (tail kids)))))))
+
+    (defn bml-emit-interface-header (objects)
+        (bml-ast-interface
+            (bmf-collection-value objects "name")
+            (bmf-collection-value objects "parent")
+            (intern_node BML-AST-BLOCK (empty))))
+
+    (defn bml-source-interface-header (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "interface")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ":")
+                  (bml-src-name (node_value (head (tail kids)))))))
+
+    (defn bml-emit-package-simple (objects)
+        (bml-ast-package (bmf-collection-value objects "name")))
+
+    (defn bml-source-package-simple (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "package")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-import-simple (objects)
+        (bml-ast-import (bmf-collection-value objects "name") ""))
+
+    (defn bml-source-import-simple (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "import")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-import-star-simple (objects)
+        (bml-ast-import (bmf-collection-value objects "name") ".*"))
+
+    (defn bml-source-import-star-simple (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "import")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ".*")
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-section-header (objects)
+        (bml-ast-section
+            (intern_node BML-AST-NAME
+                         (list (bml-cap-str objects "property")))
+            (intern_node BML-AST-BLOCK (empty))))
+
+    (defn bml-emit-field (objects)
+        (bml-ast-field
+            (bmf-collection-value objects "type")
+            (bmf-collection-value objects "name")))
+
+    (defn bml-source-field (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-name (node_value (head kids)))
+                  (bml-src-name (node_value (head (tail kids))))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-const-int (objects)
+        (bml-ast-const
+            (bmf-collection-value objects "type")
+            (bmf-collection-value objects "name")
+            (intern_node BML-AST-INT (list (bml-cap-int objects "value")))))
+
+    (defn bml-source-const-int (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let value-node (head (tail (tail kids))))
+            (list (bml-src-keyword "const")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-name (node_value (head (tail kids))))
+                  (bml-src-op "=")
+                  (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-return-int (objects)
+        (bml-ast-return
+            (intern_node BML-AST-INT (list (bml-cap-int objects "value")))))
+
+    (defn bml-source-return-int (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let value-node (head kids))
+            (list (bml-src-keyword "return")
+                  (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-break-simple (objects)
+        (bml-ast-break (bmf-collection-value objects "label")))
+
+    (defn bml-source-break-simple (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "break")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-continue-simple (objects)
+        (bml-ast-continue (bmf-collection-value objects "label")))
+
+    (defn bml-source-continue-simple (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-keyword "continue")
+                  (bml-src-name (node_value (head kids)))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-throw-int (objects)
+        (bml-ast-throw
+            (intern_node BML-AST-INT (list (bml-cap-int objects "value")))))
+
+    (defn bml-source-throw-int (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let value-node (head kids))
+            (list (bml-src-keyword "throw")
+                  (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
+                  (bml-src-op ";"))))
+
+    (defn bml-emit-try-throw-return (objects)
+        (bml-ast-try
+            (bml-ast-block
+                (list (bml-ast-throw
+                        (intern_node BML-AST-INT
+                                     (list (bml-cap-int objects "throw-value"))))))
+            (bml-ast-block
+                (list (bml-ast-return
+                        (intern_node BML-AST-INT
+                                     (list (bml-cap-int objects "return-value"))))))))
+
+    (defn bml-source-try-throw-return (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let body (head kids))
+            (let handler (head (tail kids)))
+            (let throw-node (head (node_children body)))
+            (let return-node (head (node_children handler)))
+            (let throw-value-node (head (node_children throw-node)))
+            (let return-value-node (head (node_children return-node)))
+            (list (bml-src-keyword "try") (bml-src-op "{")
+                  (bml-src-keyword "throw")
+                  (bml-src-int (int_to_str (node_value (head (node_children throw-value-node)))))
+                  (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-keyword "catch") (bml-src-op "{")
+                  (bml-src-keyword "return")
+                  (bml-src-int (int_to_str (node_value (head (node_children return-value-node)))))
+                  (bml-src-op ";") (bml-src-op "}"))))
+
+    (defn bml-emit-char-lit (objects)
+        (bml-ast-char (bmf-collection-value objects "value")))
+
+    (defn bml-source-char-lit (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (bml-src-op "'")
+                  (bml-src-string (node_value (head kids)))
+                  (bml-src-op "'"))))
+
+    (defn bml-emit-array-int (objects)
+        (bml-ast-array
+            (list (intern_node BML-AST-INT (list (bml-cap-int objects "value"))))))
+
+    (defn bml-source-array-int (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let value-node (head kids))
+            (list (bml-src-op "#(")
+                  (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
+                  (bml-src-op ")"))))
+
+    (defn bml-emit-method-return-add (objects)
+        (bml-ast-method
+            (bmf-collection-value objects "name")
+            (bml-ast-return
+                (bml-ast-add
+                    (intern_node BML-AST-INT (list (bml-cap-int objects "left")))
+                    (intern_node BML-AST-INT (list (bml-cap-int objects "right")))))))
+
+    (defn bml-emit-choose-fail-int (objects)
+        (bml-ast-choose
+            (list
+                (bml-ast-block (list (bml-ast-fail 0)))
+                (bml-ast-block
+                    (list (bml-ast-return
+                            (intern_node BML-AST-INT
+                                         (list (bml-cap-int objects "value")))))))))
+
+    (defn bml-emit-state-int (objects)
+        (bml-ast-block
+            (list (bml-ast-save 0)
+                  (intern_node BML-AST-INT (list (bml-cap-int objects "value")))
+                  (bml-ast-discard 0))))
+
+    (defn bml-emit-node-source (objects)
+        (compiler-object "bml-source-node" objects objects compiler-identity-inverse))
+
+    ;; --- BML rulebook ------------------------------------------------
+
+    (let bml-bmf-reference-model
+        (comp-bmf-syntax
+            "BML"
+            "bml"
+            "file"
+            (list
+                (comp-bmf-rule "Rule" (empty) (comp-bmf-sequence (empty)) (comp-bmf-process "Invoke" "Object"))
+                (comp-bmf-rule "Sequence" (empty) (comp-bmf-sequence (empty)) (empty))
+                (comp-bmf-rule "Branch" (empty) (comp-bmf-branch (empty)) (empty))
+                (comp-bmf-rule "Repeat" (empty) (comp-bmf-repeat (empty) 0 2147483647) (empty))
+                (comp-bmf-rule "Tag" (empty) (comp-bmf-tag "" (empty)) (empty))
+                (comp-bmf-rule "RuleCall" (empty) (comp-bmf-rule-call "name" (empty)) (empty))
+                (comp-bmf-rule "MethodCall" (empty) (comp-bmf-method-call "name" (empty)) (empty))
+                (comp-bmf-rule "Primitive" (empty) (comp-bmf-primitive "Cut" (empty)) (empty))
+                (comp-bmf-rule "CharRange" (empty) (comp-bmf-char-range "a" "z") (empty))
+                (comp-bmf-rule "CharChain" (empty) (comp-bmf-char-chain "literal") (empty)))
+            (empty)
+            (empty)))
+
+    section [bml.bmf] {
+      bml-comment-line ::= "/" "/" char-not-eol eol => bml-emit-node-source;
+      bml-comment-nest ::= "/" "*" bml-comment-body "*" "/" => bml-emit-node-source;
+      file ::= init main-rule eof => bml-emit-node-source;
+      main-rule ::= include binary-type naming-conventions default-methods package import class interface template asm statement => bml-emit-node-source;
+      package ::= "package" spc cut package-name ";" => bml-emit-node-source;
+      import ::= "import" spc cut full-class-name import-star ";" => bml-emit-node-source;
+      binary-type ::= "binary" cut $name:name "[" binary-field-list "]" => bml-emit-node-source;
+      naming-conventions ::= "naming" cut "conventions" "{" type-naming-conventions operator-naming-conventions "}" => bml-emit-node-source;
+      type-naming-decl ::= full-class-name cut "=" $name:name eol => bml-emit-node-source;
+      operator-naming-decl ::= "'" op-name "'" cut "=" $name:name eol => bml-emit-node-source;
+      default-methods ::= "DefaultMethods" cut "{" method "}" => bml-emit-node-source;
+      package-simple ::= "package" $name:name ";" => bml-emit-package-simple <= bml-source-package-simple;
+      import-simple ::= "import" $name:name ";" => bml-emit-import-simple <= bml-source-import-simple;
+      import-star-simple ::= "import" $name:name ".*" ";" => bml-emit-import-star-simple <= bml-source-import-star-simple;
+      class-header ::= "class" $name:name ":" $base:name => bml-emit-class-header <= bml-source-class-header;
+      class ::= "class" spc cut class-name properties super-class-list class-block => bml-emit-node-source;
+      interface-header ::= "interface" $name:name ":" $parent:name => bml-emit-interface-header <= bml-source-interface-header;
+      interface ::= "interface" cut class-name properties parent-interface interface-block => bml-emit-node-source;
+      template ::= "template" "<" cut template-parameter-list ">" class-or-interface => bml-emit-node-source;
+      section-header ::= "section" "[" $property:property "]" => bml-emit-section-header;
+      class-section ::= "section" spc cut properties class-block => bml-emit-node-source;
+      syntax-section ::= "syntax" spc cut "[" $name:name "]" "{" bmf-rule-list bmf-attribute-list "}" => bml-emit-node-source;
+      class-block ::= "{" template class-section syntax-section class-interface code-block class const method field "}" => bml-emit-node-source;
+      interface-block ::= "{" interface-section constant method "}" => bml-emit-node-source;
+      interface-ref ::= bml-class-use method-params array-definition-list => bml-emit-node-source;
+      array-definition ::= "[" range "]" => bml-emit-node-source;
+      field ::= $type:name $name:name ";" => bml-emit-field <= bml-source-field;
+      field-definition ::= interface-ref field-list => bml-emit-node-source;
+      member-field ::= field-name properties field-init => bml-emit-node-source;
+      const-int ::= "const" $type:name $name:name "=" $value:int ";" => bml-emit-const-int <= bml-source-const-int;
+      const ::= "const" spc cut interface-ref field-name properties "=" expression => bml-emit-node-source;
+      enum ::= "enum" spc cut class-name properties enum-base "{" enum-const-list "}" => bml-emit-node-source;
+      property ::= member-property "|" parameter-property "|" method-property "|" array-property "|" access-property "|" class-def-property "|" library-property "|" name-property "|" guid-property => bml-emit-node-source;
+      properties ::= "[" property-list "]" => bml-emit-node-source;
+      method-return-add ::= $type:name $name:name "(" ")" "{" "return" $left:int "+" $right:int ";" "}" => bml-emit-method-return-add;
+      method ::= method-head properties code-block => bml-emit-node-source;
+      method-head ::= "operator" spc cut full-class-name "|" interface-ref method-name => bml-emit-node-source;
+      parameter ::= field-definition => bml-emit-node-source;
+      statement ::= for while loop switch select if return break continue try throw fail with choose asm expression-statement code-block => bml-emit-node-source;
+      code-block ::= "{" cut statement-list "}" => bml-emit-node-source;
+      expression-statement ::= expression ";" => bml-emit-node-source;
+      for ::= label "for" "(" cut for-init expression ";" expression ")" statement => bml-emit-node-source;
+      while ::= label "while" "(" cut expression ")" statement => bml-emit-node-source;
+      loop ::= label "loop" spc cut statement => bml-emit-node-source;
+      switch ::= "switch" "(" cut expression ")" switch-block => bml-emit-node-source;
+      select ::= "select" "(" cut expression ")" switch-block => bml-emit-node-source;
+      case ::= "case" spc cut case-expr ":" statement-list => bml-emit-node-source;
+      default-case ::= "default" ":" cut statement-list => bml-emit-node-source;
+      if ::= "if" "(" cut expression ")" statement "else" spc cut statement => bml-emit-node-source;
+      return-int ::= "return" $value:int ";" => bml-emit-return-int <= bml-source-return-int;
+      return ::= "return" expression ";" => bml-emit-node-source;
+      break-simple ::= "break" $label:name ";" => bml-emit-break-simple <= bml-source-break-simple;
+      break ::= "break" label-name ";" cut => bml-emit-node-source;
+      continue-simple ::= "continue" $label:name ";" => bml-emit-continue-simple <= bml-source-continue-simple;
+      continue ::= "continue" label-name ";" cut => bml-emit-node-source;
+      try-throw-return ::= "try" "{" "throw" $throw-value:int ";" "}" "catch" "{" "return" $return-value:int ";" "}" => bml-emit-try-throw-return <= bml-source-try-throw-return;
+      try ::= "try" spc cut statement "catch" "(" interface-ref field-name properties ")" statement => bml-emit-node-source;
+      throw-int ::= "throw" $value:int ";" => bml-emit-throw-int <= bml-source-throw-int;
+      throw ::= "throw" spc cut expression ";" cut => bml-emit-node-source;
+      choose-fail-int ::= "choose" "{" "fail" ";" "}" "," "{" "return" $value:int ";" "}" => bml-emit-choose-fail-int;
+      choose ::= "choose" code-block choose-tail => bml-emit-node-source;
+      asm ::= "asm" cut "{" asm-local-decl-list asm-statement-list "}" => bml-emit-node-source;
+      asm-block ::= ".begin" cut asm-local-decl-list asm-statement-list ".end" => bml-emit-node-source;
+      expression ::= op base-expr => bml-emit-node-source;
+      base-expr ::= "(" expression ")" "|" identifier "|" const-expression => bml-emit-node-source;
+      identifier ::= interface-ref local-field-list => bml-emit-node-source;
+      const-expression ::= float "|" int "|" string "|" char "|" array "|" block "|" anonymous => bml-emit-node-source;
+      float ::= signed-digits "." digits exponent => bml-emit-node-source;
+      char-lit ::= "'" $value:string "'" => bml-emit-char-lit <= bml-source-char-lit;
+      char ::= "'" cut char-body "'" => bml-emit-node-source;
+      array-int ::= "#(" $value:int ")" => bml-emit-array-int <= bml-source-array-int;
+      array ::= "#(" expression-list ")" => bml-emit-node-source;
+      block ::= interface-ref "(" parameter-list ")" properties code-block => bml-emit-node-source;
+      anonymous ::= "class" spc cut bml-class-use "(" parameter-list ")" properties class-block => bml-emit-node-source;
+      arguments ::= expression-list => bml-emit-node-source;
+      op-select ::= "." select-op => bml-emit-node-source;
+      op-item-at ::= "[" item-at-op "]" => bml-emit-node-source;
+      op-call ::= "(" arguments ")" => bml-emit-node-source;
+      op-instanceof ::= "instanceof" => bml-emit-node-source;
+      op-type-cast ::= "(" type-cast-op ")" => bml-emit-node-source;
+      op-prefix-inc ::= "++" => bml-emit-node-source;
+      op-prefix-dec ::= "--" => bml-emit-node-source;
+      op-not ::= "!" => bml-emit-node-source;
+      op-bit-not ::= "~" => bml-emit-node-source;
+      op-neg ::= "-" => bml-emit-node-source;
+      op-pos ::= "+" => bml-emit-node-source;
+      op-post-inc ::= "++" => bml-emit-node-source;
+      op-post-dec ::= "--" => bml-emit-node-source;
+      op-mul ::= "*" => bml-emit-node-source;
+      op-div ::= "/" => bml-emit-node-source;
+      op-mod ::= "%" => bml-emit-node-source;
+      op-add ::= "+" => bml-emit-node-source;
+      op-sub ::= "-" => bml-emit-node-source;
+      op-shl ::= "<<" => bml-emit-node-source;
+      op-shr-unsigned ::= ">>>" => bml-emit-node-source;
+      op-shr ::= ">>" => bml-emit-node-source;
+      op-lt ::= "<" => bml-emit-node-source;
+      op-le ::= "<=" => bml-emit-node-source;
+      op-gt ::= ">" => bml-emit-node-source;
+      op-ge ::= ">=" => bml-emit-node-source;
+      op-eq ::= "==" => bml-emit-node-source;
+      op-ne ::= "!=" => bml-emit-node-source;
+      op-bit-and ::= "&" => bml-emit-node-source;
+      op-bit-xor ::= "^" => bml-emit-node-source;
+      op-bit-or ::= "|" => bml-emit-node-source;
+      op-and ::= "&&" => bml-emit-node-source;
+      op-or ::= "||" => bml-emit-node-source;
+      op-if ::= "?" if-op ":" => bml-emit-node-source;
+      op-assign-ref ::= ":=" => bml-emit-node-source;
+      op-assign ::= "=" => bml-emit-node-source;
+      op-mul-assign ::= "*=" => bml-emit-node-source;
+      op-div-assign ::= "/=" => bml-emit-node-source;
+      op-mod-assign ::= "%=" => bml-emit-node-source;
+      op-add-assign ::= "+=" => bml-emit-node-source;
+      op-sub-assign ::= "-=" => bml-emit-node-source;
+      op-shl-assign ::= "<<=" => bml-emit-node-source;
+      op-shr-assign ::= ">>=" => bml-emit-node-source;
+      op-and-assign ::= "&=" => bml-emit-node-source;
+      op-or-assign ::= "|=" => bml-emit-node-source;
+      op-xor-assign ::= "^=" => bml-emit-node-source;
+      bmf-rule ::= bmf-call "::=" bmf-rule-body ";" cut => bml-emit-node-source;
+      bmf-lit ::= bmf-bang-prefix string bmf-bang-suffix => bml-emit-node-source;
+      bmf-range ::= bmf-char ".." bmf-char => bml-emit-node-source;
+      bmf-char ::= "\\" cut int "|" "'" cut bmf-char-body "'" => bml-emit-node-source;
+      bmf-basis ::= bmf-range "|" bmf-lit "|" bmf-call-base => bml-emit-node-source;
+      bmf-literal ::= float "|" int "|" string "|" "#" cut field-name => bml-emit-node-source;
+      bmf-call ::= $base:name bmf-call-args => bml-emit-node-source;
+      bmf-call-base ::= bmf-call => bml-emit-node-source;
+      bmf-prim ::= "<<prim" spc id ">>" => bml-emit-node-source;
+      bmf-inline ::= "<<" bmf-expr ">>" => bml-emit-node-source;
+      bmf-tag ::= "$" $tag:name cut ":" => bml-emit-node-source;
+      bmf-expr ::= bmf-term bmf-expr-tail => bml-emit-node-source;
+      bmf-term ::= bmf-factor bmf-term-tail => bml-emit-node-source;
+      bmf-factor ::= bmf-tag bmf-factor-body => bml-emit-node-source;
+      bmf-item-method ::= bmf-item "." cut bmf-call-base => bml-emit-node-source;
+      bmf-item ::= bmf-opt "|" bmf-basis "|" bmf-must => bml-emit-node-source;
+      bmf-opt ::= "[" cut bmf-expr "]" => bml-emit-node-source;
+      bmf-must ::= int "(" bmf-expr ")" int => bml-emit-node-source;
+      bmf-attribute ::= id-list code-block => bml-emit-node-source;
+      state-int ::= "save" ";" $value:int ";" "discard" ";" => bml-emit-state-int;
+    }
+
+    (defn bml-bmf-rule-name (r) (head r))
+
+    (defn bml-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (bml-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (bml-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-bml-bmf-rule (rule-name objects)
+        (apply-object-rule (bml-bmf-find-rule rule-name bml-bmf-rules) objects))
+
+    ;; --- native source sections -------------------------------------
+
+    (let bml-recipe-section
+        (form-rule-recipe-section "bml"
+            (list
+                (compiler-rule "bml" "class-header" "BML class source objects" bml-emit-class-header)
+                (compiler-rule "bml" "interface-header" "BML interface source objects" bml-emit-interface-header)
+                (compiler-rule "bml" "package-simple" "BML package source objects" bml-emit-package-simple)
+                (compiler-rule "bml" "import-simple" "BML import source objects" bml-emit-import-simple)
+                (compiler-rule "bml" "section-header" "BML section source objects" bml-emit-section-header)
+                (compiler-rule "bml" "return-int" "BML return object to BMA ops" bml-emit-return-int)
+                (compiler-rule "bml" "break-simple" "BML break object to BMA ops" bml-emit-break-simple)
+                (compiler-rule "bml" "continue-simple" "BML continue object to BMA ops" bml-emit-continue-simple)
+                (compiler-rule "bml" "throw-int" "BML throw object to BMA ops" bml-emit-throw-int)
+                (compiler-rule "bml" "try-throw-return" "BML try object to BMA ops" bml-emit-try-throw-return)
+                (compiler-rule "bml" "char-lit" "BML char literal source objects" bml-emit-char-lit)
+                (compiler-rule "bml" "array-int" "BML array literal source objects" bml-emit-array-int)
+                (compiler-rule "bml" "method-return-add" "BML method object to BMA ops" bml-emit-method-return-add)
+                (compiler-rule "bml" "choose-fail-int" "BML choice object to BMA ops" bml-emit-choose-fail-int)
+                (compiler-rule "bml" "state-int" "BML state object to BMA ops" bml-emit-state-int))))
+
+    (let bml-form-source
+        (form-source "bml" (list bml-bmf-second bml-recipe-section)))
+
+    ;; --- BMA-like program lowering ----------------------------------
+
+    (defn bma-op (name value)
+        (comp-op name value comp-op-identity-inverse))
+
+    (defn bma-push-int (n) (bma-op "push-int" n))
+    (defn bma-push-lit (value) (bma-op "push-lit" value))
+    (defn bma-add (_x) (bma-op "add" 0))
+    (defn bma-return (_x) (bma-op "return" 0))
+    (defn bma-break (label) (bma-op "break" label))
+    (defn bma-continue (label) (bma-op "continue" label))
+    (defn bma-throw (_x) (bma-op "throw" 0))
+    (defn bma-save (_x) (bma-op "save" 0))
+    (defn bma-restore (_x) (bma-op "restore" 0))
+    (defn bma-discard (_x) (bma-op "discard" 0))
+    (defn bma-fail (_x) (bma-op "fail" 0))
+    (defn bma-cut (_x) (bma-op "cut" 0))
+    (defn bma-choose (branches) (bma-op "choose" branches))
+    (defn bma-try (branches) (bma-op "try" branches))
+
+    (defn bml-node-child (node index)
+        (nth (node_children node) index))
+
+    (defn bml-compile-children (children)
+        (if (nil? children) (empty)
+            (append (bml-compile-node (head children))
+                    (bml-compile-children (tail children)))))
+
+    (defn bml-compile-node (node)
+        (do
+            (let cat (node_category node))
+            (if (node_eq cat BML-AST-INT)
+                (list (bma-push-int (node_value (bml-node-child node 0))))
+            (if (node_eq cat BML-AST-CHAR)
+                (list (bma-push-lit (node_value (bml-node-child node 0))))
+            (if (node_eq cat BML-AST-ARRAY)
+                (bml-compile-children (node_children node))
+            (if (node_eq cat BML-AST-ADD)
+                (append (bml-compile-node (bml-node-child node 0))
+                        (append (bml-compile-node (bml-node-child node 1))
+                                (list (bma-add 0))))
+            (if (node_eq cat BML-AST-CONST)
+                (bml-compile-node (bml-node-child node 2))
+            (if (node_eq cat BML-AST-RETURN)
+                (append (bml-compile-node (bml-node-child node 0))
+                        (list (bma-return 0)))
+            (if (node_eq cat BML-AST-BREAK)
+                (list (bma-break (node_value (bml-node-child node 0))))
+            (if (node_eq cat BML-AST-CONTINUE)
+                (list (bma-continue (node_value (bml-node-child node 0))))
+            (if (node_eq cat BML-AST-THROW)
+                (append (bml-compile-node (bml-node-child node 0))
+                        (list (bma-throw 0)))
+            (if (node_eq cat BML-AST-TRY)
+                (list (bma-try
+                        (list (bml-compile-node (bml-node-child node 0))
+                              (bml-compile-node (bml-node-child node 1)))))
+            (if (node_eq cat BML-AST-METHOD)
+                (bml-compile-node (bml-node-child node 1))
+            (if (node_eq cat BML-AST-BLOCK)
+                (bml-compile-children (node_children node))
+            (if (node_eq cat BML-AST-CHOOSE)
+                (list (bma-choose (map bml-compile-node (node_children node))))
+            (if (node_eq cat BML-AST-FAIL)
+                (list (bma-fail 0))
+            (if (node_eq cat BML-AST-CUT)
+                (list (bma-cut 0))
+            (if (node_eq cat BML-AST-SAVE)
+                (list (bma-save 0))
+            (if (node_eq cat BML-AST-RESTORE)
+                (list (bma-restore 0))
+            (if (node_eq cat BML-AST-DISCARD)
+                (list (bma-discard 0))
+                (empty)))))))))))))))))))))
+
+    (defn bml-compile-program (node)
+        (comp-program "bma" (bml-compile-node node)))
+
+    ;; --- BMA-like runtime -------------------------------------------
+
+    (defn bma-bin-add (s)
+        (do
+            (let right (comp-vm-pop-value s))
+            (let s1 (comp-vm-pop-state s))
+            (let left (comp-vm-pop-value s1))
+            (let s2 (comp-vm-pop-state s1))
+            (comp-vm-push s2 (add left right))))
+
+    (defn bma-exec-choose-branches (branches state)
+        (if (nil? branches)
+            (comp-vm-with-mode state "fail")
+            (do
+                (let branch-state (bma-exec-ops (head branches) (comp-vm-with-mode state "run")))
+                (if (str_eq (comp-vm-mode branch-state) "fail")
+                    (bma-exec-choose-branches (tail branches) state)
+                    branch-state))))
+
+    (defn bma-exec-try-branches (branches state)
+        (do
+            (let body-state (bma-exec-ops (head branches) (comp-vm-with-mode state "run")))
+            (if (str_eq (comp-vm-mode body-state) "throw")
+                (bma-exec-ops (head (tail branches)) (comp-vm-with-mode state "run"))
+                body-state)))
+
+    (defn bma-exec-op (op state)
+        (do
+            (let name (comp-op-name op))
+            (if (str_eq name "push-int") (comp-vm-push state (comp-op-value op))
+            (if (str_eq name "push-lit") (comp-vm-push state (comp-op-value op))
+            (if (str_eq name "add") (bma-bin-add state)
+            (if (str_eq name "return") (comp-vm-with-mode state "return")
+            (if (str_eq name "break") (comp-vm-with-mode state "break")
+            (if (str_eq name "continue") (comp-vm-with-mode state "continue")
+            (if (str_eq name "throw") (comp-vm-with-mode state "throw")
+            (if (str_eq name "save") (comp-vm-save state)
+            (if (str_eq name "restore") (comp-vm-restore state)
+            (if (str_eq name "discard") (comp-vm-discard state)
+            (if (str_eq name "fail") (comp-vm-with-mode state "fail")
+            (if (str_eq name "cut") (comp-vm-with-mode state "cut")
+            (if (str_eq name "choose") (bma-exec-choose-branches (comp-op-value op) state)
+            (if (str_eq name "try") (bma-exec-try-branches (comp-op-value op) state)
+                state))))))))))))))))
+
+    (defn bma-exec-ops (ops state)
+        (if (nil? ops) state
+            (if (str_eq (comp-vm-mode state) "run")
+                (bma-exec-ops (tail ops) (bma-exec-op (head ops) state))
+                state)))
+
+    (defn bma-run-program (program)
+        (bma-exec-ops (comp-program-ops program) (comp-vm-empty 0)))
+
+    (defn bma-run-value (program)
+        (comp-vm-pop-value (bma-run-program program)))
+
+    0)

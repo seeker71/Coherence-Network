@@ -1,0 +1,192 @@
+; tests/python-bmf-runtime.fk - Python BMF rules emit reversible Form objects
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn source-value (m name)
+        (bmf-collection-value (cell-undo (result-object m)) name))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    (let import-match
+        (py-apply "import-as"
+                  (list (py-keyword "import") (py-name "os")
+                        (py-keyword "as") (py-name "system"))))
+    (let import-kids (node_children (result-value import-match)))
+    (let import-score
+        (add (str_len (node_value (head import-kids)))
+             (str_len (node_value (head (tail import-kids)))))) ; os + system = 8
+
+    (let def-match
+        (py-apply "def"
+                  (list (py-keyword "def") (py-name "main")
+                        (py-op "(") (py-op ")") (py-op ":"))))
+    (let def-score
+        (str_len (node_value (head (node_children (result-value def-match)))))) ; main = 4
+
+    (let assign-match
+        (py-apply "assign-int"
+                  (list (py-name "answer") (py-op "=") (py-int "42"))))
+    (let assign-score
+        (str_len (node_value (head (node_children (result-value assign-match)))))) ; answer = 6
+
+    (let for-match
+        (py-apply "for-header"
+                  (list (py-keyword "for") (py-name "item")
+                        (py-keyword "in") (py-name "values")
+                        (py-op ":") (py-keyword "pass"))))
+    (let for-source-score
+        (add (str_len (source-value for-match "target"))
+             (str_len (source-value for-match "iter")))) ; item + values = 10
+
+    (let call-match
+        (py-apply "call0"
+                  (list (py-name "run") (py-op "(") (py-op ")"))))
+    (let call-score
+        (str_len (node_value (head (node_children (result-value call-match)))))) ; run = 3
+
+    (let attr-match
+        (py-apply "attr"
+                  (list (py-name "obj") (py-op ".") (py-name "field"))))
+    (let attr-kids (node_children (result-value attr-match)))
+    (let attr-score
+        (add (str_len (node_value (head attr-kids)))
+             (str_len (node_value (head (tail attr-kids)))))) ; obj + field = 8
+
+    (let method-match
+        (py-apply "method-call0"
+                  (list (py-name "name") (py-op ".") (py-name "strip")
+                        (py-op "(") (py-op ")"))))
+    (let method-kids (node_children (result-value method-match)))
+    (let method-score
+        (add (str_len (node_value (head method-kids)))
+             (str_len (node_value (head (tail method-kids)))))) ; name + strip = 9
+
+    (let call1-match
+        (py-apply "call1-ident"
+                  (list (py-name "print") (py-op "(")
+                        (py-name "value") (py-op ")"))))
+    (let call1-kids (node_children (result-value call1-match)))
+    (let call1-score
+        (add (str_len (node_value (head call1-kids)))
+             (str_len (node_value (head (tail call1-kids)))))) ; print + value = 10
+
+    (let list-match
+        (py-apply "list3-int"
+                  (list (py-op "[") (py-int "1") (py-op ",")
+                        (py-int "2") (py-op ",") (py-int "3") (py-op "]"))))
+    (let list-kids (node_children (result-value list-match)))
+    (let list-score
+        (add (node_value (head list-kids))
+             (add (node_value (head (tail list-kids)))
+                  (node_value (head (tail (tail list-kids))))))) ; 1 + 2 + 3 = 6
+
+    (let dict-match
+        (py-apply "dict1-ident-int"
+                  (list (py-op "{") (py-name "answer") (py-op ":")
+                        (py-int "42") (py-op "}"))))
+    (let dict-kids (node_children (result-value dict-match)))
+    (let dict-score
+        (add (str_len (node_value (head dict-kids)))
+             (node_value (head (tail dict-kids))))) ; answer + 42 = 48
+
+    (let ann-match
+        (py-apply "annotated-assign-int"
+                  (list (py-name "x") (py-op ":") (py-name "int")
+                        (py-op "=") (py-int "5"))))
+    (let ann-kids (node_children (result-value ann-match)))
+    (let ann-score
+        (add (str_len (node_value (head ann-kids)))
+             (add (str_len (node_value (head (tail ann-kids))))
+                  (node_value (head (tail (tail ann-kids))))))) ; x + int + 5 = 9
+
+    (let aug-match
+        (py-apply "plus-assign-int"
+                  (list (py-name "x") (py-op "+=") (py-int "7"))))
+    (let aug-kids (node_children (result-value aug-match)))
+    (let aug-score
+        (add (str_len (node_value (head aug-kids)))
+             (add (str_len (node_value (head (tail aug-kids))))
+                  (node_value (head (tail (tail aug-kids))))))) ; x + += + 7 = 10
+
+    (let def2-match
+        (py-apply "def2"
+                  (list (py-keyword "def") (py-name "add")
+                        (py-op "(") (py-name "a") (py-op ",")
+                        (py-name "b") (py-op ")") (py-op ":"))))
+    (let def2-kids (node_children (result-value def2-match)))
+    (let def2-score
+        (add (str_len (node_value (head def2-kids)))
+             (add (str_len (node_value (head (tail def2-kids))))
+                  (str_len (node_value (head (tail (tail def2-kids)))))))) ; add + a + b = 5
+
+    (let return-plus-match
+        (py-apply "return-plus-ident"
+                  (list (py-keyword "return") (py-name "a")
+                        (py-op "+") (py-name "b"))))
+    (let binop-node (head (node_children (result-value return-plus-match))))
+    (let binop-kids (node_children binop-node))
+    (let return-plus-score
+        (add (str_len (node_value (head binop-kids)))
+             (add (str_len (node_value (head (tail binop-kids))))
+                  (str_len (node_value (head (tail (tail binop-kids)))))))) ; a + + + b = 3
+
+    (let assign-call2-match
+        (py-apply "assign-call2-ident"
+                  (list (py-name "z") (py-op "=") (py-name "add")
+                        (py-op "(") (py-name "x") (py-op ",")
+                        (py-name "y") (py-op ")"))))
+    (let assign-call2-kids (node_children (result-value assign-call2-match)))
+    (let assign-call2-call (head (tail assign-call2-kids)))
+    (let assign-call2-call-kids (node_children assign-call2-call))
+    (let assign-call2-score
+        (add (str_len (node_value (head assign-call2-kids)))
+             (add (str_len (node_value (head assign-call2-call-kids)))
+                  (add (str_len (node_value (head (tail assign-call2-call-kids))))
+                       (str_len (node_value (head (tail (tail assign-call2-call-kids))))))))) ; z + add + x + y = 6
+
+    (let sample-module-match
+        (py-apply "sample-module"
+                  (list
+                    (py-keyword "import") (py-name "os")
+                    (py-keyword "import") (py-name "sys")
+                    (py-keyword "from") (py-name "typing")
+                    (py-keyword "import") (py-name "Optional")
+                    (py-name "CONST") (py-op "=") (py-int "42")
+                    (py-keyword "def") (py-name "add")
+                    (py-op "(") (py-name "a") (py-op ",")
+                    (py-name "b") (py-op ")") (py-op ":")
+                    (py-keyword "return") (py-name "a") (py-op "+") (py-name "b")
+                    (py-keyword "def") (py-name "main")
+                    (py-op "(") (py-op ")") (py-op ":")
+                    (py-name "x") (py-op "=") (py-int "10")
+                    (py-name "y") (py-op "=") (py-int "20")
+                    (py-name "z") (py-op "=") (py-name "add")
+                    (py-op "(") (py-name "x") (py-op ",") (py-name "y") (py-op ")")
+                    (py-name "print") (py-op "(") (py-name "z") (py-op ")"))))
+    (let sample-module-score
+        (len (node_children (result-value sample-module-match)))) ; 15 module children
+
+    (add import-score
+         (add def-score
+              (add assign-score
+                   (add for-source-score
+                        (add call-score
+                             (add attr-score
+                                  (add method-score
+                                       (add call1-score
+                                            (add list-score
+                                                 (add dict-score
+                                                      (add ann-score
+                                                           (add aug-score
+                                                                (add def2-score
+                                                                     (add return-plus-score
+                                                                          (add assign-call2-score
+                                                                               sample-module-score))))))))))))))))

@@ -1,0 +1,63 @@
+; language-bmf-bidirectional.fk - supported language adapters carry reverse rules.
+; Authored in form.action; source-compiler.fk lowers it above the kernel.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk
+
+section [form.action] {
+    def rt_score(rt) {
+        add(if bmf-roundtrip-node-eq?(rt) then 1 else 0, len(bmf-roundtrip-source(rt)));
+    }
+
+    let py_source = list(py-name("answer"), py-op("="), py-int("42"));
+    let py_rule = python-bmf-find-rule("assign-int", python-bmf-rules);
+    let py_rt = bmf-roundtrip(py_rule, py_source);
+
+    let ts_source = list(ts-src-keyword("export"), ts-src-keyword("const"), ts-src-name("answer"), ts-src-op("="), ts-src-name("value"), ts-src-op(";"));
+    let ts_rule = typescript-bmf-find-rule("export-const", typescript-bmf-rules);
+    let ts_rt = bmf-roundtrip(ts_rule, ts_source);
+
+    let go_source = list(go-src-keyword("var"), go-src-name("count"), go-src-op("="), go-src-int("7"));
+    let go_rule = go-bmf-find-rule("var-int", go-bmf-rules);
+    let go_rt = bmf-roundtrip(go_rule, go_source);
+
+    let rust_source = list(rust-src-name("println"), rust-src-op("!"), rust-src-op("("), rust-src-string("value"), rust-src-op(")"), rust-src-op(";"));
+    let rust_rule = rust-bmf-find-rule("macro-call", rust-bmf-rules);
+    let rust_rt = bmf-roundtrip(rust_rule, rust_source);
+
+    let bml_source = list(bml-src-name("Int"), bml-src-name("value"), bml-src-op(";"));
+    let bml_rule = bml-bmf-find-rule("field", bml-bmf-rules);
+    let bml_rt = bmf-roundtrip(bml_rule, bml_source);
+
+    let natural_source = list(natural-src-word("the"), natural-src-word("count"), natural-src-word("is"), natural-src-int("42"), natural-src-punct("."));
+    let natural_rule = natural-bmf-find-rule("fact-the-is", natural-bmf-rules);
+    let natural_rt = bmf-roundtrip(natural_rule, natural_source);
+
+    let natural_id_source = list(natural-src-word("jumlah"), natural-src-word("adalah"), natural-src-int("42"), natural-src-punct("."));
+    let natural_id_rule = natural-bmf-find-rule("fact-id-adalah", natural-bmf-rules);
+    let natural_id_rt = bmf-roundtrip(natural_id_rule, natural_id_source);
+
+    let py_default_source = list(py-keyword("return"), py-int("11"));
+    let py_default_rule = python-bmf-find-rule("return-int", python-bmf-rules);
+    let py_default_rt = bmf-roundtrip(py_default_rule, py_default_source);
+
+    let ts_default_source = list(ts-src-keyword("import"), ts-src-name("View"), ts-src-keyword("from"), ts-src-string("./view"), ts-src-op(";"));
+    let ts_default_rule = typescript-bmf-find-rule("import-default", typescript-bmf-rules);
+    let ts_default_rt = bmf-roundtrip(ts_default_rule, ts_default_source);
+
+    let go_default_source = list(go-src-keyword("package"), go-src-name("main"));
+    let go_default_rule = go-bmf-find-rule("package", go-bmf-rules);
+    let go_default_rt = bmf-roundtrip(go_default_rule, go_default_source);
+
+    let rust_default_source = list(rust-src-keyword("fn"), rust-src-name("main"), rust-src-op("("), rust-src-op(")"), rust-src-op("{"), rust-src-op("}"));
+    let rust_default_rule = rust-bmf-find-rule("fn0", rust-bmf-rules);
+    let rust_default_rt = bmf-roundtrip(rust_default_rule, rust_default_source);
+
+    let bml_default_source = list(bml-src-keyword("const"), bml-src-name("Int"), bml-src-name("answer"), bml-src-op("="), bml-src-int("42"), bml-src-op(";"));
+    let bml_default_rule = bml-bmf-find-rule("const-int", bml-bmf-rules);
+    let bml_default_rt = bmf-roundtrip(bml_default_rule, bml_default_source);
+
+    let section_score = sum(list(len(python-bmf-rules), len(typescript-bmf-rules), len(go-bmf-rules), len(rust-bmf-rules), len(natural-bmf-rules), len(bml-compiler-rules)));
+    let roundtrip_score = sum(list(rt_score(py_rt), rt_score(ts_rt), rt_score(go_rt), rt_score(rust_rt), rt_score(bml_rt), rt_score(natural_rt), rt_score(natural_id_rt), rt_score(py_default_rt), rt_score(ts_default_rt), rt_score(go_default_rt), rt_score(rust_default_rt), rt_score(bml_default_rt)));
+
+    add(section_score, roundtrip_score);
+}

@@ -1,0 +1,16 @@
+; form-action-dialect-band.fk - BML-shaped rule action authoring surface.
+; The source compiler lowers form.action above the kernel.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let ACTION_NODE = make_nodeid(1, 2, 101, 33);
+
+    def emit_action_int(n) = intern_node(ACTION_NODE, list(intern_trivial_int(n)));
+    def action_pair(a, b) = list(a, b);
+    def action_choose(n) = if gt(n, 4) then emit_action_int(n) else emit_action_int(add(n, 10));
+}
+
+(add (node_value (head (node_children (action_choose 6))))
+(add (node_value (head (node_children (action_choose 2))))
+     (len (action_pair "rule" "recipe"))))

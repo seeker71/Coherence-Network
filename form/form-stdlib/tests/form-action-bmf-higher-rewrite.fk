@@ -1,0 +1,178 @@
+; form-action-bmf-higher-rewrite.fk - rebuild higher.fk through BMF objects.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call0 (name) (fa-call name (empty)))
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+    (defn fa-call3 (name a b c) (fa-call name (list a b c)))
+    (defn fa-call5 (name a b c d e) (fa-call name (list a b c d e)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (let xs (fa-ident "xs"))
+    (let ys (fa-ident "ys"))
+    (let n (fa-ident "n"))
+    (let pred (fa-ident "pred"))
+    (let xs-tail (fa-call1 "tail" xs))
+
+    (let nil-def
+        (fa-def "nil?" (list "xs")
+            (fa-call2 "eq" (fa-call1 "len" xs) (fa-int "0"))))
+
+    (let even-def
+        (fa-def "even?" (list "n")
+            (fa-call2 "eq"
+                (fa-call2 "mod" n (fa-int "2"))
+                (fa-int "0"))))
+
+    (let sum-def
+        (fa-def "sum" (list "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-int "0")
+                (fa-call2 "add"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "sum" xs-tail)))))
+
+    (let append-def
+        (fa-def "append" (list "xs" "ys")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                ys
+                (fa-call2 "cons"
+                    (fa-call1 "head" xs)
+                    (fa-call2 "append" xs-tail ys)))))
+
+    (let reverse-def
+        (fa-def "reverse" (list "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-call0 "empty")
+                (fa-call2 "append"
+                    (fa-call1 "reverse" xs-tail)
+                    (fa-call1 "list" (fa-call1 "head" xs))))))
+
+    (let take-def
+        (fa-def "take" (list "n" "xs")
+            (fa-if
+                (fa-call2 "le" n (fa-int "0"))
+                (fa-call0 "empty")
+                (fa-if
+                    (fa-call1 "nil?" xs)
+                    (fa-call0 "empty")
+                    (fa-call2 "cons"
+                        (fa-call1 "head" xs)
+                        (fa-call2 "take" (fa-call2 "sub" n (fa-int "1")) xs-tail))))))
+
+    (let drop-def
+        (fa-def "drop" (list "n" "xs")
+            (fa-if
+                (fa-call2 "le" n (fa-int "0"))
+                xs
+                (fa-if
+                    (fa-call1 "nil?" xs)
+                    (fa-call0 "empty")
+                    (fa-call2 "drop" (fa-call2 "sub" n (fa-int "1")) xs-tail)))))
+
+    (let any-def
+        (fa-def "any?" (list "pred" "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-int "0")
+                (fa-if
+                    (fa-call1 "pred" (fa-call1 "head" xs))
+                    (fa-int "1")
+                    (fa-call2 "any?" pred xs-tail)))))
+
+    (let all-def
+        (fa-def "all?" (list "pred" "xs")
+            (fa-if
+                (fa-call1 "nil?" xs)
+                (fa-int "1")
+                (fa-if
+                    (fa-call1 "pred" (fa-call1 "head" xs))
+                    (fa-call2 "all?" pred xs-tail)
+                    (fa-int "0")))))
+
+    (let list-a
+        (fa-call5 "list" (fa-int "1") (fa-int "2") (fa-int "3") (fa-int "4") (fa-int "5")))
+    (let list-b
+        (fa-call3 "list" (fa-int "1") (fa-int "2") (fa-int "3")))
+    (let list-c
+        (fa-call3 "list" (fa-int "4") (fa-int "5") (fa-int "6")))
+
+    (let shape-score
+        (fa-call2 "add"
+            (fa-call1 "sum" (fa-call1 "reverse" list-a))
+            (fa-call2 "add"
+                (fa-call1 "sum" (fa-call2 "append" list-b list-c))
+                (fa-call2 "add"
+                    (fa-call1 "sum" (fa-call2 "take" (fa-int "3") list-a))
+                    (fa-call1 "sum" (fa-call2 "drop" (fa-int "3") list-a))))))
+
+    (let truth-score
+        (fa-call2 "add"
+            (fa-call2 "any?" (fa-ident "even?")
+                (fa-call3 "list" (fa-int "1") (fa-int "3") (fa-int "4")))
+            (fa-call2 "add"
+                (fa-call2 "all?" (fa-ident "even?")
+                    (fa-call3 "list" (fa-int "2") (fa-int "4") (fa-int "6")))
+                (fa-call2 "add"
+                    (fa-call2 "any?" (fa-ident "even?")
+                        (fa-call3 "list" (fa-int "1") (fa-int "3") (fa-int "5")))
+                    (fa-call2 "all?" (fa-ident "even?")
+                        (fa-call3 "list" (fa-int "1") (fa-int "2") (fa-int "4")))))))
+
+    (let score
+        (fa-call2 "add" shape-score truth-score))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list nil-def even-def sum-def append-def reverse-def take-def drop-def any-def all-def score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

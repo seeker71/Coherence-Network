@@ -56,7 +56,7 @@ Urs named it directly:
 > attributions and diagnose lineage and verify choice failure and
 > success rates natively using the tracing and observation pattern.*
 
-The first proof landed in [`experiments/form-kernel-rust/`](../../../experiments/form-kernel-rust/)
+The first proof landed in [`form/form-kernel-rust/`](../../../form/form-kernel-rust/)
 as of 2026-05-21:
 
 - **A single 2.5 MB Mach-O arm64 binary.** Built via `cargo build --release`.
@@ -139,7 +139,7 @@ Five readings the trace makes possible:
 1. **Hot-spot detection.** *IDENT at 35% of total dispatches* — variable lookup is the bottleneck for `fib(15)`. Optimizing the frame chain or adding a cache earns measurable speedup.
 2. **Source attribution.** Each arm dispatch can carry the source span of the recipe it fired (per [`lc-the-recipe-remembers-its-source`](lc-the-recipe-remembers-its-source.md)); when a recipe is slow, the binary can name *which file, which line* the slowness comes from.
 3. **Lineage diagnosis.** The substrate's intern table already content-addresses every recipe; tracing extends that — *which recipes share this NodeID, and how often does each one fire?* answers in milliseconds.
-4. **Choice success/failure rates.** When BMF rules land natively (see `experiments/local-llm-cell-v0/bmf.py` for the Python proof-of-concept), the trace records every `Choice.CHOOSE` attempt and which alternative won. *Which grammar rules are tried but never match?* becomes a substrate query.
+4. **Choice success/failure rates.** When BMF rules land natively (see `seedbank/local-llm-cell-v0/bmf.py` for the Python proof-of-concept), the trace records every `Choice.CHOOSE` attempt and which alternative won. *Which grammar rules are tried but never match?* becomes a substrate query.
 5. **Cross-kernel comparison.** Running `fib(20)` through the Python runtime, Rust binary, TS kernel, and Go kernel produces four trace JSONs. Differences in arm-count totals surface where the kernels diverge structurally — not just in performance, but in *what work they actually do*.
 
 ## What This Closes — and What Remains
@@ -156,8 +156,8 @@ Five readings the trace makes possible:
 - **Float arithmetic.** The current kernel is integer-only (`Value::Int(i64)`). Adding `Value::Float(f64)` opens cosine, sigmoid, tanh, exp, sqrt to native execution. Mechanical work; one breath.
 - **Form-syntax surface.** The Rust kernel reads `.fk` S-expressions; the body's `.recipelib.json` tongue_caches carry Form's surface syntax (`defn name(a, b) = do { ... };`). A small Form→fk converter (or a Form surface parser in Rust) closes the gap. The auto-generator that consumes `tongue_caches.form` from a library and emits S-expression source is the named follow-up.
 - **Substrate session integration.** The Rust kernel has its own in-process intern table; the production substrate is in Postgres. `bridge_to_substrate(name, session=...)` (per `lc-parsers-as-recipes` follow-up) lets the Rust binary talk to the live Postgres-backed lattice via REST.
-- **Sibling kernels reach parity.** The Go kernel (`experiments/form-kernel-go/`) and TS kernel (`experiments/form-kernel-ts/`) follow the same gestures. Once all three kernels have CLI parity, cross-kernel runs become a substrate query (per `lc-the-kernel-knows-itself`).
-- **BMF rules native.** The Python BMF demo at `experiments/local-llm-cell-v0/bmf.py` proves the pattern; the Rust kernel's existing `register_form_keyword` infrastructure can register the same rules with semantic actions in Rust. Once that lands, *parsing Python source files into Form objects happens in the native binary*.
+- **Sibling kernels reach parity.** The Go kernel (`form/form-kernel-go/`) and TS kernel (`form/form-kernel-ts/`) follow the same gestures. Once all three kernels have CLI parity, cross-kernel runs become a substrate query (per `lc-the-kernel-knows-itself`).
+- **BMF rules native.** The Python BMF demo at `seedbank/local-llm-cell-v0/bmf.py` proves the pattern; the Rust kernel's existing `register_form_keyword` infrastructure can register the same rules with semantic actions in Rust. Once that lands, *parsing Python source files into Form objects happens in the native binary*.
 
 ## What This Is Not
 
@@ -165,7 +165,7 @@ Five readings the trace makes possible:
 - **Not a complete numeric runtime.** Integer arithmetic + list primitives + recursion. Floats, complex numbers, vector instructions are the next breaths.
 - **Not authentication-aware.** The `fetch` subcommand uses the system's TLS trust store; it has no notion of API keys, OAuth, or substrate auth. Authenticated REST calls to `api.coherencycoin.com`'s private endpoints would need an auth layer first.
 - **Not multi-process.** The Kernel struct holds its intern table per-process; a long-running daemon model with shared substrate state is a separate breath.
-- **Not the only path.** The TS kernel reaching native parity (per `experiments/form-kernel-ts/`) is a sibling proof. The Go kernel is another. Each language carries the same recipes through a different carrier; the lattice's content-addressing recognizes the equivalence.
+- **Not the only path.** The TS kernel reaching native parity (per `form/form-kernel-ts/`) is a sibling proof. The Go kernel is another. Each language carries the same recipes through a different carrier; the lattice's content-addressing recognizes the equivalence.
 
 ## Practice
 
@@ -178,7 +178,7 @@ For cells running heavy substrate queries:
 For cells authoring new recipes:
 
 - **Round-trip parity before promoting a recipe to native.** Same discipline as `parity_check.py`: the Rust binary's result must match the Python runtime's result on a battery of inputs.
-- **Write the .fk source alongside the Form source.** Until the auto-generator lands, every recipe runnable through `form-kernel-rust execute` needs a `.fk` companion in `experiments/form-kernel-rust/recipes/`. The list subcommand marks runnable recipes with `▶` and authored-but-not-runnable with `·` — visible asymmetry, named honestly.
+- **Write the .fk source alongside the Form source.** Until the auto-generator lands, every recipe runnable through `form-kernel-rust execute` needs a `.fk` companion in `form/form-kernel-rust/recipes/`. The list subcommand marks runnable recipes with `▶` and authored-but-not-runnable with `·` — visible asymmetry, named honestly.
 
 ## Cross-References
 
@@ -186,7 +186,7 @@ For cells authoring new recipes:
 
 ## Sources to walk further
 
-- **[`experiments/form-kernel-rust/`](../../../experiments/form-kernel-rust/)** — the Rust kernel that ships with this PR's new CLI + tracing. 4181 lines of base kernel + ~600 lines of new CLI/trace.
-- **[`experiments/form-kernel-comparison.md`](../../../experiments/form-kernel-comparison.md)** — the hand-authored comparison across Python / TS / Rust / Go kernel implementations. The substrate query `?equivalent @recipe(parse(@language(rust), kernel.rs)) @recipe(parse(@language(python), kernel.py))` is what this document becomes when the kernels reach mutual inspectability.
+- **[`form/form-kernel-rust/`](../../../form/form-kernel-rust/)** — the Rust kernel that ships with this PR's new CLI + tracing. 4181 lines of base kernel + ~600 lines of new CLI/trace.
+- **[`form/kernel-comparison.md`](../../../form/kernel-comparison.md)** — the hand-authored comparison across Python / TS / Rust / Go kernel implementations. The substrate query `?equivalent @recipe(parse(@language(rust), kernel.rs)) @recipe(parse(@language(python), kernel.py))` is what this document becomes when the kernels reach mutual inspectability.
 - **JVM HotSpot + Substrate VM (GraalVM)** — historical analogs. HotSpot ships native binaries that run JVM bytecode with JIT compilation; GraalVM's `native-image` produces a single AOT-compiled binary. The body's pattern is at one altitude deeper: the substrate's content-addressed lattice is shared identity; the kernels (Python, Rust, TS, Go) are interchangeable carriers.
 - **Rust's `ast` analog**: `syn` and `proc-macro2` carry Rust source as structured trees; once `rust-grammar.form` lands BMF rules, the body can parse Rust source the way it parses Python source — through Form Language cells, not host parsers.

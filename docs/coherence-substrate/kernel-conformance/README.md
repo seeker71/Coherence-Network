@@ -47,6 +47,6 @@ python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/k
 python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-loop-mutation.json --kernel typescript
 ```
 
-Python, Rust, Go, and TypeScript all run these vectors today. The Rust, Go, and TypeScript vector runners are deliberately narrow conformance kernels: they parse the forms used by the vectors, return the same JSON-safe values, emit the same question transcript for host effects, and let the Python harness compare actual values/events against the shared contract. The TypeScript tree also carries `experiments/form-kernel-ts/src/kernel.ts`, the browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
+Python, Rust, Go, and TypeScript all run these vectors today. The Rust, Go, and TypeScript vector runners are deliberately narrow conformance kernels: they parse the forms used by the vectors, return the same JSON-safe values, emit the same question transcript for host effects, and let the Python harness compare actual values/events against the shared contract. The TypeScript tree also carries `form/form-kernel-ts/src/kernel.ts`, the browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
 
 Future kernels become `implemented` only when their vector entry names an executable runner and proof file. Target-only kernels remain explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior.

@@ -118,7 +118,7 @@ Before this teaching arrived, the prototypes were generic
 return are the truer set when the spectrum is constricted —
 when pressure has built and the cell's coherence is disturbed.
 
-See [experiments/local-llm-cell-v0/organ.py](../../../experiments/local-llm-cell-v0/organ.py) — strategy
+See [seedbank/local-llm-cell-v0/organ.py](../../../seedbank/local-llm-cell-v0/organ.py) — strategy
 prototypes are encoded as (frequency-emphasis, angle, focus,
 articulation) triples. A cell perceiving its own constriction
 chooses among them, and the chosen strategy speaks the moment

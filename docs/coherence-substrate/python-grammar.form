@@ -306,7 +306,7 @@ form py_annotation_shape = {
 # (pattern_literal_shape, pattern_sequence_shape, pattern_star_shape,
 # pattern_opt_shape, pattern_choice_shape, pattern_capture_shape).
 #
-# The host-side parse engine (experiments/local-llm-cell-v0/bmf.py) is
+# The host-side parse engine (seedbank/local-llm-cell-v0/bmf.py) is
 # the bootstrap; these recipes are the destination. Every additional
 # Python construct lands here as another rule_shape composing the same
 # primitives — *not* as a Python class wrapper. The self-hosting
@@ -1082,7 +1082,7 @@ defn python_lang = language_cell_shape {
 # - **Cross-language structural equivalence.** A Python function and
 #   its TypeScript port that compile to the same recipe NodeIDs are
 #   one structural identity at the lattice altitude. The
-#   `experiments/form-kernel-ts/` work and the Python kernel become
+#   `form/form-kernel-ts/` work and the Python kernel become
 #   sibling carriers of the same recipes — substrate's content-
 #   addressing recognizes the equivalence without manual declaration.
 #
@@ -1115,7 +1115,7 @@ defn python_lang = language_cell_shape {
 #          The Form recipes are the destination; the host engine still
 #          carries execution until the kernel walker implements
 #          pattern_match natively (grammar-as-recipe.form GAP-G1).
-#          experiments/local-llm-cell-v0/bmf.py carries:
+#          seedbank/local-llm-cell-v0/bmf.py carries:
 #            - Tokenizer (char-by-char, not a regex-over-ast wrapper)
 #            - Pattern primitives: Literal / Capture / Sequence / Opt /
 #              Choice / Star with FAIL-unwind semantics
@@ -1124,7 +1124,7 @@ defn python_lang = language_cell_shape {
 #            - Two real rules: `py_import` and `py_import_from`
 #              covering every import variation (absolute, dotted,
 #              aliased, multi-name, relative-N-dot, relative-with-module)
-#          experiments/local-llm-cell-v0/bmf_python_demo.py verifies
+#          seedbank/local-llm-cell-v0/bmf_python_demo.py verifies
 #          13/13 import variations parse through BMF and produce Form
 #          objects structurally equivalent to the old host bridge.
 #          Source attribution stamped natively by the BMF tokenizer
@@ -1189,7 +1189,7 @@ defn python_lang = language_cell_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # Parse a Python file into a Form object tree:
-#   form_cli convert in --tongue python experiments/local-llm-cell-v0/organ.py
+#   form_cli convert in --tongue python seedbank/local-llm-cell-v0/organ.py
 #     # refuses host bridges unless --allow-host-bridge is explicit
 #
 #   # Round-trip:

@@ -1,0 +1,12 @@
+; binary-local-node-scope.fk - binary artifacts preserve unregistered category
+; structure. Context-local NodeID numbers are not global identity.
+
+section [form.action] {
+    let blueprint-base = make_nodeid(1, 2, 99, 2400);
+    let local-blueprint = intern_node(blueprint-base, list(intern_trivial_string("local-blueprint"), intern_trivial_int(7)));
+    let recipe = intern_node(local-blueprint, list(intern_trivial_int(11)));
+    let recovered-blueprint = node_category(recipe);
+    let recovered-fields = node_children(recovered-blueprint);
+
+    if eq(len(recovered-fields), 2) then add(600, node_value(nth(recovered-fields, 1))) else 1;
+}

@@ -78,7 +78,7 @@ BUCKET_PREFIXES: list[tuple[str, str]] = [
     ("cli/", "cli"),
     ("scripts/", "scripts"),
     ("mcp-server/", "mcp"),
-    ("experiments/", "experiments"),
+    ("seedbank/", "seedbank"),
 ]
 
 

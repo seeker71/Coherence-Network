@@ -1,6 +1,6 @@
 """Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel.
 
-Mirrors ``experiments/form-kernel-ts/src/inductive.test.ts``. The core
+Mirrors ``form/form-kernel-ts/src/inductive.test.ts``. The core
 promise: structurally identical inductive definitions share NodeIDs
 through content-addressing, and pattern matches are total-checked at
 walk time.

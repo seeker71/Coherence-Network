@@ -283,7 +283,7 @@ defn adapter_forward_heads(A, B, bias, x, n_bands, n_dispos) = do {
 #         deepening.
 #
 # GAP-N4 (CLOSED 2026-05-21): Runtime routing landed as
-#         `experiments/local-llm-cell-v0/substrate_dispatch.py`. The
+#         `seedbank/local-llm-cell-v0/substrate_dispatch.py`. The
 #         `@substrate_dispatch("<name>")` decorator now wraps
 #         organ.py's `_cosine`, `_strategy_score`, and `_sigmoid`. An
 #         empty registry falls through to the Python body (existing
@@ -293,7 +293,7 @@ defn adapter_forward_heads(A, B, bias, x, n_bands, n_dispos) = do {
 #         the one-line move that wires a substrate-resident Form
 #         recipe in as the registered implementation once a session
 #         is booted. Verified end-to-end by
-#         experiments/local-llm-cell-v0/substrate_dispatch_demo.py.
+#         seedbank/local-llm-cell-v0/substrate_dispatch_demo.py.
 #
 # GAP-N5 (CLOSED 2026-05-21): Cell state expressed as substrate
 #         NamedCell. cell-as-namedcell.form names the cell_shape,

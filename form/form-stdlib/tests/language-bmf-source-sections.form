@@ -1,0 +1,89 @@
+; language-bmf-source-sections.form - active language grammars as BMF-defined sections
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn node-child (node n)
+        (nth (node_children node) n))
+
+    (defn node-string-len (node)
+        (str_len (node_value node)))
+
+    (defn language-source-score (src language)
+        (do
+            (let second
+                (form-source-section-by-dialect src (str_concat language ".bmf")))
+            (let recipes
+                (form-source-section-by-dialect src (str_concat language ".recipes")))
+            (add (len (bmf-section-rules (form-section-object second)))
+                 (add (len (compiler-section-items (form-section-object recipes)))
+                      (len (form-source-sections src))))))
+
+    (let ts-import
+        (result-value
+            (apply-typescript-bmf-rule "import-named"
+                (list (ts-src-keyword "import") (ts-src-op "{")
+                      (ts-src-string "A,B") (ts-src-op "}")
+                      (ts-src-keyword "from") (ts-src-string "./m")
+                      (ts-src-op ";")))))
+    (let ts-export
+        (result-value
+            (apply-typescript-bmf-rule "export-const"
+                (list (ts-src-keyword "export") (ts-src-keyword "const")
+                      (ts-src-name "answer") (ts-src-op "=")
+                      (ts-src-name "value") (ts-src-op ";")))))
+    (let ts-score
+        (add (add (node-string-len (node-child ts-import 0))
+                  (add (node-string-len (node-child ts-import 1))
+                       (node-string-len (node-child ts-import 2))))
+             (add (node-string-len (node-child ts-export 0))
+                  (node-string-len (node-child ts-export 1)))))
+
+    (let go-func
+        (result-value
+            (apply-go-bmf-rule "func2"
+                (list (go-src-keyword "func") (go-src-name "add")
+                      (go-src-op "(") (go-src-name "a") (go-src-op ",")
+                      (go-src-name "b") (go-src-op ")")
+                      (go-src-op "{") (go-src-op "}")))))
+    (let go-var
+        (result-value
+            (apply-go-bmf-rule "var-int"
+                (list (go-src-keyword "var") (go-src-name "answer")
+                      (go-src-op "=") (go-src-int "42")))))
+    (let go-score
+        (add (add (node-string-len (node-child go-func 0))
+                  (add (node-string-len (node-child go-func 1))
+                       (node-string-len (node-child go-func 2))))
+             (add (node-string-len (node-child go-var 0))
+                  (node_value (node-child go-var 1)))))
+
+    (let rust-macro
+        (result-value
+            (apply-rust-bmf-rule "macro-call"
+                (list (rust-src-name "println") (rust-src-op "!")
+                      (rust-src-op "(") (rust-src-string "value")
+                      (rust-src-op ")") (rust-src-op ";")))))
+    (let rust-struct
+        (result-value
+            (apply-rust-bmf-rule "struct"
+                (list (rust-src-keyword "struct") (rust-src-name "Packet")
+                      (rust-src-op "{") (rust-src-op "}")))))
+    (let rust-score
+        (add (add (node-string-len (node-child rust-macro 0))
+                  (node-string-len (node-child rust-macro 1)))
+             (node-string-len (node-child rust-struct 0))))
+
+    (add
+        (add (language-source-score python-form-source "python")
+             (language-source-score typescript-form-source "typescript"))
+        (add (language-source-score go-form-source "go")
+             (add (language-source-score rust-form-source "rust")
+                  (add ts-score
+                       (add go-score rust-score))))))

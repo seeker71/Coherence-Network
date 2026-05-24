@@ -1,0 +1,102 @@
+; python-bmf-reversible-band.fk - canonical Python reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    (let from-import-rt
+        (py-rt "from-import"
+            (list (py-keyword "from") (py-name "path")
+                  (py-keyword "import") (py-name "Item"))))
+    (let def-rt
+        (py-rt "def"
+            (list (py-keyword "def") (py-name "main")
+                  (py-op "(") (py-op ")") (py-op ":"))))
+    (let def2-rt
+        (py-rt "def2"
+            (list (py-keyword "def") (py-name "add")
+                  (py-op "(") (py-name "a") (py-op ",")
+                  (py-name "b") (py-op ")") (py-op ":"))))
+    (let class-rt
+        (py-rt "class"
+            (list (py-keyword "class") (py-name "Thing")
+                  (py-op ":") (py-keyword "pass"))))
+    (let assign-ident-rt
+        (py-rt "assign-ident"
+            (list (py-name "target") (py-op "=") (py-name "value"))))
+    (let assign-string-rt
+        (py-rt "assign-string"
+            (list (py-name "label") (py-op "=") (py-string "ready"))))
+    (let return-ident-rt
+        (py-rt "return-ident"
+            (list (py-keyword "return") (py-name "value"))))
+    (let return-string-rt
+        (py-rt "return-string"
+            (list (py-keyword "return") (py-string "ok"))))
+    (let raise-rt
+        (py-rt "raise"
+            (list (py-keyword "raise") (py-name "Error"))))
+    (let if-rt
+        (py-rt "if-header"
+            (list (py-keyword "if") (py-name "ready")
+                  (py-op ":") (py-keyword "pass"))))
+    (let while-rt
+        (py-rt "while-header"
+            (list (py-keyword "while") (py-name "running")
+                  (py-op ":") (py-keyword "pass"))))
+    (let for-rt
+        (py-rt "for-header"
+            (list (py-keyword "for") (py-name "item")
+                  (py-keyword "in") (py-name "items")
+                  (py-op ":") (py-keyword "pass"))))
+    (let call0-rt
+        (py-rt "call0"
+            (list (py-name "run") (py-op "(") (py-op ")"))))
+    (let call1-rt
+        (py-rt "call1-ident"
+            (list (py-name "use") (py-op "(") (py-name "value") (py-op ")"))))
+    (let attr-rt
+        (py-rt "attr"
+            (list (py-name "obj") (py-op ".") (py-name "field"))))
+    (let method-rt
+        (py-rt "method-call0"
+            (list (py-name "obj") (py-op ".") (py-name "run")
+                  (py-op "(") (py-op ")"))))
+    (let subscript-rt
+        (py-rt "subscript-ident-int"
+            (list (py-name "items") (py-op "[") (py-int "3") (py-op "]"))))
+    (let binop-mul-rt
+        (py-rt "binop-mul-ident"
+            (list (py-name "left") (py-op "*") (py-name "right"))))
+    (let binop-pow-rt
+        (py-rt "binop-pow-ident"
+            (list (py-name "base") (py-op "**") (py-name "power"))))
+    (let lambda-rt
+        (py-rt "lambda1-ident"
+            (list (py-keyword "lambda") (py-name "x")
+                  (py-op ":") (py-name "y"))))
+    (let await-rt
+        (py-rt "await-ident"
+            (list (py-keyword "await") (py-name "task"))))
+    (let yield-rt
+        (py-rt "yield-ident"
+            (list (py-keyword "yield") (py-name "value"))))
+
+    (sum
+        (list (rt-score from-import-rt) (rt-score def-rt)
+              (rt-score def2-rt) (rt-score class-rt)
+              (rt-score assign-ident-rt) (rt-score assign-string-rt)
+              (rt-score return-ident-rt) (rt-score return-string-rt)
+              (rt-score raise-rt) (rt-score if-rt)
+              (rt-score while-rt) (rt-score for-rt)
+              (rt-score call0-rt) (rt-score call1-rt)
+              (rt-score attr-rt) (rt-score method-rt)
+              (rt-score subscript-rt) (rt-score binop-mul-rt)
+              (rt-score binop-pow-rt) (rt-score lambda-rt)
+              (rt-score await-rt) (rt-score yield-rt))))

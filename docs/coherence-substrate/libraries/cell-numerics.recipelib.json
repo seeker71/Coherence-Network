@@ -5,7 +5,7 @@
     "generated_at": "2026-05-21T00:00:00Z",
     "generator_tongue": "hand-authored",
     "package_hint": 1,
-    "summary": "First sample recipe-library. Bundles the cell-mechanics numerics already authored as Form recipes in docs/coherence-substrate/cosine.form and cell-numerics.form. Each recipe carries Form (canonical source), Python (the host implementation in experiments/local-llm-cell-v0/organ.py), and TypeScript (didactic pseudocode showing how a Rust/Go/TS reader would see it) views. Demonstrates the three-layer architecture from lc-recipes-as-binary-library: lattice → portable library bytes → per-tongue source views."
+    "summary": "First sample recipe-library. Bundles the cell-mechanics numerics already authored as Form recipes in docs/coherence-substrate/cosine.form and cell-numerics.form. Each recipe carries Form (canonical source), Python (the host implementation in seedbank/local-llm-cell-v0/organ.py), and TypeScript (didactic pseudocode showing how a Rust/Go/TS reader would see it) views. Demonstrates the three-layer architecture from lc-recipes-as-binary-library: lattice → portable library bytes → per-tongue source views."
   },
   "dependencies": [],
   "language_cells": ["form", "python", "typescript"],

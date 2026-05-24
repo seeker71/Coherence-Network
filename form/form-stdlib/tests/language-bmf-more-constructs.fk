@@ -1,0 +1,139 @@
+; language-bmf-more-constructs.fk - broader reversible BMF language constructs
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn go-rt (rule-name objects)
+        (bmf-roundtrip (go-bmf-find-rule rule-name go-bmf-rules) objects))
+
+    (defn ts-rt (rule-name objects)
+        (bmf-roundtrip (typescript-bmf-find-rule rule-name typescript-bmf-rules) objects))
+
+    (defn rust-rt (rule-name objects)
+        (bmf-roundtrip (rust-bmf-find-rule rule-name rust-bmf-rules) objects))
+
+    (let go-switch
+        (go-rt "switch-case-empty"
+            (list (go-src-keyword "switch") (go-src-name "state")
+                  (go-src-op "{") (go-src-keyword "case")
+                  (go-src-name "ready") (go-src-op ":")
+                  (go-src-op "}"))))
+    (let go-select
+        (go-rt "select-recv-case-empty"
+            (list (go-src-keyword "select") (go-src-op "{")
+                  (go-src-keyword "case") (go-src-name "value")
+                  (go-src-op ":=") (go-src-op "<-")
+                  (go-src-name "updates") (go-src-op ":")
+                  (go-src-op "}"))))
+    (let go-chan-send
+        (go-rt "chan-send-ident"
+            (list (go-src-name "updates") (go-src-op "<-")
+                  (go-src-name "value"))))
+    (let go-chan-recv
+        (go-rt "chan-recv-ident"
+            (list (go-src-op "<-") (go-src-name "updates"))))
+    (let go-composite-empty
+        (go-rt "composite-empty"
+            (list (go-src-name "Packet") (go-src-op "{")
+                  (go-src-op "}"))))
+    (let go-composite-field
+        (go-rt "composite-field-ident"
+            (list (go-src-name "Packet") (go-src-op "{")
+                  (go-src-name "Value") (go-src-op ":")
+                  (go-src-name "value") (go-src-op "}"))))
+    (let go-pointer
+        (go-rt "pointer-type"
+            (list (go-src-op "*") (go-src-name "Packet"))))
+
+    (let ts-enum
+        (ts-rt "enum-empty"
+            (list (ts-src-keyword "enum") (ts-src-name "State")
+                  (ts-src-op "{") (ts-src-op "}"))))
+    (let ts-generic
+        (ts-rt "generic-function-return"
+            (list (ts-src-keyword "function") (ts-src-name "identity")
+                  (ts-src-op "<") (ts-src-name "T") (ts-src-op ">")
+                  (ts-src-op "(") (ts-src-name "value") (ts-src-op ":")
+                  (ts-src-name "T") (ts-src-op ")") (ts-src-op ":")
+                  (ts-src-name "T") (ts-src-op "{") (ts-src-keyword "return")
+                  (ts-src-name "value") (ts-src-op ";") (ts-src-op "}"))))
+    (let ts-interface-property
+        (ts-rt "interface-property"
+            (list (ts-src-keyword "interface") (ts-src-name "Props")
+                  (ts-src-op "{") (ts-src-name "title") (ts-src-op ":")
+                  (ts-src-name "string") (ts-src-op ";") (ts-src-op "}"))))
+    (let ts-optional
+        (ts-rt "optional-member"
+            (list (ts-src-name "props") (ts-src-op "?.")
+                  (ts-src-name "title"))))
+    (let ts-template
+        (ts-rt "template-ident"
+            (list (ts-src-op "`") (ts-src-string "hello ")
+                  (ts-src-op "${") (ts-src-name "name")
+                  (ts-src-op "}") (ts-src-string "!")
+                  (ts-src-op "`"))))
+
+    (let rust-let
+        (rust-rt "let-ident"
+            (list (rust-src-keyword "let") (rust-src-name "value")
+                  (rust-src-op "=") (rust-src-name "input")
+                  (rust-src-op ";"))))
+    (let rust-return
+        (rust-rt "return-ident"
+            (list (rust-src-keyword "return") (rust-src-name "value")
+                  (rust-src-op ";"))))
+    (let rust-match
+        (rust-rt "match-default-ident"
+            (list (rust-src-keyword "match") (rust-src-name "value")
+                  (rust-src-op "{") (rust-src-name "_")
+                  (rust-src-op "=>") (rust-src-name "value")
+                  (rust-src-op "}"))))
+    (let rust-if
+        (rust-rt "if-pass"
+            (list (rust-src-keyword "if") (rust-src-name "ready")
+                  (rust-src-op "{") (rust-src-op "}"))))
+    (let rust-loop
+        (rust-rt "loop-empty"
+            (list (rust-src-keyword "loop") (rust-src-op "{")
+                  (rust-src-op "}"))))
+    (let rust-async
+        (rust-rt "async-fn0"
+            (list (rust-src-keyword "async") (rust-src-keyword "fn")
+                  (rust-src-name "load") (rust-src-op "(")
+                  (rust-src-op ")") (rust-src-op "{")
+                  (rust-src-op "}"))))
+    (let rust-result
+        (rust-rt "fn-result-ok"
+            (list (rust-src-keyword "fn") (rust-src-name "build")
+                  (rust-src-op "(") (rust-src-op ")") (rust-src-op "->")
+                  (rust-src-name "Result") (rust-src-op "<")
+                  (rust-src-name "Packet") (rust-src-op ",")
+                  (rust-src-name "Error") (rust-src-op ">")
+                  (rust-src-op "{") (rust-src-name "Ok")
+                  (rust-src-op "(") (rust-src-name "packet")
+                  (rust-src-op ")") (rust-src-op "}"))))
+
+    (sum
+        (list (rt-score go-switch)
+              (rt-score go-select)
+              (rt-score go-chan-send)
+              (rt-score go-chan-recv)
+              (rt-score go-composite-empty)
+              (rt-score go-composite-field)
+              (rt-score go-pointer)
+              (rt-score ts-enum)
+              (rt-score ts-generic)
+              (rt-score ts-interface-property)
+              (rt-score ts-optional)
+              (rt-score ts-template)
+              (rt-score rust-let)
+              (rt-score rust-return)
+              (rt-score rust-match)
+              (rt-score rust-if)
+              (rt-score rust-loop)
+              (rt-score rust-async)
+              (rt-score rust-result))))

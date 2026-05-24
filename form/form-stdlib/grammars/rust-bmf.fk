@@ -1,0 +1,297 @@
+; grammars/rust-bmf.fk - Rust grammar as native BMF object rules
+
+(do
+    (let RS-BMF-USE    (make_nodeid 1 2 99 661))
+    (let RS-BMF-MOD    (make_nodeid 1 2 99 662))
+    (let RS-BMF-FN     (make_nodeid 1 2 99 663))
+    (let RS-BMF-STRUCT (make_nodeid 1 2 99 664))
+    (let RS-BMF-ENUM   (make_nodeid 1 2 99 665))
+    (let RS-BMF-IMPL   (make_nodeid 1 2 99 666))
+    (let RS-BMF-TRAIT  (make_nodeid 1 2 99 667))
+    (let RS-BMF-MACRO  (make_nodeid 1 2 99 668))
+    (let RS-BMF-LET    (make_nodeid 1 2 99 669))
+    (let RS-BMF-RETURN (make_nodeid 1 2 99 670))
+    (let RS-BMF-MATCH  (make_nodeid 1 2 99 671))
+    (let RS-BMF-IF     (make_nodeid 1 2 99 672))
+    (let RS-BMF-LOOP   (make_nodeid 1 2 99 673))
+    (let RS-BMF-ASYNC  (make_nodeid 1 2 99 674))
+    (let RS-BMF-RESULT (make_nodeid 1 2 99 675))
+
+    (defn rust-src-keyword (value) (bmf-atom "rust-keyword" value))
+    (defn rust-src-name (value) (bmf-atom "rust-name" value))
+    (defn rust-src-op (value) (bmf-atom "rust-op" value))
+    (defn rust-src-string (value) (bmf-atom "rust-string" value))
+
+    (defn rust-kw (value) (object-lit "rust-keyword" value))
+    (defn rust-op (value) (object-lit "rust-op" value))
+    (defn rust-name (capture-name) (list "capture" capture-name (object-lit "rust-name" "")))
+    (defn rust-string-lit (capture-name) (list "capture" capture-name (object-lit "rust-string" "")))
+
+    (defn rsbmf-value (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn rsbmf-string (objects capture-name)
+        (intern_trivial_string (rsbmf-value objects capture-name)))
+
+    (defn rsbmf-node-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn rsbmf-emit-use (objects)
+        (intern_node RS-BMF-USE (list (rsbmf-string objects "path"))))
+
+    (defn rsbmf-emit-mod (objects)
+        (intern_node RS-BMF-MOD (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-fn0 (objects)
+        (intern_node RS-BMF-FN (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-fn1 (objects)
+        (intern_node RS-BMF-FN
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-string objects "arg"))))
+
+    (defn rsbmf-emit-fn-return-add (objects)
+        (intern_node RS-BMF-FN
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-string objects "a")
+                           (rsbmf-string objects "atype")
+                           (rsbmf-string objects "b")
+                           (rsbmf-string objects "btype")
+                           (rsbmf-string objects "rtype")
+                           (rsbmf-string objects "left")
+                           (rsbmf-string objects "right"))))
+
+    (defn rsbmf-source-fn-return-add (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (rust-src-keyword "fn")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "(")
+                  (rust-src-name (node_value (nth kids 1)))
+                  (rust-src-op ":")
+                  (rust-src-name (node_value (nth kids 2)))
+                  (rust-src-op ",")
+                  (rust-src-name (node_value (nth kids 3)))
+                  (rust-src-op ":")
+                  (rust-src-name (node_value (nth kids 4)))
+                  (rust-src-op ")")
+                  (rust-src-op "->")
+                  (rust-src-name (node_value (nth kids 5)))
+                  (rust-src-op "{")
+                  (rust-src-keyword "return")
+                  (rust-src-name (node_value (nth kids 6)))
+                  (rust-src-op "+")
+                  (rust-src-name (node_value (nth kids 7)))
+                  (rust-src-op ";")
+                  (rust-src-op "}"))))
+
+    (defn rsbmf-emit-struct (objects)
+        (intern_node RS-BMF-STRUCT (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-enum (objects)
+        (intern_node RS-BMF-ENUM (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-impl (objects)
+        (intern_node RS-BMF-IMPL (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-trait (objects)
+        (intern_node RS-BMF-TRAIT (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-emit-macro (objects)
+        (intern_node RS-BMF-MACRO
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-string objects "arg"))))
+
+    (defn rsbmf-source-macro (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (list (rust-src-name (node_value (head kids)))
+                  (rust-src-op "!")
+                  (rust-src-op "(")
+                  (rust-src-string (node_value (head (tail kids))))
+                  (rust-src-op ")")
+                  (rust-src-op ";"))))
+
+    (defn rsbmf-emit-let-ident (objects)
+        (intern_node RS-BMF-LET
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-string objects "value"))))
+
+    (defn rsbmf-source-let-ident (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "let")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "=")
+                  (rust-src-name (node_value (nth kids 1)))
+                  (rust-src-op ";"))))
+
+    (defn rsbmf-emit-return-ident (objects)
+        (intern_node RS-BMF-RETURN (list (rsbmf-string objects "value"))))
+
+    (defn rsbmf-source-return-ident (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "return")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op ";"))))
+
+    (defn rsbmf-emit-match-default-ident (objects)
+        (intern_node RS-BMF-MATCH
+                     (list (rsbmf-string objects "value")
+                           (rsbmf-string objects "arm")
+                           (rsbmf-string objects "result"))))
+
+    (defn rsbmf-source-match-default-ident (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "match")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "{")
+                  (rust-src-name (node_value (nth kids 1)))
+                  (rust-src-op "=>")
+                  (rust-src-name (node_value (nth kids 2)))
+                  (rust-src-op "}"))))
+
+    (defn rsbmf-emit-if-pass (objects)
+        (intern_node RS-BMF-IF (list (rsbmf-string objects "cond"))))
+
+    (defn rsbmf-source-if-pass (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "if")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "{")
+                  (rust-src-op "}"))))
+
+    (defn rsbmf-emit-loop-empty (_objects)
+        (intern_node RS-BMF-LOOP (list)))
+
+    (defn rsbmf-source-loop-empty (_object)
+        (list (rust-src-keyword "loop") (rust-src-op "{") (rust-src-op "}")))
+
+    (defn rsbmf-emit-async-fn0 (objects)
+        (intern_node RS-BMF-ASYNC (list (rsbmf-string objects "name"))))
+
+    (defn rsbmf-source-async-fn0 (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "async")
+                  (rust-src-keyword "fn")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "(")
+                  (rust-src-op ")")
+                  (rust-src-op "{")
+                  (rust-src-op "}"))))
+
+    (defn rsbmf-emit-fn-result-ok (objects)
+        (intern_node RS-BMF-RESULT
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-string objects "result")
+                           (rsbmf-string objects "ok")
+                           (rsbmf-string objects "err")
+                           (rsbmf-string objects "ctor")
+                           (rsbmf-string objects "value"))))
+
+    (defn rsbmf-source-fn-result-ok (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "fn")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "(")
+                  (rust-src-op ")")
+                  (rust-src-op "->")
+                  (rust-src-name (node_value (nth kids 1)))
+                  (rust-src-op "<")
+                  (rust-src-name (node_value (nth kids 2)))
+                  (rust-src-op ",")
+                  (rust-src-name (node_value (nth kids 3)))
+                  (rust-src-op ">")
+                  (rust-src-op "{")
+                  (rust-src-name (node_value (nth kids 4)))
+                  (rust-src-op "(")
+                  (rust-src-name (node_value (nth kids 5)))
+                  (rust-src-op ")")
+                  (rust-src-op "}"))))
+
+    (let rust-bmf-native-section
+        (list
+            (bmf-native "rsbmf-emit-use" rsbmf-emit-use RS-BMF-USE)
+            (bmf-native "rsbmf-emit-mod" rsbmf-emit-mod RS-BMF-MOD)
+            (bmf-native "rsbmf-emit-fn0" rsbmf-emit-fn0 RS-BMF-FN)
+            (bmf-native "rsbmf-emit-fn1" rsbmf-emit-fn1 RS-BMF-FN)
+            (bmf-native "rsbmf-emit-fn-return-add" rsbmf-emit-fn-return-add RS-BMF-FN)
+            (bmf-native "rsbmf-emit-struct" rsbmf-emit-struct RS-BMF-STRUCT)
+            (bmf-native "rsbmf-emit-enum" rsbmf-emit-enum RS-BMF-ENUM)
+            (bmf-native "rsbmf-emit-impl" rsbmf-emit-impl RS-BMF-IMPL)
+            (bmf-native "rsbmf-emit-trait" rsbmf-emit-trait RS-BMF-TRAIT)
+            (bmf-native "rsbmf-emit-macro" rsbmf-emit-macro RS-BMF-MACRO)
+            (bmf-native "rsbmf-emit-let-ident" rsbmf-emit-let-ident RS-BMF-LET)
+            (bmf-native "rsbmf-emit-return-ident" rsbmf-emit-return-ident RS-BMF-RETURN)
+            (bmf-native "rsbmf-emit-match-default-ident" rsbmf-emit-match-default-ident RS-BMF-MATCH)
+            (bmf-native "rsbmf-emit-if-pass" rsbmf-emit-if-pass RS-BMF-IF)
+            (bmf-native "rsbmf-emit-loop-empty" rsbmf-emit-loop-empty RS-BMF-LOOP)
+            (bmf-native "rsbmf-emit-async-fn0" rsbmf-emit-async-fn0 RS-BMF-ASYNC)
+            (bmf-native "rsbmf-emit-fn-result-ok" rsbmf-emit-fn-result-ok RS-BMF-RESULT)))
+
+    section [rust.bmf] {
+      use ::= "use" $path:string ";" => rsbmf-emit-use;
+      pub-use ::= "pub" "use" $path:string ";" => rsbmf-emit-use;
+      mod ::= "mod" $name:name ";" => rsbmf-emit-mod;
+      pub-mod ::= "pub" "mod" $name:name ";" => rsbmf-emit-mod;
+      fn0 ::= "fn" $name:name "(" ")" "{" "}" => rsbmf-emit-fn0;
+      fn1 ::= "fn" $name:name "(" $arg:name ")" "{" "}" => rsbmf-emit-fn1;
+      fn-return-add ::= "fn" $name:name "(" $a:name ":" $atype:name "," $b:name ":" $btype:name ")" "->" $rtype:name "{" "return" $left:name "+" $right:name ";" "}" => rsbmf-emit-fn-return-add <= rsbmf-source-fn-return-add;
+      struct ::= "struct" $name:name "{" "}" => rsbmf-emit-struct;
+      enum ::= "enum" $name:name "{" "}" => rsbmf-emit-enum;
+      impl ::= "impl" $name:name "{" "}" => rsbmf-emit-impl;
+      trait ::= "trait" $name:name "{" "}" => rsbmf-emit-trait;
+      macro-call ::= $name:name "!" "(" $arg:string ")" ";" => rsbmf-emit-macro <= rsbmf-source-macro;
+      let-ident ::= "let" $name:name "=" $value:name ";" => rsbmf-emit-let-ident <= rsbmf-source-let-ident;
+      return-ident ::= "return" $value:name ";" => rsbmf-emit-return-ident <= rsbmf-source-return-ident;
+      match-default-ident ::= "match" $value:name "{" $arm:name "=>" $result:name "}" => rsbmf-emit-match-default-ident <= rsbmf-source-match-default-ident;
+      if-pass ::= "if" $cond:name "{" "}" => rsbmf-emit-if-pass <= rsbmf-source-if-pass;
+      loop-empty ::= "loop" "{" "}" => rsbmf-emit-loop-empty <= rsbmf-source-loop-empty;
+      async-fn0 ::= "async" "fn" $name:name "(" ")" "{" "}" => rsbmf-emit-async-fn0 <= rsbmf-source-async-fn0;
+      fn-result-ok ::= "fn" $name:name "(" ")" "->" $result:name "<" $ok:name "," $err:name ">" "{" $ctor:name "(" $value:name ")" "}" => rsbmf-emit-fn-result-ok <= rsbmf-source-fn-result-ok;
+    }
+
+    (defn rust-bmf-rule-name (r) (head r))
+
+    (defn rust-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (rust-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (rust-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-rust-bmf-rule (rule-name object-stream)
+        (apply-object-rule (rust-bmf-find-rule rule-name rust-bmf-rules) object-stream))
+
+    (let rust-recipe-section
+        (form-rule-recipe-section "rust"
+            (list
+                (compiler-rule "rust" "use" "Rust use source objects" rsbmf-emit-use)
+                (compiler-rule "rust" "mod" "Rust module source objects" rsbmf-emit-mod)
+                (compiler-rule "rust" "fn" "Rust function source objects" rsbmf-emit-fn0)
+                (compiler-rule "rust" "fn-return-add" "Rust function addition source objects" rsbmf-emit-fn-return-add)
+                (compiler-rule "rust" "struct" "Rust struct source objects" rsbmf-emit-struct)
+                (compiler-rule "rust" "impl" "Rust impl source objects" rsbmf-emit-impl)
+                (compiler-rule "rust" "trait" "Rust trait source objects" rsbmf-emit-trait)
+                (compiler-rule "rust" "let" "Rust let source objects" rsbmf-emit-let-ident)
+                (compiler-rule "rust" "return" "Rust return source objects" rsbmf-emit-return-ident)
+                (compiler-rule "rust" "match" "Rust match source objects" rsbmf-emit-match-default-ident)
+                (compiler-rule "rust" "if" "Rust if source objects" rsbmf-emit-if-pass)
+                (compiler-rule "rust" "loop" "Rust loop source objects" rsbmf-emit-loop-empty)
+                (compiler-rule "rust" "async-fn" "Rust async function source objects" rsbmf-emit-async-fn0)
+                (compiler-rule "rust" "result-fn" "Rust Result-returning function source objects" rsbmf-emit-fn-result-ok))))
+
+    (let rust-form-source
+        (form-source "rust" (list rust-bmf-second rust-recipe-section)))
+
+    (let rust-bmf-dialect
+        (bmf-dialect "rust"
+                     (form-section-object rust-bmf-second)
+                     rust-bmf-native-section
+                     rust-bmf-rules))
+
+    0)

@@ -1,0 +1,46 @@
+; image-bmf-reversible-band.fk - canonical image metadata reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn image-rt (rule-name objects)
+        (bmf-roundtrip (image-bmf-find-rule rule-name image-bmf-rules) objects))
+
+    (let png-rt
+        (image-rt "png"
+            (list (image-src-keyword "png") (image-src-int "1") (image-src-keyword "x")
+                  (image-src-int "2") (image-src-keyword "chunks") (image-src-int "2"))))
+    (let jpg-rt
+        (image-rt "jpg"
+            (list (image-src-keyword "jpg") (image-src-int "4") (image-src-keyword "x")
+                  (image-src-int "3"))))
+    (let jpeg-rt
+        (image-rt "jpeg"
+            (list (image-src-keyword "jpeg") (image-src-int "4") (image-src-keyword "x")
+                  (image-src-int "3"))))
+    (let svg-rt
+        (image-rt "svg"
+            (list (image-src-keyword "svg") (image-src-int "9") (image-src-keyword "x")
+                  (image-src-int "10"))))
+    (let bmp-rt
+        (image-rt "bmp"
+            (list (image-src-keyword "bmp") (image-src-int "7") (image-src-keyword "x")
+                  (image-src-int "8"))))
+    (let ico-rt
+        (image-rt "ico"
+            (list (image-src-keyword "ico") (image-src-int "16") (image-src-keyword "x")
+                  (image-src-int "16") (image-src-keyword "images") (image-src-int "1"))))
+    (let gif-rt
+        (image-rt "gif"
+            (list (image-src-keyword "gif") (image-src-int "5") (image-src-keyword "x")
+                  (image-src-int "6") (image-src-keyword "frames") (image-src-int "1"))))
+
+    (sum
+        (list (rt-score png-rt) (rt-score jpg-rt)
+              (rt-score jpeg-rt) (rt-score svg-rt)
+              (rt-score bmp-rt) (rt-score ico-rt)
+              (rt-score gif-rt))))

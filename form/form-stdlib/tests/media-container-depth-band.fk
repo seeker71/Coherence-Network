@@ -1,0 +1,86 @@
+; media-container-depth-band.fk - cross-media metadata depth
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk
+
+(do
+    (defn media-field (node index)
+        (node_value (nth (node_children node) index)))
+
+    (defn media-format-score (node want score)
+        (if (str_eq (media-field node 0) want) score 0))
+
+    (defn media-rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (let png-depth-bytes
+        (list 137 80 78 71 13 10 26 10
+              0 0 0 13 73 72 68 82
+              0 0 2 128 0 0 1 224 8 2 0 0 0
+              0 0 0 0
+              0 0 0 1 73 68 65 84
+              0
+              0 0 0 0
+              0 0 0 0 73 69 78 68
+              0 0 0 0))
+
+    (let wav-depth-bytes
+        (list 82 73 70 70 36 0 0 0 87 65 86 69
+              102 109 116 32 16 0 0 0 1 0 6 0
+              128 187 0 0 0 101 4 0 18 0 24 0))
+
+    (let avi-depth-bytes
+        (list 82 73 70 70 0 0 0 0 65 86 73 32
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0 0 0 0 0
+              64 156 0 0
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0 0 0 0 0 0 0 0 0
+              0 0 0 0
+              0 5 0 0 208 2 0 0))
+
+    (let png-node (image-detect-bytes png-depth-bytes))
+    (let wav-node (audio-detect-bytes wav-depth-bytes))
+    (let avi-node (video-detect-bytes avi-depth-bytes))
+
+    (let png-score
+        (add (media-format-score png-node "png" 1000)
+        (add (media-field png-node 1)
+        (add (media-field png-node 2)
+             (mul (media-field png-node 3) 10)))))
+
+    (let wav-score
+        (add (media-format-score wav-node "wav" 2000)
+        (add (media-field wav-node 1)
+        (add (mul (media-field wav-node 2) 10)
+             (media-field wav-node 3)))))
+
+    (let avi-score
+        (add (media-format-score avi-node "avi" 3000)
+        (add (media-field avi-node 1)
+        (add (media-field avi-node 2)
+             (media-field avi-node 3)))))
+
+    (let png-rt
+        (bmf-roundtrip
+            (image-bmf-find-rule "png" image-bmf-rules)
+            (list (image-src-keyword "png") (image-src-int "640") (image-src-keyword "x")
+                  (image-src-int "480") (image-src-keyword "chunks") (image-src-int "3"))))
+
+    (let wav-rt
+        (bmf-roundtrip
+            (audio-bmf-find-rule "wav" audio-bmf-rules)
+            (list (audio-src-keyword "wav") (audio-src-int "48000") (audio-src-keyword "hz")
+                  (audio-src-int "6") (audio-src-keyword "channels")
+                  (audio-src-int "24") (audio-src-keyword "bits"))))
+
+    (let avi-rt
+        (bmf-roundtrip
+            (video-bmf-find-rule "avi" video-bmf-rules)
+            (list (video-src-keyword "avi") (video-src-int "1280") (video-src-keyword "x")
+                  (video-src-int "720") (video-src-keyword "fps") (video-src-int "25"))))
+
+    (sum (list png-score wav-score avi-score
+               (media-rt-score png-rt)
+               (media-rt-score wav-rt)
+               (media-rt-score avi-rt))))

@@ -1,0 +1,150 @@
+; runtime-grammar.fk - dynamic grammar registry and discovery.
+;
+; This module sits above engine.fk. The engine owns BMF object matching and
+; reversible rule execution; this module owns runtime discovery, selector
+; registration, and config-driven loading policy.
+
+section [form.action] {
+    let FORM-RUNTIME-GRAMMAR-SELECTOR = make_nodeid(8, 45, 6, 16);
+    let FORM-RUNTIME-GRAMMAR-BINDING = make_nodeid(8, 45, 6, 17);
+    let FORM-RUNTIME-GRAMMAR-REGISTRY = make_nodeid(8, 45, 6, 18);
+    let FORM-RUNTIME-GRAMMAR-PLUGIN = make_nodeid(8, 45, 6, 19);
+    let FORM-RUNTIME-DYNAMIC-PARSE = make_nodeid(8, 45, 6, 20);
+
+    def form-runtime-grammar-selector(selector_kind, selector_value) = list(intern_node(FORM-RUNTIME-GRAMMAR-SELECTOR, list(selector_kind, intern_trivial_string(selector_value))), selector_kind, selector_value);
+    def form-runtime-grammar-selector-node(selector) = nth(selector, 0);
+    def form-runtime-grammar-selector-kind(selector) = nth(selector, 1);
+    def form-runtime-grammar-selector-value(selector) = nth(selector, 2);
+
+    def form-runtime-grammar-binding(selector_kind, selector_value, capsule, dialect, source_surface, form_surface, parse_kind, emit_kind) = list(intern_node(FORM-RUNTIME-GRAMMAR-BINDING, list(selector_kind, intern_trivial_string(selector_value), form-recipe-capsule-node(capsule))), selector_kind, selector_value, capsule, dialect, source_surface, form_surface, parse_kind, emit_kind);
+    def form-runtime-grammar-binding-node(binding) = nth(binding, 0);
+    def form-runtime-grammar-binding-selector-kind(binding) = nth(binding, 1);
+    def form-runtime-grammar-binding-selector-value(binding) = nth(binding, 2);
+    def form-runtime-grammar-binding-capsule(binding) = nth(binding, 3);
+    def form-runtime-grammar-binding-dialect(binding) = nth(binding, 4);
+    def form-runtime-grammar-binding-source-surface(binding) = nth(binding, 5);
+    def form-runtime-grammar-binding-form-surface(binding) = nth(binding, 6);
+    def form-runtime-grammar-binding-parse-kind(binding) = nth(binding, 7);
+    def form-runtime-grammar-binding-emit-kind(binding) = nth(binding, 8);
+
+    def form-runtime-grammar-plugin(capsule, dialect, source_surface, form_surface, parse_kind, emit_kind, selectors) = list(intern_node(FORM-RUNTIME-GRAMMAR-PLUGIN, list(form-recipe-capsule-node(capsule), intern_trivial_int(len(selectors)))), capsule, dialect, source_surface, form_surface, parse_kind, emit_kind, selectors);
+    def form-runtime-grammar-plugin-node(plugin) = nth(plugin, 0);
+    def form-runtime-grammar-plugin-capsule(plugin) = nth(plugin, 1);
+    def form-runtime-grammar-plugin-dialect(plugin) = nth(plugin, 2);
+    def form-runtime-grammar-plugin-source-surface(plugin) = nth(plugin, 3);
+    def form-runtime-grammar-plugin-form-surface(plugin) = nth(plugin, 4);
+    def form-runtime-grammar-plugin-parse-kind(plugin) = nth(plugin, 5);
+    def form-runtime-grammar-plugin-emit-kind(plugin) = nth(plugin, 6);
+    def form-runtime-grammar-plugin-selectors(plugin) = nth(plugin, 7);
+    def form-runtime-grammar-binding-from-plugin(plugin, selector) = form-runtime-grammar-binding(form-runtime-grammar-selector-kind(selector), form-runtime-grammar-selector-value(selector), form-runtime-grammar-plugin-capsule(plugin), form-runtime-grammar-plugin-dialect(plugin), form-runtime-grammar-plugin-source-surface(plugin), form-runtime-grammar-plugin-form-surface(plugin), form-runtime-grammar-plugin-parse-kind(plugin), form-runtime-grammar-plugin-emit-kind(plugin));
+    def bmf-runtime-dialect-plugin(root, dialect, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selectors) {
+        let capsule = bmf-runtime-dialect-capsule(root, dialect, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected);
+        form-runtime-grammar-plugin(capsule, dialect, source_surface, form_surface, parse_kind, emit_kind, selectors);
+    }
+
+    def form-runtime-grammar-registry(recipe_registry, bindings) = list(intern_node(FORM-RUNTIME-GRAMMAR-REGISTRY, list(form-recipe-registry-node(recipe_registry), intern_trivial_int(len(bindings)))), recipe_registry, bindings);
+    def form-runtime-grammar-registry-node(registry) = nth(registry, 0);
+    def form-runtime-grammar-registry-recipe-registry(registry) = nth(registry, 1);
+    def form-runtime-grammar-registry-bindings(registry) = nth(registry, 2);
+    def form-runtime-grammar-registry-empty() = form-runtime-grammar-registry(form-recipe-registry-empty(), empty);
+    def form-runtime-grammar-registry-add(registry, binding) = form-runtime-grammar-registry(form-recipe-registry-add-capsule(form-runtime-grammar-registry-recipe-registry(registry), form-runtime-grammar-binding-capsule(binding)), cons(binding, form-runtime-grammar-registry-bindings(registry)));
+    def form-runtime-grammar-registry-add-binding-only(registry, binding) = form-runtime-grammar-registry(form-runtime-grammar-registry-recipe-registry(registry), cons(binding, form-runtime-grammar-registry-bindings(registry)));
+    def form-runtime-grammar-registry-add-plugin-selectors(registry, plugin, selectors) = if nil?(selectors) then registry else form-runtime-grammar-registry-add-plugin-selectors(form-runtime-grammar-registry-add-binding-only(registry, form-runtime-grammar-binding-from-plugin(plugin, head(selectors))), plugin, tail(selectors));
+    def form-runtime-grammar-registry-add-plugin(registry, plugin) {
+        let with_capsule = form-runtime-grammar-registry(form-recipe-registry-add-capsule(form-runtime-grammar-registry-recipe-registry(registry), form-runtime-grammar-plugin-capsule(plugin)), form-runtime-grammar-registry-bindings(registry));
+        form-runtime-grammar-registry-add-plugin-selectors(with_capsule, plugin, form-runtime-grammar-plugin-selectors(plugin));
+    }
+    def form-runtime-grammar-binding-matches?(binding, selector_kind, selector_value) = and(node_eq(form-runtime-grammar-binding-selector-kind(binding), selector_kind), str_eq(form-runtime-grammar-binding-selector-value(binding), selector_value));
+    def form-runtime-grammar-resolve-list(bindings, selector_kind, selector_value, missing) = if nil?(bindings) then missing else if form-runtime-grammar-binding-matches?(head(bindings), selector_kind, selector_value) then head(bindings) else form-runtime-grammar-resolve-list(tail(bindings), selector_kind, selector_value, missing);
+    def form-runtime-grammar-resolve(registry, selector_kind, selector_value, missing) = form-runtime-grammar-resolve-list(form-runtime-grammar-registry-bindings(registry), selector_kind, selector_value, missing);
+    def form-runtime-grammar-resolve-value-list(bindings, selector_value, missing) = if nil?(bindings) then missing else if str_eq(form-runtime-grammar-binding-selector-value(head(bindings)), selector_value) then head(bindings) else form-runtime-grammar-resolve-value-list(tail(bindings), selector_value, missing);
+    def form-runtime-grammar-resolve-value(registry, selector_value, missing) = form-runtime-grammar-resolve-value-list(form-runtime-grammar-registry-bindings(registry), selector_value, missing);
+    def form-runtime-grammar-parse(registry, selector_kind, selector_value, rule_name, source, anchor, ctx, missing) {
+        let binding = form-runtime-grammar-resolve(registry, selector_kind, selector_value, missing);
+        if nil?(binding) then missing else form-recipe-registry-run-flex(form-runtime-grammar-registry-recipe-registry(registry), form-runtime-grammar-binding-source-surface(binding), form-runtime-grammar-binding-form-surface(binding), bmf-runtime-grammar-request(anchor, form-runtime-grammar-binding-dialect(binding), rule_name, source), anchor, ctx, 2, missing);
+    }
+    def form-runtime-grammar-emit(registry, selector_kind, selector_value, rule_name, object, anchor, ctx, missing) {
+        let binding = form-runtime-grammar-resolve(registry, selector_kind, selector_value, missing);
+        if nil?(binding) then missing else form-recipe-registry-run-flex(form-runtime-grammar-registry-recipe-registry(registry), form-runtime-grammar-binding-form-surface(binding), form-runtime-grammar-binding-source-surface(binding), bmf-runtime-grammar-object-request(anchor, form-runtime-grammar-binding-dialect(binding), rule_name, object), anchor, ctx, 2, missing);
+    }
+
+    def form-runtime-find-at-len?(s, needle, s_len, needle_len, i, j) = if eq(j, needle_len) then true else if ge(add(i, j), s_len) then false else if str_eq(char_at(s, add(i, j)), char_at(needle, j)) then form-runtime-find-at-len?(s, needle, s_len, needle_len, i, add(j, 1)) else false;
+    def form-runtime-find-from-len(s, needle, s_len, needle_len, i) = if gt(add(i, needle_len), s_len) then sub(0, 1) else if form-runtime-find-at-len?(s, needle, s_len, needle_len, i, 0) then i else form-runtime-find-from-len(s, needle, s_len, needle_len, add(i, 1));
+    def form-runtime-find-from(s, needle, i) = form-runtime-find-from-len(s, needle, str_len(s), str_len(needle), i);
+    def form-runtime-find-char-from(s, ch, i) = if ge(i, str_len(s)) then sub(0, 1) else if str_eq(char_at(s, i), ch) then i else form-runtime-find-char-from(s, ch, add(i, 1));
+    def form-runtime-space?(ch) = or(str_eq(ch, " "), or(str_eq(ch, "\n"), or(str_eq(ch, "\t"), str_eq(ch, "\r"))));
+    def form-runtime-skip-spaces(s, i) = if ge(i, str_len(s)) then i else if form-runtime-space?(char_at(s, i)) then form-runtime-skip-spaces(s, add(i, 1)) else i;
+    def form-runtime-rtrim-index(s, i) = if le(i, 0) then 0 else if form-runtime-space?(char_at(s, sub(i, 1))) then form-runtime-rtrim-index(s, sub(i, 1)) else i;
+    def form-runtime-trim(s) {
+        let start = form-runtime-skip-spaces(s, 0);
+        let end = form-runtime-rtrim-index(s, str_len(s));
+        if ge(start, end) then "" else substring(s, start, end);
+    }
+    def form-runtime-line-end(s, i) {
+        let e = form-runtime-find-char-from(s, "\n", i);
+        if lt(e, 0) then str_len(s) else e;
+    }
+    def form-runtime-manifest-value(text, key) {
+        let pos = form-runtime-find-from(text, key, 0);
+        if lt(pos, 0) then "" else form-runtime-trim(substring(text, add(pos, str_len(key)), form-runtime-line-end(text, pos)));
+    }
+    def form-runtime-extension-finish(path, last_dot) = if lt(last_dot, 0) then "" else substring(path, last_dot, str_len(path));
+    def form-runtime-extension-next-dot(path, i, last_dot) = if str_eq(char_at(path, i), ".") then i else last_dot;
+    def form-runtime-extension-loop(path, i, last_dot) = if ge(i, str_len(path)) then form-runtime-extension-finish(path, last_dot) else form-runtime-extension-loop(path, add(i, 1), form-runtime-extension-next-dot(path, i, last_dot));
+    def form-runtime-file-extension(path) = form-runtime-extension-loop(path, 0, sub(0, 1));
+    def form-runtime-extension-stem(extension) = if gt(str_len(extension), 0) then substring(extension, 1, str_len(extension)) else extension;
+    def form-runtime-word-end(text, i) = if ge(i, str_len(text)) then i else if form-runtime-space?(char_at(text, i)) then i else form-runtime-word-end(text, add(i, 1));
+    def form-runtime-source-words-loop(text, i, word_kind) {
+        let p = form-runtime-skip-spaces(text, i);
+        let e = form-runtime-word-end(text, p);
+        if ge(p, str_len(text)) then empty else cons(bmf-atom(word_kind, substring(text, p, e)), form-runtime-source-words-loop(text, e, word_kind));
+    }
+    def form-runtime-source-words(text, word_kind) = form-runtime-source-words-loop(text, 0, word_kind);
+    def form-runtime-dynamic-emit-value(objects) = intern_node(FORM-RUNTIME-DYNAMIC-PARSE, list(intern_trivial_string(bmf-collection-value(objects, "value"))));
+    def form-runtime-dialect-first-word-kind(dialect) {
+        let rule = head(bmf-dialect-rules(dialect));
+        let pattern = rule-pattern(rule);
+        let first = head(tail(pattern));
+        nth(first, 1);
+    }
+    def form-runtime-grammar-plugin-from-manifest-text(root, text, extension, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section) {
+        let dialect_name = form-runtime-manifest-value(text, "dialect=");
+        let block = form-runtime-manifest-value(text, "block=");
+        let word_kind = form-runtime-manifest-value(text, "word=");
+        let rule_name = form-runtime-manifest-value(text, "rule=");
+        let literal = form-runtime-manifest-value(text, "literal=");
+        let dialect = bmf-dialect(dialect_name, empty, empty, list(list(rule_name, list("sequence", object-lit(word_kind, literal), list("capture", "value", object-lit(word_kind, ""))), form-runtime-dynamic-emit-value)));
+        bmf-runtime-dialect-plugin(root, dialect, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, list(form-runtime-grammar-selector(selector_extension, extension), form-runtime-grammar-selector(selector_section, block)));
+    }
+    def form-runtime-grammar-load-plugin-file(registry, plugin_path, extension, root, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section) {
+        let plugin = form-runtime-grammar-plugin-from-manifest-text(root, read_file(plugin_path), extension, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section);
+        form-runtime-grammar-registry-add-plugin(registry, plugin);
+    }
+    def form-runtime-grammar-config-path-loop(text, extension, i, missing) {
+        let pos = form-runtime-find-from(text, "extension=", i);
+        let ext_end = if lt(pos, 0) then 0 else form-runtime-line-end(text, pos);
+        let value = if lt(pos, 0) then "" else form-runtime-trim(substring(text, add(pos, str_len("extension=")), ext_end));
+        let grammar_pos = if lt(pos, 0) then sub(0, 1) else form-runtime-find-from(text, "grammar=", ext_end);
+        let grammar_end = if lt(grammar_pos, 0) then 0 else form-runtime-line-end(text, grammar_pos);
+        let grammar = if lt(grammar_pos, 0) then missing else form-runtime-trim(substring(text, add(grammar_pos, str_len("grammar=")), grammar_end));
+        if lt(pos, 0) then missing else if str_eq(value, extension) then grammar else form-runtime-grammar-config-path-loop(text, extension, grammar_end, missing);
+    }
+    def form-runtime-grammar-config-path(config_text, extension, missing) = form-runtime-grammar-config-path-loop(config_text, extension, 0, missing);
+    def form-runtime-grammar-load-config-for-file(registry, config_path, source_filename, root, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section, missing) {
+        let extension = form-runtime-file-extension(source_filename);
+        let plugin_path = form-runtime-grammar-config-path(read_file(config_path), extension, missing);
+        if str_eq(plugin_path, missing) then registry else form-runtime-grammar-load-plugin-file(registry, plugin_path, extension, root, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section);
+    }
+    def form-runtime-grammar-parse-file-text(registry, source_filename, rule_name, source_text, ctx, missing) {
+        let extension = form-runtime-file-extension(source_filename);
+        let binding = form-runtime-grammar-resolve-value(registry, extension, missing);
+        if nil?(binding) then missing else form-runtime-grammar-parse(registry, form-runtime-grammar-binding-selector-kind(binding), extension, rule_name, form-runtime-source-words(source_text, form-runtime-dialect-first-word-kind(form-runtime-grammar-binding-dialect(binding))), source_filename, ctx, missing);
+    }
+    def form-runtime-grammar-parse-source-file(registry, source_filename, rule_name, ctx, missing) = form-runtime-grammar-parse-file-text(registry, source_filename, rule_name, read_file(source_filename), ctx, missing);
+    def form-runtime-grammar-load-and-parse-source-file(registry, config_path, source_filename, root, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section, rule_name, ctx, missing) {
+        let loaded = form-runtime-grammar-load-config-for-file(registry, config_path, source_filename, root, source_surface, form_surface, parse_kind, emit_kind, effect, reversibility, lossiness, deterministic, proof_kind, proof_recipe, expected, selector_extension, selector_section, missing);
+        form-runtime-grammar-parse-source-file(loaded, source_filename, rule_name, ctx, missing);
+    }
+
+    0;
+}

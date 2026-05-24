@@ -339,8 +339,8 @@ let plus_two_three = intern_recipe(
 # ─────────────────────────────────────────────────────────────────────
 #
 # "Everything else can be written in Form" implies a floor. Two
-# vertical-slice kernels in `experiments/form-kernel-go/` (854 LoC)
-# and `experiments/form-kernel-rust/` (737 LoC) carry the floor end-
+# vertical-slice kernels in `form/form-kernel-go/` (854 LoC)
+# and `form/form-kernel-rust/` (737 LoC) carry the floor end-
 # to-end — NodeID + content-addressed intern + recipe walker (22
 # RBasic arms) + frame/closure system + native primitives (strings,
 # lists, file I/O) + S-expression bootstrap reader. Both read `.fk`
@@ -349,7 +349,7 @@ let plus_two_three = intern_recipe(
 # both kernels.
 #
 # Runtime comparison + honest read on language alignment lives in
-# `experiments/form-kernel-comparison.md`. After three focused
+# `form/kernel-comparison.md`. After three focused
 # optimization breaths each (slice returns, interned NameIDs, arena
 # frames + recipe-fold), both kernels stay under 1000 lines and
 # produce identical results across every sample. Go ends up

@@ -1,0 +1,129 @@
+; typescript-bmf-reversible-band.fk - canonical TypeScript reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/typescript-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn ts-rt (rule-name objects)
+        (bmf-roundtrip (typescript-bmf-find-rule rule-name typescript-bmf-rules) objects))
+
+    (let import-named-rt
+        (ts-rt "import-named"
+            (list (ts-src-keyword "import") (ts-src-op "{")
+                  (ts-src-string "View") (ts-src-op "}")
+                  (ts-src-keyword "from") (ts-src-string "./view")
+                  (ts-src-op ";"))))
+    (let import-default-rt
+        (ts-rt "import-default"
+            (list (ts-src-keyword "import") (ts-src-name "View")
+                  (ts-src-keyword "from") (ts-src-string "./view")
+                  (ts-src-op ";"))))
+    (let export-const-rt
+        (ts-rt "export-const"
+            (list (ts-src-keyword "export") (ts-src-keyword "const")
+                  (ts-src-name "answer") (ts-src-op "=")
+                  (ts-src-name "value") (ts-src-op ";"))))
+    (let function-rt
+        (ts-rt "function-decl"
+            (list (ts-src-keyword "function") (ts-src-name "run")
+                  (ts-src-op "(") (ts-src-string "")
+                  (ts-src-op ")") (ts-src-op "{") (ts-src-op "}"))))
+    (let function-add-rt
+        (ts-rt "function-return-add"
+            (list (ts-src-keyword "function") (ts-src-name "add")
+                  (ts-src-op "(") (ts-src-name "a") (ts-src-op ":")
+                  (ts-src-name "number") (ts-src-op ",") (ts-src-name "b")
+                  (ts-src-op ":") (ts-src-name "number") (ts-src-op ")")
+                  (ts-src-op ":") (ts-src-name "number") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "a") (ts-src-op "+")
+                  (ts-src-name "b") (ts-src-op ";") (ts-src-op "}"))))
+    (let export-function-rt
+        (ts-rt "export-function"
+            (list (ts-src-keyword "export") (ts-src-keyword "function")
+                  (ts-src-name "run") (ts-src-op "(") (ts-src-string "")
+                  (ts-src-op ")") (ts-src-op "{") (ts-src-op "}"))))
+    (let class-rt
+        (ts-rt "class-decl"
+            (list (ts-src-keyword "class") (ts-src-name "View")
+                  (ts-src-op "{") (ts-src-op "}"))))
+    (let interface-rt
+        (ts-rt "interface-decl"
+            (list (ts-src-keyword "interface") (ts-src-name "Props")
+                  (ts-src-op "{") (ts-src-op "}"))))
+    (let type-rt
+        (ts-rt "type-alias"
+            (list (ts-src-keyword "type") (ts-src-name "ID")
+                  (ts-src-op "=") (ts-src-name "string") (ts-src-op ";"))))
+    (let call-rt
+        (ts-rt "call1"
+            (list (ts-src-name "use") (ts-src-op "(")
+                  (ts-src-name "value") (ts-src-op ")") (ts-src-op ";"))))
+    (let await-rt
+        (ts-rt "await-expr"
+            (list (ts-src-keyword "await") (ts-src-name "task")
+                  (ts-src-op ";"))))
+    (let jsx-rt
+        (ts-rt "jsx-self"
+            (list (ts-src-op "<") (ts-src-name "View")
+                  (ts-src-op "/") (ts-src-op ">"))))
+    (let return-ident-rt
+        (ts-rt "return-ident"
+            (list (ts-src-keyword "return") (ts-src-name "value")
+                  (ts-src-op ";"))))
+    (let return-string-rt
+        (ts-rt "return-string"
+            (list (ts-src-keyword "return") (ts-src-string "ok")
+                  (ts-src-op ";"))))
+    (let assign-ident-rt
+        (ts-rt "assign-ident"
+            (list (ts-src-name "target") (ts-src-op "=")
+                  (ts-src-name "value") (ts-src-op ";"))))
+    (let assign-int-rt
+        (ts-rt "assign-int"
+            (list (ts-src-name "target") (ts-src-op "=")
+                  (ts-src-int "42") (ts-src-op ";"))))
+    (let member-rt
+        (ts-rt "member"
+            (list (ts-src-name "obj") (ts-src-op ".")
+                  (ts-src-name "field"))))
+    (let index-rt
+        (ts-rt "index-int"
+            (list (ts-src-name "items") (ts-src-op "[")
+                  (ts-src-int "3") (ts-src-op "]"))))
+    (let if-rt
+        (ts-rt "if-pass"
+            (list (ts-src-keyword "if") (ts-src-op "(")
+                  (ts-src-name "ready") (ts-src-op ")")
+                  (ts-src-op "{") (ts-src-op "}"))))
+    (let for-rt
+        (ts-rt "for-of-pass"
+            (list (ts-src-keyword "for") (ts-src-op "(")
+                  (ts-src-keyword "const") (ts-src-name "item")
+                  (ts-src-keyword "of") (ts-src-name "items")
+                  (ts-src-op ")") (ts-src-op "{") (ts-src-op "}"))))
+    (let arrow-rt
+        (ts-rt "arrow1"
+            (list (ts-src-name "x") (ts-src-op "=>") (ts-src-name "y"))))
+    (let array-rt
+        (ts-rt "array-empty"
+            (list (ts-src-op "[") (ts-src-op "]"))))
+    (let object-rt
+        (ts-rt "object-empty"
+            (list (ts-src-op "{") (ts-src-op "}"))))
+
+    (sum
+        (list (rt-score import-named-rt) (rt-score import-default-rt)
+              (rt-score export-const-rt) (rt-score function-rt)
+              (rt-score function-add-rt) (rt-score export-function-rt)
+              (rt-score class-rt) (rt-score interface-rt)
+              (rt-score type-rt) (rt-score call-rt)
+              (rt-score await-rt) (rt-score jsx-rt)
+              (rt-score return-ident-rt) (rt-score return-string-rt)
+              (rt-score assign-ident-rt) (rt-score assign-int-rt)
+              (rt-score member-rt) (rt-score index-rt)
+              (rt-score if-rt) (rt-score for-rt)
+              (rt-score arrow-rt) (rt-score array-rt)
+              (rt-score object-rt))))

@@ -6,7 +6,7 @@
 ;
 ; The Form here is intentionally minimal — it sketches the dispatch
 ; geometry as living-Form expressions. Each (defn ...) below is either
-; already implemented in experiments/form-stdlib/ or names the next
+; already implemented in form/form-stdlib/ or names the next
 ; breath that lands it. Reading top-to-bottom traces the
 ; architecture; reading any one form-shape names a contract.
 

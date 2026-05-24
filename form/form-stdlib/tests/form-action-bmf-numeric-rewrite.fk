@@ -1,0 +1,144 @@
+; form-action-bmf-numeric-rewrite.fk - rebuild numeric.fk through BMF objects.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call0 (name) (fa-call name (empty)))
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+    (defn fa-call3 (name a b c) (fa-call name (list a b c)))
+    (defn fa-call5 (name a b c d e) (fa-call name (list a b c d e)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-def (name param-list body)
+        (form-action-bmf-value "def"
+            (list
+                (fsc-action-src-kw "def")
+                (fsc-action-src-name name)
+                (fsc-action-src-params param-list)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr body)
+                (fsc-action-src-op ";"))))
+
+    (let n (fa-ident "n"))
+    (let a (fa-ident "a"))
+    (let b (fa-ident "b"))
+    (let xs (fa-ident "xs"))
+    (let xs-tail (fa-call1 "tail" xs))
+
+    (let negative-def
+        (fa-def "negative?" (list "n")
+            (fa-call2 "lt" n (fa-int "0"))))
+
+    (let abs-def
+        (fa-def "abs" (list "n")
+            (fa-if
+                (fa-call1 "negative?" n)
+                (fa-call2 "sub" (fa-int "0") n)
+                n)))
+
+    (let min2-def
+        (fa-def "min2" (list "a" "b")
+            (fa-if (fa-call2 "lt" a b) a b)))
+
+    (let max2-def
+        (fa-def "max2" (list "a" "b")
+            (fa-if (fa-call2 "gt" a b) a b)))
+
+    (let sum-def
+        (fa-def "sum" (list "xs")
+            (fa-if
+                (fa-call2 "eq" (fa-call1 "len" xs) (fa-int "0"))
+                (fa-int "0")
+                (fa-call2 "add"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "sum" xs-tail)))))
+
+    (let product-def
+        (fa-def "product" (list "xs")
+            (fa-if
+                (fa-call2 "eq" (fa-call1 "len" xs) (fa-int "0"))
+                (fa-int "1")
+                (fa-call2 "mul"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "product" xs-tail)))))
+
+    (let minimum-def
+        (fa-def "minimum" (list "xs")
+            (fa-if
+                (fa-call2 "eq" (fa-call1 "len" xs-tail) (fa-int "0"))
+                (fa-call1 "head" xs)
+                (fa-call2 "min2"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "minimum" xs-tail)))))
+
+    (let maximum-def
+        (fa-def "maximum" (list "xs")
+            (fa-if
+                (fa-call2 "eq" (fa-call1 "len" xs-tail) (fa-int "0"))
+                (fa-call1 "head" xs)
+                (fa-call2 "max2"
+                    (fa-call1 "head" xs)
+                    (fa-call1 "maximum" xs-tail)))))
+
+    (let values
+        (fa-call5 "list" (fa-int "4") (fa-int "2") (fa-int "8") (fa-int "1") (fa-int "6")))
+    (let factors
+        (fa-call5 "list" (fa-int "1") (fa-int "2") (fa-int "3") (fa-int "4") (fa-int "5")))
+    (let totals
+        (fa-call3 "list" (fa-int "10") (fa-int "20") (fa-int "30")))
+
+    (let score
+        (fa-call2 "add"
+            (fa-call1 "abs" (fa-call2 "sub" (fa-int "0") (fa-int "7")))
+            (fa-call2 "add"
+                (fa-call2 "min2" (fa-int "3") (fa-int "9"))
+                (fa-call2 "add"
+                    (fa-call2 "max2" (fa-int "3") (fa-int "9"))
+                    (fa-call2 "add"
+                        (fa-call1 "minimum" values)
+                        (fa-call2 "add"
+                            (fa-call1 "maximum" values)
+                            (fa-call2 "add"
+                                (fa-call1 "product" factors)
+                                (fa-call1 "sum" totals))))))))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list negative-def abs-def min2-def max2-def sum-def product-def minimum-def maximum-def score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (add (walk_recipe program)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

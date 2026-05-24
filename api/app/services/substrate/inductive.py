@@ -1,6 +1,6 @@
 """INDUCTIVE / CONSTRUCTOR / CHOICE arms — algebraic datatypes on the substrate.
 
-This module mirrors :mod:`experiments/form-kernel-ts/src/inductive.ts`. An
+This module mirrors :mod:`form/form-kernel-ts/src/inductive.ts`. An
 inductive type is a substrate recipe whose category is ``RBasic.INDUCTIVE``
 (slot 71). Its shape — defined here once, read everywhere by
 content-addressing — is::
@@ -48,7 +48,7 @@ SAME substrate cell. That is what the substrate's promise of structural
 equivalence buys us here.
 
 Cross-kernel: TS at slot 71 / 72 / 35 (see
-``experiments/form-kernel-ts/src/inductive.ts``); Python at the same
+``form/form-kernel-ts/src/inductive.ts``); Python at the same
 slots. A Form program that defines ``Nat`` in either kernel produces
 matching NodeIDs for ``Nat``, ``zero``, and ``succ`` — content-addressing
 across kernels.

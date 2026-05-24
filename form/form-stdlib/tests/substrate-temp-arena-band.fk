@@ -1,0 +1,21 @@
+; substrate-temp-arena-band.fk - temporary substrate objects can be released.
+;
+; The kernel keeps only primitive host storage. Form code owns the lifetime
+; boundary by marking before transient work and releasing after it is consumed.
+
+(do
+    (let category (make_nodeid 9 9 9 1))
+    (let before (substrate_counts))
+    (let mark (substrate_mark))
+    (let temp-name (intern_trivial_string (str_concat "temporary-" "arena-object")))
+    (let temp-int (intern_trivial_int 42))
+    (let temp-node (intern_node category (list temp-name temp-int)))
+    (let mid (substrate_counts))
+    (let released (substrate_release mark))
+    (let after (substrate_counts))
+    (sum (list
+        (if (gt released 0) 1000 0)
+        (if (gt (nth mid 0) (nth before 0)) 2000 0)
+        (if (gt (nth mid 1) (nth before 1)) 3000 0)
+        (if (eq (nth after 0) (nth before 0)) 4000 0)
+        (if (eq (nth after 1) (nth before 1)) 5000 0))))

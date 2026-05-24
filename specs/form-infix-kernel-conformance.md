@@ -6,11 +6,11 @@ source:
     symbols: [form-infix-operators]
   - file: scripts/verify_kernel_conformance.py
     symbols: [run_kernel(), run_python_kernel(), run_external_kernel(), main()]
-  - file: experiments/form-question-kernels/rust/src/main.rs
+  - file: seedbank/form-question-kernels/rust/src/main.rs
     symbols: []
-  - file: experiments/form-question-kernels/go/question_kernel.go
+  - file: seedbank/form-question-kernels/go/question_kernel.go
     symbols: []
-  - file: experiments/form-kernel-ts/src/conformance.ts
+  - file: form/form-kernel-ts/src/conformance.ts
     symbols: []
   - file: api/tests/test_kernel_conformance_harness.py
     symbols: [test_python_kernel_passes_infix_operator_vector(), test_rust_go_and_typescript_kernels_pass_infix_operator_vector()]
@@ -61,7 +61,7 @@ The core built-ins vector proved that Rust, Go, and TypeScript can return shared
 
 - `2026-05-20` - `docs/coherence-substrate/kernel-conformance/form-core-builtins.json` - the existing pure value vector shape.
 - `2026-05-20` - `api/app/services/substrate/form_runtime.py` - Python runtime behavior for operator precedence and truthy boolean flow.
-- `2026-05-20` - `experiments/form-question-kernels/rust/src/main.rs`, `experiments/form-question-kernels/go/question_kernel.go`, and `experiments/form-kernel-ts/src/conformance.ts` - existing narrow executable kernels.
+- `2026-05-20` - `seedbank/form-question-kernels/rust/src/main.rs`, `seedbank/form-question-kernels/go/question_kernel.go`, and `form/form-kernel-ts/src/conformance.ts` - existing narrow executable kernels.
 
 ## Vector Contract
 
@@ -82,9 +82,9 @@ python3 scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/k
 ## Files to Create/Modify
 
 - `docs/coherence-substrate/kernel-conformance/form-infix-operators.json` - shared infix-operator vector.
-- `experiments/form-question-kernels/rust/src/main.rs` - add the narrow literal infix parser/evaluator.
-- `experiments/form-question-kernels/go/question_kernel.go` - add the narrow literal infix parser/evaluator.
-- `experiments/form-kernel-ts/src/conformance.ts` - add the narrow literal infix parser/evaluator.
+- `seedbank/form-question-kernels/rust/src/main.rs` - add the narrow literal infix parser/evaluator.
+- `seedbank/form-question-kernels/go/question_kernel.go` - add the narrow literal infix parser/evaluator.
+- `form/form-kernel-ts/src/conformance.ts` - add the narrow literal infix parser/evaluator.
 - `api/tests/test_kernel_conformance_harness.py` - assert Python/Rust/Go/TypeScript pass the infix vector.
 - `docs/coherence-substrate/kernel-conformance/README.md` - document the vector.
 - `docs/coherence-substrate/form-language.md` - state the widened but bounded conformance surface.
@@ -123,7 +123,7 @@ python3 scripts/validate_spec_quality.py --file specs/form-infix-kernel-conforma
 
 - Follow-up task closed by `specs/form-control-flow-kernel-conformance.md`: add a lexical block vector for `do`, `let`, and `if`.
 - Follow-up task: add variables and function-call operands inside infix expressions.
-- Follow-up task: rename or split the experiment runner directory once it carries enough surface to justify a non-question-specific module boundary.
+- Follow-up task: rename or split the seed runner directory once it carries enough surface to justify a non-question-specific module boundary.
 
 ## Task Card
 
@@ -133,9 +133,9 @@ files_allowed:
   - docs/coherence-substrate/kernel-conformance/form-infix-operators.json
   - docs/coherence-substrate/kernel-conformance/README.md
   - docs/coherence-substrate/form-language.md
-  - experiments/form-question-kernels/rust/src/main.rs
-  - experiments/form-question-kernels/go/question_kernel.go
-  - experiments/form-kernel-ts/src/conformance.ts
+  - seedbank/form-question-kernels/rust/src/main.rs
+  - seedbank/form-question-kernels/go/question_kernel.go
+  - form/form-kernel-ts/src/conformance.ts
   - api/tests/test_kernel_conformance_harness.py
   - specs/form-core-kernel-conformance.md
   - specs/form-infix-kernel-conformance.md

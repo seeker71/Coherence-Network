@@ -1,0 +1,13 @@
+; lists.fk - exercises map / filter / foldl / range / sum on the stdlib.
+; Loaded after form-stdlib/core.fk.
+;
+; Expected: 220 - sum of squares of evens in 1..10
+;   range(1, 11)               -> [1..10]
+;   filter(even?, _)            -> [2, 4, 6, 8, 10]
+;   map(square, _)              -> [4, 16, 36, 64, 100]
+;   sum(_)                      -> 220
+
+section [form.action] {
+    def square(x) = mul(x, x);
+    sum(map(square, filter(even?, range(1, 11))));
+}

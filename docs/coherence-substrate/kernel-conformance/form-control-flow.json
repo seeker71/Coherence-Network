@@ -65,7 +65,7 @@
     },
     "rust": {
       "status": "implemented",
-      "entrypoint": "experiments/form-question-kernels/rust/src/main.rs",
+      "entrypoint": "seedbank/form-question-kernels/rust/src/main.rs",
       "proof": "api/tests/test_kernel_conformance_harness.py",
       "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel rust",
       "runner": [
@@ -73,33 +73,33 @@
         "run",
         "--quiet",
         "--manifest-path",
-        "experiments/form-question-kernels/rust/Cargo.toml",
+        "seedbank/form-question-kernels/rust/Cargo.toml",
         "--",
         "{vector}"
       ]
     },
     "go": {
       "status": "implemented",
-      "entrypoint": "experiments/form-question-kernels/go/question_kernel.go",
+      "entrypoint": "seedbank/form-question-kernels/go/question_kernel.go",
       "proof": "api/tests/test_kernel_conformance_harness.py",
       "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel go",
       "runner": [
         "go",
         "run",
-        "experiments/form-question-kernels/go/question_kernel.go",
+        "seedbank/form-question-kernels/go/question_kernel.go",
         "{vector}"
       ]
     },
     "typescript": {
       "status": "implemented",
-      "entrypoint": "experiments/form-kernel-ts/src/conformance.ts",
+      "entrypoint": "form/form-kernel-ts/src/conformance.ts",
       "proof": "api/tests/test_kernel_conformance_harness.py",
       "harness": "scripts/verify_kernel_conformance.py --vector docs/coherence-substrate/kernel-conformance/form-control-flow.json --kernel typescript",
       "runner": [
         "npx",
         "--yes",
         "tsx",
-        "experiments/form-kernel-ts/src/conformance.ts",
+        "form/form-kernel-ts/src/conformance.ts",
         "{vector}"
       ]
     }

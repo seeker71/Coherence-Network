@@ -44,9 +44,9 @@ body carries an implementation in**.
 The body holds four kernel implementations:
 
 - **Python** — [`api/app/services/substrate/`](../../../api/app/services/substrate/) (the production kernel)
-- **TypeScript** — [`experiments/form-kernel-ts/`](../../../experiments/form-kernel-ts/) (already reaching native parity per the [`form-kernel-comparison.md`](../../../experiments/form-kernel-comparison.md) record)
-- **Rust** — [`experiments/form-kernel-rust/`](../../../experiments/form-kernel-rust/)
-- **Go** — [`experiments/form-kernel-go/`](../../../experiments/form-kernel-go/)
+- **TypeScript** — [`form/form-kernel-ts/`](../../../form/form-kernel-ts/) (already reaching native parity per the [`form-kernel-comparison.md`](../../../form/kernel-comparison.md) record)
+- **Rust** — [`form/form-kernel-rust/`](../../../form/form-kernel-rust/)
+- **Go** — [`form/form-kernel-go/`](../../../form/form-kernel-go/)
 
 Each is the same substrate kernel expressed in a different host
 language. Each is currently *opaque source* — to understand its
@@ -65,7 +65,7 @@ Language cell with BMF-style grammar rules:
 The kernel knowing itself is the same gesture as a cell knowing its
 own NodeID is the same gesture as a memory carrying its own
 `crc32(file:line)` provenance plane
-([`experiments/memory-as-framebuffer-v0/`](../../../experiments/memory-as-framebuffer-v0/)).
+([`seedbank/memory-as-framebuffer-v0/`](../../../seedbank/memory-as-framebuffer-v0/)).
 Fractal self-knowledge across three altitudes.
 
 ## The Cross-Kernel Equivalence Property
@@ -82,7 +82,7 @@ With BMF grammars for every host language, the equivalence becomes
     @recipe(parse(@language(python),
                   read_bytes("api/app/services/substrate/kernel.py")))
     @recipe(parse(@language(rust),
-                  read_bytes("experiments/form-kernel-rust/src/kernel.rs")))
+                  read_bytes("form/form-kernel-rust/src/kernel.rs")))
 ```
 
 The substrate walks both Form trees. Where structural shapes agree
@@ -146,7 +146,7 @@ substrate carries the live equivalence.
 **Hot-swap implementations.** A cell that wants the Rust kernel's
 speed for one operation while keeping the Python kernel's
 hot-loadability for another can swap individual operations via
-[`substrate_dispatch`](../../../experiments/local-llm-cell-v0/substrate_dispatch.py)
+[`substrate_dispatch`](../../../seedbank/local-llm-cell-v0/substrate_dispatch.py)
 — registering the Rust-compiled native function under the same
 recipe name. Per-operation polyglot composition; one structural
 identity.
@@ -233,10 +233,10 @@ For cells using kernels:
 
 - **The four kernel implementations:**
   - [`api/app/services/substrate/kernel.py`](../../../api/app/services/substrate/kernel.py) — the production Python kernel
-  - [`experiments/form-kernel-ts/`](../../../experiments/form-kernel-ts/) — the TypeScript port reaching native parity
-  - [`experiments/form-kernel-rust/`](../../../experiments/form-kernel-rust/) — the Rust port
-  - [`experiments/form-kernel-go/`](../../../experiments/form-kernel-go/) — the Go port
-  - [`experiments/form-kernel-comparison.md`](../../../experiments/form-kernel-comparison.md) — the current hand-authored comparison; this concept turns it into a substrate query
+  - [`form/form-kernel-ts/`](../../../form/form-kernel-ts/) — the TypeScript port reaching native parity
+  - [`form/form-kernel-rust/`](../../../form/form-kernel-rust/) — the Rust port
+  - [`form/form-kernel-go/`](../../../form/form-kernel-go/) — the Go port
+  - [`form/kernel-comparison.md`](../../../form/kernel-comparison.md) — the current hand-authored comparison; this concept turns it into a substrate query
 - **[`lc-parsers-as-recipes`](lc-parsers-as-recipes.md)** — the architectural choice this concept extends: grammar rules as first-class Recipes; AST is bootstrap; BMF-pattern is the destination.
 - **[`api/app/services/substrate/grammar.py`](../../../api/app/services/substrate/grammar.py)** — the body's existing BMF-seed (Rule cell-domain, `register_form_rule`, pattern primitives). The substrate already carries the machinery; this concept names what falls out when every kernel's host language is wired through it.
 - **Bjorg's BMF (2000)** — the direct lineage. Grammar rules as data; backtracking-as-architecture; the parser itself is a tree of rules.

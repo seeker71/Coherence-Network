@@ -1,0 +1,34 @@
+; audio-bmf-reversible-band.fk - canonical audio metadata reverse recipes
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/audio-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn audio-rt (rule-name objects)
+        (bmf-roundtrip (audio-bmf-find-rule rule-name audio-bmf-rules) objects))
+
+    (defn audio-source-for (format rate channels bits)
+        (list (audio-src-keyword format)
+              (audio-src-int rate)
+              (audio-src-keyword "hz")
+              (audio-src-int channels)
+              (audio-src-keyword "channels")
+              (audio-src-int bits)
+              (audio-src-keyword "bits")))
+
+    (let wav-rt (audio-rt "wav" (audio-source-for "wav" "44100" "2" "16")))
+    (let mp3-rt (audio-rt "mp3" (audio-source-for "mp3" "0" "0" "0")))
+    (let flac-rt (audio-rt "flac" (audio-source-for "flac" "0" "0" "0")))
+    (let ogg-rt (audio-rt "ogg" (audio-source-for "ogg" "0" "0" "0")))
+    (let aiff-rt (audio-rt "aiff" (audio-source-for "aiff" "0" "2" "16")))
+    (let m4a-rt (audio-rt "m4a" (audio-source-for "m4a" "0" "0" "0")))
+    (let aac-rt (audio-rt "aac" (audio-source-for "aac" "0" "0" "0")))
+
+    (sum
+        (list (rt-score wav-rt) (rt-score mp3-rt)
+              (rt-score flac-rt) (rt-score ogg-rt)
+              (rt-score aiff-rt) (rt-score m4a-rt)
+              (rt-score aac-rt))))

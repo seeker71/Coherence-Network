@@ -208,7 +208,7 @@ at the language altitude.
 to swap the Python implementation of `cosine` for a Rust-compiled
 native binary doesn't change the recipe NodeID; it adds a new
 implementation backend that registers under the recipe's name (via
-[`substrate_dispatch.py`](../../../experiments/local-llm-cell-v0/substrate_dispatch.py)).
+[`substrate_dispatch.py`](../../../seedbank/local-llm-cell-v0/substrate_dispatch.py)).
 Callers' source paths are unchanged; the runtime route picks the
 fastest registered implementation. The library is the contract; the
 implementations are the carriers.
@@ -287,7 +287,7 @@ For cells reading recipes:
   **[cell-numerics.form](../../coherence-substrate/cell-numerics.form)** —
   the body's first recipes in Form-native form; the candidate
   contents of the first sample library.
-- **[substrate_dispatch.py](../../../experiments/local-llm-cell-v0/substrate_dispatch.py)** —
+- **[substrate_dispatch.py](../../../seedbank/local-llm-cell-v0/substrate_dispatch.py)** —
   the runtime route that lets library-carried recipes take over from
   host-intrinsic implementations.
 - **NUMS-Go (2023) lineage** — content-addressed numeric lattice

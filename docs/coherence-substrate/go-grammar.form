@@ -3,7 +3,7 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 # Stub Language cell for Go. The Rust and Go kernels under
-# experiments/form-kernel-rust/ and experiments/form-kernel-go/
+# form/form-kernel-rust/ and form/form-kernel-go/
 # become inspectable through their respective Language cells once
 # this lands (per lc-the-kernel-knows-itself).
 #
@@ -211,7 +211,7 @@ defn go_lang = language_cell_shape {
 #
 # Once go-grammar lands and form_cli convert --tongue go is wired:
 #
-#   form_cli convert in --tongue go experiments/form-kernel-go/kernel.go
+#   form_cli convert in --tongue go form/form-kernel-go/kernel.go
 #     → Form object tree with go_file_shape root, every function as
 #       go_func_decl_shape, source_attribution stamped from go/ast's
 #       token positions.
@@ -222,7 +222,7 @@ defn go_lang = language_cell_shape {
 #     @recipe(parse(@language(python),
 #                   read_bytes("api/app/services/substrate/kernel.py")))
 #     @recipe(parse(@language(go),
-#                   read_bytes("experiments/form-kernel-go/kernel.go")))
+#                   read_bytes("form/form-kernel-go/kernel.go")))
 #
 # return the cross-kernel structural alignment as substrate truth.
 # Per lc-the-kernel-knows-itself.

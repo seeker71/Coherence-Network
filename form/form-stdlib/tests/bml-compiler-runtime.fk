@@ -1,0 +1,88 @@
+; tests/bml-compiler-runtime.fk - BML compiler model lowers to Form objects and BMA-like runtime
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn source-value (m name)
+        (bmf-collection-value (cell-undo (result-object m)) name))
+
+    (let class-match
+        (apply-bml-bmf-rule "class-header"
+            (list (bml-src-keyword "class") (bml-src-name "Demo")
+                  (bml-src-op ":") (bml-src-name "Application"))))
+    (let class-kids (node_children (result-value class-match)))
+    (let class-score
+        (add (str_len (node_value (head class-kids)))
+             (str_len (node_value (head (tail class-kids)))))) ; Demo + Application = 15
+
+    (let method-match
+        (apply-bml-bmf-rule "method-return-add"
+            (list (bml-src-name "int") (bml-src-name "Main")
+                  (bml-src-op "(") (bml-src-op ")") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "1")
+                  (bml-src-op "+") (bml-src-int "2")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let method-program (bml-compile-program (result-value method-match)))
+    (let method-score
+        (add (bma-run-value method-program)
+             (len (comp-program-ops method-program)))) ; 3 + 4 = 7
+
+    (let choose-match
+        (apply-bml-bmf-rule "choose-fail-int"
+            (list (bml-src-keyword "choose") (bml-src-op "{")
+                  (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-op ",") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "8")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let choose-score
+        (bma-run-value (bml-compile-program (result-value choose-match)))) ; 8
+
+    (let state-match
+        (apply-bml-bmf-rule "state-int"
+            (list (bml-src-keyword "save") (bml-src-op ";")
+                  (bml-src-int "10") (bml-src-op ";")
+                  (bml-src-keyword "discard") (bml-src-op ";"))))
+    (let state-score
+        (bma-run-value (bml-compile-program (result-value state-match)))) ; 10
+
+    (let section-match
+        (apply-bml-bmf-rule "section-header"
+            (list (bml-src-keyword "section") (bml-src-op "[")
+                  (bml-src-prop "public") (bml-src-op "]"))))
+    (let section-kids (node_children (result-value section-match)))
+    (let section-prop-node (head (node_children (head section-kids))))
+    (let section-score (str_len (node_value section-prop-node))) ; public = 6
+
+    (let field-match
+        (apply-bml-bmf-rule "field"
+            (list (bml-src-name "String") (bml-src-name "Name") (bml-src-op ";"))))
+    (let field-score (len (node_children (result-value field-match)))) ; type + name = 2
+
+    (let const-match
+        (apply-bml-bmf-rule "const-int"
+            (list (bml-src-keyword "const") (bml-src-name "int") (bml-src-name "Answer")
+                  (bml-src-op "=") (bml-src-int "7") (bml-src-op ";"))))
+    (let const-kids (node_children (result-value const-match)))
+    (let const-value-node (head (tail (tail const-kids))))
+    (let const-score (node_value (head (node_children const-value-node)))) ; 7
+
+    (let reference-score (len (nth bml-bmf-reference-model 4))) ; 10 BMF reference classes
+    (let source-score
+        (add (str_to_int (source-value method-match "left"))
+             (str_to_int (source-value method-match "right")))) ; undo source 1 + 2 = 3
+
+    (add class-score
+    (add method-score
+    (add choose-score
+    (add state-score
+    (add section-score
+    (add field-score
+    (add const-score
+    (add reference-score source-score))))))))
+)

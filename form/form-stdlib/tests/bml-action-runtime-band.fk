@@ -1,0 +1,177 @@
+; tests/bml-action-runtime-band.fk - BML action/runtime band for cut, restore, and source reversal
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (let field-rule (bml-bmf-find-rule "field" bml-bmf-rules))
+    (let field-source
+        (list (bml-src-name "String") (bml-src-name "Title") (bml-src-op ";")))
+    (let field-roundtrip (bmf-roundtrip field-rule field-source))
+    (let field-object (bmf-roundtrip-first-object field-roundtrip))
+    (let field-node (bmf-object-value field-object))
+    (let field-source-back (bmf-roundtrip-source field-roundtrip))
+    (let field-source-score
+        (add (bool-score (bmf-roundtrip-node-eq? field-roundtrip) 1)
+        (add (bool-score (node_eq (node_category field-node) BML-AST-FIELD) 2)
+        (add (len (node_children field-node))
+             (add (str_len (bmf-object-value (head field-source-back)))
+                  (str_len (bmf-object-value (head (tail field-source-back)))))))))
+
+    (let restore-node
+        (bml-ast-block
+            (list (bml-ast-save 0)
+                  (bml-ast-int 4)
+                  (bml-ast-restore 0)
+                  (bml-ast-return
+                      (bml-ast-add (bml-ast-int 2) (bml-ast-int 5))))))
+    (let restore-program (bml-compile-program restore-node))
+    (let restore-state (bma-run-program restore-program))
+    (let restore-score
+        (add (bma-run-value restore-program)
+        (add (len (comp-program-ops restore-program))
+             (mode-score restore-state "return" 16))))
+
+    (let cut-node
+        (bml-ast-choose
+            (list
+                (bml-ast-block (list (bml-ast-int 11) (bml-ast-cut 0)))
+                (bml-ast-block (list (bml-ast-return (bml-ast-int 99)))))))
+    (let cut-program (bml-compile-program cut-node))
+    (let cut-state (bma-run-program cut-program))
+    (let cut-score
+        (add (comp-vm-pop-value cut-state)
+        (add (len (comp-program-ops cut-program))
+             (mode-score cut-state "cut" 32))))
+
+    (let package-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "package-simple" bml-bmf-rules)
+            (list (bml-src-keyword "package") (bml-src-name "demo.core")
+                  (bml-src-op ";"))))
+    (let import-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "import-star-simple" bml-bmf-rules)
+            (list (bml-src-keyword "import") (bml-src-name "demo.lib")
+                  (bml-src-op ".*") (bml-src-op ";"))))
+    (let class-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "class-header" bml-bmf-rules)
+            (list (bml-src-keyword "class") (bml-src-name "Widget")
+                  (bml-src-op ":") (bml-src-name "Object"))))
+    (let interface-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "interface-header" bml-bmf-rules)
+            (list (bml-src-keyword "interface") (bml-src-name "Runnable")
+                  (bml-src-op ":") (bml-src-name "Base"))))
+
+    (let const-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "const-int" bml-bmf-rules)
+            (list (bml-src-keyword "const") (bml-src-name "int")
+                  (bml-src-name "Answer") (bml-src-op "=")
+                  (bml-src-int "13") (bml-src-op ";"))))
+    (let const-program
+        (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object const-rt))))
+
+    (let return-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "return-int" bml-bmf-rules)
+            (list (bml-src-keyword "return") (bml-src-int "21")
+                  (bml-src-op ";"))))
+    (let return-program
+        (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object return-rt))))
+    (let return-state (bma-run-program return-program))
+
+    (let break-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "break-simple" bml-bmf-rules)
+            (list (bml-src-keyword "break") (bml-src-name "outer")
+                  (bml-src-op ";"))))
+    (let break-state
+        (bma-run-program
+            (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object break-rt)))))
+
+    (let continue-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "continue-simple" bml-bmf-rules)
+            (list (bml-src-keyword "continue") (bml-src-name "outer")
+                  (bml-src-op ";"))))
+    (let continue-state
+        (bma-run-program
+            (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object continue-rt)))))
+
+    (let throw-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "throw-int" bml-bmf-rules)
+            (list (bml-src-keyword "throw") (bml-src-int "4")
+                  (bml-src-op ";"))))
+    (let throw-state
+        (bma-run-program
+            (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object throw-rt)))))
+
+    (let try-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "try-throw-return" bml-bmf-rules)
+            (list (bml-src-keyword "try") (bml-src-op "{")
+                  (bml-src-keyword "throw") (bml-src-int "4")
+                  (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-keyword "catch") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "5")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let try-program
+        (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object try-rt))))
+    (let try-state (bma-run-program try-program))
+
+    (let char-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "char-lit" bml-bmf-rules)
+            (list (bml-src-op "'") (bml-src-string "x") (bml-src-op "'"))))
+    (let array-rt
+        (bmf-roundtrip
+            (bml-bmf-find-rule "array-int" bml-bmf-rules)
+            (list (bml-src-op "#(") (bml-src-int "6") (bml-src-op ")"))))
+
+    (let header-score
+        (add (bool-score (bmf-roundtrip-node-eq? package-rt) 64)
+        (add (bool-score (bmf-roundtrip-node-eq? import-rt) 128)
+        (add (bool-score (bmf-roundtrip-node-eq? class-rt) 256)
+             (bool-score (bmf-roundtrip-node-eq? interface-rt) 512)))))
+
+    (let action-score
+        (add (bool-score (bmf-roundtrip-node-eq? const-rt) 1024)
+        (add (bma-run-value const-program)
+        (add (bool-score (bmf-roundtrip-node-eq? return-rt) 2048)
+        (add (bma-run-value return-program)
+        (add (mode-score return-state "return" 4096)
+        (add (bool-score (bmf-roundtrip-node-eq? break-rt) 8192)
+        (add (mode-score break-state "break" 16384)
+        (add (bool-score (bmf-roundtrip-node-eq? continue-rt) 32768)
+        (add (mode-score continue-state "continue" 65536)
+        (add (bool-score (bmf-roundtrip-node-eq? throw-rt) 131072)
+        (add (mode-score throw-state "throw" 262144)
+        (add (bool-score (bmf-roundtrip-node-eq? try-rt) 524288)
+        (add (bma-run-value try-program)
+             (mode-score try-state "return" 1048576)))))))))))))))
+
+    (let char-program
+        (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object char-rt))))
+    (let array-program
+        (bml-compile-program (bmf-object-value (bmf-roundtrip-first-object array-rt))))
+    (let literal-score
+        (add (bool-score (bmf-roundtrip-node-eq? char-rt) 2097152)
+        (add (str_len (bma-run-value char-program))
+        (add (bool-score (bmf-roundtrip-node-eq? array-rt) 4194304)
+             (bma-run-value array-program)))))
+
+    (add field-source-score
+    (add restore-score
+    (add cut-score
+    (add header-score
+    (add action-score literal-score)))))
+)

@@ -14,11 +14,11 @@ source:
     symbols: [test_python_kernel_passes_question_effect_vector(), test_rust_go_and_typescript_kernels_pass_question_effect_vector(), test_default_runs_all_implemented_kernels()]
   - file: scripts/verify_kernel_conformance.py
     symbols: [run_kernel(), run_python_kernel(), run_external_kernel(), main()]
-  - file: experiments/form-question-kernels/rust/src/main.rs
+  - file: seedbank/form-question-kernels/rust/src/main.rs
     symbols: []
-  - file: experiments/form-question-kernels/go/question_kernel.go
+  - file: seedbank/form-question-kernels/go/question_kernel.go
     symbols: []
-  - file: experiments/form-kernel-ts/src/conformance.ts
+  - file: form/form-kernel-ts/src/conformance.ts
     symbols: []
   - file: docs/coherence-substrate/kernel-conformance/agent-question-effects.json
     symbols: [form-question-effects]
@@ -164,10 +164,10 @@ Rust, Go, and TypeScript are implemented for this vector only. They parse the qu
 - `api/tests/test_substrate_form_question_effects.py` - prove Form question effects and endpoint runtime mode.
 - `api/tests/test_kernel_conformance_harness.py` - prove the executable conformance harness.
 - `scripts/verify_kernel_conformance.py` - consume vector cases and validate kernel transcripts.
-- `experiments/form-question-kernels/rust/Cargo.toml` - Rust question-effect runner manifest.
-- `experiments/form-question-kernels/rust/src/main.rs` - Rust question-effect runner.
-- `experiments/form-question-kernels/go/question_kernel.go` - Go question-effect runner.
-- `experiments/form-kernel-ts/src/conformance.ts` - TypeScript question-effect runner.
+- `seedbank/form-question-kernels/rust/Cargo.toml` - Rust question-effect runner manifest.
+- `seedbank/form-question-kernels/rust/src/main.rs` - Rust question-effect runner.
+- `seedbank/form-question-kernels/go/question_kernel.go` - Go question-effect runner.
+- `form/form-kernel-ts/src/conformance.ts` - TypeScript question-effect runner.
 - `docs/coherence-substrate/form-language.md` - document the Form-visible question effect.
 - `docs/coherence-substrate/kernel-conformance/agent-question-effects.json` - define the Rust/Go/TypeScript/Python runner contract.
 - `docs/coherence-substrate/kernel-conformance/README.md` - document the runner contract.
@@ -223,10 +223,10 @@ files_allowed:
   - api/tests/test_substrate_form_question_effects.py
   - api/tests/test_kernel_conformance_harness.py
   - scripts/verify_kernel_conformance.py
-  - experiments/form-question-kernels/rust/Cargo.toml
-  - experiments/form-question-kernels/rust/src/main.rs
-  - experiments/form-question-kernels/go/question_kernel.go
-  - experiments/form-kernel-ts/src/conformance.ts
+  - seedbank/form-question-kernels/rust/Cargo.toml
+  - seedbank/form-question-kernels/rust/src/main.rs
+  - seedbank/form-question-kernels/go/question_kernel.go
+  - form/form-kernel-ts/src/conformance.ts
   - docs/coherence-substrate/form-language.md
   - docs/coherence-substrate/kernel-conformance/README.md
   - docs/coherence-substrate/kernel-conformance/agent-question-effects.json

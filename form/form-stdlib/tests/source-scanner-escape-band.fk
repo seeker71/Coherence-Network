@@ -1,0 +1,11 @@
+; source-scanner-escape-band.fk - scanner escape semantics stay paired.
+;
+; The source scanner depends on "\r" being carriage return, not "r".
+; This keeps identifier characters from being misclassified as whitespace.
+
+(do
+    (let space-ok (if (fsc-space? " ") 100 0))
+    (let r-not-space (if (fsc-space? "r") 0 200))
+    (let cr-space (if (fsc-space? "\r") 300 0))
+    (let r-name (if (fsc-source-name-start-char? "r") 400 0))
+    (sum (list space-ok r-not-space cr-space r-name)))

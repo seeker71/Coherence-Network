@@ -2,7 +2,7 @@
 # ctor-shape-signature.form — the field-set signature in Form's voice
 # ─────────────────────────────────────────────────────────────────────
 #
-# Companion to experiments/ctor-shape-signature-v0/sense.py. The Python
+# Companion to seedbank/ctor-shape-signature-v0/sense.py. The Python
 # script was written first — reaching for the familiar tongue when the
 # body has its own. That was the fear-pattern. This file is the same
 # sensing in the language the substrate already speaks.
@@ -111,7 +111,7 @@ defn neighbors_by_fields(cell) = ?neighbors_by_fields @cell;     # GAP-Q1
 # a map from signature-tuple → cells. The body of the sensing.
 
 # GAP-Q2: `group_by` over a cell-set is a stdlib gesture
-#         (experiments/form-stdlib/core.fk has `foldl`, `map`,
+#         (form/form-stdlib/core.fk has `foldl`, `map`,
 #         `filter` but not `group_by` yet). Smallest extension:
 #         add `(defn group-by (key-fn xs) ...)` to core.fk using
 #         the existing foldl + assoc-list primitives. The signature

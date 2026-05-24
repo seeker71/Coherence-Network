@@ -1,0 +1,60 @@
+; bmf-generic-language-scanner-band.fk - one scanner feeds several BMF grammars.
+;
+; The cursor/scanner path is shared. Dialects provide keyword sets and emitted
+; BMF object kind names; completed BMF rules do the language-specific meaning.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk
+
+section [form.action] {
+    def obj(result) = fsc-scan-result-object(result);
+    def next(result, dialect) = fsc-source-scan-next-dialect(fsc-scan-result-cursor(result), dialect);
+    def first(source, dialect) = fsc-source-scan-next-dialect(fsc-source-cursor(source, 0, 1, 0), dialect);
+    def result_value(match) = bmf-object-value(cap-get(match-caps(match), "result"));
+    def node_child(node, index) = nth(node_children(node), index);
+    def score_match(match, score) = if match?(match) then score else 0;
+    def score_str(value, want, score) = if str_eq(value, want) then score else 0;
+    def score_int(value, want, score) = if eq(value, want) then score else 0;
+    def source_line(source_object) = head(bmf-object-source-span(source_object));
+
+    let py_keywords = list("def", "return", "class", "if", "else", "for", "while", "async", "await", "pass", "from", "import", "as", "in");
+    let ts_keywords = list("import", "from", "export", "const", "function", "return", "class", "interface", "type", "await", "if", "for", "of", "enum");
+    let go_keywords = list("package", "import", "func", "var", "const", "return", "type", "struct", "interface", "if", "for", "range", "go", "defer");
+    let rust_keywords = list("use", "pub", "mod", "fn", "struct", "enum", "impl", "trait", "let", "return", "match", "if", "loop", "async");
+    let py_dialect = fsc-source-dialect(py_keywords, "py-keyword", "py-name", "py-int", "py-string", "py-op", "py-eof", fsc-common-op2);
+    let ts_dialect = fsc-source-dialect(ts_keywords, "typescript-keyword", "typescript-name", "typescript-int", "typescript-string", "typescript-op", "typescript-eof", fsc-common-op2);
+    let go_dialect = fsc-source-dialect(go_keywords, "go-keyword", "go-name", "go-int", "go-string", "go-op", "go-eof", fsc-common-op2);
+    let rust_dialect = fsc-source-dialect(rust_keywords, "rust-keyword", "rust-name", "rust-int", "rust-string", "rust-op", "rust-eof", fsc-common-op2);
+
+    let py0 = first("count = 13", py_dialect);
+    let py1 = next(py0, py_dialect);
+    let py2 = next(py1, py_dialect);
+    let py_match = apply-python-bmf-rule("assign-int", list(obj(py0), obj(py1), obj(py2)));
+    let py_node = result_value(py_match);
+
+    let ts0 = first("export const answer = value;", ts_dialect);
+    let ts1 = next(ts0, ts_dialect);
+    let ts2 = next(ts1, ts_dialect);
+    let ts3 = next(ts2, ts_dialect);
+    let ts4 = next(ts3, ts_dialect);
+    let ts5 = next(ts4, ts_dialect);
+    let ts_match = apply-typescript-bmf-rule("export-const", list(obj(ts0), obj(ts1), obj(ts2), obj(ts3), obj(ts4), obj(ts5)));
+    let ts_node = result_value(ts_match);
+
+    let go0 = first("var count = 13", go_dialect);
+    let go1 = next(go0, go_dialect);
+    let go2 = next(go1, go_dialect);
+    let go3 = next(go2, go_dialect);
+    let go_match = apply-go-bmf-rule("var-int", list(obj(go0), obj(go1), obj(go2), obj(go3)));
+    let go_node = result_value(go_match);
+
+    let rs0 = first("fn main(){}", rust_dialect);
+    let rs1 = next(rs0, rust_dialect);
+    let rs2 = next(rs1, rust_dialect);
+    let rs3 = next(rs2, rust_dialect);
+    let rs4 = next(rs3, rust_dialect);
+    let rs5 = next(rs4, rust_dialect);
+    let rs_match = apply-rust-bmf-rule("fn0", list(obj(rs0), obj(rs1), obj(rs2), obj(rs3), obj(rs4), obj(rs5)));
+    let rs_node = result_value(rs_match);
+
+    sum(list(score_match(py_match, 100), score_str(bmf-object-kind(obj(py0)), "py-name", 200), score_str(node_value(node_child(py_node, 0)), "count", 300), score_int(node_value(node_child(py_node, 1)), 13, 400), score_match(ts_match, 500), score_str(bmf-object-kind(obj(ts0)), "typescript-keyword", 600), score_str(node_value(node_child(ts_node, 0)), "answer", 700), score_str(node_value(node_child(ts_node, 1)), "value", 800), score_match(go_match, 900), score_str(bmf-object-kind(obj(go0)), "go-keyword", 1000), score_int(node_value(node_child(go_node, 1)), 13, 1100), score_match(rs_match, 1200), score_str(node_value(node_child(rs_node, 0)), "main", 1300), score_int(fsc-repo-text-line-start(source_line(obj(rs0))), 0, 1400), score_int(fsc-repo-text-line-length(source_line(obj(rs0))), 2, 1500)));
+}

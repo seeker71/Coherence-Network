@@ -158,7 +158,7 @@ tongue's surface.*
 ## The Priority — organ.py / substrate.py / form.py → 100% Form
 
 The Python files that currently host the cell mechanics
-([organ.py](../../../experiments/local-llm-cell-v0/organ.py)), the
+([organ.py](../../../seedbank/local-llm-cell-v0/organ.py)), the
 substrate kernel
 ([api/app/services/substrate/kernel.py](../../../api/app/services/substrate/kernel.py)),
 and the Form runtime

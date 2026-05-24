@@ -1,0 +1,577 @@
+; grammars/go-bmf.fk - Go grammar as native BMF object rules
+
+(do
+    (let GO-BMF-PACKAGE   (make_nodeid 1 2 99 631))
+    (let GO-BMF-IMPORT    (make_nodeid 1 2 99 632))
+    (let GO-BMF-FUNC      (make_nodeid 1 2 99 633))
+    (let GO-BMF-METHOD    (make_nodeid 1 2 99 634))
+    (let GO-BMF-STRUCT    (make_nodeid 1 2 99 635))
+    (let GO-BMF-INTERFACE (make_nodeid 1 2 99 636))
+    (let GO-BMF-VAR       (make_nodeid 1 2 99 637))
+    (let GO-BMF-CONST     (make_nodeid 1 2 99 638))
+    (let GO-BMF-RETURN    (make_nodeid 1 2 99 639))
+    (let GO-BMF-ASSIGN    (make_nodeid 1 2 99 640))
+    (let GO-BMF-CALL      (make_nodeid 1 2 99 641))
+    (let GO-BMF-SELECTOR  (make_nodeid 1 2 99 642))
+    (let GO-BMF-INDEX     (make_nodeid 1 2 99 643))
+    (let GO-BMF-IF        (make_nodeid 1 2 99 644))
+    (let GO-BMF-FOR       (make_nodeid 1 2 99 645))
+    (let GO-BMF-GO        (make_nodeid 1 2 99 646))
+    (let GO-BMF-DEFER     (make_nodeid 1 2 99 647))
+    (let GO-BMF-TYPE      (make_nodeid 1 2 99 648))
+    (let GO-BMF-SWITCH    (make_nodeid 1 2 99 649))
+    (let GO-BMF-SELECT    (make_nodeid 1 2 99 650))
+    (let GO-BMF-CHAN      (make_nodeid 1 2 99 651))
+    (let GO-BMF-COMPOSITE (make_nodeid 1 2 99 652))
+    (let GO-BMF-PTR-TYPE  (make_nodeid 1 2 99 653))
+
+    (defn go-src-keyword (value) (bmf-atom "go-keyword" value))
+    (defn go-src-name (value) (bmf-atom "go-name" value))
+    (defn go-src-op (value) (bmf-atom "go-op" value))
+    (defn go-src-string (value) (bmf-atom "go-string" value))
+    (defn go-src-int (value) (bmf-atom "go-int" value))
+
+    (defn go-kw (value) (object-lit "go-keyword" value))
+    (defn go-op (value) (object-lit "go-op" value))
+    (defn go-name (capture-name) (list "capture" capture-name (object-lit "go-name" "")))
+    (defn go-string-lit (capture-name) (list "capture" capture-name (object-lit "go-string" "")))
+    (defn go-int-lit (capture-name) (list "capture" capture-name (object-lit "go-int" "")))
+
+    (defn gobmf-value (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn gobmf-string (objects capture-name)
+        (intern_trivial_string (gobmf-value objects capture-name)))
+
+    (defn gobmf-int (objects capture-name)
+        (intern_trivial_int (str_to_int (gobmf-value objects capture-name))))
+
+    (defn gobmf-node-kids (object)
+        (node_children (bmf-object-value object)))
+
+    (defn gobmf-emit-package (objects)
+        (intern_node GO-BMF-PACKAGE (list (gobmf-string objects "name"))))
+
+    (defn gobmf-source-package (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "package")
+                  (go-src-name (node_value (nth kids 0))))))
+
+    (defn gobmf-emit-import (objects)
+        (intern_node GO-BMF-IMPORT (list (gobmf-string objects "path"))))
+
+    (defn gobmf-source-import (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "import")
+                  (go-src-string (node_value (nth kids 0))))))
+
+    (defn gobmf-emit-func0 (objects)
+        (intern_node GO-BMF-FUNC (list (gobmf-string objects "name"))))
+
+    (defn gobmf-source-func0 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "func")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-op ")")
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-func2 (objects)
+        (intern_node GO-BMF-FUNC
+                     (list (gobmf-string objects "name")
+                           (gobmf-string objects "a")
+                           (gobmf-string objects "b"))))
+
+    (defn gobmf-source-func2 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "func")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ",")
+                  (go-src-name (node_value (nth kids 2)))
+                  (go-src-op ")")
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-func-return-add (objects)
+        (intern_node GO-BMF-FUNC
+                     (list (gobmf-string objects "name")
+                           (gobmf-string objects "a")
+                           (gobmf-string objects "atype")
+                           (gobmf-string objects "b")
+                           (gobmf-string objects "btype")
+                           (gobmf-string objects "rtype")
+                           (gobmf-string objects "left")
+                           (gobmf-string objects "right"))))
+
+    (defn gobmf-source-func-return-add (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "func")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-name (node_value (nth kids 2)))
+                  (go-src-op ",")
+                  (go-src-name (node_value (nth kids 3)))
+                  (go-src-name (node_value (nth kids 4)))
+                  (go-src-op ")")
+                  (go-src-name (node_value (nth kids 5)))
+                  (go-src-op "{")
+                  (go-src-keyword "return")
+                  (go-src-name (node_value (nth kids 6)))
+                  (go-src-op "+")
+                  (go-src-name (node_value (nth kids 7)))
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-method0 (objects)
+        (intern_node GO-BMF-METHOD
+                     (list (gobmf-string objects "recv")
+                           (gobmf-string objects "name"))))
+
+    (defn gobmf-source-method0 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "func")
+                  (go-src-op "(")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op ")")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op "(")
+                  (go-src-op ")")
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-struct (objects)
+        (intern_node GO-BMF-STRUCT (list (gobmf-string objects "name"))))
+
+    (defn gobmf-source-struct (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "type")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-keyword "struct")
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-interface (objects)
+        (intern_node GO-BMF-INTERFACE (list (gobmf-string objects "name"))))
+
+    (defn gobmf-source-interface (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "type")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-keyword "interface")
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-var-int (objects)
+        (intern_node GO-BMF-VAR
+                     (list (gobmf-string objects "name")
+                           (gobmf-int objects "value"))))
+
+    (defn gobmf-source-var-int (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "var")
+                  (go-src-name (node_value (head kids)))
+                  (go-src-op "=")
+                  (go-src-int (int_to_str (node_value (head (tail kids))))))))
+
+    (defn gobmf-emit-const-string (objects)
+        (intern_node GO-BMF-CONST
+                     (list (gobmf-string objects "name")
+                           (gobmf-string objects "value"))))
+
+    (defn gobmf-source-const-string (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "const")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "=")
+                  (go-src-string (node_value (nth kids 1))))))
+
+    (defn gobmf-emit-return-ident (objects)
+        (intern_node GO-BMF-RETURN (list (gobmf-string objects "value"))))
+
+    (defn gobmf-source-return-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "return")
+                  (go-src-name (node_value (nth kids 0))))))
+
+    (defn gobmf-emit-return-int (objects)
+        (intern_node GO-BMF-RETURN (list (gobmf-int objects "value"))))
+
+    (defn gobmf-source-return-int (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "return")
+                  (go-src-int (int_to_str (node_value (nth kids 0)))))))
+
+    (defn gobmf-emit-assign-ident (objects)
+        (intern_node GO-BMF-ASSIGN
+                     (list (gobmf-string objects "target")
+                           (intern_trivial_string "=")
+                           (gobmf-string objects "value"))))
+
+    (defn gobmf-emit-assign-int (objects)
+        (intern_node GO-BMF-ASSIGN
+                     (list (gobmf-string objects "target")
+                           (intern_trivial_string "=")
+                           (gobmf-int objects "value"))))
+
+    (defn gobmf-emit-short-var-ident (objects)
+        (intern_node GO-BMF-ASSIGN
+                     (list (gobmf-string objects "target")
+                           (intern_trivial_string ":=")
+                           (gobmf-string objects "value"))))
+
+    (defn gobmf-emit-short-var-int (objects)
+        (intern_node GO-BMF-ASSIGN
+                     (list (gobmf-string objects "target")
+                           (intern_trivial_string ":=")
+                           (gobmf-int objects "value"))))
+
+    (defn gobmf-source-assign-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op (node_value (nth kids 1)))
+                  (go-src-name (node_value (nth kids 2))))))
+
+    (defn gobmf-source-assign-int (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op (node_value (nth kids 1)))
+                  (go-src-int (int_to_str (node_value (nth kids 2)))))))
+
+    (defn gobmf-emit-call0 (objects)
+        (intern_node GO-BMF-CALL (list (gobmf-string objects "callee"))))
+
+    (defn gobmf-source-call0 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-op ")"))))
+
+    (defn gobmf-emit-call1-ident (objects)
+        (intern_node GO-BMF-CALL
+                     (list (gobmf-string objects "callee")
+                           (gobmf-string objects "arg"))))
+
+    (defn gobmf-source-call1-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ")"))))
+
+    (defn gobmf-emit-selector (objects)
+        (intern_node GO-BMF-SELECTOR
+                     (list (gobmf-string objects "object")
+                           (gobmf-string objects "field"))))
+
+    (defn gobmf-source-selector (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op ".")
+                  (go-src-name (node_value (nth kids 1))))))
+
+    (defn gobmf-emit-index-int (objects)
+        (intern_node GO-BMF-INDEX
+                     (list (gobmf-string objects "object")
+                           (gobmf-int objects "index"))))
+
+    (defn gobmf-source-index-int (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "[")
+                  (go-src-int (int_to_str (node_value (nth kids 1))))
+                  (go-src-op "]"))))
+
+    (defn gobmf-emit-if-pass (objects)
+        (intern_node GO-BMF-IF (list (gobmf-string objects "cond"))))
+
+    (defn gobmf-source-if-pass (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "if")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-for-range-pass (objects)
+        (intern_node GO-BMF-FOR
+                     (list (gobmf-string objects "key")
+                           (gobmf-string objects "value")
+                           (gobmf-string objects "iter"))))
+
+    (defn gobmf-source-for-range-pass (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "for")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op ",")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ":=")
+                  (go-src-keyword "range")
+                  (go-src-name (node_value (nth kids 2)))
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-go-call0 (objects)
+        (intern_node GO-BMF-GO (list (gobmf-string objects "callee"))))
+
+    (defn gobmf-source-go-call0 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "go")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-op ")"))))
+
+    (defn gobmf-emit-defer-call0 (objects)
+        (intern_node GO-BMF-DEFER (list (gobmf-string objects "callee"))))
+
+    (defn gobmf-source-defer-call0 (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "defer")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "(")
+                  (go-src-op ")"))))
+
+    (defn gobmf-emit-type-alias (objects)
+        (intern_node GO-BMF-TYPE
+                     (list (gobmf-string objects "name")
+                           (gobmf-string objects "target"))))
+
+    (defn gobmf-source-type-alias (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "type")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "=")
+                  (go-src-name (node_value (nth kids 1))))))
+
+    (defn gobmf-emit-switch-case-empty (objects)
+        (intern_node GO-BMF-SWITCH
+                     (list (gobmf-string objects "value")
+                           (gobmf-string objects "case"))))
+
+    (defn gobmf-source-switch-case-empty (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "switch")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "{")
+                  (go-src-keyword "case")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ":")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-select-recv-case-empty (objects)
+        (intern_node GO-BMF-SELECT
+                     (list (gobmf-string objects "target")
+                           (gobmf-string objects "channel"))))
+
+    (defn gobmf-source-select-recv-case-empty (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-keyword "select")
+                  (go-src-op "{")
+                  (go-src-keyword "case")
+                  (go-src-name (node_value (nth kids 0)))
+                  (go-src-op ":=")
+                  (go-src-op "<-")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ":")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-chan-send-ident (objects)
+        (intern_node GO-BMF-CHAN
+                     (list (intern_trivial_string "send")
+                           (gobmf-string objects "channel")
+                           (gobmf-string objects "value"))))
+
+    (defn gobmf-source-chan-send-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 1)))
+                  (go-src-op "<-")
+                  (go-src-name (node_value (nth kids 2))))))
+
+    (defn gobmf-emit-chan-recv-ident (objects)
+        (intern_node GO-BMF-CHAN
+                     (list (intern_trivial_string "recv")
+                           (gobmf-string objects "channel"))))
+
+    (defn gobmf-source-chan-recv-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-op "<-")
+                  (go-src-name (node_value (nth kids 1))))))
+
+    (defn gobmf-emit-composite-empty (objects)
+        (intern_node GO-BMF-COMPOSITE
+                     (list (gobmf-string objects "type"))))
+
+    (defn gobmf-source-composite-empty (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "{")
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-composite-field-ident (objects)
+        (intern_node GO-BMF-COMPOSITE
+                     (list (gobmf-string objects "type")
+                           (gobmf-string objects "field")
+                           (gobmf-string objects "value"))))
+
+    (defn gobmf-source-composite-field-ident (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-name (node_value (nth kids 0)))
+                  (go-src-op "{")
+                  (go-src-name (node_value (nth kids 1)))
+                  (go-src-op ":")
+                  (go-src-name (node_value (nth kids 2)))
+                  (go-src-op "}"))))
+
+    (defn gobmf-emit-pointer-type (objects)
+        (intern_node GO-BMF-PTR-TYPE (list (gobmf-string objects "name"))))
+
+    (defn gobmf-source-pointer-type (object)
+        (do
+            (let kids (gobmf-node-kids object))
+            (list (go-src-op "*")
+                  (go-src-name (node_value (nth kids 0))))))
+
+    (let go-bmf-native-section
+        (list
+            (bmf-native "gobmf-emit-package" gobmf-emit-package GO-BMF-PACKAGE)
+            (bmf-native "gobmf-emit-import" gobmf-emit-import GO-BMF-IMPORT)
+            (bmf-native "gobmf-emit-func0" gobmf-emit-func0 GO-BMF-FUNC)
+            (bmf-native "gobmf-emit-func-return-add" gobmf-emit-func-return-add GO-BMF-FUNC)
+            (bmf-native "gobmf-emit-method0" gobmf-emit-method0 GO-BMF-METHOD)
+            (bmf-native "gobmf-emit-struct" gobmf-emit-struct GO-BMF-STRUCT)
+            (bmf-native "gobmf-emit-interface" gobmf-emit-interface GO-BMF-INTERFACE)
+            (bmf-native "gobmf-emit-var-int" gobmf-emit-var-int GO-BMF-VAR)
+            (bmf-native "gobmf-emit-const-string" gobmf-emit-const-string GO-BMF-CONST)
+            (bmf-native "gobmf-emit-return-ident" gobmf-emit-return-ident GO-BMF-RETURN)
+            (bmf-native "gobmf-emit-return-int" gobmf-emit-return-int GO-BMF-RETURN)
+            (bmf-native "gobmf-emit-assign-ident" gobmf-emit-assign-ident GO-BMF-ASSIGN)
+            (bmf-native "gobmf-emit-assign-int" gobmf-emit-assign-int GO-BMF-ASSIGN)
+            (bmf-native "gobmf-emit-short-var-ident" gobmf-emit-short-var-ident GO-BMF-ASSIGN)
+            (bmf-native "gobmf-emit-short-var-int" gobmf-emit-short-var-int GO-BMF-ASSIGN)
+            (bmf-native "gobmf-emit-call0" gobmf-emit-call0 GO-BMF-CALL)
+            (bmf-native "gobmf-emit-call1-ident" gobmf-emit-call1-ident GO-BMF-CALL)
+            (bmf-native "gobmf-emit-selector" gobmf-emit-selector GO-BMF-SELECTOR)
+            (bmf-native "gobmf-emit-index-int" gobmf-emit-index-int GO-BMF-INDEX)
+            (bmf-native "gobmf-emit-if-pass" gobmf-emit-if-pass GO-BMF-IF)
+            (bmf-native "gobmf-emit-for-range-pass" gobmf-emit-for-range-pass GO-BMF-FOR)
+            (bmf-native "gobmf-emit-go-call0" gobmf-emit-go-call0 GO-BMF-GO)
+            (bmf-native "gobmf-emit-defer-call0" gobmf-emit-defer-call0 GO-BMF-DEFER)
+            (bmf-native "gobmf-emit-type-alias" gobmf-emit-type-alias GO-BMF-TYPE)
+            (bmf-native "gobmf-emit-switch-case-empty" gobmf-emit-switch-case-empty GO-BMF-SWITCH)
+            (bmf-native "gobmf-emit-select-recv-case-empty" gobmf-emit-select-recv-case-empty GO-BMF-SELECT)
+            (bmf-native "gobmf-emit-chan-send-ident" gobmf-emit-chan-send-ident GO-BMF-CHAN)
+            (bmf-native "gobmf-emit-chan-recv-ident" gobmf-emit-chan-recv-ident GO-BMF-CHAN)
+            (bmf-native "gobmf-emit-composite-empty" gobmf-emit-composite-empty GO-BMF-COMPOSITE)
+            (bmf-native "gobmf-emit-composite-field-ident" gobmf-emit-composite-field-ident GO-BMF-COMPOSITE)
+            (bmf-native "gobmf-emit-pointer-type" gobmf-emit-pointer-type GO-BMF-PTR-TYPE)))
+
+    section [go.bmf] {
+      package ::= "package" $name:name => gobmf-emit-package <= gobmf-source-package;
+      import ::= "import" $path:string => gobmf-emit-import <= gobmf-source-import;
+      func0 ::= "func" $name:name "(" ")" "{" "}" => gobmf-emit-func0 <= gobmf-source-func0;
+      func2 ::= "func" $name:name "(" $a:name "," $b:name ")" "{" "}" => gobmf-emit-func2 <= gobmf-source-func2;
+      func-return-add ::= "func" $name:name "(" $a:name $atype:name "," $b:name $btype:name ")" $rtype:name "{" "return" $left:name "+" $right:name "}" => gobmf-emit-func-return-add <= gobmf-source-func-return-add;
+      method0 ::= "func" "(" $recv:name ")" $name:name "(" ")" "{" "}" => gobmf-emit-method0 <= gobmf-source-method0;
+      struct ::= "type" $name:name "struct" "{" "}" => gobmf-emit-struct <= gobmf-source-struct;
+      interface ::= "type" $name:name "interface" "{" "}" => gobmf-emit-interface <= gobmf-source-interface;
+      var-int ::= "var" $name:name "=" $value:int => gobmf-emit-var-int <= gobmf-source-var-int;
+      const-string ::= "const" $name:name "=" $value:string => gobmf-emit-const-string <= gobmf-source-const-string;
+      return-ident ::= "return" $value:name => gobmf-emit-return-ident <= gobmf-source-return-ident;
+      return-int ::= "return" $value:int => gobmf-emit-return-int <= gobmf-source-return-int;
+      assign-ident ::= $target:name "=" $value:name => gobmf-emit-assign-ident <= gobmf-source-assign-ident;
+      assign-int ::= $target:name "=" $value:int => gobmf-emit-assign-int <= gobmf-source-assign-int;
+      short-var-ident ::= $target:name ":=" $value:name => gobmf-emit-short-var-ident <= gobmf-source-assign-ident;
+      short-var-int ::= $target:name ":=" $value:int => gobmf-emit-short-var-int <= gobmf-source-assign-int;
+      call0 ::= $callee:name "(" ")" => gobmf-emit-call0 <= gobmf-source-call0;
+      call1-ident ::= $callee:name "(" $arg:name ")" => gobmf-emit-call1-ident <= gobmf-source-call1-ident;
+      selector ::= $object:name "." $field:name => gobmf-emit-selector <= gobmf-source-selector;
+      index-int ::= $object:name "[" $index:int "]" => gobmf-emit-index-int <= gobmf-source-index-int;
+      if-pass ::= "if" $cond:name "{" "}" => gobmf-emit-if-pass <= gobmf-source-if-pass;
+      for-range-pass ::= "for" $key:name "," $value:name ":=" "range" $iter:name "{" "}" => gobmf-emit-for-range-pass <= gobmf-source-for-range-pass;
+      go-call0 ::= "go" $callee:name "(" ")" => gobmf-emit-go-call0 <= gobmf-source-go-call0;
+      defer-call0 ::= "defer" $callee:name "(" ")" => gobmf-emit-defer-call0 <= gobmf-source-defer-call0;
+      type-alias ::= "type" $name:name "=" $target:name => gobmf-emit-type-alias <= gobmf-source-type-alias;
+      switch-case-empty ::= "switch" $value:name "{" "case" $case:name ":" "}" => gobmf-emit-switch-case-empty <= gobmf-source-switch-case-empty;
+      select-recv-case-empty ::= "select" "{" "case" $target:name ":=" "<-" $channel:name ":" "}" => gobmf-emit-select-recv-case-empty <= gobmf-source-select-recv-case-empty;
+      chan-send-ident ::= $channel:name "<-" $value:name => gobmf-emit-chan-send-ident <= gobmf-source-chan-send-ident;
+      chan-recv-ident ::= "<-" $channel:name => gobmf-emit-chan-recv-ident <= gobmf-source-chan-recv-ident;
+      composite-empty ::= $type:name "{" "}" => gobmf-emit-composite-empty <= gobmf-source-composite-empty;
+      composite-field-ident ::= $type:name "{" $field:name ":" $value:name "}" => gobmf-emit-composite-field-ident <= gobmf-source-composite-field-ident;
+      pointer-type ::= "*" $name:name => gobmf-emit-pointer-type <= gobmf-source-pointer-type;
+    }
+
+    (defn go-bmf-rule-name (r) (head r))
+
+    (defn go-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (go-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (go-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-go-bmf-rule (rule-name object-stream)
+        (apply-object-rule (go-bmf-find-rule rule-name go-bmf-rules) object-stream))
+
+    (let go-recipe-section
+        (form-rule-recipe-section "go"
+            (list
+                (compiler-rule "go" "package" "Go package source objects" gobmf-emit-package)
+                (compiler-rule "go" "import" "Go import source objects" gobmf-emit-import)
+                (compiler-rule "go" "func" "Go function source objects" gobmf-emit-func0)
+                (compiler-rule "go" "func-return-add" "Go function addition source objects" gobmf-emit-func-return-add)
+                (compiler-rule "go" "method" "Go method source objects" gobmf-emit-method0)
+                (compiler-rule "go" "struct" "Go struct source objects" gobmf-emit-struct)
+                (compiler-rule "go" "interface" "Go interface source objects" gobmf-emit-interface)
+                (compiler-rule "go" "return" "Go return source objects" gobmf-emit-return-ident)
+                (compiler-rule "go" "assign" "Go assignment source objects" gobmf-emit-assign-ident)
+                (compiler-rule "go" "call" "Go call source objects" gobmf-emit-call0)
+                (compiler-rule "go" "selector" "Go selector source objects" gobmf-emit-selector)
+                (compiler-rule "go" "index" "Go index source objects" gobmf-emit-index-int)
+                (compiler-rule "go" "if" "Go if source objects" gobmf-emit-if-pass)
+                (compiler-rule "go" "for-range" "Go range source objects" gobmf-emit-for-range-pass)
+                (compiler-rule "go" "type-alias" "Go type alias source objects" gobmf-emit-type-alias)
+                (compiler-rule "go" "switch" "Go switch source objects" gobmf-emit-switch-case-empty)
+                (compiler-rule "go" "select" "Go select source objects" gobmf-emit-select-recv-case-empty)
+                (compiler-rule "go" "channel" "Go channel source objects" gobmf-emit-chan-send-ident)
+                (compiler-rule "go" "composite" "Go composite literal source objects" gobmf-emit-composite-empty)
+                (compiler-rule "go" "pointer-type" "Go pointer type source objects" gobmf-emit-pointer-type))))
+
+    (let go-form-source
+        (form-source "go" (list go-bmf-second go-recipe-section)))
+
+    (let go-bmf-dialect
+        (bmf-dialect "go"
+                     (form-section-object go-bmf-second)
+                     go-bmf-native-section
+                     go-bmf-rules))
+
+    0)

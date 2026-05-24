@@ -1,0 +1,14 @@
+; tests/bmf-section-syntax.fk - native BMF section syntax is first-class
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (let bmf-object (form-section-object python-bmf-section))
+    (let rule-count (len (bmf-section-rules bmf-object)))
+    (let native-count (len python-bmf-native-section))
+    (add (str_len (form-section-dialect python-bmf-section))
+    (add (str_len (bmf-section-name bmf-object))
+    (add rule-count
+    (add native-count
+    (add (if (form-section? python-bmf-section) 1 0)
+         (if (bmf-dialect? python-bmf-dialect) 1 0)))))))

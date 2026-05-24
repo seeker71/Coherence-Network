@@ -1,0 +1,54 @@
+; runtime-grammar-selector-registry-band.fk - config-driven grammar selection.
+;
+; Runtime code reads an extension-to-grammar config file, loads the grammar
+; file named by that config, registers the grammar plugin, and routes a source
+; file by its filename extension. This proof does not preload or name any
+; specific language grammar.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk
+
+section [form.action] {
+    def proof_ok(capability) = 1;
+    def parsed_object(result) = form-adapter-plan-result-value(result);
+    def parsed_node(result) = bmf-object-value(parsed_object(result));
+    def node_child(node, index) = nth(node_children(node), index);
+    def str_score(value, want, score) = if str_eq(value, want) then score else 0;
+    def int_score(value, want, score) = if eq(value, want) then score else 0;
+
+    let root = form-capsule-root(131, 1, 9, 1);
+    let kind_selector = form-dynamic-kind(root, 1);
+    let kind_surface = form-dynamic-kind(root, 2);
+    let kind_capability = form-dynamic-kind(root, 3);
+    let kind_contract = form-dynamic-kind(root, 4);
+    let kind_proof = form-dynamic-kind(root, 5);
+    let selector_extension = form-dynamic-ref(root, kind_selector, 1);
+    let selector_section = form-dynamic-ref(root, kind_selector, 2);
+    let parse_kind = form-dynamic-ref(root, kind_capability, 1);
+    let emit_kind = form-dynamic-ref(root, kind_capability, 2);
+    let effect_pure = form-dynamic-ref(root, kind_contract, 1);
+    let reversible_yes = form-dynamic-ref(root, kind_contract, 2);
+    let lossless_yes = form-dynamic-ref(root, kind_contract, 3);
+    let deterministic_yes = form-dynamic-ref(root, kind_contract, 4);
+    let proof_roundtrip = form-dynamic-ref(root, kind_proof, 1);
+    let surface_a_source = form-dynamic-ref(root, kind_surface, 1);
+    let surface_a_form = form-dynamic-ref(root, kind_surface, 2);
+    let ctx = bmf-symbol-context(root, root, empty);
+    let missing = "__missing__";
+
+    let config_text = "extension=.aa\ngrammar=/tmp/form-runtime-grammar-a.fk\n";
+    let grammar_a = "; runtime grammar plugin\n; dialect=surface-a\n; block=surface-a.bmf\n; word=surface-a-word\n; rule=greeting\n; literal=hello\n(do 0)\n";
+    let config_write = write_file_text("/tmp/form-runtime-grammar.config", config_text);
+    let grammar_a_write = write_file_text("/tmp/form-runtime-grammar-a.fk", grammar_a);
+    let source_a_write = write_file_text("/tmp/source.aa", "hello field");
+
+    let registry0 = form-runtime-grammar-registry-empty();
+    let registry = form-runtime-grammar-load-config-for-file(registry0, "/tmp/form-runtime-grammar.config", "/tmp/source.aa", form-capsule-root(132, 1, 9, 1), surface_a_source, surface_a_form, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1, selector_extension, selector_section, missing);
+
+    let missing_cc = form-runtime-grammar-config-path(read_file("/tmp/form-runtime-grammar.config"), ".cc", missing);
+    let binding_a = form-runtime-grammar-resolve-value(registry, ".aa", empty);
+    let result_a = form-runtime-grammar-parse-source-file(registry, "/tmp/source.aa", "greeting", ctx, empty);
+    let registry_score = sum(list(str_score(missing_cc, missing, 100), if nil?(binding_a) then 0 else 200, int_score(len(form-runtime-grammar-registry-bindings(registry)), 2, 300), int_score(len(form-recipe-registry-capsules(form-runtime-grammar-registry-recipe-registry(registry))), 1, 400)));
+    let parse_score = sum(list(str_score(bmf-object-kind(parsed_object(result_a)), "greeting", 500), str_score(node_value(node_child(parsed_node(result_a), 0)), "field", 600)));
+
+    sum(list(registry_score, parse_score));
+}

@@ -1,0 +1,19 @@
+; kernel-walk-parallel-cached-band.fk - async walk joined to the JIT cache slot.
+;
+; Pure roots execute through the bounded worker surface, then land in the
+; walk-cache by NodeID. Duplicate roots prove the cache remains structural.
+
+(do
+    (let PLUS (make_nodeid 1 2 12 1))
+    (let MUL (make_nodeid 1 2 12 3))
+    (let one (intern_trivial_int 1))
+    (let two (intern_trivial_int 2))
+    (let three (intern_trivial_int 3))
+    (let four (intern_trivial_int 4))
+    (let five (intern_trivial_int 5))
+    (let r1 (intern_node PLUS (list two three)))
+    (let r2 (intern_node MUL (list three four)))
+    (let r3 (intern_node MUL (list five five)))
+    (walk-cache-clear)
+    (let values (walk_parallel_cached (list r1 r2 r3 r1) 3))
+    (add (sum values) (walk-cache-size)))

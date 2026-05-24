@@ -1,0 +1,32 @@
+; form-action-migrated-bmf-band.fk - BMF rule actions authored in form.action.
+; The rule pattern, action, and proof helpers live in the readable dialect.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    let MIGRATED-BMF-NODE = make_nodeid(1, 2, 101, 44);
+
+    def migrated-atom(kind, value) = bmf-atom(kind, value);
+    def migrated-pattern() = list("sequence", object-lit("literal", "let"), list("capture", "name", object-lit("name", "")));
+
+    def migrated-rule-action(captures) {
+        let name-value = bmf-collection-value(captures, "name");
+        intern_node(MIGRATED-BMF-NODE, list(intern_trivial_string(name-value)));
+    }
+
+    def migrated-rule() = list("migrated-binding", migrated-pattern(), migrated-rule-action);
+    def migrated-spec() = bmf-rule-spec("migrated-binding", migrated-pattern(), migrated-rule-action);
+    def migrated-source() = list(migrated-atom("literal", "let"), migrated-atom("name", "sample"));
+    def migrated-apply() = apply-object-rule(migrated-rule(), migrated-source());
+
+    def migrated-score() {
+        let matched = migrated-apply();
+        let result = cap-get(match-caps(matched), "result");
+        let recipe = bmf-object-value(result);
+        let child = head(node_children(recipe));
+        let spec = migrated-spec();
+        add(add(if match?(matched) then 100 else 0, str_len(node_value(child))), add(len(bmf-object-source-span(result)), len(nth(spec, 1))));
+    }
+}
+
+(migrated-score)

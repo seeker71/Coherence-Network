@@ -1,0 +1,144 @@
+; form-action-bmf-source-compiler-rewrite.fk - rebuild the source-compiler
+; runtime body as BMF objects, while keeping compiler helpers in the ambient
+; Form runtime until module bundles can be emitted as standalone recipes.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (defn fa-ident (name)
+        (form-action-bmf-value "ident"
+            (list (fsc-action-src-name name))))
+
+    (defn fa-int (value)
+        (form-action-bmf-value "int"
+            (list (fsc-action-src-int value))))
+
+    (defn fa-string (value)
+        (form-action-bmf-value "string"
+            (list (fsc-action-src-string value))))
+
+    (defn fa-call (name args)
+        (form-action-bmf-value "call"
+            (list
+                (fsc-action-src-name name)
+                (fsc-action-src-args args))))
+
+    (defn fa-call1 (name a) (fa-call name (list a)))
+    (defn fa-call2 (name a b) (fa-call name (list a b)))
+
+    (defn fa-if (cond yes no)
+        (form-action-bmf-value "if"
+            (list
+                (fsc-action-src-kw "if")
+                (fsc-action-src-expr cond)
+                (fsc-action-src-kw "then")
+                (fsc-action-src-expr yes)
+                (fsc-action-src-kw "else")
+                (fsc-action-src-expr no))))
+
+    (defn fa-let (name value)
+        (form-action-bmf-value "let"
+            (list
+                (fsc-action-src-kw "let")
+                (fsc-action-src-name name)
+                (fsc-action-src-op "=")
+                (fsc-action-src-expr value)
+                (fsc-action-src-op ";"))))
+
+    (let quote-let
+        (fa-let "quote"
+            (fa-string "\"")))
+
+    (let rule-source-let
+        (fa-let "rule-source"
+            (fa-call2 "str_concat"
+                (fa-string "[bml.bmf] {\n      field ::= $type:name $name:name ")
+                (fa-call2 "str_concat"
+                    (fa-ident "quote")
+                    (fa-call2 "str_concat"
+                        (fa-string ";")
+                        (fa-call2 "str_concat"
+                            (fa-ident "quote")
+                            (fa-string " => bml-emit-field;\n    }\n")))))))
+
+    (let sample-let
+        (fa-let "sample"
+            (fa-call2 "str_concat"
+                (fa-string "section ")
+                (fa-ident "rule-source"))))
+
+    (let compiled-let
+        (fa-let "compiled"
+            (fa-call1 "form-source-compile-text"
+                (fa-ident "sample"))))
+
+    (let rule-score-let
+        (fa-let "rule-score"
+            (fa-call2 "add"
+                (fa-if
+                    (fa-call2 "fsc-contains?"
+                        (fa-ident "compiled")
+                        (fa-string "bml-bmf-rules"))
+                    (fa-int "10")
+                    (fa-int "0"))
+                (fa-if
+                    (fa-call2 "fsc-contains?"
+                        (fa-ident "compiled")
+                        (fa-string "form-bmf-second"))
+                    (fa-int "20")
+                    (fa-int "0")))))
+
+    (let object-score-let
+        (fa-let "object-score"
+            (fa-call2 "add"
+                (fa-if
+                    (fa-call2 "fsc-contains?"
+                        (fa-ident "compiled")
+                        (fa-string "bml-name"))
+                    (fa-int "30")
+                    (fa-int "0"))
+                (fa-if
+                    (fa-call2 "fsc-contains?"
+                        (fa-ident "compiled")
+                        (fa-string "bmf-identity-inverse"))
+                    (fa-int "40")
+                    (fa-int "0")))))
+
+    (let final-score
+        (fa-call2 "add"
+            (fa-ident "rule-score")
+            (fa-ident "object-score")))
+
+    (let do-source
+        (list
+            (fsc-action-src-kw "do")
+            (fsc-action-src-items
+                (list quote-let rule-source-let sample-let compiled-let rule-score-let object-score-let final-score))))
+    (let do-rt
+        (bmf-roundtrip
+            (form-action-bmf-find-rule "do" (form-action-bmf-rules 0))
+            do-source))
+    (let program
+        (bmf-object-value (bmf-roundtrip-first-object do-rt)))
+
+    (let quote "\"")
+    (let rule-source
+        (str_concat "[bml.bmf] {\n      field ::= $type:name $name:name "
+            (str_concat quote
+                (str_concat ";"
+                    (str_concat quote " => bml-emit-field;\n    }\n")))))
+    (let sample (str_concat "section " rule-source))
+    (let compiled (form-source-compile-text sample))
+    (let rule-score
+        (add
+            (if (fsc-contains? compiled "bml-bmf-rules") 10 0)
+            (if (fsc-contains? compiled "form-bmf-second") 20 0)))
+    (let object-score
+        (add
+            (if (fsc-contains? compiled "bml-name") 30 0)
+            (if (fsc-contains? compiled "bmf-identity-inverse") 40 0)))
+
+    (add (add rule-score object-score)
+    (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)
+    (add (len (form-action-bmf-rules 0))
+         (len (node_children program))))))

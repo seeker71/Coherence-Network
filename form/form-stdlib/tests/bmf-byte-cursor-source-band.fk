@@ -1,0 +1,36 @@
+; bmf-byte-cursor-source-band.fk - BMF byte cursor over a file source.
+;
+; Infinite-capable scanners do not recurse over a materialized byte list.
+; The host layer provides generic file I/O. Form/BMF owns the cursor cell:
+; path, offset, line, column. Advancing creates the next cursor state.
+;
+; preludes: form-stdlib/core.fk form-stdlib/source-compiler.fk
+
+section [form.action] {
+    def bmf-cursor(path, offset, line, col) = list(path, offset, line, col);
+    def bmf-cursor-path(cursor) = nth(cursor, 0);
+    def bmf-cursor-offset(cursor) = nth(cursor, 1);
+    def bmf-cursor-line(cursor) = nth(cursor, 2);
+    def bmf-cursor-col(cursor) = nth(cursor, 3);
+    def bmf-cursor-byte(cursor) = file_byte_at(bmf-cursor-path(cursor), bmf-cursor-offset(cursor));
+    def bmf-cursor-advance(cursor) {
+        let b = bmf-cursor-byte(cursor);
+        if lt(b, 0) then cursor else
+        if eq(b, 10) then bmf-cursor(bmf-cursor-path(cursor), add(bmf-cursor-offset(cursor), 1), add(bmf-cursor-line(cursor), 1), 0) else
+        bmf-cursor(bmf-cursor-path(cursor), add(bmf-cursor-offset(cursor), 1), bmf-cursor-line(cursor), add(bmf-cursor-col(cursor), 1));
+    }
+    def bmf-cursor-range(start, end) = fsc-repo-text-line(bmf-cursor-offset(start), sub(bmf-cursor-offset(end), bmf-cursor-offset(start)), bmf-cursor-line(start), bmf-cursor-col(start), bmf-cursor-line(end), bmf-cursor-col(end));
+    def score_eq(value, want, score) = if eq(value, want) then score else 0;
+    def score_gt(value, threshold, score) = if gt(value, threshold) then score else 0;
+
+    let path = "form-kernel-ts/src/kernel.ts";
+    let size = file_size(path);
+    let c0 = bmf-cursor(path, 0, 1, 0);
+    let c1 = bmf-cursor-advance(c0);
+    let c2 = bmf-cursor-advance(c1);
+    let c3 = bmf-cursor-advance(c2);
+    let first_range = bmf-cursor-range(c0, c3);
+    let last_byte = if gt(size, 0) then file_byte_at(path, sub(size, 1)) else -1;
+
+    sum(list(score_gt(size, 70000, 100), score_eq(bmf-cursor-byte(c0), 47, 200), score_eq(bmf-cursor-byte(c1), 47, 300), score_eq(bmf-cursor-byte(c2), 32, 400), score_eq(bmf-cursor-offset(c3), 3, 500), score_eq(fsc-repo-text-line-length(first_range), 3, 600), score_gt(last_byte, 0, 700)));
+}

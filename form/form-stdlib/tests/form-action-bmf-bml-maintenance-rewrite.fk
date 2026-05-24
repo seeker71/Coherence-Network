@@ -1,0 +1,47 @@
+; form-action-bmf-bml-maintenance-rewrite.fk - rebuild the BML
+; maintenance dialect proof through shared BMF action helpers.
+;
+; preludes: form-stdlib/source-compiler.fk
+
+(do
+    (let n (form-action-bmf-ident "n"))
+    (let a (form-action-bmf-ident "a"))
+    (let b (form-action-bmf-ident "b"))
+
+    (let label-let
+        (form-action-bmf-let "FORM_BML_LABEL"
+            (form-action-bmf-string "maintenance")))
+
+    (let square-def
+        (form-action-bmf-def "bml_square" (list "n")
+            (form-action-bmf-call2 "mul" n n)))
+
+    (let inc-def
+        (form-action-bmf-def "bml_inc" (list "n")
+            (form-action-bmf-call2 "add" n (form-action-bmf-int "1"))))
+
+    (let pair-def
+        (form-action-bmf-def "bml_pair" (list "a" "b")
+            (form-action-bmf-call2 "list" a b)))
+
+    (let choose-def
+        (form-action-bmf-def "bml_choose" (list "n")
+            (form-action-bmf-if
+                (form-action-bmf-call2 "gt" n (form-action-bmf-int "3"))
+                (form-action-bmf-call1 "bml_square" n)
+                (form-action-bmf-call1 "bml_inc" n))))
+
+    (let final-score
+        (form-action-bmf-call2 "add"
+            (form-action-bmf-call1 "bml_choose" (form-action-bmf-int "4"))
+            (form-action-bmf-call1 "len"
+                (form-action-bmf-call2 "bml_pair"
+                    (form-action-bmf-int "1")
+                    (form-action-bmf-int "2")))))
+
+    (let do-rt
+        (form-action-bmf-do-roundtrip
+            (list label-let square-def inc-def pair-def choose-def final-score)))
+    (let program (form-action-bmf-roundtrip-program do-rt))
+
+    (form-action-bmf-proof-score (walk_recipe program) do-rt program))

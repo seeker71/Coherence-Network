@@ -3,7 +3,7 @@ id: lc-canon-as-sovereignty-surface
 hz: 432
 status: seed
 updated: 2026-05-24
-source: ../../../experiments/local-llm-cell-v0/upsilon_session.py
+source: ../../../seedbank/local-llm-cell-v0/upsilon_session.py
 geometry:
   arity: 2
   form: internal-dyad
