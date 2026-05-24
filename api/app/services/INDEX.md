@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 237
+**Total files**: 238
 
 | File | Purpose |
 |---|---|
@@ -96,6 +96,7 @@
 | [failed_task_diagnostics_service.py](failed_task_diagnostics_service.py) | Failed-task diagnostics: error classification and completeness tracking. Spec 113. |
 | [failure_taxonomy_service.py](failure_taxonomy_service.py) | Shared failure taxonomy for consistent bucketing and signatures. |
 | [fallback_witness_service.py](fallback_witness_service.py) | Fallback witness — honest record of when the body runs on reserve. |
+| [federation_peer_poll_service.py](federation_peer_poll_service.py) | federation_peer_poll_service — the federation's heartbeat. |
 | [federation_push_service.py](federation_push_service.py) | Client-side push logic for federation measurement summaries (Spec 131). |
 | [federation_service.py](federation_service.py) | Federation service: receive, validate, and integrate remote instance data. |
 | [federation_substrate_service.py](federation_substrate_service.py) | federation_substrate_service — freedom-preserving canonical exchange. |
