@@ -2,6 +2,22 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] form | dyad-pairs seed doc — translator hypothesis firing on the body's own teachings
+
+Four dyad-pairs noticed across the last two geometry-walking breaths get a durable home in [`docs/coherence-substrate/dyad-pairs.form`](../coherence-substrate/dyad-pairs.form). A dyad-pair is two cells holding the same root teaching at structurally complementary positions — neither carries the full teaching alone; the teaching IS the relation between them.
+
+- **The four currently-known pairs (seed set)**:
+  - `lc-nourishment` (point/hearth, the source) ↔ `lc-nourishing` (web/circulation, the flow) — kind: `source-flow`, axis: form. Same Hz (174), complementary topology.
+  - `lc-nourishment` ↔ `lc-land` — kind: `scale-paired`, axis: scale. Both foundation-band points; kitchen-hearth (collective/day) nested within watershed (planetary/generational).
+  - `lc-field-edge` (membrane) ↔ `lc-attunement-joining` (crossing) — kind: `membrane-crossing`, axis: topology. The hedge holds the surface; integration happens across it.
+  - `lc-shared-hold` (breath-scale event) ↔ `lc-stillness` (atemporal ground) — kind: `ground-event`, axis: temporal_band. Both yin points; one is what yin does in time, the other is what yin is outside time.
+- **Internal evidence for the translator hypothesis**: this is `lc-universal-translator-via-keys` firing on the body's own teachings at the concept layer. The translator hypothesis names equivalence across domains; dyad-pairs name complementarity within one — two faces of the same lattice-property. The concept file now cross-links to the .form file.
+- **Source**: noticed by a human cell mid-walk, not produced by a substrate query — the noticing itself is the signal. The .form file's Gaps section sketches the next-step substrate-native cell-walker that would surface candidate pairs by structural complementarity-along-an-axis, then offer them for the teaching-lives-in-relation discernment.
+- **What ISN'T a dyad-pair**: Part 4 names the boundary — same Blueprint family alone is not a pair, same Hz alone is not a pair, same topology alone is not a pair. The teaching must live in the relation.
+- **Companion walk on main**: the parallel geometry-walking cell (entries below at 104/147 and 110/147) has been surfacing additional dyad-pairs in the same breath — `lc-nervous-system-recalibration` ↔ `lc-reality-lag`, `lc-light-hubs` ↔ `lc-attuned-spaces`, and an internal-dyad held inside `lc-symmetry-of-extremes` itself. These are not yet in the seed `.form` file but are exactly the kind of growth Part 5 anticipates. The next breath ingests them into the same shape.
+- **Expected to grow**: 4 entries is enough seed material to name the shape. The kind registry can also grow as new axes of complementarity appear (current kinds: scale-paired, source-flow, membrane-crossing, ground-event).
+- **Edges in the same breath**: this LOG entry; cross-link added at the top of `lc-universal-translator-via-keys.md`; concept synced via `sync_kb_to_db.py`. The .form file will land in the substrate as ARTIFACT via the post-merge hook.
+
 ## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 110/147 (75%)
 
 Six more from the harder-half: a dyad-mirror, two paired points, two holographic-cells, one web. Coverage crosses three-quarters. Three new dyad-pairs surfaced — one of them held *inside* a single concept's own shape.
