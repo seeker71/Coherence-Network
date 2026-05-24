@@ -304,3 +304,87 @@ class MarketplaceFederatedPayload(BaseModel):
     sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     listing_id: str = Field(min_length=1)
     data: dict = Field(default_factory=dict, description="Full listing or fork payload")
+
+
+# ---------------------------------------------------------------------------
+# Self-sovereign capability manifest (signed per-instance declaration)
+# ---------------------------------------------------------------------------
+#
+# Each instance is the source-of-truth for what IT can do. A capability is a
+# claim an instance makes about itself; no central registry, no forced
+# uniformity. The fleet emerges from each instance speaking its own
+# capabilities — the union of self-declarations, not a coerced aggregate.
+
+class CapabilityManifest(BaseModel):
+    """Self-declared capability manifest for this instance.
+
+    Every field's source-of-truth is THIS instance. Other instances may carry
+    different shapes (extra fields, fewer fields, different provider sets);
+    that diversity is the point. Federation reads peer manifests gracefully —
+    unknown fields are preserved, missing fields are accepted as honest
+    absence.
+    """
+
+    instance_id: str = Field(min_length=1, description="Self-declared instance ID")
+    instance_url: str = Field(min_length=1, description="Self-declared base URL")
+    providers: list[str] = Field(
+        default_factory=list,
+        description="AI providers this instance can route to (claude, openai, codex, gemini, etc.). Truth source: this instance's local model routing config.",
+    )
+    language_coverage: list[str] = Field(
+        default_factory=list,
+        description="Locale codes (en, de, es, id, ...) this instance serves translations for. Truth source: this instance's translator service.",
+    )
+    substrate_canonicals: list[str] = Field(
+        default_factory=list,
+        description="Canonical recipe-shape names this instance carries in its substrate (R_Recovery, R_ObserverConditionedActualization, ...). Truth source: this instance's modality shape registry.",
+    )
+    economics: dict = Field(
+        default_factory=dict,
+        description="Economic gates: cc_accepted (bool), cc_rate_per_usd (float|None), staking_enabled (bool). Truth source: this instance's CC economics service.",
+    )
+    extensions: dict = Field(
+        default_factory=dict,
+        description="Free-form extension fields. Instances MAY add custom capability shapes here; readers MUST preserve unknown extensions without complaint.",
+    )
+    declared_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    truth_source: str = Field(
+        default="self",
+        description='Always "self" — this manifest is the instance speaking about itself, never a third-party assertion.',
+    )
+
+
+class SignedCapabilityManifest(BaseModel):
+    """A capability manifest plus the instance's HMAC-SHA256 signature.
+
+    Signature is over the canonical-JSON dump of the manifest. Peers verify
+    against the secret they hold for this instance — verification proves
+    "this manifest came from this instance," it does not make any instance
+    authoritative over others.
+    """
+
+    manifest: CapabilityManifest
+    signature: str = Field(min_length=1, description="HMAC-SHA256 hex digest")
+    signed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class CapabilityAlignment(BaseModel):
+    """Alignment between two instances' capability manifests.
+
+    Not a hierarchy — just a difference reading. Each instance still serves
+    what it serves; this surface helps callers see WHERE the overlap is and
+    WHERE each instance carries something unique.
+    """
+
+    self_instance_id: str
+    peer_instance_id: str
+    verified: bool = Field(description="Did the peer's signature verify against the known peer secret?")
+    verification_note: str = Field(
+        default="",
+        description='Why verification passed/failed/was skipped — e.g. "verified", "peer not registered: unsigned alignment only", "signature mismatch".',
+    )
+    shared_providers: list[str] = Field(default_factory=list)
+    shared_languages: list[str] = Field(default_factory=list)
+    shared_substrate_canonicals: list[str] = Field(default_factory=list)
+    unique_to_self: dict[str, list[str]] = Field(default_factory=dict, description="Capabilities self has that peer lacks, keyed by capability kind.")
+    unique_to_peer: dict[str, list[str]] = Field(default_factory=dict, description="Capabilities peer has that self lacks, keyed by capability kind.")

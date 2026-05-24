@@ -15,6 +15,8 @@ from pydantic import BaseModel
 from app.middleware.traceability import traces_to
 
 from app.models.federation import (
+    CapabilityAlignment,
+    CapabilityManifest,
     FederatedInstance,
     FederatedPayload,
     FleetCapabilitySummary,
@@ -29,6 +31,7 @@ from app.models.federation import (
     MeasurementListResponse,
     MeasurementPushRequest,
     MeasurementPushResponse,
+    SignedCapabilityManifest,
     VALID_STRATEGY_TYPES,
     FederatedAggregationRequest,
     FederatedAggregationResponse,
@@ -133,6 +136,81 @@ async def delete_node(node_id: str):
 async def get_fleet_capabilities():
     """Return aggregated fleet capability coverage."""
     return federation_service.get_fleet_capability_summary()
+
+
+# ---------------------------------------------------------------------------
+# Self-sovereign capability manifests
+# ---------------------------------------------------------------------------
+#
+# Each instance speaks its own capabilities. These endpoints expose THIS
+# instance's manifest, sign it, and align peer manifests against it — no
+# instance is authoritative over others, no central registry coerces
+# uniformity. The fleet emerges from each instance's self-declaration.
+
+@router.get(
+    "/federation/capabilities/self",
+    response_model=CapabilityManifest,
+    summary="Return this instance's self-declared capability manifest",
+)
+async def get_self_capabilities() -> CapabilityManifest:
+    """Return this instance's self-declared capability manifest.
+
+    Each field's source-of-truth is THIS instance — providers from its
+    local model routing config, languages from its translator service,
+    substrate canonicals from its modality shapes, economics from its CC
+    service. Other instances may carry different shapes; that diversity
+    is the point of federation.
+    """
+    return federation_service.get_self_capability_manifest()
+
+
+@router.post(
+    "/federation/capabilities/sign",
+    response_model=SignedCapabilityManifest,
+    summary="Sign this instance's capability manifest with its secret",
+)
+async def sign_self_capabilities() -> SignedCapabilityManifest:
+    """Sign this instance's capability manifest.
+
+    Uses the FEDERATION_INSTANCE_SECRET env var. Signature is HMAC-SHA256
+    over the canonical-JSON dump of the manifest. Other instances verify
+    against the secret they hold for this instance — verification proves
+    "this came from this instance," it does NOT make this instance
+    authoritative over peers.
+
+    Returns 503 if no signing secret is configured. An instance may still
+    share its manifest unsigned via GET /federation/capabilities/self —
+    sovereignty includes the choice not to sign.
+    """
+    try:
+        return federation_service.sign_capability_manifest()
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post(
+    "/federation/capabilities/{instance_id}/verify",
+    response_model=CapabilityAlignment,
+    summary="Verify a peer's signed manifest and return capability alignment",
+)
+async def verify_peer_capabilities(
+    instance_id: str,
+    signed: SignedCapabilityManifest,
+) -> CapabilityAlignment:
+    """Verify a peer's signed manifest and align it with this instance.
+
+    Returns capability alignment regardless of signature outcome — an
+    unregistered peer (or registered without a known secret) yields
+    `verified=false` with a clear note, not an error. Sovereignty: an
+    instance may share capabilities openly without authentication
+    overhead, and we honor that by reading rather than refusing.
+    """
+    if signed.manifest.instance_id != instance_id:
+        raise HTTPException(
+            status_code=422,
+            detail=f"instance_id path '{instance_id}' does not match manifest '{signed.manifest.instance_id}'",
+        )
+    return federation_service.align_with_peer(signed)
 
 
 # ---------------------------------------------------------------------------

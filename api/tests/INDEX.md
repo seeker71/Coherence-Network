@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 206
+**Total files**: 207
 
 | File | Purpose |
 |---|---|
@@ -62,6 +62,7 @@
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |
 | [test_failed_task_diagnostics.py](test_failed_task_diagnostics.py) | Tests for failed_task_diagnostics_service (spec: failed-task-diagnostics-contract). |
 | [test_failure_taxonomy_service.py](test_failure_taxonomy_service.py) | _no top-of-file purpose_ |
+| [test_federation_capabilities.py](test_federation_capabilities.py) | Acceptance tests for self-sovereign capability manifests. |
 | [test_federation_layer.py](test_federation_layer.py) | Acceptance tests for spec: federation-network-layer (idea: federation-and-nodes). |
 | [test_federation_message_readback.py](test_federation_message_readback.py) | _no top-of-file purpose_ |
 | [test_federation_substance.py](test_federation_substance.py) | Federation substance payload — round-trip test. |
