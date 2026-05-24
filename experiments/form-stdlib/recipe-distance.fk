@@ -131,4 +131,90 @@
             (if (eq denom 0) 1000
                 (div (mul (sub denom d) 1000) denom))))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Variant 3 — observer-weighted distance
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The caller supplies a weight function (category-NodeID → integer).
+    ;; At a mismatch, cost = weight-fn(node_category(a)). This lets the
+    ;; observer say what they actually care about — control-flow shapes
+    ;; weigh more than identifier leaves, or vice versa for a literal-
+    ;; preserving translation. The function-as-value lifts the metric
+    ;; from "tree-edit count" to "tree-edit count under this observer."
+    ;;
+    ;; This is the codec-style observer-cost from image/audio compression:
+    ;; the same residual signal can be high-fidelity or low-fidelity
+    ;; depending on which spectral band the observer cares about.
+
+    (defn observed-tail-cost (xs weight-fn)
+        (if (nil? xs) 0
+            (add (mul (weight-fn (node_category (head xs)))
+                      (node-size (head xs)))
+                 (observed-tail-cost (tail xs) weight-fn))))
+
+    (defn observed-children-dist (xs ys weight-fn)
+        (if (nil? xs)
+            (observed-tail-cost ys weight-fn)
+            (if (nil? ys)
+                (observed-tail-cost xs weight-fn)
+                (add (recipe-distance-observed (head xs) (head ys) weight-fn)
+                     (observed-children-dist (tail xs) (tail ys) weight-fn)))))
+
+    (defn recipe-distance-observed (a b weight-fn)
+        (if (node_eq a b) 0
+            (do
+                (let cat-cost
+                    (if (node_eq (node_category a) (node_category b))
+                        0
+                        (weight-fn (node_category a))))
+                (add cat-cost
+                     (observed-children-dist (node_children a)
+                                             (node_children b)
+                                             weight-fn)))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Multi-candidate selection — pick the recipe nearest a reference
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Given N candidate recipes (e.g. from N parse paths or N emit-and-
+    ;; reparse cycles), return the one whose distance from `reference`
+    ;; is smallest. The metric becomes load-bearing for selection: pick
+    ;; the recipe that best preserves what the reference holds.
+    ;;
+    ;; This is the argmin-over-candidates move that makes "best of N
+    ;; translations" a real operation instead of a vibe.
+
+    (defn best-of-loop (xs ref best best-d)
+        (if (nil? xs) best
+            (do
+                (let d (recipe-distance ref (head xs)))
+                (if (lt d best-d)
+                    (best-of-loop (tail xs) ref (head xs) d)
+                    (best-of-loop (tail xs) ref best best-d)))))
+
+    (defn recipe-best-of (candidates reference)
+        (if (nil? candidates) reference
+            (best-of-loop (tail candidates)
+                          reference
+                          (head candidates)
+                          (recipe-distance reference (head candidates)))))
+
+    ;; And the same with an observer weight, so multi-candidate selection
+    ;; under a particular observer is one call away.
+
+    (defn best-of-observed-loop (xs ref weight-fn best best-d)
+        (if (nil? xs) best
+            (do
+                (let d (recipe-distance-observed ref (head xs) weight-fn))
+                (if (lt d best-d)
+                    (best-of-observed-loop (tail xs) ref weight-fn (head xs) d)
+                    (best-of-observed-loop (tail xs) ref weight-fn best best-d)))))
+
+    (defn recipe-best-of-observed (candidates reference weight-fn)
+        (if (nil? candidates) reference
+            (best-of-observed-loop
+                (tail candidates)
+                reference
+                weight-fn
+                (head candidates)
+                (recipe-distance-observed reference (head candidates) weight-fn))))
+
     0)

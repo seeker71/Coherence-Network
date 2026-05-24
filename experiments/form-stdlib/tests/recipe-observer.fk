@@ -1,0 +1,188 @@
+; tests/recipe-observer.fk — observer-weighted distance + multi-candidate
+;                            selection + cross-language structural fidelity
+;
+; Three new claims the metric must support, each turned into a number:
+;
+;   1. OBSERVER-WEIGHTING — two different weight functions on the same
+;      pair of recipes produce two different distances. The function the
+;      caller passes shapes what counts as "near" and what counts as
+;      "far." This is the codec-style observer-cost: same signal, different
+;      perceptual band, different fidelity.
+;
+;   2. MULTI-CANDIDATE SELECTION — given a list of N candidate recipes
+;      and a reference, recipe-best-of returns the one with minimum
+;      distance. The metric becomes load-bearing for choice, not just
+;      measurement. recipe-best-of-observed lets the observer steer the
+;      choice — names-observer picks the same-name candidate, structure-
+;      observer picks the same-shape candidate.
+;
+;   3. CROSS-LANGUAGE FIDELITY — Python and Go grammars both parse to
+;      the same universal Blueprint vocabulary. If the BMF claim is real,
+;      structurally equivalent programs in the two tongues should produce
+;      structurally near-identical universal Recipes. The number puts a
+;      ceiling on the BMF promise: how aligned are the two projections,
+;      really, on a worked example?
+;
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/recipe-distance.fk
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Two observer weight functions — demonstrate the mechanism
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The IDENT category (1 2 33 1) is the wrapper for identifier
+    ;; references. Note: rename-mismatches actually surface at the
+    ;; trivial-string LEAF beneath IDENT, not at the IDENT wrapper —
+    ;; node_eq on two IDENT recipes with different names short-circuits
+    ;; via content-addressing differences, then the walk recurses into
+    ;; the strings. The weight function fires on the leaf category, not
+    ;; on the wrapper. This is itself useful to know: an observer that
+    ;; wants to weight renames specifically must target the trivial-
+    ;; string category, not IDENT.
+    ;;
+    ;; Two opposed weight functions live here so we can watch them
+    ;; produce different scores on the same pair of recipes. The labels
+    ;; describe what the function does mechanically; tuning these to
+    ;; match human intuitions about "structure" vs "names" is a separate
+    ;; learning the metric makes possible.
+    ;;
+    ;; weight-favor-ident: IDENT wrapper → 1, every other category → 5.
+    ;;     A rename surfaces beneath IDENT, so this observer assigns
+    ;;     weight 5 to rename mismatches. Reads as "rename-intolerant."
+    ;;
+    ;; weight-favor-others: IDENT wrapper → 5, every other category → 1.
+    ;;     The opposite. A rename costs weight 1 — observer barely cares.
+    ;;     Reads as "rename-tolerant."
+
+    (let CF-IDENT (make_nodeid 1 2 33 1))
+
+    (defn weight-favor-ident (cat)
+        (if (node_eq cat CF-IDENT) 1 5))
+
+    (defn weight-favor-others (cat)
+        (if (node_eq cat CF-IDENT) 5 1))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Setup — parse three Python sources for the candidate-selection demo
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; same-as-ref: identical to reference (distance 0)
+    ;; same-shape:  same structure, different identifiers
+    ;; diff-shape:  different operator AND different identifiers
+
+    (let src-ref        "def add(a, b): return a + b")
+    (let src-same-as-ref "def add(a, b): return a + b")
+    (let src-same-shape "def add(x, y): return x + y")
+    (let src-diff-shape "def mul(p, q): return p * q")
+
+    (let r-ref        (parse-python-universal src-ref))
+    (let r-same       (parse-python-universal src-same-as-ref))
+    (let r-shape      (parse-python-universal src-same-shape))
+    (let r-diff       (parse-python-universal src-diff-shape))
+
+    ;; ── claim 1: observer-weighting shifts the number ──
+    ;; Compare ref vs r-shape (same structure, renamed identifiers).
+    ;; Under structure-observer this should read as a small distance
+    ;; (identifier-only drift); under names-observer it should read
+    ;; as a large distance (names matter, all changed).
+
+    (let d-shape-unweighted (recipe-distance r-ref r-shape))
+    (let d-shape-rename-bad (recipe-distance-observed r-ref r-shape weight-favor-ident))
+    (let d-shape-rename-ok  (recipe-distance-observed r-ref r-shape weight-favor-others))
+
+    (print "── claim 1: same pair, two observers, two scores ──")
+    (print (str_concat "  source A: " src-ref))
+    (print (str_concat "  source B: " src-same-shape))
+    (print (str_concat "  unweighted distance:        " (int_to_str d-shape-unweighted)))
+    (print (str_concat "  rename-intolerant observer: " (int_to_str d-shape-rename-bad)))
+    (print (str_concat "  rename-tolerant   observer: " (int_to_str d-shape-rename-ok)))
+    (print "  expected: rename-intolerant > rename-tolerant")
+    (print "    (the observer's weights shift what counts as near)")
+    (print "")
+
+    ;; ── claim 2: multi-candidate selection ──
+    ;; Build a candidate list. recipe-best-of(ref) must return the recipe
+    ;; whose distance from ref is smallest — that's r-same.
+
+    (let candidates (list r-diff r-shape r-same))
+    (let chosen-unweighted (recipe-best-of candidates r-ref))
+    (let chosen-d (recipe-distance r-ref chosen-unweighted))
+
+    (print "── claim 2: best-of N candidates ──")
+    (print (str_concat "  candidate 0 (diff):  d=" (int_to_str (recipe-distance r-ref r-diff))))
+    (print (str_concat "  candidate 1 (shape): d=" (int_to_str (recipe-distance r-ref r-shape))))
+    (print (str_concat "  candidate 2 (same):  d=" (int_to_str (recipe-distance r-ref r-same))))
+    (print (str_concat "  recipe-best-of chose: d=" (int_to_str chosen-d)))
+    (print "  expected: chose candidate 2 (d=0) — same source = same interned recipe")
+    (print "")
+
+    ;; ── claim 2b: best-of under different observers picks differently ──
+    ;; Take a 2-candidate race where the structure-observer and names-
+    ;; observer disagree about which is closer:
+    ;;   ref:    "def add(a, b): return a + b"
+    ;;   r-shape "def add(x, y): return x + y" — same shape, renamed
+    ;;   r-diff  "def mul(p, q): return p * q" — same identifiers (none
+    ;;                                            shared) AND wrong shape
+    ;; Both observers should prefer r-shape over r-diff, since r-shape
+    ;; beats r-diff on both axes; the test confirms the observer-aware
+    ;; selector returns the structurally-closer candidate.
+
+    (let two-cands (list r-diff r-shape))
+    (let chosen-by-intolerant
+        (recipe-best-of-observed two-cands r-ref weight-favor-ident))
+    (let chosen-by-tolerant
+        (recipe-best-of-observed two-cands r-ref weight-favor-others))
+
+    ;; Confirm by identity-check: both observers should pick r-shape
+    ;; on this pair (it dominates r-diff on every axis).
+    (let intolerant-picked-shape (node_eq chosen-by-intolerant r-shape))
+    (let tolerant-picked-shape   (node_eq chosen-by-tolerant   r-shape))
+
+    (print "── claim 2b: observer steers best-of ──")
+    (print (str_concat "  intolerant chose r-shape? " (if intolerant-picked-shape "yes" "no")))
+    (print (str_concat "  tolerant   chose r-shape? " (if tolerant-picked-shape   "yes" "no")))
+    (print (str_concat "  intolerant d (under its own metric): "
+                       (int_to_str (recipe-distance-observed r-ref chosen-by-intolerant weight-favor-ident))))
+    (print (str_concat "  tolerant   d (under its own metric): "
+                       (int_to_str (recipe-distance-observed r-ref chosen-by-tolerant weight-favor-others))))
+    (print "  expected: both pick r-shape (dominates r-diff on every axis)")
+    (print "")
+
+    ;; ── claim 3: cross-language structural fidelity ──
+    ;; The BMF promise: both parsers project to the same universal
+    ;; Blueprint vocabulary, so structurally equivalent programs in the
+    ;; two tongues should produce structurally near-identical universal
+    ;; Recipes. The number says how well that promise holds in practice.
+
+    (let py-src "def add(a, b): return a + b")
+    (let go-src "func add(a, b) { return a + b }")
+
+    (let r-py (parse-python-universal py-src))
+    (let r-go (parse-go-universal go-src))
+
+    (let d-cross (recipe-distance r-py r-go))
+    (let d-cross-w (recipe-distance-w r-py r-go))
+    (let fid-cross (recipe-fidelity-ppk r-py r-go))
+    (let d-cross-rename-bad (recipe-distance-observed r-py r-go weight-favor-ident))
+    (let d-cross-rename-ok  (recipe-distance-observed r-py r-go weight-favor-others))
+    (let identical (node_eq r-py r-go))
+
+    (print "── claim 3: cross-language structural fidelity ──")
+    (print (str_concat "  python: " py-src))
+    (print (str_concat "  go:     " go-src))
+    (print (str_concat "  python recipe size: " (int_to_str (recipe-size r-py))))
+    (print (str_concat "  go recipe size:     " (int_to_str (recipe-size r-go))))
+    (print (str_concat "  recipes node_eq?    " (if identical "yes" "no")))
+    (print (str_concat "  unweighted distance:        " (int_to_str d-cross)))
+    (print (str_concat "  weighted   distance:        " (int_to_str d-cross-w)))
+    (print (str_concat "  fidelity (ppk):             " (int_to_str fid-cross)))
+    (print (str_concat "  rename-intolerant observer: " (int_to_str d-cross-rename-bad)))
+    (print (str_concat "  rename-tolerant   observer: " (int_to_str d-cross-rename-ok)))
+    (print "  reading: d=0 means the two grammars produce the SAME universal")
+    (print "          NodeID for semantically equivalent code — the BMF claim")
+    (print "          holds at the substrate's content-addressing level.")
+    (print "")
+
+    ;; Deterministic kernel return — sum of the four headline numbers so
+    ;; sibling kernels can compare bytes for parity.
+    (add d-shape-rename-bad
+         (add d-shape-rename-ok
+              (add chosen-d d-cross))))
