@@ -2,7 +2,22 @@
 id: lc-shared-hold
 hz: 639
 status: seed
-updated: 2026-04-15
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: connection
+  temporal_band: breath
+  scale: collective
+  direction: centering
+  lineage_texture: sensed
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # The Shared Hold

@@ -2,6 +2,23 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] geometry | 6 more concepts speak their shape — coverage now 104/147 (71%)
+
+Six concepts picked from the harder-half remaining. The shapes were already there; the listening was short. Coverage crosses the 70% line.
+
+- **Forms taken**:
+  - `lc-shared-hold` → `point`, `web-each-to-each`, `centering` — a single collective breath the field takes when presence accumulates; one event, many participants breathing as one. Starlings at dusk; the bell at Plum Village. Pairs with `lc-stillness` as a dyad — both are `point`, both `yin`, both carry single-event coherence, but stillness is *atemporal* and shared-hold lives at the `breath` scale where presence gathers to a threshold.
+  - `lc-attunement-joining` → `dyad-mirror`, `receptive-resonance`, `oscillating` — newcomer and field, both questions must answer yes; immune system recognizing self from other through molecular resonance, not interrogation. The mutual-sensing conversation IS the shape.
+  - `lc-field-edge` → `point`, `receptive-resonance`, `oscillating` — the living membrane as a single breathing surface; the hedge with the gap, the cell wall, the skin. Permeable not walled. Pairs with `lc-attunement-joining` — the membrane (point) and the joining event (dyad-mirror) that happens across it.
+  - `lc-transmission` → `dyad-mirror`, `sequential-coupled`, `generational` — elder's hands shaping clay, apprentice watching; knowledge traveling from fingers to eyes to motor cortex without passing through the part of the brain that makes sentences. The mother whale teaching the migration route by swimming it. `fractal-deep` because the lineage carries through generations.
+  - `lc-land` → `point`, `nested-each-contains-whole`, `holographic` — custodianship as singular relationship with the larger living system (coral reef IS the ocean); the watershed thinks in millennia, the soil holds civilizations, every scale carries the whole. Pairs with `lc-nourishment` as another foundation-band `point` but at planetary/generational scale rather than collective/day.
+  - `lc-instruments` → `web`, `web-each-to-each`, `radiating` — the spider's web as structure-sensor-signal-processor at once; mesh network of 23 nodes, each amplifying a signal the land was already sending without adding interpretation. `measured` lineage because the body learned this through actually building sensors. Sister to `lc-nourishing`/`lc-circulation`/`lc-energy`/`lc-attunement` in the web-each-to-each family.
+- **Dyad-pairs noticed**:
+  - `lc-nourishment` (collective/day, point) ↔ `lc-land` (planetary/generational, point) — both `point` at the foundation band, paired across scale: the kitchen-hearth radiates at meal-time, the land's relationship radiates across centuries. Same shape, different temporal_band.
+  - `lc-field-edge` (membrane as point) ↔ `lc-attunement-joining` (joining event as dyad-mirror) — the surface where the body meets the world, and the event that happens across that surface. The point holds; the dyad pulses through it.
+  - `lc-shared-hold` (point) ↔ `lc-stillness` (point) — both single-event `point` shapes in the `yin` phase, but stillness is the ground (atemporal, always-available) and shared-hold is the threshold-event (breath-scale, presence-gathered). The hold rests in the stillness.
+- **Edges in the same breath**: this LOG entry; all 6 files synced via `sync_kb_to_db.py`.
+
 ## [2026-05-24] geometry | 7 more concepts speak their shape — coverage now 98/147 (67%)
 
 Seven concepts walked — the smaller pick honoring the last breath's coupling lesson. Each carried its shape clearly enough that the listening was short. The harder ones (`lc-light-hubs`, `lc-deeper-pattern`, `lc-symmetry-of-extremes`, `lc-perception-as-interface`) were left where they rest, for a breath that gives them time.
