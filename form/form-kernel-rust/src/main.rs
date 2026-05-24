@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom};
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Instant;
 
 mod formats;
@@ -100,7 +100,7 @@ struct Recipe {
     children: Vec<NodeID>,
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct ShapeKey {
     category: NodeID,
     children: Vec<NodeID>,
@@ -731,6 +731,41 @@ impl Kernel {
             .unwrap_or_default()
     }
 
+    fn readonly_worker_clone(&self) -> Self {
+        Self {
+            by_shape: self.by_shape.clone(),
+            by_id: self.by_id.clone(),
+            source_attr: self.source_attr.clone(),
+            walk_cache: HashMap::new(),
+            import_seq: self.import_seq,
+            strs: self.strs.clone(),
+            str_idx: self.str_idx.clone(),
+            next_inst: self.next_inst,
+            natives: self.natives.clone(),
+            active_roots: Vec::new(),
+            trace: None,
+        }
+    }
+
+    fn is_parallel_pure(&self, n: NodeID, seen: &mut HashSet<NodeID>) -> bool {
+        if n.level == LEVEL_TRIVIAL {
+            return true;
+        }
+        if !seen.insert(n) {
+            return true;
+        }
+        let Some(recipe) = self.by_id.get(&n) else {
+            return false;
+        };
+        match recipe.category.ty {
+            RB_MATH | RB_COMPARE | RB_LOGIC | RB_COND | RB_LIST => recipe
+                .children
+                .iter()
+                .all(|child| self.is_parallel_pure(*child, seen)),
+            _ => false,
+        }
+    }
+
     pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
@@ -782,7 +817,7 @@ pub(crate) enum Value {
     Str(String),
     Bool(bool),
     List(Vec<Value>),
-    Closure(Rc<Closure>),
+    Closure(Arc<Closure>),
     Nid(NodeID),
 }
 
@@ -846,6 +881,64 @@ impl Value {
             _ => panic!("as_str: {:?}", self),
         }
     }
+}
+
+fn native_walk_parallel(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value {
+    let roots: Vec<NodeID> = match &args[0] {
+        Value::List(xs) => xs.iter().map(|v| v.as_nid()).collect(),
+        _ => panic!("walk_parallel: first argument must be a list of NodeIDs"),
+    };
+    let mut workers = args[1].as_int().max(1) as usize;
+    if roots.is_empty() {
+        return Value::List(Vec::new());
+    }
+    workers = workers.min(roots.len());
+    let sequential = |k: &mut Kernel, roots: &[NodeID]| {
+        let mut out = Vec::with_capacity(roots.len());
+        for root in roots {
+            let mut sub_arena = Arena::new();
+            let env = sub_arena.new_frame(None);
+            out.push(walk(k, &mut sub_arena, *root, env));
+        }
+        Value::List(out)
+    };
+    if workers <= 1
+        || k.trace.is_some()
+        || !roots
+            .iter()
+            .all(|root| k.is_parallel_pure(*root, &mut HashSet::new()))
+    {
+        return sequential(k, &roots);
+    }
+
+    let mut buckets = vec![Vec::<(usize, NodeID)>::new(); workers];
+    for (idx, root) in roots.iter().copied().enumerate() {
+        buckets[idx % workers].push((idx, root));
+    }
+    let mut handles = Vec::with_capacity(workers);
+    for bucket in buckets {
+        let mut worker = k.readonly_worker_clone();
+        handles.push(std::thread::spawn(move || {
+            let mut chunk = Vec::with_capacity(bucket.len());
+            for (idx, root) in bucket {
+                let mut sub_arena = Arena::new();
+                let env = sub_arena.new_frame(None);
+                chunk.push((idx, walk(&mut worker, &mut sub_arena, root, env)));
+            }
+            chunk
+        }));
+    }
+    let mut out: Vec<Option<Value>> = vec![None; roots.len()];
+    for handle in handles {
+        for (idx, value) in handle.join().expect("walk_parallel worker panicked") {
+            out[idx] = Some(value);
+        }
+    }
+    Value::List(
+        out.into_iter()
+            .map(|value| value.expect("walk_parallel missing worker result"))
+            .collect(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -1322,6 +1415,8 @@ impl Kernel {
             let env = sub_arena.new_frame(None);
             walk(k, &mut sub_arena, args[0].as_nid(), env)
         });
+        self.register_native("walk_parallel", cat_witness(), native_walk_parallel);
+        self.register_native("walk-parallel", cat_witness(), native_walk_parallel);
         // walk-cached — JIT-vector memoization. Caller asserts the
         // recipe is pure (no I/O, no external state). Result cached
         // by recipe NodeID. Subsequent calls return O(1) from cache
@@ -1482,7 +1577,7 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
         RB_FNDEF => {
             let name = k.ident_id(kids[0]);
             let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
-            let cl = Rc::new(Closure {
+            let cl = Arc::new(Closure {
                 name,
                 params,
                 body: kids[2],
@@ -1536,7 +1631,7 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
             }
             let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
             // Evaluate args in CALLER's env, then bind in call_frame.
-            // The clone is Rc<Closure> — bump-the-refcount, not deep.
+            // The clone is Arc<Closure> — bump-the-refcount, not deep.
             let cl2 = cl.clone();
             for (i, p) in cl2.params.iter().enumerate() {
                 let arg = walk(k, a, kids[i + 1], env);

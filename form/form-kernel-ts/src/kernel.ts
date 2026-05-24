@@ -1338,6 +1338,36 @@ export class Kernel {
     this.registerNative("walk_recipe", catWitness(), (k, args) =>
       walk(k, argNodeID(args, 0), new Frame(null)),
     );
+    const walkParallel: NativeFn = (k, args) => {
+      const roots = argList(args, 0).map((value) => {
+        if (value.kind !== "nodeid")
+          throw new Error("walk_parallel: first argument must be a list of NodeIDs");
+        return value.nodeid;
+      });
+      const workers = Math.max(1, argInt(args, 1));
+      const sequential = (): Value => ({
+        kind: "list",
+        list: roots.map((root) => walk(k, root, new Frame(null))),
+      });
+      if (
+        workers <= 1 ||
+        roots.length <= 1 ||
+        k.trace !== undefined ||
+        roots.some((root) => !isParallelPure(k, root, new Set<string>()))
+      ) {
+        return sequential();
+      }
+      const out: Value[] = new Array(roots.length);
+      const workerCount = Math.min(workers, roots.length);
+      for (let worker = 0; worker < workerCount; worker++) {
+        for (let i = worker; i < roots.length; i += workerCount) {
+          out[i] = walk(k, roots[i]!, new Frame(null));
+        }
+      }
+      return { kind: "list", list: out };
+    };
+    this.registerNative("walk_parallel", catWitness(), walkParallel);
+    this.registerNative("walk-parallel", catWitness(), walkParallel);
     this.registerNative("walk-cached", catWitness(), (k, args) => {
       const nid = argNodeID(args, 0);
       const key = nodeKey(nid);
@@ -1586,6 +1616,24 @@ export class Frame {
 // ---------------------------------------------------------------------------
 // Walker — recipe → value
 // ---------------------------------------------------------------------------
+
+function isParallelPure(k: Kernel, node: NodeID, seen: Set<string>): boolean {
+  if (node.level === Level.TRIVIAL) return true;
+  const key = nodeKey(node);
+  if (seen.has(key)) return true;
+  seen.add(key);
+  const cat = k.category(node);
+  switch (cat.type) {
+    case RBasic.MATH:
+    case RBasic.COMPARE:
+    case RBasic.LOGIC:
+    case RBasic.COND:
+    case RBasic.LIST:
+      return k.children(node).every((child) => isParallelPure(k, child, seen));
+    default:
+      return false;
+  }
+}
 
 export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
   if (node.level === Level.TRIVIAL) {

@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -628,6 +629,31 @@ func (k *Kernel) children(n NodeID) []NodeID {
 // the caller already short-circuited on Level before calling.
 func (k *Kernel) recipeAt(n NodeID) Recipe { return k.byID[n] }
 
+func (k *Kernel) isParallelPure(n NodeID, seen map[NodeID]bool) bool {
+	if n.Level == LevelTrivial {
+		return true
+	}
+	if seen[n] {
+		return true
+	}
+	seen[n] = true
+	r, ok := k.byID[n]
+	if !ok {
+		return false
+	}
+	switch r.Category.Type {
+	case RBasicMath, RBasicCompare, RBasicLogic, RBasicCond, RBasicList:
+		for _, child := range r.Children {
+			if !k.isParallelPure(child, seen) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 func (k *Kernel) trivialValue(n NodeID) Value {
 	if n.Level != LevelTrivial {
 		panic(fmt.Sprintf("trivialValue: %v is composite", n))
@@ -1213,6 +1239,54 @@ func (k *Kernel) registerNatives() {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)
 	})
+	walkParallel := func(k *Kernel, args []Value) Value {
+		roots := make([]NodeID, len(args[0].List))
+		for i, v := range args[0].List {
+			roots[i] = v.Nid
+		}
+		workers := int(args[1].Int)
+		if workers < 1 {
+			workers = 1
+		}
+		if workers > len(roots) && len(roots) > 0 {
+			workers = len(roots)
+		}
+		sequential := func() Value {
+			out := make([]Value, len(roots))
+			for i, root := range roots {
+				out[i] = k.walk(root, NewFrame(nil))
+			}
+			return Value{Kind: VList, List: out}
+		}
+		if workers <= 1 || len(roots) <= 1 || k.Trace != nil {
+			return sequential()
+		}
+		for _, root := range roots {
+			if !k.isParallelPure(root, make(map[NodeID]bool)) {
+				return sequential()
+			}
+		}
+		out := make([]Value, len(roots))
+		jobs := make(chan int)
+		var wg sync.WaitGroup
+		for w := 0; w < workers; w++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for idx := range jobs {
+					out[idx] = k.walk(roots[idx], NewFrame(nil))
+				}
+			}()
+		}
+		for i := range roots {
+			jobs <- i
+		}
+		close(jobs)
+		wg.Wait()
+		return Value{Kind: VList, List: out}
+	}
+	k.registerNative("walk_parallel", catWitness(), walkParallel)
+	k.registerNative("walk-parallel", catWitness(), walkParallel)
 
 	// native_blueprint — read a native's Form category from inside Form.
 	// Returns the category NodeID (level=2, ty=RBasic, inst=instance) or
