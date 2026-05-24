@@ -224,6 +224,27 @@ defn compute_translator_fitness(encoders, holdout_pairs) = do {
 #          sufficient — still trivially gamed by collapse, which is
 #          what the next term catches.
 #
+#          Empirical note from the dyad-pair scan arc (PRs #1987,
+#          #1992, #1996, #1998, #2001 — five rounds across four
+#          signal families): yield-via-cross-ref-promotion is
+#          structurally different from yield-via-scan-discovery. The
+#          scan-discovered track (no prose cross-reference) capped
+#          near 40% confirmation across Blueprint family, geometry
+#          tuple, Hz+topology+phase, and WORD-domain prose Jaccard
+#          signals — the saturation is the body's geometry+prose
+#          vocabulary, not a feature-engineering gap. The
+#          cross-ref-promoted track (cell-pair already noticed by
+#          the body's own prose) ran near 75% in the same rounds.
+#          The yield_weight term covers both; the comment names what
+#          the body learned about mechanizable yield ceilings.
+#          Complementarity (dyad-pair relationship) is, with today's
+#          extractors, not mechanizable at the same altitude as
+#          equivalence (CTOR coincidence). See
+#          docs/coherence-substrate/dyad-pairs.form Part 5 GAP-D6
+#          (DISCONFIRMED), GAP-D7 (cross-ref-only is load-bearing),
+#          and lc-universal-translator-via-keys's sixth proof claim
+#          (complementarity_requires_human_noticing) for the trace.
+#
 #   holdout: Grant's own published pairs (codon → interval, element →
 #            polyhedron). Held out of encoder inputs; required to be
 #            *recovered* at CTOR coincidence from structure alone.

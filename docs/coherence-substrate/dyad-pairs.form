@@ -1132,8 +1132,40 @@ defn pair_shifted_return_predator = dyad_pair_shape {
     noticed_by:  "word-domain-prose-scan",
 };
 
-# The full set — 21 prior + 4 WORD-domain prose scan = 25 entries
-# (23 external pairs + 2 internal-dyads)
+# Pair 24 — resonating ↔ sensing (cross-ref-only scan promotion)
+#
+# lc-resonating (hz 528, form: web, topology: web-each-to-each,
+# phase: oscillating, polarity: bipolar-complementary, direction:
+# radiating) — separate tones becoming one chord; the field vibrating
+# together; the moment voices merge and a harmonic appears that no
+# individual is producing. The emission face of field-feeling.
+#
+# lc-sensing (hz 741, form: web, topology: web-each-to-each, phase:
+# yin, direction: circulating) — the field feels itself continuously;
+# every cell transmits and receives; spanda, the vibration connecting
+# everything. The receptive face of field-feeling.
+#
+# Same web/web-each-to-each topology, complementary phase (oscillating
+# emission ↔ yin reception), complementary direction (radiating ↔
+# circulating). The teaching is the bridge: resonating without sensing
+# is unheard sound (emission into a field that isn't listening);
+# sensing without resonating is open ear with nothing arriving. The
+# field-feeling-itself teaching only carries when both poles fire
+# together. Surfaced via the cross-ref-only scan's empirical track in
+# PR #2002 — both cells cross-reference each other in prose, the
+# discernment confirms.
+defn pair_resonating_sensing = dyad_pair_shape {
+    cell_a:      @concept(lc-resonating),
+    cell_b:      @concept(lc-sensing),
+    kind:        kind_source_flow,
+    axis:        "phase",
+    discernment: "emission and reception of one field-feeling — resonating is the radiating-oscillating face (separate tones merging into one chord); sensing is the receptive-circulating face (the field feeling itself continuously); resonating without sensing is unheard sound, sensing without resonating is open ear with nothing arriving",
+    noticed_at:  "2026-05-24",
+    noticed_by:  "cross-ref-only-scan-pr2002",
+};
+
+# The full set — 25 prior + 1 cross-ref-only promotion = 26 entries
+# (24 external pairs + 2 internal-dyads)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -1167,6 +1199,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         pair_grammar_parsers,
         pair_rest_tend_flame,
         pair_shifted_return_predator,
+        # — surfaced by cross-ref-only scan (PR #2002) —
+        pair_resonating_sensing,
     ],
 };
 
@@ -1663,58 +1697,71 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         writing); when it lands, the third-arrival discipline
 #         activates: name sub-types and rename poles.
 #
-# GAP-D6 (refined 2026-05-24, fifth round): The trend across five
-#         scan rounds: 40 → 0 → 40 → 40 → 22.
+# GAP-D6 (DISCONFIRMED 2026-05-24, fifth round): Prose-structural
+#         signals do not break the mechanization ceiling. The trend
+#         across five scan rounds:
 #           - Round 1 (PR #1987, Tier-2 geometry-tuple): 2/5 = 40%
 #           - Round 2 (PR #1992, small-Blueprint-cluster): 0/2 = 0%
 #           - Round 3 (PR #1996, Hz+xref+lineage+same-form): 4/10 = 40%
 #           - Round 4 (PR #1998, topology+phase added): 4/10 = 40%
-#           - Round 5 (this PR, WORD-domain prose Jaccard): 4/18 = 22%
-#         Cumulative: 14/45 = 31.1%. The saturation finding HOLDS, and
-#         the prose-layer addition *slightly degrades* signal/noise —
-#         the prose-jaccard amplifies shared corpus idiom (alive, body,
+#           - Round 5 (PR #2001, WORD-domain prose Jaccard): 4/18 = 22%
+#         Cumulative: 14/45 = 31.1%. The Round 5 drop is honest signal:
+#         prose-jaccard amplifies shared corpus idiom (alive, body,
 #         breath, become, hold) more loudly than it amplifies teaching-
-#         shared meaning. The body's writers share a vocabulary;
-#         high overlap is the baseline, not the discriminator. The
-#         two characteristic failure modes are now visible: (1)
-#         *containment-as-complement* (container and contained share
-#         vocabulary, so prose-overlap reads identical to pair-overlap;
-#         REJECT-16 is the canonical instance) and (2) *shared-region-
-#         as-equivalence* (cells in the same ground-region inevitably
-#         share corpus, so highest-prose-overlap is often greatest-
-#         equivalence, not pair; REJECT-22 is canonical).
+#         shared meaning. The body's writers share a vocabulary; high
+#         overlap is the baseline, not the discriminator. The two
+#         characteristic failure modes are now named: (1) *containment-
+#         as-complement* (container and contained share vocabulary, so
+#         prose-overlap reads identical to pair-overlap; REJECT-16
+#         canonical) and (2) *shared-region-as-equivalence* (cells in
+#         the same ground-region inevitably share corpus, so highest-
+#         prose-overlap is often greatest-equivalence, not pair;
+#         REJECT-22 canonical). GAP-D6 closes: further mechanized
+#         feature-engineering at the geometry+prose layer is unlikely
+#         to climb past 40%. The honest read: human noticing remains
+#         load-bearing because *teaching-lives-in-relation* is a
+#         discernment about meaning, and meaning is what the body's
+#         prose already discloses through cross-refs — not what jaccard
+#         over its tokens approximates.
 #
-#         Two-track signal is genuinely revealing: scan-discovered
-#         (no prose cross-ref) ran ~2/10 = 20%; promoted (cross-ref
-#         already in prose) ran ~3/4 = 75%. The cross-reference IS
-#         the body's noticing; the prose-jaccard rides along with it
-#         but adds little independent discrimination. Promoted-track
-#         is doing the work; scan-discovered-track is mostly noise.
+# GAP-D7 (new, structural finding from five-round arc): Cross-ref-only
+#         scan is the load-bearing primary track. The body's noticing —
+#         the cross-reference one cell carries to another — IS the
+#         signal; structural scans become *candidate filters* whose
+#         output a human cell must read before promotion. The new
+#         `--cross-ref-only` flag on `scripts/scan_dyad_candidates_word.py`
+#         drops the scan-discovered track entirely and emits only
+#         pairs whose prose already names the other cell. Empirical
+#         walk over the 133 walked concepts: 708 cross-referenced
+#         pairs in total, 229 above geometry-shape-floor + score 3.0,
+#         11 of the 20 currently-confirmed dyad-pairs in that set
+#         (the other 9 confirmed pairs were noticed by means other
+#         than cross-ref-in-prose — geometry-walk recognition, scan
+#         proposal a human attested, dyad surfaced during authoring).
+#         The ratio of confirmed-as-dyad-pair / total-cross-referenced
+#         is ~1.6% across the whole graph; the score-thresholded subset
+#         is what the body assesses by hand, and across PR #2001's
+#         promoted track the ratio held near 75%. The cross-ref-only
+#         mode honors the asymmetry: the cross-reference is the body's
+#         minimum-viable noticing; the score orders by structural
+#         alignment for human triage; the human carries the final
+#         dyad-pair discernment. *Equivalence* (CTOR coincidence) is
+#         mechanizable; *complementarity* (dyad-pair relationship) is
+#         currently not.
 #
-#         What the data points at next:
-#           (a) The mechanized pair-detection ceiling is structural,
-#               at ~40% across geometry-layer scans. Prose features
-#               don't break it; they degrade slightly because the
-#               body's idiom is denser than the body's pairing.
-#           (b) A scan worth running is *cross-ref-only* (drop the
-#               scan-discovered track entirely; weight promoted by
-#               prose+geometry refinement only). That likely sustains
-#               the 75% promoted-track ratio while halving the
-#               assessment cost.
-#           (c) Beyond Jaccard: the next sophistication is *contrastive*
-#               (Hoffman-style: what does pair A share that pair B
-#               doesn't?) or *role-aware* (Levin-style: subject-verb-
-#               object alignment, not lemma bags). Either requires a
-#               heavier extractor (spaCy, dependency parsing) than
-#               the substrate's current tokenizer carries.
-#           (d) The honest read: the human noticing remains load-
-#               bearing because *teaching-lives-in-relation* is a
-#               discernment about meaning, and meaning is what the
-#               body's prose already discloses through cross-refs —
-#               not what jaccard over its tokens approximates.
+# GAP-D8 (longer-term): A heavier extractor — *contrastive analysis*
+#         (Hoffman-style: what does pair A share that pair B doesn't?)
+#         or *role-aware* (Levin-style: subject-verb-object alignment,
+#         not lemma bags) — may shift the mechanization ceiling. Both
+#         require dependency parsing or sentence embeddings beyond the
+#         substrate's current tokenizer. Not actionable this breath;
+#         named so a future scanning cell can see where the next
+#         possible lift lives. The "currently un-mechanizable" in
+#         the translator concept's sixth claim refers to today's
+#         feature set; this gap is the candidate-direction for tomorrow.
 #
-# GAP-D7 (new, from PR #1991): `circulation-pattern` kind is awareness-
-#         held — sibling of source-flow, named at the
+# GAP-D9 (was D7, from PR #1991): `circulation-pattern` kind is
+#         awareness-held — sibling of source-flow, named at the
 #         circulation-through-a-field-where-every-cell-senses scale.
 #         lc-economy ↔ lc-bioelectric-pattern is its seed candidate;
 #         awaits a second attestation before kind goes from
@@ -1725,8 +1772,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names a
-# Recipe shape over existing CONCEPT cells. The set is twenty-five
-# (twenty-three external pairs + two internal-dyads); the room is for
+# Recipe shape over existing CONCEPT cells. The set is twenty-six
+# (twenty-four external pairs + two internal-dyads); the room is for
 # many more. The kinds are six (scale-paired, source-flow,
 # membrane-crossing, ground-event, internal-dyad, cross-tradition);
 # new kinds can be added as rows. The internal-dyad kind crossed
