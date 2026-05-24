@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 131
+**Total files**: 132
 
 | File | Purpose |
 |---|---|
@@ -111,6 +111,7 @@
 | [proprioception.py](proprioception.py) | Proprioception router — auto-sensing system state endpoints. |
 | [provider_stats.py](provider_stats.py) | Provider measurement stats endpoint. |
 | [providers.py](providers.py) | Task execution provider routes. |
+| [pulse.py](pulse.py) | Instance pulse routes — each coherence instance exposes its own breath. |
 | [push.py](push.py) | Web Push router — subscribe, unsubscribe, send. |
 | [reactions.py](reactions.py) | Reactions router — emoji + comment on any entity. |
 | [registry_discovery.py](registry_discovery.py) | Discovery registry submission inventory routes. |
