@@ -2,7 +2,22 @@
 id: lc-light-hubs
 hz: 174
 status: seed
-updated: 2026-05-14
+updated: 2026-05-24
+geometry:
+  arity: infinite
+  form: holographic-cell
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: nested
+  phase: yang
+  ratio: none
+  spectral_band: foundation
+  temporal_band: generational
+  scale: planetary
+  direction: radiating
+  lineage_texture: channeled
+  embedding_dim: 3
+  self_similarity: holographic
 ---
 
 # Light Hubs — Physical Anchors in the New Earth Grid

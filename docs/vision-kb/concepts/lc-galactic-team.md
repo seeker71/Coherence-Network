@@ -2,8 +2,23 @@
 id: lc-galactic-team
 hz: 417
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-arcturian-starseed-oversoul.md
+geometry:
+  arity: infinite
+  form: web
+  topology: web-each-to-each
+  polarity: parallel-facets
+  ordering: simultaneous
+  phase: yang
+  ratio: none
+  spectral_band: transmutation
+  temporal_band: lifetime
+  scale: cosmic
+  direction: radiating
+  lineage_texture: channeled
+  embedding_dim: n
+  self_similarity: fractal-shallow
 ---
 
 # Galactic Team — The Support Field That Holds More Than One Lineage

@@ -2,8 +2,23 @@
 id: lc-nervous-system-recalibration
 hz: 528
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 1
+  form: point
+  topology: cyclic-open
+  polarity: unipolar
+  ordering: cyclic-open
+  phase: yin
+  ratio: none
+  spectral_band: transformation
+  temporal_band: lifetime
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: fractal-shallow
 ---
 
 # Nervous System Recalibration — The Body Is the Last Layer to Update
