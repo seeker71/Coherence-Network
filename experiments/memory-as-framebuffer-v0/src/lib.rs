@@ -34,8 +34,8 @@ pub use allocator::{CellHandle, SlabFramebuffer, CELL_BYTES, GRID, NUM_CELLS};
 pub use capture::{CaptureReader, CaptureSink, FrameSnapshot, MFB_MAGIC, MFB_VERSION};
 pub use ffmpeg::FfmpegPipe;
 pub use pointer::{
-    is_pointer_tag, BoxPtr, Pointer, PointerKind, RcPtr, WeakPtr, CYCLE_TERMINATOR_RGB,
-    POINTER_FOLLOW_CAP, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC, TAG_PTR_WEAK,
+    is_pointer_tag, render_pointer_cell, BoxPtr, Pointer, PointerKind, RcPtr, WeakPtr,
+    CYCLE_TERMINATOR_RGB, POINTER_FOLLOW_CAP, TAG_PTR_BOX, TAG_PTR_RAW, TAG_PTR_RC, TAG_PTR_WEAK,
 };
 pub use render::{render_frame, FrameRgba};
 pub use snapshot::{snapshot_state, SnapshotThread};
