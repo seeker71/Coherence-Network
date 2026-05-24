@@ -541,22 +541,40 @@ export default async function VisionPage({
          arriving with a specific concept in mind can find it without
          scrolling through the curated narrative first. */}
       <section className="max-w-3xl mx-auto px-6 pb-12">
-        <Link
-          href={localizedHref("/concepts/garden?domain=living-collective", lang)}
-          className="group flex items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 px-5 py-4 transition-all"
-        >
-          <div className="space-y-0.5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/70 font-medium">
-              {t("visionIndex.gardenStripEyebrow")}
-            </p>
-            <p className="text-base text-stone-200 group-hover:text-amber-100 transition-colors">
-              {t("visionIndex.gardenStripBody")}
-            </p>
-          </div>
-          <span className="text-amber-400/70 group-hover:text-amber-300 text-2xl transition-colors shrink-0">
-            →
-          </span>
-        </Link>
+        <div className="grid gap-3">
+          <Link
+            href={localizedHref("/concepts/garden?domain=living-collective", lang)}
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 px-5 py-4 transition-all"
+          >
+            <div className="space-y-0.5">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300/70 font-medium">
+                {t("visionIndex.gardenStripEyebrow")}
+              </p>
+              <p className="text-base text-stone-200 group-hover:text-amber-100 transition-colors">
+                {t("visionIndex.gardenStripBody")}
+              </p>
+            </div>
+            <span className="text-amber-400/70 group-hover:text-amber-300 text-2xl transition-colors shrink-0">
+              →
+            </span>
+          </Link>
+          <Link
+            href={localizedHref("/vision/recipes", lang)}
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-teal-500/20 bg-teal-500/5 hover:bg-teal-500/10 hover:border-teal-500/30 px-5 py-4 transition-all"
+          >
+            <div className="space-y-0.5">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-teal-300/70 font-medium">
+                Transmission recipes
+              </p>
+              <p className="text-base text-stone-200 group-hover:text-teal-100 transition-colors">
+                Turn a song, story, failure, video, or spec into a payload someone can run.
+              </p>
+            </div>
+            <span className="text-teal-400/70 group-hover:text-teal-300 text-2xl transition-colors shrink-0">
+              →
+            </span>
+          </Link>
+        </div>
       </section>
 
       {/* How It Knows */}
