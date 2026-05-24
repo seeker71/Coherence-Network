@@ -1,9 +1,13 @@
 """Assets router — backed by graph_nodes (type=asset)."""
 from __future__ import annotations
 
+import base64
+import logging
 from datetime import datetime, timezone
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 from decimal import Decimal
+
+log = logging.getLogger(__name__)
 
 # Stable namespace for deriving asset UUIDs from slug-shaped graph
 # node ids. Resolver-minted and KB-seeded asset nodes carry slug ids
@@ -32,7 +36,8 @@ def _stable_asset_id(node: dict) -> UUID:
     except (ValueError, AttributeError):
         return uuid5(ASSET_NS, str(node.get("id", "")))
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
+from fastapi.responses import JSONResponse
 
 from app.models.asset import (
     Asset,
@@ -43,8 +48,13 @@ from app.models.asset import (
 )
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
-from app.services import graph_service
+from app.services import graph_service, read_tracking_service
 from app.services.locale_projection import project, project_many, resolve_caller_lang
+from app.services.story_protocol_bridge import (
+    build_x402_payment_required_headers,
+    compute_content_hash,
+    verify_content_integrity,
+)
 
 router = APIRouter()
 
@@ -297,3 +307,274 @@ async def list_assets(
         for item in items:
             project(item, "asset", str(item.id), target_lang, title_field="description", body_field="description")
     return PaginatedResponse(items=items, total=result.get("total", len(items)), limit=limit, offset=offset)
+
+
+# ---------------------------------------------------------------------------
+# Content delivery + x402 (spec R4)
+# ---------------------------------------------------------------------------
+
+# Default micropayment amount per content read. The cc-economics service
+# will calibrate this once usage data arrives; today the value is the
+# placeholder named in specs/story-protocol-integration.md API contract.
+DEFAULT_CONTENT_CC_AMOUNT = Decimal("0.01")
+DEFAULT_PAYMENT_NETWORK = "coherence-cc"
+# Free-tier text truncation point — keeps the preview useful (a paragraph
+# or so) without giving away the body. Image assets emit a watermark
+# label rather than truncating bytes.
+FREE_TIER_TEXT_PREVIEW_CHARS = 280
+
+
+def _find_asset_node(asset_id: UUID) -> dict | None:
+    """Lookup mirroring ``get_asset`` — direct hit on ``asset:<uuid>``
+    then walk all asset nodes matching ``_stable_asset_id``. Returns
+    None if no node resolves to this UUID."""
+    node = graph_service.get_node(f"asset:{asset_id}")
+    if node:
+        return node
+    result = graph_service.list_nodes(type="asset", limit=1000)
+    for n in result.get("items", []):
+        if _stable_asset_id(n) == asset_id:
+            return n
+    return None
+
+
+def _extract_content_bytes(node: dict) -> tuple[bytes, str]:
+    """Resolve the raw content for an asset node, plus the MIME type.
+
+    Search order:
+      1. ``metadata.content_base64`` — set by the upload flow when the
+         caller hands us the bytes directly.
+      2. ``metadata.content`` — text content stored as a plain string.
+      3. ``description`` — fallback so even bare-metadata nodes (the
+         resolver-minted ones from KB seeds) have *some* content to
+         serve. The hash on the node will not match this fallback;
+         the verification endpoint will surface that honestly.
+
+    MIME defaults to ``text/plain`` and is overridden by
+    ``mime_type`` on the node if present.
+    """
+    metadata = node.get("metadata") or {}
+    mime_type = node.get("mime_type") or "text/plain"
+
+    b64 = metadata.get("content_base64")
+    if isinstance(b64, str) and b64:
+        try:
+            return base64.b64decode(b64), mime_type
+        except (ValueError, base64.binascii.Error):
+            pass
+
+    text = metadata.get("content")
+    if isinstance(text, str) and text:
+        return text.encode("utf-8"), mime_type
+
+    description = node.get("description") or ""
+    return description.encode("utf-8"), mime_type
+
+
+def _is_image_mime(mime_type: str) -> bool:
+    return mime_type.lower().startswith("image/")
+
+
+def _free_tier_content(content: bytes, mime_type: str) -> str:
+    """Free-tier rendering. Images return a watermark label, text
+    returns a truncation. Binary types collapse to a short notice so
+    we never serve undefined bytes."""
+    if _is_image_mime(mime_type):
+        return f"[free-tier preview: watermarked {mime_type}]"
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return f"[free-tier preview: {len(content)}-byte {mime_type}]"
+    if len(text) <= FREE_TIER_TEXT_PREVIEW_CHARS:
+        return text
+    return text[:FREE_TIER_TEXT_PREVIEW_CHARS] + "…"
+
+
+def _has_valid_payment(authorization: str | None) -> bool:
+    """First-iteration x402 token check. Any non-empty Bearer token
+    counts as paid; real facilitator verification (signature check
+    against the x402 chain) lands in a follow-up PR per the
+    Phase 6 plan in specs/story-protocol-integration.md."""
+    if not authorization:
+        return False
+    parts = authorization.strip().split(None, 1)
+    if len(parts) != 2:
+        return False
+    scheme, token = parts
+    return scheme.lower() == "bearer" and bool(token.strip())
+
+
+def _payment_address(node: dict) -> str:
+    """Resolve the asset's payment address. Prefers an explicit
+    ``payment_address`` on the node; falls back to a ``coherence:contributor:<creator_id>``
+    form for nodes that only know who made them."""
+    explicit = node.get("payment_address")
+    if isinstance(explicit, str) and explicit:
+        return explicit
+    creator_id = node.get("creator_id")
+    if isinstance(creator_id, str) and creator_id:
+        return f"coherence:contributor:{creator_id}"
+    return "coherence:contributor:unknown"
+
+
+@router.get(
+    "/assets/{asset_id}/content",
+    summary="Get asset content with x402 payment headers",
+    responses={
+        402: {"description": "Payment required — content gated"},
+        404: {"model": ErrorDetail, "description": "Asset not found"},
+    },
+)
+async def get_asset_content(
+    asset_id: UUID,
+    authorization: str | None = Header(default=None),
+) -> Response:
+    """Serve asset content with x402 payment headers (spec R4).
+
+    Three flows:
+      - **Paid** — valid Bearer token in ``Authorization``: full content,
+        ``read_type="paid"``, ``cc_charged`` set, all four
+        ``X-Payment-*`` headers present.
+      - **Free tier** — no token, asset has ``free_tier_enabled``: a
+        truncated/watermarked preview is served at 200 with the same
+        payment headers (informational, so the reader knows the price
+        of the upgrade). ``read_type="free"``.
+      - **Payment required** — no token, asset has
+        ``requires_payment=True`` and free tier is disabled: 402 with
+        the payment headers as the price quote. No read recorded.
+
+    Every served read (paid or free) calls
+    ``read_tracking_service.record_read`` so settlement aggregations
+    later see the event per spec R5.
+    """
+    node = _find_asset_node(asset_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    requires_payment = bool(node.get("requires_payment", False))
+    free_tier_enabled = bool(node.get("free_tier_enabled", True))
+    cc_amount = Decimal(str(node.get("cc_amount") or DEFAULT_CONTENT_CC_AMOUNT))
+    payment_address = _payment_address(node)
+    network = node.get("payment_network") or DEFAULT_PAYMENT_NETWORK
+
+    payment_headers = build_x402_payment_required_headers(
+        amount_cc=cc_amount,
+        payment_address=payment_address,
+        network=network,
+    )
+
+    content_bytes, mime_type = _extract_content_bytes(node)
+    asset_id_str = str(asset_id)
+    node_id = node.get("id") or f"asset:{asset_id}"
+
+    if _has_valid_payment(authorization):
+        try:
+            read_tracking_service.record_read(asset_id=node_id)
+        except Exception as e:  # non-blocking — read tracking failure mustn't fail delivery
+            log.warning("record_read failed for %s: %s", node_id, e)
+        try:
+            content = content_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            content = base64.b64encode(content_bytes).decode("ascii")
+        body = {
+            "asset_id": asset_id_str,
+            "content_type": mime_type,
+            "content": content,
+            "tier": "paid",
+            "cc_charged": str(cc_amount),
+            "read_type": "paid",
+        }
+        return JSONResponse(content=body, status_code=200, headers=payment_headers)
+
+    if requires_payment and not free_tier_enabled:
+        # 402 — content is gated, no token, no free tier.
+        body = {
+            "asset_id": asset_id_str,
+            "error": "payment_required",
+            "payment_info": {
+                "amount_cc": str(cc_amount),
+                "address": payment_address,
+                "network": network,
+            },
+        }
+        return JSONResponse(content=body, status_code=402, headers=payment_headers)
+
+    # Free tier — preview served, read recorded as "free".
+    try:
+        read_tracking_service.record_read(asset_id=node_id)
+    except Exception as e:
+        log.warning("record_read failed for %s: %s", node_id, e)
+    preview = _free_tier_content(content_bytes, mime_type)
+    body = {
+        "asset_id": asset_id_str,
+        "content_type": mime_type,
+        "content": preview,
+        "tier": "free",
+        "read_type": "free",
+        "full_content_available": True,
+        "payment_info": {
+            "amount_cc": str(cc_amount),
+            "address": payment_address,
+            "network": network,
+        },
+    }
+    return JSONResponse(content=body, status_code=200, headers=payment_headers)
+
+
+# ---------------------------------------------------------------------------
+# Content verification (spec R10)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/assets/{asset_id}/verification",
+    summary="Verify asset content integrity against stored hash",
+    responses={404: {"model": ErrorDetail, "description": "Asset not found"}},
+)
+async def get_asset_verification(asset_id: UUID) -> dict:
+    """Return content-hash + storage refs + recomputed hash (spec R10).
+
+    Recomputes the SHA-256 of the currently-stored content and compares
+    against the node's ``content_hash``. ``integrity`` is
+    ``"verified"`` when they match, ``"failed"`` when they don't, and
+    ``"no_hash"`` when the node has no stored hash to compare against.
+
+    The recompute runs locally against the content we already serve —
+    the Arweave/IPFS fetch half of the integrity check lives in
+    ``permanent_storage_service.verify_content_integrity`` and is
+    gated on the partner-storage bring-up. The Arweave TX and IPFS CID
+    are surfaced here as references regardless.
+    """
+    node = _find_asset_node(asset_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    expected_hash = node.get("content_hash") or ""
+    content_bytes, _ = _extract_content_bytes(node)
+    recomputed_hash = compute_content_hash(content_bytes)
+
+    if not expected_hash:
+        integrity = "no_hash"
+    else:
+        result = verify_content_integrity(expected_hash, content_bytes)
+        integrity = "verified" if result.ok else "failed"
+
+    arweave_tx = node.get("arweave_tx") or node.get("arweave_tx_id")
+    ipfs_cid = node.get("ipfs_cid")
+    sp_ip_id = node.get("sp_ip_id")
+
+    return {
+        "asset_id": str(asset_id),
+        "content_hash": expected_hash or None,
+        "recomputed_hash": recomputed_hash,
+        "integrity": integrity,
+        "arweave_tx_id": arweave_tx,
+        "arweave_url": f"https://arweave.net/{arweave_tx}" if arweave_tx else None,
+        "ipfs_cid": ipfs_cid,
+        "ipfs_url": f"https://ipfs.io/ipfs/{ipfs_cid}" if ipfs_cid else None,
+        "sp_ip_id": sp_ip_id,
+        "sp_explorer_url": (
+            f"https://explorer.story.foundation/ip/{sp_ip_id}" if sp_ip_id else None
+        ),
+        "verified_at": datetime.now(timezone.utc).isoformat(),
+    }
