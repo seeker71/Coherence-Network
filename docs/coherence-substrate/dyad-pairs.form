@@ -1409,9 +1409,102 @@ defn triad_grant = transmission_triad_shape {
     noticed_by:          "focused-listening-pr2006-candidate-pr2009-discernment",
 };
 
-# The full set — 25 prior + 1 cross-ref-only promotion + 4 transmission-
-# triads = 30 entries (24 external pairs + 2 internal-dyads + 4
-# transmission-triads: 1 complete + 3 partial)
+# Triad 5 — Dispenza transmission (3-cell complete)
+#
+# A breath flagged-but-not-chased in PR #2015 (focused-listening on
+# lc-embodiment) named the candidate: *"lc-embodiment shares Dispenza
+# as direct source with sibling teachings (changing-boxes practice,
+# elevated-emotions chemistry, internal-pharmacy). A future breath
+# could walk the Dispenza-attested concepts and complete a
+# transmission-triad attestation across them."* This breath chased it.
+#
+# A grep over docs/vision-kb/concepts/lc-*.md surfaced twelve cells
+# that name Dispenza. Applying the same rigor PR #2011 used on the
+# Grant triad (citation-alone is not enough; the cell must carry a
+# load-bearing facet that would not exist or would be substantially
+# different without Dispenza's reading in the body's metabolism), the
+# twelve narrow to three:
+#
+#   lc-embodiment (hz 432) — the PRACTICE-ARCHITECTURE facet. The
+#     internal pharmacy as central organizing image (the body
+#     manufactures every chemical it needs); the four movements (song,
+#     dance, connection, stillness) as a complete circuit; the
+#     65-minute morning practice as a ring traversing the energy
+#     axis; "changing boxes" as the manifestation technology (feel
+#     the future as present, the body produces the chemistry, the
+#     field reorganizes); elevated emotion as the body's recipe-
+#     selector. The comprehensive *how the embodiment practice runs*.
+#
+#   lc-nervous-system (hz 432) — the COLLECTIVE-SENSING facet. The
+#     ascending eight centers (root through crown, with the eighth as
+#     the witness above) as the daily ritual through which the whole
+#     network senses itself; Body Electric named directly as the
+#     working model; Dispenza's week-long retreats cited as the
+#     measurable proof (heart rate variability, brain entrainment,
+#     shared field). The *how the practice becomes proprioception for
+#     the organism*, not just the individual.
+#
+#   lc-devotion-placement (hz 432) — the DISCERNMENT/FAILURE-MODE
+#     facet. *The Dispenza-shape* coined as load-bearing diagnostic:
+#     containers explicitly built for coherence (retreats, ceremonies,
+#     deep working sessions) are exactly where the gap between form
+#     and devotion becomes most visible, because the container was
+#     constructed to make distance impossible. When the container
+#     fails to dissolve distance, it is the unplaced devotion, not
+#     the container. The Network itself read as a Dispenza-grade
+#     container. The *how to tell when the practice is firing vs.
+#     performing*.
+#
+# Three facets of one teaching: the embodied-collective-coherence
+# practice Dispenza's open-source corpus carries. Pairwise
+# complementarity reads:
+#   (embodiment↔nervous-system) — altitude: comprehensive practice
+#     architecture vs. core energy-axis ritual; embodiment is the
+#     flesh, nervous-system is the spine on which it hangs.
+#   (nervous-system↔devotion-placement) — engine-and-test: the
+#     practice that fires the coherence vs. the diagnostic that
+#     names whether the firing is real (Dispenza-shape as failure-
+#     mode of the very practice nervous-system runs).
+#   (embodiment↔devotion-placement) — manifestation-and-its-shadow:
+#     changing-boxes / feel-the-future / the body becomes the vision
+#     vs. the gap-between-form-and-devotion that can persist even
+#     while the body performs the practice perfectly.
+#
+# All three at 432 Hz (heart band — the band where embodiment-
+# coherence lives). The triad-binding is the source: Joe Dispenza's
+# corpus (Becoming Supernatural; the week-long retreats; Body
+# Electric / changing boxes / elevated-emotions chemistry / coherence-
+# container design). The three cells share lineage_texture *embodied*
+# / *synthesized* (devotion-placement); none of them would carry the
+# shape they carry without that corpus being part of the body's
+# reading.
+#
+# 3-cell complete. The third facet (devotion-placement as the shadow-
+# diagnostic) is the discriminator: it would be easy to author
+# embodiment and nervous-system as a 2-cell partial (practice + its
+# collective sensing) and leave the triad open. But the body has
+# already authored the Dispenza-shape teaching directly — it names
+# Dispenza-grade containers as the EXACT class of practice this
+# concept exists to discern. That cell completes the triad because
+# the source is not just cited; the source's container-design IS
+# the load-bearing claim the cell's whole teaching pivots on.
+defn triad_dispenza = transmission_triad_shape {
+    cell_a:              @concept(lc-embodiment),
+    cell_b:              @concept(lc-nervous-system),
+    cell_c:              @concept(lc-devotion-placement),
+    transmission_source: "joe-dispenza-becoming-supernatural-body-electric",
+    axis_a_b:            "altitude-comprehensive-practice-vs-core-energy-axis-ritual",
+    axis_b_c:            "engine-and-test-coherence-firing-vs-devotion-discernment",
+    axis_a_c:            "manifestation-and-its-shadow-changing-boxes-vs-form-without-devotion",
+    kind:                kind_transmission_triad,
+    discernment:         "three facets of Joe Dispenza's open-source embodied-coherence corpus held in triad-shape — practice-architecture (internal pharmacy, four movements, changing boxes), collective-sensing (Body Electric ascent as the network's nervous system), discernment/shadow (the Dispenza-shape diagnostic for when containers built to dissolve distance fail to fire); the source IS the binding, the third facet completes because devotion-placement names the container-class directly",
+    noticed_at:          "2026-05-24",
+    noticed_by:          "transmission-triad-walk-pr2015-flagged-this-breath-chased",
+};
+
+# The full set — 25 prior + 1 cross-ref-only promotion + 5 transmission-
+# triads = 31 entries (24 external pairs + 2 internal-dyads + 5
+# transmission-triads: 2 complete + 3 partial)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -1453,6 +1546,8 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         triad_spine_nature,
         # — fourth transmission-triad attestation (Grant, 2-cell partial) —
         triad_grant,
+        # — fifth transmission-triad attestation (Dispenza, 3-cell complete) —
+        triad_dispenza,
     ],
 };
 
@@ -2052,30 +2147,56 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         Do not invent a third cell to force completeness; honor
 #         what's actually there.
 #
-# GAP-D12 (new, held observation): The four transmission-triad
-#         attestations currently held span four distinct *transmission-
+# GAP-D12 (strengthened 2026-05-24): The five transmission-triad
+#         attestations currently held span five distinct *transmission-
 #         flavors*: Hardest-Part is a teaching/event-transmission
 #         (a discrete spoken arrival, April 2026); Arcturian Council
 #         is a presence/channel-transmission (an ongoing 9D channeled
 #         lineage); Spine/Nature 2026-05-21 is a body/chart-
 #         transmission (a felt-and-mapped reading on a specific date);
-#         Grant is an external-thinker/published-author-transmission
+#         Grant is an external-thinker/published-corpus-transmission
 #         (an open-source body of mathematics and disclosure across
-#         years). Each flavor's source-binding has a different texture
-#         — speech-event vs presence-lineage vs felt-chart vs
-#         published-corpus — and the field-mechanics of how each
-#         "transmission" gathers cells around itself differs accord-
-#         ingly. Four attestations across four flavors is enough to
-#         notice the variation but NOT enough to sub-type (the body's
-#         discipline is two attestations per sub-type before naming).
-#         What would justify sub-typing: a fifth and sixth triad
-#         attestation that share a flavor with one of the existing
-#         four. Held here as honest observation; sub-types named only
-#         when the body has two of any one flavor. The naming when it
-#         comes: event-transmission-triad, presence-transmission-
-#         triad, chart-transmission-triad, corpus-transmission-triad
-#         — provisional, awaiting the second flavor-instance to reveal
-#         what the shared structure actually IS.
+#         years); Dispenza is an embodied-teacher / practice-corpus-
+#         transmission (a published embodied-practice lineage carrying
+#         a complete daily ritual the body has metabolized — Becoming
+#         Supernatural, Body Electric, week-long retreats — distinct
+#         from Grant's mathematical-disclosure flavor by being
+#         practice-centric rather than theory-centric, and distinct
+#         from the channelled Arcturian lineage by carrying a living
+#         human teacher's published work rather than a non-human
+#         presence's transmissions). Each flavor's source-binding has
+#         a different texture — speech-event vs presence-lineage vs
+#         felt-chart vs published-mathematics-corpus vs published-
+#         embodied-practice-corpus — and the field-mechanics of how
+#         each "transmission" gathers cells around itself differs
+#         accordingly.
+#
+#         **Five-across-five strengthens the pattern.** Four attestations
+#         across four flavors could still be coincidence — the kind's
+#         arity (three cells per triad) is small enough that distinct
+#         sources easily produce distinct flavors. Five-across-five
+#         starts to look like the kind itself naturally diversifies
+#         along flavor lines as it grows. The diversity is not a
+#         signal of weakness in the kind; it is the kind teaching
+#         the body that *transmission-triad* is the genus and the
+#         flavors are species emerging beneath it.
+#
+#         Sub-typing remains held-open: the discipline is two
+#         attestations per sub-type before naming, and no two of the
+#         five share a flavor. What activates sub-typing is the FIRST
+#         second-flavor-instance — when a sixth triad lands that
+#         shares Hardest-Part's event-shape, or Dispenza's embodied-
+#         practice-shape, or any of the others — at that moment the
+#         shared structure of that flavor becomes attestable rather
+#         than provisional. The next breath that lands a triad
+#         should check the flavor against the five before authoring;
+#         if it matches one of the existing five, the sub-type gets
+#         named with two attestations at hand. The provisional names
+#         to watch for: event-transmission-triad, presence-channel-
+#         transmission-triad, chart-felt-transmission-triad, corpus-
+#         theory-transmission-triad, corpus-practice-transmission-
+#         triad — placeholders awaiting the second flavor-instance to
+#         reveal what the shared structure actually IS.
 #
 # GAP-D11 (new, held candidate): Emerging kind 'interior-axis-dyad'
 #         noticed in PR #2002 as the first clear instance:
@@ -2102,9 +2223,9 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # ─────────────────────────────────────────────────────────────────────
 #
 # This file does not introduce a new kernel primitive. It names
-# Recipe shapes over existing CONCEPT cells. The set is thirty
-# (twenty-four external pairs + two internal-dyads + four
-# transmission-triads: one 3-cell complete and three 2-cell partials);
+# Recipe shapes over existing CONCEPT cells. The set is thirty-one
+# (twenty-four external pairs + two internal-dyads + five
+# transmission-triads: two 3-cell complete and three 2-cell partials);
 # the room is for many more. The kinds are seven (scale-paired,
 # source-flow, membrane-crossing, ground-event, internal-dyad,
 # cross-tradition, transmission-triad); new kinds can be added as
@@ -2115,9 +2236,10 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # the other six in arity (three cells per instance) and in companion
 # shape (transmission_triad_shape lives alongside dyad_pair_shape
 # and internal_dyad_shape). A fourth transmission-triad attestation
-# (Grant, 2-cell partial) joined the same day — strengthening the
-# kind's evidence and surfacing a sub-typing observation held in
-# GAP-D12. An emerging circulation-pattern kind sits in GAP-D9
+# (Grant, 2-cell partial) joined the same day; a fifth (Dispenza,
+# 3-cell complete) followed in the same breath — five-across-five
+# distinct flavors, strengthening the sub-typing observation held
+# in GAP-D12. An emerging circulation-pattern kind sits in GAP-D9
 # awaiting its second attestation; an emerging interior-axis-dyad
 # candidate sits in GAP-D11 with one attestation, awaiting its
 # second.
