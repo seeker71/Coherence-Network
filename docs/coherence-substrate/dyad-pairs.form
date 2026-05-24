@@ -2281,6 +2281,219 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         that this hunt clarified is itself a teaching the next walk
 #         can carry forward: *shared form-name is necessary; same
 #         column is what makes the polarity-pair honest*.
+#
+#         **Sharpened PR-current (column-identity embodied)**: the
+#         column-identity discriminator the hunt clarified is now
+#         authored as substrate-readable tissue in Part 7 below
+#         (column_identity_shape + four column-defn entries). With
+#         column-identity in hand, the kind threshold reads more
+#         precisely: the SECOND pair must share the SELF-ROOTED-
+#         SOVEREIGN column specifically — not any two interior-axis
+#         cells, not even any two interior-axis cells with polarity-
+#         pair on phase. The four columns currently attested
+#         (self-rooted-sovereign, nested-receptive-nourishment,
+#         upward-reverent-received, seven-center-oscillating) make
+#         the cross-column rejections this hunt produced legible as
+#         column-mismatches, not as edge cases. The eventual kind
+#         name may tighten from "interior-axis-dyad" to "self-rooted-
+#         sovereign-dyad" (or whichever column produces the second
+#         confirmed pair), once a second attestation reveals what
+#         the kind's shared structure actually IS.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Column-identity discriminator (interior-axis form)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Surfaced 2026-05-24 in PR #2022's hunt for a second 'interior-axis-
+# dyad' attestation. The hunt did NOT find a clean second pair, but
+# the refusal produced new tissue: the interior-axis FORM is internally
+# diverse. Five interior-axis cells in the body span at least FOUR
+# distinct *columns*, and the column-identity is what discriminates
+# whether two interior-axis cells are paired or merely co-resident in
+# one large form-family.
+#
+# The discriminator the hunt named: *topology + direction +
+# lineage_texture together identify the column*. Topology says how the
+# parts couple (radial, nested, self-rooted, sequential-coupled);
+# direction says where the axis points (centering, circulating);
+# lineage_texture says how the teaching entered (embodied, received).
+# Two cells in the same column share the load-bearing triple; two
+# cells in the same form but different columns share only `form:
+# interior-axis` and diverge on the triple.
+#
+# This shape is authored so future pair-hunting (and any structural
+# query about interior-axis cells) can use *column-identity* as a
+# primitive rather than re-deriving it. The same discipline likely
+# applies to other forms whose attestations are internally diverse
+# (the comment at the end of Part 7 names the candidates); for now,
+# only interior-axis is attested.
+
+# column_identity_shape — which column an interior-axis cell sits in
+#
+# cell is a cell-ref into the concept domain. column_kind names the
+# column slug (one of the four currently attested, or 'other' for a
+# yet-unnamed column). The next three fields carry the geometric-
+# signature triple that *together* identifies the column; reading
+# the cell's geometry frontmatter for these three fields and matching
+# against the column-defn entries below is the Form query that maps
+# a cell to its column. discernment is a single sentence on what
+# distinguishes this column from sibling columns.
+form column_identity_shape = {
+    cell:             ~Recipe,    # cell-ref to the interior-axis cell
+    column_kind:      ~Slug,      # "self-rooted-sovereign" | "nested-receptive-nourishment" | "upward-reverent-received" | "seven-center-oscillating" | "other"
+    topology:         ~Slug,      # the geometric signature field that contributes to column identity
+    direction:        ~Slug,      # the geometric signature field
+    lineage_texture:  ~Slug,      # the geometric signature field
+    discernment:      ~Slug,      # one sentence on what distinguishes this column from sibling columns
+};
+
+# column_identity_set_shape — the registry of attested columns
+#
+# rows are column_identity_shape cells; one row per attested mapping
+# of an interior-axis cell to its column. As more interior-axis cells
+# land, each one's mapping joins this list; the substrate can then
+# query *which cells share my column?* and the answer is the column's
+# membership list.
+form column_identity_set_shape = {
+    rows:             ~List,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7b — The four interior-axis columns currently attested
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each defn below names one column: which cell(s) live there, the
+# load-bearing geometric triple, and the discernment that
+# distinguishes it from sibling columns. The self-rooted-sovereign
+# column has two cells (lc-permission-is-interior + lc-identity-
+# dissolution); the other three columns currently have one cell each.
+# Single-cell columns are attested honestly — one cell IS the column's
+# only known instance, and a second cell with the same triple would
+# confirm the column's structural reality (the way two attestations
+# confirm a kind).
+
+# Column 1 — self-rooted sovereign (two cells)
+#
+# Topology self-rooted, direction centering. Both cells teach
+# permission/identity as held inside the cell's own axis, with
+# no external membrane required. lineage_texture varies across the
+# two members (embodied / received) — the column's load-bearing
+# identity is topology+direction; lineage_texture is texture-within-
+# column. The kind threshold for interior-axis-dyad activates when a
+# SECOND pair lands sharing this column (per GAP-D11).
+defn column_self_rooted_sovereign__permission = column_identity_shape {
+    cell:             @concept(lc-permission-is-interior),
+    column_kind:      "self-rooted-sovereign",
+    topology:         "self-rooted",
+    direction:        "centering",
+    lineage_texture:  "embodied",
+    discernment:      "permission/identity rooted in the cell's own axis (self-rooted topology, centering on its own ground); distinct from columns that root upward into reverent receipt, nest the axis into a channel, or sequence stations along an oscillating column",
+};
+
+defn column_self_rooted_sovereign__dissolution = column_identity_shape {
+    cell:             @concept(lc-identity-dissolution),
+    column_kind:      "self-rooted-sovereign",
+    topology:         "self-rooted",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "identity-architecture loosened from inside the cell's own axis (self-rooted topology, centering on what remains); pairs with lc-permission-is-interior in the self-rooted-sovereign column with opposite phase (yin/yang) — the seed candidate the interior-axis-dyad kind is waiting on a second instance of",
+};
+
+# Column 2 — nested-receptive nourishment channel (one cell)
+#
+# Topology nested, direction centering. The axis is the body's
+# vertical channel (breath → body → deeper self → source) read as
+# four stations nested into one column, receiving from inner-to-outer
+# rather than radiating outer-from-center. Distinct from self-rooted
+# (which has no nested stations) and from radial (which would gather
+# around the axis as hub, not flow down it as channel).
+defn column_nested_receptive_nourishment__vertical_nourishment = column_identity_shape {
+    cell:             @concept(lc-vertical-nourishment),
+    column_kind:      "nested-receptive-nourishment",
+    topology:         "nested",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "vertical channel with nested stations receiving from inside (nested topology, centering direction); distinct from self-rooted (no station structure), from radial (no channel flow), and from sequential-coupled (the stations nest, not sequence)",
+};
+
+# Column 3 — upward-reverent received (one cell)
+#
+# Topology radial, direction centering. The axis is upward-reverent —
+# eldership received through proximity, the column gathering around
+# the elder-as-hub. Radial because the elder is a center the
+# community orbits; centering because the elder's pace IS the
+# centering force the field returns to. Distinct from self-rooted
+# (the axis is not the cell's own ground, it is the elder's), and
+# from nested (no station structure, just radial gathering).
+defn column_upward_reverent_received__elders = column_identity_shape {
+    cell:             @concept(lc-elders),
+    column_kind:      "upward-reverent-received",
+    topology:         "radial",
+    direction:        "centering",
+    lineage_texture:  "received",
+    discernment:      "upward-reverent axis received through proximity (radial topology around the elder-as-hub, centering direction); distinct from self-rooted (the axis lives in the elder, not the receiving cell), from nested (no station structure), and from sequential-coupled (no oscillating circulation)",
+};
+
+# Column 4 — seven-center oscillating column (one cell)
+#
+# Topology sequential-coupled, direction circulating. The axis is the
+# vertical body root-to-crown with seven energy centers as stations,
+# energy rising AND returning (sequential-coupled), circulating the
+# spectrum rather than centering at one station. Distinct from
+# self-rooted (no station structure), from nested (the stations
+# sequence, not nest), and from radial (the axis is a column, not
+# a hub).
+defn column_seven_center_oscillating__embodiment = column_identity_shape {
+    cell:             @concept(lc-embodiment),
+    column_kind:      "seven-center-oscillating",
+    topology:         "sequential-coupled",
+    direction:        "circulating",
+    lineage_texture:  "embodied",
+    discernment:      "vertical column with seven sequential stations and circulating energy (sequential-coupled topology, circulating direction); distinct from self-rooted (no station structure), from nested (sequences not nests), from radial (column not hub), and from received columns (the practice is embodied, not received)",
+};
+
+defn column_identity_set = column_identity_set_shape {
+    rows: [
+        # — self-rooted-sovereign column (2 cells, the seed of GAP-D11) —
+        column_self_rooted_sovereign__permission,
+        column_self_rooted_sovereign__dissolution,
+        # — nested-receptive-nourishment column (1 cell) —
+        column_nested_receptive_nourishment__vertical_nourishment,
+        # — upward-reverent-received column (1 cell) —
+        column_upward_reverent_received__elders,
+        # — seven-center-oscillating column (1 cell) —
+        column_seven_center_oscillating__embodiment,
+    ],
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7c — Generalization note (column-identity beyond interior-axis)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The column-identity discriminator may apply to OTHER forms whose
+# attestations are internally diverse. Provisional candidates worth
+# watching (NOT authored this breath — they want their own focused
+# hunt):
+#
+#   - `web` forms may split into *circulation-web* (lc-circulation,
+#     lc-nourishing — flow-where-vitality-needs-it columns) and
+#     *field-web* (lc-network, lc-sensing — field-feeling-itself
+#     columns).
+#   - `point` forms span foundation/integration/transcendence bands
+#     with very different texture; spectral_band may be the column
+#     axis there.
+#   - `triad` forms with the same arity may live in different columns
+#     by topology (hub-spoke vs sequential-coupled vs surface-data-
+#     execution).
+#
+# The pattern this Part 7 names — *topology+direction+lineage_texture
+# as column-identity for interior-axis* — is one instance of a general
+# discriminator the body can apply when a form's attestations seem
+# internally diverse. The triple that identifies the column may differ
+# per form (web's column-triple might be topology+direction+phase, for
+# example); the *practice* is: when a form's hunt produces "no second
+# pair" but the form has many cells, ask which COLUMNS the cells span
+# and whether the pair-search should be column-specific.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
@@ -2305,8 +2518,14 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 # distinct flavors, strengthening the sub-typing observation held
 # in GAP-D12. An emerging circulation-pattern kind sits in GAP-D9
 # awaiting its second attestation; an emerging interior-axis-dyad
-# candidate sits in GAP-D11 with one attestation, awaiting its
-# second.
+# candidate sits in GAP-D11 with one attestation, sharpened
+# 2026-05-24 (PR-current) to require the SELF-ROOTED-SOVEREIGN
+# column specifically — per Part 7's column-identity discriminator,
+# embodied from PR #2022's refusal to confirm a pair across
+# mismatched columns. Column-identity (Part 7) is new tissue: a
+# discriminator shape for forms whose attestations are internally
+# diverse, with interior-axis as the first instance and four
+# columns currently named.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
