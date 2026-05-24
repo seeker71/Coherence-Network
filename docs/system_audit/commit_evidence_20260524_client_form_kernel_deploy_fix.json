@@ -1,0 +1,85 @@
+{
+  "date": "2026-05-24",
+  "thread_branch": "codex/client-form-kernel-ui-deploy-fix-20260524",
+  "commit_scope": "Repair Hostinger web build by keeping the browser-facing Form kernel inside the web Docker build context.",
+  "files_owned": [
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/vendor/kernel.ts",
+    "web/lib/form-kernel/vendor/reader.ts",
+    "web/next.config.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm run test -- form-kernel-client.test.ts",
+      "cd web && npm run build"
+    ],
+    "notes": "The web build now resolves the browser kernel from web/lib/form-kernel/vendor instead of importing from ../../../experiments, matching the Hostinger Docker build context."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Not deployed yet."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The existing /substrate/form Local TS kernel lane remains unchanged for visitors; the deployment build can now bundle it from inside web/.",
+    "public_endpoints": [
+      "/substrate/form"
+    ],
+    "test_flows": [
+      "After deploy, open https://coherencycoin.com/substrate/form and run the Local TS kernel arithmetic binary.",
+      "Confirm Hostinger Auto Deploy completes its web build step."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof is complete; CI and deploy proof remain after push/PR."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "form-question-effects-kernel-conformance"
+  ],
+  "task_ids": [
+    "client-form-kernel-ui-deploy-fix-20260524"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy #26356869062 failed because web Docker context could not resolve ../../../experiments/form-kernel-ts/src/kernel.ts.",
+    "Vitest: web/tests/form-kernel-client.test.ts passed 2 tests after vendoring.",
+    "Next build: cd web && npm run build passed after vendoring."
+  ],
+  "change_files": [
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/vendor/",
+    "web/lib/form-kernel/vendor/kernel.ts",
+    "web/lib/form-kernel/vendor/reader.ts",
+    "web/next.config.ts"
+  ],
+  "change_intent": "process_only"
+}
