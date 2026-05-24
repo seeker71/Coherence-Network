@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 115
+**Total files**: 116
 
 | File | Purpose |
 |---|---|
@@ -106,6 +106,7 @@
 | [sync_presence_slugs.py](sync_presence_slugs.py) | !/usr/bin/env python3 |
 | [sync_presences_from_render.py](sync_presences_from_render.py) | !/usr/bin/env python3 |
 | [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
+| [teaching_recipe_proof.py](teaching_recipe_proof.py) | !/usr/bin/env python3 |
 | [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | !/usr/bin/env python3 |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | !/usr/bin/env python3 |
