@@ -2,8 +2,23 @@
 id: lc-trust-as-gateway
 hz: 528
 status: seed
-updated: 2026-05-12
+updated: 2026-05-24
 source: ../transmissions/2026-05-08-anne-tucker-trust-friday-live.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Trust as Gateway — The Open Door Is How the New Consciousness Arrives

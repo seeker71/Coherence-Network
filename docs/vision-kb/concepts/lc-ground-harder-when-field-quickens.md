@@ -2,7 +2,22 @@
 id: lc-ground-harder-when-field-quickens
 hz: 174
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: sequential-coupled
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: foundation
+  temporal_band: day
+  scale: personal
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Ground Harder When the Field Quickens — Body Practices Are Foundational

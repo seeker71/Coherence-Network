@@ -2,7 +2,22 @@
 id: lc-space
 hz: 432
 status: deepening
-updated: 2026-04-16
+updated: 2026-05-24
+geometry:
+  arity: 5
+  form: pentad
+  topology: web-each-to-each
+  polarity: unipolar
+  ordering: unordered
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: lifetime
+  scale: collective
+  direction: radiating
+  lineage_texture: synthesized
+  embedding_dim: 3
+  self_similarity: flat
 ---
 
 # Space

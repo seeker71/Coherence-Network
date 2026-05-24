@@ -2,8 +2,23 @@
 id: lc-relationships-as-mirrors
 hz: 741
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: 1-to-1
+  spectral_band: transcendence
+  temporal_band: instant
+  scale: relational
+  direction: circulating
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: holographic
 ---
 
 # Relationships as Mirrors — They Show How You Are Loving Yourself

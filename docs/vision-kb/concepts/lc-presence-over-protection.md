@@ -2,8 +2,23 @@
 id: lc-presence-over-protection
 hz: 174
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: parallel
+  polarity: bipolar-opposing
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: foundation
+  temporal_band: breath
+  scale: personal
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Presence Over Protection — Choosing Aliveness Rather Than Defense

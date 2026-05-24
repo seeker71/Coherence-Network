@@ -2,7 +2,22 @@
 id: lc-vitality
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: point
+  topology: radial
+  polarity: unipolar
+  ordering: atemporal
+  phase: yang
+  ratio: none
+  spectral_band: integration
+  temporal_band: instant
+  scale: cross-scale
+  direction: radiating
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: holographic
 ---
 
 # Vitality

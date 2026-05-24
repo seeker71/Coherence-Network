@@ -2,8 +2,23 @@
 id: lc-coherence-over-control
 hz: 432
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-hardest-part-already-behind-you.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: parallel
+  polarity: bipolar-opposing
+  ordering: simultaneous
+  phase: yin
+  ratio: none
+  spectral_band: integration
+  temporal_band: breath
+  scale: personal
+  direction: still
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Coherence Over Control — Remain Aligned While Reality Catches Up

@@ -2,8 +2,23 @@
 id: lc-overgiving-depletion
 hz: 285
 status: seed
-updated: 2026-04-29
+updated: 2026-05-24
 source: ../transmissions/2026-04-29-from-drained-to-nourished.md
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: sequential-coupled
+  polarity: bipolar-opposing
+  ordering: cyclic-open
+  phase: yang
+  ratio: none
+  spectral_band: foundation
+  temporal_band: lifetime
+  scale: personal
+  direction: descending
+  lineage_texture: received
+  embedding_dim: 1
+  self_similarity: flat
 ---
 
 # Overgiving Depletion — The Leak in the Helping Pattern

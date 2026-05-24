@@ -2,7 +2,22 @@
 id: lc-elders
 hz: 852
 status: deepening
-updated: 2026-04-14
+updated: 2026-05-24
+geometry:
+  arity: 1
+  form: interior-axis
+  topology: radial
+  polarity: unipolar
+  ordering: nested
+  phase: yin
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: generational
+  scale: relational
+  direction: centering
+  lineage_texture: received
+  embedding_dim: 2
+  self_similarity: fractal-shallow
 ---
 
 # Elders

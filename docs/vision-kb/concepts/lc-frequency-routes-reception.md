@@ -2,7 +2,22 @@
 id: lc-frequency-routes-reception
 hz: 741
 status: seed
-updated: 2026-05-09
+updated: 2026-05-24
+geometry:
+  arity: 2
+  form: dyad-mirror
+  topology: receptive-resonance
+  polarity: bipolar-complementary
+  ordering: simultaneous
+  phase: oscillating
+  ratio: none
+  spectral_band: transcendence
+  temporal_band: instant
+  scale: relational
+  direction: radiating
+  lineage_texture: synthesized
+  embedding_dim: 2
+  self_similarity: flat
 ---
 
 # Frequency Routes Reception — Build at the Tone, the Right Cells Hear
