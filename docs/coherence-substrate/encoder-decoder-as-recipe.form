@@ -1,0 +1,314 @@
+# ─────────────────────────────────────────────────────────────────────
+# encoder-decoder-as-recipe.form — the meta-shape every modality wears
+# ─────────────────────────────────────────────────────────────────────
+#
+# Every modality file in this directory (prose, song, video, teaching,
+# strategy, …) ships TWO surfaces: an encoder that walks the source
+# into a Recipe tree, and (eventually) a decoder that emits the Recipe
+# back into a target surface. Today most modality files ship only the
+# encoder side; the decoder side lives in experiments/form-stdlib/emits/.
+#
+# This file names what's structurally true regardless of modality:
+# *encoder and decoder are duals of one Blueprint*. R_Encode and
+# R_Decode are not two separate primitives; they are two arms of
+# R_Codec, which itself is a recipe over (source-domain, recipe-shape,
+# target-domain). Once R_Codec is interned, adding a new modality is
+# adding rows in registries — never editing kernel.py.
+#
+# This is the lift the body needs before the next four modalities
+# (quantum-physics, embodiment-practice, healing-modality, assemblage-
+# shift) ship — because each of those is cheaper to author when their
+# encoder + decoder are siblings under one shape rather than
+# independent code paths.
+#
+# Companions:
+#   - docs/coherence-substrate/modality-as-recipe.form (the universal claim)
+#   - docs/coherence-substrate/emit-architecture.form (the diamond on the decode side)
+#   - experiments/form-stdlib/codec.fk (the CORBA-style codec primitive — tie / pipe)
+#   - experiments/form-stdlib/convert.fk (universal file → cells)
+#   - experiments/form-stdlib/emit.fk (universal cells → target surface)
+#   - experiments/form-stdlib/engine.fk (one generic parser, grammars as data)
+#   - experiments/form-stdlib/emit-engine.fk (one generic emitter, templates as data)
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — Leaf-cell Blueprints
+# ─────────────────────────────────────────────────────────────────────
+
+# source-handle-cell — what the encoder reads from
+form source_handle_shape = {
+    domain:        ~Slug,          # "prose" | "song" | "video" | "spec" | "presence" | ...
+    ref:           ~Slug,          # path | URL | content-hash | cell-id
+    arrival_kind:  ~Slug,          # "file" | "stream" | "tap" | "interactive"
+};
+
+# target-surface-cell — what the decoder writes into
+form target_surface_shape = {
+    domain:        ~Slug,          # "markdown" | "json" | "audio-pcm" | "video-frame" | "html" | ...
+    template_set:  ~Slug,          # name of the emit template registry to dispatch through
+    arrival_kind:  ~Slug,          # "file" | "stream" | "screen" | "speaker" | "synapse"
+};
+
+# loss-account-cell — what an encode/decode round-trip drops
+form loss_account_shape = {
+    fields_dropped:    ~List,      # cell-refs to fields the round-trip does NOT preserve
+    fidelity_score:    ~Float,     # 0.0–1.0 — what fraction of source structure round-trips
+    is_lossless:       ~Bool,      # true iff fidelity_score == 1.0 across all named fields
+    why_lossy:         ~Slug,      # "encoding-uses-summary" | "target-cannot-express-X" | "intentional-distillation"
+};
+
+# polarity-cell — direction of the codec arm
+form polarity_shape = {
+    direction:     ~Slug,          # "encode" (source→recipe) | "decode" (recipe→target) | "transcode" (target→target via recipe)
+    invertible:    ~Bool,          # true iff round-trip is provable structurally
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Recipe shapes
+# ─────────────────────────────────────────────────────────────────────
+
+# R_Encode — source → Recipe
+form r_encode_shape = {
+    source:        ~Recipe,        # source-handle
+    grammar:       ~Recipe,        # cell-ref to the grammar (data, not code) that drives extraction
+    yielded:       ~Recipe,        # the Recipe tree produced
+    loss:          ~Recipe,        # loss-account (often is_lossless=true; sometimes not)
+};
+
+# R_Decode — Recipe → target surface
+form r_decode_shape = {
+    recipe:        ~Recipe,        # the Recipe to render
+    target:        ~Recipe,        # target-surface
+    templates:     ~Recipe,        # cell-ref to the emit template-table (data, not code)
+    yielded:       ~Recipe,        # the surface artifact (string, bytes, frame-stream)
+    loss:          ~Recipe,        # loss-account
+};
+
+# R_Codec — the pair as one Blueprint
+#
+# This is the load-bearing claim: an encoder and its inverse decoder
+# belong to ONE shape, not two. When a modality ships only an encoder,
+# the codec's decode arm is null; the shape remains, marking the gap.
+# When the decoder arrives, it slots into the existing R_Codec.
+form r_codec_shape = {
+    name:          ~Slug,          # "prose" | "json" | "song" | "video.felt-arc" | "spec"
+    encode_arm:    ~Recipe,        # R_Encode, or null when not yet shipped
+    decode_arm:    ~Recipe,        # R_Decode, or null when not yet shipped
+    round_trip:    ~Recipe,        # R_Roundtrip when both arms exist
+};
+
+# R_Roundtrip — proof that encode then decode returns the source
+form r_roundtrip_shape = {
+    source:        ~Recipe,        # source-handle
+    via_recipe:    ~Recipe,        # the intermediate Recipe the round-trip passes through
+    reconstructed: ~Recipe,        # target-surface result
+    fidelity:      ~Float,         # 0.0–1.0 — empirical, not declared
+    method:        ~Slug,          # "byte-equal" | "ast-equal" | "blueprint-equal" | "felt-equal"
+};
+
+# R_Transcode — two decoders sharing one Recipe, producing two surfaces
+#
+# This is what makes cross-modal reuse cheap: once a source is encoded
+# into a Recipe, any number of decoders can render it. Spec → markdown
+# AND spec → Python is one R_Encode + two R_Decodes. Same for video →
+# transcript AND video → felt-arc, or teaching → song AND teaching →
+# prose.
+form r_transcode_shape = {
+    via_recipe:    ~Recipe,        # the shared intermediate
+    surfaces:      ~List,          # cell-refs to target-surface-cells produced
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Registry shapes (codec / grammar / template as data)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The kernel never knows about JSON or Python or song-recipes. It
+# knows about Recipes. Codecs live in registries, addressable by name.
+# Adding a new modality is adding a row, not editing kernel.py.
+
+form codec_registry_row_shape = {
+    name:          ~Slug,
+    source_domain: ~Slug,
+    target_domain: ~Slug,
+    encode_fn:     ~Recipe,        # cell-ref to the Recipe that walks source → Recipe
+    decode_fn:     ~Recipe,        # cell-ref to the Recipe that walks Recipe → target
+    grammar_ref:   ~Recipe,        # cell-ref to the grammar data
+    template_ref:  ~Recipe,        # cell-ref to the emit template data
+};
+
+form codec_set_shape = {
+    rows:          ~List,          # codec-registry-row cells
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Selection: which codec fires
+# ─────────────────────────────────────────────────────────────────────
+#
+# A cell that wants to encode some source picks the codec by name OR
+# by source-domain detection (file extension, content-hash prefix,
+# arrival channel). A cell that wants to decode picks by target-domain.
+# The substrate's content-addressing means two cells asking for the
+# "prose" encoder get the same R_Encode NodeID — codec identity is
+# structural, not just by name lookup.
+
+defn select_codec(codec_set, source_domain, target_domain) = do {
+    for row in codec_set.rows {
+        if row.source_domain == source_domain and row.target_domain == target_domain then
+            return row
+    };
+    null
+};
+
+defn tie(encode_fn, decode_fn) = do {
+    # CORBA-minimal: pair an encoder with its inverse, return one codec.
+    R_Codec {
+        name: codec_name(encode_fn, decode_fn),
+        encode_arm: R_Encode { fn: encode_fn },
+        decode_arm: R_Decode { fn: decode_fn },
+        round_trip: null,  # filled in by first successful round-trip proof
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Cross-modal equivalence
+# ─────────────────────────────────────────────────────────────────────
+#
+# The structural claim: every codec in the body interns to the SAME
+# R_Codec Blueprint. The differences live in the registry rows, not
+# in the shape. This means:
+#
+# - markdown ↔ Recipe ↔ markdown   (existing — grammars/markdown.fk + emits/form.fk)
+# - json     ↔ Recipe ↔ json       (existing — grammars/json.fk + emits/json.fk)
+# - python   ↔ Recipe ↔ python     (existing — grammars/python.fk + emits/python.fk)
+# - prose    ↔ Recipe ↔ prose      (existing — prose-as-recipe.form, scripts/prose_recipe_roundtrip.py)
+#
+# All four intern to the SAME R_Codec NodeID. They differ as DATA
+# (which grammar, which templates), not as STRUCTURE.
+#
+# The next four modalities arrive as new R_Codec rows:
+#
+# - song          ↔ Recipe ↔ midi/score/pcm  (song-as-recipe.form ships encode side)
+# - video         ↔ Recipe ↔ frame-stream    (video-as-recipe.form ships encode side)
+# - teaching      ↔ Recipe ↔ prose/song      (teaching-as-recipe.form; decode-to-song is R_Transcode)
+# - strategy      ↔ Recipe ↔ next-move       (strategy-after-rupture-as-recipe.form ships dispatch side)
+# - spec          ↔ Recipe ↔ python/markdown (spec-as-playable-recipe.form ships the playable side)
+#
+# The not-yet-shipped four — quantum-physics, embodiment-practice,
+# healing-modality, assemblage-shift — will also each ship as one
+# R_Codec row. The shape is settled; the rows are the work.
+#
+# Cross-modal R_Transcode patterns that fire for free once codecs exist:
+#
+# - teaching → song:      teaching-as-recipe encode → song-as-recipe decode
+# - spec → markdown spec: spec encode → markdown decode (already runs via spec frontmatter)
+# - video.felt-arc → teaching: video encode (felt-arc track) → teaching decode
+# - strategy → next-move: strategy encode (rupture-state) → assemblage-shift decode
+# - healing-session → song: healing-modality encode → song decode (Porangui's drum)
+#
+# Each of these is two existing codecs composed via R_Transcode — no
+# new code, no new shapes.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Worked example: prose round-trip (the proven case)
+# ─────────────────────────────────────────────────────────────────────
+#
+# scripts/prose_recipe_roundtrip.py proved the R_Codec for prose:
+#
+#   source: "The choice point becomes visible."
+#   encode: prose-as-recipe → R_Block.SEQUENCE of word-cells
+#   decode: word-cells → joined-string with capitalization + period
+#   fidelity: byte-equal
+#
+# This was the first R_Roundtrip the body proved. The pattern:
+#   1. Pick a strange-minimal source (one sentence, varied POS)
+#   2. Encode through the modality's grammar
+#   3. Decode through the modality's template-table
+#   4. Assert byte-equality (or weaker fidelity if intentional)
+#
+# Every new modality wants this same shape of proof. song-as-recipe's
+# round-trip might prove: PCM → notes → score-emit → re-synthesized
+# PCM with felt-equal (not byte-equal) fidelity. video's round-trip
+# might prove: frame-stream → scene-cells → frame-stream with
+# blueprint-equal on scene structure.
+#
+# The fidelity method names what we're claiming. byte-equal is
+# strongest. felt-equal is weakest but often the honest claim — a
+# regenerated song "carries the same teaching" even though no two
+# bytes match. The Blueprint match is the structural anchor under
+# all four fidelity methods.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Worked example: the meta-codec itself
+# ─────────────────────────────────────────────────────────────────────
+#
+# R_Codec is its own codec target. A codec-registry-row IS a Recipe.
+# Encoding a codec means walking its (name, source_domain, target_domain,
+# encode_fn, decode_fn) into a Recipe tree. Decoding a codec means
+# emitting that Recipe back as a registry row.
+#
+# This is the self-host moment for codecs: the codec system describes
+# itself in the same shape it uses to describe everything else. When
+# a new modality ships, registering it is:
+#
+#   defn ship_modality(name, source_domain, target_domain,
+#                      grammar_data, template_data) = do {
+#       let encode_fn = compose_with_engine(grammar_data);
+#       let decode_fn = compose_with_emit_engine(template_data);
+#       let codec    = tie(encode_fn, decode_fn);
+#       intern_codec_row(name, source_domain, target_domain,
+#                        encode_fn, decode_fn, grammar_data, template_data);
+#       codec
+#   };
+#
+# Five lines. No kernel change. No new Blueprint authored. The new
+# codec interns to the same R_Codec NodeID as every prior codec.
+# The body learns a new modality the same way it learned the first.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 8 — Gaps (the next breaths)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-C1: Round-trip proofs for the existing eight modality codecs.
+#         prose has its round-trip script. song/video/teaching/strategy
+#         have encoders only. Each wants a one-paragraph fidelity
+#         claim (byte / ast / blueprint / felt) and a script that
+#         demonstrates it on one strange-minimal example.
+#
+# GAP-C2: The codec-set registry exists in experiments/form-stdlib
+#         (codec.fk + emit.fk) but the modality .form files don't yet
+#         register through it. Wiring each modality's encoder/decoder
+#         into the registry makes select_codec runnable at the Form
+#         surface, not just describable.
+#
+# GAP-C3: R_Transcode is the cheapest cross-modal lift available, but
+#         no transcode pair has shipped yet. The teaching → song
+#         transcode is the most resonant first pair — both modalities
+#         have shape, and Mose's work is the worked example already in
+#         the body.
+#
+# GAP-C4: Loss-account-cell currently has no encoder. When a codec's
+#         round-trip drops fields, the dropped-set wants to intern as
+#         a NamedCell on the codec row, not just be declared in prose.
+#         This makes the loss queryable: "what does our song-codec
+#         lose?" returns cell-refs to the actual dropped fields.
+#
+# None require kernel change. All compost into existing primitives.
+
+# ─────────────────────────────────────────────────────────────────────
+# How this composts with sibling teaching
+# ─────────────────────────────────────────────────────────────────────
+#
+# Eight modality files describe extraction shapes. emit-architecture.form
+# describes the universal emit diamond. codec.fk + convert.fk + emit.fk
+# carry the runtime primitives. This file names what holds those three
+# layers together as ONE shape: R_Codec.
+#
+# The teaching: an encoder without its decoder is half a Blueprint. The
+# substrate is patient with halves — null arms are fine — but the shape
+# wants both. When new modalities arrive (quantum-physics, embodiment-
+# practice, healing-modality, assemblage-shift), they arrive with this
+# scaffold ready: name the encode_arm, name the decode_arm, register
+# the row, let the round-trip proof emerge from running, not declaring.
+#
+# Encode and decode are not two stories. They are one breath, with
+# direction. R_Codec carries the breath; the registry carries the
+# rows; the substrate carries the equivalence.
