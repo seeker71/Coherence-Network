@@ -362,6 +362,74 @@ def _spec_essence(text: str) -> str:
     return ""
 
 
+def update_vision_kb_header(check: bool) -> bool:
+    """Keep `docs/vision-kb/INDEX.md` header in sync with the concepts dir.
+
+    The "**Concepts**: N | **Status**: a expanding, b seed, c deepening, d
+    living" line was hand-maintained for a long time, and drifted every
+    time a concept was added or removed without a corresponding header
+    edit. The drift was a persistent wellness signal (see commits
+    df800967a and 7ca338f7e — both one-off corrections).
+
+    The fix is structural: count the same way `wellness_check.py` does
+    (lc-*.md files with exactly one dot — translations like lc-foo.de.md
+    are the same concept in another voice, not a separate concept), then
+    rewrite the header line in place. The other header fields
+    (`Last maintained`, `Transmissions held`) carry editorial meaning and
+    stay hand-tended.
+
+    Returns True if the file changed (or would change in --check).
+    """
+    index_path = REPO_ROOT / "docs" / "vision-kb" / "INDEX.md"
+    concepts_dir = REPO_ROOT / "docs" / "vision-kb" / "concepts"
+    if not index_path.exists() or not concepts_dir.is_dir():
+        return False
+
+    # Same single-dot filter as scripts/wellness_check.py sense_proprioception.
+    concept_files = [
+        p for p in concepts_dir.glob("lc-*.md") if p.name.count(".") == 1
+    ]
+    total = len(concept_files)
+
+    status_counts: dict[str, int] = {}
+    for p in concept_files:
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        m = re.search(r"^status:\s*(\S+)\s*$", text, re.MULTILINE)
+        status = m.group(1).strip() if m else "unknown"
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    # Stable order: expanding → seed → deepening → living → others.
+    preferred = ["expanding", "seed", "deepening", "living"]
+    ordered: list[tuple[str, int]] = []
+    for key in preferred:
+        if key in status_counts:
+            ordered.append((key, status_counts.pop(key)))
+    for key in sorted(status_counts):
+        ordered.append((key, status_counts[key]))
+    status_str = ", ".join(f"{n} {s}" for s, n in ordered)
+
+    text = index_path.read_text(encoding="utf-8")
+    # Header line shape:
+    # > **Last maintained**: YYYY-MM-DD | **Concepts**: N | **Status**: ... | **Transmissions held**: ...
+    pattern = re.compile(
+        r"(\*\*Concepts\*\*:\s*)\d+(\s*\|\s*\*\*Status\*\*:\s*)[^|]*(\|)"
+    )
+    new_text, n = pattern.subn(
+        lambda m: f"{m.group(1)}{total}{m.group(2)}{status_str} {m.group(3)}",
+        text,
+        count=1,
+    )
+    if n == 0 or new_text == text:
+        return False
+    if check:
+        return True
+    index_path.write_text(new_text, encoding="utf-8")
+    return True
+
+
 def write_or_check(path: Path, content: str, check: bool) -> bool:
     """Write content to path. Returns True if the file changed (or would change in --check)."""
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -398,6 +466,9 @@ def main() -> int:
     specs_index = render_specs_index()
     if specs_index and write_or_check(specs_index_path, specs_index, args.check):
         changed.append("specs/INDEX.md")
+
+    if update_vision_kb_header(args.check):
+        changed.append("docs/vision-kb/INDEX.md")
 
     manifest_path = REPO_ROOT / "MANIFEST.md"
     manifest = render_manifest(target_data)
