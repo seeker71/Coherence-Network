@@ -123,7 +123,7 @@ done_when:
   - 'pytest_passes("api/tests/test_story_protocol.py")'
   - 'pytest_passes("api/tests/test_settlement.py")'
   - 'pytest_passes("api/tests/test_evidence.py")'
-test: "cd api && python -m pytest tests/test_story_protocol.py tests/test_settlement.py tests/test_evidence.py -q"
+test: "cd api && python -m pytest tests/test_story_protocol.py tests/test_settlement_flow.py tests/test_evidence_flow.py -q"
 constraints:
   - "No blockchain node required on infrastructure -- use Story Protocol SDK RPC and Arweave bundler services"
   - "Gas costs below $0.01 per asset registration (use Story Protocol Proof of Creativity on L2)"

@@ -132,7 +132,7 @@ done_when:
   - 'symbol_in_file("docs/vision-kb/glossary/id.md", "anchor")'
   - 'pytest_passes("api/tests/test_locale.py")'
   - 'pytest_passes("api/tests/test_translation_cache.py")'
-test: "cd api && python -m pytest tests/test_locale.py tests/test_translation_cache.py -q && cd ../web && npm run test"
+test: "cd api && python -m pytest tests/test_translations_router.py tests/test_lens_translation_boundaries.py tests/test_libretranslate_backend.py -q && cd ../web && npm run test"
 constraints:
   - "Never mutate source markdown — translations are additive rows keyed by (target_lang, source_hash)"
   - "English is not privileged — source_lang is whatever the contributor wrote in; any locale can be source or target"
