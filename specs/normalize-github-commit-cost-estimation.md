@@ -31,6 +31,10 @@ constraints:
 
 # Normalize GitHub Commit Cost Estimation
 
+## Purpose
+
+Normalize GitHub Commit Cost Estimation — see `idea_id: value-attribution` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 Fix inflated per-commit contribution cost values by replacing the high-multiplier estimator with a bounded normalized model and enforcing normalization server-side.
 

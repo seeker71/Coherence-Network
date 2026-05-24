@@ -31,6 +31,10 @@ test: "cd api && python -m pytest -q tests/test_monitor_resolution.py"
 
 # Heal Completion → Issue Resolution
 
+## Purpose
+
+Heal Completion → Issue Resolution — see `idea_id: pipeline-reliability` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 **Idea ID**: `047-heal-completion-issue-resolution`
 **Status**: Ready for Implementation
 **Related Specs**: 002, 007, 114, 115
@@ -181,6 +185,8 @@ The cap ensures the array never exceeds 50 entries regardless of how many condit
 
 ## Known Gaps and Follow-up Tasks
 
+- None.
+
 - **JSONL rotation**: `monitor_resolutions.jsonl` grows indefinitely; a separate spec should add rotation (e.g. keep last 1000 lines or by date).
 - **API endpoint for resolutions**: `GET /api/agent/monitor-resolutions` (paginated JSONL reader) would allow dashboards to query resolved history without reading raw files.
 - **Distributed-safe writes**: For multi-worker setups, file-level locking or a DB-backed store replaces JSONL + JSON array.
@@ -205,3 +211,20 @@ python3 -m pytest api/tests/test_monitor_resolution.py -x -v
 ```
 
 All tests must pass without modifying test assertions to force passing behavior.
+
+## Risks and Assumptions
+
+- None.
+
+## Acceptance Tests
+
+- `tests/test_monitor_resolution.py`
+
+## Requirements
+
+- [ ] Resolution JSONL contains heal_task_id when present on prior issue
+- [ ] Resolved array capped at 50 with correct FIFO eviction
+- [ ] pytest api/tests/test_monitor_resolution.py passes
+- [ ] file_exists("api/app/services/auto_heal_service.py")
+- [ ] symbol_in_file("api/app/services/auto_heal_service.py", "heal")
+

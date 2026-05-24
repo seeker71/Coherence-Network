@@ -509,3 +509,8 @@ The discipline is not a guarantee of representativeness. It is a guarantee of **
 - **Risk**: Google Photos location data carries privacy weight even without pixels (a home address pattern across many photos exposes residence). Mitigation: the privacy filter applies to Photos metadata too; residence-pattern detection (multiple encounters at the same private location) can flow `mark-private` rather than `allow`.
 - **Assumption**: `inspired_by_service.ensure_identity()` handles the `asset` node type as well as the contributor types it was originally written for. If the asset path needs additional defaults (e.g. `claimable: true` already in `_ensure_creation_nodes`), this spec extends `ensure_identity` rather than forking.
 - **Assumption**: The vision concepts already in the graph carry enough story_content for `resonance_service.attune` to produce meaningful overlap with influence keywords. Verified for the existing lc-* concepts; sparse concepts will produce sparse resonance, which is the right behaviour.
+
+## Known Gaps
+
+- None.
+

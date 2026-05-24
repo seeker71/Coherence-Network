@@ -252,3 +252,12 @@ If provider stats or network-summary fail, the page still returns 200 — sectio
 - Alerting / notification when a provider crosses a threshold (covered by `provider-health-alerting` spec)
 - Strategy propagation visibility (covered by `federation-network-layer` spec)
 - Authentication gating on the network-summary endpoint
+
+## Known Gaps
+
+- None.
+
+## Acceptance Tests
+
+- Validated by: `cd api && python -m pytest api/tests/ -q -k federation`
+

@@ -201,6 +201,8 @@ attribute to).
 
 ## Acceptance Criteria
 
+- Validated by: `cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.py`
+
 1. `compute_grounded_cost()` returns `actual_cost_usd` when present, else
    `runtime_cost_estimate`. Never returns a caller-invented number.
 2. `compute_grounded_value()` returns 0.0 for failed tasks, 1.0 for
@@ -229,6 +231,10 @@ See `api/tests/test_grounded_cost_value_measurement.py` for test cases covering 
 
 
 ## Verification
+
+```bash
+cd api && python -m pytest -q tests/test_grounded_cost_value_measurement.py
+```
 
 - Unit tests with exact assertions on `compute_grounded_cost` and
   `compute_grounded_value` for all edge cases
@@ -260,3 +266,21 @@ See `api/tests/test_grounded_cost_value_measurement.py` for test cases covering 
       Should be tuned from real usage distribution data.
 - [ ] External value signals: GitHub stars/forks, customer support ticket
       reduction, user retention metrics — not yet wired.
+
+## Out of Scope
+
+- None.
+
+## Files
+
+- `api/app/services/grounded_measurement_service.py`
+- `api/app/services/grounded_idea_metrics_service.py`
+
+## Requirements
+
+- [ ] Exact computed values verified against known inputs in tests
+- [ ] pytest api/tests/test_grounded_cost_value_measurement.py passes
+- [ ] file_exists("api/app/services/grounded_measurement_service.py")
+- [ ] symbol_in_file("api/app/services/grounded_measurement_service.py", "compute_grounded_cost")
+- [ ] symbol_in_file("api/app/services/grounded_measurement_service.py", "compute_grounded_value")
+

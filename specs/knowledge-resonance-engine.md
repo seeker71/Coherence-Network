@@ -77,6 +77,10 @@ test: "python3 -m pytest api/tests/test_flow_discovery.py -q"
 
 # Knowledge and Resonance Engine -- 184 Concepts, Harmonic Matching, Belief Translation
 
+## Purpose
+
+Knowledge and Resonance Engine -- 184 Concepts, Harmonic Matching, Belief Translation — see `idea_id: knowledge-and-resonance` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 
 Provide the semantic substrate that makes coherence scoring meaningful -- a living ontology of 184 universal concepts with typed relationships, a harmonic resonance kernel for cross-domain idea matching, contributor belief profiles for personalized discovery, and an accessible ontology that non-technical contributors can extend naturally.
@@ -111,3 +115,33 @@ The knowledge and resonance engine spans eight source files implementing four la
 ```bash
 python3 -m pytest api/tests/test_flow_discovery.py -q
 ```
+
+## Out of Scope
+
+- None.
+
+## Known Gaps
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `api/app/services/concept_service.py`
+- `api/app/services/concept_resonance_kernel.py`
+- `api/app/services/belief_service.py`
+- `api/app/services/idea_resonance_service.py`
+- `api/app/services/accessible_ontology_service.py`
+- `api/app/services/discovery_service.py`
+- `api/app/routers/resonance.py`
+- `api/app/routers/beliefs.py`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_flow_discovery.py -q
+```
+

@@ -91,6 +91,8 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 
 ## Acceptance Tests
 
+- Validated by: `python3 -m pytest api/tests/test_cc_scoring.py -x -v`
+
 - COHERENCE-ALGORITHM-SKETCH.md documents all 8 inputs
 - Pitfalls section present
 - Weights stub (e.g. "Default: equal weight per component; override via config")

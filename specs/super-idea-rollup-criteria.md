@@ -92,3 +92,12 @@ python3 -m pytest api/tests/test_idea_hierarchy.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Out of Scope
+
+- None.
+
+## Acceptance Tests
+
+- `api/tests/test_super_idea_rollup.py`
+

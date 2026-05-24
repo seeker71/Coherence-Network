@@ -26,6 +26,10 @@ constraints:
 
 # Tool Failure Awareness (Cost Without Gain)
 
+## Purpose
+
+Tool Failure Awareness (Cost Without Gain) — see `idea_id: pipeline-optimization` for parent context. Detailed shape carried in this spec's structured frontmatter (source: + requirements + done_when + test).
+
 ## Goal
 Detect and surface expensive tool failures (time/cost spent without value) automatically.
 
@@ -126,3 +130,9 @@ python3 -m pytest api/tests/test_agent_runner_tool_failure_telemetry.py -x -v
 
 - No known gaps at time of writing.
 - Follow-up: review after initial implementation for completeness.
+
+## Files
+
+- `api/app/services/failure_taxonomy_service.py`
+- `api/app/services/agent_execution_retry.py`
+

@@ -380,3 +380,8 @@ curl -s "http://localhost:8000/api/presence-views/contributor:robert-edward-gran
 - **Risk**: Calibration parity is subjective for prose-heavy fields like the bio. Mitigation: the calibration script reports field-by-field equivalence and the human (this body, or anyone reading) makes the parity call before composting that human's hand-built file. No automated greenlight.
 - **Assumption**: The graph node already carries enough primary data for the calibration target. Verified for Robert Edward Grant: `contributor:robert-edward-grant-f7e43ccfb4b0` holds a ~1700-word `description`, a `canonical_url`, an `image_url`, and existing `inspired-by` edges. For sparser presences, the harmonized shape will be sparser — that's the right behavior.
 - **Assumption**: The og:* metadata for `canonical_url` is already harvested by existing infrastructure (the news / external-presence pipeline). If not, a small harvester lives in `scripts/sync_presence_views.py::harvest_canonical_url_metadata` as a near-term placeholder.
+
+## Known Gaps
+
+- None.
+

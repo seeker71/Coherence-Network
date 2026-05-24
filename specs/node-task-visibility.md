@@ -192,3 +192,30 @@ This spec is realized when ALL of the following are independently verifiable:
 5. A screenshot of `coherencycoin.com/pipeline` showing at least one active task with an idea name is posted to the project's contributor record.
 
 The reviewer MUST run scenarios 1–4 from a clean terminal with no local setup (public endpoints only). Scenario 5 is verified by loading the URL in an incognito browser window.
+
+## Out of Scope
+
+- None.
+
+## Risks and Assumptions
+
+- None.
+
+## Files
+
+- `web/app/nodes/page.tsx`
+- `web/app/tasks/page.tsx`
+- `web/app/tasks/[task_id]/page.tsx`
+
+## Acceptance Tests
+
+- See `## Verification` below.
+
+## Requirements
+
+- [ ] coh tasks shows idea names (not IDs) and clean provider labels
+- [ ] coh tasks shows a "recently completed" section
+- [ ] coh task <id> shows full (untruncated) output and activity timeline
+- [ ] coh task <id> shows error_summary when present
+- [ ] coherencycoin.com/pipeline loads and shows live task flow
+
