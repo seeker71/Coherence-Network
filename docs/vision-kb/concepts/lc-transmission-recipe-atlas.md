@@ -1,7 +1,7 @@
 ---
 id: lc-transmission-recipe-atlas
 hz: 741
-status: seed
+status: deepening
 updated: 2026-05-24
 geometry:
   arity: 6
@@ -247,6 +247,9 @@ human-facing doorway: cards people can read, try, verify, and improve.
 
 ## Sources To Walk Further
 
+- **[Transmission Recipe Atlas guide](../guides/transmission-recipe-atlas-guide.md)**
+  -- the practical card walk with complete payloads, proof modes, and
+  a first group practice.
 - **[modality-as-recipe.form](../../coherence-substrate/modality-as-recipe.form)**
   -- substrate shape for multiple recipe extractions from one source.
 - **[song-as-recipe.form](../../coherence-substrate/song-as-recipe.form)**

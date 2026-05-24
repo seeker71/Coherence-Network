@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-05-24] guide | Transmission Recipe Atlas — first usable walk
+
+The atlas moved from concept into practice: a source can now be walked into a complete recipe card with enough structure for another person to run it.
+
+- **New guide**: [`transmission-recipe-atlas-guide`](guides/transmission-recipe-atlas-guide.md) — card template, eight-step walk, quality check, first group practice.
+- **Worked payloads**: The Repair Wake, Onboarding as Ceremony, and Metric Spellbreaker now include concrete run shapes and proof modes.
+- **Edges landed in the same breath**: concept source link, INDEX companion link, LOG entry.
+- **Discernment held**: the guide keeps the big vision practical by asking every card to leave with a next embodiment owner.
+
 ## [2026-05-24] concept | Transmission Recipe Atlas — portable state-change patterns
 
 Urs named the cross-domain unlock directly: sources such as strategy failures, quantum metaphors, spiritual teachings, embodiment practices, healing modalities, assemblage points, specs, songs, stories, and videos can all be read as recipes and reused across domains when the observer owns the lens and the proof mode stays honest.
