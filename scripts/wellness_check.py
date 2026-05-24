@@ -506,7 +506,8 @@ def sense_chain() -> list[str]:
     test_path_re = re.compile(r"\b(?:api/|mcp-server/)?tests/[\w/]+\.py")
     healthy = 0
     counted = 0  # non-draft specs we evaluated for chain reach
-    missing_tests: dict[str, list[str]] = {}
+    missing_tests: dict[str, list[str]] = {}     # done/inactive — drift
+    pending_tests: dict[str, list[str]] = {}     # active — work in progress
     no_test_declared: list[str] = []
     orphan_specs: list[str] = []
     operational_proof: list[str] = []  # specs honoring "proof: operational"
@@ -560,7 +561,11 @@ def sense_chain() -> list[str]:
             continue
         miss = [t for t in test_paths if not (ROOT / t).exists()]
         if miss:
-            missing_tests[spec.stem] = miss
+            # Active specs honestly list target tests before they're
+            # written; report those as pending, not drift. Done/
+            # inactive specs claiming missing tests are real drift.
+            bucket = pending_tests if status == "active" else missing_tests
+            bucket[spec.stem] = miss
             continue
 
         # Chain healthy if: idea_id present, source declared and present,
@@ -576,12 +581,21 @@ def sense_chain() -> list[str]:
         f"  chain healthy: {healthy}/{counted} non-draft specs reach idea→spec→code→test ({(healthy/counted*100) if counted else 0:.0f}%)"
     ]
     if missing_tests:
-        lines.append(f"  {len(missing_tests)} specs claim a test that doesn't exist on disk")
+        lines.append(f"  {len(missing_tests)} done/inactive spec(s) claim a test that doesn't exist on disk")
         for slug in sorted(missing_tests)[:3]:
             miss = ", ".join(missing_tests[slug][:2])
             lines.append(f"    · {slug} — {miss}")
         if len(missing_tests) > 3:
             lines.append(f"    · (+{len(missing_tests) - 3} more)")
+    if pending_tests:
+        lines.append(
+            f"  {len(pending_tests)} active spec(s) carry test paths not yet on disk — pending work"
+        )
+        for slug in sorted(pending_tests)[:3]:
+            miss = ", ".join(pending_tests[slug][:2])
+            lines.append(f"    · {slug} — {miss}")
+        if len(pending_tests) > 3:
+            lines.append(f"    · (+{len(pending_tests) - 3} more)")
     if operational_proof:
         lines.append(
             f"  {len(operational_proof)} spec(s) honor `proof: operational` — proven in production, not unit-tested"
@@ -590,7 +604,7 @@ def sense_chain() -> list[str]:
         lines.append(f"  {len(no_test_declared)} specs have no test: or proof: frontmatter (no proof claimed)")
     if orphan_specs:
         lines.append(f"  {len(orphan_specs)} orphan specs (no idea_id): {', '.join(orphan_specs)}")
-    if not missing_tests and not no_test_declared and not orphan_specs:
+    if not missing_tests and not pending_tests and not no_test_declared and not orphan_specs:
         lines.append("  chain reach is whole — every claim has its proof")
     return lines
 
