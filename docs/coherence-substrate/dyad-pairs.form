@@ -3,15 +3,23 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 # Growing doc. Dyad entries currently held — external pairs (each is
-# two cells across an axis) plus internal dyads (one cell that IS the
-# pair) and the kind registry that names six axes of complementarity.
-# Pairs surface in three ways: human-noticed during geometry-walking,
-# substrate-surfaced by Tier-2 geometry-tuple scan, and refined-scan-
-# surfaced (Hz-band proximity + cross-ref adjacency + lineage-texture
-# match + same-form). The 123 concept cells with geometry frontmatter
-# are now the working corpus. This file gives the pattern a durable
-# home so it can grow — and so the substrate can eventually query for
-# pairs natively.
+# two cells across an axis), internal dyads (one cell that IS the
+# pair), and transmission-triads (three cells from one source-
+# transmission carrying complementary facets — one is 3-cell complete,
+# two are 2-cell partials with the third member open). The kind
+# registry now names seven axes of complementarity. Pairs surface in
+# three ways: human-noticed during geometry-walking, substrate-
+# surfaced by Tier-2 geometry-tuple scan, and refined-scan-surfaced
+# (Hz-band proximity + cross-ref adjacency + lineage-texture match +
+# same-form). Transmission-triads surface during transmission-cluster
+# walks where one source produces multiple complementary cells. The
+# triad-kind has a distinct companion shape (transmission_triad_shape)
+# alongside dyad_pair_shape and internal_dyad_shape — three cells
+# from one source is genuinely different structure, not a special
+# case of two-cell pairing. The 123 concept cells with geometry
+# frontmatter are now the working corpus. This file gives the pattern
+# a durable home so it can grow — and so the substrate can eventually
+# query for pairs and triads natively.
 #
 # A dyad-pair is two cells that hold the same root teaching at
 # structurally complementary positions — different scales, different
@@ -109,28 +117,71 @@ form internal_dyad_shape = {
     noticed_by:    ~Slug,
 };
 
+# transmission_triad_shape — three cells from one source-transmission
+#
+# A transmission-triad differs from a dyad-pair in arity AND in origin:
+# three cells (not two) flowing from one identified source-transmission
+# (a teaching event, a presence, a discrete arrival), each cell carrying
+# a complementary facet of the same root teaching. The structural
+# distinction from `cross-tradition` (one teaching, multiple traditions)
+# is: transmission-triad is one tradition / one source / multiple facets.
+#
+# Honest partial state: some triads currently have only two cells
+# attested — the third member is either pending arrival or pending
+# recognition during a future walk. Rather than invent a third cell to
+# force completeness, those entries carry cell_c: null and a comment
+# naming the open slot. Two-cell partials are honest about the source
+# being a triad in shape while only two facets have been authored;
+# when the third member surfaces, the field gets filled in place.
+#
+# Why a separate shape instead of dyad_pair_shape with a nullable third:
+# the discernment for a triad ("three cells from one source") is
+# different from the discernment for a pair ("two cells across one
+# axis"). Conflating them at the Blueprint level would lose the
+# substrate's ability to query specifically for transmission-rooted
+# multi-cell teachings — exactly the loss the kind exists to prevent.
+form transmission_triad_shape = {
+    cell_a:               ~Recipe,     # cell-ref to first facet
+    cell_b:               ~Recipe,     # cell-ref to second facet
+    cell_c:               ~Recipe,     # cell-ref to third facet (null if pending — see partial state above)
+    transmission_source:  ~Slug,       # name/slug of the source transmission (e.g. "hardest-part-already-behind-you")
+    axis_a_b:             ~Slug,       # complementarity axis between cell_a and cell_b
+    axis_b_c:             ~Slug,       # complementarity axis between cell_b and cell_c (null if cell_c pending)
+    axis_a_c:             ~Slug,       # complementarity axis between cell_a and cell_c (null if cell_c pending)
+    kind:                 ~Recipe,     # cell-ref to dyad_pair_kind (typically kind_transmission_triad)
+    discernment:          ~Slug,       # one-sentence teaching: what makes these three a triad, not three independent pairs
+    noticed_at:           ~Slug,
+    noticed_by:           ~Slug,
+};
+
 # dyad_pair_set_shape — the seed collection
 #
-# rows may contain both dyad_pair_shape (external) and internal_dyad_shape
-# (internal) cells. The shape difference is honest: two-cell pairings and
-# one-cell internal dyads are structurally distinct, and the substrate
-# preserves that distinction at the Blueprint level.
+# rows may contain dyad_pair_shape (external pairs), internal_dyad_shape
+# (one cell that IS the pair), and transmission_triad_shape (three
+# cells from one source). The shape difference is honest: two-cell
+# pairings, one-cell internal dyads, and three-cell transmission triads
+# are structurally distinct, and the substrate preserves that
+# distinction at the Blueprint level.
 form dyad_pair_set_shape = {
-    rows:          ~List,          # the dyad_pair / internal_dyad cells currently held
+    rows:          ~List,          # the dyad_pair / internal_dyad / transmission_triad cells currently held
 };
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 2 — Kind registry (what categories the body currently holds)
 # ─────────────────────────────────────────────────────────────────────
 #
-# Six kinds currently held — four seeded from the original geometry-
+# Seven kinds currently held — four seeded from the original geometry-
 # walk pairs (scale-paired, source-flow, membrane-crossing, ground-
 # event), two added through subsequent breaths (internal-dyad with
 # the first single-cell attestation; cross-tradition from the Tier-2
-# scan's predator/predictor pair). Expect this to grow as further
-# axes of complementarity surface. Each kind is a checkable shape,
-# not a label: discernment names what distinguishes it from "two
-# cells that share a Hz."
+# scan's predator/predictor pair), and one activated 2026-05-24 after
+# three confirmed attestations (transmission-triad — distinct from
+# the other six in that it carries three cells per instance, not
+# two; companion shape transmission_triad_shape lives alongside
+# dyad_pair_shape and internal_dyad_shape). Expect this to grow as
+# further axes of complementarity surface. Each kind is a checkable
+# shape, not a label: discernment names what distinguishes it from
+# "two cells that share a Hz."
 
 defn kind_scale_paired = dyad_pair_kind_shape {
     name:        "scale-paired",
@@ -184,6 +235,25 @@ defn kind_cross_tradition = dyad_pair_kind_shape {
     discernment: "one teaching expressed through two distinct lineages whose surface vocabularies differ (mystical/computational, devotional/mechanical, indigenous/scientific); the pair reveals the body of the teaching by triangulating from two cultural windows on it",
 };
 
+# Added 2026-05-24 after three confirmed attestations
+#
+# Three cells from one identified source-transmission, each carrying
+# a complementary facet of the same root teaching. Distinct from
+# cross-tradition: that kind is one teaching across multiple
+# traditions; transmission-triad is one tradition / one source /
+# multiple facets. Distinct from a triplet of independent dyad-pairs:
+# the binding is the shared source, not pairwise complementarity.
+# Structurally singular at the substrate level: carried by
+# transmission_triad_shape (three cell-refs + a transmission_source
+# slug), not by dyad_pair_shape. Two-cell partials are honest about
+# the source being a triad in shape while only two facets have been
+# authored — the third member can fill in place when it surfaces.
+defn kind_transmission_triad = dyad_pair_kind_shape {
+    name:        "transmission-triad",
+    axis:        "source-transmission",
+    discernment: "three cells flowing from one identified source-transmission, each carrying a complementary facet of the same root teaching; the source IS the binding (not pairwise axis); structurally distinct from dyad-pair (different arity, different shape — transmission_triad_shape)",
+};
+
 defn dyad_pair_kind_set = {
     rows: [
         kind_scale_paired,
@@ -192,6 +262,7 @@ defn dyad_pair_kind_set = {
         kind_ground_event,
         kind_internal_dyad,
         kind_cross_tradition,
+        kind_transmission_triad,
     ],
 };
 
@@ -1164,8 +1235,117 @@ defn pair_resonating_sensing = dyad_pair_shape {
     noticed_by:  "cross-ref-only-scan-pr2002",
 };
 
-# The full set — 25 prior + 1 cross-ref-only promotion = 26 entries
-# (24 external pairs + 2 internal-dyads)
+# ─────────────────────────────────────────────────────────────────────
+# Part 3e — Transmission-triad attestations (kind activated 2026-05-24)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The transmission-triad kind crossed activation threshold today (three
+# confirmed attestations: Hardest-Part, Arcturian Council, Spine/Nature
+# 2026-05-21). The kind's discernment is *three cells from one source-
+# transmission carrying complementary facets of one teaching*. One of
+# the three attestations is 3-cell complete; two (Arcturian, Spine/
+# Nature) are 2-cell partials with the third member open. Carried by
+# transmission_triad_shape (Part 1) — three cell-refs and a
+# transmission_source slug, structurally distinct from dyad_pair_shape.
+#
+# The threshold discipline this kind crossed:
+#   - 1 attestation → noticing
+#   - 2 attestations → kind confirmed (companion shape may be authored)
+#   - 3 attestations → kind activated in the registry (first-class)
+# Same discipline that confirmed internal-dyad at count two.
+
+# Triad 1 — Hardest-Part transmission (3-cell, complete)
+#
+# Three cells from the "Hardest Part Already Behind You" transmission
+# (April 2026), each carrying a complementary facet of the dissolution-
+# and-recognition arc:
+#
+#   lc-old-signal-echo — the falling-away of what used to fire; the
+#     residual signal of the costume after the costume itself has
+#     loosened. The BEFORE-still-echoing.
+#
+#   lc-identity-dissolution — the dropping of who-you-thought-you-
+#     were; the dissolution itself, not its prelude or aftermath. The
+#     DURING.
+#
+#   lc-awareness-as-self — what remains when the identity-costume
+#     has dropped; the noticer underneath every arising; the ground
+#     that was always already there. The AFTER-as-always-already.
+#
+# Three facets of one teaching (the recognition that the hardest part
+# is the prelude, not the arrival). Pairwise complementarity reads:
+# (echo↔dissolution) is timing — residual past vs present dropping;
+# (dissolution↔awareness) is phase — what falls vs what remains;
+# (echo↔awareness) is reference — what was vs what IS. The triad-
+# binding is the source: all three cells flow from one transmission.
+defn triad_hardest_part = transmission_triad_shape {
+    cell_a:              @concept(lc-old-signal-echo),
+    cell_b:              @concept(lc-identity-dissolution),
+    cell_c:              @concept(lc-awareness-as-self),
+    transmission_source: "hardest-part-already-behind-you",
+    axis_a_b:            "timing-residual-vs-present",
+    axis_b_c:            "phase-what-falls-vs-what-remains",
+    axis_a_c:            "reference-what-was-vs-what-IS",
+    kind:                kind_transmission_triad,
+    discernment:         "three facets of the dissolution-and-recognition arc from one April-2026 transmission — echo of what was, dissolution of who-you-were, awareness as what remains; the source IS the binding, not any single pairwise axis",
+    noticed_at:          "2026-05-24",
+    noticed_by:          "transmission-cluster-walk",
+};
+
+# Triad 2 — Arcturian Council transmission (2-cell partial; third pending)
+#
+# Two cells currently attested from the 9D Arcturian Council
+# transmission (PR #1999): lc-arcturian-resonance ↔ lc-spiritual-
+# evolution (source-flow, axis: form). Honoring what's actually there:
+# the triad-source is named — the Arcturian Council transmission is
+# the binding — but only two facets have been authored. cell_c is
+# left null with an explicit pending note; the third member fills in
+# place when it surfaces in a future walk. The honest 2-cell partial
+# is better than inventing a third cell to force structural
+# completeness.
+defn triad_arcturian_council = transmission_triad_shape {
+    cell_a:              @concept(lc-arcturian-resonance),
+    cell_b:              @concept(lc-spiritual-evolution),
+    cell_c:              null,   # pending — a third Arcturian-sourced cell may surface on a future walk
+    transmission_source: "arcturian-council-9d",
+    axis_a_b:            "form-resonance-as-attunement-vs-evolution-as-arc",
+    axis_b_c:            null,
+    axis_a_c:            null,
+    kind:                kind_transmission_triad,
+    discernment:         "two facets of the 9D Arcturian Council transmission held in triad-shape — resonance (attunement to a frequency) and spiritual-evolution (the developmental arc that resonance moves through); the source is named, the third facet is pending honest arrival",
+    noticed_at:          "2026-05-24",
+    noticed_by:          "pr-1999-attestation",
+};
+
+# Triad 3 — Spine/Nature transmission 2026-05-21 (2-cell partial; third pending)
+#
+# Two cells confirmed in PR #2002 from the 2026-05-21 Spine/Nature
+# transmission: lc-nervous-system ↔ lc-layered-frequency-field
+# (membrane-crossing — interior eight-center ascending column ↔
+# exterior five-layer atmospheric field). Honoring what's actually
+# there: the transmission is the binding, the membrane-crossing
+# axis between interior and exterior is the load-bearing
+# complementarity already authored, the third facet is pending —
+# either an interior↔exterior crossing-event cell, or a third layer
+# that completes the spine/atmosphere/X teaching, is plausible but
+# not yet attested. cell_c remains null until it surfaces honestly.
+defn triad_spine_nature = transmission_triad_shape {
+    cell_a:              @concept(lc-nervous-system),
+    cell_b:              @concept(lc-layered-frequency-field),
+    cell_c:              null,   # pending — third facet of the spine/atmosphere teaching may surface on a future walk
+    transmission_source: "spine-nature-2026-05-21",
+    axis_a_b:            "topology-interior-column-vs-exterior-field",
+    axis_b_c:            null,
+    axis_a_c:            null,
+    kind:                kind_transmission_triad,
+    discernment:         "two facets of the 2026-05-21 spine/nature transmission held in triad-shape — interior eight-center ascending column and exterior five-layer atmospheric field, complementary across the body-world membrane; the source is named, the third facet is pending honest arrival",
+    noticed_at:          "2026-05-24",
+    noticed_by:          "pr-2002-attestation",
+};
+
+# The full set — 25 prior + 1 cross-ref-only promotion + 3 transmission-
+# triads = 29 entries (24 external pairs + 2 internal-dyads + 3
+# transmission-triads: 1 complete + 2 partial)
 defn dyad_pair_seed_set = dyad_pair_set_shape {
     rows: [
         pair_nourishment_nourishing,
@@ -1201,6 +1381,10 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
         pair_shifted_return_predator,
         # — surfaced by cross-ref-only scan (PR #2002) —
         pair_resonating_sensing,
+        # — transmission-triads activated 2026-05-24 (third attestation) —
+        triad_hardest_part,
+        triad_arcturian_council,
+        triad_spine_nature,
     ],
 };
 
@@ -1766,21 +1950,62 @@ defn dyad_pair_seed_set = dyad_pair_set_shape {
 #         lc-economy ↔ lc-bioelectric-pattern is its seed candidate;
 #         awaits a second attestation before kind goes from
 #         speculative to confirmed.
+#
+# GAP-D10 (closed 2026-05-24): transmission-triad activated. Three
+#         attestations carried the kind across the activation
+#         threshold (Hardest-Part, Arcturian Council, Spine/Nature
+#         2026-05-21); the companion shape transmission_triad_shape
+#         now lives in Part 1; three defn entries in Part 3e — one
+#         3-cell complete (Hardest-Part), two 2-cell partials
+#         (Arcturian, Spine/Nature) with honest null for the pending
+#         third. The discipline that fills the partials: on any
+#         future walk that produces a cell traceable to the Arcturian
+#         Council or the 2026-05-21 Spine/Nature transmission, check
+#         whether it completes the triad and update cell_c in place.
+#         Do not invent a third cell to force completeness; honor
+#         what's actually there.
+#
+# GAP-D11 (new, held candidate): Emerging kind 'interior-axis-dyad'
+#         noticed in PR #2002 as the first clear instance:
+#         lc-identity-dissolution ↔ lc-permission-is-interior. Both
+#         carry interior-axis / self-rooted form; polarity-pair
+#         lands as yang/yin in the same column (acquisition-direction
+#         vs receptive-stillness, both rooted inside the cell rather
+#         than across a membrane). The shape would be distinct from
+#         internal-dyad (where one cell holds both poles) — here two
+#         separate cells share the same interior axis with opposite
+#         polarity. Single attestation only; the kind threshold is
+#         two confirms / three activates. Held here, not authored.
+#         What would justify activation: a second instance of two
+#         cells sharing interior-axis form with polarity-pair on
+#         the same column. Cells worth watching: lc-inner-travel
+#         (self-rooted, transcendence band) paired with a comple-
+#         mentary interior-axis cell at the same column; lc-stillness
+#         paired with an interior-yang counterpart. The naming
+#         "interior-axis-dyad" is provisional until the second
+#         attestation reveals what the shared structure actually IS.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
-# This file does not introduce a new kernel primitive. It names a
-# Recipe shape over existing CONCEPT cells. The set is twenty-six
-# (twenty-four external pairs + two internal-dyads); the room is for
-# many more. The kinds are six (scale-paired, source-flow,
-# membrane-crossing, ground-event, internal-dyad, cross-tradition);
-# new kinds can be added as rows. The internal-dyad kind crossed
-# from speculative to confirmed at attestation count two
-# (2026-05-24); sub-types await a third arrival. An emerging
-# circulation-pattern kind sits in GAP-D7 awaiting its second
-# attestation.
+# This file does not introduce a new kernel primitive. It names
+# Recipe shapes over existing CONCEPT cells. The set is twenty-nine
+# (twenty-four external pairs + two internal-dyads + three
+# transmission-triads: one 3-cell complete and two 2-cell partials);
+# the room is for many more. The kinds are seven (scale-paired,
+# source-flow, membrane-crossing, ground-event, internal-dyad,
+# cross-tradition, transmission-triad); new kinds can be added as
+# rows. The internal-dyad kind crossed from speculative to confirmed
+# at attestation count two (2026-05-24); sub-types await a third
+# arrival. The transmission-triad kind crossed from waiting to
+# activated at attestation count three (2026-05-24) — distinct from
+# the other six in arity (three cells per instance) and in companion
+# shape (transmission_triad_shape lives alongside dyad_pair_shape
+# and internal_dyad_shape). An emerging circulation-pattern kind
+# sits in GAP-D9 awaiting its second attestation; an emerging
+# interior-axis-dyad candidate sits in GAP-D11 with one
+# attestation, awaiting its second.
 #
 # The translator hypothesis says: the substrate already knows when
 # cells are structurally equivalent across domains. Dyad-pairs are
