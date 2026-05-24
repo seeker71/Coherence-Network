@@ -483,3 +483,194 @@ class CanonicalExchangeResponse(BaseModel):
     diverged: int = 0
     discovered: int = 0
     attestations: list[CanonicalAttestationOut] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Federated value flow — freedom-preserving CC distribution across instances
+# ---------------------------------------------------------------------------
+#
+# Asset on instance A is mirrored to instance B. B serves a read; B sends A
+# an attribution envelope. At settlement time, A computes B's share and sends
+# B a settlement envelope. Each instance stays sovereign over what it knows:
+# A holds the truth about its assets, B holds the truth about its readers.
+# Neither commands the other — both sides may decline. The fleet's value
+# flow is the union of self-declared exchanges, not a central ledger.
+
+
+VALUE_ATTESTATION_STATUSES = frozenset({"received", "verified", "settled", "rejected"})
+
+# Default split when a federated read settles: 80% to the creator, 20% to
+# the serving instance. Inspired by the asset-renderer-plugin 85/15 share —
+# the serving instance carries delivery cost the same way a renderer does.
+DEFAULT_FEDERATED_CREATOR_SHARE = 0.80
+DEFAULT_FEDERATED_SERVING_SHARE = 0.20
+
+
+class AssetMirrorManifest(BaseModel):
+    """Manifest a peer sends when asking to mirror one of our assets.
+
+    The peer holds the local asset id; the manifest declares origin so
+    later read-attributions can address us as authoritative. Sovereignty:
+    we still choose whether to accept; the manifest is a request, not a
+    command.
+    """
+    local_asset_id: str = Field(min_length=1, description="The asset id on the mirroring instance (the one receiving the manifest)")
+    origin_instance_id: str = Field(min_length=1, description="Instance that authored the asset")
+    origin_asset_id: str = Field(min_length=1, description="Asset id as known to its origin instance")
+    origin_url: str = Field(min_length=1, description="URL on the origin instance where the asset lives")
+    origin_payment_address: str | None = Field(
+        default=None,
+        description="Creator's payment address on the origin instance — where settlement CC flows",
+    )
+    mirrored_at: str | None = None
+
+
+class AssetMirrorRecord(BaseModel):
+    """Round-tripped mirror record — what we store and return."""
+    local_asset_id: str
+    origin_instance_id: str
+    origin_asset_id: str
+    origin_url: str
+    origin_payment_address: str | None = None
+    mirrored_at: str
+
+
+class ReadAttributionEnvelope(BaseModel):
+    """Signed envelope a serving instance sends to an origin instance.
+
+    `signature` is HMAC-SHA256 over the canonical-JSON dump of the envelope
+    excluding the signature itself. The origin verifies against the secret
+    it holds for the serving instance (stored in
+    `FederatedInstanceRecord.public_key`).
+    """
+    asset_origin_id: str = Field(min_length=1, description="The asset id as known to the origin instance")
+    reader_instance_id: str = Field(min_length=1, description="ID of the instance that served the read")
+    reader_subject: str | None = Field(
+        default=None,
+        description="Opaque reader subject on the serving instance (may be hashed or anonymous)",
+    )
+    read_type: str = Field(default="free", description="free | paid")
+    cc_amount: float = Field(default=0.0, ge=0.0)
+    concept_resonance: dict[str, float] | None = None
+    observed_at: str = Field(description="ISO 8601 UTC timestamp when the read happened")
+    signature: str = Field(min_length=1)
+
+
+class ReadAttributionAck(BaseModel):
+    """What the origin instance returns after recording an attribution."""
+    asset_origin_id: str
+    reader_instance_id: str
+    status: str = Field(description="received | verified | rejected")
+    federated_reader_id: str | None = Field(
+        default=None,
+        description="The reader_id under which this read was recorded locally",
+    )
+    note: str | None = None
+
+
+class FederatedReadAttestationOut(BaseModel):
+    """One stored federated read attestation, as exposed via the API."""
+    id: int
+    asset_origin_id: str
+    reader_instance_id: str
+    reader_subject: str | None = None
+    read_type: str
+    cc_amount: float
+    observed_at: str
+    received_at: str
+    status: str
+    signature_verified: bool
+
+
+class FederatedReadAttestationListResponse(BaseModel):
+    asset_origin_id: str | None = None
+    reader_instance_id: str | None = None
+    attestations: list[FederatedReadAttestationOut] = Field(default_factory=list)
+    count: int = 0
+
+
+class SettlementShareEnvelope(BaseModel):
+    """Signed envelope an origin instance sends to a serving instance.
+
+    The origin computed the serving instance's share from attestations it
+    received during the period; the envelope declares the amount and the
+    constituent reads. Sovereignty: the serving instance verifies, then
+    stores in its inbox; downstream CC transfer is a separate breath.
+    """
+    origin_instance_id: str = Field(min_length=1, description="Instance computing the settlement (the asset's home)")
+    serving_instance_id: str = Field(min_length=1, description="Instance receiving the share (read-server)")
+    period_start: str = Field(description="ISO 8601 UTC inclusive start of the settlement period")
+    period_end: str = Field(description="ISO 8601 UTC exclusive end of the settlement period")
+    read_count: int = Field(ge=0)
+    cc_amount_to_serving: float = Field(ge=0.0)
+    cc_amount_to_creator: float = Field(ge=0.0)
+    serving_share: float = Field(ge=0.0, le=1.0)
+    creator_share: float = Field(ge=0.0, le=1.0)
+    asset_breakdown: list[dict] = Field(
+        default_factory=list,
+        description="Per-asset entries: {asset_origin_id, read_count, cc_amount_to_serving}",
+    )
+    signature: str = Field(min_length=1)
+
+
+class SettlementShareAck(BaseModel):
+    """Acknowledgement returned by the serving instance after inbox storage."""
+    inbox_id: int
+    origin_instance_id: str
+    status: str = Field(description="received | verified | rejected")
+    note: str | None = None
+
+
+class SettlementInboxEntryOut(BaseModel):
+    """One inbox entry — a settlement envelope the serving side received."""
+    id: int
+    origin_instance_id: str
+    period_start: str
+    period_end: str
+    read_count: int
+    cc_amount_to_serving: float
+    cc_amount_to_creator: float
+    received_at: str
+    status: str
+    signature_verified: bool
+
+
+class SettlementInboxListResponse(BaseModel):
+    origin_instance_id: str | None = None
+    entries: list[SettlementInboxEntryOut] = Field(default_factory=list)
+    count: int = 0
+
+
+class ComputeFederatedSharesRequest(BaseModel):
+    """Trigger a settlement-share computation across federated peers for a period.
+
+    The request says *which* period; the service computes per-peer envelopes
+    from this instance's stored federated read attestations.
+    """
+    period_start: str = Field(description="ISO 8601 UTC inclusive period start")
+    period_end: str = Field(description="ISO 8601 UTC exclusive period end")
+    serving_share: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Override the default serving-side share (default 0.20)",
+    )
+    serving_instance_id: str | None = Field(
+        default=None,
+        description="If set, only compute for this peer; otherwise compute for every peer with attestations in the window",
+    )
+    mark_settled: bool = Field(
+        default=True,
+        description="If true, attestations included in the envelope flip to status=settled",
+    )
+
+
+class ComputeFederatedSharesResponse(BaseModel):
+    period_start: str
+    period_end: str
+    envelopes: list[SettlementShareEnvelope] = Field(default_factory=list)
+    serving_share: float
+    creator_share: float
+    total_cc_to_serving: float = 0.0
+    total_cc_to_creator: float = 0.0
+    attestations_settled: int = 0
