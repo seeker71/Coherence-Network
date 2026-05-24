@@ -1,6 +1,6 @@
 ; tests/translator-bidirectional.fk — verify bidirectional translation
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk form-stdlib/recipe-distance.fk
 ;
 ; The verifiable bidirectional translator:
 ;
@@ -8,6 +8,12 @@
 ;   Go source     → parse → universal Recipe → emit Python (Go → Python)
 ;
 ; Both directions through the SAME universal vocabulary.
+;
+; Measurement: recipe-distance (see form-stdlib/recipe-distance.fk) gives
+; a structural-fidelity number per translation hop. A clean lossless hop
+; reads as fidelity=1000ppk (distance=0). When recipes diverge under
+; cross-language translation, the number says by how much — the BMF
+; pipeline becomes a measured codec, not just a rewriter.
 
 (do
     (let NL "
@@ -45,6 +51,21 @@
     (print go-src)
     (print "  ↓")
     (print go-roundtrip)
+    (print "")
+
+    ;; ── measurement ──
+    ;; Re-parse the round-tripped Go output back to a Recipe and compute
+    ;; structural distance against the original Recipe. A structure-
+    ;; preserving emitter+parser pair produces distance=0 / fidelity=1000.
+    ;; This is the codec-style number the BMF pipeline was missing.
+    (let go-rt-recipe (parse-go-universal go-roundtrip))
+    (let d-go-rt (recipe-distance recipe-from-go go-rt-recipe))
+    (let fid-go-rt (recipe-fidelity-ppk recipe-from-go go-rt-recipe))
+
+    (print "── round-trip fidelity (Go → universal → Go → universal) ──")
+    (print (str_concat "  distance:        " (int_to_str d-go-rt)))
+    (print (str_concat "  fidelity (ppk):  " (int_to_str fid-go-rt)))
+    (print (str_concat "  source size:     " (int_to_str (recipe-size recipe-from-go))))
     (print "")
 
     (add (str_len py-to-go) (add (str_len go-to-py) (str_len go-roundtrip))))
