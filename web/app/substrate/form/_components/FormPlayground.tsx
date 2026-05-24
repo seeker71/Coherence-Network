@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Play, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, Cpu, Play, RotateCcw, Sparkles } from "lucide-react";
+import {
+  LOCAL_FORM_EXAMPLES,
+  runLocalFormBinary,
+  type LocalFormRun,
+} from "@/lib/form-kernel/client";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
 
@@ -567,6 +572,166 @@ function ResultPanel({ result }: { result: FormResultOut }) {
   );
 }
 
+function LocalKernelPanel() {
+  const firstExample = LOCAL_FORM_EXAMPLES[0];
+  const [binary, setBinary] = useState(firstExample.source);
+  const [activeNote, setActiveNote] = useState(firstExample.note);
+  const [localRun, setLocalRun] = useState<LocalFormRun | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const pickLocalExample = (example: (typeof LOCAL_FORM_EXAMPLES)[number]) => {
+    setBinary(example.source);
+    setActiveNote(example.note);
+    setLocalRun(null);
+    setLocalError(null);
+  };
+
+  const runLocal = () => {
+    if (!binary.trim()) return;
+    setLocalError(null);
+    setLocalRun(null);
+    try {
+      setLocalRun(runLocalFormBinary(binary));
+    } catch (e: unknown) {
+      setLocalError(e instanceof Error ? e.message : "Local kernel failed");
+    }
+  };
+
+  const hotArms = localRun ? localRun.trace.arms.slice(0, 5) : [];
+
+  return (
+    <section
+      className="grid gap-5 rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 lg:grid-cols-[0.9fr_1.1fr]"
+      aria-labelledby="local-kernel-heading"
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.22em] text-teal-300/75">
+            Local TS kernel
+          </p>
+          <h2 id="local-kernel-heading" className="text-2xl font-light text-stone-100">
+            Run a Form binary in this browser.
+          </h2>
+          <p className="text-sm leading-relaxed text-stone-400">
+            This lane does not call the API. The TypeScript kernel parses the text-encoded
+            <code className="mx-1">.fk</code>
+            binary, walks the recipe, and reports the local trace from this tab.
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          {LOCAL_FORM_EXAMPLES.map((example) => (
+            <button
+              key={example.label}
+              type="button"
+              onClick={() => pickLocalExample(example)}
+              className={`rounded-lg border px-3 py-3 text-left transition-colors ${
+                binary === example.source
+                  ? "border-teal-400/50 bg-teal-500/10 text-teal-100"
+                  : "border-stone-800/50 bg-stone-950/35 text-stone-300 hover:border-teal-500/35 hover:text-teal-200"
+              }`}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Cpu className="h-4 w-4 text-teal-300/80" aria-hidden="true" />
+                {example.label}
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-stone-500">
+                {example.note}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-stone-800/50 bg-stone-950/35 p-4">
+        <div className="space-y-2">
+          <label htmlFor="local-form-binary" className="text-xs uppercase tracking-[0.18em] text-stone-500">
+            .fk binary
+          </label>
+          <textarea
+            id="local-form-binary"
+            value={binary}
+            onChange={(e) => {
+              setBinary(e.target.value);
+              setActiveNote("Run the edited binary locally and compare the trace.");
+            }}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                runLocal();
+              }
+            }}
+            className="h-44 w-full resize-y rounded-xl border border-stone-800/50 bg-stone-950/80 p-3 font-mono text-sm leading-relaxed text-stone-300 transition-colors focus:border-teal-500/40 focus:outline-none"
+            spellCheck={false}
+          />
+          <p className="text-xs leading-relaxed text-stone-500">{activeNote}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={runLocal}
+            disabled={!binary.trim()}
+            className="inline-flex items-center gap-2 rounded-xl border border-teal-500/20 bg-teal-500/10 px-5 py-2.5 text-sm font-medium text-teal-200 transition-all hover:border-teal-500/30 hover:bg-teal-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Play className="h-4 w-4" aria-hidden="true" />
+            Run locally
+          </button>
+          <span className="text-xs text-stone-600">⌘↩ to run in-tab</span>
+        </div>
+
+        {localError && (
+          <div className="whitespace-pre-wrap rounded-xl border border-red-800/30 bg-red-900/10 p-3 text-sm text-red-300">
+            {localError}
+          </div>
+        )}
+
+        {localRun && (
+          <div className="space-y-3 rounded-xl border border-stone-800/50 bg-stone-900/25 p-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-stone-500">Result</div>
+                <div className="mt-1 font-mono text-lg text-teal-200">{localRun.result}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-stone-500">Root</div>
+                <div className="mt-1 font-mono text-sm text-stone-300">{localRun.root}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-stone-500">Walks</div>
+                <div className="mt-1 font-mono text-sm text-stone-300">
+                  {localRun.trace.total_walks} · {localRun.elapsedMs.toFixed(2)} ms
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-stone-800/40 bg-stone-950/45 p-3">
+              <div className="mb-2 text-xs uppercase tracking-wide text-stone-500">
+                Hot dispatch arms
+              </div>
+              <div className="grid gap-1 font-mono text-xs text-stone-300 sm:grid-cols-2">
+                {hotArms.map((arm) => (
+                  <div key={arm.arm_ty} className="flex justify-between gap-3">
+                    <span>RBasic.{arm.arm_name}</span>
+                    <span className="text-teal-200">{arm.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {(localRun.stdout || localRun.stderr) && (
+              <pre className="max-h-40 overflow-auto rounded-lg border border-stone-800/40 bg-stone-950/45 p-3 text-xs text-stone-400">
+                {localRun.stdout}
+                {localRun.stderr}
+              </pre>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // Build a starter expression when the playground arrives bound to a cell.
 // `?cell=@concept(lc-pulse)` becomes `@concept(lc-pulse).blueprint` — a
 // useful first question to ask of any cell. The visitor lands inside a
@@ -741,6 +906,8 @@ export function FormPlayground() {
           {result && <ResultPanel result={result} />}
         </div>
       </section>
+
+      <LocalKernelPanel />
 
       <section className="space-y-4" aria-labelledby="form-atlas-heading">
         <div>

@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 const securityHeaders = [
   {
@@ -25,6 +29,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  experimental: {
+    externalDir: true,
+  },
+  turbopack: {
+    root: repoRoot,
+  },
   /**
    * Routing-layer redirects for retired surfaces.
    *
