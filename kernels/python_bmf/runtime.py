@@ -31,14 +31,19 @@ sys.setrecursionlimit(200_000)
 
 
 # Load order matches Form kernel's prepare_sources for the BMF compiler:
-# Loaded in dependency order. The two we can fully load today are engine and
-# source_compiler. compiler.py and python_bmf.py reference symbols from
-# section [...] grammar blocks that the source-compiler expands at .fk-load
-# time — those expansions don't yet land via the emit_python path, so those
-# two modules' module-level execution fails on undefined symbols. We load
-# what works; the loader is honest about which surfaces are live.
-LOAD_ORDER = ["engine", "source_compiler"]
-DEFERRED = ["python_bmf", "compiler"]  # need section-grammar expansion first
+# Loaded in dependency order. All four emitted modules load when the
+# section [...] grammar blocks in compiler.fk and python-bmf.fk have been
+# pre-expanded through the source-compiler. The regeneration flow
+# (scripts/regen_emitted_python.py) handles the expansion bootstrap:
+#   form/form-stdlib/{compiler,python-bmf}.fk
+#     → emitted Python source-compiler.form_source_compile_file()
+#     → /tmp/bmf_compiler_expanded/*.expanded.fk
+#     → emit_python.py
+#     → kernels/python_bmf/emitted/{compiler,python_bmf}.py
+#
+# compiler.py defines form-bmf-second; python-bmf.py references it. Order:
+LOAD_ORDER = ["engine", "source_compiler", "compiler", "python_bmf"]
+DEFERRED: list[str] = []
 
 EMITTED_DIR = Path(__file__).parent / "emitted"
 

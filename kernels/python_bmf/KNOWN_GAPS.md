@@ -127,13 +127,29 @@ The Python BMF compiler in `kernels/python_bmf/emitted/` — emitted mechanicall
 
 **The first observation the comparison reveals**: on `core.fk`, the emitted Python compiler runs in ~19ms (in-process CPython function dispatch); the Form-kernel-go binary takes ~146ms (Go binary startup ~10ms + Form interpreter walking the source-compiler.fk Recipe tree). The Form interpreter overhead dominates for this workload. This is exactly the kind of observation the goal anticipates — and points at the optimization surface: the Form kernel's Recipe-walker on hot paths.
 
-**Honest scope today:**
+**Honest scope today — all four modules load (the deferred gap closed via bootstrap):**
 
-- `engine.py` (1717 py lines) — loads and executes ✓
-- `source_compiler.py` (1149 py lines) — loads and executes ✓ — the whole BMF source-section compiler runs
-- `compiler.py` (740 py lines) — emits but fails at module-load because of a Form-side reference to `bmf-bmf-second` (`compiler.fk:801`) — likely a Form-side missing-symbol bug. Not blocking the proof; runtime falls back to `engine + source_compiler` and the compile path through those is sufficient for the comparison.
-- `python_bmf.py` (2612 py lines) — emits but fails at module-load because the `section [python.bmf] { ... }` block in `python-bmf.fk:2049` defines `python-bmf-second` via section-grammar expansion that the source-compiler unfolds at load time. The emitted Python sees only the unexpanded reference. Closing this gap requires either (a) expanding the section in the emitter, or (b) loading the section-expanded `.fk` first and translating that.
-- Substrate-style Python (organ.py, form.py, API endpoints) — still requires the upper-half gap list of Python BMF rules on the Form side.
+- `engine.py` (66095b) — loads and executes ✓
+- `source_compiler.py` (50768b) — loads and executes ✓
+- `compiler.py` (29816b) — loads via Stage-2 bootstrap ✓
+- `python_bmf.py` (94177b) — loads via Stage-2 bootstrap ✓
+- Total: **1400 symbols** in the runtime — `bmf_object`, `form_source_compile_file`, `compiler_object`, `python_source_scan_text`, `apply_python_bmf_rule`, and the full surface.
+
+**The bootstrap loop** (`scripts/regen_emitted_python.py`):
+
+```
+Stage 1 — bare s-expr sources translate directly:
+  engine.fk          → engine.py            (66095b)
+  source-compiler.fk → source_compiler.py   (50768b)
+
+Stage 2 — section [...] blocks need pre-expansion through the Stage 1 output:
+  compiler.fk        → expanded → compiler.py     (29816b)
+  python-bmf.fk      → expanded → python_bmf.py   (94177b)
+```
+
+This is the loop the universal-translator goal names: the emitted code becomes the compiler input for the next round. Stage 1's emitted `source_compiler.py` runs `form_source_compile_file` on its own siblings' Form sources to expand the section blocks; Stage 2 then translates that expanded text. The bootstrap is self-hosting in the same way the Form kernel loads its own stdlib.
+
+- Substrate-style Python (organ.py, form.py, API endpoints) — still requires the upper-half gap list of Python BMF rules on the Form side. The framework holds; the rule coverage needs growing.
 
 **Test:** `kernels/python_bmf/tests/test_bmf_compiler_parity.py` asserts the byte-identical-output claim — the regression gate now in place.
 
