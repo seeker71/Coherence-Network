@@ -1129,6 +1129,21 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
+        // str_find — Rust-level substring search starting at index `from`.
+        // (str_find s needle from) → int (index or -1). Whole search in
+        // this Rust loop; no Form callback per byte, no Form recursion.
+        self.register_native("str_find", cat_access(), |_, _, args| {
+            let s = args[0].as_str();
+            let needle = args[1].as_str();
+            let from = args[2].as_int() as usize;
+            if from > s.len() {
+                return Value::Int(-1);
+            }
+            match s[from..].find(needle) {
+                Some(i) => Value::Int((from + i) as i64),
+                None => Value::Int(-1),
+            }
+        });
         // string_fold — Rust-level streaming iteration over a string's bytes.
         // Signature: (string_fold s init step) where step is a closure of
         // (acc, char) → acc. Whole iteration in this Rust for-loop; no Form-

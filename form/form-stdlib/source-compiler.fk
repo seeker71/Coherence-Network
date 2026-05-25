@@ -18,69 +18,35 @@
     (defn fsc-find-string-at? (s needle i j)
         (fsc-find-string-at-len? s needle (str_len s) (str_len needle) i j))
 
-    ;; --- streaming scanners — built on the kernel-native string_fold ---
+    ;; --- streaming scanners — dispatched to kernel-native `str_find` ---
     ;;
-    ;; The earlier per-character recursive scanners (fsc-find-string-from-len,
+    ;; The earlier recursive scanners (fsc-find-string-from-len,
     ;; fsc-find-char-from-len) blew Go's stack when section bodies grew past
-    ;; ~165 BMF rules. The cure is the kernel-native `string_fold` (added in
-    ;; the three kernels alongside this file): it loops over a string's bytes
-    ;; in Go/Rust/JS code, so Form-level scanning costs zero Form recursion
-    ;; regardless of input size. Universal-translator stream property restored.
+    ;; ~165 BMF rules. The first attempt (string_fold-based) eliminated the
+    ;; recursion but moved the cost into per-byte Form-closure dispatch,
+    ;; which is too slow when called 800+ times per source-compile run.
     ;;
-    ;; State threaded through the fold is a 4-element list:
-    ;;   (list current-index found-index needle-len searching?)
-    ;; — once found, subsequent characters leave the result unchanged.
-
-    (defn fsc-state-cur   (st) (head st))
-    (defn fsc-state-found (st) (head (tail st)))
-    (defn fsc-state-arg   (st) (head (tail (tail st))))
+    ;; The cure: a `str_find` kernel native that does the whole search in
+    ;; Go/Rust/JS (one for-loop per call, no Form callback, no recursion).
+    ;; This is what `tokenizeSexp` already does internally; we expose it so
+    ;; Form code doesn't pay the closure-dispatch tax. The universal-
+    ;; translator stream property holds: arbitrary-length input, zero Form
+    ;; recursion, constant per-call cost.
 
     (defn fsc-find-string-from (s needle i)
-        (do
-            (let needle-len (str_len needle))
-            (let s-len (str_len s))
-            (if (eq needle-len 0) i
-            (if (gt needle-len s-len) (sub 0 1)
-                (do
-                    ;; Step closure observes each byte; once a hit is recorded
-                    ;; we leave the state alone for the remainder of the fold.
-                    (defn fsc-find-string-step (acc _ch)
-                        (do
-                            (let cur (fsc-state-cur acc))
-                            (let found (fsc-state-found acc))
-                            (if (ge found 0) (list (add cur 1) found needle)
-                            (if (lt cur i) (list (add cur 1) found needle)
-                            (if (gt (add cur needle-len) s-len) (list (add cur 1) found needle)
-                            (if (fsc-find-string-at-len? s needle s-len needle-len cur 0)
-                                (list (add cur 1) cur needle)
-                                (list (add cur 1) found needle)))))))
-                    (let init (list 0 (sub 0 1) needle))
-                    (let final (string_fold s init fsc-find-string-step))
-                    (fsc-state-found final))))))
+        (str_find s needle i))
 
     (defn fsc-find-string-from-len (s needle _s-len _needle-len i)
-        (fsc-find-string-from s needle i))
+        (str_find s needle i))
 
     (defn fsc-contains? (s needle)
-        (ge (fsc-find-string-from s needle 0) 0))
+        (ge (str_find s needle 0) 0))
 
     (defn fsc-find-char-from (s ch i)
-        (do
-            (defn fsc-find-char-step (acc byte)
-                (do
-                    (let cur (fsc-state-cur acc))
-                    (let found (fsc-state-found acc))
-                    (if (ge found 0) (list (add cur 1) found ch)
-                    (if (lt cur i) (list (add cur 1) found ch)
-                    (if (str_eq byte ch)
-                        (list (add cur 1) cur ch)
-                        (list (add cur 1) found ch))))))
-            (let init (list 0 (sub 0 1) ch))
-            (let final (string_fold s init fsc-find-char-step))
-            (fsc-state-found final)))
+        (str_find s ch i))
 
     (defn fsc-find-char-from-len (s ch _s-len i)
-        (fsc-find-char-from s ch i))
+        (str_find s ch i))
 
     (defn fsc-space? (ch)
         (or (str_eq ch " ") (or (str_eq ch "\n") (or (str_eq ch "\t") (str_eq ch "\r")))))

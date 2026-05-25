@@ -852,6 +852,28 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
 	})
+	// str_find — Go-level substring search starting at index `from`.
+	// Signature: (str_find s needle from) → int (index or -1). The whole
+	// search runs in this Go loop (uses strings.Index after slicing); no
+	// Form closure dispatch per byte, no Form recursion. This is what
+	// `tokenizeSexp` does internally — exposed for Form scanners that
+	// would otherwise blow the walker stack with per-character recursion.
+	k.registerNative("str_find", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		needle := args[1].Str
+		from := int(args[2].Int)
+		if from < 0 {
+			from = 0
+		}
+		if from > len(s) {
+			return Value{Kind: VInt, Int: -1}
+		}
+		idx := strings.Index(s[from:], needle)
+		if idx < 0 {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(from + idx)}
+	})
 	// string_fold — Go-level streaming iteration over a string's bytes.
 	// Signature: (string_fold s init step) where step is a closure of
 	// (acc, char) → acc. Whole iteration in this Go for-loop; no Form-
