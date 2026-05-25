@@ -1,7 +1,7 @@
 ; form-action-dialect-band.fk - BML-shaped rule action authoring surface.
 ; The source compiler lowers form.action above the kernel.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let ACTION_NODE = make_nodeid(1, 2, 101, 33);

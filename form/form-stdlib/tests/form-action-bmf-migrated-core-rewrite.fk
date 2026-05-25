@@ -1,7 +1,7 @@
 ; form-action-bmf-migrated-core-rewrite.fk - rebuild
 ; form-action-migrated-core-band through shared BMF action helpers.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 (do
     (defn fa-tail2 (value)

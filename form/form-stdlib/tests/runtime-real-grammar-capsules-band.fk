@@ -4,7 +4,7 @@
 ; capsules. Runtime selection uses surfaces and capability nodes; grammar
 ; execution uses bmf-dialect data carried by the capsule/request.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk
 
 section [form.action] {
     def proof_ok(capability) = 1;

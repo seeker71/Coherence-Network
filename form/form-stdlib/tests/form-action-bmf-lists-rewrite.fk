@@ -1,6 +1,6 @@
 ; form-action-bmf-lists-rewrite.fk - rebuild lists.fk through BMF objects.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 (do
     (defn fa-ident (name)

@@ -361,43 +361,15 @@
     ;; Source: form/form-kernel-go/main.go parseSexp around line 1942 (DO/LET) +
     ;; 2005 (FNCALL) + 1900 (IDENT).
 
-    ;; --- Form ontology table — names ↔ kernel category NodeIDs ----
+    ;; --- Form ontology helpers — data lives in form-ontology.fk -----
     ;;
-    ;; Single source of truth on the Form side for the kernel's
-    ;; parseSexp dispatch + RBasic/R{Math,Compare,Logic,Cond,Block}
-    ;; constants. Every Recipe-emitter looks up by name here instead
-    ;; of inlining (make_nodeid 1 2 X Y); a new primitive or composite
-    ;; lands as one row instead of touching every emit site.
+    ;; FORM-CATEGORY-TABLE and FORM-PRIMITIVE-TABLE are bound by
+    ;; form-stdlib/form-ontology.fk (loaded as a prelude before this
+    ;; file). The data and the code that walks it stay separate: data
+    ;; in form-ontology.fk, helpers + emit logic here. A new primitive
+    ;; or composite shape lands as one row in form-ontology.fk and is
+    ;; picked up by every emit site through these helpers.
     ;;
-    ;; Source: form-kernel-go/main.go constants ~73-95 + parseSexp
-    ;; dispatch ~1956-2014. Type 9 = Block, 11 = Cond, 12 = Math,
-    ;; 13 = Compare, 14 = Logic, 31 = FnDef, 32 = FnCall, 33 = Ident.
-
-    ;; Composite categories — packaged via (form-cat-node "name").
-    (let FORM-CATEGORY-TABLE (list
-        (list "do"          9 1)
-        (list "sequence"    9 2)
-        (list "let"         9 3)
-        (list "if-then"    11 1)
-        (list "if"         11 2)   ;; full if-then-else
-        (list "fndef"      31 1)
-        (list "fncall"     32 1)
-        (list "ident"      33 1)))
-
-    ;; Parser special-form primitives — names parseSexp lifts to typed
-    ;; categories before falling through to FNCALL. The walker reads
-    ;; them via RBasicMath/Compare/Logic. Adding a new primitive means
-    ;; one row here AND a parser case in each kernel (Go/Rust/TS).
-    (let FORM-PRIMITIVE-TABLE (list
-        ;; math (type 12)
-        (list "add" 12 1) (list "sub" 12 2) (list "mul" 12 3)
-        (list "div" 12 4) (list "mod" 12 5)
-        ;; compare (type 13)
-        (list "eq"  13 1) (list "ne"  13 2) (list "lt"  13 3)
-        (list "le"  13 4) (list "gt"  13 5) (list "ge"  13 6)
-        ;; logic (type 14)
-        (list "and" 14 1) (list "or"  14 2) (list "not" 14 3)))
-
     ;; List-walk lookup — pure head/tail, no nth/nil? (we run before
     ;; core.fk). Returns the matched row or empty list.
     (defn form-table-lookup (table name)

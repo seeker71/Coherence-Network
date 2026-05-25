@@ -1,6 +1,6 @@
 ; source-compiler-multi-dialect-band.fk - one source carries several DSL sections
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 (do
     (let source

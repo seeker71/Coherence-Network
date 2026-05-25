@@ -1,7 +1,7 @@
 ; form-action-bmf-dialect-band-rewrite.fk - rebuild form-action-dialect-band
 ; through BMF objects and executable Form recipe nodes.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 (do
     (defn fa-ident (name)

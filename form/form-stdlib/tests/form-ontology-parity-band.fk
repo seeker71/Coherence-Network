@@ -1,0 +1,68 @@
+; form-ontology-parity-band.fk — ontology tables walk themselves.
+;
+; This band proves the Form-side ontology (form-stdlib/form-ontology.fk)
+; round-trips through the helpers (form-cat-node, form-prim-node) and
+; intern-deduplicates with NodeIDs built from the same (type, inst)
+; pair via make_nodeid. Code walks the data table; the assertions are
+; in the data, not in the test.
+;
+; If this band ever fails:
+;   - a row in form-ontology.fk got out of step with the helpers, or
+;   - the kernel's intern hashing diverged across siblings.
+;
+; The remaining drift surface — kernel parser dispatch (Go/Rust/TS
+; case "add" → catMath(PLUS)) — is enforced implicitly by every
+; form.action band that uses `add`/`gt`/etc; if the parser produced
+; a different category than FORM-PRIMITIVE-TABLE says, those bands
+; would score wrong.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+
+(do
+    ;; Each row is (list name type inst). Pull fields without nth.
+    (defn row-name (row) (head row))
+    (defn row-type (row) (head (tail row)))
+    (defn row-inst (row) (head (tail (tail row))))
+
+    ;; A primitive row passes if the helper-built call recipe and the
+    ;; direct-built call recipe intern-deduplicate (same NodeID).
+    (defn check-prim (row)
+        (do
+            (let via-table (intern_node
+                              (form-prim-node (form-prim-or-empty (row-name row)))
+                              (list (intern_trivial_int 1)
+                                    (intern_trivial_int 2))))
+            (let via-direct (intern_node
+                              (make_nodeid 1 2 (row-type row) (row-inst row))
+                              (list (intern_trivial_int 1)
+                                    (intern_trivial_int 2))))
+            (if (node_eq via-table via-direct) 1 0)))
+
+    ;; A category row passes if the helper resolves to the same
+    ;; NodeID as direct make_nodeid construction.
+    (defn check-cat (row)
+        (if (node_eq (form-cat-node (row-name row))
+                     (make_nodeid 1 2 (row-type row) (row-inst row)))
+            1 0))
+
+    ;; Walk a table; sum the per-row scores. Pure recursion — no
+    ;; reliance on map/fold from core (which IS loaded here, but the
+    ;; recursive shape keeps the band readable next to the rows it
+    ;; checks).
+    (defn sum-checks (table check)
+        (if (nil? table) 0
+            (add (check (head table))
+                 (sum-checks (tail table) check))))
+
+    (let prim-passed (sum-checks FORM-PRIMITIVE-TABLE check-prim))
+    (let cat-passed  (sum-checks FORM-CATEGORY-TABLE  check-cat))
+
+    ;; Unknown primitive must return empty — exercise the fallback.
+    (let unknown-ok (if (nil? (form-prim-or-empty "xor")) 7 0))
+
+    ;; FORM-PRIMITIVE-TABLE has 14 rows × 100 = 1400.
+    ;; FORM-CATEGORY-TABLE has  8 rows × 10  =   80.
+    ;; Unknown fallback                       =    7.
+    ;; Expected total                         = 1487.
+    (add (mul prim-passed 100)
+         (add (mul cat-passed 10) unknown-ok)))
