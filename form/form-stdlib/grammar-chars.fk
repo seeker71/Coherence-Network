@@ -257,11 +257,6 @@
                     (cmk-match (ccap-set (cmatch-caps m) name span)
                                (cmatch-rest m))))))
 
-    ;; substring helper (since cm- file is self-contained from core only)
-    (defn substring (s a b)
-        (if (ge a b) ""
-            (str_concat (char_at s a) (substring s (add a 1) b))))
-
     (defn cm-match-star (child stream rules collected)
         (do
             (let m (cm-match-pattern child stream rules))
