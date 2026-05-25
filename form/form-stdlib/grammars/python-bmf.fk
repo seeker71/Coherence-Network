@@ -1508,6 +1508,85 @@
                   (py-op ",")
                   (py-name (node_value (nth kids 2))))))
 
+    (defn pybmf-emit-from-import-as (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "alias"))))
+
+    (defn pybmf-source-from-import-as (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-from-import-many3 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b")
+                           (pybmf-trivial-string objects "c"))))
+
+    (defn pybmf-source-from-import-many3 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3))))))
+
+    (defn pybmf-emit-from-import-alias-many2 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "a")
+                                              (pybmf-trivial-string objects "alias_a")))
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "b")
+                                              (pybmf-trivial-string objects "alias_b"))))))
+
+    (defn pybmf-source-from-import-alias-many2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let a-kids (node_children (nth kids 1)))
+            (let b-kids (node_children (nth kids 2)))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth a-kids 0)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth a-kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth b-kids 0)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth b-kids 1))))))
+
+    (defn pybmf-emit-from-import-paren-many2 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-from-import-paren-many2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-from-import-star (objects)
         (intern_node PY-BMF-IMPORT-STAR
                      (list (pybmf-trivial-string objects "module"))))
@@ -2053,7 +2132,11 @@
     import-many3 ::= "import" $a:name "," $b:name "," $c:name => pybmf-emit-import-many3 <= pybmf-source-import-many3;
     import-alias-many2 ::= "import" $a:name "as" $alias_a:name "," $b:name "as" $alias_b:name => pybmf-emit-import-alias-many2 <= pybmf-source-import-alias-many2;
     from-import ::= "from" $module:name "import" $name:name => pybmf-emit-from-import <= pybmf-source-from-import;
+    from-import-as ::= "from" $module:name "import" $name:name "as" $alias:name => pybmf-emit-from-import-as <= pybmf-source-from-import-as;
     from-import-many2 ::= "from" $module:name "import" $a:name "," $b:name => pybmf-emit-from-import-many2 <= pybmf-source-from-import-many2;
+    from-import-many3 ::= "from" $module:name "import" $a:name "," $b:name "," $c:name => pybmf-emit-from-import-many3 <= pybmf-source-from-import-many3;
+    from-import-alias-many2 ::= "from" $module:name "import" $a:name "as" $alias_a:name "," $b:name "as" $alias_b:name => pybmf-emit-from-import-alias-many2 <= pybmf-source-from-import-alias-many2;
+    from-import-paren-many2 ::= "from" $module:name "import" "(" $a:name "," $b:name ")" => pybmf-emit-from-import-paren-many2 <= pybmf-source-from-import-paren-many2;
     from-import-star ::= "from" $module:name "import" "*" => pybmf-emit-from-import-star <= pybmf-source-from-import-star;
     decorator ::= "@" $name:name => pybmf-emit-decorator <= pybmf-source-decorator;
     decorator-call1 ::= "@" $name:name "(" $arg:name ")" => pybmf-emit-decorator-call1 <= pybmf-source-decorator-call1;

@@ -1,0 +1,94 @@
+; tests/python-bmf-from-import-band.fk - from … import … family coverage
+;
+; Exercises the rules added to extend substrate-Python `from X import Y`
+; coverage in form/form-stdlib/grammars/python-bmf.fk:
+;   - from-import-as           : `from pathlib import Path as P`
+;   - from-import-many3        : `from os import path, sep, getcwd`
+;   - from-import-alias-many2  : `from typing import List as L, Dict as D`
+;   - from-import-paren-many2  : `from typing import (List, Dict)`
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    ;; --- from X import Y as Z -----------------------------------------
+    (let from-as-match
+        (py-apply "from-import-as"
+                  (list (py-keyword "from") (py-name "pathlib")
+                        (py-keyword "import") (py-name "Path")
+                        (py-keyword "as") (py-name "P"))))
+    (let from-as-score
+        (add (kid-str-len from-as-match 0)         ; pathlib = 7
+             (add (kid-str-len from-as-match 1)    ; Path    = 4
+                  (kid-str-len from-as-match 2)))) ; P       = 1  (total 12)
+
+    ;; --- from X import a, b, c ----------------------------------------
+    (let from-many3-match
+        (py-apply "from-import-many3"
+                  (list (py-keyword "from") (py-name "os")
+                        (py-keyword "import") (py-name "path")
+                        (py-op ",") (py-name "sep")
+                        (py-op ",") (py-name "getcwd"))))
+    (let from-many3-score
+        (add (kid-str-len from-many3-match 0)         ; os     = 2
+             (add (kid-str-len from-many3-match 1)    ; path   = 4
+                  (add (kid-str-len from-many3-match 2)  ; sep = 3
+                       (kid-str-len from-many3-match 3))))) ; getcwd = 6 (total 15)
+
+    ;; --- from X import a as A, b as B ---------------------------------
+    (let from-alias-many-match
+        (py-apply "from-import-alias-many2"
+                  (list (py-keyword "from") (py-name "typing")
+                        (py-keyword "import") (py-name "List")
+                        (py-keyword "as") (py-name "L")
+                        (py-op ",") (py-name "Dict")
+                        (py-keyword "as") (py-name "D"))))
+    (let from-alias-many-score
+        (add (kid-str-len from-alias-many-match 0)  ; typing = 6
+             (child-count from-alias-many-match)))   ; 3 children (module, pair, pair) -> 9
+
+    ;; --- from X import (a, b) -----------------------------------------
+    (let from-paren-match
+        (py-apply "from-import-paren-many2"
+                  (list (py-keyword "from") (py-name "typing")
+                        (py-keyword "import") (py-op "(")
+                        (py-name "List") (py-op ",") (py-name "Dict")
+                        (py-op ")"))))
+    (let from-paren-score
+        (add (kid-str-len from-paren-match 0)       ; typing = 6
+             (add (kid-str-len from-paren-match 1)  ; List   = 4
+                  (kid-str-len from-paren-match 2)))) ; Dict   = 4 (total 14)
+
+    ;; --- existence bits ------------------------------------------------
+    (let bits
+        (add (object-bit from-as-match)
+             (add (object-bit from-many3-match)
+                  (add (object-bit from-alias-many-match)
+                       (object-bit from-paren-match)))))
+
+    (sum
+        (list from-as-score from-many3-score from-alias-many-score
+              from-paren-score bits)))
