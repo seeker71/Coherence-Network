@@ -521,6 +521,10 @@ export class Kernel {
     this.activeRoots = [...roots];
   }
 
+  pushActiveRoot(root: NodeID): void {
+    this.activeRoots.push(root);
+  }
+
   remapImportedLeaf(scope: number, nid: NodeID): NodeID {
     if (nid.pkg !== 0) return nid;
     return this.intern(catUndefined(), [
@@ -1443,9 +1447,16 @@ export class Kernel {
     // walk_recipe_here — walks a Recipe in the CALLER's env, so let-
     // bindings inside the Recipe land in the caller's scope. Matches
     // the Go and Rust kernels' env-aware variant.
-    this.registerEnvNative("walk_recipe_here", catWitness(), (k, env, args) =>
-      walk(k, argNodeID(args, 0), env),
-    );
+    this.registerEnvNative("walk_recipe_here", catWitness(), (k, env, args) => {
+      // Pin the recipe root as an active root so substrate_gc keeps the
+      // definitions reachable. Closures bound here hold body NodeIDs that
+      // aren't reachable from the source-parsed root, so without this pin
+      // a subsequent substrate_gc would sweep them and leave env holding
+      // closures with deleted bodies.
+      const root = argNodeID(args, 0);
+      k.pushActiveRoot(root);
+      return walk(k, root, env);
+    });
     const walkParallel: NativeFn = (k, args) => {
       const roots = argList(args, 0).map((value) => {
         if (value.kind !== "nodeid")

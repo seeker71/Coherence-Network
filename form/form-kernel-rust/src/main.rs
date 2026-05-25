@@ -1636,7 +1636,14 @@ impl Kernel {
         // bindings inside the Recipe land in the caller's scope. Matches
         // the Go kernel's env-aware variant.
         self.register_env_native("walk_recipe_here", cat_witness(), |k, a, env, args| {
-            walk(k, a, args[0].as_nid(), env)
+            // Pin the recipe root as an active root so substrate_gc keeps the
+            // definitions reachable. Closures bound here hold body NodeIDs
+            // that aren't reachable from the source-parsed root, so without
+            // this pin a subsequent substrate_gc would sweep them and leave
+            // env holding closures with deleted bodies.
+            let root = args[0].as_nid();
+            k.active_roots.push(root);
+            walk(k, a, root, env)
         });
         self.register_native("walk_parallel", cat_witness(), native_walk_parallel);
         self.register_native("walk-parallel", cat_witness(), native_walk_parallel);
