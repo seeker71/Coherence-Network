@@ -1,7 +1,7 @@
 ; natural-bmf-bidirectional.fk - natural language through BMF rules and lenses.
 ; Authored in form.action; source-compiler.fk lowers it above the kernel.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/python-bmf.fk
 
 section [form.action] {
     let NATURAL_LENS_COUNT = make_nodeid(8, 45, 2, 1);

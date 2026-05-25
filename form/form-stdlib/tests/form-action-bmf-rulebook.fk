@@ -1,7 +1,7 @@
 ; form-action-bmf-rulebook.fk - form.action grammar rules lower BMF objects
 ; into executable Form recipe nodes.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 (do
     (let x-ident-match

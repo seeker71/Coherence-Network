@@ -1,6 +1,6 @@
 ; tests/source-compiler-runtime.fk - source sections compile inside Form runtime
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let quote = "\"";

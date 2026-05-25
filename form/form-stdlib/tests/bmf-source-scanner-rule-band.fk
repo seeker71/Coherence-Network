@@ -4,7 +4,7 @@
 ; A Form-owned cursor emits source objects one at a time, and completed
 ; BMF object rules reduce those objects into Form recipe nodes.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     def next(result) = fsc-action-scan-next(fsc-scan-result-cursor(result));
