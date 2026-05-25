@@ -1,0 +1,45 @@
+; emits/python-native-driver.fk — invoke the Python-native emitter
+;
+; Usage: load core.fk + python-native.fk + this driver. The driver
+; calls pn-emit-file on a slice of engine.fk and writes the result
+; to kernels/python_bmf/native_demo.py via the kernel's
+; write_file_text host call.
+;
+; The slice is the first eight reversible-cell + bmf-object helpers
+; from engine.fk — small enough for a fresh reader to scan in one
+; sitting, big enough to exercise let / if / nested-call / list /
+; head / tail / nil? in real engine code (not synthetic samples).
+
+(do
+    ;; The Form snippet emitted as a Python module. Carved out of
+    ;; engine.fk's capture-environment + match-result + bmf-object
+    ;; section so reviewers can compare side-by-side with that file.
+    (let engine-slice
+        "(do
+            (defn cap-empty (_x) (empty))
+            (defn cap-pair (name value) (list name value))
+            (defn cap-name (p) (head p))
+            (defn cap-value (p) (head (tail p)))
+            (defn cap-get (caps name)
+                (if (nil? caps) (empty)
+                    (if (str_eq (cap-name (head caps)) name)
+                        (cap-value (head caps))
+                        (cap-get (tail caps) name))))
+            (defn cap-set (caps name value)
+                (cons (cap-pair name value) caps))
+            (defn cap-merge (a b)
+                (if (nil? b) a
+                    (cap-merge (cons (head b) a) (tail b))))
+            (defn mk-match (caps rest) (list \"match\" caps rest))
+            (defn mk-fail  (reason)    (list \"fail\"  reason))
+            (defn match? (r) (str_eq (head r) \"match\"))
+            (defn fail?  (r) (str_eq (head r) \"fail\")))")
+
+    (let py-text (pn-emit-string engine-slice))
+    ;; Path is resolved against the caller's cwd. validate.sh runs from
+    ;; form/, so "../kernels/python_bmf/native_demo.py" lands in the
+    ;; repo's kernels/python_bmf/ directory. If running the kernel
+    ;; binary directly from the repo root, override the path.
+    (write_file_text "../kernels/python_bmf/native_demo.py" py-text)
+    (print "wrote ../kernels/python_bmf/native_demo.py (relative to form/)")
+    (str_len py-text))
