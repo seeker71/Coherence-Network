@@ -1049,7 +1049,10 @@ export class Kernel {
       const needle = argStr(args, 1);
       const from = argInt(args, 2);
       const idx = s.indexOf(needle, from);
-      return { kind: "int", int: BigInt(idx) };
+      // `kind: "int"` carries a JS Number — using BigInt here would
+      // poison downstream arithmetic with "Cannot mix BigInt and other
+      // types" when callers do plain int math on the result.
+      return { kind: "int", int: idx };
     });
     // string_fold — JS-level streaming iteration over a string's chars.
     // Signature: (string_fold s init step) where step is a closure of
@@ -1240,9 +1243,12 @@ export class Kernel {
       const bytes = serializeRecipeArtifact(k, nid);
       try {
         writeFileSync(path, bytes);
-        return { kind: "int", int: BigInt(bytes.length) };
+        // `kind: "int"` carries a JS Number — BigInt poisons downstream
+        // arithmetic with "Cannot mix BigInt and other types" when
+        // callers do plain int math on the byte count.
+        return { kind: "int", int: bytes.length };
       } catch {
-        return { kind: "int", int: -1n };
+        return { kind: "int", int: -1 };
       }
     });
     this.registerNative("read_form_binary", catCall(), (k, args) => {

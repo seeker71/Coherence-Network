@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "source_of_truth_note": "Mirrors kernel parser dispatch — see form-kernel-go/main.go ~1956-2014 (buildVerb) and constants ~73-95. A row added here must land in the kernel's switch table too; scripts/validate_form_ontology.py reads this file and verifies each kernel.",
+  "kernel_type_constants": {
+    "RBasicBlock":   9,
+    "RBasicCond":   11,
+    "RBasicMath":   12,
+    "RBasicCompare": 13,
+    "RBasicLogic":  14,
+    "RBasicFnDef":  31,
+    "RBasicFnCall": 32,
+    "RBasicIdent":  33
+  },
+  "categories": [
+    {"name": "do",       "type":  9, "inst": 1, "note": "RBlock Do"},
+    {"name": "sequence", "type":  9, "inst": 2, "note": "RBlock Sequence (kernel verb: \"seq\")"},
+    {"name": "let",      "type":  9, "inst": 3, "note": "RBlock Let"},
+    {"name": "if-then",  "type": 11, "inst": 1, "note": "RCond IfThen"},
+    {"name": "if",       "type": 11, "inst": 2, "note": "RCond IfThenElse — full if-then-else"},
+    {"name": "fndef",    "type": 31, "inst": 1, "note": "kernel verb: \"defn\""},
+    {"name": "fncall",   "type": 32, "inst": 1, "note": "default branch in kernels — no explicit case"},
+    {"name": "ident",    "type": 33, "inst": 1, "note": "identifier-wrap path — no explicit case"}
+  ],
+  "primitives": [
+    {"name": "add", "type": 12, "inst": 1, "family": "math"},
+    {"name": "sub", "type": 12, "inst": 2, "family": "math"},
+    {"name": "mul", "type": 12, "inst": 3, "family": "math"},
+    {"name": "div", "type": 12, "inst": 4, "family": "math"},
+    {"name": "mod", "type": 12, "inst": 5, "family": "math"},
+    {"name": "eq",  "type": 13, "inst": 1, "family": "compare"},
+    {"name": "ne",  "type": 13, "inst": 2, "family": "compare"},
+    {"name": "lt",  "type": 13, "inst": 3, "family": "compare"},
+    {"name": "le",  "type": 13, "inst": 4, "family": "compare"},
+    {"name": "gt",  "type": 13, "inst": 5, "family": "compare"},
+    {"name": "ge",  "type": 13, "inst": 6, "family": "compare"},
+    {"name": "and", "type": 14, "inst": 1, "family": "logic"},
+    {"name": "or",  "type": 14, "inst": 2, "family": "logic"},
+    {"name": "not", "type": 14, "inst": 3, "family": "logic"}
+  ]
+}
