@@ -34,6 +34,30 @@ The session built a Python BMF compiler in two wrong shapes before the user surf
 
 3. **Comparison the goal actually names** — Form-resident BMF compiler vs. native Python BMF compiler producing the same Recipe trees from the same Python source. NodeID semantics, not text equality. Performance and resource use observed across two truly distinct implementations.
 
+## Form kernel walker hits a scaling ceiling around 175+ rules (2026-05-25 evening — observation from the parallel merge)
+
+Five parallel agents extended `python-bmf.fk` in disjoint worktrees. Each branch validated clean in isolation (three-kernel agreement on its own + base). The sequential merge surfaced a real kernel constraint:
+
+| Merge state | Rules | `validate.sh` result |
+|---|---|---|
+| Base + class + decorator + type-ann + from-import (prior session) | ~150 | clean |
+| + Form-native Python emitter (disjoint surface, `emits/`) | ~150 | clean |
+| + attribute access (`attr-chain`, `attr-assign-*`, method calls, chained method calls) | 156 | clean |
+| + comprehensions (`list-comp-simple`, `set-comp-simple`, dict/genexp variants) | 162 | clean |
+| + exception handling with bodies (`try-except-stmt`, raise-call variants) | 169 | **stack overflow in form-kernel-go walker (1 GB stack ceiling)** |
+| + f-strings/slicing (in place of exception) | 169 | **same stack overflow** |
+
+**The pattern**: each agent's grammar is fine alone. The walker overflows when ~7 more rules pile on top of the attr-access + comprehensions surface. Either combination (exception, f-strings/slicing) triggers it; both add ~7 rules. This is a real combinatorial behavior in the kernel's tree-walking dispatch — not a rule bug. The exception agent's grammar validated clean against the base, so the trigger is the *interaction* with attr-access/comprehensions, not the rules themselves.
+
+**What this points at**: the kernel's walker dispatch grows non-linearly with rule count above some threshold. For the goal's "use observations to improve performance, resource use" — this is a concrete optimization target on the Form kernel side. The walker likely tries all rules against each input and the cross-rule search explodes when many rules have overlapping initial-token patterns (`name . …`, `name ( …`, `[ name for …`, `( name for …`, `try : …`).
+
+**Branches not merged today** (clean in isolation, blocked by the kernel ceiling):
+
+- `worktree-agent-a594976002747c313` — exception handling (try/except/finally bodies + raise calls)
+- `worktree-agent-adabbde639636adb8` — f-strings + slicing extensions
+
+Both validated cleanly on their own; both push the merged grammar past the kernel walker's current scaling limit. They sit on origin awaiting either kernel-walker optimization or a rule-table reorganization that reduces dispatch search depth.
+
 ## Open Python-BMF rule gaps (Form side)
 
 The recent multi-agent breath landed rules for `from … import …`, class shapes, decorators, and type annotations. Still open in `python-bmf.fk`:
