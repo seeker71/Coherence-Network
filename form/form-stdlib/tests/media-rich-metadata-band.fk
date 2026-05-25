@@ -1,6 +1,6 @@
 ; media-rich-metadata-band.fk - reversible container metadata objects
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk
+; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk
 
 (do
     (defn media-field (node index)

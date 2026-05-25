@@ -1,6 +1,6 @@
 ; form-action-bmf-numeric-rewrite.fk - rebuild numeric.fk through BMF objects.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk
 
 (do
     (defn fa-ident (name)

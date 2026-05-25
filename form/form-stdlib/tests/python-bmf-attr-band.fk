@@ -1,6 +1,6 @@
 ; python-bmf-attr-band.fk - attribute access, attribute assignment, and method-call coverage
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn rt-score (rt)

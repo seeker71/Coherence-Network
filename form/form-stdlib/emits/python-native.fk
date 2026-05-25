@@ -22,7 +22,12 @@
 ; multi-arg `and` expressions — that's the difference between "passes on
 ; one kernel" and "all three siblings agree".
 
-(do
+;; ------------------------------------------------------------------
+;; Top-level defns + lets (no (do ...) wrapping so consumers see
+;; the bindings). The self-test at the file's tail still runs at
+;; load time, just at top-level rather than inside an outer (do ...).
+;; ------------------------------------------------------------------
+
     ;; ------------------------------------------------------------------
     ;; Tokenizer — S-expression lexer
     ;; ------------------------------------------------------------------
@@ -431,6 +436,29 @@
         (str_concat "# Hand edits will be overwritten; edit the Form source instead.\n"
         (str_concat "from kernels.python_bmf import sdk\n\n" ""))))
 
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Module manifest — names the Python modules this emitter produces.
+    ;; The full pipeline (spec §Architecture) lowers a Form binary into
+    ;; one file per module; the manifest declares them so a builder can
+    ;; iterate without grepping the emit functions. Currently bootstraps
+    ;; with the canonical four targets named in the spec.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let pn-module-manifest
+        (list "objects.py"
+              "rules.py"
+              "section_parser.py"
+              "form_action.py"))
+
+    ;; Per-file header — same provenance comment as pn-py-header, with
+    ;; the relative path interpolated so each emitted file names itself.
+    (defn pn-module-header (path)
+        (str_concat "# Auto-emitted by form/form-stdlib/emits/python-native.fk\n"
+        (str_concat "# Target file: "
+        (str_concat path
+        (str_concat "\n# Hand edits will be overwritten; edit the Form source instead.\n"
+                    "from kernels.python_bmf import sdk\n\n")))))
+
     (defn pn-emit-string (src)
         (str_concat (pn-py-header) (pn-emit-program (pn-parse src))))
 
@@ -450,4 +478,7 @@
     (let demo-py (pn-emit-string demo-src))
 
     (print demo-py)
-    (str_len demo-py))
+    (str_len demo-py)
+
+0
+

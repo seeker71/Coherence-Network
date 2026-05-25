@@ -1,6 +1,6 @@
 ; audio-format-signatures.fk - byte audio format sensing
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/audio-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/audio-bmf.fk
 
 (do
     (defn audio-format (node) (node_value (nth (node_children node) 0)))
