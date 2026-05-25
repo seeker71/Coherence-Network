@@ -852,6 +852,31 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
 	})
+	// string_fold — Go-level streaming iteration over a string's bytes.
+	// Signature: (string_fold s init step) where step is a closure of
+	// (acc, char) → acc. Whole iteration in this Go for-loop; no Form-
+	// level recursion. Lets the substrate process arbitrary-length input
+	// streams without piling kernel stack frames — the universal-translator
+	// stream property the goal's first sentence demands.
+	k.registerNative("string_fold", catCall(), func(k *Kernel, args []Value) Value {
+		s := args[0].Str
+		acc := args[1]
+		fnVal := args[2]
+		if fnVal.Kind != VClosure {
+			panic("string_fold: third arg must be a closure")
+		}
+		cl := fnVal.Cl
+		if len(cl.Params) != 2 {
+			panic(fmt.Sprintf("string_fold: step closure wants 2 params (acc char), got %d", len(cl.Params)))
+		}
+		for i := 0; i < len(s); i++ {
+			call := NewCallFrame(cl.Env, len(cl.Params))
+			call.Bind(cl.Params[0], acc)
+			call.Bind(cl.Params[1], Value{Kind: VStr, Str: string(s[i])})
+			acc = k.walk(cl.Body, call)
+		}
+		return acc
+	})
 	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
 	})

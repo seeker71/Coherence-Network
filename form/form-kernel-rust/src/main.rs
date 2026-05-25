@@ -1129,6 +1129,32 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
+        // string_fold — Rust-level streaming iteration over a string's bytes.
+        // Signature: (string_fold s init step) where step is a closure of
+        // (acc, char) → acc. Whole iteration in this Rust for-loop; no Form-
+        // level recursion. Lets the substrate process arbitrary-length input
+        // streams without piling kernel stack frames.
+        self.register_native("string_fold", cat_call(), |k, a, args| {
+            let s = args[0].as_str().to_string();
+            let mut acc = args[1].clone();
+            let cl = match &args[2] {
+                Value::Closure(c) => c.clone(),
+                _ => panic!("string_fold: third arg must be a closure"),
+            };
+            if cl.params.len() != 2 {
+                panic!(
+                    "string_fold: step closure wants 2 params (acc char), got {}",
+                    cl.params.len()
+                );
+            }
+            for byte in s.as_bytes().to_vec() {
+                let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+                a.bind(call_frame, cl.params[0], acc);
+                a.bind(call_frame, cl.params[1], Value::Str((byte as char).to_string()));
+                acc = walk(k, a, cl.body, call_frame);
+            }
+            acc
+        });
         self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_str() == args[1].as_str())
         });
