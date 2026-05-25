@@ -1377,6 +1377,19 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // write_form_binary — emit a Recipe to .fkb in the full artifact
+        // format (string table + tree). Sibling to read_form_binary.
+        // Use when source-compile output crosses kernel invocations:
+        // serialize-recipe alone drops string indices.
+        self.register_native("write_form_binary", cat_call(), |k, _, args| {
+            let path = args[0].as_str().to_string();
+            let nid = args[1].as_nid();
+            let bytes = serialize_artifact(k, nid);
+            match fs::write(&path, &bytes) {
+                Ok(_) => Value::Int(bytes.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
         self.register_native("read_form_binary", cat_call(), |k, _, args| {
             match fs::read(args[0].as_str()) {
                 Ok(bytes) => match deserialize_artifact(k, &bytes) {

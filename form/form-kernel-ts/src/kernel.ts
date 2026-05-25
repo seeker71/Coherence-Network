@@ -1228,6 +1228,19 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // write_form_binary — emit a Recipe to .fkb in the full artifact
+    // format (string table + tree). Sibling to read_form_binary.
+    this.registerNative("write_form_binary", catCall(), (k, args) => {
+      const path = argStr(args, 0);
+      const nid = argNodeID(args, 1);
+      const bytes = serializeRecipeArtifact(k, nid);
+      try {
+        writeFileSync(path, bytes);
+        return { kind: "int", int: BigInt(bytes.length) };
+      } catch {
+        return { kind: "int", int: -1n };
+      }
+    });
     this.registerNative("read_form_binary", catCall(), (k, args) => {
       try {
         return {

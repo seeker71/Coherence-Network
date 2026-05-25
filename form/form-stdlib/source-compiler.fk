@@ -191,81 +191,28 @@
             (if (fsc-space? (char_at s i)) i
                 (fsc-read-part-end s (add i 1)))))
 
-    (defn fsc-pattern-items-loop (dialect pattern i)
-        (do
-            (let p (fsc-skip-spaces pattern i))
-            (if (ge p (str_len pattern)) ""
-                (if (str_eq (char_at pattern p) "\"")
-                    (do
-                        (let e (fsc-read-quoted-end pattern (add p 1)))
-                        (let value (fsc-sub pattern (add p 1) e))
-                        (str_concat " "
-                            (str_concat (fsc-literal-expr dialect value)
-                                        (fsc-pattern-items-loop dialect pattern (add e 1)))))
-                    (do
-                        (let e (fsc-read-part-end pattern p))
-                        (let part (fsc-sub pattern p e))
-                        (let expr
-                            (if (str_eq (char_at part 0) "$")
-                                (fsc-capture-expr dialect part)
-                                (fsc-rule-ref-expr dialect part)))
-                        (str_concat " "
-                            (str_concat expr
-                                        (fsc-pattern-items-loop dialect pattern e))))))))
-
-    (defn fsc-rule-line (dialect line)
-        (do
-            (let sep (fsc-find-string-from line "::=" 0))
-            (let arr (fsc-find-string-from line " => " sep))
-            (let semi (fsc-find-char-from line ";" arr))
-            (let rev (fsc-find-string-from line " <= " arr))
-            (let name (fsc-trim (fsc-sub line 0 sep)))
-            (let pattern (fsc-trim (fsc-sub line (add sep 3) arr)))
-            (let action-end (if (and (ge rev 0) (lt rev semi)) rev semi))
-            (let action (fsc-trim (fsc-sub line (add arr 4) action-end)))
-            (let reverse (if (and (ge rev 0) (lt rev semi))
-                             (fsc-trim (fsc-sub line (add rev 4) semi))
-                             "bmf-default-reverse-emitter"))
-            (str_concat "            (list "
-                (str_concat (fsc-q name)
-                (str_concat "\n                  (list \"sequence\""
-                (str_concat (fsc-pattern-items-loop dialect pattern 0)
-                (str_concat ")\n                  "
-                (str_concat action
-                (str_concat "\n                  bmf-identity-inverse\n                  "
-                (str_concat reverse ")"))))))))))
-
+    ;; fsc-skip-rule-line? — used by the Recipe-build path's rules loop.
     (defn fsc-skip-rule-line? (line)
         (if (str_eq line "") true
             (str_eq (char_at line 0) ";")))
 
-    (defn fsc-rules-loop (dialect body i)
-        (if (ge i (str_len body)) ""
-            (do
-                (let e (fsc-line-end body i))
-                (let line (fsc-trim (fsc-sub body i e)))
-                (let rest (fsc-rules-loop dialect body (fsc-line-next body i)))
-                (if (fsc-skip-rule-line? line) rest
-                    (str_concat (fsc-rule-line dialect line)
-                                (str_concat "\n" rest))))))
-
-    (defn fsc-compile-bmf-section (dialect-name body)
-        (do
-            (let dot (fsc-find-char-from dialect-name "." 0))
-            (let dialect (fsc-sub dialect-name 0 dot))
-            (let rules-name (str_concat dialect "-bmf-rules"))
-            (let second-name (str_concat dialect "-bmf-second"))
-            (str_concat "    (let "
-            (str_concat rules-name
-            (str_concat "\n        (list\n"
-            (str_concat (fsc-rules-loop dialect body 0)
-            (str_concat "        ))\n\n    (let "
-            (str_concat second-name
-            (str_concat "\n        (form-bmf-second "
-            (str_concat (fsc-q dialect)
-            (str_concat " (bmf-section "
-            (str_concat (fsc-q dialect-name)
-            (str_concat " " (str_concat rules-name ")))"))))))))))))))
+    ;; --- Composted ---------------------------------------------------
+    ;; The text-build path (fsc-pattern-items-loop, fsc-rule-line,
+    ;; fsc-rules-loop, fsc-compile-bmf-section) emitted .fk source text
+    ;; the kernel re-parsed. Each rule cost ~13 nested str_concats; whole
+    ;; sections piled hundreds. The Recipe-build path below (fsc-bmf-
+    ;; section-recipe + write_form_binary) is the live replacement — it
+    ;; constructs a Recipe via intern_node and emits one .fkb on disk,
+    ;; one one-line driver text. Same observable behavior, zero text
+    ;; round-trip for the rule list, str_concat count reduced from ~93
+    ;; to ~20 in this file (the residual is path/name building +
+    ;; form.bml/form.action path which still uses text output).
+    ;;
+    ;; fsc-literal-expr / fsc-capture-expr / fsc-rule-ref-expr were the
+    ;; text formatters for the old path; their Recipe equivalents live in
+    ;; fsc-pattern-item-recipe + fsc-rec-* helpers (further down). fsc-q
+    ;; (defined above near fsc-quote-loop) still serves form.bml/form.action
+    ;; until that path also gets the Recipe treatment.
 
     ;; --- form.bml / form.action maintenance dialect ------------------
     ;; These dialects are deliberately above the kernel. They give stdlib,
@@ -556,10 +503,182 @@
         (or (str_eq dialect-name "form.bml")
             (str_eq dialect-name "form.action")))
 
-    (defn fsc-compile-section (dialect-name body)
+    ;; Local list-reverse — bounded by rule count (~200), not body length.
+    ;; engine.fk's `reverse-list` isn't in scope during source-compile pre-pass.
+
+    (defn fsc-empty? (xs) (eq (len xs) 0))
+
+    (defn fsc-rev-into (xs acc)
+        (if (fsc-empty? xs) acc
+            (fsc-rev-into (tail xs) (cons (head xs) acc))))
+
+    (defn fsc-rev (xs) (fsc-rev-into xs (empty)))
+
+    ;; --- Recipe construction primitives ------------------------------
+    ;;
+    ;; Each helper builds a Recipe NodeID directly via intern_node (no
+    ;; str_concat building source text the kernel re-parses). The shapes
+    ;; mirror what the kernel's parser produces internally:
+    ;;
+    ;;   DO       : intern(catBlock(RBlockDo),    [child1, child2, ...])
+    ;;   LET      : intern(catBlock(RBlockLet),   [string-trivial-name, value-recipe])
+    ;;   IDENT    : intern(catIdent(),            [string-trivial-name])
+    ;;   FNCALL   : intern(catFnCall(),           [ident-callee, arg1, arg2, ...])
+    ;;
+    ;; Built Recipe is serialized to .fkb via serialize-recipe + write_file_bytes,
+    ;; reloaded at validate time via walk_recipe_here so lets land in caller env.
+    ;; Source: form/form-kernel-go/main.go parseSexp around line 1942 (DO/LET) +
+    ;; 2005 (FNCALL) + 1900 (IDENT).
+
+    (let fsc-rec-DO-CAT     (make_nodeid 1 2 9 1))
+    (let fsc-rec-LET-CAT    (make_nodeid 1 2 9 3))
+    (let fsc-rec-FNCALL-CAT (make_nodeid 1 2 32 1))
+    (let fsc-rec-IDENT-CAT  (make_nodeid 1 2 33 1))
+
+    (defn fsc-rec-ident (name)
+        (intern_node fsc-rec-IDENT-CAT (list (intern_trivial_string name))))
+
+    (defn fsc-rec-let (name value-recipe)
+        (intern_node fsc-rec-LET-CAT (list (intern_trivial_string name) value-recipe)))
+
+    (defn fsc-rec-do (children-list)
+        (intern_node fsc-rec-DO-CAT children-list))
+
+    (defn fsc-rec-call (fn-name arg-recipes)
+        (intern_node fsc-rec-FNCALL-CAT (cons (fsc-rec-ident fn-name) arg-recipes)))
+
+    (defn fsc-rec-list-of (item-recipes)
+        (fsc-rec-call "list" item-recipes))
+
+    (defn fsc-rec-string (s)
+        (intern_trivial_string s))
+
+    ;; --- BMF section as Recipe ---------------------------------------
+    ;;
+    ;; Old (text path): fsc-rules-loop walks the body line by line,
+    ;; building a giant str_concat'd .fk source string the kernel re-parses.
+    ;; New (Recipe path): walk the body line by line, but each line becomes
+    ;; a Recipe node directly. The list of rule recipes becomes the value
+    ;; of the X-bmf-rules let.
+
+    (defn fsc-pattern-item-recipe (dialect pattern i)
+        (do
+            (let p (fsc-skip-spaces pattern i))
+            (if (ge p (str_len pattern)) (fsc-rec-call "empty" (list (intern_trivial_int 0)))
+                (if (str_eq (char_at pattern p) "\"")
+                    (do
+                        (let e (fsc-read-quoted-end pattern (add p 1)))
+                        (let value (fsc-sub pattern (add p 1) e))
+                        (list (fsc-rec-call (fsc-lit-fn dialect value)
+                                            (list (fsc-rec-string value)))
+                              (add e 1)))
+                    (do
+                        (let e (fsc-read-part-end pattern p))
+                        (let part (fsc-sub pattern p e))
+                        (if (str_eq (char_at part 0) "$")
+                            (do
+                                (let colon (fsc-find-char-from part ":" 0))
+                                (let name (fsc-sub part 1 colon))
+                                (let kind (fsc-sub part (add colon 1) (str_len part)))
+                                (list (fsc-rec-call (fsc-capture-fn dialect kind)
+                                                    (list (fsc-rec-string name)))
+                                      e))
+                            (list (fsc-rec-call (fsc-dialect-fn dialect "ref")
+                                                (list (fsc-rec-string part)))
+                                  e)))))))
+
+    (defn fsc-pattern-items-recipes (dialect pattern i acc)
+        (do
+            (let p (fsc-skip-spaces pattern i))
+            (if (ge p (str_len pattern)) (fsc-rev acc)
+                (do
+                    (let result (fsc-pattern-item-recipe dialect pattern p))
+                    (fsc-pattern-items-recipes dialect pattern
+                                               (head (tail result))
+                                               (cons (head result) acc))))))
+
+    (defn fsc-rule-line-recipe (dialect line)
+        (do
+            (let sep (fsc-find-string-from line "::=" 0))
+            (let arr (fsc-find-string-from line " => " sep))
+            (let semi (fsc-find-char-from line ";" arr))
+            (let rev (fsc-find-string-from line " <= " arr))
+            (let name (fsc-trim (fsc-sub line 0 sep)))
+            (let pattern (fsc-trim (fsc-sub line (add sep 3) arr)))
+            (let action-end (if (and (ge rev 0) (lt rev semi)) rev semi))
+            (let action (fsc-trim (fsc-sub line (add arr 4) action-end)))
+            (let reverse (if (and (ge rev 0) (lt rev semi))
+                             (fsc-trim (fsc-sub line (add rev 4) semi))
+                             "bmf-default-reverse-emitter"))
+            (let pattern-recipes (fsc-pattern-items-recipes dialect pattern 0 (empty)))
+            (let sequence-recipe (fsc-rec-call "list"
+                                               (cons (fsc-rec-string "sequence")
+                                                     pattern-recipes)))
+            (fsc-rec-list-of (list
+                (fsc-rec-string name)
+                sequence-recipe
+                (fsc-rec-ident action)
+                (fsc-rec-ident "bmf-identity-inverse")
+                (fsc-rec-ident reverse)))))
+
+    (defn fsc-rules-recipes-loop (dialect body i acc)
+        (if (ge i (str_len body)) (fsc-rev acc)
+            (do
+                (let e (fsc-line-end body i))
+                (let line (fsc-trim (fsc-sub body i e)))
+                (let next-i (fsc-line-next body i))
+                (if (fsc-skip-rule-line? line)
+                    (fsc-rules-recipes-loop dialect body next-i acc)
+                    (fsc-rules-recipes-loop dialect body next-i
+                                            (cons (fsc-rule-line-recipe dialect line)
+                                                  acc))))))
+
+    (defn fsc-bmf-section-recipe (dialect-name body)
+        (do
+            (let dot (fsc-find-char-from dialect-name "." 0))
+            (let dialect (fsc-sub dialect-name 0 dot))
+            (let rules-name (str_concat dialect "-bmf-rules"))
+            (let second-name (str_concat dialect "-bmf-second"))
+            (let rule-recipes (fsc-rules-recipes-loop dialect body 0 (empty)))
+            (let rules-list-recipe (fsc-rec-call "list" rule-recipes))
+            (let second-value-recipe (fsc-rec-call "form-bmf-second" (list
+                (fsc-rec-string dialect)
+                (fsc-rec-call "bmf-section" (list
+                    (fsc-rec-string dialect-name)
+                    (fsc-rec-ident rules-name))))))
+            (fsc-rec-do (list
+                (fsc-rec-let rules-name rules-list-recipe)
+                (fsc-rec-let second-name second-value-recipe)))))
+
+    ;; --- compile section, route to text path (form.action/form.bml) or
+    ;; --- Recipe path (BMF dialects). The Recipe path writes a .fkb side
+    ;; --- artifact and returns a tiny driver text snippet that calls
+    ;; --- walk_recipe_here on it. Caller threads out-path so each section
+    ;; --- gets a unique sibling .fkb at out-path.<dialect>.fkb.
+
+    (defn fsc-compile-section-with-out (dialect-name body out-path)
         (if (fsc-form-action-dialect? dialect-name)
             (fsc-compile-form-bml-section body)
-            (fsc-compile-bmf-section dialect-name body)))
+            (do
+                (let recipe (fsc-bmf-section-recipe dialect-name body))
+                (let fkb-path (str_concat out-path
+                              (str_concat "."
+                              (str_concat dialect-name ".fkb"))))
+                ;; write_form_binary embeds the string table — required for
+                ;; cross-invocation Recipe portability. serialize-recipe is
+                ;; in-process only; the .fkb on disk needs the artifact
+                ;; format (read/write_form_binary) so the loader can rehydrate
+                ;; strings into its own interner.
+                (write_form_binary fkb-path recipe)
+                (str_concat "    (walk_recipe_here (read_form_binary \""
+                (str_concat fkb-path "\"))\n")))))
+
+    ;; Legacy text path retained for callers that haven't threaded out-path.
+
+    ;; fsc-compile-section composted — fsc-compile-bmf-section is gone
+    ;; (replaced by fsc-compile-section-with-out), and the form.bml/
+    ;; form.action path is called directly by callers that haven't
+    ;; threaded out-path through yet.
 
     ;; --- form.action BMF object rules --------------------------------
     ;; The text lowering above is the bootstrap path for source sections. The
@@ -1579,7 +1698,7 @@
 
     ;; --- source compiler ---------------------------------------------
 
-    (defn form-source-compile-loop (src i)
+    (defn form-source-compile-loop (src out-path i)
         (do
             (let pos (fsc-find-string-from src "section [" i))
             (if (lt pos 0) (fsc-sub src i (str_len src))
@@ -1593,11 +1712,11 @@
                         (str_concat
                             (fsc-sub src i pos)
                             (str_concat
-                            (fsc-compile-section dialect-name body)
-                            (form-source-compile-loop src (fsc-line-next src close))))))))
+                            (fsc-compile-section-with-out dialect-name body out-path)
+                            (form-source-compile-loop src out-path (fsc-line-next src close))))))))
 
-    (defn form-source-compile-text (src)
-        (form-source-compile-loop src 0))
+    (defn form-source-compile-text (src out-path)
+        (form-source-compile-loop src out-path 0))
 
     (defn fsc-string-to-bytes-len-loop (s s-len i)
         (if (ge i s-len) (empty)
@@ -1610,7 +1729,7 @@
     (defn form-source-compile-file (in-path out-path)
         (do
             (let src (read_file in-path))
-            (let compiled (form-source-compile-text src))
+            (let compiled (form-source-compile-text src out-path))
             (write_file_text out-path compiled)))
 
 0
