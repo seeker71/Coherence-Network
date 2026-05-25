@@ -93,7 +93,68 @@ The emitted compiler compiles its own .py files and decompiles back to Python. S
 
 This IS the cross-runtime learning loop the Universal Translator goal names: each divergence shows what one runtime has that the other doesn't, what to bring across.
 
-## What "compile" actually does today — the honest picture
+## Form → idiomatic native Python translator (2026-05-25, real direction)
+
+**The actual universal-translator move:** take a Form recipe (Form's surface text expression of the numeric semantic capture) and emit **real native Python** — `def`/`if`/`else`/`while`/`+`/`*`/`==`/`<=`, real names, real control flow. NOT s-expressions wrapped in Python strings.
+
+```
+python_imperative_demo.fk → emit_python.py → 
+
+def sum_to(n):
+    total = 0
+    i = 1
+    def _while_0(total, i):
+        if (i <= n):
+            total = (total + i)
+            i = (i + 1)
+            return _while_0(total, i)
+        else:
+            return [total, i]
+    _while_1_result = _while_0(total, i)
+    total = _while_1_result[0]
+    i = _while_1_result[1]
+    return total
+…
+print((sum_to(100) + fact_loop(8)))    # → 45370, same as CPython, same as form-kernel-rust
+```
+
+`kernels/python_bmf/emit_python.py` is `(.fk → readable Python)`. Proof: every parity-suite demo .fk emits Python that executes under CPython producing the same integer as the original .py source. 7/7 demos. Test: `kernels/python_bmf/tests/test_emit_python.py` — also asserts the emitted Python contains real Python idioms (`def`, `return`, `+`, `<`, `==`) and contains **no** Form s-expression operator names (`_plus`, `(mul`, `(let`, `(defn`).
+
+**This is the surface today — toy demos.** Real substrate code (organ.py, form.py, API endpoints) requires growth on both sides:
+1. Form-side `.fk` rule coverage for classes / decorators / imports-from / type annotations / comprehensions / f-strings / attribute assign / async / exceptions (the upper half of the gap list named in PYTHON_PIPELINE_STATUS on 2026-05-21 — still open on the Form side).
+2. `emit_python.py` coverage for the corresponding Form recipes that the rules above would produce. Today: enough for the parity-suite feature surface.
+
+The Form numeric semantic capture is lossless by design; growing both arms is mechanical work. The universal-translator framework now has both directions in place — emit_python (`.fk → Python`) is the real move; `kernel_fk_lowering` (`.py → .fk`) is a sanity bridge for the cross-runtime comparison, not the translator itself.
+
+## Kernel-execution proof — what now works (2026-05-25, mid-day)
+
+**Cross-runtime parity holds on every parity-suite demo:**
+
+```
+$ scripts/perf_compare_native_python.sh 8
+demo                     |   CPython ms |    kernel ms |   kern/cpy | result
+-------------------------+--------------+--------------+------------+------
+python_demo              |        0.083 |        4.267 |      51.4x | 40949
+python_assign_demo       |        0.000 |        2.033 |    2033.0x | 45
+python_imperative_demo   |        0.005 |        2.372 |     474.4x | 45370
+python_substrate_demo    |        0.000 |        2.202 |    2202.0x | 17680
+python_range_demo        |        0.008 |        2.355 |     294.4x | 41650
+python_builtins_demo     |        0.000 |        2.101 |    2101.0x | 131
+python_string_demo       |        0.000 |        1.990 |    1990.0x | 45
+```
+
+7/7 demos: emitted `.fk` from `kernels/python_bmf/emit_fk.py` → `form-kernel-rust` → **same integer as CPython**. The kernel ~2ms floor is fork+exec+load overhead; in-process CPython wins on these tiny workloads but the *cross-runtime equivalence is now real* — the comparison the goal names is finally measurable.
+
+The path:
+```
+.py source  →  ast.parse  →  kernels/python_bmf/emit_fk.py  →  .fk text  →  form-kernel-rust  →  int
+                                                                                    ↑
+                                                                       byte-identical to canonical lang-python-fk.ts output
+```
+
+The `nth`/`sum`/`range` preludes are emitted automatically when subscript/sum-call/range-call appear in the source — these natives were composted from the kernel in 2026-05-22, so even the canonical TS-pipeline-produced `.fk` files in `examples/` fail to execute today. My emitter is now more correct than the canonical TS pipeline for these workloads.
+
+## What "compile" actually does today — the honest picture (the older gap, still open for `--file` → `.fkb`)
 
 Running `python3 -m kernels.python_bmf.compiler --file <any.py>` produces a `.fkb` for **any** Python file (organ.py, form.py, category.py — they all "succeed"). That success is misleading. Here is what is actually in the output:
 
