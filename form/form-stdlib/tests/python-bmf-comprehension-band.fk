@@ -1,0 +1,152 @@
+; tests/python-bmf-comprehension-band.fk - comprehension grammar band
+;
+; Three-kernel agreement on Python comprehension rules: list/set/dict/genexp,
+; simple and filtered (where defined). Forward pass exercises emit; reverse
+; pass exercises source-projection; sum is what the kernels compare.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    ;; --- forward (emit) checks ---------------------------------------
+
+    (let list-comp-simple-match
+        (py-apply "list-comp-simple"
+                  (list (py-op "[") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "xs") (py-op "]"))))
+    (let list-comp-simple-score
+        (add (kid-str-len list-comp-simple-match 0)
+             (add (kid-str-len list-comp-simple-match 1)
+                  (add (kid-str-len list-comp-simple-match 2)
+                       (kid-str-len list-comp-simple-match 3))))) ; list + x + x + xs = 9
+
+    (let list-comp-if-match
+        (py-apply "list-comp-if"
+                  (list (py-op "[") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "xs")
+                        (py-keyword "if") (py-name "ok") (py-op "]"))))
+    (let list-comp-if-score
+        (add (child-count list-comp-if-match)
+             (add (kid-str-len list-comp-if-match 0)
+                  (add (kid-str-len list-comp-if-match 1)
+                       (add (kid-str-len list-comp-if-match 3)
+                            (kid-str-len list-comp-if-match 4)))))) ; 5 + list + x + xs + ok = 14
+
+    (let set-comp-simple-match
+        (py-apply "set-comp-simple"
+                  (list (py-op "{") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "xs") (py-op "}"))))
+    (let set-comp-simple-score
+        (add (child-count set-comp-simple-match)
+             (add (kid-str-len set-comp-simple-match 0)
+                  (kid-str-len set-comp-simple-match 2)))) ; 3 + x + xs = 6
+
+    (let dict-comp-simple-match
+        (py-apply "dict-comp-simple"
+                  (list (py-op "{") (py-name "k") (py-op ":") (py-name "v")
+                        (py-keyword "for") (py-name "item")
+                        (py-keyword "in") (py-name "pairs") (py-op "}"))))
+    (let dict-comp-simple-score
+        (add (kid-str-len dict-comp-simple-match 0)
+             (add (kid-str-len dict-comp-simple-match 1)
+                  (add (kid-str-len dict-comp-simple-match 2)
+                       (add (kid-str-len dict-comp-simple-match 3)
+                            (kid-str-len dict-comp-simple-match 4)))))) ; dict + k + v + item + pairs = 14
+
+    (let genexp-simple-match
+        (py-apply "genexp-simple"
+                  (list (py-op "(") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "xs") (py-op ")"))))
+    (let genexp-simple-score
+        (add (child-count genexp-simple-match)
+             (add (kid-str-len genexp-simple-match 0)
+                  (kid-str-len genexp-simple-match 2)))) ; 3 + x + xs = 6
+
+    (let genexp-if-match
+        (py-apply "genexp-if"
+                  (list (py-op "(") (py-name "x")
+                        (py-keyword "for") (py-name "x")
+                        (py-keyword "in") (py-name "xs")
+                        (py-keyword "if") (py-name "ok") (py-op ")"))))
+    (let genexp-if-score
+        (add (child-count genexp-if-match)
+             (add (kid-str-len genexp-if-match 0)
+                  (add (kid-str-len genexp-if-match 2)
+                       (kid-str-len genexp-if-match 3))))) ; 4 + x + xs + ok = 9
+
+    ;; --- reverse (source) round-trips --------------------------------
+
+    (let list-comp-simple-rt
+        (py-rt "list-comp-simple"
+            (list (py-op "[") (py-name "x")
+                  (py-keyword "for") (py-name "x")
+                  (py-keyword "in") (py-name "xs") (py-op "]"))))
+    (let list-comp-if-rt
+        (py-rt "list-comp-if"
+            (list (py-op "[") (py-name "x")
+                  (py-keyword "for") (py-name "x")
+                  (py-keyword "in") (py-name "xs")
+                  (py-keyword "if") (py-name "ok") (py-op "]"))))
+    (let set-comp-simple-rt
+        (py-rt "set-comp-simple"
+            (list (py-op "{") (py-name "x")
+                  (py-keyword "for") (py-name "x")
+                  (py-keyword "in") (py-name "xs") (py-op "}"))))
+    (let dict-comp-simple-rt
+        (py-rt "dict-comp-simple"
+            (list (py-op "{") (py-name "k") (py-op ":") (py-name "v")
+                  (py-keyword "for") (py-name "item")
+                  (py-keyword "in") (py-name "pairs") (py-op "}"))))
+    (let genexp-simple-rt
+        (py-rt "genexp-simple"
+            (list (py-op "(") (py-name "x")
+                  (py-keyword "for") (py-name "x")
+                  (py-keyword "in") (py-name "xs") (py-op ")"))))
+    (let genexp-if-rt
+        (py-rt "genexp-if"
+            (list (py-op "(") (py-name "x")
+                  (py-keyword "for") (py-name "x")
+                  (py-keyword "in") (py-name "xs")
+                  (py-keyword "if") (py-name "ok") (py-op ")"))))
+
+    (sum
+        (list list-comp-simple-score list-comp-if-score
+              set-comp-simple-score dict-comp-simple-score
+              genexp-simple-score genexp-if-score
+              (rt-score list-comp-simple-rt) (rt-score list-comp-if-rt)
+              (rt-score set-comp-simple-rt) (rt-score dict-comp-simple-rt)
+              (rt-score genexp-simple-rt) (rt-score genexp-if-rt))))

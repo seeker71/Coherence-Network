@@ -1758,6 +1758,128 @@
                   (py-name (node_value (nth kids 2)))
                   (py-op "}"))))
 
+    ;; --- comprehension expansions: simple + filtered ----------------
+    ;; The four containers (list/set/dict/genexp) share a common shape:
+    ;; expression-recipe + iteration-var + iterable-recipe (+ optional
+    ;; condition-recipe). The PY-BMF-COMP category carries list/dict/set
+    ;; flavor as a leading trivial-string discriminator; PY-BMF-GENEXP is
+    ;; its own category. Filtered variants append a fourth (or fifth, for
+    ;; dict) child holding the predicate name.
+
+    (defn pybmf-emit-list-comp-simple (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "list")
+                           (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-list-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-list-comp-if (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "list")
+                           (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter")
+                           (pybmf-trivial-string objects "cond"))))
+
+    (defn pybmf-source-list-comp-if (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "if")
+                  (py-name (node_value (nth kids 4)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-set-comp-simple (objects)
+        (intern_node PY-BMF-SETCOMP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-set-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "{")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-dict-comp-simple (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "dict")
+                           (pybmf-trivial-string objects "key")
+                           (pybmf-trivial-string objects "value")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-dict-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 4)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-genexp-simple (objects)
+        (intern_node PY-BMF-GENEXP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-genexp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "(")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-genexp-if (objects)
+        (intern_node PY-BMF-GENEXP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter")
+                           (pybmf-trivial-string objects "cond"))))
+
+    (defn pybmf-source-genexp-if (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "(")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "if")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-kwarg (objects)
         (intern_node PY-BMF-KWARG
                      (list (pybmf-trivial-string objects "key")
@@ -2115,6 +2237,12 @@
     dict-comp ::= "{" $key:name ":" $value:name "for" $target:name "in" $iter:name "}" => pybmf-emit-dict-comp <= pybmf-source-dict-comp;
     gen-exp ::= "(" $expr:name "for" $target:name "in" $iter:name ")" => pybmf-emit-gen-exp;
     set-comp ::= "{" $expr:name "for" $target:name "in" $iter:name "}" => pybmf-emit-set-comp <= pybmf-source-set-comp;
+    list-comp-simple ::= "[" $expr:name "for" $var:name "in" $iter:name "]" => pybmf-emit-list-comp-simple <= pybmf-source-list-comp-simple;
+    list-comp-if ::= "[" $expr:name "for" $var:name "in" $iter:name "if" $cond:name "]" => pybmf-emit-list-comp-if <= pybmf-source-list-comp-if;
+    set-comp-simple ::= "{" $expr:name "for" $var:name "in" $iter:name "}" => pybmf-emit-set-comp-simple <= pybmf-source-set-comp-simple;
+    dict-comp-simple ::= "{" $key:name ":" $value:name "for" $var:name "in" $iter:name "}" => pybmf-emit-dict-comp-simple <= pybmf-source-dict-comp-simple;
+    genexp-simple ::= "(" $expr:name "for" $var:name "in" $iter:name ")" => pybmf-emit-genexp-simple <= pybmf-source-genexp-simple;
+    genexp-if ::= "(" $expr:name "for" $var:name "in" $iter:name "if" $cond:name ")" => pybmf-emit-genexp-if <= pybmf-source-genexp-if;
     annotated-assign-int ::= $target:name ":" $type:name "=" $value:int => pybmf-emit-annotated-assign-int;
     typed-param ::= $name:name ":" $type:name => pybmf-emit-typed-param <= pybmf-source-typed-param;
     default-param-int ::= $name:name "=" $value:int => pybmf-emit-default-param-int <= pybmf-source-default-param-int;
