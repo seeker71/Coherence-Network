@@ -47,16 +47,29 @@ Five parallel agents extended `python-bmf.fk` in disjoint worktrees. Each branch
 | + exception handling with bodies (`try-except-stmt`, raise-call variants) | 169 | **stack overflow in form-kernel-go walker (1 GB stack ceiling)** |
 | + f-strings/slicing (in place of exception) | 169 | **same stack overflow** |
 
-**The pattern**: each agent's grammar is fine alone. The walker overflows when ~7 more rules pile on top of the attr-access + comprehensions surface. Either combination (exception, f-strings/slicing) triggers it; both add ~7 rules. This is a real combinatorial behavior in the kernel's tree-walking dispatch — not a rule bug. The exception agent's grammar validated clean against the base, so the trigger is the *interaction* with attr-access/comprehensions, not the rules themselves.
+**First guess (wrong)**: the BMF object engine's `match-object-pattern` lacked cut/stop semantics that BML's `grammar-chars.fk` has, so rule-search exploded across alternatives. I ported cut/stop into `engine.fk` (commit `5baa60d0`) and re-tested the merge. **The merge still overflows.** The cut/stop port is valid forward work (rule-side adoption can prune the BMF object-engine search), but it does NOT fix this symptom.
 
-**What this points at**: the kernel's walker dispatch grows non-linearly with rule count above some threshold. For the goal's "use observations to improve performance, resource use" — this is a concrete optimization target on the Form kernel side. The walker likely tries all rules against each input and the cross-rule search explodes when many rules have overlapping initial-token patterns (`name . …`, `name ( …`, `[ name for …`, `( name for …`, `try : …`).
+**Actual root cause** (from reading the Go stack trace, not from architectural reasoning):
 
-**Branches not merged today** (clean in isolation, blocked by the kernel ceiling):
+The recursion frames cycle at `main.go:1525-1530-1572-1605` — that's `RBasicCond` (if/else) inside `RBasicFnCall` (function call into body). Tracing the calls into Form source:
 
-- `worktree-agent-a594976002747c313` — exception handling (try/except/finally bodies + raise calls)
-- `worktree-agent-adabbde639636adb8` — f-strings + slicing extensions
+- `form/form-stdlib/source-compiler.fk:231 fsc-rules-loop` — **non-tail recursion**. The body holds `(let rest (fsc-rules-loop dialect body (next-line)))` then `str_concat`. Every line of the section body adds a Go stack frame that lives until ALL recursive calls return.
+- `form/form-stdlib/source-compiler.fk:205 fsc-rule-line` — calls `fsc-find-string-from` four times per rule.
+- `form/form-stdlib/source-compiler.fk:21 fsc-find-string-from-len` — per-character recursion through the section body. For a 150KB section body, that's 150K-deep recursion per call.
 
-Both validated cleanly on their own; both push the merged grammar past the kernel walker's current scaling limit. They sit on origin awaiting either kernel-walker optimization or a rule-table reorganization that reduces dispatch search depth.
+The growth is multiplicative: rules-loop frames × per-rule find-string calls × per-character scan depth. The Go kernel walker performs no tail-call elimination, so every Form self-call costs a Go stack frame. The 1 GB stack limit hits when section body × rule count exceeds ~2 million Go frames.
+
+**Three honest fixes** (each addresses a different layer):
+
+1. **Source-compiler side** (`fsc-rules-loop`, `fsc-find-string-from-len`): rewrite accumulator-style. Helps only IF the Go walker does TCO or recognizes tail-position self-calls. Today it doesn't.
+
+2. **Kernel-walker side** (`form-kernel-go/main.go walk()`): add tail-call elimination — when `RBasicFnCall` is in tail position, reuse the frame instead of recursing. The character-engine's `cm-match-sequence` is tail-recursive by design; the BMF engine's `match-object-sequence` is too, post-cut/stop port. Both would benefit. This is the real cross-kernel optimization the goal's loop names.
+
+3. **Iterative primitive**: add a kernel-native `for-each-line` or `find-string` that loops in Go rather than recursing through Form. Cheapest fix but pollutes the substrate with host-language primitives.
+
+The cut/stop port to `engine.fk` (commit `5baa60d0`) stays — it's correct forward work for runtime BMF rule-search pruning. It does not address the source-compile-time symptom. Naming this honestly so the next breath works on the actual problem, not the guess I made.
+
+## Open Python-BMF rule gaps (Form side)
 
 ## Open Python-BMF rule gaps (Form side)
 
