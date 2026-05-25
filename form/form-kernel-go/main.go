@@ -1364,6 +1364,12 @@ func (k *Kernel) registerNatives() {
 	//   (walk_recipe_here (deserialize-recipe (read_file_bytes "out.fkb")))
 	// the lets propagate into the surrounding load chain's env.
 	k.registerEnvNative("walk_recipe_here", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		// Pin the recipe root as an active root so substrate_gc keeps the
+		// definitions reachable. Closures bound here hold body NodeIDs that
+		// aren't reachable from the source-parsed root, so without this pin
+		// a subsequent substrate_gc would sweep them and leave the env
+		// holding closures with deleted bodies.
+		k.activeRoots = append(k.activeRoots, args[0].Nid)
 		return k.walk(args[0].Nid, env)
 	})
 	walkParallel := func(k *Kernel, args []Value) Value {
