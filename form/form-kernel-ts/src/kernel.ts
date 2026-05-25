@@ -1618,6 +1618,15 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    this.registerNative("write_form_binary", catCall(), (k, args) => {
+      try {
+        const bytes = serializeRecipeArtifact(k, argNodeID(args, 1));
+        writeFileSync(argStr(args, 0), bytes);
+        return { kind: "int", int: bytes.length };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
     this.registerNative("file_size", catCall(), (_k, args) => {
       try {
         return { kind: "int", int: statSync(argStr(args, 0)).size };
