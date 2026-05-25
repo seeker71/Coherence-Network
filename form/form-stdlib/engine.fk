@@ -26,16 +26,36 @@
             (cap-merge (cons (head b) a) (tail b))))
 
     ;; --- match result -------------------------------------------------
+    ;;
+    ;; cut / stop semantics ported from grammar-chars.fk (the character-
+    ;; engine pattern BML uses heavily in its BMF rules). Once a sequence
+    ;; crosses a `cut`, a subsequent fail becomes a `fail-cut` that aborts
+    ;; the enclosing choice's remaining alternatives. Adding `cut` after a
+    ;; distinguishing token in a BMF rule body is the way the grammar tells
+    ;; the engine "no other rule could match here." This prunes the per-
+    ;; input rule-search tree dramatically when many rules share an initial
+    ;; token (`"try"`, `"class"`, `$name:name "."`, etc.).
 
     (defn mk-match (caps rest) (list "match" caps rest))
     (defn mk-fail (reason) (list "fail" reason))
+    (defn mk-fail-cut (reason) (list "fail-cut" reason))
 
     (defn match? (r) (str_eq (head r) "match"))
     (defn fail? (r) (str_eq (head r) "fail"))
+    (defn fail-cut? (r) (str_eq (head r) "fail-cut"))
+    (defn any-fail? (r) (or (fail? r) (fail-cut? r)))
 
     (defn match-caps (r) (head (tail r)))
     (defn match-rest (r) (head (tail (tail r))))
     (defn fail-reason (r) (head (tail r)))
+
+    ;; Predicate used by the cut-aware sequence walker to promote a plain
+    ;; fail into a fail-cut, sealing the surrounding choice.
+    (defn cap-has? (caps name)
+        (if (nil? caps) false
+            (if (str_eq (cap-name (head caps)) name)
+                true
+                (cap-has? (tail caps) name))))
 
     ;; --- BMF objects --------------------------------------------------
 
@@ -1884,7 +1904,14 @@
             (if (str_eq tag "capture") (match-object-capture (head (tail p)) (head (tail (tail p))) object-stream)
             (if (str_eq tag "star") (match-object-star (head (tail p)) object-stream (empty))
             (if (str_eq tag "opt") (match-object-opt (head (tail p)) object-stream)
-                (mk-fail (str_concat "unknown object pattern: " tag))))))))))
+            ;; cut — commit sentinel. Succeeds without consuming, records
+            ;; a `_cut` capability the surrounding sequence reads if a
+            ;; subsequent step fails.
+            (if (str_eq tag "cut")
+                (mk-match (cap-set (cap-empty 0) "_cut" "true") object-stream)
+            ;; stop — explicit failure marker. Never matches.
+            (if (str_eq tag "stop") (mk-fail "stop")
+                (mk-fail (str_concat "unknown object pattern: " tag))))))))))))
 
     (defn match-object-literal (p object-stream)
         (if (nil? object-stream)
@@ -1906,18 +1933,29 @@
             (mk-match acc-caps object-stream)
             (do
                 (let m (match-object-pattern (head children) object-stream))
-                (if (fail? m) m
+                ;; cut-aware sequence: fail-cut propagates immediately; a
+                ;; plain fail AFTER a cut is promoted to fail-cut so the
+                ;; enclosing choice stops trying further alternatives.
+                (if (fail-cut? m) m
+                (if (fail? m)
+                    (if (cap-has? acc-caps "_cut")
+                        (mk-fail-cut (fail-reason m))
+                        m)
                     (match-object-sequence (tail children)
                                            (match-rest m)
-                                           (cap-merge acc-caps (match-caps m)))))))
+                                           (cap-merge acc-caps (match-caps m))))))))
 
     (defn match-object-choice (alternatives object-stream)
         (if (nil? alternatives)
             (mk-fail "no object alternative matched")
             (do
                 (let m (match-object-pattern (head alternatives) object-stream))
+                ;; cut-aware choice: a fail-cut from a committed alternative
+                ;; aborts the search — converts back to plain fail so the
+                ;; cut's scope stays this choice, not its caller.
                 (if (match? m) m
-                    (match-object-choice (tail alternatives) object-stream)))))
+                (if (fail-cut? m) (mk-fail (fail-reason m))
+                    (match-object-choice (tail alternatives) object-stream))))))
 
     (defn capture-object-value (m original-stream)
         (if (nil? (match-caps m))
