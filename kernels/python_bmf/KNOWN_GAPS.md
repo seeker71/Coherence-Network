@@ -95,14 +95,29 @@ This IS the cross-runtime learning loop the Universal Translator goal names: eac
 
 ## BMF compiler runs as native Python — cross-runtime parity proven (2026-05-25, end-of-day)
 
-**The emitted BMF compiler executes. Same Form source → both runtimes → byte-identical output.**
+**The emitted BMF compiler executes. Six graduated workloads → both runtimes → byte-identical output.**
 
 ```
 $ scripts/cross_runtime_bmf_compile.sh
-source                           |      Form ms |    Python ms |    speedup | parity
----------------------------------+--------------+--------------+------------+--------
-core.fk                          |        146.0 |         19.0 |       7.7x | BYTE-IDENTICAL
+workload                  lines   Form ms     Py ms   speedup     output       parity
+----------------------------------------------------------------------------------------
+lists.fk                     13      19.6       0.7     27.1x       449b   BYTE-IDENT
+numeric.fk                   22      31.9       1.3     24.1x       842b   BYTE-IDENT
+task-runtime.fk              19      38.6       2.2     17.3x       872b   BYTE-IDENT
+higher.fk                    25      45.9       2.5     18.2x      1086b   BYTE-IDENT
+core.fk                      86     149.1      18.0      8.3x      4204b   BYTE-IDENT
+engine.fk                  1995    1140.2      42.5     26.8x     82880b   BYTE-IDENT
 ```
+
+**The first real observations the comparison loop surfaces:**
+
+1. **U-shaped speedup curve.** Tiny workloads show 17-27× Python advantage because Go binary fork+exec+load (~10-15ms) dominates the Form kernel timing. Medium workloads converge to ~8× as the Go fixed cost amortizes against actual work. Large workloads diverge again to 26× — for engine.fk, the Form kernel's Recipe-walker cost per token outpaces CPython's bytecode interpretation by a wide margin. The shape itself is the signal: the Form kernel has a *per-source-token* cost that scales linearly with size, while CPython's per-call dispatch is more efficient once code is in steady state.
+
+2. **The Form kernel's Recipe interpreter is the hot path.** engine.fk has no section syntax — the source-compiler walks pure s-expressions. That's the kernel's fastest path in theory, yet Python beats it by 26.8×. The optimization surface this points at is the kernel's tree-walking dispatch in `form-kernel-go/main.go`'s walk function — every Form node dispatched through a Go switch, every list head/tail through a slice copy.
+
+3. **CPython's recursion limit was a real wall, not a ceiling.** The emitted compiler hits engine.fk-class depths only when both `sys.setrecursionlimit(200000)` and `ulimit -s 65536` are raised. The Form kernel's iterative walker doesn't have this problem. For real substrate-Python workloads (organ.py, form.py), recursion-to-iteration lifting in the emitter would be the next breath of work — turning the head/tail recursive helpers (which are CPS-lowered loops in the original Python source) back into Python `for` loops.
+
+**Test:** `kernels/python_bmf/tests/test_bmf_compiler_parity.py` asserts byte-identical output across all 6 workloads as a regression gate.
 
 The Python BMF compiler in `kernels/python_bmf/emitted/` — emitted mechanically from `form/form-stdlib/{engine,compiler,source-compiler}.fk` and `form/form-stdlib/grammars/python-bmf.fk` — actually runs:
 

@@ -16,10 +16,18 @@ Usage:
 
 from __future__ import annotations
 
+import sys
 import types
 from pathlib import Path
 
 from . import host_primitives
+
+# Form source code is heavily recursive (head/tail walks, deep AST traversals).
+# CPython's default recursion limit (1000) trips on engine.fk-class workloads
+# where the Form kernel's iterative Recipe walker continues. Raising it lets
+# the emitted compiler match the kernel's reach. The cost is stack memory, not
+# correctness — Python's per-frame overhead is modest at these depths.
+sys.setrecursionlimit(200_000)
 
 
 # Load order matches Form kernel's prepare_sources for the BMF compiler:
