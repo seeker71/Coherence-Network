@@ -2157,6 +2157,99 @@
                      (list (pybmf-trivial-string objects "name")
                            (pybmf-trivial-string objects "type"))))
 
+    ;; --- additional type-annotation rules ----------------------------
+
+    (defn pybmf-emit-var-annotated (objects)
+        (intern_node PY-BMF-ANNOTATED
+                     (list (pybmf-trivial-string objects "target")
+                           (pybmf-trivial-string objects "type"))))
+
+    (defn pybmf-source-var-annotated (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-source-var-annotated-int (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-int (int_to_str (node_value (nth kids 2)))))))
+
+    (defn pybmf-emit-var-annotated-name (objects)
+        (intern_node PY-BMF-ANNOTATED
+                     (list (pybmf-trivial-string objects "target")
+                           (pybmf-trivial-string objects "type")
+                           (pybmf-trivial-string objects "value"))))
+
+    (defn pybmf-source-var-annotated-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-return-ann-suffix (objects)
+        (intern_node PY-BMF-RET-ANN
+                     (list (pybmf-trivial-string objects "type"))))
+
+    (defn pybmf-source-return-ann-suffix (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "->")
+                  (py-name (node_value (nth kids 0))))))
+
+    (defn pybmf-emit-def-typed-ret (objects)
+        (intern_node PY-BMF-DEF
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-RET-ANN
+                                        (list (pybmf-trivial-string objects "ret"))))))
+
+    (defn pybmf-source-def-typed-ret (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let ret-kids (node_children (nth kids 1)))
+            (list (py-keyword "def")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op "->")
+                  (py-name (node_value (nth ret-kids 0)))
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-def-typed-param-ret (objects)
+        (intern_node PY-BMF-DEF
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-TYPED-PARAM
+                                        (list (pybmf-trivial-string objects "p")
+                                              (pybmf-trivial-string objects "t")))
+                           (intern_node PY-BMF-RET-ANN
+                                        (list (pybmf-trivial-string objects "ret"))))))
+
+    (defn pybmf-source-def-typed-param-ret (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let param-kids (node_children (nth kids 1)))
+            (let ret-kids (node_children (nth kids 2)))
+            (list (py-keyword "def")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth param-kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth param-kids 1)))
+                  (py-op ")")
+                  (py-op "->")
+                  (py-name (node_value (nth ret-kids 0)))
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
     (defn pybmf-emit-walrus-ident (objects)
         (intern_node PY-BMF-WALRUS
                      (list (pybmf-trivial-string objects "target")
@@ -2353,7 +2446,9 @@
     dict-comp ::= "{" $key:name ":" $value:name "for" $target:name "in" $iter:name "}" => pybmf-emit-dict-comp <= pybmf-source-dict-comp;
     gen-exp ::= "(" $expr:name "for" $target:name "in" $iter:name ")" => pybmf-emit-gen-exp;
     set-comp ::= "{" $expr:name "for" $target:name "in" $iter:name "}" => pybmf-emit-set-comp <= pybmf-source-set-comp;
-    annotated-assign-int ::= $target:name ":" $type:name "=" $value:int => pybmf-emit-annotated-assign-int;
+    annotated-assign-int ::= $target:name ":" $type:name "=" $value:int => pybmf-emit-annotated-assign-int <= pybmf-source-var-annotated-int;
+    var-annotated ::= $target:name ":" $type:name => pybmf-emit-var-annotated <= pybmf-source-var-annotated;
+    var-annotated-name ::= $target:name ":" $type:name "=" $value:name => pybmf-emit-var-annotated-name <= pybmf-source-var-annotated-name;
     typed-param ::= $name:name ":" $type:name => pybmf-emit-typed-param <= pybmf-source-typed-param;
     default-param-int ::= $name:name "=" $value:int => pybmf-emit-default-param-int <= pybmf-source-default-param-int;
     default-param-string ::= $name:name "=" $value:string => pybmf-emit-default-param-string <= pybmf-source-default-param-string;
@@ -2361,6 +2456,9 @@
     typed-default-param-string ::= $name:name ":" $type:name "=" $value:string => pybmf-emit-typed-default-param-string <= pybmf-source-typed-default-param-string;
     def1-typed-default-int ::= "def" $name:name "(" $arg:name ":" $type:name "=" $value:int ")" ":" => pybmf-emit-def1-typed-default-int <= pybmf-source-def1-typed-default-int;
     def-return-annotation ::= "def" $name:name "(" ")" "->" $type:name ":" => pybmf-emit-def-return-annotation;
+    return-ann ::= "->" $type:name => pybmf-emit-return-ann-suffix <= pybmf-source-return-ann-suffix;
+    def-typed-ret ::= "def" $name:name "(" ")" "->" $ret:name ":" "pass" => pybmf-emit-def-typed-ret <= pybmf-source-def-typed-ret;
+    def-typed-param-ret ::= "def" $name:name "(" $p:name ":" $t:name ")" "->" $ret:name ":" "pass" => pybmf-emit-def-typed-param-ret <= pybmf-source-def-typed-param-ret;
     plus-assign-int ::= $target:name "+=" $value:int => pybmf-emit-aug-assign-int;
     attr-assign-int ::= $object:name "." $field:name "=" $value:int => pybmf-emit-attr-assign-int;
     subscript-assign-int ::= $object:name "[" $index:int "]" "=" $value:int => pybmf-emit-subscript-assign-int;
