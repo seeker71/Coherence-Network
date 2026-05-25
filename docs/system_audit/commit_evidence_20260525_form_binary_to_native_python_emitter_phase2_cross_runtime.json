@@ -1,0 +1,29 @@
+{
+  "date": "2026-05-25",
+  "branch": "claude/amazing-fermi-3OVOZ",
+  "spec": "specs/form-binary-to-native-python-emitter.md",
+  "phase": "2 (cross-runtime scanner parity)",
+  "intent": "Build the cross-runtime parity harness — same Python source through Form-native python-bmf.fk and through the emitted Python compiler, diff token streams. Begin the comparison loop the user named: 'compare the language native execution to the form native execution, optimize the kernel, the compiler, the emmitor.'",
+  "what_changed": {
+    "form_side_scan_driver": "form/form-stdlib/emits/python-bmf-scan-driver.fk — Form recipe that calls python-source-scan-file and writes tokens as kind\\tvalue lines",
+    "parity_harness": "form/scripts/cross_runtime_parity.sh — invokes form-kernel-go with core+source-compiler+engine+compiler+python-bmf+driver, then runs emitted Python scanner on the same file, diffs the outputs",
+    "cross_runtime_test": "kernels/python_bmf/tests/test_cross_runtime.py — automates parity check across all parity-suite demos",
+    "known_gaps_updated": "kernels/python_bmf/KNOWN_GAPS.md — adds Cross-runtime parity section with the table of which workloads agree and which diverge, naming each divergence as a next-breath candidate"
+  },
+  "parity_results": {
+    "parity_suite_demos": "8/8 PARITY — token streams identical",
+    "emitted_objects_py": "PARITY",
+    "emitted_other_modules": "diverge — mostly because Python side has features (string escape preservation, quote-style tagging, triple-quoted variants) Form side doesn't yet have"
+  },
+  "key_finding": "At the scanner level, both runtimes agree on every token category and value for code within the python-bmf.fk feature surface. Divergences point in ONE direction: the emitted Python scanner has more features than the Form-native scanner currently exposes. These are not bugs — they're the next-breath candidates for extending python-bmf.fk's `python-source-scan-string-loop` to preserve backslash escapes, tag quote variants, etc. Bringing those into the Form side closes the loop.",
+  "proof": {
+    "command": "form/scripts/cross_runtime_parity.sh form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.py",
+    "result": "Form-side tokens: 218 lines; Python tokens: 218 lines; Diff: PARITY — both runtimes produce identical token streams."
+  },
+  "next_breaths": [
+    "Extend python-bmf.fk scanner to preserve backslash escapes — close one divergence direction.",
+    "Add reverse actions to BMF rules so the rule itself supplies its inverse for decompilation.",
+    "Build a Form-side rule-application driver that takes Python file → applies python-bmf-rules → writes .fkb. Compare .fkb output between Form-native and emitted-Python compilers — the deeper proof loop.",
+    "Add performance harness: time-per-iter and peak RSS for both runtimes scanning + rule-applying the same workload."
+  ]
+}
