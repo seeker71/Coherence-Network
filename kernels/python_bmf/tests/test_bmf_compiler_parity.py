@@ -24,7 +24,12 @@ sys.path.insert(0, str(REPO_ROOT))
 GO_BIN = REPO_ROOT / "form/form-kernel-go/bin-go"
 SOURCE_COMPILER = REPO_ROOT / "form/form-stdlib/source-compiler.fk"
 TARGETS = [
+    REPO_ROOT / "form/form-stdlib/tests/lists.fk",
+    REPO_ROOT / "form/form-stdlib/tests/numeric.fk",
+    REPO_ROOT / "form/form-stdlib/tests/task-runtime.fk",
+    REPO_ROOT / "form/form-stdlib/tests/higher.fk",
     REPO_ROOT / "form/form-stdlib/core.fk",
+    REPO_ROOT / "form/form-stdlib/engine.fk",
 ]
 
 
