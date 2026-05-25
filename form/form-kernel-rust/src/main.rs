@@ -113,6 +113,18 @@ struct ShapeKey {
 // optimization is undone). Future breath: restore via Cow or split tables.
 type NativeFn = fn(&mut Kernel, &mut Arena, &[Value]) -> Value;
 
+// EnvAwareNativeFn — natives that need the caller's env (walk_recipe_here).
+// Separate registry path to avoid changing the NativeFn signature across
+// every existing native.
+type EnvAwareNativeFn = fn(&mut Kernel, &mut Arena, FrameId, &[Value]) -> Value;
+
+#[derive(Copy, Clone)]
+struct EnvAwareNativeEntry {
+    name: NameID,
+    category: NodeID,
+    func: EnvAwareNativeFn,
+}
+
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
 // through a native, the trace records the category alongside the FNCALL
@@ -164,6 +176,7 @@ pub(crate) struct Kernel {
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
+    env_natives: HashMap<NameID, EnvAwareNativeEntry>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -441,6 +454,7 @@ impl Kernel {
             str_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
+            env_natives: HashMap::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -748,6 +762,7 @@ impl Kernel {
             str_idx: self.str_idx.clone(),
             next_inst: self.next_inst,
             natives: self.natives.clone(),
+            env_natives: self.env_natives.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -1074,6 +1089,18 @@ struct Frame {
 // ---------------------------------------------------------------------------
 
 impl Kernel {
+    fn register_env_native(&mut self, name: &str, category: NodeID, f: EnvAwareNativeFn) {
+        let id = self.intern_string(name).inst;
+        self.env_natives.insert(
+            id,
+            EnvAwareNativeEntry {
+                name: id,
+                category,
+                func: f,
+            },
+        );
+    }
+
     fn register_native(&mut self, name: &str, category: NodeID, f: NativeFn) {
         let id = self.intern_string(name).inst;
         self.natives.insert(
@@ -1592,6 +1619,12 @@ impl Kernel {
             let env = sub_arena.new_frame(None);
             walk(k, &mut sub_arena, args[0].as_nid(), env)
         });
+        // walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+        // bindings inside the Recipe land in the caller's scope. Matches
+        // the Go kernel's env-aware variant.
+        self.register_env_native("walk_recipe_here", cat_witness(), |k, a, env, args| {
+            walk(k, a, args[0].as_nid(), env)
+        });
         self.register_native("walk_parallel", cat_witness(), native_walk_parallel);
         self.register_native("walk-parallel", cat_witness(), native_walk_parallel);
         self.register_native(
@@ -1786,6 +1819,26 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
         }
         RB_FNCALL => {
             let name = k.ident_id(kids[0]);
+            // Env-aware natives first — they need caller env (walk_recipe_here).
+            let env_ne_opt = k.env_natives.get(&name).copied();
+            if let Some(ne) = env_ne_opt {
+                if a.lookup(env, name).is_none() {
+                    let mut args = Vec::with_capacity(kids.len() - 1);
+                    for arg in &kids[1..] {
+                        args.push(walk(k, a, *arg, env));
+                    }
+                    if ne.category.ty != RB_UNDEFINED {
+                        if let Some(t) = &mut k.trace {
+                            t.record(ne.category.ty, ne.category.inst);
+                        }
+                    }
+                    let native_name = k.name_str(ne.name).to_string();
+                    if let Some(t) = &mut k.trace {
+                        t.record_native(&native_name);
+                    }
+                    return (ne.func)(k, a, env, &args);
+                }
+            }
             // Native takes priority unless user shadowed. Copy the entry
             // out so the natives-map borrow releases before we call &mut k.
             let ne_opt = k.natives.get(&name).copied();

@@ -348,7 +348,8 @@ type Kernel struct {
 	strs    []string
 	strIdx  map[string]NameID
 	next    uint32
-	natives map[NameID]NativeEntry
+	natives    map[NameID]NativeEntry
+	envNatives map[NameID]EnvAwareNativeEntry
 	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
 	// intern_node_at; read by node_source. The satsang-load-bearing
 	// surface: every cell's state traceable to the source line that
@@ -383,6 +384,7 @@ func NewKernel() *Kernel {
 		walkCache:  make(map[NodeID]Value),
 		next:       1,
 		natives:    make(map[NameID]NativeEntry),
+		envNatives: make(map[NameID]EnvAwareNativeEntry),
 	}
 	k.registerNatives()
 	return k
@@ -811,12 +813,30 @@ func (f *Frame) Lookup(name NameID) (Value, bool) {
 
 type NativeFn func(k *Kernel, args []Value) Value
 
+// EnvAwareNativeFn — natives that need access to the caller's env to do
+// in-scope evaluation (e.g. walk_recipe_here, which walks a pre-built
+// Recipe in the calling scope so its `let` bindings land in the caller's
+// env, not a fresh one). Separate registry to avoid changing the existing
+// NativeFn signature across ~60 sites.
+type EnvAwareNativeFn func(k *Kernel, env *Frame, args []Value) Value
+
+type EnvAwareNativeEntry struct {
+	Name     NameID
+	Category NodeID
+	Fn       EnvAwareNativeFn
+}
+
 // registerNative — central registration point. The string name is
 // interned once into a NameID; runtime dispatch is u32-keyed. Each
 // native carries the Form category it expresses (Blueprint attribution).
 func (k *Kernel) registerNative(name string, category NodeID, fn NativeFn) {
 	id := k.internName(name)
 	k.natives[id] = NativeEntry{Name: id, Category: category, Fn: fn}
+}
+
+func (k *Kernel) registerEnvNative(name string, category NodeID, fn EnvAwareNativeFn) {
+	id := k.internName(name)
+	k.envNatives[id] = EnvAwareNativeEntry{Name: id, Category: category, Fn: fn}
 }
 
 func (k *Kernel) registerNatives() {
@@ -1322,6 +1342,16 @@ func (k *Kernel) registerNatives() {
 		env := NewFrame(nil)
 		return k.walk(args[0].Nid, env)
 	})
+	// walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+	// bindings inside the Recipe land in the caller's scope. This is
+	// how source-compiled output can produce Form definitions directly
+	// from a Recipe tree without going through text round-trip: build
+	// the Recipe via intern_node, serialize to .fkb, then load via
+	//   (walk_recipe_here (deserialize-recipe (read_file_bytes "out.fkb")))
+	// the lets propagate into the surrounding load chain's env.
+	k.registerEnvNative("walk_recipe_here", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		return k.walk(args[0].Nid, env)
+	})
 	walkParallel := func(k *Kernel, args []Value) Value {
 		roots := make([]NodeID, len(args[0].List))
 		for i, v := range args[0].List {
@@ -1611,6 +1641,24 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 
 	case RBasicFnCall:
 		name := k.identID(kids[0])
+		// Env-aware natives first — they need the caller env to splice
+		// pre-built Recipes (walk_recipe_here, etc.). Checked before
+		// plain natives so a name registered both ways prefers env-aware.
+		if ne, ok := k.envNatives[name]; ok {
+			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
+				args := make([]Value, len(kids)-1)
+				for i := 1; i < len(kids); i++ {
+					args[i-1] = k.walk(kids[i], env)
+				}
+				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
+					k.Trace.record(ne.Category.Type, ne.Category.Inst)
+				}
+				if k.Trace != nil {
+					k.Trace.recordNative(k.nameStr(ne.Name))
+				}
+				return ne.Fn(k, env, args)
+			}
+		}
 		// Native takes priority unless user shadowed with a closure
 		if ne, ok := k.natives[name]; ok {
 			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
