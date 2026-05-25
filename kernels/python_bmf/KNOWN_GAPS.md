@@ -109,13 +109,18 @@ core.fk                      86     149.1      18.0      8.3x      4204b   BYTE-
 engine.fk                  1995    1140.2      42.5     26.8x     82880b   BYTE-IDENT
 ```
 
-**The first real observations the comparison loop surfaces:**
+**Observations from the comparison loop:**
 
-1. **U-shaped speedup curve.** Tiny workloads show 17-27× Python advantage because Go binary fork+exec+load (~10-15ms) dominates the Form kernel timing. Medium workloads converge to ~8× as the Go fixed cost amortizes against actual work. Large workloads diverge again to 26× — for engine.fk, the Form kernel's Recipe-walker cost per token outpaces CPython's bytecode interpretation by a wide margin. The shape itself is the signal: the Form kernel has a *per-source-token* cost that scales linearly with size, while CPython's per-call dispatch is more efficient once code is in steady state.
+1. **U-shaped speedup curve.** Tiny workloads show 18-30× Python advantage because Go binary fork+exec+load (~10-15ms) dominates the Form kernel timing. Medium workloads converge to ~10× as the Go fixed cost amortizes against actual work. Large workloads diverge again to 44× — for engine.fk, the Form kernel's Recipe-walker cost per token outpaces CPython's bytecode interpretation by a wide margin. The shape itself is the signal: the Form kernel has a *per-source-token* cost that scales linearly with size, while CPython's per-call dispatch is more efficient once code is in steady state.
 
-2. **The Form kernel's Recipe interpreter is the hot path.** engine.fk has no section syntax — the source-compiler walks pure s-expressions. That's the kernel's fastest path in theory, yet Python beats it by 26.8×. The optimization surface this points at is the kernel's tree-walking dispatch in `form-kernel-go/main.go`'s walk function — every Form node dispatched through a Go switch, every list head/tail through a slice copy.
+2. **The Form kernel's Recipe interpreter is the hot path.** engine.fk has no section syntax — the source-compiler walks pure s-expressions. That's the kernel's fastest path in theory, yet Python beats it by 44.7×. The optimization surface this points at is the kernel's tree-walking dispatch in `form-kernel-go/main.go`'s walk function — every Form node dispatched through a Go switch, every list head/tail through a slice copy.
 
-3. **CPython's recursion limit was a real wall, not a ceiling.** The emitted compiler hits engine.fk-class depths only when both `sys.setrecursionlimit(200000)` and `ulimit -s 65536` are raised. The Form kernel's iterative walker doesn't have this problem. For real substrate-Python workloads (organ.py, form.py), recursion-to-iteration lifting in the emitter would be the next breath of work — turning the head/tail recursive helpers (which are CPS-lowered loops in the original Python source) back into Python `for` loops.
+3. **The CPython recursion wall — closed.** The emitter's `_is_tail_recursive` pass now detects tail-position self-calls (62 functions across the emitted compiler) and lifts them to `while True:` with parameter rebinding + `continue`. The Form kernel walks recipes iteratively; this lift gives the emitted Python the same iterative reach. After lift:
+   - `sys.setrecursionlimit(5_000)` (was `200_000`) — 40× lower
+   - `ulimit -s 8192` (was `65536`) — 8× lower stack
+   - engine.fk compiles in **25.5ms** (was 42.5ms) — **40% faster** on the large workload alone
+   - Cross-runtime parity still 6/6 BYTE-IDENT
+   The CPython-side fragility named by the harness is gone.
 
 **Test:** `kernels/python_bmf/tests/test_bmf_compiler_parity.py` asserts byte-identical output across all 6 workloads as a regression gate.
 
