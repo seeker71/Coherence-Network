@@ -33,12 +33,14 @@ four'''
     left //= 3
     ok := True
     tail = ...
+    big = 1_000_000
+    quoted = \"'approve' or 'reject'\"
 ")
     (let source-objects (python-source-scan-text source))
 
     (sum
         (list
-            (score-int (len source-objects) 49 100)
+            (score-int (len source-objects) 55 100)
             (score-str (scanner-real-kind source-objects 0) "py-op" 200)
             (score-str (scanner-real-value source-objects 0) "@" 300)
             (score-str (scanner-real-kind source-objects 2) "py-keyword" 400)
@@ -66,4 +68,8 @@ four" 1100)
             (score-str (scanner-real-value source-objects 45) "True" 2300)
             (score-str (scanner-real-value source-objects 48) "..." 2400)
             (score-int (fsc-repo-text-line-number (scanner-real-span source-objects 0)) 2 2400)
-            (score-int (fsc-repo-text-line-number (scanner-real-span source-objects 48)) 16 2500))))
+            (score-int (fsc-repo-text-line-number (scanner-real-span source-objects 48)) 16 2500)
+            (score-str (scanner-real-kind source-objects 51) "py-int" 2600)
+            (score-str (scanner-real-value source-objects 51) "1_000_000" 2700)
+            (score-str (scanner-real-kind source-objects 54) "py-string" 2800)
+            (score-str (scanner-real-value source-objects 54) "'approve' or 'reject'" 2900))))

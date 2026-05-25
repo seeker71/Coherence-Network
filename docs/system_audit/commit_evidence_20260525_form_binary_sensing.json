@@ -1,0 +1,77 @@
+{
+  "date": "2026-05-25",
+  "thread_branch": "codex/cpython-parity-harness-20260525",
+  "commit_scope": "Expose Form binary artifact sensing to Form recipes across sibling kernels and repair Python BMF scanner cases found while preparing roundtrip diagnostics.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/grammars/python-bmf.fk",
+    "form/form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+      "cd form && tmpdir=$(mktemp -d /tmp/formbin-sense.XXXXXX) && ./form-kernel-go/bin-go --emit-binary \"$tmpdir/fib.fkb\" form-samples/fib.fk && printf '(do (let root (read_form_binary \"%s\")) (let cat (node_category root)) (add (node_pkg cat) (add (node_level cat) (add (node_type cat) (node_inst cat)))))\\n' \"$tmpdir/fib.fkb\" > \"$tmpdir/read.fk\" && ./validate.sh form-stdlib/core.fk \"$tmpdir/read.fk\""
+    ],
+    "notes": "Sibling kernels agree on the Python BMF scanner band and on reading a compiled .fkb artifact from Form code, inspecting the loaded root category node fields."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote PR checks pending after push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No web/API deployment surface changed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof is complete; CI proof remains after PR checks."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-question-effects-kernel-conformance"
+  ],
+  "task_ids": [
+    "form-binary-sensing-20260525"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Form binary sensing: read_form_binary plus node_pkg/node_level/node_type/node_inst agree across Go/Rust/TypeScript kernels on a compiled fib.fk artifact.",
+    "Python BMF scanner band: underscores in integer literals and quote-specific empty/string handling agree across sibling kernels.",
+    "The implementation contains no handwritten Python solution code; the only Python file touched is this process evidence JSON path requirement."
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/grammars/python-bmf.fk",
+    "form/form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+    "docs/system_audit/commit_evidence_20260525_form_binary_sensing.json"
+  ],
+  "change_intent": "process_only"
+}
