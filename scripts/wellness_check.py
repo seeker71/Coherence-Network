@@ -701,6 +701,40 @@ def sense_form_engine() -> list[str]:
     return lines
 
 
+def sense_form_ontology() -> list[str]:
+    """Does the Form-side ontology table agree with the kernel parsers?
+
+    `form/form-stdlib/form-ontology.fk` holds the canonical (name, type,
+    inst) rows for parser-special-form primitives (add/gt/and/...) and
+    composite shapes (do/let/if/fndef/...). Each kernel (Go/Rust/TS)
+    has its own switch table in parseSexp/buildVerb. If a primitive is
+    added to one but not the other, every test that doesn't happen to
+    exercise it stays silent through the drift.
+
+    Delegates to form/scripts/validate_form_ontology.py — the canonical
+    drift reader. Silent on a clean match; surfaces the divergence
+    otherwise.
+    """
+    script = ROOT / "form" / "scripts" / "validate_form_ontology.py"
+    if not script.is_file():
+        return ["  (form/scripts/validate_form_ontology.py not present; skipping)"]
+    try:
+        result = subprocess.run(
+            ["python3", str(script)],
+            capture_output=True, text=True, timeout=15,
+        )
+    except Exception as exc:
+        return [f"  (validate_form_ontology.py did not run cleanly: {exc})"]
+    out = (result.stdout + result.stderr).strip()
+    if result.returncode == 0:
+        return ["  form ontology matches kernel parsers (Go/Rust/TS)"]
+    lines = ["  ontology and kernel parsers have drifted:"]
+    for line in out.splitlines():
+        if line.strip():
+            lines.append(f"    {line}")
+    return lines
+
+
 def sense_substrate_surprise() -> list[str]:
     """Names structural twins of recently-touched cells that haven't been
     looked at yet.
@@ -1178,6 +1212,7 @@ def main() -> int:
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
+        ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
