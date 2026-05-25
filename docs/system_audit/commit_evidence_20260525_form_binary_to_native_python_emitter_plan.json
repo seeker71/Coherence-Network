@@ -1,0 +1,73 @@
+{
+  "date": "2026-05-25",
+  "thread_branch": "codex/form-native-python-plan-20260525",
+  "commit_scope": "Add the implementation plan for emitting native Python compiler code from actual Form binary artifacts.",
+  "files_owned": [
+    "specs/form-binary-to-native-python-emitter.md",
+    "specs/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/form-binary-to-native-python-emitter.md"
+    ],
+    "notes": "The spec names the corrected target: source .fkb to readable native Python compiler implementation to roundtrip .fkb, with no giant Form graph literal or Python Form interpreter."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "Docs/spec-only change; spec quality validation passed locally."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No deployable runtime surface changed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "notes": "The planning artifact is ready for a follow-on implementation agent."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-binary-to-native-python-emitter"
+  ],
+  "task_ids": [
+    "form-native-python-plan-20260525"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "planning",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Spec quality validation passed for specs/form-binary-to-native-python-emitter.md.",
+    "Wellness check reported aligned spec index after regeneration.",
+    "Prompt guide passed in linked worktree on branch codex/form-native-python-plan-20260525."
+  ],
+  "change_files": [
+    "specs/form-binary-to-native-python-emitter.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_20260525_form_binary_to_native_python_emitter_plan.json"
+  ],
+  "change_intent": "docs_only"
+}
