@@ -156,6 +156,46 @@ This is the loop the universal-translator goal names: the emitted code becomes t
 
 - Substrate-style Python (organ.py, form.py, API endpoints) — still requires the upper-half gap list of Python BMF rules on the Form side. The framework holds; the rule coverage needs growing.
 
+## Spec violation surfaced (2026-05-25, late evening)
+
+`kernels/python_bmf/emit_python.py` is hand-written Python that emits Python.
+This violates the spec constraint named in
+`specs/form-binary-to-native-python-emitter.md`:
+
+> "No handwritten Python in kernels/python_bmf/ other than `__init__.py`,
+> `README.md`, and `sdk.py` (the SDK bridge). Every other .py file MUST be
+> Form-emitter output landed via the kernel's `write_file_text` host call."
+
+Honest reason it exists: bootstrap. There was no other path to the first
+emit. But that's not the architectural target — same shape as the
+`kernel_fk_lowering.py` shortcut that was flagged earlier, and worse because
+this one is THE emitter itself, not a sanity bridge.
+
+The Form-side replacement (`form/form-stdlib/emits/python-native.fk`) exists
+but today only does a **template bridge**: reads hand-written canonical Python
+from `python-native-templates/*.py` and writes via kernel `write_file_text`.
+That's relocated hand-written Python, not the deep synthesis from a Form
+Recipe tree.
+
+Path to close the violation:
+1. Extend `emits/python-native.fk` to walk a source-compiled Form Recipe tree
+   (engine.fk → .fkb-shape Recipe → walk) and synthesize Python source from
+   the structural shape, exactly what `emit_python.py` does today.
+2. Verify byte-equivalence: Form-native emitter output == `emit_python.py`
+   output on the same source files.
+3. Compost `emit_python.py` and the `python-native-templates/` bridge layer.
+
+Scope: substantial. The current `emit_python.py` is ~450 lines of intricate
+s-expression-to-Python translation. The Form-native version must reproduce
+every detail of py_ident name-mangling, BIN_OP/UNARY_OP/LIST_PRIMS dispatch,
+tail-call lifting, module-level let-binding hoisting, string escape preservation.
+
+The bootstrap loop already demonstrated the architecture works: emitted-Python
+source-compiler is the compiler input for emitting its siblings. The
+analogous loop here: emit_python.py emits the FIRST version of an emitter
+written-in-Form-but-targeting-Python, then that takes over. Sequential
+work, named here so it isn't lost.
+
 **Test:** `kernels/python_bmf/tests/test_bmf_compiler_parity.py` asserts the byte-identical-output claim — the regression gate now in place.
 
 ## Full BMF compiler emitted as native Python (2026-05-25, late)
