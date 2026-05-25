@@ -1357,6 +1357,134 @@
                   (py-op ":")
                   (py-keyword "pass"))))
 
+    ;; --- try/except/finally with real (non-pass) bodies --------------
+    ;; Body and handler/cleanup stand in as single-name references so the
+    ;; grammar can match real exception-handling code. Each rule is fully
+    ;; reversible — emit interns the children as substrate-trivial strings,
+    ;; source projects them back to the positional token stream.
+
+    (defn pybmf-emit-try-except-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "handler"))))
+
+    (defn pybmf-source-try-except-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 3))))))
+
+    (defn pybmf-emit-try-except-as-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-as-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "alias")
+                           (pybmf-trivial-string objects "handler"))))
+
+    (defn pybmf-source-try-except-as-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 4))))))
+
+    (defn pybmf-emit-try-finally-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "finally-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "cleanup"))))
+
+    (defn pybmf-source-try-finally-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "finally")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-try-except-finally-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-finally-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "handler")
+                           (pybmf-trivial-string objects "cleanup"))))
+
+    (defn pybmf-source-try-except-finally-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "finally")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 4))))))
+
+    ;; --- raise with constructor call ---------------------------------
+
+    (defn pybmf-emit-raise-call0 (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call0")
+                           (pybmf-trivial-string objects "error"))))
+
+    (defn pybmf-source-raise-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-raise-call1 (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call1")
+                           (pybmf-trivial-string objects "error")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-raise-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-raise-call-string (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call-string")
+                           (pybmf-trivial-string objects "error")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-raise-call-string (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-string (node_value (nth kids 2)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-async-def (objects)
         (intern_node PY-BMF-ASYNC-DEF
                      (list (pybmf-trivial-string objects "name"))))
@@ -2655,6 +2783,13 @@
     except-as-pass ::= "except" $error:name "as" $alias:name ":" "pass" => pybmf-emit-except-as-pass <= pybmf-source-except-as-pass;
     try-finally-pass ::= "try" ":" "pass" "finally" ":" "pass" => pybmf-emit-try-finally-pass <= pybmf-source-try-finally-pass;
     try-except-else-finally-pass ::= "try" ":" "pass" "except" $error:name ":" "pass" "else" ":" "pass" "finally" ":" "pass" => pybmf-emit-try-except-else-finally-pass <= pybmf-source-try-except-else-finally-pass;
+    try-except-stmt ::= "try" ":" $body:name "except" $err:name ":" $handler:name => pybmf-emit-try-except-stmt <= pybmf-source-try-except-stmt;
+    try-except-as-stmt ::= "try" ":" $body:name "except" $err:name "as" $alias:name ":" $handler:name => pybmf-emit-try-except-as-stmt <= pybmf-source-try-except-as-stmt;
+    try-finally-stmt ::= "try" ":" $body:name "finally" ":" $cleanup:name => pybmf-emit-try-finally-stmt <= pybmf-source-try-finally-stmt;
+    try-except-finally-stmt ::= "try" ":" $body:name "except" $err:name ":" $handler:name "finally" ":" $cleanup:name => pybmf-emit-try-except-finally-stmt <= pybmf-source-try-except-finally-stmt;
+    raise-call0 ::= "raise" $error:name "(" ")" => pybmf-emit-raise-call0 <= pybmf-source-raise-call0;
+    raise-call1 ::= "raise" $error:name "(" $arg:name ")" => pybmf-emit-raise-call1 <= pybmf-source-raise-call1;
+    raise-call-string ::= "raise" $error:name "(" $arg:string ")" => pybmf-emit-raise-call-string <= pybmf-source-raise-call-string;
     async-def ::= "async" "def" $name:name "(" ")" ":" => pybmf-emit-async-def;
     call0 ::= $callee:name "(" ")" => pybmf-emit-call0 <= pybmf-source-call0;
     call1-ident ::= $callee:name "(" $arg:name ")" => pybmf-emit-call1-ident <= pybmf-source-call1-ident;
