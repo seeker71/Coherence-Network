@@ -41,7 +41,7 @@ def _render_atom(kind, value):
         return 'f"' + value.replace('"', '\\"') + '"'
     if kind == "py-tstring":
         return 't"' + value.replace('"', '\\"') + '"'
-    # py-keyword, py-name, py-int, py-float, py-op — value is the surface text.
+    # py-keyword, py-name, py-int, py-float, py-op, py-comment — value is the surface text.
     return value
 
 
@@ -58,15 +58,29 @@ def _render_tokens(token_entries):
 
     Tightens around brackets, commas, dots so output reads like Python.
     Token entries may be (kind, value) tuples (preserved across compile)
-    or raw value strings (legacy shape).
+    or raw value strings (legacy shape). Comments get a two-space gutter
+    when trailing (preceded by another token), no padding when leading.
     """
-    tokens = [_normalize_token(t) for t in token_entries]
+    kinds = []
+    values = []
+    for entry in token_entries:
+        if isinstance(entry, (list, tuple)) and len(entry) == 2:
+            kinds.append(entry[0])
+            values.append(_render_atom(entry[0], entry[1]))
+        else:
+            kinds.append("")
+            values.append(str(entry))
+
     out = []
-    for i, tok in enumerate(tokens):
+    for i, tok in enumerate(values):
+        kind = kinds[i]
         if i == 0:
             out.append(tok)
             continue
-        prev = tokens[i - 1]
+        prev = values[i - 1]
+        if kind == "py-comment":
+            out.append("  " + tok)
+            continue
         if _is_open_bracket(prev) or tok in (",", ":", ";", ")", "]", "}"):
             out.append(tok)
         elif tok == "(" and (prev.replace("_", "").isalnum() or _is_close_bracket(prev) or prev in (")", "]")):

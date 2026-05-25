@@ -8,24 +8,24 @@ Updated each time `python3 -m unittest kernels.python_bmf.tests.test_roundtrip` 
 
 Parity-suite demos in `form/form-kernel-ts/seedbank/python-adapter/examples/python_*.py`:
 
-| Demo | Round-trip (semantic) | Notes |
-|------|----------------------|-------|
-| `python_assign_demo.py` | ok | function + assignment + list + subscript |
-| `python_builtins_demo.py` | ok | aug-assign, builtins (len/sum/etc.) |
-| `python_demo.py` | ok | recursion, conditional expressions, ackermann |
-| `python_imperative_demo.py` | ok | while-loop, accumulator |
-| `python_lambda_demo.py` | ok semantic / trailing-comments lost | trailing `#` comments stripped |
-| `python_range_demo.py` | ok | `range()` |
-| `python_string_demo.py` | ok semantic / trailing-comments lost | trailing `#` comments stripped |
-| `python_substrate_demo.py` | ok | for loop, multi-return def |
+| Demo | Round-trip | Notes |
+|------|-----------|-------|
+| `python_assign_demo.py` | byte-equivalent | function + assignment + list + subscript |
+| `python_builtins_demo.py` | byte-equivalent | aug-assign, builtins (len/sum/etc.) |
+| `python_demo.py` | byte-equivalent | recursion, conditional expressions, ackermann |
+| `python_imperative_demo.py` | byte-equivalent | while-loop, accumulator |
+| `python_lambda_demo.py` | byte-equivalent | trailing + leading comments preserved |
+| `python_range_demo.py` | byte-equivalent | `range()` |
+| `python_string_demo.py` | byte-equivalent | strings + comments preserved |
+| `python_substrate_demo.py` | byte-equivalent | for loop, multi-return def |
 
-**Semantic round-trip: 8/8.** Byte-identical round-trip blocked on the gaps below.
+**8/8 byte-equivalent** (whitespace-normalized — runs of spaces collapsed). Single-language Universal Translator Step 1 holds on these demos.
 
 ## Categorized gaps
 
 ### Scanner-side losses
 
-- **trailing `#` comments are stripped** — `_skip_trivia` in `parser.py` discards `#...\n`. Next breath: emit a `py-comment` atom alongside the `\n`, preserve as layout-adjacent metadata. Affects: `python_lambda_demo`, `python_string_demo`.
+- ~~trailing `#` comments are stripped~~ — **fixed**: `_skip_trivia` accepts a `comment_sink` parameter; comments emit as `py-comment` atoms preserved through layout + decompiler.
 - **horizontal whitespace runs collapse** — multiple spaces between tokens collapse to one in decompiler. Original alignment (e.g. `xs = [1, 2, 3, 4, 5]` vs `xs=[1,2,3,4,5]`) lost. Next breath: preserve span-derived spacing in decompiler.
 - **string quote-style not preserved** — single-quoted and double-quoted strings both serialize as `"..."`. Next breath: tag `py-string` with quote variant.
 
