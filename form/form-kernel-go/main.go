@@ -1090,6 +1090,20 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// write_form_binary — emit a Recipe to .fkb on disk in the full
+	// artifact format (string table + tree). Sibling to read_form_binary.
+	// Use when source-compile output needs to cross kernel invocations:
+	// serialize-recipe alone drops string indices, which break under
+	// fresh string tables on load. This format embeds the strings.
+	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
+		path := args[0].Str
+		nid := args[1].Nid
+		bytes := serializeArtifact(k, nid)
+		if err := os.WriteFile(path, bytes, 0644); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(len(bytes))}
+	})
 	k.registerNative("read_form_binary", catCall(), func(k *Kernel, args []Value) Value {
 		b, err := os.ReadFile(args[0].Str)
 		if err != nil {
