@@ -102,14 +102,21 @@ def _is_string_prefix(ch):
 _OPERATORS_LONGEST_FIRST = tuple(sorted(PYTHON_OPERATORS, key=len, reverse=True))
 
 
-def _skip_trivia(c):
+def _skip_trivia(c, comment_sink=None):
+    """Skip spaces/tabs/cr; if `comment_sink` provided, capture # comments into it
+    as ('py-comment', text, span) tuples rather than discarding them."""
     while not c.at_end():
         ch = c.char()
         if _is_space(ch):
             c = c.advance()
         elif ch == "#":
+            start = c
+            body = []
             while not c.at_end() and c.char() != "\n":
+                body.append(c.char())
                 c = c.advance()
+            if comment_sink is not None:
+                comment_sink.append(BmfAtom("py-comment", "".join(body), start.span_to(c)))
         else:
             break
     return c
@@ -207,8 +214,8 @@ def _scan_op(c):
     return BmfAtom("py-op", c.char(), start.span_to(end)), end
 
 
-def _scan_one(c):
-    c = _skip_trivia(c)
+def _scan_one(c, comment_sink=None):
+    c = _skip_trivia(c, comment_sink)
     if c.at_end():
         return BmfAtom("py-eof", "", c.span_to(c)), c
     ch = c.char()
@@ -227,12 +234,20 @@ def _scan_one(c):
     return _scan_op(c)
 
 
-def scan_python_source(text, path="<source>"):
-    """Mirror python-source-scan-text in python-bmf.fk."""
+def scan_python_source(text, path="<source>", preserve_comments=True):
+    """Mirror python-source-scan-text in python-bmf.fk.
+
+    `preserve_comments` (default True): emit py-comment atoms inline at
+    the position they appeared, so layout + decompiler can re-render
+    them. Set False to match the legacy comment-stripping behavior.
+    """
     c = Cursor(text, path)
     atoms = []
     while True:
-        atom, c = _scan_one(c)
+        comment_sink = [] if preserve_comments else None
+        atom, c = _scan_one(c, comment_sink)
+        if comment_sink:
+            atoms.extend(comment_sink)
         if atom.kind == "py-eof":
             atoms.append(atom)
             return atoms
@@ -242,7 +257,11 @@ def scan_python_source(text, path="<source>"):
 
 
 def layout_objects(atoms):
-    """Insert NEWLINE / INDENT / DEDENT / ENDMARKER. Mirror python-source-layout-objects."""
+    """Insert NEWLINE / INDENT / DEDENT / ENDMARKER. Mirror python-source-layout-objects.
+
+    Comments (py-comment atoms) preserve their column so the layout pass
+    can tag them as trailing (same line as prior code) vs leading (own line).
+    """
     out = []
     prev_line = 1
     indent_stack = [0]
@@ -260,7 +279,8 @@ def layout_objects(atoms):
             while indent_stack and col < indent_stack[-1]:
                 indent_stack.pop()
                 out.append(py_layout("DEDENT"))
-            if col > indent_stack[-1]:
+            if col > indent_stack[-1] and atom.kind != "py-comment":
+                # Comments don't open new indent levels.
                 indent_stack.append(col)
                 out.append(py_layout("INDENT"))
         out.append(atom)
