@@ -3,31 +3,31 @@ idea_id: idea-realization-engine
 status: done
 source:
   - file: form/form-kernel-go/main.go
-    symbols: [read_form_binary, write_form_binary, serializeArtifact, deserializeArtifact, node_pkg, node_level, node_type, node_inst, node_children, node_value, node_eq, intern_node, intern_trivial_int, intern_trivial_string]
+    symbols: []
   - file: form/form-kernel-rust/src/main.rs
-    symbols: [read_form_binary, write_form_binary, serialize_artifact, deserialize_artifact]
+    symbols: [serialize_artifact, deserialize_artifact]
   - file: form/form-kernel-ts/src/kernel.ts
-    symbols: [read_form_binary, write_form_binary, serializeRecipeArtifact, deserializeRecipeArtifact]
-  - file: form/form-stdlib/emit-engine.fk
-    symbols: [emit-recipe, emit-children, lookup-template, encode]
-  - file: form/form-stdlib/seedbank/emit.fk
-    symbols: [emit-to, emit-all, list-targets, lookup-target]
+    symbols: [serializeRecipeArtifact, deserializeRecipeArtifact, serializeNode]
   - file: form/form-stdlib/seedbank/universal-emit.fk
-    symbols: [emit-function-decl, emit-call, emit-return, emit-math-op, emit-compare-op, emit-logic-op, emit-if, emit-if-else, emit-sequence, emit-do, emit-let, emit-local-access, emit-member, emit-subscript, emit-assign, emit-ident, emit-int, emit-string, emit-bool]
+    symbols: []
+  - file: form/form-stdlib/seedbank/emit.fk
+    symbols: []
+  - file: form/form-stdlib/emit-engine.fk
+    symbols: []
   - file: form/form-stdlib/seedbank/emits/python.fk
-    symbols: [python-templates]
+    symbols: []
   - file: form/form-stdlib/seedbank/emits/typescript.fk
-    symbols: [typescript-templates]
+    symbols: []
   - file: form/form-stdlib/seedbank/emits/go.fk
-    symbols: [go-templates]
+    symbols: []
   - file: form/form-stdlib/seedbank/emits/rust.fk
-    symbols: [rust-templates]
+    symbols: []
   - file: form/form-stdlib/seedbank/emits/form.fk
-    symbols: [form-templates]
+    symbols: []
   - file: form/form-stdlib/tests/form-binary-multi-emit.fk
     symbols: []
   - file: form/validate.sh
-    symbols: [prepare_sources, run_siblings, run_workload]
+    symbols: []
 requirements:
   - "A Form binary (.fkb) is the substrate source of truth — load it as live Recipe nodes via read_form_binary; write back via write_form_binary in the same FORMBIN2 artifact format the --emit-binary CLI produces."
   - "Native source in any tongue emits from a loaded Recipe through ONE engine with each tongue as DATA — no per-tongue branching in the dispatcher itself."
