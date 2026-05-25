@@ -1,3 +1,6 @@
+"""Emitted from Form source by kernels/python_bmf/emit_python.py."""
+from kernels.python_bmf.host_primitives import *  # noqa: F401, F403
+
 def fsc_sub(s, a, b):
     return substring(s, a, b)
 
@@ -1121,29 +1124,30 @@ def form_source_compile_file(in_path, out_path):
     compiled = form_source_compile_text(src)
     return write_file_text(out_path, compiled)
 
+FSC_ACTION_BLOCK_DO = make_nodeid(1, 2, 9, 1)
+FSC_ACTION_BLOCK_SEQ = make_nodeid(1, 2, 9, 2)
+FSC_ACTION_BLOCK_LET = make_nodeid(1, 2, 9, 3)
+FSC_ACTION_MATH_ADD = make_nodeid(1, 2, 12, 1)
+FSC_ACTION_MATH_SUB = make_nodeid(1, 2, 12, 2)
+FSC_ACTION_MATH_MUL = make_nodeid(1, 2, 12, 3)
+FSC_ACTION_MATH_MOD = make_nodeid(1, 2, 12, 5)
+FSC_ACTION_COMPARE_EQ = make_nodeid(1, 2, 13, 1)
+FSC_ACTION_COMPARE_LT = make_nodeid(1, 2, 13, 3)
+FSC_ACTION_COMPARE_LE = make_nodeid(1, 2, 13, 4)
+FSC_ACTION_COMPARE_GT = make_nodeid(1, 2, 13, 5)
+FSC_ACTION_COMPARE_GE = make_nodeid(1, 2, 13, 6)
+FSC_ACTION_COND_IF = make_nodeid(1, 2, 11, 2)
+FSC_ACTION_FNDEF = make_nodeid(1, 2, 31, 1)
+FSC_ACTION_FNCALL = make_nodeid(1, 2, 32, 1)
+FSC_ACTION_IDENT = make_nodeid(1, 2, 33, 1)
+fsc_action_keywords = ['def', 'let', 'if', 'then', 'else', 'do']
+fsc_common_op2 = ['==', '!=', '<=', '>=', '->', '=>', ':=', '+=', '-=', '*=', '/=', '**', '//', '<<', '>>', '<-', '?.']
+fsc_action_source_dialect = fsc_source_dialect(fsc_action_keywords, 'form-action-keyword', 'form-action-name', 'form-action-int', 'form-action-string', 'form-action-op', 'form-action-eof', fsc_common_op2)
+FSC_REPO_DOCUMENT = make_nodeid(8, 45, 6, 10)
+FSC_REPO_TEXT_LINES = make_nodeid(8, 45, 6, 11)
+FSC_REPO_TEXT_LINE = make_nodeid(8, 45, 6, 12)
+FSC_REPO_MEANING = make_nodeid(8, 45, 6, 13)
+FSC_REPO_MEANING_FIELD = make_nodeid(8, 45, 6, 14)
+
 if __name__ == '__main__':
-    FSC_ACTION_BLOCK_DO = make_nodeid(1, 2, 9, 1)
-    FSC_ACTION_BLOCK_SEQ = make_nodeid(1, 2, 9, 2)
-    FSC_ACTION_BLOCK_LET = make_nodeid(1, 2, 9, 3)
-    FSC_ACTION_MATH_ADD = make_nodeid(1, 2, 12, 1)
-    FSC_ACTION_MATH_SUB = make_nodeid(1, 2, 12, 2)
-    FSC_ACTION_MATH_MUL = make_nodeid(1, 2, 12, 3)
-    FSC_ACTION_MATH_MOD = make_nodeid(1, 2, 12, 5)
-    FSC_ACTION_COMPARE_EQ = make_nodeid(1, 2, 13, 1)
-    FSC_ACTION_COMPARE_LT = make_nodeid(1, 2, 13, 3)
-    FSC_ACTION_COMPARE_LE = make_nodeid(1, 2, 13, 4)
-    FSC_ACTION_COMPARE_GT = make_nodeid(1, 2, 13, 5)
-    FSC_ACTION_COMPARE_GE = make_nodeid(1, 2, 13, 6)
-    FSC_ACTION_COND_IF = make_nodeid(1, 2, 11, 2)
-    FSC_ACTION_FNDEF = make_nodeid(1, 2, 31, 1)
-    FSC_ACTION_FNCALL = make_nodeid(1, 2, 32, 1)
-    FSC_ACTION_IDENT = make_nodeid(1, 2, 33, 1)
-    fsc_action_keywords = ['def', 'let', 'if', 'then', 'else', 'do']
-    fsc_common_op2 = ['==', '!=', '<=', '>=', '->', '=>', ':=', '+=', '-=', '*=', '/=', '**', '//', '<<', '>>', '<-', '?.']
-    fsc_action_source_dialect = fsc_source_dialect(fsc_action_keywords, 'form-action-keyword', 'form-action-name', 'form-action-int', 'form-action-string', 'form-action-op', 'form-action-eof', fsc_common_op2)
-    FSC_REPO_DOCUMENT = make_nodeid(8, 45, 6, 10)
-    FSC_REPO_TEXT_LINES = make_nodeid(8, 45, 6, 11)
-    FSC_REPO_TEXT_LINE = make_nodeid(8, 45, 6, 12)
-    FSC_REPO_MEANING = make_nodeid(8, 45, 6, 13)
-    FSC_REPO_MEANING_FIELD = make_nodeid(8, 45, 6, 14)
-    print(0)
+    pass
