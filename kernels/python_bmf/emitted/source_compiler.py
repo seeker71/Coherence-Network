@@ -5,28 +5,32 @@ def fsc_sub(s, a, b):
     return substring(s, a, b)
 
 def is_fsc_find_string_at_len(s, needle, s_len, needle_len, i, j):
-    if (j == needle_len):
-        return True
-    else:
-        if ((i + j) >= s_len):
-            return False
+    while True:
+        if (j == needle_len):
+            return True
         else:
-            if str_eq(char_at(s, (i + j)), char_at(needle, j)):
-                return is_fsc_find_string_at_len(s, needle, s_len, needle_len, i, (j + 1))
-            else:
+            if ((i + j) >= s_len):
                 return False
+            else:
+                if str_eq(char_at(s, (i + j)), char_at(needle, j)):
+                    s, needle, s_len, needle_len, i, j = s, needle, s_len, needle_len, i, (j + 1)
+                    continue
+                else:
+                    return False
 
 def is_fsc_find_string_at(s, needle, i, j):
     return is_fsc_find_string_at_len(s, needle, str_len(s), str_len(needle), i, j)
 
 def fsc_find_string_from_len(s, needle, s_len, needle_len, i):
-    if ((i + needle_len) > s_len):
-        return (0 - 1)
-    else:
-        if is_fsc_find_string_at_len(s, needle, s_len, needle_len, i, 0):
-            return i
+    while True:
+        if ((i + needle_len) > s_len):
+            return (0 - 1)
         else:
-            return fsc_find_string_from_len(s, needle, s_len, needle_len, (i + 1))
+            if is_fsc_find_string_at_len(s, needle, s_len, needle_len, i, 0):
+                return i
+            else:
+                s, needle, s_len, needle_len, i = s, needle, s_len, needle_len, (i + 1)
+                continue
 
 def fsc_find_string_from(s, needle, i):
     return fsc_find_string_from_len(s, needle, str_len(s), str_len(needle), i)
@@ -35,13 +39,15 @@ def is_fsc_contains(s, needle):
     return (fsc_find_string_from(s, needle, 0) >= 0)
 
 def fsc_find_char_from_len(s, ch, s_len, i):
-    if (i >= s_len):
-        return (0 - 1)
-    else:
-        if str_eq(char_at(s, i), ch):
-            return i
+    while True:
+        if (i >= s_len):
+            return (0 - 1)
         else:
-            return fsc_find_char_from_len(s, ch, s_len, (i + 1))
+            if str_eq(char_at(s, i), ch):
+                return i
+            else:
+                s, ch, s_len, i = s, ch, s_len, (i + 1)
+                continue
 
 def fsc_find_char_from(s, ch, i):
     return fsc_find_char_from_len(s, ch, str_len(s), i)
@@ -50,22 +56,26 @@ def is_fsc_space(ch):
     return (str_eq(ch, ' ') or (str_eq(ch, '\n') or (str_eq(ch, '\t') or str_eq(ch, '\r'))))
 
 def fsc_skip_spaces(s, i):
-    if (i >= str_len(s)):
-        return i
-    else:
-        if is_fsc_space(char_at(s, i)):
-            return fsc_skip_spaces(s, (i + 1))
-        else:
+    while True:
+        if (i >= str_len(s)):
             return i
+        else:
+            if is_fsc_space(char_at(s, i)):
+                s, i = s, (i + 1)
+                continue
+            else:
+                return i
 
 def fsc_rtrim_index(s, i):
-    if (i <= 0):
-        return 0
-    else:
-        if is_fsc_space(char_at(s, (i - 1))):
-            return fsc_rtrim_index(s, (i - 1))
+    while True:
+        if (i <= 0):
+            return 0
         else:
-            return i
+            if is_fsc_space(char_at(s, (i - 1))):
+                s, i = s, (i - 1)
+                continue
+            else:
+                return i
 
 def fsc_trim(s):
     start = fsc_skip_spaces(s, 0)
@@ -87,9 +97,10 @@ def is_fsc_line_opens_block(line):
         return str_eq(char_at(line, fsc_last_char_index(line)), '{')
 
 def fsc_section_end_depth(s, i, depth):
-    e = fsc_line_end(s, i)
-    line = fsc_trim(fsc_sub(s, i, e))
-    return ((i if (depth == 0) else fsc_section_end_depth(s, fsc_line_next(s, i), (depth - 1))) if str_eq(line, '}') else (fsc_section_end_depth(s, fsc_line_next(s, i), (depth + 1)) if is_fsc_line_opens_block(line) else fsc_section_end_depth(s, fsc_line_next(s, i), depth)))
+    while True:
+        e = fsc_line_end(s, i)
+        line = fsc_trim(fsc_sub(s, i, e))
+        return ((i if (depth == 0) else fsc_section_end_depth(s, fsc_line_next(s, i), (depth - 1))) if str_eq(line, '}') else (fsc_section_end_depth(s, fsc_line_next(s, i), (depth + 1)) if is_fsc_line_opens_block(line) else fsc_section_end_depth(s, fsc_line_next(s, i), depth)))
 
 def fsc_section_end(s, i):
     return fsc_section_end_depth(s, i, 0)
@@ -114,13 +125,15 @@ def is_fsc_word_start_char(ch):
     return (((cp >= 65) and (cp <= 90)) or (((cp >= 97) and (cp <= 122)) or (((cp >= 48) and (cp <= 57)) or str_eq(ch, '_'))))
 
 def is_fsc_word_loop(s, i):
-    if (i >= str_len(s)):
-        return True
-    else:
-        if is_fsc_word_char(char_at(s, i)):
-            return is_fsc_word_loop(s, (i + 1))
+    while True:
+        if (i >= str_len(s)):
+            return True
         else:
-            return False
+            if is_fsc_word_char(char_at(s, i)):
+                s, i = s, (i + 1)
+                continue
+            else:
+                return False
 
 def is_fsc_word(s):
     if (str_len(s) > 0):
@@ -189,22 +202,26 @@ def fsc_rule_ref_expr(dialect, name):
     return str_concat('(', str_concat(dialect, str_concat('-ref ', str_concat(fsc_q(name), ')'))))
 
 def fsc_read_quoted_end(s, i):
-    if (i >= str_len(s)):
-        return i
-    else:
-        if str_eq(char_at(s, i), '"'):
+    while True:
+        if (i >= str_len(s)):
             return i
         else:
-            return fsc_read_quoted_end(s, (i + 1))
+            if str_eq(char_at(s, i), '"'):
+                return i
+            else:
+                s, i = s, (i + 1)
+                continue
 
 def fsc_read_part_end(s, i):
-    if (i >= str_len(s)):
-        return i
-    else:
-        if is_fsc_space(char_at(s, i)):
+    while True:
+        if (i >= str_len(s)):
             return i
         else:
-            return fsc_read_part_end(s, (i + 1))
+            if is_fsc_space(char_at(s, i)):
+                return i
+            else:
+                s, i = s, (i + 1)
+                continue
 
 def fsc_pattern_items_loop(dialect, pattern, i):
     p = fsc_skip_spaces(pattern, i)
@@ -259,24 +276,27 @@ def is_fsc_digit(ch):
     return ((cp >= 48) and (cp <= 57))
 
 def is_fsc_int_loop(s, i):
-    if (i >= str_len(s)):
-        return True
-    else:
-        if is_fsc_digit(char_at(s, i)):
-            return is_fsc_int_loop(s, (i + 1))
+    while True:
+        if (i >= str_len(s)):
+            return True
         else:
-            return False
+            if is_fsc_digit(char_at(s, i)):
+                s, i = s, (i + 1)
+                continue
+            else:
+                return False
 
 def is_fsc_int(s):
     value = fsc_trim(s)
     return (False if (str_len(value) == 0) else (((str_len(value) > 1) and is_fsc_int_loop(value, 1)) if str_eq(char_at(value, 0), '-') else is_fsc_int_loop(value, 0)))
 
 def fsc_bml_find_comma_loop(s, i, depth, quoted):
-    if (i >= str_len(s)):
-        return (0 - 1)
-    else:
-        ch = char_at(s, i)
-        return ((fsc_bml_find_comma_loop(s, (i + 1), depth, False) if str_eq(ch, '"') else fsc_bml_find_comma_loop(s, (i + 1), depth, quoted)) if quoted else (fsc_bml_find_comma_loop(s, (i + 1), depth, True) if str_eq(ch, '"') else (fsc_bml_find_comma_loop(s, (i + 1), (depth + 1), quoted) if str_eq(ch, '(') else (fsc_bml_find_comma_loop(s, (i + 1), (depth - 1), quoted) if str_eq(ch, ')') else (i if ((depth == 0) and str_eq(ch, ',')) else fsc_bml_find_comma_loop(s, (i + 1), depth, quoted))))))
+    while True:
+        if (i >= str_len(s)):
+            return (0 - 1)
+        else:
+            ch = char_at(s, i)
+            return ((fsc_bml_find_comma_loop(s, (i + 1), depth, False) if str_eq(ch, '"') else fsc_bml_find_comma_loop(s, (i + 1), depth, quoted)) if quoted else (fsc_bml_find_comma_loop(s, (i + 1), depth, True) if str_eq(ch, '"') else (fsc_bml_find_comma_loop(s, (i + 1), (depth + 1), quoted) if str_eq(ch, '(') else (fsc_bml_find_comma_loop(s, (i + 1), (depth - 1), quoted) if str_eq(ch, ')') else (i if ((depth == 0) and str_eq(ch, ',')) else fsc_bml_find_comma_loop(s, (i + 1), depth, quoted))))))
 
 def fsc_bml_find_comma(s, i):
     return fsc_bml_find_comma_loop(s, i, 0, False)
@@ -290,9 +310,10 @@ def fsc_bml_name_list_loop(args, i):
     return ('' if (p >= str_len(args)) else ((comma := fsc_find_char_from(args, ',', p)), (end := (str_len(args) if (comma < 0) else comma)), (name := fsc_trim(fsc_sub(args, p, end))), (rest_start := (str_len(args) if (comma < 0) else (comma + 1))), str_concat(' ', str_concat(name, fsc_bml_name_list_loop(args, rest_start))))[-1])
 
 def fsc_bml_block_end(body, i, depth):
-    e = fsc_line_end(body, i)
-    line = fsc_trim(fsc_sub(body, i, e))
-    return ((i if (depth == 0) else fsc_bml_block_end(body, fsc_line_next(body, i), (depth - 1))) if str_eq(line, '}') else (fsc_bml_block_end(body, fsc_line_next(body, i), (depth + 1)) if is_fsc_line_opens_block(line) else fsc_bml_block_end(body, fsc_line_next(body, i), depth)))
+    while True:
+        e = fsc_line_end(body, i)
+        line = fsc_trim(fsc_sub(body, i, e))
+        return ((i if (depth == 0) else fsc_bml_block_end(body, fsc_line_next(body, i), (depth - 1))) if str_eq(line, '}') else (fsc_bml_block_end(body, fsc_line_next(body, i), (depth + 1)) if is_fsc_line_opens_block(line) else fsc_bml_block_end(body, fsc_line_next(body, i), depth)))
 
 def is_fsc_bml_comment_line(line):
     if is_fsc_skip_rule_line(line):
@@ -349,11 +370,12 @@ def fsc_compile_form_bml_block_line(line):
     return ('' if is_fsc_bml_comment_line(value) else (((eq_pos := fsc_find_char_from(value, '=', 4)), (name := fsc_trim(fsc_sub(value, 4, eq_pos))), (body := fsc_sub(value, (eq_pos + 1), str_len(value))), str_concat('        (let ', str_concat(name, str_concat(' ', str_concat(fsc_compile_form_bml_expr(body), ')\n')))))[-1] if is_fsc_prefix(value, 'let ') else str_concat('        ', str_concat(fsc_compile_form_bml_expr(value), '\n'))))
 
 def fsc_bml_stmt_end_loop(body, i, end, depth, quoted):
-    if (i >= end):
-        return end
-    else:
-        ch = char_at(body, i)
-        return ((fsc_bml_stmt_end_loop(body, (i + 1), end, depth, False) if str_eq(ch, '"') else fsc_bml_stmt_end_loop(body, (i + 1), end, depth, quoted)) if quoted else (fsc_bml_stmt_end_loop(body, (i + 1), end, depth, True) if str_eq(ch, '"') else (fsc_bml_stmt_end_loop(body, (i + 1), end, (depth + 1), quoted) if str_eq(ch, '(') else (fsc_bml_stmt_end_loop(body, (i + 1), end, (depth - 1), quoted) if str_eq(ch, ')') else ((i + 1) if ((depth == 0) and str_eq(ch, ';')) else fsc_bml_stmt_end_loop(body, (i + 1), end, depth, quoted))))))
+    while True:
+        if (i >= end):
+            return end
+        else:
+            ch = char_at(body, i)
+            return ((fsc_bml_stmt_end_loop(body, (i + 1), end, depth, False) if str_eq(ch, '"') else fsc_bml_stmt_end_loop(body, (i + 1), end, depth, quoted)) if quoted else (fsc_bml_stmt_end_loop(body, (i + 1), end, depth, True) if str_eq(ch, '"') else (fsc_bml_stmt_end_loop(body, (i + 1), end, (depth + 1), quoted) if str_eq(ch, '(') else (fsc_bml_stmt_end_loop(body, (i + 1), end, (depth - 1), quoted) if str_eq(ch, ')') else ((i + 1) if ((depth == 0) and str_eq(ch, ';')) else fsc_bml_stmt_end_loop(body, (i + 1), end, depth, quoted))))))
 
 def fsc_bml_stmt_end(body, i, end):
     return fsc_bml_stmt_end_loop(body, i, end, 0, False)
@@ -523,22 +545,26 @@ def fsc_scan_result_cursor(result):
     return result[2]
 
 def is_fsc_string_list_contains(xs, value):
-    if is_nil(xs):
-        return False
-    else:
-        if str_eq(xs[0], value):
-            return True
+    while True:
+        if is_nil(xs):
+            return False
         else:
-            return is_fsc_string_list_contains(xs[1:], value)
+            if str_eq(xs[0], value):
+                return True
+            else:
+                xs, value = xs[1:], value
+                continue
 
 def fsc_source_scan_skip(cursor):
-    if is_fsc_source_cursor_end(cursor):
-        return cursor
-    else:
-        if is_fsc_space(fsc_source_cursor_char(cursor)):
-            return fsc_source_scan_skip(fsc_source_cursor_advance(cursor))
-        else:
+    while True:
+        if is_fsc_source_cursor_end(cursor):
             return cursor
+        else:
+            if is_fsc_space(fsc_source_cursor_char(cursor)):
+                cursor = fsc_source_cursor_advance(cursor)
+                continue
+            else:
+                return cursor
 
 def is_fsc_source_name_char(ch):
     return (is_fsc_word_char(ch) or str_eq(ch, '?'))
@@ -548,11 +574,12 @@ def is_fsc_source_name_start_char(ch):
     return (((cp >= 65) and (cp <= 90)) or (((cp >= 97) and (cp <= 122)) or str_eq(ch, '_')))
 
 def fsc_source_scan_name_loop(cursor, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        ch = fsc_source_cursor_char(cursor)
-        return (fsc_source_scan_name_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_fsc_source_name_char(ch) else [value, cursor])
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
+        else:
+            ch = fsc_source_cursor_char(cursor)
+            return (fsc_source_scan_name_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_fsc_source_name_char(ch) else [value, cursor])
 
 def fsc_source_name_kind(value, keywords, keyword_kind, name_kind):
     if is_fsc_string_list_contains(keywords, value):
@@ -603,11 +630,12 @@ def fsc_source_scan_name(start, keywords, keyword_kind, name_kind):
     return fsc_scan_result(fsc_source_object(fsc_source_name_kind(value, keywords, keyword_kind, name_kind), value, start, end), end)
 
 def fsc_source_scan_int_loop(cursor, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        ch = fsc_source_cursor_char(cursor)
-        return (fsc_source_scan_int_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_fsc_digit(ch) else [value, cursor])
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
+        else:
+            ch = fsc_source_cursor_char(cursor)
+            return (fsc_source_scan_int_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_fsc_digit(ch) else [value, cursor])
 
 def fsc_source_scan_int(start, int_kind):
     read = fsc_source_scan_int_loop(start, '')
@@ -616,13 +644,15 @@ def fsc_source_scan_int(start, int_kind):
     return fsc_scan_result(fsc_source_object(int_kind, value, start, end), end)
 
 def fsc_source_scan_string_loop(cursor, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        if str_eq(fsc_source_cursor_char(cursor), '"'):
-            return [value, fsc_source_cursor_advance(cursor)]
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
         else:
-            return fsc_source_scan_string_loop(fsc_source_cursor_advance(cursor), str_concat(value, fsc_source_cursor_char(cursor)))
+            if str_eq(fsc_source_cursor_char(cursor), '"'):
+                return [value, fsc_source_cursor_advance(cursor)]
+            else:
+                cursor, value = fsc_source_cursor_advance(cursor), str_concat(value, fsc_source_cursor_char(cursor))
+                continue
 
 def fsc_source_scan_string(start, string_kind):
     body_start = fsc_source_cursor_advance(start)
@@ -632,35 +662,41 @@ def fsc_source_scan_string(start, string_kind):
     return fsc_scan_result(fsc_source_object(string_kind, value, start, end), end)
 
 def fsc_source_advance_n(cursor, n):
-    if (n <= 0):
-        return cursor
-    else:
-        return fsc_source_advance_n(fsc_source_cursor_advance(cursor), (n - 1))
+    while True:
+        if (n <= 0):
+            return cursor
+        else:
+            cursor, n = fsc_source_cursor_advance(cursor), (n - 1)
+            continue
 
 def is_fsc_source_cursor_prefix(cursor, prefix):
     offset = fsc_source_cursor_offset(cursor)
     return (is_fsc_source_cursor_file_prefix(cursor, prefix, 0) if is_fsc_source_cursor_file(cursor) else is_fsc_find_string_at_len(fsc_source_cursor_source(cursor), prefix, fsc_source_cursor_source_len(cursor), str_len(prefix), offset, 0))
 
 def is_fsc_source_cursor_file_prefix(cursor, prefix, j):
-    if (j == str_len(prefix)):
-        return True
-    else:
-        if ((fsc_source_cursor_offset(cursor) + j) >= fsc_source_cursor_source_len(cursor)):
-            return False
+    while True:
+        if (j == str_len(prefix)):
+            return True
         else:
-            if (file_byte_at(fsc_source_cursor_source(cursor), (fsc_source_cursor_offset(cursor) + j)) == ord(char_at(prefix, j))):
-                return is_fsc_source_cursor_file_prefix(cursor, prefix, (j + 1))
-            else:
+            if ((fsc_source_cursor_offset(cursor) + j) >= fsc_source_cursor_source_len(cursor)):
                 return False
+            else:
+                if (file_byte_at(fsc_source_cursor_source(cursor), (fsc_source_cursor_offset(cursor) + j)) == ord(char_at(prefix, j))):
+                    cursor, prefix, j = cursor, prefix, (j + 1)
+                    continue
+                else:
+                    return False
 
 def fsc_source_match_op(cursor, ops):
-    if is_nil(ops):
-        return fsc_source_cursor_char(cursor)
-    else:
-        if is_fsc_source_cursor_prefix(cursor, ops[0]):
-            return ops[0]
+    while True:
+        if is_nil(ops):
+            return fsc_source_cursor_char(cursor)
         else:
-            return fsc_source_match_op(cursor, ops[1:])
+            if is_fsc_source_cursor_prefix(cursor, ops[0]):
+                return ops[0]
+            else:
+                cursor, ops = cursor, ops[1:]
+                continue
 
 def fsc_source_scan_op(start, op_kind, ops):
     value = fsc_source_match_op(start, ops)
@@ -817,13 +853,15 @@ def form_action_bmf_rules(_x):
     return [['ident', fsc_action_name('name'), fsc_action_emit_ident, bmf_identity_inverse, fsc_action_source_span], ['int', fsc_action_int('value'), fsc_action_emit_int, bmf_identity_inverse, fsc_action_source_span], ['string', fsc_action_string('value'), fsc_action_emit_string, bmf_identity_inverse, fsc_action_source_span], ['call', ['sequence', fsc_action_name('name'), fsc_action_args('args')], fsc_action_emit_call, bmf_identity_inverse, fsc_action_source_span], ['if', ['sequence', fsc_action_kw('if'), fsc_action_expr('cond'), fsc_action_kw('then'), fsc_action_expr('yes'), fsc_action_kw('else'), fsc_action_expr('no')], fsc_action_emit_if, bmf_identity_inverse, fsc_action_source_span], ['let', ['sequence', fsc_action_kw('let'), fsc_action_name('name'), fsc_action_op('='), fsc_action_expr('value'), fsc_action_op(';')], fsc_action_emit_let, bmf_identity_inverse, fsc_action_source_span], ['def', ['sequence', fsc_action_kw('def'), fsc_action_name('name'), fsc_action_params('params'), fsc_action_op('='), fsc_action_expr('body'), fsc_action_op(';')], fsc_action_emit_def, bmf_identity_inverse, fsc_action_source_span], ['do', ['sequence', fsc_action_kw('do'), fsc_action_items('items')], fsc_action_emit_do, bmf_identity_inverse, fsc_action_source_span]]
 
 def form_action_bmf_find_rule(name, rules):
-    if is_nil(rules):
-        return empty()
-    else:
-        if str_eq(rule_name(rules[0]), name):
-            return rules[0]
+    while True:
+        if is_nil(rules):
+            return empty()
         else:
-            return form_action_bmf_find_rule(name, rules[1:])
+            if str_eq(rule_name(rules[0]), name):
+                return rules[0]
+            else:
+                name, rules = name, rules[1:]
+                continue
 
 def apply_form_action_bmf_rule(rule_name, objects):
     return apply_object_rule(form_action_bmf_find_rule(rule_name, form_action_bmf_rules(0)), objects)
@@ -982,12 +1020,14 @@ def fsc_repo_text_line(offset, length, start_line, start_col, end_line, end_col)
     return intern_node(FSC_REPO_TEXT_LINE, [intern_trivial_int(offset), intern_trivial_int(length), intern_trivial_int(start_line), intern_trivial_int(start_col), intern_trivial_int(end_line), intern_trivial_int(end_col)])
 
 def fsc_repo_text_lines_loop(text, text_len, start, line, acc):
-    if (start >= text_len):
-        return intern_node(FSC_REPO_TEXT_LINES, reverse(([fsc_repo_text_line(0, 0, 1, 0, 1, 0), *acc] if (text_len == 0) else acc)))
-    else:
-        end = fsc_line_end(text, start)
-        next = fsc_line_next(text, start)
-        return fsc_repo_text_lines_loop(text, text_len, next, (line + 1), [fsc_repo_text_line(start, (end - start), line, 0, line, (end - start)), *acc])
+    while True:
+        if (start >= text_len):
+            return intern_node(FSC_REPO_TEXT_LINES, reverse(([fsc_repo_text_line(0, 0, 1, 0, 1, 0), *acc] if (text_len == 0) else acc)))
+        else:
+            end = fsc_line_end(text, start)
+            next = fsc_line_next(text, start)
+            text, text_len, start, line, acc = text, text_len, next, (line + 1), [fsc_repo_text_line(start, (end - start), line, 0, line, (end - start)), *acc]
+            continue
 
 def fsc_repo_text_lines(text):
     return fsc_repo_text_lines_loop(text, str_len(text), 0, 1, empty())

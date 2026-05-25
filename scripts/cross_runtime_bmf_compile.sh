@@ -22,9 +22,12 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Bump stack so the emitted Python's head/tail recursion can reach engine.fk
-# depth without tripping. Same shape as the form kernel raises its own stack.
-ulimit -s 65536 2>/dev/null || true
+# Stack: the emitter lifts tail-recursive head/tail walks to `while True:`
+# loops (see kernels/python_bmf/emit_python.py `_is_tail_recursive`), so the
+# emitted Python no longer needs a giant stack to reach engine.fk depth. The
+# default soft limit suffices; we leave a modest bump as cushion for the
+# remaining non-tail recursion in tree walkers.
+ulimit -s 8192 2>/dev/null || true
 
 # Graduated workloads: tiny → small → medium → large.
 # Each exercises a different part of the source compiler's reach.

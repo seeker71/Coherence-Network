@@ -71,13 +71,15 @@ def form_source_sections(src):
     return cell_value(src)[1]
 
 def form_source_section_by_dialect_list(sections, dialect):
-    if is_nil(sections):
-        return empty()
-    else:
-        if str_eq(form_section_dialect(sections[0]), dialect):
-            return sections[0]
+    while True:
+        if is_nil(sections):
+            return empty()
         else:
-            return form_source_section_by_dialect_list(sections[1:], dialect)
+            if str_eq(form_section_dialect(sections[0]), dialect):
+                return sections[0]
+            else:
+                sections, dialect = sections[1:], dialect
+                continue
 
 def form_source_section_by_dialect(src, dialect):
     return form_source_section_by_dialect_list(form_source_sections(src), dialect)
@@ -358,13 +360,15 @@ def bmf_compiler_rule_name(r):
     return r[0]
 
 def bmf_compiler_find_rule(rule_name, rules):
-    if is_nil(rules):
-        return empty()
-    else:
-        if str_eq(bmf_compiler_rule_name(rules[0]), rule_name):
-            return rules[0]
+    while True:
+        if is_nil(rules):
+            return empty()
         else:
-            return bmf_compiler_find_rule(rule_name, rules[1:])
+            if str_eq(bmf_compiler_rule_name(rules[0]), rule_name):
+                return rules[0]
+            else:
+                rule_name, rules = rule_name, rules[1:]
+                continue
 
 def is_bmf_compiler_has_rule(rule_name):
     if is_nil(bmf_compiler_find_rule(rule_name, bmf_compiler_rules)):
