@@ -1398,6 +1398,82 @@
                   (py-op ":")
                   (py-keyword "pass"))))
 
+    (defn pybmf-emit-class-no-base (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name"))))
+
+    (defn pybmf-source-class-no-base (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-base2 (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "base_a")
+                           (pybmf-trivial-string objects "base_b"))))
+
+    (defn pybmf-source-class-base2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-base3 (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "base_a")
+                           (pybmf-trivial-string objects "base_b")
+                           (pybmf-trivial-string objects "base_c"))))
+
+    (defn pybmf-source-class-base3 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-kwbase-metaclass (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "meta_key")
+                                              (pybmf-trivial-string objects "meta_value"))))))
+
+    (defn pybmf-source-class-kwbase-metaclass (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let meta-kids (node_children (nth kids 1)))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth meta-kids 0)))
+                  (py-op "=")
+                  (py-name (node_value (nth meta-kids 1)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
     (defn pybmf-emit-decorator (objects)
         (intern_node PY-BMF-DECORATOR
                      (list (pybmf-trivial-string objects "name"))))
@@ -2130,6 +2206,10 @@
     walrus-ident ::= $target:name ":=" $value:name => pybmf-emit-walrus-ident <= pybmf-source-walrus-ident;
     if-walrus-pass ::= "if" $target:name ":=" $value:name ":" "pass" => pybmf-emit-if-walrus-pass <= pybmf-source-if-walrus-pass;
     class-base ::= "class" $name:name "(" $base:name ")" ":" "pass" => pybmf-emit-class-base <= pybmf-source-class-base;
+    class-no-base ::= "class" $name:name "(" ")" ":" "pass" => pybmf-emit-class-no-base <= pybmf-source-class-no-base;
+    class-base2 ::= "class" $name:name "(" $base_a:name "," $base_b:name ")" ":" "pass" => pybmf-emit-class-base2 <= pybmf-source-class-base2;
+    class-base3 ::= "class" $name:name "(" $base_a:name "," $base_b:name "," $base_c:name ")" ":" "pass" => pybmf-emit-class-base3 <= pybmf-source-class-base3;
+    class-kwbase-metaclass ::= "class" $name:name "(" $meta_key:name "=" $meta_value:name ")" ":" "pass" => pybmf-emit-class-kwbase-metaclass <= pybmf-source-class-kwbase-metaclass;
     decorated-class-base ::= "@" $decorator:name "class" $name:name "(" $base:name ")" ":" "pass" => pybmf-emit-decorated-class-base <= pybmf-source-decorated-class-base;
     bool-true ::= "True" => pybmf-emit-bool-true;
     bool-false ::= "False" => pybmf-emit-bool-false;
