@@ -38,7 +38,7 @@ Urs named it directly when reviewing the `python-trace` demo on 2026-05-21:
 
 > *the parser is in .ts? the grammar needs to be in form with a form recipe. we don't want a demo, we want the real thing, with full end-to-end support for the full language.*
 
-The demo had shown real Python (24,022 CTOR dispatches) running through the BMF parser through the kernel's evaluator with full Blueprint attribution. The work was real; the architecture was not. The parser was hand-written TypeScript ([`lang-python.ts`](../../../form/form-kernel-ts/src/lang-python.ts), ~2000 lines of host code that does Python parsing). That doesn't meet the body's discipline.
+The demo had shown real Python (24,022 CTOR dispatches) running through the BMF parser through the kernel's evaluator with full Blueprint attribution. The work was real; the architecture was not. The parser was hand-written TypeScript ([`lang-python.ts`](../../../experiments/form-kernel-ts/src/lang-python.ts), ~2000 lines of host code that does Python parsing). That doesn't meet the body's discipline.
 
 This concept names the full path from where we are to where the parser belongs.
 

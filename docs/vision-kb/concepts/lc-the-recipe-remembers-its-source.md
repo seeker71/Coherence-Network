@@ -51,7 +51,7 @@ Three load-bearing claims:
 
 - **Source attribution is the parallel plane**, not a comment in the
   margin. The framebuffer crate
-  ([`seedbank/memory-as-framebuffer-v0/`](../../../seedbank/memory-as-framebuffer-v0/))
+  ([`experiments/memory-as-framebuffer-v0/`](../../../experiments/memory-as-framebuffer-v0/))
   encodes the same shape at the memory altitude: a 256×256 data plane
   AND a 256×256 provenance plane, stored side-by-side, rendered
   together. Same architecture, one altitude up: a recipe tree AND its
@@ -87,7 +87,7 @@ The principle has a working ancestor in the body:
 > shows both *what* the cell holds and *where in source it was last
 > written*.
 
-(From [memory-as-framebuffer-v0/README.md](../../../seedbank/memory-as-framebuffer-v0/README.md).)
+(From [memory-as-framebuffer-v0/README.md](../../../experiments/memory-as-framebuffer-v0/README.md).)
 
 The `track!(field, expr)` macro stamps `crc32(file:line)` automatically
 on every write. The cell never has to remember to attribute; the macro
@@ -227,7 +227,7 @@ For cells consuming recipes:
 
 ## Sources to walk further
 
-- **[`seedbank/memory-as-framebuffer-v0/`](../../../seedbank/memory-as-framebuffer-v0/)** —
+- **[`experiments/memory-as-framebuffer-v0/`](../../../experiments/memory-as-framebuffer-v0/)** —
   the body's own ancestor: a Rust crate that holds memory cells with
   parallel provenance plane, renders both to mp4 frames at 60 fps.
   The `track!` macro stamps `crc32(file:line)` on every write.
