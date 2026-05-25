@@ -205,6 +205,21 @@ function nodeFromKey(key: string): NodeID {
 
 export type NativeFn = (k: Kernel, args: Value[]) => Value;
 
+// EnvAwareNativeFn — natives that need the caller's env (walk_recipe_here).
+// Separate registry path to avoid changing the NativeFn signature across
+// every existing native.
+export type EnvAwareNativeFn = (
+  k: Kernel,
+  env: Frame,
+  args: Value[],
+) => Value;
+
+export interface EnvAwareNativeEntry {
+  readonly name: NameID;
+  readonly category: NodeID;
+  readonly fn: EnvAwareNativeFn;
+}
+
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
 // through a native, the trace records the category alongside the FNCALL
@@ -467,6 +482,7 @@ export class Kernel {
   // Lookup is u32-keyed. The category lets the walker record which
   // Form-shape a native expresses, alongside the FNCALL arm.
   natives = new Map<NameID, NativeEntry>();
+  envNatives = new Map<NameID, EnvAwareNativeEntry>();
 
   // Optional tracing — undefined for hot-path runs, set by trace
   // subcommand. Sibling-parity with Go/Rust kernels.
@@ -970,6 +986,15 @@ export class Kernel {
     this.natives.set(id, { name: id, category, fn });
   }
 
+  private registerEnvNative(
+    name: string,
+    category: NodeID,
+    fn: EnvAwareNativeFn,
+  ): void {
+    const id = this.internName(name);
+    this.envNatives.set(id, { name: id, category, fn });
+  }
+
   // setNative — public registration helper for language adapters that
   // need to extend the native map. Default category is UNDEFINED
   // (honest about unsettled Form attribution); pass an explicit category
@@ -1401,6 +1426,12 @@ export class Kernel {
     });
     this.registerNative("walk_recipe", catWitness(), (k, args) =>
       walk(k, argNodeID(args, 0), new Frame(null)),
+    );
+    // walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+    // bindings inside the Recipe land in the caller's scope. Matches
+    // the Go and Rust kernels' env-aware variant.
+    this.registerEnvNative("walk_recipe_here", catWitness(), (k, env, args) =>
+      walk(k, argNodeID(args, 0), env),
     );
     const walkParallel: NativeFn = (k, args) => {
       const roots = argList(args, 0).map((value) => {
@@ -2419,6 +2450,19 @@ function walkFnCall(
   }
 
   if (calleeName !== null) {
+    // Env-aware natives first — need the caller's env (walk_recipe_here).
+    const envNe = k.envNatives.get(calleeName);
+    if (envNe !== undefined && frame.lookup(calleeName) === undefined) {
+      const envArgs: Value[] = [];
+      for (let i = 1; i < kids.length; i++) {
+        envArgs.push(walk(k, kids[i]!, frame));
+      }
+      if (envNe.category.type !== RBasic.UNDEFINED) {
+        k.trace?.record(envNe.category.type, envNe.category.inst);
+      }
+      k.trace?.recordNative(k.nameStr(envNe.name));
+      return envNe.fn(k, frame, envArgs);
+    }
     // Native dispatch
     const ne = k.natives.get(calleeName);
     if (ne !== undefined) {
