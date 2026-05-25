@@ -1498,6 +1498,80 @@
                   (py-name (node_value (nth kids 1)))
                   (py-op ")"))))
 
+    (defn pybmf-emit-decorator-dotted (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr"))))
+
+    (defn pybmf-source-decorator-dotted (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-emit-decorator-call0 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name"))))
+
+    (defn pybmf-source-decorator-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-call2 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "arg1")
+                           (pybmf-trivial-string objects "arg2"))))
+
+    (defn pybmf-source-decorator-call2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-dotted-call0 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr"))))
+
+    (defn pybmf-source-decorator-dotted-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-dotted-call1 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-decorator-dotted-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-decorated-def (objects)
         (intern_node PY-BMF-DEF
                      (list (intern_node PY-BMF-DECORATOR
@@ -2216,6 +2290,11 @@
     from-import-star ::= "from" $module:name "import" "*" => pybmf-emit-from-import-star <= pybmf-source-from-import-star;
     decorator ::= "@" $name:name => pybmf-emit-decorator <= pybmf-source-decorator;
     decorator-call1 ::= "@" $name:name "(" $arg:name ")" => pybmf-emit-decorator-call1 <= pybmf-source-decorator-call1;
+    decorator-dotted ::= "@" $name:name "." $attr:name => pybmf-emit-decorator-dotted <= pybmf-source-decorator-dotted;
+    decorator-call0 ::= "@" $name:name "(" ")" => pybmf-emit-decorator-call0 <= pybmf-source-decorator-call0;
+    decorator-call2 ::= "@" $name:name "(" $arg1:name "," $arg2:name ")" => pybmf-emit-decorator-call2 <= pybmf-source-decorator-call2;
+    decorator-dotted-call0 ::= "@" $name:name "." $attr:name "(" ")" => pybmf-emit-decorator-dotted-call0 <= pybmf-source-decorator-dotted-call0;
+    decorator-dotted-call1 ::= "@" $name:name "." $attr:name "(" $arg:name ")" => pybmf-emit-decorator-dotted-call1 <= pybmf-source-decorator-dotted-call1;
     decorated-def ::= "@" $decorator:name "def" $name:name "(" ")" ":" => pybmf-emit-decorated-def <= pybmf-source-decorated-def;
     def ::= "def" $name:name "(" ")" ":" => pybmf-emit-def <= pybmf-source-def;
     def2 ::= "def" $name:name "(" $a:name "," $b:name ")" ":" => pybmf-emit-def2 <= pybmf-source-def2;
