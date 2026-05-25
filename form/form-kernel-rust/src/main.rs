@@ -1309,6 +1309,15 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        self.register_native("read_form_binary", cat_call(), |k, _, args| {
+            match fs::read(args[0].as_str()) {
+                Ok(bytes) => match deserialize_artifact(k, &bytes) {
+                    Ok(root) => Value::Nid(root),
+                    Err(_) => Value::Null,
+                },
+                Err(_) => Value::Null,
+            }
+        });
         self.register_native("file_size", cat_call(), |_, _, args| {
             match fs::metadata(args[0].as_str()) {
                 Ok(meta) => Value::Int(meta.len() as i64),
@@ -1412,6 +1421,18 @@ impl Kernel {
         });
         self.register_native("node_value", cat_witness(), |k, _, args| {
             k.trivial_value(args[0].as_nid())
+        });
+        self.register_native("node_pkg", cat_witness(), |_, _, args| {
+            Value::Int(args[0].as_nid().pkg as i64)
+        });
+        self.register_native("node_level", cat_witness(), |_, _, args| {
+            Value::Int(args[0].as_nid().level as i64)
+        });
+        self.register_native("node_type", cat_witness(), |_, _, args| {
+            Value::Int(args[0].as_nid().ty as i64)
+        });
+        self.register_native("node_inst", cat_witness(), |_, _, args| {
+            Value::Int(args[0].as_nid().inst as i64)
         });
         // node_eq — compare two NodeIDs structurally without coercing to int.
         // The kernel's `eq` (RCMP_EQ) does as_int on both operands, which
