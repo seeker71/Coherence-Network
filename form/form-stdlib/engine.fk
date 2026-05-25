@@ -1069,9 +1069,12 @@
             (form-adapter-registry-capsules registry)))
 
     (defn form-adapter-capability-matches? (capability kind input-surface output-surface)
-        (and (node_eq (form-adapter-capability-kind capability) kind)
-             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
-                  (node_eq (form-adapter-capability-output-surface capability) output-surface))))
+        ;; kind/input-surface/output-surface — polymorphic, same as
+        ;; bmf-symbol-binding's domain/lens: tests pass them as either
+        ;; typed NodeIDs or string literals. value_eq holds both shapes.
+        (and (value_eq (form-adapter-capability-kind capability) kind)
+             (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
+                  (value_eq (form-adapter-capability-output-surface capability) output-surface))))
 
     (defn form-adapter-capability-score (capability kind input-surface output-surface ctx)
         (if (form-adapter-capability-matches? capability kind input-surface output-surface)
@@ -1165,14 +1168,16 @@
                         (parse source ctx))))))
 
     (defn form-adapter-capability-starts? (capability kind input-surface ctx)
-        (and (node_eq (form-adapter-capability-kind capability) kind)
-             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+        ;; kind/input-surface — polymorphic, see form-adapter-capability-matches?.
+        (and (value_eq (form-adapter-capability-kind capability) kind)
+             (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
                   (bmf-context-properties-match?
                     ctx
                     (form-adapter-capability-requirements capability)))))
 
     (defn form-adapter-capability-input-ready? (capability input-surface ctx)
-        (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+        ;; input-surface — polymorphic, see form-adapter-capability-matches?.
+        (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
              (bmf-context-properties-match?
                 ctx
                 (form-adapter-capability-requirements capability))))
@@ -1236,7 +1241,8 @@
     (defn form-adapter-plan-from-capabilities
         (capabilities kinds input-surface output-surface ctx missing)
         (if (nil? kinds)
-            (if (node_eq input-surface output-surface)
+            ;; surfaces — polymorphic, may be NodeIDs OR strings.
+            (if (value_eq input-surface output-surface)
                 (form-adapter-plan (empty))
                 missing)
             (form-adapter-plan-search
@@ -1294,7 +1300,8 @@
 
     (defn form-adapter-flex-plan-from-capabilities
         (capabilities input-surface output-surface ctx depth missing)
-        (if (node_eq input-surface output-surface)
+        ;; surfaces — polymorphic, see form-adapter-plan-from-capabilities.
+        (if (value_eq input-surface output-surface)
             (form-adapter-plan (empty))
             (if (lt depth 1)
                 missing
