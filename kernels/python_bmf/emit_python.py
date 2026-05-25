@@ -142,10 +142,54 @@ def parse_fk(text: str) -> list[Sexpr]:
 
 
 BIN_OP = {
-    "_plus": "+", "sub": "-", "mul": "*", "div": "/", "mod": "%",
+    # The two Python-pipeline operator-marker names from lang-python-fk.ts:
+    "_plus": "+",
+    # The Form kernel's plain math natives (Form sources call these as
+    # ordinary functions: `(add a b)`, `(sub a b)` ...). Translating them
+    # to native Python operators makes the emitted code readable.
+    "add": "+", "sub": "-", "mul": "*", "div": "/", "mod": "%",
+    # comparisons
     "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "eq": "==", "ne": "!=",
+    # boolean
     "and": "and", "or": "or",
 }
+
+# Form identifier conventions → valid Python identifiers.
+# `foo-bar`  → `foo_bar`     (Lisp-style hyphens become underscores)
+# `foo?`     → `is_foo`      (predicate suffix becomes is_ prefix)
+# `foo!`     → `foo_bang`    (mutation suffix marker)
+# `*foo*`    → `_FOO_`       (Lisp earmuffs for globals)
+# Keywords/digits that would collide with Python builtins or syntax get an
+# `_` suffix.
+
+import keyword as _kw
+
+
+def py_ident(name: str) -> str:
+    # Form-only sentinels we keep as-is (operator names handled elsewhere).
+    if name in BIN_OP or name in UNARY_OP:
+        return name
+    raw = name
+    # earmuffs *foo* → _FOO_ (uppercase signals "global" in Python convention)
+    if len(raw) >= 3 and raw.startswith("*") and raw.endswith("*"):
+        return "_" + raw[1:-1].upper().replace("-", "_") + "_"
+    # predicate suffix `foo?` or `foo-bar?` → `is_foo` / `is_foo_bar`
+    if raw.endswith("?"):
+        base = raw[:-1].replace("-", "_").replace(".", "_")
+        return f"is_{base}" if not base.startswith("is_") else base
+    # mutation marker `foo!` → `foo_bang`
+    if raw.endswith("!"):
+        return raw[:-1].replace("-", "_") + "_bang"
+    # general: hyphens → underscores, dots → underscores
+    out = raw.replace("-", "_").replace(".", "_").replace("/", "_")
+    # Python identifier rules: can't start with digit; can't be a keyword.
+    if out and out[0].isdigit():
+        out = "_" + out
+    if _kw.iskeyword(out):
+        out = out + "_"
+    # Replace any remaining non-identifier char with `_`.
+    out = "".join(c if (c.isalnum() or c == "_") else "_" for c in out)
+    return out or "_"
 UNARY_OP = {"not": "not "}
 LIST_PRIMS = {
     "list": "list",
@@ -153,6 +197,31 @@ LIST_PRIMS = {
     "nth": "nth", "cons": "cons",
     "min": "min", "max": "max", "abs": "abs",
     "sum": "sum", "range": "range",
+}
+
+# Form/kernel host primitives that need Python-side stubs to make the emitted
+# code runnable. We keep them as identifiers — they bind to substrate SDK
+# helpers at import time (see sdk.py / objects.py). Translation preserves
+# the symbolic name with Python identifier conventions applied.
+HOST_PRIMS = {
+    # cells / objects
+    "cell", "cell?", "cell-kind", "cell-value", "cell-origin", "cell-undo",
+    "cell-inverse",
+    # strings
+    "str_concat", "str_eq", "str_len", "substring", "char_at", "str_to_int",
+    "str_to_float",
+    # arithmetic helpers
+    "add", "sub", "mul", "div", "mod",
+    # node ids
+    "make_nodeid", "intern_node", "intern_trivial_int", "intern_trivial_string",
+    # file io
+    "read_file", "write_file_text", "write_file_bytes", "file_size",
+    # list / collection
+    "empty", "nil?", "head", "tail", "list", "nth", "cons", "append",
+    "reverse-list", "len",
+    # bmf
+    "bmf-object", "bmf-object?", "bmf-object-kind", "bmf-object-value",
+    "bmf-collection", "bmf-collection-items",
 }
 
 
@@ -228,10 +297,9 @@ class PythonEmitter:
 
     def _emit_defn(self, form: list) -> None:
         # (defn name (params...) body)
-        name = form[1].name
-        params = " ".join(p.name for p in form[2]) if form[2] else ""
-        params_py = ", ".join(p.name for p in form[2]) if form[2] else ""
-        body = form[3]
+        name = py_ident(form[1].name)
+        params_py = ", ".join(py_ident(p.name) for p in form[2]) if form[2] else ""
+        body = form[3] if len(form) > 3 else 0
         self.line(f"def {name}({params_py}):")
         self.indent += 1
         self._emit_function_body(body)
@@ -267,7 +335,7 @@ class PythonEmitter:
         if isinstance(form, list) and form:
             head = form[0]
             if is_sym(head, "let"):
-                name = form[1].name
+                name = py_ident(form[1].name)
                 value = self._emit_expr(form[2])
                 self.line(f"{name} = {value}")
                 return
@@ -301,10 +369,10 @@ class PythonEmitter:
         if isinstance(form, int):
             return str(form)
         if isinstance(form, str):
-            escaped = form.replace("\\", "\\\\").replace('"', '\\"')
-            return f'"{escaped}"'
+            # repr() handles \n, \t, \r, \", \\, control chars correctly.
+            return repr(form)
         if isinstance(form, Sym):
-            return form.name
+            return py_ident(form.name)
         if not isinstance(form, list) or not form:
             raise UnsupportedForm(f"empty/unknown: {form!r}")
         head = form[0]
@@ -312,14 +380,18 @@ class PythonEmitter:
             raise UnsupportedForm(f"non-symbol head: {head!r}")
         op = head.name
         if op == "do":
-            # Expression-position `(do s1 ... sn)` — Python doesn't have a
-            # do-block expression; use a tuple-and-last idiom or lift via
-            # walrus. For now we accept that nested do in expr position is
-            # rare in real Form output, and let the body emitter split it.
+            # Expression-position `(do s1 ... sn)`: Form returns the value
+            # of `sn`. Python has no block-expression; we lift via tuple +
+            # `[-1]`. `(let x v)` children become walrus expressions, which
+            # is the natural Python way to introduce a binding inside an
+            # expression. The shape stays readable: `((x := v), (y := w), final)[-1]`.
             inner = form[1:]
+            if not inner:
+                return "None"
             if len(inner) == 1:
                 return self._emit_expr(inner[0])
-            raise UnsupportedForm("do-block in expression position needs lifting")
+            parts = ", ".join(self._emit_expr(x) for x in inner)
+            return f"({parts})[-1]"
         if op == "if":
             cond = self._emit_expr(form[1])
             then_ = self._emit_expr(form[2])
@@ -327,7 +399,7 @@ class PythonEmitter:
             return f"({then_} if {cond} else {else_})"
         if op == "let":
             # In expr position, surface a walrus.
-            name = form[1].name
+            name = py_ident(form[1].name)
             return f"({name} := {self._emit_expr(form[2])})"
         if op in BIN_OP:
             left = self._emit_expr(form[1])
@@ -351,7 +423,7 @@ class PythonEmitter:
             return f"{LIST_PRIMS[op]}({args})"
         # default: function call (Form's apply shape: (callee arg1 arg2 ...))
         args = ", ".join(self._emit_expr(a) for a in form[1:])
-        return f"{op}({args})"
+        return f"{py_ident(op)}({args})"
 
 
 def is_sym(form: Sexpr, name: str) -> bool:
