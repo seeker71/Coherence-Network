@@ -26,14 +26,6 @@
 
 (do
     ;; ──────────────────────────────────────────────────────────────────
-    ;; string slicing
-    ;; ──────────────────────────────────────────────────────────────────
-
-    (defn substr (s a b)
-        (if (ge a b) ""
-            (str_concat (char_at s a) (substr s (add a 1) b))))
-
-    ;; ──────────────────────────────────────────────────────────────────
     ;; character predicates (codepoint-level)
     ;; ──────────────────────────────────────────────────────────────────
 
@@ -57,13 +49,13 @@
     (defn trim-leading-ws (s)
         (if (eq (str_len s) 0) s
             (if (is-ws-cp (ord (char_at s 0)))
-                (trim-leading-ws (substr s 1 (str_len s)))
+                (trim-leading-ws (substring s 1 (str_len s)))
                 s)))
 
     (defn trim-trailing-ws (s)
         (if (eq (str_len s) 0) s
             (if (is-ws-cp (ord (char_at s (sub (str_len s) 1))))
-                (trim-trailing-ws (substr s 0 (sub (str_len s) 1)))
+                (trim-trailing-ws (substring s 0 (sub (str_len s) 1)))
                 s)))
 
     (defn trim (s) (trim-leading-ws (trim-trailing-ws s)))
@@ -87,11 +79,11 @@
     (defn lines-loop (s i start line acc)
         (if (eq i (str_len s))
             (if (gt i start)
-                (reverse-acc (cons (list (substr s start i) line) acc))
+                (reverse-acc (cons (list (substring s start i) line) acc))
                 (reverse-acc acc))
             (if (eq (ord (char_at s i)) 10)
                 (lines-loop s (add i 1) (add i 1) (add line 1)
-                            (cons (list (substr s start i) line) acc))
+                            (cons (list (substring s start i) line) acc))
                 (lines-loop s (add i 1) start line acc))))
 
     (defn line-text (ln) (head ln))
@@ -103,7 +95,7 @@
 
     (defn starts-with? (text prefix)
         (if (lt (str_len text) (str_len prefix)) false
-            (str_eq (substr text 0 (str_len prefix)) prefix)))
+            (str_eq (substring text 0 (str_len prefix)) prefix)))
 
     ;; starts-with-keyword? — like starts-with? but requires that the
     ;; character immediately after the prefix is whitespace, so we don't
@@ -115,7 +107,7 @@
                   (is-ws-cp (ord (char_at text (str_len kw)))))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; substring search
+    ;; substringing search
     ;; ──────────────────────────────────────────────────────────────────
 
     (defn find-from (s needle start)
@@ -123,11 +115,11 @@
 
     (defn find-loop (s needle i)
         (if (gt (add i (str_len needle)) (str_len s)) (sub 0 1)
-            (if (str_eq (substr s i (add i (str_len needle))) needle) i
+            (if (str_eq (substring s i (add i (str_len needle))) needle) i
                 (find-loop s needle (add i 1)))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; split on substring
+    ;; split on substringing
     ;; ──────────────────────────────────────────────────────────────────
     ;; Splits text on every occurrence of sep. Empty leading/trailing
     ;; pieces are preserved (matches Python's str.split semantics).
@@ -139,9 +131,9 @@
         (do
             (let pos (find-from s sep i))
             (if (lt pos 0)
-                (reverse-acc (cons (substr s i (str_len s)) acc))
+                (reverse-acc (cons (substring s i (str_len s)) acc))
                 (split-on-loop s sep (add pos (str_len sep))
-                                (cons (substr s i pos) acc)))))
+                                (cons (substring s i pos) acc)))))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; pick-min: smallest non-negative value, with fallback
