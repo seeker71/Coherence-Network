@@ -1,0 +1,34 @@
+; emits/python-bmf-scan-driver.fk — Form-side scanner output for cross-runtime parity
+;
+; Reads a Python source file via the Form-native scanner
+; (python-source-scan-file in python-bmf.fk), serializes the token
+; stream to a text file as one `kind\tvalue\n` line per token.
+;
+; The emitted Python compiler (kernels/python_bmf/parser.py) produces
+; the same shape via `dump_tokens()`. Diffing the two files surfaces
+; any scanner-level divergence between runtimes — the first cross-runtime
+; parity proof on the way to a full .fkb comparison.
+;
+; Run via form/scripts/cross_runtime_parity.sh — that script invokes
+; this driver with PY_SRC and OUT_PATH env vars baked in.
+
+(do
+    ;; Helpers — render each scanned object as `kind\tvalue\n`.
+
+    (defn pn-render-token (object)
+        (str_concat (bmf-object-kind object)
+            (str_concat "\t"
+                (str_concat (bmf-object-value object) "\n"))))
+
+    (defn pn-render-tokens-loop (objects)
+        (if (nil? objects) ""
+            (str_concat (pn-render-token (head objects))
+                        (pn-render-tokens-loop (tail objects)))))
+
+    (defn pn-dump-tokens (path out-path)
+        (do
+            (let objects (python-source-scan-file path))
+            (write_file_text out-path (pn-render-tokens-loop objects))
+            (len objects)))
+
+    0)

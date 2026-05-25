@@ -73,6 +73,26 @@ The emitted compiler compiles its own .py files and decompiles back to Python. S
 
 - **fixed in compiler.py via `statement-occurrence`** — wraps each rule emit with a span-bearing parent so two occurrences of `return n` at different lines stay distinct. The fix is one indirection layer; a cleaner shape would have `intern` accept an explicit occurrence/span axis. Next breath: SDK addition.
 
+## Cross-runtime parity (Form-native vs emitted Python)
+
+`form/scripts/cross_runtime_parity.sh <python_source>` runs both runtimes on the same file and diffs the token streams (`py-blank` excluded as additive Python-side feature; quote-style suffixes collapsed).
+
+| Workload | Scanner parity |
+|----------|---------------|
+| All 8 parity-suite demos | **PARITY** — identical token streams |
+| `kernels/python_bmf/objects.py` | **PARITY** |
+| `kernels/python_bmf/parser.py` | diverges — features Python-side has, Form-side doesn't |
+| `kernels/python_bmf/rules.py` | diverges |
+| `kernels/python_bmf/sdk.py` | diverges |
+| `kernels/python_bmf/decompiler.py` | diverges — string escape preservation |
+| `kernels/python_bmf/form_action.py` | diverges — string escape preservation (`\n` → `n` on Form side) |
+| `kernels/python_bmf/section_parser.py` | diverges |
+| `kernels/python_bmf/compiler.py` | diverges |
+
+**The divergences are mostly features Python-side gained that Form-side doesn't yet have**: backslash-escape preservation in string scanning, quote-style tagging, triple-quoted variants. These are next-breath candidates for the Form-side scanner (extend `python-source-scan-string-loop` in `python-bmf.fk` to preserve `\`).
+
+This IS the cross-runtime learning loop the Universal Translator goal names: each divergence shows what one runtime has that the other doesn't, what to bring across.
+
 ## Larger gaps to face
 
 - **Bidirectional rule definition** — Form's `python-bmf.fk` rules carry both `=>` (emit) and `<=` (source) — the inverse. The Python rules only have `forward`. Next breath: add `reverse` to every rule; check round-trip uses reverse path.
