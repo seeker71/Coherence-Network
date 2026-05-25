@@ -123,6 +123,9 @@ def _skip_trivia(c, comment_sink=None):
 
 
 def _scan_string(c, kind="py-string"):
+    """Scan a string. Triple-quoted variants get '-triple' appended to kind
+    so the decompiler can re-render them with the original triple-quote.
+    """
     start = c
     quote = c.char()
     triple = c.peek(1) == quote and c.peek(2) == quote
@@ -133,13 +136,25 @@ def _scan_string(c, kind="py-string"):
             if c.starts_with(quote * 3):
                 c = c.advance(3)
                 break
+            if c.char() == "\\":
+                body.append("\\")
+                c = c.advance()
+                if not c.at_end():
+                    body.append(c.char())
+                    c = c.advance()
+                continue
             body.append(c.char())
             c = c.advance()
-        return BmfAtom(kind, "".join(body), start.span_to(c)), c
+        triple_kind = kind + "-triple-" + ("sq" if quote == "'" else "dq")
+        return BmfAtom(triple_kind, "".join(body), start.span_to(c)), c
+    # Tag quote-style so decompiler can re-emit with the original quote.
+    kind_with_quote = kind + ("-sq" if quote == "'" else "-dq")
     c = c.advance()
     body = []
     while not c.at_end() and c.char() != quote:
         if c.char() == "\\":
+            # Preserve the backslash + the escaped character verbatim.
+            body.append("\\")
             c = c.advance()
             if not c.at_end():
                 body.append(c.char())
@@ -149,7 +164,7 @@ def _scan_string(c, kind="py-string"):
         c = c.advance()
     if not c.at_end():
         c = c.advance()
-    return BmfAtom(kind, "".join(body), start.span_to(c)), c
+    return BmfAtom(kind_with_quote, "".join(body), start.span_to(c)), c
 
 
 def _prefix_string_kind(prefix):
@@ -240,31 +255,44 @@ def scan_python_source(text, path="<source>", preserve_comments=True):
     `preserve_comments` (default True): emit py-comment atoms inline at
     the position they appeared, so layout + decompiler can re-render
     them. Set False to match the legacy comment-stripping behavior.
+
+    Blank lines emit as py-blank atoms (one per consecutive blank line)
+    so the decompiler can preserve them.
     """
     c = Cursor(text, path)
     atoms = []
+    last_line = 0
     while True:
         comment_sink = [] if preserve_comments else None
         atom, c = _scan_one(c, comment_sink)
         if comment_sink:
             atoms.extend(comment_sink)
+            last_line = comment_sink[-1].span.start_line
         if atom.kind == "py-eof":
             atoms.append(atom)
             return atoms
         if atom.kind == "py-op" and atom.value == "\n":
             continue
+        # Detect blank line gaps: more than one line jump between tokens.
+        if last_line and atom.span.start_line - last_line > 1:
+            blanks = atom.span.start_line - last_line - 1
+            for _ in range(blanks):
+                atoms.append(BmfAtom("py-blank", "", atom.span))
+        last_line = atom.span.end_line
         atoms.append(atom)
 
 
 def layout_objects(atoms):
     """Insert NEWLINE / INDENT / DEDENT / ENDMARKER. Mirror python-source-layout-objects.
 
-    Comments (py-comment atoms) preserve their column so the layout pass
-    can tag them as trailing (same line as prior code) vs leading (own line).
+    Tracks bracket depth — inside `(...)` / `[...]` / `{...}` newlines do
+    not emit NEWLINE/INDENT/DEDENT, so multi-line bracketed expressions
+    stay one statement (matching CPython's implicit line continuation).
     """
     out = []
     prev_line = 1
     indent_stack = [0]
+    bracket_depth = 0
     for atom in atoms:
         if atom.kind == "py-eof":
             while len(indent_stack) > 1:
@@ -272,18 +300,27 @@ def layout_objects(atoms):
                 out.append(py_layout("DEDENT"))
             out.append(py_layout("ENDMARKER"))
             continue
+        if atom.kind == "py-blank":
+            if bracket_depth == 0:
+                out.append(py_layout("NEWLINE"))
+                out.append(atom)
+            continue
         line = atom.span.start_line
         col = atom.span.start_col
-        if line > prev_line:
+        if line > prev_line and bracket_depth == 0:
             out.append(py_layout("NEWLINE"))
             while indent_stack and col < indent_stack[-1]:
                 indent_stack.pop()
                 out.append(py_layout("DEDENT"))
-            if col > indent_stack[-1] and atom.kind != "py-comment":
-                # Comments don't open new indent levels.
+            if col > indent_stack[-1] and atom.kind not in ("py-comment", "py-blank"):
                 indent_stack.append(col)
                 out.append(py_layout("INDENT"))
         out.append(atom)
+        if atom.kind == "py-op":
+            if atom.value in ("(", "[", "{"):
+                bracket_depth += 1
+            elif atom.value in (")", "]", "}"):
+                bracket_depth = max(0, bracket_depth - 1)
         prev_line = line
     return out
 

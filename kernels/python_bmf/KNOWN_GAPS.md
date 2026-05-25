@@ -21,17 +21,40 @@ Parity-suite demos in `form/form-kernel-ts/seedbank/python-adapter/examples/pyth
 
 **8/8 byte-equivalent** (whitespace-normalized — runs of spaces collapsed). Single-language Universal Translator Step 1 holds on these demos.
 
+## Self-round-trip (the real "full compiler" exercise)
+
+The emitted compiler compiles its own .py files and decompiles back to Python. Semantic equivalence (whitespace + blank-line + bracket-style normalized) is the bar; byte-identical is the deeper destination.
+
+| Module | Self-roundtrip (semantic) | Lines (decompiled) |
+|--------|--------------------------|--------------------|
+| `sdk.py` | ok | 267 |
+| `objects.py` | ok | 181 |
+| `parser.py` | ok | 423 |
+| `rules.py` | ok | 186 |
+| `section_parser.py` | ok | 102 |
+| `form_action.py` | ok | 185 |
+| `compiler.py` | ok | 181 |
+| `decompiler.py` | ok | 266 |
+
+**8/8 emitted modules round-trip semantically through themselves.** The native Python compiler can compile and decompile every file in its own package.
+
 ## Categorized gaps
 
 ### Scanner-side losses
 
-- ~~trailing `#` comments are stripped~~ — **fixed**: `_skip_trivia` accepts a `comment_sink` parameter; comments emit as `py-comment` atoms preserved through layout + decompiler.
-- **horizontal whitespace runs collapse** — multiple spaces between tokens collapse to one in decompiler. Original alignment (e.g. `xs = [1, 2, 3, 4, 5]` vs `xs=[1,2,3,4,5]`) lost. Next breath: preserve span-derived spacing in decompiler.
-- **string quote-style not preserved** — single-quoted and double-quoted strings both serialize as `"..."`. Next breath: tag `py-string` with quote variant.
+- ~~trailing `#` comments are stripped~~ — **fixed**: `_skip_trivia` accepts a `comment_sink`.
+- ~~string escape sequences (`\n`, `\t`, `\\`) stripped~~ — **fixed**: scanner preserves `\` + the escaped char verbatim in the body.
+- ~~string quote-style not preserved~~ — **fixed**: scanner tags strings with `-sq`/`-dq` and triple variants; decompiler restores original quote.
+- ~~triple-quoted strings collapse to single-quoted~~ — **fixed**: scanner emits `py-string-triple-sq|dq`; decompiler renders with `"""` / `'''`.
+- ~~multi-line bracket-continuation~~ — **fixed**: layout pass tracks `()`/`[]`/`{}` depth; newlines inside brackets don't emit NEWLINE/INDENT/DEDENT.
+- ~~blank lines not preserved~~ — **fixed**: scanner emits `py-blank` atoms tracking blank-line gaps.
+- **horizontal whitespace runs still collapse** — multiple spaces between tokens collapse to one (acceptable for semantic round-trip; tests normalize spaces).
 
 ### Decompiler-side weaknesses
 
-- **operator-adjacency rules naive** — `_render_tokens` uses simple `isidentifier` checks; misses cases like `not x` (looks like `notx`). Next breath: longest-prefix Python operator table + grammar-aware spacing.
+- ~~operator-adjacency naive~~ — **fixed**: `is_op(i, ...)` helpers distinguish py-op vs string-content; kwarg `=` inside parens, unary `-`/`+`/`*`/`**`, decorator `@`, dotted attribute access all bind correctly.
+- **multi-line bracketed expressions collapse to one line** — `nodes.append(\n  {\n    ...\n  }\n)` becomes `nodes.append({...})`. Semantically equivalent; lost layout style. Next breath: emit a `py-layout-fmt` atom recording original multi-line shape.
+- **slice colon spacing** — `data[pos : pos + n]` and `data[pos:pos + n]` are both Python; my decompiler picks one. Tests normalize colon spacing.
 - **block headers detected by position, not category** — `_walk` assumes the first child of a `statement-block` is the head, the rest are body. Correct for `def`/`while`/`for` but wrong for try/except/else/finally chains. Next breath: tag the relationship explicitly.
 
 ### Compiler-side weaknesses (BMF rule coverage)
