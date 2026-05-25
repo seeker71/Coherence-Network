@@ -1,6 +1,6 @@
 ; tests/bmf-compiler-runtime.fk - BMF source objects compile into BMF compiler objects
 ;
-; preludes: form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk
 
 (do
     (defn result-object (m)

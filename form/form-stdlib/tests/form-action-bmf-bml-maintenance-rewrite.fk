@@ -1,7 +1,7 @@
 ; form-action-bmf-bml-maintenance-rewrite.fk - rebuild the BML
 ; maintenance dialect proof through shared BMF action helpers.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
 
 (do
     (let n (form-action-bmf-ident "n"))

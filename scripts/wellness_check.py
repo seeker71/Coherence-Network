@@ -704,12 +704,14 @@ def sense_form_engine() -> list[str]:
 def sense_form_ontology() -> list[str]:
     """Does the Form-side ontology table agree with the kernel parsers?
 
-    `form/form-stdlib/form-ontology.fk` holds the canonical (name, type,
-    inst) rows for parser-special-form primitives (add/gt/and/...) and
-    composite shapes (do/let/if/fndef/...). Each kernel (Go/Rust/TS)
-    has its own switch table in parseSexp/buildVerb. If a primitive is
-    added to one but not the other, every test that doesn't happen to
-    exercise it stays silent through the drift.
+    `form/form-stdlib/form-ontology.json` holds the canonical (name,
+    type, inst) rows for parser-special-form primitives (add/gt/and/...)
+    and composite shapes (do/let/if/fndef/...). The Form-side bindings
+    are materialised at load time by form-stdlib/form-ontology-loader.fk
+    (reading the JSON via parse-json from form-stdlib/json.fk). Each
+    kernel (Go/Rust/TS) has its own switch table in parseSexp/buildVerb.
+    If a primitive is added to one but not the other, every test that
+    doesn't happen to exercise it stays silent through the drift.
 
     Delegates to form/scripts/validate_form_ontology.py — the canonical
     drift reader. Silent on a clean match; surfaces the divergence

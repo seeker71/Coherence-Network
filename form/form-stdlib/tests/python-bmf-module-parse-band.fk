@@ -5,7 +5,7 @@
 ; carries queryable py-statement objects with kind, indentation, tokens, and
 ; reversible source object origin.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn score-str (actual want score) (if (str_eq actual want) score 0))

@@ -13,7 +13,7 @@
 ; through the Recipe path; the second proves the Recipe was actually
 ; written.
 ;
-; preludes: form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let quote = "\"";

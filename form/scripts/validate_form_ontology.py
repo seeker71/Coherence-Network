@@ -3,9 +3,9 @@
 dispatch tables in Go / Rust / TypeScript.
 
 The Form-side ontology (categories + primitives in form-stdlib/form-ontology.json)
-is the data grammar. The .fk file is a generated artifact (see
-scripts/generate_ontology.py) that simply exposes the same rows as two
-top-level Form bindings. This script reads the JSON — the canonical
+is the data grammar. At Form runtime, form-stdlib/form-ontology-loader.fk reads
+the JSON via form-stdlib/json.fk's parse-json and exposes the rows as
+top-level bindings (water). This script reads the JSON — the canonical
 source — and verifies each row against each kernel's buildVerb dispatch.
 
 Each kernel has cases like

@@ -1,6 +1,6 @@
 ; python-bmf-decorator-band.fk - Python decorator rules round-trip parity
 ;
-; preludes: form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
 ;
 ; Exercises every decorator shape that python-bmf.fk recognises and
 ; asserts byte-identical scores across Go, Rust and TypeScript kernels.
