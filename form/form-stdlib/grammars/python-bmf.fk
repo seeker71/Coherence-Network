@@ -162,32 +162,55 @@
                 (python-source-scan-skip (python-source-skip-comment cursor))
                 cursor))))
 
-    (defn python-source-scan-string-loop (cursor quote value)
+    ;; Slice the source text between two cursor offsets. Both cursors must
+    ;; share the same underlying source. Used by scanners that track start
+    ;; and end positions and extract the token text once via substring —
+    ;; O(N) instead of O(N²) per-byte str_concat accumulation.
+    (defn python-source-cursor-slice (start-cursor end-cursor)
+        (if (fsc-source-cursor-file? start-cursor)
+            (read_file_slice (fsc-source-cursor-source start-cursor)
+                             (fsc-source-cursor-offset start-cursor)
+                             (sub (fsc-source-cursor-offset end-cursor)
+                                  (fsc-source-cursor-offset start-cursor)))
+            (substring (fsc-source-cursor-source start-cursor)
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset end-cursor))))
+
+    ;; Track start/end positions through the loop; extract the token text
+    ;; once at termination. The returned (list value cursor) shape is
+    ;; preserved so callers don't change. Backslash escapes still consume
+    ;; two characters in source — the slice carries both verbatim, which
+    ;; matches the prior accumulator's behaviour (it appended the char
+    ;; after the backslash, never the backslash itself; the prior shape
+    ;; was lossy on backslashes and the slice preserves them as written).
+    (defn python-source-scan-string-loop (start-cursor cursor quote)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (if (str_eq (fsc-source-cursor-char cursor) "\\")
                 (python-source-scan-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance (fsc-source-cursor-advance cursor))
-                    quote
-                    (str_concat value (fsc-source-cursor-char (fsc-source-cursor-advance cursor))))
+                    quote)
             (if (str_eq (fsc-source-cursor-char cursor) quote)
-                (list value (fsc-source-cursor-advance cursor))
+                (list (python-source-cursor-slice start-cursor cursor)
+                      (fsc-source-cursor-advance cursor))
                 (python-source-scan-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance cursor)
-                    quote
-                    (str_concat value (fsc-source-cursor-char cursor)))))))
+                    quote)))))
 
-    (defn python-source-scan-triple-string-loop (cursor quote value)
+    (defn python-source-scan-triple-string-loop (start-cursor cursor quote)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (if (and (fsc-source-cursor-prefix? cursor quote)
                      (and (fsc-source-cursor-prefix? (fsc-source-cursor-advance cursor) quote)
                           (fsc-source-cursor-prefix? (fsc-source-cursor-advance (fsc-source-cursor-advance cursor)) quote)))
-                (list value (fsc-source-advance-n cursor 3))
+                (list (python-source-cursor-slice start-cursor cursor)
+                      (fsc-source-advance-n cursor 3))
                 (python-source-scan-triple-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance cursor)
-                    quote
-                    (str_concat value (fsc-source-cursor-char cursor))))))
+                    quote))))
 
     (defn python-source-scan-string-at (start quote string-kind)
         (do
@@ -197,7 +220,7 @@
                           (fsc-source-cursor-prefix? (fsc-source-cursor-advance (fsc-source-cursor-advance start)) open-quote)))
                 (do
                     (let body-start (fsc-source-advance-n start 3))
-                    (let read (python-source-scan-triple-string-loop body-start open-quote ""))
+                    (let read (python-source-scan-triple-string-loop body-start body-start open-quote))
                     (fsc-scan-result (fsc-source-object string-kind (nth read 0) start (nth read 1)) (nth read 1)))
                 (do
                     (let body-start (fsc-source-cursor-advance start))
@@ -206,7 +229,7 @@
                             (fsc-source-object string-kind "" start (fsc-source-cursor-advance body-start))
                             (fsc-source-cursor-advance body-start))
                         (do
-                            (let read (python-source-scan-string-loop body-start open-quote ""))
+                            (let read (python-source-scan-string-loop body-start body-start open-quote))
                             (fsc-scan-result (fsc-source-object string-kind (nth read 0) start (nth read 1)) (nth read 1))))))))
 
     (defn python-source-prefixed-string-prefix-len (cursor)
@@ -225,12 +248,8 @@
 
     (defn python-source-scan-prefixed-string (start prefix-len)
         (do
-            (let prefix
-                (if (eq prefix-len 2)
-                    (str_concat (fsc-source-cursor-char start)
-                                (fsc-source-cursor-char (fsc-source-cursor-advance start)))
-                    (fsc-source-cursor-char start)))
             (let quote-start (fsc-source-advance-n start prefix-len))
+            (let prefix (python-source-cursor-slice start quote-start))
             (python-source-scan-string-at quote-start
                                           (fsc-source-cursor-char quote-start)
                                           (python-source-prefix-string-kind prefix))))
@@ -241,20 +260,20 @@
     (defn python-source-int-char? (ch)
         (or (fsc-digit? ch) (str_eq ch "_")))
 
-    (defn python-source-scan-int-loop (cursor value)
+    (defn python-source-scan-int-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (python-source-int-char? ch)
                     (python-source-scan-int-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                        start-cursor
+                        (fsc-source-cursor-advance cursor))
+                    (list (python-source-cursor-slice start-cursor cursor) cursor)))))
 
     (defn python-source-scan-int (start)
         (do
-            (let read (python-source-scan-int-loop start ""))
+            (let read (python-source-scan-int-loop start start))
             (fsc-scan-result
                 (fsc-source-object "py-int" (nth read 0) start (nth read 1))
                 (nth read 1))))
