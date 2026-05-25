@@ -274,31 +274,6 @@
     (defn fsc-bml-find-comma (s i)
         (fsc-bml-find-comma-loop s i 0 false))
 
-    (defn fsc-bml-args-form-loop (args i)
-        (do
-            (let p (fsc-skip-spaces args i))
-            (if (ge p (str_len args)) ""
-                (do
-                    (let comma (fsc-bml-find-comma args p))
-                    (let end (if (lt comma 0) (str_len args) comma))
-                    (let part (fsc-trim (fsc-sub args p end)))
-                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
-                    (str_concat " "
-                        (str_concat (fsc-compile-form-bml-expr part)
-                                    (fsc-bml-args-form-loop args rest-start)))))))
-
-    (defn fsc-bml-name-list-loop (args i)
-        (do
-            (let p (fsc-skip-spaces args i))
-            (if (ge p (str_len args)) ""
-                (do
-                    (let comma (fsc-find-char-from args "," p))
-                    (let end (if (lt comma 0) (str_len args) comma))
-                    (let name (fsc-trim (fsc-sub args p end)))
-                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
-                    (str_concat " "
-                        (str_concat name (fsc-bml-name-list-loop args rest-start)))))))
-
     (defn fsc-bml-block-end (body i depth)
         (do
             (let e (fsc-line-end body i))
@@ -313,17 +288,6 @@
     (defn fsc-bml-comment-line? (line)
         (if (fsc-skip-rule-line? line) true
             (fsc-prefix? line "//")))
-
-    (defn fsc-compile-form-bml-call (expr open)
-        (do
-            (let close (fsc-last-char-index expr))
-            (let name (fsc-trim (fsc-sub expr 0 open)))
-            (let args (fsc-sub expr (add open 1) close))
-            (if (eq (str_len (fsc-trim args)) 0)
-                (str_concat "(" (str_concat name ")"))
-                (str_concat "("
-                    (str_concat name
-                    (str_concat (fsc-bml-args-form-loop args 0) ")"))))))
 
     (defn fsc-bml-normalize-ws-loop (s i quoted saw-space)
         (if (ge i (str_len s)) ""
@@ -345,76 +309,6 @@
     (defn fsc-bml-normalize-ws (s)
         (fsc-trim (fsc-bml-normalize-ws-loop s 0 false false)))
 
-    (defn fsc-compile-form-bml-if (expr)
-        (do
-            (let then-pos (fsc-find-string-from expr " then " 0))
-            (let else-pos (fsc-find-string-from expr " else " then-pos))
-            (let cond (fsc-trim (fsc-sub expr 3 then-pos)))
-            (let yes (fsc-trim (fsc-sub expr (add then-pos 6) else-pos)))
-            (let no (fsc-trim (fsc-sub expr (add else-pos 6) (str_len expr))))
-            (str_concat "(if "
-                (str_concat (fsc-compile-form-bml-expr cond)
-                (str_concat " "
-                (str_concat (fsc-compile-form-bml-expr yes)
-                (str_concat " " (str_concat (fsc-compile-form-bml-expr no) ")"))))))))
-
-    (defn fsc-compile-form-bml-expr (raw)
-        (do
-            (let expr (fsc-bml-normalize-ws (fsc-strip-semi raw)))
-            (let open (fsc-find-char-from expr "(" 0))
-            (if (eq (str_len expr) 0) "(empty)"
-            (if (fsc-prefix? expr "if ")
-                (fsc-compile-form-bml-if expr)
-            (if (and (ge open 0) (str_eq (char_at expr (fsc-last-char-index expr)) ")"))
-                (fsc-compile-form-bml-call expr open)
-            (if (str_eq expr "empty") "(empty)"
-            (if (str_eq expr "true") "true"
-            (if (str_eq expr "false") "false"
-            (if (str_eq expr "null") "null"
-            (if (fsc-int? expr) expr
-                expr))))))))))
-
-    (defn fsc-compile-form-bml-def (line)
-        (do
-            (let open (fsc-find-char-from line "(" 4))
-            (let close (fsc-find-char-from line ")" open))
-            (let eq-pos (fsc-find-char-from line "=" close))
-            (let name (fsc-trim (fsc-sub line 4 open)))
-            (let args (fsc-sub line (add open 1) close))
-            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
-            (str_concat "    (defn "
-                (str_concat name
-                (str_concat " ("
-                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
-                (str_concat ")\n        "
-                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))))
-
-    (defn fsc-compile-form-bml-let (line)
-        (do
-            (let eq-pos (fsc-find-char-from line "=" 4))
-            (let name (fsc-trim (fsc-sub line 4 eq-pos)))
-            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
-            (str_concat "    (let "
-                (str_concat name
-                (str_concat " "
-                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))
-
-    (defn fsc-compile-form-bml-block-line (line)
-        (do
-            (let value (fsc-strip-semi line))
-            (if (fsc-bml-comment-line? value) ""
-            (if (fsc-prefix? value "let ")
-                (do
-                    (let eq-pos (fsc-find-char-from value "=" 4))
-                    (let name (fsc-trim (fsc-sub value 4 eq-pos)))
-                    (let body (fsc-sub value (add eq-pos 1) (str_len value)))
-                    (str_concat "        (let "
-                        (str_concat name
-                        (str_concat " "
-                        (str_concat (fsc-compile-form-bml-expr body) ")\n")))))
-                (str_concat "        "
-                    (str_concat (fsc-compile-form-bml-expr value) "\n"))))))
-
     (defn fsc-bml-stmt-end-loop (body i end depth quoted)
         (if (ge i end) end
             (do
@@ -435,69 +329,6 @@
 
     (defn fsc-bml-stmt-end (body i end)
         (fsc-bml-stmt-end-loop body i end 0 false))
-
-    (defn fsc-compile-form-bml-block-stmts (body i end)
-        (do
-            (let p (fsc-skip-spaces body i))
-            (if (ge p end) ""
-                (do
-                    (let line-end (fsc-line-end body p))
-                    (let line (fsc-trim (fsc-sub body p line-end)))
-                    (if (fsc-bml-comment-line? line)
-                        (fsc-compile-form-bml-block-stmts body (fsc-line-next body p) end)
-                    (do
-                    (let stmt-end (fsc-bml-stmt-end body p end))
-                    (let stmt (fsc-trim (fsc-sub body p stmt-end)))
-                    (str_concat (fsc-compile-form-bml-block-line stmt)
-                                (fsc-compile-form-bml-block-stmts body stmt-end end))))))))
-
-    (defn fsc-compile-form-bml-block-lines (body i end)
-        (fsc-compile-form-bml-block-stmts body i end))
-
-    (defn fsc-compile-form-bml-def-block (body line body-start)
-        (do
-            (let open (fsc-find-char-from line "(" 4))
-            (let close (fsc-find-char-from line ")" open))
-            (let name (fsc-trim (fsc-sub line 4 open)))
-            (let args (fsc-sub line (add open 1) close))
-            (let body-end (fsc-bml-block-end body body-start 0))
-            (str_concat "    (defn "
-                (str_concat name
-                (str_concat " ("
-                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
-                (str_concat ")\n"
-                (str_concat "        (do\n"
-                (str_concat (fsc-compile-form-bml-block-lines body body-start body-end)
-                            "        ))\n")))))))))
-
-    (defn fsc-compile-form-bml-line (line)
-        (do
-            (let value (fsc-strip-semi line))
-            (if (fsc-bml-comment-line? value) ""
-            (if (fsc-prefix? value "def ")
-                (fsc-compile-form-bml-def value)
-            (if (fsc-prefix? value "let ")
-                (fsc-compile-form-bml-let value)
-                (str_concat "    "
-                    (str_concat (fsc-compile-form-bml-expr value) "\n")))))))
-
-    (defn fsc-form-bml-lines-loop (body i)
-        (if (ge i (str_len body)) ""
-            (do
-                (let e (fsc-line-end body i))
-                (let line (fsc-trim (fsc-sub body i e)))
-                (if (and (fsc-prefix? line "def ") (fsc-line-opens-block? line))
-                    (do
-                        (let body-start (fsc-line-next body i))
-                        (let body-end (fsc-bml-block-end body body-start 0))
-                        (str_concat (fsc-compile-form-bml-def-block body line body-start)
-                                    (fsc-form-bml-lines-loop body (fsc-line-next body body-end))))
-                    (str_concat (fsc-compile-form-bml-line line)
-                                (fsc-form-bml-lines-loop body (fsc-line-next body i)))))))
-
-    (defn fsc-compile-form-bml-section (body)
-        (str_concat "(do\n"
-            (str_concat (fsc-form-bml-lines-loop body 0) ")\n")))
 
     (defn fsc-form-action-dialect? (dialect-name)
         (or (str_eq dialect-name "form.bml")
