@@ -1012,6 +1012,16 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    // str_find — JS-level substring search starting at index `from`.
+    // (str_find s needle from) → int (index or -1). Whole search in this
+    // JS String.indexOf call; no Form callback per byte, no Form recursion.
+    this.registerNative("str_find", catAccess(), (_k, args) => {
+      const s = argStr(args, 0);
+      const needle = argStr(args, 1);
+      const from = argInt(args, 2);
+      const idx = s.indexOf(needle, from);
+      return { kind: "int", int: BigInt(idx) };
+    });
     // string_fold — JS-level streaming iteration over a string's chars.
     // Signature: (string_fold s init step) where step is a closure of
     // (acc, char) → acc. Whole iteration in this JS for-loop; no Form-
