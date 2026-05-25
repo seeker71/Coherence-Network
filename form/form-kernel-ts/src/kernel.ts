@@ -1167,6 +1167,16 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    this.registerNative("read_form_binary", catCall(), (k, args) => {
+      try {
+        return {
+          kind: "nodeid",
+          nodeid: deserializeRecipeArtifact(k, readFileSync(argStr(args, 0))),
+        };
+      } catch {
+        return { kind: "null" };
+      }
+    });
     this.registerNative("file_size", catCall(), (_k, args) => {
       try {
         return { kind: "int", int: statSync(argStr(args, 0)).size };
@@ -1290,6 +1300,22 @@ export class Kernel {
     this.registerNative("node_value", catWitness(), (k, args) =>
       k.trivialValue(argNodeID(args, 0)),
     );
+    this.registerNative("node_pkg", catWitness(), (_k, args) => ({
+      kind: "int",
+      int: argNodeID(args, 0).pkg,
+    }));
+    this.registerNative("node_level", catWitness(), (_k, args) => ({
+      kind: "int",
+      int: argNodeID(args, 0).level,
+    }));
+    this.registerNative("node_type", catWitness(), (_k, args) => ({
+      kind: "int",
+      int: argNodeID(args, 0).type,
+    }));
+    this.registerNative("node_inst", catWitness(), (_k, args) => ({
+      kind: "int",
+      int: argNodeID(args, 0).inst,
+    }));
     this.registerNative("node_source", catWitness(), (k, args) => {
       const loc = k.sourceAttr.get(nodeKey(argNodeID(args, 0)));
       if (!loc) return { kind: "list", list: [] };

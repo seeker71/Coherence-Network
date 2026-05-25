@@ -1023,6 +1023,17 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	k.registerNative("read_form_binary", catCall(), func(k *Kernel, args []Value) Value {
+		b, err := os.ReadFile(args[0].Str)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		root, err := deserializeArtifact(k, b)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: root}
+	})
 	k.registerNative("file_size", catCall(), func(_ *Kernel, args []Value) Value {
 		info, err := os.Stat(args[0].Str)
 		if err != nil {
@@ -1114,6 +1125,18 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("node_value", catWitness(), func(k *Kernel, args []Value) Value {
 		return k.trivialValue(args[0].Nid)
+	})
+	k.registerNative("node_pkg", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(args[0].Nid.Pkg)}
+	})
+	k.registerNative("node_level", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(args[0].Nid.Level)}
+	})
+	k.registerNative("node_type", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(args[0].Nid.Type)}
+	})
+	k.registerNative("node_inst", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(args[0].Nid.Inst)}
 	})
 	// node_eq — compare two NodeIDs structurally. Sibling to Rust's node_eq.
 	// Form code (emit-engine.fk lookup-template) uses this for category
