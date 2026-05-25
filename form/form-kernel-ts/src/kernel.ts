@@ -1012,6 +1012,32 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    // string_fold — JS-level streaming iteration over a string's chars.
+    // Signature: (string_fold s init step) where step is a closure of
+    // (acc, char) → acc. Whole iteration in this JS for-loop; no Form-
+    // level recursion. Lets the substrate process arbitrary-length input
+    // streams without piling kernel stack frames.
+    this.registerNative("string_fold", catCall(), (k, args) => {
+      const s = argStr(args, 0);
+      let acc = args[1]!;
+      const fnVal = args[2]!;
+      if (fnVal.kind !== "closure") {
+        throw new Error("string_fold: third arg must be a closure");
+      }
+      const cl = fnVal.closure;
+      if (cl.params.length !== 2) {
+        throw new Error(
+          `string_fold: step closure wants 2 params (acc char), got ${cl.params.length}`,
+        );
+      }
+      for (let i = 0; i < s.length; i++) {
+        const callFrame = new Frame(cl.env);
+        callFrame.bind(cl.params[0]!, acc);
+        callFrame.bind(cl.params[1]!, { kind: "str", str: s[i]! });
+        acc = walk(k, cl.body, callFrame);
+      }
+      return acc;
+    });
     this.registerNative("str_eq", catCompareEq(), (_k, args) => ({
       kind: "bool",
       bool: argStr(args, 0) === argStr(args, 1),
