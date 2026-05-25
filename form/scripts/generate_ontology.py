@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Form ontology .fk artifacts from form-stdlib/form-ontology.json.
 
-The JSON file is the canonical data grammar. Two .fk artifacts are emitted:
+The JSON file is the canonical data grammar. Three .fk artifacts are emitted:
 
   form-stdlib/form-ontology.fk        — kernel ontology tables
                                         (FORM-CATEGORY-TABLE,
@@ -9,10 +9,16 @@ The JSON file is the canonical data grammar. Two .fk artifacts are emitted:
   form-stdlib/dialect-categories.fk   — per-dialect BMF/AST category
                                         constants, one (let ...) per
                                         dialect category
+  form-stdlib/engine-constants.fk     — typed-constant 0-arg getters
+                                        (bmf-domain-python, bmf-lens-
+                                        assertion, bmf-register-math,
+                                        bmf-locale-en-us, ...) used by
+                                        engine.fk and the grammar/lens
+                                        layers as a shared vocabulary
 
 Usage:
-  python3 scripts/generate_ontology.py            # write both .fk files
-  python3 scripts/generate_ontology.py --check    # exit 1 if either differs
+  python3 scripts/generate_ontology.py            # write all .fk files
+  python3 scripts/generate_ontology.py --check    # exit 1 if any differ
 
 Stdlib only, no external deps. Idempotent: running it twice produces
 identical output.
@@ -31,6 +37,7 @@ FORM_ROOT = SCRIPT_DIR.parent
 ONTOLOGY_JSON = FORM_ROOT / "form-stdlib" / "form-ontology.json"
 ONTOLOGY_FK = FORM_ROOT / "form-stdlib" / "form-ontology.fk"
 DIALECTS_FK = FORM_ROOT / "form-stdlib" / "dialect-categories.fk"
+ENGINE_CONSTANTS_FK = FORM_ROOT / "form-stdlib" / "engine-constants.fk"
 
 GENERATED_HEADER = """; form-ontology.fk — Form-side ontology, pure data.
 ;
@@ -222,6 +229,85 @@ def render_dialects(data: dict) -> str:
     return "\n".join(lines)
 
 
+ENGINE_CONSTANTS_HEADER = """; engine-constants.fk — typed-constant 0-arg getters.
+;
+; ┌──────────────────────────────────────────────────────────────────────┐
+; │  GENERATED FILE — DO NOT EDIT BY HAND.                               │
+; │  Source of truth: form-stdlib/form-ontology.json                     │
+; │                   (engine_constants: section)                        │
+; │  Regenerate with: python3 scripts/generate_ontology.py               │
+; │  Drift check    : python3 scripts/generate_ontology.py --check       │
+; └──────────────────────────────────────────────────────────────────────┘
+;
+; This file holds DATA only — one `(defn <name_prefix>-<entry.name> ()
+; ...)` per typed-constant entry. Two value shapes:
+;
+;   factory-style   (defn bmf-domain-python () (bmf-domain-ref 1))
+;   string-style    (defn bmf-semantic-natural-language () "natural-language")
+;
+; The factory functions (bmf-domain-ref, bmf-lens-ref,
+; bmf-domain-kind-ref) live in form-stdlib/engine.fk. Load this file as a
+; prelude BEFORE engine.fk so engine.fk's references to these constants
+; resolve as free identifiers. The validate.sh `prepare_sources` chain
+; already loads it for the source-compiler driver; tests that list
+; form-stdlib/engine.fk in their `; preludes:` header should list
+; form-stdlib/engine-constants.fk immediately before it.
+;
+; Numeric values and string literals are load-bearing — they intern
+; Recipe shapes and carry context-key identity. Moving a value changes
+; structural identity in the substrate.
+"""
+
+
+def render_engine_constants(data: dict) -> str:
+    families = data.get("engine_constants") or {}
+    if not families:
+        return ENGINE_CONSTANTS_HEADER.rstrip() + "\n\n0\n"
+
+    lines: List[str] = [ENGINE_CONSTANTS_HEADER.rstrip(), ""]
+
+    # Stable order: as declared in JSON (Python preserves insertion order).
+    for family_name, family in families.items():
+        prefix = family["name_prefix"]
+        entries = family["entries"]
+        string_values = bool(family.get("string_values", False))
+        factory = family.get("factory")
+
+        header_bits = [f"family {family_name}", f"prefix {prefix}"]
+        if string_values:
+            header_bits.append("string values")
+        elif factory:
+            header_bits.append(f"factory {factory}")
+        header = f";; --- {' / '.join(header_bits)} ---"
+        lines.append(header)
+
+        # Compute name-column width so the body columns line up per-family.
+        full_names = [f"{prefix}-{e['name']}" for e in entries]
+        name_width = max(len(n) for n in full_names)
+
+        for entry, full_name in zip(entries, full_names):
+            value = entry["value"]
+            if string_values:
+                body = f'"{value}"'
+            else:
+                if factory is None:
+                    raise ValueError(
+                        f"engine_constants family {family_name!r} "
+                        "lacks `factory` and is not string_values"
+                    )
+                body = f"({factory} {value})"
+            row = f"(defn {full_name:<{name_width}} () {body})"
+            note = entry.get("note", "")
+            if note:
+                row = f"{row}   ;; {note}"
+            lines.append(row)
+        lines.append("")
+
+    lines.append("0")
+    lines.append("")  # trailing newline
+    return "\n".join(lines)
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
@@ -235,10 +321,12 @@ def main(argv: List[str]) -> int:
     data = json.loads(ONTOLOGY_JSON.read_text())
     rendered_ontology = render(data)
     rendered_dialects = render_dialects(data)
+    rendered_engine_constants = render_engine_constants(data)
 
     artifacts = [
         (ONTOLOGY_FK, rendered_ontology),
         (DIALECTS_FK, rendered_dialects),
+        (ENGINE_CONSTANTS_FK, rendered_engine_constants),
     ]
 
     if args.check:

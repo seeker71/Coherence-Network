@@ -16,10 +16,10 @@
 ; lower to an explicit (semantic-unhandled <name> ...) node carrying
 ; the lens-resolved name, never a string-collapse.
 
-(do
-    ;; ──────────────────────────────────────────────────────────────────
-    ;; Semantic IR constructors
-    ;; ──────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────
+;; Semantic IR constructors — top-level defns so consumers (tests,
+;; emitters) see the bindings without a (do ...) scope wrapping.
+;; ──────────────────────────────────────────────────────────────────
 
     (defn semantic-module (name members)
         (list "semantic-module" name members))
@@ -72,7 +72,8 @@
     ;; preserves unknown nodes by name so the emitter can still render
     ;; readable Python with explicit gaps.
 
-    (defn lower-recipe (recipe lens-lookup)
-        (semantic-unhandled "unlowered" "unknown" recipe))
+(defn lower-recipe (recipe lens-lookup)
+    (semantic-unhandled "unlowered" "unknown" recipe))
 
-    0)
+0
+

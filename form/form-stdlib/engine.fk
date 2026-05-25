@@ -169,93 +169,17 @@
     (defn bmf-surface-ref (index)
         (intern_node BMF-SURFACE-REF (list (intern_trivial_int index))))
 
-    (defn bmf-domain-python () (bmf-domain-ref 1))
-    (defn bmf-domain-typescript () (bmf-domain-ref 2))
-    (defn bmf-domain-go () (bmf-domain-ref 3))
-    (defn bmf-domain-rust () (bmf-domain-ref 4))
-    (defn bmf-domain-bml () (bmf-domain-ref 5))
-    (defn bmf-domain-natural () (bmf-domain-ref 6))
-    (defn bmf-domain-image () (bmf-domain-ref 7))
-    (defn bmf-domain-audio () (bmf-domain-ref 8))
-    (defn bmf-domain-video () (bmf-domain-ref 9))
-
-    (defn bmf-domain-kind-language () (bmf-domain-kind-ref 1))
-    (defn bmf-domain-kind-media () (bmf-domain-kind-ref 2))
-    (defn bmf-domain-kind-runtime () (bmf-domain-kind-ref 3))
-
-    (defn bmf-semantic-natural-language () "natural-language")
-    (defn bmf-semantic-image () "image")
-    (defn bmf-semantic-audio () "audio")
-    (defn bmf-semantic-video () "video")
-    (defn bmf-semantic-general () "general")
-    (defn bmf-semantic-knowledge () "knowledge")
-
-    (defn bmf-lens-assertion () (bmf-lens-ref 1))
-    (defn bmf-lens-metadata () (bmf-lens-ref 2))
-    (defn bmf-lens-assign () (bmf-lens-ref 3))
-    (defn bmf-lens-var () (bmf-lens-ref 4))
-    (defn bmf-lens-quote () (bmf-lens-ref 5))
-    (defn bmf-lens-display () (bmf-lens-ref 6))
-
-    (defn bmf-context-key-language-tag () "language-tag")
-    (defn bmf-context-key-locale () "locale")
-    (defn bmf-context-key-script () "script")
-    (defn bmf-context-key-region () "region")
-    (defn bmf-context-key-direction () "direction")
-    (defn bmf-context-key-calendar () "calendar")
-    (defn bmf-context-key-numbering-system () "numbering-system")
-    (defn bmf-context-key-time-zone () "time-zone")
-    (defn bmf-context-key-semantic-domain () "semantic-domain")
-    (defn bmf-context-key-culture () "culture")
-    (defn bmf-context-key-register () "register")
-    (defn bmf-context-key-environment () "environment")
-    (defn bmf-context-key-audience () "audience")
-    (defn bmf-context-key-purpose () "purpose")
-    (defn bmf-context-key-viewpoint () "viewpoint")
-    (defn bmf-context-key-media-type () "media-type")
-    (defn bmf-context-key-charset () "charset")
-    (defn bmf-context-key-encoding () "encoding")
-    (defn bmf-context-key-container () "container")
-    (defn bmf-context-key-codec () "codec")
-    (defn bmf-context-key-unit () "unit")
-    (defn bmf-context-key-color-space () "color-space")
-    (defn bmf-context-key-source () "source")
-    (defn bmf-context-key-creator () "creator")
-    (defn bmf-context-key-license () "license")
-    (defn bmf-context-key-created () "created")
-    (defn bmf-context-key-derived-from () "derived-from")
-
-    (defn bmf-locale-und () "und")
-    (defn bmf-locale-en-us () "en-US")
-    (defn bmf-locale-id-id () "id-ID")
-    (defn bmf-script-latn () "Latn")
-    (defn bmf-direction-auto () "auto")
-    (defn bmf-direction-ltr () "ltr")
-    (defn bmf-direction-rtl () "rtl")
-    (defn bmf-register-plain () "plain")
-    (defn bmf-register-math () "math")
-    (defn bmf-register-formal () "formal")
-    (defn bmf-environment-general () "general")
-    (defn bmf-environment-file () "file")
-    (defn bmf-environment-repo () "repo")
-    (defn bmf-environment-web () "web")
-    (defn bmf-purpose-representation () "representation")
-    (defn bmf-purpose-roundtrip () "roundtrip")
-    (defn bmf-calendar-gregory () "gregory")
-    (defn bmf-numbering-latn () "latn")
-
-    (defn bmf-media-text-plain () "text/plain")
-    (defn bmf-media-octet-stream () "application/octet-stream")
-    (defn bmf-media-image-svg () "image/svg+xml")
-    (defn bmf-media-image-gif () "image/gif")
-    (defn bmf-charset-utf8 () "utf-8")
-    (defn bmf-encoding-xml () "xml")
-    (defn bmf-encoding-binary () "binary")
-    (defn bmf-container-text () "text")
-    (defn bmf-unit-px () "px")
-    (defn bmf-unit-samples () "samples")
-    (defn bmf-unit-px-ms () "px/ms")
-    (defn bmf-color-srgb () "sRGB")
+    ;; Typed engine constants — domain / domain-kind / lens / semantic /
+    ;; context-key / locale / script / direction / register / environment /
+    ;; purpose / calendar / numbering / media / charset / encoding /
+    ;; container / unit / color. The 0-arg getter shape — (bmf-domain-python),
+    ;; (bmf-lens-assertion), (bmf-register-math), (bmf-locale-en-us), etc. —
+    ;; lives in form-stdlib/engine-constants.fk (generated from
+    ;; form-stdlib/form-ontology.json). Load engine-constants.fk as a
+    ;; prelude BEFORE engine.fk so the bindings are in scope when this
+    ;; file references them. The *-ref factory functions
+    ;; (bmf-domain-ref, bmf-lens-ref, bmf-domain-kind-ref) defined above
+    ;; remain here; only their typed-constant call-sites moved out.
 
     ;; Shared context property groups. These live in the runtime lens layer,
     ;; not in binary Form objects or the kernel.

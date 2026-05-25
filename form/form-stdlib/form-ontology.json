@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "source_of_truth_note": "Mirrors kernel parser dispatch — see form-kernel-go/main.go ~1956-2014 (buildVerb) and constants ~73-95. A row added here must land in the kernel's switch table too; scripts/validate_form_ontology.py reads this file and verifies each kernel.",
   "kernel_type_constants": {
     "RBasicBlock":   9,
@@ -237,6 +237,204 @@
         {"name": "LOOP",   "inst": 673},
         {"name": "ASYNC",  "inst": 674},
         {"name": "RESULT", "inst": 675}
+      ]
+    }
+  },
+  "engine_constants_note": "Typed-constant 0-arg getters used by engine.fk and the grammar/lens layers as a shared vocabulary. Two shapes: factory-style families carry a `factory` (a NodeID factory defined inside engine.fk — `bmf-domain-ref`, `bmf-lens-ref`, `bmf-domain-kind-ref`) and integer entry values; string-style families set `string_values: true` and carry literal string values. The generator emits one `(defn <name_prefix>-<entry.name> () ...)` per entry into form-stdlib/engine-constants.fk. Load that file as a prelude BEFORE engine.fk so engine.fk's references resolve as free identifiers.",
+  "engine_constants": {
+    "domain": {
+      "factory": "bmf-domain-ref",
+      "name_prefix": "bmf-domain",
+      "entries": [
+        {"name": "python",     "value": 1},
+        {"name": "typescript", "value": 2},
+        {"name": "go",         "value": 3},
+        {"name": "rust",       "value": 4},
+        {"name": "bml",        "value": 5},
+        {"name": "natural",    "value": 6},
+        {"name": "image",      "value": 7},
+        {"name": "audio",      "value": 8},
+        {"name": "video",      "value": 9}
+      ]
+    },
+    "domain_kind": {
+      "factory": "bmf-domain-kind-ref",
+      "name_prefix": "bmf-domain-kind",
+      "entries": [
+        {"name": "language", "value": 1},
+        {"name": "media",    "value": 2},
+        {"name": "runtime",  "value": 3}
+      ]
+    },
+    "lens": {
+      "factory": "bmf-lens-ref",
+      "name_prefix": "bmf-lens",
+      "entries": [
+        {"name": "assertion", "value": 1},
+        {"name": "metadata",  "value": 2},
+        {"name": "assign",    "value": 3},
+        {"name": "var",       "value": 4},
+        {"name": "quote",     "value": 5},
+        {"name": "display",   "value": 6}
+      ]
+    },
+    "semantic": {
+      "name_prefix": "bmf-semantic",
+      "string_values": true,
+      "entries": [
+        {"name": "natural-language", "value": "natural-language"},
+        {"name": "image",            "value": "image"},
+        {"name": "audio",            "value": "audio"},
+        {"name": "video",            "value": "video"},
+        {"name": "general",          "value": "general"},
+        {"name": "knowledge",        "value": "knowledge"}
+      ]
+    },
+    "context_key": {
+      "name_prefix": "bmf-context-key",
+      "string_values": true,
+      "entries": [
+        {"name": "language-tag",     "value": "language-tag"},
+        {"name": "locale",           "value": "locale"},
+        {"name": "script",           "value": "script"},
+        {"name": "region",           "value": "region"},
+        {"name": "direction",        "value": "direction"},
+        {"name": "calendar",         "value": "calendar"},
+        {"name": "numbering-system", "value": "numbering-system"},
+        {"name": "time-zone",        "value": "time-zone"},
+        {"name": "semantic-domain",  "value": "semantic-domain"},
+        {"name": "culture",          "value": "culture"},
+        {"name": "register",         "value": "register"},
+        {"name": "environment",      "value": "environment"},
+        {"name": "audience",         "value": "audience"},
+        {"name": "purpose",          "value": "purpose"},
+        {"name": "viewpoint",        "value": "viewpoint"},
+        {"name": "media-type",       "value": "media-type"},
+        {"name": "charset",          "value": "charset"},
+        {"name": "encoding",         "value": "encoding"},
+        {"name": "container",        "value": "container"},
+        {"name": "codec",            "value": "codec"},
+        {"name": "unit",             "value": "unit"},
+        {"name": "color-space",      "value": "color-space"},
+        {"name": "source",           "value": "source"},
+        {"name": "creator",          "value": "creator"},
+        {"name": "license",          "value": "license"},
+        {"name": "created",          "value": "created"},
+        {"name": "derived-from",     "value": "derived-from"}
+      ]
+    },
+    "locale": {
+      "name_prefix": "bmf-locale",
+      "string_values": true,
+      "entries": [
+        {"name": "und",   "value": "und"},
+        {"name": "en-us", "value": "en-US"},
+        {"name": "id-id", "value": "id-ID"}
+      ]
+    },
+    "script": {
+      "name_prefix": "bmf-script",
+      "string_values": true,
+      "entries": [
+        {"name": "latn", "value": "Latn"}
+      ]
+    },
+    "direction": {
+      "name_prefix": "bmf-direction",
+      "string_values": true,
+      "entries": [
+        {"name": "auto", "value": "auto"},
+        {"name": "ltr",  "value": "ltr"},
+        {"name": "rtl",  "value": "rtl"}
+      ]
+    },
+    "register": {
+      "name_prefix": "bmf-register",
+      "string_values": true,
+      "entries": [
+        {"name": "plain",  "value": "plain"},
+        {"name": "math",   "value": "math"},
+        {"name": "formal", "value": "formal"}
+      ]
+    },
+    "environment": {
+      "name_prefix": "bmf-environment",
+      "string_values": true,
+      "entries": [
+        {"name": "general", "value": "general"},
+        {"name": "file",    "value": "file"},
+        {"name": "repo",    "value": "repo"},
+        {"name": "web",     "value": "web"}
+      ]
+    },
+    "purpose": {
+      "name_prefix": "bmf-purpose",
+      "string_values": true,
+      "entries": [
+        {"name": "representation", "value": "representation"},
+        {"name": "roundtrip",      "value": "roundtrip"}
+      ]
+    },
+    "calendar": {
+      "name_prefix": "bmf-calendar",
+      "string_values": true,
+      "entries": [
+        {"name": "gregory", "value": "gregory"}
+      ]
+    },
+    "numbering": {
+      "name_prefix": "bmf-numbering",
+      "string_values": true,
+      "entries": [
+        {"name": "latn", "value": "latn"}
+      ]
+    },
+    "media": {
+      "name_prefix": "bmf-media",
+      "string_values": true,
+      "entries": [
+        {"name": "text-plain",   "value": "text/plain"},
+        {"name": "octet-stream", "value": "application/octet-stream"},
+        {"name": "image-svg",    "value": "image/svg+xml"},
+        {"name": "image-gif",    "value": "image/gif"}
+      ]
+    },
+    "charset": {
+      "name_prefix": "bmf-charset",
+      "string_values": true,
+      "entries": [
+        {"name": "utf8", "value": "utf-8"}
+      ]
+    },
+    "encoding": {
+      "name_prefix": "bmf-encoding",
+      "string_values": true,
+      "entries": [
+        {"name": "xml",    "value": "xml"},
+        {"name": "binary", "value": "binary"}
+      ]
+    },
+    "container": {
+      "name_prefix": "bmf-container",
+      "string_values": true,
+      "entries": [
+        {"name": "text", "value": "text"}
+      ]
+    },
+    "unit": {
+      "name_prefix": "bmf-unit",
+      "string_values": true,
+      "entries": [
+        {"name": "px",      "value": "px"},
+        {"name": "samples", "value": "samples"},
+        {"name": "px-ms",   "value": "px/ms"}
+      ]
+    },
+    "color": {
+      "name_prefix": "bmf-color",
+      "string_values": true,
+      "entries": [
+        {"name": "srgb", "value": "sRGB"}
       ]
     }
   }

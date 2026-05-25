@@ -1,6 +1,6 @@
 ; video-format-signatures.fk - byte video container sensing
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/video-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/video-bmf.fk
 
 (do
     (defn video-format (node) (node_value (nth (node_children node) 0)))

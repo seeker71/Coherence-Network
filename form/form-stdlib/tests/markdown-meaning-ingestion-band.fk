@@ -1,6 +1,6 @@
 ; markdown-meaning-ingestion-band.fk - Markdown file decoded into queryable Form nodes.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/grammars/markdown.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/grammars/markdown.fk
 
 section [form.action] {
     let repo_root = form-capsule-root(83, 1, 9, 3);

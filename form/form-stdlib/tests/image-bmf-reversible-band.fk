@@ -1,6 +1,6 @@
 ; image-bmf-reversible-band.fk - canonical image metadata reverse recipes
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk
+; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/image-bmf.fk
 
 (do
     (defn rt-score (rt)

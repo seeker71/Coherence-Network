@@ -1,6 +1,6 @@
 ; source-corpus-roundtrip-band.fk - active source sections through target lenses
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/typescript-bmf.fk
+; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/typescript-bmf.fk
 
 (do
     (let ACTIVE-CORPUS-ADD (make_nodeid 8 44 2 1))
@@ -121,7 +121,11 @@
 }
 "))))
 
-    (let compiled-source (form-source-compile-text active-source))
+    ;; Recipe-emit path (a12b8f71): form-source-compile-text threads an
+    ;; out-path so each section can write a sibling .fkb; the returned
+    ;; text is one walk_recipe_here driver per section.
+    (let compiled-out-path "/tmp/form-test-source-corpus-roundtrip")
+    (let compiled-source (form-source-compile-text active-source compiled-out-path))
     (let anchor "active-corpus/add")
     (let binary (active-add-binary "add" "a" "int" "b" "int" "int" "a" "b"))
 
@@ -186,9 +190,13 @@
 
     (sum
         (list
-            (if (fsc-contains? compiled-source "go-bmf-rules") 10 0)
-            (if (fsc-contains? compiled-source "typescript-bmf-rules") 20 0)
-            (if (fsc-contains? compiled-source "(defn add") 30 0)
+            ;; Driver text + sidecar existence prove each section lowered
+            ;; through the Recipe-emit path. Section bindings (go-bmf-rules,
+            ;; typescript-bmf-rules, the add defn) live in the .fkb sidecars
+            ;; and only reach env when walk_recipe_here loads them.
+            (if (fsc-contains? compiled-source "walk_recipe_here") 10 0)
+            (if (gt (file_size (str_concat compiled-out-path ".go.bmf.fkb")) 0) 20 0)
+            (if (gt (file_size (str_concat compiled-out-path ".form.bml.fkb")) 0) 30 0)
             (if (str_eq (fsc-source-corpus-name corpus) "active-fk-form-corpus") 40 0)
             (if (eq (len (fsc-source-corpus-files corpus)) 2) 50 0)
             (if (str_eq (fsc-source-file-kind (head (fsc-source-corpus-files corpus))) "fk") 60 0)

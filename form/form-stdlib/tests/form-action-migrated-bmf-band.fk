@@ -1,7 +1,7 @@
 ; form-action-migrated-bmf-band.fk - BMF rule actions authored in form.action.
 ; The rule pattern, action, and proof helpers live in the readable dialect.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let MIGRATED-BMF-NODE = make_nodeid(1, 2, 101, 44);

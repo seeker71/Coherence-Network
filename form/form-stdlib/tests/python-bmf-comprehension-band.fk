@@ -4,7 +4,7 @@
 ; simple and filtered (where defined). Forward pass exercises emit; reverse
 ; pass exercises source-projection; sum is what the kernels compare.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn result-object (m)

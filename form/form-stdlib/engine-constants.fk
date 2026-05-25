@@ -1,0 +1,148 @@
+; engine-constants.fk — typed-constant 0-arg getters.
+;
+; ┌──────────────────────────────────────────────────────────────────────┐
+; │  GENERATED FILE — DO NOT EDIT BY HAND.                               │
+; │  Source of truth: form-stdlib/form-ontology.json                     │
+; │                   (engine_constants: section)                        │
+; │  Regenerate with: python3 scripts/generate_ontology.py               │
+; │  Drift check    : python3 scripts/generate_ontology.py --check       │
+; └──────────────────────────────────────────────────────────────────────┘
+;
+; This file holds DATA only — one `(defn <name_prefix>-<entry.name> ()
+; ...)` per typed-constant entry. Two value shapes:
+;
+;   factory-style   (defn bmf-domain-python () (bmf-domain-ref 1))
+;   string-style    (defn bmf-semantic-natural-language () "natural-language")
+;
+; The factory functions (bmf-domain-ref, bmf-lens-ref,
+; bmf-domain-kind-ref) live in form-stdlib/engine.fk. Load this file as a
+; prelude BEFORE engine.fk so engine.fk's references to these constants
+; resolve as free identifiers. The validate.sh `prepare_sources` chain
+; already loads it for the source-compiler driver; tests that list
+; form-stdlib/engine.fk in their `; preludes:` header should list
+; form-stdlib/engine-constants.fk immediately before it.
+;
+; Numeric values and string literals are load-bearing — they intern
+; Recipe shapes and carry context-key identity. Moving a value changes
+; structural identity in the substrate.
+
+;; --- family domain / prefix bmf-domain / factory bmf-domain-ref ---
+(defn bmf-domain-python     () (bmf-domain-ref 1))
+(defn bmf-domain-typescript () (bmf-domain-ref 2))
+(defn bmf-domain-go         () (bmf-domain-ref 3))
+(defn bmf-domain-rust       () (bmf-domain-ref 4))
+(defn bmf-domain-bml        () (bmf-domain-ref 5))
+(defn bmf-domain-natural    () (bmf-domain-ref 6))
+(defn bmf-domain-image      () (bmf-domain-ref 7))
+(defn bmf-domain-audio      () (bmf-domain-ref 8))
+(defn bmf-domain-video      () (bmf-domain-ref 9))
+
+;; --- family domain_kind / prefix bmf-domain-kind / factory bmf-domain-kind-ref ---
+(defn bmf-domain-kind-language () (bmf-domain-kind-ref 1))
+(defn bmf-domain-kind-media    () (bmf-domain-kind-ref 2))
+(defn bmf-domain-kind-runtime  () (bmf-domain-kind-ref 3))
+
+;; --- family lens / prefix bmf-lens / factory bmf-lens-ref ---
+(defn bmf-lens-assertion () (bmf-lens-ref 1))
+(defn bmf-lens-metadata  () (bmf-lens-ref 2))
+(defn bmf-lens-assign    () (bmf-lens-ref 3))
+(defn bmf-lens-var       () (bmf-lens-ref 4))
+(defn bmf-lens-quote     () (bmf-lens-ref 5))
+(defn bmf-lens-display   () (bmf-lens-ref 6))
+
+;; --- family semantic / prefix bmf-semantic / string values ---
+(defn bmf-semantic-natural-language () "natural-language")
+(defn bmf-semantic-image            () "image")
+(defn bmf-semantic-audio            () "audio")
+(defn bmf-semantic-video            () "video")
+(defn bmf-semantic-general          () "general")
+(defn bmf-semantic-knowledge        () "knowledge")
+
+;; --- family context_key / prefix bmf-context-key / string values ---
+(defn bmf-context-key-language-tag     () "language-tag")
+(defn bmf-context-key-locale           () "locale")
+(defn bmf-context-key-script           () "script")
+(defn bmf-context-key-region           () "region")
+(defn bmf-context-key-direction        () "direction")
+(defn bmf-context-key-calendar         () "calendar")
+(defn bmf-context-key-numbering-system () "numbering-system")
+(defn bmf-context-key-time-zone        () "time-zone")
+(defn bmf-context-key-semantic-domain  () "semantic-domain")
+(defn bmf-context-key-culture          () "culture")
+(defn bmf-context-key-register         () "register")
+(defn bmf-context-key-environment      () "environment")
+(defn bmf-context-key-audience         () "audience")
+(defn bmf-context-key-purpose          () "purpose")
+(defn bmf-context-key-viewpoint        () "viewpoint")
+(defn bmf-context-key-media-type       () "media-type")
+(defn bmf-context-key-charset          () "charset")
+(defn bmf-context-key-encoding         () "encoding")
+(defn bmf-context-key-container        () "container")
+(defn bmf-context-key-codec            () "codec")
+(defn bmf-context-key-unit             () "unit")
+(defn bmf-context-key-color-space      () "color-space")
+(defn bmf-context-key-source           () "source")
+(defn bmf-context-key-creator          () "creator")
+(defn bmf-context-key-license          () "license")
+(defn bmf-context-key-created          () "created")
+(defn bmf-context-key-derived-from     () "derived-from")
+
+;; --- family locale / prefix bmf-locale / string values ---
+(defn bmf-locale-und   () "und")
+(defn bmf-locale-en-us () "en-US")
+(defn bmf-locale-id-id () "id-ID")
+
+;; --- family script / prefix bmf-script / string values ---
+(defn bmf-script-latn () "Latn")
+
+;; --- family direction / prefix bmf-direction / string values ---
+(defn bmf-direction-auto () "auto")
+(defn bmf-direction-ltr  () "ltr")
+(defn bmf-direction-rtl  () "rtl")
+
+;; --- family register / prefix bmf-register / string values ---
+(defn bmf-register-plain  () "plain")
+(defn bmf-register-math   () "math")
+(defn bmf-register-formal () "formal")
+
+;; --- family environment / prefix bmf-environment / string values ---
+(defn bmf-environment-general () "general")
+(defn bmf-environment-file    () "file")
+(defn bmf-environment-repo    () "repo")
+(defn bmf-environment-web     () "web")
+
+;; --- family purpose / prefix bmf-purpose / string values ---
+(defn bmf-purpose-representation () "representation")
+(defn bmf-purpose-roundtrip      () "roundtrip")
+
+;; --- family calendar / prefix bmf-calendar / string values ---
+(defn bmf-calendar-gregory () "gregory")
+
+;; --- family numbering / prefix bmf-numbering / string values ---
+(defn bmf-numbering-latn () "latn")
+
+;; --- family media / prefix bmf-media / string values ---
+(defn bmf-media-text-plain   () "text/plain")
+(defn bmf-media-octet-stream () "application/octet-stream")
+(defn bmf-media-image-svg    () "image/svg+xml")
+(defn bmf-media-image-gif    () "image/gif")
+
+;; --- family charset / prefix bmf-charset / string values ---
+(defn bmf-charset-utf8 () "utf-8")
+
+;; --- family encoding / prefix bmf-encoding / string values ---
+(defn bmf-encoding-xml    () "xml")
+(defn bmf-encoding-binary () "binary")
+
+;; --- family container / prefix bmf-container / string values ---
+(defn bmf-container-text () "text")
+
+;; --- family unit / prefix bmf-unit / string values ---
+(defn bmf-unit-px      () "px")
+(defn bmf-unit-samples () "samples")
+(defn bmf-unit-px-ms   () "px/ms")
+
+;; --- family color / prefix bmf-color / string values ---
+(defn bmf-color-srgb () "sRGB")
+
+0

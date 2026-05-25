@@ -12,8 +12,9 @@
 ; spec: specs/form-binary-to-native-python-emitter.md §Architecture
 ;       layer 3 (symbol/source lens layer).
 
-(do
-    ;; ──────────────────────────────────────────────────────────────────
+;; ──────────────────────────────────────────────────────────────────
+;; Top-level defns — no (do ...) wrapping so consumers see bindings.
+;; ──────────────────────────────────────────────────────────────────
     ;; Lens accessors
     ;; ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,8 @@
     ;; so the generated Python remains readable, with the lens-miss
     ;; visible as a name pattern.
 
-    (defn lens-fallback-name (nodeid)
-        (str_concat "node_" nodeid))
+(defn lens-fallback-name (nodeid)
+    (str_concat "node_" nodeid))
 
-    0)
+0
+
