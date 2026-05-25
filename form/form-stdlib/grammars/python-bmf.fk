@@ -2023,6 +2023,115 @@
                            (pybmf-trivial-string objects "b")
                            (pybmf-trivial-string objects "value"))))
 
+    ;; --- attribute chain and assignment, method calls ---------------
+
+    (defn pybmf-emit-attr-chain (objects)
+        (intern_node PY-BMF-ATTR
+                     (list (intern_node PY-BMF-ATTR
+                                        (list (pybmf-trivial-string objects "object")
+                                              (pybmf-trivial-string objects "field1")))
+                           (pybmf-trivial-string objects "field2"))))
+
+    (defn pybmf-source-attr-chain (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let inner-kids (node_children (nth kids 0)))
+            (list (py-name (node_value (nth inner-kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth inner-kids 1)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-emit-attr-assign-name (objects)
+        (intern_node PY-BMF-ATTR-ASSIGN
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "field")
+                           (pybmf-trivial-string objects "value"))))
+
+    (defn pybmf-source-attr-assign-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-attr-assign-call0 (objects)
+        (intern_node PY-BMF-ATTR-ASSIGN
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "field")
+                           (intern_node PY-BMF-CALL
+                                        (list (pybmf-trivial-string objects "call"))))))
+
+    (defn pybmf-source-attr-assign-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let call-kids (node_children (nth kids 2)))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth call-kids 0)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-method-call1 (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "method")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-method-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-method-call2 (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "method")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-method-call2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-chained-method-call (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (intern_node PY-BMF-METHOD-CALL
+                                        (list (pybmf-trivial-string objects "object")
+                                              (pybmf-trivial-string objects "m1")))
+                           (pybmf-trivial-string objects "m2"))))
+
+    (defn pybmf-source-chained-method-call (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let inner-kids (node_children (nth kids 0)))
+            (list (py-name (node_value (nth inner-kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth inner-kids 1)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
+
     (let python-bmf-native-section
         (list
             (bmf-native "pybmf-emit-import" pybmf-emit-import PY-BMF-IMPORT)
@@ -2104,7 +2213,11 @@
     call-star-star1 ::= $callee:name "(" "**" $value:name ")" => pybmf-emit-call-star-star1 <= pybmf-source-call-star1;
     assign-call2-ident ::= $target:name "=" $callee:name "(" $a:name "," $b:name ")" => pybmf-emit-assign-call2-ident;
     attr ::= $object:name "." $field:name => pybmf-emit-attr <= pybmf-source-attr;
+    attr-chain ::= $object:name "." $field1:name "." $field2:name => pybmf-emit-attr-chain <= pybmf-source-attr-chain;
     method-call0 ::= $object:name "." $method:name "(" ")" => pybmf-emit-method-call0 <= pybmf-source-method-call0;
+    method-call1 ::= $object:name "." $method:name "(" $arg:name ")" => pybmf-emit-method-call1 <= pybmf-source-method-call1;
+    method-call2 ::= $object:name "." $method:name "(" $a:name "," $b:name ")" => pybmf-emit-method-call2 <= pybmf-source-method-call2;
+    chained-method-call ::= $object:name "." $m1:name "(" ")" "." $m2:name "(" ")" => pybmf-emit-chained-method-call <= pybmf-source-chained-method-call;
     subscript-ident-int ::= $object:name "[" $index:int "]" => pybmf-emit-subscript-ident-int <= pybmf-source-subscript-ident-int;
     slice-int-int ::= $object:name "[" $start:int ":" $end:int "]" => pybmf-emit-slice-int-int;
     list3-int ::= "[" $a:int "," $b:int "," $c:int "]" => pybmf-emit-list3-int;
@@ -2125,6 +2238,8 @@
     def-return-annotation ::= "def" $name:name "(" ")" "->" $type:name ":" => pybmf-emit-def-return-annotation;
     plus-assign-int ::= $target:name "+=" $value:int => pybmf-emit-aug-assign-int;
     attr-assign-int ::= $object:name "." $field:name "=" $value:int => pybmf-emit-attr-assign-int;
+    attr-assign-name ::= $object:name "." $field:name "=" $value:name => pybmf-emit-attr-assign-name <= pybmf-source-attr-assign-name;
+    attr-assign-call0 ::= $object:name "." $field:name "=" $call:name "(" ")" => pybmf-emit-attr-assign-call0 <= pybmf-source-attr-assign-call0;
     subscript-assign-int ::= $object:name "[" $index:int "]" "=" $value:int => pybmf-emit-subscript-assign-int;
     unpack2-ident ::= $a:name "," $b:name "=" $value:name => pybmf-emit-unpack2-ident;
     walrus-ident ::= $target:name ":=" $value:name => pybmf-emit-walrus-ident <= pybmf-source-walrus-ident;
