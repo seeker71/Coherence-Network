@@ -1,0 +1,207 @@
+; form-ontology-loader.fk — runtime JSON → Form ontology bindings.
+;
+; Replaces the three generated artifacts that used to mirror
+; form-stdlib/form-ontology.json into Form-side bindings:
+;
+;   form-ontology.fk       (FORM-CATEGORY-TABLE, FORM-PRIMITIVE-TABLE)
+;   dialect-categories.fk  ((let PY-BMF-IMPORT ...) etc.)
+;   engine-constants.fk    ((defn bmf-domain-python () (bmf-domain-ref 1)) etc.)
+;
+; This file reads form-ontology.json once at load time, builds the
+; two tables directly, and synthesises Recipes for every dialect
+; constant and engine-constant getter. Those Recipes are walked in
+; the caller's env via `walk_recipe_here`, so the resulting bindings
+; land in the same scope they would have if the .fk files had been
+; loaded textually. ONE ice (the JSON) → water at load (table walk)
+; → gas (env bindings).
+;
+; Prelude requirement: form-stdlib/json.fk must load before this
+; file so parse-json and the json-* accessors are in scope.
+
+;; --- read + parse ---------------------------------------------------
+
+(let ONTOLOGY-JSON
+    (parse-json "form-stdlib/form-ontology.json"
+                (read_file "form-stdlib/form-ontology.json")))
+
+;; --- categories / primitives → tables -------------------------------
+;;
+;; Each row is `(list name type inst)` — the exact shape source-compiler.fk
+;; consumes via form-table-lookup / form-row-type / form-row-inst.
+
+(defn fol-build-row (obj)
+    (list (json-string-value (json-object-get obj "name"))
+          (json-int-value    (json-object-get obj "type"))
+          (json-int-value    (json-object-get obj "inst"))))
+
+(defn fol-build-rows-loop (elements acc)
+    (if (eq (len elements) 0) (json-reverse-acc acc)
+        (fol-build-rows-loop (tail elements)
+            (cons (fol-build-row (head elements)) acc))))
+
+(defn fol-build-rows (array-node)
+    (fol-build-rows-loop (json-array-elements array-node) (empty)))
+
+(let FORM-CATEGORY-TABLE  (fol-build-rows (json-object-get ONTOLOGY-JSON "categories")))
+(let FORM-PRIMITIVE-TABLE (fol-build-rows (json-object-get ONTOLOGY-JSON "primitives")))
+
+;; --- recipe-building helpers ----------------------------------------
+;;
+;; The loader builds (let NAME (make_nodeid 1 2 T I)) and (defn NAME ()
+;; BODY) recipes at runtime. These mirror fsc-rec-let / fsc-rec-fndef
+;; in source-compiler.fk but stay local so the loader can run BEFORE
+;; source-compiler.fk in the load chain (the chain is:
+;;   json.fk → form-ontology-loader.fk → source-compiler.fk
+;; so source-compiler.fk's helpers aren't available yet).
+;;
+;; The static recipe-category NodeIDs come straight from the JSON
+;; tables — keeping ONE ice. A walk through FORM-CATEGORY-TABLE for
+;; each name resolves type+inst, then make_nodeid lifts them.
+
+(defn fol-table-lookup (table name)
+    (if (eq (len table) 0) (empty)
+        (if (str_eq (head (head table)) name)
+            (head table)
+            (fol-table-lookup (tail table) name))))
+
+(defn fol-cat (name)
+    (do
+        (let row (fol-table-lookup FORM-CATEGORY-TABLE name))
+        (make_nodeid 1 2 (head (tail row)) (head (tail (tail row))))))
+
+(let FOL-LET-CAT    (fol-cat "let"))
+(let FOL-DO-CAT     (fol-cat "do"))
+(let FOL-SEQ-CAT    (fol-cat "sequence"))
+(let FOL-FNDEF-CAT  (fol-cat "fndef"))
+(let FOL-FNCALL-CAT (fol-cat "fncall"))
+
+;; --- recipe constructors --------------------------------------------
+
+(defn fol-rec-call (fn-name arg-list)
+    (intern_node FOL-FNCALL-CAT (cons (intern_trivial_string fn-name) arg-list)))
+
+(defn fol-rec-let (name value-recipe)
+    (intern_node FOL-LET-CAT
+        (list (intern_trivial_string name) value-recipe)))
+
+(defn fol-rec-fndef-0 (name body-recipe)
+    (intern_node FOL-FNDEF-CAT
+        (list (intern_trivial_string name)
+              (intern_node FOL-SEQ-CAT (empty))
+              body-recipe)))
+
+(defn fol-rec-make-nodeid (type inst)
+    (fol-rec-call "make_nodeid"
+        (list (intern_trivial_int 1)
+              (intern_trivial_int 2)
+              (intern_trivial_int type)
+              (intern_trivial_int inst))))
+
+;; --- dialect-category recipes ---------------------------------------
+;;
+;; For each dialect entry, build `(let <PREFIX>-<NAME> (make_nodeid 1
+;; 2 <category_type> <inst>))`. The name is concatenated at runtime;
+;; the value-recipe is an fncall to make_nodeid.
+
+(defn fol-dialect-cat-let (prefix cat-type cat-obj)
+    (do
+        (let name (str_concat prefix
+                    (str_concat "-" (json-string-value
+                                       (json-object-get cat-obj "name")))))
+        (let inst (json-int-value (json-object-get cat-obj "inst")))
+        (fol-rec-let name (fol-rec-make-nodeid cat-type inst))))
+
+(defn fol-dialect-cat-lets-loop (prefix cat-type cat-array acc)
+    (if (eq (len cat-array) 0) acc
+        (fol-dialect-cat-lets-loop prefix cat-type (tail cat-array)
+            (cons (fol-dialect-cat-let prefix cat-type (head cat-array)) acc))))
+
+;; Walk one dialect's category list, prepending each let-recipe onto acc.
+(defn fol-dialect-lets (dialect-pair acc)
+    (do
+        (let dialect-obj (json-pair-value dialect-pair))
+        (let prefix      (json-string-value (json-object-get dialect-obj "name_prefix")))
+        (let cat-type    (json-int-value    (json-object-get dialect-obj "category_type")))
+        (let cats        (json-array-elements (json-object-get dialect-obj "categories")))
+        (fol-dialect-cat-lets-loop prefix cat-type cats acc)))
+
+;; Walk all dialects, building one flat list of let-recipes.
+(defn fol-all-dialect-lets-loop (dialects acc)
+    (if (eq (len dialects) 0) acc
+        (fol-all-dialect-lets-loop (tail dialects)
+            (fol-dialect-lets (head dialects) acc))))
+
+(defn fol-all-dialect-lets ()
+    (fol-all-dialect-lets-loop
+        (json-object-pairs (json-object-get ONTOLOGY-JSON "dialects"))
+        (empty)))
+
+;; --- engine-constants getters ---------------------------------------
+;;
+;; Two shapes per family:
+;;   factory-style — body is (fncall <factory> <int-value>)
+;;   string-style  — body is a trivial string literal
+;;
+;; The schema marks string-style families with `string_values: true`.
+;; Factory-style families carry a `factory` field naming the helper
+;; in engine.fk that takes the int value.
+
+(defn fol-engine-entry-body-factory (factory entry-obj)
+    (fol-rec-call factory
+        (list (intern_trivial_int (json-int-value (json-object-get entry-obj "value"))))))
+
+(defn fol-engine-entry-body-string (entry-obj)
+    (intern_trivial_string (json-string-value (json-object-get entry-obj "value"))))
+
+(defn fol-engine-entry-defn (name-prefix is-string factory entry-obj)
+    (do
+        (let name (str_concat name-prefix
+                    (str_concat "-" (json-string-value
+                                       (json-object-get entry-obj "name")))))
+        (let body (if is-string
+                      (fol-engine-entry-body-string entry-obj)
+                      (fol-engine-entry-body-factory factory entry-obj)))
+        (fol-rec-fndef-0 name body)))
+
+(defn fol-engine-entries-loop (name-prefix is-string factory entries acc)
+    (if (eq (len entries) 0) acc
+        (fol-engine-entries-loop name-prefix is-string factory (tail entries)
+            (cons (fol-engine-entry-defn name-prefix is-string factory (head entries)) acc))))
+
+(defn fol-engine-family-defns (family-pair acc)
+    (do
+        (let fam-obj     (json-pair-value family-pair))
+        (let name-prefix (json-string-value (json-object-get fam-obj "name_prefix")))
+        (let is-string   (json-object-has? fam-obj "string_values"))
+        (let factory     (if is-string ""
+                             (json-string-value (json-object-get fam-obj "factory"))))
+        (let entries     (json-array-elements (json-object-get fam-obj "entries")))
+        (fol-engine-entries-loop name-prefix is-string factory entries acc)))
+
+(defn fol-all-engine-defns-loop (families acc)
+    (if (eq (len families) 0) acc
+        (fol-all-engine-defns-loop (tail families)
+            (fol-engine-family-defns (head families) acc))))
+
+(defn fol-all-engine-defns ()
+    (fol-all-engine-defns-loop
+        (json-object-pairs (json-object-get ONTOLOGY-JSON "engine_constants"))
+        (empty)))
+
+;; --- materialise: walk the combined do-recipe in caller env ---------
+;;
+;; All let-recipes and defn-recipes go into one (do ...) block whose
+;; bindings land in the caller env when walked via walk_recipe_here.
+;; Order doesn't matter — every binding is independent (factory names
+;; resolve when the getter is *called*, not when its defn is walked).
+
+(defn fol-concat-acc (xs acc)
+    (if (eq (len xs) 0) acc
+        (fol-concat-acc (tail xs) (cons (head xs) acc))))
+
+(let FOL-ALL-RECIPES
+    (fol-concat-acc (fol-all-dialect-lets) (fol-all-engine-defns)))
+
+(walk_recipe_here (intern_node FOL-DO-CAT FOL-ALL-RECIPES))
+
+0

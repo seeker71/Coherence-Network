@@ -1,6 +1,6 @@
 ; tests/bmf-object-runtime.fk - completed grammar rules become reversible BMF objects
 ;
-; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk
 
 (do
     (defn emit-int-object (objects)

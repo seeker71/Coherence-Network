@@ -4,7 +4,7 @@
 ; forms: comments, decorators, async defs, annotations, single/double/triple
 ; strings, prefixed strings, in-place operators, walrus, booleans, ellipsis.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn scanner-real-obj (source-objects index) (nth source-objects index))

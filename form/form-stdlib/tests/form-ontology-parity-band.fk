@@ -16,7 +16,7 @@
 ; a different category than FORM-PRIMITIVE-TABLE says, those bands
 ; would score wrong.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk
 
 (do
     ;; Each row is (list name type inst). Pull fields without nth.
