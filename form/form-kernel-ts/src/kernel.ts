@@ -1430,6 +1430,16 @@ export class Kernel {
         a.inst === b.inst;
       return { kind: "bool", bool: equal };
     });
+    // value_eq — polymorphic equality across Value kinds. Returns true
+    // when both args have the same kind AND compare equal within that
+    // kind. Cross-kind returns false. Use when a Form-side function
+    // holds tagged values that may be either strings or NodeIDs —
+    // e.g. domain/lens in bmf-symbol-context.
+    this.registerNative("value_eq", catCompareEq(), (_k, args) => {
+      const a = args[0]!;
+      const b = args[1]!;
+      return { kind: "bool", bool: valueEqual(a, b) };
+    });
     this.registerNative("serialize-recipe", catWitness(), (k, args) => {
       const out: number[] = [];
       serializeNode(k, argNodeID(args, 0), out);
@@ -2293,6 +2303,15 @@ function valueEqual(a: Value, b: Value): boolean {
       return a.str === (b as { str: string }).str;
     case "bool":
       return a.bool === (b as { bool: boolean }).bool;
+    case "nodeid": {
+      const bn = (b as { nodeid: NodeID }).nodeid;
+      return (
+        a.nodeid.pkg === bn.pkg &&
+        a.nodeid.level === bn.level &&
+        a.nodeid.type === bn.type &&
+        a.nodeid.inst === bn.inst
+      );
+    }
     default:
       return false;
   }

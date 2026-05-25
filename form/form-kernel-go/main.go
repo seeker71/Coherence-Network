@@ -1224,7 +1224,44 @@ func (k *Kernel) registerNatives() {
 	// dispatch — the kernel's `eq` (RCMP_EQ) coerces operands via as_int,
 	// which panics on NodeIDs; node_eq closes that gap.
 	k.registerNative("node_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		// Strict — sibling parity with Rust's `as_nid` and TS's `argNodeID`.
+		// Both panic on non-NodeID args; Go's previous lenience (reading
+		// `args[N].Nid` directly on a VStr returns the zero NodeID, making
+		// two strings compare equal — a latent false positive) is the bug.
+		if args[0].Kind != VNodeID || args[1].Kind != VNodeID {
+			panic(fmt.Sprintf("node_eq: expected NodeID args, got %v and %v", args[0].Kind, args[1].Kind))
+		}
 		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+	})
+	// value_eq — polymorphic equality across all Value kinds. Returns
+	// true when both args have the same kind AND compare equal within
+	// that kind. Cross-kind returns false (str ≠ nodeid even if they
+	// share text). Use this when a Form-side function holds tagged
+	// values that may be either strings or NodeIDs (e.g. domain/lens
+	// in bmf-symbol-context can be either typed-constant NodeIDs or
+	// string literals). Avoids the str_eq/node_eq fork that previously
+	// forced callers to know which type they held.
+	k.registerNative("value_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		a, b := args[0], args[1]
+		if a.Kind != b.Kind {
+			return Value{Kind: VBool, Bool: false}
+		}
+		var eq bool
+		switch a.Kind {
+		case VNull:
+			eq = true
+		case VInt:
+			eq = a.Int == b.Int
+		case VStr:
+			eq = a.Str == b.Str
+		case VBool:
+			eq = a.Bool == b.Bool
+		case VNodeID:
+			eq = a.Nid == b.Nid
+		default:
+			eq = false
+		}
+		return Value{Kind: VBool, Bool: eq}
 	})
 	// intern_node_at — intern composite + record source attribution.
 	// Engine.fk's parser actions call this so every emitted Recipe carries

@@ -7,7 +7,7 @@
 ;   - from-import-alias-many2  : `from typing import List as L, Dict as D`
 ;   - from-import-paren-many2  : `from typing import (List, Dict)`
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn result-object (m)

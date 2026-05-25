@@ -339,9 +339,13 @@
     (defn bmf-context-derived-from (ctx) (bmf-symbol-context-property ctx (bmf-context-key-derived-from) ""))
 
     (defn bmf-symbol-binding-matches? (binding ctx anchor)
+        ;; domain/lens are tagged values that may be either string
+        ;; literals ("python", "go" in lower-level test fixtures) or
+        ;; typed-constant NodeIDs (bmf-domain-natural() etc in context
+        ;; tests). value_eq is polymorphic across both kinds.
         (and (str_eq (bmf-symbol-binding-anchor binding) anchor)
-             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
-                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+             (and (value_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (value_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
 
     (defn bmf-symbol-name-in-list? (names name)
         (if (nil? names) false
@@ -350,9 +354,11 @@
                 (bmf-symbol-name-in-list? (tail names) name))))
 
     (defn bmf-symbol-binding-name-matches? (binding ctx name)
+        ;; domain/lens — same polymorphic convention as
+        ;; bmf-symbol-binding-matches? above.
         (and (bmf-symbol-name-in-list? (bmf-symbol-binding-names binding) name)
-             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
-                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+             (and (value_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (value_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
 
     (defn bmf-symbol-find-loop (bindings ctx anchor missing)
         (if (nil? bindings) missing
@@ -523,8 +529,9 @@
         (bmf-lens-contracts-to-targets (bmf-translation-space-contracts space)))
 
     (defn bmf-surface-contract-matches? (surface domain lens)
-        (and (node_eq (bmf-surface-contract-domain surface) domain)
-             (node_eq (bmf-surface-contract-lens surface) lens)))
+        ;; domain/lens — polymorphic, same as bmf-symbol-binding.
+        (and (value_eq (bmf-surface-contract-domain surface) domain)
+             (value_eq (bmf-surface-contract-lens surface) lens)))
 
     (defn bmf-surface-contract-score (surface domain lens ctx)
         (if (bmf-surface-contract-matches? surface domain lens)
@@ -582,8 +589,9 @@
             missing))
 
     (defn bmf-reverse-lens-matches? (target domain lens)
-        (and (node_eq (bmf-reverse-lens-domain target) domain)
-             (node_eq (bmf-reverse-lens-lens target) lens)))
+        ;; domain/lens — polymorphic, same as bmf-symbol-binding.
+        (and (value_eq (bmf-reverse-lens-domain target) domain)
+             (value_eq (bmf-reverse-lens-lens target) lens)))
 
     (defn bmf-reverse-lens-find (targets domain lens missing)
         (if (nil? targets) missing

@@ -1,30 +1,12 @@
 ; grammars/go-bmf.fk - Go grammar as native BMF object rules
+;
+; Per-dialect category constants (GO-BMF-*) are declared as data in
+; form-stdlib/form-ontology.json and emitted into
+; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
+; file references them as free identifiers; load dialect-categories.fk as
+; a prelude before this file.
 
 (do
-    (let GO-BMF-PACKAGE   (make_nodeid 1 2 99 631))
-    (let GO-BMF-IMPORT    (make_nodeid 1 2 99 632))
-    (let GO-BMF-FUNC      (make_nodeid 1 2 99 633))
-    (let GO-BMF-METHOD    (make_nodeid 1 2 99 634))
-    (let GO-BMF-STRUCT    (make_nodeid 1 2 99 635))
-    (let GO-BMF-INTERFACE (make_nodeid 1 2 99 636))
-    (let GO-BMF-VAR       (make_nodeid 1 2 99 637))
-    (let GO-BMF-CONST     (make_nodeid 1 2 99 638))
-    (let GO-BMF-RETURN    (make_nodeid 1 2 99 639))
-    (let GO-BMF-ASSIGN    (make_nodeid 1 2 99 640))
-    (let GO-BMF-CALL      (make_nodeid 1 2 99 641))
-    (let GO-BMF-SELECTOR  (make_nodeid 1 2 99 642))
-    (let GO-BMF-INDEX     (make_nodeid 1 2 99 643))
-    (let GO-BMF-IF        (make_nodeid 1 2 99 644))
-    (let GO-BMF-FOR       (make_nodeid 1 2 99 645))
-    (let GO-BMF-GO        (make_nodeid 1 2 99 646))
-    (let GO-BMF-DEFER     (make_nodeid 1 2 99 647))
-    (let GO-BMF-TYPE      (make_nodeid 1 2 99 648))
-    (let GO-BMF-SWITCH    (make_nodeid 1 2 99 649))
-    (let GO-BMF-SELECT    (make_nodeid 1 2 99 650))
-    (let GO-BMF-CHAN      (make_nodeid 1 2 99 651))
-    (let GO-BMF-COMPOSITE (make_nodeid 1 2 99 652))
-    (let GO-BMF-PTR-TYPE  (make_nodeid 1 2 99 653))
-
     (defn go-src-keyword (value) (bmf-atom "go-keyword" value))
     (defn go-src-name (value) (bmf-atom "go-name" value))
     (defn go-src-op (value) (bmf-atom "go-op" value))
