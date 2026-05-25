@@ -1,0 +1,51 @@
+; lenses/symbol-source.fk — symbol/source lens extraction for emitter use
+;
+; A NodeID alone has no human-readable name. The lens binds a NodeID to
+; (symbol, source-span) without making the symbol part of structural
+; identity. Emitters look here when they need a name to put on a Python
+; function, a rule name, or a dataclass field.
+;
+; The lens itself lives as a sibling .fkl artifact next to each .fkb
+; (kernels/python_bmf/sdk.py defines the on-disk shape). This file is
+; the Form-side accessor surface.
+;
+; spec: specs/form-binary-to-native-python-emitter.md §Architecture
+;       layer 3 (symbol/source lens layer).
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Lens accessors
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn lens-entry (nodeid symbol span)
+        (list "lens-entry" nodeid symbol span))
+
+    (defn lens-entry-nodeid (e) (nth e 1))
+    (defn lens-entry-symbol (e) (nth e 2))
+    (defn lens-entry-span (e)   (nth e 3))
+
+    (defn lens-symbol-for (lens nodeid)
+        (if (nil? lens) "unnamed"
+            (do
+                (let entry (head lens))
+                (if (str_eq (lens-entry-nodeid entry) nodeid)
+                    (lens-entry-symbol entry)
+                    (lens-symbol-for (tail lens) nodeid)))))
+
+    (defn lens-source-span-for (lens nodeid)
+        (if (nil? lens) (list "span" "" 0 0)
+            (do
+                (let entry (head lens))
+                (if (str_eq (lens-entry-nodeid entry) nodeid)
+                    (lens-entry-span entry)
+                    (lens-source-span-for (tail lens) nodeid)))))
+
+    ;; Identity helper for emitters that need a fallback name when the
+    ;; lens lacks an entry. Format: "node-<pkg>-<level>-<type>-<inst>"
+    ;; so the generated Python remains readable, with the lens-miss
+    ;; visible as a name pattern.
+
+    (defn lens-fallback-name (nodeid)
+        (str_concat "node_" nodeid))
+
+    0)

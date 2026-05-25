@@ -1,0 +1,78 @@
+; emits/semantic-lowerer.fk — recipe → target-neutral semantic IR
+;
+; Sits between a compiled .fkb and any per-target emitter
+; (emits/python-native.fk, future emits/go-native.fk, etc.). Every
+; emitter consumes the same semantic IR so target-specific idioms do
+; not leak into shared lowering.
+;
+; The semantic IR vocabulary is named in
+; specs/form-binary-to-native-python-emitter.md §Architecture:
+;
+;   module, function, parameter-list, call, assignment, branch,
+;   sequence, BMF rule, parser section, grammar registry, object
+;   constructor, artifact writer.
+;
+; Each recipe category lowers to one of those — unknown categories
+; lower to an explicit (semantic-unhandled <name> ...) node carrying
+; the lens-resolved name, never a string-collapse.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Semantic IR constructors
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn semantic-module (name members)
+        (list "semantic-module" name members))
+
+    (defn semantic-fndef (name params body)
+        (list "semantic-fndef" name params body))
+
+    (defn semantic-call (target args)
+        (list "semantic-call" target args))
+
+    (defn semantic-assign (target value)
+        (list "semantic-assign" target value))
+
+    (defn semantic-branch (cond then-branch else-branch)
+        (list "semantic-branch" cond then-branch else-branch))
+
+    (defn semantic-sequence (items)
+        (list "semantic-sequence" items))
+
+    (defn semantic-bmf-rule (name pattern forward reverse)
+        (list "semantic-bmf-rule" name pattern forward reverse))
+
+    (defn semantic-rule-pattern (matchers)
+        (list "semantic-rule-pattern" matchers))
+
+    (defn semantic-object-ctor (category fields)
+        (list "semantic-object-ctor" category fields))
+
+    (defn semantic-grammar-registry (entries)
+        (list "semantic-grammar-registry" entries))
+
+    (defn semantic-artifact-writer (path body)
+        (list "semantic-artifact-writer" path body))
+
+    (defn semantic-unhandled (name kind original-recipe)
+        (list "semantic-unhandled" name kind original-recipe))
+
+    ;; Leaf values
+    (defn semantic-lit-int (n)    (list "semantic-lit" "int" n))
+    (defn semantic-lit-string (s) (list "semantic-lit" "string" s))
+    (defn semantic-lit-bool (b)   (list "semantic-lit" "bool" b))
+    (defn semantic-lit-none ()    (list "semantic-lit" "none" 0))
+    (defn semantic-ident (name)   (list "semantic-ident" name))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Lowering dispatch (skeleton)
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The full dispatch lives next to recipe-category constants once
+    ;; the lens layer is wired (Phase 1). Today: a thin shim that
+    ;; preserves unknown nodes by name so the emitter can still render
+    ;; readable Python with explicit gaps.
+
+    (defn lower-recipe (recipe lens-lookup)
+        (semantic-unhandled "unlowered" "unknown" recipe))
+
+    0)
