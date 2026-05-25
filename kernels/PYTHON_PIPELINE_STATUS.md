@@ -177,11 +177,12 @@ Sibling track to the TS pipeline above. The `kernels/python_bmf/` package is the
 | Other modules template-emitted via kernel `write_file_text` | ✓ |
 | Scanner parity (Form-native python-bmf.fk vs emitted) — parity-suite demos | ✓ 8/8 token-stream identical |
 | Round-trip on parity-suite demos (compile → decompile → re-compile) | ✓ 8/8 semantic match |
-| **Output format the Form kernels can execute (`.fk` s-expression text)** | ✗ — emits private `FKB1` binary only this package reads |
-| **BMF rule coverage for substrate-style Python (classes, decorators, imports-from, type annotations, comprehensions, f-strings, attribute assign)** | ✗ — falls through to generic `statement` envelopes |
-| **Executing emitted output on `form-kernel-rust` and matching CPython on real workloads** | ✗ — kernel rejects `FKB1`; no execution proof exists |
-| **organ.py / form.py / API endpoint code compile to executable Form** | ✗ — see `kernels/python_bmf/KNOWN_GAPS.md` "What 'compile' actually does today" |
-| Performance + RSS comparison on equivalent workloads | ✗ — gated on the above |
+| **Form → idiomatic native Python translator** (the universal-translator move) | ✓ — `kernels/python_bmf/emit_python.py` reads `.fk`, emits real `def`/`if`/`+`/`*`/`==` Python; 7/7 parity-suite demos execute under CPython matching original |
+| **`.py` → `.fk` sanity bridge** (not the universal translator, just for cross-runtime comparison) | ✓ — `kernels/python_bmf/kernel_fk_lowering.py` walks `ast`, emits the same `.fk` shape as `lang-python-fk.ts` |
+| **Executing emitted `.fk` on `form-kernel-rust` matching CPython** | ✓ — 7/7 parity-suite demos return identical integers |
+| Performance comparison (wall-clock per iter) | ✓ — `scripts/perf_compare_native_python.sh` reports CPython vs kernel for each demo |
+| **BMF rule coverage for substrate-style Python (classes, decorators, imports-from, type annotations, comprehensions, f-strings, attribute assign, lambdas)** | ✗ — falls through to generic `statement` envelopes via `--file` path; `--emit-fk` raises `UnsupportedConstruct` |
+| **organ.py / form.py / API endpoint code emitting to executable Form** | ✗ — needs the upper-half of the gap list above |
 
 The TS pipeline (top of this doc) is the path that currently runs end-to-end on the parity-suite demos with native kernel execution. The native-Python emitter is on a parallel arc that still needs the `.fk`-text emitter, the rule coverage, and the cross-runtime execution proof before any "compile organ.py" claim can land.
 
