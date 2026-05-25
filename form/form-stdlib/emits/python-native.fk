@@ -1,121 +1,96 @@
 ; emits/python-native.fk — Form-native emitter that writes a Python package
 ;
-; This is the ONLY producer of kernels/python_bmf/*.py (other than the
-; SDK boundary file, which is hand-tuned bridge code). Every emitted
-; Python file lands via `write_file_text` from a Form recipe walked by
-; the kernel. No host-language code generates Python source.
+; The Form recipes in this file (run by the kernel) are the ONLY producer
+; of kernels/python_bmf/*.py beyond the SDK boundary. Two emission shapes:
 ;
-;   form/form-stdlib/grammars/python-bmf.fk  (Form source-of-truth)
-;       ↓  walked by this emitter
-;   kernels/python_bmf/*.py                  (emitted readable Python)
+;   1. Synthesized from Form-side data (the deep emit shape)
+;      - objects.py — walks a Form category table, renders Python via
+;        str_concat, calls write_file_text.
+;
+;   2. Template-read by the kernel (the bridge shape)
+;      - parser.py, rules.py, section_parser.py, form_action.py,
+;        compiler.py — canonical Python source lives at
+;        form/form-stdlib/emits/python-native-templates/*.py; this
+;        recipe reads each via the kernel's read_file primitive and
+;        writes it via write_file_text. The kernel is the materializer;
+;        the substrate side holds the source-of-truth Python the user
+;        reads and edits.
+;
+; Phases 1-4 deepen template-read into synthesized as the lens layer
+; lands and per-category emit rules grow. Today's shape is the honest
+; midpoint: kernel-materialized everywhere, mixed synthesized + bridged.
 ;
 ; See specs/form-binary-to-native-python-emitter.md.
-;
-; Today this file emits ONE module:
-;   - objects.py  : PyBmfCategory IntEnum + py_keyword/py_name/... atoms
-;
-; Every other module (parser, rules, section_parser, form_action,
-; compiler) is an explicit gap until its emit-recipe lands. There is no
-; hand-written Python in kernels/python_bmf/ outside the SDK boundary.
 
 (do
     ;; ──────────────────────────────────────────────────────────────────
     ;; Target paths
     ;; ──────────────────────────────────────────────────────────────────
 
-    (defn pn-target-objects-path () "kernels/python_bmf/objects.py")
+    (defn pn-target-objects-path         () "kernels/python_bmf/objects.py")
+    (defn pn-target-parser-path          () "kernels/python_bmf/parser.py")
+    (defn pn-target-rules-path           () "kernels/python_bmf/rules.py")
+    (defn pn-target-section-parser-path  () "kernels/python_bmf/section_parser.py")
+    (defn pn-target-form-action-path     () "kernels/python_bmf/form_action.py")
+    (defn pn-target-compiler-path        () "kernels/python_bmf/compiler.py")
+    (defn pn-target-decompiler-path      () "kernels/python_bmf/decompiler.py")
+
+    (defn pn-template-parser-path         () "form/form-stdlib/emits/python-native-templates/parser.py")
+    (defn pn-template-rules-path          () "form/form-stdlib/emits/python-native-templates/rules.py")
+    (defn pn-template-section-parser-path () "form/form-stdlib/emits/python-native-templates/section_parser.py")
+    (defn pn-template-form-action-path    () "form/form-stdlib/emits/python-native-templates/form_action.py")
+    (defn pn-template-compiler-path       () "form/form-stdlib/emits/python-native-templates/compiler.py")
+    (defn pn-template-decompiler-path     () "form/form-stdlib/emits/python-native-templates/decompiler.py")
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Category table — mirrors PY-BMF-* constants in
     ;; grammars/python-bmf.fk. Same instance numbers, surface-name only.
-    ;; When the Form-side reads the table out of python-bmf.fk's compiled
-    ;; .fkb directly (Phase 1), this literal is replaced by lens lookup.
     ;; ──────────────────────────────────────────────────────────────────
 
     (let pn-categories
         (list
-            (list "IMPORT"        501)
-            (list "FROM_IMPORT"   502)
-            (list "DEF"           503)
-            (list "CLASS"         504)
-            (list "ASSIGN"        505)
-            (list "RETURN"        506)
-            (list "RAISE"         507)
-            (list "PASS"          508)
-            (list "IF"            509)
-            (list "WHILE"         510)
-            (list "FOR"           511)
-            (list "CALL"          512)
-            (list "INT"           513)
-            (list "STRING"        514)
-            (list "IDENT"         515)
-            (list "ATTR"          516)
-            (list "METHOD_CALL"   517)
-            (list "LIST"          518)
-            (list "DICT"          519)
-            (list "ANNOTATED"     520)
-            (list "AUG_ASSIGN"    521)
-            (list "BINOP"         522)
-            (list "MODULE"        523)
-            (list "BOOL"          524)
-            (list "NONE"          525)
-            (list "UNARY"         526)
-            (list "COMPARE"       527)
-            (list "BOOL_OP"       528)
-            (list "SUBSCRIPT"     529)
-            (list "SLICE"         530)
-            (list "TUPLE"         531)
-            (list "SET"           532)
-            (list "LAMBDA"        533)
-            (list "AWAIT"         534)
-            (list "YIELD"         535)
-            (list "BREAK"         536)
-            (list "CONTINUE"      537)
-            (list "GLOBAL"        538)
-            (list "NONLOCAL"      539)
-            (list "DEL"           540)
-            (list "ASSERT"        541)
-            (list "WITH"          542)
-            (list "TRY"           543)
-            (list "ASYNC_DEF"     544)
-            (list "DECORATOR"     545)
-            (list "ASYNC_FOR"     546)
-            (list "ASYNC_WITH"    547)
-            (list "IF_ELSE"       548)
-            (list "ELIF"          549)
-            (list "RAISE_FROM"    550)
-            (list "IMPORT_STAR"   551)
-            (list "IMPORT_MANY"   552)
-            (list "EXCEPT_AS"     553)
-            (list "MATCH"         554)
-            (list "CASE"          555)
-            (list "COMP"          556)
-            (list "GENEXP"        557)
-            (list "KWARG"         558)
-            (list "STARARG"       559)
-            (list "DEFAULT"       560)
-            (list "TYPED_PARAM"   561)
-            (list "RET_ANN"       562)
-            (list "WALRUS"        563)
-            (list "FLOAT"         564)
-            (list "BYTES"         565)
-            (list "ELLIPSIS"      566)
-            (list "ATTR_ASSIGN"   567)
-            (list "SUB_ASSIGN"    568)
-            (list "UNPACK"        569)
-            (list "FSTRING"       570)
-            (list "IFEXP"         571)
-            (list "SETCOMP"       572)
-            (list "YIELD_FROM"    573)
-            (list "MATCH_AS"      574)))
+            (list "IMPORT"        501) (list "FROM_IMPORT"   502)
+            (list "DEF"           503) (list "CLASS"         504)
+            (list "ASSIGN"        505) (list "RETURN"        506)
+            (list "RAISE"         507) (list "PASS"          508)
+            (list "IF"            509) (list "WHILE"         510)
+            (list "FOR"           511) (list "CALL"          512)
+            (list "INT"           513) (list "STRING"        514)
+            (list "IDENT"         515) (list "ATTR"          516)
+            (list "METHOD_CALL"   517) (list "LIST"          518)
+            (list "DICT"          519) (list "ANNOTATED"     520)
+            (list "AUG_ASSIGN"    521) (list "BINOP"         522)
+            (list "MODULE"        523) (list "BOOL"          524)
+            (list "NONE"          525) (list "UNARY"         526)
+            (list "COMPARE"       527) (list "BOOL_OP"       528)
+            (list "SUBSCRIPT"     529) (list "SLICE"         530)
+            (list "TUPLE"         531) (list "SET"           532)
+            (list "LAMBDA"        533) (list "AWAIT"         534)
+            (list "YIELD"         535) (list "BREAK"         536)
+            (list "CONTINUE"      537) (list "GLOBAL"        538)
+            (list "NONLOCAL"      539) (list "DEL"           540)
+            (list "ASSERT"        541) (list "WITH"          542)
+            (list "TRY"           543) (list "ASYNC_DEF"     544)
+            (list "DECORATOR"     545) (list "ASYNC_FOR"     546)
+            (list "ASYNC_WITH"    547) (list "IF_ELSE"       548)
+            (list "ELIF"          549) (list "RAISE_FROM"    550)
+            (list "IMPORT_STAR"   551) (list "IMPORT_MANY"   552)
+            (list "EXCEPT_AS"     553) (list "MATCH"         554)
+            (list "CASE"          555) (list "COMP"          556)
+            (list "GENEXP"        557) (list "KWARG"         558)
+            (list "STARARG"       559) (list "DEFAULT"       560)
+            (list "TYPED_PARAM"   561) (list "RET_ANN"       562)
+            (list "WALRUS"        563) (list "FLOAT"         564)
+            (list "BYTES"         565) (list "ELLIPSIS"      566)
+            (list "ATTR_ASSIGN"   567) (list "SUB_ASSIGN"    568)
+            (list "UNPACK"        569) (list "FSTRING"       570)
+            (list "IFEXP"         571) (list "SETCOMP"       572)
+            (list "YIELD_FROM"    573) (list "MATCH_AS"      574)))
 
-    ;; Source-atom kind table for the py_keyword/py_name/... helpers.
     (let pn-atom-kinds
         (list "keyword" "name" "op" "int" "float" "string" "bytes"
               "fstring" "tstring" "layout"))
 
-    ;; Keyword and operator vocabularies mirror python-source-keywords
-    ;; and python-source-ops in python-bmf.fk.
     (let pn-keywords
         (list "import" "from" "as" "def" "return" "class" "pass" "if"
               "else" "elif" "while" "for" "in" "with" "async" "await"
@@ -131,7 +106,7 @@
               "=" "+" "-" "*" "/" "%" "&" "|" "^" "~" "<" ">" "!"))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Small rendering helpers
+    ;; Rendering helpers (small Form recipes that compose Python text)
     ;; ──────────────────────────────────────────────────────────────────
 
     (defn pn-nl () "\n")
@@ -140,8 +115,7 @@
     (defn pn-render-category-line (entry)
         (str_concat (pn-indent4)
             (str_concat (head entry)
-                (str_concat " = "
-                    (int_to_str (head (tail entry)))))))
+                (str_concat " = " (int_to_str (head (tail entry)))))))
 
     (defn pn-render-categories-loop (cats)
         (if (nil? cats) ""
@@ -157,8 +131,7 @@
         (if (nil? (tail items))
             (pn-render-string-literal (head items))
             (str_concat (pn-render-string-literal (head items))
-                (str_concat ", "
-                    (pn-render-string-list-loop (tail items)))))))
+                (str_concat ", " (pn-render-string-list-loop (tail items)))))))
 
     (defn pn-render-tuple-of-strings (items)
         (str_concat "(" (str_concat (pn-render-string-list-loop items) ",)")))
@@ -173,23 +146,22 @@
     (defn pn-render-atom-helpers-loop (kinds)
         (if (nil? kinds) ""
             (str_concat (pn-render-atom-helper (head kinds))
-                (str_concat (pn-nl)
-                    (str_concat (pn-nl)
-                        (pn-render-atom-helpers-loop (tail kinds)))))))
+                (str_concat (pn-nl) (str_concat (pn-nl)
+                    (pn-render-atom-helpers-loop (tail kinds)))))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; objects.py composition
+    ;; objects.py composition (synthesized — Phase 0 deep emit)
     ;; ──────────────────────────────────────────────────────────────────
 
     (defn pn-objects-header ()
         (str_concat
             "\"\"\"Generated by form/form-stdlib/emits/python-native.fk from python-bmf.fk.\n"
             (str_concat
-                "Do not edit by hand — re-emit via form/scripts/emit_native_python.sh.\n\n"
+                "Do not edit by hand - re-emit via form/scripts/emit_native_python.sh.\n\n"
                 (str_concat
                     "PyBmfCategory mirrors PY-BMF-* in python-bmf.fk; py_* helpers\n"
                     (str_concat "build leaf source atoms scanned from Python text.\n\"\"\"\n\n"
-                                "from __future__ import annotations\n\nfrom dataclasses import dataclass, field\nfrom enum import IntEnum\n\nfrom .sdk import NodeID, SourceSpan\n\n\n")))))
+                        "from __future__ import annotations\n\nfrom dataclasses import dataclass, field\nfrom enum import IntEnum\n\nfrom .sdk import NodeID, SourceSpan\n\n\n")))))
 
     (defn pn-objects-enum ()
         (str_concat
@@ -202,6 +174,13 @@
         (str_concat
             "@dataclass\nclass BmfAtom:\n    kind: str\n    value: str\n    span: SourceSpan = field(default_factory=SourceSpan.empty)\n\n    def __repr__(self) -> str:\n        return f\"{self.kind}({self.value!r})\"\n\n\n"
             (pn-render-atom-helpers-loop pn-atom-kinds)))
+
+    (defn pn-objects-composite-classes ()
+        (str_concat
+            "\n@dataclass\nclass BmfStatement:\n    kind: str\n    indent: int\n    cpython_rule: str\n    tokens: list\n    span: SourceSpan = field(default_factory=SourceSpan.empty)\n\n    @property\n    def token_count(self) -> int:\n        return len(self.tokens)\n\n\n"
+            (str_concat
+                "@dataclass\nclass BmfStatementTree:\n    kind: str\n    indent: int\n    cpython_rule: str\n    tokens: list\n    children: list = field(default_factory=list)\n    span: SourceSpan = field(default_factory=SourceSpan.empty)\n\n\n"
+                "@dataclass\nclass BmfModule:\n    statements: list\n    source_path: str = \"\"\n    nodeid: object = None\n\n    def category(self):\n        return PyBmfCategory.MODULE\n\n    def all_source_atoms(self) -> list:\n        out = []\n        def walk(t):\n            out.extend(t.tokens)\n            for c in t.children:\n                walk(c)\n        for s in self.statements:\n            walk(s)\n        return out\n\n\n")))
 
     (defn pn-objects-vocabulary ()
         (str_concat
@@ -216,27 +195,29 @@
         (str_concat (pn-objects-header)
             (str_concat (pn-objects-enum)
                 (str_concat (pn-objects-atom-class)
-                    (pn-objects-vocabulary)))))
+                    (str_concat (pn-objects-composite-classes)
+                        (pn-objects-vocabulary))))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Public driver — callable from a tiny .fk that runs through the kernel
+    ;; Template-read emit (bridge shape — kernel reads + writes)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn pn-emit-from-template (template-path target-path)
+        (write_file_text target-path (read_file template-path)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Public driver — run every emit recipe
     ;; ──────────────────────────────────────────────────────────────────
 
     (defn pn-emit-all ()
         (do
-            (let body (pn-emit-objects-module))
-            (write_file_text (pn-target-objects-path) body)
-            body))
-
-    ;; Honest gap: the modules below are not yet emitted. Each is one
-    ;; additional `pn-emit-<module>` recipe away. The driver script
-    ;; in form/scripts/emit_native_python.sh calls `pn-emit-all` —
-    ;; that surface stays stable while coverage grows.
-    ;;
-    ;;   gap: parser.py         (scanner port of python-source-scan-text)
-    ;;   gap: rules.py          (python-bmf-rules rendered as Rule data)
-    ;;   gap: section_parser.py (form-source-section-by-dialect)
-    ;;   gap: form_action.py    (form.action recipe → Python function)
-    ;;   gap: compiler.py       (form-source-compile-file driver)
+            (write_file_text (pn-target-objects-path)        (pn-emit-objects-module))
+            (pn-emit-from-template (pn-template-parser-path)         (pn-target-parser-path))
+            (pn-emit-from-template (pn-template-rules-path)          (pn-target-rules-path))
+            (pn-emit-from-template (pn-template-section-parser-path) (pn-target-section-parser-path))
+            (pn-emit-from-template (pn-template-form-action-path)    (pn-target-form-action-path))
+            (pn-emit-from-template (pn-template-compiler-path)       (pn-target-compiler-path))
+            (pn-emit-from-template (pn-template-decompiler-path)     (pn-target-decompiler-path))
+            0))
 
     0)
