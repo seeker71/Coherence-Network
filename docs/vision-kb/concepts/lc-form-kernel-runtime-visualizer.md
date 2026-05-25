@@ -105,17 +105,17 @@ This means:
 ## The honest gaps (today)
 
 - The kernel-side substrate stamp on each `Tracked::new_with_nodeid` is per-write, not per-recipe. A future breath introduces an automatic *current-Recipe NodeID* threaded through the walker so attribution is always-on, not opt-in.
-- The visualizer's render path still colors by tag, not by NodeID category. Adding NodeID-aware coloring requires reading the new plane in [`seedbank/memory-as-framebuffer-v0/src/render.rs`](../../../seedbank/memory-as-framebuffer-v0/src/render.rs) and mapping category → palette.
+- The visualizer's render path still colors by tag, not by NodeID category. Adding NodeID-aware coloring requires reading the new plane in [`experiments/memory-as-framebuffer-v0/src/render.rs`](../../../experiments/memory-as-framebuffer-v0/src/render.rs) and mapping category → palette.
 - BMF coverage of Python is partial (closures + import shipped 2026-05-20; comprehensions, decorators, async still pending). The arc is real but the leaves are growing.
 
 None of these gaps invalidate the synthesis. They name where the next breaths land.
 
 ## Source attestation
 
-- Rust kernel attribution: [`form/form-kernel-rust/src/main.rs`](../../../form/form-kernel-rust/src/main.rs) — `NativeEntry`, `Trace::arm_name`, `cat_*` helpers.
-- Go kernel attribution: [`form/form-kernel-go/main.go`](../../../form/form-kernel-go/main.go) — same shape.
-- TS kernel attribution: [`form/form-kernel-ts/src/kernel.ts`](../../../form/form-kernel-ts/src/kernel.ts) — `NativeEntry`, `Trace`, `catCall/catWitness/...`.
-- Framebuffer NodeID plane: [`seedbank/memory-as-framebuffer-v0/src/lib.rs`](../../../seedbank/memory-as-framebuffer-v0/src/lib.rs) — `NodeID`, `nodeid_plane`, `Tracked::new_with_nodeid`, `track_node!`, `snapshot_nodeid_plane`.
+- Rust kernel attribution: [`experiments/form-kernel-rust/src/main.rs`](../../../experiments/form-kernel-rust/src/main.rs) — `NativeEntry`, `Trace::arm_name`, `cat_*` helpers.
+- Go kernel attribution: [`experiments/form-kernel-go/main.go`](../../../experiments/form-kernel-go/main.go) — same shape.
+- TS kernel attribution: [`experiments/form-kernel-ts/src/kernel.ts`](../../../experiments/form-kernel-ts/src/kernel.ts) — `NativeEntry`, `Trace`, `catCall/catWitness/...`.
+- Framebuffer NodeID plane: [`experiments/memory-as-framebuffer-v0/src/lib.rs`](../../../experiments/memory-as-framebuffer-v0/src/lib.rs) — `NodeID`, `nodeid_plane`, `Tracked::new_with_nodeid`, `track_node!`, `snapshot_nodeid_plane`.
 - Kernel profile: [`kernels/README.md`](../../../kernels/README.md).
 
 ## Closing breath
