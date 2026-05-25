@@ -1,6 +1,6 @@
 ; tests/bml-reference-compiler-runtime.fk - BML reference compiler bands
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/dialect-categories.fk form-stdlib/grammars/bml.fk
 
 (do
     (defn result-object (m)

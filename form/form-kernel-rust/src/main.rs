@@ -1523,6 +1523,22 @@ impl Kernel {
         self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_nid() == args[1].as_nid())
         });
+        // value_eq — polymorphic equality across Value kinds. Returns
+        // true when both args have the same kind AND compare equal
+        // within that kind. Cross-kind returns false. Use when a
+        // Form-side function holds tagged values that may be either
+        // strings or NodeIDs — e.g. domain/lens in bmf-symbol-context.
+        self.register_native("value_eq", cat_compare(RCMP_EQ), |_, _, args| {
+            let eq = match (&args[0], &args[1]) {
+                (Value::Null, Value::Null) => true,
+                (Value::Int(x), Value::Int(y)) => x == y,
+                (Value::Str(x), Value::Str(y)) => x == y,
+                (Value::Bool(x), Value::Bool(y)) => x == y,
+                (Value::Nid(x), Value::Nid(y)) => x == y,
+                _ => false,
+            };
+            Value::Bool(eq)
+        });
         // intern_node_at — intern a composite Recipe AND record its source
         // attribution. Engine.fk's parser actions call this so every emitted
         // Recipe carries (file, line, col) provenance. The satsang teaching:

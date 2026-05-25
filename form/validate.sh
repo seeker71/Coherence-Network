@@ -69,7 +69,7 @@ prepare_sources() {
             out="$source_compile_dir/$safe"
             driver="$source_compile_dir/compile-${safe}.fk"
             printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
-            "$GO_BIN" "form-stdlib/form-ontology.fk" "form-stdlib/source-compiler.fk" "$driver" >/dev/null
+            "$GO_BIN" "form-stdlib/form-ontology.fk" "form-stdlib/dialect-categories.fk" "form-stdlib/source-compiler.fk" "$driver" >/dev/null
             prepared_args+=("$out")
         else
             prepared_args+=("$src")

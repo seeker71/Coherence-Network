@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Generate form-stdlib/form-ontology.fk from form-stdlib/form-ontology.json.
+"""Generate Form ontology .fk artifacts from form-stdlib/form-ontology.json.
 
-The JSON file is the canonical data grammar. The .fk file is a generated
-artifact that exposes the same data as two top-level Form bindings —
-FORM-CATEGORY-TABLE and FORM-PRIMITIVE-TABLE — for form-stdlib/source-compiler.fk
-to consume.
+The JSON file is the canonical data grammar. Two .fk artifacts are emitted:
+
+  form-stdlib/form-ontology.fk        — kernel ontology tables
+                                        (FORM-CATEGORY-TABLE,
+                                         FORM-PRIMITIVE-TABLE)
+  form-stdlib/dialect-categories.fk   — per-dialect BMF/AST category
+                                        constants, one (let ...) per
+                                        dialect category
 
 Usage:
-  python3 scripts/generate_ontology.py            # write the .fk
-  python3 scripts/generate_ontology.py --check    # exit 1 if disk differs
+  python3 scripts/generate_ontology.py            # write both .fk files
+  python3 scripts/generate_ontology.py --check    # exit 1 if either differs
 
 Stdlib only, no external deps. Idempotent: running it twice produces
 identical output.
@@ -26,6 +30,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 FORM_ROOT = SCRIPT_DIR.parent
 ONTOLOGY_JSON = FORM_ROOT / "form-stdlib" / "form-ontology.json"
 ONTOLOGY_FK = FORM_ROOT / "form-stdlib" / "form-ontology.fk"
+DIALECTS_FK = FORM_ROOT / "form-stdlib" / "dialect-categories.fk"
 
 GENERATED_HEADER = """; form-ontology.fk — Form-side ontology, pure data.
 ;
@@ -155,10 +160,72 @@ def render(data: dict) -> str:
     return "\n".join(lines)
 
 
+DIALECTS_HEADER = """; dialect-categories.fk — per-dialect BMF/AST category constants.
+;
+; ┌──────────────────────────────────────────────────────────────────────┐
+; │  GENERATED FILE — DO NOT EDIT BY HAND.                               │
+; │  Source of truth: form-stdlib/form-ontology.json (dialects: section) │
+; │  Regenerate with: python3 scripts/generate_ontology.py               │
+; │  Drift check    : python3 scripts/generate_ontology.py --check       │
+; └──────────────────────────────────────────────────────────────────────┘
+;
+; This file holds DATA only — one `(let <PREFIX>-<NAME> (make_nodeid 1
+; 2 <type> <inst>))` binding per dialect category. The per-dialect
+; grammar files in form-stdlib/grammars/ (python-bmf.fk, bml.fk,
+; go-bmf.fk, typescript-bmf.fk, rust-bmf.fk) reference these names as
+; free identifiers from their emit/source helpers; load this file as a
+; prelude before any of those grammar files.
+;
+; The (type, inst) numbers are load-bearing: they intern the Recipe
+; shapes the grammar code constructs. Moving a constant changes its
+; structural identity in the substrate.
+"""
+
+
+def render_dialects(data: dict) -> str:
+    dialects = data.get("dialects") or {}
+    if not dialects:
+        return DIALECTS_HEADER.rstrip() + "\n\n0\n"
+
+    lines: List[str] = [DIALECTS_HEADER.rstrip(), ""]
+
+    # Stable order: as declared in JSON (Python preserves insertion order).
+    for dialect_name, dialect in dialects.items():
+        prefix = dialect["name_prefix"]
+        type_id = dialect["category_type"]
+        categories = dialect["categories"]
+        grammar_file = dialect.get("grammar_file", "")
+
+        header = f";; --- {dialect_name} (type {type_id}, prefix {prefix})"
+        if grammar_file:
+            header = f"{header} — {grammar_file}"
+        header = f"{header} ---"
+        lines.append(header)
+
+        # Compute name-column width so the make_nodeid columns line up
+        # per-dialect (Python's PY-BMF-* names vary in length).
+        name_width = max(len(f"{prefix}-{r['name']}") for r in categories)
+
+        for r in categories:
+            full_name = f"{prefix}-{r['name']}"
+            inst = r["inst"]
+            note = r.get("note", "")
+            row = (f"(let {full_name:<{name_width}} "
+                   f"(make_nodeid 1 2 {type_id} {inst}))")
+            if note:
+                row = f"{row}   ;; {note}"
+            lines.append(row)
+        lines.append("")
+
+    lines.append("0")
+    lines.append("")  # trailing newline
+    return "\n".join(lines)
+
+
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
-                        help="exit 1 if the file on disk differs from regenerated output")
+                        help="exit 1 if either file on disk differs from regenerated output")
     args = parser.parse_args(argv)
 
     if not ONTOLOGY_JSON.exists():
@@ -166,22 +233,33 @@ def main(argv: List[str]) -> int:
         return 2
 
     data = json.loads(ONTOLOGY_JSON.read_text())
-    rendered = render(data)
+    rendered_ontology = render(data)
+    rendered_dialects = render_dialects(data)
+
+    artifacts = [
+        (ONTOLOGY_FK, rendered_ontology),
+        (DIALECTS_FK, rendered_dialects),
+    ]
 
     if args.check:
-        if not ONTOLOGY_FK.exists():
-            print(f"✗ {ONTOLOGY_FK} does not exist — run generate_ontology.py")
-            return 1
-        on_disk = ONTOLOGY_FK.read_text()
-        if on_disk != rendered:
-            print(f"✗ {ONTOLOGY_FK} is out of date with {ONTOLOGY_JSON}")
-            print("  run: python3 scripts/generate_ontology.py")
-            return 1
-        print(f"✓ {ONTOLOGY_FK.name} matches {ONTOLOGY_JSON.name}")
-        return 0
+        drift = 0
+        for path, rendered in artifacts:
+            if not path.exists():
+                print(f"✗ {path} does not exist — run generate_ontology.py")
+                drift += 1
+                continue
+            on_disk = path.read_text()
+            if on_disk != rendered:
+                print(f"✗ {path} is out of date with {ONTOLOGY_JSON}")
+                print("  run: python3 scripts/generate_ontology.py")
+                drift += 1
+            else:
+                print(f"✓ {path.name} matches {ONTOLOGY_JSON.name}")
+        return 1 if drift else 0
 
-    ONTOLOGY_FK.write_text(rendered)
-    print(f"✓ wrote {ONTOLOGY_FK} from {ONTOLOGY_JSON}")
+    for path, rendered in artifacts:
+        path.write_text(rendered)
+        print(f"✓ wrote {path} from {ONTOLOGY_JSON}")
     return 0
 
 

@@ -82,5 +82,11 @@ section [form.bml] {
     def any?(pred, xs) = if nil?(xs) then false else if pred(head(xs)) then true else any?(pred, tail(xs));
     def all?(pred, xs) = if nil?(xs) then true else if pred(head(xs)) then all?(pred, tail(xs)) else false;
 
+    // assertion — pred holds or the kernel halts. Form has no halt-with-
+    // message native; head(empty) panics in every kernel, which surfaces
+    // the failure at the assert site. msg is reader hint for the human
+    // reading the test; the panic message will point at this line.
+    def assert(pred, msg) = if pred then 0 else head(empty);
+
     0;
 }
