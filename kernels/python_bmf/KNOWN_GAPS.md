@@ -93,6 +93,49 @@ The emitted compiler compiles its own .py files and decompiles back to Python. S
 
 This IS the cross-runtime learning loop the Universal Translator goal names: each divergence shows what one runtime has that the other doesn't, what to bring across.
 
+## Full BMF compiler emitted as native Python (2026-05-25, late)
+
+**The Form-written BMF compiler — every line — now translates to readable Python.**
+
+```
+$ for src in form/form-stdlib/{compiler,engine,source-compiler}.fk \
+             form/form-stdlib/grammars/python-bmf.fk; do
+    python3 -m kernels.python_bmf.emit_python "$src" --out kernels/python_bmf/emitted/$(basename ${src%.fk}).py
+  done
+$ ls kernels/python_bmf/emitted/
+compiler.py    engine.py    python_bmf.py    source_compiler.py
+$ wc -l kernels/python_bmf/emitted/*.py
+   740 compiler.py
+  1717 engine.py
+  2612 python_bmf.py
+  1149 source_compiler.py
+  6218 total
+$ python3 -m py_compile kernels/python_bmf/emitted/*.py   # 4/4 compile clean
+```
+
+The full BMF compiler stack — compiler-object cells (`compiler.py`), the reversible BMF runtime (`engine.py`), the source section compiler (`source_compiler.py`), and the Python grammar with its 50+ rules + 74 object categories (`python_bmf.py`) — reads as ordinary Python. `def compiler_unit(language, name, sections):`, `is_bmf_object(x)`, `python_source_scan_text(source)`, `apply_python_bmf_rule(rule_name, object_stream)` — real Python identifiers, real control flow, no `(defn`/`(let`/`_plus` syntax leaks.
+
+**Honest scope of "runnable" vs "readable":**
+
+- **Readable** as Python ✓ — anyone can open the files and follow the BMF compiler's structure as Python code.
+- **Compiles** clean ✓ — `py_compile` passes on all four modules.
+- **Runnable end-to-end** ✗ — the emitted code calls host primitives the Form kernel provides (`cell`, `bmf_object`, `str_concat`, `make_nodeid`, `intern_node`, file IO, list head/tail/cons primitives, ...). These need Python-side bindings in `kernels/python_bmf/host_primitives.py` — that wiring is the next breath.
+- **Cross-runtime parity on the BMF compiler workload itself** ✗ — gated on the runnable step.
+
+**The shortcut the user flagged is also in the Form source** — `form/form-stdlib/source-compiler.fk` has 7 sites where Form `.fk` text is built via `str_concat` rather than as real Recipe NodeIDs:
+
+```
+form/form-stdlib/source-compiler.fk:142:        (str_concat "("
+form/form-stdlib/source-compiler.fk:164:            (str_concat "("
+form/form-stdlib/source-compiler.fk:169:        (str_concat "("
+form/form-stdlib/source-compiler.fk:365:                (str_concat "(" (str_concat name ")"))
+form/form-stdlib/source-compiler.fk:366:                (str_concat "("
+form/form-stdlib/source-compiler.fk:397:            (str_concat "(if "
+form/form-stdlib/source-compiler.fk:541:        (str_concat "(do\n"
+```
+
+These functions (`fsc-literal-expr`, `fsc-capture-expr`, `fsc-rule-ref-expr`, `fsc-compile-form-bml-if`, the top-level `(do\n` template at line 541) emit Form-source TEXT that then has to be re-parsed by the kernel — they do not capture semantics as numeric NodeIDs through `intern_node`. The translator faithfully carries this shortcut through to Python (the emitted `source_compiler.py` also builds text), which is the right move for semantic faithfulness, but it surfaces that the SHORTCUT lives in Form, not in the translator. Fixing it requires the source-compiler to build Recipe NodeIDs directly and the kernel to load Recipes without a re-parse step — that's a structural Form-side refactor, not an emitter task. Naming it here so the work isn't lost.
+
 ## Form → idiomatic native Python translator (2026-05-25, real direction)
 
 **The actual universal-translator move:** take a Form recipe (Form's surface text expression of the numeric semantic capture) and emit **real native Python** — `def`/`if`/`else`/`while`/`+`/`*`/`==`/`<=`, real names, real control flow. NOT s-expressions wrapped in Python strings.
