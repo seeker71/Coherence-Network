@@ -1,0 +1,13 @@
+; emits/python-native-driver.fk — tiny driver that invokes the emitter
+;
+; Run as:
+;   form-kernel-go form-stdlib/emits/python-native.fk \
+;                  form-stdlib/emits/python-native-driver.fk
+;
+; The kernel loads python-native.fk first (defining pn-emit-all and
+; helpers), then runs this driver which calls pn-emit-all to write the
+; emitted Python files to disk via write_file_text.
+
+(do
+    (pn-emit-all)
+    0)
