@@ -93,6 +93,35 @@ The emitted compiler compiles its own .py files and decompiles back to Python. S
 
 This IS the cross-runtime learning loop the Universal Translator goal names: each divergence shows what one runtime has that the other doesn't, what to bring across.
 
+## BMF compiler runs as native Python — cross-runtime parity proven (2026-05-25, end-of-day)
+
+**The emitted BMF compiler executes. Same Form source → both runtimes → byte-identical output.**
+
+```
+$ scripts/cross_runtime_bmf_compile.sh
+source                           |      Form ms |    Python ms |    speedup | parity
+---------------------------------+--------------+--------------+------------+--------
+core.fk                          |        146.0 |         19.0 |       7.7x | BYTE-IDENTICAL
+```
+
+The Python BMF compiler in `kernels/python_bmf/emitted/` — emitted mechanically from `form/form-stdlib/{engine,compiler,source-compiler}.fk` and `form/form-stdlib/grammars/python-bmf.fk` — actually runs:
+
+- `kernels/python_bmf/host_primitives.py` binds Cell, str primitives, lists (head/tail/cons), file I/O, NodeID, intern. 44 host primitives, ~300 lines.
+- `kernels/python_bmf/runtime.py` loads the emitted modules into a shared namespace (same as how the Form kernel loads them) and exposes them as `bmf_compiler` runtime.
+- `rt.form_source_compile_file('form/form-stdlib/core.fk', '/tmp/out.fk')` runs the source-section compiler, calls real BMF object constructors, real source cursors, real reversible cells, real `str_concat` / `substring` / `char_at` — every primitive the Form kernel provides. Output: byte-identical to what `form-kernel-go form-stdlib/source-compiler.fk <driver>` produces.
+
+**The first observation the comparison reveals**: on `core.fk`, the emitted Python compiler runs in ~19ms (in-process CPython function dispatch); the Form-kernel-go binary takes ~146ms (Go binary startup ~10ms + Form interpreter walking the source-compiler.fk Recipe tree). The Form interpreter overhead dominates for this workload. This is exactly the kind of observation the goal anticipates — and points at the optimization surface: the Form kernel's Recipe-walker on hot paths.
+
+**Honest scope today:**
+
+- `engine.py` (1717 py lines) — loads and executes ✓
+- `source_compiler.py` (1149 py lines) — loads and executes ✓ — the whole BMF source-section compiler runs
+- `compiler.py` (740 py lines) — emits but fails at module-load because of a Form-side reference to `bmf-bmf-second` (`compiler.fk:801`) — likely a Form-side missing-symbol bug. Not blocking the proof; runtime falls back to `engine + source_compiler` and the compile path through those is sufficient for the comparison.
+- `python_bmf.py` (2612 py lines) — emits but fails at module-load because the `section [python.bmf] { ... }` block in `python-bmf.fk:2049` defines `python-bmf-second` via section-grammar expansion that the source-compiler unfolds at load time. The emitted Python sees only the unexpanded reference. Closing this gap requires either (a) expanding the section in the emitter, or (b) loading the section-expanded `.fk` first and translating that.
+- Substrate-style Python (organ.py, form.py, API endpoints) — still requires the upper-half gap list of Python BMF rules on the Form side.
+
+**Test:** `kernels/python_bmf/tests/test_bmf_compiler_parity.py` asserts the byte-identical-output claim — the regression gate now in place.
+
 ## Full BMF compiler emitted as native Python (2026-05-25, late)
 
 **The Form-written BMF compiler — every line — now translates to readable Python.**

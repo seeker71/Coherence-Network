@@ -251,17 +251,41 @@ class PythonEmitter:
     def line(self, text: str = "") -> None:
         self.out.append("    " * self.indent + text)
 
+    HEADER = (
+        '"""Emitted from Form source by kernels/python_bmf/emit_python.py."""\n'
+        "from kernels.python_bmf.host_primitives import *  # noqa: F401, F403\n"
+    )
+
     def write_module(self, forms: list[Sexpr]) -> str:
-        """Top-level: a Form .fk usually wraps everything in (do ...). Render
-        the children as module-level Python statements; the final expression
-        becomes the printed result."""
+        """Top-level: a Form .fk usually wraps everything in (do ...). We split
+        the children into three buckets:
+          - `(defn ...)`            → module-level `def name(...)`.
+          - `(let x v)`             → module-level `x = v` global binding
+                                       (Form code references these as globals
+                                       inside function bodies via closure).
+          - everything else         → main-block statements; the last
+                                       expression prints when run as a script.
+        """
         if len(forms) == 1 and isinstance(forms[0], list) and forms[0] and is_sym(forms[0][0], "do"):
             top = forms[0][1:]
         else:
             top = forms
-        defns, tail = self._split_defns_and_tail(top)
+        defns, lets, tail = self._split_top(top)
+        # Header — host primitives must resolve before module-level code runs
+        for hdr_line in self.HEADER.rstrip().split("\n"):
+            self.line(hdr_line)
+        self.line()
+        # Defns FIRST. Python closures resolve names at call time, so let-
+        # bindings that reference defns work even if defined later; but list
+        # literals at module-level (rule tables that name compile-functions)
+        # evaluate immediately and DO need the defns already bound.
         for d in defns:
             self._emit_defn(d)
+            self.line()
+        # module-level globals — emit AFTER defns so rule tables can reference them
+        for lname, lval in lets:
+            self.line(f"{lname} = {self._emit_expr(lval)}")
+        if lets:
             self.line()
         if tail:
             self.line("if __name__ == '__main__':")
@@ -269,31 +293,45 @@ class PythonEmitter:
             for stmt in tail[:-1]:
                 self._emit_statement(stmt)
             last = tail[-1]
-            expr = self._emit_expr(last)
-            self.line(f"print({expr})")
+            # final form may be just `0` from the python-bmf.fk closer; skip
+            # printing a bare numeric literal that carries no result.
+            if isinstance(last, int):
+                if last != 0:
+                    self.line(f"print({last})")
+                else:
+                    self.line("pass")
+            else:
+                self.line(f"print({self._emit_expr(last)})")
             self.indent -= 1
         return "\n".join(self.out).rstrip() + "\n"
 
-    # ---- structure ----
-
-    def _split_defns_and_tail(self, forms: list[Sexpr]) -> tuple[list[list], list[Sexpr]]:
-        """Hoist all `(defn ...)` to top-level functions; the rest is the body
-        that becomes the module's main expression."""
+    def _split_top(self, forms: list[Sexpr]) -> tuple[list[list], list[tuple[str, Sexpr]], list[Sexpr]]:
+        """Top-level forms split into (defns, lets, tail).
+        Recurses into nested (do ...) blocks at top-level (compiler.fk and
+        python-bmf.fk wrap everything in one outer do).
+        """
         defns: list[list] = []
+        lets: list[tuple[str, Sexpr]] = []
         tail: list[Sexpr] = []
         for f in forms:
             if (isinstance(f, list) and f and is_sym(f[0], "defn")
                     and isinstance(f[1], Sym) and f[1].name in PRELUDE_DEFN_NAMES):
-                continue  # elided — Python has these as builtins/idioms
+                continue
             if isinstance(f, list) and f and is_sym(f[0], "defn"):
                 defns.append(f)
-            elif (isinstance(f, list) and f and is_sym(f[0], "do")):
-                inner_defns, inner_tail = self._split_defns_and_tail(f[1:])
+            elif isinstance(f, list) and f and is_sym(f[0], "let") and len(f) >= 3:
+                lets.append((py_ident(f[1].name), f[2]))
+            elif isinstance(f, list) and f and is_sym(f[0], "do"):
+                inner_defns, inner_lets, inner_tail = self._split_top(f[1:])
                 defns.extend(inner_defns)
+                lets.extend(inner_lets)
                 tail.extend(inner_tail)
             else:
                 tail.append(f)
-        return defns, tail
+        return defns, lets, tail
+
+    # ---- structure ----
+
 
     def _emit_defn(self, form: list) -> None:
         # (defn name (params...) body)
