@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Detect drift between form-stdlib/form-ontology.fk and the kernel parser
+"""Detect drift between form-stdlib/form-ontology.json and the kernel parser
 dispatch tables in Go / Rust / TypeScript.
 
-The Form-side ontology table (FORM-PRIMITIVE-TABLE + FORM-CATEGORY-TABLE in
-form-stdlib/form-ontology.fk) mirrors the kernel parsers' buildVerb dispatch.
+The Form-side ontology (categories + primitives in form-stdlib/form-ontology.json)
+is the data grammar. The .fk file is a generated artifact (see
+scripts/generate_ontology.py) that simply exposes the same rows as two
+top-level Form bindings. This script reads the JSON — the canonical
+source — and verifies each row against each kernel's buildVerb dispatch.
+
 Each kernel has cases like
 
     case "add": return k.intern(catMath(RMathPlus), args)
 
-If a primitive is added to the kernel without updating form-ontology.fk
+If a primitive is added to the kernel without updating form-ontology.json
 (or vice-versa) tests still pass but the body has silently drifted.
 This script catches that drift.
 
@@ -20,6 +24,7 @@ Exits 0 on a clean match, 1 on drift.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -31,7 +36,7 @@ from typing import Dict, List, Optional, Set, Tuple
 SCRIPT_DIR = Path(__file__).resolve().parent
 FORM_ROOT = SCRIPT_DIR.parent  # .../form
 
-ONTOLOGY_FK = FORM_ROOT / "form-stdlib" / "form-ontology.fk"
+ONTOLOGY_JSON = FORM_ROOT / "form-stdlib" / "form-ontology.json"
 GO_MAIN = FORM_ROOT / "form-kernel-go" / "main.go"
 RUST_MAIN = FORM_ROOT / "form-kernel-rust" / "src" / "main.rs"
 TS_READER = FORM_ROOT / "form-kernel-ts" / "src" / "reader.ts"
@@ -71,56 +76,19 @@ PRIM_INST_LABELS: Dict[Tuple[int, int], str] = {
 
 
 # ----------------------------------------------------------------------------
-# Parse form-ontology.fk
+# Parse form-ontology.json
 # ----------------------------------------------------------------------------
-ROW_RE = re.compile(
-    r'\(\s*list\s+"([^"]+)"\s+(\d+)\s+(\d+)\s*\)'
-)
-
 
 def parse_ontology(path: Path) -> Tuple[List[Tuple[str, int, int]], List[Tuple[str, int, int]]]:
-    """Return (category_rows, primitive_rows). Each row: (name, type, inst)."""
-    text = path.read_text()
-    cat_rows = _extract_table(text, "FORM-CATEGORY-TABLE")
-    prim_rows = _extract_table(text, "FORM-PRIMITIVE-TABLE")
+    """Return (category_rows, primitive_rows). Each row: (name, type, inst).
+
+    Reads the canonical JSON data grammar. The .fk file is a generated
+    artifact — we go to the source.
+    """
+    data = json.loads(path.read_text())
+    cat_rows = [(r["name"], int(r["type"]), int(r["inst"])) for r in data.get("categories", [])]
+    prim_rows = [(r["name"], int(r["type"]), int(r["inst"])) for r in data.get("primitives", [])]
     return cat_rows, prim_rows
-
-
-def _extract_table(text: str, table_name: str) -> List[Tuple[str, int, int]]:
-    # Find the (let TABLE-NAME (list (list ...) (list ...) ...)) form. We
-    # locate the `(let TABLE-NAME` then walk parens to find the matching close.
-    m = re.search(r'\(\s*let\s+' + re.escape(table_name) + r'\s+', text)
-    if not m:
-        raise ValueError(f"table {table_name} not found in {ONTOLOGY_FK}")
-    start = m.end()
-    depth = 1  # we've consumed the opening `(` of `(let ...`
-    i = start
-    while i < len(text) and depth > 0:
-        c = text[i]
-        if c == ';':
-            # skip to end of line
-            nl = text.find('\n', i)
-            i = len(text) if nl == -1 else nl + 1
-            continue
-        if c == '"':
-            # skip string literal
-            j = i + 1
-            while j < len(text) and text[j] != '"':
-                if text[j] == '\\':
-                    j += 2
-                else:
-                    j += 1
-            i = j + 1
-            continue
-        if c == '(':
-            depth += 1
-        elif c == ')':
-            depth -= 1
-            if depth == 0:
-                break
-        i += 1
-    body = text[start:i]
-    return [(name, int(ty), int(inst)) for name, ty, inst in ROW_RE.findall(body)]
 
 
 # ----------------------------------------------------------------------------
@@ -489,12 +457,12 @@ def main(argv: List[str]) -> int:
                         help="print every checked row")
     args = parser.parse_args(argv)
 
-    for p in (ONTOLOGY_FK, GO_MAIN, RUST_MAIN, TS_READER):
+    for p in (ONTOLOGY_JSON, GO_MAIN, RUST_MAIN, TS_READER):
         if not p.exists():
             print(f"error: required file not found: {p}", file=sys.stderr)
             return 2
 
-    cat_rows, prim_rows = parse_ontology(ONTOLOGY_FK)
+    cat_rows, prim_rows = parse_ontology(ONTOLOGY_JSON)
     if args.verbose:
         print(f"FORM-CATEGORY-TABLE: {len(cat_rows)} rows")
         print(f"FORM-PRIMITIVE-TABLE: {len(prim_rows)} rows")

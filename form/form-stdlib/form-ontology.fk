@@ -1,5 +1,12 @@
 ; form-ontology.fk — Form-side ontology, pure data.
 ;
+; ┌──────────────────────────────────────────────────────────────────────┐
+; │  GENERATED FILE — DO NOT EDIT BY HAND.                               │
+; │  Source of truth: form-stdlib/form-ontology.json                     │
+; │  Regenerate with: python3 scripts/generate_ontology.py               │
+; │  Drift check    : python3 scripts/generate_ontology.py --check       │
+; └──────────────────────────────────────────────────────────────────────┘
+;
 ; This file holds DATA only — no helpers, no scanners, no emit logic.
 ; The kernel parser (form-kernel-{go,rust,ts}) carries the canonical
 ; (name → category) dispatch table for primitive special forms and
@@ -24,21 +31,21 @@
 ;   form/form-kernel-go/main.go parseSexp ~1956-2014
 ;     case "add" → catMath(RMathPlus), case "gt" → catCompare(RCompareGt), etc.
 ;
-; A new primitive added to the kernel must add a row here too. The
-; lookup helpers and emit code live in form-stdlib/source-compiler.fk
-; — load this file before source-compiler.fk so the bindings are in
-; scope when the helpers reference them.
+; A new primitive added to the kernel must add a row to form-ontology.json
+; (and re-run the generator). The lookup helpers and emit code live in
+; form-stdlib/source-compiler.fk — load this file before source-compiler.fk
+; so the bindings are in scope when the helpers reference them.
 
 (let FORM-CATEGORY-TABLE (list
     ;; (name        type  inst)
-    (list "do"          9 1)
-    (list "sequence"    9 2)
-    (list "let"         9 3)
-    (list "if-then"    11 1)
-    (list "if"         11 2)   ;; full if-then-else
-    (list "fndef"      31 1)
-    (list "fncall"     32 1)
-    (list "ident"      33 1)))
+    (list "do"        9 1)   ;; RBlock Do
+    (list "sequence"  9 2)   ;; RBlock Sequence (kernel verb: "seq")
+    (list "let"       9 3)   ;; RBlock Let
+    (list "if-then"  11 1)   ;; RCond IfThen
+    (list "if"       11 2)   ;; RCond IfThenElse — full if-then-else
+    (list "fndef"    31 1)   ;; kernel verb: "defn"
+    (list "fncall"   32 1)   ;; default branch in kernels — no explicit case
+    (list "ident"    33 1)))   ;; identifier-wrap path — no explicit case
 
 (let FORM-PRIMITIVE-TABLE (list
     ;; (name  type  inst)
