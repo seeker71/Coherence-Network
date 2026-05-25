@@ -1204,6 +1204,77 @@
                            (pybmf-trivial-int objects "start")
                            (pybmf-trivial-int objects "end"))))
 
+    (defn pybmf-emit-slice-name-name (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "start")
+                           (pybmf-trivial-string objects "end"))))
+
+    (defn pybmf-source-slice-name-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-name-omit (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "start"))))
+
+    (defn pybmf-source-slice-name-omit (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-omit-name (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "end"))))
+
+    (defn pybmf-source-slice-omit-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-omit-omit (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object"))))
+
+    (defn pybmf-source-slice-omit-omit (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-step-int (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-int objects "step"))))
+
+    (defn pybmf-source-slice-step-int (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-op ":")
+                  (py-int (int_to_str (node_value (nth kids 1))))
+                  (py-op "]"))))
+
     (defn pybmf-emit-tuple2-ident (objects)
         (intern_node PY-BMF-TUPLE
                      (list (pybmf-trivial-string objects "a")
@@ -1999,6 +2070,39 @@
                   (py-name (node_value (nth kids 1)))
                   (py-op "}"))))
 
+    (defn pybmf-emit-fstring-double-format (objects)
+        (intern_node PY-BMF-FSTRING
+                     (list (pybmf-trivial-string objects "prefix")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-fstring-double-format (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-fstring (node_value (nth kids 0)))
+                  (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "}")
+                  (py-op "{")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-fstring-spec (objects)
+        (intern_node PY-BMF-FSTRING
+                     (list (pybmf-trivial-string objects "prefix")
+                           (pybmf-trivial-string objects "value")
+                           (pybmf-trivial-string objects "spec"))))
+
+    (defn pybmf-source-fstring-spec (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-fstring (node_value (nth kids 0)))
+                  (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
     (defn pybmf-emit-ifexp (objects)
         (intern_node PY-BMF-IFEXP
                      (list (pybmf-trivial-string objects "body")
@@ -2107,6 +2211,11 @@
     method-call0 ::= $object:name "." $method:name "(" ")" => pybmf-emit-method-call0 <= pybmf-source-method-call0;
     subscript-ident-int ::= $object:name "[" $index:int "]" => pybmf-emit-subscript-ident-int <= pybmf-source-subscript-ident-int;
     slice-int-int ::= $object:name "[" $start:int ":" $end:int "]" => pybmf-emit-slice-int-int;
+    slice-name-name ::= $object:name "[" $start:name ":" $end:name "]" => pybmf-emit-slice-name-name <= pybmf-source-slice-name-name;
+    slice-name-omit ::= $object:name "[" $start:name ":" "]" => pybmf-emit-slice-name-omit <= pybmf-source-slice-name-omit;
+    slice-omit-name ::= $object:name "[" ":" $end:name "]" => pybmf-emit-slice-omit-name <= pybmf-source-slice-omit-name;
+    slice-omit-omit ::= $object:name "[" ":" "]" => pybmf-emit-slice-omit-omit <= pybmf-source-slice-omit-omit;
+    slice-step-int ::= $object:name "[" ":" ":" $step:int "]" => pybmf-emit-slice-step-int <= pybmf-source-slice-step-int;
     list3-int ::= "[" $a:int "," $b:int "," $c:int "]" => pybmf-emit-list3-int;
     tuple2-ident ::= "(" $a:name "," $b:name ")" => pybmf-emit-tuple2-ident;
     set2-int ::= "{" $a:int "," $b:int "}" => pybmf-emit-set2-int;
@@ -2174,6 +2283,8 @@
     bytes ::= $value:bytes => pybmf-emit-bytes <= pybmf-source-bytes;
     fstring ::= $value:fstring => pybmf-emit-fstring <= pybmf-source-fstring;
     fstring-format ::= $prefix:fstring "{" $value:name "}" => pybmf-emit-fstring-format <= pybmf-source-fstring-format;
+    fstring-double-format ::= $prefix:fstring "{" $a:name "}" "{" $b:name "}" => pybmf-emit-fstring-double-format <= pybmf-source-fstring-double-format;
+    fstring-spec ::= $prefix:fstring "{" $value:name ":" $spec:name "}" => pybmf-emit-fstring-spec <= pybmf-source-fstring-spec;
     ellipsis ::= "..." => pybmf-emit-ellipsis <= pybmf-source-ellipsis;
     sample-module ::= "import" $import_a:name "import" $import_b:name "from" $from_mod:name "import" $from_name:name $const_name:name "=" $const_value:int "def" $add_name:name "(" $add_a:name "," $add_b:name ")" ":" "return" $ret_left:name "+" $ret_right:name "def" $main_name:name "(" ")" ":" $x_name:name "=" $x_value:int $y_name:name "=" $y_value:int $z_name:name "=" $z_call:name "(" $z_arg_a:name "," $z_arg_b:name ")" $print_call:name "(" $print_arg:name ")" => pybmf-emit-sample-module;
     int ::= $value:int => pybmf-emit-int;
