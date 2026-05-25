@@ -361,10 +361,72 @@
     ;; Source: form/form-kernel-go/main.go parseSexp around line 1942 (DO/LET) +
     ;; 2005 (FNCALL) + 1900 (IDENT).
 
-    (let fsc-rec-DO-CAT     (make_nodeid 1 2 9 1))
-    (let fsc-rec-LET-CAT    (make_nodeid 1 2 9 3))
-    (let fsc-rec-FNCALL-CAT (make_nodeid 1 2 32 1))
-    (let fsc-rec-IDENT-CAT  (make_nodeid 1 2 33 1))
+    ;; --- Form ontology table — names ↔ kernel category NodeIDs ----
+    ;;
+    ;; Single source of truth on the Form side for the kernel's
+    ;; parseSexp dispatch + RBasic/R{Math,Compare,Logic,Cond,Block}
+    ;; constants. Every Recipe-emitter looks up by name here instead
+    ;; of inlining (make_nodeid 1 2 X Y); a new primitive or composite
+    ;; lands as one row instead of touching every emit site.
+    ;;
+    ;; Source: form-kernel-go/main.go constants ~73-95 + parseSexp
+    ;; dispatch ~1956-2014. Type 9 = Block, 11 = Cond, 12 = Math,
+    ;; 13 = Compare, 14 = Logic, 31 = FnDef, 32 = FnCall, 33 = Ident.
+
+    ;; Composite categories — packaged via (form-cat-node "name").
+    (let FORM-CATEGORY-TABLE (list
+        (list "do"          9 1)
+        (list "sequence"    9 2)
+        (list "let"         9 3)
+        (list "if-then"    11 1)
+        (list "if"         11 2)   ;; full if-then-else
+        (list "fndef"      31 1)
+        (list "fncall"     32 1)
+        (list "ident"      33 1)))
+
+    ;; Parser special-form primitives — names parseSexp lifts to typed
+    ;; categories before falling through to FNCALL. The walker reads
+    ;; them via RBasicMath/Compare/Logic. Adding a new primitive means
+    ;; one row here AND a parser case in each kernel (Go/Rust/TS).
+    (let FORM-PRIMITIVE-TABLE (list
+        ;; math (type 12)
+        (list "add" 12 1) (list "sub" 12 2) (list "mul" 12 3)
+        (list "div" 12 4) (list "mod" 12 5)
+        ;; compare (type 13)
+        (list "eq"  13 1) (list "ne"  13 2) (list "lt"  13 3)
+        (list "le"  13 4) (list "gt"  13 5) (list "ge"  13 6)
+        ;; logic (type 14)
+        (list "and" 14 1) (list "or"  14 2) (list "not" 14 3)))
+
+    ;; List-walk lookup — pure head/tail, no nth/nil? (we run before
+    ;; core.fk). Returns the matched row or empty list.
+    (defn form-table-lookup (table name)
+        (if (fsc-empty? table) (empty)
+            (if (str_eq (head (head table)) name)
+                (head table)
+                (form-table-lookup (tail table) name))))
+
+    (defn form-row-type (row) (head (tail row)))
+    (defn form-row-inst (row) (head (tail (tail row))))
+
+    (defn form-cat-node (name)
+        (do
+            (let row (form-table-lookup FORM-CATEGORY-TABLE name))
+            (make_nodeid 1 2 (form-row-type row) (form-row-inst row))))
+
+    (defn form-prim-or-empty (name)
+        (form-table-lookup FORM-PRIMITIVE-TABLE name))
+
+    (defn form-prim-node (row)
+        (make_nodeid 1 2 (form-row-type row) (form-row-inst row)))
+
+    ;; Bind the common categories so emit sites read like names, not
+    ;; table walks. The table is still the source — these are just the
+    ;; rows resolved once at load time.
+    (let fsc-rec-DO-CAT     (form-cat-node "do"))
+    (let fsc-rec-LET-CAT    (form-cat-node "let"))
+    (let fsc-rec-FNCALL-CAT (form-cat-node "fncall"))
+    (let fsc-rec-IDENT-CAT  (form-cat-node "ident"))
 
     (defn fsc-rec-ident (name)
         (intern_node fsc-rec-IDENT-CAT (list (intern_trivial_string name))))
@@ -499,9 +561,9 @@
     ;;   TrivBool (Level 1, Type 3): Inst 1=true, 0=false — bool literals
     ;;     bypass the env at parse time per main.go:1908.
 
-    (let fsc-rec-FNDEF-CAT (make_nodeid 1 2 31 1))
-    (let fsc-rec-IF3-CAT   (make_nodeid 1 2 11 2))
-    (let fsc-rec-SEQ-CAT   (make_nodeid 1 2 9 2))
+    (let fsc-rec-FNDEF-CAT (form-cat-node "fndef"))
+    (let fsc-rec-IF3-CAT   (form-cat-node "if"))
+    (let fsc-rec-SEQ-CAT   (form-cat-node "sequence"))
 
     (defn fsc-rec-true ()  (make_nodeid 1 1 3 1))
     (defn fsc-rec-false () (make_nodeid 1 1 3 0))
@@ -576,26 +638,15 @@
     (defn fsc-unescape-str (s) (fsc-unescape-str-loop s 0 ""))
 
     ;; Math/compare/logic primitives are parser SPECIAL FORMS in the
-    ;; kernel — there's no env binding for `gt`, `add`, etc. Source:
-    ;; form-kernel-go/main.go parseSexp ~1970-1996. So the Recipe path
-    ;; must lift these to their typed categories (MATH=12, COMPARE=13,
-    ;; LOGIC=14); everything else stays a real FNCALL.
+    ;; kernel — there's no env binding for `gt`, `add`, etc. Look the
+    ;; name up in FORM-PRIMITIVE-TABLE; if present, lift to the typed
+    ;; category; otherwise fall through to a real FNCALL.
     (defn fsc-rec-form-call (name args)
-        (if (str_eq name "add")  (intern_node (make_nodeid 1 2 12 1) args)
-        (if (str_eq name "sub")  (intern_node (make_nodeid 1 2 12 2) args)
-        (if (str_eq name "mul")  (intern_node (make_nodeid 1 2 12 3) args)
-        (if (str_eq name "div")  (intern_node (make_nodeid 1 2 12 4) args)
-        (if (str_eq name "mod")  (intern_node (make_nodeid 1 2 12 5) args)
-        (if (str_eq name "eq")   (intern_node (make_nodeid 1 2 13 1) args)
-        (if (str_eq name "ne")   (intern_node (make_nodeid 1 2 13 2) args)
-        (if (str_eq name "lt")   (intern_node (make_nodeid 1 2 13 3) args)
-        (if (str_eq name "le")   (intern_node (make_nodeid 1 2 13 4) args)
-        (if (str_eq name "gt")   (intern_node (make_nodeid 1 2 13 5) args)
-        (if (str_eq name "ge")   (intern_node (make_nodeid 1 2 13 6) args)
-        (if (str_eq name "and")  (intern_node (make_nodeid 1 2 14 1) args)
-        (if (str_eq name "or")   (intern_node (make_nodeid 1 2 14 2) args)
-        (if (str_eq name "not")  (intern_node (make_nodeid 1 2 14 3) args)
-            (fsc-rec-call name args))))))))))))))))
+        (do
+            (let prim-row (form-prim-or-empty name))
+            (if (fsc-empty? prim-row)
+                (fsc-rec-call name args)
+                (intern_node (form-prim-node prim-row) args))))
 
     (defn fsc-compile-form-bml-call-recipe (expr open)
         (do
@@ -759,22 +810,15 @@
     ;; lower rule-by-rule into Form recipe nodes, and each rule carries a
     ;; reverse path back to the matched source span.
 
-    (let FSC-ACTION-BLOCK-DO (make_nodeid 1 2 9 1))
-    (let FSC-ACTION-BLOCK-SEQ (make_nodeid 1 2 9 2))
-    (let FSC-ACTION-BLOCK-LET (make_nodeid 1 2 9 3))
-    (let FSC-ACTION-MATH-ADD (make_nodeid 1 2 12 1))
-    (let FSC-ACTION-MATH-SUB (make_nodeid 1 2 12 2))
-    (let FSC-ACTION-MATH-MUL (make_nodeid 1 2 12 3))
-    (let FSC-ACTION-MATH-MOD (make_nodeid 1 2 12 5))
-    (let FSC-ACTION-COMPARE-EQ (make_nodeid 1 2 13 1))
-    (let FSC-ACTION-COMPARE-LT (make_nodeid 1 2 13 3))
-    (let FSC-ACTION-COMPARE-LE (make_nodeid 1 2 13 4))
-    (let FSC-ACTION-COMPARE-GT (make_nodeid 1 2 13 5))
-    (let FSC-ACTION-COMPARE-GE (make_nodeid 1 2 13 6))
-    (let FSC-ACTION-COND-IF (make_nodeid 1 2 11 2))
-    (let FSC-ACTION-FNDEF (make_nodeid 1 2 31 1))
-    (let FSC-ACTION-FNCALL (make_nodeid 1 2 32 1))
-    (let FSC-ACTION-IDENT (make_nodeid 1 2 33 1))
+    ;; form.action BMF rule actions resolve through the same ontology
+    ;; table as the Recipe-emit path. Names → kernel categories.
+    (let FSC-ACTION-BLOCK-DO   (form-cat-node "do"))
+    (let FSC-ACTION-BLOCK-SEQ  (form-cat-node "sequence"))
+    (let FSC-ACTION-BLOCK-LET  (form-cat-node "let"))
+    (let FSC-ACTION-COND-IF    (form-cat-node "if"))
+    (let FSC-ACTION-FNDEF      (form-cat-node "fndef"))
+    (let FSC-ACTION-FNCALL     (form-cat-node "fncall"))
+    (let FSC-ACTION-IDENT      (form-cat-node "ident"))
 
     (defn fsc-action-src-kw (value) (bmf-atom "form-action-keyword" value))
     (defn fsc-action-src-name (value) (bmf-atom "form-action-name" value))
@@ -1244,27 +1288,16 @@
         (intern_node FSC-ACTION-BLOCK-SEQ
                      (fsc-action-param-nodes param-list)))
 
+    ;; Same primitive lookup as the Recipe-emit path. Was previously a
+    ;; subset-of-fsc-rec-form-call if-ladder (missing div/ne/and/or/
+    ;; not) — drift this collapses by routing through one table.
     (defn fsc-action-call-node (name args)
-        (if (str_eq name "add")
-            (intern_node FSC-ACTION-MATH-ADD args)
-            (if (str_eq name "sub")
-                (intern_node FSC-ACTION-MATH-SUB args)
-            (if (str_eq name "mul")
-                (intern_node FSC-ACTION-MATH-MUL args)
-            (if (str_eq name "mod")
-                (intern_node FSC-ACTION-MATH-MOD args)
-            (if (str_eq name "eq")
-                (intern_node FSC-ACTION-COMPARE-EQ args)
-            (if (str_eq name "lt")
-                (intern_node FSC-ACTION-COMPARE-LT args)
-            (if (str_eq name "le")
-                (intern_node FSC-ACTION-COMPARE-LE args)
-            (if (str_eq name "gt")
-                (intern_node FSC-ACTION-COMPARE-GT args)
-            (if (str_eq name "ge")
-                (intern_node FSC-ACTION-COMPARE-GE args)
+        (do
+            (let prim-row (form-prim-or-empty name))
+            (if (fsc-empty? prim-row)
                 (intern_node FSC-ACTION-FNCALL
-                             (cons (intern_trivial_string name) args))))))))))))
+                             (cons (intern_trivial_string name) args))
+                (intern_node (form-prim-node prim-row) args))))
 
     (defn fsc-action-let-node (name value)
         (intern_node FSC-ACTION-BLOCK-LET
