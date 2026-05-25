@@ -93,6 +93,48 @@ The emitted compiler compiles its own .py files and decompiles back to Python. S
 
 This IS the cross-runtime learning loop the Universal Translator goal names: each divergence shows what one runtime has that the other doesn't, what to bring across.
 
+## What "compile" actually does today — the honest picture
+
+Running `python3 -m kernels.python_bmf.compiler --file <any.py>` produces a `.fkb` for **any** Python file (organ.py, form.py, category.py — they all "succeed"). That success is misleading. Here is what is actually in the output:
+
+- **Empirical** (`api/app/services/substrate/form.py`, 2032 lines, "compiled" to 1879 nodes):
+  - `1529 × statement` — generic envelopes wrapping raw token lists
+  - `349 × statement-block` — generic block envelopes
+  - `1 × module` — the file
+  - Zero nodes with universal-shape NodeIDs the Form kernels recognize.
+  - Each `statement` is classified by **first-token heuristic** (`star_expressions` 731×, `assignment` 220×, `if_stmt` 160×, `class_def` 50× …) — none of those classes go through BMF rule matching.
+
+- **The `.fkb` format is private to this package.** `form-kernel-rust` rejects it: `stream did not contain valid UTF-8`. The Form kernels read `.fk` s-expression text. My `FKB1` binary is a tokens-and-metadata envelope only my own `decompiler.py` can read back.
+
+- **Round-trip works only because both ends are mine.** Re-emission writes the captured tokens back to Python source. The 8/8 round-trip on small demos is not "the Form kernel executed the .fkb and produced the same answer as CPython" — it is "my compiler wrote tokens, my decompiler read them back, modulo whitespace they match."
+
+- **No execution proof exists.** I have not run any emitted `.fkb` through `form-kernel-rust` or `form-kernel-go` and gotten a result that matches CPython, because the Form kernels cannot ingest this binary at all.
+
+### Can we compile organ.py / substrate code to executable Form today?
+
+**No.** Two layers are missing:
+
+1. **Format**: emit `.fk` s-expression text (the format Form kernels actually run), not the private `FKB1` binary. The TS pipeline (`form-kernel-ts/src/lang-python-fk.ts`) emits `.fk` for the parity-suite demos; my emitter does not yet.
+
+2. **Coverage**: real BMF rule matching that produces universal-shape Recipe trees for classes, decorators, imports-from, type annotations, attribute/subscript assign, comprehensions, f-strings, async, exception handling, slicing. `kernels/PYTHON_PIPELINE_STATUS.md` named these on 2026-05-21 as the upper-half gap list; they remain open on both sides (Form-side `python-bmf.fk` and this emitted Python). Until those rules match, real substrate code falls through to generic `statement` envelopes the kernel cannot execute.
+
+### What's real today
+
+- Scanner parity (token-level) across 8/8 parity-suite demos. ✓
+- Hand-written destination Python shape that compiles cleanly. ✓
+- Round-trip via re-emission of captured tokens on small demos. ✓
+- Form-emitter recipes (`emits/python-native.fk`) materializing `objects.py` from a category table via `write_file_text`. ✓
+- Cross-runtime scanner comparison harness. ✓
+
+### What it takes for the user's question to become "yes"
+
+1. `.fk` emitter (s-expressions of universal-shape Recipes, not the FKB1 binary).
+2. BMF rule coverage for classes, imports-from, decorators, type annotations, attribute/subscript assign, comprehensions, f-strings (close the gap list).
+3. Run a substrate file end-to-end: `organ.py → emitted Python compiler → .fk → form-kernel-rust → result`, with same answer as CPython.
+4. Performance + RSS measurement on equivalent workloads, with a leak check that holds across many iterations.
+
+Steps 1–3 are the unfinished compiler; step 4 is the comparison the higher goal names. None of them has shipped. The arc remains open.
+
 ## Larger gaps to face
 
 - **Bidirectional rule definition** — Form's `python-bmf.fk` rules carry both `=>` (emit) and `<=` (source) — the inverse. The Python rules only have `forward`. Next breath: add `reverse` to every rule; check round-trip uses reverse path.

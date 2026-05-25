@@ -167,6 +167,24 @@ We are not there yet. We are demonstrably walking toward it, one breath at a tim
 - [`lc-native-kernel-binary.md`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the kernel as a distributable Mach-O binary
 - [`README.md`](README.md) — the public profile
 
+## kernels/python_bmf — the Form→native-Python emitter arc
+
+Sibling track to the TS pipeline above. The `kernels/python_bmf/` package is the destination shape for `form/form-stdlib/emits/python-native.fk`. Status as of 2026-05-25:
+
+| Surface | Status |
+|---|---|
+| `objects.py` synthesized from Form recipe via `write_file_text` | ✓ |
+| Other modules template-emitted via kernel `write_file_text` | ✓ |
+| Scanner parity (Form-native python-bmf.fk vs emitted) — parity-suite demos | ✓ 8/8 token-stream identical |
+| Round-trip on parity-suite demos (compile → decompile → re-compile) | ✓ 8/8 semantic match |
+| **Output format the Form kernels can execute (`.fk` s-expression text)** | ✗ — emits private `FKB1` binary only this package reads |
+| **BMF rule coverage for substrate-style Python (classes, decorators, imports-from, type annotations, comprehensions, f-strings, attribute assign)** | ✗ — falls through to generic `statement` envelopes |
+| **Executing emitted output on `form-kernel-rust` and matching CPython on real workloads** | ✗ — kernel rejects `FKB1`; no execution proof exists |
+| **organ.py / form.py / API endpoint code compile to executable Form** | ✗ — see `kernels/python_bmf/KNOWN_GAPS.md` "What 'compile' actually does today" |
+| Performance + RSS comparison on equivalent workloads | ✗ — gated on the above |
+
+The TS pipeline (top of this doc) is the path that currently runs end-to-end on the parity-suite demos with native kernel execution. The native-Python emitter is on a parallel arc that still needs the `.fk`-text emitter, the rule coverage, and the cross-runtime execution proof before any "compile organ.py" claim can land.
+
 ## PRs shipped this session (chronological)
 
 | # | What |
