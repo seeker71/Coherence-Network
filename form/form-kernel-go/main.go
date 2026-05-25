@@ -894,6 +894,73 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: int64(from + idx)}
 	})
+	// scan_run — return the end-index where a contiguous run of bytes
+	// matching `class_code` ends (exclusive). Generic per-byte loop in
+	// Go avoids the walker dispatch a pure-Form recursion would pay
+	// per character — closing the per-byte parser-throughput gap that
+	// makes Form unviable as a universal runtime translator otherwise.
+	// Class codes (sibling-parity across Go/Rust/TS):
+	//   0  whitespace          space, tab, lf, cr
+	//   1  ascii-digit         '0'-'9'
+	//   2  ascii-alpha         'a'-'z', 'A'-'Z'
+	//   3  identifier-char     alpha + digit + '_' + '-'
+	//   4  non-quote-non-escape   anything except '"' and '\\'
+	//   5  non-newline         anything except '\n'
+	// Used by json.fk's skip-ws / scan-string / scan-number, BMF
+	// tokenizers, CSV scanners, future YAML/TOML parsers — not
+	// JSON-special. A new class adds one branch to a small switch.
+	k.registerNative("scan_run", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		from := int(args[1].Int)
+		class := int(args[2].Int)
+		if from < 0 {
+			from = 0
+		}
+		n := len(s)
+		end := from
+		switch class {
+		case 0: // whitespace
+			for end < n {
+				c := s[end]
+				if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+					break
+				}
+				end++
+			}
+		case 1: // ascii digit
+			for end < n && s[end] >= '0' && s[end] <= '9' {
+				end++
+			}
+		case 2: // ascii alpha
+			for end < n {
+				c := s[end]
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+					break
+				}
+				end++
+			}
+		case 3: // identifier char
+			for end < n {
+				c := s[end]
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+					(c >= '0' && c <= '9') || c == '_' || c == '-') {
+					break
+				}
+				end++
+			}
+		case 4: // non-quote-non-escape
+			for end < n && s[end] != '"' && s[end] != '\\' {
+				end++
+			}
+		case 5: // non-newline
+			for end < n && s[end] != '\n' {
+				end++
+			}
+		default:
+			panic(fmt.Sprintf("scan_run: unknown class_code %d (valid: 0-5)", class))
+		}
+		return Value{Kind: VInt, Int: int64(end)}
+	})
 	// string_fold — Go-level streaming iteration over a string's bytes.
 	// Signature: (string_fold s init step) where step is a closure of
 	// (acc, char) → acc. Whole iteration in this Go for-loop; no Form-

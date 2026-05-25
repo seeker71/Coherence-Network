@@ -1171,6 +1171,30 @@ impl Kernel {
                 None => Value::Int(-1),
             }
         });
+        // scan_run — return the end-index where a contiguous run of bytes
+        // matching `class_code` ends (exclusive). Sibling parity with Go +
+        // TS scan_run. Generic per-byte loop in Rust avoids the walker
+        // dispatch a pure-Form recursion would pay per character.
+        // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
+        //              4=non-quote-non-escape, 5=non-newline.
+        self.register_native("scan_run", cat_access(), |_, _, args| {
+            let s = args[0].as_str();
+            let from = args[1].as_int().max(0) as usize;
+            let class = args[2].as_int();
+            let bytes = s.as_bytes();
+            let n = bytes.len();
+            let mut end = from.min(n);
+            match class {
+                0 => while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') { end += 1; },
+                1 => while end < n && bytes[end].is_ascii_digit() { end += 1; },
+                2 => while end < n && bytes[end].is_ascii_alphabetic() { end += 1; },
+                3 => while end < n && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_' || bytes[end] == b'-') { end += 1; },
+                4 => while end < n && bytes[end] != b'"' && bytes[end] != b'\\' { end += 1; },
+                5 => while end < n && bytes[end] != b'\n' { end += 1; },
+                _ => panic!("scan_run: unknown class_code {} (valid: 0-5)", class),
+            }
+            Value::Int(end as i64)
+        });
         // string_fold — Rust-level streaming iteration over a string's bytes.
         // Signature: (string_fold s init step) where step is a closure of
         // (acc, char) → acc. Whole iteration in this Rust for-loop; no Form-

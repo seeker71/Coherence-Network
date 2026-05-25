@@ -1054,6 +1054,72 @@ export class Kernel {
       // types" when callers do plain int math on the result.
       return { kind: "int", int: idx };
     });
+    // scan_run — return the end-index where a contiguous run of bytes
+    // matching `class_code` ends (exclusive). Sibling parity with Go +
+    // Rust scan_run. Generic per-byte loop in JS avoids the walker
+    // dispatch a pure-Form recursion would pay per character.
+    // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
+    //              4=non-quote-non-escape, 5=non-newline.
+    this.registerNative("scan_run", catAccess(), (_k, args) => {
+      const s = argStr(args, 0);
+      const from = Math.max(0, argInt(args, 1));
+      const cls = argInt(args, 2);
+      const n = s.length;
+      let end = Math.min(from, n);
+      switch (cls) {
+        case 0: { // whitespace
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c !== 32 && c !== 9 && c !== 10 && c !== 13) break;
+            end++;
+          }
+          break;
+        }
+        case 1: { // ascii digit
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c < 48 || c > 57) break;
+            end++;
+          }
+          break;
+        }
+        case 2: { // ascii alpha
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (!((c >= 97 && c <= 122) || (c >= 65 && c <= 90))) break;
+            end++;
+          }
+          break;
+        }
+        case 3: { // identifier char
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            const isAlnum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+            if (!(isAlnum || c === 95 || c === 45)) break;
+            end++;
+          }
+          break;
+        }
+        case 4: { // non-quote-non-escape
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c === 34 || c === 92) break;
+            end++;
+          }
+          break;
+        }
+        case 5: { // non-newline
+          while (end < n) {
+            if (s.charCodeAt(end) === 10) break;
+            end++;
+          }
+          break;
+        }
+        default:
+          throw new Error(`scan_run: unknown class_code ${cls} (valid: 0-5)`);
+      }
+      return { kind: "int", int: end };
+    });
     // string_fold — JS-level streaming iteration over a string's chars.
     // Signature: (string_fold s init step) where step is a closure of
     // (acc, char) → acc. Whole iteration in this JS for-loop; no Form-
