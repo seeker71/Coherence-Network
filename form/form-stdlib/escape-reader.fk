@@ -28,15 +28,7 @@
 
 (do
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 1 — shared infrastructure (from line-grammar.fk)
-    ;; ──────────────────────────────────────────────────────────────────
-
-    (defn substr (s a b)
-        (if (ge a b) ""
-            (str_concat (char_at s a) (substr s (add a 1) b))))
-
-    ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 2 — escape-table lookup
+    ;; Part 1 — escape-table lookup
     ;; ──────────────────────────────────────────────────────────────────
     ;; An escape-table is a list of (trigger-char, replacement-string)
     ;; pairs. When the reader is in escape mode and encounters
@@ -56,7 +48,7 @@
                     (lookup-escape (tail table) trigger-char)))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 3 — read-with-escape: terminator-bounded with escape table
+    ;; Part 2 — read-with-escape: terminator-bounded with escape table
     ;; ──────────────────────────────────────────────────────────────────
     ;; Reads from s starting at i, accumulating chars until terminator
     ;; is hit. Inside the bounded region, escape-char triggers a one-
@@ -72,31 +64,56 @@
     (defn result-text (r) (head r))
     (defn result-pos (r) (head (tail r)))
 
-    (defn read-with-escape (s i terminator escape-char escape-table)
-        (read-loop s i terminator escape-char escape-table ""))
+    ;; The loop tracks two indices into the input:
+    ;;   start-i — start of the current unescaped run (the next substring
+    ;;             slice that will be emitted as-is from s)
+    ;;   i       — current scan position
+    ;; and a `prefix` accumulator that only grows when an escape sequence
+    ;; rewrites bytes. The common case (no escape) emits a single
+    ;; substring of s with no per-char copying; the escape case folds the
+    ;; current run + the decoded replacement into prefix and resets
+    ;; start-i past the escape. Total str_concat invocations across the
+    ;; whole read are bounded by the number of escape sequences seen,
+    ;; not by the input length.
 
-    (defn read-loop (s i terminator escape-char escape-table acc)
+    (defn read-with-escape (s i terminator escape-char escape-table)
+        (read-loop s i i terminator escape-char escape-table ""))
+
+    (defn finish-run (s start-i end-i prefix end-pos)
+        (if (str_eq prefix "")
+            (mk-result (substring s start-i end-i) end-pos)
+            (mk-result (str_concat prefix (substring s start-i end-i)) end-pos)))
+
+    (defn read-loop (s start-i i terminator escape-char escape-table prefix)
         (if (eq i (str_len s))
-            ;; EOF before terminator — return what we have
-            (mk-result acc i)
+            ;; EOF before terminator — emit current run
+            (finish-run s start-i i prefix i)
             (do
                 (let c (char_at s i))
                 (if (str_eq c terminator)
-                    (mk-result acc (add i 1))   ; consume terminator
+                    ;; consume terminator, emit current run
+                    (finish-run s start-i i prefix (add i 1))
                     (if (str_eq c escape-char)
                         (if (ge (add i 1) (str_len s))
-                            ;; escape at EOF — emit the escape char
-                            (mk-result (str_concat acc c) (add i 1))
+                            ;; escape at EOF — emit run including the
+                            ;; trailing escape char (the original behavior:
+                            ;; pass it through literally)
+                            (finish-run s start-i (add i 1) prefix (add i 1))
                             (do
                                 (let next-c (char_at s (add i 1)))
                                 (let decoded (lookup-escape escape-table next-c))
-                                (read-loop s (add i 2) terminator escape-char escape-table
-                                            (str_concat acc decoded))))
-                        (read-loop s (add i 1) terminator escape-char escape-table
-                                    (str_concat acc c)))))))
+                                ;; fold the current run + decoded into
+                                ;; prefix, advance past the escape pair
+                                (let run-end (finish-run s start-i i prefix (add i 2)))
+                                (read-loop s (add i 2) (add i 2)
+                                            terminator escape-char escape-table
+                                            (result-text run-end))))
+                        (read-loop s start-i (add i 1)
+                                    terminator escape-char escape-table
+                                    prefix))))))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 4 — read-with-length: count-bounded (binary framing)
+    ;; Part 3 — read-with-length: count-bounded (binary framing)
     ;; ──────────────────────────────────────────────────────────────────
     ;; Reads exactly N bytes/chars from s starting at i. Returns
     ;; (substring, position-after). This is the PNG chunk-data shape,
@@ -108,10 +125,10 @@
     ;; caller does that with header-specific helpers.
 
     (defn read-with-length (s i n)
-        (mk-result (substr s i (add i n)) (add i n)))
+        (mk-result (substring s i (add i n)) (add i n)))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 5 — read-length-prefix: single-byte length-prefixed read
+    ;; Part 4 — read-length-prefix: single-byte length-prefixed read
     ;; ──────────────────────────────────────────────────────────────────
     ;; Convenience for the common "1 byte length + that many bytes data"
     ;; shape that shows up in many simple binary formats (Pascal strings,
@@ -124,7 +141,7 @@
             (read-with-length s (add i 1) len)))
 
     ;; ──────────────────────────────────────────────────────────────────
-    ;; Part 6 — read-context: the unified abstraction
+    ;; Part 5 — read-context: the unified abstraction
     ;; ──────────────────────────────────────────────────────────────────
     ;; A context is one of:
     ;;   (list "escape" terminator escape-char escape-table)
