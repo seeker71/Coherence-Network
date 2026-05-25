@@ -335,39 +335,148 @@ class PythonEmitter:
 
     def _emit_defn(self, form: list) -> None:
         # (defn name (params...) body)
-        name = py_ident(form[1].name)
-        params_py = ", ".join(py_ident(p.name) for p in form[2]) if form[2] else ""
+        fname_raw = form[1].name
+        name = py_ident(fname_raw)
+        param_syms = list(form[2]) if form[2] else []
+        params_py_list = [py_ident(p.name) for p in param_syms]
+        params_py = ", ".join(params_py_list)
         body = form[3] if len(form) > 3 else 0
         self.line(f"def {name}({params_py}):")
         self.indent += 1
-        self._emit_function_body(body)
+        # Tail-call recursion lifting: when every self-call sits in tail
+        # position and at least one self-call exists, lift the body into a
+        # `while True:` and rewrite each tail self-call as a tuple rebind +
+        # `continue`. This removes CPython's stack-depth fragility for the
+        # head/tail-style loops the Form CPS lowering emits — the deep
+        # source-compiler workloads (engine.fk) no longer need
+        # sys.setrecursionlimit raised to extreme values.
+        if param_syms and self._is_tail_recursive(fname_raw, param_syms, body):
+            self.line("while True:")
+            self.indent += 1
+            self._emit_function_body(body, tail_self=(fname_raw, params_py_list))
+            self.indent -= 1
+        else:
+            self._emit_function_body(body)
         self.indent -= 1
 
-    def _emit_function_body(self, body: Sexpr) -> None:
-        """Render a Form expression as a Python function body."""
-        # Try to detect while/for CPS shapes and recover them as native loops
-        # (not in this first slice — recursive functions stay recursive Python,
-        # which is semantically correct). TODO: pattern-match _while_N /
-        # _for_N CPS shapes and lift to while/for.
+    # ---- tail-call recursion analysis ----
+
+    def _contains_self_call(self, fname: str, expr: Sexpr) -> bool:
+        """True iff `expr` (or any sub-expression) is a call to `fname`.
+
+        Used as the "this is not a tail call" guard — anything that wraps a
+        self-call (arguments to other calls, conditions, let values, prefix
+        statements of a `do`) disqualifies the function from tail lifting.
+        """
+        if isinstance(expr, list) and expr:
+            if isinstance(expr[0], Sym) and expr[0].name == fname:
+                return True
+            return any(self._contains_self_call(fname, x) for x in expr)
+        return False
+
+    def _is_tail_recursive(self, fname: str, params: list, body: Sexpr) -> bool:
+        """Return True iff `body` is tail-recursive in `fname`.
+
+        Tail-recursive means: every call to `fname` reachable in `body`
+        sits in tail position (the value returned from the function), and
+        at least one such call exists. Self-calls nested inside arguments,
+        conditions, let-values, or non-final `do` statements disqualify.
+
+        Tail positions walked:
+        - `(do s1 ... sn)`     → tail is `sn`; `s1..s_{n-1}` must contain no self-call
+        - `(if cond t e)`      → tail is both `t` and `e`; `cond` must contain no self-call
+        - `(let x v)`          → tail leaf (the let evaluates to v); v must contain no self-call
+        - `(fname args...)`    → THE tail self-call; args must contain no nested self-call
+        - any other expression → tail leaf base case; must contain no self-call
+        """
+        saw_self = [False]
+
+        def walk(expr: Sexpr) -> bool:
+            if isinstance(expr, list) and expr and isinstance(expr[0], Sym):
+                op = expr[0].name
+                if op == "do":
+                    inner = expr[1:]
+                    if not inner:
+                        return True
+                    for s in inner[:-1]:
+                        if self._contains_self_call(fname, s):
+                            return False
+                    return walk(inner[-1])
+                if op == "if" and len(expr) == 4:
+                    cond, then_, else_ = expr[1], expr[2], expr[3]
+                    if self._contains_self_call(fname, cond):
+                        return False
+                    return walk(then_) and walk(else_)
+                if op == "let" and len(expr) >= 3:
+                    # let-as-expr: value is not in tail position. Form's let
+                    # in tail simply binds and yields the value — the value
+                    # itself must not contain a self-call.
+                    return not self._contains_self_call(fname, expr[2])
+                if op == fname:
+                    # The tail self-call. Arity must match params, and the
+                    # argument expressions themselves must contain no nested
+                    # self-calls (those would be non-tail).
+                    if len(expr) - 1 != len(params):
+                        return False
+                    for arg in expr[1:]:
+                        if self._contains_self_call(fname, arg):
+                            return False
+                    saw_self[0] = True
+                    return True
+            # Any other shape (atom, non-special call, etc.) is a base-case
+            # tail leaf — valid as long as it contains no self-call.
+            return not self._contains_self_call(fname, expr)
+
+        if not walk(body):
+            return False
+        return saw_self[0]
+
+    def _emit_function_body(self, body: Sexpr, tail_self: tuple | None = None) -> None:
+        """Render a Form expression as a Python function body.
+
+        When `tail_self` is `(fname, [param_py_names])`, every tail self-call
+        is rewritten to a tuple rebind + `continue` instead of `return f(...)`.
+        Non-self tail positions still emit a normal `return`.
+        """
         if isinstance(body, list) and body and is_sym(body[0], "do"):
             stmts = body[1:]
             for stmt in stmts[:-1]:
                 self._emit_statement(stmt)
-            self.line(f"return {self._emit_expr(stmts[-1])}")
+            self._emit_tail(stmts[-1], tail_self)
             return
         if isinstance(body, list) and body and is_sym(body[0], "if"):
             # if-as-statement: render as Python if/else returning each arm.
             cond, then_, else_ = body[1], body[2], body[3]
             self.line(f"if {self._emit_expr(cond)}:")
             self.indent += 1
-            self._emit_function_body(then_)
+            self._emit_function_body(then_, tail_self)
             self.indent -= 1
             self.line("else:")
             self.indent += 1
-            self._emit_function_body(else_)
+            self._emit_function_body(else_, tail_self)
             self.indent -= 1
             return
-        self.line(f"return {self._emit_expr(body)}")
+        self._emit_tail(body, tail_self)
+
+    def _emit_tail(self, expr: Sexpr, tail_self: tuple | None) -> None:
+        """Emit a tail-position expression — either a self-call rebind or a return."""
+        if tail_self is not None:
+            fname, param_names = tail_self
+            if (isinstance(expr, list) and expr
+                    and isinstance(expr[0], Sym) and expr[0].name == fname
+                    and len(expr) - 1 == len(param_names)):
+                # Rebind params from the tail-call arguments, then loop.
+                # Python's tuple assignment evaluates the full RHS before
+                # binding any LHS, so simultaneous updates are safe.
+                rhs = ", ".join(self._emit_expr(a) for a in expr[1:])
+                lhs = ", ".join(param_names)
+                if len(param_names) == 1:
+                    self.line(f"{lhs} = {rhs}")
+                else:
+                    self.line(f"{lhs} = {rhs}")
+                self.line("continue")
+                return
+        self.line(f"return {self._emit_expr(expr)}")
 
     def _emit_statement(self, form: Sexpr) -> None:
         if isinstance(form, list) and form:
