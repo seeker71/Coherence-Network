@@ -1,7 +1,7 @@
 ; dynamic-adapter-registry-band.fk - adapter capsules mint local identities.
 ; Authored in form.action; source-compiler.fk lowers it above the kernel.
 ;
-; preludes: form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let DYNAMIC_ADAPTER_COUNT = make_nodeid(8, 45, 2, 3);

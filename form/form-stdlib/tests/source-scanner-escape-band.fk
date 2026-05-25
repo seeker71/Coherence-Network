@@ -3,7 +3,7 @@
 ; The source scanner depends on "\r" being carriage return, not "r".
 ; This keeps identifier characters from being misclassified as whitespace.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk
 
 (do
     (let space-ok (if (fsc-space? " ") 100 0))

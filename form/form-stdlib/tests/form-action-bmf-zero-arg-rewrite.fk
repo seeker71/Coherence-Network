@@ -1,7 +1,7 @@
 ; form-action-bmf-zero-arg-rewrite.fk - rebuild zero-arg-functions through
 ; BMF objects and executable Form recipe nodes.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
 
 (do
     (defn fa-int (value)

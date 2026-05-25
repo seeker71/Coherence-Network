@@ -4,7 +4,7 @@
 ; and transport parsers are all ordinary runtime capabilities. The registry
 ; plans by surfaces and context, not by kernel vocabulary or hard-coded order.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/form-ontology.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let RUNTIME_DYNAMIC_COUNT = make_nodeid(8, 45, 8, 1);
