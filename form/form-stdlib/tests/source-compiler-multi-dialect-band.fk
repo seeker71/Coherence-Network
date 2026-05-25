@@ -8,7 +8,7 @@
 ; one driver line per section and wrote the corresponding sidecar to
 ; disk with non-zero size.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 (do
     (let source

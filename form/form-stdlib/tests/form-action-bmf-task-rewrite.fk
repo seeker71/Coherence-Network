@@ -1,6 +1,6 @@
 ; form-action-bmf-task-rewrite.fk - rebuild task-runtime through BMF objects.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology.fk form-stdlib/dialect-categories.fk form-stdlib/engine-constants.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk
 
 (do
     (defn fa-ident (name)

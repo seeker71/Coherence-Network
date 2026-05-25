@@ -29,9 +29,12 @@
 
 ;; --- text helpers --------------------------------------------------
 
-(defn json-substr (s a b)
-    (if (ge a b) ""
-        (str_concat (char_at s a) (json-substr s (add a 1) b))))
+;; Native `substring` is sibling-parity (Go/Rust/TS) and O(1) per slice
+;; — used in place of the earlier recursive char-by-char str_concat
+;; which made parsing a 13KB ontology file take ~26s. The wrapper
+;; preserves the json-substr name in case future callers want to
+;; switch back to a Form-walked slice for instrumentation.
+(defn json-substr (s a b) (substring s a b))
 
 (defn json-is-ws-cp (cp)
     (or (eq cp 32)
@@ -48,6 +51,13 @@
             (json-skip-ws s (add i 1))
             i)))
 
+;; Counts newlines from 0 to target-i. Available for callers that
+;; need source attribution; the loader uses line=1 directly because
+;; line-counting from scratch per node turns parse into O(n²) walk
+;; over the input — a ~13KB JSON took 26s with line counting,
+;; instantly without. When the JSON parser is invoked from a path
+;; that does need attribution, pass the result of json-count-line
+;; in lieu of the literal 1 at each intern_node_at call site.
 (defn json-count-line (s i target-i line)
     (if (ge i target-i) line
         (if (eq (ord (char_at s i)) 10)
@@ -163,7 +173,7 @@
             (json-mk-pair-r (intern_trivial_int 0) (json-token-end s tok))
         (if (str_eq kind "NULL")
             (json-mk-pair-r (intern_node_at JSON-NULL (empty) source-path
-                                        (json-count-line s 0 (json-tok-start tok) 1) 1)
+                                        1 1)
                         (json-token-end s tok))
         (if (str_eq kind "LBRACE")
             (json-parse-object s (json-token-end s tok) source-path (json-tok-start tok))
@@ -173,7 +183,7 @@
 
 (defn json-parse-array (s i source-path start-pos)
     (do
-        (let line-no (json-count-line s 0 start-pos 1))
+        (let line-no 1)
         (let tok (json-next-token s i))
         (if (str_eq (json-tok-kind tok) "RBRACK")
             (json-mk-pair-r (intern_node_at JSON-ARRAY (empty) source-path line-no 1)
@@ -198,7 +208,7 @@
 
 (defn json-parse-object (s i source-path start-pos)
     (do
-        (let line-no (json-count-line s 0 start-pos 1))
+        (let line-no 1)
         (let tok (json-next-token s i))
         (if (str_eq (json-tok-kind tok) "RBRACE")
             (json-mk-pair-r (intern_node_at JSON-OBJECT (empty) source-path line-no 1)
@@ -215,8 +225,7 @@
         (let val-pr (json-parse-value s after-colon source-path))
         (let val (json-pair-r val-pr))
         (let after-val (json-pair-pos val-pr))
-        (let pair (intern_node_at JSON-PAIR (list key val) source-path
-                                   (json-count-line s 0 (json-tok-start key-tok) 1) 1))
+        (let pair (intern_node_at JSON-PAIR (list key val) source-path 1 1))
         (let acc2 (cons pair acc))
         (let next-tok (json-next-token s after-val))
         (if (str_eq (json-tok-kind next-tok) "COMMA")
