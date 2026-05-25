@@ -31,16 +31,53 @@ def _is_close_bracket(t):
     return t in (")", "]", "}")
 
 
+_STRING_QUOTE_MAP = {
+    "sq": ("'", "'"),
+    "dq": ('"', '"'),
+    "triple-sq": ("'''", "'''"),
+    "triple-dq": ('"""', '"""'),
+}
+
+_STRING_PREFIX_MAP = {
+    "py-string": "",
+    "py-bytes": "b",
+    "py-fstring": "f",
+    "py-tstring": "t",
+}
+
+
+def _render_string_atom(kind, value):
+    """Reassemble a string atom from its kind + body, restoring prefix/quote.
+
+    Suffix encoding:
+      `py-<prefix>`              → unquoted (legacy)
+      `py-<prefix>-sq|dq`        → single/double quoted
+      `py-<prefix>-triple-sq|dq` → triple-quoted
+    """
+    base = kind
+    quote_key = "dq"
+    # Check triple FIRST so the chop below doesn't strip the wrong suffix.
+    if "-triple-sq" in base:
+        quote_key = "triple-sq"
+        base = base.replace("-triple-sq", "")
+    elif "-triple-dq" in base:
+        quote_key = "triple-dq"
+        base = base.replace("-triple-dq", "")
+    elif base.endswith("-sq"):
+        quote_key = "sq"
+        base = base[:-3]
+    elif base.endswith("-dq"):
+        quote_key = "dq"
+        base = base[:-3]
+    open_q, close_q = _STRING_QUOTE_MAP.get(quote_key, ('"', '"'))
+    prefix = _STRING_PREFIX_MAP.get(base, "")
+    return f"{prefix}{open_q}{value}{close_q}"
+
+
 def _render_atom(kind, value):
     """Re-render a token from its kind + raw value."""
-    if kind == "py-string":
-        return '"' + value.replace('"', '\\"') + '"'
-    if kind == "py-bytes":
-        return 'b"' + value.replace('"', '\\"') + '"'
-    if kind == "py-fstring":
-        return 'f"' + value.replace('"', '\\"') + '"'
-    if kind == "py-tstring":
-        return 't"' + value.replace('"', '\\"') + '"'
+    if kind.startswith(("py-string", "py-bytes", "py-fstring", "py-tstring")):
+        return _render_string_atom(kind, value)
     # py-keyword, py-name, py-int, py-float, py-op, py-comment — value is the surface text.
     return value
 
@@ -56,47 +93,133 @@ def _normalize_token(entry):
 def _render_tokens(token_entries):
     """Best-effort source text from a token list.
 
-    Tightens around brackets, commas, dots so output reads like Python.
-    Token entries may be (kind, value) tuples (preserved across compile)
-    or raw value strings (legacy shape). Comments get a two-space gutter
-    when trailing (preceded by another token), no padding when leading.
+    Spacing follows Python style: tight around brackets/commas/dots,
+    @ for decorator, = inside parens for kwargs. Comments get a
+    two-space gutter when trailing, flush-left when leading.
     """
     kinds = []
     values = []
+    raw_values = []
     for entry in token_entries:
         if isinstance(entry, (list, tuple)) and len(entry) == 2:
             kinds.append(entry[0])
+            raw_values.append(entry[1])
             values.append(_render_atom(entry[0], entry[1]))
         else:
             kinds.append("")
+            raw_values.append(str(entry))
             values.append(str(entry))
+
+    def is_op(idx, *symbols):
+        """Token at idx is a py-op whose value is one of the symbols."""
+        if idx < 0 or idx >= len(kinds):
+            return False
+        return kinds[idx] == "py-op" and raw_values[idx] in symbols
+
+    # Pre-pass: depths per position so we know when `=` is a kwarg
+    # and when `:` is a slice colon.
+    paren_depth = []
+    square_depth = []
+    pd = 0
+    sd = 0
+    for i in range(len(kinds)):
+        paren_depth.append(pd)
+        square_depth.append(sd)
+        if is_op(i, "("):
+            pd += 1
+        elif is_op(i, ")"):
+            pd = max(0, pd - 1)
+        elif is_op(i, "["):
+            sd += 1
+            pd += 1
+        elif is_op(i, "]"):
+            sd = max(0, sd - 1)
+            pd = max(0, pd - 1)
+        elif is_op(i, "{"):
+            pd += 1
+        elif is_op(i, "}"):
+            pd = max(0, pd - 1)
 
     out = []
     for i, tok in enumerate(values):
         kind = kinds[i]
+        raw = raw_values[i]
         if i == 0:
             out.append(tok)
             continue
         prev = values[i - 1]
+        prev_kind = kinds[i - 1]
+        prev_raw = raw_values[i - 1]
+
         if kind == "py-comment":
             out.append("  " + tok)
             continue
-        if _is_open_bracket(prev) or tok in (",", ":", ";", ")", "]", "}"):
+        # Tight close: comma / colon / semicolon / close-bracket bind tight.
+        if is_op(i, ",", ":", ";", ")", "]", "}"):
             out.append(tok)
-        elif tok == "(" and (prev.replace("_", "").isalnum() or _is_close_bracket(prev) or prev in (")", "]")):
+            continue
+        # Inside [] (slice context), the value after `:` binds tight.
+        if is_op(i - 1, ":") and square_depth[i - 1] > 0:
             out.append(tok)
-        elif tok == "." or prev == ".":
+            continue
+        # Tight after open bracket or after `.` or after `@` decorator.
+        if is_op(i - 1, "(", "[", "{", ".", "@"):
             out.append(tok)
-        elif tok == "[" and (prev.replace("_", "").isalnum() or _is_close_bracket(prev)):
+            continue
+        # Unary +/-/*/** (preceded by an operator that opens an expression)
+        # binds tight to its operand. The "opens expression" check covers
+        # call/list/tuple/dict/comma/assign/return/`:`/keywords like 'not'/'and'/'or'.
+        _UNARY_PARENTS = ("(", "[", "{", ",", "=", ":", "+", "-", "*", "/", "%",
+                          "**", "//", "<", ">", "<=", ">=", "==", "!=",
+                          "+=", "-=", "*=", "/=", "%=", "**=", "//=",
+                          "&", "|", "^", "<<", ">>", "->", ";", "@")
+        if is_op(i - 1, "+", "-", "*", "**") and i - 2 >= 0 and (
+            is_op(i - 2, *_UNARY_PARENTS) or kinds[i - 2] == "py-keyword"
+        ):
             out.append(tok)
-        else:
-            out.append(" " + tok)
+            continue
+        # `.` binds tight on both sides — but NOT after a keyword like `from`.
+        if is_op(i, "."):
+            if prev_kind == "py-keyword":
+                out.append(" " + tok)
+            else:
+                out.append(tok)
+            continue
+        # `(` immediately after a name / close-bracket = call.
+        if is_op(i, "(") and (prev_kind == "py-name" or is_op(i - 1, ")", "]")):
+            out.append(tok)
+            continue
+        # `[` after a name / close-bracket = subscript.
+        if is_op(i, "[") and (prev_kind == "py-name" or is_op(i - 1, ")", "]")):
+            out.append(tok)
+            continue
+        # `=` inside parens with `name =` shape = kwarg, no spaces.
+        if is_op(i, "=") and paren_depth[i] > 0 and prev_kind == "py-name":
+            out.append(tok)
+            continue
+        if is_op(i - 1, "=") and paren_depth[i - 1] > 0:
+            if i - 2 >= 0 and kinds[i - 2] == "py-name":
+                out.append(tok)
+                continue
+        out.append(" " + tok)
     return "".join(out)
 
 
 def _statement_text(node):
     value = node.get("value") or {}
     tokens = value.get("tokens") or []
+    # A statement that is only py-blank tokens renders as blank lines.
+    only_blanks = (
+        tokens
+        and all(
+            isinstance(t, (list, tuple))
+            and len(t) == 2
+            and t[0] == "py-blank"
+            for t in tokens
+        )
+    )
+    if only_blanks:
+        return ""  # the surrounding newline join supplies the blank
     return _render_tokens(tokens)
 
 
@@ -105,7 +228,9 @@ def _walk(node, by_id, indent=0):
     kind = node.get("kind")
     pad = "    " * indent
     if kind == "statement":
-        return f"{pad}{_statement_text(node)}"
+        text = _statement_text(node)
+        # Blank-line statements render as "" so they don't carry trailing pad.
+        return text if text == "" else f"{pad}{text}"
     if kind == "statement-block":
         children = node.get("children") or []
         if not children:

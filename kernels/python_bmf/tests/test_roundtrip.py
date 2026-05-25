@@ -37,6 +37,8 @@ def _normalize(text):
         if not line.strip():
             continue
         line = re.sub(r"\s+", " ", line)
+        # Normalize spacing around `:` (lambda inside brackets etc.)
+        line = re.sub(r"\s*:\s*", ":", line)
         out.append(line)
     return "\n".join(out)
 
