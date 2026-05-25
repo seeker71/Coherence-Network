@@ -754,16 +754,35 @@
             (or (and (ge cp 97) (le cp 122))
                 (str_eq ch "_")))))
 
-    (defn fsc-source-scan-name-loop (cursor value)
+    ;; Extract a slice [start, end) from the cursor's underlying source,
+    ;; whether it is an in-memory string or a file path.
+    (defn fsc-source-cursor-slice (cursor start end)
+        (if (fsc-source-cursor-file? cursor)
+            (read_file_slice (fsc-source-cursor-source cursor)
+                             start
+                             (sub end start))
+            (substring (fsc-source-cursor-source cursor) start end)))
+
+    ;; Walk forward through name-chars without copying.  start-cursor stays
+    ;; pinned at the token's first byte; we only advance the moving cursor.
+    ;; The token text is extracted in a single substring call at the end.
+    (defn fsc-source-scan-name-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (fsc-source-name-char? ch)
-                    (fsc-source-scan-name-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                    (fsc-source-scan-name-loop start-cursor
+                                               (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
 
     (defn fsc-source-name-kind (value keywords keyword-kind name-kind)
         (if (fsc-string-list-contains? keywords value)
@@ -805,7 +824,7 @@
 
     (defn fsc-source-scan-name (start keywords keyword-kind name-kind)
         (do
-            (let read (fsc-source-scan-name-loop start ""))
+            (let read (fsc-source-scan-name-loop start start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
@@ -816,39 +835,53 @@
                     end)
                 end)))
 
-    (defn fsc-source-scan-int-loop (cursor value)
+    (defn fsc-source-scan-int-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (fsc-digit? ch)
-                    (fsc-source-scan-int-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                    (fsc-source-scan-int-loop start-cursor
+                                              (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
 
     (defn fsc-source-scan-int (start int-kind)
         (do
-            (let read (fsc-source-scan-int-loop start ""))
+            (let read (fsc-source-scan-int-loop start start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
                 (fsc-source-object int-kind value start end)
                 end)))
 
-    (defn fsc-source-scan-string-loop (cursor value)
+    (defn fsc-source-scan-string-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (if (str_eq (fsc-source-cursor-char cursor) "\"")
-                (list value (fsc-source-cursor-advance cursor))
-                (fsc-source-scan-string-loop
-                    (fsc-source-cursor-advance cursor)
-                    (str_concat value (fsc-source-cursor-char cursor))))))
+                (list (fsc-source-cursor-slice
+                           start-cursor
+                           (fsc-source-cursor-offset start-cursor)
+                           (fsc-source-cursor-offset cursor))
+                      (fsc-source-cursor-advance cursor))
+                (fsc-source-scan-string-loop start-cursor
+                                             (fsc-source-cursor-advance cursor)))))
 
     (defn fsc-source-scan-string (start string-kind)
         (do
             (let body-start (fsc-source-cursor-advance start))
-            (let read (fsc-source-scan-string-loop body-start ""))
+            (let read (fsc-source-scan-string-loop body-start body-start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
