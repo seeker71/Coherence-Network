@@ -37,25 +37,25 @@ source:
   - file: form/scripts/diff_form_artifacts.py
     symbols: [diff_artifacts, _structural_hash]
 requirements:
-  - "Use the Python BMF compiler currently written in Form (form/form-stdlib/grammars/python-bmf.fk plus compiler.fk and source-compiler.fk) as the use case; emit it as native Python that runs under CPython without any Form interpreter in the path."
-  - "Emit native Python source from compiled Form binary artifacts (.fkb), not from .fk source text and not from a host-language generator."
-  - "Emitted Python expresses compiler behavior as ordinary Python functions, dataclasses, and a small data-driven rule registry — readable by humans and machines as Python, with as little Form influence as possible."
-  - "Provide a thin Python SDK (kernels/python_bmf/sdk.py) only for features Python lacks directly: content-addressed NodeIDs, reversible cell metadata, .fkb binary read/write, and symbol/source lens lookup."
-  - "Parity proof runs the same Python program through (a) the Form-kernel BMF compiler and (b) the emitted Python BMF compiler and compares Recipe trees / .fkb output; differences belong to a small enumerated set of accepted classes."
-  - "Performance harness measures CPU time and peak RSS for the emitted Python compiler against the Form kernels (Go, Rust, TS) running the same workload, so the comparison informs optimization of both core libraries and kernels."
+  - "Emitter is a Form recipe (form/form-stdlib/emits/python-native.fk) that walks a source-compiled Form Recipe tree and writes Python source to disk via the kernel's write_file_text host call. NOT a host-language program that emits Python."
+  - "Emitted Python is idiomatic native Python — Python `class`, `def`, `if/else`, `while`/`for`, `xs[0]`, `xs[1:]`, `[x, *xs]`, `a + b`, regex, dict, generators. The kind of Python a Python programmer would write."
+  - "Form vocabulary surfaces in emitted Python ONLY where Python has no native equivalent — content-addressed structural identity (NodeID), interning, source-span attachment, .fkb binary i/o. These come via `from kernels.python_bmf.sdk import …`. Everything else uses Python natives."
+  - "Comparison the goal names: Form-resident BMF compiler vs. native Python BMF compiler producing the same Recipe trees (NodeID semantics) from the same Python source. NOT two walkers of the same recipes."
+  - "Round-trip the goal names: emitted Python source is fed as compiler input to the Form-resident Python BMF compiler; the resulting .fkb is semantically equivalent to the .fkb produced from the original Form source. Differences are named and minimized."
+  - "Performance/resource observations across the two truly distinct implementations inform optimization of both kernels and emitted code."
 done_when:
-  - "kernels/python_bmf/ contains a self-contained native Python package (objects.py, parser.py, rules.py, section_parser.py, form_action.py, compiler.py, sdk.py) that compiles a Python source file to a BMF Recipe tree using only the standard library."
-  - "Running python3 -m kernels.python_bmf.compiler <file.py> produces the same Recipe shape (after id remapping) as the Form-kernel pipeline for every demo in form/form-kernel-ts/scripts/parity_suite.sh."
-  - "form/scripts/build_form_compiler_artifact.sh builds the source compiler .fkb and form/scripts/diff_form_artifacts.py compares source.fkb against a roundtrip.fkb with zero unexplained difference classes."
-  - "form/form-stdlib/emits/python-native.fk is a target row in seedbank/emit.fk's registry that produces the same Python package layout from a .fkb without giant ROOT = R(...) graph literals."
-  - "scripts/perf_compare_native_python.sh reports time per iteration and peak RSS for CPython-via-emitted-package vs form-kernel-rust on at least three parity-suite demos."
-test: "form/scripts/emit_native_python.sh && python3 -m py_compile kernels/python_bmf/*.py && python3 scripts/validate_spec_quality.py --file specs/form-binary-to-native-python-emitter.md"
+  - "form/form-stdlib/emits/python-native.fk walks a source-compiled Form Recipe tree and emits Python that contains zero Form vocabulary outside the `sdk` import."
+  - "Emitted Python compiles cleanly under `python3 -m py_compile`."
+  - "Emitted Python runs under CPython without importing any form-kernel runtime."
+  - "Emitted Python, when fed back into the Form-resident Python BMF compiler via python-bmf.fk rules, produces a .fkb semantically equivalent to the original Form source's .fkb."
+  - "Recipe-tree comparison (NodeID semantics) between Form-resident and Python-native implementations on the parity-suite demos produces a difference report with only enumerated, named classes."
 constraints:
-  - "No handwritten Python in kernels/python_bmf/ other than `__init__.py`, `README.md`, and `sdk.py` (the SDK bridge). Every other .py file MUST be Form-emitter output landed via the kernel's `write_file_text` host call. The wrong-path fix: if a developer wants to add a new function, the addition goes in `emits/python-native.fk` first, and the emitter re-runs."
-  - "No tokenizer fallback. The emitted Python parser uses the same scanner shape as python-source-scan-text in python-bmf.fk — character cursor + dialect-driven scanning, not a Python regex tokenizer."
-  - "No giant ROOT = R(...) graph literal anywhere in emitted Python. Categories are enums, rules are data, recipes are Python functions or dataclasses."
+  - "No handwritten Python in kernels/python_bmf/ other than `__init__.py`, `README.md`, `KNOWN_GAPS.md`, and `sdk.py` (the SDK bridge)."
+  - "Emitted Python MUST use Python natives where they exist: `xs[0]` not `head(xs)`; `xs[1:]` not `tail(xs)`; `[x, *xs]` not `cons(x, xs)`; `a + b` not `str_concat(a, b)`; `len(xs)` not a Form helper; `a == b` not `str_eq(a, b)`. Wrapping a Python native as a Form-vocab function is the shortcut shape that is forbidden."
+  - "No host-language program emits Python. The emitter is a Form recipe walked by the kernel."
   - "The emitted Python imports nothing from form-kernel-ts, form-kernel-go, or form-kernel-rust at runtime."
-  - "The SDK stays under 400 lines and contains no rule logic, no parser logic, and no emit logic — only substrate primitives."
+  - "The SDK stays under 400 lines and contains no rule logic, no parser logic, no emit logic — only substrate primitives."
+  - "The comparison harness compares two distinct implementations of the BMF compiler — NOT two walkers of the same recipes. A 'two walkers, same recipes, same output' claim is tautological and does not count as the comparison this spec demands."
 ---
 
 # Form Binary to Native Python Emitter — compiler parity through readable Python

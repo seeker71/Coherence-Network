@@ -1,60 +1,53 @@
-# `kernels/python_bmf/` — native Python BMF compiler (emitted from Form)
+# `kernels/python_bmf/` — substrate boundary for Python
 
-The Python BMF compiler lives as Form recipes in
-`form/form-stdlib/grammars/python-bmf.fk`. This package is its native
-Python expression, materialized by the Form emitter
-(`form/form-stdlib/emits/python-native.fk`) through the kernel's
-`write_file_text` host call.
+The architectural target (`specs/form-binary-to-native-python-emitter.md`):
 
-## Files
-
-| File | Source | Role |
-|------|--------|------|
-| `__init__.py` | hand-tuned | package marker + lineage |
-| `README.md` | hand-tuned | this file |
-| `sdk.py` | hand-tuned | **SDK bridge** — NodeIDs, intern, SourceSpan, `.fkb` i/o, Lens. The only place Form concepts surface in Python. |
-| `objects.py` | **synthesized** | walked from a Form-side category table + atom helpers; rendered by Form recipes via `str_concat` and written via `write_file_text` |
-| `parser.py` | **template-emitted** | scanner + layout + module parser; canonical source at `form/form-stdlib/emits/python-native-templates/parser.py`, the kernel reads it and writes it here |
-| `rules.py` | **template-emitted** | BMF rule registry (12 rules in the first slice); same path |
-| `section_parser.py` | **template-emitted** | section header detection + dialect dispatch |
-| `form_action.py` | **template-emitted** | Action IR + evaluator + `compile_form_action` |
-| `compiler.py` | **template-emitted** | `Compiler` class + CLI (`--self-test`, `--self-compile`, `--roundtrip`) |
-| `decompiler.py` | **template-emitted** | `.fkb` → Python source for round-trip testing |
-
-## Two emission shapes
-
-1. **Synthesized** (the deep emit shape): `objects.py` is built from Form-side data (category list, atom kinds, keyword/operator vocabularies) via composed `str_concat` recipes. Re-emit edits the recipe and the data — the Form file is authoritative.
-
-2. **Template-emitted** (the bridge shape): for files too large to synthesize from primitives in one breath, the canonical Python source lives at `form/form-stdlib/emits/python-native-templates/*.py`. The Form emitter calls `read_file` then `write_file_text`. The kernel is still the sole materializer; the substrate side holds the source-of-truth Python.
-
-The destination state: every module synthesized from a `.fkb` walked by Form recipes + a lens layer. Templates compost into synthesis as the lens layer lands.
-
-## Constraint
-
-> No handwritten Python in `kernels/python_bmf/` other than `__init__.py`, `README.md`, and `sdk.py`. Every other .py file MUST be Form-emitter output landed via the kernel's `write_file_text` host call. If a developer wants to add a new function, the addition goes in either the Form recipe (`emits/python-native.fk`) or the canonical template (`emits/python-native-templates/*.py`) first, and the emitter re-runs.
-
-## Regenerating
-
-```bash
-form/scripts/emit_native_python.sh
+```
+Form-resident BMF compiler  (Form recipes, walked by Go/Rust/TS kernels)
+    ↓  parses Python source → Recipe tree
+form/form-stdlib/emits/python-native.fk  (the Form-native adapter for Python)
+    ↓  walks Recipe tree, emits idiomatic native Python
+emitted .py files  (real Python — class, def, regex, dict, generators)
+    ↓  run under CPython
+same observable behavior as the Form-resident compiler
 ```
 
-This builds `form-kernel-go` if needed, source-compiles `core.fk`,
-runs the kernel against `emits/python-native.fk` +
-`emits/python-native-driver.fk`, the driver calls `pn-emit-all`, which
-calls `write_file_text` from inside the kernel for each target file,
-then verifies the emitted Python compiles.
+## What lives here
 
-## Round-trip status
+Only the substrate primitives Python lacks natively:
 
-`python3 -m unittest kernels.python_bmf.tests` round-trips every demo in `form/form-kernel-ts/seedbank/python-adapter/examples/python_*.py`. **8/8 semantic round-trip.** See `KNOWN_GAPS.md` for what's lost (trailing comments, alignment whitespace, quote-style) and what's next.
+| File | Role |
+|------|------|
+| `__init__.py` | package marker + lineage |
+| `README.md` | this file |
+| `sdk.py` | `NodeID`, `intern_trivial_int/string`, `SourceSpan`, `.fkb` read/write, `Lens` |
+| `KNOWN_GAPS.md` | honest map of what's open |
 
-## Where this is going
+## What does NOT live here
 
-`specs/form-binary-to-native-python-emitter.md` names the full destination — every module emitted, parity proof against the Form-kernel pipeline, performance comparison between CPython-via-emitted-package and form-kernel-rust on the same workloads. The Universal Translator path:
+- The emitter itself (`form/form-stdlib/emits/python-native.fk` — Form recipe, under construction)
+- The emitted Python (none today; the Form-native emitter must produce it)
+- Hand-written Python that emits Python (composted; was the shortcut)
+- Hand-written Python that walks Form recipes in Python syntax (composted; same shortcut)
+- Python `ast`-based `.fk` lowering (composted; wrong direction)
 
-1. **Step 1 — round-trip in a single language** (Python ↔ Form): the current arc.
-2. **Step 2 — round-trip across languages**: sibling `emits/<lang>-native.fk` for Go, Rust, TypeScript, C++ reusing `semantic-lowerer.fk`.
-3. **Step 3 — round-trip across domains**: the substrate's deeper promise.
+## What the SDK is for
 
-Each gap surfaced by round-trip testing is mapped in `KNOWN_GAPS.md`. The body learns by trying.
+Content-addressed structural identity is not native to Python. When emitted
+Python code needs to talk to the substrate (build a node with a stable
+NodeID, intern a value, read a `.fkb` artifact, attach a source span), it
+imports from `sdk.py`. That import is the **only** Form vocabulary in
+emitted Python — every other operation uses Python's natives (lists,
+dicts, regex, classes, generators, operators).
+
+## Status
+
+Today (2026-05-25):
+
+- The Form-resident BMF compiler exists and parses Python via `form/form-stdlib/grammars/python-bmf.fk` — 150+ rules now, recent extensions cover `from … import …`, `class …`, decorators (multiple shapes), and type annotations.
+- The Form-native Python emitter (`form/form-stdlib/emits/python-native.fk`) is under construction. When it lands, it walks a Recipe tree and writes idiomatic Python via the kernel's `write_file_text` host call.
+- The wrong-shape work created earlier today — hand-written Python emitter, Form-recipes-translated-to-Python-syntax, tautological cross-runtime parity claims — was composted. See `KNOWN_GAPS.md` for what was learned.
+
+## Spec
+
+`specs/form-binary-to-native-python-emitter.md` carries the contract.
