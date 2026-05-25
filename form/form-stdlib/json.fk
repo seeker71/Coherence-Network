@@ -45,11 +45,10 @@
 (defn json-is-digit-or-minus-cp (cp)
     (or (json-is-digit-cp cp) (eq cp 45)))   ; '-' = 45
 
-(defn json-skip-ws (s i)
-    (if (eq i (str_len s)) i
-        (if (json-is-ws-cp (ord (char_at s i)))
-            (json-skip-ws s (add i 1))
-            i)))
+;; scan_run class 0 = whitespace (space/tab/lf/cr). One native call
+;; replaces N walker-step recursions — closing the per-byte parser-
+;; throughput gap that pure-Form per-char loops carry.
+(defn json-skip-ws (s i) (scan_run s i 0))
 
 ;; Counts newlines from 0 to target-i. Available for callers that
 ;; need source attribution; the loader uses line=1 directly because
@@ -101,24 +100,29 @@
 ;; embedded `\"` doesn't end the string. The token value is the raw
 ;; substring between the quotes (escapes not expanded — the loader
 ;; only needs ASCII keys and simple values).
+;; scan_run class 4 = non-quote-non-escape. Fast-forward to the next
+;; '"' or '\\' in one native call; only fall back to per-char walk for
+;; escape sequences (rare in our data files). Was per-char recursion.
 (defn json-scan-string-loop (s j start)
-    (if (eq j (str_len s))
-        (json-mk-tok "STRING" (json-substr s (add start 1) j) start)
-        (if (eq (ord (char_at s j)) 92)            ; backslash
-            (json-scan-string-loop s (add j 2) start)
-            (if (eq (ord (char_at s j)) 34)         ; closing quote
-                (json-mk-tok "STRING" (json-substr s (add start 1) j) start)
-                (json-scan-string-loop s (add j 1) start)))))
+    (do
+        (let k (scan_run s j 4))
+        (if (eq k (str_len s))
+            (json-mk-tok "STRING" (json-substr s (add start 1) k) start)
+            (if (eq (ord (char_at s k)) 92)        ; backslash — skip 2
+                (json-scan-string-loop s (add k 2) start)
+                (json-mk-tok "STRING" (json-substr s (add start 1) k) start)))))
 
 (defn json-scan-string-end-pos (s i)
     (json-scan-string-end-loop s (add i 1)))
 
+;; scan_run class 4 = non-quote-non-escape. See json-scan-string-loop.
 (defn json-scan-string-end-loop (s j)
-    (if (eq j (str_len s)) j
-        (if (eq (ord (char_at s j)) 92)
-            (json-scan-string-end-loop s (add j 2))
-            (if (eq (ord (char_at s j)) 34) (add j 1)
-                (json-scan-string-end-loop s (add j 1))))))
+    (do
+        (let k (scan_run s j 4))
+        (if (eq k (str_len s)) k
+            (if (eq (ord (char_at s k)) 92)
+                (json-scan-string-end-loop s (add k 2))
+                (add k 1)))))
 
 (defn json-scan-number (s i)
     (json-mk-tok "NUMBER" (json-substr s i (json-scan-number-end s i)) i))
