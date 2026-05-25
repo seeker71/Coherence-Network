@@ -23,11 +23,13 @@ from pathlib import Path
 from . import host_primitives
 
 # Form source code is heavily recursive (head/tail walks, deep AST traversals).
-# CPython's default recursion limit (1000) trips on engine.fk-class workloads
-# where the Form kernel's iterative Recipe walker continues. Raising it lets
-# the emitted compiler match the kernel's reach. The cost is stack memory, not
-# correctness — Python's per-frame overhead is modest at these depths.
-sys.setrecursionlimit(200_000)
+# The emitter lifts tail-recursive Form functions to native Python `while True:`
+# loops with parameter rebinding (see emit_python.py `_is_tail_recursive`), so
+# the deep head/tail walks no longer consume Python stack frames. The remaining
+# non-tail recursion (e.g. tree walkers, `append(self(...), ...)` shapes) sits
+# well under 5,000 frames on every workload exercised by the cross-runtime
+# harness — a modest cushion above CPython's default 1,000.
+sys.setrecursionlimit(5_000)
 
 
 # Load order matches Form kernel's prepare_sources for the BMF compiler:

@@ -56,46 +56,56 @@ def python_source_prefix_string_kind(prefix):
                 return 'py-string'
 
 def python_source_skip_comment(cursor):
-    if is_fsc_source_cursor_end(cursor):
-        return cursor
-    else:
-        if str_eq(fsc_source_cursor_char(cursor), '\n'):
-            return fsc_source_cursor_advance(cursor)
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return cursor
         else:
-            return python_source_skip_comment(fsc_source_cursor_advance(cursor))
+            if str_eq(fsc_source_cursor_char(cursor), '\n'):
+                return fsc_source_cursor_advance(cursor)
+            else:
+                cursor = fsc_source_cursor_advance(cursor)
+                continue
 
 def python_source_scan_skip(cursor):
-    if is_fsc_source_cursor_end(cursor):
-        return cursor
-    else:
-        if is_fsc_space(fsc_source_cursor_char(cursor)):
-            return python_source_scan_skip(fsc_source_cursor_advance(cursor))
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return cursor
         else:
-            if str_eq(fsc_source_cursor_char(cursor), '#'):
-                return python_source_scan_skip(python_source_skip_comment(cursor))
+            if is_fsc_space(fsc_source_cursor_char(cursor)):
+                cursor = fsc_source_cursor_advance(cursor)
+                continue
             else:
-                return cursor
+                if str_eq(fsc_source_cursor_char(cursor), '#'):
+                    cursor = python_source_skip_comment(cursor)
+                    continue
+                else:
+                    return cursor
 
 def python_source_scan_string_loop(cursor, quote, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        if str_eq(fsc_source_cursor_char(cursor), '\\'):
-            return python_source_scan_string_loop(fsc_source_cursor_advance(fsc_source_cursor_advance(cursor)), quote, str_concat(value, fsc_source_cursor_char(fsc_source_cursor_advance(cursor))))
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
         else:
-            if str_eq(fsc_source_cursor_char(cursor), quote):
-                return [value, fsc_source_cursor_advance(cursor)]
+            if str_eq(fsc_source_cursor_char(cursor), '\\'):
+                cursor, quote, value = fsc_source_cursor_advance(fsc_source_cursor_advance(cursor)), quote, str_concat(value, fsc_source_cursor_char(fsc_source_cursor_advance(cursor)))
+                continue
             else:
-                return python_source_scan_string_loop(fsc_source_cursor_advance(cursor), quote, str_concat(value, fsc_source_cursor_char(cursor)))
+                if str_eq(fsc_source_cursor_char(cursor), quote):
+                    return [value, fsc_source_cursor_advance(cursor)]
+                else:
+                    cursor, quote, value = fsc_source_cursor_advance(cursor), quote, str_concat(value, fsc_source_cursor_char(cursor))
+                    continue
 
 def python_source_scan_triple_string_loop(cursor, quote, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        if (is_fsc_source_cursor_prefix(cursor, quote) and (is_fsc_source_cursor_prefix(fsc_source_cursor_advance(cursor), quote) and is_fsc_source_cursor_prefix(fsc_source_cursor_advance(fsc_source_cursor_advance(cursor)), quote))):
-            return [value, fsc_source_advance_n(cursor, 3)]
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
         else:
-            return python_source_scan_triple_string_loop(fsc_source_cursor_advance(cursor), quote, str_concat(value, fsc_source_cursor_char(cursor)))
+            if (is_fsc_source_cursor_prefix(cursor, quote) and (is_fsc_source_cursor_prefix(fsc_source_cursor_advance(cursor), quote) and is_fsc_source_cursor_prefix(fsc_source_cursor_advance(fsc_source_cursor_advance(cursor)), quote))):
+                return [value, fsc_source_advance_n(cursor, 3)]
+            else:
+                cursor, quote, value = fsc_source_cursor_advance(cursor), quote, str_concat(value, fsc_source_cursor_char(cursor))
+                continue
 
 def python_source_scan_string_at(start, quote, string_kind):
     open_quote = fsc_source_cursor_char(start)
@@ -119,11 +129,12 @@ def is_python_source_int_char(ch):
     return (is_fsc_digit(ch) or str_eq(ch, '_'))
 
 def python_source_scan_int_loop(cursor, value):
-    if is_fsc_source_cursor_end(cursor):
-        return [value, cursor]
-    else:
-        ch = fsc_source_cursor_char(cursor)
-        return (python_source_scan_int_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_python_source_int_char(ch) else [value, cursor])
+    while True:
+        if is_fsc_source_cursor_end(cursor):
+            return [value, cursor]
+        else:
+            ch = fsc_source_cursor_char(cursor)
+            return (python_source_scan_int_loop(fsc_source_cursor_advance(cursor), str_concat(value, ch)) if is_python_source_int_char(ch) else [value, cursor])
 
 def python_source_scan_int(start):
     read = python_source_scan_int_loop(start, '')
@@ -136,9 +147,10 @@ def python_source_scan_next(cursor):
     return (fsc_scan_result(fsc_source_object('py-eof', '', start, start), start) if is_fsc_source_cursor_end(start) else (python_source_scan_prefixed_string(start, prefix_len) if (prefix_len > 0) else (python_source_scan_string_at(start, ch, 'py-string') if is_python_source_quote(ch) else (python_source_scan_int(start) if is_fsc_digit(ch) else (fsc_source_scan_name(start, python_source_keywords, 'py-keyword', 'py-name') if is_fsc_source_name_start_char(ch) else fsc_source_scan_op(start, 'py-op', python_source_ops))))))
 
 def python_source_scan_text_loop(cursor, acc):
-    result = python_source_scan_next(cursor)
-    object = fsc_scan_result_object(result)
-    return (reverse_list(acc) if str_eq(bmf_object_kind(object), 'py-eof') else python_source_scan_text_loop(fsc_scan_result_cursor(result), [object, *acc]))
+    while True:
+        result = python_source_scan_next(cursor)
+        object = fsc_scan_result_object(result)
+        return (reverse_list(acc) if str_eq(bmf_object_kind(object), 'py-eof') else python_source_scan_text_loop(fsc_scan_result_cursor(result), [object, *acc]))
 
 def python_source_scan_text(source):
     return python_source_scan_text_loop(fsc_source_cursor(source, 0, 1, 0), empty())
@@ -159,10 +171,12 @@ def py_endmarker():
     return py_layout('ENDMARKER')
 
 def python_layout_dedents(from_indent, to_indent, acc):
-    if (from_indent <= to_indent):
-        return acc
-    else:
-        return python_layout_dedents((from_indent - 4), to_indent, [py_dedent(), *acc])
+    while True:
+        if (from_indent <= to_indent):
+            return acc
+        else:
+            from_indent, to_indent, acc = (from_indent - 4), to_indent, [py_dedent(), *acc]
+            continue
 
 def python_layout_shift(prev_indent, next_indent, acc):
     if (next_indent > prev_indent):
@@ -174,16 +188,18 @@ def python_layout_shift(prev_indent, next_indent, acc):
             return acc
 
 def python_source_layout_loop(objects, prev_line, prev_indent, is_current_line_start, acc):
-    if is_nil(objects):
-        return reverse_list([py_endmarker(), *python_layout_dedents(prev_indent, 0, acc)])
-    else:
-        object = objects[0]
-        line = python_source_object_line(object)
-        col = python_source_object_col(object)
-        is_new_line = (line > prev_line)
-        with_newline = ([py_newline(), *acc] if is_new_line else acc)
-        with_layout = (python_layout_shift(prev_indent, col, with_newline) if is_new_line else with_newline)
-        return python_source_layout_loop(objects[1:], line, (col if is_new_line else prev_indent), False, [object, *with_layout])
+    while True:
+        if is_nil(objects):
+            return reverse_list([py_endmarker(), *python_layout_dedents(prev_indent, 0, acc)])
+        else:
+            object = objects[0]
+            line = python_source_object_line(object)
+            col = python_source_object_col(object)
+            is_new_line = (line > prev_line)
+            with_newline = ([py_newline(), *acc] if is_new_line else acc)
+            with_layout = (python_layout_shift(prev_indent, col, with_newline) if is_new_line else with_newline)
+            objects, prev_line, prev_indent, is_current_line_start, acc = objects[1:], line, (col if is_new_line else prev_indent), False, [object, *with_layout]
+            continue
 
 def python_source_layout_objects(objects):
     return python_source_layout_loop(objects, 1, 0, True, empty())
@@ -351,10 +367,12 @@ def python_module_statements(module):
     return bmf_collection_items(bmf_object_value(module))
 
 def python_module_source_objects_loop(statements, acc):
-    if is_nil(statements):
-        return reverse_list(acc)
-    else:
-        return python_module_source_objects_loop(statements[1:], append(reverse_list(python_statement_tokens(statements[0])), acc))
+    while True:
+        if is_nil(statements):
+            return reverse_list(acc)
+        else:
+            statements, acc = statements[1:], append(reverse_list(python_statement_tokens(statements[0])), acc)
+            continue
 
 def python_module_source_objects(module):
     return python_module_source_objects_loop(python_module_statements(module), empty())
@@ -413,13 +431,14 @@ def python_parse_module_finish(current, statements, source_objects):
     return python_parse_module_object(reverse_list((statements if is_nil(current) else [python_parse_statement(reverse_list(current)), *statements])), source_objects)
 
 def python_parse_module_loop(remaining, current, current_line, depth, statements, source_objects):
-    if is_nil(remaining):
-        return python_parse_module_finish(current, statements, source_objects)
-    else:
-        object = remaining[0]
-        line = python_source_object_line(object)
-        next_depth = python_source_depth_after(depth, object)
-        return (python_parse_module_loop(remaining[1:], [object], line, next_depth, statements, source_objects) if is_nil(current) else (python_parse_module_loop(remaining[1:], [object], line, next_depth, [python_parse_statement(reverse_list(current)), *statements], source_objects) if ((line > current_line) and (depth == 0)) else python_parse_module_loop(remaining[1:], [object, *current], line, next_depth, statements, source_objects)))
+    while True:
+        if is_nil(remaining):
+            return python_parse_module_finish(current, statements, source_objects)
+        else:
+            object = remaining[0]
+            line = python_source_object_line(object)
+            next_depth = python_source_depth_after(depth, object)
+            return (python_parse_module_loop(remaining[1:], [object], line, next_depth, statements, source_objects) if is_nil(current) else (python_parse_module_loop(remaining[1:], [object], line, next_depth, [python_parse_statement(reverse_list(current)), *statements], source_objects) if ((line > current_line) and (depth == 0)) else python_parse_module_loop(remaining[1:], [object, *current], line, next_depth, statements, source_objects)))
 
 def python_parse_module_objects(source_objects):
     return python_parse_module_loop(source_objects, empty(), 0, 0, empty(), source_objects)
@@ -1217,13 +1236,15 @@ def python_bmf_rule_name(r):
     return r[0]
 
 def python_bmf_find_rule(rule_name, rules):
-    if is_nil(rules):
-        return empty()
-    else:
-        if str_eq(python_bmf_rule_name(rules[0]), rule_name):
-            return rules[0]
+    while True:
+        if is_nil(rules):
+            return empty()
         else:
-            return python_bmf_find_rule(rule_name, rules[1:])
+            if str_eq(python_bmf_rule_name(rules[0]), rule_name):
+                return rules[0]
+            else:
+                rule_name, rules = rule_name, rules[1:]
+                continue
 
 def apply_python_bmf_rule(rule_name, object_stream):
     rule = python_bmf_find_rule(rule_name, python_bmf_rules)

@@ -14,22 +14,26 @@ def cap_value(p):
     return p[1:][0]
 
 def cap_get(caps, name):
-    if is_nil(caps):
-        return empty()
-    else:
-        if str_eq(cap_name(caps[0]), name):
-            return cap_value(caps[0])
+    while True:
+        if is_nil(caps):
+            return empty()
         else:
-            return cap_get(caps[1:], name)
+            if str_eq(cap_name(caps[0]), name):
+                return cap_value(caps[0])
+            else:
+                caps, name = caps[1:], name
+                continue
 
 def cap_set(caps, name, value):
     return [cap_pair(name, value), *caps]
 
 def cap_merge(a, b):
-    if is_nil(b):
-        return a
-    else:
-        return cap_merge([b[0], *a], b[1:])
+    while True:
+        if is_nil(b):
+            return a
+        else:
+            a, b = [b[0], *a], b[1:]
+            continue
 
 def mk_match(caps, rest):
     return ['match', caps, rest]
@@ -148,13 +152,15 @@ def bmf_symbol_context_properties(ctx):
         return empty()
 
 def bmf_symbol_context_property_loop(properties, key, missing):
-    if is_nil(properties):
-        return missing
-    else:
-        if str_eq(bmf_lens_property_key(properties[0]), key):
-            return bmf_lens_property_value(properties[0])
+    while True:
+        if is_nil(properties):
+            return missing
         else:
-            return bmf_symbol_context_property_loop(properties[1:], key, missing)
+            if str_eq(bmf_lens_property_key(properties[0]), key):
+                return bmf_lens_property_value(properties[0])
+            else:
+                properties, key, missing = properties[1:], key, missing
+                continue
 
 def bmf_symbol_context_property(ctx, key, missing):
     return bmf_symbol_context_property_loop(bmf_symbol_context_properties(ctx), key, missing)
@@ -517,25 +523,29 @@ def is_bmf_symbol_binding_matches(binding, ctx, anchor):
     return (str_eq(bmf_symbol_binding_anchor(binding), anchor) and (node_eq(bmf_symbol_binding_domain(binding), bmf_symbol_context_domain(ctx)) and node_eq(bmf_symbol_binding_lens(binding), bmf_symbol_context_lens(ctx))))
 
 def is_bmf_symbol_name_in_list(names, name):
-    if is_nil(names):
-        return False
-    else:
-        if str_eq(names[0], name):
-            return True
+    while True:
+        if is_nil(names):
+            return False
         else:
-            return is_bmf_symbol_name_in_list(names[1:], name)
+            if str_eq(names[0], name):
+                return True
+            else:
+                names, name = names[1:], name
+                continue
 
 def is_bmf_symbol_binding_name_matches(binding, ctx, name):
     return (is_bmf_symbol_name_in_list(bmf_symbol_binding_names(binding), name) and (node_eq(bmf_symbol_binding_domain(binding), bmf_symbol_context_domain(ctx)) and node_eq(bmf_symbol_binding_lens(binding), bmf_symbol_context_lens(ctx))))
 
 def bmf_symbol_find_loop(bindings, ctx, anchor, missing):
-    if is_nil(bindings):
-        return missing
-    else:
-        if is_bmf_symbol_binding_matches(bindings[0], ctx, anchor):
-            return bindings[0]
+    while True:
+        if is_nil(bindings):
+            return missing
         else:
-            return bmf_symbol_find_loop(bindings[1:], ctx, anchor, missing)
+            if is_bmf_symbol_binding_matches(bindings[0], ctx, anchor):
+                return bindings[0]
+            else:
+                bindings, ctx, anchor, missing = bindings[1:], ctx, anchor, missing
+                continue
 
 def bmf_symbol_find(ctx, anchor, missing):
     return bmf_symbol_find_loop(bmf_symbol_context_bindings(ctx), ctx, anchor, missing)
@@ -549,13 +559,15 @@ def bmf_symbol_value(ctx, anchor, missing):
     return (missing if is_nil(binding) else bmf_symbol_binding_symbol(binding))
 
 def bmf_anchor_resolve_loop(bindings, ctx, name, missing):
-    if is_nil(bindings):
-        return missing
-    else:
-        if is_bmf_symbol_binding_name_matches(bindings[0], ctx, name):
-            return bmf_symbol_binding_anchor(bindings[0])
+    while True:
+        if is_nil(bindings):
+            return missing
         else:
-            return bmf_anchor_resolve_loop(bindings[1:], ctx, name, missing)
+            if is_bmf_symbol_binding_name_matches(bindings[0], ctx, name):
+                return bmf_symbol_binding_anchor(bindings[0])
+            else:
+                bindings, ctx, name, missing = bindings[1:], ctx, name, missing
+                continue
 
 def bmf_anchor_resolve(ctx, name, missing):
     return bmf_anchor_resolve_loop(bmf_symbol_context_bindings(ctx), ctx, name, missing)
@@ -703,11 +715,12 @@ def bmf_surface_contract_score(surface, domain, lens, ctx):
         return (0 - 1)
 
 def bmf_translation_space_find_surface_best(surfaces, domain, lens, ctx, best, best_score, missing):
-    if is_nil(surfaces):
-        return best
-    else:
-        score = bmf_surface_contract_score(surfaces[0], domain, lens, ctx)
-        return (bmf_translation_space_find_surface_best(surfaces[1:], domain, lens, ctx, surfaces[0], score, missing) if (score > best_score) else bmf_translation_space_find_surface_best(surfaces[1:], domain, lens, ctx, best, best_score, missing))
+    while True:
+        if is_nil(surfaces):
+            return best
+        else:
+            score = bmf_surface_contract_score(surfaces[0], domain, lens, ctx)
+            return (bmf_translation_space_find_surface_best(surfaces[1:], domain, lens, ctx, surfaces[0], score, missing) if (score > best_score) else bmf_translation_space_find_surface_best(surfaces[1:], domain, lens, ctx, best, best_score, missing))
 
 def bmf_translation_space_find_surface(space, domain, lens, ctx, missing):
     return bmf_translation_space_find_surface_best(bmf_translation_space_surfaces(space), domain, lens, ctx, missing, (0 - 1), missing)
@@ -719,13 +732,15 @@ def is_bmf_reverse_lens_matches(target, domain, lens):
     return (node_eq(bmf_reverse_lens_domain(target), domain) and node_eq(bmf_reverse_lens_lens(target), lens))
 
 def bmf_reverse_lens_find(targets, domain, lens, missing):
-    if is_nil(targets):
-        return missing
-    else:
-        if is_bmf_reverse_lens_matches(targets[0], domain, lens):
-            return targets[0]
+    while True:
+        if is_nil(targets):
+            return missing
         else:
-            return bmf_reverse_lens_find(targets[1:], domain, lens, missing)
+            if is_bmf_reverse_lens_matches(targets[0], domain, lens):
+                return targets[0]
+            else:
+                targets, domain, lens, missing = targets[1:], domain, lens, missing
+                continue
 
 def form_capsule_root(package, level, type, instance):
     return intern_node(FORM_CAPSULE_ROOT, [intern_trivial_int(package), intern_trivial_int(level), intern_trivial_int(type), intern_trivial_int(instance)])
@@ -971,52 +986,62 @@ def form_recipe_registry_specializers(registry):
     return form_recipe_specializers_from_capsules(form_recipe_registry_capsules(registry))
 
 def form_recipe_capability_by_node(capabilities, capability_node, missing):
-    if is_nil(capabilities):
-        return missing
-    else:
-        if node_eq(form_adapter_capability_node(capabilities[0]), capability_node):
-            return capabilities[0]
+    while True:
+        if is_nil(capabilities):
+            return missing
         else:
-            return form_recipe_capability_by_node(capabilities[1:], capability_node, missing)
+            if node_eq(form_adapter_capability_node(capabilities[0]), capability_node):
+                return capabilities[0]
+            else:
+                capabilities, capability_node, missing = capabilities[1:], capability_node, missing
+                continue
 
 def form_recipe_registry_capability_by_node(registry, capability_node, missing):
     return form_recipe_capability_by_node(form_recipe_registry_capabilities(registry), capability_node, missing)
 
 def form_capability_contract_for(contracts, capability, missing):
-    if is_nil(contracts):
-        return missing
-    else:
-        if node_eq(form_capability_contract_capability_node(contracts[0]), form_adapter_capability_node(capability)):
-            return contracts[0]
+    while True:
+        if is_nil(contracts):
+            return missing
         else:
-            return form_capability_contract_for(contracts[1:], capability, missing)
+            if node_eq(form_capability_contract_capability_node(contracts[0]), form_adapter_capability_node(capability)):
+                return contracts[0]
+            else:
+                contracts, capability, missing = contracts[1:], capability, missing
+                continue
 
 def form_capability_cost_for(costs, capability, missing):
-    if is_nil(costs):
-        return missing
-    else:
-        if node_eq(form_capability_cost_capability_node(costs[0]), form_adapter_capability_node(capability)):
-            return costs[0]
+    while True:
+        if is_nil(costs):
+            return missing
         else:
-            return form_capability_cost_for(costs[1:], capability, missing)
+            if node_eq(form_capability_cost_capability_node(costs[0]), form_adapter_capability_node(capability)):
+                return costs[0]
+            else:
+                costs, capability, missing = costs[1:], capability, missing
+                continue
 
 def form_capability_proof_for(proofs, capability, proof_kind, missing):
-    if is_nil(proofs):
-        return missing
-    else:
-        if (node_eq(form_adapter_capability_node(form_capability_proof_capability(proofs[0])), form_adapter_capability_node(capability)) and node_eq(form_capability_proof_kind(proofs[0]), proof_kind)):
-            return proofs[0]
+    while True:
+        if is_nil(proofs):
+            return missing
         else:
-            return form_capability_proof_for(proofs[1:], capability, proof_kind, missing)
+            if (node_eq(form_adapter_capability_node(form_capability_proof_capability(proofs[0])), form_adapter_capability_node(capability)) and node_eq(form_capability_proof_kind(proofs[0]), proof_kind)):
+                return proofs[0]
+            else:
+                proofs, capability, proof_kind, missing = proofs[1:], capability, proof_kind, missing
+                continue
 
 def form_capability_specializer_for(specializers, capability, specializer_kind, ctx, missing):
-    if is_nil(specializers):
-        return missing
-    else:
-        if (node_eq(form_adapter_capability_node(form_capability_specializer_capability(specializers[0])), form_adapter_capability_node(capability)) and (node_eq(form_capability_specializer_kind(specializers[0]), specializer_kind) and is_bmf_context_properties_match(ctx, form_capability_specializer_requirements(specializers[0])))):
-            return specializers[0]
+    while True:
+        if is_nil(specializers):
+            return missing
         else:
-            return form_capability_specializer_for(specializers[1:], capability, specializer_kind, ctx, missing)
+            if (node_eq(form_adapter_capability_node(form_capability_specializer_capability(specializers[0])), form_adapter_capability_node(capability)) and (node_eq(form_capability_specializer_kind(specializers[0]), specializer_kind) and is_bmf_context_properties_match(ctx, form_capability_specializer_requirements(specializers[0])))):
+                return specializers[0]
+            else:
+                specializers, capability, specializer_kind, ctx, missing = specializers[1:], capability, specializer_kind, ctx, missing
+                continue
 
 def is_form_capability_contract_satisfies(contract, effect, reversibility, lossiness, deterministic):
     return (node_eq(form_capability_contract_effect(contract), effect) and (node_eq(form_capability_contract_reversibility(contract), reversibility) and (node_eq(form_capability_contract_lossiness(contract), lossiness) and node_eq(form_capability_contract_deterministic(contract), deterministic))))
@@ -1029,11 +1054,12 @@ def form_recipe_capability_score(capability, contracts, costs, kind, input_surfa
         return (0 - 1)
 
 def form_recipe_find_capability_best(capabilities, contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, best, best_score, missing):
-    if is_nil(capabilities):
-        return best
-    else:
-        score = form_recipe_capability_score(capabilities[0], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, missing)
-        return (form_recipe_find_capability_best(capabilities[1:], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, capabilities[0], score, missing) if (score > best_score) else form_recipe_find_capability_best(capabilities[1:], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, best, best_score, missing))
+    while True:
+        if is_nil(capabilities):
+            return best
+        else:
+            score = form_recipe_capability_score(capabilities[0], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, missing)
+            return (form_recipe_find_capability_best(capabilities[1:], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, capabilities[0], score, missing) if (score > best_score) else form_recipe_find_capability_best(capabilities[1:], contracts, costs, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, best, best_score, missing))
 
 def form_recipe_registry_find_capability(registry, kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, missing):
     return form_recipe_find_capability_best(form_recipe_registry_capabilities(registry), form_recipe_registry_contracts(registry), form_recipe_registry_costs(registry), kind, input_surface, output_surface, ctx, effect, reversibility, lossiness, deterministic, missing, (0 - 1), missing)
@@ -1110,11 +1136,12 @@ def form_adapter_capability_score(capability, kind, input_surface, output_surfac
         return (0 - 1)
 
 def form_adapter_find_capability_best(capabilities, kind, input_surface, output_surface, ctx, best, best_score, missing):
-    if is_nil(capabilities):
-        return best
-    else:
-        score = form_adapter_capability_score(capabilities[0], kind, input_surface, output_surface, ctx)
-        return (form_adapter_find_capability_best(capabilities[1:], kind, input_surface, output_surface, ctx, capabilities[0], score, missing) if (score > best_score) else form_adapter_find_capability_best(capabilities[1:], kind, input_surface, output_surface, ctx, best, best_score, missing))
+    while True:
+        if is_nil(capabilities):
+            return best
+        else:
+            score = form_adapter_capability_score(capabilities[0], kind, input_surface, output_surface, ctx)
+            return (form_adapter_find_capability_best(capabilities[1:], kind, input_surface, output_surface, ctx, capabilities[0], score, missing) if (score > best_score) else form_adapter_find_capability_best(capabilities[1:], kind, input_surface, output_surface, ctx, best, best_score, missing))
 
 def form_adapter_registry_find_capability(registry, kind, input_surface, output_surface, ctx, missing):
     return form_adapter_find_capability_best(form_adapter_registry_capabilities(registry), kind, input_surface, output_surface, ctx, missing, (0 - 1), missing)
@@ -1172,11 +1199,12 @@ def form_adapter_plan_cons(capability, plan):
     return form_adapter_plan([capability, *form_adapter_plan_capabilities(plan)])
 
 def form_adapter_plan_search(candidates, all_capabilities, kinds, input_surface, output_surface, ctx, missing):
-    if is_nil(candidates):
-        return missing
-    else:
-        capability = candidates[0]
-        return (((rest_plan := form_adapter_plan_from_capabilities(all_capabilities, kinds[1:], form_adapter_capability_output_surface(capability), output_surface, ctx, missing)), (form_adapter_plan_search(candidates[1:], all_capabilities, kinds, input_surface, output_surface, ctx, missing) if is_nil(rest_plan) else form_adapter_plan_cons(capability, rest_plan)))[-1] if is_form_adapter_capability_starts(capability, kinds[0], input_surface, ctx) else form_adapter_plan_search(candidates[1:], all_capabilities, kinds, input_surface, output_surface, ctx, missing))
+    while True:
+        if is_nil(candidates):
+            return missing
+        else:
+            capability = candidates[0]
+            return (((rest_plan := form_adapter_plan_from_capabilities(all_capabilities, kinds[1:], form_adapter_capability_output_surface(capability), output_surface, ctx, missing)), (form_adapter_plan_search(candidates[1:], all_capabilities, kinds, input_surface, output_surface, ctx, missing) if is_nil(rest_plan) else form_adapter_plan_cons(capability, rest_plan)))[-1] if is_form_adapter_capability_starts(capability, kinds[0], input_surface, ctx) else form_adapter_plan_search(candidates[1:], all_capabilities, kinds, input_surface, output_surface, ctx, missing))
 
 def form_adapter_plan_from_capabilities(capabilities, kinds, input_surface, output_surface, ctx, missing):
     if is_nil(kinds):
@@ -1191,11 +1219,12 @@ def form_adapter_registry_plan(registry, kinds, input_surface, output_surface, c
     return form_adapter_plan_from_capabilities(form_adapter_registry_capabilities(registry), kinds, input_surface, output_surface, ctx, missing)
 
 def form_adapter_flex_plan_search(candidates, all_capabilities, input_surface, output_surface, ctx, depth, missing):
-    if is_nil(candidates):
-        return missing
-    else:
-        capability = candidates[0]
-        return (((rest_plan := form_adapter_flex_plan_from_capabilities(all_capabilities, form_adapter_capability_output_surface(capability), output_surface, ctx, (depth - 1), missing)), (form_adapter_flex_plan_search(candidates[1:], all_capabilities, input_surface, output_surface, ctx, depth, missing) if is_nil(rest_plan) else form_adapter_plan_cons(capability, rest_plan)))[-1] if is_form_adapter_capability_input_ready(capability, input_surface, ctx) else form_adapter_flex_plan_search(candidates[1:], all_capabilities, input_surface, output_surface, ctx, depth, missing))
+    while True:
+        if is_nil(candidates):
+            return missing
+        else:
+            capability = candidates[0]
+            return (((rest_plan := form_adapter_flex_plan_from_capabilities(all_capabilities, form_adapter_capability_output_surface(capability), output_surface, ctx, (depth - 1), missing)), (form_adapter_flex_plan_search(candidates[1:], all_capabilities, input_surface, output_surface, ctx, depth, missing) if is_nil(rest_plan) else form_adapter_plan_cons(capability, rest_plan)))[-1] if is_form_adapter_capability_input_ready(capability, input_surface, ctx) else form_adapter_flex_plan_search(candidates[1:], all_capabilities, input_surface, output_surface, ctx, depth, missing))
 
 def form_adapter_flex_plan_from_capabilities(capabilities, input_surface, output_surface, ctx, depth, missing):
     if node_eq(input_surface, output_surface):
@@ -1253,16 +1282,18 @@ def form_adapter_plan_result_routes(result):
     return result[4]
 
 def form_adapter_plan_run_loop(capabilities, value, anchor, ctx, routes):
-    if is_nil(capabilities):
-        return [value, anchor, reverse(routes)]
-    else:
-        capability = capabilities[0]
-        emit = form_adapter_capability_emit(capability)
-        parse = form_adapter_capability_parse(capability)
-        source = emit(value, anchor, ctx)
-        parsed = parse(source, ctx)
-        route = form_adapter_route(capability, source, parsed)
-        return form_adapter_plan_run_loop(capabilities[1:], form_adapter_route_value(route), form_adapter_route_anchor(route), ctx, [route, *routes])
+    while True:
+        if is_nil(capabilities):
+            return [value, anchor, reverse(routes)]
+        else:
+            capability = capabilities[0]
+            emit = form_adapter_capability_emit(capability)
+            parse = form_adapter_capability_parse(capability)
+            source = emit(value, anchor, ctx)
+            parsed = parse(source, ctx)
+            route = form_adapter_route(capability, source, parsed)
+            capabilities, value, anchor, ctx, routes = capabilities[1:], form_adapter_route_value(route), form_adapter_route_anchor(route), ctx, [route, *routes]
+            continue
 
 def form_adapter_plan_run(plan, value, anchor, ctx):
     output = form_adapter_plan_run_loop(form_adapter_plan_capabilities(plan), value, anchor, ctx, empty())
@@ -1276,24 +1307,27 @@ def is_bmf_context_property_matches(ctx, property):
     return str_eq(bmf_symbol_context_property(ctx, bmf_lens_property_key(property), ''), bmf_lens_property_value(property))
 
 def is_bmf_context_properties_match(ctx, requirements):
-    if is_nil(requirements):
-        return True
-    else:
-        if is_bmf_context_property_matches(ctx, requirements[0]):
-            return is_bmf_context_properties_match(ctx, requirements[1:])
+    while True:
+        if is_nil(requirements):
+            return True
         else:
-            return False
+            if is_bmf_context_property_matches(ctx, requirements[0]):
+                ctx, requirements = ctx, requirements[1:]
+                continue
+            else:
+                return False
 
 def bmf_context_property_score(ctx, property):
     actual = bmf_symbol_context_property(ctx, bmf_lens_property_key(property), '')
     return (0 if str_eq(actual, '') else (1 if str_eq(actual, bmf_lens_property_value(property)) else (0 - 1)))
 
 def bmf_context_properties_score_loop(ctx, requirements, score):
-    if is_nil(requirements):
-        return score
-    else:
-        item_score = bmf_context_property_score(ctx, requirements[0])
-        return ((0 - 1) if (item_score < 0) else bmf_context_properties_score_loop(ctx, requirements[1:], (score + item_score)))
+    while True:
+        if is_nil(requirements):
+            return score
+        else:
+            item_score = bmf_context_property_score(ctx, requirements[0])
+            return ((0 - 1) if (item_score < 0) else bmf_context_properties_score_loop(ctx, requirements[1:], (score + item_score)))
 
 def bmf_context_properties_score(ctx, requirements):
     return bmf_context_properties_score_loop(ctx, requirements, 0)
@@ -1311,11 +1345,12 @@ def bmf_reverse_lens_find_for_context(targets, domain, lens, ctx, missing):
     return bmf_reverse_lens_find_best_for_context(targets, domain, lens, ctx, missing, (0 - 1), missing)
 
 def bmf_reverse_lens_find_best_for_context(targets, domain, lens, ctx, best, best_score, missing):
-    if is_nil(targets):
-        return best
-    else:
-        score = bmf_reverse_lens_context_score(targets[0], domain, lens, ctx)
-        return (bmf_reverse_lens_find_best_for_context(targets[1:], domain, lens, ctx, targets[0], score, missing) if (score > best_score) else bmf_reverse_lens_find_best_for_context(targets[1:], domain, lens, ctx, best, best_score, missing))
+    while True:
+        if is_nil(targets):
+            return best
+        else:
+            score = bmf_reverse_lens_context_score(targets[0], domain, lens, ctx)
+            return (bmf_reverse_lens_find_best_for_context(targets[1:], domain, lens, ctx, targets[0], score, missing) if (score > best_score) else bmf_reverse_lens_find_best_for_context(targets[1:], domain, lens, ctx, best, best_score, missing))
 
 def bmf_emit_through_lens(targets, domain, lens, node, anchor, ctx, missing):
     target = bmf_reverse_lens_find(targets, domain, lens, empty())
@@ -1389,13 +1424,15 @@ def bmf_caps_to_collection(caps):
     return bmf_collection(bmf_caps_to_objects(caps))
 
 def bmf_object_by_kind(objects, kind):
-    if is_nil(objects):
-        return empty()
-    else:
-        if str_eq(bmf_object_kind(objects[0]), kind):
-            return objects[0]
+    while True:
+        if is_nil(objects):
+            return empty()
         else:
-            return bmf_object_by_kind(objects[1:], kind)
+            if str_eq(bmf_object_kind(objects[0]), kind):
+                return objects[0]
+            else:
+                objects, kind = objects[1:], kind
+                continue
 
 def bmf_collection_get(collection, kind):
     return bmf_object_by_kind(bmf_collection_items(collection), kind)
@@ -1547,13 +1584,15 @@ def bmf_dialect_rule_name(rule):
     return rule[0]
 
 def bmf_dialect_find_rule_list(rules, rule_name):
-    if is_nil(rules):
-        return empty()
-    else:
-        if str_eq(bmf_dialect_rule_name(rules[0]), rule_name):
-            return rules[0]
+    while True:
+        if is_nil(rules):
+            return empty()
         else:
-            return bmf_dialect_find_rule_list(rules[1:], rule_name)
+            if str_eq(bmf_dialect_rule_name(rules[0]), rule_name):
+                return rules[0]
+            else:
+                rules, rule_name = rules[1:], rule_name
+                continue
 
 def bmf_dialect_find_rule(dialect, rule_name):
     return bmf_dialect_find_rule_list(bmf_dialect_rules(dialect), rule_name)
@@ -1632,18 +1671,20 @@ def match_object_literal(p, object_stream):
         return ((mk_match(cap_empty(0), object_stream[1:]) if str_eq(want_value, '') else (mk_match(cap_empty(0), object_stream[1:]) if str_eq(bmf_object_value(obj), want_value) else mk_fail(str_concat('object value mismatch: expected ', want_value)))) if str_eq(bmf_object_kind(obj), want_kind) else mk_fail(str_concat('object kind mismatch: expected ', want_kind)))
 
 def match_object_sequence(children, object_stream, acc_caps):
-    if is_nil(children):
-        return mk_match(acc_caps, object_stream)
-    else:
-        m = match_object_pattern(children[0], object_stream)
-        return (m if is_fail(m) else match_object_sequence(children[1:], match_rest(m), cap_merge(acc_caps, match_caps(m))))
+    while True:
+        if is_nil(children):
+            return mk_match(acc_caps, object_stream)
+        else:
+            m = match_object_pattern(children[0], object_stream)
+            return (m if is_fail(m) else match_object_sequence(children[1:], match_rest(m), cap_merge(acc_caps, match_caps(m))))
 
 def match_object_choice(alternatives, object_stream):
-    if is_nil(alternatives):
-        return mk_fail('no object alternative matched')
-    else:
-        m = match_object_pattern(alternatives[0], object_stream)
-        return (m if is_match(m) else match_object_choice(alternatives[1:], object_stream))
+    while True:
+        if is_nil(alternatives):
+            return mk_fail('no object alternative matched')
+        else:
+            m = match_object_pattern(alternatives[0], object_stream)
+            return (m if is_match(m) else match_object_choice(alternatives[1:], object_stream))
 
 def capture_object_value(m, original_stream):
     if is_nil(match_caps(m)):
@@ -1656,8 +1697,9 @@ def match_object_capture(name, child, object_stream):
     return (m if is_fail(m) else mk_match(cap_set(match_caps(m), name, capture_object_value(m, object_stream)), match_rest(m)))
 
 def match_object_star(child, object_stream, collected):
-    m = match_object_pattern(child, object_stream)
-    return (mk_match(cap_set(cap_empty(0), 'items', collected), object_stream) if is_fail(m) else match_object_star(child, match_rest(m), [match_caps(m), *collected]))
+    while True:
+        m = match_object_pattern(child, object_stream)
+        return (mk_match(cap_set(cap_empty(0), 'items', collected), object_stream) if is_fail(m) else match_object_star(child, match_rest(m), [match_caps(m), *collected]))
 
 def match_object_opt(child, object_stream):
     m = match_object_pattern(child, object_stream)
