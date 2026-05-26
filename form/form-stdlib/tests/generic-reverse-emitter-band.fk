@@ -79,66 +79,81 @@
     (let node (lens-count-recipe 13))
     (let anchor "binary/lens/count")
 
+    ;; bmf-reverse-lens-node-from calls intern_node BMF-REVERSE-LENS (list domain lens) —
+    ;; kernel intern_node requires children to be NodeIDs, so we promote the domain/lens
+    ;; labels from raw strings to interned-string NodeIDs once and reuse them at every
+    ;; call site. bmf-reverse-lens-matches? compares with value_eq, which is kind-strict;
+    ;; the lookups must use the same kind the targets were constructed with.
+    (let DOM-PYTHON (intern_trivial_string "python"))
+    (let DOM-GO (intern_trivial_string "go"))
+    (let DOM-TYPESCRIPT (intern_trivial_string "typescript"))
+    (let DOM-IMAGE (intern_trivial_string "image"))
+    (let DOM-NATURAL (intern_trivial_string "natural"))
+    (let LENS-ASSIGN (intern_trivial_string "assign"))
+    (let LENS-VAR (intern_trivial_string "var"))
+    (let LENS-SVG-META (intern_trivial_string "svg-meta"))
+    (let LENS-ASSERTION (intern_trivial_string "assertion"))
+
     (let python-ctx
-        (bmf-symbol-context "python" "assign"
-            (list (bmf-symbol-binding anchor "python" "assign"
+        (bmf-symbol-context DOM-PYTHON LENS-ASSIGN
+            (list (bmf-symbol-binding anchor DOM-PYTHON LENS-ASSIGN
                                       "py.count" (list "count_py" "py_count")))))
     (let go-ctx
-        (bmf-symbol-context "go" "var"
-            (list (bmf-symbol-binding anchor "go" "var"
+        (bmf-symbol-context DOM-GO LENS-VAR
+            (list (bmf-symbol-binding anchor DOM-GO LENS-VAR
                                       "go.count" (list "countGo")))))
     (let typescript-ctx
-        (bmf-symbol-context "typescript" "assign"
-            (list (bmf-symbol-binding anchor "typescript" "assign"
+        (bmf-symbol-context DOM-TYPESCRIPT LENS-ASSIGN
+            (list (bmf-symbol-binding anchor DOM-TYPESCRIPT LENS-ASSIGN
                                       "ts.count" (list "countTs")))))
     (let image-ctx
-        (bmf-symbol-context "image" "svg-meta"
-            (list (bmf-symbol-binding anchor "image" "svg-meta"
+        (bmf-symbol-context DOM-IMAGE LENS-SVG-META
+            (list (bmf-symbol-binding anchor DOM-IMAGE LENS-SVG-META
                                       "image.count" (list "count-viewbox")))))
     (let natural-ctx
-        (natural-symbol-context "en-US" "plain" "general" "assertion"
-            (list (bmf-symbol-binding anchor "natural" "assertion"
+        (natural-symbol-context "en-US" "plain" "general" LENS-ASSERTION
+            (list (bmf-symbol-binding anchor DOM-NATURAL LENS-ASSERTION
                                       "natural.count" (list "count" "number")))))
     (let natural-id-ctx
-        (natural-symbol-context "id-ID" "plain" "general" "assertion"
-            (list (bmf-symbol-binding anchor "natural" "assertion"
+        (natural-symbol-context "id-ID" "plain" "general" LENS-ASSERTION
+            (list (bmf-symbol-binding anchor DOM-NATURAL LENS-ASSERTION
                                       "natural.jumlah" (list "jumlah" "bilangan")))))
 
     (let targets
         (list
-            (bmf-reverse-lens "python" "assign" emit-lens-python parse-lens-python
+            (bmf-reverse-lens DOM-PYTHON LENS-ASSIGN emit-lens-python parse-lens-python
                               (python-bmf-find-rule "assign-int" python-bmf-rules))
-            (bmf-reverse-lens "go" "var" emit-lens-go parse-lens-go
+            (bmf-reverse-lens DOM-GO LENS-VAR emit-lens-go parse-lens-go
                               (go-bmf-find-rule "var-int" go-bmf-rules))
-            (bmf-reverse-lens "typescript" "assign" emit-lens-typescript parse-lens-typescript
+            (bmf-reverse-lens DOM-TYPESCRIPT LENS-ASSIGN emit-lens-typescript parse-lens-typescript
                               (typescript-bmf-find-rule "assign-int" typescript-bmf-rules))
-            (bmf-reverse-lens "image" "svg-meta" emit-lens-image parse-lens-image
+            (bmf-reverse-lens DOM-IMAGE LENS-SVG-META emit-lens-image parse-lens-image
                               (image-bmf-find-rule "svg-viewbox" image-bmf-rules))
-            (bmf-reverse-lens "natural" "assertion" emit-lens-natural parse-lens-natural
+            (bmf-reverse-lens DOM-NATURAL LENS-ASSERTION emit-lens-natural parse-lens-natural
                               (natural-bmf-find-rule "fact-the-is" natural-bmf-rules))))
 
-    (let py-rt (bmf-lens-roundtrip targets "python" "assign" node anchor python-ctx (empty)))
-    (let go-rt (bmf-lens-roundtrip targets "go" "var" node anchor go-ctx (empty)))
-    (let ts-rt (bmf-lens-roundtrip targets "typescript" "assign" node anchor typescript-ctx (empty)))
-    (let image-rt (bmf-lens-roundtrip targets "image" "svg-meta" node anchor image-ctx (empty)))
-    (let natural-rt (bmf-lens-roundtrip targets "natural" "assertion" node anchor natural-ctx (empty)))
-    (let natural-id-rt (bmf-lens-roundtrip targets "natural" "assertion" node anchor natural-id-ctx (empty)))
+    (let py-rt (bmf-lens-roundtrip targets DOM-PYTHON LENS-ASSIGN node anchor python-ctx (empty)))
+    (let go-rt (bmf-lens-roundtrip targets DOM-GO LENS-VAR node anchor go-ctx (empty)))
+    (let ts-rt (bmf-lens-roundtrip targets DOM-TYPESCRIPT LENS-ASSIGN node anchor typescript-ctx (empty)))
+    (let image-rt (bmf-lens-roundtrip targets DOM-IMAGE LENS-SVG-META node anchor image-ctx (empty)))
+    (let natural-rt (bmf-lens-roundtrip targets DOM-NATURAL LENS-ASSERTION node anchor natural-ctx (empty)))
+    (let natural-id-rt (bmf-lens-roundtrip targets DOM-NATURAL LENS-ASSERTION node anchor natural-id-ctx (empty)))
 
     (let py-bmf-rt
         (bmf-roundtrip
-            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "python" "assign" (empty)))
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets DOM-PYTHON LENS-ASSIGN (empty)))
             (bmf-lens-roundtrip-source py-rt)))
     (let go-bmf-rt
         (bmf-roundtrip
-            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "go" "var" (empty)))
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets DOM-GO LENS-VAR (empty)))
             (bmf-lens-roundtrip-source go-rt)))
     (let ts-bmf-rt
         (bmf-roundtrip
-            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "typescript" "assign" (empty)))
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets DOM-TYPESCRIPT LENS-ASSIGN (empty)))
             (bmf-lens-roundtrip-source ts-rt)))
     (let image-bmf-rt
         (bmf-roundtrip
-            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets "image" "svg-meta" (empty)))
+            (bmf-reverse-lens-rule (bmf-reverse-lens-find targets DOM-IMAGE LENS-SVG-META (empty)))
             (bmf-lens-roundtrip-source image-rt)))
     (let natural-bmf-rt
         (bmf-roundtrip
