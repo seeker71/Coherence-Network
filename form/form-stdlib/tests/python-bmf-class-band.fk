@@ -7,7 +7,7 @@
 ;   - class-base3              : `class Name(B1, B2, B3): pass`
 ;   - class-kwbase-metaclass   : `class Name(metaclass=M): pass`
 ;
-; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn result-object (m)

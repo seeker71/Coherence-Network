@@ -3,7 +3,7 @@
 ; The source scanner depends on "\r" being carriage return, not "r".
 ; This keeps identifier characters from being misclassified as whitespace.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 (do
     (let space-ok (if (fsc-space? " ") 100 0))

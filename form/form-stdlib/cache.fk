@@ -1,0 +1,59 @@
+; cache.fk — generic on-disk cache layer for parsed-data Recipes.
+;
+; The pattern: any data file (JSON, YAML, TOML, future grammars) is
+; canonical source. Parsing it is real work; on every cold load.
+; Caching the parsed RECIPE as a sibling `.fkb` lets second-and-after
+; loads use the kernel's native `read_form_binary` in microseconds.
+;
+; "Less ice, more water, more gas":
+;   - the .json (or whatever source format) is the canonical ice
+;     (human-readable, source of truth)
+;   - the .fkb is a SUBSTRATE-NATIVE cache, regenerated only when
+;     the source file's mtime advances past the cache's mtime
+;   - the in-memory Recipe is water (lives in the process)
+;   - lookup results are gas (materialised on demand)
+;
+; The cache is intentionally generic — JSON happens to be the first
+; consumer, but any parser of (text → Recipe) can compose this.
+;
+; Prelude requirement: load before any caller that wants caching.
+; Depends only on kernel natives (file_mtime, file_size, read_file,
+; read_form_binary, write_form_binary).
+
+;; --- cache-freshness predicate -------------------------------------
+;;
+;; Cache is fresh iff:
+;;   - it exists (file_size returns >= 0)
+;;   - source exists (mtime returns > 0)
+;;   - cache mtime >= source mtime
+;;
+;; file_mtime returns -1 for missing files; we check explicitly so a
+;; clock-skewed system still falls back to "regenerate" gracefully.
+
+(defn cache-fresh? (source-path cache-path)
+    (do
+        (let cache-mtime (file_mtime cache-path))
+        (let source-mtime (file_mtime source-path))
+        (if (lt cache-mtime 0) false
+            (if (lt source-mtime 0) false
+                (ge cache-mtime source-mtime)))))
+
+;; --- read_with_cache -----------------------------------------------
+;;
+;; Returns a Recipe NodeID. Either re-hydrates from the .fkb (fast
+;; path) or runs `parse-fn source-path source-text` and writes the
+;; result back to the cache.
+;;
+;; `parse-fn` is any (source-path text) → Recipe function. parse-json
+;; from form-stdlib/json.fk fits; future parse-yaml, parse-toml fit
+;; the same shape.
+
+(defn read_with_cache (source-path cache-path parse-fn)
+    (if (cache-fresh? source-path cache-path)
+        (read_form_binary cache-path)
+        (do
+            (let recipe (parse-fn source-path (read_file source-path)))
+            (write_form_binary cache-path recipe)
+            recipe)))
+
+0

@@ -1,6 +1,6 @@
 ; tests/python-bmf-exception-band.fk - reversible exception-handling rules
 ;
-; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
 ;
 ; Each rule round-trips an object stream through the grammar and back to
 ; tokens; the score sums the node-equality bit with the projected token

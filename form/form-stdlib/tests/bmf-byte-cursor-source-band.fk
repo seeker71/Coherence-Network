@@ -4,7 +4,7 @@
 ; The host layer provides generic file I/O. Form/BMF owns the cursor cell:
 ; path, offset, line, column. Advancing creates the next cursor state.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     def bmf-cursor(path, offset, line, col) = list(path, offset, line, col);

@@ -7,7 +7,7 @@
 ; Each rule round-trips a positional token stream; the band sum must be
 ; byte-identical across Go / Rust / TypeScript kernels.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn rt-score (rt)
