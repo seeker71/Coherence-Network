@@ -1771,17 +1771,173 @@ impl Kernel {
             }
         });
 
-        // --- Debug / inspection -----------------------------------------
-        // bmf_apply_rule_native — sibling-parity stub (Path C native BMF
-        // runtime; see docs/coherence-substrate/bmf-native-runtime.form).
-        // Go kernel carries the working implementation this breath; Rust +
-        // TS panic loudly so divergence is visible, not silent. Form code
-        // that wants portability keeps calling engine.fk's apply-object-rule
-        // which works on every kernel.
-        self.register_native("bmf_apply_rule_native", cat_witness(), |_, _, _args| {
-            panic!("bmf_apply_rule_native: not implemented; use engine.fk apply-object-rule fallback");
+        // --- BMF native rule runtime (Path C) ---------------------------
+        //
+        // bmf_apply_rule_native — additive fast path for engine.fk's
+        // apply-object-rule. Sibling port of Go's implementation; the
+        // returned Recipe shape (caps alist with "objects" + "result"
+        // keys, bmf-match-source captures + span, the result bmf-object
+        // as ("cell" rule-name recipe source inverse)) is byte-identical
+        // under node_eq to what apply-object-rule produces.
+        //
+        // POC scope this breath — flat sequence of object-literal
+        // matchers, no captures, no choice, no star/opt/cut. Every other
+        // shape PANICS loudly so callers can't silently fall off the fast
+        // path. Captures + choice + star/opt are queued for a later
+        // breath; see docs/coherence-substrate/bmf-native-runtime.form.
+        self.register_native("bmf_apply_rule_native", cat_witness(), |k, a, args| {
+            if args.len() != 2 {
+                panic!("bmf_apply_rule_native: expects (rule object-stream)");
+            }
+            let rule = &args[0];
+            let stream = &args[1];
+            let rule_list = match rule {
+                Value::List(xs) if xs.len() >= 3 => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: rule must be (name pattern action ...)"),
+            };
+            let rule_name = rule_list[0].clone();
+            let pattern = rule_list[1].clone();
+            let action = rule_list[2].clone();
+            let rule_inverse = if rule_list.len() > 3 {
+                rule_list[3].clone()
+            } else {
+                Value::Null
+            };
+            // Pattern must be a tagged list.
+            let pattern_list = match &pattern {
+                Value::List(xs) if !xs.is_empty() => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: pattern must be a tagged list"),
+            };
+            let tag = match &pattern_list[0] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("bmf_apply_rule_native: pattern must be a tagged list"),
+            };
+            if tag != "sequence" {
+                panic!("bmf_apply_rule_native: TODO: pattern tag '{}' not yet supported (POC: 'sequence' of 'object' literals only)", tag);
+            }
+            // Validate every child is an "object" literal — no nesting yet.
+            let children: Vec<Value> = pattern_list[1..].to_vec();
+            for (i, child) in children.iter().enumerate() {
+                let kids = match child {
+                    Value::List(xs) if xs.len() >= 3 => xs,
+                    _ => panic!("bmf_apply_rule_native: child {} malformed", i),
+                };
+                let ctag = match &kids[0] {
+                    Value::Str(s) => s.clone(),
+                    _ => panic!("bmf_apply_rule_native: child {} malformed", i),
+                };
+                if ctag != "object" {
+                    panic!("bmf_apply_rule_native: TODO: sequence child '{}' not yet supported (POC: 'object' literals only)", ctag);
+                }
+            }
+            // State-machine walk: consume one stream object per literal child.
+            let stream_list = match stream {
+                Value::List(xs) => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: object-stream must be a list"),
+            };
+            let mut consumed: usize = 0;
+            for child in &children {
+                let cl = match child {
+                    Value::List(xs) => xs,
+                    _ => unreachable!(),
+                };
+                let want_kind = match &cl[1] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                let want_value = match &cl[2] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                if consumed >= stream_list.len() {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str("expected BMF object".to_string()),
+                    ]);
+                }
+                let obj = &stream_list[consumed];
+                let obj_list = match obj {
+                    Value::List(xs) if xs.len() >= 3 => xs,
+                    _ => panic!("bmf_apply_rule_native: stream item is not a cell"),
+                };
+                let head = match &obj_list[0] {
+                    Value::Str(s) => s.clone(),
+                    _ => panic!("bmf_apply_rule_native: stream item is not a cell"),
+                };
+                if head != "cell" {
+                    panic!("bmf_apply_rule_native: stream item is not a cell");
+                }
+                let got_kind = match &obj_list[1] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                let got_value = match &obj_list[2] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                if got_kind != want_kind {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str(format!("object kind mismatch: expected {}", want_kind)),
+                    ]);
+                }
+                if !want_value.is_empty() && got_value != want_value {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str(format!("object value mismatch: expected {}", want_value)),
+                    ]);
+                }
+                consumed += 1;
+            }
+            // Build captures-as-collection. POC scope: no named captures,
+            // so the collection wraps an empty objects list — same shape
+            // Form's (bmf-caps-to-collection (cap-empty 0)) produces.
+            let empty_collection = Value::List(vec![
+                Value::Str("bmf-collection".to_string()),
+                Value::List(vec![]),
+            ]);
+            // Consumed prefix slice — what Form's (take N stream) returns.
+            let span = Value::List(stream_list[..consumed].to_vec());
+            // bmf-match-source captures span.
+            let match_source = Value::List(vec![
+                Value::Str("bmf-match-source".to_string()),
+                empty_collection.clone(),
+                span,
+            ]);
+            // Invoke the action closure: (rule-action captures-collection)
+            // → recipe. The only Form re-entry; everything above is native.
+            let cl = match &action {
+                Value::Closure(c) => c.clone(),
+                _ => panic!("bmf_apply_rule_native: rule action must be a closure"),
+            };
+            if cl.params.len() != 1 {
+                panic!(
+                    "bmf_apply_rule_native: action closure takes {} params, expected 1",
+                    cl.params.len()
+                );
+            }
+            let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            a.bind(call_frame, cl.params[0], empty_collection.clone());
+            let recipe = walk(k, a, cl.body, call_frame);
+            // Result bmf-object — ("cell" rule-name recipe source inverse).
+            let result_object = Value::List(vec![
+                Value::Str("cell".to_string()),
+                rule_name,
+                recipe,
+                match_source,
+                rule_inverse,
+            ]);
+            // caps alist — cons "result" then "objects" so the alist
+            // order matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
+            let caps = Value::List(vec![
+                Value::List(vec![Value::Str("result".to_string()), result_object]),
+                Value::List(vec![Value::Str("objects".to_string()), empty_collection]),
+            ]);
+            let rest = Value::List(stream_list[consumed..].to_vec());
+            Value::List(vec![Value::Str("match".to_string()), caps, rest])
         });
 
+        // --- Debug / inspection -----------------------------------------
         // `trace` — print-and-return. Drop into any Form expression to
         // inspect a value mid-computation without breaking control flow.
         // Output goes to stderr so it doesn't pollute the result on stdout.
