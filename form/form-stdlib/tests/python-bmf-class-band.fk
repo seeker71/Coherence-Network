@@ -1,0 +1,92 @@
+; tests/python-bmf-class-band.fk - class header family coverage
+;
+; Exercises the rules added to extend substrate-Python `class …` coverage
+; in form/form-stdlib/grammars/python-bmf.fk:
+;   - class-no-base            : `class Name(): pass`
+;   - class-base2              : `class Name(B1, B2): pass`
+;   - class-base3              : `class Name(B1, B2, B3): pass`
+;   - class-kwbase-metaclass   : `class Name(metaclass=M): pass`
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    ;; --- class Name(): pass -------------------------------------------
+    (let no-base-match
+        (py-apply "class-no-base"
+                  (list (py-keyword "class") (py-name "Bare")
+                        (py-op "(") (py-op ")")
+                        (py-op ":") (py-keyword "pass"))))
+    (let no-base-score
+        (add (kid-str-len no-base-match 0)        ; Bare = 4
+             (child-count no-base-match)))         ; 1 child -> 5
+
+    ;; --- class Name(B1, B2): pass -------------------------------------
+    (let base2-match
+        (py-apply "class-base2"
+                  (list (py-keyword "class") (py-name "Pair")
+                        (py-op "(") (py-name "Base")
+                        (py-op ",") (py-name "Mixin")
+                        (py-op ")") (py-op ":") (py-keyword "pass"))))
+    (let base2-score
+        (add (kid-str-len base2-match 0)             ; Pair  = 4
+             (add (kid-str-len base2-match 1)        ; Base  = 4
+                  (kid-str-len base2-match 2))))      ; Mixin = 5  (total 13)
+
+    ;; --- class Name(B1, B2, B3): pass ---------------------------------
+    (let base3-match
+        (py-apply "class-base3"
+                  (list (py-keyword "class") (py-name "Tri")
+                        (py-op "(") (py-name "A")
+                        (py-op ",") (py-name "B")
+                        (py-op ",") (py-name "C")
+                        (py-op ")") (py-op ":") (py-keyword "pass"))))
+    (let base3-score
+        (add (kid-str-len base3-match 0)                ; Tri = 3
+             (add (kid-str-len base3-match 1)           ; A   = 1
+                  (add (kid-str-len base3-match 2)      ; B   = 1
+                       (kid-str-len base3-match 3)))))   ; C   = 1  (total 6)
+
+    ;; --- class Name(metaclass=M): pass --------------------------------
+    (let meta-match
+        (py-apply "class-kwbase-metaclass"
+                  (list (py-keyword "class") (py-name "Meta")
+                        (py-op "(") (py-name "metaclass")
+                        (py-op "=") (py-name "ABCMeta")
+                        (py-op ")") (py-op ":") (py-keyword "pass"))))
+    (let meta-score
+        (add (kid-str-len meta-match 0)            ; Meta = 4
+             (child-count meta-match)))             ; 2 children -> 6
+
+    ;; --- existence bits ------------------------------------------------
+    (let bits
+        (add (object-bit no-base-match)
+             (add (object-bit base2-match)
+                  (add (object-bit base3-match)
+                       (object-bit meta-match)))))
+
+    (sum
+        (list no-base-score base2-score base3-score meta-score bits)))

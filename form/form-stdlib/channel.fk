@@ -1,0 +1,105 @@
+; channel.fk — inter-cell Recipe transport via a shared .fkb file.
+;
+; The substrate teaching: two kernels (two processes, two machines)
+; communicate by sharing a CHANNEL Recipe. A channel is a Recipe
+; whose Blueprint is CHANNEL-V0 and whose ordered children are
+; message-Recipes. Sender appends a child; receiver reads new
+; children since last seen.
+;
+; Content-addressing IS the dedup. Two cells appending the same
+; payload at different positions produce the same CHANNEL-MSG
+; NodeID — receivers can recognize semantic identity across the
+; gap by node_eq, with no schema negotiation between them.
+;
+; Shape (v0):
+;   CHANNEL-V0 (
+;     CHANNEL-MSG (payload),   ; position 0
+;     CHANNEL-MSG (payload),   ; position 1
+;     ...
+;   )
+;
+; Semantics:
+;   - Single writer. Concurrent appenders race on the file rewrite
+;     and a window of messages can be lost. v0 is fine for one cell
+;     publishing to many readers; concurrent-safe append is queued.
+;   - Whole-file rewrite per append. If the writer is interrupted
+;     mid-write the channel can be truncated — this is NOT a
+;     lossless log. Name it; ship it; revisit when the use-case
+;     demands durability.
+;   - Multiple readers fine — they only read.
+;   - Real-time poll: callers compare file_mtime to detect change.
+;
+; Depends only on kernel natives:
+;   read_form_binary, write_form_binary, intern_node, node_children,
+;   file_size, file_mtime, make_nodeid.
+
+;; --- Blueprints ----------------------------------------------------
+(let CHANNEL-V0  (make_nodeid 1 2 99 1700))
+(let CHANNEL-MSG (make_nodeid 1 2 99 1701))
+
+;; --- helpers -------------------------------------------------------
+
+;; node-children-skip — drop the first N children of `lst`, return
+;; the rest as a list. Used by channel-read-since to slice from a
+;; remembered position. Tail-recursive over the spine of the list.
+(defn node-children-skip (lst n)
+    (if (le n 0) lst
+        (if (eq (len lst) 0) lst
+            (node-children-skip (tail lst) (sub n 1)))))
+
+;; --- create --------------------------------------------------------
+
+;; channel-create — initialize an empty channel at `path`. Writes a
+;; CHANNEL-V0 Recipe with zero children. Overwrites any prior file.
+;; Returns bytes-written (kernel native return) or -1 on error.
+(defn channel-create (path)
+    (write_form_binary path (intern_node CHANNEL-V0 (empty))))
+
+;; --- message construction -----------------------------------------
+
+;; channel-message — wrap a payload Recipe as a CHANNEL-MSG. The
+;; only child is the payload, so the resulting NodeID is fully
+;; determined by the payload's content-address — duplicate payloads
+;; intern to the same message NodeID.
+(defn channel-message (payload-recipe)
+    (intern_node CHANNEL-MSG (list payload-recipe)))
+
+;; --- append --------------------------------------------------------
+
+;; channel-append — append `msg` to the channel at `path`. Reads
+;; the existing channel, builds a new children list = old + msg,
+;; rewrites the file. Returns the message COUNT after the append.
+;;
+;; Single-writer; concurrent appenders may overwrite each other.
+(defn channel-append (path msg)
+    (do
+        (let existing (read_form_binary path))
+        (let old-children (node_children existing))
+        (let new-children (append old-children (list msg)))
+        (let new-channel (intern_node CHANNEL-V0 new-children))
+        (write_form_binary path new-channel)
+        (len new-children)))
+
+;; --- read ----------------------------------------------------------
+
+;; channel-read — every message currently on the channel as a list
+;; of CHANNEL-MSG Recipes (in append-order).
+(defn channel-read (path)
+    (node_children (read_form_binary path)))
+
+;; channel-read-since — messages from index `n` onward (0-based).
+;; Polling pattern: a cell remembers `seen = (len received)` and
+;; asks for everything after that. With content-addressing, even
+;; if the cell reconnects to a brand-new channel file containing
+;; the same earlier payloads, NodeIDs match — dedup is automatic.
+(defn channel-read-since (path n)
+    (node-children-skip (channel-read path) n))
+
+;; --- accessor ------------------------------------------------------
+
+;; channel-msg-payload — unwrap a CHANNEL-MSG Recipe back to the
+;; payload Recipe it carries. Inverse of channel-message.
+(defn channel-msg-payload (msg)
+    (head (node_children msg)))
+
+0

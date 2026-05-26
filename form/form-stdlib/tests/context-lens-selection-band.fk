@@ -1,7 +1,7 @@
 ; context-lens-selection-band.fk - context requirements choose reverse lenses.
 ; Authored in form.action; source-compiler.fk lowers it above the kernel.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk
 
 section [form.action] {
     let CONTEXT_SELECT_COUNT = make_nodeid(8, 45, 2, 2);

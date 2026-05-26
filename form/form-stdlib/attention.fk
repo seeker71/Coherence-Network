@@ -1,0 +1,72 @@
+; attention.fk — query-through-keys as a substrate-walk.
+;
+; Combination (9) of docs/coherence-substrate/cross-domain-universal-transit.form
+; says: attention is a function (query, keys) → weights. With embeddings living
+; as Recipes (see embedding-as-recipe.fk), we can compose this WITHOUT any
+; learned weights: distance IS the unnormalized weight, selection IS the
+; substrate-walk.
+;
+; The cross-domain story comes for free. Embedding-Recipes from different
+; surface modalities (text, image, audio) intern to the same NodeID when
+; their meaning matches — the kernel's content-addressing IS the attention
+; head. Selecting the arg-min over distances is the body looking through
+; the query at the closest key, regardless of which modality produced it.
+;
+; preludes: form-stdlib/embedding-as-recipe.fk
+
+(do
+    ;; --- distances ----------------------------------------------------
+    ;;
+    ;; attention-distances-loop walks the keys list, prepending the L1
+    ;; distance from query to each key. The caller reverses once so the
+    ;; output list aligns positionally with the input keys.
+
+    (defn attention-reverse-loop (in out)
+        (if (eq (len in) 0) out
+            (attention-reverse-loop (tail in) (cons (head in) out))))
+
+    (defn attention-reverse (xs)
+        (attention-reverse-loop xs (empty)))
+
+    (defn attention-distances-loop (query keys-list acc)
+        (if (eq (len keys-list) 0) acc
+            (attention-distances-loop query (tail keys-list)
+                (cons (embedding-distance query (head keys-list)) acc))))
+
+    (defn attention-distances (query keys-list)
+        (attention-reverse
+            (attention-distances-loop query keys-list (empty))))
+
+    ;; --- arg-min ------------------------------------------------------
+    ;;
+    ;; The selected key is the one whose distance to query is smallest.
+    ;; Ties go to the first occurrence (lowest index) — strict `lt`, not
+    ;; `le`, on the running best. The loop carries (idx, best-idx, best-val);
+    ;; we seed with the head as the initial best so an empty list panics
+    ;; at the kernel via head(empty), the same convention assert uses.
+
+    (defn attention-argmin-loop (distances idx best-idx best-val)
+        (if (eq (len distances) 0) best-idx
+            (if (lt (head distances) best-val)
+                (attention-argmin-loop (tail distances)
+                    (add idx 1) idx (head distances))
+                (attention-argmin-loop (tail distances)
+                    (add idx 1) best-idx best-val))))
+
+    (defn attention-argmin (distances)
+        (attention-argmin-loop (tail distances) 1 0 (head distances)))
+
+    ;; --- composite query: select the nearest key ---------------------
+    ;;
+    ;; attention-select returns the key embedding itself — the substrate
+    ;; identity the body "saw" when it looked through the query at the
+    ;; keys. This is the decoded attention output, not a probability
+    ;; distribution; the distribution is implicit in the distances and
+    ;; only matters once we layer softmax (a future composition).
+
+    (defn attention-select (query keys-list)
+        (nth keys-list
+            (attention-argmin
+                (attention-distances query keys-list))))
+
+    0)

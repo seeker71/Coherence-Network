@@ -1,0 +1,110 @@
+; concept-i18n-bridge.fk — compose the two free dimensions.
+;
+; Two corpora live at substrate altitude:
+;   - i18n.fk: ~9300 (key-path, locale, surface) triples — one media
+;     (text) varied across 4 locales.
+;   - concept-corpus.fk: ~149 (concept-id, body, visuals, cross-refs)
+;     tuples — many media (prose, visual prompt, edge graph) in one
+;     locale (English today).
+;
+; The teaching from docs/coherence-substrate/concepts-as-recipe-corpus
+; .form: composing the two gives the universal translator's two free
+; dimensions — (anchor × locale × media). This file is the smallest
+; bridge that exercises the composition: given a concept anchor and
+; a target locale, look up the anchor AS-IF it were an i18n key-path
+; and return whatever surface (if any) the body currently holds.
+;
+; The honesty: today no locale has a "concepts" section in
+; web/messages — every probe returns "". That empty IS the result.
+; The gap-sense names which concepts the UI has surfaced and which
+; haven't. The shape of the composition (anchor → key-path → locale
+; → surface) works end-to-end whether the surface is populated or not.
+;
+; No new ice; this composes existing load functions from i18n.fk and
+; concept-corpus.fk. The anchor-to-keypath transform is the only new
+; structural move.
+;
+; Prelude requirement: form-stdlib/json.fk, form-stdlib/cache.fk,
+; form-stdlib/i18n.fk, form-stdlib/concept-corpus.fk must load first.
+
+(do
+    ;; --- anchor → key-path -----------------------------------------
+    ;;
+    ;; A concept-id like "lc-trust-over-fear" maps to the natural i18n
+    ;; key-path (list "concepts" "trust-over-fear") — top section
+    ;; "concepts", leaf the bare id (lc- prefix stripped).
+    ;;
+    ;; The "lc-" prefix is the namespace marker in the body's concept
+    ;; tree; it doesn't belong in a UI key-path. If a concept-id is
+    ;; passed without the prefix it still works — strip is conditional.
+
+    (defn concept-strip-lc-prefix (concept-id-str)
+        (do
+            (let n (str_len concept-id-str))
+            (if (lt n 3) concept-id-str
+                (if (str_eq (substring concept-id-str 0 3) "lc-")
+                    (substring concept-id-str 3 n)
+                    concept-id-str))))
+
+    (defn concept-anchor-as-i18n-path (concept-id-str)
+        (list "concepts" (concept-strip-lc-prefix concept-id-str)))
+
+    ;; --- single-locale surface probe -------------------------------
+    ;;
+    ;; Look up a concept's anchor as an i18n key-path in one locale.
+    ;; Returns the surface string if the body has surfaced this concept
+    ;; as a UI string in that locale, "" otherwise.
+    ;;
+    ;; "" is an honest answer — most concepts have no UI string today,
+    ;; and that gap IS the body's signal of which concepts have been
+    ;; surfaced and which haven't.
+
+    (defn concept-i18n-surface (concept-id-str locale-recipe)
+        (i18n-string-by-path locale-recipe
+            (concept-anchor-as-i18n-path concept-id-str)))
+
+    ;; --- multi-locale parallel view --------------------------------
+    ;;
+    ;; (concept-i18n-parallel concept-id locale-pairs) →
+    ;; ((en surface-or-empty) (de surface-or-empty) ...)
+    ;;
+    ;; Same shape as nl-emit-all from nl-emit.fk — one entry per loaded
+    ;; locale. Caller supplies (list (list "en" en-recipe) ...); we
+    ;; never call i18n-load ourselves so a probe over many concepts
+    ;; stays linear in locale count, not in probe count.
+
+    (defn concept-i18n-parallel-loop (concept-id-str pairs acc)
+        (if (eq (len pairs) 0) (json-reverse-acc acc)
+            (do
+                (let p (head pairs))
+                (let loc (head p))
+                (let recipe (head (tail p)))
+                (let surf (concept-i18n-surface concept-id-str recipe))
+                (concept-i18n-parallel-loop concept-id-str (tail pairs)
+                    (cons (list loc surf) acc)))))
+
+    (defn concept-i18n-parallel (concept-id-str locale-pairs)
+        (concept-i18n-parallel-loop concept-id-str locale-pairs (empty)))
+
+    ;; --- coverage count --------------------------------------------
+    ;;
+    ;; Count how many of the loaded locales have a non-empty surface
+    ;; for this concept's anchor. Today this returns 0 for every
+    ;; concept — no locale has a "concepts" section. When a translator
+    ;; eventually adds one, the same number lifts; the band re-reads
+    ;; the body without any code change here.
+
+    (defn concept-i18n-coverage-loop (parallel-triples acc)
+        (if (eq (len parallel-triples) 0) acc
+            (do
+                (let entry (head parallel-triples))
+                (let surf (head (tail entry)))
+                (if (gt (str_len surf) 0)
+                    (concept-i18n-coverage-loop (tail parallel-triples) (add acc 1))
+                    (concept-i18n-coverage-loop (tail parallel-triples) acc)))))
+
+    (defn concept-i18n-coverage (concept-id-str locale-pairs)
+        (concept-i18n-coverage-loop
+            (concept-i18n-parallel concept-id-str locale-pairs) 0))
+
+    0)

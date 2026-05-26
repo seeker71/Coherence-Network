@@ -50,6 +50,7 @@ run_ts() {
 }
 
 source_compile_dir="$(mktemp -d "${TMPDIR:-/tmp}/form-source.XXXXXX")"
+mkdir -p form-stdlib/.cache
 artifact=""
 cleanup() {
     rm -rf "$source_compile_dir"
@@ -69,7 +70,7 @@ prepare_sources() {
             out="$source_compile_dir/$safe"
             driver="$source_compile_dir/compile-${safe}.fk"
             printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
-            "$GO_BIN" "form-stdlib/source-compiler.fk" "$driver" >/dev/null
+            "$GO_BIN" "form-stdlib/json.fk" "form-stdlib/cache.fk" "form-stdlib/form-ontology-loader.fk" "form-stdlib/source-compiler.fk" "$driver" >/dev/null
             prepared_args+=("$out")
         else
             prepared_args+=("$src")

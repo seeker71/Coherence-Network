@@ -1,0 +1,441 @@
+{
+  "schema_version": 3,
+  "source_of_truth_note": "Mirrors kernel parser dispatch — see form-kernel-go/main.go ~1956-2014 (buildVerb) and constants ~73-95. A row added here must land in the kernel's switch table too; scripts/validate_form_ontology.py reads this file and verifies each kernel.",
+  "kernel_type_constants": {
+    "RBasicBlock":   9,
+    "RBasicCond":   11,
+    "RBasicMath":   12,
+    "RBasicCompare": 13,
+    "RBasicLogic":  14,
+    "RBasicFnDef":  31,
+    "RBasicFnCall": 32,
+    "RBasicIdent":  33
+  },
+  "categories": [
+    {"name": "do",       "type":  9, "inst": 1, "note": "RBlock Do"},
+    {"name": "sequence", "type":  9, "inst": 2, "note": "RBlock Sequence (kernel verb: \"seq\")"},
+    {"name": "let",      "type":  9, "inst": 3, "note": "RBlock Let"},
+    {"name": "if-then",  "type": 11, "inst": 1, "note": "RCond IfThen"},
+    {"name": "if",       "type": 11, "inst": 2, "note": "RCond IfThenElse — full if-then-else"},
+    {"name": "fndef",    "type": 31, "inst": 1, "note": "kernel verb: \"defn\""},
+    {"name": "fncall",   "type": 32, "inst": 1, "note": "default branch in kernels — no explicit case"},
+    {"name": "ident",    "type": 33, "inst": 1, "note": "identifier-wrap path — no explicit case"}
+  ],
+  "primitives": [
+    {"name": "add", "type": 12, "inst": 1, "family": "math"},
+    {"name": "sub", "type": 12, "inst": 2, "family": "math"},
+    {"name": "mul", "type": 12, "inst": 3, "family": "math"},
+    {"name": "div", "type": 12, "inst": 4, "family": "math"},
+    {"name": "mod", "type": 12, "inst": 5, "family": "math"},
+    {"name": "eq",  "type": 13, "inst": 1, "family": "compare"},
+    {"name": "ne",  "type": 13, "inst": 2, "family": "compare"},
+    {"name": "lt",  "type": 13, "inst": 3, "family": "compare"},
+    {"name": "le",  "type": 13, "inst": 4, "family": "compare"},
+    {"name": "gt",  "type": 13, "inst": 5, "family": "compare"},
+    {"name": "ge",  "type": 13, "inst": 6, "family": "compare"},
+    {"name": "and", "type": 14, "inst": 1, "family": "logic"},
+    {"name": "or",  "type": 14, "inst": 2, "family": "logic"},
+    {"name": "not", "type": 14, "inst": 3, "family": "logic"}
+  ],
+  "dialects_note": "Per-dialect BMF/AST category constants. Each dialect declares its category_type (the type-id used in `make_nodeid 1 2 <type> <inst>`) and a name_prefix; the generator emits a `(let <prefix>-<name> ...)` for each category into form-stdlib/dialect-categories.fk. Numeric (type, inst) values are load-bearing — they intern Recipe shapes the grammar code constructs.",
+  "dialects": {
+    "python.bmf": {
+      "category_type": 99,
+      "name_prefix": "PY-BMF",
+      "grammar_file": "form-stdlib/grammars/python-bmf.fk",
+      "categories": [
+        {"name": "IMPORT",      "inst": 501, "note": "import statement"},
+        {"name": "FROM-IMPORT", "inst": 502},
+        {"name": "DEF",         "inst": 503},
+        {"name": "CLASS",       "inst": 504},
+        {"name": "ASSIGN",      "inst": 505},
+        {"name": "RETURN",      "inst": 506},
+        {"name": "RAISE",       "inst": 507},
+        {"name": "PASS",        "inst": 508},
+        {"name": "IF",          "inst": 509},
+        {"name": "WHILE",       "inst": 510},
+        {"name": "FOR",         "inst": 511},
+        {"name": "CALL",        "inst": 512},
+        {"name": "INT",         "inst": 513},
+        {"name": "STRING",      "inst": 514},
+        {"name": "IDENT",       "inst": 515},
+        {"name": "ATTR",        "inst": 516},
+        {"name": "METHOD-CALL", "inst": 517},
+        {"name": "LIST",        "inst": 518},
+        {"name": "DICT",        "inst": 519},
+        {"name": "ANNOTATED",   "inst": 520},
+        {"name": "AUG-ASSIGN",  "inst": 521},
+        {"name": "BINOP",       "inst": 522},
+        {"name": "MODULE",      "inst": 523},
+        {"name": "BOOL",        "inst": 524},
+        {"name": "NONE",        "inst": 525},
+        {"name": "UNARY",       "inst": 526},
+        {"name": "COMPARE",     "inst": 527},
+        {"name": "BOOL-OP",     "inst": 528},
+        {"name": "SUBSCRIPT",   "inst": 529},
+        {"name": "SLICE",       "inst": 530},
+        {"name": "TUPLE",       "inst": 531},
+        {"name": "SET",         "inst": 532},
+        {"name": "LAMBDA",      "inst": 533},
+        {"name": "AWAIT",       "inst": 534},
+        {"name": "YIELD",       "inst": 535},
+        {"name": "BREAK",       "inst": 536},
+        {"name": "CONTINUE",    "inst": 537},
+        {"name": "GLOBAL",      "inst": 538},
+        {"name": "NONLOCAL",    "inst": 539},
+        {"name": "DEL",         "inst": 540},
+        {"name": "ASSERT",      "inst": 541},
+        {"name": "WITH",        "inst": 542},
+        {"name": "TRY",         "inst": 543},
+        {"name": "ASYNC-DEF",   "inst": 544},
+        {"name": "DECORATOR",   "inst": 545},
+        {"name": "ASYNC-FOR",   "inst": 546},
+        {"name": "ASYNC-WITH",  "inst": 547},
+        {"name": "IF-ELSE",     "inst": 548},
+        {"name": "ELIF",        "inst": 549},
+        {"name": "RAISE-FROM",  "inst": 550},
+        {"name": "IMPORT-STAR", "inst": 551},
+        {"name": "IMPORT-MANY", "inst": 552},
+        {"name": "EXCEPT-AS",   "inst": 553},
+        {"name": "MATCH",       "inst": 554},
+        {"name": "CASE",        "inst": 555},
+        {"name": "COMP",        "inst": 556},
+        {"name": "GENEXP",      "inst": 557},
+        {"name": "KWARG",       "inst": 558},
+        {"name": "STARARG",     "inst": 559},
+        {"name": "DEFAULT",     "inst": 560},
+        {"name": "TYPED-PARAM", "inst": 561},
+        {"name": "RET-ANN",     "inst": 562},
+        {"name": "WALRUS",      "inst": 563},
+        {"name": "FLOAT",       "inst": 564},
+        {"name": "BYTES",       "inst": 565},
+        {"name": "ELLIPSIS",    "inst": 566},
+        {"name": "ATTR-ASSIGN", "inst": 567},
+        {"name": "SUB-ASSIGN",  "inst": 568},
+        {"name": "UNPACK",      "inst": 569},
+        {"name": "FSTRING",     "inst": 570},
+        {"name": "IFEXP",       "inst": 571},
+        {"name": "SETCOMP",     "inst": 572},
+        {"name": "YIELD-FROM",  "inst": 573},
+        {"name": "MATCH-AS",    "inst": 574}
+      ]
+    },
+    "bml": {
+      "category_type": 100,
+      "name_prefix": "BML-AST",
+      "grammar_file": "form-stdlib/grammars/bml.fk",
+      "categories": [
+        {"name": "PACKAGE",   "inst": 1},
+        {"name": "IMPORT",    "inst": 2},
+        {"name": "CLASS",     "inst": 3},
+        {"name": "INTERFACE", "inst": 4},
+        {"name": "TEMPLATE",  "inst": 5},
+        {"name": "SECTION",   "inst": 6},
+        {"name": "FIELD",     "inst": 7},
+        {"name": "CONST",     "inst": 8},
+        {"name": "METHOD",    "inst": 9},
+        {"name": "RETURN",    "inst": 10},
+        {"name": "INT",       "inst": 11},
+        {"name": "STRING",    "inst": 12},
+        {"name": "NAME",      "inst": 13},
+        {"name": "ADD",       "inst": 14},
+        {"name": "CHOOSE",    "inst": 15},
+        {"name": "FAIL",      "inst": 16},
+        {"name": "CUT",       "inst": 17},
+        {"name": "SAVE",      "inst": 18},
+        {"name": "RESTORE",   "inst": 19},
+        {"name": "DISCARD",   "inst": 20},
+        {"name": "THROW",     "inst": 21},
+        {"name": "IF",        "inst": 22},
+        {"name": "WHILE",     "inst": 23},
+        {"name": "FOR",       "inst": 24},
+        {"name": "WITH",      "inst": 25},
+        {"name": "TRY",       "inst": 26},
+        {"name": "BLOCK",     "inst": 27},
+        {"name": "BREAK",     "inst": 28},
+        {"name": "CONTINUE",  "inst": 29},
+        {"name": "CHAR",      "inst": 32, "note": "insts 30-31 are reserved/skipped historically"},
+        {"name": "ARRAY",     "inst": 33}
+      ]
+    },
+    "go.bmf": {
+      "category_type": 99,
+      "name_prefix": "GO-BMF",
+      "grammar_file": "form-stdlib/grammars/go-bmf.fk",
+      "categories": [
+        {"name": "PACKAGE",   "inst": 631},
+        {"name": "IMPORT",    "inst": 632},
+        {"name": "FUNC",      "inst": 633},
+        {"name": "METHOD",    "inst": 634},
+        {"name": "STRUCT",    "inst": 635},
+        {"name": "INTERFACE", "inst": 636},
+        {"name": "VAR",       "inst": 637},
+        {"name": "CONST",     "inst": 638},
+        {"name": "RETURN",    "inst": 639},
+        {"name": "ASSIGN",    "inst": 640},
+        {"name": "CALL",      "inst": 641},
+        {"name": "SELECTOR",  "inst": 642},
+        {"name": "INDEX",     "inst": 643},
+        {"name": "IF",        "inst": 644},
+        {"name": "FOR",       "inst": 645},
+        {"name": "GO",        "inst": 646},
+        {"name": "DEFER",     "inst": 647},
+        {"name": "TYPE",      "inst": 648},
+        {"name": "SWITCH",    "inst": 649},
+        {"name": "SELECT",    "inst": 650},
+        {"name": "CHAN",      "inst": 651},
+        {"name": "COMPOSITE", "inst": 652},
+        {"name": "PTR-TYPE",  "inst": 653}
+      ]
+    },
+    "typescript.bmf": {
+      "category_type": 99,
+      "name_prefix": "TS-BMF",
+      "grammar_file": "form-stdlib/grammars/typescript-bmf.fk",
+      "categories": [
+        {"name": "IMPORT",       "inst": 601},
+        {"name": "EXPORT-CONST", "inst": 602},
+        {"name": "FUNCTION",     "inst": 603},
+        {"name": "CLASS",        "inst": 604},
+        {"name": "INTERFACE",    "inst": 605},
+        {"name": "TYPE",         "inst": 606},
+        {"name": "CALL",         "inst": 607},
+        {"name": "AWAIT",        "inst": 608},
+        {"name": "JSX",          "inst": 609},
+        {"name": "RETURN",       "inst": 610},
+        {"name": "ASSIGN",       "inst": 611},
+        {"name": "MEMBER",       "inst": 612},
+        {"name": "INDEX",        "inst": 613},
+        {"name": "IF",           "inst": 614},
+        {"name": "FOR",          "inst": 615},
+        {"name": "ARROW",        "inst": 616},
+        {"name": "ARRAY",        "inst": 617},
+        {"name": "OBJECT",       "inst": 618},
+        {"name": "ENUM",         "inst": 619},
+        {"name": "OPTIONAL",     "inst": 620},
+        {"name": "TEMPLATE",     "inst": 621}
+      ]
+    },
+    "rust.bmf": {
+      "category_type": 99,
+      "name_prefix": "RS-BMF",
+      "grammar_file": "form-stdlib/grammars/rust-bmf.fk",
+      "name_prefix_note": "Source files name these RS-BMF-* (not RUST-BMF-*); the prefix is kept stable to avoid churning every reference in rust-bmf.fk.",
+      "categories": [
+        {"name": "USE",    "inst": 661},
+        {"name": "MOD",    "inst": 662},
+        {"name": "FN",     "inst": 663},
+        {"name": "STRUCT", "inst": 664},
+        {"name": "ENUM",   "inst": 665},
+        {"name": "IMPL",   "inst": 666},
+        {"name": "TRAIT",  "inst": 667},
+        {"name": "MACRO",  "inst": 668},
+        {"name": "LET",    "inst": 669},
+        {"name": "RETURN", "inst": 670},
+        {"name": "MATCH",  "inst": 671},
+        {"name": "IF",     "inst": 672},
+        {"name": "LOOP",   "inst": 673},
+        {"name": "ASYNC",  "inst": 674},
+        {"name": "RESULT", "inst": 675}
+      ]
+    }
+  },
+  "engine_constants_note": "Typed-constant 0-arg getters used by engine.fk and the grammar/lens layers as a shared vocabulary. Two shapes: factory-style families carry a `factory` (a NodeID factory defined inside engine.fk — `bmf-domain-ref`, `bmf-lens-ref`, `bmf-domain-kind-ref`) and integer entry values; string-style families set `string_values: true` and carry literal string values. The generator emits one `(defn <name_prefix>-<entry.name> () ...)` per entry into form-stdlib/engine-constants.fk. Load that file as a prelude BEFORE engine.fk so engine.fk's references resolve as free identifiers.",
+  "engine_constants": {
+    "domain": {
+      "factory": "bmf-domain-ref",
+      "name_prefix": "bmf-domain",
+      "entries": [
+        {"name": "python",     "value": 1},
+        {"name": "typescript", "value": 2},
+        {"name": "go",         "value": 3},
+        {"name": "rust",       "value": 4},
+        {"name": "bml",        "value": 5},
+        {"name": "natural",    "value": 6},
+        {"name": "image",      "value": 7},
+        {"name": "audio",      "value": 8},
+        {"name": "video",      "value": 9}
+      ]
+    },
+    "domain_kind": {
+      "factory": "bmf-domain-kind-ref",
+      "name_prefix": "bmf-domain-kind",
+      "entries": [
+        {"name": "language", "value": 1},
+        {"name": "media",    "value": 2},
+        {"name": "runtime",  "value": 3}
+      ]
+    },
+    "lens": {
+      "factory": "bmf-lens-ref",
+      "name_prefix": "bmf-lens",
+      "entries": [
+        {"name": "assertion", "value": 1},
+        {"name": "metadata",  "value": 2},
+        {"name": "assign",    "value": 3},
+        {"name": "var",       "value": 4},
+        {"name": "quote",     "value": 5},
+        {"name": "display",   "value": 6}
+      ]
+    },
+    "semantic": {
+      "name_prefix": "bmf-semantic",
+      "string_values": true,
+      "entries": [
+        {"name": "natural-language", "value": "natural-language"},
+        {"name": "image",            "value": "image"},
+        {"name": "audio",            "value": "audio"},
+        {"name": "video",            "value": "video"},
+        {"name": "general",          "value": "general"},
+        {"name": "knowledge",        "value": "knowledge"}
+      ]
+    },
+    "context_key": {
+      "name_prefix": "bmf-context-key",
+      "string_values": true,
+      "entries": [
+        {"name": "language-tag",     "value": "language-tag"},
+        {"name": "locale",           "value": "locale"},
+        {"name": "script",           "value": "script"},
+        {"name": "region",           "value": "region"},
+        {"name": "direction",        "value": "direction"},
+        {"name": "calendar",         "value": "calendar"},
+        {"name": "numbering-system", "value": "numbering-system"},
+        {"name": "time-zone",        "value": "time-zone"},
+        {"name": "semantic-domain",  "value": "semantic-domain"},
+        {"name": "culture",          "value": "culture"},
+        {"name": "register",         "value": "register"},
+        {"name": "environment",      "value": "environment"},
+        {"name": "audience",         "value": "audience"},
+        {"name": "purpose",          "value": "purpose"},
+        {"name": "viewpoint",        "value": "viewpoint"},
+        {"name": "media-type",       "value": "media-type"},
+        {"name": "charset",          "value": "charset"},
+        {"name": "encoding",         "value": "encoding"},
+        {"name": "container",        "value": "container"},
+        {"name": "codec",            "value": "codec"},
+        {"name": "unit",             "value": "unit"},
+        {"name": "color-space",      "value": "color-space"},
+        {"name": "source",           "value": "source"},
+        {"name": "creator",          "value": "creator"},
+        {"name": "license",          "value": "license"},
+        {"name": "created",          "value": "created"},
+        {"name": "derived-from",     "value": "derived-from"}
+      ]
+    },
+    "locale": {
+      "name_prefix": "bmf-locale",
+      "string_values": true,
+      "entries": [
+        {"name": "und",   "value": "und"},
+        {"name": "en-us", "value": "en-US"},
+        {"name": "id-id", "value": "id-ID"}
+      ]
+    },
+    "script": {
+      "name_prefix": "bmf-script",
+      "string_values": true,
+      "entries": [
+        {"name": "latn", "value": "Latn"}
+      ]
+    },
+    "direction": {
+      "name_prefix": "bmf-direction",
+      "string_values": true,
+      "entries": [
+        {"name": "auto", "value": "auto"},
+        {"name": "ltr",  "value": "ltr"},
+        {"name": "rtl",  "value": "rtl"}
+      ]
+    },
+    "register": {
+      "name_prefix": "bmf-register",
+      "string_values": true,
+      "entries": [
+        {"name": "plain",  "value": "plain"},
+        {"name": "math",   "value": "math"},
+        {"name": "formal", "value": "formal"}
+      ]
+    },
+    "environment": {
+      "name_prefix": "bmf-environment",
+      "string_values": true,
+      "entries": [
+        {"name": "general", "value": "general"},
+        {"name": "file",    "value": "file"},
+        {"name": "repo",    "value": "repo"},
+        {"name": "web",     "value": "web"}
+      ]
+    },
+    "purpose": {
+      "name_prefix": "bmf-purpose",
+      "string_values": true,
+      "entries": [
+        {"name": "representation", "value": "representation"},
+        {"name": "roundtrip",      "value": "roundtrip"}
+      ]
+    },
+    "calendar": {
+      "name_prefix": "bmf-calendar",
+      "string_values": true,
+      "entries": [
+        {"name": "gregory", "value": "gregory"}
+      ]
+    },
+    "numbering": {
+      "name_prefix": "bmf-numbering",
+      "string_values": true,
+      "entries": [
+        {"name": "latn", "value": "latn"}
+      ]
+    },
+    "media": {
+      "name_prefix": "bmf-media",
+      "string_values": true,
+      "entries": [
+        {"name": "text-plain",   "value": "text/plain"},
+        {"name": "octet-stream", "value": "application/octet-stream"},
+        {"name": "image-svg",    "value": "image/svg+xml"},
+        {"name": "image-gif",    "value": "image/gif"}
+      ]
+    },
+    "charset": {
+      "name_prefix": "bmf-charset",
+      "string_values": true,
+      "entries": [
+        {"name": "utf8", "value": "utf-8"}
+      ]
+    },
+    "encoding": {
+      "name_prefix": "bmf-encoding",
+      "string_values": true,
+      "entries": [
+        {"name": "xml",    "value": "xml"},
+        {"name": "binary", "value": "binary"}
+      ]
+    },
+    "container": {
+      "name_prefix": "bmf-container",
+      "string_values": true,
+      "entries": [
+        {"name": "text", "value": "text"}
+      ]
+    },
+    "unit": {
+      "name_prefix": "bmf-unit",
+      "string_values": true,
+      "entries": [
+        {"name": "px",      "value": "px"},
+        {"name": "samples", "value": "samples"},
+        {"name": "px-ms",   "value": "px/ms"}
+      ]
+    },
+    "color": {
+      "name_prefix": "bmf-color",
+      "string_values": true,
+      "entries": [
+        {"name": "srgb", "value": "sRGB"}
+      ]
+    }
+  }
+}

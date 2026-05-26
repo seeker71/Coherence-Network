@@ -1,0 +1,72 @@
+; python-bmf-attr-band.fk - attribute access, attribute assignment, and method-call coverage
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    ;; attr-access (existing, exercised to anchor the band)
+    (let attr-rt
+        (py-rt "attr"
+            (list (py-name "self") (py-op ".") (py-name "x"))))
+
+    ;; attr-chain: obj.x.y
+    (let attr-chain-rt
+        (py-rt "attr-chain"
+            (list (py-name "self") (py-op ".") (py-name "store")
+                  (py-op ".") (py-name "value"))))
+
+    ;; attr-assign-name: obj.x = y
+    (let attr-assign-name-rt
+        (py-rt "attr-assign-name"
+            (list (py-name "self") (py-op ".") (py-name "x")
+                  (py-op "=") (py-name "value"))))
+
+    ;; attr-assign-call0: obj.x = build()
+    (let attr-assign-call0-rt
+        (py-rt "attr-assign-call0"
+            (list (py-name "self") (py-op ".") (py-name "store")
+                  (py-op "=") (py-name "build")
+                  (py-op "(") (py-op ")"))))
+
+    ;; method-call0 (existing, anchor)
+    (let method-call0-rt
+        (py-rt "method-call0"
+            (list (py-name "self") (py-op ".") (py-name "run")
+                  (py-op "(") (py-op ")"))))
+
+    ;; method-call1: obj.m(a)
+    (let method-call1-rt
+        (py-rt "method-call1"
+            (list (py-name "self") (py-op ".") (py-name "use")
+                  (py-op "(") (py-name "value") (py-op ")"))))
+
+    ;; method-call2: obj.m(a, b)
+    (let method-call2-rt
+        (py-rt "method-call2"
+            (list (py-name "self") (py-op ".") (py-name "pair")
+                  (py-op "(") (py-name "left") (py-op ",")
+                  (py-name "right") (py-op ")"))))
+
+    ;; chained-method-call: obj.f().g()
+    (let chained-method-call-rt
+        (py-rt "chained-method-call"
+            (list (py-name "self") (py-op ".") (py-name "build")
+                  (py-op "(") (py-op ")")
+                  (py-op ".") (py-name "freeze")
+                  (py-op "(") (py-op ")"))))
+
+    (sum
+        (list (rt-score attr-rt)
+              (rt-score attr-chain-rt)
+              (rt-score attr-assign-name-rt)
+              (rt-score attr-assign-call0-rt)
+              (rt-score method-call0-rt)
+              (rt-score method-call1-rt)
+              (rt-score method-call2-rt)
+              (rt-score chained-method-call-rt))))

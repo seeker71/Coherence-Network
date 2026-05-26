@@ -1,0 +1,93 @@
+; i18n-as-recipe-corpus.form — the body's parallel natural-language
+; corpus IS the universal translator's training data.
+;
+; The teaching: we don't need to invent natural-language Recipes.
+; web/messages/{en,de,es,id}.json holds ~2300 keys per locale, each
+; one a parallel translation of the same semantic concept. That's
+; ~9300 OBSERVED (Recipe, locale, surface) triples sitting on disk,
+; waiting to be read as substrate.
+
+(do
+    ;; --- the observation -------------------------------------------
+    ;;
+    ;; For each key path like `common.save`:
+    ;;   en → "Save"
+    ;;   de → "Speichern"
+    ;;   es → "Guardar"
+    ;;   id → "Simpan"
+    ;;
+    ;; The KEY PATH is a Recipe NodeID candidate — one semantic
+    ;; identity across all four locales. The strings are surface
+    ;; emissions. The universal translator's natural-language layer
+    ;; is asking: "given an identity, what does each locale emit?"
+    ;; The answer for ~2300 concepts already exists in the body.
+
+    ;; --- the access surface ----------------------------------------
+    ;;
+    ;; form-stdlib/i18n.fk exposes the corpus at substrate altitude:
+    ;;   (i18n-load locale-name)            → parsed JSON Recipe
+    ;;   (i18n-string-by-path rec path)     → surface in that locale
+    ;;   (i18n-parallel path-strs)          → (locale, string) pairs
+    ;;                                        across every loaded locale
+    ;;   (i18n-locales-available)           → list of locale names
+    ;;
+    ;; Backed by form-stdlib/cache.fk so each locale parses once at
+    ;; cold load (~50–100 ms per locale, ~50 KB JSON) and is warm
+    ;; thereafter (~5–20 ms). No new ice — the source JSON stays
+    ;; canonical; the cache lives in form-stdlib/.cache/ (gitignored).
+
+    ;; --- what this enables -----------------------------------------
+    ;;
+    ;; Pattern 1: parallel-emission lookup
+    ;;   Given a Recipe (or key path), get its surface in every locale.
+    ;;   The ground truth for "what is this concept in German?"
+    ;;
+    ;; Pattern 2: gap-sensing at substrate altitude
+    ;;   Compare en's key set to de's — which concepts haven't crossed?
+    ;;   Today the wellness check does this in Python over the JSON;
+    ;;   Form-side access lets ANY cell sense the same drift.
+    ;;
+    ;; Pattern 3: natural-language emitter
+    ;;   A Recipe NodeID can be linked to a key path (via NamedCell
+    ;;   binding). Emitting that Recipe in locale L = walking the
+    ;;   key path through i18n-load(L). The natural-language layer
+    ;;   of the universal translator IS this lookup.
+    ;;
+    ;; Pattern 4: learning from observed pairs
+    ;;   Each (en-string, de-string) pair at the same key path is a
+    ;;   point in (Recipe → locale-surface) space. Across 2300 keys ×
+    ;;   4 locales, the body holds ~9300 such observations. A future
+    ;;   substrate-side learner can derive locale-specific emission
+    ;;   patterns (word-order, gender-agreement, register) from this
+    ;;   parallel corpus without ever invoking an external translator.
+
+    ;; --- not-special-case discipline -------------------------------
+    ;;
+    ;; The i18n machinery is just JSON-loading composed through the
+    ;; cache layer. Adding a new locale = drop a {lang}.json into
+    ;; web/messages/. Adding a new content domain = its own JSON,
+    ;; loaded via i18n-load (or a sibling). No grammar-specific
+    ;; code paths.
+
+    ;; --- horizons named --------------------------------------------
+    ;;
+    ;; Near (small):
+    ;;   - extend wellness check to read from Form-side i18n (parity
+    ;;     sense becomes a substrate query, not a Python script)
+    ;;   - cli/lib/messages/{lang}.json same pattern, same loader
+    ;;   - web/content/presence-walk/{lang}.json same pattern
+    ;;
+    ;; Mid (Path C territory):
+    ;;   - BMF rules natively executable in kernel — natural-language
+    ;;     grammars (already in form-stdlib/grammars/natural-bmf.fk)
+    ;;     gain document-scale speed. Then the corpus can drive
+    ;;     reverse emission at any scale.
+    ;;
+    ;; Far (the universal translator's claim made good):
+    ;;   - bidirectional NL ↔ Recipe through the i18n corpus as
+    ;;     training data + the BMF natural-language grammar as model.
+    ;;     "Translate this concept to Indonesian" = walk Recipe →
+    ;;     locale-binding → emit through natural-bmf rules + parallel
+    ;;     ground truth.
+
+    "i18n-as-recipe-corpus: the body's natural-language training data already exists at substrate altitude — ~9300 observed (key-path, locale, surface) triples in 4 locales × 2300 keys, accessible via form-stdlib/i18n.fk")

@@ -1,0 +1,156 @@
+; tests/python-bmf-fstring-slice-band.fk - extended Python f-string and slice grammar
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-value m)))
+
+    (defn result-kid (m n)
+        (nth (result-kids m) n))
+
+    (defn kid-str-len (m n)
+        (str_len (node_value (result-kid m n))))
+
+    (defn kid-int (m n)
+        (node_value (result-kid m n)))
+
+    (defn child-count (m)
+        (len (result-kids m)))
+
+    (defn object-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    (defn py-apply (rule-name objects)
+        (apply-python-bmf-rule rule-name objects))
+
+    ;; --- f-string extensions ----------------------------------------
+
+    (let fstring-double-match
+        (py-apply "fstring-double-format"
+                  (list (py-fstring "f")
+                        (py-op "{") (py-name "x") (py-op "}")
+                        (py-op "{") (py-name "y") (py-op "}"))))
+    (let fstring-double-score
+        (add (child-count fstring-double-match)
+             (add (kid-str-len fstring-double-match 1)
+                  (kid-str-len fstring-double-match 2)))) ; 3 + x + y = 5
+
+    (let fstring-spec-match
+        (py-apply "fstring-spec"
+                  (list (py-fstring "f")
+                        (py-op "{") (py-name "value") (py-op ":")
+                        (py-name "spec") (py-op "}"))))
+    (let fstring-spec-score
+        (add (child-count fstring-spec-match)
+             (add (kid-str-len fstring-spec-match 1)
+                  (kid-str-len fstring-spec-match 2)))) ; 3 + value + spec = 12
+
+    ;; --- slice extensions -------------------------------------------
+
+    (let slice-name-name-match
+        (py-apply "slice-name-name"
+                  (list (py-name "xs") (py-op "[")
+                        (py-name "a") (py-op ":")
+                        (py-name "b") (py-op "]"))))
+    (let slice-name-name-score
+        (add (kid-str-len slice-name-name-match 0)
+             (add (kid-str-len slice-name-name-match 1)
+                  (kid-str-len slice-name-name-match 2)))) ; xs + a + b = 4
+
+    (let slice-name-omit-match
+        (py-apply "slice-name-omit"
+                  (list (py-name "xs") (py-op "[")
+                        (py-name "a") (py-op ":") (py-op "]"))))
+    (let slice-name-omit-score
+        (add (kid-str-len slice-name-omit-match 0)
+             (kid-str-len slice-name-omit-match 1))) ; xs + a = 3
+
+    (let slice-omit-name-match
+        (py-apply "slice-omit-name"
+                  (list (py-name "xs") (py-op "[") (py-op ":")
+                        (py-name "b") (py-op "]"))))
+    (let slice-omit-name-score
+        (add (kid-str-len slice-omit-name-match 0)
+             (kid-str-len slice-omit-name-match 1))) ; xs + b = 3
+
+    (let slice-omit-omit-match
+        (py-apply "slice-omit-omit"
+                  (list (py-name "xs") (py-op "[")
+                        (py-op ":") (py-op "]"))))
+    (let slice-omit-omit-score
+        (add (kid-str-len slice-omit-omit-match 0)
+             (child-count slice-omit-omit-match))) ; xs + 1 = 3
+
+    (let slice-step-int-match
+        (py-apply "slice-step-int"
+                  (list (py-name "xs") (py-op "[")
+                        (py-op ":") (py-op ":")
+                        (py-int "2") (py-op "]"))))
+    (let slice-step-int-score
+        (add (kid-str-len slice-step-int-match 0)
+             (kid-int slice-step-int-match 1))) ; xs + 2 = 4
+
+    ;; --- reversible round-trip --------------------------------------
+
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    (let fstring-double-rt
+        (py-rt "fstring-double-format"
+            (list (py-fstring "f")
+                  (py-op "{") (py-name "x") (py-op "}")
+                  (py-op "{") (py-name "y") (py-op "}"))))
+
+    (let fstring-spec-rt
+        (py-rt "fstring-spec"
+            (list (py-fstring "f")
+                  (py-op "{") (py-name "value") (py-op ":")
+                  (py-name "spec") (py-op "}"))))
+
+    (let slice-name-name-rt
+        (py-rt "slice-name-name"
+            (list (py-name "xs") (py-op "[")
+                  (py-name "a") (py-op ":")
+                  (py-name "b") (py-op "]"))))
+
+    (let slice-name-omit-rt
+        (py-rt "slice-name-omit"
+            (list (py-name "xs") (py-op "[")
+                  (py-name "a") (py-op ":") (py-op "]"))))
+
+    (let slice-omit-name-rt
+        (py-rt "slice-omit-name"
+            (list (py-name "xs") (py-op "[") (py-op ":")
+                  (py-name "b") (py-op "]"))))
+
+    (let slice-omit-omit-rt
+        (py-rt "slice-omit-omit"
+            (list (py-name "xs") (py-op "[")
+                  (py-op ":") (py-op "]"))))
+
+    (let slice-step-int-rt
+        (py-rt "slice-step-int"
+            (list (py-name "xs") (py-op "[")
+                  (py-op ":") (py-op ":")
+                  (py-int "2") (py-op "]"))))
+
+    (sum
+        (list fstring-double-score fstring-spec-score
+              slice-name-name-score slice-name-omit-score
+              slice-omit-name-score slice-omit-omit-score
+              slice-step-int-score
+              (rt-score fstring-double-rt) (rt-score fstring-spec-rt)
+              (rt-score slice-name-name-rt) (rt-score slice-name-omit-rt)
+              (rt-score slice-omit-name-rt) (rt-score slice-omit-omit-rt)
+              (rt-score slice-step-int-rt))))

@@ -1,0 +1,118 @@
+; channel-band.fk — file-backed CHANNEL Recipe witness.
+;
+; Proves the inter-cell transport shape from channel.fk:
+;   - create / append / read / read-since on a shared .fkb path
+;   - count returns after each append
+;   - payload round-trip through CHANNEL-MSG wrap/unwrap
+;   - content-addressing IS the dedup: appending the same payload
+;     at two different positions produces two list positions but
+;     ONE shared CHANNEL-MSG NodeID (node_eq is TRUE).
+;
+; The witness uses /tmp so repeated band runs don't pollute the
+; repo. channel-create overwrites any prior contents, so a stale
+; file from an earlier run is harmless.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk
+
+(do
+    (let path "/tmp/coh-channel-band.fkb")
+
+    ;; --- 1. create -------------------------------------------------
+    ;; channel-create writes an empty CHANNEL-V0 Recipe; native
+    ;; write_form_binary returns bytes-written (positive on success).
+    (let bytes-written (channel-create path))
+    (let create-score
+        (if (gt bytes-written 0) 100 0))
+
+    ;; --- 2. fresh channel has 0 messages ---------------------------
+    (let m0 (channel-read path))
+    (let empty-score
+        (if (eq (len m0) 0) 100 0))
+
+    ;; --- 3-5. append three messages, check counts ------------------
+    (let p1 (intern_trivial_string "hello"))
+    (let p2 (intern_trivial_string "world"))
+    (let p3 (intern_trivial_int 42))
+
+    (let msg1 (channel-message p1))
+    (let msg2 (channel-message p2))
+    (let msg3 (channel-message p3))
+
+    (let c1 (channel-append path msg1))
+    (let c2 (channel-append path msg2))
+    (let c3 (channel-append path msg3))
+
+    (let count-score
+        (if (and (eq c1 1) (and (eq c2 2) (eq c3 3))) 200 0))
+
+    ;; --- 6. channel-read returns all three -------------------------
+    (let all (channel-read path))
+    (let read-all-score
+        (if (eq (len all) 3) 100 0))
+
+    ;; --- 7. read-since 0 = all -------------------------------------
+    (let since0 (channel-read-since path 0))
+    (let since0-score
+        (if (eq (len since0) 3) 100 0))
+
+    ;; --- 8. read-since 1 = last two --------------------------------
+    (let since1 (channel-read-since path 1))
+    (let since1-score
+        (if (eq (len since1) 2) 100 0))
+
+    ;; --- 9. read-since 3 = empty (past the end) --------------------
+    (let since3 (channel-read-since path 3))
+    (let since3-score
+        (if (eq (len since3) 0) 100 0))
+
+    ;; --- 10. first message's payload round-trips to "hello" --------
+    (let m1-out (head all))
+    (let m1-payload (channel-msg-payload m1-out))
+    (let payload1-score
+        (if (str_eq (node_value m1-payload) "hello") 100 0))
+
+    ;; --- 11. third message's payload round-trips to 42 -------------
+    (let m3-out (head (tail (tail all))))
+    (let m3-payload (channel-msg-payload m3-out))
+    (let payload3-score
+        (if (eq (node_value m3-payload) 42) 100 0))
+
+    ;; --- DEDUP WITNESS ---------------------------------------------
+    ;; Append the same payload ("hello") again at position 3. The
+    ;; new message occupies its own list slot (count=4) but its
+    ;; CHANNEL-MSG NodeID equals msg1's — content-addressing means
+    ;; "the same payload" IS "the same message identity" regardless
+    ;; of position. Receivers comparing NodeIDs see same-content
+    ;; without negotiating any application-level identifier.
+
+    (let dup-msg (channel-message (intern_trivial_string "hello")))
+    (let c4 (channel-append path dup-msg))
+
+    (let after-dup (channel-read path))
+    (let count-after-dup-score
+        (if (and (eq c4 4) (eq (len after-dup) 4)) 100 0))
+
+    ;; Position 0 (original "hello") and position 3 (duplicate "hello")
+    ;; are different LIST CELLS but the same NodeID — the substrate
+    ;; recognizes the semantic identity automatically.
+    (let pos0 (head after-dup))
+    (let pos3 (head (tail (tail (tail after-dup)))))
+    (let dedup-score
+        (if (node_eq pos0 pos3) 200 0))
+
+    ;; And the wrapped-fresh msg1 still equals the one we read back.
+    (let msg-roundtrip-score
+        (if (node_eq msg1 pos0) 100 0))
+
+    ;; Expected total: 100+100+200+100+100+100+100+100+100+100+200+100 = 1400
+    (add create-score
+    (add empty-score
+    (add count-score
+    (add read-all-score
+    (add since0-score
+    (add since1-score
+    (add since3-score
+    (add payload1-score
+    (add payload3-score
+    (add count-after-dup-score
+    (add dedup-score msg-roundtrip-score))))))))))))

@@ -1,0 +1,65 @@
+; tests/python-bmf-exception-band.fk - reversible exception-handling rules
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+;
+; Each rule round-trips an object stream through the grammar and back to
+; tokens; the score sums the node-equality bit with the projected token
+; count. Three-kernel agreement is the proof that emit/source are honest
+; about the structure they hold.
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    (let try-except-rt
+        (py-rt "try-except-stmt"
+            (list (py-keyword "try") (py-op ":") (py-name "body0")
+                  (py-keyword "except") (py-name "ValueError")
+                  (py-op ":") (py-name "handler0"))))
+
+    (let try-except-as-rt
+        (py-rt "try-except-as-stmt"
+            (list (py-keyword "try") (py-op ":") (py-name "body1")
+                  (py-keyword "except") (py-name "ValueError")
+                  (py-keyword "as") (py-name "exc")
+                  (py-op ":") (py-name "handler1"))))
+
+    (let try-finally-rt
+        (py-rt "try-finally-stmt"
+            (list (py-keyword "try") (py-op ":") (py-name "body2")
+                  (py-keyword "finally") (py-op ":") (py-name "cleanup0"))))
+
+    (let try-except-finally-rt
+        (py-rt "try-except-finally-stmt"
+            (list (py-keyword "try") (py-op ":") (py-name "body3")
+                  (py-keyword "except") (py-name "IOError")
+                  (py-op ":") (py-name "handler2")
+                  (py-keyword "finally") (py-op ":") (py-name "cleanup1"))))
+
+    (let raise-call0-rt
+        (py-rt "raise-call0"
+            (list (py-keyword "raise") (py-name "StopIteration")
+                  (py-op "(") (py-op ")"))))
+
+    (let raise-call1-rt
+        (py-rt "raise-call1"
+            (list (py-keyword "raise") (py-name "ValueError")
+                  (py-op "(") (py-name "msg") (py-op ")"))))
+
+    (let raise-call-string-rt
+        (py-rt "raise-call-string"
+            (list (py-keyword "raise") (py-name "ValueError")
+                  (py-op "(") (py-string "bad input") (py-op ")"))))
+
+    (sum
+        (list (rt-score try-except-rt)
+              (rt-score try-except-as-rt)
+              (rt-score try-finally-rt)
+              (rt-score try-except-finally-rt)
+              (rt-score raise-call0-rt)
+              (rt-score raise-call1-rt)
+              (rt-score raise-call-string-rt))))

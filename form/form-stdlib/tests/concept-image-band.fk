@@ -1,0 +1,57 @@
+; concept-image-band.fk — image-bytes pointers reachable from Form.
+;
+; Witnesses that concept-image returns the actual paths the body
+; holds on disk under web/public/visuals/generated/.
+;
+; Numbers come from the current state of the generated directory. If
+; a regenerate step adds/removes images the score shifts — the band
+; reads the body, not a parallel projection of it.
+;
+; preludes: form-stdlib/json.fk form-stdlib/concept-image.fk
+
+(do
+    ;; lc-attunement currently has 3 gallery (0,1,2) + 3 story (0,1,2)
+    ;; in web/public/visuals/generated/. lc-circulation matches.
+    ;; lc-trust-over-fear has no generated images today.
+
+    (let att-gallery (concept-gallery-images "lc-attunement"))
+    (let att-story (concept-story-images "lc-attunement"))
+    (let att-all (concept-all-images "lc-attunement"))
+
+    (let circ-gallery (concept-gallery-images "lc-circulation"))
+    (let circ-all (concept-all-images "lc-circulation"))
+
+    (let tof-gallery (concept-gallery-images "lc-trust-over-fear"))
+    (let tof-all (concept-all-images "lc-trust-over-fear"))
+
+    ;; --- counts match the body -------------------------------------
+    (let count-score
+        (add
+            (if (eq (len att-gallery) 3) 10 0)
+        (add
+            (if (eq (len att-story) 3) 20 0)
+        (add
+            (if (eq (len att-all) 6) 30 0)
+        (add
+            (if (eq (len circ-gallery) 3) 40 0)
+        (add
+            (if (eq (len circ-all) 6) 50 0)
+            (if (eq (len tof-gallery) 0) 60 0)))))))
+
+    ;; --- honest gap: tof has no images yet -------------------------
+    (let gap-score (if (eq (len tof-all) 0) 70 0))
+
+    ;; --- path shape: head of att-gallery ends with expected suffix -
+    (defn ends-with? (s suffix)
+        (do
+            (let s-len (str_len s))
+            (let suf-len (str_len suffix))
+            (if (lt s-len suf-len) false
+                (str_eq (substring s (sub s-len suf-len) s-len) suffix))))
+
+    (let first-path (head att-gallery))
+    (let suffix-score
+        (if (ends-with? first-path "lc-attunement-0.jpg") 80 0))
+
+    ;; Expected total: 10+20+30+40+50+60 + 70 + 80 = 360
+    (add count-score (add gap-score suffix-score)))

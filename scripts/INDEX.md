@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 129
+**Total files**: 130
 
 | File | Purpose |
 |---|---|
@@ -51,6 +51,7 @@
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | !/usr/bin/env python3 |
 | [form_cli.py](form_cli.py) | !/usr/bin/env python3 |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | !/usr/bin/env python3 |
+| [framebuffer_viewer.py](framebuffer_viewer.py) | !/usr/bin/env python3 |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [generate_curated_translations.py](generate_curated_translations.py) | !/usr/bin/env python3 |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | !/usr/bin/env python3 |

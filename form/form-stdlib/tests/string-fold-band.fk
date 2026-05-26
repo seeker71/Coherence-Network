@@ -1,0 +1,70 @@
+; string-fold-band.fk — proves three-kernel parity on string_fold, the
+; Go/Rust/TS-level streaming primitive that lets Form code iterate over
+; an arbitrary-length string without piling kernel stack frames.
+;
+; Why this exists (the actual root cause from 2026-05-25):
+; source-compiler.fk's per-character recursion (fsc-find-string-from-len,
+; fsc-rules-loop) blows the Go walker's stack on python-bmf.fk past ~165
+; rules. The kernel parses 2806 lines of python-bmf.fk fine because its
+; OWN parser (tokenizeSexp) loops in Go. string_fold exposes that same
+; streaming pattern to Form code.
+;
+; The band drives string_fold from Form, then asserts the result has the
+; expected shape. Three kernels (Go/Rust/TS) must agree byte-for-byte.
+
+(do
+    ;; Identity fold — concatenate every char back to the original string.
+    ;; If string_fold genuinely iterates every byte, the result equals the
+    ;; input. No Form recursion involved.
+    (defn pass-char (acc ch) (str_concat acc ch))
+    (let identity-roundtrip (string_fold "the kernel streams" "" pass-char))
+
+    ;; Counting fold — count the bytes, returning an int. Exercises both
+    ;; that the step closure runs once per byte AND that the accumulator
+    ;; type can be anything (not just strings).
+    (defn count-step (acc _ch) (add acc 1))
+    (let counted (string_fold "abcdefghij" 0 count-step))   ; 10
+
+    ;; Search fold — find the index of the first space character. Threads
+    ;; (current-index, found-index-or-(-1)) as a pair through the fold;
+    ;; once found, subsequent iterations leave it unchanged. This is the
+    ;; shape fsc-find-string-from-len wants to take but currently recurses.
+    (defn pair-cur (p) (head p))
+    (defn pair-found (p) (head (tail p)))
+    (defn search-step (acc ch)
+        (do
+            (let cur (pair-cur acc))
+            (let found (pair-found acc))
+            (if (and (lt found 0) (str_eq ch " "))
+                (list (add cur 1) cur)
+                (list (add cur 1) found))))
+    (let search-result (string_fold "the kernel streams" (list 0 (sub 0 1)) search-step))
+    (let first-space-at (pair-found search-result))   ; 3 ("the |kernel streams")
+
+    ;; Long-input proof — fold a 1000-char string, no stack blowup. The
+    ;; whole point: arbitrary length, single Go for-loop, no Form frame
+    ;; growth. If this hangs or crashes, string_fold is recursing somewhere
+    ;; in its own implementation and the universal-translator stream
+    ;; requirement is unmet.
+    (defn build-long (acc _ch) (str_concat acc "x"))
+    (let long-input
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"   ; 50
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        (str_concat "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")))))))))) ; 500
+    (let long-roundtrip-len (str_len (string_fold long-input "" build-long))) ; 500
+
+    ;; Aggregate score so kernel agreement is one number.
+    ;;   identity-roundtrip length = 18
+    ;;   counted = 10
+    ;;   first-space-at = 3
+    ;;   long-roundtrip-len = 500
+    ;; Total = 531
+    (add (add (str_len identity-roundtrip) counted)
+         (add first-space-at long-roundtrip-len)))

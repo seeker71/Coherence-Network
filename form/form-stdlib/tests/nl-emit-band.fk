@@ -1,0 +1,76 @@
+; nl-emit-band.fk — anchor ↔ i18n corpus bridge round-trips.
+;
+; Witnesses that (anchor, locale) → surface and (surface, locale) →
+; anchor compose through the i18n corpus the body already holds.
+; The numbers below are observed from web/messages/{en,de,es,id}.json
+; — if a translator hand-edits one of those leaves the score shifts,
+; which is what we want: the band is grounded in real corpus state,
+; not a parallel ice projection of it.
+;
+; Each locale loads exactly once into a local recipe; downstream
+; probes reuse those handles. Rust today runs Form without GC, so
+; load-once-reuse-many is the discipline that keeps the band light.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/nl-emit.fk
+
+(do
+    (let en (i18n-load "en"))
+    (let de (i18n-load "de"))
+    (let es (i18n-load "es"))
+    (let id (i18n-load "id"))
+    (let locales (list (list "en" en) (list "de" de) (list "es" es) (list "id" id)))
+
+    (let save (nl-binding-save))
+    (let back (nl-binding-back))
+
+    ;; --- single-locale emission ------------------------------------
+    (let emit-score
+        (add
+            (if (str_eq (nl-emit-from save en) "Save") 10 0)
+        (add
+            (if (str_eq (nl-emit-from save de) "Speichern") 20 0)
+        (add
+            (if (str_eq (nl-emit-from save es) "Guardar") 30 0)
+            (if (str_eq (nl-emit-from save id) "Simpan") 40 0)))))
+
+    ;; --- parallel emission -----------------------------------------
+    (let save-all (nl-emit-all save locales))
+    (let back-all (nl-emit-all back locales))
+    (let parallel-score
+        (add
+            (if (eq (len save-all) 4) 50 0)
+            (if (eq (len back-all) 4) 60 0)))
+
+    ;; --- inverse: surface → anchor candidate -----------------------
+    ;; nl-sense-section-from walks one section's pairs; the matching
+    ;; leaf's key-path comes back. "Speichern" in de's common section
+    ;; → save.
+    (let de-sense (nl-sense-section-from de "common" "Speichern"))
+    (let en-sense (nl-sense-section-from en "common" "Save"))
+    (let id-sense (nl-sense-section-from id "common" "Simpan"))
+
+    (defn first-key-eq? (matches expected)
+        (if (nil? matches) 0
+            (if (str_eq (head (tail (head matches))) expected) 1 0)))
+
+    (let sense-score
+        (add
+            (mul (first-key-eq? de-sense "save") 70)
+        (add
+            (mul (first-key-eq? en-sense "save") 80)
+            (mul (first-key-eq? id-sense "save") 90))))
+
+    ;; --- round-trip: emit then sense recovers the binding ----------
+    (let saved-path (head (tail save)))
+    (let rt-path (head en-sense))
+    (defn paths-eq? (a b)
+        (if (eq (len a) (len b))
+            (if (eq (len a) 0) 1
+                (if (str_eq (head a) (head b))
+                    (paths-eq? (tail a) (tail b))
+                    0))
+            0))
+    (let roundtrip-score (mul (paths-eq? saved-path rt-path) 100))
+
+    ;; Expected total: 10+20+30+40 + 50+60 + 70+80+90 + 100 = 550
+    (add emit-score (add parallel-score (add sense-score roundtrip-score))))

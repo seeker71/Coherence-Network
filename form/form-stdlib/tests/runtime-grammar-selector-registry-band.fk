@@ -5,7 +5,7 @@
 ; file by its filename extension. This proof does not preload or name any
 ; specific language grammar.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk
 
 section [form.action] {
     def proof_ok(capability) = 1;

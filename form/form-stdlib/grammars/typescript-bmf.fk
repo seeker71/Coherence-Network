@@ -1,28 +1,12 @@
 ; grammars/typescript-bmf.fk - TypeScript grammar as native BMF object rules
+;
+; Per-dialect category constants (TS-BMF-*) are declared as data in
+; form-stdlib/form-ontology.json and emitted into
+; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
+; file references them as free identifiers; load dialect-categories.fk as
+; a prelude before this file.
 
 (do
-    (let TS-BMF-IMPORT       (make_nodeid 1 2 99 601))
-    (let TS-BMF-EXPORT-CONST (make_nodeid 1 2 99 602))
-    (let TS-BMF-FUNCTION     (make_nodeid 1 2 99 603))
-    (let TS-BMF-CLASS        (make_nodeid 1 2 99 604))
-    (let TS-BMF-INTERFACE    (make_nodeid 1 2 99 605))
-    (let TS-BMF-TYPE         (make_nodeid 1 2 99 606))
-    (let TS-BMF-CALL         (make_nodeid 1 2 99 607))
-    (let TS-BMF-AWAIT        (make_nodeid 1 2 99 608))
-    (let TS-BMF-JSX          (make_nodeid 1 2 99 609))
-    (let TS-BMF-RETURN       (make_nodeid 1 2 99 610))
-    (let TS-BMF-ASSIGN       (make_nodeid 1 2 99 611))
-    (let TS-BMF-MEMBER       (make_nodeid 1 2 99 612))
-    (let TS-BMF-INDEX        (make_nodeid 1 2 99 613))
-    (let TS-BMF-IF           (make_nodeid 1 2 99 614))
-    (let TS-BMF-FOR          (make_nodeid 1 2 99 615))
-    (let TS-BMF-ARROW        (make_nodeid 1 2 99 616))
-    (let TS-BMF-ARRAY        (make_nodeid 1 2 99 617))
-    (let TS-BMF-OBJECT       (make_nodeid 1 2 99 618))
-    (let TS-BMF-ENUM         (make_nodeid 1 2 99 619))
-    (let TS-BMF-OPTIONAL     (make_nodeid 1 2 99 620))
-    (let TS-BMF-TEMPLATE     (make_nodeid 1 2 99 621))
-
     (defn ts-src-keyword (value) (bmf-atom "typescript-keyword" value))
     (defn ts-src-name (value) (bmf-atom "typescript-name" value))
     (defn ts-src-op (value) (bmf-atom "typescript-op" value))

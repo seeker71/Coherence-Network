@@ -1,0 +1,73 @@
+; python-bmf-typeann-band.fk - Python type-annotation reversible band
+;
+; Exercises the rules added for substrate-Python signatures:
+;   var-annotated, var-annotated-name, annotated-assign-int (source-action),
+;   return-ann, def-typed-ret, def-typed-param-ret.
+;
+; Each rule round-trips a positional token stream; the band sum must be
+; byte-identical across Go / Rust / TypeScript kernels.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    ; --- bare variable annotation: x: int
+    (let var-annotated-rt
+        (py-rt "var-annotated"
+            (list (py-name "x") (py-op ":") (py-name "int"))))
+
+    ; --- annotated assignment with int value: x: int = 5
+    (let var-annotated-int-rt
+        (py-rt "annotated-assign-int"
+            (list (py-name "x") (py-op ":") (py-name "int")
+                  (py-op "=") (py-int "5"))))
+
+    ; --- annotated assignment with identifier value: x: T = source
+    (let var-annotated-name-rt
+        (py-rt "var-annotated-name"
+            (list (py-name "x") (py-op ":") (py-name "T")
+                  (py-op "=") (py-name "source"))))
+
+    ; --- bare typed parameter pair: x: int
+    (let typed-param-rt
+        (py-rt "typed-param"
+            (list (py-name "x") (py-op ":") (py-name "int"))))
+
+    ; --- return-annotation suffix: -> int
+    (let return-ann-rt
+        (py-rt "return-ann"
+            (list (py-op "->") (py-name "int"))))
+
+    ; --- def with return annotation + pass body: def main() -> int: pass
+    (let def-typed-ret-rt
+        (py-rt "def-typed-ret"
+            (list (py-keyword "def") (py-name "main")
+                  (py-op "(") (py-op ")")
+                  (py-op "->") (py-name "int")
+                  (py-op ":") (py-keyword "pass"))))
+
+    ; --- def with typed parameter + return annotation + pass:
+    ;     def f(x: int) -> bool: pass
+    (let def-typed-param-ret-rt
+        (py-rt "def-typed-param-ret"
+            (list (py-keyword "def") (py-name "f")
+                  (py-op "(")
+                  (py-name "x") (py-op ":") (py-name "int")
+                  (py-op ")")
+                  (py-op "->") (py-name "bool")
+                  (py-op ":") (py-keyword "pass"))))
+
+    (sum
+        (list (rt-score var-annotated-rt)
+              (rt-score var-annotated-int-rt)
+              (rt-score var-annotated-name-rt)
+              (rt-score typed-param-rt)
+              (rt-score return-ann-rt)
+              (rt-score def-typed-ret-rt)
+              (rt-score def-typed-param-ret-rt))))

@@ -5,41 +5,13 @@
 ; This file keeps that shape in Form data so Python, Go, Rust, TypeScript,
 ; and future languages can reuse the same compiler bands.
 
+; Per-dialect BML-AST-* category constants are declared as data in
+; form-stdlib/form-ontology.json and emitted into
+; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
+; file references them as free identifiers; load dialect-categories.fk as
+; a prelude before this file.
+
 (do
-    ;; --- BML object categories --------------------------------------
-
-    (let BML-AST-PACKAGE       (make_nodeid 1 2 100 1))
-    (let BML-AST-IMPORT        (make_nodeid 1 2 100 2))
-    (let BML-AST-CLASS         (make_nodeid 1 2 100 3))
-    (let BML-AST-INTERFACE     (make_nodeid 1 2 100 4))
-    (let BML-AST-TEMPLATE      (make_nodeid 1 2 100 5))
-    (let BML-AST-SECTION       (make_nodeid 1 2 100 6))
-    (let BML-AST-FIELD         (make_nodeid 1 2 100 7))
-    (let BML-AST-CONST         (make_nodeid 1 2 100 8))
-    (let BML-AST-METHOD        (make_nodeid 1 2 100 9))
-    (let BML-AST-RETURN        (make_nodeid 1 2 100 10))
-    (let BML-AST-INT           (make_nodeid 1 2 100 11))
-    (let BML-AST-STRING        (make_nodeid 1 2 100 12))
-    (let BML-AST-NAME          (make_nodeid 1 2 100 13))
-    (let BML-AST-ADD           (make_nodeid 1 2 100 14))
-    (let BML-AST-CHOOSE        (make_nodeid 1 2 100 15))
-    (let BML-AST-FAIL          (make_nodeid 1 2 100 16))
-    (let BML-AST-CUT           (make_nodeid 1 2 100 17))
-    (let BML-AST-SAVE          (make_nodeid 1 2 100 18))
-    (let BML-AST-RESTORE       (make_nodeid 1 2 100 19))
-    (let BML-AST-DISCARD       (make_nodeid 1 2 100 20))
-    (let BML-AST-THROW         (make_nodeid 1 2 100 21))
-    (let BML-AST-IF            (make_nodeid 1 2 100 22))
-    (let BML-AST-WHILE         (make_nodeid 1 2 100 23))
-    (let BML-AST-FOR           (make_nodeid 1 2 100 24))
-    (let BML-AST-WITH          (make_nodeid 1 2 100 25))
-    (let BML-AST-TRY           (make_nodeid 1 2 100 26))
-    (let BML-AST-BLOCK         (make_nodeid 1 2 100 27))
-    (let BML-AST-BREAK         (make_nodeid 1 2 100 28))
-    (let BML-AST-CONTINUE      (make_nodeid 1 2 100 29))
-    (let BML-AST-CHAR          (make_nodeid 1 2 100 32))
-    (let BML-AST-ARRAY         (make_nodeid 1 2 100 33))
-
     ;; --- source objects ---------------------------------------------
 
     (defn bml-src-keyword (value) (bmf-atom "bml-keyword" value))

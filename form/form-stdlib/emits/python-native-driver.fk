@@ -1,0 +1,18 @@
+; emits/python-native-driver.fk — invoke the Python-native emitter
+;
+; Phase 1: the category table is read from a compiled .fkb (built by
+; form/scripts/build_form_compiler_artifact.sh --categories), not from
+; a Form literal inside the emitter. The lens
+; (pn-cat-table-from-artifact) lifts the (name code) pairs out of the
+; deserialized recipe tree; this driver hands the lens its .fkb path
+; and points the emitter at the output Python file.
+;
+; Run via form/scripts/emit_native_python.sh — that script builds the
+; .fkb first, then loads core.fk + python-native.fk + this driver.
+
+(do
+    (let categories-fkb "form/.cache/emit_native_python/python-bmf-categories.fkb")
+    (let out-path "kernels/python_bmf/objects.py")
+    (let nbytes (pn-emit-objects-file categories-fkb out-path))
+    (print "wrote kernels/python_bmf/objects.py from python-bmf-categories.fkb")
+    nbytes)

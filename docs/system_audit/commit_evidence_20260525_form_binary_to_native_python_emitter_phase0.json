@@ -1,0 +1,32 @@
+{
+  "date": "2026-05-25",
+  "branch": "claude/amazing-fermi-3OVOZ",
+  "spec": "specs/form-binary-to-native-python-emitter.md",
+  "phase": "0",
+  "intent": "Restore spec composted earlier today. Phase 0: Form-native emitter writing real Python via the kernel's write_file_text host call. First emitted module: kernels/python_bmf/objects.py.",
+  "what_changed": {
+    "spec_restored": "specs/form-binary-to-native-python-emitter.md",
+    "form_native_emitter": "form/form-stdlib/emits/python-native.fk — produces Python source via write_file_text",
+    "emitter_driver": "form/form-stdlib/emits/python-native-driver.fk — (pn-emit-all) invocation",
+    "emitter_script": "form/scripts/emit_native_python.sh — source-compiles core.fk then runs the kernel against the emitter",
+    "semantic_scaffold": "form/form-stdlib/emits/semantic-lowerer.fk + form/form-stdlib/lenses/symbol-source.fk",
+    "scaffold_band": "form/form-stdlib/tests/python-native-emitter-band.fk",
+    "build_script": "form/scripts/build_form_compiler_artifact.sh",
+    "diff_tool": "form/scripts/diff_form_artifacts.py — structural diff with artifact-local id remapping",
+    "perf_harness": "scripts/perf_compare_native_python.sh — Phase-5 stub",
+    "sdk_bridge": "kernels/python_bmf/sdk.py — hand-tuned (NodeID, intern, SourceSpan, .fkb read/write, Lens)",
+    "emitted_module": "kernels/python_bmf/objects.py — produced by the Form emitter via write_file_text"
+  },
+  "false_path_caught": "First pass hand-wrote objects.py / parser.py / rules.py / section_parser.py / form_action.py / compiler.py in kernels/python_bmf/ as 'destination shape'. User caught it: same false-start pattern as the previously-composted attempt — different surface, same sin. Hand-written compiler modules deleted. Only sdk.py / __init__.py / README.md remain hand-tuned; every other .py is emitter output.",
+  "proof": {
+    "command": "form/scripts/emit_native_python.sh && python3 -m py_compile kernels/python_bmf/*.py && python3 -c 'from kernels.python_bmf.objects import PyBmfCategory, py_keyword; assert int(PyBmfCategory.IMPORT) == 501; assert int(PyBmfCategory.MATCH_AS) == 574; assert py_keyword(\"def\").value == \"def\"'",
+    "result": "PASS — Form recipes ran through form-kernel-go, wrote kernels/python_bmf/objects.py via write_file_text, the Python compiles, imports, and the IntEnum/atoms work correctly. PyBmfCategory.IMPORT == 501, PyBmfCategory.MATCH_AS == 574, 74 categories total."
+  },
+  "next_breaths": [
+    "Phase 1: extend pn-categories to read from python-bmf.fk's compiled .fkb via read_form_binary + lens lookup so divergence is impossible.",
+    "Phase 2: pn-emit-parser-module — port python-source-scan-text + layout derivation.",
+    "Phase 3: pn-emit-rules-module — walk python-bmf-rules, render each as Rule dataclass entry.",
+    "Phase 4: pn-emit-section-parser / pn-emit-form-action / pn-emit-compiler.",
+    "Phase 5: parity suite + perf comparison; populate scripts/perf_compare_native_python.sh findings."
+  ]
+}

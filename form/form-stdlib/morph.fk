@@ -1,0 +1,77 @@
+; morph.fk — continuous-domain morphing between two embedding anchors.
+;
+; The body's substrate primitive: combination (5) of
+; docs/coherence-substrate/cross-domain-universal-transit.form —
+; continuous-domain morphing. Two embedding-Recipes A and B define
+; endpoints; a morph walks linear-interpolation between them, interning
+; each waypoint as its own embedding-Recipe. The trail of NodeIDs IS
+; the substrate-path between the anchors.
+;
+; Integer arithmetic only — the kernel has no float native yet, so
+; component-wise interpolation uses integer division. The grain of
+; the path mirrors the grain of the kernel; that's honest, not a bug.
+; When (b-a)*t is divisible by steps, the waypoint sits exactly on
+; the line; otherwise it rounds toward zero. Distance still composes
+; monotonically with t.
+;
+; Composes with embedding-as-recipe.fk: every waypoint is a Recipe
+; under the EMBEDDING_BLUEPRINT, content-addressed, deduped across
+; modalities. The path A→B and the path B→A traverse the SAME
+; NodeIDs (modulo direction) when the integer arithmetic agrees.
+;
+; preludes: form-stdlib/embedding-as-recipe.fk
+
+(do
+    ;; --- one component, one step ----------------------------------
+    ;;
+    ;; morph-component a b t steps → a + ((b-a) * t) / steps,
+    ;; integer-arithmetic only. At t=0 returns a; at t=steps returns b.
+
+    (defn morph-component (a b t steps)
+        (add a (div (mul (sub b a) t) steps)))
+
+    ;; --- one full vector at step t --------------------------------
+    ;;
+    ;; Walks parallel a/b lists, builds the reversed accumulator of
+    ;; interpolated components; morph-vector reverses once.
+
+    (defn morph-vector-loop (a-list b-list t steps acc)
+        (if (eq (len a-list) 0) acc
+            (if (eq (len b-list) 0) acc
+                (morph-vector-loop (tail a-list) (tail b-list) t steps
+                    (cons (morph-component (head a-list) (head b-list) t steps)
+                          acc)))))
+
+    (defn morph-vector (a-list b-list t steps)
+        (embedding-reverse
+            (morph-vector-loop a-list b-list t steps (empty))))
+
+    ;; --- one waypoint as an embedding-Recipe ----------------------
+    ;;
+    ;; Extracts the int-components from each anchor, interpolates,
+    ;; interns the result as a fresh embedding-Recipe. Content-
+    ;; addressing means t=0 returns the same NodeID as A; t=steps
+    ;; returns the same NodeID as B.
+
+    (defn morph-at (a-emb b-emb t steps)
+        (embedding-from-vector
+            (morph-vector
+                (embedding-children-as-list a-emb)
+                (embedding-children-as-list b-emb)
+                t steps)))
+
+    ;; --- the full substrate-path ----------------------------------
+    ;;
+    ;; morph-path-loop walks t from steps down to 0, prepending each
+    ;; waypoint to acc. Because we count down, the natural cons order
+    ;; produces the path A→B without a reversal.
+
+    (defn morph-path-loop (a-emb b-emb t steps acc)
+        (if (lt t 0) acc
+            (morph-path-loop a-emb b-emb (sub t 1) steps
+                (cons (morph-at a-emb b-emb t steps) acc))))
+
+    (defn morph-path (a-emb b-emb steps)
+        (morph-path-loop a-emb b-emb steps steps (empty)))
+
+    0)

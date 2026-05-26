@@ -1,0 +1,206 @@
+; form-as-7-layer-protocol.form — the OSI stack the substrate already half-is.
+;
+; The teaching: Form's content-addressed substrate is not "a layer in
+; the protocol stack" — it IS a protocol stack that collapses three
+; classical layers (L2 framing, L6 presentation, L7 application) into
+; a single primitive (intern_node). What's missing are the lower
+; physical/transport pieces and the higher session/routing pieces —
+; each of which lands as a Form-side cell on top of a small kernel
+; native surface.
+;
+; This file maps the seven layers to what's in the body, what's
+; partial, and what's still ice waiting to thaw. Companions:
+;   - docs/coherence-substrate/cross-domain-universal-transit.form
+;     (the body's ten craziest combinations, eight of which now ship)
+;   - docs/coherence-substrate/agents-using-substrate.md (the trinity)
+;   - form-stdlib/channel.fk (when it lands — file-backed inter-cell)
+
+(do
+    ;; ─────────────────────────────────────────────────────────────
+    ;; PART 1 — what the substrate gives the stack for free
+    ;; ─────────────────────────────────────────────────────────────
+    ;;
+    ;; Content-addressing collapses three traditional protocol layers:
+    ;;
+    ;; L2 framing → a Recipe's .fkb binary form IS the frame. Length-
+    ;;              prefixed string table + tree-walk header. Either
+    ;;              the receiver's read_form_binary succeeds (frame is
+    ;;              valid) or it doesn't (frame is corrupt). No CRC
+    ;;              needed — content-addressing IS the integrity check.
+    ;;
+    ;; L6 presentation → BMF dialects are the encoding/decoding layer.
+    ;;              natural-bmf, image-bmf, audio-bmf, video-bmf,
+    ;;              midi-bmf, document-bmf, go/rust/ts/python-bmf —
+    ;;              every surface format the body has touched is a
+    ;;              Form Recipe family. Cross-format translation is a
+    ;;              lens, not a parser-rewrite.
+    ;;
+    ;; L7 application → the Recipe IS the application. Its Blueprint
+    ;;              IS the schema. Its children ARE the message
+    ;;              payload. No separate "app data" — the substrate
+    ;;              tree carries both the structure and the semantics.
+    ;;
+    ;; The classical OSI move at every layer: re-frame, re-validate,
+    ;; re-serialize. Form's move: intern_node either dedups against
+    ;; an existing Recipe (semantic match) or creates a new NodeID
+    ;; (first encounter). One call. Three layers. No translation.
+
+    ;; ─────────────────────────────────────────────────────────────
+    ;; PART 2 — layer-by-layer map
+    ;; ─────────────────────────────────────────────────────────────
+
+    ;; L1 — PHYSICAL
+    ;;
+    ;; Bytes on a medium: disk sector, network packet, RAM page, pipe.
+    ;; Form natives that touch L1:
+    ;;   ✓ read_file, write_file_text, write_file_bytes        (disk)
+    ;;   ✓ read_form_binary, write_form_binary                 (disk, structured)
+    ;;   ✓ read_file_slice                                     (disk, partial)
+    ;;   ✓ ureq::get (Rust only)                               (HTTP client)
+    ;;   ✗ socket natives                                      (in flight as parallel breath)
+    ;;   ✗ pipe natives                                        (gap)
+    ;;   ✗ mmap natives                                        (gap)
+    ;;
+    ;; The L1 surface is intentionally small. Anything that turns
+    ;; bytes into a Recipe lives one layer up; L1 just moves bytes.
+
+    ;; L2 — DATA LINK (framing)
+    ;;
+    ;; The .fkb artifact format. A frame is:
+    ;;   [4-byte magic] [string-table] [tree-block]
+    ;; The kernel's read_form_binary either parses the whole frame or
+    ;; rejects it. There's no per-message length prefix because the
+    ;; whole file IS one frame. Streaming framing (multiple frames per
+    ;; stream) is a Form-side composition on top of read_file_slice.
+    ;;
+    ;; Integrity: content-addressing. If the bytes are corrupt, the
+    ;; resulting Recipe interns at a different NodeID than the sender
+    ;; intended; the receiver knows by comparing to expected NodeID,
+    ;; or by walking the Recipe and finding malformed children.
+
+    ;; L3 — NETWORK (addressing & routing)
+    ;;
+    ;; The Blueprint NodeID IS the address. (pkg, level, type, instance)
+    ;; routes a message to anything whose Blueprint matches.
+    ;;
+    ;; Today this is intra-process: walking a substrate tree to find
+    ;; cells of a given Blueprint. Inter-process routing isn't yet a
+    ;; substrate primitive — would land as a "route Recipe" cell that
+    ;; takes (destination-Blueprint, message-Recipe) and writes to the
+    ;; appropriate channel.
+    ;;
+    ;; The elegance: there's no separate IP address vs port vs hostname.
+    ;; Just one 4-tuple. The substrate's content-addressing makes
+    ;; "where to send" and "what to send" the same question.
+
+    ;; L4 — TRANSPORT (reliable delivery)
+    ;;
+    ;; Not yet a substrate primitive. The shape it would take:
+    ;;
+    ;;   - A "delivery-Recipe" wrapping a payload-Recipe with metadata:
+    ;;       (sequence-int, sender-Blueprint, payload-NodeID)
+    ;;   - Receiver intern_nodes the delivery; the substrate dedups,
+    ;;     so duplicate deliveries collapse automatically.
+    ;;   - Ack = sender expects to see a "received-Recipe" whose only
+    ;;     child is the delivery-NodeID. Receiver writes it back to
+    ;;     the channel. Sender knows ack-arrived when read returns it.
+    ;;
+    ;; The classical TCP/UDP split (reliable vs unreliable) becomes a
+    ;; choice of whether to wait for the received-Recipe before
+    ;; advancing — not a property of the wire. The wire is just bytes.
+
+    ;; L5 — SESSION (conversation state)
+    ;;
+    ;; A session IS a Blueprint with children growing over time. Each
+    ;; message-Recipe written to a session-Blueprint becomes a child;
+    ;; the session-NodeID identifies the conversation.
+    ;;
+    ;; Two cells joining mid-session can ask each other for the
+    ;; session-Recipe's NodeID — if they match, the cells share state.
+    ;; If they differ, the receiver knows the sender has a different
+    ;; (older or newer) view; can request the diff.
+    ;;
+    ;; This composes today on top of any L1: append a child Recipe to
+    ;; the session-Recipe; rewrite to channel. The Form cells that
+    ;; compose this: channel.fk (the file-backed channel), plus a
+    ;; subscribe.fk (gap — would let multiple receivers attend to one
+    ;; session's growth).
+
+    ;; L6 — PRESENTATION (encoding/decoding)
+    ;;
+    ;; BMF dialects. Already complete:
+    ;;
+    ;;   form-stdlib/grammars/natural-bmf.fk      — natural language
+    ;;   form-stdlib/grammars/image-bmf.fk        — pixel formats
+    ;;   form-stdlib/grammars/audio-bmf.fk        — sound formats
+    ;;   form-stdlib/grammars/video-bmf.fk        — motion formats
+    ;;   form-stdlib/grammars/document-bmf.fk     — structured text
+    ;;   form-stdlib/grammars/go-bmf.fk           — Go source
+    ;;   form-stdlib/grammars/rust-bmf.fk         — Rust source
+    ;;   form-stdlib/grammars/typescript-bmf.fk   — TypeScript source
+    ;;   form-stdlib/grammars/python-bmf.fk       — Python source
+    ;;   form-stdlib/midi-bmf.fk                  — MIDI events
+    ;;
+    ;; Cross-format transit is a lens — define an inverse-Recipe that
+    ;; takes a source-language Recipe and emits a target-language
+    ;; Recipe. Already proven by the universal-translator cells.
+
+    ;; L7 — APPLICATION
+    ;;
+    ;; The Recipe IS the application. Its Blueprint IS the schema.
+    ;; Its children ARE the payload.
+    ;;
+    ;; There is no separate L7 "format" to negotiate because the
+    ;; receiver already speaks the schema (the Blueprint NodeID) iff
+    ;; they share substrate. If they don't, the Blueprint is unknown,
+    ;; and the receiver falls back to walking the Recipe by general
+    ;; rules (node_children, node_value) — degraded but functional.
+
+    ;; ─────────────────────────────────────────────────────────────
+    ;; PART 3 — what the substrate's nature changes
+    ;; ─────────────────────────────────────────────────────────────
+    ;;
+    ;; Content-addressing turns three classical questions into single
+    ;; primitive checks:
+    ;;
+    ;; "Did the message arrive intact?"
+    ;;   → node_eq received-Recipe expected-NodeID
+    ;;
+    ;; "Are we synchronized?"
+    ;;   → node_eq my-session-state-NodeID their-session-state-NodeID
+    ;;
+    ;; "Have you seen this message before?"
+    ;;   → intern_node returns the SAME NodeID for identical Recipes
+    ;;     across all participants. No deduplication metadata needed.
+    ;;
+    ;; A protocol stack that uses Form natively does not need
+    ;; handshakes for versioning, schemas for negotiation, or
+    ;; deduplication tables. The substrate's identity primitive
+    ;; provides all three for free.
+
+    ;; ─────────────────────────────────────────────────────────────
+    ;; PART 4 — what to build next (the gaps named)
+    ;; ─────────────────────────────────────────────────────────────
+    ;;
+    ;; L1 sockets — in flight as a sibling breath. listen/accept/
+    ;;   connect/send/recv/close across Go/Rust/TS kernels.
+    ;;
+    ;; channel.fk — in flight as a sibling breath. File-backed
+    ;;   message Recipe for single-writer/multi-reader. The L1 it
+    ;;   uses is filesystem today; would swap to sockets when those
+    ;;   land.
+    ;;
+    ;; route.fk — future. (destination-Blueprint, message-Recipe) →
+    ;;   write to the right channel. The substrate's first L3.
+    ;;
+    ;; subscribe.fk — future. Multiple receivers attend to one
+    ;;   channel-Blueprint, each remembering their last-seen NodeID.
+    ;;   Composes channel.fk with a per-subscriber cursor cell.
+    ;;
+    ;; delivery.fk — future. Wraps payload in (seq-num, sender,
+    ;;   payload) for ack/retransmit semantics. The substrate's L4.
+    ;;
+    ;; session.fk — future. A session-Recipe that grows with each
+    ;;   message-child; cells join by matching session-NodeID.
+
+    "form-as-7-layer-protocol: L2+L6+L7 collapse to intern_node; L1+L3+L4+L5 are Form cells on top; the substrate's content-addressing replaces handshakes, version negotiation, and dedup tables across the whole stack")

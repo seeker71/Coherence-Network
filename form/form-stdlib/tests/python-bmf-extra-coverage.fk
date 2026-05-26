@@ -1,6 +1,6 @@
 ; tests/python-bmf-extra-coverage.fk - reversible Python BMF breadth
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
 
 (do
     (defn rt-score (rt)

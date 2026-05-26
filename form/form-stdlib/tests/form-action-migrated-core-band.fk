@@ -1,7 +1,7 @@
 ; form-action-migrated-core-band.fk - migrated core/test pattern in form.action.
 ; The source compiler lowers this BML-shaped action section above the kernel.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     def migrated_square(n) = mul(n, n);

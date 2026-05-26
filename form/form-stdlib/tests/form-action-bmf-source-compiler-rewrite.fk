@@ -2,7 +2,7 @@
 ; runtime body as BMF objects, while keeping compiler helpers in the ambient
 ; Form runtime until module bundles can be emitted as standalone recipes.
 ;
-; preludes: form-stdlib/source-compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk form-stdlib/compiler.fk
 
 (do
     (defn fa-ident (name)
@@ -128,15 +128,19 @@
                 (str_concat ";"
                     (str_concat quote " => bml-emit-field;\n    }\n")))))
     (let sample (str_concat "section " rule-source))
-    (let compiled (form-source-compile-text sample))
+    ;; Recipe-emit path (a12b8f71): section bindings live in the sibling
+    ;; .fkb; the returned text is a walk_recipe_here driver. Check the
+    ;; driver shape + the sidecar's existence on disk.
+    (let out-path "/tmp/form-test-fa-bmf-source-compiler-rewrite")
+    (let compiled (form-source-compile-text sample out-path))
     (let rule-score
         (add
-            (if (fsc-contains? compiled "bml-bmf-rules") 10 0)
-            (if (fsc-contains? compiled "form-bmf-second") 20 0)))
+            (if (fsc-contains? compiled "walk_recipe_here") 10 0)
+            (if (fsc-contains? compiled "read_form_binary") 20 0)))
     (let object-score
         (add
-            (if (fsc-contains? compiled "bml-name") 30 0)
-            (if (fsc-contains? compiled "bmf-identity-inverse") 40 0)))
+            (if (fsc-contains? compiled ".bml.bmf.fkb") 30 0)
+            (if (gt (file_size (str_concat out-path ".bml.bmf.fkb")) 0) 40 0)))
 
     (add (add rule-score object-score)
     (add (if (bmf-roundtrip-node-eq? do-rt) 100 0)

@@ -1,0 +1,47 @@
+{
+  "date": "2026-05-25",
+  "branch": "claude/amazing-fermi-3OVOZ",
+  "spec": "specs/form-binary-to-native-python-emitter.md",
+  "phase": "1 (round-trip surfaced)",
+  "intent": "Extend Phase 0 to the full compiler: parser, rules, section_parser, form_action, compiler, decompiler all materialized through the kernel. Surface missing cases via round-trip testing on parity-suite demos.",
+  "what_changed": {
+    "templates_added": "form/form-stdlib/emits/python-native-templates/{parser,rules,section_parser,form_action,compiler,decompiler}.py — canonical Python source the Form emitter materializes through the kernel via read_file + write_file_text",
+    "emitter_extended": "form/form-stdlib/emits/python-native.fk — pn-emit-all now writes 6 emitted modules (objects synthesized; 5 template-emitted) plus objects.py composite classes (BmfStatement, BmfStatementTree, BmfModule)",
+    "compiler_roundtrip_flag": "compiler.py gained --roundtrip; decompiler.py reads .fkb back to Python source",
+    "tests": "kernels/python_bmf/tests/{test_emitted_objects,test_roundtrip}.py — 8 tests, all passing",
+    "known_gaps_doc": "kernels/python_bmf/KNOWN_GAPS.md — catalogues every gap surfaced through round-trip testing",
+    "spec_updates": "kernels/python_bmf/README.md describes the dual emission shapes (synthesized + template-emitted) and the constraint"
+  },
+  "round_trip_results": {
+    "demos_tested": 8,
+    "semantic_byte_equivalent": 8,
+    "byte_identical_after_normalization": 6,
+    "gaps_surfaced": [
+      "trailing # comments stripped by scanner — affects 2/8 demos",
+      "horizontal whitespace runs collapse",
+      "string quote-style not preserved",
+      "operator-adjacency rules naive",
+      "rule registry covers 12/~50 python-bmf.fk patterns",
+      "no inverse actions yet — Rule.reverse always None",
+      "multi-line statement continuation not handled",
+      "section_parser dialect handlers beyond `python` not registered"
+    ]
+  },
+  "key_fix_landed": "compiler.py + rules.py — content-addressing was collapsing distinct occurrences of structurally-identical statements (two `def foo(a,b):` blocks with different bodies got swapped). Fixed by wrapping rule emits in a `statement-occurrence` intern that carries the span; preserves Recipe HOW-IT-HAPPENS distinction while keeping Blueprint structural equivalence intact.",
+  "proof": {
+    "commands": [
+      "form/scripts/emit_native_python.sh",
+      "python3 -m unittest kernels.python_bmf.tests",
+      "python3 -m kernels.python_bmf.compiler --roundtrip form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.py --out /tmp/demo.rt.py"
+    ],
+    "result": "PASS — 8 emitted modules compile (objects synthesized, parser/rules/section_parser/form_action/compiler/decompiler template-emitted via kernel write_file_text). 8 tests green. 8/8 demos semantic round-trip."
+  },
+  "next_breaths": [
+    "Preserve trailing # comments — emit py-comment atoms.",
+    "Add reverse actions to every rule so the decompiler uses the rule's own inverse rather than recovered tokens.",
+    "Lower form.action: COND, CALL, MATH, COMPARE, LOGIC arms — replace `unhandled` routings.",
+    "Register dialect handlers for form.bml, form.recipe, form.action in section_parser.",
+    "Read pn-categories from python-bmf.fk's compiled .fkb via read_form_binary instead of the Form-side literal.",
+    "Step 2 of Universal Translator: sibling emits/<lang>-native.fk for Go, Rust, TypeScript, C++."
+  ]
+}
