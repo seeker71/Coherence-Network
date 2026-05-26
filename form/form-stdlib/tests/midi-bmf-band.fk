@@ -1,0 +1,171 @@
+; midi-bmf-band.fk — MIDI codec as Form Recipe family witness.
+;
+; Proves combination (2) of
+; docs/coherence-substrate/cross-domain-universal-transit.form: a codec's
+; elementary unit IS a Recipe. The bytestream is a Form sequence;
+; content-addressing dedups repeated structures automatically.
+;
+; The song: "Mary Had a Little Lamb" — first 4 notes E4 D4 C4 D4 played
+; as note-on / note-off pairs at standard MIDI ticks (480 per quarter
+; note, channel 0, velocity 100). Eight events total.
+;
+; preludes: form-stdlib/json.fk form-stdlib/midi-bmf.fk
+
+(do
+    ;; --- the song's eight events ----------------------------------
+    ;;
+    ;; (delta channel pitch velocity). MIDI pitches: E4=64, D4=62, C4=60.
+    ;; delta=0 on the note-on means "press immediately"; delta=480 on the
+    ;; note-off means "release one quarter-note later".
+
+    (let ev1 (midi-note-on  0   0 64 100))
+    (let ev2 (midi-note-off 480 0 64 0))
+    (let ev3 (midi-note-on  0   0 62 100))
+    (let ev4 (midi-note-off 480 0 62 0))
+    (let ev5 (midi-note-on  0   0 60 100))
+    (let ev6 (midi-note-off 480 0 60 0))
+    (let ev7 (midi-note-on  0   0 62 100))
+    (let ev8 (midi-note-off 480 0 62 0))
+
+    ;; --- accessor witness (100) ------------------------------------
+    ;;
+    ;; Each event answers its four fields. We check every event so a
+    ;; per-field bug in either blueprint can't hide.
+
+    (let acc-ok
+        (add (if (eq (midi-event-delta    ev1)   0) 1 0)
+        (add (if (eq (midi-event-channel  ev1)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev1)  64) 1 0)
+        (add (if (eq (midi-event-velocity ev1) 100) 1 0)
+        (add (if (eq (midi-event-delta    ev2) 480) 1 0)
+        (add (if (eq (midi-event-channel  ev2)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev2)  64) 1 0)
+        (add (if (eq (midi-event-velocity ev2)   0) 1 0)
+        (add (if (eq (midi-event-delta    ev3)   0) 1 0)
+        (add (if (eq (midi-event-channel  ev3)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev3)  62) 1 0)
+        (add (if (eq (midi-event-velocity ev3) 100) 1 0)
+        (add (if (eq (midi-event-delta    ev4) 480) 1 0)
+        (add (if (eq (midi-event-channel  ev4)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev4)  62) 1 0)
+        (add (if (eq (midi-event-velocity ev4)   0) 1 0)
+        (add (if (eq (midi-event-delta    ev5)   0) 1 0)
+        (add (if (eq (midi-event-channel  ev5)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev5)  60) 1 0)
+        (add (if (eq (midi-event-velocity ev5) 100) 1 0)
+        (add (if (eq (midi-event-delta    ev6) 480) 1 0)
+        (add (if (eq (midi-event-channel  ev6)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev6)  60) 1 0)
+        (add (if (eq (midi-event-velocity ev6)   0) 1 0)
+        (add (if (eq (midi-event-delta    ev7)   0) 1 0)
+        (add (if (eq (midi-event-channel  ev7)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev7)  62) 1 0)
+        (add (if (eq (midi-event-velocity ev7) 100) 1 0)
+        (add (if (eq (midi-event-delta    ev8) 480) 1 0)
+        (add (if (eq (midi-event-channel  ev8)   0) 1 0)
+        (add (if (eq (midi-event-pitch    ev8)  62) 1 0)
+             (if (eq (midi-event-velocity ev8)   0) 1 0)))))))))))))))))))))))))))))))))
+
+    ;; 32 accessor checks → if all true, accessor-score = 100.
+    (let accessor-score (if (eq acc-ok 32) 100 0))
+
+    ;; --- predicate witness (200) ----------------------------------
+    ;;
+    ;; Each event's Blueprint identifies its kind. Odd events are
+    ;; note-on; even events are note-off.
+
+    (let pred-ok
+        (add (if (midi-is-note-on?  ev1) 1 0)
+        (add (if (midi-is-note-off? ev1) 0 1)
+        (add (if (midi-is-note-on?  ev2) 0 1)
+        (add (if (midi-is-note-off? ev2) 1 0)
+        (add (if (midi-is-note-on?  ev3) 1 0)
+        (add (if (midi-is-note-off? ev3) 0 1)
+        (add (if (midi-is-note-on?  ev4) 0 1)
+        (add (if (midi-is-note-off? ev4) 1 0)
+        (add (if (midi-is-note-on?  ev5) 1 0)
+        (add (if (midi-is-note-off? ev5) 0 1)
+        (add (if (midi-is-note-on?  ev6) 0 1)
+        (add (if (midi-is-note-off? ev6) 1 0)
+        (add (if (midi-is-note-on?  ev7) 1 0)
+        (add (if (midi-is-note-off? ev7) 0 1)
+        (add (if (midi-is-note-on?  ev8) 0 1)
+             (if (midi-is-note-off? ev8) 1 0)))))))))))))))))
+
+    (let predicate-score (if (eq pred-ok 16) 200 0))
+
+    ;; --- dedup witness (300) --------------------------------------
+    ;;
+    ;; Build a second note-on with the SAME tuple as ev1. Content-
+    ;; addressing must collapse it to the same NodeID. This is the
+    ;; codec-level proof: a song with two identical events occupies
+    ;; one NodeID per shape, not one per occurrence.
+
+    (let ev1-twin (midi-note-on 0 0 64 100))
+    (let ev3-twin (midi-note-on 0 0 62 100))
+
+    (let dedup-score
+        (if (node_eq ev1 ev1-twin)
+            (if (node_eq ev3 ev3-twin) 300 0)
+            0))
+
+    ;; Also: ev3 and ev7 are the same tuple (E4 pressed and released,
+    ;; then D4 pressed once and then again identically). They should
+    ;; share NodeID — the song's two D4 attacks ARE the same Recipe.
+
+    (let song-repeat-ok
+        (if (node_eq ev3 ev7) 1 0))
+
+    ;; --- distinct witness (400) -----------------------------------
+    ;;
+    ;; Different Blueprint → different NodeID (ev1 vs ev2: same tuple
+    ;; except blueprint). Different child → different NodeID (ev1 vs
+    ;; ev3: same blueprint, different pitch).
+
+    (let blueprint-distinct
+        (if (node_eq ev1 ev2) 0 1))
+
+    (let child-distinct
+        (if (node_eq ev1 ev3) 0 1))
+
+    (let distinct-score
+        (if (eq (add blueprint-distinct (add child-distinct song-repeat-ok)) 3)
+            400
+            0))
+
+    ;; --- composition witness (500) --------------------------------
+    ;;
+    ;; The track holds all eight events; the song wraps the track.
+    ;; node_children on the song returns the tracks; node_children on
+    ;; the track returns the events. Re-interning the same shape
+    ;; produces the same NodeID — composition is content-addressed all
+    ;; the way up.
+
+    (let track1 (midi-track (list ev1 ev2 ev3 ev4 ev5 ev6 ev7 ev8)))
+    (let song   (midi-song  (list track1)))
+
+    ;; Re-build to test full-tree dedup.
+    (let track1-twin (midi-track (list ev1 ev2 ev3 ev4 ev5 ev6 ev7 ev8)))
+    (let song-twin   (midi-song  (list track1-twin)))
+
+    (let tracks-of-song (node_children song))
+    (let events-of-track1 (node_children (head tracks-of-song)))
+
+    (let comp-ok
+        (add (if (eq (len tracks-of-song) 1) 1 0)
+        (add (if (eq (len events-of-track1) 8) 1 0)
+        (add (if (node_eq (head events-of-track1) ev1) 1 0)
+        (add (if (node_eq (nth events-of-track1 7) ev8) 1 0)
+        (add (if (node_eq track1 track1-twin) 1 0)
+             (if (node_eq song song-twin) 1 0)))))))
+
+    (let composition-score (if (eq comp-ok 6) 500 0))
+
+    ;; --- total -----------------------------------------------------
+    ;;
+    ;; 100 + 200 + 300 + 400 + 500 = 1500. A clean round.
+
+    (add accessor-score
+    (add predicate-score
+    (add dedup-score
+    (add distinct-score composition-score)))))
