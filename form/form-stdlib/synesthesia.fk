@@ -1,0 +1,59 @@
+; synesthesia.fk — cross-domain same-shape via content-addressing.
+;
+; Combination (3) from docs/coherence-substrate/cross-domain-universal-transit.form:
+; a C-major chord (frequencies 261, 329, 392 Hz in ratio 4:5:6) and an image
+; triangle with sides 4:5:6 share the SAME structural shape. The substrate's
+; content-addressing makes them dedup at one Blueprint despite different
+; surface domains — the shape IS the projection, no audio↔image mapping table
+; needed. The substrate is the synesthete.
+;
+; Two domain Blueprints (AUDIO-TRIAD, IMAGE-TRIANGLE) hold one child each — a
+; ratio-Recipe. The ratio-Recipe is interned under a shared SHAPE Blueprint
+; (RATIO-3). Same content → same NodeID, no matter which side called it.
+;
+; Surface (substrate-resident):
+;   AUDIO-TRIAD     domain Blueprint for a 3-tone tagged Recipe
+;   IMAGE-TRIANGLE  domain Blueprint for a 3-side tagged Recipe
+;   RATIO-3         shared SHAPE Blueprint — a 3-component ratio
+;   audio-chord     (a b c) → Recipe<AUDIO-TRIAD>[Recipe<RATIO-3>[a b c]]
+;   image-triangle  (a b c) → Recipe<IMAGE-TRIANGLE>[Recipe<RATIO-3>[a b c]]
+;   ratio-recipe    (a b c) → Recipe<RATIO-3>[trivial(a) trivial(b) trivial(c)]
+;   shape-of        peel the domain tag, return the inner ratio-Recipe
+;   same-shape?     node_eq on shape-of of both — cross-domain equivalence
+
+;; Two distinct domain Blueprints — different (pkg, level, type, instance).
+(let AUDIO-TRIAD     (make_nodeid 1 2 99 1200))
+(let IMAGE-TRIANGLE  (make_nodeid 1 2 99 1201))
+
+;; One shared SHAPE Blueprint — abstracts a 3-component ratio across domains.
+(let RATIO-3         (make_nodeid 1 2 99 1202))
+
+;; ratio-recipe — content-addressed under RATIO-3. Same (a,b,c) returns the
+;; same NodeID whether called from the audio or image side. This IS where
+;; the cross-domain dedup happens — content-addressing, not a projection
+;; function.
+(defn ratio-recipe (a b c)
+    (intern_node RATIO-3
+        (list (intern_trivial_int a)
+              (intern_trivial_int b)
+              (intern_trivial_int c))))
+
+;; audio-chord — tag a ratio with the AUDIO-TRIAD domain Blueprint.
+(defn audio-chord (a b c)
+    (intern_node AUDIO-TRIAD
+        (list (ratio-recipe a b c))))
+
+;; image-triangle — tag a ratio with the IMAGE-TRIANGLE domain Blueprint.
+(defn image-triangle (a b c)
+    (intern_node IMAGE-TRIANGLE
+        (list (ratio-recipe a b c))))
+
+;; shape-of — peel the domain tag, return the inner ratio-Recipe (the shape).
+(defn shape-of (recipe)
+    (head (node_children recipe)))
+
+;; same-shape? — true when two Recipes share the same inner shape, regardless
+;; of which domain wraps them. node_eq on the shape-of of both; the substrate
+;; answers without ever being told "audio ↔ image."
+(defn same-shape? (a b)
+    (node_eq (shape-of a) (shape-of b)))
