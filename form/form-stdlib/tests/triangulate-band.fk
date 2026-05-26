@@ -1,30 +1,30 @@
-; triangulate-band.fk — the substrate handshake by content-addressing.
+; triangulate-band.fk — the substrate handshake at two altitudes.
 ;
-; Three "vertex perspectives" each construct the triangle Recipe
-; locally. All three arrive at the same NodeID via intern_node's
-; content-addressing. The witness: node_eq across all three.
+; Two honest claims, two witnesses:
 ;
-; In production, each perspective lives in its own kernel process
-; (see scripts/triangulate.sh). The band proves the IN-process logic
-; that the shell script then witnesses cross-process.
+;   1. Sibling parity (counter-based). Within one kernel session,
+;      content-addressing dedups: two computations of the same Recipe
+;      return the same NodeID. The instance int matches across Go/
+;      Rust/TS when they load the same preludes in the same order.
+;
+;   2. Cross-session content (content-derived). The triangle's
+;      canonical content — three vertex strings in order — is the
+;      session-independent witness. Any kernel anywhere walking the
+;      same Recipe content returns the same string.
 ;
 ; preludes: form-stdlib/json.fk form-stdlib/triangulate.fk
 
 (do
-    ;; Three vertices, three perspectives. Each computes the same
-    ;; triangle Recipe from its own knowledge of the canonical names.
+    ;; --- claim 1: same-session sibling parity ----------------------
     (let from-a (triangulate-triangle "A" "B" "C"))
     (let from-b (triangulate-triangle "A" "B" "C"))
     (let from-c (triangulate-triangle "A" "B" "C"))
 
-    ;; All three perspectives arrive at one Recipe. That IS the
-    ;; handshake — three independent walks, one NodeID.
     (let handshake-score
         (add
             (if (node_eq from-a from-b) 100 0)
             (if (node_eq from-b from-c) 100 0)))
 
-    ;; Fingerprint matches across vertices.
     (let fp-a (triangulate-fingerprint "A" "B" "C"))
     (let fp-b (triangulate-fingerprint "A" "B" "C"))
     (let fp-c (triangulate-fingerprint "A" "B" "C"))
@@ -34,31 +34,46 @@
             (if (eq fp-a fp-b) 200 0)
             (if (eq fp-b fp-c) 200 0)))
 
-    ;; The triangle has three vertices in the order the constructor
-    ;; received them (canonical alphabetical).
+    ;; --- claim 2: cross-session content witness --------------------
+    ;;
+    ;; Walk the triangle's children, extract names, concatenate. This
+    ;; value is session-independent: any kernel that computes the
+    ;; same triangle produces the same string regardless of preload
+    ;; order or session counter state.
+
+    (defn content-witness (t)
+        (do
+            (let kids (node_children t))
+            (str_concat (triangulate-vertex-name (head kids))
+            (str_concat "-"
+            (str_concat (triangulate-vertex-name (head (tail kids)))
+            (str_concat "-"
+                        (triangulate-vertex-name (head (tail (tail kids))))))))))
+
+    (let cw-a (content-witness from-a))
+    (let cw-b (content-witness from-b))
+    (let cw-c (content-witness from-c))
+
+    (let content-score
+        (add
+            (if (str_eq cw-a "A-B-C") 200 0)
+            (if (str_eq cw-b "A-B-C") 200 0)))
+
+    ;; --- triangle structure ---------------------------------------
     (let vertices (triangulate-vertices from-a))
     (let count-score
         (if (eq (len vertices) 3) 300 0))
 
-    (let name-0 (triangulate-vertex-name (head vertices)))
-    (let name-1 (triangulate-vertex-name (head (tail vertices))))
-    (let name-2 (triangulate-vertex-name (head (tail (tail vertices)))))
-    (let order-score
-        (add
-            (if (str_eq name-0 "A") 100 0)
-        (add
-            (if (str_eq name-1 "B") 100 0)
-            (if (str_eq name-2 "C") 100 0))))
-
-    ;; A DIFFERENT triangle (different vertex names) must produce a
-    ;; different NodeID. Content-addressing requires distinct content
-    ;; → distinct NodeID.
+    ;; --- distinct content → distinct Recipe -----------------------
     (let other-triangle (triangulate-triangle "X" "Y" "Z"))
+    (let other-content (content-witness other-triangle))
     (let distinct-score
-        (if (node_eq from-a other-triangle) 0 400))
+        (add
+            (if (node_eq from-a other-triangle) 0 200)
+            (if (str_eq other-content "X-Y-Z") 200 0)))
 
-    ;; Expected total: 200 + 400 + 300 + 300 + 400 = 1600
+    ;; Expected: 200 + 400 + 400 + 300 + 400 = 1700
     (add handshake-score
     (add fingerprint-score
-    (add count-score
-    (add order-score distinct-score)))))
+    (add content-score
+    (add count-score distinct-score)))))
