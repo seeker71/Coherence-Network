@@ -1,0 +1,92 @@
+; concept-image.fk — image-bytes as fourth media surface for concepts.
+;
+; The body holds generated concept images at web/public/visuals/generated/
+; with two naming patterns:
+;   {concept-id}-{index}.jpg          gallery visuals
+;   {concept-id}-story-{index}.jpg    story visuals
+;
+; This file exposes the image PATHS — not the bytes — at substrate
+; altitude. A caller wanting the bytes can `read_file` the returned
+; path; this lets cells walk "what visuals does this concept have on
+; disk?" without loading megabytes per concept into intern arenas.
+;
+; The teaching at docs/coherence-substrate/concepts-as-recipe-corpus
+; .form named the cross-media triple (id, body, visuals, cross-refs).
+; concept-corpus.fk holds the inline visual-prompt strings; this file
+; holds the rendered-image-bytes pointer. Together they close the
+; loop: each concept anchor emits prose, prompt, AND rendered image.
+;
+; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc).
+; Uses kernel natives: file_size, str_concat, int_to_str.
+
+(do
+    ;; --- path helpers -----------------------------------------------
+    ;;
+    ;; Paths relative to form/ (validate.sh's cwd). The generated
+    ;; directory lives at ../web/public/visuals/generated/.
+
+    (defn concept-gallery-image-path (concept-id-str index-int)
+        (str_concat "../web/public/visuals/generated/"
+            (str_concat concept-id-str
+                (str_concat "-"
+                    (str_concat (int_to_str index-int) ".jpg")))))
+
+    (defn concept-story-image-path (concept-id-str index-int)
+        (str_concat "../web/public/visuals/generated/"
+            (str_concat concept-id-str
+                (str_concat "-story-"
+                    (str_concat (int_to_str index-int) ".jpg")))))
+
+    ;; --- existence probe --------------------------------------------
+    ;;
+    ;; file_size returns < 0 when the file is missing. We treat 0-byte
+    ;; files as missing too — a generator that wrote a placeholder
+    ;; should be treated as a gap until it has real bytes.
+
+    (defn concept-image-exists? (path)
+        (gt (file_size path) 0))
+
+    ;; --- index walk -------------------------------------------------
+    ;;
+    ;; Walk indices 0..max-1, accumulating paths that exist. Stops the
+    ;; first time TWO consecutive indices are missing — protects
+    ;; against scanning forever while still tolerating one gap in
+    ;; numbering (which the generator can produce on retry failures).
+
+    (defn concept-image-walk (path-fn concept-id idx miss-count max-miss acc)
+        (if (ge miss-count max-miss) (json-reverse-acc acc)
+            (do
+                (let path (path-fn concept-id idx))
+                (if (concept-image-exists? path)
+                    (concept-image-walk path-fn concept-id
+                        (add idx 1) 0 max-miss
+                        (cons path acc))
+                    (concept-image-walk path-fn concept-id
+                        (add idx 1) (add miss-count 1) max-miss
+                        acc)))))
+
+    (defn concept-gallery-images (concept-id-str)
+        (concept-image-walk concept-gallery-image-path
+            concept-id-str 0 0 2 (empty)))
+
+    (defn concept-story-images (concept-id-str)
+        (concept-image-walk concept-story-image-path
+            concept-id-str 0 0 2 (empty)))
+
+    ;; --- composition: all images for a concept ----------------------
+    ;;
+    ;; (concept-all-images id) = gallery + story paths. Order preserved:
+    ;; gallery first (0..n), then story (0..m). A caller wanting just
+    ;; counts uses (len ...); a caller wanting bytes maps read_file.
+
+    (defn concept-list-concat (a b)
+        (if (eq (len a) 0) b
+            (cons (head a)
+                (concept-list-concat (tail a) b))))
+
+    (defn concept-all-images (concept-id-str)
+        (concept-list-concat
+            (concept-gallery-images concept-id-str)
+            (concept-story-images concept-id-str)))
+
+    0)
