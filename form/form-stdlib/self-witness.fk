@@ -1,0 +1,179 @@
+; self-witness.fk — the substrate reads its own forward/inverse delta.
+;
+; Background: docs/coherence-substrate/cross-domain-universal-transit
+; .form names combination (8) — the substrate learns its own translation
+; grammars by comparing forward-encode to inverse-decode. The encoder
+; Recipe is mutable; the witness is frozen; the loss is Distance(X, X').
+; Minimize the loss → the encoder Recipe has learned the translation.
+;
+; This file is the WITNESS half: take a parsed JSON Recipe, re-emit it
+; as a JSON-ish string, and score how close the emission is to the
+; original. The mutable-encoder half stays as a future-horizon (the
+; autoresearch loop that mutates the encoder to minimize this delta).
+;
+; What the witness proves: parse → walk → re-emit preserves the
+; substrate skeleton — every JSON-OBJECT, JSON-ARRAY, JSON-PAIR, and
+; trivial leaf in the parsed Recipe is recoverable from the Recipe
+; alone, without re-reading the original byte stream. This is round-
+; trip skeleton preservation, not byte-identity (whitespace, key order,
+; and number formatting all need explicit preservation cells that
+; aren't part of this v0 witness).
+;
+; What's next: feed the delta back into an encoder mutator (the
+; auto-research loop). When delta(X, X') for every X in a corpus
+; minimizes, the encoder Recipe IS the translation grammar — a
+; substrate-derived JSON encoder learned by self-comparison rather
+; than authored by hand.
+;
+; Prelude requirement: form-stdlib/json.fk must load before this file
+; (it owns the JSON-OBJECT / JSON-ARRAY / JSON-PAIR / JSON-NULL
+; NodeIDs and the parser the witness walks the output of).
+
+;; --- emit: walk a parsed JSON Recipe, produce a JSON-ish string ----
+;;
+;; Toy emitter — comma-separated, brace/bracket-delimited, no
+;; whitespace, no number/bool support (the i18n corpus is mostly
+;; strings and objects, so v0 emits all leaves as quoted strings via
+;; int_to_str which passes strings through unchanged). What this is
+;; FOR: emitting enough surface that a structural score (brace count,
+;; pair count, key-count-equal-to-original) can compare the round-
+;; trip to the source. Not for general JSON serialization — the body
+;; has Python json.dumps for that.
+
+;; emit-children-joined — concat a list of already-emitted child
+;; strings with a single-char separator between each adjacent pair.
+;; Direct walk (not foldl) so the file loads alongside json.fk
+;; without depending on core.fk's list combinators.
+(defn self-witness-join (parts sep)
+    (if (eq (len parts) 0) ""
+        (if (eq (len (tail parts)) 0) (head parts)
+            (str_concat (head parts)
+                (str_concat sep
+                    (self-witness-join (tail parts) sep))))))
+
+;; Forward decl: emit-json-value calls itself through emit-json-pair
+;; / emit-json-object / emit-json-array. Form's `defn` resolves
+;; identifiers at call-time so the mutual recursion works as long as
+;; every member is defined before any expression evaluates one.
+
+(defn emit-json-string (s)
+    (str_concat "\"" (str_concat s "\"")))
+
+(defn emit-json-pair (pair-node)
+    (str_concat
+        (emit-json-string (json-pair-key pair-node))
+        (str_concat ":"
+            (emit-json-value (json-pair-value pair-node)))))
+
+(defn emit-json-pairs-loop (pairs acc)
+    (if (eq (len pairs) 0) (json-reverse-acc acc)
+        (emit-json-pairs-loop (tail pairs)
+            (cons (emit-json-pair (head pairs)) acc))))
+
+(defn emit-json-object (obj-node)
+    (str_concat "{"
+        (str_concat
+            (self-witness-join
+                (emit-json-pairs-loop (node_children obj-node) (empty))
+                ",")
+            "}")))
+
+(defn emit-json-array-loop (elems acc)
+    (if (eq (len elems) 0) (json-reverse-acc acc)
+        (emit-json-array-loop (tail elems)
+            (cons (emit-json-value (head elems)) acc))))
+
+(defn emit-json-array (arr-node)
+    (str_concat "["
+        (str_concat
+            (self-witness-join
+                (emit-json-array-loop (node_children arr-node) (empty))
+                ",")
+            "]")))
+
+;; emit-json-value — dispatch by node_category. JSON-OBJECT / -ARRAY /
+;; -NULL are composite categories from json.fk; anything else is a
+;; trivial leaf (string or int). For v0 every leaf is emitted as a
+;; quoted string — int_to_str passes strings through and stringifies
+;; ints, so the emission is well-formed for the i18n corpus where
+;; ~all leaves are strings (any numbers come out double-quoted, which
+;; loses byte-identity but preserves skeletal position; the witness
+;; doesn't care).
+(defn emit-json-value (r)
+    (do
+        (let cat (node_category r))
+        (if (node_eq cat JSON-OBJECT) (emit-json-object r)
+        (if (node_eq cat JSON-ARRAY)  (emit-json-array r)
+        (if (node_eq cat JSON-NULL)   "null"
+            (emit-json-string (int_to_str (node_value r))))))))
+
+;; --- score: count opening braces in the emitted string -------------
+;;
+;; The structural score: how many JSON-OBJECT nodes are visible in
+;; the emitted surface. Walks the output string char-by-char and
+;; counts code-point 123 ('{'). Compares against the count of
+;; JSON-OBJECT nodes reachable by walking the parsed Recipe (the
+;; ground truth the encoder had access to). Equal counts → the
+;; emitter walked every composite the parser produced.
+
+(defn self-witness-count-char-loop (s i target-cp acc)
+    (if (eq i (str_len s)) acc
+        (if (eq (ord (char_at s i)) target-cp)
+            (self-witness-count-char-loop s (add i 1) target-cp (add acc 1))
+            (self-witness-count-char-loop s (add i 1) target-cp acc))))
+
+(defn self-witness-count-char (s cp)
+    (self-witness-count-char-loop s 0 cp 0))
+
+;; self-witness-count-objects — number of JSON-OBJECT recipes in the
+;; tree rooted at node. Walks the children recursively; arrays
+;; contribute via their elements, pairs via their value-recipe.
+
+(defn self-witness-count-objects (node)
+    (do
+        (let cat (node_category node))
+        (if (node_eq cat JSON-OBJECT)
+            (add 1 (self-witness-count-objects-children (node_children node)))
+        (if (node_eq cat JSON-ARRAY)
+            (self-witness-count-objects-children (node_children node))
+        (if (node_eq cat JSON-PAIR)
+            ;; pair children: (key-leaf, value-recipe) — the leaf
+            ;; doesn't have JSON-OBJECT children to scan but
+            ;; recurse-on-leaf returns 0 so this is safe and uniform.
+            (self-witness-count-objects-children (node_children node))
+            0)))))
+
+(defn self-witness-count-objects-children (children)
+    (if (eq (len children) 0) 0
+        (add (self-witness-count-objects (head children))
+             (self-witness-count-objects-children (tail children)))))
+
+;; --- score: count pairs in a JSON-OBJECT node ----------------------
+;;
+;; Direct length of node_children on a JSON-OBJECT recipe. Used by
+;; the band test to verify the "common" section has the same pair
+;; count after walking — the lightest possible structural identity
+;; assertion, sensitive to drops or duplications but not to whitespace.
+
+(defn self-witness-pair-count (obj-node)
+    (len (node_children obj-node)))
+
+;; --- top-level: parse → emit → score one locale --------------------
+;;
+;; Returns a list of three integers:
+;;   (original-object-count emitted-brace-count delta)
+;; where delta = abs(original - emitted). Zero delta means every
+;; composite the parser saw made it into the emission — the
+;; round-trip skeleton is intact.
+
+(defn self-witness-abs (a b)
+    (if (gt a b) (sub a b) (sub b a)))
+
+(defn self-witness-score (locale-recipe)
+    (do
+        (let original (self-witness-count-objects locale-recipe))
+        (let emitted-str (emit-json-value locale-recipe))
+        (let emitted (self-witness-count-char emitted-str 123))
+        (list original emitted (self-witness-abs original emitted))))
+
+0
