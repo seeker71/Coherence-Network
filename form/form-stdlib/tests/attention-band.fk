@@ -1,0 +1,73 @@
+; attention-band.fk — cross-domain attention witness.
+;
+; Combination (9) of cross-domain-universal-transit.form: attention is a
+; function (query, keys) → weights. With embeddings as Recipes, distance
+; IS the unnormalized weight; the arg-min IS the selected key.
+;
+; The teaching probe is the cross-domain story. We encode a TEXT query
+; about "calm" and three image-side keys: a still lake (near), rolling
+; hills (middling), and a raging fire (far). The substrate does not know
+; which side is text and which is image — it only sees vectors at numeric
+; positions. The body looks through the query and picks the still lake
+; because that's where the meanings sit closest, not because we told it
+; which modality matched.
+;
+; preludes: form-stdlib/json.fk form-stdlib/embedding-as-recipe.fk form-stdlib/attention.fk
+
+(do
+    ;; --- scene: one query, three keys -------------------------------
+    ;; query  = "calm"               at (10,10,10,10)
+    ;; key1   = "still lake" image   at (12,11,10,11)   dist 4
+    ;; key2   = "raging fire" image  at (80,90,70,100)  dist 300
+    ;; key3   = "rolling hills"      at (50,50,50,50)   dist 160
+
+    (let query (embedding-from-vector (list 10 10 10 10)))
+    (let key1  (embedding-from-vector (list 12 11 10 11)))
+    (let key2  (embedding-from-vector (list 80 90 70 100)))
+    (let key3  (embedding-from-vector (list 50 50 50 50)))
+    (let keys  (list key1 key2 key3))
+
+    ;; --- distances aligned with key order ---------------------------
+    (let dists (attention-distances query keys))
+    (let dist-score
+        (if (eq (len dists) 3)
+            (if (eq (head dists) 4)
+                (if (eq (head (tail dists)) 300)
+                    (if (eq (head (tail (tail dists))) 160) 100 0)
+                    0)
+                0)
+            0))
+
+    ;; --- arg-min picks index 0 (the still lake) ---------------------
+    (let argmin-score
+        (if (eq (attention-argmin (list 4 300 160)) 0) 200 0))
+
+    ;; --- arg-min tie: first occurrence wins -------------------------
+    (let tie-score
+        (if (eq (attention-argmin (list 5 5 9)) 0) 300 0))
+
+    ;; --- attention-select returns the still-lake embedding ---------
+    ;; Identity verified through embedding-equal? (NodeID equality),
+    ;; not vector reconstruction — the substrate's content-addressing
+    ;; is the witness.
+    (let selected (attention-select query keys))
+    (let select-score
+        (if (embedding-equal? selected key1) 400 0))
+
+    ;; --- teaching probe: different query → different selection -----
+    ;; A second query sitting near the "raging fire" coordinates flips
+    ;; the body's gaze. Same keys, same distance machinery; the only
+    ;; thing that changed is where the query stands. That's the whole
+    ;; point of attention — the same head looks different ways.
+    (let fire-query (embedding-from-vector (list 78 88 72 98)))
+    (let fire-selected (attention-select fire-query keys))
+    (let probe-score
+        (if (embedding-equal? fire-selected key2)
+            (if (embedding-equal? fire-selected key1) 0 500)
+            0))
+
+    ;; Expected: 100 + 200 + 300 + 400 + 500 = 1500
+    (add dist-score
+    (add argmin-score
+    (add tie-score
+    (add select-score probe-score)))))
