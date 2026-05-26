@@ -1,0 +1,59 @@
+; concept-corpus-band.fk — Living Collective concepts walkable from Form.
+;
+; Witnesses that concept-load returns a Recipe whose id matches the
+; requested anchor and whose cross-refs are the actual graph edges
+; the body holds in docs/vision-kb/concepts/.
+;
+; Numbers are observed from the current concept bodies — if a concept
+; editor adds/removes a cross-ref, the score shifts. That's the
+; grounding: the band reads the body, not a parallel projection of it.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/concept-corpus.fk
+
+(do
+    ;; Load three concepts, each held in caller scope (load-once-reuse-
+    ;; many discipline — Rust runs Form without GC).
+    (let tof (concept-load "lc-trust-over-fear"))
+    (let att (concept-load "lc-attunement"))
+    (let circ (concept-load "lc-circulation"))
+
+    ;; --- id round-trip ---------------------------------------------
+    ;; Each concept's parsed id matches the anchor used to load it.
+    (let id-score
+        (add
+            (if (str_eq (concept-id tof) "lc-trust-over-fear") 10 0)
+        (add
+            (if (str_eq (concept-id att) "lc-attunement") 20 0)
+            (if (str_eq (concept-id circ) "lc-circulation") 30 0))))
+
+    ;; --- cross-refs non-empty --------------------------------------
+    ;; Each of these three concepts ships with cross-refs in its body.
+    ;; The lengths can shift as editors tend the graph — we assert
+    ;; "at least one" to stay supple to that movement.
+    (let xref-tof (concept-cross-refs tof))
+    (let xref-att (concept-cross-refs att))
+    (let xref-circ (concept-cross-refs circ))
+    (let nonempty-score
+        (add
+            (if (gt (len xref-tof) 0) 40 0)
+        (add
+            (if (gt (len xref-att) 0) 50 0)
+            (if (gt (len xref-circ) 0) 60 0))))
+
+    ;; --- known edge probe ------------------------------------------
+    ;; lc-trust-over-fear's first cross-ref is lc-presence-over-protection
+    ;; (observed in the current body).
+    (let first-xref-tof (head xref-tof))
+    (let known-edge-score
+        (if (str_eq first-xref-tof "lc-presence-over-protection") 70 0))
+
+    ;; --- corpus walk: follow an edge -------------------------------
+    ;; Load the concept the first cross-ref points to; its id should
+    ;; match the cross-ref string. This proves the graph is
+    ;; substrate-traversable: a cross-ref string IS a loadable anchor.
+    (let followed (concept-load first-xref-tof))
+    (let walk-score
+        (if (str_eq (concept-id followed) first-xref-tof) 80 0))
+
+    ;; Expected total: 10+20+30 + 40+50+60 + 70 + 80 = 360
+    (add id-score (add nonempty-score (add known-edge-score walk-score))))
