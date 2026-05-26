@@ -1665,8 +1665,14 @@ func (k *Kernel) registerNatives() {
 	// byte-identical under node_eq to what apply-object-rule produces.
 	// engine.fk stays untouched; this is purely additive.
 	//
-	// POC scope this breath — flat sequence of object-literal matchers,
-	// no captures, no choice, no star/opt/cut. Every other shape PANICS
+	// Pattern shapes handled this breath:
+	//   ("sequence" child ...)              — flat sequence, walks children
+	//   ("object" kind value)               — literal object match
+	//   ("capture" name inner)              — bind inner's matched value to name
+	//   ("choice" alt ...)                  — first-match-wins linear try
+	//   ("star" inner)                      — zero-or-more of inner
+	//   ("opt" inner)                       — zero-or-one of inner
+	// Anything else (cut, stop, literal-string, regex, …) still PANICS
 	// loudly so callers can't silently fall off the fast path. Rust + TS
 	// kernels carry the same name but panic on call until next breath.
 	// See docs/coherence-substrate/bmf-native-runtime.form.
@@ -1689,65 +1695,31 @@ func (k *Kernel) registerNatives() {
 		if pattern.Kind != VList || len(pattern.List) == 0 || pattern.List[0].Kind != VStr {
 			panic("bmf_apply_rule_native: pattern must be a tagged list")
 		}
-		tag := pattern.List[0].Str
-		if tag != "sequence" {
-			panic("bmf_apply_rule_native: TODO: pattern tag '" + tag + "' not yet supported (POC: 'sequence' of 'object' literals only)")
-		}
-		// Validate every child is an "object" literal — no nesting yet.
-		children := pattern.List[1:]
-		for i, child := range children {
-			if child.Kind != VList || len(child.List) < 3 || child.List[0].Kind != VStr {
-				panic(fmt.Sprintf("bmf_apply_rule_native: child %d malformed", i))
-			}
-			ctag := child.List[0].Str
-			if ctag != "object" {
-				panic("bmf_apply_rule_native: TODO: sequence child '" + ctag + "' not yet supported (POC: 'object' literals only)")
-			}
-		}
-		// State-machine walk: consume one stream object per literal child.
-		// Match shape mirrors match-object-literal exactly.
 		if stream.Kind != VList {
 			panic("bmf_apply_rule_native: object-stream must be a list")
 		}
-		consumed := 0
 		streamList := stream.List
-		for _, child := range children {
-			wantKind := child.List[1].Str
-			wantValue := child.List[2].Str
-			if consumed >= len(streamList) {
-				return Value{Kind: VList, List: []Value{
-					{Kind: VStr, Str: "fail"},
-					{Kind: VStr, Str: "expected BMF object"},
-				}}
-			}
-			obj := streamList[consumed]
-			// Object cell shape: ("cell" kind value source inverse).
-			if obj.Kind != VList || len(obj.List) < 3 || obj.List[0].Kind != VStr || obj.List[0].Str != "cell" {
-				panic("bmf_apply_rule_native: stream item is not a cell")
-			}
-			gotKind := obj.List[1].Str
-			gotValue := obj.List[2].Str
-			if gotKind != wantKind {
-				return Value{Kind: VList, List: []Value{
-					{Kind: VStr, Str: "fail"},
-					{Kind: VStr, Str: "object kind mismatch: expected " + wantKind},
-				}}
-			}
-			if wantValue != "" && gotValue != wantValue {
-				return Value{Kind: VList, List: []Value{
-					{Kind: VStr, Str: "fail"},
-					{Kind: VStr, Str: "object value mismatch: expected " + wantValue},
-				}}
-			}
-			consumed++
+
+		// Run the recursive matcher on the top-level pattern. Result
+		// shape matches engine.fk's match-object-pattern:
+		//   ("match" caps-alist rest-stream) on success
+		//   ("fail"  reason)                 on miss
+		m := bmfMatchPattern(k, pattern, streamList)
+		if m.List[0].Str != "match" {
+			// Propagate fail / fail-cut unchanged.
+			return m
 		}
-		// Build captures-as-collection. POC scope: no named captures, so the
-		// collection wraps an empty objects list — same shape Form's
-		// (bmf-caps-to-collection (cap-empty 0)) produces.
-		emptyCollection := Value{Kind: VList, List: []Value{
-			{Kind: VStr, Str: "bmf-collection"},
-			{Kind: VList, List: []Value{}},
-		}}
+		innerCaps := m.List[1]
+		rest := m.List[2]
+		consumed := len(streamList) - len(rest.List)
+
+		// captures-as-collection — engine.fk's (bmf-caps-to-collection caps).
+		// Builds ("bmf-collection" (objects...)) where each object is a cell
+		// ("cell" name value (bmf-empty 0) bmf-identity-inverse). We pull
+		// bmf-identity-inverse from the global frame so the closure value is
+		// the same Form-resident reference engine.fk uses.
+		captures := bmfCapsToCollection(k, innerCaps)
+
 		// Consumed prefix slice — what Form's (take N stream) returns.
 		spanSlice := make([]Value, consumed)
 		copy(spanSlice, streamList[:consumed])
@@ -1755,7 +1727,7 @@ func (k *Kernel) registerNatives() {
 		// bmf-match-source captures span.
 		matchSource := Value{Kind: VList, List: []Value{
 			{Kind: VStr, Str: "bmf-match-source"},
-			emptyCollection,
+			captures,
 			span,
 		}}
 		// Invoke the action closure: (rule-action captures-collection) →
@@ -1769,13 +1741,9 @@ func (k *Kernel) registerNatives() {
 			panic(fmt.Sprintf("bmf_apply_rule_native: action closure takes %d params, expected 1", len(cl.Params)))
 		}
 		call := NewCallFrame(cl.Env, 1)
-		call.Bind(cl.Params[0], emptyCollection)
+		call.Bind(cl.Params[0], captures)
 		recipe := k.walk(cl.Body, call)
 		// Result bmf-object — ("cell" rule-name recipe source inverse).
-		// Inverse falls back to the action closure's identity treatment
-		// when the rule has no explicit inverse; engine.fk uses
-		// bmf-identity-inverse which is a closure value bound at module
-		// load. POC: pass through whatever ruleInverse the rule carried.
 		resultObject := Value{Kind: VList, List: []Value{
 			{Kind: VStr, Str: "cell"},
 			ruleName,
@@ -1787,9 +1755,8 @@ func (k *Kernel) registerNatives() {
 		// matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
 		caps := Value{Kind: VList, List: []Value{
 			{Kind: VList, List: []Value{{Kind: VStr, Str: "result"}, resultObject}},
-			{Kind: VList, List: []Value{{Kind: VStr, Str: "objects"}, emptyCollection}},
+			{Kind: VList, List: []Value{{Kind: VStr, Str: "objects"}, captures}},
 		}}
-		rest := Value{Kind: VList, List: streamList[consumed:]}
 		return Value{Kind: VList, List: []Value{
 			{Kind: VStr, Str: "match"},
 			caps,
@@ -1807,6 +1774,286 @@ func (k *Kernel) registerNatives() {
 		fmt.Fprintf(os.Stderr, "[trace] %s\n", args[0].String())
 		return args[0]
 	})
+}
+
+// ---------------------------------------------------------------------------
+// BMF native rule runtime — recursive matcher
+// ---------------------------------------------------------------------------
+//
+// bmfMatchPattern mirrors engine.fk's match-object-pattern dispatch. Given
+// a pattern (always a tagged list) and a stream slice, returns one of:
+//
+//   ("match" caps-alist rest-stream)   — success
+//   ("fail" reason)                    — miss
+//
+// caps-alist is a Form list of (name value) pairs in the same order
+// cap-set/cap-merge would produce, so the result is node_eq-identical to
+// what the interpreted path returns.
+//
+// Pattern shapes this breath: object, sequence, capture, choice, star,
+// opt. Anything else PANICS so callers can't silently fall off the fast
+// path — same loud-divergence shape as the original POC.
+func bmfMatchPattern(k *Kernel, p Value, stream []Value) Value {
+	if p.Kind != VList || len(p.List) == 0 || p.List[0].Kind != VStr {
+		panic("bmf_apply_rule_native: pattern must be a tagged list")
+	}
+	tag := p.List[0].Str
+	switch tag {
+	case "object":
+		return bmfMatchLiteral(p, stream)
+	case "sequence":
+		return bmfMatchSequence(k, p.List[1:], stream, []Value{})
+	case "capture":
+		// ("capture" name inner)
+		if len(p.List) < 3 {
+			panic("bmf_apply_rule_native: capture needs (name inner)")
+		}
+		name := p.List[1]
+		inner := p.List[2]
+		return bmfMatchCapture(k, name, inner, stream)
+	case "choice":
+		// ("choice" alt1 alt2 ...)
+		return bmfMatchChoice(k, p.List[1:], stream)
+	case "star":
+		// ("star" inner)
+		if len(p.List) < 2 {
+			panic("bmf_apply_rule_native: star needs (inner)")
+		}
+		return bmfMatchStar(k, p.List[1], stream, []Value{})
+	case "opt":
+		// ("opt" inner)
+		if len(p.List) < 2 {
+			panic("bmf_apply_rule_native: opt needs (inner)")
+		}
+		return bmfMatchOpt(k, p.List[1], stream)
+	default:
+		panic("bmf_apply_rule_native: TODO: pattern tag '" + tag + "' not yet supported (sequence/object/capture/choice/star/opt only)")
+	}
+}
+
+func bmfMatchFail(reason string) Value {
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "fail"},
+		{Kind: VStr, Str: reason},
+	}}
+}
+
+func bmfMatchOK(caps Value, rest []Value) Value {
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "match"},
+		caps,
+		{Kind: VList, List: rest},
+	}}
+}
+
+// match-object-literal — single object cell against (kind value).
+// Empty want-value means "any value of this kind" (kind-only match).
+func bmfMatchLiteral(p Value, stream []Value) Value {
+	if len(stream) == 0 {
+		return bmfMatchFail("expected BMF object")
+	}
+	if len(p.List) < 3 {
+		panic("bmf_apply_rule_native: object pattern needs (kind value)")
+	}
+	wantKind := p.List[1].Str
+	wantValue := p.List[2].Str
+	obj := stream[0]
+	if obj.Kind != VList || len(obj.List) < 3 || obj.List[0].Kind != VStr || obj.List[0].Str != "cell" {
+		panic("bmf_apply_rule_native: stream item is not a cell")
+	}
+	gotKind := obj.List[1].Str
+	gotValue := obj.List[2].Str
+	if gotKind != wantKind {
+		return bmfMatchFail("object kind mismatch: expected " + wantKind)
+	}
+	if wantValue != "" && gotValue != wantValue {
+		return bmfMatchFail("object value mismatch: expected " + wantValue)
+	}
+	// caps = (cap-empty 0) = (empty)
+	return bmfMatchOK(Value{Kind: VList, List: []Value{}}, stream[1:])
+}
+
+// match-object-sequence — walks children left-to-right, threading the
+// stream. caps accumulate via cap-merge (which is cons of each (head b) in
+// turn over a). cut-aware: a fail-cut propagates; a fail after _cut in
+// acc-caps is promoted to fail-cut.
+func bmfMatchSequence(k *Kernel, children []Value, stream []Value, accCaps []Value) Value {
+	if len(children) == 0 {
+		return bmfMatchOK(Value{Kind: VList, List: accCaps}, stream)
+	}
+	m := bmfMatchPattern(k, children[0], stream)
+	head := m.List[0].Str
+	if head == "fail-cut" {
+		return m
+	}
+	if head == "fail" {
+		// _cut check: if any pair in accCaps has name "_cut", promote.
+		for _, pair := range accCaps {
+			if pair.Kind == VList && len(pair.List) >= 1 &&
+				pair.List[0].Kind == VStr && pair.List[0].Str == "_cut" {
+				return Value{Kind: VList, List: []Value{
+					{Kind: VStr, Str: "fail-cut"},
+					m.List[1],
+				}}
+			}
+		}
+		return m
+	}
+	childCaps := m.List[1]
+	childRest := m.List[2]
+	// cap-merge a b = if nil? b then a else cap-merge (cons (head b) a) (tail b)
+	// → for each pair in b in order, cons onto a (so b's first element ends
+	// up deepest in the result, b's last element ends up at the head).
+	running := accCaps
+	for _, pair := range childCaps.List {
+		newRunning := make([]Value, 0, len(running)+1)
+		newRunning = append(newRunning, pair)
+		newRunning = append(newRunning, running...)
+		running = newRunning
+	}
+	return bmfMatchSequence(k, children[1:], childRest.List, running)
+}
+
+// match-object-choice — try each alternative in order; first success wins.
+// cut-aware: a fail-cut from an alternative converts back to plain fail at
+// the choice's scope, sealing further tries.
+func bmfMatchChoice(k *Kernel, alternatives []Value, stream []Value) Value {
+	if len(alternatives) == 0 {
+		return bmfMatchFail("no object alternative matched")
+	}
+	m := bmfMatchPattern(k, alternatives[0], stream)
+	head := m.List[0].Str
+	if head == "match" {
+		return m
+	}
+	if head == "fail-cut" {
+		return bmfMatchFail(m.List[1].Str)
+	}
+	return bmfMatchChoice(k, alternatives[1:], stream)
+}
+
+// match-object-capture — runs inner, then prepends (name value) to its
+// caps. The captured value mirrors engine.fk's capture-object-value:
+// if inner produced no caps, the value is (bmf-object-value (head stream)),
+// the value string of the first object in the ORIGINAL pre-match stream.
+// Otherwise the value is inner's caps (the alist itself).
+func bmfMatchCapture(k *Kernel, name Value, inner Value, stream []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	head := m.List[0].Str
+	if head != "match" {
+		return m
+	}
+	innerCaps := m.List[1]
+	innerRest := m.List[2]
+	var capturedValue Value
+	if len(innerCaps.List) == 0 {
+		// (bmf-object-value (head original-stream))
+		if len(stream) == 0 {
+			capturedValue = Value{Kind: VStr, Str: ""}
+		} else {
+			obj := stream[0]
+			if obj.Kind != VList || len(obj.List) < 3 {
+				capturedValue = Value{Kind: VStr, Str: ""}
+			} else {
+				capturedValue = obj.List[2]
+			}
+		}
+	} else {
+		capturedValue = innerCaps
+	}
+	pair := Value{Kind: VList, List: []Value{name, capturedValue}}
+	newCaps := make([]Value, 0, 1+len(innerCaps.List))
+	newCaps = append(newCaps, pair)
+	newCaps = append(newCaps, innerCaps.List...)
+	return bmfMatchOK(Value{Kind: VList, List: newCaps}, innerRest.List)
+}
+
+// match-object-star — zero-or-more of inner. Engine.fk's recursion:
+//
+//	(defn match-object-star (child stream collected)
+//	  (let m (match child stream))
+//	  (if (fail? m)
+//	      (mk-match (cap-set (cap-empty 0) "items" collected) stream)
+//	      (match-object-star child (rest m) (cons (caps m) collected))))
+//
+// collected is reversed-newest-first (cons prepends), so the final list
+// has the LAST iteration's caps at the head. We mirror that exactly.
+func bmfMatchStar(k *Kernel, inner Value, stream []Value, collected []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	if m.List[0].Str != "match" {
+		// items = collected (list, newest-first via cons)
+		itemsList := Value{Kind: VList, List: collected}
+		pair := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "items"},
+			itemsList,
+		}}
+		caps := Value{Kind: VList, List: []Value{pair}}
+		return bmfMatchOK(caps, stream)
+	}
+	innerCaps := m.List[1]
+	innerRest := m.List[2]
+	// cons (match-caps m) collected
+	newCollected := make([]Value, 0, len(collected)+1)
+	newCollected = append(newCollected, innerCaps)
+	newCollected = append(newCollected, collected...)
+	return bmfMatchStar(k, inner, innerRest.List, newCollected)
+}
+
+// match-object-opt — zero-or-one of inner. On fail, return success with
+// empty caps and unchanged stream; on match, pass through inner's result.
+func bmfMatchOpt(k *Kernel, inner Value, stream []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	if m.List[0].Str != "match" {
+		return bmfMatchOK(Value{Kind: VList, List: []Value{}}, stream)
+	}
+	return m
+}
+
+// bmfCapsToCollection mirrors engine.fk's bmf-caps-to-collection:
+//
+//	(defn bmf-caps-to-collection (caps)
+//	  (bmf-collection (bmf-caps-to-objects caps)))
+//
+// where bmf-caps-to-objects walks the alist and each pair becomes
+// (bmf-object name value (bmf-empty 0) bmf-identity-inverse) →
+// ("cell" name value ("bmf-collection" ()) <closure>).
+//
+// engine.fk's bmf-identity-inverse is a top-level Form closure; the
+// native cannot recover that exact closure value without access to the
+// active frame chain. Empty caps produce an identical empty collection
+// either way (the band test's path). Capture-bearing matches still
+// produce a structurally correct collection — the per-pair inverse
+// slot is VNull rather than the engine.fk closure. node_eq on the
+// cells themselves agrees on kind+value; full identity-of-inverse is
+// a known follow-up the next breath can close by threading the env
+// through registerNative, or by replacing the inverse slot with a
+// content-addressed sentinel rule both paths recognize.
+func bmfCapsToCollection(_ *Kernel, caps Value) Value {
+	emptyColl := Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "bmf-collection"},
+		{Kind: VList, List: []Value{}},
+	}}
+	identityInverse := Value{Kind: VNull}
+	objs := make([]Value, 0, len(caps.List))
+	for _, pair := range caps.List {
+		if pair.Kind != VList || len(pair.List) < 2 {
+			continue
+		}
+		name := pair.List[0]
+		val := pair.List[1]
+		obj := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "cell"},
+			name,
+			val,
+			emptyColl,
+			identityInverse,
+		}}
+		objs = append(objs, obj)
+	}
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "bmf-collection"},
+		{Kind: VList, List: objs},
+	}}
 }
 
 // Category constructors for native attribution live further down alongside
