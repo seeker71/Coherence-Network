@@ -102,4 +102,50 @@
 (defn i18n-parallel (path-strs)
     (i18n-parallel-loop (i18n-locales-available) path-strs (empty)))
 
+;; --- sibling corpora: cli/lib/messages -----------------------------
+;;
+;; The CLI carries its own parallel translation corpus on the same
+;; shape — cli/lib/messages/{en,de,es,id}.json. Loader composition
+;; mirrors i18n-load; the path differs because the body holds two
+;; distinct surfaces (web chrome vs CLI output) that speak the same
+;; locales without sharing keys.
+;;
+;; Use (i18n-string-by-path (cli-i18n-load "de") (list "help" "usage"))
+;; to read a CLI surface in any locale, same shape as the web loader.
+;; The composition is bottom-up: same read_with_cache, same parse-json,
+;; only the source/cache paths change.
+(defn cli-i18n-source-path (locale-name)
+    (str_concat "../cli/lib/messages/"
+        (str_concat locale-name ".json")))
+
+(defn cli-i18n-cache-path (locale-name)
+    (str_concat "form-stdlib/.cache/cli-i18n-"
+        (str_concat locale-name ".fkb")))
+
+(defn cli-i18n-load (locale-name)
+    (read_with_cache
+        (cli-i18n-source-path locale-name)
+        (cli-i18n-cache-path locale-name)
+        parse-json))
+
+;; --- sibling corpora: web/content/presence-walk --------------------
+;;
+;; Presence-walk pages carry richer per-locale prose than the web
+;; chrome — full first-person passages keyed by node-kind. Same
+;; loader shape, separate path.
+
+(defn presence-walk-i18n-source-path (locale-name)
+    (str_concat "../web/content/presence-walk/"
+        (str_concat locale-name ".json")))
+
+(defn presence-walk-i18n-cache-path (locale-name)
+    (str_concat "form-stdlib/.cache/presence-walk-i18n-"
+        (str_concat locale-name ".fkb")))
+
+(defn presence-walk-i18n-load (locale-name)
+    (read_with_cache
+        (presence-walk-i18n-source-path locale-name)
+        (presence-walk-i18n-cache-path locale-name)
+        parse-json))
+
 0

@@ -409,6 +409,10 @@ def sense_locale_parity() -> list[str]:
     bilingual in name only. The number speaks; the body chooses what
     to do with it.
     """
+    # Substrate-altitude companion: form/form-stdlib/i18n-parity.fk
+    # reaches the same per-locale leaf counts through (i18n-load → recursive
+    # node_category walk). Python stays the runtime reporter; Form proves
+    # the corpus is reachable from substrate without the Python boundary.
     messages_dir = ROOT / "web" / "messages"
     if not messages_dir.is_dir():
         return ["  web/messages/ directory not found"]
