@@ -1,0 +1,57 @@
+; triangulate.fk — three-vertex substrate handshake.
+;
+; The minimum viable shape for a sovereign witness triangle. Three
+; independent kernels each compute the same triangle-Recipe and
+; arrive at the same NodeID via content-addressing alone — no
+; central coordinator, no shared state, no schema negotiation. The
+; math performs the handshake.
+;
+; Convention: vertex names are passed in canonical (alphabetical)
+; order to triangulate-triangle. Every vertex knows the three names
+; of the triangle; each computes (triangulate-triangle "A" "B" "C")
+; locally; content-addressing ensures all three arrive at one NodeID.
+;
+; Companion: docs/coherence-substrate/sovereignty-as-observable.form.
+
+(do
+    ;; --- Blueprints --------------------------------------------------
+
+    (let TRIANGLE-VERTEX   (make_nodeid 1 2 99 1800))
+    (let TRIANGLE-COMPLETE (make_nodeid 1 2 99 1801))
+
+    ;; --- constructors -----------------------------------------------
+
+    (defn triangulate-vertex-identity (name)
+        (intern_node TRIANGLE-VERTEX
+            (list (intern_trivial_string name))))
+
+    ;; triangulate-triangle: names in canonical (alphabetical) order.
+    ;; Every vertex calls with the same three names → same Recipe →
+    ;; same NodeID. The handshake is the math, not the coordination.
+
+    (defn triangulate-triangle (a b c)
+        (intern_node TRIANGLE-COMPLETE
+            (list (triangulate-vertex-identity a)
+                  (triangulate-vertex-identity b)
+                  (triangulate-vertex-identity c))))
+
+    ;; --- accessors --------------------------------------------------
+
+    (defn triangulate-vertex-name (v)
+        (node_value (head (node_children v))))
+
+    (defn triangulate-vertices (triangle)
+        (node_children triangle))
+
+    ;; --- the handshake fingerprint ----------------------------------
+    ;;
+    ;; Each subprocess running triangulate-vertex prints this int.
+    ;; All three vertices return the SAME int because the triangle
+    ;; Recipe is content-addressed; node_inst is the content-derived
+    ;; instance position. The shell script compares the three outputs;
+    ;; matching = handshake complete.
+
+    (defn triangulate-fingerprint (a b c)
+        (node_inst (triangulate-triangle a b c)))
+
+    0)
