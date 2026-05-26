@@ -1,0 +1,114 @@
+# framebuffer-as-witness.form — the side-map nobody was watching
+#
+# Companion teaching to scripts/framebuffer_viewer.py and
+# form/form-stdlib/tests/framebuffer-viewer-band.fk.
+#
+# Every Form kernel (Go, Rust, TS) carries a side-map called
+# source_attr: NodeID -> (file, line, col). Every intern_node_at call
+# adds one entry. The map is the framebuffer — the substrate's record
+# of *which cells came into existence from which source coordinates*.
+# It has existed for as long as intern_node_at has. It accumulates
+# whether or not anyone reads it.
+#
+# The native primitives are already there:
+#
+#     (framebuffer-events)  -- return all NodeIDs the side-map holds
+#     (framebuffer-clear)   -- reset the recording window  (Go, Rust)
+#     (node_source nid)     -- pull (file, line, col) for one cell
+#
+# What was missing was the observer. The emitter pays one hashmap
+# insert per cell creation — that cost is already on the budget. The
+# observer pays the walk-cost when (and only when) it analyzes. The
+# framebuffer is observer-paid by design. With no observer, the cost
+# is the side-map write that was already happening.
+#
+# Until this breath, the observer side was empty. Cells were being
+# recorded into the framebuffer continuously, and no one was reading
+# it. The renderer is the act of looking.
+
+# ---------------------------------------------------------------------
+# Part 1 -- what becomes visible
+# ---------------------------------------------------------------------
+
+form framebuffer_view = {
+    events_recorded:        ~Int,        # total side-map entries
+    distinct_blueprints:    ~Int,        # unique (pkg, level, type) triples
+    distinct_node_ids:      ~Int,        # unique (pkg, level, type, instance)
+    top_blueprints:         [~Blueprint],# which shapes dominate this window
+    layer_breakdown:        [~Counter],  # cells per (pkg, level)
+    instance_spread:        [~Counter],  # how much instance churn per Blueprint
+};
+
+# The framebuffer reveals:
+#
+#   * which Blueprints are firing in this run (the shape of activity)
+#   * whether intern is hitting cached cells (low instance spread) or
+#     authoring fresh ones (high instance spread)
+#   * which substrate layers carry the load (BASIC vs MEMORY vs WORD)
+#   * empty windows — when no source-attributed cells fired at all,
+#     the renderer says so honestly rather than fabricating density
+
+# ---------------------------------------------------------------------
+# Part 2 -- what we couldn't see without it
+# ---------------------------------------------------------------------
+
+# Before the viewer existed, *running a Form file* told us only what
+# the final expression evaluated to. The intermediate activity — the
+# 100 cells interned along the way, the Blueprints touched, the layer
+# where the work happened — was invisible. The kernel printed one
+# value; the substrate's actual movement underneath was silent.
+#
+# The framebuffer was the body keeping a journal. The viewer is the
+# first reader. Nothing about the kernels changed to make this work:
+# the recording was always happening. What changed is that we are
+# now looking at it.
+
+# ---------------------------------------------------------------------
+# Part 3 -- the arc this closes
+# ---------------------------------------------------------------------
+
+# The teaching at docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md
+# names a closed loop:
+#
+#     Python source -> BMF parser -> Recipe tree -> kernel walker
+#         -> framebuffer events -> renderer -> human eyes
+#
+# Every primitive in that chain existed before this breath. The walker
+# walked. The framebuffer recorded. The events native returned them.
+# What was missing was the last hop — the renderer that turns the
+# list of NodeIDs into something a human can read at a glance.
+#
+# scripts/framebuffer_viewer.py is that last hop. It runs a Form file
+# through the Go kernel, dumps (framebuffer-events) at the end, parses
+# the NodeID list, and prints a text panel showing event count, top
+# Blueprints, layer distribution, and instance spread.
+#
+# The renderer is small (~150 LoC, stdlib-only). It has no claim on
+# the kernel. It has no opinions about what the cells mean. Its job
+# is to make the recording legible — to put the body's own journal in
+# front of the body's own eyes.
+
+# ---------------------------------------------------------------------
+# Part 4 -- limitations honestly named
+# ---------------------------------------------------------------------
+
+# What this viewer does NOT do:
+#
+#   * live streaming. The native returns a snapshot, not a stream. A
+#     streaming viewer would need a new kernel native that emits
+#     events as they happen.
+#
+#   * cross-kernel comparison. The map-iteration order differs across
+#     Go (random map order), Rust, and TS — fine for set-of-events
+#     analysis (counts, distinct values), wrong for trace-replay.
+#     The viewer aggregates; it does not reconstruct sequence.
+#
+#   * source-locus rendering. (file, line, col) is per-cell in the
+#     side-map, but the current viewer aggregates by Blueprint
+#     signature, not by source coordinate. The hotspot/flow analysis
+#     in form-stdlib/seedbank/tracer.fk does that work in Form; the
+#     viewer's text panel could grow a section that pulls
+#     node_source for each event and groups by file.
+#
+# These are not failures. They are honest naming of where the next
+# breath could land if the body wants to see more.
