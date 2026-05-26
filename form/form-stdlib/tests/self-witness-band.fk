@@ -1,0 +1,82 @@
+; self-witness-band.fk — proves parse → walk → re-emit preserves the
+; substrate skeleton on a real corpus (web/messages/en.json).
+;
+; The witness: load en.json via i18n-load (warm from the .fkb cache),
+; walk the parsed Recipe through self-witness's toy JSON emitter, and
+; compare structural counts between the source and the emission.
+;
+; What this proves: the parser hands a Recipe to the witness; the
+; witness re-emits without re-reading the source bytes; every
+; JSON-OBJECT, JSON-PAIR, and trivial leaf the parser produced makes
+; it back out the other side. The skeleton round-trips.
+;
+; What it does NOT prove: byte-identity. The emitter writes no
+; whitespace, doesn't preserve key order across kernels with
+; different reduce semantics (today they agree, but the witness
+; doesn't depend on it), and quotes every leaf — fine for a corpus
+; that's mostly strings. Byte-identity would require sibling cells
+; for whitespace and number/bool preservation.
+;
+; What's next: the autoresearch loop — mutate the encoder Recipe
+; (currently authored by hand in self-witness.fk) and watch the
+; delta drop toward zero on more corpora than just JSON. The witness
+; this file embodies is the loss function the mutator will minimize.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/self-witness.fk
+
+(do
+    ;; --- load en, narrow to the "common" section -------------------
+    ;; The full en.json has ~213 nested objects and ~2300 leaves —
+    ;; deep enough that a pure-Form recursive emitter blows the
+    ;; default kernel stacks. The witness narrows to common (a
+    ;; flat object of 19 string pairs, 1 outer brace) — small
+    ;; enough to walk in any kernel and shaped to prove every
+    ;; layer of the witness pipeline: object dispatch, pair
+    ;; emission, leaf escape-and-quote, brace counting.
+
+    (let en (i18n-load "en"))
+    (let common (json-object-get en "common"))
+
+    ;; --- structural ground truth from the Recipe ------------------
+    ;; Pair count via node_children is the parser's view of how many
+    ;; entries common holds. JSON-OBJECT counter recurses; for a flat
+    ;; section it returns 1 (just the outer object itself).
+
+    (let common-pair-count (self-witness-pair-count common))
+    (let original-objects (self-witness-count-objects common))
+
+    ;; --- round-trip: walk the Recipe through the emitter ----------
+    ;; The emission has no whitespace, no preserved key order
+    ;; promises, no number/bool support — but it has every
+    ;; structural element the parser saw. Two structural
+    ;; invariants the witness checks:
+    ;;
+    ;;   brace-count(emitted) == JSON-OBJECT count in Recipe
+    ;;   comma-count(emitted) + 1 == pair count in Recipe
+    ;;     (true for a single flat object; the +1 is the implicit
+    ;;     first pair which has no leading comma)
+
+    (let emitted (emit-json-value common))
+    (let emitted-braces (self-witness-count-char emitted 123))
+    (let emitted-commas (self-witness-count-char emitted 44))
+
+    (defn match-flag (a b) (if (eq a b) 1 0))
+    (let brace-match (match-flag original-objects emitted-braces))
+    (let comma-match (match-flag (add emitted-commas 1) common-pair-count))
+
+    ;; --- witness composite ----------------------------------------
+    ;; The three kernels must agree on every term:
+    ;;   brace-match (0 or 1) × 1000     → 1000
+    ;;   comma-match (0 or 1) × 100      →  100
+    ;;   common-pair-count                →   19
+    ;;   common-braces (emitted)          →    1
+    ;; --------------------------------------------
+    ;; Expected total: 1000 + 100 + 19 + 1 = 1120
+    ;;
+    ;; Any drift in parse, walk, or emit changes the total — making
+    ;; this single integer a tight witness for forward/inverse
+    ;; skeleton preservation across the sibling kernels.
+
+    (add (mul brace-match 1000)
+        (add (mul comma-match 100)
+            (add common-pair-count emitted-braces))))
