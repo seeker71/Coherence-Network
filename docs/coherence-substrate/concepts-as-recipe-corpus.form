@@ -1,0 +1,106 @@
+; concepts-as-recipe-corpus.form — the body's parallel-media corpus.
+;
+; Sibling teaching to i18n-as-recipe-corpus.form. Where i18n holds
+; (anchor, locale) → text-surface triples, the Living Collective KB
+; holds (anchor, media) → media-surface triples — but instead of
+; varying locale at the same media, it varies MEDIA at the same
+; anchor: each concept's prose body, its inline visual prompts, its
+; cross-references, and the generated image bytes are parallel
+; emissions of one concept-anchor.
+
+(do
+    ;; --- the observation -------------------------------------------
+    ;;
+    ;; For each concept like lc-trust-over-fear:
+    ;;   prose          → "The body's frequency is tending and ripening — relationship, not policy..."
+    ;;   visual-prompts → ("photorealistic group of 25 people standing in loose circle..." ...)
+    ;;   cross-refs     → (lc-presence-over-protection lc-permission-is-interior ...)
+    ;;   image-bytes    → public/concepts/lc-trust-over-fear-{1,2,3}.jpg (generated)
+    ;;
+    ;; The CONCEPT-ID is a Recipe NodeID candidate — one semantic
+    ;; identity across all media. The body, the visuals, the image
+    ;; bytes, the cross-ref edges are surface emissions in different
+    ;; media. The universal translator's media-translation layer is
+    ;; asking: "given a concept identity, what does each medium emit?"
+    ;; The answer for ~149 concepts already exists in the body.
+
+    ;; --- the access surface ----------------------------------------
+    ;;
+    ;; form-stdlib/concept-corpus.fk will expose the corpus at substrate
+    ;; altitude (planned, this breath starts with cross-refs):
+    ;;   (concept-load id)             → parsed concept Recipe
+    ;;   (concept-body c)              → prose markdown string
+    ;;   (concept-visuals c)           → list of (caption prompt) pairs
+    ;;   (concept-cross-refs c)        → list of related anchor-ids
+    ;;   (concept-frontmatter c)       → frontmatter Recipe (hz, status, geometry)
+    ;;
+    ;; Backed by form-stdlib/cache.fk so each concept parses once
+    ;; cold (~5–10 ms per concept, ~5 KB markdown) and is warm
+    ;; thereafter (~1–3 ms). 149 concepts × ~7 KB = ~1 MB total.
+
+    ;; --- parallel to i18n -------------------------------------------
+    ;;
+    ;; i18n varies LOCALE within one media (text):
+    ;;   (anchor common/save) → en="Save" de="Speichern" es="Guardar" id="Simpan"
+    ;;
+    ;; concepts vary MEDIA within one locale (English, today):
+    ;;   (anchor lc-attunement) → body="..."
+    ;;                          → visuals=("photo of choir..." "humming circle...")
+    ;;                          → cross-refs=(lc-trust-over-fear lc-circulation)
+    ;;                          → image-bytes=(jpg1 jpg2 jpg3)
+    ;;
+    ;; Together they cover the two free dimensions of natural-language
+    ;; emission: LOCALE (which language) and MEDIA (which form). A
+    ;; future cell composing both gets (anchor, locale, media) → surface
+    ;; — every concept emittable as German prose, Spanish image-caption,
+    ;; Indonesian one-line-summary.
+
+    ;; --- what this enables -----------------------------------------
+    ;;
+    ;; Pattern 1: cross-media emission lookup
+    ;;   Given a concept, get its prose AND visual prompts. The ground
+    ;;   truth for "how does this concept appear to a reader vs a viewer?"
+    ;;
+    ;; Pattern 2: graph walk at substrate altitude
+    ;;   Cross-refs ARE substrate edges — concept-cross-refs returns the
+    ;;   list of anchor-ids the concept points to. Walking the graph is
+    ;;   walking the corpus; no separate adjacency table.
+    ;;
+    ;; Pattern 3: training corpus for natural-language ↔ visual
+    ;;   Each (prose-body, visual-prompt) pair at the same anchor is a
+    ;;   point in (concept → media-surface) space. ~149 concepts × 3-5
+    ;;   visuals × 1 body = ~600 cross-media observations. A future
+    ;;   substrate-side learner can derive "text describing X → visual
+    ;;   prompt evoking X" patterns from this corpus.
+    ;;
+    ;; Pattern 4: composition with i18n
+    ;;   When a concept ships in German (concept body translated to de),
+    ;;   the concept-corpus extends from (anchor, media) to (anchor,
+    ;;   locale, media). Both axes free, no special-casing.
+
+    ;; --- not-special-case discipline -------------------------------
+    ;;
+    ;; Same shape as i18n — read_with_cache composed with parse-concept-md.
+    ;; The markdown parser is a Form cell; adding a new content domain
+    ;; (presence files, lineage docs, spec frontmatter) = drop a .md
+    ;; under its dir and reuse the parser. No grammar-specific code paths
+    ;; per concept type.
+
+    ;; --- horizons named --------------------------------------------
+    ;;
+    ;; Near (small):
+    ;;   - concept-corpus.fk shipping cross-refs only (proves the path)
+    ;;   - witness band probing 2-3 known concepts
+    ;;
+    ;; Mid (the corpus extends):
+    ;;   - prose body extraction (substring between frontmatter end + EOF)
+    ;;   - visual-prompt extraction (![caption](visuals:prompt) pattern walk)
+    ;;   - frontmatter YAML → Recipe (smallest sufficient YAML parser)
+    ;;
+    ;; Far (the universal translator's media claim):
+    ;;   - concept-emit anchor media-name → surface in that medium
+    ;;   - cross-media training data feeding a Form-side learner
+    ;;   - bidirectional: surface-in-medium → candidate concept-anchor
+    ;;     (sense the concept from its prose, its image, its caption)
+
+    "concepts-as-recipe-corpus: the body's natural-language + visual training data already exists at substrate altitude — ~149 concepts × 4 media (prose, visuals, cross-refs, image-bytes), accessible via form-stdlib/concept-corpus.fk once landed")

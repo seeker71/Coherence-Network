@@ -1,0 +1,141 @@
+; concept-corpus.fk — Living Collective KB concepts as Form substrate.
+;
+; Sibling to i18n.fk. The body holds docs/vision-kb/concepts/lc-*.md
+; — ~149 concept files, each carrying prose body, inline visual
+; prompts, cross-references to related concepts, and yaml frontmatter
+; (id, hz, status, geometry). This file exposes the corpus at
+; substrate altitude so Form cells can walk concepts the way they
+; already walk i18n locales.
+;
+; First breath: only cross-refs and id parse. Prose body and visual-
+; prompt extraction queue as the next breath — same pattern, same
+; cache layer, no new ice.
+;
+; Read docs/coherence-substrate/concepts-as-recipe-corpus.form for the
+; teaching that names what this opens.
+;
+; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc),
+; form-stdlib/cache.fk must load before this file.
+
+(do
+    ;; --- file path helpers ------------------------------------------
+    ;;
+    ;; Paths relative to form/ (where validate.sh runs). Each concept
+    ;; lives at docs/vision-kb/concepts/{id}.md; the .fkb cache lands
+    ;; next to its i18n sibling under form-stdlib/.cache/.
+
+    (defn concept-source-path (concept-id)
+        (str_concat "../docs/vision-kb/concepts/"
+            (str_concat concept-id ".md")))
+
+    (defn concept-cache-path (concept-id)
+        (str_concat "form-stdlib/.cache/concept-"
+            (str_concat concept-id ".fkb")))
+
+    ;; --- cross-ref line extraction ----------------------------------
+    ;;
+    ;; Concept files carry one line of the shape:
+    ;;   → lc-foo, lc-bar, lc-baz
+    ;; Find the line, return the substring after "→ " up to newline.
+    ;; Returns the empty string if no cross-refs line exists.
+
+    (defn concept-find-crossref-line (text)
+        (do
+            (let arrow-pos (str_find text "\n→ " 0))
+            (if (lt arrow-pos 0) ""
+                (do
+                    ;; "\n→ " is 5 bytes: \n=1, →=3 (UTF-8), space=1.
+                    (let start (add arrow-pos 5))
+                    (let nl-pos (str_find text "\n" start))
+                    (if (lt nl-pos 0)
+                        (substring text start (str_len text))
+                        (substring text start nl-pos))))))
+
+    ;; --- split comma-separated cross-refs --------------------------
+    ;;
+    ;; Walk the cross-ref text, splitting on ", " — each chunk is one
+    ;; anchor-id. Empty input produces the empty list (no spurious
+    ;; entries).
+
+    (defn concept-split-loop (text from acc)
+        (do
+            (let comma-pos (str_find text ", " from))
+            (if (lt comma-pos 0)
+                (json-reverse-acc
+                    (cons (substring text from (str_len text)) acc))
+                (concept-split-loop text (add comma-pos 2)
+                    (cons (substring text from comma-pos) acc)))))
+
+    (defn concept-cross-refs-from-text (text)
+        (do
+            (let line (concept-find-crossref-line text))
+            (if (eq (str_len line) 0) (empty)
+                (concept-split-loop line 0 (empty)))))
+
+    ;; --- id extraction from yaml frontmatter -----------------------
+    ;;
+    ;; Frontmatter starts at byte 0 with "---\n" and contains one
+    ;; "id: lc-..." line within the first few lines. Read the line
+    ;; after "id: " up to newline.
+
+    (defn concept-id-from-text (text)
+        (do
+            (let id-pos (str_find text "id: " 0))
+            (if (lt id-pos 0) ""
+                (do
+                    (let start (add id-pos 4))
+                    (let nl-pos (str_find text "\n" start))
+                    (if (lt nl-pos 0)
+                        (substring text start (str_len text))
+                        (substring text start nl-pos))))))
+
+    ;; --- concept Recipe shape --------------------------------------
+    ;;
+    ;; CONCEPT NodeID groups (id-string, cross-refs-list). Two fixed
+    ;; children today; the next breath adds body and visuals as
+    ;; sibling children. Keeping the NodeID stable across additions
+    ;; would mean a versioned shape — for now this breath ships v0,
+    ;; named explicitly.
+
+    (let CONCEPT-V0 (make_nodeid 1 2 99 950))
+
+    ;; Children layout: child[0] = id string, child[1..] = cross-ref strings.
+    ;; Flat shape (one ref per child) lets len + tail compose cleanly
+    ;; across kernels — a nested list-as-single-child reads back as a
+    ;; CONS NodeID that not all kernels iterate the same way through
+    ;; node_children.
+
+    (defn concept-intern-refs (refs acc)
+        (if (eq (len refs) 0) (json-reverse-acc acc)
+            (concept-intern-refs (tail refs)
+                (cons (intern_trivial_string (head refs)) acc))))
+
+    (defn concept-node (id-str cross-refs-list)
+        (intern_node CONCEPT-V0
+            (cons (intern_trivial_string id-str)
+                  (concept-intern-refs cross-refs-list (empty)))))
+
+    (defn concept-id (c) (node_value (head (node_children c))))
+
+    (defn concept-cross-refs-loop (children acc)
+        (if (eq (len children) 0) (json-reverse-acc acc)
+            (concept-cross-refs-loop (tail children)
+                (cons (node_value (head children)) acc))))
+
+    (defn concept-cross-refs (c)
+        (concept-cross-refs-loop (tail (node_children c)) (empty)))
+
+    ;; --- parse + cached load ---------------------------------------
+
+    (defn parse-concept-md (source-path text)
+        (concept-node
+            (concept-id-from-text text)
+            (concept-cross-refs-from-text text)))
+
+    (defn concept-load (concept-id-str)
+        (read_with_cache
+            (concept-source-path concept-id-str)
+            (concept-cache-path concept-id-str)
+            parse-concept-md))
+
+    0)
