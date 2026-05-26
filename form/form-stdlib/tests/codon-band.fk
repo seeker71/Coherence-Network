@@ -1,0 +1,114 @@
+; codon-band.fk — the substrate admits the DNA reading.
+;
+; Witnesses that the NodeID 4-tuple under modular projection gives
+; a four-base alphabet, that three-base triplets pack into 0..63
+; (the genetic code's cardinality), and that two distinct Recipes
+; can share a codon sequence under one reading frame while differing
+; under another.
+;
+; preludes: form-stdlib/json.fk form-stdlib/codon.fk
+
+(do
+    ;; Build a Recipe with three known-NodeID children. We use
+    ;; intern_trivial_int values whose NodeID structure is
+    ;; (pkg=1, level=LEVEL_TRIVIAL, type=TRIV_INT, instance=value).
+    ;; For our purposes the exact level/type don't matter — we just
+    ;; need three distinct NodeIDs that we can project.
+    ;;
+    ;; The PKG of each trivial-int Recipe is 1; modulo 4 = 1.
+    ;; The INSTANCE differs per value, so projecting on inst gives
+    ;; non-trivial codon sequences.
+
+    (let RECIPE-A-BLUEPRINT (make_nodeid 1 2 99 1300))
+    (let RECIPE-B-BLUEPRINT (make_nodeid 1 2 99 1301))
+
+    ;; A and B both have three int children: 7, 11, 19.
+    ;; Their codon sequences under codon-base-inst should be identical
+    ;; (since the children's NodeIDs are intern-deduplicated — both
+    ;; Recipes share the same int leaves).
+    (let recipe-a (intern_node RECIPE-A-BLUEPRINT
+        (list (intern_trivial_int 7)
+              (intern_trivial_int 11)
+              (intern_trivial_int 19))))
+
+    (let recipe-b (intern_node RECIPE-B-BLUEPRINT
+        (list (intern_trivial_int 7)
+              (intern_trivial_int 11)
+              (intern_trivial_int 19))))
+
+    ;; A different Recipe with different leaves.
+    (let recipe-c (intern_node RECIPE-B-BLUEPRINT
+        (list (intern_trivial_int 8)
+              (intern_trivial_int 11)
+              (intern_trivial_int 19))))
+
+    ;; --- frame readings --------------------------------------------
+    (let a-pkg-frame (codon-frame-pkg recipe-a))
+    (let a-inst-frame (codon-frame-inst recipe-a))
+    (let b-inst-frame (codon-frame-inst recipe-b))
+    (let c-inst-frame (codon-frame-inst recipe-c))
+
+    ;; pkg of every trivial-int is 1; pkg frame for A is (1 1 1).
+    (let pkg-frame-score
+        (add
+            (if (eq (len a-pkg-frame) 3) 10 0)
+        (add
+            (if (eq (head a-pkg-frame) 1) 20 0)
+        (add
+            (if (eq (head (tail a-pkg-frame)) 1) 30 0)
+            (if (eq (head (tail (tail a-pkg-frame))) 1) 40 0)))))
+
+    ;; inst frame for A: 7 mod 4 = 3, 11 mod 4 = 3, 19 mod 4 = 3.
+    ;; All three reduce to base 3 — a fun accident; demonstrates how
+    ;; modular projection collapses many values to few classes.
+    (let inst-frame-score
+        (add
+            (if (eq (head a-inst-frame) 3) 50 0)
+        (add
+            (if (eq (head (tail a-inst-frame)) 3) 60 0)
+            (if (eq (head (tail (tail a-inst-frame))) 3) 70 0))))
+
+    ;; --- cross-recipe frame agreement -------------------------------
+    ;; A and B share leaves, so their inst-frames must match.
+
+    (defn frame-eq-loop (a b)
+        (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (head a) (head b))
+                    (frame-eq-loop (tail a) (tail b))
+                    0))))
+
+    (let cross-recipe-score
+        (mul 80 (frame-eq-loop a-inst-frame b-inst-frame)))
+
+    ;; C differs at the first leaf (8 vs 7); 8 mod 4 = 0 vs 7 mod 4 = 3.
+    ;; So C's inst-frame differs from A's at position 0.
+    (let differing-frame-score
+        (if (eq (frame-eq-loop a-inst-frame c-inst-frame) 0) 90 0))
+
+    ;; --- codon packing ---------------------------------------------
+    ;; Pack (3, 3, 3) → 3*16 + 3*4 + 3 = 63.
+    (let a-sequence (codon-sequence recipe-a codon-base-inst))
+    (let pack-score
+        (add
+            (if (eq (len a-sequence) 1) 100 0)
+            (if (eq (head a-sequence) 63) 110 0)))
+
+    ;; --- the universal-transit teaching --------------------------
+    ;; Direct triplet packing: codon-pack3 7 11 19 = 7*16 + 11*4 + 19 = 175,
+    ;; but that's the raw int triple, not the mod-4 codon. Verify the
+    ;; modular packing: codon-pack3 (mod 7 4) (mod 11 4) (mod 19 4)
+    ;;                = codon-pack3 3 3 3 = 63.
+    (let raw-pack (codon-pack3 7 11 19))
+    (let mod-pack (codon-pack3 (mod 7 4) (mod 11 4) (mod 19 4)))
+    (let teaching-score
+        (add
+            (if (eq raw-pack 175) 120 0)
+            (if (eq mod-pack 63) 130 0)))
+
+    ;; Expected: 10+20+30+40 + 50+60+70 + 80 + 90 + 100+110 + 120+130 = 910
+    (add pkg-frame-score
+    (add inst-frame-score
+    (add cross-recipe-score
+    (add differing-frame-score
+    (add pack-score teaching-score))))))
