@@ -1643,6 +1643,160 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNodeID, Nid: ne.Category}
 	})
 
+	// --- BMF native rule runtime (Path C) --------------------------------
+	//
+	// bmf_apply_rule_native — additive fast path for engine.fk's
+	// apply-object-rule. Operates on already-tokenized object streams
+	// (kernel does NOT see raw bytes here — tokenization is its own concern,
+	// often already lowered through scan_run path-A natives). The state-
+	// machine walk that engine.fk does interpretively (match-object-pattern
+	// + match-object-sequence + match-object-literal, each costing one
+	// walker dispatch per tick) runs as a Go loop here, then re-enters Form
+	// exactly once to invoke the rule's action closure.
+	//
+	// Signature mirrors apply-object-rule's shape:
+	//   (bmf_apply_rule_native rule object-stream)
+	//     → ("match" caps rest) on success
+	//     → ("fail"  reason)    on miss
+	//
+	// Fidelity contract: the returned Recipe shape (caps alist with
+	// "objects" + "result" keys, bmf-match-source captures + span, the
+	// result bmf-object as ("cell" rule-name recipe source inverse)) is
+	// byte-identical under node_eq to what apply-object-rule produces.
+	// engine.fk stays untouched; this is purely additive.
+	//
+	// POC scope this breath — flat sequence of object-literal matchers,
+	// no captures, no choice, no star/opt/cut. Every other shape PANICS
+	// loudly so callers can't silently fall off the fast path. Rust + TS
+	// kernels carry the same name but panic on call until next breath.
+	// See docs/coherence-substrate/bmf-native-runtime.form.
+	k.registerNative("bmf_apply_rule_native", catWitness(), func(k *Kernel, args []Value) Value {
+		if len(args) != 2 {
+			panic("bmf_apply_rule_native: expects (rule object-stream)")
+		}
+		rule := args[0]
+		stream := args[1]
+		if rule.Kind != VList || len(rule.List) < 3 {
+			panic("bmf_apply_rule_native: rule must be (name pattern action ...)")
+		}
+		ruleName := rule.List[0]
+		pattern := rule.List[1]
+		action := rule.List[2]
+		ruleInverse := Value{Kind: VNull}
+		if len(rule.List) > 3 {
+			ruleInverse = rule.List[3]
+		}
+		if pattern.Kind != VList || len(pattern.List) == 0 || pattern.List[0].Kind != VStr {
+			panic("bmf_apply_rule_native: pattern must be a tagged list")
+		}
+		tag := pattern.List[0].Str
+		if tag != "sequence" {
+			panic("bmf_apply_rule_native: TODO: pattern tag '" + tag + "' not yet supported (POC: 'sequence' of 'object' literals only)")
+		}
+		// Validate every child is an "object" literal — no nesting yet.
+		children := pattern.List[1:]
+		for i, child := range children {
+			if child.Kind != VList || len(child.List) < 3 || child.List[0].Kind != VStr {
+				panic(fmt.Sprintf("bmf_apply_rule_native: child %d malformed", i))
+			}
+			ctag := child.List[0].Str
+			if ctag != "object" {
+				panic("bmf_apply_rule_native: TODO: sequence child '" + ctag + "' not yet supported (POC: 'object' literals only)")
+			}
+		}
+		// State-machine walk: consume one stream object per literal child.
+		// Match shape mirrors match-object-literal exactly.
+		if stream.Kind != VList {
+			panic("bmf_apply_rule_native: object-stream must be a list")
+		}
+		consumed := 0
+		streamList := stream.List
+		for _, child := range children {
+			wantKind := child.List[1].Str
+			wantValue := child.List[2].Str
+			if consumed >= len(streamList) {
+				return Value{Kind: VList, List: []Value{
+					{Kind: VStr, Str: "fail"},
+					{Kind: VStr, Str: "expected BMF object"},
+				}}
+			}
+			obj := streamList[consumed]
+			// Object cell shape: ("cell" kind value source inverse).
+			if obj.Kind != VList || len(obj.List) < 3 || obj.List[0].Kind != VStr || obj.List[0].Str != "cell" {
+				panic("bmf_apply_rule_native: stream item is not a cell")
+			}
+			gotKind := obj.List[1].Str
+			gotValue := obj.List[2].Str
+			if gotKind != wantKind {
+				return Value{Kind: VList, List: []Value{
+					{Kind: VStr, Str: "fail"},
+					{Kind: VStr, Str: "object kind mismatch: expected " + wantKind},
+				}}
+			}
+			if wantValue != "" && gotValue != wantValue {
+				return Value{Kind: VList, List: []Value{
+					{Kind: VStr, Str: "fail"},
+					{Kind: VStr, Str: "object value mismatch: expected " + wantValue},
+				}}
+			}
+			consumed++
+		}
+		// Build captures-as-collection. POC scope: no named captures, so the
+		// collection wraps an empty objects list — same shape Form's
+		// (bmf-caps-to-collection (cap-empty 0)) produces.
+		emptyCollection := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "bmf-collection"},
+			{Kind: VList, List: []Value{}},
+		}}
+		// Consumed prefix slice — what Form's (take N stream) returns.
+		spanSlice := make([]Value, consumed)
+		copy(spanSlice, streamList[:consumed])
+		span := Value{Kind: VList, List: spanSlice}
+		// bmf-match-source captures span.
+		matchSource := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "bmf-match-source"},
+			emptyCollection,
+			span,
+		}}
+		// Invoke the action closure: (rule-action captures-collection) →
+		// recipe. This is the only Form re-entry; everything above is
+		// native data walking.
+		if action.Kind != VClosure {
+			panic("bmf_apply_rule_native: rule action must be a closure")
+		}
+		cl := action.Cl
+		if len(cl.Params) != 1 {
+			panic(fmt.Sprintf("bmf_apply_rule_native: action closure takes %d params, expected 1", len(cl.Params)))
+		}
+		call := NewCallFrame(cl.Env, 1)
+		call.Bind(cl.Params[0], emptyCollection)
+		recipe := k.walk(cl.Body, call)
+		// Result bmf-object — ("cell" rule-name recipe source inverse).
+		// Inverse falls back to the action closure's identity treatment
+		// when the rule has no explicit inverse; engine.fk uses
+		// bmf-identity-inverse which is a closure value bound at module
+		// load. POC: pass through whatever ruleInverse the rule carried.
+		resultObject := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "cell"},
+			ruleName,
+			recipe,
+			matchSource,
+			ruleInverse,
+		}}
+		// caps alist — cons "result" then "objects" so the alist order
+		// matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
+		caps := Value{Kind: VList, List: []Value{
+			{Kind: VList, List: []Value{{Kind: VStr, Str: "result"}, resultObject}},
+			{Kind: VList, List: []Value{{Kind: VStr, Str: "objects"}, emptyCollection}},
+		}}
+		rest := Value{Kind: VList, List: streamList[consumed:]}
+		return Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "match"},
+			caps,
+			rest,
+		}}
+	})
+
 	// --- Debug / inspection -----------------------------------------------
 	// `trace` — print-and-return. No Form category claimed; debug surface.
 	k.registerNative("trace", catUndefined(), func(_ *Kernel, args []Value) Value {
