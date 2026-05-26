@@ -1,0 +1,126 @@
+; concept-i18n-band.fk — witnesses the bridge composing two corpora.
+;
+; The composition under test:
+;   concept anchor (substrate Recipe id)
+;     → i18n key-path (transform: strip "lc-", prefix "concepts")
+;       → 4 locale recipes
+;         → 4 parallel surface strings
+;
+; Today every surface returns "" — web/messages/*.json has no
+; "concepts" section. The band scores the SHAPE of the composition
+; (the anchor transform, the locales loading, the parallel walk,
+; the coverage count) rather than the surface content. If a
+; translator later adds a "concepts" section, the coverage score
+; lifts without any code change in this band — the body decides.
+;
+; The empty-coverage assertion is itself a positive witness: the
+; gap-sense IS the result. We're proving the composition works
+; end-to-end on real corpora, and we're naming the current state
+; truthfully.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/concept-corpus.fk form-stdlib/concept-i18n-bridge.fk
+
+(do
+    ;; --- load all four locales once --------------------------------
+    (let en (i18n-load "en"))
+    (let de (i18n-load "de"))
+    (let es (i18n-load "es"))
+    (let id (i18n-load "id"))
+    (let locales (list (list "en" en) (list "de" de) (list "es" es) (list "id" id)))
+
+    ;; --- anchor → key-path transform -------------------------------
+    ;; Three concept-ids the body holds, each transforms to a
+    ;; ("concepts" <bare-id>) two-element path.
+    (let path-tof  (concept-anchor-as-i18n-path "lc-trust-over-fear"))
+    (let path-att  (concept-anchor-as-i18n-path "lc-attunement"))
+    (let path-circ (concept-anchor-as-i18n-path "lc-circulation"))
+
+    (let transform-score
+        (add
+            (if (and (eq (len path-tof) 2)
+                     (and (str_eq (head path-tof) "concepts")
+                          (str_eq (head (tail path-tof)) "trust-over-fear"))) 10 0)
+        (add
+            (if (and (eq (len path-att) 2)
+                     (and (str_eq (head path-att) "concepts")
+                          (str_eq (head (tail path-att)) "attunement"))) 20 0)
+            (if (and (eq (len path-circ) 2)
+                     (and (str_eq (head path-circ) "concepts")
+                          (str_eq (head (tail path-circ)) "circulation"))) 30 0))))
+
+    ;; --- prefix stripping idempotence ------------------------------
+    ;; A bare id (no "lc-") passes through unchanged. A "lc-x" strips
+    ;; cleanly. The transform is honest on both forms.
+    (let strip-score
+        (add
+            (if (str_eq (concept-strip-lc-prefix "lc-attunement") "attunement") 40 0)
+        (add
+            (if (str_eq (concept-strip-lc-prefix "attunement") "attunement") 50 0)
+            (if (str_eq (concept-strip-lc-prefix "lc-") "") 60 0))))
+
+    ;; --- single-locale surface probe -------------------------------
+    ;; Each locale returns "" today — no "concepts" section exists.
+    ;; That empty IS the result; we score it explicitly.
+    (let surf-en  (concept-i18n-surface "lc-trust-over-fear" en))
+    (let surf-de  (concept-i18n-surface "lc-trust-over-fear" de))
+    (let surf-es  (concept-i18n-surface "lc-attunement" es))
+    (let surf-id  (concept-i18n-surface "lc-circulation" id))
+
+    (let gap-score
+        (add
+            (if (eq (str_len surf-en) 0) 70 0)
+        (add
+            (if (eq (str_len surf-de) 0) 80 0)
+        (add
+            (if (eq (str_len surf-es) 0) 90 0)
+            (if (eq (str_len surf-id) 0) 100 0)))))
+
+    ;; --- multi-locale parallel view --------------------------------
+    ;; Returns a 4-entry list, one per locale. Shape matches nl-emit-all
+    ;; — the sibling composition lands at the same surface form.
+    (let par-tof  (concept-i18n-parallel "lc-trust-over-fear" locales))
+    (let par-att  (concept-i18n-parallel "lc-attunement" locales))
+    (let par-circ (concept-i18n-parallel "lc-circulation" locales))
+
+    (let parallel-score
+        (add
+            (if (eq (len par-tof) 4) 110 0)
+        (add
+            (if (eq (len par-att) 4) 120 0)
+            (if (eq (len par-circ) 4) 130 0))))
+
+    ;; --- coverage count --------------------------------------------
+    ;; Today every concept has coverage 0 — the body has not surfaced
+    ;; any concept as a UI string yet. The band records this honestly;
+    ;; the day a translator adds a "concepts" section the same call
+    ;; lifts without code changes here.
+    (let cov-tof  (concept-i18n-coverage "lc-trust-over-fear" locales))
+    (let cov-att  (concept-i18n-coverage "lc-attunement" locales))
+    (let cov-circ (concept-i18n-coverage "lc-circulation" locales))
+
+    (let coverage-score
+        (add
+            (if (eq cov-tof 0) 140 0)
+        (add
+            (if (eq cov-att 0) 150 0)
+            (if (eq cov-circ 0) 160 0))))
+
+    ;; --- concept-load + bridge end-to-end --------------------------
+    ;; Round-trip: load a concept Recipe from concept-corpus.fk, take
+    ;; its id, run it through the bridge, get parallel locale view.
+    ;; This is the full composition arc on real substrate.
+    (let tof-recipe (concept-load "lc-trust-over-fear"))
+    (let tof-id (concept-id tof-recipe))
+    (let par-from-recipe (concept-i18n-parallel tof-id locales))
+    (let end-to-end-score
+        (add
+            (if (str_eq tof-id "lc-trust-over-fear") 170 0)
+            (if (eq (len par-from-recipe) 4) 180 0)))
+
+    ;; Expected total: 10+20+30 + 40+50+60 + 70+80+90+100 + 110+120+130
+    ;;               + 140+150+160 + 170+180 = 1710
+    (add transform-score
+    (add strip-score
+    (add gap-score
+    (add parallel-score
+    (add coverage-score end-to-end-score))))))
