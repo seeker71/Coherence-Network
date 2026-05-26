@@ -1,0 +1,64 @@
+; triangulate-band.fk — the substrate handshake by content-addressing.
+;
+; Three "vertex perspectives" each construct the triangle Recipe
+; locally. All three arrive at the same NodeID via intern_node's
+; content-addressing. The witness: node_eq across all three.
+;
+; In production, each perspective lives in its own kernel process
+; (see scripts/triangulate.sh). The band proves the IN-process logic
+; that the shell script then witnesses cross-process.
+;
+; preludes: form-stdlib/json.fk form-stdlib/triangulate.fk
+
+(do
+    ;; Three vertices, three perspectives. Each computes the same
+    ;; triangle Recipe from its own knowledge of the canonical names.
+    (let from-a (triangulate-triangle "A" "B" "C"))
+    (let from-b (triangulate-triangle "A" "B" "C"))
+    (let from-c (triangulate-triangle "A" "B" "C"))
+
+    ;; All three perspectives arrive at one Recipe. That IS the
+    ;; handshake — three independent walks, one NodeID.
+    (let handshake-score
+        (add
+            (if (node_eq from-a from-b) 100 0)
+            (if (node_eq from-b from-c) 100 0)))
+
+    ;; Fingerprint matches across vertices.
+    (let fp-a (triangulate-fingerprint "A" "B" "C"))
+    (let fp-b (triangulate-fingerprint "A" "B" "C"))
+    (let fp-c (triangulate-fingerprint "A" "B" "C"))
+
+    (let fingerprint-score
+        (add
+            (if (eq fp-a fp-b) 200 0)
+            (if (eq fp-b fp-c) 200 0)))
+
+    ;; The triangle has three vertices in the order the constructor
+    ;; received them (canonical alphabetical).
+    (let vertices (triangulate-vertices from-a))
+    (let count-score
+        (if (eq (len vertices) 3) 300 0))
+
+    (let name-0 (triangulate-vertex-name (head vertices)))
+    (let name-1 (triangulate-vertex-name (head (tail vertices))))
+    (let name-2 (triangulate-vertex-name (head (tail (tail vertices)))))
+    (let order-score
+        (add
+            (if (str_eq name-0 "A") 100 0)
+        (add
+            (if (str_eq name-1 "B") 100 0)
+            (if (str_eq name-2 "C") 100 0))))
+
+    ;; A DIFFERENT triangle (different vertex names) must produce a
+    ;; different NodeID. Content-addressing requires distinct content
+    ;; → distinct NodeID.
+    (let other-triangle (triangulate-triangle "X" "Y" "Z"))
+    (let distinct-score
+        (if (node_eq from-a other-triangle) 0 400))
+
+    ;; Expected total: 200 + 400 + 300 + 300 + 400 = 1600
+    (add handshake-score
+    (add fingerprint-score
+    (add count-score
+    (add order-score distinct-score)))))
