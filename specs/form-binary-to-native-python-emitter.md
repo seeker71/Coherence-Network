@@ -130,11 +130,14 @@ Every module reads as Python. Imports from `sdk` are the only Form surface.
 - The proof: `form/scripts/emit_native_python.sh` runs end-to-end and produces a `kernels/python_bmf/objects.py` that imports and works under CPython. No hand-written Python compiler modules anywhere.
 - Write commit_evidence.
 
-### Phase 1 — artifact and lens readiness
+### Phase 1 — artifact and lens readiness  *(landed 2026-05-26)*
 
-- Verify `read_form_binary(path)` loads `.fkb` into live nodes in each kernel without parsing source.
-- Add inspection primitives: `node_category`, `node_children`, `node_value`, `node_pkg`, `node_level`, `node_type`, `node_inst`.
-- Define artifact context model for id remapping. Add `--emit-lens` mode to compilers if `.fkb` does not preserve enough symbol/source data.
+- `read_form_binary(path)` deserializes `.fkb` into live nodes on all three kernels (Go, Rust, TypeScript).
+- Inspection primitives in every kernel: `node_category`, `node_children`, `node_value`, `node_pkg`, `node_level`, `node_type`, `node_inst`.
+- `form/scripts/build_form_compiler_artifact.sh --categories <out.fkb>` reads `form-stdlib/form-ontology.json`, projects the python.bmf category list to a tiny generated `.fk`, then compiles it to `.fkb` via `form-kernel-go --emit-binary`.
+- `form/form-stdlib/emits/python-native.fk` carries the lens (`pn-cat-table-from-artifact`) plus the `objects.py` renderer (`pn-emit-objects-module`, `pn-emit-objects-file`). The lens walks the deserialized recipe tree (`RBlockLet → RFnCall list → entry list`) into a Form list of `(name code)` pairs; the renderer walks the pairs into `class PyBmfCategory(IntEnum)` source. **Zero category names are duplicated inside the emitter** — the .fkb is the source.
+- `form/scripts/emit_native_python.sh` is the end-to-end driver: build the .fkb, then run the Form emitter to write `kernels/python_bmf/objects.py`. The output passes `python3 -m py_compile`; `PyBmfCategory.IMPORT == 501`, `PyBmfCategory.MATCH_AS == 574`, and `len(list(PyBmfCategory)) == 74` match the ontology JSON.
+- Artifact context model for id remapping and `--emit-lens` for symbol/source data remain open and roll into Phase 2.
 
 ### Phase 2 — semantic lowering
 
@@ -266,7 +269,7 @@ Each gap is the next breath's task — name + handle so the next agent can pick 
 - **gap: emit parser.py** — extend `emits/python-native.fk` with `pn-emit-parser-module`. Port `python-source-scan-text` and layout derivation. Follow-up issue: file as `idea-realization-engine: emit parser.py` once Phase 1 lens is in.
 - **gap: emit rules.py** — extend `emits/python-native.fk` with `pn-emit-rules-module`. Walk `python-bmf-rules` and render each as a `Rule(name=..., pattern=..., forward=...)` dataclass. Follow-up: same idea.
 - **gap: emit section_parser.py, form_action.py, compiler.py** — three more `pn-emit-<module>` recipes. Follow-up: same idea.
-- **gap: source-of-truth from .fkb, not Form literal** — the `pn-categories` literal inside `emits/python-native.fk` shadows `python-bmf.fk`. Phase 1 reads the category list out of `python-bmf.fk`'s compiled `.fkb` via `read_form_binary` + lens lookup so divergence is impossible. Follow-up: `idea-realization-engine: lens-driven emitter`.
+- ~~**gap: source-of-truth from .fkb, not Form literal**~~ — *closed 2026-05-26.* The category table now ships as a `.fkb` artifact compiled from a generated `.fk` projection of `form-ontology.json`. `pn-cat-table-from-artifact` in `emits/python-native.fk` is the lens; no category names live inside the emitter. The .fkb path follows `form-kernel-go --emit-binary` → `read_form_binary` → recipe-tree walk via `node_children`/`node_value`. Reaching `python-bmf.fk` itself (with full rule bodies) is downstream of Phase 2 lowering.
 - **gap: build_form_compiler_artifact.sh --emit-lens** — the kernel does not yet write a sibling `.fkl` lens; the script's fallback path emits a placeholder .fkb. Follow-up: `idea-realization-engine: kernel --emit-lens`.
 - **gap: perf comparison numbers in PYTHON_PIPELINE_STATUS.md** — `scripts/perf_compare_native_python.sh` runs but parity-suite emission isn't complete enough yet to compare meaningfully. Follow-up: re-run after Phase 5.
 

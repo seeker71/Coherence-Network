@@ -49,4 +49,27 @@
     (assert (gt (str_len header) 0)
             "pn-module-header must produce a non-empty header")
 
+    ;; --- Phase 1: lens-driven objects.py emitter ---------------------
+    ;; The emitter no longer carries a Form literal of the category
+    ;; table. pn-cat-table-from-artifact reads the table from a .fkb
+    ;; produced by form/scripts/build_form_compiler_artifact.sh
+    ;; --categories. Here we synthesize a two-entry pair list directly
+    ;; (the lens output shape) and verify the rendering functions agree.
+
+    (let synth-pairs (list (list "IMPORT" 501) (list "MATCH-AS" 574)))
+
+    (let enum-line (pn-render-enum-line (head synth-pairs)))
+    (assert (gt (str_len enum-line) 0)
+            "pn-render-enum-line must produce a non-empty IntEnum member line")
+
+    (let objects-py (pn-emit-objects-module synth-pairs))
+    (assert (gt (str_len objects-py) 0)
+            "pn-emit-objects-module must produce a non-empty module source")
+
+    (assert (str_eq (pn-enum-name "FROM-IMPORT") "FROM_IMPORT")
+            "pn-enum-name must translate UPPER-KEBAB to UPPER_SNAKE")
+
+    (assert (str_eq (pn-int-str 574) "574")
+            "pn-int-str must render integers as decimal strings")
+
     0)
