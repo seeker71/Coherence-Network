@@ -1,0 +1,155 @@
+; autoresearch-loop.fk — the mutable-genome layer on top of pareto.fk.
+;
+; docs/coherence-substrate/autoresearch-runtime.form names the four
+; primitive cells: genome (mutable), evaluator (frozen), experiment
+; (time-boxed), governance (commit-or-rollback). This cell composes
+; them with pareto.fk's fitness layer so the body can evolve its own
+; cross-domain encoder candidates without a human in the loop.
+;
+; The shape this breath ships:
+;   - genome   = a list of pareto-candidate Recipes
+;   - mutator  = ±1 perturbation in either dimension (4 variants per candidate)
+;   - selector = pareto-frontier (FROZEN — pareto.fk is the evaluator)
+;   - loop     = generation = (original ∪ variants) → frontier
+;   - governance = automatic: the frontier IS the commit. Dominated
+;                  candidates are silently rolled back by not appearing
+;                  in the next generation's genome.
+;
+; The teaching: selection pressure favors non-domination. Mutations
+; that produce a worse-on-both-axes Recipe are silently dropped at
+; the next frontier step. The genome cannot get worse — at worst it
+; stays the same, at best it improves toward the kernel-attainable
+; knee. No reward shaping, no LR scheduling — the substrate's
+; content-addressing handles the evaluation.
+;
+; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc),
+; form-stdlib/pareto.fk (for candidate shape + frontier).
+
+(do
+    ;; --- helpers ----------------------------------------------------
+
+    (defn auto-list-concat (a b)
+        (if (eq (len a) 0) b
+            (cons (head a) (auto-list-concat (tail a) b))))
+
+    ;; --- mutator ---------------------------------------------------
+    ;;
+    ;; Given one candidate, produce four variants: ±1 in compute,
+    ;; ±1 in loss. Variants are clamped to ≥ 0 — negative compute or
+    ;; negative loss isn't physically meaningful, and the body's
+    ;; honest gap-sense prefers refusing the variant over producing it.
+    ;;
+    ;; Clamping: if a delta would push below zero, that variant
+    ;; collapses to a duplicate of the original. The frontier step
+    ;; then drops the duplicate.
+
+    (defn auto-clamp (v) (if (lt v 0) 0 v))
+
+    (defn auto-mutate-one (c)
+        (do
+            (let comp (pareto-compute c))
+            (let loss (pareto-loss c))
+            (list (pareto-candidate (auto-clamp (sub comp 1)) loss)
+                  (pareto-candidate (add comp 1) loss)
+                  (pareto-candidate comp (auto-clamp (sub loss 1)))
+                  (pareto-candidate comp (add loss 1)))))
+
+    (defn auto-mutate-all-loop (genome acc)
+        (if (eq (len genome) 0) acc
+            (auto-mutate-all-loop (tail genome)
+                (auto-list-concat (auto-mutate-one (head genome)) acc))))
+
+    (defn auto-mutate-all (genome)
+        (auto-mutate-all-loop genome (empty)))
+
+    ;; --- one generation --------------------------------------------
+    ;;
+    ;; Combine original genome + all mutations, then take the
+    ;; frontier. The frontier IS the new genome. Dominated candidates
+    ;; (including the original ones whose mutants strictly improved
+    ;; on them) are silently dropped — that's the governance shape.
+
+    (defn auto-evolve-once (genome)
+        (do
+            (let mutants (auto-mutate-all genome))
+            (pareto-frontier (auto-list-concat genome mutants))))
+
+    ;; --- N generations ---------------------------------------------
+    ;;
+    ;; Run the loop N times. Each iteration is itself a closed cell:
+    ;; the genome going in produces a strictly-not-worse genome going
+    ;; out. Time-boxing happens by limiting N; in autoresearch's full
+    ;; shape, a wall-clock evaluator could replace the integer.
+
+    (defn auto-evolve-loop (genome n)
+        (if (eq n 0) genome
+            (auto-evolve-loop (auto-evolve-once genome) (sub n 1))))
+
+    (defn auto-evolve (genome n)
+        (auto-evolve-loop genome n))
+
+    ;; --- experiment record -----------------------------------------
+    ;;
+    ;; Wraps one generation: (genome-before, genome-after, knee-before,
+    ;; knee-after, budget). Reading the experiment Recipe tells the
+    ;; body whether the loop made progress at the budget the caller
+    ;; cares about.
+
+    (let AUTO-EXPERIMENT (make_nodeid 1 2 99 1600))
+
+    ;; pareto-knee returns either a Recipe (with PARETO-CANDIDATE
+    ;; children) or the empty list. We can't use (len knee) to
+    ;; distinguish — `len` on a Recipe returns 0, same as the empty
+    ;; list. Check node_children instead; a Recipe has 2 children,
+    ;; the empty list has 0.
+
+    (defn auto-knee-fits? (knee)
+        (gt (len (node_children knee)) 0))
+
+    (defn auto-experiment (genome-before budget)
+        (do
+            (let genome-after (auto-evolve-once genome-before))
+            (let knee-before (pareto-knee genome-before budget))
+            (let knee-after (pareto-knee genome-after budget))
+            (intern_node AUTO-EXPERIMENT
+                (list (intern_trivial_int (len genome-before))
+                      (intern_trivial_int (len genome-after))
+                      (intern_trivial_int budget)
+                      (if (auto-knee-fits? knee-before)
+                          (intern_trivial_int (pareto-loss knee-before))
+                          (intern_trivial_int -1))
+                      (if (auto-knee-fits? knee-after)
+                          (intern_trivial_int (pareto-loss knee-after))
+                          (intern_trivial_int -1))))))
+
+    (defn auto-exp-genome-before-size (e)
+        (node_value (head (node_children e))))
+    (defn auto-exp-genome-after-size (e)
+        (node_value (head (tail (node_children e)))))
+    (defn auto-exp-knee-loss-before (e)
+        (node_value (head (tail (tail (tail (node_children e)))))))
+    (defn auto-exp-knee-loss-after (e)
+        (node_value (head (tail (tail (tail (tail (node_children e))))))))
+
+    ;; --- the invariant ---------------------------------------------
+    ;;
+    ;; Monotonicity: at any budget, knee-loss-after ≤ knee-loss-before.
+    ;; The substrate cannot regress. This IS the autoresearch
+    ;; honesty contract — the evaluator is frozen, the search can
+    ;; only commit improvements.
+    ;;
+    ;; (Subtle: if the budget excludes all candidates in the original
+    ;;  AND the mutations cross into-budget, knee-loss-after can be
+    ;;  finite where knee-loss-before was -1. Handle: -1 sentinel for
+    ;;  "no fit"; treat as +∞ in comparisons elsewhere.)
+
+    (defn auto-improved? (experiment)
+        (do
+            (let before (auto-exp-knee-loss-before experiment))
+            (let after (auto-exp-knee-loss-after experiment))
+            (if (eq before -1)
+                (if (eq after -1) false true)
+                (if (eq after -1) false
+                    (lt after before)))))
+
+    0)
