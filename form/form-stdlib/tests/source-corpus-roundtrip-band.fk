@@ -162,29 +162,37 @@
                     "form"
                     (list form-source-section)))))
 
+    ;; bmf-reverse-lens-node-from calls intern_node BMF-REVERSE-LENS (list domain lens) —
+    ;; kernel intern_node requires NodeID children, so promote the domain/lens labels to
+    ;; interned-string NodeIDs once. bmf-reverse-lens-matches? uses kind-strict value_eq,
+    ;; so every lookup must reuse the same NodeID-form the targets were built with.
+    (let DOM-GO (intern_trivial_string "go"))
+    (let DOM-TYPESCRIPT (intern_trivial_string "typescript"))
+    (let LENS-SOURCE (intern_trivial_string "source"))
+
     (let go-ctx
-        (bmf-symbol-context "go" "source"
-            (list (bmf-symbol-binding anchor "go" "source"
+        (bmf-symbol-context DOM-GO LENS-SOURCE
+            (list (bmf-symbol-binding anchor DOM-GO LENS-SOURCE
                                       "active.add"
                                       (list "add" "Add")))))
     (let ts-ctx
-        (bmf-symbol-context "typescript" "source"
-            (list (bmf-symbol-binding anchor "typescript" "source"
+        (bmf-symbol-context DOM-TYPESCRIPT LENS-SOURCE
+            (list (bmf-symbol-binding anchor DOM-TYPESCRIPT LENS-SOURCE
                                       "active.add"
                                       (list "add" "addFn")))))
     (let targets
         (list
-            (bmf-reverse-lens "go" "source"
+            (bmf-reverse-lens DOM-GO LENS-SOURCE
                               emit-active-add-go
                               parse-active-add-go
                               (go-bmf-find-rule "func-return-add" go-bmf-rules))
-            (bmf-reverse-lens "typescript" "source"
+            (bmf-reverse-lens DOM-TYPESCRIPT LENS-SOURCE
                               emit-active-add-typescript
                               parse-active-add-typescript
                               (typescript-bmf-find-rule "function-return-add" typescript-bmf-rules))))
 
-    (let go-rt (bmf-lens-roundtrip targets "go" "source" binary anchor go-ctx (empty)))
-    (let ts-rt (bmf-lens-roundtrip targets "typescript" "source" binary anchor ts-ctx (empty)))
+    (let go-rt (bmf-lens-roundtrip targets DOM-GO LENS-SOURCE binary anchor go-ctx (empty)))
+    (let ts-rt (bmf-lens-roundtrip targets DOM-TYPESCRIPT LENS-SOURCE binary anchor ts-ctx (empty)))
     (let go-source (bmf-lens-roundtrip-source go-rt))
     (let ts-source (bmf-lens-roundtrip-source ts-rt))
 
