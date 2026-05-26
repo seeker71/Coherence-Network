@@ -1,0 +1,67 @@
+; i18n-parity.fk — Form-side companion to wellness_check's
+; sense_locale_parity. Same answer, reached through the substrate.
+;
+; The Python lens (scripts/wellness_check.py :: sense_locale_parity)
+; reads web/messages/{lang}.json directly and counts deep-flattened
+; keys per locale. This file reaches the same number through Form:
+; load each locale via i18n-load, recursively count leaf paths via
+; node_category walks. The numbers must agree.
+;
+; Why both: the Python lens stays the runtime reporter (it prints
+; what the body says out loud). The Form expression proves the same
+; corpus is reachable from substrate altitude — a future emitter,
+; parity-sensor, or natural-language Recipe builder reads the same
+; ground without crossing the Python boundary.
+;
+; Prelude: form-stdlib/json.fk, form-stdlib/cache.fk, form-stdlib/i18n.fk.
+
+;; --- deep leaf-key count --------------------------------------------
+;;
+;; A JSON-OBJECT contributes the sum over its pairs of either
+;;   (a) one leaf-key if the value is not itself a JSON-OBJECT, or
+;;   (b) the recursive count if it is.
+;; Arrays don't contribute named leaves — the Python flatten matches.
+
+(defn i18n-leaf-count-pair (pair)
+    (do
+        (let v (json-pair-value pair))
+        (if (node_eq (node_category v) JSON-OBJECT)
+            (i18n-leaf-count v)
+            1)))
+
+(defn i18n-leaf-count-loop (pairs acc)
+    (if (eq (len pairs) 0) acc
+        (i18n-leaf-count-loop (tail pairs)
+            (add acc (i18n-leaf-count-pair (head pairs))))))
+
+(defn i18n-leaf-count (obj-node)
+    (i18n-leaf-count-loop (node_children obj-node) 0))
+
+;; --- per-corpus deep-key counts -------------------------------------
+;;
+;; One function per corpus loader; each returns the leaf-key total.
+;; Wellness-check compares to web-corpus-leaf-count; the sibling
+;; corpora help future parity-sense work that crosses surfaces.
+
+(defn web-corpus-leaf-count (locale-name)
+    (i18n-leaf-count (i18n-load locale-name)))
+
+(defn cli-corpus-leaf-count (locale-name)
+    (i18n-leaf-count (cli-i18n-load locale-name)))
+
+(defn presence-walk-corpus-leaf-count (locale-name)
+    (i18n-leaf-count (presence-walk-i18n-load locale-name)))
+
+;; --- parity drift (web corpus, vs en) -------------------------------
+;;
+;; Returns |en-count - locale-count|. Zero means the locales hold the
+;; same number of leaves (not the same key set — true set-diff lives
+;; in the Python lens for now; a Form-side set-diff is the next reach).
+
+(defn i18n-leaf-count-drift (locale-name)
+    (do
+        (let en-count (web-corpus-leaf-count "en"))
+        (let other (web-corpus-leaf-count locale-name))
+        (if (gt en-count other) (sub en-count other) (sub other en-count))))
+
+0

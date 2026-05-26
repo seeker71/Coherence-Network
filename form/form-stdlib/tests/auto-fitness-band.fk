@@ -1,0 +1,153 @@
+; auto-fitness-band.fk — the substrate discovers a real fitness landscape.
+;
+; A frozen monotone fitness: loss(p) = sub 100 p, clamped to ≥ 0.
+;   At p=0:   loss=100
+;   At p=50:  loss=50
+;   At p=99:  loss=1
+;   At p=100: loss=0   (optimum)
+;
+; This is a one-knee landscape: every step toward p=100 strictly
+; reduces loss. The mutated (p+1) candidate dominates (p) — same
+; compute family, lower loss. So each generation the frontier
+; SHIFTS by one without growing: genome size stays at 1.
+;
+; Witness: starting from p=0, 10 generations of mutation + selection
+; should walk the frontier to p=10, loss=90. The substrate cannot
+; know the fitness shape — it only sees snapped (parameter, loss)
+; pairs.
+;
+; preludes: form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/auto-fitness.fk
+
+(do
+    ;; --- the frozen evaluator --------------------------------------
+    ;; loss(p) = 100 - p, clamped at 0.
+
+    (defn monotone-loss (p)
+        (do
+            (let raw (sub 100 p))
+            (if (lt raw 0) 0 raw)))
+
+    ;; Direct probes.
+    (let m-0   (monotone-loss 0))     ; 100
+    (let m-50  (monotone-loss 50))    ; 50
+    (let m-99  (monotone-loss 99))    ; 1
+    (let m-100 (monotone-loss 100))   ; 0
+    (let m-110 (monotone-loss 110))   ; clamped to 0
+
+    (let landscape-score
+        (add
+            (if (eq m-0   100) 10 0)
+        (add
+            (if (eq m-50  50)  20 0)
+        (add
+            (if (eq m-99  1)   30 0)
+        (add
+            (if (eq m-100 0)   40 0)
+            (if (eq m-110 0)   50 0))))))
+
+    ;; --- seed at p=0, walk one generation --------------------------
+    ;;
+    ;; Variants of (0, ?): {(0, snapped→100), (1, snapped→99)}
+    ;; (1, 99) strictly dominates (0, 100): better on both → frontier = {(1,99)}.
+    ;; Wait, no. (1, 99): compute=1, loss=99. (0, 100): compute=0, loss=100.
+    ;; (0) has LOWER compute but HIGHER loss. (1) has HIGHER compute, LOWER loss.
+    ;; Neither dominates → both stay. Frontier grows by 1 per generation.
+
+    (let g0 (list (pareto-candidate 0 100)))
+    (let g1 (auto-fit-evolve g0 monotone-loss 1))
+
+    ;; After 1 gen: frontier has (0,100) and (1,99). The mutator also
+    ;; produced (-1, 100) clamped to (0, 100) — duplicate, deduped.
+    (let g1-size-score
+        (if (eq (len g1) 2) 60 0))
+
+    ;; --- 5 generations: frontier should walk to include (5, 95) ----
+    ;;
+    ;; Each generation extends the discovered Pareto curve by one
+    ;; new (p+1, loss-1) point. After 5 gens, frontier has 6
+    ;; points: (0,100), (1,99), (2,98), (3,97), (4,96), (5,95).
+
+    (let g5 (auto-fit-evolve g0 monotone-loss 5))
+    (let g5-size-score
+        (if (eq (len g5) 6) 70 0))
+
+    ;; Check that (5, 95) is on the frontier — the loop reached it.
+    (defn contains-param-loop (genome target)
+        (if (eq (len genome) 0) 0
+            (if (eq (pareto-compute (head genome)) target) 1
+                (contains-param-loop (tail genome) target))))
+
+    (let reached-5-score
+        (if (eq (contains-param-loop g5 5) 1) 80 0))
+
+    ;; (0, 100) should still be on the frontier — lowest-compute
+    ;; trade-off is non-dominated.
+    (let kept-0-score
+        (if (eq (contains-param-loop g5 0) 1) 90 0))
+
+    ;; --- 10 generations: deeper walk ------------------------------
+    ;;
+    ;; After 10 gens, frontier has 11 points: 0..10.
+
+    (let g10 (auto-fit-evolve g0 monotone-loss 10))
+    (let g10-size-score
+        (if (eq (len g10) 11) 100 0))
+
+    (let reached-10-score
+        (if (eq (contains-param-loop g10 10) 1) 110 0))
+
+    ;; --- knee at a budget ----------------------------------------
+    ;;
+    ;; At budget=5, the best candidate is (5, 95) — lowest loss
+    ;; whose compute ≤ 5.
+    (let knee-5 (auto-fit-knee g10 monotone-loss 5))
+    (let knee-5-score
+        (add
+            (if (eq (pareto-compute knee-5) 5) 120 0)
+            (if (eq (pareto-loss knee-5) 95) 130 0)))
+
+    ;; At budget=10: (10, 90)
+    (let knee-10 (auto-fit-knee g10 monotone-loss 10))
+    (let knee-10-score
+        (add
+            (if (eq (pareto-compute knee-10) 10) 140 0)
+            (if (eq (pareto-loss knee-10) 90) 150 0)))
+
+    ;; At budget=0: only (0, 100)
+    (let knee-0 (auto-fit-knee g10 monotone-loss 0))
+    (let knee-0-score
+        (add
+            (if (eq (pareto-compute knee-0) 0) 160 0)
+            (if (eq (pareto-loss knee-0) 100) 170 0)))
+
+    ;; --- monotonicity: knee-loss never regresses -----------------
+    ;;
+    ;; At budget=5, knee-loss is monotone non-increasing as
+    ;; generations advance.
+    (let knee-g0-5 (auto-fit-knee g0 monotone-loss 5))
+    (let knee-g5-5 (auto-fit-knee g5 monotone-loss 5))
+    (let knee-g10-5 (auto-fit-knee g10 monotone-loss 5))
+
+    (defn knee-loss-or-inf (knee)
+        (if (auto-knee-fits? knee) (pareto-loss knee) 9999))
+
+    (let l0  (knee-loss-or-inf knee-g0-5))   ; (0,100) is the only candidate at budget=5 in g0
+    (let l5  (knee-loss-or-inf knee-g5-5))   ; (5, 95)
+    (let l10 (knee-loss-or-inf knee-g10-5))  ; (5, 95) — same as l5
+
+    (let monotone-score
+        (add
+            (if (le l5 l0)  180 0)
+            (if (le l10 l5) 190 0)))
+
+    ;; Expected total: 10+20+30+40+50 + 60+70+80+90 + 100+110 + 120+130+140+150+160+170 + 180+190 = 1900
+    (add landscape-score
+    (add g1-size-score
+    (add g5-size-score
+    (add reached-5-score
+    (add kept-0-score
+    (add g10-size-score
+    (add reached-10-score
+    (add knee-5-score
+    (add knee-10-score
+    (add knee-0-score monotone-score)))))))))))

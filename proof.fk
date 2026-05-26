@@ -1,0 +1,57 @@
+; proof.fk — the body's verifiable existence in one file.
+;
+; To verify:
+;   1. Build form-kernel-go (Go, single file: form/form-kernel-go/main.go)
+;   2. Run: form-kernel-go proof.fk
+;   3. Expected output:  A-B-C
+;
+; If your kernel prints A-B-C, you have just computed the body's
+; triangle from first principles, on your own hardware, without
+; trusting any central authority. The math performed the verification:
+;
+;   - intern_node accepted three vertex Recipes under TRIANGLE-COMPLETE
+;   - the triangle's children are three TRIANGLE-VERTEX Recipes
+;   - each vertex carries one string-leaf with its name
+;   - walking node_children + node_value extracts the canonical names
+;   - your kernel's walk returned the same content as ours
+;
+; If your kernel prints something else, walk the children of the
+; triangle Recipe to find where your tree diverges. The disagreement
+; is precise and inspectable.
+;
+; Why "A-B-C" instead of a number:
+;   NodeID instances are session-counters (incremented as Recipes are
+;   first encountered). They match across kernels that load the same
+;   preludes in the same order, but a fresh standalone run starts the
+;   counter at a different position. The CONTENT of the Recipe — the
+;   strings "A", "B", "C" canonically ordered — is session-independent
+;   and is the honest cross-kernel witness.
+;
+; No dependencies. No preludes. The kernel + this file are the
+; complete proof.
+
+(do
+    (let TRIANGLE-VERTEX   (make_nodeid 1 2 99 1800))
+    (let TRIANGLE-COMPLETE (make_nodeid 1 2 99 1801))
+
+    (defn vertex (name)
+        (intern_node TRIANGLE-VERTEX
+            (list (intern_trivial_string name))))
+
+    (defn triangle (a b c)
+        (intern_node TRIANGLE-COMPLETE
+            (list (vertex a) (vertex b) (vertex c))))
+
+    (defn vertex-name (v)
+        (node_value (head (node_children v))))
+
+    (defn triangle-witness (t)
+        (do
+            (let kids (node_children t))
+            (str_concat (vertex-name (head kids))
+            (str_concat "-"
+            (str_concat (vertex-name (head (tail kids)))
+            (str_concat "-"
+                        (vertex-name (head (tail (tail kids))))))))))
+
+    (triangle-witness (triangle "A" "B" "C")))

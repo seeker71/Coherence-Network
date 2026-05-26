@@ -4,85 +4,14 @@
 ; host parser, no lexical layer, and no TypeScript lowering in this file:
 ; a sensing layer supplies BMF stack objects, rules consume those objects,
 ; and completed matches emit reversible Form objects.
+;
+; Per-dialect PY-BMF-* category constants are declared as data in
+; form-stdlib/form-ontology.json and emitted into
+; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
+; file references them as free identifiers; load dialect-categories.fk as
+; a prelude before this file.
 
 (do
-    ;; --- Python BMF object categories --------------------------------
-
-    (let PY-BMF-IMPORT      (make_nodeid 1 2 99 501))
-    (let PY-BMF-FROM-IMPORT (make_nodeid 1 2 99 502))
-    (let PY-BMF-DEF         (make_nodeid 1 2 99 503))
-    (let PY-BMF-CLASS       (make_nodeid 1 2 99 504))
-    (let PY-BMF-ASSIGN      (make_nodeid 1 2 99 505))
-    (let PY-BMF-RETURN      (make_nodeid 1 2 99 506))
-    (let PY-BMF-RAISE       (make_nodeid 1 2 99 507))
-    (let PY-BMF-PASS        (make_nodeid 1 2 99 508))
-    (let PY-BMF-IF          (make_nodeid 1 2 99 509))
-    (let PY-BMF-WHILE       (make_nodeid 1 2 99 510))
-    (let PY-BMF-FOR         (make_nodeid 1 2 99 511))
-    (let PY-BMF-CALL        (make_nodeid 1 2 99 512))
-    (let PY-BMF-INT         (make_nodeid 1 2 99 513))
-    (let PY-BMF-STRING      (make_nodeid 1 2 99 514))
-    (let PY-BMF-IDENT       (make_nodeid 1 2 99 515))
-    (let PY-BMF-ATTR        (make_nodeid 1 2 99 516))
-    (let PY-BMF-METHOD-CALL (make_nodeid 1 2 99 517))
-    (let PY-BMF-LIST        (make_nodeid 1 2 99 518))
-    (let PY-BMF-DICT        (make_nodeid 1 2 99 519))
-    (let PY-BMF-ANNOTATED   (make_nodeid 1 2 99 520))
-    (let PY-BMF-AUG-ASSIGN  (make_nodeid 1 2 99 521))
-    (let PY-BMF-BINOP       (make_nodeid 1 2 99 522))
-    (let PY-BMF-MODULE      (make_nodeid 1 2 99 523))
-    (let PY-BMF-BOOL        (make_nodeid 1 2 99 524))
-    (let PY-BMF-NONE        (make_nodeid 1 2 99 525))
-    (let PY-BMF-UNARY       (make_nodeid 1 2 99 526))
-    (let PY-BMF-COMPARE     (make_nodeid 1 2 99 527))
-    (let PY-BMF-BOOL-OP     (make_nodeid 1 2 99 528))
-    (let PY-BMF-SUBSCRIPT   (make_nodeid 1 2 99 529))
-    (let PY-BMF-SLICE       (make_nodeid 1 2 99 530))
-    (let PY-BMF-TUPLE       (make_nodeid 1 2 99 531))
-    (let PY-BMF-SET         (make_nodeid 1 2 99 532))
-    (let PY-BMF-LAMBDA      (make_nodeid 1 2 99 533))
-    (let PY-BMF-AWAIT       (make_nodeid 1 2 99 534))
-    (let PY-BMF-YIELD       (make_nodeid 1 2 99 535))
-    (let PY-BMF-BREAK       (make_nodeid 1 2 99 536))
-    (let PY-BMF-CONTINUE    (make_nodeid 1 2 99 537))
-    (let PY-BMF-GLOBAL      (make_nodeid 1 2 99 538))
-    (let PY-BMF-NONLOCAL    (make_nodeid 1 2 99 539))
-    (let PY-BMF-DEL         (make_nodeid 1 2 99 540))
-    (let PY-BMF-ASSERT      (make_nodeid 1 2 99 541))
-    (let PY-BMF-WITH        (make_nodeid 1 2 99 542))
-    (let PY-BMF-TRY         (make_nodeid 1 2 99 543))
-    (let PY-BMF-ASYNC-DEF   (make_nodeid 1 2 99 544))
-    (let PY-BMF-DECORATOR   (make_nodeid 1 2 99 545))
-    (let PY-BMF-ASYNC-FOR   (make_nodeid 1 2 99 546))
-    (let PY-BMF-ASYNC-WITH  (make_nodeid 1 2 99 547))
-    (let PY-BMF-IF-ELSE     (make_nodeid 1 2 99 548))
-    (let PY-BMF-ELIF        (make_nodeid 1 2 99 549))
-    (let PY-BMF-RAISE-FROM  (make_nodeid 1 2 99 550))
-    (let PY-BMF-IMPORT-STAR (make_nodeid 1 2 99 551))
-    (let PY-BMF-IMPORT-MANY (make_nodeid 1 2 99 552))
-    (let PY-BMF-EXCEPT-AS   (make_nodeid 1 2 99 553))
-    (let PY-BMF-MATCH       (make_nodeid 1 2 99 554))
-    (let PY-BMF-CASE        (make_nodeid 1 2 99 555))
-    (let PY-BMF-COMP        (make_nodeid 1 2 99 556))
-    (let PY-BMF-GENEXP      (make_nodeid 1 2 99 557))
-    (let PY-BMF-KWARG       (make_nodeid 1 2 99 558))
-    (let PY-BMF-STARARG     (make_nodeid 1 2 99 559))
-    (let PY-BMF-DEFAULT     (make_nodeid 1 2 99 560))
-    (let PY-BMF-TYPED-PARAM (make_nodeid 1 2 99 561))
-    (let PY-BMF-RET-ANN     (make_nodeid 1 2 99 562))
-    (let PY-BMF-WALRUS      (make_nodeid 1 2 99 563))
-    (let PY-BMF-FLOAT       (make_nodeid 1 2 99 564))
-    (let PY-BMF-BYTES       (make_nodeid 1 2 99 565))
-    (let PY-BMF-ELLIPSIS    (make_nodeid 1 2 99 566))
-    (let PY-BMF-ATTR-ASSIGN (make_nodeid 1 2 99 567))
-    (let PY-BMF-SUB-ASSIGN  (make_nodeid 1 2 99 568))
-    (let PY-BMF-UNPACK      (make_nodeid 1 2 99 569))
-    (let PY-BMF-FSTRING     (make_nodeid 1 2 99 570))
-    (let PY-BMF-IFEXP       (make_nodeid 1 2 99 571))
-    (let PY-BMF-SETCOMP     (make_nodeid 1 2 99 572))
-    (let PY-BMF-YIELD-FROM  (make_nodeid 1 2 99 573))
-    (let PY-BMF-MATCH-AS    (make_nodeid 1 2 99 574))
-
     ;; --- source-object helpers ---------------------------------------
 
     (defn py-keyword (value) (bmf-atom "py-keyword" value))
@@ -162,32 +91,55 @@
                 (python-source-scan-skip (python-source-skip-comment cursor))
                 cursor))))
 
-    (defn python-source-scan-string-loop (cursor quote value)
+    ;; Slice the source text between two cursor offsets. Both cursors must
+    ;; share the same underlying source. Used by scanners that track start
+    ;; and end positions and extract the token text once via substring —
+    ;; O(N) instead of O(N²) per-byte str_concat accumulation.
+    (defn python-source-cursor-slice (start-cursor end-cursor)
+        (if (fsc-source-cursor-file? start-cursor)
+            (read_file_slice (fsc-source-cursor-source start-cursor)
+                             (fsc-source-cursor-offset start-cursor)
+                             (sub (fsc-source-cursor-offset end-cursor)
+                                  (fsc-source-cursor-offset start-cursor)))
+            (substring (fsc-source-cursor-source start-cursor)
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset end-cursor))))
+
+    ;; Track start/end positions through the loop; extract the token text
+    ;; once at termination. The returned (list value cursor) shape is
+    ;; preserved so callers don't change. Backslash escapes still consume
+    ;; two characters in source — the slice carries both verbatim, which
+    ;; matches the prior accumulator's behaviour (it appended the char
+    ;; after the backslash, never the backslash itself; the prior shape
+    ;; was lossy on backslashes and the slice preserves them as written).
+    (defn python-source-scan-string-loop (start-cursor cursor quote)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (if (str_eq (fsc-source-cursor-char cursor) "\\")
                 (python-source-scan-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance (fsc-source-cursor-advance cursor))
-                    quote
-                    (str_concat value (fsc-source-cursor-char (fsc-source-cursor-advance cursor))))
+                    quote)
             (if (str_eq (fsc-source-cursor-char cursor) quote)
-                (list value (fsc-source-cursor-advance cursor))
+                (list (python-source-cursor-slice start-cursor cursor)
+                      (fsc-source-cursor-advance cursor))
                 (python-source-scan-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance cursor)
-                    quote
-                    (str_concat value (fsc-source-cursor-char cursor)))))))
+                    quote)))))
 
-    (defn python-source-scan-triple-string-loop (cursor quote value)
+    (defn python-source-scan-triple-string-loop (start-cursor cursor quote)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (if (and (fsc-source-cursor-prefix? cursor quote)
                      (and (fsc-source-cursor-prefix? (fsc-source-cursor-advance cursor) quote)
                           (fsc-source-cursor-prefix? (fsc-source-cursor-advance (fsc-source-cursor-advance cursor)) quote)))
-                (list value (fsc-source-advance-n cursor 3))
+                (list (python-source-cursor-slice start-cursor cursor)
+                      (fsc-source-advance-n cursor 3))
                 (python-source-scan-triple-string-loop
+                    start-cursor
                     (fsc-source-cursor-advance cursor)
-                    quote
-                    (str_concat value (fsc-source-cursor-char cursor))))))
+                    quote))))
 
     (defn python-source-scan-string-at (start quote string-kind)
         (do
@@ -197,7 +149,7 @@
                           (fsc-source-cursor-prefix? (fsc-source-cursor-advance (fsc-source-cursor-advance start)) open-quote)))
                 (do
                     (let body-start (fsc-source-advance-n start 3))
-                    (let read (python-source-scan-triple-string-loop body-start open-quote ""))
+                    (let read (python-source-scan-triple-string-loop body-start body-start open-quote))
                     (fsc-scan-result (fsc-source-object string-kind (nth read 0) start (nth read 1)) (nth read 1)))
                 (do
                     (let body-start (fsc-source-cursor-advance start))
@@ -206,7 +158,7 @@
                             (fsc-source-object string-kind "" start (fsc-source-cursor-advance body-start))
                             (fsc-source-cursor-advance body-start))
                         (do
-                            (let read (python-source-scan-string-loop body-start open-quote ""))
+                            (let read (python-source-scan-string-loop body-start body-start open-quote))
                             (fsc-scan-result (fsc-source-object string-kind (nth read 0) start (nth read 1)) (nth read 1))))))))
 
     (defn python-source-prefixed-string-prefix-len (cursor)
@@ -225,12 +177,8 @@
 
     (defn python-source-scan-prefixed-string (start prefix-len)
         (do
-            (let prefix
-                (if (eq prefix-len 2)
-                    (str_concat (fsc-source-cursor-char start)
-                                (fsc-source-cursor-char (fsc-source-cursor-advance start)))
-                    (fsc-source-cursor-char start)))
             (let quote-start (fsc-source-advance-n start prefix-len))
+            (let prefix (python-source-cursor-slice start quote-start))
             (python-source-scan-string-at quote-start
                                           (fsc-source-cursor-char quote-start)
                                           (python-source-prefix-string-kind prefix))))
@@ -241,20 +189,20 @@
     (defn python-source-int-char? (ch)
         (or (fsc-digit? ch) (str_eq ch "_")))
 
-    (defn python-source-scan-int-loop (cursor value)
+    (defn python-source-scan-int-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (python-source-cursor-slice start-cursor cursor) cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (python-source-int-char? ch)
                     (python-source-scan-int-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                        start-cursor
+                        (fsc-source-cursor-advance cursor))
+                    (list (python-source-cursor-slice start-cursor cursor) cursor)))))
 
     (defn python-source-scan-int (start)
         (do
-            (let read (python-source-scan-int-loop start ""))
+            (let read (python-source-scan-int-loop start start))
             (fsc-scan-result
                 (fsc-source-object "py-int" (nth read 0) start (nth read 1))
                 (nth read 1))))
@@ -1204,6 +1152,77 @@
                            (pybmf-trivial-int objects "start")
                            (pybmf-trivial-int objects "end"))))
 
+    (defn pybmf-emit-slice-name-name (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "start")
+                           (pybmf-trivial-string objects "end"))))
+
+    (defn pybmf-source-slice-name-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-name-omit (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "start"))))
+
+    (defn pybmf-source-slice-name-omit (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-omit-name (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "end"))))
+
+    (defn pybmf-source-slice-omit-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-omit-omit (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object"))))
+
+    (defn pybmf-source-slice-omit-omit (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-op "]"))))
+
+    (defn pybmf-emit-slice-step-int (objects)
+        (intern_node PY-BMF-SLICE
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-int objects "step"))))
+
+    (defn pybmf-source-slice-step-int (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op "[")
+                  (py-op ":")
+                  (py-op ":")
+                  (py-int (int_to_str (node_value (nth kids 1))))
+                  (py-op "]"))))
+
     (defn pybmf-emit-tuple2-ident (objects)
         (intern_node PY-BMF-TUPLE
                      (list (pybmf-trivial-string objects "a")
@@ -1357,6 +1376,134 @@
                   (py-op ":")
                   (py-keyword "pass"))))
 
+    ;; --- try/except/finally with real (non-pass) bodies --------------
+    ;; Body and handler/cleanup stand in as single-name references so the
+    ;; grammar can match real exception-handling code. Each rule is fully
+    ;; reversible — emit interns the children as substrate-trivial strings,
+    ;; source projects them back to the positional token stream.
+
+    (defn pybmf-emit-try-except-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "handler"))))
+
+    (defn pybmf-source-try-except-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 3))))))
+
+    (defn pybmf-emit-try-except-as-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-as-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "alias")
+                           (pybmf-trivial-string objects "handler"))))
+
+    (defn pybmf-source-try-except-as-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 4))))))
+
+    (defn pybmf-emit-try-finally-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "finally-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "cleanup"))))
+
+    (defn pybmf-source-try-finally-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "finally")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-try-except-finally-stmt (objects)
+        (intern_node PY-BMF-TRY
+                     (list (intern_trivial_string "except-finally-stmt")
+                           (pybmf-trivial-string objects "body")
+                           (pybmf-trivial-string objects "err")
+                           (pybmf-trivial-string objects "handler")
+                           (pybmf-trivial-string objects "cleanup"))))
+
+    (defn pybmf-source-try-except-finally-stmt (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "try")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "except")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "finally")
+                  (py-op ":")
+                  (py-name (node_value (nth kids 4))))))
+
+    ;; --- raise with constructor call ---------------------------------
+
+    (defn pybmf-emit-raise-call0 (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call0")
+                           (pybmf-trivial-string objects "error"))))
+
+    (defn pybmf-source-raise-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-raise-call1 (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call1")
+                           (pybmf-trivial-string objects "error")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-raise-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-raise-call-string (objects)
+        (intern_node PY-BMF-RAISE
+                     (list (intern_trivial_string "call-string")
+                           (pybmf-trivial-string objects "error")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-raise-call-string (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "raise")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-string (node_value (nth kids 2)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-async-def (objects)
         (intern_node PY-BMF-ASYNC-DEF
                      (list (pybmf-trivial-string objects "name"))))
@@ -1398,6 +1545,82 @@
                   (py-op ":")
                   (py-keyword "pass"))))
 
+    (defn pybmf-emit-class-no-base (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name"))))
+
+    (defn pybmf-source-class-no-base (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-base2 (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "base_a")
+                           (pybmf-trivial-string objects "base_b"))))
+
+    (defn pybmf-source-class-base2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-base3 (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "base_a")
+                           (pybmf-trivial-string objects "base_b")
+                           (pybmf-trivial-string objects "base_c"))))
+
+    (defn pybmf-source-class-base3 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-class-kwbase-metaclass (objects)
+        (intern_node PY-BMF-CLASS
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "meta_key")
+                                              (pybmf-trivial-string objects "meta_value"))))))
+
+    (defn pybmf-source-class-kwbase-metaclass (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let meta-kids (node_children (nth kids 1)))
+            (list (py-keyword "class")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth meta-kids 0)))
+                  (py-op "=")
+                  (py-name (node_value (nth meta-kids 1)))
+                  (py-op ")")
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
     (defn pybmf-emit-decorator (objects)
         (intern_node PY-BMF-DECORATOR
                      (list (pybmf-trivial-string objects "name"))))
@@ -1420,6 +1643,80 @@
                   (py-name (node_value (nth kids 0)))
                   (py-op "(")
                   (py-name (node_value (nth kids 1)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-dotted (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr"))))
+
+    (defn pybmf-source-decorator-dotted (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-emit-decorator-call0 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name"))))
+
+    (defn pybmf-source-decorator-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-call2 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "arg1")
+                           (pybmf-trivial-string objects "arg2"))))
+
+    (defn pybmf-source-decorator-call2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-dotted-call0 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr"))))
+
+    (defn pybmf-source-decorator-dotted-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-decorator-dotted-call1 (objects)
+        (intern_node PY-BMF-DECORATOR
+                     (list (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "attr")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-decorator-dotted-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "@")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
                   (py-op ")"))))
 
     (defn pybmf-emit-decorated-def (objects)
@@ -1507,6 +1804,85 @@
                   (py-name (node_value (nth kids 1)))
                   (py-op ",")
                   (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-from-import-as (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "name")
+                           (pybmf-trivial-string objects "alias"))))
+
+    (defn pybmf-source-from-import-as (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-from-import-many3 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b")
+                           (pybmf-trivial-string objects "c"))))
+
+    (defn pybmf-source-from-import-many3 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3))))))
+
+    (defn pybmf-emit-from-import-alias-many2 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "a")
+                                              (pybmf-trivial-string objects "alias_a")))
+                           (intern_node PY-BMF-IMPORT
+                                        (list (pybmf-trivial-string objects "b")
+                                              (pybmf-trivial-string objects "alias_b"))))))
+
+    (defn pybmf-source-from-import-alias-many2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let a-kids (node_children (nth kids 1)))
+            (let b-kids (node_children (nth kids 2)))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-name (node_value (nth a-kids 0)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth a-kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth b-kids 0)))
+                  (py-keyword "as")
+                  (py-name (node_value (nth b-kids 1))))))
+
+    (defn pybmf-emit-from-import-paren-many2 (objects)
+        (intern_node PY-BMF-FROM-IMPORT
+                     (list (pybmf-trivial-string objects "module")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-from-import-paren-many2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-keyword "from")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "import")
+                  (py-op "(")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
 
     (defn pybmf-emit-from-import-star (objects)
         (intern_node PY-BMF-IMPORT-STAR
@@ -1758,6 +2134,128 @@
                   (py-name (node_value (nth kids 2)))
                   (py-op "}"))))
 
+    ;; --- comprehension expansions: simple + filtered ----------------
+    ;; The four containers (list/set/dict/genexp) share a common shape:
+    ;; expression-recipe + iteration-var + iterable-recipe (+ optional
+    ;; condition-recipe). The PY-BMF-COMP category carries list/dict/set
+    ;; flavor as a leading trivial-string discriminator; PY-BMF-GENEXP is
+    ;; its own category. Filtered variants append a fourth (or fifth, for
+    ;; dict) child holding the predicate name.
+
+    (defn pybmf-emit-list-comp-simple (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "list")
+                           (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-list-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-list-comp-if (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "list")
+                           (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter")
+                           (pybmf-trivial-string objects "cond"))))
+
+    (defn pybmf-source-list-comp-if (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "[")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "if")
+                  (py-name (node_value (nth kids 4)))
+                  (py-op "]"))))
+
+    (defn pybmf-emit-set-comp-simple (objects)
+        (intern_node PY-BMF-SETCOMP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-set-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "{")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-dict-comp-simple (objects)
+        (intern_node PY-BMF-COMP
+                     (list (intern_trivial_string "dict")
+                           (pybmf-trivial-string objects "key")
+                           (pybmf-trivial-string objects "value")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-dict-comp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 3)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 4)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-genexp-simple (objects)
+        (intern_node PY-BMF-GENEXP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter"))))
+
+    (defn pybmf-source-genexp-simple (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "(")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-genexp-if (objects)
+        (intern_node PY-BMF-GENEXP
+                     (list (pybmf-trivial-string objects "expr")
+                           (pybmf-trivial-string objects "var")
+                           (pybmf-trivial-string objects "iter")
+                           (pybmf-trivial-string objects "cond"))))
+
+    (defn pybmf-source-genexp-if (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "(")
+                  (py-name (node_value (nth kids 0)))
+                  (py-keyword "for")
+                  (py-name (node_value (nth kids 1)))
+                  (py-keyword "in")
+                  (py-name (node_value (nth kids 2)))
+                  (py-keyword "if")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")"))))
+
     (defn pybmf-emit-kwarg (objects)
         (intern_node PY-BMF-KWARG
                      (list (pybmf-trivial-string objects "key")
@@ -1928,6 +2426,99 @@
                      (list (pybmf-trivial-string objects "name")
                            (pybmf-trivial-string objects "type"))))
 
+    ;; --- additional type-annotation rules ----------------------------
+
+    (defn pybmf-emit-var-annotated (objects)
+        (intern_node PY-BMF-ANNOTATED
+                     (list (pybmf-trivial-string objects "target")
+                           (pybmf-trivial-string objects "type"))))
+
+    (defn pybmf-source-var-annotated (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-source-var-annotated-int (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-int (int_to_str (node_value (nth kids 2)))))))
+
+    (defn pybmf-emit-var-annotated-name (objects)
+        (intern_node PY-BMF-ANNOTATED
+                     (list (pybmf-trivial-string objects "target")
+                           (pybmf-trivial-string objects "type")
+                           (pybmf-trivial-string objects "value"))))
+
+    (defn pybmf-source-var-annotated-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-return-ann-suffix (objects)
+        (intern_node PY-BMF-RET-ANN
+                     (list (pybmf-trivial-string objects "type"))))
+
+    (defn pybmf-source-return-ann-suffix (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-op "->")
+                  (py-name (node_value (nth kids 0))))))
+
+    (defn pybmf-emit-def-typed-ret (objects)
+        (intern_node PY-BMF-DEF
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-RET-ANN
+                                        (list (pybmf-trivial-string objects "ret"))))))
+
+    (defn pybmf-source-def-typed-ret (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let ret-kids (node_children (nth kids 1)))
+            (list (py-keyword "def")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op "->")
+                  (py-name (node_value (nth ret-kids 0)))
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
+    (defn pybmf-emit-def-typed-param-ret (objects)
+        (intern_node PY-BMF-DEF
+                     (list (pybmf-trivial-string objects "name")
+                           (intern_node PY-BMF-TYPED-PARAM
+                                        (list (pybmf-trivial-string objects "p")
+                                              (pybmf-trivial-string objects "t")))
+                           (intern_node PY-BMF-RET-ANN
+                                        (list (pybmf-trivial-string objects "ret"))))))
+
+    (defn pybmf-source-def-typed-param-ret (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let param-kids (node_children (nth kids 1)))
+            (let ret-kids (node_children (nth kids 2)))
+            (list (py-keyword "def")
+                  (py-name (node_value (nth kids 0)))
+                  (py-op "(")
+                  (py-name (node_value (nth param-kids 0)))
+                  (py-op ":")
+                  (py-name (node_value (nth param-kids 1)))
+                  (py-op ")")
+                  (py-op "->")
+                  (py-name (node_value (nth ret-kids 0)))
+                  (py-op ":")
+                  (py-keyword "pass"))))
+
     (defn pybmf-emit-walrus-ident (objects)
         (intern_node PY-BMF-WALRUS
                      (list (pybmf-trivial-string objects "target")
@@ -1999,6 +2590,39 @@
                   (py-name (node_value (nth kids 1)))
                   (py-op "}"))))
 
+    (defn pybmf-emit-fstring-double-format (objects)
+        (intern_node PY-BMF-FSTRING
+                     (list (pybmf-trivial-string objects "prefix")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-fstring-double-format (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-fstring (node_value (nth kids 0)))
+                  (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "}")
+                  (py-op "{")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
+    (defn pybmf-emit-fstring-spec (objects)
+        (intern_node PY-BMF-FSTRING
+                     (list (pybmf-trivial-string objects "prefix")
+                           (pybmf-trivial-string objects "value")
+                           (pybmf-trivial-string objects "spec"))))
+
+    (defn pybmf-source-fstring-spec (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-fstring (node_value (nth kids 0)))
+                  (py-op "{")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op ":")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op "}"))))
+
     (defn pybmf-emit-ifexp (objects)
         (intern_node PY-BMF-IFEXP
                      (list (pybmf-trivial-string objects "body")
@@ -2022,6 +2646,115 @@
                      (list (pybmf-trivial-string objects "a")
                            (pybmf-trivial-string objects "b")
                            (pybmf-trivial-string objects "value"))))
+
+    ;; --- attribute chain and assignment, method calls ---------------
+
+    (defn pybmf-emit-attr-chain (objects)
+        (intern_node PY-BMF-ATTR
+                     (list (intern_node PY-BMF-ATTR
+                                        (list (pybmf-trivial-string objects "object")
+                                              (pybmf-trivial-string objects "field1")))
+                           (pybmf-trivial-string objects "field2"))))
+
+    (defn pybmf-source-attr-chain (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let inner-kids (node_children (nth kids 0)))
+            (list (py-name (node_value (nth inner-kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth inner-kids 1)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1))))))
+
+    (defn pybmf-emit-attr-assign-name (objects)
+        (intern_node PY-BMF-ATTR-ASSIGN
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "field")
+                           (pybmf-trivial-string objects "value"))))
+
+    (defn pybmf-source-attr-assign-name (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth kids 2))))))
+
+    (defn pybmf-emit-attr-assign-call0 (objects)
+        (intern_node PY-BMF-ATTR-ASSIGN
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "field")
+                           (intern_node PY-BMF-CALL
+                                        (list (pybmf-trivial-string objects "call"))))))
+
+    (defn pybmf-source-attr-assign-call0 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let call-kids (node_children (nth kids 2)))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "=")
+                  (py-name (node_value (nth call-kids 0)))
+                  (py-op "(")
+                  (py-op ")"))))
+
+    (defn pybmf-emit-method-call1 (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "method")
+                           (pybmf-trivial-string objects "arg"))))
+
+    (defn pybmf-source-method-call1 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-method-call2 (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (pybmf-trivial-string objects "object")
+                           (pybmf-trivial-string objects "method")
+                           (pybmf-trivial-string objects "a")
+                           (pybmf-trivial-string objects "b"))))
+
+    (defn pybmf-source-method-call2 (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (list (py-name (node_value (nth kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-name (node_value (nth kids 2)))
+                  (py-op ",")
+                  (py-name (node_value (nth kids 3)))
+                  (py-op ")"))))
+
+    (defn pybmf-emit-chained-method-call (objects)
+        (intern_node PY-BMF-METHOD-CALL
+                     (list (intern_node PY-BMF-METHOD-CALL
+                                        (list (pybmf-trivial-string objects "object")
+                                              (pybmf-trivial-string objects "m1")))
+                           (pybmf-trivial-string objects "m2"))))
+
+    (defn pybmf-source-chained-method-call (object)
+        (do
+            (let kids (pybmf-node-kids object))
+            (let inner-kids (node_children (nth kids 0)))
+            (list (py-name (node_value (nth inner-kids 0)))
+                  (py-op ".")
+                  (py-name (node_value (nth inner-kids 1)))
+                  (py-op "(")
+                  (py-op ")")
+                  (py-op ".")
+                  (py-name (node_value (nth kids 1)))
+                  (py-op "(")
+                  (py-op ")"))))
 
     (let python-bmf-native-section
         (list
@@ -2053,10 +2786,19 @@
     import-many3 ::= "import" $a:name "," $b:name "," $c:name => pybmf-emit-import-many3 <= pybmf-source-import-many3;
     import-alias-many2 ::= "import" $a:name "as" $alias_a:name "," $b:name "as" $alias_b:name => pybmf-emit-import-alias-many2 <= pybmf-source-import-alias-many2;
     from-import ::= "from" $module:name "import" $name:name => pybmf-emit-from-import <= pybmf-source-from-import;
+    from-import-as ::= "from" $module:name "import" $name:name "as" $alias:name => pybmf-emit-from-import-as <= pybmf-source-from-import-as;
     from-import-many2 ::= "from" $module:name "import" $a:name "," $b:name => pybmf-emit-from-import-many2 <= pybmf-source-from-import-many2;
+    from-import-many3 ::= "from" $module:name "import" $a:name "," $b:name "," $c:name => pybmf-emit-from-import-many3 <= pybmf-source-from-import-many3;
+    from-import-alias-many2 ::= "from" $module:name "import" $a:name "as" $alias_a:name "," $b:name "as" $alias_b:name => pybmf-emit-from-import-alias-many2 <= pybmf-source-from-import-alias-many2;
+    from-import-paren-many2 ::= "from" $module:name "import" "(" $a:name "," $b:name ")" => pybmf-emit-from-import-paren-many2 <= pybmf-source-from-import-paren-many2;
     from-import-star ::= "from" $module:name "import" "*" => pybmf-emit-from-import-star <= pybmf-source-from-import-star;
     decorator ::= "@" $name:name => pybmf-emit-decorator <= pybmf-source-decorator;
     decorator-call1 ::= "@" $name:name "(" $arg:name ")" => pybmf-emit-decorator-call1 <= pybmf-source-decorator-call1;
+    decorator-dotted ::= "@" $name:name "." $attr:name => pybmf-emit-decorator-dotted <= pybmf-source-decorator-dotted;
+    decorator-call0 ::= "@" $name:name "(" ")" => pybmf-emit-decorator-call0 <= pybmf-source-decorator-call0;
+    decorator-call2 ::= "@" $name:name "(" $arg1:name "," $arg2:name ")" => pybmf-emit-decorator-call2 <= pybmf-source-decorator-call2;
+    decorator-dotted-call0 ::= "@" $name:name "." $attr:name "(" ")" => pybmf-emit-decorator-dotted-call0 <= pybmf-source-decorator-dotted-call0;
+    decorator-dotted-call1 ::= "@" $name:name "." $attr:name "(" $arg:name ")" => pybmf-emit-decorator-dotted-call1 <= pybmf-source-decorator-dotted-call1;
     decorated-def ::= "@" $decorator:name "def" $name:name "(" ")" ":" => pybmf-emit-decorated-def <= pybmf-source-decorated-def;
     def ::= "def" $name:name "(" ")" ":" => pybmf-emit-def <= pybmf-source-def;
     def2 ::= "def" $name:name "(" $a:name "," $b:name ")" ":" => pybmf-emit-def2 <= pybmf-source-def2;
@@ -2093,6 +2835,13 @@
     except-as-pass ::= "except" $error:name "as" $alias:name ":" "pass" => pybmf-emit-except-as-pass <= pybmf-source-except-as-pass;
     try-finally-pass ::= "try" ":" "pass" "finally" ":" "pass" => pybmf-emit-try-finally-pass <= pybmf-source-try-finally-pass;
     try-except-else-finally-pass ::= "try" ":" "pass" "except" $error:name ":" "pass" "else" ":" "pass" "finally" ":" "pass" => pybmf-emit-try-except-else-finally-pass <= pybmf-source-try-except-else-finally-pass;
+    try-except-stmt ::= "try" ":" $body:name "except" $err:name ":" $handler:name => pybmf-emit-try-except-stmt <= pybmf-source-try-except-stmt;
+    try-except-as-stmt ::= "try" ":" $body:name "except" $err:name "as" $alias:name ":" $handler:name => pybmf-emit-try-except-as-stmt <= pybmf-source-try-except-as-stmt;
+    try-finally-stmt ::= "try" ":" $body:name "finally" ":" $cleanup:name => pybmf-emit-try-finally-stmt <= pybmf-source-try-finally-stmt;
+    try-except-finally-stmt ::= "try" ":" $body:name "except" $err:name ":" $handler:name "finally" ":" $cleanup:name => pybmf-emit-try-except-finally-stmt <= pybmf-source-try-except-finally-stmt;
+    raise-call0 ::= "raise" $error:name "(" ")" => pybmf-emit-raise-call0 <= pybmf-source-raise-call0;
+    raise-call1 ::= "raise" $error:name "(" $arg:name ")" => pybmf-emit-raise-call1 <= pybmf-source-raise-call1;
+    raise-call-string ::= "raise" $error:name "(" $arg:string ")" => pybmf-emit-raise-call-string <= pybmf-source-raise-call-string;
     async-def ::= "async" "def" $name:name "(" ")" ":" => pybmf-emit-async-def;
     call0 ::= $callee:name "(" ")" => pybmf-emit-call0 <= pybmf-source-call0;
     call1-ident ::= $callee:name "(" $arg:name ")" => pybmf-emit-call1-ident <= pybmf-source-call1-ident;
@@ -2104,9 +2853,18 @@
     call-star-star1 ::= $callee:name "(" "**" $value:name ")" => pybmf-emit-call-star-star1 <= pybmf-source-call-star1;
     assign-call2-ident ::= $target:name "=" $callee:name "(" $a:name "," $b:name ")" => pybmf-emit-assign-call2-ident;
     attr ::= $object:name "." $field:name => pybmf-emit-attr <= pybmf-source-attr;
+    attr-chain ::= $object:name "." $field1:name "." $field2:name => pybmf-emit-attr-chain <= pybmf-source-attr-chain;
     method-call0 ::= $object:name "." $method:name "(" ")" => pybmf-emit-method-call0 <= pybmf-source-method-call0;
+    method-call1 ::= $object:name "." $method:name "(" $arg:name ")" => pybmf-emit-method-call1 <= pybmf-source-method-call1;
+    method-call2 ::= $object:name "." $method:name "(" $a:name "," $b:name ")" => pybmf-emit-method-call2 <= pybmf-source-method-call2;
+    chained-method-call ::= $object:name "." $m1:name "(" ")" "." $m2:name "(" ")" => pybmf-emit-chained-method-call <= pybmf-source-chained-method-call;
     subscript-ident-int ::= $object:name "[" $index:int "]" => pybmf-emit-subscript-ident-int <= pybmf-source-subscript-ident-int;
     slice-int-int ::= $object:name "[" $start:int ":" $end:int "]" => pybmf-emit-slice-int-int;
+    slice-name-name ::= $object:name "[" $start:name ":" $end:name "]" => pybmf-emit-slice-name-name <= pybmf-source-slice-name-name;
+    slice-name-omit ::= $object:name "[" $start:name ":" "]" => pybmf-emit-slice-name-omit <= pybmf-source-slice-name-omit;
+    slice-omit-name ::= $object:name "[" ":" $end:name "]" => pybmf-emit-slice-omit-name <= pybmf-source-slice-omit-name;
+    slice-omit-omit ::= $object:name "[" ":" "]" => pybmf-emit-slice-omit-omit <= pybmf-source-slice-omit-omit;
+    slice-step-int ::= $object:name "[" ":" ":" $step:int "]" => pybmf-emit-slice-step-int <= pybmf-source-slice-step-int;
     list3-int ::= "[" $a:int "," $b:int "," $c:int "]" => pybmf-emit-list3-int;
     tuple2-ident ::= "(" $a:name "," $b:name ")" => pybmf-emit-tuple2-ident;
     set2-int ::= "{" $a:int "," $b:int "}" => pybmf-emit-set2-int;
@@ -2115,7 +2873,15 @@
     dict-comp ::= "{" $key:name ":" $value:name "for" $target:name "in" $iter:name "}" => pybmf-emit-dict-comp <= pybmf-source-dict-comp;
     gen-exp ::= "(" $expr:name "for" $target:name "in" $iter:name ")" => pybmf-emit-gen-exp;
     set-comp ::= "{" $expr:name "for" $target:name "in" $iter:name "}" => pybmf-emit-set-comp <= pybmf-source-set-comp;
-    annotated-assign-int ::= $target:name ":" $type:name "=" $value:int => pybmf-emit-annotated-assign-int;
+    annotated-assign-int ::= $target:name ":" $type:name "=" $value:int => pybmf-emit-annotated-assign-int <= pybmf-source-var-annotated-int;
+    var-annotated ::= $target:name ":" $type:name => pybmf-emit-var-annotated <= pybmf-source-var-annotated;
+    var-annotated-name ::= $target:name ":" $type:name "=" $value:name => pybmf-emit-var-annotated-name <= pybmf-source-var-annotated-name;
+    list-comp-simple ::= "[" $expr:name "for" $var:name "in" $iter:name "]" => pybmf-emit-list-comp-simple <= pybmf-source-list-comp-simple;
+    list-comp-if ::= "[" $expr:name "for" $var:name "in" $iter:name "if" $cond:name "]" => pybmf-emit-list-comp-if <= pybmf-source-list-comp-if;
+    set-comp-simple ::= "{" $expr:name "for" $var:name "in" $iter:name "}" => pybmf-emit-set-comp-simple <= pybmf-source-set-comp-simple;
+    dict-comp-simple ::= "{" $key:name ":" $value:name "for" $var:name "in" $iter:name "}" => pybmf-emit-dict-comp-simple <= pybmf-source-dict-comp-simple;
+    genexp-simple ::= "(" $expr:name "for" $var:name "in" $iter:name ")" => pybmf-emit-genexp-simple <= pybmf-source-genexp-simple;
+    genexp-if ::= "(" $expr:name "for" $var:name "in" $iter:name "if" $cond:name ")" => pybmf-emit-genexp-if <= pybmf-source-genexp-if;
     typed-param ::= $name:name ":" $type:name => pybmf-emit-typed-param <= pybmf-source-typed-param;
     default-param-int ::= $name:name "=" $value:int => pybmf-emit-default-param-int <= pybmf-source-default-param-int;
     default-param-string ::= $name:name "=" $value:string => pybmf-emit-default-param-string <= pybmf-source-default-param-string;
@@ -2123,13 +2889,22 @@
     typed-default-param-string ::= $name:name ":" $type:name "=" $value:string => pybmf-emit-typed-default-param-string <= pybmf-source-typed-default-param-string;
     def1-typed-default-int ::= "def" $name:name "(" $arg:name ":" $type:name "=" $value:int ")" ":" => pybmf-emit-def1-typed-default-int <= pybmf-source-def1-typed-default-int;
     def-return-annotation ::= "def" $name:name "(" ")" "->" $type:name ":" => pybmf-emit-def-return-annotation;
+    return-ann ::= "->" $type:name => pybmf-emit-return-ann-suffix <= pybmf-source-return-ann-suffix;
+    def-typed-ret ::= "def" $name:name "(" ")" "->" $ret:name ":" "pass" => pybmf-emit-def-typed-ret <= pybmf-source-def-typed-ret;
+    def-typed-param-ret ::= "def" $name:name "(" $p:name ":" $t:name ")" "->" $ret:name ":" "pass" => pybmf-emit-def-typed-param-ret <= pybmf-source-def-typed-param-ret;
     plus-assign-int ::= $target:name "+=" $value:int => pybmf-emit-aug-assign-int;
     attr-assign-int ::= $object:name "." $field:name "=" $value:int => pybmf-emit-attr-assign-int;
+    attr-assign-name ::= $object:name "." $field:name "=" $value:name => pybmf-emit-attr-assign-name <= pybmf-source-attr-assign-name;
+    attr-assign-call0 ::= $object:name "." $field:name "=" $call:name "(" ")" => pybmf-emit-attr-assign-call0 <= pybmf-source-attr-assign-call0;
     subscript-assign-int ::= $object:name "[" $index:int "]" "=" $value:int => pybmf-emit-subscript-assign-int;
     unpack2-ident ::= $a:name "," $b:name "=" $value:name => pybmf-emit-unpack2-ident;
     walrus-ident ::= $target:name ":=" $value:name => pybmf-emit-walrus-ident <= pybmf-source-walrus-ident;
     if-walrus-pass ::= "if" $target:name ":=" $value:name ":" "pass" => pybmf-emit-if-walrus-pass <= pybmf-source-if-walrus-pass;
     class-base ::= "class" $name:name "(" $base:name ")" ":" "pass" => pybmf-emit-class-base <= pybmf-source-class-base;
+    class-no-base ::= "class" $name:name "(" ")" ":" "pass" => pybmf-emit-class-no-base <= pybmf-source-class-no-base;
+    class-base2 ::= "class" $name:name "(" $base_a:name "," $base_b:name ")" ":" "pass" => pybmf-emit-class-base2 <= pybmf-source-class-base2;
+    class-base3 ::= "class" $name:name "(" $base_a:name "," $base_b:name "," $base_c:name ")" ":" "pass" => pybmf-emit-class-base3 <= pybmf-source-class-base3;
+    class-kwbase-metaclass ::= "class" $name:name "(" $meta_key:name "=" $meta_value:name ")" ":" "pass" => pybmf-emit-class-kwbase-metaclass <= pybmf-source-class-kwbase-metaclass;
     decorated-class-base ::= "@" $decorator:name "class" $name:name "(" $base:name ")" ":" "pass" => pybmf-emit-decorated-class-base <= pybmf-source-decorated-class-base;
     bool-true ::= "True" => pybmf-emit-bool-true;
     bool-false ::= "False" => pybmf-emit-bool-false;
@@ -2174,6 +2949,8 @@
     bytes ::= $value:bytes => pybmf-emit-bytes <= pybmf-source-bytes;
     fstring ::= $value:fstring => pybmf-emit-fstring <= pybmf-source-fstring;
     fstring-format ::= $prefix:fstring "{" $value:name "}" => pybmf-emit-fstring-format <= pybmf-source-fstring-format;
+    fstring-double-format ::= $prefix:fstring "{" $a:name "}" "{" $b:name "}" => pybmf-emit-fstring-double-format <= pybmf-source-fstring-double-format;
+    fstring-spec ::= $prefix:fstring "{" $value:name ":" $spec:name "}" => pybmf-emit-fstring-spec <= pybmf-source-fstring-spec;
     ellipsis ::= "..." => pybmf-emit-ellipsis <= pybmf-source-ellipsis;
     sample-module ::= "import" $import_a:name "import" $import_b:name "from" $from_mod:name "import" $from_name:name $const_name:name "=" $const_value:int "def" $add_name:name "(" $add_a:name "," $add_b:name ")" ":" "return" $ret_left:name "+" $ret_right:name "def" $main_name:name "(" ")" ":" $x_name:name "=" $x_value:int $y_name:name "=" $y_value:int $z_name:name "=" $z_call:name "(" $z_arg_a:name "," $z_arg_b:name ")" $print_call:name "(" $print_arg:name ")" => pybmf-emit-sample-module;
     int ::= $value:int => pybmf-emit-int;

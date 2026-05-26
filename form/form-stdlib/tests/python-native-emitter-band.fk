@@ -1,0 +1,75 @@
+; tests/python-native-emitter-band.fk — focused validation for the binary→native-python emitter
+;
+; This band exercises the emitter scaffolds at their current depth:
+;   - emits/python-native.fk loads and exposes its module manifest
+;   - emits/semantic-lowerer.fk constructors return well-shaped IR
+;   - lenses/symbol-source.fk accessors return fallback names cleanly
+;
+; The full proof chain (build artifact → emit Python → roundtrip → diff)
+; runs from `python3 form/scripts/diff_form_artifacts.py` once the
+; emitter templates expand. This band guards the bones.
+;
+; preludes: form-stdlib/emits/semantic-lowerer.fk form-stdlib/lenses/symbol-source.fk form-stdlib/emits/python-native.fk
+
+(do
+    ;; --- semantic-lowerer.fk shape checks ----------------------------
+
+    (let sample-fn-name "compile_statement")
+    (let sample-int    (semantic-lit-int 42))
+    (let sample-str    (semantic-lit-string "ok"))
+    (let sample-call   (semantic-call sample-fn-name (list sample-int sample-str)))
+    (let sample-module (semantic-module "rules"
+                                        (list (semantic-fndef "main" (empty) sample-call))))
+
+    (assert (str_eq (head sample-int) "semantic-lit")
+            "semantic-lit-int constructor must produce semantic-lit")
+    (assert (str_eq (head sample-call) "semantic-call")
+            "semantic-call constructor must produce semantic-call")
+    (assert (str_eq (head sample-module) "semantic-module")
+            "semantic-module constructor must produce semantic-module")
+
+    ;; --- lenses/symbol-source.fk shape checks ------------------------
+
+    (let lens-empty (empty))
+    (assert (str_eq (lens-symbol-for lens-empty "@1.2.99.500") "unnamed")
+            "lens-symbol-for must return 'unnamed' on miss")
+
+    (let lens-with-entry
+        (list (lens-entry "@1.2.99.500" "compile_statement" (list "span" "rules.py" 17 5))))
+    (assert (str_eq (lens-symbol-for lens-with-entry "@1.2.99.500") "compile_statement")
+            "lens-symbol-for must return the bound symbol on hit")
+
+    ;; --- emits/python-native.fk module manifest ----------------------
+
+    (let manifest pn-module-manifest)
+    (assert (gt (len manifest) 0)
+            "python-native emitter must declare at least one module")
+
+    (let header (pn-module-header "rules.py"))
+    (assert (gt (str_len header) 0)
+            "pn-module-header must produce a non-empty header")
+
+    ;; --- Phase 1: lens-driven objects.py emitter ---------------------
+    ;; The emitter no longer carries a Form literal of the category
+    ;; table. pn-cat-table-from-artifact reads the table from a .fkb
+    ;; produced by form/scripts/build_form_compiler_artifact.sh
+    ;; --categories. Here we synthesize a two-entry pair list directly
+    ;; (the lens output shape) and verify the rendering functions agree.
+
+    (let synth-pairs (list (list "IMPORT" 501) (list "MATCH-AS" 574)))
+
+    (let enum-line (pn-render-enum-line (head synth-pairs)))
+    (assert (gt (str_len enum-line) 0)
+            "pn-render-enum-line must produce a non-empty IntEnum member line")
+
+    (let objects-py (pn-emit-objects-module synth-pairs))
+    (assert (gt (str_len objects-py) 0)
+            "pn-emit-objects-module must produce a non-empty module source")
+
+    (assert (str_eq (pn-enum-name "FROM-IMPORT") "FROM_IMPORT")
+            "pn-enum-name must translate UPPER-KEBAB to UPPER_SNAKE")
+
+    (assert (str_eq (pn-int-str 574) "574")
+            "pn-int-str must render integers as decimal strings")
+
+    0)

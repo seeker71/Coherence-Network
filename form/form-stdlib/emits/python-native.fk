@@ -1,0 +1,593 @@
+; emits/python-native.fk — Form-native Python emitter
+;
+; Walks a Form Recipe tree (the AST of an .fk source file expressed as
+; nested Form lists) and emits idiomatic native Python source. The output
+; reads as Python a Python programmer would write — not Form-recipes
+; wrapped in Python syntax.
+;
+; Vocabulary the emitted Python uses, beyond the Python language itself:
+;   from kernels.python_bmf import sdk
+; This is the substrate boundary; no other Form vocabulary crosses into
+; the emit. Operators like (add a b) become `a + b`, (head xs) becomes
+; `xs[0]`, (str_concat a b) becomes `a + b`, etc.
+;
+; Pipeline:
+;   pn-tokenize   — source text → token list (paren, atom, string)
+;   pn-parse      — tokens → nested Form list AST
+;   pn-emit-tree  — AST → Python source text
+;   pn-emit-file  — read .fk, emit, write .py via write_file_text
+;
+; Kernel note: the host `and` and `or` natives take exactly two children,
+; so every guard in this file uses nested if/and pairs rather than wide
+; multi-arg `and` expressions — that's the difference between "passes on
+; one kernel" and "all three siblings agree".
+
+;; ------------------------------------------------------------------
+;; Top-level defns + lets (no (do ...) wrapping so consumers see
+;; the bindings). The self-test at the file's tail still runs at
+;; load time, just at top-level rather than inside an outer (do ...).
+;; ------------------------------------------------------------------
+
+    ;; ------------------------------------------------------------------
+    ;; Tokenizer — S-expression lexer
+    ;; ------------------------------------------------------------------
+    ;; Tokens are flat lists:
+    ;;   ("LP")        — left paren
+    ;;   ("RP")        — right paren
+    ;;   ("ATOM" s)    — identifier, number, or operator-name
+    ;;   ("STR" s)     — string literal contents (quotes stripped)
+
+    (defn pn-ws? (ch)
+        (if (str_eq ch " ") true
+        (if (str_eq ch "\n") true
+        (if (str_eq ch "\t") true
+        (if (str_eq ch "\r") true false)))))
+
+    (defn pn-paren? (ch)
+        (if (str_eq ch "(") true (str_eq ch ")")))
+
+    (defn pn-atom-end? (ch)
+        (if (pn-ws? ch) true
+        (if (pn-paren? ch) true
+        (str_eq ch "\""))))
+
+    (defn pn-skip-line (s i n)
+        (if (ge i n) i
+            (if (str_eq (char_at s i) "\n") (add i 1)
+                (pn-skip-line s (add i 1) n))))
+
+    (defn pn-skip-ws (s i n)
+        (if (ge i n) i
+            (do
+                (let ch (char_at s i))
+                (if (pn-ws? ch) (pn-skip-ws s (add i 1) n)
+                (if (str_eq ch ";") (pn-skip-ws s (pn-skip-line s i n) n)
+                    i)))))
+
+    (defn pn-read-atom (s i n)
+        (if (ge i n) i
+            (if (pn-atom-end? (char_at s i)) i
+                (pn-read-atom s (add i 1) n))))
+
+    (defn pn-read-str (s i n)
+        (if (ge i n) i
+            (do
+                (let ch (char_at s i))
+                (if (str_eq ch "\\")
+                    (pn-read-str s (add i 2) n)
+                    (if (str_eq ch "\"") i
+                        (pn-read-str s (add i 1) n))))))
+
+    (defn pn-substr (s a b)
+        (if (ge a b) "" (substring s a b)))
+
+    (defn pn-tokenize-loop (s i n)
+        (do
+            (let j (pn-skip-ws s i n))
+            (if (ge j n) (empty)
+                (do
+                    (let ch (char_at s j))
+                    (if (str_eq ch "(")
+                        (cons (list "LP") (pn-tokenize-loop s (add j 1) n))
+                    (if (str_eq ch ")")
+                        (cons (list "RP") (pn-tokenize-loop s (add j 1) n))
+                    (if (str_eq ch "\"")
+                        (do
+                            (let end (pn-read-str s (add j 1) n))
+                            (cons (list "STR" (pn-substr s (add j 1) end))
+                                  (pn-tokenize-loop s (add end 1) n)))
+                        (do
+                            (let end (pn-read-atom s j n))
+                            (cons (list "ATOM" (pn-substr s j end))
+                                  (pn-tokenize-loop s end n))))))))))
+
+    (defn pn-tokenize (s) (pn-tokenize-loop s 0 (str_len s)))
+
+    ;; ------------------------------------------------------------------
+    ;; Parser — tokens → list of top-level Recipe trees
+    ;; ------------------------------------------------------------------
+    ;; A parsed node is one of:
+    ;;   ("a" "ATOM" value)   — identifier / number / operator name
+    ;;   ("s" "STR"  value)   — string literal
+    ;;   ("l" children...)    — a list / call form
+
+    (defn pn-node-tag (n)  (head n))
+    (defn pn-atom?    (n)  (str_eq (pn-node-tag n) "a"))
+    (defn pn-str?     (n)  (str_eq (pn-node-tag n) "s"))
+    (defn pn-list?    (n)  (str_eq (pn-node-tag n) "l"))
+    (defn pn-atom-val (n)  (head (tail (tail n))))
+    (defn pn-str-val  (n)  (head (tail (tail n))))
+    (defn pn-list-children (n) (tail n))
+
+    (defn pn-mk-atom (v) (list "a" "ATOM" v))
+    (defn pn-mk-str  (v) (list "s" "STR"  v))
+    (defn pn-mk-list (cs) (cons "l" cs))
+
+    (defn pn-parse-one (toks)
+        (do
+            (let t (head toks)) (let k (head t))
+            (if (str_eq k "ATOM") (list (pn-mk-atom (head (tail t))) (tail toks))
+            (if (str_eq k "STR")  (list (pn-mk-str  (head (tail t))) (tail toks))
+            (if (str_eq k "LP")
+                (do
+                    (let inner (pn-parse-many (tail toks)))
+                    (list (pn-mk-list (head inner)) (head (tail inner))))
+                (list (list "rp") toks))))))
+
+    (defn pn-parse-many (toks)
+        (if (nil? toks) (list (empty) toks)
+            (do
+                (let t (head toks)) (let k (head t))
+                (if (str_eq k "RP")
+                    (list (empty) (tail toks))
+                    (do
+                        (let one (pn-parse-one toks))
+                        (let rest (pn-parse-many (head (tail one))))
+                        (list (cons (head one) (head rest)) (head (tail rest))))))))
+
+    (defn pn-parse-top (toks)
+        (if (nil? toks) (empty)
+            (do
+                (let one (pn-parse-one toks))
+                (cons (head one) (pn-parse-top (head (tail one)))))))
+
+    (defn pn-parse (source)
+        (pn-parse-top (pn-tokenize source)))
+
+    ;; ------------------------------------------------------------------
+    ;; Guard helpers — wrapping the kernel's binary-only and/or behind
+    ;; safe single-call shapes the rest of the emitter can rely on.
+    ;; ------------------------------------------------------------------
+
+    ;; pn-head-is-atom? — does node have shape `(<atom> ...)` with the
+    ;; given head-name? Walks the guard step by step so we never call
+    ;; head/tail on a value that isn't a list/atom of the right shape.
+    (defn pn-head-is-atom? (node name)
+        (if (pn-list? node)
+            (do
+                (let cs (pn-list-children node))
+                (if (gt (len cs) 0)
+                    (if (pn-atom? (head cs))
+                        (str_eq (pn-atom-val (head cs)) name)
+                        false)
+                    false))
+            false))
+
+    ;; pn-head-atom — the head atom value (a string), or "" if the node
+    ;; doesn't shape that way. Single safe accessor.
+    (defn pn-head-atom (node)
+        (if (pn-list? node)
+            (do
+                (let cs (pn-list-children node))
+                (if (gt (len cs) 0)
+                    (if (pn-atom? (head cs))
+                        (pn-atom-val (head cs))
+                        "")
+                    ""))
+            ""))
+
+    ;; ------------------------------------------------------------------
+    ;; Indentation + small string helpers
+    ;; ------------------------------------------------------------------
+
+    (defn pn-indent (depth)
+        (if (le depth 0) ""
+            (str_concat "    " (pn-indent (sub depth 1)))))
+
+    (defn pn-join-comma (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat ", " (pn-join-comma (tail xs)))))))
+
+    (defn pn-join-nl (xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs) (str_concat "\n" (pn-join-nl (tail xs)))))))
+
+    ;; Python identifier sanitation: Form uses kebab-case (cap-empty),
+    ;; Python uses snake_case. Replace - with _, ? with _p suffix.
+    (defn pn-py-name-loop (s i n)
+        (if (ge i n) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (pn-py-name-loop s (add i 1) n))
+                (if (str_eq ch "-") (str_concat "_" rest)
+                (if (str_eq ch "?") (str_concat "_p" rest)
+                    (str_concat ch rest))))))
+
+    (defn pn-py-name (s) (pn-py-name-loop s 0 (str_len s)))
+
+    ;; Python string literal: re-quote a parsed string atom.
+    (defn pn-py-quote-loop (s i n)
+        (if (ge i n) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (pn-py-quote-loop s (add i 1) n))
+                (if (str_eq ch "\\") (str_concat "\\\\" rest)
+                (if (str_eq ch "\"") (str_concat "\\\"" rest)
+                (if (str_eq ch "\n") (str_concat "\\n"  rest)
+                    (str_concat ch rest)))))))
+
+    (defn pn-py-quote (s)
+        (str_concat "\"" (str_concat (pn-py-quote-loop s 0 (str_len s)) "\"")))
+
+    ;; Recognize a numeric literal atom (all digits, optional leading -).
+    (defn pn-all-digits-loop (s i n)
+        (if (ge i n) true
+            (do
+                (let c (ord (char_at s i)))
+                (if (ge c 48)
+                    (if (le c 57)
+                        (pn-all-digits-loop s (add i 1) n)
+                        false)
+                    false))))
+
+    (defn pn-numeric? (s)
+        (do
+            (let n (str_len s))
+            (if (eq n 0) false
+                (if (str_eq (char_at s 0) "-")
+                    (if (gt n 1) (pn-all-digits-loop s 1 n) false)
+                    (pn-all-digits-loop s 0 n)))))
+
+    ;; ------------------------------------------------------------------
+    ;; Emitter — Recipe tree → Python source
+    ;; ------------------------------------------------------------------
+
+    (defn pn-binop (op a b)
+        (str_concat "(" (str_concat a (str_concat op (str_concat b ")")))))
+
+    (defn pn-call-py (name args)
+        (str_concat name (str_concat "(" (str_concat (pn-join-comma args) ")"))))
+
+    ;; Form head → Python infix operator. Returns "" if no match.
+    (defn pn-binop-name (h)
+        (if (str_eq h "add") " + "
+        (if (str_eq h "sub") " - "
+        (if (str_eq h "mul") " * "
+        (if (str_eq h "div") " // "
+        (if (str_eq h "mod") " % "
+        (if (str_eq h "eq")  " == "
+        (if (str_eq h "ne")  " != "
+        (if (str_eq h "lt")  " < "
+        (if (str_eq h "le")  " <= "
+        (if (str_eq h "gt")  " > "
+        (if (str_eq h "ge")  " >= "
+        (if (str_eq h "and") " and "
+        (if (str_eq h "or")  " or "
+        (if (str_eq h "str_concat") " + "
+        (if (str_eq h "str_eq")     " == "
+            ""))))))))))))))))
+
+    (defn pn-emit-expr (node)
+        (if (pn-atom? node)
+            (do
+                (let v (pn-atom-val node))
+                (if (str_eq v "true")  "True"
+                (if (str_eq v "false") "False"
+                (if (str_eq v "empty") "[]"
+                (if (pn-numeric? v) v
+                    (pn-py-name v))))))
+        (if (pn-str? node) (pn-py-quote (pn-str-val node))
+        (if (pn-list? node)
+            (do
+                (let cs (pn-list-children node))
+                (if (nil? cs) "[]"
+                    (do
+                        (let h (head cs))
+                        (if (pn-atom? h)
+                            (pn-emit-call (pn-atom-val h) (tail cs))
+                            (pn-call-py (pn-emit-expr h) (pn-emit-args (tail cs)))))))
+            "None"))))
+
+    (defn pn-emit-args (xs)
+        (if (nil? xs) (empty)
+            (cons (pn-emit-expr (head xs)) (pn-emit-args (tail xs)))))
+
+    ;; --- specific-shape helpers (avoid wide ands) ---------------------
+    (defn pn-is-binop-2? (h cs)
+        (if (gt (str_len (pn-binop-name h)) 0)
+            (eq (len cs) 2)
+            false))
+
+    (defn pn-is-unary? (h cs name)
+        (if (str_eq h name) (eq (len cs) 1) false))
+
+    (defn pn-is-binary? (h cs name)
+        (if (str_eq h name) (eq (len cs) 2) false))
+
+    (defn pn-is-arity? (h cs name k)
+        (if (str_eq h name) (eq (len cs) k) false))
+
+    ;; pn-emit-call dispatches on the head atom name.
+    (defn pn-emit-call (h cs)
+        (if (pn-is-binop-2? h cs)
+            (pn-binop (pn-binop-name h)
+                      (pn-emit-expr (head cs))
+                      (pn-emit-expr (head (tail cs))))
+        (if (pn-is-unary? h cs "not")
+            (str_concat "(not " (str_concat (pn-emit-expr (head cs)) ")"))
+        (if (pn-is-unary? h cs "head")
+            (str_concat (pn-emit-expr (head cs)) "[0]")
+        (if (pn-is-unary? h cs "tail")
+            (str_concat (pn-emit-expr (head cs)) "[1:]")
+        (if (pn-is-binary? h cs "cons")
+            (str_concat "[" (str_concat (pn-emit-expr (head cs))
+                        (str_concat ", *" (str_concat (pn-emit-expr (head (tail cs))) "]"))))
+        (if (pn-is-unary? h cs "len")
+            (str_concat "len(" (str_concat (pn-emit-expr (head cs)) ")"))
+        (if (pn-is-unary? h cs "nil?")
+            (str_concat "(len(" (str_concat (pn-emit-expr (head cs)) ") == 0)"))
+        (if (str_eq h "empty") "[]"
+        (if (str_eq h "list")
+            (str_concat "[" (str_concat (pn-join-comma (pn-emit-args cs)) "]"))
+        (if (pn-is-binary? h cs "nth")
+            (str_concat (pn-emit-expr (head cs))
+                        (str_concat "[" (str_concat (pn-emit-expr (head (tail cs))) "]")))
+        (if (pn-is-arity? h cs "if" 3)
+            (str_concat "(" (str_concat (pn-emit-expr (head (tail cs)))
+                        (str_concat " if " (str_concat (pn-emit-expr (head cs))
+                        (str_concat " else " (str_concat (pn-emit-expr (head (tail (tail cs)))) ")"))))))
+        (if (str_eq h "make_nodeid")
+            (str_concat "sdk.NodeID(" (str_concat (pn-join-comma (pn-emit-args cs)) ")"))
+        (if (str_eq h "intern_trivial_string")
+            (str_concat "sdk.intern_trivial_string(" (str_concat (pn-join-comma (pn-emit-args cs)) ")"))
+        (if (str_eq h "intern_trivial_int")
+            (str_concat "sdk.intern_trivial_int(" (str_concat (pn-join-comma (pn-emit-args cs)) ")"))
+            (pn-call-py (pn-py-name h) (pn-emit-args cs)))))))))))))))))
+
+    ;; --- statement / function-body emitter ----------------------------
+
+    (defn pn-params-list (xs)
+        (if (nil? xs) (empty)
+            (cons (pn-py-name (pn-atom-val (head xs))) (pn-params-list (tail xs)))))
+
+    (defn pn-emit-defn (cs depth)
+        (do
+            (let name (pn-py-name (pn-atom-val (head cs))))
+            (let params-node (head (tail cs)))
+            (let body (head (tail (tail cs))))
+            (let params (pn-params-list (pn-list-children params-node)))
+            (let header (str_concat (pn-indent depth)
+                        (str_concat "def " (str_concat name
+                        (str_concat "(" (str_concat (pn-join-comma params) "):"))))))
+            (let body-text (pn-emit-fn-body body (add depth 1)))
+            (str_concat header (str_concat "\n" body-text))))
+
+    (defn pn-emit-fn-body (node depth)
+        (if (pn-head-is-atom? node "do")
+            (pn-emit-do-body (tail (pn-list-children node)) depth)
+            (str_concat (pn-indent depth)
+                        (str_concat "return " (pn-emit-expr node)))))
+
+    ;; (do stmt1 stmt2 ... last-expr). Each non-final form becomes a
+    ;; statement; the final form becomes the return value.
+    (defn pn-emit-do-body (cs depth)
+        (if (nil? cs) (str_concat (pn-indent depth) "return None")
+            (if (nil? (tail cs))
+                (pn-emit-tail-form (head cs) depth)
+                (str_concat (pn-emit-mid-form (head cs) depth)
+                (str_concat "\n" (pn-emit-do-body (tail cs) depth))))))
+
+    (defn pn-emit-mid-form (node depth)
+        (if (pn-head-is-atom? node "let")
+            (do
+                (let cs (tail (pn-list-children node)))
+                (let n (pn-py-name (pn-atom-val (head cs))))
+                (let v (pn-emit-expr (head (tail cs))))
+                (str_concat (pn-indent depth) (str_concat n (str_concat " = " v))))
+            (str_concat (pn-indent depth) (pn-emit-expr node))))
+
+    (defn pn-emit-tail-form (node depth)
+        (if (pn-head-is-atom? node "let")
+            (str_concat (pn-emit-mid-form node depth)
+            (str_concat "\n" (str_concat (pn-indent depth) "return None")))
+            (str_concat (pn-indent depth)
+                        (str_concat "return " (pn-emit-expr node)))))
+
+    ;; --- top-level emitter --------------------------------------------
+
+    (defn pn-emit-top-form (node)
+        (if (pn-head-is-atom? node "defn")
+            (pn-emit-defn (tail (pn-list-children node)) 0)
+        (if (pn-head-is-atom? node "let")
+            (do
+                (let cs (tail (pn-list-children node)))
+                (str_concat (pn-py-name (pn-atom-val (head cs)))
+                (str_concat " = " (pn-emit-expr (head (tail cs))))))
+            (pn-emit-expr node))))
+
+    (defn pn-emit-top-list (forms)
+        (if (nil? forms) ""
+            (if (nil? (tail forms)) (pn-emit-top-form (head forms))
+                (str_concat (pn-emit-top-form (head forms))
+                (str_concat "\n\n" (pn-emit-top-list (tail forms)))))))
+
+    ;; A top-level (do ...) wraps everything inside engine.fk. Unwrap and
+    ;; emit each child as a module-level form.
+    (defn pn-emit-program (forms)
+        (if (nil? forms) ""
+            (if (pn-head-is-atom? (head forms) "do")
+                (pn-emit-top-list (tail (pn-list-children (head forms))))
+                (pn-emit-top-list forms))))
+
+    (defn pn-py-header ()
+        (str_concat "# Auto-emitted by form/form-stdlib/emits/python-native.fk\n"
+        (str_concat "# Hand edits will be overwritten; edit the Form source instead.\n"
+        (str_concat "from kernels.python_bmf import sdk\n\n" ""))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Module manifest — names the Python modules this emitter produces.
+    ;; The full pipeline (spec §Architecture) lowers a Form binary into
+    ;; one file per module; the manifest declares them so a builder can
+    ;; iterate without grepping the emit functions. Currently bootstraps
+    ;; with the canonical four targets named in the spec.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (let pn-module-manifest
+        (list "objects.py"
+              "rules.py"
+              "section_parser.py"
+              "form_action.py"))
+
+    ;; Per-file header — same provenance comment as pn-py-header, with
+    ;; the relative path interpolated so each emitted file names itself.
+    (defn pn-module-header (path)
+        (str_concat "# Auto-emitted by form/form-stdlib/emits/python-native.fk\n"
+        (str_concat "# Target file: "
+        (str_concat path
+        (str_concat "\n# Hand edits will be overwritten; edit the Form source instead.\n"
+                    "from kernels.python_bmf import sdk\n\n")))))
+
+    (defn pn-emit-string (src)
+        (str_concat (pn-py-header) (pn-emit-program (pn-parse src))))
+
+    (defn pn-emit-file (in-path out-path)
+        (do
+            (let src (read_file in-path))
+            (let py  (pn-emit-string src))
+            (write_file_text out-path py)))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Lens: category-table-from-artifact
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The python.bmf category table is the ice — name + instance code
+    ;; per BMF object category. The data lives in form-ontology.json and
+    ;; is projected to a tiny `(let pn-categories (list (list "NAME" CODE) …))`
+    ;; .fk by build_form_compiler_artifact.sh --categories, then compiled
+    ;; to .fkb via `form-kernel-go --emit-binary`.
+    ;;
+    ;; This lens reads that .fkb back as a Recipe tree and walks it into
+    ;; a plain Form list of `(list name-string code-int)` pairs the
+    ;; emitter consumes. No category names are duplicated in this file —
+    ;; the lattice IS the source of truth.
+    ;;
+    ;; Recipe shape the artifact carries (per form-kernel-go buildVerb):
+    ;;   root = RBlockLet(name-leaf "pn-categories", value-recipe)
+    ;;   value-recipe = RFnCall(name-leaf "list", entry1, entry2, …)
+    ;;   each entry = RFnCall(name-leaf "list", name-leaf STRING, name-leaf INT)
+    ;; The lens trusts that shape; if a future encoder changes it, this
+    ;; lens fails loudly with an unexpected-shape print rather than
+    ;; quietly emitting wrong objects.py output.
+
+    ;; pn-fncall-args — strip the verb-name leaf, return only the arg
+    ;; nodes of an RFnCall recipe. The kernel stores fn-calls as
+    ;; (name-leaf arg1 arg2 …); arg2:.. are the real args.
+    (defn pn-fncall-args (node)
+        (tail (node_children node)))
+
+    ;; pn-entries-to-pairs — walk the list of `(list "NAME" CODE)` entry
+    ;; nodes into Form pairs `(name code)` the emitter can iterate.
+    (defn pn-entries-to-pairs (entries)
+        (if (nil? entries) (empty)
+            (do
+                (let entry (head entries))
+                (let kids (pn-fncall-args entry))
+                (let name (node_value (head kids)))
+                (let code (node_value (head (tail kids))))
+                (cons (list name code)
+                      (pn-entries-to-pairs (tail entries))))))
+
+    ;; pn-cat-table-from-artifact — entry point. Takes the root NodeID
+    ;; returned by `read_form_binary` and returns the (name code) list.
+    (defn pn-cat-table-from-artifact (root)
+        (do
+            (let let-kids (node_children root))
+            (let list-call (head (tail let-kids)))
+            (pn-entries-to-pairs (pn-fncall-args list-call))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; objects.py emitter — IntEnum + py_keyword helper
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walks the (name code) pair list from the lens and renders Python
+    ;; source. The IntEnum is the destination shape named in
+    ;; specs/form-binary-to-native-python-emitter.md R5.
+
+    ;; pn-py-enum-name — Form names use UPPER-KEBAB ("FROM-IMPORT").
+    ;; Python IntEnum members read as UPPER_SNAKE. Hyphens → underscores.
+    (defn pn-enum-name-loop (s i n)
+        (if (ge i n) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (pn-enum-name-loop s (add i 1) n))
+                (if (str_eq ch "-") (str_concat "_" rest)
+                    (str_concat ch rest)))))
+
+    (defn pn-enum-name (s) (pn-enum-name-loop s 0 (str_len s)))
+
+    ;; pn-int-str — integer → decimal string. Builds digit-by-digit using
+    ;; mod/div; handles 0 as a special case. Form's `print` would coerce
+    ;; for us, but we need the value inside a larger string-concat chain.
+    (defn pn-digit-char (d)
+        (if (eq d 0) "0"
+        (if (eq d 1) "1"
+        (if (eq d 2) "2"
+        (if (eq d 3) "3"
+        (if (eq d 4) "4"
+        (if (eq d 5) "5"
+        (if (eq d 6) "6"
+        (if (eq d 7) "7"
+        (if (eq d 8) "8"
+            "9"))))))))))
+
+    (defn pn-int-str-loop (n acc)
+        (if (le n 0) acc
+            (pn-int-str-loop (div n 10)
+                             (str_concat (pn-digit-char (mod n 10)) acc))))
+
+    (defn pn-int-str (n)
+        (if (eq n 0) "0" (pn-int-str-loop n "")))
+
+    ;; pn-render-enum-line — one IntEnum member line.
+    (defn pn-render-enum-line (pair)
+        (str_concat "    "
+        (str_concat (pn-enum-name (head pair))
+        (str_concat " = "
+        (str_concat (pn-int-str (head (tail pair))) "\n")))))
+
+    (defn pn-render-enum-body (pairs)
+        (if (nil? pairs) ""
+            (str_concat (pn-render-enum-line (head pairs))
+                        (pn-render-enum-body (tail pairs)))))
+
+    ;; pn-emit-objects-module — full Python source for objects.py.
+    (defn pn-emit-objects-module (pairs)
+        (str_concat (pn-module-header "kernels/python_bmf/objects.py")
+        (str_concat "from enum import IntEnum\n\n"
+        (str_concat "from dataclasses import dataclass\n\n"
+        (str_concat "class PyBmfCategory(IntEnum):\n"
+        (str_concat "    \"\"\"Python BMF object categories — emitted from form-ontology.json via the .fkb lens.\"\"\"\n"
+        (str_concat (pn-render-enum-body pairs)
+        (str_concat "\n\n@dataclass(frozen=True)\nclass PyKeyword:\n    value: str\n\n"
+        (str_concat "def py_keyword(value):\n    return PyKeyword(value=value)\n" "")))))))))
+
+    ;; pn-emit-objects-file — read .fkb, lens, write Python.
+    (defn pn-emit-objects-file (fkb-path out-path)
+        (do
+            (let root (read_form_binary fkb-path))
+            (let pairs (pn-cat-table-from-artifact root))
+            (let py (pn-emit-objects-module pairs))
+            (write_file_text out-path py)))
+
+0
+

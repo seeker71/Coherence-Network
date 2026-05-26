@@ -1,6 +1,6 @@
 ; binary-target-naming.fk - binary objects emit through sidecar symbol lenses
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk
 
 (do
     (let UNIVERSAL-LOCAL-INT (make_nodeid 1 2 101 1))

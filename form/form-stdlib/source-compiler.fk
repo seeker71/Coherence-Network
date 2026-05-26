@@ -18,24 +18,35 @@
     (defn fsc-find-string-at? (s needle i j)
         (fsc-find-string-at-len? s needle (str_len s) (str_len needle) i j))
 
-    (defn fsc-find-string-from-len (s needle s-len needle-len i)
-        (if (gt (add i needle-len) s-len) (sub 0 1)
-            (if (fsc-find-string-at-len? s needle s-len needle-len i 0) i
-                (fsc-find-string-from-len s needle s-len needle-len (add i 1)))))
+    ;; --- streaming scanners — dispatched to kernel-native `str_find` ---
+    ;;
+    ;; The earlier recursive scanners (fsc-find-string-from-len,
+    ;; fsc-find-char-from-len) blew Go's stack when section bodies grew past
+    ;; ~165 BMF rules. The first attempt (string_fold-based) eliminated the
+    ;; recursion but moved the cost into per-byte Form-closure dispatch,
+    ;; which is too slow when called 800+ times per source-compile run.
+    ;;
+    ;; The cure: a `str_find` kernel native that does the whole search in
+    ;; Go/Rust/JS (one for-loop per call, no Form callback, no recursion).
+    ;; This is what `tokenizeSexp` already does internally; we expose it so
+    ;; Form code doesn't pay the closure-dispatch tax. The universal-
+    ;; translator stream property holds: arbitrary-length input, zero Form
+    ;; recursion, constant per-call cost.
 
     (defn fsc-find-string-from (s needle i)
-        (fsc-find-string-from-len s needle (str_len s) (str_len needle) i))
+        (str_find s needle i))
+
+    (defn fsc-find-string-from-len (s needle _s-len _needle-len i)
+        (str_find s needle i))
 
     (defn fsc-contains? (s needle)
-        (ge (fsc-find-string-from s needle 0) 0))
-
-    (defn fsc-find-char-from-len (s ch s-len i)
-        (if (ge i s-len) (sub 0 1)
-            (if (str_eq (char_at s i) ch) i
-                (fsc-find-char-from-len s ch s-len (add i 1)))))
+        (ge (str_find s needle 0) 0))
 
     (defn fsc-find-char-from (s ch i)
-        (fsc-find-char-from-len s ch (str_len s) i))
+        (str_find s ch i))
+
+    (defn fsc-find-char-from-len (s ch _s-len i)
+        (str_find s ch i))
 
     (defn fsc-space? (ch)
         (or (str_eq ch " ") (or (str_eq ch "\n") (or (str_eq ch "\t") (str_eq ch "\r")))))
@@ -180,81 +191,28 @@
             (if (fsc-space? (char_at s i)) i
                 (fsc-read-part-end s (add i 1)))))
 
-    (defn fsc-pattern-items-loop (dialect pattern i)
-        (do
-            (let p (fsc-skip-spaces pattern i))
-            (if (ge p (str_len pattern)) ""
-                (if (str_eq (char_at pattern p) "\"")
-                    (do
-                        (let e (fsc-read-quoted-end pattern (add p 1)))
-                        (let value (fsc-sub pattern (add p 1) e))
-                        (str_concat " "
-                            (str_concat (fsc-literal-expr dialect value)
-                                        (fsc-pattern-items-loop dialect pattern (add e 1)))))
-                    (do
-                        (let e (fsc-read-part-end pattern p))
-                        (let part (fsc-sub pattern p e))
-                        (let expr
-                            (if (str_eq (char_at part 0) "$")
-                                (fsc-capture-expr dialect part)
-                                (fsc-rule-ref-expr dialect part)))
-                        (str_concat " "
-                            (str_concat expr
-                                        (fsc-pattern-items-loop dialect pattern e))))))))
-
-    (defn fsc-rule-line (dialect line)
-        (do
-            (let sep (fsc-find-string-from line "::=" 0))
-            (let arr (fsc-find-string-from line " => " sep))
-            (let semi (fsc-find-char-from line ";" arr))
-            (let rev (fsc-find-string-from line " <= " arr))
-            (let name (fsc-trim (fsc-sub line 0 sep)))
-            (let pattern (fsc-trim (fsc-sub line (add sep 3) arr)))
-            (let action-end (if (and (ge rev 0) (lt rev semi)) rev semi))
-            (let action (fsc-trim (fsc-sub line (add arr 4) action-end)))
-            (let reverse (if (and (ge rev 0) (lt rev semi))
-                             (fsc-trim (fsc-sub line (add rev 4) semi))
-                             "bmf-default-reverse-emitter"))
-            (str_concat "            (list "
-                (str_concat (fsc-q name)
-                (str_concat "\n                  (list \"sequence\""
-                (str_concat (fsc-pattern-items-loop dialect pattern 0)
-                (str_concat ")\n                  "
-                (str_concat action
-                (str_concat "\n                  bmf-identity-inverse\n                  "
-                (str_concat reverse ")"))))))))))
-
+    ;; fsc-skip-rule-line? — used by the Recipe-build path's rules loop.
     (defn fsc-skip-rule-line? (line)
         (if (str_eq line "") true
             (str_eq (char_at line 0) ";")))
 
-    (defn fsc-rules-loop (dialect body i)
-        (if (ge i (str_len body)) ""
-            (do
-                (let e (fsc-line-end body i))
-                (let line (fsc-trim (fsc-sub body i e)))
-                (let rest (fsc-rules-loop dialect body (fsc-line-next body i)))
-                (if (fsc-skip-rule-line? line) rest
-                    (str_concat (fsc-rule-line dialect line)
-                                (str_concat "\n" rest))))))
-
-    (defn fsc-compile-bmf-section (dialect-name body)
-        (do
-            (let dot (fsc-find-char-from dialect-name "." 0))
-            (let dialect (fsc-sub dialect-name 0 dot))
-            (let rules-name (str_concat dialect "-bmf-rules"))
-            (let second-name (str_concat dialect "-bmf-second"))
-            (str_concat "    (let "
-            (str_concat rules-name
-            (str_concat "\n        (list\n"
-            (str_concat (fsc-rules-loop dialect body 0)
-            (str_concat "        ))\n\n    (let "
-            (str_concat second-name
-            (str_concat "\n        (form-bmf-second "
-            (str_concat (fsc-q dialect)
-            (str_concat " (bmf-section "
-            (str_concat (fsc-q dialect-name)
-            (str_concat " " (str_concat rules-name ")))"))))))))))))))
+    ;; --- Composted ---------------------------------------------------
+    ;; The text-build path (fsc-pattern-items-loop, fsc-rule-line,
+    ;; fsc-rules-loop, fsc-compile-bmf-section) emitted .fk source text
+    ;; the kernel re-parsed. Each rule cost ~13 nested str_concats; whole
+    ;; sections piled hundreds. The Recipe-build path below (fsc-bmf-
+    ;; section-recipe + write_form_binary) is the live replacement — it
+    ;; constructs a Recipe via intern_node and emits one .fkb on disk,
+    ;; one one-line driver text. Same observable behavior, zero text
+    ;; round-trip for the rule list, str_concat count reduced from ~93
+    ;; to ~20 in this file (the residual is path/name building +
+    ;; form.bml/form.action path which still uses text output).
+    ;;
+    ;; fsc-literal-expr / fsc-capture-expr / fsc-rule-ref-expr were the
+    ;; text formatters for the old path; their Recipe equivalents live in
+    ;; fsc-pattern-item-recipe + fsc-rec-* helpers (further down). fsc-q
+    ;; (defined above near fsc-quote-loop) still serves form.bml/form.action
+    ;; until that path also gets the Recipe treatment.
 
     ;; --- form.bml / form.action maintenance dialect ------------------
     ;; These dialects are deliberately above the kernel. They give stdlib,
@@ -316,31 +274,6 @@
     (defn fsc-bml-find-comma (s i)
         (fsc-bml-find-comma-loop s i 0 false))
 
-    (defn fsc-bml-args-form-loop (args i)
-        (do
-            (let p (fsc-skip-spaces args i))
-            (if (ge p (str_len args)) ""
-                (do
-                    (let comma (fsc-bml-find-comma args p))
-                    (let end (if (lt comma 0) (str_len args) comma))
-                    (let part (fsc-trim (fsc-sub args p end)))
-                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
-                    (str_concat " "
-                        (str_concat (fsc-compile-form-bml-expr part)
-                                    (fsc-bml-args-form-loop args rest-start)))))))
-
-    (defn fsc-bml-name-list-loop (args i)
-        (do
-            (let p (fsc-skip-spaces args i))
-            (if (ge p (str_len args)) ""
-                (do
-                    (let comma (fsc-find-char-from args "," p))
-                    (let end (if (lt comma 0) (str_len args) comma))
-                    (let name (fsc-trim (fsc-sub args p end)))
-                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
-                    (str_concat " "
-                        (str_concat name (fsc-bml-name-list-loop args rest-start)))))))
-
     (defn fsc-bml-block-end (body i depth)
         (do
             (let e (fsc-line-end body i))
@@ -355,17 +288,6 @@
     (defn fsc-bml-comment-line? (line)
         (if (fsc-skip-rule-line? line) true
             (fsc-prefix? line "//")))
-
-    (defn fsc-compile-form-bml-call (expr open)
-        (do
-            (let close (fsc-last-char-index expr))
-            (let name (fsc-trim (fsc-sub expr 0 open)))
-            (let args (fsc-sub expr (add open 1) close))
-            (if (eq (str_len (fsc-trim args)) 0)
-                (str_concat "(" (str_concat name ")"))
-                (str_concat "("
-                    (str_concat name
-                    (str_concat (fsc-bml-args-form-loop args 0) ")"))))))
 
     (defn fsc-bml-normalize-ws-loop (s i quoted saw-space)
         (if (ge i (str_len s)) ""
@@ -386,76 +308,6 @@
 
     (defn fsc-bml-normalize-ws (s)
         (fsc-trim (fsc-bml-normalize-ws-loop s 0 false false)))
-
-    (defn fsc-compile-form-bml-if (expr)
-        (do
-            (let then-pos (fsc-find-string-from expr " then " 0))
-            (let else-pos (fsc-find-string-from expr " else " then-pos))
-            (let cond (fsc-trim (fsc-sub expr 3 then-pos)))
-            (let yes (fsc-trim (fsc-sub expr (add then-pos 6) else-pos)))
-            (let no (fsc-trim (fsc-sub expr (add else-pos 6) (str_len expr))))
-            (str_concat "(if "
-                (str_concat (fsc-compile-form-bml-expr cond)
-                (str_concat " "
-                (str_concat (fsc-compile-form-bml-expr yes)
-                (str_concat " " (str_concat (fsc-compile-form-bml-expr no) ")"))))))))
-
-    (defn fsc-compile-form-bml-expr (raw)
-        (do
-            (let expr (fsc-bml-normalize-ws (fsc-strip-semi raw)))
-            (let open (fsc-find-char-from expr "(" 0))
-            (if (eq (str_len expr) 0) "(empty)"
-            (if (fsc-prefix? expr "if ")
-                (fsc-compile-form-bml-if expr)
-            (if (and (ge open 0) (str_eq (char_at expr (fsc-last-char-index expr)) ")"))
-                (fsc-compile-form-bml-call expr open)
-            (if (str_eq expr "empty") "(empty)"
-            (if (str_eq expr "true") "true"
-            (if (str_eq expr "false") "false"
-            (if (str_eq expr "null") "null"
-            (if (fsc-int? expr) expr
-                expr))))))))))
-
-    (defn fsc-compile-form-bml-def (line)
-        (do
-            (let open (fsc-find-char-from line "(" 4))
-            (let close (fsc-find-char-from line ")" open))
-            (let eq-pos (fsc-find-char-from line "=" close))
-            (let name (fsc-trim (fsc-sub line 4 open)))
-            (let args (fsc-sub line (add open 1) close))
-            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
-            (str_concat "    (defn "
-                (str_concat name
-                (str_concat " ("
-                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
-                (str_concat ")\n        "
-                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))))
-
-    (defn fsc-compile-form-bml-let (line)
-        (do
-            (let eq-pos (fsc-find-char-from line "=" 4))
-            (let name (fsc-trim (fsc-sub line 4 eq-pos)))
-            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
-            (str_concat "    (let "
-                (str_concat name
-                (str_concat " "
-                (str_concat (fsc-compile-form-bml-expr body) ")\n"))))))
-
-    (defn fsc-compile-form-bml-block-line (line)
-        (do
-            (let value (fsc-strip-semi line))
-            (if (fsc-bml-comment-line? value) ""
-            (if (fsc-prefix? value "let ")
-                (do
-                    (let eq-pos (fsc-find-char-from value "=" 4))
-                    (let name (fsc-trim (fsc-sub value 4 eq-pos)))
-                    (let body (fsc-sub value (add eq-pos 1) (str_len value)))
-                    (str_concat "        (let "
-                        (str_concat name
-                        (str_concat " "
-                        (str_concat (fsc-compile-form-bml-expr body) ")\n")))))
-                (str_concat "        "
-                    (str_concat (fsc-compile-form-bml-expr value) "\n"))))))
 
     (defn fsc-bml-stmt-end-loop (body i end depth quoted)
         (if (ge i end) end
@@ -478,53 +330,413 @@
     (defn fsc-bml-stmt-end (body i end)
         (fsc-bml-stmt-end-loop body i end 0 false))
 
-    (defn fsc-compile-form-bml-block-stmts (body i end)
+    (defn fsc-form-action-dialect? (dialect-name)
+        (or (str_eq dialect-name "form.bml")
+            (str_eq dialect-name "form.action")))
+
+    ;; Local list-reverse — bounded by rule count (~200), not body length.
+    ;; engine.fk's `reverse-list` isn't in scope during source-compile pre-pass.
+
+    (defn fsc-empty? (xs) (eq (len xs) 0))
+
+    (defn fsc-rev-into (xs acc)
+        (if (fsc-empty? xs) acc
+            (fsc-rev-into (tail xs) (cons (head xs) acc))))
+
+    (defn fsc-rev (xs) (fsc-rev-into xs (empty)))
+
+    ;; --- Recipe construction primitives ------------------------------
+    ;;
+    ;; Each helper builds a Recipe NodeID directly via intern_node (no
+    ;; str_concat building source text the kernel re-parses). The shapes
+    ;; mirror what the kernel's parser produces internally:
+    ;;
+    ;;   DO       : intern(catBlock(RBlockDo),    [child1, child2, ...])
+    ;;   LET      : intern(catBlock(RBlockLet),   [string-trivial-name, value-recipe])
+    ;;   IDENT    : intern(catIdent(),            [string-trivial-name])
+    ;;   FNCALL   : intern(catFnCall(),           [ident-callee, arg1, arg2, ...])
+    ;;
+    ;; Built Recipe is serialized to .fkb via serialize-recipe + write_file_bytes,
+    ;; reloaded at validate time via walk_recipe_here so lets land in caller env.
+    ;; Source: form/form-kernel-go/main.go parseSexp around line 1942 (DO/LET) +
+    ;; 2005 (FNCALL) + 1900 (IDENT).
+
+    ;; --- Form ontology helpers — data lives in form-ontology.json --
+    ;;
+    ;; FORM-CATEGORY-TABLE and FORM-PRIMITIVE-TABLE are bound by
+    ;; form-stdlib/form-ontology-loader.fk (loaded as a prelude before
+    ;; this file). The loader reads form-stdlib/form-ontology.json at
+    ;; load time via parse-json from form-stdlib/json.fk and walks the
+    ;; categories/primitives arrays into the row shape these helpers
+    ;; consume. ONE ice (the JSON), water at load (table walk), gas
+    ;; (bindings). A new primitive or composite shape lands as one
+    ;; row in form-ontology.json and is picked up by every emit site
+    ;; through these helpers.
+    ;;
+    ;; List-walk lookup — pure head/tail, no nth/nil? (we run before
+    ;; core.fk). Returns the matched row or empty list.
+    (defn form-table-lookup (table name)
+        (if (fsc-empty? table) (empty)
+            (if (str_eq (head (head table)) name)
+                (head table)
+                (form-table-lookup (tail table) name))))
+
+    (defn form-row-type (row) (head (tail row)))
+    (defn form-row-inst (row) (head (tail (tail row))))
+
+    (defn form-cat-node (name)
+        (do
+            (let row (form-table-lookup FORM-CATEGORY-TABLE name))
+            (make_nodeid 1 2 (form-row-type row) (form-row-inst row))))
+
+    (defn form-prim-or-empty (name)
+        (form-table-lookup FORM-PRIMITIVE-TABLE name))
+
+    (defn form-prim-node (row)
+        (make_nodeid 1 2 (form-row-type row) (form-row-inst row)))
+
+    ;; Bind the common categories so emit sites read like names, not
+    ;; table walks. The table is still the source — these are just the
+    ;; rows resolved once at load time.
+    (let fsc-rec-DO-CAT     (form-cat-node "do"))
+    (let fsc-rec-LET-CAT    (form-cat-node "let"))
+    (let fsc-rec-FNCALL-CAT (form-cat-node "fncall"))
+    (let fsc-rec-IDENT-CAT  (form-cat-node "ident"))
+
+    (defn fsc-rec-ident (name)
+        (intern_node fsc-rec-IDENT-CAT (list (intern_trivial_string name))))
+
+    (defn fsc-rec-let (name value-recipe)
+        (intern_node fsc-rec-LET-CAT (list (intern_trivial_string name) value-recipe)))
+
+    (defn fsc-rec-do (children-list)
+        (intern_node fsc-rec-DO-CAT children-list))
+
+    (defn fsc-rec-call (fn-name arg-recipes)
+        (intern_node fsc-rec-FNCALL-CAT (cons (fsc-rec-ident fn-name) arg-recipes)))
+
+    (defn fsc-rec-list-of (item-recipes)
+        (fsc-rec-call "list" item-recipes))
+
+    (defn fsc-rec-string (s)
+        (intern_trivial_string s))
+
+    ;; --- BMF section as Recipe ---------------------------------------
+    ;;
+    ;; Old (text path): fsc-rules-loop walks the body line by line,
+    ;; building a giant str_concat'd .fk source string the kernel re-parses.
+    ;; New (Recipe path): walk the body line by line, but each line becomes
+    ;; a Recipe node directly. The list of rule recipes becomes the value
+    ;; of the X-bmf-rules let.
+
+    (defn fsc-pattern-item-recipe (dialect pattern i)
+        (do
+            (let p (fsc-skip-spaces pattern i))
+            (if (ge p (str_len pattern)) (fsc-rec-call "empty" (list (intern_trivial_int 0)))
+                (if (str_eq (char_at pattern p) "\"")
+                    (do
+                        (let e (fsc-read-quoted-end pattern (add p 1)))
+                        (let value (fsc-sub pattern (add p 1) e))
+                        (list (fsc-rec-call (fsc-lit-fn dialect value)
+                                            (list (fsc-rec-string value)))
+                              (add e 1)))
+                    (do
+                        (let e (fsc-read-part-end pattern p))
+                        (let part (fsc-sub pattern p e))
+                        (if (str_eq (char_at part 0) "$")
+                            (do
+                                (let colon (fsc-find-char-from part ":" 0))
+                                (let name (fsc-sub part 1 colon))
+                                (let kind (fsc-sub part (add colon 1) (str_len part)))
+                                (list (fsc-rec-call (fsc-capture-fn dialect kind)
+                                                    (list (fsc-rec-string name)))
+                                      e))
+                            (list (fsc-rec-call (fsc-dialect-fn dialect "ref")
+                                                (list (fsc-rec-string part)))
+                                  e)))))))
+
+    (defn fsc-pattern-items-recipes (dialect pattern i acc)
+        (do
+            (let p (fsc-skip-spaces pattern i))
+            (if (ge p (str_len pattern)) (fsc-rev acc)
+                (do
+                    (let result (fsc-pattern-item-recipe dialect pattern p))
+                    (fsc-pattern-items-recipes dialect pattern
+                                               (head (tail result))
+                                               (cons (head result) acc))))))
+
+    (defn fsc-rule-line-recipe (dialect line)
+        (do
+            (let sep (fsc-find-string-from line "::=" 0))
+            (let arr (fsc-find-string-from line " => " sep))
+            (let semi (fsc-find-char-from line ";" arr))
+            (let rev (fsc-find-string-from line " <= " arr))
+            (let name (fsc-trim (fsc-sub line 0 sep)))
+            (let pattern (fsc-trim (fsc-sub line (add sep 3) arr)))
+            (let action-end (if (and (ge rev 0) (lt rev semi)) rev semi))
+            (let action (fsc-trim (fsc-sub line (add arr 4) action-end)))
+            (let reverse (if (and (ge rev 0) (lt rev semi))
+                             (fsc-trim (fsc-sub line (add rev 4) semi))
+                             "bmf-default-reverse-emitter"))
+            (let pattern-recipes (fsc-pattern-items-recipes dialect pattern 0 (empty)))
+            (let sequence-recipe (fsc-rec-call "list"
+                                               (cons (fsc-rec-string "sequence")
+                                                     pattern-recipes)))
+            (fsc-rec-list-of (list
+                (fsc-rec-string name)
+                sequence-recipe
+                (fsc-rec-ident action)
+                (fsc-rec-ident "bmf-identity-inverse")
+                (fsc-rec-ident reverse)))))
+
+    (defn fsc-rules-recipes-loop (dialect body i acc)
+        (if (ge i (str_len body)) (fsc-rev acc)
+            (do
+                (let e (fsc-line-end body i))
+                (let line (fsc-trim (fsc-sub body i e)))
+                (let next-i (fsc-line-next body i))
+                (if (fsc-skip-rule-line? line)
+                    (fsc-rules-recipes-loop dialect body next-i acc)
+                    (fsc-rules-recipes-loop dialect body next-i
+                                            (cons (fsc-rule-line-recipe dialect line)
+                                                  acc))))))
+
+    (defn fsc-bmf-section-recipe (dialect-name body)
+        (do
+            (let dot (fsc-find-char-from dialect-name "." 0))
+            (let dialect (fsc-sub dialect-name 0 dot))
+            (let rules-name (str_concat dialect "-bmf-rules"))
+            (let second-name (str_concat dialect "-bmf-second"))
+            (let rule-recipes (fsc-rules-recipes-loop dialect body 0 (empty)))
+            (let rules-list-recipe (fsc-rec-call "list" rule-recipes))
+            (let second-value-recipe (fsc-rec-call "form-bmf-second" (list
+                (fsc-rec-string dialect)
+                (fsc-rec-call "bmf-section" (list
+                    (fsc-rec-string dialect-name)
+                    (fsc-rec-ident rules-name))))))
+            (fsc-rec-do (list
+                (fsc-rec-let rules-name rules-list-recipe)
+                (fsc-rec-let second-name second-value-recipe)))))
+
+    ;; --- form.bml / form.action section as Recipe -------------------
+    ;;
+    ;; Old (text path): line by line emit Form source text the kernel
+    ;; re-parses (~50 str_concat sites per section).
+    ;; New (Recipe path): each line becomes a Recipe node directly. The
+    ;; section is a DO Recipe over LET / FNDEF / FNCALL children. Same
+    ;; .fkb sidecar pattern as BMF sections.
+    ;;
+    ;; Categories (source: form-kernel-go/main.go parseSexp + walker):
+    ;;   FNDEF (1 2 31 1): kids [trivial-string-name, SEQUENCE-of-trivial-
+    ;;     strings (params), body-recipe]; walker ~1645 reads NameID
+    ;;     straight from p.Inst on each param trivial — params must be
+    ;;     trivial-strings, not IDENT-wrapped.
+    ;;   IF3   (1 2 11 2): kids [cond, yes, no]
+    ;;   SEQ   (1 2 9 2): block sequence (used for param-list)
+    ;;   TrivBool (Level 1, Type 3): Inst 1=true, 0=false — bool literals
+    ;;     bypass the env at parse time per main.go:1908.
+
+    (let fsc-rec-FNDEF-CAT (form-cat-node "fndef"))
+    (let fsc-rec-IF3-CAT   (form-cat-node "if"))
+    (let fsc-rec-SEQ-CAT   (form-cat-node "sequence"))
+
+    (defn fsc-rec-true ()  (make_nodeid 1 1 3 1))
+    (defn fsc-rec-false () (make_nodeid 1 1 3 0))
+
+    (defn fsc-rec-if3 (cond yes no)
+        (intern_node fsc-rec-IF3-CAT (list cond yes no)))
+
+    ;; Param list: SEQUENCE of trivial-strings (NOT IDENT-wrapped).
+    (defn fsc-rec-param-trivials (names)
+        (if (fsc-empty? names) (empty)
+            (cons (intern_trivial_string (head names))
+                  (fsc-rec-param-trivials (tail names)))))
+
+    (defn fsc-rec-fndef (name param-names body-recipe)
+        (intern_node fsc-rec-FNDEF-CAT (list
+            (intern_trivial_string name)
+            (intern_node fsc-rec-SEQ-CAT (fsc-rec-param-trivials param-names))
+            body-recipe)))
+
+    ;; Append xs (in order) onto acc (reversed accumulator) → reversed.
+    (defn fsc-rec-append-rev (xs acc)
+        (if (fsc-empty? xs) acc
+            (fsc-rec-append-rev (tail xs) (cons (head xs) acc))))
+
+    ;; Comma-separated names → list of trimmed name strings.
+    (defn fsc-bml-name-list-strings-loop (args i acc)
+        (do
+            (let p (fsc-skip-spaces args i))
+            (if (ge p (str_len args)) (fsc-rev acc)
+                (do
+                    (let comma (fsc-find-char-from args "," p))
+                    (let end (if (lt comma 0) (str_len args) comma))
+                    (let name (fsc-trim (fsc-sub args p end)))
+                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
+                    (fsc-bml-name-list-strings-loop args rest-start (cons name acc))))))
+
+    ;; Comma-separated arg exprs → list of arg Recipes (in order).
+    (defn fsc-bml-args-recipes-loop (args i acc)
+        (do
+            (let p (fsc-skip-spaces args i))
+            (if (ge p (str_len args)) (fsc-rev acc)
+                (do
+                    (let comma (fsc-bml-find-comma args p))
+                    (let end (if (lt comma 0) (str_len args) comma))
+                    (let part (fsc-trim (fsc-sub args p end)))
+                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
+                    (fsc-bml-args-recipes-loop args rest-start
+                        (cons (fsc-compile-form-bml-expr-recipe part) acc))))))
+
+    ;; String literal escape interpretation. Mirrors the kernel's
+    ;; unescapeStr (form-kernel-go/main.go ~1862): \n → newline, \t →
+    ;; tab, \r → CR, \\ → \, \" → ", \X → X (unknown escape becomes X).
+    ;; Required for Recipe-path parity with the parser, which interprets
+    ;; escapes inside string tokens before interning.
+    (defn fsc-unescape-str-loop (s i acc)
+        (if (ge i (str_len s)) acc
+            (do
+                (let ch (char_at s i))
+                (if (and (str_eq ch "\\") (lt (add i 1) (str_len s)))
+                    (do
+                        (let nx (char_at s (add i 1)))
+                        (let lit
+                            (if (str_eq nx "n") "\n"
+                            (if (str_eq nx "t") "\t"
+                            (if (str_eq nx "r") "\r"
+                            (if (str_eq nx "\\") "\\"
+                            (if (str_eq nx "\"") "\""
+                                nx))))))
+                        (fsc-unescape-str-loop s (add i 2) (str_concat acc lit)))
+                    (fsc-unescape-str-loop s (add i 1) (str_concat acc ch))))))
+
+    (defn fsc-unescape-str (s) (fsc-unescape-str-loop s 0 ""))
+
+    ;; Math/compare/logic primitives are parser SPECIAL FORMS in the
+    ;; kernel — there's no env binding for `gt`, `add`, etc. Look the
+    ;; name up in FORM-PRIMITIVE-TABLE; if present, lift to the typed
+    ;; category; otherwise fall through to a real FNCALL.
+    (defn fsc-rec-form-call (name args)
+        (do
+            (let prim-row (form-prim-or-empty name))
+            (if (fsc-empty? prim-row)
+                (fsc-rec-call name args)
+                (intern_node (form-prim-node prim-row) args))))
+
+    (defn fsc-compile-form-bml-call-recipe (expr open)
+        (do
+            (let close (fsc-last-char-index expr))
+            (let name (fsc-trim (fsc-sub expr 0 open)))
+            (let args (fsc-sub expr (add open 1) close))
+            (let arg-recipes (if (eq (str_len (fsc-trim args)) 0) (empty)
+                                 (fsc-bml-args-recipes-loop args 0 (empty))))
+            (fsc-rec-form-call name arg-recipes)))
+
+    (defn fsc-compile-form-bml-if-recipe (expr)
+        (do
+            (let then-pos (fsc-find-string-from expr " then " 0))
+            (let else-pos (fsc-find-string-from expr " else " then-pos))
+            (let cond-text (fsc-trim (fsc-sub expr 3 then-pos)))
+            (let yes-text (fsc-trim (fsc-sub expr (add then-pos 6) else-pos)))
+            (let no-text (fsc-trim (fsc-sub expr (add else-pos 6) (str_len expr))))
+            (fsc-rec-if3 (fsc-compile-form-bml-expr-recipe cond-text)
+                         (fsc-compile-form-bml-expr-recipe yes-text)
+                         (fsc-compile-form-bml-expr-recipe no-text))))
+
+    (defn fsc-compile-form-bml-expr-recipe (raw)
+        (do
+            (let expr (fsc-bml-normalize-ws (fsc-strip-semi raw)))
+            (let open (fsc-find-char-from expr "(" 0))
+            (if (eq (str_len expr) 0) (fsc-rec-call "empty" (empty))
+            (if (fsc-prefix? expr "if ")
+                (fsc-compile-form-bml-if-recipe expr)
+            (if (and (ge open 0) (str_eq (char_at expr (fsc-last-char-index expr)) ")"))
+                (fsc-compile-form-bml-call-recipe expr open)
+            (if (str_eq expr "empty") (fsc-rec-call "empty" (empty))
+            (if (str_eq expr "true")  (fsc-rec-true)
+            (if (str_eq expr "false") (fsc-rec-false)
+            (if (str_eq expr "null")  (fsc-rec-ident "null")
+            (if (fsc-int? expr) (intern_trivial_int (str_to_int expr))
+            (if (str_eq (char_at expr 0) "\"")
+                (intern_trivial_string
+                    (fsc-unescape-str (fsc-sub expr 1 (fsc-last-char-index expr))))
+                (fsc-rec-ident expr))))))))))))
+
+    (defn fsc-compile-form-bml-def-recipe (line)
+        (do
+            (let open (fsc-find-char-from line "(" 4))
+            (let close (fsc-find-char-from line ")" open))
+            (let eq-pos (fsc-find-char-from line "=" close))
+            (let name (fsc-trim (fsc-sub line 4 open)))
+            (let args (fsc-sub line (add open 1) close))
+            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
+            (let param-names (fsc-bml-name-list-strings-loop args 0 (empty)))
+            (fsc-rec-fndef name param-names
+                           (fsc-compile-form-bml-expr-recipe body))))
+
+    (defn fsc-compile-form-bml-let-recipe (line)
+        (do
+            (let eq-pos (fsc-find-char-from line "=" 4))
+            (let name (fsc-trim (fsc-sub line 4 eq-pos)))
+            (let body (fsc-sub line (add eq-pos 1) (str_len line)))
+            (fsc-rec-let name (fsc-compile-form-bml-expr-recipe body))))
+
+    ;; A block-line returns a (possibly empty) list of recipes. Empty for
+    ;; comments; one recipe for let or bare expr. defn isn't permitted
+    ;; inside a block in this dialect (matches text path).
+    (defn fsc-compile-form-bml-block-line-recipe (line)
+        (do
+            (let value (fsc-strip-semi line))
+            (if (fsc-bml-comment-line? value) (empty)
+            (if (fsc-prefix? value "let ")
+                (do
+                    (let eq-pos (fsc-find-char-from value "=" 4))
+                    (let name (fsc-trim (fsc-sub value 4 eq-pos)))
+                    (let body (fsc-sub value (add eq-pos 1) (str_len value)))
+                    (list (fsc-rec-let name (fsc-compile-form-bml-expr-recipe body))))
+                (list (fsc-compile-form-bml-expr-recipe value))))))
+
+    (defn fsc-bml-block-stmts-recipes-loop (body i end acc)
         (do
             (let p (fsc-skip-spaces body i))
-            (if (ge p end) ""
+            (if (ge p end) (fsc-rev acc)
                 (do
                     (let line-end (fsc-line-end body p))
                     (let line (fsc-trim (fsc-sub body p line-end)))
                     (if (fsc-bml-comment-line? line)
-                        (fsc-compile-form-bml-block-stmts body (fsc-line-next body p) end)
+                        (fsc-bml-block-stmts-recipes-loop body
+                            (fsc-line-next body p) end acc)
                     (do
                     (let stmt-end (fsc-bml-stmt-end body p end))
                     (let stmt (fsc-trim (fsc-sub body p stmt-end)))
-                    (str_concat (fsc-compile-form-bml-block-line stmt)
-                                (fsc-compile-form-bml-block-stmts body stmt-end end))))))))
+                    (let line-recipes (fsc-compile-form-bml-block-line-recipe stmt))
+                    (fsc-bml-block-stmts-recipes-loop body stmt-end end
+                        (fsc-rec-append-rev line-recipes acc))))))))
 
-    (defn fsc-compile-form-bml-block-lines (body i end)
-        (fsc-compile-form-bml-block-stmts body i end))
-
-    (defn fsc-compile-form-bml-def-block (body line body-start)
+    (defn fsc-compile-form-bml-def-block-recipe (body line body-start)
         (do
             (let open (fsc-find-char-from line "(" 4))
             (let close (fsc-find-char-from line ")" open))
             (let name (fsc-trim (fsc-sub line 4 open)))
             (let args (fsc-sub line (add open 1) close))
             (let body-end (fsc-bml-block-end body body-start 0))
-            (str_concat "    (defn "
-                (str_concat name
-                (str_concat " ("
-                (str_concat (fsc-trim (fsc-bml-name-list-loop args 0))
-                (str_concat ")\n"
-                (str_concat "        (do\n"
-                (str_concat (fsc-compile-form-bml-block-lines body body-start body-end)
-                            "        ))\n")))))))))
+            (let param-names (fsc-bml-name-list-strings-loop args 0 (empty)))
+            (let stmt-recipes
+                (fsc-bml-block-stmts-recipes-loop body body-start body-end (empty)))
+            (fsc-rec-fndef name param-names (fsc-rec-do stmt-recipes))))
 
-    (defn fsc-compile-form-bml-line (line)
+    (defn fsc-compile-form-bml-line-recipe (line)
         (do
             (let value (fsc-strip-semi line))
-            (if (fsc-bml-comment-line? value) ""
+            (if (fsc-bml-comment-line? value) (empty)
             (if (fsc-prefix? value "def ")
-                (fsc-compile-form-bml-def value)
+                (list (fsc-compile-form-bml-def-recipe value))
             (if (fsc-prefix? value "let ")
-                (fsc-compile-form-bml-let value)
-                (str_concat "    "
-                    (str_concat (fsc-compile-form-bml-expr value) "\n")))))))
+                (list (fsc-compile-form-bml-let-recipe value))
+                (list (fsc-compile-form-bml-expr-recipe value)))))))
 
-    (defn fsc-form-bml-lines-loop (body i)
-        (if (ge i (str_len body)) ""
+    (defn fsc-form-bml-lines-recipes-loop (body i acc)
+        (if (ge i (str_len body)) (fsc-rev acc)
             (do
                 (let e (fsc-line-end body i))
                 (let line (fsc-trim (fsc-sub body i e)))
@@ -532,23 +744,40 @@
                     (do
                         (let body-start (fsc-line-next body i))
                         (let body-end (fsc-bml-block-end body body-start 0))
-                        (str_concat (fsc-compile-form-bml-def-block body line body-start)
-                                    (fsc-form-bml-lines-loop body (fsc-line-next body body-end))))
-                    (str_concat (fsc-compile-form-bml-line line)
-                                (fsc-form-bml-lines-loop body (fsc-line-next body i)))))))
+                        (fsc-form-bml-lines-recipes-loop body
+                            (fsc-line-next body body-end)
+                            (cons (fsc-compile-form-bml-def-block-recipe body line body-start)
+                                  acc)))
+                    (do
+                        (let line-recipes (fsc-compile-form-bml-line-recipe line))
+                        (fsc-form-bml-lines-recipes-loop body
+                            (fsc-line-next body i)
+                            (fsc-rec-append-rev line-recipes acc)))))))
 
-    (defn fsc-compile-form-bml-section (body)
-        (str_concat "(do\n"
-            (str_concat (fsc-form-bml-lines-loop body 0) ")\n")))
+    (defn fsc-compile-form-bml-section-recipe (body)
+        (fsc-rec-do (fsc-form-bml-lines-recipes-loop body 0 (empty))))
 
-    (defn fsc-form-action-dialect? (dialect-name)
-        (or (str_eq dialect-name "form.bml")
-            (str_eq dialect-name "form.action")))
+    ;; --- compile section, both dialects emit Recipe + .fkb sidecar.
+    ;; --- Returns a tiny driver text snippet that calls walk_recipe_here
+    ;; --- on the sidecar. Caller threads out-path so each section gets a
+    ;; --- unique .fkb at out-path.<dialect>.fkb.
 
-    (defn fsc-compile-section (dialect-name body)
-        (if (fsc-form-action-dialect? dialect-name)
-            (fsc-compile-form-bml-section body)
-            (fsc-compile-bmf-section dialect-name body)))
+    (defn fsc-compile-section-with-out (dialect-name body out-path)
+        (do
+            (let recipe (if (fsc-form-action-dialect? dialect-name)
+                            (fsc-compile-form-bml-section-recipe body)
+                            (fsc-bmf-section-recipe dialect-name body)))
+            (let fkb-path (str_concat out-path
+                          (str_concat "."
+                          (str_concat dialect-name ".fkb"))))
+            ;; write_form_binary embeds the string table — required for
+            ;; cross-invocation Recipe portability. serialize-recipe is
+            ;; in-process only; the .fkb on disk needs the artifact format
+            ;; (read/write_form_binary) so the loader can rehydrate strings
+            ;; into its own interner.
+            (write_form_binary fkb-path recipe)
+            (str_concat "    (walk_recipe_here (read_form_binary \""
+            (str_concat fkb-path "\"))\n"))))
 
     ;; --- form.action BMF object rules --------------------------------
     ;; The text lowering above is the bootstrap path for source sections. The
@@ -556,22 +785,15 @@
     ;; lower rule-by-rule into Form recipe nodes, and each rule carries a
     ;; reverse path back to the matched source span.
 
-    (let FSC-ACTION-BLOCK-DO (make_nodeid 1 2 9 1))
-    (let FSC-ACTION-BLOCK-SEQ (make_nodeid 1 2 9 2))
-    (let FSC-ACTION-BLOCK-LET (make_nodeid 1 2 9 3))
-    (let FSC-ACTION-MATH-ADD (make_nodeid 1 2 12 1))
-    (let FSC-ACTION-MATH-SUB (make_nodeid 1 2 12 2))
-    (let FSC-ACTION-MATH-MUL (make_nodeid 1 2 12 3))
-    (let FSC-ACTION-MATH-MOD (make_nodeid 1 2 12 5))
-    (let FSC-ACTION-COMPARE-EQ (make_nodeid 1 2 13 1))
-    (let FSC-ACTION-COMPARE-LT (make_nodeid 1 2 13 3))
-    (let FSC-ACTION-COMPARE-LE (make_nodeid 1 2 13 4))
-    (let FSC-ACTION-COMPARE-GT (make_nodeid 1 2 13 5))
-    (let FSC-ACTION-COMPARE-GE (make_nodeid 1 2 13 6))
-    (let FSC-ACTION-COND-IF (make_nodeid 1 2 11 2))
-    (let FSC-ACTION-FNDEF (make_nodeid 1 2 31 1))
-    (let FSC-ACTION-FNCALL (make_nodeid 1 2 32 1))
-    (let FSC-ACTION-IDENT (make_nodeid 1 2 33 1))
+    ;; form.action BMF rule actions resolve through the same ontology
+    ;; table as the Recipe-emit path. Names → kernel categories.
+    (let FSC-ACTION-BLOCK-DO   (form-cat-node "do"))
+    (let FSC-ACTION-BLOCK-SEQ  (form-cat-node "sequence"))
+    (let FSC-ACTION-BLOCK-LET  (form-cat-node "let"))
+    (let FSC-ACTION-COND-IF    (form-cat-node "if"))
+    (let FSC-ACTION-FNDEF      (form-cat-node "fndef"))
+    (let FSC-ACTION-FNCALL     (form-cat-node "fncall"))
+    (let FSC-ACTION-IDENT      (form-cat-node "ident"))
 
     (defn fsc-action-src-kw (value) (bmf-atom "form-action-keyword" value))
     (defn fsc-action-src-name (value) (bmf-atom "form-action-name" value))
@@ -754,16 +976,35 @@
             (or (and (ge cp 97) (le cp 122))
                 (str_eq ch "_")))))
 
-    (defn fsc-source-scan-name-loop (cursor value)
+    ;; Extract a slice [start, end) from the cursor's underlying source,
+    ;; whether it is an in-memory string or a file path.
+    (defn fsc-source-cursor-slice (cursor start end)
+        (if (fsc-source-cursor-file? cursor)
+            (read_file_slice (fsc-source-cursor-source cursor)
+                             start
+                             (sub end start))
+            (substring (fsc-source-cursor-source cursor) start end)))
+
+    ;; Walk forward through name-chars without copying.  start-cursor stays
+    ;; pinned at the token's first byte; we only advance the moving cursor.
+    ;; The token text is extracted in a single substring call at the end.
+    (defn fsc-source-scan-name-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (fsc-source-name-char? ch)
-                    (fsc-source-scan-name-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                    (fsc-source-scan-name-loop start-cursor
+                                               (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
 
     (defn fsc-source-name-kind (value keywords keyword-kind name-kind)
         (if (fsc-string-list-contains? keywords value)
@@ -805,7 +1046,7 @@
 
     (defn fsc-source-scan-name (start keywords keyword-kind name-kind)
         (do
-            (let read (fsc-source-scan-name-loop start ""))
+            (let read (fsc-source-scan-name-loop start start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
@@ -816,39 +1057,53 @@
                     end)
                 end)))
 
-    (defn fsc-source-scan-int-loop (cursor value)
+    (defn fsc-source-scan-int-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (do
                 (let ch (fsc-source-cursor-char cursor))
                 (if (fsc-digit? ch)
-                    (fsc-source-scan-int-loop
-                        (fsc-source-cursor-advance cursor)
-                        (str_concat value ch))
-                    (list value cursor)))))
+                    (fsc-source-scan-int-loop start-cursor
+                                              (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
 
     (defn fsc-source-scan-int (start int-kind)
         (do
-            (let read (fsc-source-scan-int-loop start ""))
+            (let read (fsc-source-scan-int-loop start start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
                 (fsc-source-object int-kind value start end)
                 end)))
 
-    (defn fsc-source-scan-string-loop (cursor value)
+    (defn fsc-source-scan-string-loop (start-cursor cursor)
         (if (fsc-source-cursor-end? cursor)
-            (list value cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
             (if (str_eq (fsc-source-cursor-char cursor) "\"")
-                (list value (fsc-source-cursor-advance cursor))
-                (fsc-source-scan-string-loop
-                    (fsc-source-cursor-advance cursor)
-                    (str_concat value (fsc-source-cursor-char cursor))))))
+                (list (fsc-source-cursor-slice
+                           start-cursor
+                           (fsc-source-cursor-offset start-cursor)
+                           (fsc-source-cursor-offset cursor))
+                      (fsc-source-cursor-advance cursor))
+                (fsc-source-scan-string-loop start-cursor
+                                             (fsc-source-cursor-advance cursor)))))
 
     (defn fsc-source-scan-string (start string-kind)
         (do
             (let body-start (fsc-source-cursor-advance start))
-            (let read (fsc-source-scan-string-loop body-start ""))
+            (let read (fsc-source-scan-string-loop body-start body-start))
             (let value (nth read 0))
             (let end (nth read 1))
             (fsc-scan-result
@@ -1008,27 +1263,16 @@
         (intern_node FSC-ACTION-BLOCK-SEQ
                      (fsc-action-param-nodes param-list)))
 
+    ;; Same primitive lookup as the Recipe-emit path. Was previously a
+    ;; subset-of-fsc-rec-form-call if-ladder (missing div/ne/and/or/
+    ;; not) — drift this collapses by routing through one table.
     (defn fsc-action-call-node (name args)
-        (if (str_eq name "add")
-            (intern_node FSC-ACTION-MATH-ADD args)
-            (if (str_eq name "sub")
-                (intern_node FSC-ACTION-MATH-SUB args)
-            (if (str_eq name "mul")
-                (intern_node FSC-ACTION-MATH-MUL args)
-            (if (str_eq name "mod")
-                (intern_node FSC-ACTION-MATH-MOD args)
-            (if (str_eq name "eq")
-                (intern_node FSC-ACTION-COMPARE-EQ args)
-            (if (str_eq name "lt")
-                (intern_node FSC-ACTION-COMPARE-LT args)
-            (if (str_eq name "le")
-                (intern_node FSC-ACTION-COMPARE-LE args)
-            (if (str_eq name "gt")
-                (intern_node FSC-ACTION-COMPARE-GT args)
-            (if (str_eq name "ge")
-                (intern_node FSC-ACTION-COMPARE-GE args)
+        (do
+            (let prim-row (form-prim-or-empty name))
+            (if (fsc-empty? prim-row)
                 (intern_node FSC-ACTION-FNCALL
-                             (cons (intern_trivial_string name) args))))))))))))
+                             (cons (intern_trivial_string name) args))
+                (intern_node (form-prim-node prim-row) args))))
 
     (defn fsc-action-let-node (name value)
         (intern_node FSC-ACTION-BLOCK-LET
@@ -1535,7 +1779,7 @@
 
     ;; --- source compiler ---------------------------------------------
 
-    (defn form-source-compile-loop (src i)
+    (defn form-source-compile-loop (src out-path i)
         (do
             (let pos (fsc-find-string-from src "section [" i))
             (if (lt pos 0) (fsc-sub src i (str_len src))
@@ -1549,11 +1793,11 @@
                         (str_concat
                             (fsc-sub src i pos)
                             (str_concat
-                            (fsc-compile-section dialect-name body)
-                            (form-source-compile-loop src (fsc-line-next src close))))))))
+                            (fsc-compile-section-with-out dialect-name body out-path)
+                            (form-source-compile-loop src out-path (fsc-line-next src close))))))))
 
-    (defn form-source-compile-text (src)
-        (form-source-compile-loop src 0))
+    (defn form-source-compile-text (src out-path)
+        (form-source-compile-loop src out-path 0))
 
     (defn fsc-string-to-bytes-len-loop (s s-len i)
         (if (ge i s-len) (empty)
@@ -1566,7 +1810,7 @@
     (defn form-source-compile-file (in-path out-path)
         (do
             (let src (read_file in-path))
-            (let compiled (form-source-compile-text src))
+            (let compiled (form-source-compile-text src out-path))
             (write_file_text out-path compiled)))
 
 0

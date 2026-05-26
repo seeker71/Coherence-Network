@@ -1,0 +1,79 @@
+; triangulate-band.fk — the substrate handshake at two altitudes.
+;
+; Two honest claims, two witnesses:
+;
+;   1. Sibling parity (counter-based). Within one kernel session,
+;      content-addressing dedups: two computations of the same Recipe
+;      return the same NodeID. The instance int matches across Go/
+;      Rust/TS when they load the same preludes in the same order.
+;
+;   2. Cross-session content (content-derived). The triangle's
+;      canonical content — three vertex strings in order — is the
+;      session-independent witness. Any kernel anywhere walking the
+;      same Recipe content returns the same string.
+;
+; preludes: form-stdlib/json.fk form-stdlib/triangulate.fk
+
+(do
+    ;; --- claim 1: same-session sibling parity ----------------------
+    (let from-a (triangulate-triangle "A" "B" "C"))
+    (let from-b (triangulate-triangle "A" "B" "C"))
+    (let from-c (triangulate-triangle "A" "B" "C"))
+
+    (let handshake-score
+        (add
+            (if (node_eq from-a from-b) 100 0)
+            (if (node_eq from-b from-c) 100 0)))
+
+    (let fp-a (triangulate-fingerprint "A" "B" "C"))
+    (let fp-b (triangulate-fingerprint "A" "B" "C"))
+    (let fp-c (triangulate-fingerprint "A" "B" "C"))
+
+    (let fingerprint-score
+        (add
+            (if (eq fp-a fp-b) 200 0)
+            (if (eq fp-b fp-c) 200 0)))
+
+    ;; --- claim 2: cross-session content witness --------------------
+    ;;
+    ;; Walk the triangle's children, extract names, concatenate. This
+    ;; value is session-independent: any kernel that computes the
+    ;; same triangle produces the same string regardless of preload
+    ;; order or session counter state.
+
+    (defn content-witness (t)
+        (do
+            (let kids (node_children t))
+            (str_concat (triangulate-vertex-name (head kids))
+            (str_concat "-"
+            (str_concat (triangulate-vertex-name (head (tail kids)))
+            (str_concat "-"
+                        (triangulate-vertex-name (head (tail (tail kids))))))))))
+
+    (let cw-a (content-witness from-a))
+    (let cw-b (content-witness from-b))
+    (let cw-c (content-witness from-c))
+
+    (let content-score
+        (add
+            (if (str_eq cw-a "A-B-C") 200 0)
+            (if (str_eq cw-b "A-B-C") 200 0)))
+
+    ;; --- triangle structure ---------------------------------------
+    (let vertices (triangulate-vertices from-a))
+    (let count-score
+        (if (eq (len vertices) 3) 300 0))
+
+    ;; --- distinct content → distinct Recipe -----------------------
+    (let other-triangle (triangulate-triangle "X" "Y" "Z"))
+    (let other-content (content-witness other-triangle))
+    (let distinct-score
+        (add
+            (if (node_eq from-a other-triangle) 0 200)
+            (if (str_eq other-content "X-Y-Z") 200 0)))
+
+    ;; Expected: 200 + 400 + 400 + 300 + 400 = 1700
+    (add handshake-score
+    (add fingerprint-score
+    (add content-score
+    (add count-score distinct-score)))))

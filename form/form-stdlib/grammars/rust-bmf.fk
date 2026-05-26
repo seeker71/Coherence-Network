@@ -1,22 +1,12 @@
 ; grammars/rust-bmf.fk - Rust grammar as native BMF object rules
+;
+; Per-dialect category constants (RS-BMF-*) are declared as data in
+; form-stdlib/form-ontology.json and emitted into
+; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
+; file references them as free identifiers; load dialect-categories.fk as
+; a prelude before this file.
 
 (do
-    (let RS-BMF-USE    (make_nodeid 1 2 99 661))
-    (let RS-BMF-MOD    (make_nodeid 1 2 99 662))
-    (let RS-BMF-FN     (make_nodeid 1 2 99 663))
-    (let RS-BMF-STRUCT (make_nodeid 1 2 99 664))
-    (let RS-BMF-ENUM   (make_nodeid 1 2 99 665))
-    (let RS-BMF-IMPL   (make_nodeid 1 2 99 666))
-    (let RS-BMF-TRAIT  (make_nodeid 1 2 99 667))
-    (let RS-BMF-MACRO  (make_nodeid 1 2 99 668))
-    (let RS-BMF-LET    (make_nodeid 1 2 99 669))
-    (let RS-BMF-RETURN (make_nodeid 1 2 99 670))
-    (let RS-BMF-MATCH  (make_nodeid 1 2 99 671))
-    (let RS-BMF-IF     (make_nodeid 1 2 99 672))
-    (let RS-BMF-LOOP   (make_nodeid 1 2 99 673))
-    (let RS-BMF-ASYNC  (make_nodeid 1 2 99 674))
-    (let RS-BMF-RESULT (make_nodeid 1 2 99 675))
-
     (defn rust-src-keyword (value) (bmf-atom "rust-keyword" value))
     (defn rust-src-name (value) (bmf-atom "rust-name" value))
     (defn rust-src-op (value) (bmf-atom "rust-op" value))

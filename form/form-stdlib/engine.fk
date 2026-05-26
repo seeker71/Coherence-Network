@@ -26,16 +26,36 @@
             (cap-merge (cons (head b) a) (tail b))))
 
     ;; --- match result -------------------------------------------------
+    ;;
+    ;; cut / stop semantics ported from grammar-chars.fk (the character-
+    ;; engine pattern BML uses heavily in its BMF rules). Once a sequence
+    ;; crosses a `cut`, a subsequent fail becomes a `fail-cut` that aborts
+    ;; the enclosing choice's remaining alternatives. Adding `cut` after a
+    ;; distinguishing token in a BMF rule body is the way the grammar tells
+    ;; the engine "no other rule could match here." This prunes the per-
+    ;; input rule-search tree dramatically when many rules share an initial
+    ;; token (`"try"`, `"class"`, `$name:name "."`, etc.).
 
     (defn mk-match (caps rest) (list "match" caps rest))
     (defn mk-fail (reason) (list "fail" reason))
+    (defn mk-fail-cut (reason) (list "fail-cut" reason))
 
     (defn match? (r) (str_eq (head r) "match"))
     (defn fail? (r) (str_eq (head r) "fail"))
+    (defn fail-cut? (r) (str_eq (head r) "fail-cut"))
+    (defn any-fail? (r) (or (fail? r) (fail-cut? r)))
 
     (defn match-caps (r) (head (tail r)))
     (defn match-rest (r) (head (tail (tail r))))
     (defn fail-reason (r) (head (tail r)))
+
+    ;; Predicate used by the cut-aware sequence walker to promote a plain
+    ;; fail into a fail-cut, sealing the surrounding choice.
+    (defn cap-has? (caps name)
+        (if (nil? caps) false
+            (if (str_eq (cap-name (head caps)) name)
+                true
+                (cap-has? (tail caps) name))))
 
     ;; --- BMF objects --------------------------------------------------
 
@@ -149,93 +169,17 @@
     (defn bmf-surface-ref (index)
         (intern_node BMF-SURFACE-REF (list (intern_trivial_int index))))
 
-    (defn bmf-domain-python () (bmf-domain-ref 1))
-    (defn bmf-domain-typescript () (bmf-domain-ref 2))
-    (defn bmf-domain-go () (bmf-domain-ref 3))
-    (defn bmf-domain-rust () (bmf-domain-ref 4))
-    (defn bmf-domain-bml () (bmf-domain-ref 5))
-    (defn bmf-domain-natural () (bmf-domain-ref 6))
-    (defn bmf-domain-image () (bmf-domain-ref 7))
-    (defn bmf-domain-audio () (bmf-domain-ref 8))
-    (defn bmf-domain-video () (bmf-domain-ref 9))
-
-    (defn bmf-domain-kind-language () (bmf-domain-kind-ref 1))
-    (defn bmf-domain-kind-media () (bmf-domain-kind-ref 2))
-    (defn bmf-domain-kind-runtime () (bmf-domain-kind-ref 3))
-
-    (defn bmf-semantic-natural-language () "natural-language")
-    (defn bmf-semantic-image () "image")
-    (defn bmf-semantic-audio () "audio")
-    (defn bmf-semantic-video () "video")
-    (defn bmf-semantic-general () "general")
-    (defn bmf-semantic-knowledge () "knowledge")
-
-    (defn bmf-lens-assertion () (bmf-lens-ref 1))
-    (defn bmf-lens-metadata () (bmf-lens-ref 2))
-    (defn bmf-lens-assign () (bmf-lens-ref 3))
-    (defn bmf-lens-var () (bmf-lens-ref 4))
-    (defn bmf-lens-quote () (bmf-lens-ref 5))
-    (defn bmf-lens-display () (bmf-lens-ref 6))
-
-    (defn bmf-context-key-language-tag () "language-tag")
-    (defn bmf-context-key-locale () "locale")
-    (defn bmf-context-key-script () "script")
-    (defn bmf-context-key-region () "region")
-    (defn bmf-context-key-direction () "direction")
-    (defn bmf-context-key-calendar () "calendar")
-    (defn bmf-context-key-numbering-system () "numbering-system")
-    (defn bmf-context-key-time-zone () "time-zone")
-    (defn bmf-context-key-semantic-domain () "semantic-domain")
-    (defn bmf-context-key-culture () "culture")
-    (defn bmf-context-key-register () "register")
-    (defn bmf-context-key-environment () "environment")
-    (defn bmf-context-key-audience () "audience")
-    (defn bmf-context-key-purpose () "purpose")
-    (defn bmf-context-key-viewpoint () "viewpoint")
-    (defn bmf-context-key-media-type () "media-type")
-    (defn bmf-context-key-charset () "charset")
-    (defn bmf-context-key-encoding () "encoding")
-    (defn bmf-context-key-container () "container")
-    (defn bmf-context-key-codec () "codec")
-    (defn bmf-context-key-unit () "unit")
-    (defn bmf-context-key-color-space () "color-space")
-    (defn bmf-context-key-source () "source")
-    (defn bmf-context-key-creator () "creator")
-    (defn bmf-context-key-license () "license")
-    (defn bmf-context-key-created () "created")
-    (defn bmf-context-key-derived-from () "derived-from")
-
-    (defn bmf-locale-und () "und")
-    (defn bmf-locale-en-us () "en-US")
-    (defn bmf-locale-id-id () "id-ID")
-    (defn bmf-script-latn () "Latn")
-    (defn bmf-direction-auto () "auto")
-    (defn bmf-direction-ltr () "ltr")
-    (defn bmf-direction-rtl () "rtl")
-    (defn bmf-register-plain () "plain")
-    (defn bmf-register-math () "math")
-    (defn bmf-register-formal () "formal")
-    (defn bmf-environment-general () "general")
-    (defn bmf-environment-file () "file")
-    (defn bmf-environment-repo () "repo")
-    (defn bmf-environment-web () "web")
-    (defn bmf-purpose-representation () "representation")
-    (defn bmf-purpose-roundtrip () "roundtrip")
-    (defn bmf-calendar-gregory () "gregory")
-    (defn bmf-numbering-latn () "latn")
-
-    (defn bmf-media-text-plain () "text/plain")
-    (defn bmf-media-octet-stream () "application/octet-stream")
-    (defn bmf-media-image-svg () "image/svg+xml")
-    (defn bmf-media-image-gif () "image/gif")
-    (defn bmf-charset-utf8 () "utf-8")
-    (defn bmf-encoding-xml () "xml")
-    (defn bmf-encoding-binary () "binary")
-    (defn bmf-container-text () "text")
-    (defn bmf-unit-px () "px")
-    (defn bmf-unit-samples () "samples")
-    (defn bmf-unit-px-ms () "px/ms")
-    (defn bmf-color-srgb () "sRGB")
+    ;; Typed engine constants — domain / domain-kind / lens / semantic /
+    ;; context-key / locale / script / direction / register / environment /
+    ;; purpose / calendar / numbering / media / charset / encoding /
+    ;; container / unit / color. The 0-arg getter shape — (bmf-domain-python),
+    ;; (bmf-lens-assertion), (bmf-register-math), (bmf-locale-en-us), etc. —
+    ;; lives in form-stdlib/engine-constants.fk (generated from
+    ;; form-stdlib/form-ontology.json). Load engine-constants.fk as a
+    ;; prelude BEFORE engine.fk so the bindings are in scope when this
+    ;; file references them. The *-ref factory functions
+    ;; (bmf-domain-ref, bmf-lens-ref, bmf-domain-kind-ref) defined above
+    ;; remain here; only their typed-constant call-sites moved out.
 
     ;; Shared context property groups. These live in the runtime lens layer,
     ;; not in binary Form objects or the kernel.
@@ -319,9 +263,13 @@
     (defn bmf-context-derived-from (ctx) (bmf-symbol-context-property ctx (bmf-context-key-derived-from) ""))
 
     (defn bmf-symbol-binding-matches? (binding ctx anchor)
+        ;; domain/lens are tagged values that may be either string
+        ;; literals ("python", "go" in lower-level test fixtures) or
+        ;; typed-constant NodeIDs (bmf-domain-natural() etc in context
+        ;; tests). value_eq is polymorphic across both kinds.
         (and (str_eq (bmf-symbol-binding-anchor binding) anchor)
-             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
-                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+             (and (value_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (value_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
 
     (defn bmf-symbol-name-in-list? (names name)
         (if (nil? names) false
@@ -330,9 +278,11 @@
                 (bmf-symbol-name-in-list? (tail names) name))))
 
     (defn bmf-symbol-binding-name-matches? (binding ctx name)
+        ;; domain/lens — same polymorphic convention as
+        ;; bmf-symbol-binding-matches? above.
         (and (bmf-symbol-name-in-list? (bmf-symbol-binding-names binding) name)
-             (and (node_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
-                  (node_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
+             (and (value_eq (bmf-symbol-binding-domain binding) (bmf-symbol-context-domain ctx))
+                  (value_eq (bmf-symbol-binding-lens binding) (bmf-symbol-context-lens ctx)))))
 
     (defn bmf-symbol-find-loop (bindings ctx anchor missing)
         (if (nil? bindings) missing
@@ -503,8 +453,9 @@
         (bmf-lens-contracts-to-targets (bmf-translation-space-contracts space)))
 
     (defn bmf-surface-contract-matches? (surface domain lens)
-        (and (node_eq (bmf-surface-contract-domain surface) domain)
-             (node_eq (bmf-surface-contract-lens surface) lens)))
+        ;; domain/lens — polymorphic, same as bmf-symbol-binding.
+        (and (value_eq (bmf-surface-contract-domain surface) domain)
+             (value_eq (bmf-surface-contract-lens surface) lens)))
 
     (defn bmf-surface-contract-score (surface domain lens ctx)
         (if (bmf-surface-contract-matches? surface domain lens)
@@ -562,8 +513,9 @@
             missing))
 
     (defn bmf-reverse-lens-matches? (target domain lens)
-        (and (node_eq (bmf-reverse-lens-domain target) domain)
-             (node_eq (bmf-reverse-lens-lens target) lens)))
+        ;; domain/lens — polymorphic, same as bmf-symbol-binding.
+        (and (value_eq (bmf-reverse-lens-domain target) domain)
+             (value_eq (bmf-reverse-lens-lens target) lens)))
 
     (defn bmf-reverse-lens-find (targets domain lens missing)
         (if (nil? targets) missing
@@ -1117,9 +1069,12 @@
             (form-adapter-registry-capsules registry)))
 
     (defn form-adapter-capability-matches? (capability kind input-surface output-surface)
-        (and (node_eq (form-adapter-capability-kind capability) kind)
-             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
-                  (node_eq (form-adapter-capability-output-surface capability) output-surface))))
+        ;; kind/input-surface/output-surface — polymorphic, same as
+        ;; bmf-symbol-binding's domain/lens: tests pass them as either
+        ;; typed NodeIDs or string literals. value_eq holds both shapes.
+        (and (value_eq (form-adapter-capability-kind capability) kind)
+             (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
+                  (value_eq (form-adapter-capability-output-surface capability) output-surface))))
 
     (defn form-adapter-capability-score (capability kind input-surface output-surface ctx)
         (if (form-adapter-capability-matches? capability kind input-surface output-surface)
@@ -1213,14 +1168,16 @@
                         (parse source ctx))))))
 
     (defn form-adapter-capability-starts? (capability kind input-surface ctx)
-        (and (node_eq (form-adapter-capability-kind capability) kind)
-             (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+        ;; kind/input-surface — polymorphic, see form-adapter-capability-matches?.
+        (and (value_eq (form-adapter-capability-kind capability) kind)
+             (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
                   (bmf-context-properties-match?
                     ctx
                     (form-adapter-capability-requirements capability)))))
 
     (defn form-adapter-capability-input-ready? (capability input-surface ctx)
-        (and (node_eq (form-adapter-capability-input-surface capability) input-surface)
+        ;; input-surface — polymorphic, see form-adapter-capability-matches?.
+        (and (value_eq (form-adapter-capability-input-surface capability) input-surface)
              (bmf-context-properties-match?
                 ctx
                 (form-adapter-capability-requirements capability))))
@@ -1284,7 +1241,8 @@
     (defn form-adapter-plan-from-capabilities
         (capabilities kinds input-surface output-surface ctx missing)
         (if (nil? kinds)
-            (if (node_eq input-surface output-surface)
+            ;; surfaces — polymorphic, may be NodeIDs OR strings.
+            (if (value_eq input-surface output-surface)
                 (form-adapter-plan (empty))
                 missing)
             (form-adapter-plan-search
@@ -1342,7 +1300,8 @@
 
     (defn form-adapter-flex-plan-from-capabilities
         (capabilities input-surface output-surface ctx depth missing)
-        (if (node_eq input-surface output-surface)
+        ;; surfaces — polymorphic, see form-adapter-plan-from-capabilities.
+        (if (value_eq input-surface output-surface)
             (form-adapter-plan (empty))
             (if (lt depth 1)
                 missing
@@ -1884,7 +1843,14 @@
             (if (str_eq tag "capture") (match-object-capture (head (tail p)) (head (tail (tail p))) object-stream)
             (if (str_eq tag "star") (match-object-star (head (tail p)) object-stream (empty))
             (if (str_eq tag "opt") (match-object-opt (head (tail p)) object-stream)
-                (mk-fail (str_concat "unknown object pattern: " tag))))))))))
+            ;; cut — commit sentinel. Succeeds without consuming, records
+            ;; a `_cut` capability the surrounding sequence reads if a
+            ;; subsequent step fails.
+            (if (str_eq tag "cut")
+                (mk-match (cap-set (cap-empty 0) "_cut" "true") object-stream)
+            ;; stop — explicit failure marker. Never matches.
+            (if (str_eq tag "stop") (mk-fail "stop")
+                (mk-fail (str_concat "unknown object pattern: " tag))))))))))))
 
     (defn match-object-literal (p object-stream)
         (if (nil? object-stream)
@@ -1906,18 +1872,29 @@
             (mk-match acc-caps object-stream)
             (do
                 (let m (match-object-pattern (head children) object-stream))
-                (if (fail? m) m
+                ;; cut-aware sequence: fail-cut propagates immediately; a
+                ;; plain fail AFTER a cut is promoted to fail-cut so the
+                ;; enclosing choice stops trying further alternatives.
+                (if (fail-cut? m) m
+                (if (fail? m)
+                    (if (cap-has? acc-caps "_cut")
+                        (mk-fail-cut (fail-reason m))
+                        m)
                     (match-object-sequence (tail children)
                                            (match-rest m)
-                                           (cap-merge acc-caps (match-caps m)))))))
+                                           (cap-merge acc-caps (match-caps m))))))))
 
     (defn match-object-choice (alternatives object-stream)
         (if (nil? alternatives)
             (mk-fail "no object alternative matched")
             (do
                 (let m (match-object-pattern (head alternatives) object-stream))
+                ;; cut-aware choice: a fail-cut from a committed alternative
+                ;; aborts the search — converts back to plain fail so the
+                ;; cut's scope stays this choice, not its caller.
                 (if (match? m) m
-                    (match-object-choice (tail alternatives) object-stream)))))
+                (if (fail-cut? m) (mk-fail (fail-reason m))
+                    (match-object-choice (tail alternatives) object-stream))))))
 
     (defn capture-object-value (m original-stream)
         (if (nil? (match-caps m))

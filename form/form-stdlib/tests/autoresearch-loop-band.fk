@@ -1,0 +1,117 @@
+; autoresearch-loop-band.fk — the substrate evolves toward the knee.
+;
+; Witnesses that the autoresearch loop on top of pareto.fk:
+;   - never regresses (knee-loss is monotone non-increasing)
+;   - actually IMPROVES over generations when the genome admits
+;     directly-improving mutations
+;   - the substrate's content-addressing handles dedup so identical
+;     mutations across candidates don't bloat the genome
+;
+; The teaching this exercises: autoresearch's frozen-evaluator
+; contract holds — pareto.fk's frontier IS the evaluator, the body's
+; mutator can only propose, the frontier can only commit.
+;
+; preludes: form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk
+
+(do
+    ;; --- starting genome -------------------------------------------
+    ;;
+    ;; Three candidates all on the initial frontier (no domination):
+    ;;   (10, 100)  — cheap, low-fidelity
+    ;;   (50, 60)   — middle
+    ;;   (100, 20)  — expensive, high-fidelity
+
+    (let g0 (list (pareto-candidate 10 100)
+                  (pareto-candidate 50 60)
+                  (pareto-candidate 100 20)))
+
+    ;; --- one experiment at budget=100 ------------------------------
+    ;;
+    ;; Budget 100 admits all three candidates; knee at gen 0 is
+    ;; (100, 20). After one generation, mutations include (100, 19),
+    ;; which dominates (100, 20) → frontier shifts down by 1.
+
+    (let exp1 (auto-experiment g0 100))
+    (let g1 (auto-evolve-once g0))
+
+    (let knee-improved-1
+        (if (auto-improved? exp1) 10 0))
+
+    (let knee-loss-after-1
+        (auto-exp-knee-loss-after exp1))
+
+    ;; --- three generations -----------------------------------------
+    ;;
+    ;; Each generation can shave 1 off the loss at the same compute,
+    ;; or shave 1 off the compute at the same loss. After 3 gens at
+    ;; budget=100, the knee-loss should drop from 20 to 17.
+
+    (let g3 (auto-evolve g0 3))
+    (let knee-3 (pareto-knee g3 100))
+    (let knee-loss-3-score
+        (if (eq (pareto-loss knee-3) 17) 30 0))
+
+    ;; The compute at the knee may shift too (compute can shave down
+    ;; while loss holds, or vice versa) — but the loss-monotone
+    ;; invariant is what matters: knee-3.loss ≤ knee-0.loss.
+    (let monotone-score
+        (if (le (pareto-loss knee-3) 20) 40 0))
+
+    ;; --- genome size is bounded ------------------------------------
+    ;;
+    ;; The frontier can only grow as new non-dominated points appear.
+    ;; Starting with 3 candidates, after 3 gens the frontier reaches
+    ;; ~24 — the staircase between the three seed points fills in
+    ;; with non-dominated waypoints. Loose check: ≤ 30 — explosion
+    ;; would mean hundreds.
+
+    (let bounded-score
+        (if (le (len g3) 30) 50 0))
+
+    ;; --- knee at a tight budget ------------------------------------
+    ;;
+    ;; Budget=30 admits only (10, 100) initially. After evolution,
+    ;; mutations like (11, 99), (10, 99) appear; (10, 99) dominates
+    ;; (10, 100). After 3 gens, knee-loss at budget=30 drops to 97.
+
+    (let knee-30-3 (pareto-knee g3 30))
+    (let knee-30-score
+        (if (eq (pareto-loss knee-30-3) 97) 60 0))
+
+    ;; --- knee at impossible budget ---------------------------------
+    ;;
+    ;; Budget=5 doesn't admit anything in g0 (smallest compute is 10).
+    ;; After 3 gens, mutations include (9, 100), (8, 100), (7, 100),
+    ;; (6, 100), (5, 100), (4, 100) ... wait — let me think. Starting
+    ;; from (10, 100), one gen makes (9, 100). Two gens makes (8, 100).
+    ;; Three gens makes (7, 100). So budget=5 still no fit at gen 3.
+    ;;
+    ;; But budget=7 should now fit.
+    (let knee-7-3 (pareto-knee g3 7))
+    (let knee-7-score
+        (if (eq (pareto-loss knee-7-3) 100) 70 0))
+
+    ;; --- experiment after three gens ------------------------------
+    ;;
+    ;; Running one more experiment from g3 should still improve at
+    ;; budget=100 (mutation chain continues). knee-loss-after < 17.
+    (let exp4 (auto-experiment g3 100))
+    (let still-improving-score
+        (if (auto-improved? exp4) 80 0))
+
+    ;; --- the frozen-evaluator contract -----------------------------
+    ;;
+    ;; Genome size after one experiment is reported faithfully.
+    (let report-shape-score
+        (add
+            (if (eq (auto-exp-genome-before-size exp1) 3) 90 0)
+            (if (ge (auto-exp-genome-after-size exp1) 3) 100 0)))
+
+    ;; Expected total: 10 + 30 + 40 + 50 + 60 + 70 + 80 + 90 + 100 = 530
+    (add knee-improved-1
+    (add knee-loss-3-score
+    (add monotone-score
+    (add bounded-score
+    (add knee-30-score
+    (add knee-7-score
+    (add still-improving-score report-shape-score))))))))

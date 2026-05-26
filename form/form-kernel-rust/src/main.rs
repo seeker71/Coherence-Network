@@ -19,13 +19,56 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
-use std::io::{Read, Seek, SeekFrom};
-use std::sync::Arc;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 mod formats;
 mod inductive;
 mod quotient;
+
+// --- Socket natives — L1 physical layer (TCP) ---------------------------
+// Sibling parity with form-kernel-go + form-kernel-ts. Handles are
+// monotone i64s; the kernel never reveals the underlying TcpListener /
+// TcpStream to Form code, only the handle. -1 always means error.
+enum SocketKind {
+    Listener(TcpListener),
+    Stream(Mutex<TcpStream>),
+}
+
+struct SocketTable {
+    handles: HashMap<i64, Arc<SocketKind>>,
+    next: i64,
+}
+
+fn socket_table() -> &'static Mutex<SocketTable> {
+    static T: OnceLock<Mutex<SocketTable>> = OnceLock::new();
+    T.get_or_init(|| {
+        Mutex::new(SocketTable {
+            handles: HashMap::new(),
+            next: 0,
+        })
+    })
+}
+
+fn socket_register(s: SocketKind) -> i64 {
+    let mut t = socket_table().lock().unwrap();
+    t.next += 1;
+    let h = t.next;
+    t.handles.insert(h, Arc::new(s));
+    h
+}
+
+fn socket_lookup(h: i64) -> Option<Arc<SocketKind>> {
+    let t = socket_table().lock().unwrap();
+    t.handles.get(&h).cloned()
+}
+
+fn socket_drop(h: i64) -> bool {
+    let mut t = socket_table().lock().unwrap();
+    t.handles.remove(&h).is_some()
+}
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -113,6 +156,18 @@ struct ShapeKey {
 // optimization is undone). Future breath: restore via Cow or split tables.
 type NativeFn = fn(&mut Kernel, &mut Arena, &[Value]) -> Value;
 
+// EnvAwareNativeFn — natives that need the caller's env (walk_recipe_here).
+// Separate registry path to avoid changing the NativeFn signature across
+// every existing native.
+type EnvAwareNativeFn = fn(&mut Kernel, &mut Arena, FrameId, &[Value]) -> Value;
+
+#[derive(Copy, Clone)]
+struct EnvAwareNativeEntry {
+    name: NameID,
+    category: NodeID,
+    func: EnvAwareNativeFn,
+}
+
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
 // through a native, the trace records the category alongside the FNCALL
@@ -164,6 +219,7 @@ pub(crate) struct Kernel {
     str_idx: HashMap<String, NameID>,
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
+    env_natives: HashMap<NameID, EnvAwareNativeEntry>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -441,6 +497,7 @@ impl Kernel {
             str_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
+            env_natives: HashMap::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -748,6 +805,7 @@ impl Kernel {
             str_idx: self.str_idx.clone(),
             next_inst: self.next_inst,
             natives: self.natives.clone(),
+            env_natives: self.env_natives.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -1074,6 +1132,18 @@ struct Frame {
 // ---------------------------------------------------------------------------
 
 impl Kernel {
+    fn register_env_native(&mut self, name: &str, category: NodeID, f: EnvAwareNativeFn) {
+        let id = self.intern_string(name).inst;
+        self.env_natives.insert(
+            id,
+            EnvAwareNativeEntry {
+                name: id,
+                category,
+                func: f,
+            },
+        );
+    }
+
     fn register_native(&mut self, name: &str, category: NodeID, f: NativeFn) {
         let id = self.intern_string(name).inst;
         self.natives.insert(
@@ -1128,6 +1198,71 @@ impl Kernel {
             let mut s = args[0].as_str().to_string();
             s.push_str(args[1].as_str());
             Value::Str(s)
+        });
+        // str_find — Rust-level substring search starting at index `from`.
+        // (str_find s needle from) → int (index or -1). Whole search in
+        // this Rust loop; no Form callback per byte, no Form recursion.
+        self.register_native("str_find", cat_access(), |_, _, args| {
+            let s = args[0].as_str();
+            let needle = args[1].as_str();
+            let from = args[2].as_int() as usize;
+            if from > s.len() {
+                return Value::Int(-1);
+            }
+            match s[from..].find(needle) {
+                Some(i) => Value::Int((from + i) as i64),
+                None => Value::Int(-1),
+            }
+        });
+        // scan_run — return the end-index where a contiguous run of bytes
+        // matching `class_code` ends (exclusive). Sibling parity with Go +
+        // TS scan_run. Generic per-byte loop in Rust avoids the walker
+        // dispatch a pure-Form recursion would pay per character.
+        // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
+        //              4=non-quote-non-escape, 5=non-newline.
+        self.register_native("scan_run", cat_access(), |_, _, args| {
+            let s = args[0].as_str();
+            let from = args[1].as_int().max(0) as usize;
+            let class = args[2].as_int();
+            let bytes = s.as_bytes();
+            let n = bytes.len();
+            let mut end = from.min(n);
+            match class {
+                0 => while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') { end += 1; },
+                1 => while end < n && bytes[end].is_ascii_digit() { end += 1; },
+                2 => while end < n && bytes[end].is_ascii_alphabetic() { end += 1; },
+                3 => while end < n && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_' || bytes[end] == b'-') { end += 1; },
+                4 => while end < n && bytes[end] != b'"' && bytes[end] != b'\\' { end += 1; },
+                5 => while end < n && bytes[end] != b'\n' { end += 1; },
+                _ => panic!("scan_run: unknown class_code {} (valid: 0-5)", class),
+            }
+            Value::Int(end as i64)
+        });
+        // string_fold — Rust-level streaming iteration over a string's bytes.
+        // Signature: (string_fold s init step) where step is a closure of
+        // (acc, char) → acc. Whole iteration in this Rust for-loop; no Form-
+        // level recursion. Lets the substrate process arbitrary-length input
+        // streams without piling kernel stack frames.
+        self.register_native("string_fold", cat_call(), |k, a, args| {
+            let s = args[0].as_str().to_string();
+            let mut acc = args[1].clone();
+            let cl = match &args[2] {
+                Value::Closure(c) => c.clone(),
+                _ => panic!("string_fold: third arg must be a closure"),
+            };
+            if cl.params.len() != 2 {
+                panic!(
+                    "string_fold: step closure wants 2 params (acc char), got {}",
+                    cl.params.len()
+                );
+            }
+            for byte in s.as_bytes().to_vec() {
+                let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+                a.bind(call_frame, cl.params[0], acc);
+                a.bind(call_frame, cl.params[1], Value::Str((byte as char).to_string()));
+                acc = walk(k, a, cl.body, call_frame);
+            }
+            acc
         });
         self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_str() == args[1].as_str())
@@ -1309,6 +1444,19 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // write_form_binary — emit a Recipe to .fkb in the full artifact
+        // format (string table + tree). Sibling to read_form_binary.
+        // Use when source-compile output crosses kernel invocations:
+        // serialize-recipe alone drops string indices.
+        self.register_native("write_form_binary", cat_call(), |k, _, args| {
+            let path = args[0].as_str().to_string();
+            let nid = args[1].as_nid();
+            let bytes = serialize_artifact(k, nid);
+            match fs::write(&path, &bytes) {
+                Ok(_) => Value::Int(bytes.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
         self.register_native("read_form_binary", cat_call(), |k, _, args| {
             match fs::read(args[0].as_str()) {
                 Ok(bytes) => match deserialize_artifact(k, &bytes) {
@@ -1321,6 +1469,21 @@ impl Kernel {
         self.register_native("file_size", cat_call(), |_, _, args| {
             match fs::metadata(args[0].as_str()) {
                 Ok(meta) => Value::Int(meta.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        // file_mtime — modification time in unix seconds; -1 if missing.
+        // Sibling parity with Go + TS file_mtime; powers Form-side cache
+        // layers that regenerate .fkb projections when source files drift.
+        self.register_native("file_mtime", cat_call(), |_, _, args| {
+            match fs::metadata(args[0].as_str()) {
+                Ok(meta) => match meta.modified() {
+                    Ok(t) => match t.duration_since(std::time::UNIX_EPOCH) {
+                        Ok(d) => Value::Int(d.as_secs() as i64),
+                        Err(_) => Value::Int(-1),
+                    },
+                    Err(_) => Value::Int(-1),
+                },
                 Err(_) => Value::Int(-1),
             }
         });
@@ -1359,6 +1522,100 @@ impl Kernel {
             match file.read(&mut buf) {
                 Ok(n) => Value::Str(String::from_utf8_lossy(&buf[..n]).to_string()),
                 Err(_) => Value::Str(String::new()),
+            }
+        });
+
+        // --- Socket natives — L1 physical layer for inter-cell IO ------
+        // Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success,
+        // -1 error). Connection table is a module-level OnceLock<Mutex>.
+        // (socket_listen port)             → handle | -1
+        // (socket_accept listener-handle)  → conn-handle | -1   (BLOCKS)
+        // (socket_connect host port)       → conn-handle | -1
+        // (socket_send conn bytes-string)  → bytes-sent | -1
+        // (socket_recv conn max-bytes)     → received-string ("" on close)
+        // (socket_close handle)            → 0 | -1
+        self.register_native("socket_listen", cat_call(), |_, _, args| {
+            let port = args[0].as_int();
+            match TcpListener::bind(format!("127.0.0.1:{}", port)) {
+                Ok(ln) => Value::Int(socket_register(SocketKind::Listener(ln))),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_accept", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Int(-1),
+            };
+            match &*s {
+                SocketKind::Listener(ln) => match ln.accept() {
+                    Ok((stream, _)) => {
+                        Value::Int(socket_register(SocketKind::Stream(Mutex::new(stream))))
+                    }
+                    Err(_) => Value::Int(-1),
+                },
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_connect", cat_call(), |_, _, args| {
+            let host = args[0].as_str().to_string();
+            let port = args[1].as_int();
+            match TcpStream::connect(format!("{}:{}", host, port)) {
+                Ok(stream) => Value::Int(socket_register(SocketKind::Stream(Mutex::new(stream)))),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_send", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let bytes = args[1].as_str().as_bytes().to_vec();
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Int(-1),
+            };
+            match &*s {
+                SocketKind::Stream(m) => {
+                    let mut g = m.lock().unwrap();
+                    match g.write(&bytes) {
+                        Ok(n) => Value::Int(n as i64),
+                        Err(_) => Value::Int(-1),
+                    }
+                }
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_recv", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let max = args[1].as_int();
+            if max <= 0 {
+                return Value::Str(String::new());
+            }
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Str(String::new()),
+            };
+            match &*s {
+                SocketKind::Stream(m) => {
+                    let mut g = m.lock().unwrap();
+                    let mut buf = vec![0u8; max as usize];
+                    match g.read(&mut buf) {
+                        Ok(n) if n > 0 => {
+                            Value::Str(String::from_utf8_lossy(&buf[..n]).to_string())
+                        }
+                        _ => Value::Str(String::new()),
+                    }
+                }
+                _ => Value::Str(String::new()),
+            }
+        });
+        self.register_native("socket_close", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            if h < 0 {
+                return Value::Int(-1);
+            }
+            if socket_drop(h) {
+                Value::Int(0)
+            } else {
+                Value::Int(-1)
             }
         });
 
@@ -1441,6 +1698,22 @@ impl Kernel {
         // by direct NodeID equality. Sibling parity required across Go/TS.
         self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
             Value::Bool(args[0].as_nid() == args[1].as_nid())
+        });
+        // value_eq — polymorphic equality across Value kinds. Returns
+        // true when both args have the same kind AND compare equal
+        // within that kind. Cross-kind returns false. Use when a
+        // Form-side function holds tagged values that may be either
+        // strings or NodeIDs — e.g. domain/lens in bmf-symbol-context.
+        self.register_native("value_eq", cat_compare(RCMP_EQ), |_, _, args| {
+            let eq = match (&args[0], &args[1]) {
+                (Value::Null, Value::Null) => true,
+                (Value::Int(x), Value::Int(y)) => x == y,
+                (Value::Str(x), Value::Str(y)) => x == y,
+                (Value::Bool(x), Value::Bool(y)) => x == y,
+                (Value::Nid(x), Value::Nid(y)) => x == y,
+                _ => false,
+            };
+            Value::Bool(eq)
         });
         // intern_node_at — intern a composite Recipe AND record its source
         // attribution. Engine.fk's parser actions call this so every emitted
@@ -1551,6 +1824,19 @@ impl Kernel {
             let env = sub_arena.new_frame(None);
             walk(k, &mut sub_arena, args[0].as_nid(), env)
         });
+        // walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+        // bindings inside the Recipe land in the caller's scope. Matches
+        // the Go kernel's env-aware variant.
+        self.register_env_native("walk_recipe_here", cat_witness(), |k, a, env, args| {
+            // Pin the recipe root as an active root so substrate_gc keeps the
+            // definitions reachable. Closures bound here hold body NodeIDs
+            // that aren't reachable from the source-parsed root, so without
+            // this pin a subsequent substrate_gc would sweep them and leave
+            // env holding closures with deleted bodies.
+            let root = args[0].as_nid();
+            k.active_roots.push(root);
+            walk(k, a, root, env)
+        });
         self.register_native("walk_parallel", cat_witness(), native_walk_parallel);
         self.register_native("walk-parallel", cat_witness(), native_walk_parallel);
         self.register_native(
@@ -1620,6 +1906,172 @@ impl Kernel {
                 },
                 None => Value::Null,
             }
+        });
+
+        // --- BMF native rule runtime (Path C) ---------------------------
+        //
+        // bmf_apply_rule_native — additive fast path for engine.fk's
+        // apply-object-rule. Sibling port of Go's implementation; the
+        // returned Recipe shape (caps alist with "objects" + "result"
+        // keys, bmf-match-source captures + span, the result bmf-object
+        // as ("cell" rule-name recipe source inverse)) is byte-identical
+        // under node_eq to what apply-object-rule produces.
+        //
+        // POC scope this breath — flat sequence of object-literal
+        // matchers, no captures, no choice, no star/opt/cut. Every other
+        // shape PANICS loudly so callers can't silently fall off the fast
+        // path. Captures + choice + star/opt are queued for a later
+        // breath; see docs/coherence-substrate/bmf-native-runtime.form.
+        self.register_native("bmf_apply_rule_native", cat_witness(), |k, a, args| {
+            if args.len() != 2 {
+                panic!("bmf_apply_rule_native: expects (rule object-stream)");
+            }
+            let rule = &args[0];
+            let stream = &args[1];
+            let rule_list = match rule {
+                Value::List(xs) if xs.len() >= 3 => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: rule must be (name pattern action ...)"),
+            };
+            let rule_name = rule_list[0].clone();
+            let pattern = rule_list[1].clone();
+            let action = rule_list[2].clone();
+            let rule_inverse = if rule_list.len() > 3 {
+                rule_list[3].clone()
+            } else {
+                Value::Null
+            };
+            // Pattern must be a tagged list.
+            let pattern_list = match &pattern {
+                Value::List(xs) if !xs.is_empty() => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: pattern must be a tagged list"),
+            };
+            let tag = match &pattern_list[0] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("bmf_apply_rule_native: pattern must be a tagged list"),
+            };
+            if tag != "sequence" {
+                panic!("bmf_apply_rule_native: TODO: pattern tag '{}' not yet supported (POC: 'sequence' of 'object' literals only)", tag);
+            }
+            // Validate every child is an "object" literal — no nesting yet.
+            let children: Vec<Value> = pattern_list[1..].to_vec();
+            for (i, child) in children.iter().enumerate() {
+                let kids = match child {
+                    Value::List(xs) if xs.len() >= 3 => xs,
+                    _ => panic!("bmf_apply_rule_native: child {} malformed", i),
+                };
+                let ctag = match &kids[0] {
+                    Value::Str(s) => s.clone(),
+                    _ => panic!("bmf_apply_rule_native: child {} malformed", i),
+                };
+                if ctag != "object" {
+                    panic!("bmf_apply_rule_native: TODO: sequence child '{}' not yet supported (POC: 'object' literals only)", ctag);
+                }
+            }
+            // State-machine walk: consume one stream object per literal child.
+            let stream_list = match stream {
+                Value::List(xs) => xs.clone(),
+                _ => panic!("bmf_apply_rule_native: object-stream must be a list"),
+            };
+            let mut consumed: usize = 0;
+            for child in &children {
+                let cl = match child {
+                    Value::List(xs) => xs,
+                    _ => unreachable!(),
+                };
+                let want_kind = match &cl[1] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                let want_value = match &cl[2] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                if consumed >= stream_list.len() {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str("expected BMF object".to_string()),
+                    ]);
+                }
+                let obj = &stream_list[consumed];
+                let obj_list = match obj {
+                    Value::List(xs) if xs.len() >= 3 => xs,
+                    _ => panic!("bmf_apply_rule_native: stream item is not a cell"),
+                };
+                let head = match &obj_list[0] {
+                    Value::Str(s) => s.clone(),
+                    _ => panic!("bmf_apply_rule_native: stream item is not a cell"),
+                };
+                if head != "cell" {
+                    panic!("bmf_apply_rule_native: stream item is not a cell");
+                }
+                let got_kind = match &obj_list[1] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                let got_value = match &obj_list[2] {
+                    Value::Str(s) => s.clone(),
+                    _ => String::new(),
+                };
+                if got_kind != want_kind {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str(format!("object kind mismatch: expected {}", want_kind)),
+                    ]);
+                }
+                if !want_value.is_empty() && got_value != want_value {
+                    return Value::List(vec![
+                        Value::Str("fail".to_string()),
+                        Value::Str(format!("object value mismatch: expected {}", want_value)),
+                    ]);
+                }
+                consumed += 1;
+            }
+            // Build captures-as-collection. POC scope: no named captures,
+            // so the collection wraps an empty objects list — same shape
+            // Form's (bmf-caps-to-collection (cap-empty 0)) produces.
+            let empty_collection = Value::List(vec![
+                Value::Str("bmf-collection".to_string()),
+                Value::List(vec![]),
+            ]);
+            // Consumed prefix slice — what Form's (take N stream) returns.
+            let span = Value::List(stream_list[..consumed].to_vec());
+            // bmf-match-source captures span.
+            let match_source = Value::List(vec![
+                Value::Str("bmf-match-source".to_string()),
+                empty_collection.clone(),
+                span,
+            ]);
+            // Invoke the action closure: (rule-action captures-collection)
+            // → recipe. The only Form re-entry; everything above is native.
+            let cl = match &action {
+                Value::Closure(c) => c.clone(),
+                _ => panic!("bmf_apply_rule_native: rule action must be a closure"),
+            };
+            if cl.params.len() != 1 {
+                panic!(
+                    "bmf_apply_rule_native: action closure takes {} params, expected 1",
+                    cl.params.len()
+                );
+            }
+            let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            a.bind(call_frame, cl.params[0], empty_collection.clone());
+            let recipe = walk(k, a, cl.body, call_frame);
+            // Result bmf-object — ("cell" rule-name recipe source inverse).
+            let result_object = Value::List(vec![
+                Value::Str("cell".to_string()),
+                rule_name,
+                recipe,
+                match_source,
+                rule_inverse,
+            ]);
+            // caps alist — cons "result" then "objects" so the alist
+            // order matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
+            let caps = Value::List(vec![
+                Value::List(vec![Value::Str("result".to_string()), result_object]),
+                Value::List(vec![Value::Str("objects".to_string()), empty_collection]),
+            ]);
+            let rest = Value::List(stream_list[consumed..].to_vec());
+            Value::List(vec![Value::Str("match".to_string()), caps, rest])
         });
 
         // --- Debug / inspection -----------------------------------------
@@ -1745,6 +2197,26 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
         }
         RB_FNCALL => {
             let name = k.ident_id(kids[0]);
+            // Env-aware natives first — they need caller env (walk_recipe_here).
+            let env_ne_opt = k.env_natives.get(&name).copied();
+            if let Some(ne) = env_ne_opt {
+                if a.lookup(env, name).is_none() {
+                    let mut args = Vec::with_capacity(kids.len() - 1);
+                    for arg in &kids[1..] {
+                        args.push(walk(k, a, *arg, env));
+                    }
+                    if ne.category.ty != RB_UNDEFINED {
+                        if let Some(t) = &mut k.trace {
+                            t.record(ne.category.ty, ne.category.inst);
+                        }
+                    }
+                    let native_name = k.name_str(ne.name).to_string();
+                    if let Some(t) = &mut k.trace {
+                        t.record_native(&native_name);
+                    }
+                    return (ne.func)(k, a, env, &args);
+                }
+            }
             // Native takes priority unless user shadowed. Copy the entry
             // out so the natives-map borrow releases before we call &mut k.
             let ne_opt = k.natives.get(&name).copied();

@@ -205,6 +205,21 @@ function nodeFromKey(key: string): NodeID {
 
 export type NativeFn = (k: Kernel, args: Value[]) => Value;
 
+// EnvAwareNativeFn — natives that need the caller's env (walk_recipe_here).
+// Separate registry path to avoid changing the NativeFn signature across
+// every existing native.
+export type EnvAwareNativeFn = (
+  k: Kernel,
+  env: Frame,
+  args: Value[],
+) => Value;
+
+export interface EnvAwareNativeEntry {
+  readonly name: NameID;
+  readonly category: NodeID;
+  readonly fn: EnvAwareNativeFn;
+}
+
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
 // through a native, the trace records the category alongside the FNCALL
@@ -467,6 +482,7 @@ export class Kernel {
   // Lookup is u32-keyed. The category lets the walker record which
   // Form-shape a native expresses, alongside the FNCALL arm.
   natives = new Map<NameID, NativeEntry>();
+  envNatives = new Map<NameID, EnvAwareNativeEntry>();
 
   // Optional tracing — undefined for hot-path runs, set by trace
   // subcommand. Sibling-parity with Go/Rust kernels.
@@ -503,6 +519,10 @@ export class Kernel {
 
   setActiveRoots(roots: readonly NodeID[]): void {
     this.activeRoots = [...roots];
+  }
+
+  pushActiveRoot(root: NodeID): void {
+    this.activeRoots.push(root);
   }
 
   remapImportedLeaf(scope: number, nid: NodeID): NodeID {
@@ -970,6 +990,15 @@ export class Kernel {
     this.natives.set(id, { name: id, category, fn });
   }
 
+  private registerEnvNative(
+    name: string,
+    category: NodeID,
+    fn: EnvAwareNativeFn,
+  ): void {
+    const id = this.internName(name);
+    this.envNatives.set(id, { name: id, category, fn });
+  }
+
   // setNative — public registration helper for language adapters that
   // need to extend the native map. Default category is UNDEFINED
   // (honest about unsettled Form attribution); pass an explicit category
@@ -1012,6 +1041,111 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    // str_find — JS-level substring search starting at index `from`.
+    // (str_find s needle from) → int (index or -1). Whole search in this
+    // JS String.indexOf call; no Form callback per byte, no Form recursion.
+    this.registerNative("str_find", catAccess(), (_k, args) => {
+      const s = argStr(args, 0);
+      const needle = argStr(args, 1);
+      const from = argInt(args, 2);
+      const idx = s.indexOf(needle, from);
+      // `kind: "int"` carries a JS Number — using BigInt here would
+      // poison downstream arithmetic with "Cannot mix BigInt and other
+      // types" when callers do plain int math on the result.
+      return { kind: "int", int: idx };
+    });
+    // scan_run — return the end-index where a contiguous run of bytes
+    // matching `class_code` ends (exclusive). Sibling parity with Go +
+    // Rust scan_run. Generic per-byte loop in JS avoids the walker
+    // dispatch a pure-Form recursion would pay per character.
+    // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
+    //              4=non-quote-non-escape, 5=non-newline.
+    this.registerNative("scan_run", catAccess(), (_k, args) => {
+      const s = argStr(args, 0);
+      const from = Math.max(0, argInt(args, 1));
+      const cls = argInt(args, 2);
+      const n = s.length;
+      let end = Math.min(from, n);
+      switch (cls) {
+        case 0: { // whitespace
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c !== 32 && c !== 9 && c !== 10 && c !== 13) break;
+            end++;
+          }
+          break;
+        }
+        case 1: { // ascii digit
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c < 48 || c > 57) break;
+            end++;
+          }
+          break;
+        }
+        case 2: { // ascii alpha
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (!((c >= 97 && c <= 122) || (c >= 65 && c <= 90))) break;
+            end++;
+          }
+          break;
+        }
+        case 3: { // identifier char
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            const isAlnum = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+            if (!(isAlnum || c === 95 || c === 45)) break;
+            end++;
+          }
+          break;
+        }
+        case 4: { // non-quote-non-escape
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c === 34 || c === 92) break;
+            end++;
+          }
+          break;
+        }
+        case 5: { // non-newline
+          while (end < n) {
+            if (s.charCodeAt(end) === 10) break;
+            end++;
+          }
+          break;
+        }
+        default:
+          throw new Error(`scan_run: unknown class_code ${cls} (valid: 0-5)`);
+      }
+      return { kind: "int", int: end };
+    });
+    // string_fold — JS-level streaming iteration over a string's chars.
+    // Signature: (string_fold s init step) where step is a closure of
+    // (acc, char) → acc. Whole iteration in this JS for-loop; no Form-
+    // level recursion. Lets the substrate process arbitrary-length input
+    // streams without piling kernel stack frames.
+    this.registerNative("string_fold", catCall(), (k, args) => {
+      const s = argStr(args, 0);
+      let acc = args[1]!;
+      const fnVal = args[2]!;
+      if (fnVal.kind !== "closure") {
+        throw new Error("string_fold: third arg must be a closure");
+      }
+      const cl = fnVal.closure;
+      if (cl.params.length !== 2) {
+        throw new Error(
+          `string_fold: step closure wants 2 params (acc char), got ${cl.params.length}`,
+        );
+      }
+      for (let i = 0; i < s.length; i++) {
+        const callFrame = new Frame(cl.env);
+        callFrame.bind(cl.params[0]!, acc);
+        callFrame.bind(cl.params[1]!, { kind: "str", str: s[i]! });
+        acc = walk(k, cl.body, callFrame);
+      }
+      return acc;
+    });
     this.registerNative("str_eq", catCompareEq(), (_k, args) => ({
       kind: "bool",
       bool: argStr(args, 0) === argStr(args, 1),
@@ -1167,6 +1301,22 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // write_form_binary — emit a Recipe to .fkb in the full artifact
+    // format (string table + tree). Sibling to read_form_binary.
+    this.registerNative("write_form_binary", catCall(), (k, args) => {
+      const path = argStr(args, 0);
+      const nid = argNodeID(args, 1);
+      const bytes = serializeRecipeArtifact(k, nid);
+      try {
+        writeFileSync(path, bytes);
+        // `kind: "int"` carries a JS Number — BigInt poisons downstream
+        // arithmetic with "Cannot mix BigInt and other types" when
+        // callers do plain int math on the byte count.
+        return { kind: "int", int: bytes.length };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
     this.registerNative("read_form_binary", catCall(), (k, args) => {
       try {
         return {
@@ -1180,6 +1330,16 @@ export class Kernel {
     this.registerNative("file_size", catCall(), (_k, args) => {
       try {
         return { kind: "int", int: statSync(argStr(args, 0)).size };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    // file_mtime — modification time in unix seconds; -1 if missing.
+    // Sibling parity with Go + Rust file_mtime; powers Form-side cache
+    // layers that regenerate .fkb projections when source files drift.
+    this.registerNative("file_mtime", catCall(), (_k, args) => {
+      try {
+        return { kind: "int", int: Math.floor(statSync(argStr(args, 0)).mtimeMs / 1000) };
       } catch {
         return { kind: "int", int: -1 };
       }
@@ -1225,6 +1385,60 @@ export class Kernel {
       } catch {
         return { kind: "int", int: -1 };
       }
+    });
+
+    // --- Socket natives — L1 physical layer for inter-cell IO ---------
+    // Sibling parity with form-kernel-go + form-kernel-rust at the API
+    // surface. TS scope limit: socket_listen / socket_accept / socket_recv
+    // are panic-stubs because Node's event-loop architecture cannot do
+    // blocking accept/read without a worker-thread + SharedArrayBuffer
+    // shim — that work is deferred to a later breath. socket_close is
+    // safe on -1 (sibling-parity no-op returning -1), so the band can
+    // witness API existence without crossing into the panic-stub region.
+    // TODO: implement TS sockets when we have a blocking shim
+    //       (Atomics.wait + worker_threads sync read).
+    this.registerNative("socket_listen", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_listen: TS kernel has no blocking-accept shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel for " +
+          "server-side socket work this breath.",
+      );
+    });
+    this.registerNative("socket_accept", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_accept: TS kernel has no blocking-accept shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_connect", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_connect: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_send", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_send: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_recv", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_recv: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    // socket_close — the one socket native that has a sibling-safe
+    // sentinel branch on all three kernels: a -1 handle returns -1
+    // without touching the (nonexistent) TS connection table. Used by
+    // tests/socket-band.fk to witness that the API surface EXISTS on
+    // all three kernels even when the implementation diverges.
+    this.registerNative("socket_close", catCall(), (_k, args) => {
+      const h = argInt(args, 0);
+      if (h < 0) return { kind: "int", int: -1 };
+      // No connection table in TS — handles > 0 are necessarily stale
+      // (we never returned one), so -1 is the honest response.
+      return { kind: "int", int: -1 };
     });
 
     // Substrate write surface — all attributed as WITNESS.
@@ -1346,6 +1560,16 @@ export class Kernel {
         a.inst === b.inst;
       return { kind: "bool", bool: equal };
     });
+    // value_eq — polymorphic equality across Value kinds. Returns true
+    // when both args have the same kind AND compare equal within that
+    // kind. Cross-kind returns false. Use when a Form-side function
+    // holds tagged values that may be either strings or NodeIDs —
+    // e.g. domain/lens in bmf-symbol-context.
+    this.registerNative("value_eq", catCompareEq(), (_k, args) => {
+      const a = args[0]!;
+      const b = args[1]!;
+      return { kind: "bool", bool: valueEqual(a, b) };
+    });
     this.registerNative("serialize-recipe", catWitness(), (k, args) => {
       const out: number[] = [];
       serializeNode(k, argNodeID(args, 0), out);
@@ -1366,6 +1590,19 @@ export class Kernel {
     this.registerNative("walk_recipe", catWitness(), (k, args) =>
       walk(k, argNodeID(args, 0), new Frame(null)),
     );
+    // walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+    // bindings inside the Recipe land in the caller's scope. Matches
+    // the Go and Rust kernels' env-aware variant.
+    this.registerEnvNative("walk_recipe_here", catWitness(), (k, env, args) => {
+      // Pin the recipe root as an active root so substrate_gc keeps the
+      // definitions reachable. Closures bound here hold body NodeIDs that
+      // aren't reachable from the source-parsed root, so without this pin
+      // a subsequent substrate_gc would sweep them and leave env holding
+      // closures with deleted bodies.
+      const root = argNodeID(args, 0);
+      k.pushActiveRoot(root);
+      return walk(k, root, env);
+    });
     const walkParallel: NativeFn = (k, args) => {
       const roots = argList(args, 0).map((value) => {
         if (value.kind !== "nodeid")
@@ -1544,6 +1781,202 @@ export class Kernel {
     this.registerNative("f32", catTransmute(), (_k, args) => ({ kind: "f32", float: Math.fround(argFloat(args, 0)) }));
     this.registerNative("f64", catTransmute(), (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
     this.registerNative("i32", catTransmute(), (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
+
+    // --- BMF native rule runtime (Path C) ------------------------------
+    //
+    // bmf_apply_rule_native — additive fast path for engine.fk's
+    // apply-object-rule. Sibling port of Go's implementation; the
+    // returned Recipe shape (caps alist with "objects" + "result" keys,
+    // bmf-match-source captures + span, the result bmf-object as
+    // ("cell" rule-name recipe source inverse)) is byte-identical under
+    // node_eq to what apply-object-rule produces.
+    //
+    // POC scope this breath — flat sequence of object-literal matchers,
+    // no captures, no choice, no star/opt/cut. Every other shape THROWS
+    // loudly so callers can't silently fall off the fast path. Captures
+    // + choice + star/opt are queued for a later breath; see
+    // docs/coherence-substrate/bmf-native-runtime.form.
+    this.registerNative("bmf_apply_rule_native", catWitness(), (k, args) => {
+      if (args.length !== 2) {
+        throw new Error("bmf_apply_rule_native: expects (rule object-stream)");
+      }
+      const rule = args[0]!;
+      const stream = args[1]!;
+      if (rule.kind !== "list" || rule.list.length < 3) {
+        throw new Error(
+          "bmf_apply_rule_native: rule must be (name pattern action ...)",
+        );
+      }
+      const ruleName = rule.list[0]!;
+      const pattern = rule.list[1]!;
+      const action = rule.list[2]!;
+      const ruleInverse: Value =
+        rule.list.length > 3 ? rule.list[3]! : { kind: "null" };
+      if (
+        pattern.kind !== "list" ||
+        pattern.list.length === 0 ||
+        pattern.list[0]!.kind !== "str"
+      ) {
+        throw new Error("bmf_apply_rule_native: pattern must be a tagged list");
+      }
+      const tag = (pattern.list[0] as { kind: "str"; str: string }).str;
+      if (tag !== "sequence") {
+        throw new Error(
+          `bmf_apply_rule_native: TODO: pattern tag '${tag}' not yet supported (POC: 'sequence' of 'object' literals only)`,
+        );
+      }
+      // Validate every child is an "object" literal — no nesting yet.
+      const children = pattern.list.slice(1);
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]!;
+        if (
+          child.kind !== "list" ||
+          child.list.length < 3 ||
+          child.list[0]!.kind !== "str"
+        ) {
+          throw new Error(`bmf_apply_rule_native: child ${i} malformed`);
+        }
+        const ctag = (child.list[0] as { kind: "str"; str: string }).str;
+        if (ctag !== "object") {
+          throw new Error(
+            `bmf_apply_rule_native: TODO: sequence child '${ctag}' not yet supported (POC: 'object' literals only)`,
+          );
+        }
+      }
+      // State-machine walk: consume one stream object per literal child.
+      if (stream.kind !== "list") {
+        throw new Error("bmf_apply_rule_native: object-stream must be a list");
+      }
+      const streamList = stream.list;
+      let consumed = 0;
+      for (const child of children) {
+        // We validated shape above; narrow now.
+        const cl = (child as { kind: "list"; list: Value[] }).list;
+        const wantKind =
+          cl[1]!.kind === "str" ? (cl[1] as { str: string }).str : "";
+        const wantValue =
+          cl[2]!.kind === "str" ? (cl[2] as { str: string }).str : "";
+        if (consumed >= streamList.length) {
+          return {
+            kind: "list",
+            list: [
+              { kind: "str", str: "fail" },
+              { kind: "str", str: "expected BMF object" },
+            ],
+          };
+        }
+        const obj = streamList[consumed]!;
+        if (
+          obj.kind !== "list" ||
+          obj.list.length < 3 ||
+          obj.list[0]!.kind !== "str" ||
+          (obj.list[0] as { kind: "str"; str: string }).str !== "cell"
+        ) {
+          throw new Error("bmf_apply_rule_native: stream item is not a cell");
+        }
+        const gotKind =
+          obj.list[1]!.kind === "str"
+            ? (obj.list[1] as { str: string }).str
+            : "";
+        const gotValue =
+          obj.list[2]!.kind === "str"
+            ? (obj.list[2] as { str: string }).str
+            : "";
+        if (gotKind !== wantKind) {
+          return {
+            kind: "list",
+            list: [
+              { kind: "str", str: "fail" },
+              {
+                kind: "str",
+                str: `object kind mismatch: expected ${wantKind}`,
+              },
+            ],
+          };
+        }
+        if (wantValue !== "" && gotValue !== wantValue) {
+          return {
+            kind: "list",
+            list: [
+              { kind: "str", str: "fail" },
+              {
+                kind: "str",
+                str: `object value mismatch: expected ${wantValue}`,
+              },
+            ],
+          };
+        }
+        consumed++;
+      }
+      // Build captures-as-collection. POC scope: no named captures, so
+      // the collection wraps an empty objects list — same shape Form's
+      // (bmf-caps-to-collection (cap-empty 0)) produces.
+      const emptyCollection: Value = {
+        kind: "list",
+        list: [
+          { kind: "str", str: "bmf-collection" },
+          { kind: "list", list: [] },
+        ],
+      };
+      // Consumed prefix slice — what Form's (take N stream) returns.
+      const span: Value = { kind: "list", list: streamList.slice(0, consumed) };
+      // bmf-match-source captures span.
+      const matchSource: Value = {
+        kind: "list",
+        list: [
+          { kind: "str", str: "bmf-match-source" },
+          emptyCollection,
+          span,
+        ],
+      };
+      // Invoke the action closure: (rule-action captures-collection) →
+      // recipe. The only Form re-entry; everything above is native.
+      if (action.kind !== "closure") {
+        throw new Error(
+          "bmf_apply_rule_native: rule action must be a closure",
+        );
+      }
+      const cl = action.closure;
+      if (cl.params.length !== 1) {
+        throw new Error(
+          `bmf_apply_rule_native: action closure takes ${cl.params.length} params, expected 1`,
+        );
+      }
+      const callFrame = new Frame(cl.env);
+      callFrame.bind(cl.params[0]!, emptyCollection);
+      const recipe = walk(k, cl.body, callFrame);
+      // Result bmf-object — ("cell" rule-name recipe source inverse).
+      const resultObject: Value = {
+        kind: "list",
+        list: [
+          { kind: "str", str: "cell" },
+          ruleName,
+          recipe,
+          matchSource,
+          ruleInverse,
+        ],
+      };
+      // caps alist — cons "result" then "objects" so the alist order
+      // matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
+      const caps: Value = {
+        kind: "list",
+        list: [
+          {
+            kind: "list",
+            list: [{ kind: "str", str: "result" }, resultObject],
+          },
+          {
+            kind: "list",
+            list: [{ kind: "str", str: "objects" }, emptyCollection],
+          },
+        ],
+      };
+      const rest: Value = { kind: "list", list: streamList.slice(consumed) };
+      return {
+        kind: "list",
+        list: [{ kind: "str", str: "match" }, caps, rest],
+      };
+    });
 
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
@@ -2196,6 +2629,15 @@ function valueEqual(a: Value, b: Value): boolean {
       return a.str === (b as { str: string }).str;
     case "bool":
       return a.bool === (b as { bool: boolean }).bool;
+    case "nodeid": {
+      const bn = (b as { nodeid: NodeID }).nodeid;
+      return (
+        a.nodeid.pkg === bn.pkg &&
+        a.nodeid.level === bn.level &&
+        a.nodeid.type === bn.type &&
+        a.nodeid.inst === bn.inst
+      );
+    }
     default:
       return false;
   }
@@ -2383,6 +2825,19 @@ function walkFnCall(
   }
 
   if (calleeName !== null) {
+    // Env-aware natives first — need the caller's env (walk_recipe_here).
+    const envNe = k.envNatives.get(calleeName);
+    if (envNe !== undefined && frame.lookup(calleeName) === undefined) {
+      const envArgs: Value[] = [];
+      for (let i = 1; i < kids.length; i++) {
+        envArgs.push(walk(k, kids[i]!, frame));
+      }
+      if (envNe.category.type !== RBasic.UNDEFINED) {
+        k.trace?.record(envNe.category.type, envNe.category.inst);
+      }
+      k.trace?.recordNative(k.nameStr(envNe.name));
+      return envNe.fn(k, frame, envArgs);
+    }
     // Native dispatch
     const ne = k.natives.get(calleeName);
     if (ne !== undefined) {

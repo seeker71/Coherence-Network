@@ -1,13 +1,29 @@
 ; tests/source-compiler-runtime.fk - source sections compile inside Form runtime
 ;
-; preludes: form-stdlib/source-compiler.fk
+; Updated for the Recipe-emit path (a12b8f71, 7abdf048): BMF sections
+; lower to a sibling .fkb plus a (walk_recipe_here (read_form_binary
+; "...")) driver text. The original test asserted on inlined-text
+; markers ("bml-bmf-rules", "form-bmf-second", etc.) that lived in
+; the old text-emit path. Those bindings now live inside the .fkb;
+; the driver text is the small splice instruction.
+;
+; New assertions: the driver text references walk_recipe_here +
+; read_form_binary + the dialect's .fkb suffix, AND the sidecar file
+; on disk has non-zero size. The first proves source-compile routed
+; through the Recipe path; the second proves the Recipe was actually
+; written.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let quote = "\"";
     let rule-source = str_concat("[bml.bmf] {\n      field ::= $type:name $name:name ", str_concat(quote, str_concat(";", str_concat(quote, " => bml-emit-field;\n    }\n"))));
     let sample = str_concat("section ", rule-source);
-    let compiled = form-source-compile-text(sample);
-    let rule-score = add(if fsc-contains?(compiled, "bml-bmf-rules") then 10 else 0, if fsc-contains?(compiled, "form-bmf-second") then 20 else 0);
-    let object-score = add(if fsc-contains?(compiled, "bml-name") then 30 else 0, if fsc-contains?(compiled, "bmf-identity-inverse") then 40 else 0);
-    add(rule-score, object-score);
+    let out-path = "/tmp/form-test-source-compiler-runtime";
+    let compiled = form-source-compile-text(sample, out-path);
+    let sidecar = str_concat(out-path, ".bml.bmf.fkb");
+
+    let driver-score = add(if fsc-contains?(compiled, "walk_recipe_here") then 10 else 0, if fsc-contains?(compiled, "read_form_binary") then 20 else 0);
+    let dialect-score = add(if fsc-contains?(compiled, ".bml.bmf.fkb") then 30 else 0, if gt(file_size(sidecar), 0) then 40 else 0);
+    add(driver-score, dialect-score);
 }

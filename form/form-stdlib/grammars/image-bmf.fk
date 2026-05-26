@@ -287,10 +287,6 @@
     (defn image-byte0->256 (n)
         (if (eq n 0) 256 n))
 
-    (defn image-substr (s a b)
-        (if (ge a b) ""
-            (str_concat (char_at s a) (image-substr s (add a 1) b))))
-
     (defn image-png-signature? (bs)
         (and (eq (nth bs 0) 137)
         (and (eq (nth bs 1) 80)
@@ -421,9 +417,9 @@
 
     (defn image-svg-text? (text)
         (or (and (ge (str_len text) 4)
-                 (str_eq (image-substr text 0 4) "<svg"))
+                 (str_eq (substring text 0 4) "<svg"))
             (and (ge (str_len text) 9)
-                 (str_eq (image-substr text 0 5) "<?xml"))))
+                 (str_eq (substring text 0 5) "<?xml"))))
 
     (defn image-parse-svg-text (text)
         (if (image-svg-text? text)

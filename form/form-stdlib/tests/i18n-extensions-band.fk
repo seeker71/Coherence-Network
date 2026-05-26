@@ -1,0 +1,70 @@
+; i18n-extensions-band.fk — proves the sibling i18n loaders
+; (cli/lib/messages, web/content/presence-walk) compose as parallel
+; corpora at the same altitude as the original web/messages loader.
+;
+; Three kernels must agree on every locale × key probe and the
+; aggregate score.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk
+
+(do
+    ;; --- CLI corpus: help.usage across four locales ----------------
+    ;; en="Usage:" (6), de="Benutzung:" (10), es="Uso:" (4), id="Penggunaan:" (11)
+
+    (let cli-en (cli-i18n-load "en"))
+    (let cli-de (cli-i18n-load "de"))
+    (let cli-es (cli-i18n-load "es"))
+    (let cli-id (cli-i18n-load "id"))
+
+    (let cli-en-usage (i18n-string-by-path cli-en (list "help" "usage")))
+    (let cli-de-usage (i18n-string-by-path cli-de (list "help" "usage")))
+    (let cli-es-usage (i18n-string-by-path cli-es (list "help" "usage")))
+    (let cli-id-usage (i18n-string-by-path cli-id (list "help" "usage")))
+
+    ;; Score: sum of string lengths. 6 + 10 + 4 + 11 = 31.
+    (let cli-len-sum
+        (add (str_len cli-en-usage)
+        (add (str_len cli-de-usage)
+        (add (str_len cli-es-usage)
+             (str_len cli-id-usage)))))
+
+    ;; --- presence-walk corpus: page.directoryCta across four -------
+    ;; en="Walk the directory"     (18)
+    ;; de="Verzeichnis betreten"   (20)
+    ;; es="Recorrer el directorio" (22)
+    ;; id="Jelajahi direktori"     (18)
+
+    (let pw-en (presence-walk-i18n-load "en"))
+    (let pw-de (presence-walk-i18n-load "de"))
+    (let pw-es (presence-walk-i18n-load "es"))
+    (let pw-id (presence-walk-i18n-load "id"))
+
+    (let pw-en-cta (i18n-string-by-path pw-en (list "presenceWalk" "page" "directoryCta")))
+    (let pw-de-cta (i18n-string-by-path pw-de (list "presenceWalk" "page" "directoryCta")))
+    (let pw-es-cta (i18n-string-by-path pw-es (list "presenceWalk" "page" "directoryCta")))
+    (let pw-id-cta (i18n-string-by-path pw-id (list "presenceWalk" "page" "directoryCta")))
+
+    ;; Score: sum of string lengths. 18 + 20 + 22 + 18 = 78.
+    (let pw-len-sum
+        (add (str_len pw-en-cta)
+        (add (str_len pw-de-cta)
+        (add (str_len pw-es-cta)
+             (str_len pw-id-cta)))))
+
+    ;; --- non-null Recipe verification -------------------------------
+    ;; Each loader must return a Recipe with children (a JSON-OBJECT).
+    ;; Probe via len(node_children) > 0 → 1 per loader, else 0.
+
+    (defn loader-ok? (recipe) (if (gt (len (node_children recipe)) 0) 1 0))
+    (let loader-score
+        (add (loader-ok? cli-en)
+        (add (loader-ok? cli-de)
+        (add (loader-ok? cli-es)
+        (add (loader-ok? cli-id)
+        (add (loader-ok? pw-en)
+        (add (loader-ok? pw-de)
+        (add (loader-ok? pw-es)
+             (loader-ok? pw-id))))))))) ; expect 8
+
+    ;; Total = 31 + 78 + 8 = 117
+    (add cli-len-sum (add pw-len-sum loader-score)))

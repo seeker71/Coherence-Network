@@ -1,6 +1,14 @@
 ; source-compiler-multi-dialect-band.fk - one source carries several DSL sections
 ;
-; preludes: form-stdlib/source-compiler.fk
+; Updated for the Recipe-emit path (a12b8f71, 7abdf048): each section
+; lowers to a sibling .fkb plus a one-line walk_recipe_here driver.
+; The old assertions looked for inlined-text markers ("python-bmf-rules",
+; "go-emit-var-int", etc.) — those bindings now live inside the .fkb
+; sidecars. The new assertions verify that the source-compiler emitted
+; one driver line per section and wrote the corresponding sidecar to
+; disk with non-zero size.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 
 (do
     (let source
@@ -26,16 +34,17 @@
 }
 ")))))
 
-    (let compiled (form-source-compile-text source))
+    (let out-path "/tmp/form-test-multi-dialect")
+    (let compiled (form-source-compile-text source out-path))
 
     (sum
         (list
-            (if (fsc-contains? compiled "python-bmf-rules") 10 0)
-            (if (fsc-contains? compiled "go-bmf-rules") 20 0)
-            (if (fsc-contains? compiled "pybmf-emit-assign-int") 30 0)
-            (if (fsc-contains? compiled "go-emit-var-int") 40 0)
-            (if (fsc-contains? compiled "(let score (add 40 2))") 50 0)
-            (if (fsc-contains? compiled "score") 60 0)
-            (if (fsc-contains? compiled "natural-bmf-rules") 70 0)
-            (if (fsc-contains? compiled "natural-emit-fact-int") 80 0)
-            (if (fsc-contains? compiled "natural-source-fact-id-adalah") 90 0))))
+            (if (fsc-contains? compiled "walk_recipe_here") 10 0)
+            (if (fsc-contains? compiled ".python.bmf.fkb") 20 0)
+            (if (fsc-contains? compiled ".go.bmf.fkb") 30 0)
+            (if (fsc-contains? compiled ".form.bml.fkb") 40 0)
+            (if (fsc-contains? compiled ".natural.bmf.fkb") 50 0)
+            (if (gt (file_size (str_concat out-path ".python.bmf.fkb")) 0) 60 0)
+            (if (gt (file_size (str_concat out-path ".go.bmf.fkb")) 0) 70 0)
+            (if (gt (file_size (str_concat out-path ".form.bml.fkb")) 0) 80 0)
+            (if (gt (file_size (str_concat out-path ".natural.bmf.fkb")) 0) 90 0))))

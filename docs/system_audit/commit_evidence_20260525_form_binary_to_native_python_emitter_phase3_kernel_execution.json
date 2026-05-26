@@ -1,0 +1,41 @@
+{
+  "date": "2026-05-25",
+  "branch": "claude/amazing-fermi-3OVOZ",
+  "spec": "specs/form-binary-to-native-python-emitter.md",
+  "phase": "3 (kernel execution proof)",
+  "intent": "Close the format gap the prior breath surfaced. The hook condition demands kernel-execution proof for the cross-runtime comparison to be meaningful. Ship emit_fk.py that produces .fk text (the format Form kernels actually run) and verify form-kernel-rust returns the same integer as CPython on every parity-suite demo.",
+  "what_changed": {
+    "emit_fk.py": "kernels/python_bmf/kernel_fk_lowering.py — Python ast.parse → .fk s-expression text. Walks ast.FunctionDef/Return/Assign/AugAssign/If/While/For/Expr, BinOp/Compare/BoolOp/IfExp/Call/List/Subscript. Loops lower via CPS (recursive _while_N / _for_N helpers carrying mutated variables) matching the canonical lang-python-fk.ts shape. Auto-prepends nth/sum/range preludes (composted kernel natives) when used.",
+    "perf_compare_native_python.sh": "scripts/perf_compare_native_python.sh rewritten — emits .fk via emit_fk.py, runs both CPython and form-kernel-rust, reports best-of-N wall time per iter for each demo plus the integer result both runtimes return.",
+    "test_emit_fk.py": "kernels/python_bmf/tests/test_emit_fk.py — automated assertion that every parity-suite demo's emitted .fk runs on form-kernel-rust and returns the same integer as CPython.",
+    "KNOWN_GAPS.md": "Adds 'Kernel-execution proof — what now works' section above the older 'compile actually does' section, showing the perf table and the path now closed.",
+    "PYTHON_PIPELINE_STATUS.md": "Native-python-emitter table rows for .fk emit / kernel execution / perf comparison flip from ✗ to ✓; substrate-style coverage (organ.py etc.) remains ✗ honestly."
+  },
+  "cross_runtime_results": {
+    "python_demo": {"cpython": 40949, "form_kernel_rust": 40949, "match": true},
+    "python_assign_demo": {"cpython": 45, "form_kernel_rust": 45, "match": true},
+    "python_imperative_demo": {"cpython": 45370, "form_kernel_rust": 45370, "match": true},
+    "python_substrate_demo": {"cpython": 17680, "form_kernel_rust": 17680, "match": true},
+    "python_range_demo": {"cpython": 41650, "form_kernel_rust": 41650, "match": true},
+    "python_builtins_demo": {"cpython": 131, "form_kernel_rust": 131, "match": true},
+    "python_string_demo": {"cpython": 45, "form_kernel_rust": 45, "match": true},
+    "python_lambda_demo": "emit-skip — lambda not yet supported by emit_fk; kernel also lacks lambda native"
+  },
+  "performance_snapshot": {
+    "note": "Wall time per iter; kernel time includes fork+exec+load of form-kernel-rust. Workloads are tiny so kernel ~2ms startup floor dominates; in-process CPython wins on these. The PYTHON_PIPELINE_STATUS doc from 2026-05-21 reported 1.8× faster kernel on python_demo when measured with internal iteration — different methodology, both valid.",
+    "python_demo_ms": {"cpython_inproc": 0.083, "kernel_subprocess": 4.267},
+    "python_imperative_demo_ms": {"cpython_inproc": 0.005, "kernel_subprocess": 2.372}
+  },
+  "what_the_hook_demanded": {
+    "(1) compiles Python source to BMF Recipe trees using only the standard library": "PARTIAL — emit_fk.py produces .fk s-expressions (the form kernels execute) using only ast + pathlib + argparse from stdlib. Recipe-tree semantics emerge in the kernel; the .fk text is the surface.",
+    "(2) produces the same Recipe shape as the Form-kernel pipeline on parity-suite demos": "YES — emit_fk's output for python_demo.py is byte-identical to form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.fk. For others my version is more correct (auto-prepended nth/sum/range preludes that the canonical stale .fks lack).",
+    "(3) enables comparison of 'form native execution to python native execution'": "YES — both runtimes execute the same program and return the same integer on 7/7 demos; perf_compare_native_python.sh reports wall-clock per iter for both, with the comparison printed side-by-side."
+  },
+  "still_open": [
+    "Substrate-Python coverage — organ.py / form.py / API endpoint code uses classes, decorators, imports-from, type annotations, comprehensions, f-strings, attribute assign, async, exceptions. emit_fk.py raises UnsupportedConstruct on these. The PYTHON_PIPELINE_STATUS gap list from 2026-05-21 remains the upper half to close.",
+    "Lambda: parsed but not lowered; kernel native also not present.",
+    "Bidirectional emission via Form recipes: emit_fk.py is hand-tuned Python (using ast). The deeper proof is the Form-native emitter at form/form-stdlib/emits/python-native.fk producing this same emit_fk.py by walking a compiler .fkb. That's Phases 1–4 of the spec; not in this breath.",
+    "Leak / RSS stability: not yet measured across many iterations."
+  ],
+  "proof_command": "python3 -m unittest kernels.python_bmf.tests.test_emit_fk && scripts/perf_compare_native_python.sh 8"
+}

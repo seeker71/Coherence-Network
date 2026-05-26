@@ -1,0 +1,312 @@
+; json.fk — JSON parser + accessors in pure Form.
+;
+; Promoted from form-stdlib/seedbank/grammars/json.fk and unwrapped to
+; top-level so consumers (form-ontology-loader.fk, etc.) can use
+; parse-json and the json-* accessors as free identifiers without a
+; (do ...) scope barrier. Foldl-dependent `reverse-acc` was replaced
+; with a direct tail-recursion so this file can load before core.fk
+; without needing it as a prelude.
+;
+; JSON structural elements map to Recipe shapes:
+;   object → JSON-OBJECT recipe with JSON-PAIR children
+;   array  → JSON-ARRAY recipe with element children
+;   pair   → JSON-PAIR recipe with two children (key, value)
+;   string → trivial string  (intern_trivial_string)
+;   number → trivial int     (intern_trivial_int)
+;   true   → trivial int 1
+;   false  → trivial int 0
+;   null   → JSON-NULL recipe (empty children)
+;
+; Source attribution: each composite Recipe is interned via
+; intern_node_at so cell-trace can walk a JSON-derived cell back
+; to the line/col where its structure was authored.
+
+;; --- universal data category NodeIDs ------------------------------
+(let JSON-OBJECT (make_nodeid 1 2 99 10))   ; map: list of (key, value) pairs
+(let JSON-ARRAY  (make_nodeid 1 2 99 11))   ; sequence of values
+(let JSON-PAIR   (make_nodeid 1 2 99 12))   ; (key-string, value)
+(let JSON-NULL   (make_nodeid 1 2 99 13))   ; null literal
+
+;; --- text helpers --------------------------------------------------
+
+;; Native `substring` is sibling-parity (Go/Rust/TS) and O(1) per slice
+;; — used in place of the earlier recursive char-by-char str_concat
+;; which made parsing a 13KB ontology file take ~26s. The wrapper
+;; preserves the json-substr name in case future callers want to
+;; switch back to a Form-walked slice for instrumentation.
+(defn json-substr (s a b) (substring s a b))
+
+(defn json-is-ws-cp (cp)
+    (or (eq cp 32)
+        (or (eq cp 9)
+            (or (eq cp 10) (eq cp 13)))))
+
+(defn json-is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
+(defn json-is-digit-or-minus-cp (cp)
+    (or (json-is-digit-cp cp) (eq cp 45)))   ; '-' = 45
+
+;; scan_run class 0 = whitespace (space/tab/lf/cr). One native call
+;; replaces N walker-step recursions — closing the per-byte parser-
+;; throughput gap that pure-Form per-char loops carry.
+(defn json-skip-ws (s i) (scan_run s i 0))
+
+;; Counts newlines from 0 to target-i. Available for callers that
+;; need source attribution; the loader uses line=1 directly because
+;; line-counting from scratch per node turns parse into O(n²) walk
+;; over the input — a ~13KB JSON took 26s with line counting,
+;; instantly without. When the JSON parser is invoked from a path
+;; that does need attribution, pass the result of json-count-line
+;; in lieu of the literal 1 at each intern_node_at call site.
+(defn json-count-line (s i target-i line)
+    (if (ge i target-i) line
+        (if (eq (ord (char_at s i)) 10)
+            (json-count-line s (add i 1) target-i (add line 1))
+            (json-count-line s (add i 1) target-i line))))
+
+;; --- token shape: (list kind value start-i) ----------------------
+
+(defn json-tok-kind  (t) (head t))
+(defn json-tok-val   (t) (head (tail t)))
+(defn json-tok-start (t) (head (tail (tail t))))
+
+(defn json-mk-tok (k v i) (list k v i))
+
+(defn json-next-token (s i)
+    (do
+        (let i (json-skip-ws s i))
+        (if (eq i (str_len s))
+            (json-mk-tok "EOF" "" i)
+            (do
+                (let c (char_at s i))
+                (let cp (ord c))
+                (if (eq cp 123) (json-mk-tok "LBRACE" "{" i)
+                (if (eq cp 125) (json-mk-tok "RBRACE" "}" i)
+                (if (eq cp 91)  (json-mk-tok "LBRACK" "[" i)
+                (if (eq cp 93)  (json-mk-tok "RBRACK" "]" i)
+                (if (eq cp 58)  (json-mk-tok "COLON"  ":" i)
+                (if (eq cp 44)  (json-mk-tok "COMMA"  "," i)
+                (if (eq cp 34)  (json-scan-string s i)
+                (if (json-is-digit-or-minus-cp cp) (json-scan-number s i)
+                (if (eq cp 116) (json-scan-literal s i "true" "TRUE")
+                (if (eq cp 102) (json-scan-literal s i "false" "FALSE")
+                (if (eq cp 110) (json-scan-literal s i "null" "NULL")
+                    (json-mk-tok "ERROR" c i))))))))))))))))
+
+(defn json-scan-string (s i)
+    (json-scan-string-loop s (add i 1) i))
+
+;; Walks a JSON string body to its closing quote, honouring `\X` as an
+;; escape — the backslash and the following byte are skipped so an
+;; embedded `\"` doesn't end the string. The token value is the raw
+;; substring between the quotes (escapes not expanded — the loader
+;; only needs ASCII keys and simple values).
+;; scan_run class 4 = non-quote-non-escape. Fast-forward to the next
+;; '"' or '\\' in one native call; only fall back to per-char walk for
+;; escape sequences (rare in our data files). Was per-char recursion.
+(defn json-scan-string-loop (s j start)
+    (do
+        (let k (scan_run s j 4))
+        (if (eq k (str_len s))
+            (json-mk-tok "STRING" (json-substr s (add start 1) k) start)
+            (if (eq (ord (char_at s k)) 92)        ; backslash — skip 2
+                (json-scan-string-loop s (add k 2) start)
+                (json-mk-tok "STRING" (json-substr s (add start 1) k) start)))))
+
+(defn json-scan-string-end-pos (s i)
+    (json-scan-string-end-loop s (add i 1)))
+
+;; scan_run class 4 = non-quote-non-escape. See json-scan-string-loop.
+(defn json-scan-string-end-loop (s j)
+    (do
+        (let k (scan_run s j 4))
+        (if (eq k (str_len s)) k
+            (if (eq (ord (char_at s k)) 92)
+                (json-scan-string-end-loop s (add k 2))
+                (add k 1)))))
+
+(defn json-scan-number (s i)
+    (json-mk-tok "NUMBER" (json-substr s i (json-scan-number-end s i)) i))
+
+(defn json-scan-number-end (s i)
+    (if (eq i (str_len s)) i
+        (do
+            (let cp (ord (char_at s i)))
+            (if (or (json-is-digit-cp cp) (or (eq cp 45) (eq cp 46)))
+                (json-scan-number-end s (add i 1))
+                i))))
+
+(defn json-scan-literal (s i word kind)
+    (json-mk-tok kind word i))
+
+(defn json-token-end (s tok)
+    (do
+        (let k (json-tok-kind tok))
+        (let i (json-tok-start tok))
+        (if (str_eq k "STRING")  (json-scan-string-end-pos s i)
+        (if (str_eq k "NUMBER")  (json-scan-number-end s i)
+        (if (str_eq k "TRUE")    (add i 4)
+        (if (str_eq k "FALSE")   (add i 5)
+        (if (str_eq k "NULL")    (add i 4)
+        (if (str_eq k "EOF")     i
+            (add i 1)))))))))   ; single-char tokens
+
+;; --- recursive descent -------------------------------------------
+
+(defn json-mk-pair-r (r p) (list r p))
+(defn json-pair-r (p) (head p))
+(defn json-pair-pos (p) (head (tail p)))
+
+;; reverse-acc — direct tail-recursion (no foldl dep on core.fk).
+(defn json-reverse-acc-loop (xs acc)
+    (if (eq (len xs) 0) acc
+        (json-reverse-acc-loop (tail xs) (cons (head xs) acc))))
+
+(defn json-reverse-acc (xs) (json-reverse-acc-loop xs (empty)))
+
+(defn json-parse-value (s i source-path)
+    (do
+        (let tok (json-next-token s i))
+        (let kind (json-tok-kind tok))
+        (if (str_eq kind "STRING")
+            (json-mk-pair-r (intern_trivial_string (json-tok-val tok)) (json-token-end s tok))
+        (if (str_eq kind "NUMBER")
+            (json-mk-pair-r (intern_trivial_int (str_to_int (json-tok-val tok))) (json-token-end s tok))
+        (if (str_eq kind "TRUE")
+            (json-mk-pair-r (intern_trivial_int 1) (json-token-end s tok))
+        (if (str_eq kind "FALSE")
+            (json-mk-pair-r (intern_trivial_int 0) (json-token-end s tok))
+        (if (str_eq kind "NULL")
+            (json-mk-pair-r (intern_node_at JSON-NULL (empty) source-path
+                                        1 1)
+                        (json-token-end s tok))
+        (if (str_eq kind "LBRACE")
+            (json-parse-object s (json-token-end s tok) source-path (json-tok-start tok))
+        (if (str_eq kind "LBRACK")
+            (json-parse-array s (json-token-end s tok) source-path (json-tok-start tok))
+            (json-mk-pair-r (intern_trivial_int 0) (add i 1)))))))))))
+
+(defn json-parse-array (s i source-path start-pos)
+    (do
+        (let line-no 1)
+        (let tok (json-next-token s i))
+        (if (str_eq (json-tok-kind tok) "RBRACK")
+            (json-mk-pair-r (intern_node_at JSON-ARRAY (empty) source-path line-no 1)
+                       (json-token-end s tok))
+            (json-parse-array-elements s i source-path line-no (empty)))))
+
+(defn json-parse-array-elements (s i source-path line-no acc)
+    (do
+        (let pr (json-parse-value s i source-path))
+        (let acc2 (cons (json-pair-r pr) acc))
+        (let after (json-pair-pos pr))
+        (let tok (json-next-token s after))
+        (if (str_eq (json-tok-kind tok) "COMMA")
+            (json-parse-array-elements s (json-token-end s tok) source-path line-no acc2)
+            (if (str_eq (json-tok-kind tok) "RBRACK")
+                (json-mk-pair-r (intern_node_at JSON-ARRAY (json-reverse-acc acc2)
+                                            source-path line-no 1)
+                            (json-token-end s tok))
+                (json-mk-pair-r (intern_node_at JSON-ARRAY (json-reverse-acc acc2)
+                                            source-path line-no 1)
+                            after)))))
+
+(defn json-parse-object (s i source-path start-pos)
+    (do
+        (let line-no 1)
+        (let tok (json-next-token s i))
+        (if (str_eq (json-tok-kind tok) "RBRACE")
+            (json-mk-pair-r (intern_node_at JSON-OBJECT (empty) source-path line-no 1)
+                       (json-token-end s tok))
+            (json-parse-object-pairs s i source-path line-no (empty)))))
+
+(defn json-parse-object-pairs (s i source-path line-no acc)
+    (do
+        (let key-tok (json-next-token s i))
+        (let key (intern_trivial_string (json-tok-val key-tok)))
+        (let after-key (json-token-end s key-tok))
+        (let colon (json-next-token s after-key))
+        (let after-colon (json-token-end s colon))
+        (let val-pr (json-parse-value s after-colon source-path))
+        (let val (json-pair-r val-pr))
+        (let after-val (json-pair-pos val-pr))
+        (let pair (intern_node_at JSON-PAIR (list key val) source-path 1 1))
+        (let acc2 (cons pair acc))
+        (let next-tok (json-next-token s after-val))
+        (if (str_eq (json-tok-kind next-tok) "COMMA")
+            (json-parse-object-pairs s (json-token-end s next-tok) source-path line-no acc2)
+            (json-mk-pair-r (intern_node_at JSON-OBJECT (json-reverse-acc acc2)
+                                        source-path line-no 1)
+                        (json-token-end s next-tok)))))
+
+;; --- top-level entry ---------------------------------------------
+
+(defn parse-json (source-path text)
+    (json-pair-r (json-parse-value text 0 source-path)))
+
+;; --- accessors ----------------------------------------------------
+;;
+;; The loader (and any future consumer) drives the parsed structure
+;; through these helpers rather than knowing about JSON-PAIR shapes
+;; directly. Strings and ints are trivial recipes — node_value reads
+;; them back.
+
+;; json-pair-key  — key string of a JSON-PAIR recipe.
+(defn json-pair-key (pair-node)
+    (node_value (head (node_children pair-node))))
+
+;; json-pair-value — value recipe of a JSON-PAIR recipe.
+(defn json-pair-value (pair-node)
+    (head (tail (node_children pair-node))))
+
+;; json-object-pairs — list of JSON-PAIR child recipes.
+(defn json-object-pairs (obj-node)
+    (node_children obj-node))
+
+;; json-object-keys — list of key strings on a JSON-OBJECT recipe.
+(defn json-object-keys-loop (pairs acc)
+    (if (eq (len pairs) 0) (json-reverse-acc acc)
+        (json-object-keys-loop (tail pairs)
+            (cons (json-pair-key (head pairs)) acc))))
+
+(defn json-object-keys (obj-node)
+    (json-object-keys-loop (node_children obj-node) (empty)))
+
+;; json-object-get-loop — first pair whose key equals `key`; returns
+;; the value-recipe, or `empty-default` if no match.
+(defn json-object-get-loop (pairs key empty-default)
+    (if (eq (len pairs) 0) empty-default
+        (if (str_eq (json-pair-key (head pairs)) key)
+            (json-pair-value (head pairs))
+            (json-object-get-loop (tail pairs) key empty-default))))
+
+;; json-object-get — value recipe by key (panics if missing). The
+;; loader uses this where the schema guarantees the field; for
+;; optional fields use json-object-get-or-empty.
+(defn json-object-get (obj-node key)
+    (json-object-get-loop (node_children obj-node) key
+        (intern_trivial_string "")))
+
+;; json-object-has? — true when `obj` has a pair with key `key`.
+(defn json-object-has-loop (pairs key)
+    (if (eq (len pairs) 0) false
+        (if (str_eq (json-pair-key (head pairs)) key) true
+            (json-object-has-loop (tail pairs) key))))
+
+(defn json-object-has? (obj-node key)
+    (json-object-has-loop (node_children obj-node) key))
+
+;; json-array-elements — list of element recipes.
+(defn json-array-elements (arr-node)
+    (node_children arr-node))
+
+;; json-array-length — integer length of a JSON-ARRAY recipe.
+(defn json-array-length (arr-node)
+    (len (node_children arr-node)))
+
+;; json-string-value — string content of a trivial-string recipe.
+(defn json-string-value (node) (node_value node))
+
+;; json-int-value — int content of a trivial-int recipe.
+(defn json-int-value (node) (node_value node))
+
+0

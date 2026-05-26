@@ -1,0 +1,98 @@
+; bulk-scan-natives.form — closing the per-byte parser gap
+;
+; The teaching: Form's walker is fast enough for orchestration, slow
+; enough for per-byte work that any data-grammar parser (JSON, YAML,
+; CSV, BMF, the body's own s-expressions) becomes the bottleneck if
+; written as char-by-char recursion. The fix is not to special-case
+; the grammar — it's to expose a tiny family of bulk-scan primitives
+; that every parser can compose.
+
+(do
+    ;; --- measured roots --------------------------------------------
+    ;;
+    ;; form-ontology.json, 18 KB:
+    ;;   pure-Form parse, original             25 000 ms  (O(N²) str_concat)
+    ;;   + substring native                       150 ms  (167× — agent
+    ;;                                                      caught the O(N²))
+    ;;   + scan_run for skip-ws + scan-string      84 ms  (1.8× — bulk
+    ;;                                                      byte loops)
+    ;;   Python json.load                          20 ms  (4.2× faster)
+    ;;   jq                                         7 ms  (12× faster)
+    ;;
+    ;; Form is now within one order of magnitude of native parsers
+    ;; at the scale of small data files. That's the working zone for
+    ;; "Form as universal runtime translator" at the ontology + config
+    ;; scale. At document scale (10MB+) native BMF runtime (Path C in
+    ;; the response thread) is the next horizon.
+
+    ;; --- the universal pattern -------------------------------------
+    ;;
+    ;; Every parser does three layers of byte work:
+    ;;
+    ;;   1. tokenize:    bytes → tokens         (per-byte loop)
+    ;;   2. parse:       tokens → recipe        (per-token state machine)
+    ;;   3. interpret:   recipe → value         (per-node walk)
+    ;;
+    ;; Form's walker dispatches at ~100-500 ns per step. Per-byte
+    ;; recursion at the tokenize layer pays this cost N times per
+    ;; input byte. The walker is fine at layers 2-3 (per-token work
+    ;; is ~5-10x cheaper per char than per-byte work because tokens
+    ;; cover multiple bytes); the bottleneck is layer 1.
+
+    ;; --- the form-native answer ------------------------------------
+    ;;
+    ;; Expose a small family of bulk-scan natives that do per-byte
+    ;; work entirely in the kernel (Go/Rust/TS inline byte loops),
+    ;; staying generic across all data grammars. Form authors the
+    ;; parser; native does the per-byte loops.
+    ;;
+    ;; scan_run(s, from, class_code) → end-index
+    ;;   class 0: whitespace (space, tab, lf, cr)
+    ;;   class 1: ascii-digit
+    ;;   class 2: ascii-alpha
+    ;;   class 3: identifier-char (alpha + digit + _ + -)
+    ;;   class 4: non-quote-non-escape (skip-string-body)
+    ;;   class 5: non-newline (skip-comment)
+    ;;
+    ;; Adding a class: one branch in a small switch per kernel.
+    ;; Adding a new GRAMMAR: zero kernel changes — compose the scans
+    ;; from Form, just like json.fk's skip-ws and scan-string do.
+
+    ;; --- fidelity preserved ----------------------------------------
+    ;;
+    ;; scan_run returns an integer — the parser still does the recipe
+    ;; construction via intern_node, source attribution via line/col,
+    ;; trace preservation through every token. The native is a leaf
+    ;; primitive, not a black box.
+
+    ;; --- not-a-special-case discipline -----------------------------
+    ;;
+    ;; The same primitives serve:
+    ;;   - json.fk's skip-ws + scan-string (this commit)
+    ;;   - BMF object-rule tokenizer (next breath candidate)
+    ;;   - CSV field scanner (when written)
+    ;;   - YAML/TOML when ported (class 0 + class 5 are most of it)
+    ;;   - the body's own s-expression tokenizer (when migrated)
+    ;;
+    ;; If a grammar needs a class scan_run doesn't cover, the answer
+    ;; is to add that class to scan_run — not to add a grammar-
+    ;; specific native. The classifier table grows; the primitive
+    ;; stays one function in each kernel.
+
+    ;; --- horizons named --------------------------------------------
+    ;;
+    ;; Path B — .fkb cache for parsed data: pre-compute parse results
+    ;;   to substrate-native binary, regenerate when source mtime
+    ;;   drifts. Eliminates RE-parse cost; doesn't speed first parse.
+    ;;
+    ;; Path C — BMF rules natively executable: kernel runs BMF state
+    ;;   machines directly. ALL grammars (every file in grammars/)
+    ;;   get native speed from one kernel feature. ~500 LoC per
+    ;;   kernel. The biggest payoff toward "universal runtime
+    ;;   translator at any scale."
+    ;;
+    ;; Path D — walker bytecode mode: compile hot recipes to flat
+    ;;   dispatch. Speeds everything, not just parsers. Trace
+    ;;   identity preserved (bytecode keyed by Recipe NodeID).
+
+    "bulk-scan-natives: form is within one order of magnitude of native parsers — without making any grammar a special case")

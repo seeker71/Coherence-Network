@@ -409,6 +409,10 @@ def sense_locale_parity() -> list[str]:
     bilingual in name only. The number speaks; the body chooses what
     to do with it.
     """
+    # Substrate-altitude companion: form/form-stdlib/i18n-parity.fk
+    # reaches the same per-locale leaf counts through (i18n-load → recursive
+    # node_category walk). Python stays the runtime reporter; Form proves
+    # the corpus is reachable from substrate without the Python boundary.
     messages_dir = ROOT / "web" / "messages"
     if not messages_dir.is_dir():
         return ["  web/messages/ directory not found"]
@@ -698,6 +702,42 @@ def sense_form_engine() -> list[str]:
         "  (Each missing arm is one `@1.2.<t>.<i>` row in form-engine.form away"
     )
     lines.append("   from symmetric. Asymmetry is signal, not failure.)")
+    return lines
+
+
+def sense_form_ontology() -> list[str]:
+    """Does the Form-side ontology table agree with the kernel parsers?
+
+    `form/form-stdlib/form-ontology.json` holds the canonical (name,
+    type, inst) rows for parser-special-form primitives (add/gt/and/...)
+    and composite shapes (do/let/if/fndef/...). The Form-side bindings
+    are materialised at load time by form-stdlib/form-ontology-loader.fk
+    (reading the JSON via parse-json from form-stdlib/json.fk). Each
+    kernel (Go/Rust/TS) has its own switch table in parseSexp/buildVerb.
+    If a primitive is added to one but not the other, every test that
+    doesn't happen to exercise it stays silent through the drift.
+
+    Delegates to form/scripts/validate_form_ontology.py — the canonical
+    drift reader. Silent on a clean match; surfaces the divergence
+    otherwise.
+    """
+    script = ROOT / "form" / "scripts" / "validate_form_ontology.py"
+    if not script.is_file():
+        return ["  (form/scripts/validate_form_ontology.py not present; skipping)"]
+    try:
+        result = subprocess.run(
+            ["python3", str(script)],
+            capture_output=True, text=True, timeout=15,
+        )
+    except Exception as exc:
+        return [f"  (validate_form_ontology.py did not run cleanly: {exc})"]
+    out = (result.stdout + result.stderr).strip()
+    if result.returncode == 0:
+        return ["  form ontology matches kernel parsers (Go/Rust/TS)"]
+    lines = ["  ontology and kernel parsers have drifted:"]
+    for line in out.splitlines():
+        if line.strip():
+            lines.append(f"    {line}")
     return lines
 
 
@@ -1178,6 +1218,7 @@ def main() -> int:
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
+        ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),

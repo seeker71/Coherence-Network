@@ -1,0 +1,93 @@
+; embedding-as-recipe.fk — a vector embedding IS a Recipe.
+;
+; The body's substrate primitive: two semantically-identical inputs
+; across modalities, encoded as embeddings, intern to the SAME Recipe
+; NodeID via content-addressing. That IS the cross-domain transit —
+; combination (1) of docs/coherence-substrate/cross-domain-universal-transit.form.
+;
+; A vector embedding here is a Recipe under the stable EMBEDDING blueprint
+; whose children are trivial-int components (quantized scalars). The kernel's
+; content-addressed intern means same children → same NodeID, regardless of
+; whether the embedding came from text, image, audio, or any other modality.
+;
+; Float kernel-natives don't exist yet; we use ints as stand-in components
+; (e.g. quantized to 0..1000). That's enough to PROVE the substrate primitive
+; — the same hashing machinery applies once intern_trivial_float lands.
+;
+; Uses kernel natives: make_nodeid, intern_trivial_int, intern_node, node_eq,
+; node_children, node_value.
+
+(do
+    ;; --- stable blueprint ------------------------------------------
+    ;;
+    ;; EMBEDDING_BLUEPRINT — the structural identity every embedding
+    ;; Recipe carries. (1, 2, 99, 1100) sits in the same coordinate
+    ;; family as CONCEPT-V1 (1, 2, 99, 951): package=BDomain.SUBSTRATE,
+    ;; level=Recipe, type=99 (composite-leaf), instance=1100 (embedding).
+
+    (defn EMBEDDING_BLUEPRINT () (make_nodeid 1 2 99 1100))
+
+    ;; --- intern a vector as an embedding Recipe --------------------
+    ;;
+    ;; embedding-intern-loop walks the int list in order, building a
+    ;; reversed accumulator of interned trivial-int recipes. The caller
+    ;; reverses once at the end so child order matches vector order.
+
+    (defn embedding-reverse-loop (in out)
+        (if (eq (len in) 0) out
+            (embedding-reverse-loop (tail in) (cons (head in) out))))
+
+    (defn embedding-reverse (xs)
+        (embedding-reverse-loop xs (empty)))
+
+    (defn embedding-intern-loop (values acc)
+        (if (eq (len values) 0) acc
+            (embedding-intern-loop (tail values)
+                (cons (intern_trivial_int (head values)) acc))))
+
+    (defn embedding-from-vector (int-list)
+        (intern_node (EMBEDDING_BLUEPRINT)
+            (embedding-reverse (embedding-intern-loop int-list (empty)))))
+
+    ;; --- structural identity ---------------------------------------
+    ;;
+    ;; Two embeddings with the same components intern to the same NodeID
+    ;; — node_eq is the cross-domain dedup witness.
+
+    (defn embedding-equal? (a b) (node_eq a b))
+
+    ;; --- L1 distance over children ---------------------------------
+    ;;
+    ;; Sum of |a[i] - b[i]| across the child positions. Children that
+    ;; run past the shorter list are ignored — vectors of different
+    ;; arity have undefined distance in this v1 (production embeddings
+    ;; share an arity by construction).
+
+    (defn embedding-abs (n)
+        (if (lt n 0) (sub 0 n) n))
+
+    (defn embedding-distance-loop (as bs acc)
+        (if (eq (len as) 0) acc
+            (if (eq (len bs) 0) acc
+                (embedding-distance-loop (tail as) (tail bs)
+                    (add acc
+                        (embedding-abs
+                            (sub (node_value (head as))
+                                 (node_value (head bs)))))))))
+
+    (defn embedding-distance (a b)
+        (embedding-distance-loop
+            (node_children a) (node_children b) 0))
+
+    ;; --- accessor: children as plain int list ----------------------
+
+    (defn embedding-children-loop (children acc)
+        (if (eq (len children) 0) acc
+            (embedding-children-loop (tail children)
+                (cons (node_value (head children)) acc))))
+
+    (defn embedding-children-as-list (e)
+        (embedding-reverse
+            (embedding-children-loop (node_children e) (empty))))
+
+    0)

@@ -1,0 +1,60 @@
+; embedding-recipe-band.fk — embedding-IS-Recipe witness.
+;
+; Proves the substrate primitive named in
+; docs/coherence-substrate/cross-domain-universal-transit.form (1):
+;   * Two vectors with identical components intern to the SAME NodeID
+;     — content-addressing is the cross-domain dedup mechanism.
+;   * Different components intern to different NodeIDs.
+;   * L1 distance composes naturally over the Recipe's children.
+;
+; The point: one NodeID per semantic identity, regardless of which
+; modality produced the embedding. The substrate IS the latent space.
+;
+; preludes: form-stdlib/json.fk form-stdlib/embedding-as-recipe.fk
+
+(do
+    ;; Three vectors. e1 and e2 are the same vector — imagine modality A
+    ;; (text encoder) and modality B (image encoder) both producing the
+    ;; same quantized embedding for "a cat". e3 is close but different.
+
+    (let e1 (embedding-from-vector (list 10 20 30 40 50)))
+    (let e2 (embedding-from-vector (list 10 20 30 40 50)))
+    (let e3 (embedding-from-vector (list 10 20 30 40 51)))
+    (let e-big (embedding-from-vector (list 100 200 300 400 500)))
+
+    ;; --- cross-domain dedup: same vector → same NodeID -------------
+    (let dedup-score
+        (if (embedding-equal? e1 e2) 100 0))
+
+    ;; --- distinct vectors → distinct NodeIDs -----------------------
+    (let distinct-score
+        (if (embedding-equal? e1 e3) 0 200))
+
+    ;; --- zero distance for identical vectors -----------------------
+    (let d12 (embedding-distance e1 e2))
+    (let d12-score
+        (if (eq d12 0) 300 0))
+
+    ;; --- unit distance for one-component delta ---------------------
+    (let d13 (embedding-distance e1 e3))
+    (let d13-score
+        (if (eq d13 1) 400 0))
+
+    ;; --- monotonicity sanity: small delta < big delta --------------
+    (let d1big (embedding-distance e1 e-big))
+    (let monotone-score
+        (if (lt d13 d1big) 500 0))
+
+    ;; --- accessor round-trip ---------------------------------------
+    (let kids (embedding-children-as-list e1))
+    (let accessor-score
+        (add
+            (if (eq (len kids) 5) 50 0)
+            (if (eq (head kids) 10) 60 0)))
+
+    ;; Expected: 100 + 200 + 300 + 400 + 500 + 50 + 60 = 1610
+    (add dedup-score
+    (add distinct-score
+    (add d12-score
+    (add d13-score
+    (add monotone-score accessor-score))))))

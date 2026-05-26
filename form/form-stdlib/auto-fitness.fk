@@ -1,0 +1,126 @@
+; auto-fitness.fk — autoresearch loop with a real fitness landscape.
+;
+; The earlier autoresearch-loop.fk evolves candidates whose (compute,
+; loss) values are sealed atoms. The substrate could mutate either
+; dimension freely — useful for proving the math, but not honest
+; about real encoders. A real encoder's loss is DETERMINED by its
+; parameters; you don't get to pick it independently.
+;
+; This cell wires a real fitness function into the loop. A candidate
+; carries its parameter (in the compute field of pareto.fk); the
+; loss field gets SNAPPED to fitness(parameter) every time the
+; substrate evaluates the candidate. The mutator now only varies
+; the parameter; the loss follows.
+;
+; The teaching: the autoresearch loop, given a frozen fitness function
+; it has never seen the source of, discovers the Pareto frontier of
+; that function through pure mutation + selection. No reward shaping,
+; no gradient — the substrate's content-addressing dedups identical
+; (parameter, evaluated-loss) pairs across generations.
+;
+; Prelude requirement: form-stdlib/json.fk, form-stdlib/pareto.fk,
+; form-stdlib/autoresearch-loop.fk.
+
+(do
+    ;; --- snap loss to fitness --------------------------------------
+    ;;
+    ;; Given a candidate and a fitness function, replace the loss
+    ;; field with fitness(parameter). Content-addressing means two
+    ;; candidates with the same parameter intern to the same NodeID
+    ;; (assuming the fitness function is deterministic).
+
+    (defn auto-fit-snap (c fitness-fn)
+        (pareto-candidate
+            (pareto-compute c)
+            (fitness-fn (pareto-compute c))))
+
+    (defn auto-fit-snap-loop (genome fitness-fn acc)
+        (if (eq (len genome) 0) (json-reverse-acc acc)
+            (auto-fit-snap-loop (tail genome) fitness-fn
+                (cons (auto-fit-snap (head genome) fitness-fn) acc))))
+
+    (defn auto-fit-snap-all (genome fitness-fn)
+        (auto-fit-snap-loop genome fitness-fn (empty)))
+
+    ;; --- parameter mutator -----------------------------------------
+    ;;
+    ;; Only vary the parameter (compute). Loss snaps at the next
+    ;; evaluation. Returns 2 variants per candidate: ±1 parameter,
+    ;; clamped to ≥ 0. Loss starts as 0 (placeholder); auto-fit-snap
+    ;; replaces it before the frontier compare.
+
+    (defn auto-fit-mutate-one (c)
+        (do
+            (let p (pareto-compute c))
+            (list (pareto-candidate (auto-clamp (sub p 1)) 0)
+                  (pareto-candidate (add p 1) 0))))
+
+    (defn auto-fit-mutate-all-loop (genome acc)
+        (if (eq (len genome) 0) acc
+            (auto-fit-mutate-all-loop (tail genome)
+                (auto-list-concat (auto-fit-mutate-one (head genome)) acc))))
+
+    (defn auto-fit-mutate-all (genome)
+        (auto-fit-mutate-all-loop genome (empty)))
+
+    ;; --- list dedup by node identity --------------------------------
+    ;;
+    ;; pareto-frontier preserves all list positions even when their
+    ;; NodeIDs match (two entries of the same Recipe survive as two
+    ;; slots). Across generations this bloats the genome geometrically.
+    ;; Content-addressing means equal candidates share one NodeID;
+    ;; this pass collapses the list to one slot per distinct NodeID.
+
+    (defn auto-list-contains? (lst target)
+        (if (eq (len lst) 0) false
+            (if (node_eq (head lst) target) true
+                (auto-list-contains? (tail lst) target))))
+
+    (defn auto-list-dedup-loop (genome acc)
+        (if (eq (len genome) 0) (json-reverse-acc acc)
+            (do
+                (let c (head genome))
+                (if (auto-list-contains? acc c)
+                    (auto-list-dedup-loop (tail genome) acc)
+                    (auto-list-dedup-loop (tail genome) (cons c acc))))))
+
+    (defn auto-list-dedup (genome)
+        (auto-list-dedup-loop genome (empty)))
+
+    ;; --- one generation with real fitness --------------------------
+    ;;
+    ;; The flow:
+    ;;   1. Generate parameter-mutants of the current genome.
+    ;;   2. Snap every candidate's loss to fitness(parameter).
+    ;;   3. Dedup by NodeID.
+    ;;   4. Frontier the deduped union.
+
+    (defn auto-fit-evolve-once (genome fitness-fn)
+        (do
+            (let mutants (auto-fit-mutate-all genome))
+            (let candidates (auto-list-concat genome mutants))
+            (let snapped (auto-fit-snap-all candidates fitness-fn))
+            (let deduped (auto-list-dedup snapped))
+            (pareto-frontier deduped)))
+
+    (defn auto-fit-evolve-loop (genome fitness-fn n)
+        (if (eq n 0) genome
+            (auto-fit-evolve-loop
+                (auto-fit-evolve-once genome fitness-fn)
+                fitness-fn
+                (sub n 1))))
+
+    (defn auto-fit-evolve (genome fitness-fn n)
+        (auto-fit-evolve-loop genome fitness-fn n))
+
+    ;; --- knee-loss under real fitness ------------------------------
+    ;;
+    ;; Snap the genome first, then query pareto-knee at the given
+    ;; budget. Returns the (parameter, loss) of the chosen candidate
+    ;; — the best fidelity achievable at that compute, as the body
+    ;; currently knows it.
+
+    (defn auto-fit-knee (genome fitness-fn budget)
+        (pareto-knee (auto-fit-snap-all genome fitness-fn) budget))
+
+    0)

@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net"
 	"os"
 	"sort"
 	"strconv"
@@ -29,6 +30,38 @@ import (
 	"sync"
 	"time"
 )
+
+// --- Socket natives — L1 physical layer (TCP) ---------------------------
+// Connection table. Handles are monotone ints; the kernel never reveals
+// the underlying Listener/Conn to Form code — only the handle. -1 always
+// means error (sibling parity with Rust/TS). socket_close on -1 is a
+// no-op returning -1.
+var (
+	socketTableMu  sync.Mutex
+	socketHandles  = map[int64]interface{}{} // listener or conn
+	socketNextHnd  int64                     = 0
+)
+
+func socketRegister(v interface{}) int64 {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	socketNextHnd++
+	h := socketNextHnd
+	socketHandles[h] = v
+	return h
+}
+
+func socketLookup(h int64) interface{} {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	return socketHandles[h]
+}
+
+func socketDrop(h int64) {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	delete(socketHandles, h)
+}
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -348,7 +381,8 @@ type Kernel struct {
 	strs    []string
 	strIdx  map[string]NameID
 	next    uint32
-	natives map[NameID]NativeEntry
+	natives    map[NameID]NativeEntry
+	envNatives map[NameID]EnvAwareNativeEntry
 	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
 	// intern_node_at; read by node_source. The satsang-load-bearing
 	// surface: every cell's state traceable to the source line that
@@ -383,6 +417,7 @@ func NewKernel() *Kernel {
 		walkCache:  make(map[NodeID]Value),
 		next:       1,
 		natives:    make(map[NameID]NativeEntry),
+		envNatives: make(map[NameID]EnvAwareNativeEntry),
 	}
 	k.registerNatives()
 	return k
@@ -811,12 +846,30 @@ func (f *Frame) Lookup(name NameID) (Value, bool) {
 
 type NativeFn func(k *Kernel, args []Value) Value
 
+// EnvAwareNativeFn — natives that need access to the caller's env to do
+// in-scope evaluation (e.g. walk_recipe_here, which walks a pre-built
+// Recipe in the calling scope so its `let` bindings land in the caller's
+// env, not a fresh one). Separate registry to avoid changing the existing
+// NativeFn signature across ~60 sites.
+type EnvAwareNativeFn func(k *Kernel, env *Frame, args []Value) Value
+
+type EnvAwareNativeEntry struct {
+	Name     NameID
+	Category NodeID
+	Fn       EnvAwareNativeFn
+}
+
 // registerNative — central registration point. The string name is
 // interned once into a NameID; runtime dispatch is u32-keyed. Each
 // native carries the Form category it expresses (Blueprint attribution).
 func (k *Kernel) registerNative(name string, category NodeID, fn NativeFn) {
 	id := k.internName(name)
 	k.natives[id] = NativeEntry{Name: id, Category: category, Fn: fn}
+}
+
+func (k *Kernel) registerEnvNative(name string, category NodeID, fn EnvAwareNativeFn) {
+	id := k.internName(name)
+	k.envNatives[id] = EnvAwareNativeEntry{Name: id, Category: category, Fn: fn}
 }
 
 func (k *Kernel) registerNatives() {
@@ -851,6 +904,120 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
+	})
+	// str_find — Go-level substring search starting at index `from`.
+	// Signature: (str_find s needle from) → int (index or -1). The whole
+	// search runs in this Go loop (uses strings.Index after slicing); no
+	// Form closure dispatch per byte, no Form recursion. This is what
+	// `tokenizeSexp` does internally — exposed for Form scanners that
+	// would otherwise blow the walker stack with per-character recursion.
+	k.registerNative("str_find", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		needle := args[1].Str
+		from := int(args[2].Int)
+		if from < 0 {
+			from = 0
+		}
+		if from > len(s) {
+			return Value{Kind: VInt, Int: -1}
+		}
+		idx := strings.Index(s[from:], needle)
+		if idx < 0 {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(from + idx)}
+	})
+	// scan_run — return the end-index where a contiguous run of bytes
+	// matching `class_code` ends (exclusive). Generic per-byte loop in
+	// Go avoids the walker dispatch a pure-Form recursion would pay
+	// per character — closing the per-byte parser-throughput gap that
+	// makes Form unviable as a universal runtime translator otherwise.
+	// Class codes (sibling-parity across Go/Rust/TS):
+	//   0  whitespace          space, tab, lf, cr
+	//   1  ascii-digit         '0'-'9'
+	//   2  ascii-alpha         'a'-'z', 'A'-'Z'
+	//   3  identifier-char     alpha + digit + '_' + '-'
+	//   4  non-quote-non-escape   anything except '"' and '\\'
+	//   5  non-newline         anything except '\n'
+	// Used by json.fk's skip-ws / scan-string / scan-number, BMF
+	// tokenizers, CSV scanners, future YAML/TOML parsers — not
+	// JSON-special. A new class adds one branch to a small switch.
+	k.registerNative("scan_run", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		from := int(args[1].Int)
+		class := int(args[2].Int)
+		if from < 0 {
+			from = 0
+		}
+		n := len(s)
+		end := from
+		switch class {
+		case 0: // whitespace
+			for end < n {
+				c := s[end]
+				if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+					break
+				}
+				end++
+			}
+		case 1: // ascii digit
+			for end < n && s[end] >= '0' && s[end] <= '9' {
+				end++
+			}
+		case 2: // ascii alpha
+			for end < n {
+				c := s[end]
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+					break
+				}
+				end++
+			}
+		case 3: // identifier char
+			for end < n {
+				c := s[end]
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+					(c >= '0' && c <= '9') || c == '_' || c == '-') {
+					break
+				}
+				end++
+			}
+		case 4: // non-quote-non-escape
+			for end < n && s[end] != '"' && s[end] != '\\' {
+				end++
+			}
+		case 5: // non-newline
+			for end < n && s[end] != '\n' {
+				end++
+			}
+		default:
+			panic(fmt.Sprintf("scan_run: unknown class_code %d (valid: 0-5)", class))
+		}
+		return Value{Kind: VInt, Int: int64(end)}
+	})
+	// string_fold — Go-level streaming iteration over a string's bytes.
+	// Signature: (string_fold s init step) where step is a closure of
+	// (acc, char) → acc. Whole iteration in this Go for-loop; no Form-
+	// level recursion. Lets the substrate process arbitrary-length input
+	// streams without piling kernel stack frames — the universal-translator
+	// stream property the goal's first sentence demands.
+	k.registerNative("string_fold", catCall(), func(k *Kernel, args []Value) Value {
+		s := args[0].Str
+		acc := args[1]
+		fnVal := args[2]
+		if fnVal.Kind != VClosure {
+			panic("string_fold: third arg must be a closure")
+		}
+		cl := fnVal.Cl
+		if len(cl.Params) != 2 {
+			panic(fmt.Sprintf("string_fold: step closure wants 2 params (acc char), got %d", len(cl.Params)))
+		}
+		for i := 0; i < len(s); i++ {
+			call := NewCallFrame(cl.Env, len(cl.Params))
+			call.Bind(cl.Params[0], acc)
+			call.Bind(cl.Params[1], Value{Kind: VStr, Str: string(s[i])})
+			acc = k.walk(cl.Body, call)
+		}
+		return acc
 	})
 	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
@@ -1023,6 +1190,20 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// write_form_binary — emit a Recipe to .fkb on disk in the full
+	// artifact format (string table + tree). Sibling to read_form_binary.
+	// Use when source-compile output needs to cross kernel invocations:
+	// serialize-recipe alone drops string indices, which break under
+	// fresh string tables on load. This format embeds the strings.
+	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
+		path := args[0].Str
+		nid := args[1].Nid
+		bytes := serializeArtifact(k, nid)
+		if err := os.WriteFile(path, bytes, 0644); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(len(bytes))}
+	})
 	k.registerNative("read_form_binary", catCall(), func(k *Kernel, args []Value) Value {
 		b, err := os.ReadFile(args[0].Str)
 		if err != nil {
@@ -1040,6 +1221,17 @@ func (k *Kernel) registerNatives() {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: info.Size()}
+	})
+	// file_mtime — modification time in unix seconds; -1 if file missing.
+	// Used by Form-side cache layers (form-stdlib/cache.fk) to decide
+	// when a .fkb projection of a source file is stale. Generic: any
+	// "regenerate cache when source newer" pattern can compose this.
+	k.registerNative("file_mtime", catCall(), func(_ *Kernel, args []Value) Value {
+		info, err := os.Stat(args[0].Str)
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: info.ModTime().Unix()}
 	})
 	k.registerNative("file_byte_at", catCall(), func(_ *Kernel, args []Value) Value {
 		if args[1].Int < 0 {
@@ -1071,6 +1263,92 @@ func (k *Kernel) registerNatives() {
 		buf := make([]byte, length)
 		n, _ := f.ReadAt(buf, offset)
 		return Value{Kind: VStr, Str: string(buf[:n])}
+	})
+
+	// --- Socket natives — L1 physical layer for inter-cell IO ----------
+	// Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success, -1
+	// error). The connection table is package-level (socketHandles).
+	// (socket_listen port)             → handle | -1
+	// (socket_accept listener-handle)  → conn-handle | -1   (BLOCKS)
+	// (socket_connect host port)       → conn-handle | -1
+	// (socket_send conn bytes-string)  → bytes-sent | -1
+	// (socket_recv conn max-bytes)     → received-string ("" on close)
+	// (socket_close handle)            → 0 | -1
+	k.registerNative("socket_listen", catCall(), func(_ *Kernel, args []Value) Value {
+		port := args[0].Int
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(ln)}
+	})
+	k.registerNative("socket_accept", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		ln, ok := v.(net.Listener)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		c, err := ln.Accept()
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(c)}
+	})
+	k.registerNative("socket_connect", catCall(), func(_ *Kernel, args []Value) Value {
+		host := args[0].Str
+		port := args[1].Int
+		c, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(c)}
+	})
+	k.registerNative("socket_send", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		c, ok := v.(net.Conn)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		n, err := c.Write([]byte(args[1].Str))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(n)}
+	})
+	k.registerNative("socket_recv", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		c, ok := v.(net.Conn)
+		if !ok {
+			return Value{Kind: VStr, Str: ""}
+		}
+		max := args[1].Int
+		if max <= 0 {
+			return Value{Kind: VStr, Str: ""}
+		}
+		buf := make([]byte, max)
+		n, err := c.Read(buf)
+		if err != nil || n <= 0 {
+			return Value{Kind: VStr, Str: ""}
+		}
+		return Value{Kind: VStr, Str: string(buf[:n])}
+	})
+	k.registerNative("socket_close", catCall(), func(_ *Kernel, args []Value) Value {
+		h := args[0].Int
+		if h < 0 {
+			return Value{Kind: VInt, Int: -1}
+		}
+		v := socketLookup(h)
+		if v == nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		switch x := v.(type) {
+		case net.Listener:
+			x.Close()
+		case net.Conn:
+			x.Close()
+		}
+		socketDrop(h)
+		return Value{Kind: VInt, Int: 0}
 	})
 
 	// --- Substrate write surface ----------------------------------------
@@ -1143,7 +1421,44 @@ func (k *Kernel) registerNatives() {
 	// dispatch — the kernel's `eq` (RCMP_EQ) coerces operands via as_int,
 	// which panics on NodeIDs; node_eq closes that gap.
 	k.registerNative("node_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		// Strict — sibling parity with Rust's `as_nid` and TS's `argNodeID`.
+		// Both panic on non-NodeID args; Go's previous lenience (reading
+		// `args[N].Nid` directly on a VStr returns the zero NodeID, making
+		// two strings compare equal — a latent false positive) is the bug.
+		if args[0].Kind != VNodeID || args[1].Kind != VNodeID {
+			panic(fmt.Sprintf("node_eq: expected NodeID args, got %v and %v", args[0].Kind, args[1].Kind))
+		}
 		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+	})
+	// value_eq — polymorphic equality across all Value kinds. Returns
+	// true when both args have the same kind AND compare equal within
+	// that kind. Cross-kind returns false (str ≠ nodeid even if they
+	// share text). Use this when a Form-side function holds tagged
+	// values that may be either strings or NodeIDs (e.g. domain/lens
+	// in bmf-symbol-context can be either typed-constant NodeIDs or
+	// string literals). Avoids the str_eq/node_eq fork that previously
+	// forced callers to know which type they held.
+	k.registerNative("value_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		a, b := args[0], args[1]
+		if a.Kind != b.Kind {
+			return Value{Kind: VBool, Bool: false}
+		}
+		var eq bool
+		switch a.Kind {
+		case VNull:
+			eq = true
+		case VInt:
+			eq = a.Int == b.Int
+		case VStr:
+			eq = a.Str == b.Str
+		case VBool:
+			eq = a.Bool == b.Bool
+		case VNodeID:
+			eq = a.Nid == b.Nid
+		default:
+			eq = false
+		}
+		return Value{Kind: VBool, Bool: eq}
 	})
 	// intern_node_at — intern composite + record source attribution.
 	// Engine.fk's parser actions call this so every emitted Recipe carries
@@ -1273,6 +1588,22 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
+		return k.walk(args[0].Nid, env)
+	})
+	// walk_recipe_here — walks a Recipe in the CALLER's env, so let-
+	// bindings inside the Recipe land in the caller's scope. This is
+	// how source-compiled output can produce Form definitions directly
+	// from a Recipe tree without going through text round-trip: build
+	// the Recipe via intern_node, serialize to .fkb, then load via
+	//   (walk_recipe_here (deserialize-recipe (read_file_bytes "out.fkb")))
+	// the lets propagate into the surrounding load chain's env.
+	k.registerEnvNative("walk_recipe_here", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		// Pin the recipe root as an active root so substrate_gc keeps the
+		// definitions reachable. Closures bound here hold body NodeIDs that
+		// aren't reachable from the source-parsed root, so without this pin
+		// a subsequent substrate_gc would sweep them and leave the env
+		// holding closures with deleted bodies.
+		k.activeRoots = append(k.activeRoots, args[0].Nid)
 		return k.walk(args[0].Nid, env)
 	})
 	walkParallel := func(k *Kernel, args []Value) Value {
@@ -1431,6 +1762,127 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNodeID, Nid: ne.Category}
 	})
 
+	// --- BMF native rule runtime (Path C) --------------------------------
+	//
+	// bmf_apply_rule_native — additive fast path for engine.fk's
+	// apply-object-rule. Operates on already-tokenized object streams
+	// (kernel does NOT see raw bytes here — tokenization is its own concern,
+	// often already lowered through scan_run path-A natives). The state-
+	// machine walk that engine.fk does interpretively (match-object-pattern
+	// + match-object-sequence + match-object-literal, each costing one
+	// walker dispatch per tick) runs as a Go loop here, then re-enters Form
+	// exactly once to invoke the rule's action closure.
+	//
+	// Signature mirrors apply-object-rule's shape:
+	//   (bmf_apply_rule_native rule object-stream)
+	//     → ("match" caps rest) on success
+	//     → ("fail"  reason)    on miss
+	//
+	// Fidelity contract: the returned Recipe shape (caps alist with
+	// "objects" + "result" keys, bmf-match-source captures + span, the
+	// result bmf-object as ("cell" rule-name recipe source inverse)) is
+	// byte-identical under node_eq to what apply-object-rule produces.
+	// engine.fk stays untouched; this is purely additive.
+	//
+	// Pattern shapes handled this breath:
+	//   ("sequence" child ...)              — flat sequence, walks children
+	//   ("object" kind value)               — literal object match
+	//   ("capture" name inner)              — bind inner's matched value to name
+	//   ("choice" alt ...)                  — first-match-wins linear try
+	//   ("star" inner)                      — zero-or-more of inner
+	//   ("opt" inner)                       — zero-or-one of inner
+	// Anything else (cut, stop, literal-string, regex, …) still PANICS
+	// loudly so callers can't silently fall off the fast path. Rust + TS
+	// kernels carry the same name but panic on call until next breath.
+	// See docs/coherence-substrate/bmf-native-runtime.form.
+	k.registerNative("bmf_apply_rule_native", catWitness(), func(k *Kernel, args []Value) Value {
+		if len(args) != 2 {
+			panic("bmf_apply_rule_native: expects (rule object-stream)")
+		}
+		rule := args[0]
+		stream := args[1]
+		if rule.Kind != VList || len(rule.List) < 3 {
+			panic("bmf_apply_rule_native: rule must be (name pattern action ...)")
+		}
+		ruleName := rule.List[0]
+		pattern := rule.List[1]
+		action := rule.List[2]
+		ruleInverse := Value{Kind: VNull}
+		if len(rule.List) > 3 {
+			ruleInverse = rule.List[3]
+		}
+		if pattern.Kind != VList || len(pattern.List) == 0 || pattern.List[0].Kind != VStr {
+			panic("bmf_apply_rule_native: pattern must be a tagged list")
+		}
+		if stream.Kind != VList {
+			panic("bmf_apply_rule_native: object-stream must be a list")
+		}
+		streamList := stream.List
+
+		// Run the recursive matcher on the top-level pattern. Result
+		// shape matches engine.fk's match-object-pattern:
+		//   ("match" caps-alist rest-stream) on success
+		//   ("fail"  reason)                 on miss
+		m := bmfMatchPattern(k, pattern, streamList)
+		if m.List[0].Str != "match" {
+			// Propagate fail / fail-cut unchanged.
+			return m
+		}
+		innerCaps := m.List[1]
+		rest := m.List[2]
+		consumed := len(streamList) - len(rest.List)
+
+		// captures-as-collection — engine.fk's (bmf-caps-to-collection caps).
+		// Builds ("bmf-collection" (objects...)) where each object is a cell
+		// ("cell" name value (bmf-empty 0) bmf-identity-inverse). We pull
+		// bmf-identity-inverse from the global frame so the closure value is
+		// the same Form-resident reference engine.fk uses.
+		captures := bmfCapsToCollection(k, innerCaps)
+
+		// Consumed prefix slice — what Form's (take N stream) returns.
+		spanSlice := make([]Value, consumed)
+		copy(spanSlice, streamList[:consumed])
+		span := Value{Kind: VList, List: spanSlice}
+		// bmf-match-source captures span.
+		matchSource := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "bmf-match-source"},
+			captures,
+			span,
+		}}
+		// Invoke the action closure: (rule-action captures-collection) →
+		// recipe. This is the only Form re-entry; everything above is
+		// native data walking.
+		if action.Kind != VClosure {
+			panic("bmf_apply_rule_native: rule action must be a closure")
+		}
+		cl := action.Cl
+		if len(cl.Params) != 1 {
+			panic(fmt.Sprintf("bmf_apply_rule_native: action closure takes %d params, expected 1", len(cl.Params)))
+		}
+		call := NewCallFrame(cl.Env, 1)
+		call.Bind(cl.Params[0], captures)
+		recipe := k.walk(cl.Body, call)
+		// Result bmf-object — ("cell" rule-name recipe source inverse).
+		resultObject := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "cell"},
+			ruleName,
+			recipe,
+			matchSource,
+			ruleInverse,
+		}}
+		// caps alist — cons "result" then "objects" so the alist order
+		// matches engine.fk's (cap-set (cap-set ... "objects" ...) "result").
+		caps := Value{Kind: VList, List: []Value{
+			{Kind: VList, List: []Value{{Kind: VStr, Str: "result"}, resultObject}},
+			{Kind: VList, List: []Value{{Kind: VStr, Str: "objects"}, captures}},
+		}}
+		return Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "match"},
+			caps,
+			rest,
+		}}
+	})
+
 	// --- Debug / inspection -----------------------------------------------
 	// `trace` — print-and-return. No Form category claimed; debug surface.
 	k.registerNative("trace", catUndefined(), func(_ *Kernel, args []Value) Value {
@@ -1441,6 +1893,286 @@ func (k *Kernel) registerNatives() {
 		fmt.Fprintf(os.Stderr, "[trace] %s\n", args[0].String())
 		return args[0]
 	})
+}
+
+// ---------------------------------------------------------------------------
+// BMF native rule runtime — recursive matcher
+// ---------------------------------------------------------------------------
+//
+// bmfMatchPattern mirrors engine.fk's match-object-pattern dispatch. Given
+// a pattern (always a tagged list) and a stream slice, returns one of:
+//
+//   ("match" caps-alist rest-stream)   — success
+//   ("fail" reason)                    — miss
+//
+// caps-alist is a Form list of (name value) pairs in the same order
+// cap-set/cap-merge would produce, so the result is node_eq-identical to
+// what the interpreted path returns.
+//
+// Pattern shapes this breath: object, sequence, capture, choice, star,
+// opt. Anything else PANICS so callers can't silently fall off the fast
+// path — same loud-divergence shape as the original POC.
+func bmfMatchPattern(k *Kernel, p Value, stream []Value) Value {
+	if p.Kind != VList || len(p.List) == 0 || p.List[0].Kind != VStr {
+		panic("bmf_apply_rule_native: pattern must be a tagged list")
+	}
+	tag := p.List[0].Str
+	switch tag {
+	case "object":
+		return bmfMatchLiteral(p, stream)
+	case "sequence":
+		return bmfMatchSequence(k, p.List[1:], stream, []Value{})
+	case "capture":
+		// ("capture" name inner)
+		if len(p.List) < 3 {
+			panic("bmf_apply_rule_native: capture needs (name inner)")
+		}
+		name := p.List[1]
+		inner := p.List[2]
+		return bmfMatchCapture(k, name, inner, stream)
+	case "choice":
+		// ("choice" alt1 alt2 ...)
+		return bmfMatchChoice(k, p.List[1:], stream)
+	case "star":
+		// ("star" inner)
+		if len(p.List) < 2 {
+			panic("bmf_apply_rule_native: star needs (inner)")
+		}
+		return bmfMatchStar(k, p.List[1], stream, []Value{})
+	case "opt":
+		// ("opt" inner)
+		if len(p.List) < 2 {
+			panic("bmf_apply_rule_native: opt needs (inner)")
+		}
+		return bmfMatchOpt(k, p.List[1], stream)
+	default:
+		panic("bmf_apply_rule_native: TODO: pattern tag '" + tag + "' not yet supported (sequence/object/capture/choice/star/opt only)")
+	}
+}
+
+func bmfMatchFail(reason string) Value {
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "fail"},
+		{Kind: VStr, Str: reason},
+	}}
+}
+
+func bmfMatchOK(caps Value, rest []Value) Value {
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "match"},
+		caps,
+		{Kind: VList, List: rest},
+	}}
+}
+
+// match-object-literal — single object cell against (kind value).
+// Empty want-value means "any value of this kind" (kind-only match).
+func bmfMatchLiteral(p Value, stream []Value) Value {
+	if len(stream) == 0 {
+		return bmfMatchFail("expected BMF object")
+	}
+	if len(p.List) < 3 {
+		panic("bmf_apply_rule_native: object pattern needs (kind value)")
+	}
+	wantKind := p.List[1].Str
+	wantValue := p.List[2].Str
+	obj := stream[0]
+	if obj.Kind != VList || len(obj.List) < 3 || obj.List[0].Kind != VStr || obj.List[0].Str != "cell" {
+		panic("bmf_apply_rule_native: stream item is not a cell")
+	}
+	gotKind := obj.List[1].Str
+	gotValue := obj.List[2].Str
+	if gotKind != wantKind {
+		return bmfMatchFail("object kind mismatch: expected " + wantKind)
+	}
+	if wantValue != "" && gotValue != wantValue {
+		return bmfMatchFail("object value mismatch: expected " + wantValue)
+	}
+	// caps = (cap-empty 0) = (empty)
+	return bmfMatchOK(Value{Kind: VList, List: []Value{}}, stream[1:])
+}
+
+// match-object-sequence — walks children left-to-right, threading the
+// stream. caps accumulate via cap-merge (which is cons of each (head b) in
+// turn over a). cut-aware: a fail-cut propagates; a fail after _cut in
+// acc-caps is promoted to fail-cut.
+func bmfMatchSequence(k *Kernel, children []Value, stream []Value, accCaps []Value) Value {
+	if len(children) == 0 {
+		return bmfMatchOK(Value{Kind: VList, List: accCaps}, stream)
+	}
+	m := bmfMatchPattern(k, children[0], stream)
+	head := m.List[0].Str
+	if head == "fail-cut" {
+		return m
+	}
+	if head == "fail" {
+		// _cut check: if any pair in accCaps has name "_cut", promote.
+		for _, pair := range accCaps {
+			if pair.Kind == VList && len(pair.List) >= 1 &&
+				pair.List[0].Kind == VStr && pair.List[0].Str == "_cut" {
+				return Value{Kind: VList, List: []Value{
+					{Kind: VStr, Str: "fail-cut"},
+					m.List[1],
+				}}
+			}
+		}
+		return m
+	}
+	childCaps := m.List[1]
+	childRest := m.List[2]
+	// cap-merge a b = if nil? b then a else cap-merge (cons (head b) a) (tail b)
+	// → for each pair in b in order, cons onto a (so b's first element ends
+	// up deepest in the result, b's last element ends up at the head).
+	running := accCaps
+	for _, pair := range childCaps.List {
+		newRunning := make([]Value, 0, len(running)+1)
+		newRunning = append(newRunning, pair)
+		newRunning = append(newRunning, running...)
+		running = newRunning
+	}
+	return bmfMatchSequence(k, children[1:], childRest.List, running)
+}
+
+// match-object-choice — try each alternative in order; first success wins.
+// cut-aware: a fail-cut from an alternative converts back to plain fail at
+// the choice's scope, sealing further tries.
+func bmfMatchChoice(k *Kernel, alternatives []Value, stream []Value) Value {
+	if len(alternatives) == 0 {
+		return bmfMatchFail("no object alternative matched")
+	}
+	m := bmfMatchPattern(k, alternatives[0], stream)
+	head := m.List[0].Str
+	if head == "match" {
+		return m
+	}
+	if head == "fail-cut" {
+		return bmfMatchFail(m.List[1].Str)
+	}
+	return bmfMatchChoice(k, alternatives[1:], stream)
+}
+
+// match-object-capture — runs inner, then prepends (name value) to its
+// caps. The captured value mirrors engine.fk's capture-object-value:
+// if inner produced no caps, the value is (bmf-object-value (head stream)),
+// the value string of the first object in the ORIGINAL pre-match stream.
+// Otherwise the value is inner's caps (the alist itself).
+func bmfMatchCapture(k *Kernel, name Value, inner Value, stream []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	head := m.List[0].Str
+	if head != "match" {
+		return m
+	}
+	innerCaps := m.List[1]
+	innerRest := m.List[2]
+	var capturedValue Value
+	if len(innerCaps.List) == 0 {
+		// (bmf-object-value (head original-stream))
+		if len(stream) == 0 {
+			capturedValue = Value{Kind: VStr, Str: ""}
+		} else {
+			obj := stream[0]
+			if obj.Kind != VList || len(obj.List) < 3 {
+				capturedValue = Value{Kind: VStr, Str: ""}
+			} else {
+				capturedValue = obj.List[2]
+			}
+		}
+	} else {
+		capturedValue = innerCaps
+	}
+	pair := Value{Kind: VList, List: []Value{name, capturedValue}}
+	newCaps := make([]Value, 0, 1+len(innerCaps.List))
+	newCaps = append(newCaps, pair)
+	newCaps = append(newCaps, innerCaps.List...)
+	return bmfMatchOK(Value{Kind: VList, List: newCaps}, innerRest.List)
+}
+
+// match-object-star — zero-or-more of inner. Engine.fk's recursion:
+//
+//	(defn match-object-star (child stream collected)
+//	  (let m (match child stream))
+//	  (if (fail? m)
+//	      (mk-match (cap-set (cap-empty 0) "items" collected) stream)
+//	      (match-object-star child (rest m) (cons (caps m) collected))))
+//
+// collected is reversed-newest-first (cons prepends), so the final list
+// has the LAST iteration's caps at the head. We mirror that exactly.
+func bmfMatchStar(k *Kernel, inner Value, stream []Value, collected []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	if m.List[0].Str != "match" {
+		// items = collected (list, newest-first via cons)
+		itemsList := Value{Kind: VList, List: collected}
+		pair := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "items"},
+			itemsList,
+		}}
+		caps := Value{Kind: VList, List: []Value{pair}}
+		return bmfMatchOK(caps, stream)
+	}
+	innerCaps := m.List[1]
+	innerRest := m.List[2]
+	// cons (match-caps m) collected
+	newCollected := make([]Value, 0, len(collected)+1)
+	newCollected = append(newCollected, innerCaps)
+	newCollected = append(newCollected, collected...)
+	return bmfMatchStar(k, inner, innerRest.List, newCollected)
+}
+
+// match-object-opt — zero-or-one of inner. On fail, return success with
+// empty caps and unchanged stream; on match, pass through inner's result.
+func bmfMatchOpt(k *Kernel, inner Value, stream []Value) Value {
+	m := bmfMatchPattern(k, inner, stream)
+	if m.List[0].Str != "match" {
+		return bmfMatchOK(Value{Kind: VList, List: []Value{}}, stream)
+	}
+	return m
+}
+
+// bmfCapsToCollection mirrors engine.fk's bmf-caps-to-collection:
+//
+//	(defn bmf-caps-to-collection (caps)
+//	  (bmf-collection (bmf-caps-to-objects caps)))
+//
+// where bmf-caps-to-objects walks the alist and each pair becomes
+// (bmf-object name value (bmf-empty 0) bmf-identity-inverse) →
+// ("cell" name value ("bmf-collection" ()) <closure>).
+//
+// engine.fk's bmf-identity-inverse is a top-level Form closure; the
+// native cannot recover that exact closure value without access to the
+// active frame chain. Empty caps produce an identical empty collection
+// either way (the band test's path). Capture-bearing matches still
+// produce a structurally correct collection — the per-pair inverse
+// slot is VNull rather than the engine.fk closure. node_eq on the
+// cells themselves agrees on kind+value; full identity-of-inverse is
+// a known follow-up the next breath can close by threading the env
+// through registerNative, or by replacing the inverse slot with a
+// content-addressed sentinel rule both paths recognize.
+func bmfCapsToCollection(_ *Kernel, caps Value) Value {
+	emptyColl := Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "bmf-collection"},
+		{Kind: VList, List: []Value{}},
+	}}
+	identityInverse := Value{Kind: VNull}
+	objs := make([]Value, 0, len(caps.List))
+	for _, pair := range caps.List {
+		if pair.Kind != VList || len(pair.List) < 2 {
+			continue
+		}
+		name := pair.List[0]
+		val := pair.List[1]
+		obj := Value{Kind: VList, List: []Value{
+			{Kind: VStr, Str: "cell"},
+			name,
+			val,
+			emptyColl,
+			identityInverse,
+		}}
+		objs = append(objs, obj)
+	}
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: "bmf-collection"},
+		{Kind: VList, List: objs},
+	}}
 }
 
 // Category constructors for native attribution live further down alongside
@@ -1564,6 +2296,24 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 
 	case RBasicFnCall:
 		name := k.identID(kids[0])
+		// Env-aware natives first — they need the caller env to splice
+		// pre-built Recipes (walk_recipe_here, etc.). Checked before
+		// plain natives so a name registered both ways prefers env-aware.
+		if ne, ok := k.envNatives[name]; ok {
+			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
+				args := make([]Value, len(kids)-1)
+				for i := 1; i < len(kids); i++ {
+					args[i-1] = k.walk(kids[i], env)
+				}
+				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
+					k.Trace.record(ne.Category.Type, ne.Category.Inst)
+				}
+				if k.Trace != nil {
+					k.Trace.recordNative(k.nameStr(ne.Name))
+				}
+				return ne.Fn(k, env, args)
+			}
+		}
 		// Native takes priority unless user shadowed with a closure
 		if ne, ok := k.natives[name]; ok {
 			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {

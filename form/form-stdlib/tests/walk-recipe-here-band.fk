@@ -1,0 +1,37 @@
+; walk-recipe-here-band.fk — proves walk_recipe_here splices Recipe bindings
+; into the caller's env across all three kernels.
+;
+; The architectural lever this primitive provides: source-compile output
+; can be a Recipe (built via intern_node) + serialized to .fkb + reloaded
+; via walk_recipe_here, with the resulting let-bindings landing in the
+; caller's scope. No text round-trip. No str_concat of compiled output.
+;
+; This band exercises the round-trip: build a Recipe in Form, serialize,
+; deserialize, walk_recipe_here, then access the bindings the Recipe
+; defined. Three kernels must agree.
+
+(do
+    ;; Recipe constants — Form callable shape of the Go parser's intern.
+    ;; Matches main.go enum values: LevelBasic=2, RBasicBlock=9,
+    ;; RBlockDo=1, RBlockLet=3.
+    (let DO_CAT  (make_nodeid 1 2 9 1))
+    (let LET_CAT (make_nodeid 1 2 9 3))
+
+    ;; Build (do (let a 11) (let b 22) (let c 33)) as a Recipe tree.
+    (defn mk-let (name int-val)
+        (intern_node LET_CAT (list
+            (intern_trivial_string name)
+            (intern_trivial_int int-val))))
+
+    (let recipe (intern_node DO_CAT (list
+        (mk-let "a" 11)
+        (mk-let "b" 22)
+        (mk-let "c" 33))))
+
+    ;; Round-trip through binary serialization, splice into THIS env.
+    (let bytes (serialize-recipe recipe))
+    (let restored (deserialize-recipe bytes))
+    (walk_recipe_here restored)
+
+    ;; All three lets must be visible here. Score = 11 + 22*10 + 33*100 = 3531.
+    (add a (add (mul b 10) (mul c 100))))

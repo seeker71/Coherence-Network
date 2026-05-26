@@ -1,0 +1,151 @@
+; i18n.fk — expose the body's parallel natural-language corpus as Form substrate.
+;
+; The body holds web/messages/{en,de,es,id}.json — ~2300 keys per
+; locale, parallel translations of the same semantic concepts. Each
+; key-path is a semantic identity; each locale's string is a surface
+; emission of that same Recipe in that natural language.
+;
+; This file makes that corpus accessible at substrate altitude:
+;   - (i18n-load locale-name)        → parsed JSON Recipe for that locale
+;   - (i18n-string locale-recipe path-strs)  → string at that key-path
+;   - (i18n-locales-available)       → list of loaded locale names
+;
+; Each JSON load goes through form-stdlib/cache.fk, so re-loads are
+; microseconds. The corpus itself doesn't move — but accessing it via
+; Form means any future emitter, parity-sensor, or natural-language
+; Recipe builder reads from the same source the wellness check does.
+;
+; The teaching named in docs/coherence-substrate/i18n-as-recipe-corpus
+; .form: the universal translator's natural-language training data
+; already lives in the body. Each (en-string, de-string) pair is a
+; ground-truth observation of "what surface this Recipe emits in
+; each locale." Multiply across 4 locales × 2300 keys → ~9300 observed
+; emission triples.
+;
+; Prelude requirement: form-stdlib/json.fk and form-stdlib/cache.fk
+; must load before this file.
+
+;; --- locale-file paths ----------------------------------------------
+;;
+;; Paths are relative to repo root (where validate.sh runs from is
+;; form/, so we use ../web/messages). Each Form-side caller computes
+;; the path; the LOADER is agnostic.
+
+(defn i18n-source-path (locale-name)
+    (str_concat "../web/messages/"
+        (str_concat locale-name ".json")))
+
+(defn i18n-cache-path (locale-name)
+    (str_concat "form-stdlib/.cache/i18n-"
+        (str_concat locale-name ".fkb")))
+
+;; --- load + cache ---------------------------------------------------
+;;
+;; Returns the parsed JSON Recipe for a locale, going through the
+;; .fkb cache layer. Cold load: ~50–100 ms per locale (web/messages
+;; files are ~50 KB). Warm: ~5–20 ms. The cache lives in
+;; form-stdlib/.cache/ (gitignored, regenerated when source moves).
+
+(defn i18n-load (locale-name)
+    (read_with_cache
+        (i18n-source-path locale-name)
+        (i18n-cache-path locale-name)
+        parse-json))
+
+;; --- key-path traversal --------------------------------------------
+;;
+;; Walks a list of key strings into a JSON-OBJECT recipe, descending
+;; one level per key. Returns the leaf value (typically a trivial
+;; string for translation entries). On miss returns the empty default.
+;;
+;; Example: (i18n-string-by-path locale-recipe (list "common" "save"))
+;;          → "Save" (en) or "Speichern" (de) etc.
+
+(defn i18n-walk-path (node path-strs)
+    (if (eq (len path-strs) 0) node
+        (i18n-walk-path
+            (json-object-get node (head path-strs))
+            (tail path-strs))))
+
+(defn i18n-string-by-path (locale-recipe path-strs)
+    (json-string-value (i18n-walk-path locale-recipe path-strs)))
+
+;; --- locale-availability sense -------------------------------------
+;;
+;; A future cell can list the locales this body currently holds without
+;; hardcoding them; updated when locales/.json shows up in web/messages.
+;; Today this is a static list — when a /locales.json index appears
+;; the function reads from there. Kept as a function (not a let) so
+;; future evolution doesn't break callers.
+
+(defn i18n-locales-available ()
+    (list "en" "de" "es" "id"))
+
+;; --- parallel-emission lookup --------------------------------------
+;;
+;; For a given key-path, return the list of (locale, string) pairs
+;; across every available locale. This is the SHAPE the universal-
+;; translator's natural-language emitter wants: one semantic identity
+;; (the key-path), many parallel surface forms (one per locale).
+;;
+;; Returns a list of (locale-name string) pairs.
+
+(defn i18n-parallel-loop (locales path-strs acc)
+    (if (eq (len locales) 0) (json-reverse-acc acc)
+        (do
+            (let loc (head locales))
+            (let recipe (i18n-load loc))
+            (let str (i18n-string-by-path recipe path-strs))
+            (i18n-parallel-loop (tail locales) path-strs
+                (cons (list loc str) acc)))))
+
+(defn i18n-parallel (path-strs)
+    (i18n-parallel-loop (i18n-locales-available) path-strs (empty)))
+
+;; --- sibling corpora: cli/lib/messages -----------------------------
+;;
+;; The CLI carries its own parallel translation corpus on the same
+;; shape — cli/lib/messages/{en,de,es,id}.json. Loader composition
+;; mirrors i18n-load; the path differs because the body holds two
+;; distinct surfaces (web chrome vs CLI output) that speak the same
+;; locales without sharing keys.
+;;
+;; Use (i18n-string-by-path (cli-i18n-load "de") (list "help" "usage"))
+;; to read a CLI surface in any locale, same shape as the web loader.
+;; The composition is bottom-up: same read_with_cache, same parse-json,
+;; only the source/cache paths change.
+(defn cli-i18n-source-path (locale-name)
+    (str_concat "../cli/lib/messages/"
+        (str_concat locale-name ".json")))
+
+(defn cli-i18n-cache-path (locale-name)
+    (str_concat "form-stdlib/.cache/cli-i18n-"
+        (str_concat locale-name ".fkb")))
+
+(defn cli-i18n-load (locale-name)
+    (read_with_cache
+        (cli-i18n-source-path locale-name)
+        (cli-i18n-cache-path locale-name)
+        parse-json))
+
+;; --- sibling corpora: web/content/presence-walk --------------------
+;;
+;; Presence-walk pages carry richer per-locale prose than the web
+;; chrome — full first-person passages keyed by node-kind. Same
+;; loader shape, separate path.
+
+(defn presence-walk-i18n-source-path (locale-name)
+    (str_concat "../web/content/presence-walk/"
+        (str_concat locale-name ".json")))
+
+(defn presence-walk-i18n-cache-path (locale-name)
+    (str_concat "form-stdlib/.cache/presence-walk-i18n-"
+        (str_concat locale-name ".fkb")))
+
+(defn presence-walk-i18n-load (locale-name)
+    (read_with_cache
+        (presence-walk-i18n-source-path locale-name)
+        (presence-walk-i18n-cache-path locale-name)
+        parse-json))
+
+0

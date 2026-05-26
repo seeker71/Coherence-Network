@@ -1,0 +1,61 @@
+; python-bmf-decorator-band.fk - Python decorator rules round-trip parity
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk
+;
+; Exercises every decorator shape that python-bmf.fk recognises and
+; asserts byte-identical scores across Go, Rust and TypeScript kernels.
+;   - decorator              @name
+;   - decorator-call0        @name()
+;   - decorator-call1        @name(arg)
+;   - decorator-call2        @name(a, b)
+;   - decorator-dotted       @name.attr
+;   - decorator-dotted-call0 @name.attr()
+;   - decorator-dotted-call1 @name.attr(arg)
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn py-rt (rule-name objects)
+        (bmf-roundtrip (python-bmf-find-rule rule-name python-bmf-rules) objects))
+
+    (let bare-rt
+        (py-rt "decorator"
+            (list (py-op "@") (py-name "staticmethod"))))
+    (let call0-rt
+        (py-rt "decorator-call0"
+            (list (py-op "@") (py-name "cache")
+                  (py-op "(") (py-op ")"))))
+    (let call1-rt
+        (py-rt "decorator-call1"
+            (list (py-op "@") (py-name "lru_cache")
+                  (py-op "(") (py-name "maxsize") (py-op ")"))))
+    (let call2-rt
+        (py-rt "decorator-call2"
+            (list (py-op "@") (py-name "patch")
+                  (py-op "(") (py-name "target") (py-op ",")
+                  (py-name "wraps") (py-op ")"))))
+    (let dotted-rt
+        (py-rt "decorator-dotted"
+            (list (py-op "@") (py-name "router")
+                  (py-op ".") (py-name "get"))))
+    (let dotted-call0-rt
+        (py-rt "decorator-dotted-call0"
+            (list (py-op "@") (py-name "router")
+                  (py-op ".") (py-name "get")
+                  (py-op "(") (py-op ")"))))
+    (let dotted-call1-rt
+        (py-rt "decorator-dotted-call1"
+            (list (py-op "@") (py-name "router")
+                  (py-op ".") (py-name "get")
+                  (py-op "(") (py-name "path") (py-op ")"))))
+
+    (sum
+        (list (rt-score bare-rt)
+              (rt-score call0-rt)
+              (rt-score call1-rt)
+              (rt-score call2-rt)
+              (rt-score dotted-rt)
+              (rt-score dotted-call0-rt)
+              (rt-score dotted-call1-rt))))

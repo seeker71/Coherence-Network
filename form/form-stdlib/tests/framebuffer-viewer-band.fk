@@ -1,0 +1,61 @@
+; framebuffer-viewer-band.fk — produce framebuffer activity for the viewer.
+;
+; The Go/Rust/TS kernels record source-attributed cell creations in
+; the framebuffer side-map (the source_attr map). Every intern_node_at
+; call adds one entry. This band issues a deterministic burst of
+; intern_node_at calls across synthetic source coordinates and reports
+; how many entries the framebuffer holds at the end.
+;
+; The score is (len (framebuffer-events)) — the count of distinct
+; source-attributed NodeIDs at the close of the run. Because intern is
+; content-addressed and the framebuffer is keyed by NodeID, two
+; intern_node_at calls with identical (category, children) collapse
+; into one map entry. We exploit that for determinism: every call
+; produces a unique composite (line number distinguishes the child
+; trivial), so the count is fixed across kernels.
+;
+; The viewer at scripts/framebuffer_viewer.py loads this same band
+; through a wrapper driver and prints the events list — turning the
+; emitter's side-map into an observer-visible visualization.
+;
+; preludes: form-stdlib/json.fk
+
+(do
+    ;; A single category for every cell — keeps the viewer's "Top
+    ;; Blueprint" pane focused on one (pkg, level, type) signature so
+    ;; the visualization clearly shows where the burst landed.
+    (defn cell-cat (_x) (make_nodeid 1 2 12 1))
+
+    ;; emit-one: intern a composite with the line number as its child
+    ;; trivial. The child differs across lines, so each call produces
+    ;; a distinct composite NodeID and a fresh framebuffer entry.
+    (defn emit-one (file line)
+        (intern_node_at (cell-cat 0)
+                        (list (intern_trivial_int line))
+                        file line 1))
+
+    ;; emit-range: walk lines [start, end) issuing one cell per line.
+    (defn emit-range (file start end)
+        (if (ge start end) 0
+            (do
+                (emit-one file start)
+                (emit-range file (add start 1) end))))
+
+    ;; Snapshot the framebuffer BEFORE we add anything — captures the
+    ;; entries the prelude load already deposited (core.fk's BML
+    ;; compile, json.fk's parser machinery). The witness then reports
+    ;; the DELTA after our burst, which is deterministic regardless of
+    ;; how the prelude internally interns.
+    (let before (len (framebuffer-events)))
+
+    ;; Burst: 100 cells across one synthetic file, distinct line nums
+    ;; (so distinct composites, distinct framebuffer entries).
+    (emit-range "viewer/burst.fk" 1 101)
+
+    ;; Touch the equality machinery once — proves value_eq runs through
+    ;; the substrate without disturbing the recording count.
+    (let probe-eq (value_eq (intern_trivial_int 7) (intern_trivial_int 7)))
+
+    ;; The witness: delta = events the burst added.
+    ;; Expected: 100 — one per emit-one call.
+    (sub (len (framebuffer-events)) before))

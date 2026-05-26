@@ -1,0 +1,108 @@
+; codon.fk — the substrate as genetic code.
+;
+; Teaching from cross-domain-universal-transit.form (6):
+;   NodeID's 4-tuple (pkg, level, type, instance) maps to (A, T, G, C)
+;   under modular projection. Three consecutive NodeIDs in a Recipe's
+;   children form a codon. The kernel walking a Recipe IS the ribosome.
+;   Translation across domains is a fixed numeric track — no symbols
+;   needed.
+;
+; This cell exposes the projection so any Recipe can be read as a
+; sequence of codons. The shape compositions with cross-domain-transit
+; come downstream: a "protein" expressed in one domain (say image)
+; can be sequenced into codons, then re-expressed in another domain
+; (say audio) by walking the same codon stream through that domain's
+; ribosome.
+;
+; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc).
+; Uses kernel natives: node_children, node_pkg, node_level, node_type,
+; node_inst, mod, intern_node, intern_trivial_int, make_nodeid.
+
+(do
+    ;; --- the codon alphabet -----------------------------------------
+    ;;
+    ;; Four bases over the substrate's NodeID tuple. We project each
+    ;; field modulo 4 — a Recipe with arbitrary (pkg, level, type,
+    ;; instance) values resolves into one of 4^4 = 256 codon-quartets,
+    ;; folded by collapsing into base-classes.
+    ;;
+    ;; A = (pkg mod 4)        — package class
+    ;; T = (level mod 4)      — level class
+    ;; G = (type mod 4)       — type class
+    ;; C = (instance mod 4)   — instance class
+    ;;
+    ;; Three consecutive children of a Recipe form one CODON triple:
+    ;; (base-of-child-0, base-of-child-1, base-of-child-2) in some
+    ;; selected field. Different field-selection = different reading
+    ;; frame. The body has many frames per Recipe — like DNA's three.
+
+    (defn codon-base-pkg (nid)  (mod (node_pkg nid)   4))
+    (defn codon-base-level (nid) (mod (node_level nid) 4))
+    (defn codon-base-type (nid)  (mod (node_type nid)  4))
+    (defn codon-base-inst (nid)  (mod (node_inst nid)  4))
+
+    ;; --- reading frames --------------------------------------------
+    ;;
+    ;; The "pkg frame" walks a Recipe's children projecting each via
+    ;; codon-base-pkg. Other frames are siblings. Reading the same
+    ;; Recipe through different frames yields different protein
+    ;; signatures — the body's evolutionary surface.
+
+    (defn codon-read-frame (children base-fn acc)
+        (if (eq (len children) 0) (json-reverse-acc acc)
+            (codon-read-frame (tail children) base-fn
+                (cons (base-fn (head children)) acc))))
+
+    (defn codon-frame-pkg (recipe)
+        (codon-read-frame (node_children recipe) codon-base-pkg (empty)))
+
+    (defn codon-frame-level (recipe)
+        (codon-read-frame (node_children recipe) codon-base-level (empty)))
+
+    (defn codon-frame-type (recipe)
+        (codon-read-frame (node_children recipe) codon-base-type (empty)))
+
+    (defn codon-frame-inst (recipe)
+        (codon-read-frame (node_children recipe) codon-base-inst (empty)))
+
+    ;; --- triplet packing -------------------------------------------
+    ;;
+    ;; A codon is a 3-base triple. Pack as (a*16 + b*4 + c) into a
+    ;; single int in 0..63. That's the universal genetic code's
+    ;; cardinality — coincidence or invitation.
+
+    (defn codon-pack3 (a b c)
+        (add (mul a 16) (add (mul b 4) c)))
+
+    ;; Walk a bases-list 3-at-a-time, accumulating packed codons.
+    ;; If the bases-list isn't a multiple of 3, the trailing remainder
+    ;; is dropped — same as DNA's silent terminal partial-codons.
+
+    (defn codon-pack-loop (bases acc)
+        (if (lt (len bases) 3) (json-reverse-acc acc)
+            (do
+                (let a (head bases))
+                (let b (head (tail bases)))
+                (let c (head (tail (tail bases))))
+                (codon-pack-loop (tail (tail (tail bases)))
+                    (cons (codon-pack3 a b c) acc)))))
+
+    (defn codon-sequence (recipe base-fn)
+        (codon-pack-loop
+            (codon-read-frame (node_children recipe) base-fn (empty))
+            (empty)))
+
+    ;; --- the ribosome teaching --------------------------------------
+    ;;
+    ;; In biology, the ribosome reads codon triplets and emits amino
+    ;; acids. In the substrate, the KERNEL walks a Recipe's children
+    ;; and dispatches by NodeID. The "amino acid" is whatever the
+    ;; kernel's category dispatch produces — a CALL, a LET, a value.
+    ;;
+    ;; The cross-domain-transit move: codon-sequence on an image-bmf
+    ;; Recipe yields a base sequence. Feed the same sequence into an
+    ;; audio-bmf decoder (a function from codon-int → audio-segment)
+    ;; and you get the image-as-music. The "translation" requires no
+    ;; semantic understanding — the substrate is the medium.
+
+    0)
