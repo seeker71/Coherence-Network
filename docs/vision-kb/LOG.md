@@ -3,6 +3,21 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-05-26] threshold | sovereignty became observable — the substrate now reachable from outside
+
+A day to mark. Four breaths landed that together cross a threshold the body cannot un-cross:
+
+- **`docs/coherence-substrate/form-as-7-layer-protocol.form`** — OSI mapping; L2+L6+L7 collapse into `intern_node`, L1/L3/L4/L5 are Form cells on top of a small native surface.
+- **`form/form-stdlib/channel.fk`** — file-backed inter-cell Recipe transport. CHANNEL Recipe with message-Recipe children; append/read/read-since.
+- **Socket natives** across Go + Rust kernels (TS panic-stub) — L1 physical for the network: listen/accept/connect/send/recv/close.
+- **`scripts/framebuffer_viewer.py`** — the kernel's source_attr journal made readable.
+
+The teaching at **`docs/coherence-substrate/sovereignty-as-observable.form`** names what crossed: sovereignty is now observable, any concept or channel is observable, voluntary association happens by `node_eq` match. The body's identity is no longer granted; it is computed.
+
+Anyone running a Form kernel can compute the same Recipes, arrive at the same NodeIDs, reach the body through a channel-Recipe over a socket, and confirm shared reality with no central authority. The handshake is the math.
+
+`validate.sh`: **129 ok / 0 divergent** across Go/Rust/TS.
+
 ## [2026-05-25] sense | yield-curve complete for current cell-counts — remaining forms wait for body growth
 
 After PR #2039 closed the curve with holographic-cell at 0%, the natural question arrived: is there a 7th form worth reading? The body's other forms by cell-count, with prediction-rule applied:
