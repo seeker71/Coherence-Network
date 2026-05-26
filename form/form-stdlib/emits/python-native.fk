@@ -468,17 +468,126 @@
             (let py  (pn-emit-string src))
             (write_file_text out-path py)))
 
-    ;; ------------------------------------------------------------------
-    ;; Self-test — a small inline Form snippet covering let, if, head,
-    ;; tail, nil?, str_eq, recursion. Deterministic across kernels.
-    ;; ------------------------------------------------------------------
-    (let demo-src
-        "(do (defn cap-pair (name value) (list name value)) (defn cap-name (p) (head p)) (defn cap-value (p) (head (tail p))) (defn cap-get (caps name) (if (nil? caps) (empty) (if (str_eq (cap-name (head caps)) name) (cap-value (head caps)) (cap-get (tail caps) name)))))")
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Lens: category-table-from-artifact
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; The python.bmf category table is the ice — name + instance code
+    ;; per BMF object category. The data lives in form-ontology.json and
+    ;; is projected to a tiny `(let pn-categories (list (list "NAME" CODE) …))`
+    ;; .fk by build_form_compiler_artifact.sh --categories, then compiled
+    ;; to .fkb via `form-kernel-go --emit-binary`.
+    ;;
+    ;; This lens reads that .fkb back as a Recipe tree and walks it into
+    ;; a plain Form list of `(list name-string code-int)` pairs the
+    ;; emitter consumes. No category names are duplicated in this file —
+    ;; the lattice IS the source of truth.
+    ;;
+    ;; Recipe shape the artifact carries (per form-kernel-go buildVerb):
+    ;;   root = RBlockLet(name-leaf "pn-categories", value-recipe)
+    ;;   value-recipe = RFnCall(name-leaf "list", entry1, entry2, …)
+    ;;   each entry = RFnCall(name-leaf "list", name-leaf STRING, name-leaf INT)
+    ;; The lens trusts that shape; if a future encoder changes it, this
+    ;; lens fails loudly with an unexpected-shape print rather than
+    ;; quietly emitting wrong objects.py output.
 
-    (let demo-py (pn-emit-string demo-src))
+    ;; pn-fncall-args — strip the verb-name leaf, return only the arg
+    ;; nodes of an RFnCall recipe. The kernel stores fn-calls as
+    ;; (name-leaf arg1 arg2 …); arg2:.. are the real args.
+    (defn pn-fncall-args (node)
+        (tail (node_children node)))
 
-    (print demo-py)
-    (str_len demo-py)
+    ;; pn-entries-to-pairs — walk the list of `(list "NAME" CODE)` entry
+    ;; nodes into Form pairs `(name code)` the emitter can iterate.
+    (defn pn-entries-to-pairs (entries)
+        (if (nil? entries) (empty)
+            (do
+                (let entry (head entries))
+                (let kids (pn-fncall-args entry))
+                (let name (node_value (head kids)))
+                (let code (node_value (head (tail kids))))
+                (cons (list name code)
+                      (pn-entries-to-pairs (tail entries))))))
+
+    ;; pn-cat-table-from-artifact — entry point. Takes the root NodeID
+    ;; returned by `read_form_binary` and returns the (name code) list.
+    (defn pn-cat-table-from-artifact (root)
+        (do
+            (let let-kids (node_children root))
+            (let list-call (head (tail let-kids)))
+            (pn-entries-to-pairs (pn-fncall-args list-call))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; objects.py emitter — IntEnum + py_keyword helper
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Walks the (name code) pair list from the lens and renders Python
+    ;; source. The IntEnum is the destination shape named in
+    ;; specs/form-binary-to-native-python-emitter.md R5.
+
+    ;; pn-py-enum-name — Form names use UPPER-KEBAB ("FROM-IMPORT").
+    ;; Python IntEnum members read as UPPER_SNAKE. Hyphens → underscores.
+    (defn pn-enum-name-loop (s i n)
+        (if (ge i n) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (pn-enum-name-loop s (add i 1) n))
+                (if (str_eq ch "-") (str_concat "_" rest)
+                    (str_concat ch rest)))))
+
+    (defn pn-enum-name (s) (pn-enum-name-loop s 0 (str_len s)))
+
+    ;; pn-int-str — integer → decimal string. Builds digit-by-digit using
+    ;; mod/div; handles 0 as a special case. Form's `print` would coerce
+    ;; for us, but we need the value inside a larger string-concat chain.
+    (defn pn-digit-char (d)
+        (if (eq d 0) "0"
+        (if (eq d 1) "1"
+        (if (eq d 2) "2"
+        (if (eq d 3) "3"
+        (if (eq d 4) "4"
+        (if (eq d 5) "5"
+        (if (eq d 6) "6"
+        (if (eq d 7) "7"
+        (if (eq d 8) "8"
+            "9"))))))))))
+
+    (defn pn-int-str-loop (n acc)
+        (if (le n 0) acc
+            (pn-int-str-loop (div n 10)
+                             (str_concat (pn-digit-char (mod n 10)) acc))))
+
+    (defn pn-int-str (n)
+        (if (eq n 0) "0" (pn-int-str-loop n "")))
+
+    ;; pn-render-enum-line — one IntEnum member line.
+    (defn pn-render-enum-line (pair)
+        (str_concat "    "
+        (str_concat (pn-enum-name (head pair))
+        (str_concat " = "
+        (str_concat (pn-int-str (head (tail pair))) "\n")))))
+
+    (defn pn-render-enum-body (pairs)
+        (if (nil? pairs) ""
+            (str_concat (pn-render-enum-line (head pairs))
+                        (pn-render-enum-body (tail pairs)))))
+
+    ;; pn-emit-objects-module — full Python source for objects.py.
+    (defn pn-emit-objects-module (pairs)
+        (str_concat (pn-module-header "kernels/python_bmf/objects.py")
+        (str_concat "from enum import IntEnum\n\n"
+        (str_concat "from dataclasses import dataclass\n\n"
+        (str_concat "class PyBmfCategory(IntEnum):\n"
+        (str_concat "    \"\"\"Python BMF object categories — emitted from form-ontology.json via the .fkb lens.\"\"\"\n"
+        (str_concat (pn-render-enum-body pairs)
+        (str_concat "\n\n@dataclass(frozen=True)\nclass PyKeyword:\n    value: str\n\n"
+        (str_concat "def py_keyword(value):\n    return PyKeyword(value=value)\n" "")))))))))
+
+    ;; pn-emit-objects-file — read .fkb, lens, write Python.
+    (defn pn-emit-objects-file (fkb-path out-path)
+        (do
+            (let root (read_form_binary fkb-path))
+            (let pairs (pn-cat-table-from-artifact root))
+            (let py (pn-emit-objects-module pairs))
+            (write_file_text out-path py)))
 
 0
 
