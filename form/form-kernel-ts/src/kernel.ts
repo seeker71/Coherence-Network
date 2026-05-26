@@ -1387,6 +1387,60 @@ export class Kernel {
       }
     });
 
+    // --- Socket natives — L1 physical layer for inter-cell IO ---------
+    // Sibling parity with form-kernel-go + form-kernel-rust at the API
+    // surface. TS scope limit: socket_listen / socket_accept / socket_recv
+    // are panic-stubs because Node's event-loop architecture cannot do
+    // blocking accept/read without a worker-thread + SharedArrayBuffer
+    // shim — that work is deferred to a later breath. socket_close is
+    // safe on -1 (sibling-parity no-op returning -1), so the band can
+    // witness API existence without crossing into the panic-stub region.
+    // TODO: implement TS sockets when we have a blocking shim
+    //       (Atomics.wait + worker_threads sync read).
+    this.registerNative("socket_listen", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_listen: TS kernel has no blocking-accept shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel for " +
+          "server-side socket work this breath.",
+      );
+    });
+    this.registerNative("socket_accept", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_accept: TS kernel has no blocking-accept shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_connect", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_connect: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_send", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_send: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    this.registerNative("socket_recv", catCall(), (_k, _args) => {
+      throw new Error(
+        "socket_recv: TS kernel has no blocking-IO shim yet — " +
+          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
+      );
+    });
+    // socket_close — the one socket native that has a sibling-safe
+    // sentinel branch on all three kernels: a -1 handle returns -1
+    // without touching the (nonexistent) TS connection table. Used by
+    // tests/socket-band.fk to witness that the API surface EXISTS on
+    // all three kernels even when the implementation diverges.
+    this.registerNative("socket_close", catCall(), (_k, args) => {
+      const h = argInt(args, 0);
+      if (h < 0) return { kind: "int", int: -1 };
+      // No connection table in TS — handles > 0 are necessarily stale
+      // (we never returned one), so -1 is the honest response.
+      return { kind: "int", int: -1 };
+    });
+
     // Substrate write surface — all attributed as WITNESS.
     this.registerNative("make_nodeid", catWitness(), (_k, args) => ({
       kind: "nodeid",
