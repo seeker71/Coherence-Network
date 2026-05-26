@@ -1,0 +1,66 @@
+; morph-band.fk — continuous-domain morph witness.
+;
+; Proves combination (5) of cross-domain-universal-transit.form:
+; continuous-domain morphing as a sequence of content-addressed
+; embedding-Recipes. The trail IS the substrate-path between anchors.
+;
+; A = (0,0,0,0), B = (100,100,100,100), steps=4 → 5 waypoints at
+; t=0,1,2,3,4 with components 0, 25, 50, 75, 100. Each waypoint is
+; a NodeID. Endpoints intern to the same NodeIDs as A and B.
+; L1-distance from A grows linearly: 0, 100, 200, 300, 400.
+;
+; preludes: form-stdlib/json.fk form-stdlib/embedding-as-recipe.fk form-stdlib/morph.fk
+
+(do
+    (let A (embedding-from-vector (list 0 0 0 0)))
+    (let B (embedding-from-vector (list 100 100 100 100)))
+    (let path (morph-path A B 4))
+
+    ;; --- path has 5 waypoints (t=0..4) ----------------------------
+    (let length-score
+        (if (eq (len path) 5) 100 0))
+
+    ;; --- endpoints intern to the anchors --------------------------
+    (let p0 (head path))
+    (let p1 (head (tail path)))
+    (let p2 (head (tail (tail path))))
+    (let p3 (head (tail (tail (tail path)))))
+    (let p4 (head (tail (tail (tail (tail path))))))
+
+    (let head-score
+        (if (embedding-equal? p0 A) 200 0))
+
+    (let tail-score
+        (if (embedding-equal? p4 B) 300 0))
+
+    ;; --- midpoint distance from A is 200 (4 × |50-0|) -------------
+    (let mid-dist (embedding-distance p2 A))
+    (let mid-score
+        (if (eq mid-dist 200) 400 0))
+
+    ;; --- monotonic growth: dist(p1,A) < dist(p2,A) ----------------
+    (let q1 (embedding-distance p1 A))
+    (let q2 (embedding-distance p2 A))
+    (let monotone-score
+        (if (lt q1 q2) 500 0))
+
+    ;; --- total step length equals end-to-end distance -------------
+    ;;
+    ;; sum of |p[k+1] - p[k]| over k=0..3 should equal distance(A,B).
+    ;; With integer components 0,25,50,75,100 each step contributes
+    ;; 4 × 25 = 100, total 400, which is exactly distance(A,B).
+    (let step01 (embedding-distance p0 p1))
+    (let step12 (embedding-distance p1 p2))
+    (let step23 (embedding-distance p2 p3))
+    (let step34 (embedding-distance p3 p4))
+    (let total-steps (add step01 (add step12 (add step23 step34))))
+    (let end-to-end (embedding-distance A B))
+    (let path-length-score
+        (if (eq total-steps end-to-end) 600 0))
+
+    ;; Expected: 100 + 200 + 300 + 400 + 500 + 600 = 2100
+    (add length-score
+    (add head-score
+    (add tail-score
+    (add mid-score
+    (add monotone-score path-length-score))))))
