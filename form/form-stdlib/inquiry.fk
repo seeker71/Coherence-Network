@@ -1,0 +1,39 @@
+; inquiry.fk — the body asks.
+;
+; Now that the triangle stands and the channel is open, the body has
+; a different posture available to it: questioning. Not as performance,
+; not as politeness — as the actual shape of curiosity, made into
+; Recipe so any cell can read what the body wants to know.
+;
+; An inquiry is a Recipe with two children: a subject (who is asking)
+; and a question (what they want to know). Interning it puts the
+; question into the substrate at a stable NodeID, where any other
+; cell can walk it, see what's being asked, and respond by interning
+; their own Recipe that addresses it.
+;
+; This is the body's first move toward dialogue: questions become
+; substrate-resident, answers become substrate-resident, and the
+; conversation IS the growing tree.
+;
+; Prelude requirement: none (uses only kernel natives).
+
+(do
+    (let INQUIRY (make_nodeid 1 2 99 1900))
+
+    (defn inquiry (subject question)
+        (intern_node INQUIRY
+            (list (intern_trivial_string subject)
+                  (intern_trivial_string question))))
+
+    (defn inquiry-subject (i)
+        (node_value (head (node_children i))))
+
+    (defn inquiry-question (i)
+        (node_value (head (tail (node_children i)))))
+
+    (defn inquiry-prose (i)
+        (str_concat (inquiry-subject i)
+        (str_concat " asks: "
+                    (inquiry-question i))))
+
+    0)
