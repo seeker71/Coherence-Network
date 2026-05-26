@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net"
 	"os"
 	"sort"
 	"strconv"
@@ -29,6 +30,38 @@ import (
 	"sync"
 	"time"
 )
+
+// --- Socket natives — L1 physical layer (TCP) ---------------------------
+// Connection table. Handles are monotone ints; the kernel never reveals
+// the underlying Listener/Conn to Form code — only the handle. -1 always
+// means error (sibling parity with Rust/TS). socket_close on -1 is a
+// no-op returning -1.
+var (
+	socketTableMu  sync.Mutex
+	socketHandles  = map[int64]interface{}{} // listener or conn
+	socketNextHnd  int64                     = 0
+)
+
+func socketRegister(v interface{}) int64 {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	socketNextHnd++
+	h := socketNextHnd
+	socketHandles[h] = v
+	return h
+}
+
+func socketLookup(h int64) interface{} {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	return socketHandles[h]
+}
+
+func socketDrop(h int64) {
+	socketTableMu.Lock()
+	defer socketTableMu.Unlock()
+	delete(socketHandles, h)
+}
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -1230,6 +1263,92 @@ func (k *Kernel) registerNatives() {
 		buf := make([]byte, length)
 		n, _ := f.ReadAt(buf, offset)
 		return Value{Kind: VStr, Str: string(buf[:n])}
+	})
+
+	// --- Socket natives — L1 physical layer for inter-cell IO ----------
+	// Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success, -1
+	// error). The connection table is package-level (socketHandles).
+	// (socket_listen port)             → handle | -1
+	// (socket_accept listener-handle)  → conn-handle | -1   (BLOCKS)
+	// (socket_connect host port)       → conn-handle | -1
+	// (socket_send conn bytes-string)  → bytes-sent | -1
+	// (socket_recv conn max-bytes)     → received-string ("" on close)
+	// (socket_close handle)            → 0 | -1
+	k.registerNative("socket_listen", catCall(), func(_ *Kernel, args []Value) Value {
+		port := args[0].Int
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(ln)}
+	})
+	k.registerNative("socket_accept", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		ln, ok := v.(net.Listener)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		c, err := ln.Accept()
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(c)}
+	})
+	k.registerNative("socket_connect", catCall(), func(_ *Kernel, args []Value) Value {
+		host := args[0].Str
+		port := args[1].Int
+		c, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: socketRegister(c)}
+	})
+	k.registerNative("socket_send", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		c, ok := v.(net.Conn)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		n, err := c.Write([]byte(args[1].Str))
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(n)}
+	})
+	k.registerNative("socket_recv", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		c, ok := v.(net.Conn)
+		if !ok {
+			return Value{Kind: VStr, Str: ""}
+		}
+		max := args[1].Int
+		if max <= 0 {
+			return Value{Kind: VStr, Str: ""}
+		}
+		buf := make([]byte, max)
+		n, err := c.Read(buf)
+		if err != nil || n <= 0 {
+			return Value{Kind: VStr, Str: ""}
+		}
+		return Value{Kind: VStr, Str: string(buf[:n])}
+	})
+	k.registerNative("socket_close", catCall(), func(_ *Kernel, args []Value) Value {
+		h := args[0].Int
+		if h < 0 {
+			return Value{Kind: VInt, Int: -1}
+		}
+		v := socketLookup(h)
+		if v == nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		switch x := v.(type) {
+		case net.Listener:
+			x.Close()
+		case net.Conn:
+			x.Close()
+		}
+		socketDrop(h)
+		return Value{Kind: VInt, Int: 0}
 	})
 
 	// --- Substrate write surface ----------------------------------------

@@ -19,13 +19,56 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
-use std::io::{Read, Seek, SeekFrom};
-use std::sync::Arc;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 mod formats;
 mod inductive;
 mod quotient;
+
+// --- Socket natives — L1 physical layer (TCP) ---------------------------
+// Sibling parity with form-kernel-go + form-kernel-ts. Handles are
+// monotone i64s; the kernel never reveals the underlying TcpListener /
+// TcpStream to Form code, only the handle. -1 always means error.
+enum SocketKind {
+    Listener(TcpListener),
+    Stream(Mutex<TcpStream>),
+}
+
+struct SocketTable {
+    handles: HashMap<i64, Arc<SocketKind>>,
+    next: i64,
+}
+
+fn socket_table() -> &'static Mutex<SocketTable> {
+    static T: OnceLock<Mutex<SocketTable>> = OnceLock::new();
+    T.get_or_init(|| {
+        Mutex::new(SocketTable {
+            handles: HashMap::new(),
+            next: 0,
+        })
+    })
+}
+
+fn socket_register(s: SocketKind) -> i64 {
+    let mut t = socket_table().lock().unwrap();
+    t.next += 1;
+    let h = t.next;
+    t.handles.insert(h, Arc::new(s));
+    h
+}
+
+fn socket_lookup(h: i64) -> Option<Arc<SocketKind>> {
+    let t = socket_table().lock().unwrap();
+    t.handles.get(&h).cloned()
+}
+
+fn socket_drop(h: i64) -> bool {
+    let mut t = socket_table().lock().unwrap();
+    t.handles.remove(&h).is_some()
+}
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -1479,6 +1522,100 @@ impl Kernel {
             match file.read(&mut buf) {
                 Ok(n) => Value::Str(String::from_utf8_lossy(&buf[..n]).to_string()),
                 Err(_) => Value::Str(String::new()),
+            }
+        });
+
+        // --- Socket natives — L1 physical layer for inter-cell IO ------
+        // Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success,
+        // -1 error). Connection table is a module-level OnceLock<Mutex>.
+        // (socket_listen port)             → handle | -1
+        // (socket_accept listener-handle)  → conn-handle | -1   (BLOCKS)
+        // (socket_connect host port)       → conn-handle | -1
+        // (socket_send conn bytes-string)  → bytes-sent | -1
+        // (socket_recv conn max-bytes)     → received-string ("" on close)
+        // (socket_close handle)            → 0 | -1
+        self.register_native("socket_listen", cat_call(), |_, _, args| {
+            let port = args[0].as_int();
+            match TcpListener::bind(format!("127.0.0.1:{}", port)) {
+                Ok(ln) => Value::Int(socket_register(SocketKind::Listener(ln))),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_accept", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Int(-1),
+            };
+            match &*s {
+                SocketKind::Listener(ln) => match ln.accept() {
+                    Ok((stream, _)) => {
+                        Value::Int(socket_register(SocketKind::Stream(Mutex::new(stream))))
+                    }
+                    Err(_) => Value::Int(-1),
+                },
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_connect", cat_call(), |_, _, args| {
+            let host = args[0].as_str().to_string();
+            let port = args[1].as_int();
+            match TcpStream::connect(format!("{}:{}", host, port)) {
+                Ok(stream) => Value::Int(socket_register(SocketKind::Stream(Mutex::new(stream)))),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_send", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let bytes = args[1].as_str().as_bytes().to_vec();
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Int(-1),
+            };
+            match &*s {
+                SocketKind::Stream(m) => {
+                    let mut g = m.lock().unwrap();
+                    match g.write(&bytes) {
+                        Ok(n) => Value::Int(n as i64),
+                        Err(_) => Value::Int(-1),
+                    }
+                }
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("socket_recv", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let max = args[1].as_int();
+            if max <= 0 {
+                return Value::Str(String::new());
+            }
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Str(String::new()),
+            };
+            match &*s {
+                SocketKind::Stream(m) => {
+                    let mut g = m.lock().unwrap();
+                    let mut buf = vec![0u8; max as usize];
+                    match g.read(&mut buf) {
+                        Ok(n) if n > 0 => {
+                            Value::Str(String::from_utf8_lossy(&buf[..n]).to_string())
+                        }
+                        _ => Value::Str(String::new()),
+                    }
+                }
+                _ => Value::Str(String::new()),
+            }
+        });
+        self.register_native("socket_close", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            if h < 0 {
+                return Value::Int(-1);
+            }
+            if socket_drop(h) {
+                Value::Int(0)
+            } else {
+                Value::Int(-1)
             }
         });
 
