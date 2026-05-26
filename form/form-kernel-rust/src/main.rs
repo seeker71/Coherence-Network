@@ -1772,6 +1772,16 @@ impl Kernel {
         });
 
         // --- Debug / inspection -----------------------------------------
+        // bmf_apply_rule_native — sibling-parity stub (Path C native BMF
+        // runtime; see docs/coherence-substrate/bmf-native-runtime.form).
+        // Go kernel carries the working implementation this breath; Rust +
+        // TS panic loudly so divergence is visible, not silent. Form code
+        // that wants portability keeps calling engine.fk's apply-object-rule
+        // which works on every kernel.
+        self.register_native("bmf_apply_rule_native", cat_witness(), |_, _, _args| {
+            panic!("bmf_apply_rule_native: not implemented; use engine.fk apply-object-rule fallback");
+        });
+
         // `trace` — print-and-return. Drop into any Form expression to
         // inspect a value mid-computation without breaking control flow.
         // Output goes to stderr so it doesn't pollute the result on stdout.

@@ -1728,6 +1728,18 @@ export class Kernel {
     this.registerNative("f64", catTransmute(), (_k, args) => ({ kind: "f64", float: argFloat(args, 0) }));
     this.registerNative("i32", catTransmute(), (_k, args) => ({ kind: "int", int: argInt(args, 0) | 0 }));
 
+    // bmf_apply_rule_native — sibling-parity stub (Path C native BMF
+    // runtime; see docs/coherence-substrate/bmf-native-runtime.form).
+    // Go kernel carries the working implementation this breath; Rust + TS
+    // throw loudly so divergence is visible, not silent. Form code that
+    // wants portability keeps calling engine.fk's apply-object-rule which
+    // works on every kernel.
+    this.registerNative("bmf_apply_rule_native", catWitness(), (_k, _args) => {
+      throw new Error(
+        "bmf_apply_rule_native: not implemented; use engine.fk apply-object-rule fallback",
+      );
+    });
+
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
     this.registerNative("trace", catUndefined(), (_k, args) => {
