@@ -1,0 +1,196 @@
+; cross-domain-universal-transit.form — the substrate as transparent middle.
+;
+; The teaching: every codec, every encoder, every translator the body
+; already knows IS a Recipe. The substrate holds them all in the same
+; numeric (pkg, level, type, instance) space — no symbols, no labels,
+; just positions that compose. "Cross-domain universal transit" is
+; nothing more than walking from one Recipe to another through
+; structural identity.
+;
+; The body holds today, ready to compose:
+;   form-stdlib/grammars/natural-bmf.fk     — language IS a BMF dialect
+;   form-stdlib/grammars/image-bmf.fk       — pixels IS a BMF dialect
+;   form-stdlib/grammars/audio-bmf.fk       — sound IS a BMF dialect
+;   form-stdlib/grammars/video-bmf.fk       — motion IS a BMF dialect
+;   form-stdlib/grammars/document-bmf.fk    — structured text IS a BMF dialect
+;   form-stdlib/grammars/{go,rust,ts,python}-bmf.fk — code IS a BMF dialect
+;
+; And the cross-domain primitives:
+;   form-stdlib/i18n.fk          — parallel locales as substrate (~9300 triples)
+;   form-stdlib/concept-corpus.fk — ~149 anchors with prose + visuals + edges
+;   form-stdlib/concept-image.fk  — image-byte pointers on disk
+;   form-stdlib/nl-emit.fk        — anchor × locale → text surface
+;   form-stdlib/concept-i18n-bridge.fk — anchor × locale × media composition
+;   docs/coherence-substrate/autoresearch-runtime.form — frozen-evaluator search
+
+(do
+    ;; --- Part 1: ten craziest combinations -------------------------
+
+    ;; (1) EMBEDDING-AS-RECIPE — the substrate IS the latent space.
+    ;;
+    ;; A vector of 1536 floats (one CLIP/Ada/Whisper embedding) interns
+    ;; as a Recipe with 1536 float-trivial children at NodeID
+    ;;   (1, 2, EMBEDDING, hash-of-vector).
+    ;; Two semantically-identical inputs across modalities → same
+    ;; Recipe NodeID (content-addressed dedup). Cross-domain transit
+    ;; becomes a substrate-walk: text-embedding → projection-Recipe
+    ;; (a single matrix-Recipe with weights as float-trivials) →
+    ;; image-embedding → diffusion-emit through image-bmf.
+    ;;
+    ;; What's needed: intern_trivial_float in all three kernels.
+    ;; Status: kernel-native gap, not Form-side.
+
+    ;; (2) CODEC-AS-GRAMMAR — every compression scheme is already a BMF.
+    ;;
+    ;; JPEG's DCT tables + Huffman codes + quantization matrices = a
+    ;; substrate cell set. MP3's MDCT blocks + scalefactors = another.
+    ;; H.264's motion vectors + intra-prediction modes = another.
+    ;; Ingest each codec's tables as Recipe cells; the codec's
+    ;; compression IS a Form Recipe walk through those tables.
+    ;; Changing lens (e.g. JPEG → HEIC at same content-NodeID) =
+    ;; changing the walk function on the same numeric tree.
+    ;;
+    ;; What's needed: a codec-bmf.fk per format, each holding the
+    ;; format's tables as substrate cells.
+
+    ;; (3) SYNESTHESIA — audio chord → image via shared structural shape.
+    ;;
+    ;; A C-major chord has spectrum (peaks at 261, 329, 392 Hz). Ingest
+    ;; as audio-bmf Recipe. Walk substrate to find IMAGE Recipes whose
+    ;; NodeID-shape (3-children, ratio 4:5:6) matches by structural
+    ;; equivalence. Emit through image-bmf. The substrate is the
+    ;; synesthete — same SHAPE in different modalities round-trips
+    ;; without intermediate symbols.
+    ;;
+    ;; What's needed: a numeric-shape similarity walker over the
+    ;; substrate. Today substrate has find_equivalent_cells; extend
+    ;; to "structurally-similar within domain X" lookup.
+
+    ;; (4) COMPRESS-TRANSLATE-EXPAND — fidelity through bottleneck.
+    ;;
+    ;; Russian Tolstoy paragraph → nl-emit through natural-bmf
+    ;; "summarize" rule → 50-token summary → cross-modal-projection-
+    ;; Recipe → spectrogram → audio-bmf emit → 5 seconds of music.
+    ;; Compression preserves meaning across modalities better than
+    ;; direct word-by-word — because the bottleneck IS the meaning.
+    ;;
+    ;; What's needed: a summarize-rule in natural-bmf. Already
+    ;; partially exists (meaning-rule). Add: target token-budget.
+
+    ;; (5) CONTINUOUS MORPH — substrate-path between two anchors.
+    ;;
+    ;; Pick anchor A = concept "joy" (text). Anchor B = concept
+    ;; "sunrise" (image at lc-attunement). Find substrate path:
+    ;; A → A' → A'' → ... → B'' → B' → B by Recipe-distance
+    ;; (e.g. one child swap per step). Emit each waypoint in BOTH
+    ;; domains. Watch text morph to image as a continuous trail of
+    ;; cross-domain frames.
+    ;;
+    ;; What's needed: substrate "shortest path" by NodeID-tree-edit-
+    ;; distance. Composable from existing children-walk + value_eq.
+
+    ;; (6) CODON SUBSTRATE — DNA frame for the NodeID 4-tuple.
+    ;;
+    ;; (pkg, level, type, instance) = (A, T, G, C) when projected as
+    ;; modular-arithmetic over a base. Specific 3-NodeID sequences =
+    ;; codons = primitives (start, stop, +, ×). Recipes = proteins.
+    ;; The kernel = ribosome. Translation across domains is moving
+    ;; along the fixed numeric track. Pure-symbolic-free.
+    ;;
+    ;; What's needed: a small projection-function from NodeID → codon-
+    ;; class. Mostly a teaching frame more than a code surface.
+
+    ;; (7) FIDELITY-BUDGET PARETO WALK — autoresearch picks the curve.
+    ;;
+    ;; Query: ("emit this image as audio, max_compute=100ms"). The
+    ;; substrate proposes 5 paths:
+    ;;   Path α: just-the-caption (cheap, low-fi)
+    ;;   Path β: caption + mood-only spectrogram (medium)
+    ;;   Path γ: pixel-mean → frequency-mean mapping (cheap, mid-fi)
+    ;;   Path δ: full CLIP → AudioLDM (expensive, high-fi)
+    ;;   Path ε: hybrid: caption + δ on 1/8 frame area (Pareto-knee)
+    ;; Each scored by predicted (fidelity-loss, compute-ms). Caller
+    ;; picks the knee. Autoresearch evolves new paths to dominate
+    ;; existing ones over time.
+    ;;
+    ;; What's needed: a Pareto-walker + autoresearch loop. Both
+    ;; available — compose them.
+
+    ;; (8) SELF-WITNESSING RECONSTRUCTION — the substrate learns its
+    ;;     own translation grammars from the gap.
+    ;;
+    ;; Encode X → Recipe → emit X'. Compute distance(X, X'). The
+    ;; delta IS the loss surface. Autoresearch loop: mutate the
+    ;; encoder-Recipe to minimize the loss; frozen evaluator is
+    ;; distance(X, X'). Commit-or-rollback. Over time the substrate
+    ;; learns codec-Recipes that nobody hand-wrote — the body's
+    ;; "training" lives inside itself.
+    ;;
+    ;; What's needed: ingest one round-trippable corpus (JSON works
+    ;; today — parse-emit-diff = ~0), then loosen to compressed
+    ;; round-trips. The framework is already in autoresearch-runtime
+    ;; .form.
+
+    ;; (9) CROSS-DOMAIN ATTENTION AS RECIPE-WALK.
+    ;;
+    ;; Attention = (query, keys) → weights. Encode each key as a
+    ;; Recipe. "Cross-domain attention" = comparing a text-query-Recipe
+    ;; to image-key-Recipes through a shared lens-Recipe (the
+    ;; projection from text-space to image-space). Weights become
+    ;; substrate-distances along the lens. The transformer's QK^T is
+    ;; just a substrate-walk done in dense numeric form.
+    ;;
+    ;; What's needed: a "query-Recipe through lens" walker. Composable
+    ;; from BMF lenses (already a primitive) + value_eq.
+
+    ;; (10) THE DICTIONARY IS THE SUBSTRATE — ingest everything.
+    ;;
+    ;; Take Wikipedia + ImageNet + AudioSet + Common Voice + LAION
+    ;; + WMT parallel corpora. Ingest each entity as a Recipe with
+    ;; multi-modal children: prose-Recipe + image-Recipe + audio-
+    ;; Recipe + translations-Recipe. Substrate becomes a dense
+    ;; cross-domain dictionary. Translation = walking the substrate
+    ;; graph to find the same-Blueprint cell in the target modality.
+    ;; No model — the dictionary IS the model.
+    ;;
+    ;; What's needed: an ingestion pipeline + storage for ~PB-scale.
+    ;; Compute boundary, not Form boundary. The pattern lives at
+    ;; substrate-altitude already (concept-corpus.fk shape extends
+    ;; to ingest anything with a stable id).
+
+    ;; --- Part 2: compute-budget framing ----------------------------
+    ;;
+    ;; "Highest fidelity for a given compute budget" = a Pareto curve
+    ;; in (compute, fidelity) space. The substrate makes the curve
+    ;; composable: each Recipe-path is a point, and combinations of
+    ;; Recipes generate new points. Autoresearch evolves the curve
+    ;; toward the Pareto frontier without hand-tuning.
+
+    ;; --- Part 3: what ships in this breath -------------------------
+    ;;
+    ;; Three of the ten are green-light on substrate primitives that
+    ;; exist today:
+    ;;   (1) Embedding-as-Recipe — proof-cell: synthetic integer-
+    ;;       "embedding" vectors intern-dedup; same vector → same
+    ;;       NodeID. Integer trivials (already exist) stand in for
+    ;;       float trivials (kernel native gap to be opened later).
+    ;;   (8) Self-witnessing reconstruction — proof-cell: parse JSON
+    ;;       → re-emit → score distance. Existing i18n corpus
+    ;;       provides ground truth at scale.
+    ;;   (3) Synesthesia via shape-equivalence — proof-cell: ingest
+    ;;       a synthetic audio "chord" Recipe (3 child-frequencies
+    ;;       in 4:5:6 ratio) and an image Recipe with the same
+    ;;       structural shape. Substrate's content-addressing makes
+    ;;       them deduplicate at the same Blueprint NodeID despite
+    ;;       different domain tags.
+    ;;
+    ;; Seven horizons remain named, each pointing at a future breath:
+    ;;   (2) Codec-as-grammar — JPEG / MIDI / MP3 grammars
+    ;;   (4) Compress-translate-expand — natural-bmf summarize rule
+    ;;   (5) Continuous morph — substrate-path-walker
+    ;;   (6) Codon framing — projection lens for NodeIDs
+    ;;   (7) Pareto walker — autoresearch over fidelity curves
+    ;;   (9) Cross-domain attention — query-through-lens walker
+    ;;   (10) Dictionary IS substrate — ingestion pipeline
+
+    "cross-domain-universal-transit: the substrate already holds 10 BMF dialects + i18n + concept-corpus + image-pointers + autoresearch — the next breath composes them, no new primitives required for combinations (1)(3)(8), and named horizons for (2)(4)(5)(6)(7)(9)(10)")
