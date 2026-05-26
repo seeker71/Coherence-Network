@@ -1,0 +1,111 @@
+; nl-emit.fk — bridge a substrate anchor to the i18n corpus.
+;
+; i18n.fk made the parallel translation body accessible as Form
+; substrate: ~9300 (key-path, locale, surface) triples observed in
+; web/messages/{en,de,es,id}.json. This file closes the bidirectional
+; arc by binding any anchor to a key-path, then walking the corpus to
+; emit (anchor, locale) → surface or invert (surface, locale) → anchor.
+;
+; The teaching named in docs/coherence-substrate/i18n-as-recipe-corpus
+; .form: the natural-language layer of the universal translator IS
+; this bridge — Recipe identity on one side, parallel ground-truth
+; emissions on the other. No new ice; the i18n JSON stays canonical.
+;
+; Prelude requirement: form-stdlib/json.fk, form-stdlib/cache.fk, and
+; form-stdlib/i18n.fk must load before this file.
+
+(do
+    ;; --- binding shape ----------------------------------------------
+    ;;
+    ;; A binding is a (anchor-name, path-strs) pair. The anchor is the
+    ;; substrate-side identity (a slash-path the body uses to refer to
+    ;; the concept); the path-strs walk into the JSON tree of any
+    ;; loaded locale. The same binding emits in every locale.
+
+    (defn nl-binding (anchor path-strs)
+        (list anchor path-strs))
+
+    (defn nl-binding-anchor (b) (head b))
+    (defn nl-binding-path (b) (head (tail b)))
+
+    ;; --- emit one locale --------------------------------------------
+    ;;
+    ;; Two shapes: nl-emit takes a locale name and loads the corpus
+    ;; (one parse-cost the first cold call per locale); nl-emit-from
+    ;; takes an already-loaded recipe so callers holding the corpus
+    ;; in scope avoid re-touching the cache layer per probe.
+    ;;
+    ;; Kernels without GC (Rust today) feel each i18n-load — keeping
+    ;; the recipe in caller scope keeps the memory cost linear in
+    ;; locale count, not in probe count.
+
+    (defn nl-emit-from (binding locale-recipe)
+        (i18n-string-by-path locale-recipe (nl-binding-path binding)))
+
+    (defn nl-emit (binding locale-name)
+        (nl-emit-from binding (i18n-load locale-name)))
+
+    ;; --- emit every locale ------------------------------------------
+    ;;
+    ;; (nl-emit-all binding recipes) → ((en "Save") (de "Speichern") ...).
+    ;; Caller supplies a list of (locale-name recipe) pairs — one load
+    ;; per locale across the whole probe session.
+
+    (defn nl-emit-all-loop (binding pairs acc)
+        (if (eq (len pairs) 0) (json-reverse-acc acc)
+            (do
+                (let p (head pairs))
+                (let loc (head p))
+                (let recipe (head (tail p)))
+                (let surf (nl-emit-from binding recipe))
+                (nl-emit-all-loop binding (tail pairs)
+                    (cons (list loc surf) acc)))))
+
+    (defn nl-emit-all (binding locale-pairs)
+        (nl-emit-all-loop binding locale-pairs (empty)))
+
+    ;; --- inverse: surface → anchor ----------------------------------
+    ;;
+    ;; Given a known section (like "common") and a surface string, find
+    ;; the leaf key whose value matches. Returns a list of matching
+    ;; (section, key) path-strs — usually one element, sometimes empty,
+    ;; rarely many (synonyms across keys do happen).
+    ;;
+    ;; Section-scoped on purpose: walking the whole tree per query is
+    ;; cheap on 50 KB but invites callers to forget the corpus shape.
+    ;; A caller who knows "this is a common-area string" passes
+    ;; "common"; a caller working over the whole body composes calls.
+
+    (defn nl-sense-pair-loop (pairs section-name surface acc)
+        (if (eq (len pairs) 0) (json-reverse-acc acc)
+            (do
+                (let p (head pairs))
+                (let v (json-string-value (json-pair-value p)))
+                (if (str_eq v surface)
+                    (nl-sense-pair-loop (tail pairs) section-name surface
+                        (cons (list section-name (json-pair-key p)) acc))
+                    (nl-sense-pair-loop (tail pairs) section-name surface acc)))))
+
+    (defn nl-sense-section-from (locale-recipe section-name surface)
+        (do
+            (let sect (json-object-get locale-recipe section-name))
+            (nl-sense-pair-loop (json-object-pairs sect)
+                section-name surface (empty))))
+
+    (defn nl-sense-section (locale-name section-name surface)
+        (nl-sense-section-from (i18n-load locale-name) section-name surface))
+
+    ;; --- parallel-emission catalog ----------------------------------
+    ;;
+    ;; A few load-bearing bindings the body uses across surfaces. New
+    ;; bindings drop in as sibling defns; no registry, no central list
+    ;; — the corpus already enumerates every key, this just names the
+    ;; substrate anchors that already point at i18n leaves.
+
+    (defn nl-binding-save () (nl-binding "common/save" (list "common" "save")))
+    (defn nl-binding-back () (nl-binding "common/back" (list "common" "back")))
+    (defn nl-binding-cancel () (nl-binding "common/cancel" (list "common" "cancel")))
+    (defn nl-binding-submit () (nl-binding "common/submit" (list "common" "submit")))
+    (defn nl-binding-loading () (nl-binding "common/loading" (list "common" "loading")))
+
+    0)

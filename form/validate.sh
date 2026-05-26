@@ -50,6 +50,7 @@ run_ts() {
 }
 
 source_compile_dir="$(mktemp -d "${TMPDIR:-/tmp}/form-source.XXXXXX")"
+mkdir -p form-stdlib/.cache
 artifact=""
 cleanup() {
     rm -rf "$source_compile_dir"
