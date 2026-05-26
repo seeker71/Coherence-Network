@@ -1334,6 +1334,16 @@ export class Kernel {
         return { kind: "int", int: -1 };
       }
     });
+    // file_mtime — modification time in unix seconds; -1 if missing.
+    // Sibling parity with Go + Rust file_mtime; powers Form-side cache
+    // layers that regenerate .fkb projections when source files drift.
+    this.registerNative("file_mtime", catCall(), (_k, args) => {
+      try {
+        return { kind: "int", int: Math.floor(statSync(argStr(args, 0)).mtimeMs / 1000) };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
     this.registerNative("file_byte_at", catCall(), (_k, args) => {
       const offset = argInt(args, 1);
       if (offset < 0) return { kind: "int", int: -1 };

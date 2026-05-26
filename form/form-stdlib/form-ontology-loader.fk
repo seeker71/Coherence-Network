@@ -18,11 +18,22 @@
 ; Prelude requirement: form-stdlib/json.fk must load before this
 ; file so parse-json and the json-* accessors are in scope.
 
-;; --- read + parse ---------------------------------------------------
+;; --- read + parse (with .fkb cache) ---------------------------------
+;;
+;; First load: parse-json runs (~84 ms on form-ontology.json's 18 KB),
+;; writes the parsed Recipe to form-stdlib/.cache/form-ontology.fkb.
+;; Subsequent loads: read_form_binary in microseconds. Cache invalidates
+;; when form-ontology.json's mtime advances past the .fkb's. See
+;; form-stdlib/cache.fk for the generic mechanism.
+;;
+;; Prelude requirement: form-stdlib/cache.fk must load before this
+;; file so read_with_cache + cache-fresh? are in scope. Earlier deps
+;; (form-stdlib/json.fk for parse-json) still required.
 
 (let ONTOLOGY-JSON
-    (parse-json "form-stdlib/form-ontology.json"
-                (read_file "form-stdlib/form-ontology.json")))
+    (read_with_cache "form-stdlib/form-ontology.json"
+                     "form-stdlib/.cache/form-ontology.fkb"
+                     parse-json))
 
 ;; --- categories / primitives → tables -------------------------------
 ;;

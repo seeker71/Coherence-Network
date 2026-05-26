@@ -1189,6 +1189,17 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: info.Size()}
 	})
+	// file_mtime — modification time in unix seconds; -1 if file missing.
+	// Used by Form-side cache layers (form-stdlib/cache.fk) to decide
+	// when a .fkb projection of a source file is stale. Generic: any
+	// "regenerate cache when source newer" pattern can compose this.
+	k.registerNative("file_mtime", catCall(), func(_ *Kernel, args []Value) Value {
+		info, err := os.Stat(args[0].Str)
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: info.ModTime().Unix()}
+	})
 	k.registerNative("file_byte_at", catCall(), func(_ *Kernel, args []Value) Value {
 		if args[1].Int < 0 {
 			return Value{Kind: VInt, Int: -1}

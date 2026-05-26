@@ -2,7 +2,7 @@
 ; runtime body as BMF objects, while keeping compiler helpers in the ambient
 ; Form runtime until module bundles can be emitted as standalone recipes.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/engine.fk form-stdlib/compiler.fk
 
 (do
     (defn fa-ident (name)

@@ -1,6 +1,6 @@
 ; go-bmf-reversible-band.fk - canonical Go reverse recipes
 ;
-; preludes: form-stdlib/json.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/go-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/go-bmf.fk
 
 (do
     (defn rt-score (rt)

@@ -1429,6 +1429,21 @@ impl Kernel {
                 Err(_) => Value::Int(-1),
             }
         });
+        // file_mtime — modification time in unix seconds; -1 if missing.
+        // Sibling parity with Go + TS file_mtime; powers Form-side cache
+        // layers that regenerate .fkb projections when source files drift.
+        self.register_native("file_mtime", cat_call(), |_, _, args| {
+            match fs::metadata(args[0].as_str()) {
+                Ok(meta) => match meta.modified() {
+                    Ok(t) => match t.duration_since(std::time::UNIX_EPOCH) {
+                        Ok(d) => Value::Int(d.as_secs() as i64),
+                        Err(_) => Value::Int(-1),
+                    },
+                    Err(_) => Value::Int(-1),
+                },
+                Err(_) => Value::Int(-1),
+            }
+        });
         self.register_native("file_byte_at", cat_call(), |_, _, args| {
             let offset = args[1].as_int();
             if offset < 0 {
