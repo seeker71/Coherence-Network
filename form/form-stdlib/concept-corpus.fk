@@ -7,22 +7,19 @@
 ; substrate altitude so Form cells can walk concepts the way they
 ; already walk i18n locales.
 ;
-; First breath: only cross-refs and id parse. Prose body and visual-
-; prompt extraction queue as the next breath — same pattern, same
-; cache layer, no new ice.
+; v1 shape: id, body, visuals, cross-refs — the full cross-media
+; triple the concepts-as-recipe-corpus.form teaching named. Adding
+; another media surface (e.g. image-bytes via generated jpgs) is a
+; sibling defn at the same composition altitude.
 ;
-; Read docs/coherence-substrate/concepts-as-recipe-corpus.form for the
-; teaching that names what this opens.
+; Read docs/coherence-substrate/concepts-as-recipe-corpus.form for
+; the teaching that names what this opens.
 ;
 ; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc),
 ; form-stdlib/cache.fk must load before this file.
 
 (do
     ;; --- file path helpers ------------------------------------------
-    ;;
-    ;; Paths relative to form/ (where validate.sh runs). Each concept
-    ;; lives at docs/vision-kb/concepts/{id}.md; the .fkb cache lands
-    ;; next to its i18n sibling under form-stdlib/.cache/.
 
     (defn concept-source-path (concept-id)
         (str_concat "../docs/vision-kb/concepts/"
@@ -32,12 +29,38 @@
         (str_concat "form-stdlib/.cache/concept-"
             (str_concat concept-id ".fkb")))
 
-    ;; --- cross-ref line extraction ----------------------------------
+    ;; --- id extraction from yaml frontmatter ------------------------
     ;;
-    ;; Concept files carry one line of the shape:
-    ;;   → lc-foo, lc-bar, lc-baz
-    ;; Find the line, return the substring after "→ " up to newline.
-    ;; Returns the empty string if no cross-refs line exists.
+    ;; Frontmatter starts at byte 0 with "---\n" and contains one
+    ;; "id: lc-..." line within the first few lines.
+
+    (defn concept-id-from-text (text)
+        (do
+            (let id-pos (str_find text "id: " 0))
+            (if (lt id-pos 0) ""
+                (do
+                    (let start (add id-pos 4))
+                    (let nl-pos (str_find text "\n" start))
+                    (if (lt nl-pos 0)
+                        (substring text start (str_len text))
+                        (substring text start nl-pos))))))
+
+    ;; --- body extraction --------------------------------------------
+    ;;
+    ;; Frontmatter ends at the second "---\n" line. Body is everything
+    ;; after, with leading newline trimmed. If no frontmatter (rare,
+    ;; some short concepts), body is the whole file.
+
+    (defn concept-body-from-text (text)
+        (do
+            (let first-marker (str_find text "---\n" 0))
+            (if (lt first-marker 0) text
+                (do
+                    (let second-marker (str_find text "\n---\n" (add first-marker 4)))
+                    (if (lt second-marker 0) text
+                        (substring text (add second-marker 5) (str_len text)))))))
+
+    ;; --- cross-ref extraction ---------------------------------------
 
     (defn concept-find-crossref-line (text)
         (do
@@ -50,12 +73,6 @@
                     (if (lt nl-pos 0)
                         (substring text start (str_len text))
                         (substring text start nl-pos))))))
-
-    ;; --- split comma-separated cross-refs --------------------------
-    ;;
-    ;; Walk the cross-ref text, splitting on ", " — each chunk is one
-    ;; anchor-id. Empty input produces the empty list (no spurious
-    ;; entries).
 
     (defn concept-split-loop (text from acc)
         (do
@@ -72,50 +89,94 @@
             (if (eq (str_len line) 0) (empty)
                 (concept-split-loop line 0 (empty)))))
 
-    ;; --- id extraction from yaml frontmatter -----------------------
+    ;; --- visual extraction ------------------------------------------
     ;;
-    ;; Frontmatter starts at byte 0 with "---\n" and contains one
-    ;; "id: lc-..." line within the first few lines. Read the line
-    ;; after "id: " up to newline.
+    ;; Visuals embed as `![caption](visuals:prompt)`. Walk text finding
+    ;; each `![`, then `](visuals:`, then `)`. Each match becomes a
+    ;; (caption prompt) pair. The pair is later interned as a VISUAL
+    ;; node so the kernel can walk the list with node_children.
+    ;;
+    ;; Prompts in the current body are single-line; the closing `)` is
+    ;; the first `)` after `](visuals:`. If a future prompt nests
+    ;; parens, the walker shifts to balanced-paren scanning — for now
+    ;; the first-`)` rule fits every concept the body holds.
 
-    (defn concept-id-from-text (text)
+    (defn concept-visuals-loop (text from acc)
         (do
-            (let id-pos (str_find text "id: " 0))
-            (if (lt id-pos 0) ""
+            (let open-pos (str_find text "![" from))
+            (if (lt open-pos 0) (json-reverse-acc acc)
                 (do
-                    (let start (add id-pos 4))
-                    (let nl-pos (str_find text "\n" start))
-                    (if (lt nl-pos 0)
-                        (substring text start (str_len text))
-                        (substring text start nl-pos))))))
+                    (let cap-start (add open-pos 2))
+                    (let cap-end (str_find text "](visuals:" cap-start))
+                    (if (lt cap-end 0) (json-reverse-acc acc)
+                        (do
+                            (let prompt-start (add cap-end 10))
+                            (let prompt-end (str_find text ")" prompt-start))
+                            (if (lt prompt-end 0) (json-reverse-acc acc)
+                                (do
+                                    (let caption (substring text cap-start cap-end))
+                                    (let prompt (substring text prompt-start prompt-end))
+                                    (concept-visuals-loop text (add prompt-end 1)
+                                        (cons (list caption prompt) acc))))))))))
 
-    ;; --- concept Recipe shape --------------------------------------
+    (defn concept-visuals-from-text (text)
+        (concept-visuals-loop text 0 (empty)))
+
+    ;; --- concept Recipe shape ---------------------------------------
     ;;
-    ;; CONCEPT NodeID groups (id-string, cross-refs-list). Two fixed
-    ;; children today; the next breath adds body and visuals as
-    ;; sibling children. Keeping the NodeID stable across additions
-    ;; would mean a versioned shape — for now this breath ships v0,
-    ;; named explicitly.
+    ;; CONCEPT-V1 children layout:
+    ;;   child[0]   = id (trivial string)
+    ;;   child[1]   = body (trivial string)
+    ;;   child[2]   = VISUALS node (children are VISUAL nodes)
+    ;;   child[3..] = cross-ref strings, one per child
+    ;;
+    ;; A VISUAL node has two children: caption + prompt.
 
-    (let CONCEPT-V0 (make_nodeid 1 2 99 950))
-
-    ;; Children layout: child[0] = id string, child[1..] = cross-ref strings.
-    ;; Flat shape (one ref per child) lets len + tail compose cleanly
-    ;; across kernels — a nested list-as-single-child reads back as a
-    ;; CONS NodeID that not all kernels iterate the same way through
-    ;; node_children.
+    (let CONCEPT-V1 (make_nodeid 1 2 99 951))
+    (let CONCEPT-VISUALS (make_nodeid 1 2 99 952))
+    (let CONCEPT-VISUAL (make_nodeid 1 2 99 953))
 
     (defn concept-intern-refs (refs acc)
         (if (eq (len refs) 0) (json-reverse-acc acc)
             (concept-intern-refs (tail refs)
                 (cons (intern_trivial_string (head refs)) acc))))
 
-    (defn concept-node (id-str cross-refs-list)
-        (intern_node CONCEPT-V0
+    (defn concept-intern-visual (pair)
+        (intern_node CONCEPT-VISUAL
+            (list (intern_trivial_string (head pair))
+                  (intern_trivial_string (head (tail pair))))))
+
+    (defn concept-intern-visuals-loop (visuals acc)
+        (if (eq (len visuals) 0) (json-reverse-acc acc)
+            (concept-intern-visuals-loop (tail visuals)
+                (cons (concept-intern-visual (head visuals)) acc))))
+
+    (defn concept-intern-visuals-node (visuals)
+        (intern_node CONCEPT-VISUALS
+            (concept-intern-visuals-loop visuals (empty))))
+
+    (defn concept-node (id-str body-str visuals-list cross-refs-list)
+        (intern_node CONCEPT-V1
             (cons (intern_trivial_string id-str)
-                  (concept-intern-refs cross-refs-list (empty)))))
+                (cons (intern_trivial_string body-str)
+                    (cons (concept-intern-visuals-node visuals-list)
+                        (concept-intern-refs cross-refs-list (empty)))))))
+
+    ;; --- accessors --------------------------------------------------
 
     (defn concept-id (c) (node_value (head (node_children c))))
+
+    (defn concept-body (c)
+        (node_value (head (tail (node_children c)))))
+
+    (defn concept-visuals-node (c)
+        (head (tail (tail (node_children c)))))
+
+    (defn concept-visuals (c)
+        (node_children (concept-visuals-node c)))
+
+    (defn concept-visual-caption (v) (node_value (head (node_children v))))
+    (defn concept-visual-prompt (v) (node_value (head (tail (node_children v)))))
 
     (defn concept-cross-refs-loop (children acc)
         (if (eq (len children) 0) (json-reverse-acc acc)
@@ -123,13 +184,16 @@
                 (cons (node_value (head children)) acc))))
 
     (defn concept-cross-refs (c)
-        (concept-cross-refs-loop (tail (node_children c)) (empty)))
+        (concept-cross-refs-loop
+            (tail (tail (tail (node_children c)))) (empty)))
 
-    ;; --- parse + cached load ---------------------------------------
+    ;; --- parse + cached load ----------------------------------------
 
     (defn parse-concept-md (source-path text)
         (concept-node
             (concept-id-from-text text)
+            (concept-body-from-text text)
+            (concept-visuals-from-text text)
             (concept-cross-refs-from-text text)))
 
     (defn concept-load (concept-id-str)
