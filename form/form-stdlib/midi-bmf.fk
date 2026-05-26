@@ -1,0 +1,109 @@
+; midi-bmf.fk — MIDI note-events as Form-native Recipes.
+;
+; Names combination (2) of
+; docs/coherence-substrate/cross-domain-universal-transit.form:
+; every codec is already a BMF dialect. JPEG and MP3 are the big ones;
+; MIDI is the smallest and most structured. A note-event is a tiny tuple
+; (delta-time, channel, pitch, velocity), and the status byte (0x90 for
+; note-on, 0x80 for note-off) is implicit in the NodeID — the Blueprint
+; carries the kind.
+;
+; The trinity sibling to audio-bmf and image-bmf grammars, at the same
+; altitude. We don't repeat audio's reversible-source machinery here —
+; this v1 carries the elementary unit (event) and its compositions
+; (track, song). The bytestream parser is a future-horizon breath; the
+; Recipes are the point.
+;
+; Format-0 only in v1 (one track per song). Format-1 (multi-track) is
+; named in the Blueprint family but not yet emitted by a constructor —
+; midi-song accepts a tracks-list of length 1 today, longer tomorrow.
+;
+; Uses kernel natives: make_nodeid, intern_trivial_int, intern_node,
+; node_eq, node_children, node_value, node_category.
+
+(do
+    ;; --- Blueprints ------------------------------------------------
+    ;;
+    ;; Sibling family with audio-bmf (700, 701) and image-bmf —
+    ;; package=BDomain.SUBSTRATE (1), level=Recipe (2), type=99
+    ;; (composite-leaf), instance unique per node-shape. Instances
+    ;; 1400..1403 are MIDI's reserved slice.
+
+    (let MIDI-NOTE-ON  (make_nodeid 1 2 99 1400))
+    (let MIDI-NOTE-OFF (make_nodeid 1 2 99 1401))
+    (let MIDI-TRACK    (make_nodeid 1 2 99 1402))
+    (let MIDI-SONG     (make_nodeid 1 2 99 1403))
+
+    ;; --- list helpers ----------------------------------------------
+    ;;
+    ;; midi-track and midi-song hold heterogeneous child Recipes
+    ;; (events / tracks). The caller supplies them as a plain list;
+    ;; intern_node takes the list directly. No reversal needed because
+    ;; the caller's order IS the temporal order.
+
+    ;; --- event constructors ---------------------------------------
+    ;;
+    ;; Each note event holds four trivial-int children in fixed order:
+    ;;   (delta-time, channel, pitch, velocity)
+    ;; The status byte (0x90 / 0x80) is implicit in the Blueprint —
+    ;; that's how content-addressing earns its keep: two note-ons with
+    ;; the same tuple intern to the SAME NodeID, regardless of where in
+    ;; the song they sit.
+
+    (defn midi-note-on (delta channel pitch velocity)
+        (intern_node MIDI-NOTE-ON
+                     (list (intern_trivial_int delta)
+                           (intern_trivial_int channel)
+                           (intern_trivial_int pitch)
+                           (intern_trivial_int velocity))))
+
+    (defn midi-note-off (delta channel pitch velocity)
+        (intern_node MIDI-NOTE-OFF
+                     (list (intern_trivial_int delta)
+                           (intern_trivial_int channel)
+                           (intern_trivial_int pitch)
+                           (intern_trivial_int velocity))))
+
+    ;; --- container constructors -----------------------------------
+    ;;
+    ;; A track is an ordered sequence of events. A song wraps tracks
+    ;; (format-0: one track; format-1: future). The children are the
+    ;; sub-Recipes themselves — composition all the way down, no slugs.
+
+    (defn midi-track (events-list)
+        (intern_node MIDI-TRACK events-list))
+
+    (defn midi-song (tracks-list)
+        (intern_node MIDI-SONG tracks-list))
+
+    ;; --- accessors -------------------------------------------------
+    ;;
+    ;; Same child-position convention for both note-on and note-off:
+    ;;   0 = delta, 1 = channel, 2 = pitch, 3 = velocity.
+
+    (defn midi-event-delta (e)
+        (node_value (nth (node_children e) 0)))
+
+    (defn midi-event-channel (e)
+        (node_value (nth (node_children e) 1)))
+
+    (defn midi-event-pitch (e)
+        (node_value (nth (node_children e) 2)))
+
+    (defn midi-event-velocity (e)
+        (node_value (nth (node_children e) 3)))
+
+    ;; --- predicates ------------------------------------------------
+    ;;
+    ;; Identify event kind by Blueprint. node_category returns the
+    ;; NodeID stamped at intern time; node_eq compares structural
+    ;; identity. No status-byte inspection — the Blueprint IS the
+    ;; status byte, lifted out of the bytestream into the substrate.
+
+    (defn midi-is-note-on? (e)
+        (node_eq (node_category e) MIDI-NOTE-ON))
+
+    (defn midi-is-note-off? (e)
+        (node_eq (node_category e) MIDI-NOTE-OFF))
+
+    0)
