@@ -1,0 +1,107 @@
+; pareto-band.fk — the substrate finds the fidelity-budget frontier.
+;
+; Witnesses combination (7) from cross-domain-universal-transit.form:
+; multiple encoder candidates land as Recipes; the substrate picks
+; the non-dominated ones; under a compute budget the knee is the
+; honest best-fidelity-affordable answer.
+;
+; preludes: form-stdlib/json.fk form-stdlib/pareto.fk
+
+(do
+    ;; --- candidates: five encoders for the same query --------------
+    ;;
+    ;; Path α: caption-only         (compute=10,  loss=80)
+    ;; Path β: caption + spectrogram (compute=40,  loss=40)
+    ;; Path γ: pixel-mean → freq     (compute=20,  loss=70)
+    ;; Path δ: full CLIP→AudioLDM    (compute=200, loss=5)
+    ;; Path ε: hybrid (knee)         (compute=80,  loss=15)
+    ;;
+    ;; Domination check by inspection:
+    ;;   γ vs α: γ has higher compute but lower loss — neither dominates.
+    ;;   β vs γ: β.compute=40>20 BUT β.loss=40<70 — neither dominates.
+    ;;   ε vs δ: ε.compute=80<200 (better), ε.loss=15>5 (worse) — neither.
+    ;;   Everyone non-dominated → frontier has all 5.
+
+    (let alpha (pareto-candidate 10 80))
+    (let beta  (pareto-candidate 40 40))
+    (let gamma (pareto-candidate 20 70))
+    (let delta (pareto-candidate 200 5))
+    (let epsilon (pareto-candidate 80 15))
+
+    ;; Now add a dominated candidate ζ (compute=50, loss=90).
+    ;; α (10, 80) doesn't dominate ζ: 10<50 ✓ but 80<90 ✓ → DOMINATES (both ≤, one strict).
+    ;; So ζ is dominated by α — should be excluded from frontier.
+    (let zeta (pareto-candidate 50 90))
+
+    (let candidates (list alpha beta gamma delta epsilon zeta))
+
+    ;; --- dominance probes ------------------------------------------
+    (let dom-score
+        (add
+            (if (pareto-dominates? alpha zeta) 10 0)
+        (add
+            ;; α (10,80) does NOT dominate γ (20,70): 10≤20 ✓, 80>70 ✗
+            (if (pareto-dominates? alpha gamma) 0 20)
+        (add
+            ;; δ does not dominate ε: 200>80 ✗
+            (if (pareto-dominates? delta epsilon) 0 30)
+            ;; ε does not dominate δ: 15>5 ✗
+            (if (pareto-dominates? epsilon delta) 0 40)))))
+
+    ;; --- frontier shape --------------------------------------------
+    (let frontier (pareto-frontier candidates))
+    (let frontier-size-score
+        (if (eq (len frontier) 5) 50 0))
+
+    ;; ζ must NOT appear in frontier.
+    (defn contains-eq-loop (lst target)
+        (if (eq (len lst) 0) 0
+            (if (eq (pareto-compute (head lst)) (pareto-compute target))
+                (if (eq (pareto-loss (head lst)) (pareto-loss target)) 1
+                    (contains-eq-loop (tail lst) target))
+                (contains-eq-loop (tail lst) target))))
+
+    (let zeta-excluded-score
+        (if (eq (contains-eq-loop frontier zeta) 0) 60 0))
+
+    (let alpha-included-score
+        (if (eq (contains-eq-loop frontier alpha) 1) 70 0))
+
+    ;; --- knee-finder under a budget --------------------------------
+    ;;
+    ;; Budget=100 → ε (compute=80, loss=15) is the best-fidelity
+    ;; whose compute fits. δ wins on loss but compute=200 > 100.
+    (let knee-100 (pareto-knee candidates 100))
+    (let knee-100-score
+        (add
+            (if (eq (pareto-compute knee-100) 80) 80 0)
+            (if (eq (pareto-loss knee-100) 15) 90 0)))
+
+    ;; Budget=30 → γ (20, 70) is the best whose compute fits.
+    ;; α (10, 80) fits but loss is worse.
+    (let knee-30 (pareto-knee candidates 30))
+    (let knee-30-score
+        (add
+            (if (eq (pareto-compute knee-30) 20) 100 0)
+            (if (eq (pareto-loss knee-30) 70) 110 0)))
+
+    ;; Budget=500 → δ (200, 5) — the lowest loss period.
+    (let knee-500 (pareto-knee candidates 500))
+    (let knee-500-score
+        (add
+            (if (eq (pareto-compute knee-500) 200) 120 0)
+            (if (eq (pareto-loss knee-500) 5) 130 0)))
+
+    ;; Budget=5 → nothing fits, knee is empty.
+    (let knee-5 (pareto-knee candidates 5))
+    (let knee-5-score
+        (if (eq (len knee-5) 0) 140 0))
+
+    ;; Expected total: 10+20+30+40 + 50+60+70 + 80+90 + 100+110 + 120+130 + 140 = 1050
+    (add dom-score
+    (add frontier-size-score
+    (add zeta-excluded-score
+    (add alpha-included-score
+    (add knee-100-score
+    (add knee-30-score
+    (add knee-500-score knee-5-score))))))))

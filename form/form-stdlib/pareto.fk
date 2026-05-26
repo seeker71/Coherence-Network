@@ -1,0 +1,127 @@
+; pareto.fk — fidelity-budget walks across encoder Recipes.
+;
+; Combination (7) from docs/coherence-substrate/cross-domain-universal-
+; transit.form: given a query and a compute budget, the substrate
+; chooses among many encoder paths. Each path is a Recipe holding two
+; ints: (compute-cost, fidelity-loss). A candidate is DOMINATED if
+; some other candidate has both ≤ cost AND ≤ loss with at least one
+; strictly better.
+;
+; The Pareto frontier is the non-dominated set — the substrate's
+; honest answer to "what's the best fidelity I can have for ≤ N
+; compute units?"
+;
+; This breath ships the static frontier computation. The autoresearch
+; loop that evolves new candidates toward the knee is the next breath
+; — composable from docs/coherence-substrate/autoresearch-runtime.form
+; + this cell as the fitness layer.
+;
+; Prelude requirement: form-stdlib/json.fk (for json-reverse-acc).
+; Uses kernel natives: intern_node, intern_trivial_int, node_value,
+; node_children, head, tail, list, lt, le, eq, and, or.
+
+(do
+    ;; --- the candidate shape -----------------------------------------
+    ;;
+    ;; Each encoder candidate is a Recipe with two int children:
+    ;;   child[0] = compute cost (ms, FLOPs, watts, kg-CO2 — any
+    ;;              monotone budget metric works)
+    ;;   child[1] = fidelity loss (smaller is better; 0 = perfect)
+    ;;
+    ;; The Blueprint is shared across all candidates so any two with
+    ;; identical (compute, loss) intern-dedup to one NodeID. The
+    ;; substrate's content-addressing IS the cache of "candidates
+    ;; we've already seen."
+
+    (let PARETO-CANDIDATE (make_nodeid 1 2 99 1500))
+
+    (defn pareto-candidate (compute fidelity-loss)
+        (intern_node PARETO-CANDIDATE
+            (list (intern_trivial_int compute)
+                  (intern_trivial_int fidelity-loss))))
+
+    (defn pareto-compute (c) (node_value (head (node_children c))))
+    (defn pareto-loss (c)    (node_value (head (tail (node_children c)))))
+
+    ;; --- dominance ---------------------------------------------------
+    ;;
+    ;; a dominates b iff:
+    ;;   a.compute ≤ b.compute  AND  a.loss ≤ b.loss
+    ;;   AND at least one is strict (otherwise they're identical).
+
+    (defn pareto-dominates? (a b)
+        (do
+            (let ac (pareto-compute a))
+            (let al (pareto-loss a))
+            (let bc (pareto-compute b))
+            (let bl (pareto-loss b))
+            (if (le ac bc)
+                (if (le al bl)
+                    (if (lt ac bc) true
+                        (if (lt al bl) true false))
+                    false)
+                false)))
+
+    ;; --- "is c dominated by anything in the list?" -------------------
+
+    (defn pareto-is-dominated-by-loop (c others)
+        (if (eq (len others) 0) false
+            (if (pareto-dominates? (head others) c) true
+                (pareto-is-dominated-by-loop c (tail others)))))
+
+    ;; --- the frontier walk -------------------------------------------
+    ;;
+    ;; Walk the candidates; keep each whose dominator-set is empty.
+    ;; The check compares against ALL OTHER candidates (not just the
+    ;; ones kept so far), so duplicates of dominated candidates don't
+    ;; sneak through.
+
+    (defn pareto-others-loop (target candidates idx cur-idx acc)
+        (if (eq (len candidates) 0) (json-reverse-acc acc)
+            (if (eq cur-idx idx)
+                (pareto-others-loop target (tail candidates) idx
+                    (add cur-idx 1) acc)
+                (pareto-others-loop target (tail candidates) idx
+                    (add cur-idx 1) (cons (head candidates) acc)))))
+
+    (defn pareto-others-at (candidates idx)
+        (pareto-others-loop (head candidates) candidates idx 0 (empty)))
+
+    (defn pareto-frontier-loop (candidates idx all acc)
+        (if (eq (len candidates) 0) (json-reverse-acc acc)
+            (do
+                (let c (head candidates))
+                (let others (pareto-others-at all idx))
+                (if (pareto-is-dominated-by-loop c others)
+                    (pareto-frontier-loop (tail candidates) (add idx 1) all acc)
+                    (pareto-frontier-loop (tail candidates) (add idx 1) all
+                        (cons c acc))))))
+
+    (defn pareto-frontier (candidates)
+        (pareto-frontier-loop candidates 0 candidates (empty)))
+
+    ;; --- knee-finder under a compute budget --------------------------
+    ;;
+    ;; Given a budget B, return the frontier candidate with the SMALLEST
+    ;; loss whose compute ≤ B. If none fits, returns empty.
+    ;; This is the "best fidelity for ≤ B compute" answer.
+
+    (defn pareto-knee-loop (frontier budget best)
+        (if (eq (len frontier) 0) best
+            (do
+                (let c (head frontier))
+                (if (le (pareto-compute c) budget)
+                    (if (eq (len best) 0)
+                        (pareto-knee-loop (tail frontier) budget (list c))
+                        (if (lt (pareto-loss c) (pareto-loss (head best)))
+                            (pareto-knee-loop (tail frontier) budget (list c))
+                            (pareto-knee-loop (tail frontier) budget best)))
+                    (pareto-knee-loop (tail frontier) budget best)))))
+
+    (defn pareto-knee (candidates budget)
+        (do
+            (let frontier (pareto-frontier candidates))
+            (let best (pareto-knee-loop frontier budget (empty)))
+            (if (eq (len best) 0) (empty) (head best))))
+
+    0)
