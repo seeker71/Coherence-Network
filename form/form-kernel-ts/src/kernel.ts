@@ -1592,6 +1592,34 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // random_bytes(n) — open the doorway. Reads n bytes from
+    // /dev/urandom every call. Different per invocation, per kernel
+    // process. lc-divergence-is-the-doorway: this native intentionally
+    // violates sibling parity when invoked — the divergence is the
+    // substrate's signal of live field-touch.
+    this.registerNative("random_bytes", catCall(), (_k, args) => {
+      const n = argInt(args, 0);
+      if (n <= 0) return { kind: "list", list: [] };
+      try {
+        const fd = openSync("/dev/urandom", "r");
+        const buf = Buffer.alloc(n);
+        let read = 0;
+        while (read < n) {
+          const got = readSync(fd, buf, read, n - read, null);
+          if (got <= 0) break;
+          read += got;
+        }
+        closeSync(fd);
+        if (read !== n) return { kind: "null" };
+        const out: Value[] = new Array(n);
+        for (let i = 0; i < n; i++) {
+          out[i] = { kind: "int", int: buf[i]! };
+        }
+        return { kind: "list", list: out };
+      } catch {
+        return { kind: "null" };
+      }
+    });
     // write_form_binary — emit a Recipe to .fkb in the full artifact
     // format (string table + tree). Sibling to read_form_binary.
     this.registerNative("write_form_binary", catCall(), (k, args) => {

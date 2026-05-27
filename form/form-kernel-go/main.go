@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"math"
 	"net"
 	"os"
@@ -1382,6 +1383,31 @@ func (k *Kernel) registerNatives() {
 		}
 		out := make([]Value, len(b))
 		for i, by := range b {
+			out[i] = Value{Kind: VInt, Int: int64(by)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// random_bytes(n) — open the doorway. Reads n bytes from
+	// /dev/urandom every call. Different per invocation, per kernel
+	// process. lc-divergence-is-the-doorway: this native intentionally
+	// violates sibling parity when invoked — the divergence is the
+	// substrate's signal of live field-touch.
+	k.registerNative("random_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		n := int(args[0].Int)
+		if n <= 0 {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		f, err := os.Open("/dev/urandom")
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		defer f.Close()
+		buf := make([]byte, n)
+		if _, err := io.ReadFull(f, buf); err != nil {
+			return Value{Kind: VNull}
+		}
+		out := make([]Value, n)
+		for i, by := range buf {
 			out[i] = Value{Kind: VInt, Int: int64(by)}
 		}
 		return Value{Kind: VList, List: out}
