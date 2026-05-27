@@ -1,0 +1,159 @@
+; gradient-circles-seeded.fk — image-as-recipe, parameterized by a seed.
+;
+; The sibling of `gradient-circles.fk`: the same compositional shape, but the
+; recipe now takes a `seed` integer and emits a visibly distinct SVG for each
+; seed. Five seeds are baked in (5, 86, 17, 138, 254); the recipe writes five
+; SVGs in one run. Same recipe, five outputs, content-addresses to five
+; different Blueprints whose ONLY structural difference is the parameter cell
+; (the bound value of `seed`).
+;
+; The five seeds were chosen so that (mod seed 5) spans 0..4 — five distinct
+; palettes — while counts, radii, and y-offsets also vary visibly. No two of
+; the five outputs share both palette AND count AND radius AND y-base; each
+; pair differs in at least three of the four derived dimensions.
+;
+; The seed drives three visible dimensions:
+;   - palette  = (mod seed 5)                — one of 5 hand-picked triplets
+;   - count    = 3 + (mod (div seed 5) 4)    — 3..6 circles
+;   - radius   = 40 + (mod (div seed 7) 30)  — varying disc size
+;   - y-base   = 120 + (mod (div seed 23) 60) — vertical offset of the row
+;
+; All five SVGs share the same enclosing document, the same gradient defs, the
+; same text-label shape. Only the seed-derived parameters change. Run twice and
+; the bytes are identical: determinism is the proof that the parameter cell
+; (not the surface text) is the recipe's identity.
+;
+; Run with the Go kernel from the repo root:
+;   form/form-kernel-go/bin-go form/form-samples/cross-modal/01-image-as-recipe/gradient-circles-seeded.fk
+; Outputs gen-circles-{seed}.svg next to this file for each of the five seeds
+; and prints the total byte count.
+
+(do
+    ; --- small string-builder helpers (same as gradient-circles.fk) ---------
+    (defn s2 (a b) (str_concat a b))
+    (defn s3 (a b c) (str_concat a (str_concat b c)))
+    (defn s4 (a b c d) (str_concat (str_concat a b) (str_concat c d)))
+    (defn s5 (a b c d e) (str_concat (s4 a b c d) e))
+
+    (defn istr (n) (int_to_str n))
+
+    ; --- list indexer -------------------------------------------------------
+    (defn nth (xs n)
+        (if (eq n 0)
+            (head xs)
+            (nth (tail xs) (sub n 1))))
+
+    ; --- palettes (5 triples of hex strings) --------------------------------
+    ; The "parameter cell" lookup target. Picked for visible contrast across
+    ; the five seeds. Each row is a (left, middle, right) circle color.
+    (let palette-0 (list "#e07b5a" "#7ab37a" "#5a7ab3"))  ; clay / sage / dusk
+    (let palette-1 (list "#d4af37" "#8b4513" "#2f4f4f"))  ; gold / saddle / slate
+    (let palette-2 (list "#ff6b9d" "#c44569" "#574b90"))  ; rose / berry / violet
+    (let palette-3 (list "#00b894" "#00cec9" "#0984e3"))  ; mint / aqua / sea
+    (let palette-4 (list "#f8b500" "#ee5a24" "#c0392b"))  ; sun / ember / brick
+
+    (defn palette-for (idx)
+        (if (eq idx 0) palette-0
+        (if (eq idx 1) palette-1
+        (if (eq idx 2) palette-2
+        (if (eq idx 3) palette-3
+                       palette-4)))))
+
+    ; A circle's color comes from (i mod 3) into the seed's palette tuple.
+    (defn color-at (pal i)
+        (nth pal (mod i 3)))
+
+    ; --- gradient defs (shared; seed does not vary the background) ----------
+    (defn svg-defs ()
+        (str_concat
+            "  <defs>\n"
+            (str_concat
+                "    <linearGradient id=\"bg\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n"
+                (str_concat
+                    "      <stop offset=\"0%\" stop-color=\"#f5e6d3\"/>\n"
+                    (str_concat
+                        "      <stop offset=\"100%\" stop-color=\"#c8d8e8\"/>\n"
+                        (str_concat "    </linearGradient>\n" "  </defs>\n"))))))
+
+    (defn svg-bg (w h)
+        (s5 "  <rect width=\"" (istr w) "\" height=\"" (istr h)
+            "\" fill=\"url(#bg)\"/>\n"))
+
+    (defn svg-circle (cx cy r fill)
+        (str_concat
+            (s4 "  <circle cx=\"" (istr cx) "\" cy=\"" (istr cy))
+            (s5 "\" r=\"" (istr r) "\" fill=\"" fill "\"/>\n")))
+
+    (defn svg-text (x y size content)
+        (str_concat
+            (s4 "  <text x=\"" (istr x) "\" y=\"" (istr y))
+            (str_concat
+                (s3 "\" font-family=\"sans-serif\" font-size=\"" (istr size) "\" text-anchor=\"middle\" fill=\"#1a1a1a\">")
+                (s3 "" content "</text>\n"))))
+
+    ; --- circle row: lay out `count` circles evenly across width `w` --------
+    ; cx_i = ((i + 1) * w) / (count + 1)
+    (defn row-rec (i count w y r pal acc)
+        (if (eq i count)
+            acc
+            (row-rec (add i 1) count w y r pal
+                (str_concat acc
+                    (svg-circle
+                        (div (mul (add i 1) w) (add count 1))
+                        y
+                        r
+                        (color-at pal i))))))
+
+    (defn circle-row (count w y r pal)
+        (row-rec 0 count w y r pal ""))
+
+    ; --- the full document, parameterized by seed ---------------------------
+    (defn svg-document (w h body)
+        (str_concat
+            (s5 "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\""
+                (istr w)
+                "\" height=\""
+                (istr h)
+                "\" viewBox=\"0 0 ")
+            (str_concat
+                (s3 (istr w) " " (istr h))
+                (s3 "\">\n" body "</svg>\n"))))
+
+    ; gen-circles — THE parameterized recipe. One input cell (seed), one SVG.
+    ; The body is a single (do …) so that the seed-derived lets bind in scope
+    ; for the final svg-document expression that returns the SVG bytes.
+    (defn gen-circles (seed)
+        (do
+            (let pal     (palette-for (mod seed 5)))
+            (let count   (add 3 (mod (div seed 5) 4)))
+            (let radius  (add 40 (mod (div seed 7) 30)))
+            (let y-base  (add 120 (mod (div seed 23) 60)))
+            (let label   (str_concat "seed=" (istr seed)))
+            (svg-document 600 300
+                (str_concat
+                    (svg-defs)
+                    (str_concat
+                        (svg-bg 600 300)
+                        (str_concat
+                            (circle-row count 600 y-base radius pal)
+                            (svg-text 300 270 20 label)))))))
+
+    ; --- write one SVG per seed --------------------------------------------
+    ; Each call differs in exactly one cell: the seed. The recipe tree above
+    ; (svg-document → svg-defs + svg-bg + circle-row + svg-text) is identical
+    ; across all five calls; only the parameter NodeID varies.
+    (let svg-5    (gen-circles 5))
+    (let svg-86   (gen-circles 86))
+    (let svg-17   (gen-circles 17))
+    (let svg-138  (gen-circles 138))
+    (let svg-254  (gen-circles 254))
+
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gen-circles-5.svg"   svg-5)
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gen-circles-86.svg"  svg-86)
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gen-circles-17.svg"  svg-17)
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gen-circles-138.svg" svg-138)
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gen-circles-254.svg" svg-254)
+
+    (add (add (str_len svg-5) (str_len svg-86))
+         (add (str_len svg-17)
+              (add (str_len svg-138) (str_len svg-254)))))

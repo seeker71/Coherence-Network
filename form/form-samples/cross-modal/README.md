@@ -10,7 +10,7 @@ discoveries.
 
 | # | Experiment | One-line finding |
 |---|---|---|
-| 01 | [Image as recipe](01-image-as-recipe/) | A procedural SVG written as Form recipes; same recipe → identical SVG bytes by SHA256. |
+| 01 | [Image as recipe](01-image-as-recipe/) | A procedural SVG written as Form recipes; same recipe → identical SVG bytes by SHA256. **Parameterized** sibling: one recipe + 5 seeds → 5 byte-distinct SVGs whose only structural difference is the seed cell. |
 | 02 | [Cross-language content-addressing](02-cross-language-content-addressing/) | Two recursive trees built by different author-routes intern to the **same** NodeID; iterative shape interns to a different one. |
 | 03 | [Recipe as compression](03-recipe-as-compression/) | The substrate's "ice" (`.fkb`) is **4.17× larger** than the "water" (`.fk` text) at small payload sizes. Compression isn't automatic. |
 | 04 | [Universal diff](04-universal-diff/) | Structural diff of two algorithms surfaces "the predicate is the same; the accumulation strategy diverges" — text diff can't see this. |
