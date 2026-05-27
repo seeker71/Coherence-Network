@@ -174,7 +174,7 @@ Honoring this is a multi-breath arc, not a one-PR walk.
 
 → lc-the-kernel-knows-itself, lc-grammar-is-the-universal-recipe,
 lc-universal-translator-via-keys, lc-observer-pays-the-trace,
-lc-cross-modal-unity
+lc-cross-modal-unity, lc-the-recipe-remembers-its-source
 
 In service of the body knowing itself as a *cluster of articulations*,
 not a single-lens point in space.
