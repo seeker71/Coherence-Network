@@ -87,46 +87,20 @@ A minimum closing breath for Shape C would:
 
 **Honest scope:** this is a multi-PR walk — the TRANSMUTE primitive needs an `intern_view` kernel native pair, the eval needs a "walk-through-view-to-underlying" arm, and the convergence-vs-articulation predicate pair is new substrate surface. Worth doing once the COMPARE and arithmetic surfaces stabilize.
 
-## Concrete next breath
+## Where the walks stand today
 
-In `form/form-stdlib/python-bmf-lift.fk:206` (the `lift-binop-loop` intern site
-that emits `PY-BMF-BINOP` for every `op`):
+| Walk | State | PR(s) |
+|---|---|---|
+| Shape B — `+ - * /` lift→MATH | **LANDED** | [#2113](https://github.com/seeker71/Coherence-Network/pull/2113) |
+| Shape B — `% mod` lift→MATH | **LANDED** | [#2122](https://github.com/seeker71/Coherence-Network/pull/2122) |
+| Shape B — `== != < <= > >=` lift→COMPARE | **LANDED** | [#2119](https://github.com/seeker71/Coherence-Network/pull/2119) |
+| Shape B — `** //` lift→MATH | OPEN (needs MATH inst=6,7 + native registration in Go/Rust/TS) | — |
+| Shape C — TRANSMUTE-over-shared-identity | OPEN (multi-PR arc; sketch above) | — |
+| Bootstrap-path (LIST-34) compost | OPEN (Phase A; tracked in [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md)) | — |
 
-```form
-;; Today:
-;; (intern_node PY-BMF-BINOP (list left (intern_trivial_string op) rhs))
+**The closest small next breath:** add MATH instances 6 (power) and 7 (floor-div) to `form-stdlib/form-ontology.json`, register `pow` and `floor_div` natives in the three kernels (Go/Rust/TS), extend the lift dispatcher and the eval MATH-12 arm. Single PR. ~30 LOC per kernel.
 
-;; Replace with a math-or-binop choice. Numeric NodeIDs for MATH (type=12):
-;; (let MATH-PLUS     (make_nodeid 1 2 12 1))
-;; (let MATH-MINUS    (make_nodeid 1 2 12 2))
-;; (let MATH-MULTIPLY (make_nodeid 1 2 12 3))
-;; (let MATH-DIVIDE   (make_nodeid 1 2 12 4))
-;;
-;; (let new-left
-;;     (if (str_eq op "+")  (intern_node MATH-PLUS     (list left rhs))
-;;     (if (str_eq op "-")  (intern_node MATH-MINUS    (list left rhs))
-;;     (if (str_eq op "*")  (intern_node MATH-MULTIPLY (list left rhs))
-;;     (if (str_eq op "/")  (intern_node MATH-DIVIDE   (list left rhs))
-;;     ;; ** // % stay on PY-BMF-BINOP until MATH gets those slots
-;;     (intern_node PY-BMF-BINOP
-;;         (list left (intern_trivial_string op) rhs)))))))
-
-;; Then in form/form-stdlib/python-bmf-eval.fk:322, add a MATH arm before
-;; the existing PY-BMF-BINOP arm:
-;;
-;; (if (and (eq (node_type cat) 12)
-;;          (eq (node_pkg cat) 1)
-;;          (eq (node_level cat) 2))
-;;     (let lhs-val (py-eval (nth (node_children r) 0) env))
-;;     (let rhs-val (py-eval (nth (node_children r) 1) env))
-;;     (let inst (node_inst cat))
-;;     (if (eq inst 1) (add lhs-val rhs-val)
-;;     (if (eq inst 2) (sub lhs-val rhs-val)
-;;     (if (eq inst 3) (mul lhs-val rhs-val)
-;;     (if (eq inst 4) (div lhs-val rhs-val) (head (empty)))))))
-```
-
-The `python-bmf-eval.fk` interpreter's BINOP arm composts; the existing MATH arm picks up the work.
+The Shape C arc remains the larger walking opportunity — see the section above for the concrete sketch.
 
 ## What this enables
 
