@@ -25,6 +25,26 @@ export interface EmitFkOptions {
   // source line for debugging. Off by default — the kernel reader
   // tolerates comments but they bloat the .fk.
   source_comments?: boolean;
+  // When emitting a method body, names the class the method belongs to.
+  // Used by the method_call lowering to recognise `super().X(args)` and
+  // emit a `_dispatch_super` call with the right class context. Unset
+  // outside a method body — top-level `super()` is an honest error.
+  currentClass?: string;
+}
+
+// Is this node the shape `super()` — CTOR.call where callee is the
+// ident "super" and the args list is empty? Receiver-position super
+// with arguments (Python 3's two-arg super) is a follow-up gap.
+function isSuperCall(k: Kernel, n: NodeID): boolean {
+  if (n.level === Level.TRIVIAL) return false;
+  if (capturedCtor(k, n) !== CTOR.call) return false;
+  const callKids = capturedChildren(k, n);
+  if (callKids.length !== 2) return false;
+  const callee = callKids[0]!;
+  if (capturedCtor(k, callee) !== CTOR.ident) return false;
+  const nameID = capturedChildren(k, callee)[0]!.inst;
+  if (k.strs[nameID] !== "super") return false;
+  return capturedChildren(k, callKids[1]!).length === 0;
 }
 
 // Counter for synthesized helper names (`_while_N`, `_for_N`,
@@ -427,14 +447,36 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
     // Python `obj.method(args…)` lowers to a runtime `_dispatch` call.
     // The receiver's record carries a "__class__" string field; the
     // dispatch native uses that to find `<ClassName>__<methodName>` in
-    // the surrounding scope (where the class emit lifted it as a defn).
-    // This keeps method dispatch composable across multiple classes
-    // without baking class identity into compile-time call sites.
+    // the surrounding scope (where the class emit lifted it as a defn),
+    // walking the `__base__` chain if the method isn't on the immediate
+    // class. This keeps method dispatch composable across multiple
+    // classes and inheritance levels without baking class identity into
+    // compile-time call sites.
+    //
+    // Special-case `super().method(args)`: emitted as
+    // `(_dispatch_super self "<ClassName>" "<methodName>" args…)` where
+    // <ClassName> is whatever class context the surrounding method body
+    // was lifted into. The active class name is passed in via the
+    // `currentClass` field on opts (set by emitClass when emitting
+    // method bodies). The kernel's `_dispatch_super` native then walks
+    // up from <ClassName>'s base.
     case CTOR.method_call: {
-      const recv = emit(k, kids[0]!, opts);
+      const recvNode = kids[0]!;
       const methodName = emitIdent(k, kids[1]!);
       const argNodes = capturedChildren(k, kids[2]!);
       const argStrs = argNodes.map((a: NodeID) => emit(k, a, opts));
+      // Detect super().method(args) — receiver is call(ident("super"), []).
+      if (isSuperCall(k, recvNode)) {
+        const currentClass = opts.currentClass;
+        if (!currentClass) {
+          throw new Error(
+            "emitFk: super() used outside a class method body",
+          );
+        }
+        const tail = argStrs.length === 0 ? "" : ` ${argStrs.join(" ")}`;
+        return `(_dispatch_super self ${JSON.stringify(currentClass)} ${JSON.stringify(methodName)}${tail})`;
+      }
+      const recv = emit(k, recvNode, opts);
       const tail = argStrs.length === 0 ? "" : ` ${argStrs.join(" ")}`;
       return `(_dispatch ${recv} ${JSON.stringify(methodName)}${tail})`;
     }
@@ -838,8 +880,22 @@ function emitClass(
   classKids: readonly NodeID[],
   opts: EmitFkOptions,
 ): void {
+  // New shape (v2): classKids = [name-ident, base-node, methods-block]
+  // where base-node is CTOR.ident (single base class) or CTOR.none_literal.
   const className = emitIdent(k, classKids[0]!);
-  const methodList = capturedChildren(k, classKids[1]!);
+  const baseNode = classKids[1]!;
+  const baseCtor = capturedCtor(k, baseNode);
+  const baseName = baseCtor === CTOR.ident ? emitIdent(k, baseNode) : "";
+  const methodList = capturedChildren(k, classKids[2]!);
+
+  // Emit `(let <ClassName>__base "<BaseName>")` so `_dispatch` and
+  // `_dispatch_super` can walk the inheritance chain at runtime. An
+  // empty string means no base class.
+  liftedDefns.push(`(let ${className}__base ${JSON.stringify(baseName)})`);
+
+  // Method-body emit options carry the current class so super() inside
+  // a body lowers correctly.
+  const methodOpts: EmitFkOptions = { ...opts, currentClass: className };
 
   // Split methods into __init__ vs the rest.
   let initMethod: NodeID | null = null;
@@ -856,9 +912,13 @@ function emitClass(
 
   // --- Constructor (the class name itself, callable as Counter(2, 1)) -----
   // Each `self.<f> = expr` becomes a local `(let <f> expr)`; the final
-  // value is `(list "__class__" "<ClassName>" "<f1>" <f1> ...)`.
+  // value is `(list "__class__" "<ClassName>" "__base__" "<Base>" …)`.
+  // `super().__init__(args)` lowers to `(let _super_init (<BaseName> args…))`
+  // and the constructor's record gets merged with _super_init via
+  // _merge_record so parent-defined fields propagate.
   const fields: string[] = [];
   const initBindings: string[] = [];
+  let superInitCalled = false;
   let ctorParams: string[] = [];
   if (initMethod !== null) {
     const initKids = capturedChildren(k, initMethod);
@@ -873,9 +933,41 @@ function emitClass(
       bodyCtor === CTOR.block ? capturedChildren(k, bodyNode) : [bodyNode];
     for (const stmt of stmts) {
       const stmtCtor = capturedCtor(k, stmt);
+      // Recognise `super().__init__(args…)` as an expression statement.
+      if (stmtCtor === CTOR.expr_stmt) {
+        const inner = capturedChildren(k, stmt)[0]!;
+        if (
+          capturedCtor(k, inner) === CTOR.method_call &&
+          isSuperCall(k, capturedChildren(k, inner)[0]!) &&
+          emitIdent(k, capturedChildren(k, inner)[1]!) === "__init__"
+        ) {
+          if (baseName === "") {
+            throw new Error(
+              `emitFk: super().__init__ called in '${className}' which has no base class`,
+            );
+          }
+          if (superInitCalled) {
+            throw new Error(
+              `emitFk: super().__init__ called more than once in '${className}'`,
+            );
+          }
+          superInitCalled = true;
+          const argNodes = capturedChildren(
+            k,
+            capturedChildren(k, inner)[2]!,
+          );
+          const argStrs = argNodes.map((a: NodeID) => emit(k, a, methodOpts));
+          const callExpr =
+            argStrs.length === 0
+              ? `(${baseName})`
+              : `(${baseName} ${argStrs.join(" ")})`;
+          initBindings.push(`(let _super_init ${callExpr})`);
+          continue;
+        }
+      }
       if (stmtCtor !== CTOR.assign) {
         throw new Error(
-          `emitFk: __init__ body must be only self.<field> = <expr> or local assigns (v1); got '${stmtCtor}'`,
+          `emitFk: __init__ body may only contain self.<field> = <expr>, local assigns, or super().__init__(args); got '${stmtCtor}'`,
         );
       }
       const stmtKids = capturedChildren(k, stmt);
@@ -887,27 +979,27 @@ function emitClass(
         const recvCtor = capturedCtor(k, capturedChildren(k, target)[0]!);
         if (recvCtor !== CTOR.ident) {
           throw new Error(
-            `emitFk: __init__ attribute target must be 'self.<field>' (v1)`,
+            `emitFk: __init__ attribute target must be 'self.<field>'`,
           );
         }
         const recvName = emitIdent(k, capturedChildren(k, target)[0]!);
         if (recvName !== "self") {
           throw new Error(
-            `emitFk: __init__ attribute target must be on 'self' (v1)`,
+            `emitFk: __init__ attribute target must be on 'self'`,
           );
         }
         const fieldName = emitIdent(k, capturedChildren(k, target)[1]!);
         if (!fields.includes(fieldName)) fields.push(fieldName);
-        const valStr = emit(k, valueNode, opts);
+        const valStr = emit(k, valueNode, methodOpts);
         initBindings.push(`(let ${fieldName} ${valStr})`);
       } else if (targetCtor === CTOR.ident) {
         // local variable inside __init__ — emit (let name expr).
         const localName = emitIdent(k, target);
-        const valStr = emit(k, valueNode, opts);
+        const valStr = emit(k, valueNode, methodOpts);
         initBindings.push(`(let ${localName} ${valStr})`);
       } else {
         throw new Error(
-          `emitFk: __init__ assignment target must be self.<field> or a local (v1)`,
+          `emitFk: __init__ assignment target must be self.<field> or a local`,
         );
       }
     }
@@ -916,10 +1008,16 @@ function emitClass(
   // Constructor body: bindings followed by the record literal.
   const recordParts: string[] = [];
   recordParts.push(JSON.stringify("__class__"), JSON.stringify(className));
+  recordParts.push(JSON.stringify("__base__"), JSON.stringify(baseName));
   for (const f of fields) {
     recordParts.push(JSON.stringify(f), f);
   }
-  const recordExpr = `(list ${recordParts.join(" ")})`;
+  let recordExpr = `(list ${recordParts.join(" ")})`;
+  if (superInitCalled) {
+    // Merge the parent's record into the child's. _merge_record strips
+    // the parent's __class__/__base__ and appends remaining (k, v) pairs.
+    recordExpr = `(_merge_record ${recordExpr} _super_init)`;
+  }
   const ctorBody =
     initBindings.length === 0
       ? recordExpr
@@ -929,6 +1027,8 @@ function emitClass(
   );
 
   // --- Other methods (lifted as `<ClassName>__<methodName>`) --------------
+  // Method bodies need `currentClass` set so super().X(args) inside the
+  // body resolves to the right class.
   for (const m of otherMethods) {
     const mKids = capturedChildren(k, m);
     const mName = emitIdent(k, mKids[0]!);
@@ -936,7 +1036,7 @@ function emitClass(
     const paramNames = paramNodes.map((p: NodeID) => emitIdent(k, p));
     // First param must be `self`; we keep it as-is so attribute reads
     // (`self.x` → `(_get self "x")`) resolve at runtime.
-    const body = emitDefBody(k, mKids[2]!, opts);
+    const body = emitDefBody(k, mKids[2]!, methodOpts);
     liftedDefns.push(
       `(defn ${className}__${mName} (${paramNames.join(" ")}) ${body})`,
     );

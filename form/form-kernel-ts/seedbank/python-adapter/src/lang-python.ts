@@ -1266,36 +1266,64 @@ function parseDef(k: Kernel, c: Cursor, lineIndent: number): NodeID {
   ]);
 }
 
-// parseClass — v1 class shape:
-//   class Name:
+// parseClass — class shape with optional single base class:
+//   class Name:                — no inheritance
+//   class Name(Base):          — single base class (v2)
 //       def __init__(self, …): … self.x = …
 //       def method(self, …):   … self.y …
 //
-// No inheritance, decorators, class-vars, classmethods, staticmethods,
-// metaclasses, or `super()` in this breath. Each is a named follow-up
-// gap. The class body is parsed as a sequence of method `def`s; the
-// captured shape is CTOR.class_(name-ident, [methods…]).
+// Single-inheritance only — multiple inheritance, MRO complexity,
+// metaclasses, abstract base classes, __init_subclass__ are each named
+// as separate follow-up breaths. The class body is parsed as a sequence
+// of method `def`s; the captured shape is
+//   CTOR.class_(name-ident, base-ident-or-none, [methods…])
+// where base-ident-or-none is a CTOR.ident node (the base class name)
+// when inheritance is present, or a CTOR.none_literal when the class
+// has no base.
 function parseClass(k: Kernel, c: Cursor, lineIndent: number): NodeID {
   expectKeyword(c, "class");
   skipSpacesAndComments(c);
   const name = readIdentRaw(c);
   if (name === null) throw new SyntaxError(`python: class name required at ${c.pos}`);
-  // Optional empty `()` after the name — Python permits `class Foo():`
-  // even with no bases. Anything inside the parens is a v1 honest gap.
+  // Optional `(Base)` after the name — single inheritance. `class Foo():`
+  // with no bases is also permitted (and equivalent to `class Foo:`).
+  // Multiple bases (`class Foo(A, B):`) and metaclass kwargs remain
+  // honest gaps for later breaths.
+  let baseNode: NodeID = captureNode(k, CTOR.none_literal, []);
   skipSpacesAndComments(c);
   if (peek(c) === "(") {
     c.pos++;
     skipAllWhitespace(c);
     if (peek(c) !== ")") {
-      throw new SyntaxError(
-        `python: class bases / metaclass kwargs not supported in v1 at ${c.pos}`,
-      );
+      const baseName = readIdentRaw(c);
+      if (baseName === null) {
+        throw new SyntaxError(
+          `python: expected base class name after '(' at ${c.pos}`,
+        );
+      }
+      if (KEYWORDS.has(baseName)) {
+        throw new SyntaxError(
+          `python: base class name cannot be a keyword '${baseName}' at ${c.pos}`,
+        );
+      }
+      baseNode = captureNode(k, CTOR.ident, [k.internString(baseName)]);
+      skipAllWhitespace(c);
+      if (peek(c) === ",") {
+        throw new SyntaxError(
+          `python: multiple inheritance not supported (v2 is single base only) at ${c.pos}`,
+        );
+      }
+      if (peek(c) !== ")") {
+        throw new SyntaxError(
+          `python: expected ')' after base class at ${c.pos}`,
+        );
+      }
     }
     c.pos++; // consume ')'
   }
   expect(c, ":");
   // Body — same indented-block shape as parseBlock, but each body
-  // statement must be a method `def`. v1 accepts a trailing bare `pass`
+  // statement must be a method `def`. Accepts a trailing bare `pass`
   // for the empty class case.
   const bodyNode = parseBlock(k, c, lineIndent);
   const bodyKids = capturedChildren(k, bodyNode);
@@ -1309,12 +1337,13 @@ function parseClass(k: Kernel, c: Cursor, lineIndent: number): NodeID {
       continue;
     } else {
       throw new SyntaxError(
-        `python: class body may only contain method defs (v1); got '${ctor}'`,
+        `python: class body may only contain method defs; got '${ctor}'`,
       );
     }
   }
   return captureNode(k, CTOR.class_, [
     captureNode(k, CTOR.ident, [k.internString(name)]),
+    baseNode,
     captureNode(k, CTOR.block, methods),
   ]);
 }
@@ -2207,27 +2236,72 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       return invokePyClosure(k, calleeVal, argVals);
     }
     case CTOR.method_call: {
-      const recv = evalNode(k, kids[0]!, env);
+      const recvNode = kids[0]!;
       const methodNameID = capturedChildren(k, kids[1]!)[0]!.inst;
       const methodName = k.nameStr(methodNameID);
       const args = capturedChildren(k, kids[2]!).map((a) => evalNode(k, a, env));
+      // Detect super().method(args) — receiver is the call node
+      // `super()` with no arguments. Resolve to the parent class via
+      // `__current_class__` (stashed by invokePyClosure when the method
+      // frame was opened), then dispatch directly to the parent's
+      // qualified method with the current `self`.
+      if (isSuperCall(k, recvNode)) {
+        const currentClassVal = envLookup(env, k.internName("__current_class__"));
+        if (currentClassVal === undefined || currentClassVal.kind !== "str") {
+          throw new Error(
+            "python: super() used outside a class method body",
+          );
+        }
+        const selfVal = envLookup(env, k.internName("self"));
+        if (selfVal === undefined) {
+          throw new Error("python: super() needs an enclosing self");
+        }
+        // `super().__init__(args)` chains through the parent constructor.
+        // The parent constructor expects to build a fresh self; here we
+        // need to populate the *current* self with the parent's fields.
+        // We invoke the parent's constructor (which builds a fresh record),
+        // then copy its data fields onto our current self.
+        if (methodName === "__init__") {
+          const baseID = k.internName(`${currentClassVal.str}__base`);
+          const baseVal = envLookup(env, baseID);
+          if (baseVal === undefined || baseVal.kind !== "str" || baseVal.str === "") {
+            throw new Error(
+              `python: super().__init__ in class '${currentClassVal.str}' which has no base class`,
+            );
+          }
+          const parentCtorID = k.internName(baseVal.str);
+          const parentCtor = envLookup(env, parentCtorID);
+          if (parentCtor === undefined) {
+            throw new Error(
+              `python: parent constructor '${baseVal.str}' not bound`,
+            );
+          }
+          const parentRecord = invokePyClosure(k, parentCtor, args);
+          mergeParentFields(selfVal, parentRecord);
+          return { kind: "null" };
+        }
+        return dispatchSuperMethod(
+          k,
+          env,
+          currentClassVal.str,
+          methodName,
+          selfVal,
+          args,
+        );
+      }
+      const recv = evalNode(k, recvNode, env);
       // Class-record receivers route through env-bound qualified
       // closures (`<ClassName>__<methodName>`) — mirrors the kernel's
       // _dispatch native. Falls back to dispatchMethod for built-in
-      // str/list method dispatch.
+      // str/list method dispatch. Inheritance: walk the `__base__`
+      // chain when the qualified method isn't bound on the immediate
+      // class — first match wins.
       if (recv.kind === "list" && hasClassTag(recv)) {
         const className = recordGet(recv, "__class__");
         if (className.kind !== "str") {
           throw new Error("python: receiver's __class__ is not a string");
         }
-        const qualifiedID = k.internName(`${className.str}__${methodName}`);
-        const cl = envLookup(env, qualifiedID);
-        if (cl === undefined) {
-          throw new Error(
-            `python: method '${className.str}__${methodName}' not bound`,
-          );
-        }
-        return invokePyClosure(k, cl, [recv, ...args]);
+        return dispatchOnChain(k, env, className.str, methodName, recv, args);
       }
       return dispatchMethod(k, recv, methodName, args);
     }
@@ -2271,15 +2345,31 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       return last;
     }
     case CTOR.class_: {
-      // children: [name-ident, methods-block]
-      // The TS evaluator mirrors the .fk emitter: build a constructor
-      // closure bound under the class name, plus one closure per method
-      // bound under `<ClassName>__<methodName>`. Method dispatch reads
-      // `__class__` from the receiver record to find the right closure
-      // — matches the kernel's `_dispatch` native.
+      // children: [name-ident, base-ident-or-none, methods-block]
+      // Build a constructor closure bound under the class name, plus one
+      // closure per method bound under `<ClassName>__<methodName>`.
+      // Method dispatch reads `__class__` from the receiver record and
+      // walks the `__base__` chain — matches the kernel's `_dispatch`
+      // native. `super().method(args)` inside a method body resolves to
+      // the parent's method via the class context carried on each method
+      // closure (`methodClassName`).
       const classNameID = capturedChildren(k, kids[0]!)[0]!.inst;
       const className = k.nameStr(classNameID);
-      const methodNodes = capturedChildren(k, kids[1]!);
+      const baseNode = kids[1]!;
+      const baseCtor = capturedCtor(k, baseNode);
+      let baseName = "";
+      if (baseCtor === CTOR.ident) {
+        const baseID = capturedChildren(k, baseNode)[0]!.inst;
+        baseName = k.nameStr(baseID);
+      }
+      // Bind `<ClassName>__base` so super().X() can find the parent.
+      // Mirrors the kernel-side `<C>__base` defn-binding.
+      envBind(
+        env,
+        k.internName(`${className}__base`),
+        { kind: "str", str: baseName },
+      );
+      const methodNodes = capturedChildren(k, kids[2]!);
       let initMethod: NodeID | null = null;
       const others: NodeID[] = [];
       for (const m of methodNodes) {
@@ -2290,15 +2380,21 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
         else others.push(m);
       }
       // Constructor: call into the init body with self as a fresh record.
-      // We use a JS closure that returns a list-value record so the rest
-      // of the eval path uses normal list ops.
       const constructorValue: Value = {
         kind: "list",
         list: [],
-        pyClosure: makeConstructorClosure(k, className, initMethod, env),
+        pyClosure: makeConstructorClosure(
+          k,
+          className,
+          baseName,
+          initMethod,
+          env,
+        ),
       } as Value & { pyClosure?: PyClosure };
       envBind(env, classNameID, constructorValue);
       // Each non-init method becomes a closure under `<ClassName>__<m>`.
+      // The closure carries `methodClassName` so super() inside the body
+      // can find the parent via the class chain.
       for (const m of others) {
         const mKids = capturedChildren(k, m);
         const mNameID = capturedChildren(k, mKids[0]!)[0]!.inst;
@@ -2308,7 +2404,12 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
           (p) => capturedChildren(k, p)[0]!.inst,
         );
         const body = mKids[2]!;
-        const closure: PyClosure = { params: paramNames, body, env };
+        const closure: PyClosure = {
+          params: paramNames,
+          body,
+          env,
+          methodClassName: className,
+        };
         const qualifiedID = k.internName(`${className}__${mName}`);
         envBind(env, qualifiedID, {
           kind: "list",
@@ -2333,10 +2434,12 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
 // Build the constructor closure for a class. Body is the original
 // __init__'s body; invokePyClosure recognises `ctorClassName` and
 // arranges for a fresh tagged record to be bound as `self` before the
-// body runs, then returns that record.
+// body runs, then returns that record. `baseName` carries the parent
+// class so `super().__init__(args)` inside the body resolves correctly.
 function makeConstructorClosure(
   k: Kernel,
   className: string,
+  baseName: string,
   initMethod: NodeID | null,
   env: PyEnv,
 ): PyClosure {
@@ -2358,6 +2461,7 @@ function makeConstructorClosure(
       body: emptyBlock,
       env,
       ctorClassName: className,
+      ctorBaseName: baseName,
     };
   }
   const initKids = capturedChildren(k, initMethod);
@@ -2371,7 +2475,77 @@ function makeConstructorClosure(
     body: initKids[2]!,
     env,
     ctorClassName: className,
+    ctorBaseName: baseName,
   };
+}
+
+// Is this node the shape `super()` — CTOR.call where callee is the
+// ident "super" and the args list is empty? Receiver-position super
+// with arguments (Python 3's two-arg super) is a follow-up gap.
+function isSuperCall(k: Kernel, n: NodeID): boolean {
+  if (n.level === Level.TRIVIAL) return false;
+  if (capturedCtor(k, n) !== CTOR.call) return false;
+  const callKids = capturedChildren(k, n);
+  if (callKids.length !== 2) return false;
+  const callee = callKids[0]!;
+  if (capturedCtor(k, callee) !== CTOR.ident) return false;
+  const nameID = capturedChildren(k, callee)[0]!.inst;
+  if (k.nameStr(nameID) !== "super") return false;
+  // Args list must be empty.
+  return capturedChildren(k, callKids[1]!).length === 0;
+}
+
+// Walk a class's inheritance chain looking for `<C>__<m>` binding.
+// First match wins; matches dispatch with `self` as the first arg.
+function dispatchOnChain(
+  k: Kernel,
+  env: PyEnv,
+  startClass: string,
+  methodName: string,
+  selfVal: Value,
+  args: Value[],
+): Value {
+  let current: string | null = startClass;
+  const chain: string[] = [startClass];
+  while (current !== null) {
+    const qualifiedID = k.internName(`${current}__${methodName}`);
+    const cl = envLookup(env, qualifiedID);
+    if (cl !== undefined) {
+      return invokePyClosure(k, cl, [selfVal, ...args]);
+    }
+    // Walk to base.
+    const baseID = k.internName(`${current}__base`);
+    const baseVal = envLookup(env, baseID);
+    if (baseVal === undefined || baseVal.kind !== "str" || baseVal.str === "") {
+      break;
+    }
+    current = baseVal.str;
+    chain.push(current);
+  }
+  throw new Error(
+    `python: no method '${methodName}' in inheritance chain [${chain.join(" -> ")}]`,
+  );
+}
+
+// `super().method(args)` from inside a method of `currentClass`:
+// resolve `method` starting at `currentClass`'s base, walk further if
+// needed. Always uses the current `self`.
+function dispatchSuperMethod(
+  k: Kernel,
+  env: PyEnv,
+  currentClass: string,
+  methodName: string,
+  selfVal: Value,
+  args: Value[],
+): Value {
+  const baseID = k.internName(`${currentClass}__base`);
+  const baseVal = envLookup(env, baseID);
+  if (baseVal === undefined || baseVal.kind !== "str" || baseVal.str === "") {
+    throw new Error(
+      `python: super() in class '${currentClass}' which has no base class`,
+    );
+  }
+  return dispatchOnChain(k, env, baseVal.str, methodName, selfVal, args);
 }
 
 function hasClassTag(recv: Value): boolean {
@@ -2393,6 +2567,34 @@ function recordGet(recv: Value, field: string): Value {
     if (k.kind === "str" && k.str === field) return recv.list[i + 1]!;
   }
   throw new Error(`python: no field '${field}' on record`);
+}
+
+// super().__init__ chains by invoking the parent constructor (which
+// builds a fresh record) and then copying the parent's data fields onto
+// the current self. Strips `__class__` and `__base__` from the parent
+// — the child's identity carries through unchanged. Existing child
+// fields aren't overwritten (matches `_merge_record` on the kernel
+// side: child wins for shared field names).
+function mergeParentFields(self: Value, parentRecord: Value): void {
+  if (self.kind !== "list") {
+    throw new Error("python: super().__init__ self is not a record");
+  }
+  if (parentRecord.kind !== "list") {
+    throw new Error("python: parent constructor did not return a record");
+  }
+  const existing = new Set<string>();
+  for (let i = 0; i + 1 < self.list.length; i += 2) {
+    const k = self.list[i]!;
+    if (k.kind === "str") existing.add(k.str);
+  }
+  for (let i = 0; i + 1 < parentRecord.list.length; i += 2) {
+    const key = parentRecord.list[i]!;
+    if (key.kind !== "str") continue;
+    if (key.str === "__class__" || key.str === "__base__") continue;
+    if (existing.has(key.str)) continue;
+    self.list.push(key);
+    self.list.push(parentRecord.list[i + 1]!);
+  }
 }
 
 // In-place record write — mirrors what `self.x = expr` does during
@@ -2423,6 +2625,15 @@ interface PyClosure {
   // call frame, runs the body (which is the __init__ body), and
   // returns the populated record. None ⇒ plain function/method.
   ctorClassName?: string;
+  // When set, names the parent class — constructor chains through the
+  // parent's __init__ first (super().__init__ semantics), then runs the
+  // child's body. Only used when ctorClassName is also set. Empty
+  // string ⇒ no base.
+  ctorBaseName?: string;
+  // When set, this is a method closure — the class it was defined in.
+  // Used by `super().X(args)` inside the body to find the parent class
+  // via `<methodClassName>__base`.
+  methodClassName?: string;
 }
 
 function invokePyClosure(k: Kernel, v: Value, args: Value[]): Value {
@@ -2438,18 +2649,29 @@ function invokePyClosure(k: Kernel, v: Value, args: Value[]): Value {
     envBind(callEnv, closure.params[i]!, args[i]!);
   }
   // Constructor invocation: allocate a fresh record tagged with the
-  // class name, bind it as `self`, run the __init__ body, return the
-  // record. Returning the record (rather than the body's last value)
-  // is what makes `Counter(2, 1)` evaluate to the populated instance.
+  // class name + base name, bind it as `self`, run the __init__ body,
+  // return the record. The body's `self.x = v` writes go through
+  // recordPut and the record mutates in-place. `super().__init__(args)`
+  // inside the body dispatches via the parent's init closure with the
+  // same `self`, populating parent-defined fields directly.
   if (closure.ctorClassName !== undefined) {
     const self: Value = {
       kind: "list",
       list: [
         { kind: "str", str: "__class__" },
         { kind: "str", str: closure.ctorClassName },
+        { kind: "str", str: "__base__" },
+        { kind: "str", str: closure.ctorBaseName ?? "" },
       ],
     };
     envBind(callEnv, k.internName("self"), self);
+    // Methods called via super() from within __init__ need to know the
+    // current class context. We stash methodClassName on the call frame
+    // by binding `__current_class__` to a string value.
+    envBind(callEnv, k.internName("__current_class__"), {
+      kind: "str",
+      str: closure.ctorClassName,
+    });
     try {
       evalNode(k, closure.body, callEnv);
     } catch (e) {
@@ -2458,6 +2680,14 @@ function invokePyClosure(k: Kernel, v: Value, args: Value[]): Value {
       // with CPython which silently ignores the return value.
     }
     return self;
+  }
+  // Method-frame: when this closure carries a methodClassName, stash it
+  // on the call frame so super().X(args) inside the body can pick it up.
+  if (closure.methodClassName !== undefined) {
+    envBind(callEnv, k.internName("__current_class__"), {
+      kind: "str",
+      str: closure.methodClassName,
+    });
   }
   try {
     return evalNode(k, closure.body, callEnv);

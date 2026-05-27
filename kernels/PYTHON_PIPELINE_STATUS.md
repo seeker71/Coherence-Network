@@ -49,6 +49,7 @@ result
 | `python_class_demo.py` | 176 | `class X:`, `__init__(self, …)`, instance methods, attribute reads, method dispatch via `__class__` tag |
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary; **production API image** (`Dockerfile.api` at repo root, two-stage build) bakes the `form-kernel-rust` release binary into `/app/bin/form-kernel-rust` and sets `FORM_KERNEL_RUST_BIN` so the bridge picks it up — `/api/health` reports `kernel_runtime.available=true` and the endpoint responds with `runtime: "form-kernel-rust"` (no Python fallback) |
 | `python_dict_demo.py` | 88 | dict literal, subscript-read, subscript-assign, `in` membership, iter over keys, `len(d)` |
+| `python_inheritance_demo.py` | 337 | `class Y(X):` single inheritance, `super().__init__(args)` chaining, `super().method(args)` for override calls, method dispatch walks `__base__` chain |
 
 **Run it:**
 ```bash
@@ -115,17 +116,24 @@ Features the pipeline currently compiles to native kernel:
   are records (Value::List alists tagged with `__class__`); method dispatch goes
   through the kernel's `_dispatch` native (which reads `__class__` and calls
   the qualified method) and the `_get` native handles attribute reads.
+- **Single inheritance + `super()`** — v2: `class Y(X):` with one base; the
+  constructor records `__base__` alongside `__class__`; `_dispatch` walks the
+  `__base__` chain (first match wins); `super().method(args)` lowers to a
+  `_dispatch_super` native that resolves starting at the current class's base;
+  `super().__init__(args)` calls the parent constructor and merges its data
+  fields into the child's record via `_merge_record`.
 
 ### Honest GAPs (each is one breath)
 - Tuple unpacking `a, b = pair`
 - Subscript assignment `lst[i] = z`
 - Slicing `lst[a:b]`
 - Walrus `:=`
-- **Class inheritance**, `super()`, `classmethod`, `staticmethod`, metaclasses,
-  `__slots__`, decorators on classes, dunder methods beyond `__init__`,
-  conditional `self.x =` inside `__init__`, mid-method attribute writes
-  (the v1 ctor reconstructs the record up front; methods read fields but
-  don't mutate)
+- **Multiple inheritance** (MRO complexity, C3 linearization), `classmethod`,
+  `staticmethod`, metaclasses, abstract base classes (`abc.ABC`),
+  `__init_subclass__`, `__slots__`, decorators on classes, dunder methods
+  beyond `__init__` (`__repr__`, `__eq__`, …), conditional `self.x =` inside
+  `__init__`, mid-method attribute writes (the v2 ctor reconstructs the
+  record up front; methods read fields but don't mutate), two-arg `super(C, self)`
 - Decorators
 - User-defined module imports (the kernel-resident `math` is wired; arbitrary `.py` files aren't loaded as modules yet — needs module-system semantics, path resolution, circular-import handling)
 - Iterator protocol (`range()`, generators)
