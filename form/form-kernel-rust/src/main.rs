@@ -1503,6 +1503,13 @@ impl Kernel {
         // the surrounding scope; calls it with obj as the first argument.
         // Env-aware so it can look up the method closure in the caller's
         // frame chain (which is where the lifted method `defn`s landed).
+        //
+        // Inheritance walk: if `<C>__<m>` is not bound, look up `<C>__base`
+        // (a string holding the parent class name); try `<Parent>__<m>`;
+        // continue until a method is found or the chain ends. First match
+        // wins — single inheritance, MRO is just the linear chain. Walking
+        // here keeps every call site honest without the emitter needing to
+        // bake the dispatch order into compile-time call shape.
         self.register_env_native("_dispatch", cat_call(), |k, a, env, args| {
             let class_name = if let Value::List(xs) = &args[0] {
                 let mut i = 0;
@@ -1529,19 +1536,7 @@ impl Kernel {
                 Value::Str(s) => s.clone(),
                 _ => panic!("_dispatch: second arg must be the method name string"),
             };
-            let qualified = format!("{}__{}", class_name, method_name);
-            let name_id = match k.str_idx.get(&qualified).copied() {
-                Some(id) => id,
-                None => panic!("_dispatch: no method '{}' in scope", qualified),
-            };
-            let cl_val = match a.lookup(env, name_id) {
-                Some(v) => v,
-                None => panic!("_dispatch: method '{}' not bound in scope", qualified),
-            };
-            let cl = match cl_val {
-                Value::Closure(c) => c,
-                _ => panic!("_dispatch: '{}' is not a closure", qualified),
-            };
+            let (qualified, cl) = resolve_method(k, a, env, &class_name, &method_name);
             // Build the call frame: bind self (args[0]) + the remaining
             // method args (args[2..]) to the closure's parameters.
             let call_args: Vec<&Value> =
@@ -1775,6 +1770,118 @@ impl Kernel {
                 return Value::Bool(hay.contains(needle.as_str()));
             }
             Value::Bool(false)
+        });
+        // _dispatch_super — super().<m>(args) entry. Adapter lowers
+        // `super().m(args…)` inside a method of class C to
+        // `(_dispatch_super self "C" "m" args…)`. We look up `C__base`
+        // (a string holding the parent class name) and resolve `m`
+        // starting at the parent — the inheritance walk continues from
+        // there. Skipping the receiver's `__class__` is what makes super
+        // different from a normal dispatch: a Dog calling
+        // `super().speak()` always resolves to Animal.speak (or
+        // Animal's chain), even though self.__class__ is "Dog".
+        self.register_env_native("_dispatch_super", cat_call(), |k, a, env, args| {
+            let class_name = match &args[1] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("_dispatch_super: second arg must be the class name string"),
+            };
+            let method_name = match &args[2] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("_dispatch_super: third arg must be the method name string"),
+            };
+            // Look up <ClassName>__base to find the parent class name.
+            let base_key = format!("{}__base", class_name);
+            let base_id = match k.str_idx.get(&base_key).copied() {
+                Some(id) => id,
+                None => panic!(
+                    "_dispatch_super: no '{}' in scope — '{}' has no base class",
+                    base_key, class_name
+                ),
+            };
+            let parent_val = match a.lookup(env, base_id) {
+                Some(v) => v,
+                None => panic!(
+                    "_dispatch_super: '{}' not bound — '{}' has no base class",
+                    base_key, class_name
+                ),
+            };
+            let parent_name = match parent_val {
+                Value::Str(s) => s,
+                _ => panic!("_dispatch_super: '{}' is not a string", base_key),
+            };
+            if parent_name.is_empty() {
+                panic!(
+                    "_dispatch_super: class '{}' has no base class (empty __base)",
+                    class_name
+                );
+            }
+            let (qualified, cl) = resolve_method(k, a, env, &parent_name, &method_name);
+            // First arg is self (args[0]); method args follow at args[3..].
+            let call_args: Vec<&Value> =
+                std::iter::once(&args[0]).chain(args[3..].iter()).collect();
+            if cl.params.len() != call_args.len() {
+                panic!(
+                    "_dispatch_super: arity mismatch on {} (expected {}, got {})",
+                    qualified,
+                    cl.params.len(),
+                    call_args.len()
+                );
+            }
+            let frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            for (i, p) in cl.params.iter().enumerate() {
+                a.bind(frame, *p, call_args[i].clone());
+            }
+            walk(k, a, cl.body, frame)
+        });
+        // _merge_record — child constructors that chain through
+        // `super().__init__(args)` call the parent constructor (which
+        // returns a full record tagged with `__class__/__base__`), then
+        // merge the parent's data fields into the child's record. This
+        // native strips `__class__/__base__` from the parent record and
+        // appends the remaining (key, value) pairs to the child record.
+        // The child's `__class__/__base__` stays (the receiver's
+        // dispatch identity is the child, not the parent).
+        //
+        // Shape:
+        //   (_merge_record <child-record> <parent-record>)
+        // Returns: a new list with child's full prefix + parent's data fields.
+        self.register_native("_merge_record", cat_access(), |_, _, args| {
+            let child = match &args[0] {
+                Value::List(xs) => xs.clone(),
+                _ => panic!("_merge_record: first arg must be a record"),
+            };
+            let parent = match &args[1] {
+                Value::List(xs) => xs,
+                _ => panic!("_merge_record: second arg must be a record"),
+            };
+            let mut out = child;
+            let mut i = 0;
+            while i + 1 < parent.len() {
+                if let Value::Str(key) = &parent[i] {
+                    if key == "__class__" || key == "__base__" {
+                        i += 2;
+                        continue;
+                    }
+                    // Skip if the child already has this field — child wins.
+                    let mut child_has = false;
+                    let mut j = 0;
+                    while j + 1 < out.len() {
+                        if let Value::Str(k2) = &out[j] {
+                            if k2 == key {
+                                child_has = true;
+                                break;
+                            }
+                        }
+                        j += 2;
+                    }
+                    if !child_has {
+                        out.push(parent[i].clone());
+                        out.push(parent[i + 1].clone());
+                    }
+                }
+                i += 2;
+            }
+            Value::List(out)
         });
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
@@ -2611,6 +2718,71 @@ impl Kernel {
                 args[0].clone()
             }
         });
+    }
+}
+
+// ---------------------------------------------------------------------------
+// resolve_method — walk the inheritance chain to find a method closure.
+//
+// Starts at `class_name`; tries `<C>__<m>`; if not bound, looks up
+// `<C>__base` (a string) and tries the parent. First match wins.
+// Single-inheritance only — MRO is the linear chain. Panics with the
+// full chain walked when no method is found.
+// ---------------------------------------------------------------------------
+
+fn resolve_method(
+    k: &mut Kernel,
+    a: &mut Arena,
+    env: FrameId,
+    class_name: &str,
+    method_name: &str,
+) -> (String, Arc<Closure>) {
+    let mut current = class_name.to_string();
+    let mut chain: Vec<String> = vec![current.clone()];
+    loop {
+        let qualified = format!("{}__{}", current, method_name);
+        if let Some(name_id) = k.str_idx.get(&qualified).copied() {
+            if let Some(val) = a.lookup(env, name_id) {
+                if let Value::Closure(c) = val {
+                    return (qualified, c);
+                }
+            }
+        }
+        // Method not found on `current` — walk to base.
+        let base_key = format!("{}__base", current);
+        let base_id = match k.str_idx.get(&base_key).copied() {
+            Some(id) => id,
+            None => {
+                panic!(
+                    "_dispatch: no method '{}' in inheritance chain [{}]",
+                    method_name,
+                    chain.join(" -> ")
+                );
+            }
+        };
+        let parent_val = match a.lookup(env, base_id) {
+            Some(v) => v,
+            None => {
+                panic!(
+                    "_dispatch: no method '{}' in inheritance chain [{}]",
+                    method_name,
+                    chain.join(" -> ")
+                );
+            }
+        };
+        let parent_name = match parent_val {
+            Value::Str(s) => s,
+            _ => panic!("_dispatch: '{}' is not a string", base_key),
+        };
+        if parent_name.is_empty() {
+            panic!(
+                "_dispatch: no method '{}' in inheritance chain [{}]",
+                method_name,
+                chain.join(" -> ")
+            );
+        }
+        current = parent_name;
+        chain.push(current.clone());
     }
 }
 
