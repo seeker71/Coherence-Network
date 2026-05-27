@@ -39,6 +39,10 @@ set -euo pipefail
 PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-ts-eval}"
 
 PARITY_FILES=(
+    # First row that passes under PARITY_THIRD_RUNTIME=kernel-bmf — covers
+    # the 9 arms G4 ships (INT, IDENT, BINOP, COMPARE, RETURN, ASSIGN, DEF,
+    # CALL, IF, MODULE) via the G1+G3 bridge in form-stdlib/python-bmf-lift.fk.
+    "examples/python_bridge_demo.py"
     "examples/python_demo.py"
     "examples/python_assign_demo.py"
     "examples/python_imperative_demo.py"

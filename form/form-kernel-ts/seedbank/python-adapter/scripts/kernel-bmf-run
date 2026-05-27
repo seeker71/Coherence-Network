@@ -20,25 +20,23 @@
 #   3. Invoke the Rust kernel against (compiled preludes + driver), printing
 #      the kernel's final value.
 #
-# What this script does NOT do (yet — honest pending):
-#   - Feed real .py files into the PY-BMF closure interpreter. The grammar
-#     at form-stdlib/grammars/python-bmf.fk parses Python into source-
-#     statement objects (kind-classified token groups), but the rule
-#     dispatcher that lifts those statements to PY-BMF-* recipes (G1 from
-#     PYTHON_BMF_CONTRACT.md) plus precedence climbing for nested
-#     expressions (G3) is still the gate. The closure-walking interpreter
-#     itself (G4) is alive at form-stdlib/python-bmf-eval.fk and proven
-#     three-way against CPython for direct-recipe inputs — see
-#     form-stdlib/tests/python-bmf-eval-band.fk (returns 28000). When
-#     G1+G3 land, the driver below swaps from (len statements) to
-#     (py-run module-recipe) and the orchestration shape stays identical.
+# What this script does end-to-end (after G1+G3 closed):
+#   - Reads the .py file via the python-bmf grammar's scanner.
+#   - Lifts the parsed statement-tree to PY-BMF-* recipes via
+#     form-stdlib/python-bmf-lift.fk (G1 statement dispatch +
+#     G3 expression precedence climbing).
+#   - Walks the module recipe to a Python-runtime value via
+#     form-stdlib/python-bmf-eval.fk's py-run (G4 closure interpreter).
 #
-# So `kernel-bmf-run examples/python_demo.py` prints the count of top-
-# level statements (≠ 40949). The three-way parity gate against CPython's
-# program value reaches green when G1+G3 wire source → PY-BMF recipes.
-# `PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh` will name
-# every demo as "diverges from CPython, gated on G1+G3" until then —
-# honest red, not faked green.
+# What this script does NOT do (yet — honest pending):
+#   - Cover every Python surface. The lifter handles the 9 arms shipped
+#     in python-bmf-eval.fk: INT, IDENT, BINOP, COMPARE, RETURN, ASSIGN,
+#     DEF, CALL, IF, MODULE — enough for python_bridge_demo.py (factorial).
+#     Demos that need lists, dicts, classes, while/for, comprehensions,
+#     subscripts, attribute access, etc. fall through to PY-BMF-PASS and
+#     surface a trace from py-env-lookup or py-eval. Each is one focused
+#     breath: add the lift dispatch branch in python-bmf-lift.fk + the
+#     interpreter arm in python-bmf-eval.fk.
 
 set -euo pipefail
 
@@ -88,6 +86,8 @@ PRELUDES=(
     "form-stdlib/compiler.fk"
     "form-stdlib/source-compiler.fk"
     "form-stdlib/grammars/python-bmf.fk"
+    "form-stdlib/python-bmf-eval.fk"
+    "form-stdlib/python-bmf-lift.fk"
 )
 
 # Working directory for compiled artifacts. cleanup() removes it on any exit.
@@ -118,17 +118,15 @@ for src in "${PRELUDES[@]}"; do
     fi
 done
 
-# Emit the driver. Until G4 (closure-walking interpreter for PY-BMF-*
-# recipes) lands, the honest report from a Form-native kernel pass over a
-# .py file is the parsed-module statement count. When G4 lands, this
-# driver swaps to walk the recipe tree to its program value, and the
-# parity gate goes green at the actual CPython output.
+# Emit the driver. Calls py-bmf-run-file from python-bmf-lift.fk: that
+# parses the .py, lifts the statement-tree to PY-BMF-* recipes, then walks
+# them through the G4 closure interpreter to the program's value. The
+# orchestration shape is unchanged from the G6 breath — only the driver
+# expression swapped from (len statements) to (py-bmf-run-file path).
 driver="$work_dir/kernel-bmf-driver.fk"
 cat > "$driver" <<DRIVER_EOF
 (do
-    (let module (python-parse-module-file "$target_py_abs"))
-    (let statements (python-module-statements module))
-    (len statements))
+    (py-bmf-run-file "$target_py_abs"))
 DRIVER_EOF
 
 # Run the Rust kernel over the prepared preludes + driver.
