@@ -78,7 +78,7 @@ cd form/form-kernel-ts
 | `python-grammar.form` | core + control-flow | 13/20 |
 | `go-grammar.form` | package + import | 2/13 |
 | `rust-grammar.form` | use declarations | 1/11 |
-| `ts-grammar.form` | pending | 0/? |
+| `ts-grammar.form` | adapter seam landed (TS → .fk → kernel, 3-way parity 5/5); substrate-form grammar pending | 0/? |
 
 Each grammar's `capture_rules` list has `?rule py_X` / `?rule yaml_X` / etc. markers for pending rules. **Count the rules without `?` to see distance from bootstrap to destination.**
 

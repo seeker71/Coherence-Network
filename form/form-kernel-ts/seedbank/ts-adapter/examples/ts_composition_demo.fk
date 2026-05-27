@@ -1,0 +1,1 @@
+(do (defn classify (n) (if (lt n 0) (sub 0 1) (if (eq n 0) 0 1))) (defn abs (n) (if (lt n 0) (sub 0 n) n)) (defn combine (a b) (_plus (mul (classify a) (abs b)) (mul (classify b) (abs a)))) (_plus (combine (sub 0 3) 5) (combine 7 (sub 0 2))))
