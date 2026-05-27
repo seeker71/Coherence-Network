@@ -33,32 +33,27 @@ Once `cross-modal-nl-to-recipe` lands, extend the NL grammar with one or two mor
 
 Walk a recipe NodeID and emit an English description. The reverse of #3. Together with #3, demonstrates **round-trip across the NL/recipe boundary** — the substrate-of-meaning is preserved through both translations.
 
-### 5. **JSON-as-recipe** — *already alive, not in the auto-gate yet*
+### 5. **JSON-as-recipe** — *landed in default gate 2026-05-27 (#2105)*
 
-**Finding (2026-05-27):** `form/form-stdlib/seedbank/grammars/json.fk` exists
-and `form/form-stdlib/seedbank/tests/json.fk` runs three-way clean:
+`form/form-stdlib/seedbank/grammars/json.fk` parses JSON to a Form Recipe
+three-way clean. Closure walk in #2105 added
+`form/form-stdlib/tests/json-grammar.fk` — a thin wrapper that names the
+seedbank grammar via a `; preludes:` header. The validate.sh auto-walker
+honors the header, runs three-way, and **JSON-as-recipe now runs on every
+default-gate breath**.
 
 ```
-$ cd form && ./validate.sh form-stdlib/core.fk \
-                            form-stdlib/seedbank/cell-trace.fk \
-                            form-stdlib/seedbank/grammars/json.fk \
-                            form-stdlib/seedbank/tests/json.fk
-  ✓  core.fk+cell-trace.fk+json.fk+json.fk  → 36
-  1 ok, 0 divergent — kernels agree on every sample.
+$ ./validate.sh
+  ...
+  ✓  stdlib/json-grammar.fk          → 36
+  ...
+  136 ok, 0 divergent — kernels agree on every sample.
 ```
 
-Same source JSON, same NodeID across Go/Rust/TS. **JSON-as-recipe is real today.**
-
-**Remaining honest gap:** `validate.sh` auto-walks `form-stdlib/tests/*.fk`
-but NOT `form-stdlib/seedbank/tests/*.fk`. The JSON proof exists but isn't
-in the default gate. The walk that closes this: move (or symlink, or add
-a band-shaped wrapper to) the seedbank JSON test into the regular tests/
-directory so the body verifies JSON-as-recipe on every `./validate.sh`
-run.
-
-Same pattern as Breath 2e (already-landed, the body hadn't read its own
-attestation). The forward-map's #5 isn't a future walk; it's a discipline
-walk: bring the existing proof into the default sense-gate.
+Same shape as Breath 2e (already-landed, the body hadn't read its own
+attestation). The forward-map's #5 was a discipline walk, not a new proof:
+bring the existing attestation into the default sense-gate so the body
+knows itself on every breath.
 
 ### 6. **CSV→Form-table→NL summary**
 
