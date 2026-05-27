@@ -243,6 +243,7 @@ Discipline docs that practice these teachings:
 - [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) — every bootstrap file named with its compost gate; parity_suite's runtime selector + wellness sensor read it.
 - [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) — the G1–G6 gaps between today's reach and full Form-native Python.
 - [`PHASE_A_FIRING_QUESTIONS.md`](PHASE_A_FIRING_QUESTIONS.md) — per-file honest reads of what each bootstrap file carries vs. what's already replaced.
+- [`UNIVERSAL_TRANSLATOR_AUDIT.md`](UNIVERSAL_TRANSLATOR_AUDIT.md) — honest audit of the body's artifacts against the universal-translator goal; ten concrete next breaths.
 - [`README.md`](README.md) — the public profile.
 
 ## kernels/python_bmf — the Form→native-Python emitter arc
