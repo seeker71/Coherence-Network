@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 215
+**Total files**: 221
 
 | File | Purpose |
 |---|---|
@@ -170,6 +170,7 @@
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
 | [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
 | [test_substrate_form_args_try_methods.py](test_substrate_form_args_try_methods.py) | Method args + try/catch + cell-method dispatch + nested ?-queries. |
+| [test_substrate_form_ast_access.py](test_substrate_form_ast_access.py) | Pin Access + MethodCall in the structural Form evaluator. |
 | [test_substrate_form_bml_full.py](test_substrate_form_bml_full.py) | Close the remaining surface gaps named in form-language.md. |
 | [test_substrate_form_bml_state.py](test_substrate_form_bml_state.py) | BML state-stack + exception-flow primitives in Form. |
 | [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
@@ -195,6 +196,7 @@
 | [test_substrate_form_streaming.py](test_substrate_form_streaming.py) | Streaming parser — `tokenize_iter`, `tokenize_chunks`, `parse_chunks`. |
 | [test_substrate_form_string_interp.py](test_substrate_form_string_interp.py) | String interpolation and multiline strings. |
 | [test_substrate_grammar.py](test_substrate_grammar.py) | Tests for substrate-resident grammar — the BMF-shaped seed. |
+| [test_substrate_kernel_parity.py](test_substrate_kernel_parity.py) | Substrate ↔ kernel parity — the kernel reaches the lattice and agrees. |
 | [test_substrate_numeric_schema.py](test_substrate_numeric_schema.py) | Numeric schema sentinels for the coherence-substrate vocabulary. |
 | [test_substrate_parallel_eval.py](test_substrate_parallel_eval.py) | Parallel kernel execution — Python and Form agree on every supported expression. |
 | [test_substrate_presence_structured.py](test_substrate_presence_structured.py) | Presence domain — structural composition discipline. |
@@ -202,6 +204,7 @@
 | [test_substrate_read_hook.py](test_substrate_read_hook.py) | Tests for the Claude Code PreToolUse hook that surfaces substrate |
 | [test_substrate_recipe_eval.py](test_substrate_recipe_eval.py) | Recipe-execution engine — runtime semantics for the pure-computation core. |
 | [test_substrate_resonance.py](test_substrate_resonance.py) | Flow-centric tests for the dimensional vocabulary and resonance edges. |
+| [test_substrate_route_resolver.py](test_substrate_route_resolver.py) | Pins the route → page.tsx resolver behind GET /api/substrate/page. |
 | [test_substrate_self_host.py](test_substrate_self_host.py) | Tests for partial self-hosting — Form's grammar expressed as Form rules. |
 | [test_substrate_spec_idea_structured.py](test_substrate_spec_idea_structured.py) | Spec + Idea domains — structural composition discipline. |
 | [test_substrate_string_literal_recovery.py](test_substrate_string_literal_recovery.py) | String literals recover their value at runtime. |
@@ -218,6 +221,8 @@
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
+| [test_utils_nodeid_distance.py](test_utils_nodeid_distance.py) | Tests for /api/utils/nodeid_distance — transmuted under the habit pattern. |
+| [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |

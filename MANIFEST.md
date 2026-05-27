@@ -31,12 +31,10 @@
 
 | Index | Files | Purpose |
 |---|---|---|
-| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 133 | API routers — every HTTP endpoint surface |
-| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 238 | API services — business logic and graph operations |
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 134 | API routers — every HTTP endpoint surface |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 239 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 56 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 215 | API tests — flow-centric |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 221 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 34 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 52 | Web components — shared React surfaces |
 | [web/app/INDEX.md](web/app/INDEX.md) | 159 | Web routes — every visible page in the app |
