@@ -25,6 +25,7 @@ PARITY_FILES=(
     "examples/python_float_demo.py"
     "examples/python_import_demo.py"
     "examples/endpoint_coherence_weight_demo.py"
+    "examples/python_class_demo.py"
 )
 
 # Locate the native binary. The script lives at
