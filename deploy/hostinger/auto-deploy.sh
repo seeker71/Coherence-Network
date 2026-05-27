@@ -131,10 +131,84 @@ cd "$COMPOSE_ROOT"
 # pulse probe that reads those pages needs to redeploy alongside to
 # pick up the updated marker, otherwise it silences real organs on
 # false positives.
-log "docker compose build api web pulse"
-docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
-log "docker compose up -d api web pulse"
-docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
+#
+# Path-aware fast path: when ALL changed files between OLD_SHA and
+# TARGET_SHA fall within a static-only allowlist, skip the heavy
+# rebuild and just sync the changed files into the running containers.
+# Turns a 2.5h deploy for a static asset into ~5 seconds.
+#
+# Conservative allowlist — anything outside falls back to the full
+# rebuild path. Adding a path here means "this file does NOT require
+# a container rebuild to take effect."
+
+is_static_only_change() {
+  local from="$1" to="$2"
+  # Fall back to rebuild if SHA comparison isn't available (first deploy,
+  # detached state, etc.) — we never skip rebuild without evidence.
+  if [[ -z "$from" || -z "$to" || "$from" == "$to" ]]; then
+    return 1
+  fi
+  local changed
+  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null || true)"
+  if [[ -z "$changed" ]]; then
+    # No detected changes but SHAs differ → unknown; rebuild to be safe.
+    return 1
+  fi
+  # Each line is a path relative to repo root. Test against the
+  # static-only allowlist. Any single path outside it returns 1.
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    case "$path" in
+      web/public/*) ;;
+      docs/*) ;;
+      channels/*) ;;
+      form/*) ;;
+      scripts/*.sh) ;;
+      *.md) ;;
+      *.fkb) ;;
+      proof.fk) ;;
+      we.fkb) ;;
+      PROOF.md) ;;
+      *) return 1 ;;
+    esac
+  done <<< "$changed"
+  return 0
+}
+
+sync_web_public() {
+  # Copy any changed web/public/* files into the running web container.
+  # Next.js serves /public/* from disk at any path, so a cp is sufficient
+  # for the new file to be reachable on the next request.
+  local from="$1" to="$2"
+  local changed
+  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null \
+              | grep '^web/public/' || true)"
+  if [[ -z "$changed" ]]; then
+    log "web/public sync: no changes"
+    return 0
+  fi
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    local dest="/app/${path#web/}"
+    log "web/public sync: $path -> web:$dest"
+    docker compose exec -T web sh -lc "mkdir -p $(dirname "$dest")" 2>&1 | tee -a "$LOG_FILE" || true
+    docker compose cp "$REPO_DIR/$path" "web:$dest" 2>&1 | tee -a "$LOG_FILE"
+  done <<< "$changed"
+}
+
+if is_static_only_change "$OLD_SHA" "$TARGET_SHA"; then
+  log "Static-only change detected ($OLD_SHA -> $TARGET_SHA); skipping rebuild"
+  sync_web_public "$OLD_SHA" "$TARGET_SHA"
+  # The subsequent sync_field_docs / sync_repo_docs / etc. functions
+  # below will pick up the api-side static syncs as they would in a
+  # rebuild flow. No `docker compose build` needed.
+else
+  log "docker compose build api web pulse"
+  docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
+  log "docker compose up -d api web pulse"
+  docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
+fi
+
 
 sync_field_docs() {
   if [[ ! -d "$REPO_DIR/docs/field" ]]; then
