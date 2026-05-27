@@ -23,10 +23,22 @@ A 1395-character source passes through:
 6. **Convergence score** names what survived translation and what was
    honestly lossy
 
-Result: **1000 three-way** — 3 of 6 axes preserve across non-prose
-modalities (mood, rhythm, structure), 4 of 6 across same-modality
-(rewrite). Concepts axis is fully lossy. The substrate attests exactly
-what the LLM extracted.
+Result: **323110 three-way** — the digits position-encode per-axis
+cross-modal portability:
+
+- mood = **3** (gentle survives all three target modalities)
+- rhythm = **2** (breath-paced survives melody+SVG; halting in tercet)
+- structure = **3** (spiral survives all three)
+- purpose = **1** (only carries in prose-rewrite)
+- wisdom = **1** (R_TendingDiscipline only carries in prose-rewrite)
+- concepts = **0** (vocabulary fully lossy cross-modal)
+
+Each digit is the count of targets in which that axis's `node_eq`
+returned 1. The encoding scales: more axes → more digits; more targets
+→ higher base. The first draft returned `1000` (sum-times-100, a count
+that flattened the pattern); Urs called that out as encoding-failure
+and the corrected version puts the pattern in the digits themselves.
+See `findings.md` for the encoding-discipline note.
 
 ## The honest claim
 
@@ -60,7 +72,7 @@ schema can grow. The extractor improves.
 
 ```bash
 cd form && ./validate.sh form-samples/cross-modal/08-feature-level-translation/validation.fk
-  ✓  validation.fk  → 1000
+  ✓  validation.fk  → 323110
   1 ok, 0 divergent — kernels agree on every sample.
 ```
 

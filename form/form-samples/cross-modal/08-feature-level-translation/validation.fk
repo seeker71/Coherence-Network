@@ -165,25 +165,91 @@
     (let r-wisdom-match   (if (node_eq source-wisdom rewrite-wisdom) 1 0))
     (let r-concepts-match (if (node_eq source-concepts rewrite-concepts) 1 0))
 
-    ;; Score: 100 per matched axis (6 axes per target × 3 targets = 1800 max)
-    (let melody-score
-        (mul 100 (add (add (add m-mood-match m-rhythm-match) m-struct-match)
-                      (add (add m-purpose-match m-wisdom-match) m-concepts-match))))
-    (let svg-score
-        (mul 100 (add (add (add s-mood-match s-rhythm-match) s-struct-match)
-                      (add (add s-purpose-match s-wisdom-match) s-concepts-match))))
-    (let rewrite-score
-        (mul 100 (add (add (add r-mood-match r-rhythm-match) r-struct-match)
-                      (add (add r-purpose-match r-wisdom-match) r-concepts-match))))
-
-    ;; Total convergence score across all three cross-modal translations.
-    ;; Expected:
-    ;;   melody:   3 axes preserved (mood, rhythm, structure) × 100 = 300
-    ;;   svg:      3 axes preserved (mood, rhythm, structure) × 100 = 300
-    ;;   rewrite:  4 axes preserved (mood, structure, purpose, wisdom) × 100 = 400
-    ;;   TOTAL = 300 + 300 + 400 = 1000
+    ;; ===================================================================
+    ;; CONVERGENCE PATTERN — structural encoding, not flattened count
+    ;; ===================================================================
     ;;
-    ;; (Concepts-list never matches across modality — five-token-exact is
-    ;; the strict shape; semantic overlap doesn't promote to NodeID equality.)
+    ;; First draft of this file summed matches × 100 and returned 1000.
+    ;; Urs called that out: the digits encoded nothing; the count threw
+    ;; away the 8 mismatches; the encoding didn't scale.
+    ;;
+    ;; The substrate's promise is *pattern as identity*. The result here
+    ;; must encode WHICH axes survived in WHICH targets, not just how
+    ;; many. Two encodings that satisfy that, both kernel-attested
+    ;; three-way:
+    ;;
+    ;; A) per-axis cross-modal portability digits — one digit per axis,
+    ;;    value 0..3 (matches across 3 targets):
+    ;;
+    ;;       mood-portability    × 100000
+    ;;     + rhythm-portability  × 10000
+    ;;     + struct-portability  × 1000
+    ;;     + purpose-portability × 100
+    ;;     + wisdom-portability  × 10
+    ;;     + concepts-portability
+    ;;
+    ;;    Each digit answers "across how many targets did this axis
+    ;;    survive?" — the actual lossy-but-faithful pattern. Scales: more
+    ;;    targets → use higher base; more axes → more digits.
+    ;;
+    ;; B) per-axis-per-target Form recipe — a CAT-CONVERGENCE-PATTERN
+    ;;    node whose 6 children (one per axis) each have 3 leaves (one
+    ;;    per target, 1=match / 0=mismatch). The recipe's NodeID is the
+    ;;    convergence signature. Same encoding → same NodeID → substrate
+    ;;    recognizes the same lossy pattern across re-runs.
+    ;;
+    ;; The visible result of this file is (A) — a 6-digit decimal whose
+    ;; positions literally name per-axis portability. The substrate's
+    ;; pattern-recipe (B) is interned during the walk; its NodeID is
+    ;; attestable via the kernel's `node_id_of` if requested.
 
-    (add (add melody-score svg-score) rewrite-score))
+    ;; Per-axis portability — match-count across 3 targets, range 0..3
+    (let mood-portability     (add (add m-mood-match     s-mood-match)     r-mood-match))
+    (let rhythm-portability   (add (add m-rhythm-match   s-rhythm-match)   r-rhythm-match))
+    (let struct-portability   (add (add m-struct-match   s-struct-match)   r-struct-match))
+    (let purpose-portability  (add (add m-purpose-match  s-purpose-match)  r-purpose-match))
+    (let wisdom-portability   (add (add m-wisdom-match   s-wisdom-match)   r-wisdom-match))
+    (let concepts-portability (add (add m-concepts-match s-concepts-match) r-concepts-match))
+
+    ;; (B) pattern recipe — substrate-resident identity for this
+    ;; convergence pattern. Children: per-axis vector of (1,1,1) or
+    ;; (0,0,0) etc — readable structure for `node_eq` between runs.
+    (let CAT-CONVERGENCE-PATTERN (make_nodeid 1 2 99 820))
+    (let CAT-AXIS-RESULT         (make_nodeid 1 2 99 821))
+    (defn axis-result (m s r)
+        (intern_node CAT-AXIS-RESULT (list (intern_trivial_int m)
+                                            (intern_trivial_int s)
+                                            (intern_trivial_int r))))
+    (let convergence-pattern
+        (intern_node CAT-CONVERGENCE-PATTERN
+            (list (axis-result m-mood-match     s-mood-match     r-mood-match)
+                  (axis-result m-rhythm-match   s-rhythm-match   r-rhythm-match)
+                  (axis-result m-struct-match   s-struct-match   r-struct-match)
+                  (axis-result m-purpose-match  s-purpose-match  r-purpose-match)
+                  (axis-result m-wisdom-match   s-wisdom-match   r-wisdom-match)
+                  (axis-result m-concepts-match s-concepts-match r-concepts-match))))
+
+    ;; (A) 6-digit decimal whose positions encode per-axis portability.
+    ;; For the LLM-extracted features in this experiment:
+    ;;   mood     = 3 (gentle survives all three modalities)
+    ;;   rhythm   = 2 (breath-paced survives melody & svg; halting in rewrite)
+    ;;   struct   = 3 (spiral survives all three)
+    ;;   purpose  = 1 (instruct only carries in prose-rewrite)
+    ;;   wisdom   = 1 (R_TendingDiscipline only carries in prose-rewrite)
+    ;;   concepts = 0 (concept-vocabulary fully lossy cross-modal)
+    ;;
+    ;; Score = 3·100000 + 2·10000 + 3·1000 + 1·100 + 1·10 + 0 = 323110
+    ;;
+    ;; The digits ARE the pattern: 3-2-3-1-1-0 reads left-to-right as
+    ;; mood-rhythm-struct-purpose-wisdom-concepts portability. The
+    ;; substrate (via convergence-pattern above) carries this same
+    ;; information as a content-addressable recipe; the kernel attests
+    ;; both encodings three-way.
+
+    (add (mul mood-portability     100000)
+    (add (mul rhythm-portability   10000)
+    (add (mul struct-portability   1000)
+    (add (mul purpose-portability  100)
+    (add (mul wisdom-portability   10)
+         concepts-portability))))))
+

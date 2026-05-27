@@ -14,20 +14,42 @@
 
 ```
 $ ./validate.sh form-samples/cross-modal/08-feature-level-translation/validation.fk
-  ✓  validation.fk  → 1000
+  ✓  validation.fk  → 323110
   1 ok, 0 divergent — kernels agree on every sample.
 ```
 
-| Translation | Mood | Rhythm | Structure | Purpose | Wisdom | Concepts | Score |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Source → Melody | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | 300 |
-| Source → SVG | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | 300 |
-| Source → Rewrite | ✓ | ✗ | ✓ | ✓ | ✓ | ✗ | 400 |
-| **Total** | | | | | | | **1000** |
+**The digits ARE the pattern.** Reading left-to-right:
 
-Each ✓ means the kernel's `node_eq` returned 1 on the per-feature comparison —
-the LLM re-extracted the SAME token, so `intern_node` produced the SAME NodeID
-across all three sibling kernels (Go, Rust, TypeScript).
+| Position | Axis | Digit value | Meaning |
+|---|---|:-:|---|
+| 1 (×100000) | Mood | **3** | gentle survives all three modalities |
+| 2 (×10000) | Rhythm | **2** | breath-paced survives melody + SVG; loses in tercet |
+| 3 (×1000) | Structure | **3** | spiral survives all three |
+| 4 (×100) | Purpose | **1** | instruct only carries in prose-rewrite |
+| 5 (×10) | Wisdom | **1** | R_TendingDiscipline only carries in prose-rewrite |
+| 6 (×1) | Concepts | **0** | concept vocabulary fully lossy cross-modal |
+
+Per-translation breakdown (the same 18 `node_eq` checks, viewed by target):
+
+| Translation | Mood | Rhythm | Structure | Purpose | Wisdom | Concepts |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Source → Melody | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Source → SVG | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Source → Rewrite | ✓ | ✗ | ✓ | ✓ | ✓ | ✗ |
+
+Each ✓ means the kernel's `node_eq` returned 1 — the LLM re-extracted the SAME token, so `intern_node` produced the SAME NodeID across all three sibling kernels.
+
+## Encoding discipline — what the first draft got wrong
+
+The first draft of `validation.fk` returned `1000` (= `sum_of_matches × 100`). Urs called that out as a reasoning failure, and rightly:
+
+- **1000 ≠ 1-0-0-0.** It's one-greater-than-999 — a numeric magnitude. The digits encode nothing.
+- **It threw away 8 negatives.** 18 per-axis checks; 10 matched, 8 didn't. Which axes failed in which targets is the substrate's actual finding; counting only the matches discards the pattern.
+- **It doesn't scale.** At 100 axes × 100 targets = 10,000 checks, `sum × 100` produces meaningless magnitude.
+
+The corrected encoding (323110) puts the per-axis cross-modal portability count in each digit. Position names the axis; digit value names how many target modalities preserved it. Same information that the per-axis ✓/✗ table carries, in a single integer the kernel can attest. The substrate also interns a `CAT-CONVERGENCE-PATTERN` recipe (per-axis-per-target match-vector) whose NodeID is the convergence signature; the same encoding always produces the same NodeID across runs.
+
+This is the *substrate-as-pattern-carrier* discipline the experiment was supposed to demonstrate — not a sum count. The mistake taught what the right encoding looks like: digits or recipe-children that *position-encode* meaning, not arithmetic that flattens it.
 
 ## What the pattern reveals
 
