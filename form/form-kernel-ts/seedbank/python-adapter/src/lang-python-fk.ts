@@ -410,6 +410,45 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       );
     }
 
+    // ── method call ───────────────────────────────────────────
+    // Python `obj.method(args…)` lowers to a runtime `_dispatch` call.
+    // The receiver's record carries a "__class__" string field; the
+    // dispatch native uses that to find `<ClassName>__<methodName>` in
+    // the surrounding scope (where the class emit lifted it as a defn).
+    // This keeps method dispatch composable across multiple classes
+    // without baking class identity into compile-time call sites.
+    case CTOR.method_call: {
+      const recv = emit(k, kids[0]!, opts);
+      const methodName = emitIdent(k, kids[1]!);
+      const argNodes = capturedChildren(k, kids[2]!);
+      const argStrs = argNodes.map((a: NodeID) => emit(k, a, opts));
+      const tail = argStrs.length === 0 ? "" : ` ${argStrs.join(" ")}`;
+      return `(_dispatch ${recv} ${JSON.stringify(methodName)}${tail})`;
+    }
+
+    // ── attribute read ────────────────────────────────────────
+    // Python `obj.field` → `(_get obj "field")` reading from the
+    // receiver's record (Value::List of alternating key/value entries).
+    case CTOR.attr: {
+      const recv = emit(k, kids[0]!, opts);
+      const field = emitIdent(k, kids[1]!);
+      return `(_get ${recv} ${JSON.stringify(field)})`;
+    }
+
+    // ── class declaration ─────────────────────────────────────
+    // Compiles to:
+    //   1. A constructor function bound at the class name.
+    //   2. One lifted `<ClassName>__<methodName>` for each method (other
+    //      than __init__).
+    // Both land in the module's top-level `(do ...)` via liftedDefns.
+    case CTOR.class_: {
+      emitClass(k, kids, opts);
+      // The class statement itself evaluates to None (Python returns
+      // the class object; the kernel binds it via the constructor defn
+      // and we don't model class objects in v1).
+      return "false";
+    }
+
     case CTOR.list_literal: {
       const parts = kids.map((c: NodeID) => emit(k, c, opts));
       return parts.length === 0 ? "(list)" : `(list ${parts.join(" ")})`;
@@ -685,4 +724,154 @@ function emitIdent(k: Kernel, n: NodeID): string {
     }
   }
   throw new Error("emitIdent: expected an ident shape");
+}
+
+// ---------------------------------------------------------------------------
+// Class emission — the v1 minimum shape:
+//
+//   class Counter:
+//       def __init__(self, start, step):
+//           self.n = start
+//           self.step = step
+//       def increment(self):
+//           return self.n + self.step
+//
+// Lowers to two lifted `defn`s plus a constructor `defn` bound at the
+// class's own name:
+//
+//   (defn Counter__increment (self) (_plus (_get self "n") (_get self "step")))
+//   (defn Counter (start step)
+//       (do (let n start)
+//           (let step step)
+//           (list "__class__" "Counter" "n" n "step" step)))
+//
+// The constructor's body is the __init__ body, with `self.<f> = <expr>`
+// lines lowered to `(let <f> <expr>)` for the local copy, and the final
+// expression is the record literal — a flat alist with "__class__" as
+// the first key so _dispatch can find the right method namespace.
+//
+// Restrictions in v1 (each is a named gap in the PR body):
+//   - No inheritance, no super(), no decorators, no classmethods /
+//     staticmethods, no metaclasses, no class-vars, no __slots__,
+//     no dunder methods beyond __init__.
+//   - __init__ body may only contain `self.<field> = <expr>` lines and
+//     local-variable assignments. No conditional field assignment.
+//   - Method bodies use `self.x` for read-only field access; field
+//     writes mid-method aren't supported.
+//   - No method-to-method call via self.other_method() chains within a
+//     class body (dispatch lookup needs the receiver's __class__ to
+//     resolve, which works for normal call sites).
+//
+// emitClass appends the lifted defns to the module-level liftedDefns
+// list; the wrapper at the top of emitFk splices those in front of the
+// program body before the kernel binary executes it.
+// ---------------------------------------------------------------------------
+function emitClass(
+  k: Kernel,
+  classKids: readonly NodeID[],
+  opts: EmitFkOptions,
+): void {
+  const className = emitIdent(k, classKids[0]!);
+  const methodList = capturedChildren(k, classKids[1]!);
+
+  // Split methods into __init__ vs the rest.
+  let initMethod: NodeID | null = null;
+  const otherMethods: NodeID[] = [];
+  for (const m of methodList) {
+    const mKids = capturedChildren(k, m);
+    const mName = emitIdent(k, mKids[0]!);
+    if (mName === "__init__") {
+      initMethod = m;
+    } else {
+      otherMethods.push(m);
+    }
+  }
+
+  // --- Constructor (the class name itself, callable as Counter(2, 1)) -----
+  // Each `self.<f> = expr` becomes a local `(let <f> expr)`; the final
+  // value is `(list "__class__" "<ClassName>" "<f1>" <f1> ...)`.
+  const fields: string[] = [];
+  const initBindings: string[] = [];
+  let ctorParams: string[] = [];
+  if (initMethod !== null) {
+    const initKids = capturedChildren(k, initMethod);
+    const paramNodes = capturedChildren(k, initKids[1]!);
+    // First param is `self` — skip; remaining are constructor args.
+    ctorParams = paramNodes
+      .slice(1)
+      .map((p: NodeID) => emitIdent(k, p));
+    const bodyNode = initKids[2]!;
+    const bodyCtor = capturedCtor(k, bodyNode);
+    const stmts =
+      bodyCtor === CTOR.block ? capturedChildren(k, bodyNode) : [bodyNode];
+    for (const stmt of stmts) {
+      const stmtCtor = capturedCtor(k, stmt);
+      if (stmtCtor !== CTOR.assign) {
+        throw new Error(
+          `emitFk: __init__ body must be only self.<field> = <expr> or local assigns (v1); got '${stmtCtor}'`,
+        );
+      }
+      const stmtKids = capturedChildren(k, stmt);
+      const target = stmtKids[0]!;
+      const valueNode = stmtKids[1]!;
+      const targetCtor = capturedCtor(k, target);
+      if (targetCtor === CTOR.attr) {
+        // self.<field> = expr — emit (let <field> expr); collect into fields.
+        const recvCtor = capturedCtor(k, capturedChildren(k, target)[0]!);
+        if (recvCtor !== CTOR.ident) {
+          throw new Error(
+            `emitFk: __init__ attribute target must be 'self.<field>' (v1)`,
+          );
+        }
+        const recvName = emitIdent(k, capturedChildren(k, target)[0]!);
+        if (recvName !== "self") {
+          throw new Error(
+            `emitFk: __init__ attribute target must be on 'self' (v1)`,
+          );
+        }
+        const fieldName = emitIdent(k, capturedChildren(k, target)[1]!);
+        if (!fields.includes(fieldName)) fields.push(fieldName);
+        const valStr = emit(k, valueNode, opts);
+        initBindings.push(`(let ${fieldName} ${valStr})`);
+      } else if (targetCtor === CTOR.ident) {
+        // local variable inside __init__ — emit (let name expr).
+        const localName = emitIdent(k, target);
+        const valStr = emit(k, valueNode, opts);
+        initBindings.push(`(let ${localName} ${valStr})`);
+      } else {
+        throw new Error(
+          `emitFk: __init__ assignment target must be self.<field> or a local (v1)`,
+        );
+      }
+    }
+  }
+
+  // Constructor body: bindings followed by the record literal.
+  const recordParts: string[] = [];
+  recordParts.push(JSON.stringify("__class__"), JSON.stringify(className));
+  for (const f of fields) {
+    recordParts.push(JSON.stringify(f), f);
+  }
+  const recordExpr = `(list ${recordParts.join(" ")})`;
+  const ctorBody =
+    initBindings.length === 0
+      ? recordExpr
+      : `(do ${initBindings.join(" ")} ${recordExpr})`;
+  liftedDefns.push(
+    `(defn ${className} (${ctorParams.join(" ")}) ${ctorBody})`,
+  );
+
+  // --- Other methods (lifted as `<ClassName>__<methodName>`) --------------
+  for (const m of otherMethods) {
+    const mKids = capturedChildren(k, m);
+    const mName = emitIdent(k, mKids[0]!);
+    const paramNodes = capturedChildren(k, mKids[1]!);
+    const paramNames = paramNodes.map((p: NodeID) => emitIdent(k, p));
+    // First param must be `self`; we keep it as-is so attribute reads
+    // (`self.x` → `(_get self "x")`) resolve at runtime.
+    const body = emitDefBody(k, mKids[2]!, opts);
+    liftedDefns.push(
+      `(defn ${className}__${mName} (${paramNames.join(" ")}) ${body})`,
+    );
+  }
 }

@@ -112,6 +112,12 @@ export const CTOR = {
   params: "params",
   param: "param",
   block: "block",
+  // Classes — v1 minimum shape (class X:, __init__(self, …) storing
+  // attributes on self, instance methods that take self and use self.x).
+  // No inheritance, no super(), no decorators in v1. Each is named in
+  // PR body as a pending follow-up breath.
+  class_: "class",
+  attr: "attr", // bare attribute read:  obj.field
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -311,6 +317,8 @@ const KEYWORDS = new Set([
   "import",
   "from",
   "as",
+  "class",
+  "pass",
 ]);
 
 function readIdentRaw(c: Cursor): string | null {
@@ -712,12 +720,12 @@ function parsePostfix(k: Kernel, c: Cursor): NodeID | null {
           args,
         ]);
       } else {
-        // Bare attribute access — represent as method_call with empty args
-        // for now; refining is open work for the dot-access ctor.
-        node = captureNode(k, CTOR.method_call, [
+        // Bare attribute access — distinct CTOR so emit/eval can
+        // dispatch differently from a zero-arg method call. Carries
+        // the receiver + the attribute-name ident.
+        node = captureNode(k, CTOR.attr, [
           node,
           captureNode(k, CTOR.ident, [k.internString(member)]),
-          captureNode(k, CTOR.args, []),
         ]);
       }
       continue;
@@ -940,12 +948,20 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
   skipSpacesAndComments(c);
 
   if (peekKeyword(c, "def")) return parseDef(k, c, lineIndent);
+  if (peekKeyword(c, "class")) return parseClass(k, c, lineIndent);
   if (peekKeyword(c, "if")) return parseIfStmt(k, c, lineIndent);
   if (peekKeyword(c, "for")) return parseForStmt(k, c, lineIndent);
   if (peekKeyword(c, "while")) return parseWhileStmt(k, c, lineIndent);
   if (peekKeyword(c, "return")) return parseReturn(k, c);
   if (peekKeyword(c, "import")) return parseImportStmt(k, c);
   if (peekKeyword(c, "from")) return parseFromImportStmt(k, c);
+  if (peekKeyword(c, "pass")) {
+    consumeKeyword(c, "pass");
+    consumeEndOfLine(c);
+    // `pass` lowers to an empty block — emitFk treats CTOR.block of zero
+    // children as a no-op (emits "false").
+    return captureNode(k, CTOR.block, []);
+  }
 
   // Expression statement OR assignment.
   // Lookahead: parse an expression, then check for `=` (single-target
@@ -1034,9 +1050,9 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
     c.src.charCodeAt(c.pos) === 61 /* = */ &&
     c.src.charCodeAt(c.pos + 1) !== 61 /* not == */
   ) {
-    // Confirm LHS is a target Python permits (IDENT-only for v1).
+    // Confirm LHS is a target Python permits (IDENT or ATTR for v1).
     const lhsCtor = capturedCtor(k, e);
-    if (lhsCtor === CTOR.ident) {
+    if (lhsCtor === CTOR.ident || lhsCtor === CTOR.attr) {
       c.pos++; // skip `=`
       skipSpacesAndComments(c);
       const value = parseExpr(k, c);
@@ -1046,10 +1062,9 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
       consumeEndOfLine(c);
       return captureNode(k, CTOR.assign, [e, value]);
     }
-    // Subscript/attribute target — fall through; lhs already
-    // consumed, value not yet known. For v1, treat as unsupported.
+    // Subscript target — not yet supported as an assignment LHS.
     throw new SyntaxError(
-      `python: assignment target must be a simple name (v1) at ${savedPos}`,
+      `python: assignment target must be a name or attribute (v1) at ${savedPos}`,
     );
   }
   consumeEndOfLine(c);
@@ -1239,6 +1254,59 @@ function parseDef(k: Kernel, c: Cursor, lineIndent: number): NodeID {
     captureNode(k, CTOR.ident, [k.internString(name)]),
     params,
     body,
+  ]);
+}
+
+// parseClass — v1 class shape:
+//   class Name:
+//       def __init__(self, …): … self.x = …
+//       def method(self, …):   … self.y …
+//
+// No inheritance, decorators, class-vars, classmethods, staticmethods,
+// metaclasses, or `super()` in this breath. Each is a named follow-up
+// gap. The class body is parsed as a sequence of method `def`s; the
+// captured shape is CTOR.class_(name-ident, [methods…]).
+function parseClass(k: Kernel, c: Cursor, lineIndent: number): NodeID {
+  expectKeyword(c, "class");
+  skipSpacesAndComments(c);
+  const name = readIdentRaw(c);
+  if (name === null) throw new SyntaxError(`python: class name required at ${c.pos}`);
+  // Optional empty `()` after the name — Python permits `class Foo():`
+  // even with no bases. Anything inside the parens is a v1 honest gap.
+  skipSpacesAndComments(c);
+  if (peek(c) === "(") {
+    c.pos++;
+    skipAllWhitespace(c);
+    if (peek(c) !== ")") {
+      throw new SyntaxError(
+        `python: class bases / metaclass kwargs not supported in v1 at ${c.pos}`,
+      );
+    }
+    c.pos++; // consume ')'
+  }
+  expect(c, ":");
+  // Body — same indented-block shape as parseBlock, but each body
+  // statement must be a method `def`. v1 accepts a trailing bare `pass`
+  // for the empty class case.
+  const bodyNode = parseBlock(k, c, lineIndent);
+  const bodyKids = capturedChildren(k, bodyNode);
+  const methods: NodeID[] = [];
+  for (const stmt of bodyKids) {
+    const ctor = capturedCtor(k, stmt);
+    if (ctor === CTOR.def_) {
+      methods.push(stmt);
+    } else if (ctor === CTOR.block && capturedChildren(k, stmt).length === 0) {
+      // bare `pass` — skip.
+      continue;
+    } else {
+      throw new SyntaxError(
+        `python: class body may only contain method defs (v1); got '${ctor}'`,
+      );
+    }
+  }
+  return captureNode(k, CTOR.class_, [
+    captureNode(k, CTOR.ident, [k.internString(name)]),
+    captureNode(k, CTOR.block, methods),
   ]);
 }
 
@@ -1983,20 +2051,28 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       throw new ReturnSignal(v);
     }
     case CTOR.assign: {
-      // children: [target-ident-node, value-node]. v1 target is always
-      // CTOR.ident; richer targets (tuple unpack, attribute, subscript)
+      // children: [target-node, value-node]. v1 targets: CTOR.ident
+      // (simple name) and CTOR.attr (attribute write — the __init__
+      // shape for classes). Richer targets (tuple unpack, subscript)
       // would dispatch here with their own assignment lowering.
       const target = kids[0]!;
       const value = evalNode(k, kids[1]!, env);
       const targetCtor = capturedCtor(k, target);
-      if (targetCtor !== CTOR.ident) {
-        throw new Error(
-          `python: assignment target must be a simple name (got ${targetCtor})`,
-        );
+      if (targetCtor === CTOR.ident) {
+        const nameID = capturedChildren(k, target)[0]!.inst;
+        envBind(env, nameID, value);
+        return { kind: "null" };
       }
-      const nameID = capturedChildren(k, target)[0]!.inst;
-      envBind(env, nameID, value);
-      return { kind: "null" };
+      if (targetCtor === CTOR.attr) {
+        const recv = evalNode(k, capturedChildren(k, target)[0]!, env);
+        const fieldID = capturedChildren(k, capturedChildren(k, target)[1]!)[0]!.inst;
+        const field = k.nameStr(fieldID);
+        recordPut(recv, field, value);
+        return { kind: "null" };
+      }
+      throw new Error(
+        `python: assignment target must be a name or attribute (got ${targetCtor})`,
+      );
     }
     case CTOR.subscript: {
       // children: [value-node, index-node]. Python lst[i] semantics.
@@ -2060,8 +2136,27 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
     case CTOR.method_call: {
       const recv = evalNode(k, kids[0]!, env);
       const methodNameID = capturedChildren(k, kids[1]!)[0]!.inst;
+      const methodName = k.nameStr(methodNameID);
       const args = capturedChildren(k, kids[2]!).map((a) => evalNode(k, a, env));
-      return dispatchMethod(k, recv, k.nameStr(methodNameID), args);
+      // Class-record receivers route through env-bound qualified
+      // closures (`<ClassName>__<methodName>`) — mirrors the kernel's
+      // _dispatch native. Falls back to dispatchMethod for built-in
+      // str/list method dispatch.
+      if (recv.kind === "list" && hasClassTag(recv)) {
+        const className = recordGet(recv, "__class__");
+        if (className.kind !== "str") {
+          throw new Error("python: receiver's __class__ is not a string");
+        }
+        const qualifiedID = k.internName(`${className.str}__${methodName}`);
+        const cl = envLookup(env, qualifiedID);
+        if (cl === undefined) {
+          throw new Error(
+            `python: method '${className.str}__${methodName}' not bound`,
+          );
+        }
+        return invokePyClosure(k, cl, [recv, ...args]);
+      }
+      return dispatchMethod(k, recv, methodName, args);
     }
     case CTOR.lambda_: {
       const params = capturedChildren(k, kids[0]!);
@@ -2094,15 +2189,159 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       }
       return last;
     }
+    case CTOR.class_: {
+      // children: [name-ident, methods-block]
+      // The TS evaluator mirrors the .fk emitter: build a constructor
+      // closure bound under the class name, plus one closure per method
+      // bound under `<ClassName>__<methodName>`. Method dispatch reads
+      // `__class__` from the receiver record to find the right closure
+      // — matches the kernel's `_dispatch` native.
+      const classNameID = capturedChildren(k, kids[0]!)[0]!.inst;
+      const className = k.nameStr(classNameID);
+      const methodNodes = capturedChildren(k, kids[1]!);
+      let initMethod: NodeID | null = null;
+      const others: NodeID[] = [];
+      for (const m of methodNodes) {
+        const mKids = capturedChildren(k, m);
+        const mNameID = capturedChildren(k, mKids[0]!)[0]!.inst;
+        const mName = k.nameStr(mNameID);
+        if (mName === "__init__") initMethod = m;
+        else others.push(m);
+      }
+      // Constructor: call into the init body with self as a fresh record.
+      // We use a JS closure that returns a list-value record so the rest
+      // of the eval path uses normal list ops.
+      const constructorValue: Value = {
+        kind: "list",
+        list: [],
+        pyClosure: makeConstructorClosure(k, className, initMethod, env),
+      } as Value & { pyClosure?: PyClosure };
+      envBind(env, classNameID, constructorValue);
+      // Each non-init method becomes a closure under `<ClassName>__<m>`.
+      for (const m of others) {
+        const mKids = capturedChildren(k, m);
+        const mNameID = capturedChildren(k, mKids[0]!)[0]!.inst;
+        const mName = k.nameStr(mNameID);
+        const paramNodes = capturedChildren(k, mKids[1]!);
+        const paramNames = paramNodes.map(
+          (p) => capturedChildren(k, p)[0]!.inst,
+        );
+        const body = mKids[2]!;
+        const closure: PyClosure = { params: paramNames, body, env };
+        const qualifiedID = k.internName(`${className}__${mName}`);
+        envBind(env, qualifiedID, {
+          kind: "list",
+          list: [],
+          pyClosure: closure,
+        } as Value & { pyClosure?: PyClosure });
+      }
+      return { kind: "null" };
+    }
+    case CTOR.attr: {
+      // children: [receiver-node, field-ident]
+      const recv = evalNode(k, kids[0]!, env);
+      const fieldID = capturedChildren(k, kids[1]!)[0]!.inst;
+      const field = k.nameStr(fieldID);
+      return recordGet(recv, field);
+    }
     default:
       throw new Error(`evalPython: unsupported ctor '${ctor}'`);
   }
+}
+
+// Build the constructor closure for a class. Body is the original
+// __init__'s body; invokePyClosure recognises `ctorClassName` and
+// arranges for a fresh tagged record to be bound as `self` before the
+// body runs, then returns that record.
+function makeConstructorClosure(
+  k: Kernel,
+  className: string,
+  initMethod: NodeID | null,
+  env: PyEnv,
+): PyClosure {
+  if (initMethod === null) {
+    // No __init__ — constructor takes no args and returns a bare record
+    // tagged with the class name. The body is an empty block; the ctor
+    // branch in invokePyClosure builds the record regardless.
+    const emptyBlock = k.intern(
+      {
+        pkg: 1,
+        level: Level.BASIC,
+        type: RBasic.LIST,
+        inst: k.internName(CTOR.block),
+      },
+      [],
+    );
+    return {
+      params: [],
+      body: emptyBlock,
+      env,
+      ctorClassName: className,
+    };
+  }
+  const initKids = capturedChildren(k, initMethod);
+  const paramNodes = capturedChildren(k, initKids[1]!);
+  // Skip `self` (first param) — constructor args are the rest.
+  const ctorParamIDs = paramNodes
+    .slice(1)
+    .map((p) => capturedChildren(k, p)[0]!.inst);
+  return {
+    params: ctorParamIDs,
+    body: initKids[2]!,
+    env,
+    ctorClassName: className,
+  };
+}
+
+function hasClassTag(recv: Value): boolean {
+  if (recv.kind !== "list") return false;
+  for (let i = 0; i + 1 < recv.list.length; i += 2) {
+    const k = recv.list[i]!;
+    if (k.kind === "str" && k.str === "__class__") return true;
+  }
+  return false;
+}
+
+// Record read on a list-shaped record (alternating key/value entries).
+function recordGet(recv: Value, field: string): Value {
+  if (recv.kind !== "list") {
+    throw new Error(`python: _get on non-record (${recv.kind})`);
+  }
+  for (let i = 0; i + 1 < recv.list.length; i += 2) {
+    const k = recv.list[i]!;
+    if (k.kind === "str" && k.str === field) return recv.list[i + 1]!;
+  }
+  throw new Error(`python: no field '${field}' on record`);
+}
+
+// In-place record write — mirrors what `self.x = expr` does during
+// __init__. Outside __init__, attribute assignment would normally be
+// a v1 honest gap, but the TS eval path tolerates it since list entries
+// are mutable.
+function recordPut(recv: Value, field: string, value: Value): void {
+  if (recv.kind !== "list") {
+    throw new Error(`python: attribute assign on non-record (${recv.kind})`);
+  }
+  for (let i = 0; i + 1 < recv.list.length; i += 2) {
+    const k = recv.list[i]!;
+    if (k.kind === "str" && k.str === field) {
+      recv.list[i + 1] = value;
+      return;
+    }
+  }
+  recv.list.push({ kind: "str", str: field });
+  recv.list.push(value);
 }
 
 interface PyClosure {
   params: number[];
   body: NodeID;
   env: PyEnv;
+  // When set, this is a constructor closure: invocation allocates a
+  // fresh record tagged with this className, binds it as `self` in the
+  // call frame, runs the body (which is the __init__ body), and
+  // returns the populated record. None ⇒ plain function/method.
+  ctorClassName?: string;
 }
 
 function invokePyClosure(k: Kernel, v: Value, args: Value[]): Value {
@@ -2116,6 +2355,28 @@ function invokePyClosure(k: Kernel, v: Value, args: Value[]): Value {
   const callEnv = newEnv(closure.env);
   for (let i = 0; i < closure.params.length; i++) {
     envBind(callEnv, closure.params[i]!, args[i]!);
+  }
+  // Constructor invocation: allocate a fresh record tagged with the
+  // class name, bind it as `self`, run the __init__ body, return the
+  // record. Returning the record (rather than the body's last value)
+  // is what makes `Counter(2, 1)` evaluate to the populated instance.
+  if (closure.ctorClassName !== undefined) {
+    const self: Value = {
+      kind: "list",
+      list: [
+        { kind: "str", str: "__class__" },
+        { kind: "str", str: closure.ctorClassName },
+      ],
+    };
+    envBind(callEnv, k.internName("self"), self);
+    try {
+      evalNode(k, closure.body, callEnv);
+    } catch (e) {
+      if (!(e instanceof ReturnSignal)) throw e;
+      // __init__ shouldn't `return` anything, but tolerate it for parity
+      // with CPython which silently ignores the return value.
+    }
+    return self;
   }
   try {
     return evalNode(k, closure.body, callEnv);
