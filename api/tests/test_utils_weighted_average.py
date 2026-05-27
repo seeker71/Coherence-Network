@@ -48,7 +48,7 @@ class TestWeightedAverageEndpoint:
         assert data["average"] == 0.8125
         assert data["values"] == [0.5, 0.75, 1.0]
         assert data["weights"] == [0.25, 0.25, 0.5]
-        assert data["runtime"] in ("form-kernel-rust", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
 
     @pytest.mark.anyio
     async def test_python_fallback_agrees_with_recipe(self):

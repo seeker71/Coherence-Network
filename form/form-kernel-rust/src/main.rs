@@ -947,7 +947,7 @@ pub(crate) enum Value {
 }
 
 #[derive(Debug)]
-struct Closure {
+pub(crate) struct Closure {
     // Interned name for display only — runtime lookup never uses it.
     name: NameID,
     params: Vec<NameID>,
@@ -956,7 +956,7 @@ struct Closure {
 }
 
 impl Value {
-    fn display(&self) -> String {
+    pub(crate) fn display(&self) -> String {
         match self {
             Value::Null => "null".to_string(),
             Value::Int(n) => n.to_string(),
@@ -3683,7 +3683,7 @@ fn count_top_level(toks: &[SexpTok]) -> usize {
     count
 }
 
-fn run_source(src: &str) -> Value {
+pub(crate) fn run_source(src: &str) -> Value {
     let mut k = Kernel::new();
     let root = read_root_from_source(&mut k, src);
     execute_root(&mut k, root)

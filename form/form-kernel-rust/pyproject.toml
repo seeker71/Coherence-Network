@@ -1,0 +1,23 @@
+# Maturin entry — builds form_kernel_rust as a Python extension (cdylib).
+# The cargo binary target (form-kernel-rust CLI) is unaffected; this only
+# names what maturin pulls when installing the Python wheel.
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "form-kernel-rust"
+version = "0.1.0"
+description = "Inline Rust form-kernel — Python C extension via PyO3"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+# Activate the pyo3 feature in Cargo.toml so PyO3 + libpython linkage
+# only kicks in for the Python extension build, never the bin.
+features = ["pyo3"]
+# Module name as imported from Python.
+module-name = "form_kernel_rust"

@@ -48,7 +48,7 @@ class TestCoherenceWeightEndpoint:
         assert data["weight"] == 16185
         assert data["threshold"] == 50
         assert data["values"] == [72, 38, 91, 55, 28, 67, 84, 45, 95, 12]
-        assert data["runtime"] in ("form-kernel-rust", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
 
     @pytest.mark.anyio
     async def test_python_fallback_agrees_with_recipe(self):
