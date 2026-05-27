@@ -1,11 +1,12 @@
 # Cross-Modal Recipe Experiments
 
-Five small demos exploring how Form recipes carry semantic content across
-modalities (text, structured data, image, code, natural language). Each
-subdirectory has its own runnable sample and a README documenting what's
-reachable today, what surprised, and what's not yet reachable. **The point
-isn't to ship a universal translator** — it's to feel the body's current
-surface area for cross-modality and name the honest discoveries.
+Six small demos exploring how Form recipes carry semantic content across
+modalities (text, structured data, image, audio, code, natural language).
+Each subdirectory has its own runnable sample and a README documenting
+what's reachable today, what surprised, and what's not yet reachable.
+**The point isn't to ship a universal translator** — it's to feel the
+body's current surface area for cross-modality and name the honest
+discoveries.
 
 | # | Experiment | One-line finding |
 |---|---|---|
@@ -14,6 +15,7 @@ surface area for cross-modality and name the honest discoveries.
 | 03 | [Recipe as compression](03-recipe-as-compression/) | The substrate's "ice" (`.fkb`) is **4.17× larger** than the "water" (`.fk` text) at small payload sizes. Compression isn't automatic. |
 | 04 | [Universal diff](04-universal-diff/) | Structural diff of two algorithms surfaces "the predicate is the same; the accumulation strategy diverges" — text diff can't see this. |
 | 05 | [NL to recipe](05-nl-to-recipe/) | A 4-rule English grammar parses sentences into arithmetic recipes; NL `the square of 7` interns to the **same NodeID** as hand-built `(mul 7 7)`. |
+| 06 | [Audio as recipe](06-audio-as-recipe/) | A 1-second 440 Hz sine `.wav` composes from a 200-entry table + integer math; same recipe → byte-identical 8044-byte WAV across Go/Rust/TS kernels. Surfaced a sibling-parity gap: TS was missing `write_file_bytes`. |
 
 ## What every experiment shares
 

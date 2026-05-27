@@ -13,11 +13,11 @@ This doc names the next 10 walks toward the universal translator's destination. 
 
 ## The 10 next walks
 
-### 1. **Audio-as-recipe** (synthesis path)
+### 1. **Audio-as-recipe** (synthesis path) — **landed 2026-05-27**
 
-A Form recipe that procedurally generates a `.wav` file (sine wave, envelope, simple FM synthesis). Same content-addressing claim as image-as-recipe: same recipe → same audio. Walks the "audio is a procedural artifact" frame.
+A Form recipe that procedurally generates a `.wav` file. Same content-addressing claim as image-as-recipe: same recipe → same audio. Walks the "audio is a procedural artifact" frame.
 
-**Smallest closing breath:** `gen-sine.fk` that emits a 1-second 440Hz tone as a `.wav` file with deterministic bytes.
+**Landed:** [`06-audio-as-recipe/gen-sine.fk`](06-audio-as-recipe/gen-sine.fk) — 1-second 440 Hz tone, mono 8-bit PCM at 8000 Hz, 8044-byte WAV with sha256 `6d170ffe323b378ce29b886252105cb5e6d68e0bc1589160a472075afc635447`, byte-identical across Go/Rust/TS kernels. The walk also closed a sibling-parity gap: the TS kernel was missing `write_file_bytes`. Envelope and FM synthesis remain for future breaths.
 
 ### 2. **Image-as-recipe — parameterized**
 

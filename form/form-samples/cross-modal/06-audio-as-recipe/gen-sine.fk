@@ -1,0 +1,155 @@
+; gen-sine.fk — audio as Form recipe.
+;
+; A 1-second 440 Hz sine tone, mono, 8-bit unsigned PCM at 8000 Hz, written
+; as a deterministic .wav file. The recipe composes the WAV bytes; two runs
+; of this file produce byte-identical output. Sibling kernels (Go, Rust, TS)
+; produce the same bytes.
+;
+; The choice of 8000 Hz / 8-bit / 1 second is intentional: it is the smallest
+; WAV that proves the point (same recipe → same bytes). Fidelity is not the
+; claim; reproducibility through Form composition is.
+;
+; 440 / 8000 = 11 / 200 (exact). With a 200-entry sine table the phase index
+; advances by exactly 11 per sample modulo 200, so the waveform's full period
+; is 200 samples (carrying 11 cycles). 8000 samples is therefore 40 copies of
+; that 200-sample period. The recipe builds the period from the table, then
+; concatenates 40 copies — pure Form composition over a fixed-shape leaf.
+;
+; The sine table itself is the only numeric leaf the recipe relies on. Form's
+; kernels have integer arithmetic and no sin() native; rather than implement
+; floating-point Taylor in Form, the table holds the 200 quantized values
+; sin(2π·i/200)·127 (rounded to nearest int, −127..127). This is the honest
+; "sin-from-Form is a recipe" shape: the values are interned trivials, the
+; composition that turns them into a wave is the recipe.
+;
+; Run with the Go kernel:
+;   ./form-kernel-go form/form-samples/cross-modal/06-audio-as-recipe/gen-sine.fk
+; The WAV is written to ./gen-sine.wav next to the recipe and the byte length
+; is printed (expect 8044 = 44-byte header + 8000 samples).
+
+(do
+    ; --- small helpers -----------------------------------------------------
+    ; nth — list indexer. The kernels expose head/tail/cons; nth is composition.
+    (defn nth (xs n)
+        (if (eq n 0)
+            (head xs)
+            (nth (tail xs) (sub n 1))))
+
+    ; concat — list × list → list. Uses the kernel's _plus polymorphism
+    ; (list + list = concatenation, sibling-parity across Go/Rust/TS).
+    (defn concat (a b) (_plus a b))
+
+    ; u16-le, u32-le — little-endian byte encoders. The WAV header has fixed
+    ; integer fields that compose by mod/div over 256.
+    (defn u16-le (n)
+        (list (mod n 256)
+              (mod (div n 256) 256)))
+
+    (defn u32-le (n)
+        (list (mod n 256)
+              (mod (div n 256) 256)
+              (mod (div n 65536) 256)
+              (mod (div n 16777216) 256)))
+
+    ; str-bytes — convert an ASCII string to a list of byte values.
+    ; Used to encode the WAV magic numbers (RIFF, WAVE, fmt , data) without
+    ; hardcoding their byte values. The kernel's ord+char_at gives byte-at-i.
+    (defn str-bytes-rec (s i n acc)
+        (if (eq i n)
+            acc
+            (str-bytes-rec s (add i 1) n
+                (cons (ord (char_at s i)) acc))))
+
+    (defn reverse-rec (xs acc)
+        (if (eq (len xs) 0)
+            acc
+            (reverse-rec (tail xs) (cons (head xs) acc))))
+
+    (defn str-bytes (s)
+        (reverse-rec (str-bytes-rec s 0 (str_len s) (list)) (list)))
+
+    ; --- WAV header --------------------------------------------------------
+    ; 44 bytes, RIFF/WAVE PCM mono 8-bit at 8000 Hz, data size 8000.
+    ; Layout per the spec:
+    ;   "RIFF"      4   magic
+    ;   u32-le      4   file_size - 8 = 8036
+    ;   "WAVE"      4   format
+    ;   "fmt "      4   subchunk1 id
+    ;   u32-le      4   subchunk1 size = 16
+    ;   u16-le      2   audio format = 1 (PCM)
+    ;   u16-le      2   channels = 1 (mono)
+    ;   u32-le      4   sample rate = 8000
+    ;   u32-le      4   byte rate = 8000 (= sample_rate * channels * bits/8)
+    ;   u16-le      2   block align = 1
+    ;   u16-le      2   bits per sample = 8
+    ;   "data"      4   subchunk2 id
+    ;   u32-le      4   subchunk2 size = 8000
+    (defn wav-header ()
+        (concat (str-bytes "RIFF")
+        (concat (u32-le 8036)
+        (concat (str-bytes "WAVE")
+        (concat (str-bytes "fmt ")
+        (concat (u32-le 16)
+        (concat (u16-le 1)
+        (concat (u16-le 1)
+        (concat (u32-le 8000)
+        (concat (u32-le 8000)
+        (concat (u16-le 1)
+        (concat (u16-le 8)
+        (concat (str-bytes "data")
+                (u32-le 8000))))))))))))))
+
+    ; --- the sine table ----------------------------------------------------
+    ; sin(2π · i / 200) · 127 rounded to nearest int, for i = 0..199.
+    ; This is the only numeric leaf — every other byte the recipe emits is
+    ; derived from these via composition.
+    (let sine-table (list
+        0 4 8 12 16 20 24 28 32 35
+        39 43 47 50 54 58 61 65 68 71
+        75 78 81 84 87 90 93 95 98 100
+        103 105 107 109 111 113 115 117 118 119
+        121 122 123 124 125 125 126 126 127 127
+        127 127 127 126 126 125 125 124 123 122
+        121 119 118 117 115 113 111 109 107 105
+        103 100 98 95 93 90 87 84 81 78
+        75 71 68 65 61 58 54 50 47 43
+        39 35 32 28 24 20 16 12 8 4
+        0 -4 -8 -12 -16 -20 -24 -28 -32 -35
+        -39 -43 -47 -50 -54 -58 -61 -65 -68 -71
+        -75 -78 -81 -84 -87 -90 -93 -95 -98 -100
+        -103 -105 -107 -109 -111 -113 -115 -117 -118 -119
+        -121 -122 -123 -124 -125 -125 -126 -126 -127 -127
+        -127 -127 -127 -126 -126 -125 -125 -124 -123 -122
+        -121 -119 -118 -117 -115 -113 -111 -109 -107 -105
+        -103 -100 -98 -95 -93 -90 -87 -84 -81 -78
+        -75 -71 -68 -65 -61 -58 -54 -50 -47 -43
+        -39 -35 -32 -28 -24 -20 -16 -12 -8 -4))
+
+    ; --- one fundamental period --------------------------------------------
+    ; At i, phase index into the 200-entry table is (i * 11) mod 200.
+    ; Sample byte = 128 + table[idx]  (the unsigned-PCM offset).
+    ; The period is 200 samples carrying 11 complete 440 Hz cycles.
+    (defn build-period-rec (i acc)
+        (if (eq i 0)
+            acc
+            (build-period-rec
+                (sub i 1)
+                (cons (add 128 (nth sine-table (mod (mul (sub i 1) 11) 200)))
+                      acc))))
+
+    ; --- concatenate the period N times ------------------------------------
+    ; 8000 samples = 40 × 200 samples. concat-n-copies stays tail-recursive
+    ; on the accumulator side (concat is O(n) but n stays small per step).
+    (defn concat-n-copies (period n acc)
+        (if (eq n 0)
+            acc
+            (concat-n-copies period (sub n 1) (concat acc period))))
+
+    ; --- compose the file --------------------------------------------------
+    (let period (build-period-rec 200 (list)))
+    (let samples (concat-n-copies period 40 (list)))
+    (let wav-bytes (concat (wav-header) samples))
+
+    (write_file_bytes
+        "form/form-samples/cross-modal/06-audio-as-recipe/gen-sine.wav"
+        wav-bytes))
