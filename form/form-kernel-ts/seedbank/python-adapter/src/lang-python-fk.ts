@@ -16,8 +16,8 @@
 // Companion concept: lc-parser-as-form-recipe — names the multi-breath
 // arc this file is one step of.
 
-import { Kernel, Level, Triv, type NodeID } from "./kernel.ts";
-import { capturedCtor, capturedChildren } from "./languages.ts";
+import { Kernel, Level, Triv, type NodeID } from "../../../src/kernel.ts";
+import { capturedCtor, capturedChildren } from "../../../src/languages.ts";
 import { CTOR } from "./lang-python.ts";
 
 export interface EmitFkOptions {
@@ -619,14 +619,43 @@ function emitTrivial(k: Kernel, n: NodeID): string {
       return n.inst !== 0 ? "true" : "false";
     case Triv.NULL:
       return "false"; // honest None→false fallback
+    case Triv.FLOAT64: {
+      // The Rust kernel's reader recognizes float tokens (digits + dot
+      // + digits, optional exponent). Emit a form that always parses
+      // back as float on the kernel side: include the dot even for
+      // integer-valued floats (`1.0`, not `1`) so `(add 1.0 2)` routes
+      // through the float-promotion arm instead of the int fast path.
+      const f = k.decodeFloat64(n.inst);
+      return formatFloatForFk(f);
+    }
     default:
-      // Higher-numeric trivials (FLOAT32/64, UINT64, etc.) aren't
-      // representable in the kernel reader's bootstrap syntax today.
-      // Honest gap until the reader (or a Form-native parser) handles them.
+      // Higher-numeric trivials (FLOAT32, UINT64, etc.) aren't yet
+      // representable in the kernel reader's bootstrap syntax. Honest
+      // gap until the reader (or a Form-native parser) handles them.
       throw new Error(
         `emitTrivial: kernel reader can't represent trivial type ${n.type}`,
       );
   }
+}
+
+// formatFloatForFk — render an f64 as a token the Rust .fk reader
+// recognizes as FLOAT. The reader requires at least one digit on either
+// side of the dot, so integer-valued floats become "N.0" rather than
+// "N". NaN and Inf have no .fk syntax — fall back to a sentinel that
+// will surface as a parse error if it ever shows up (no current path
+// emits these from a parsed Python literal).
+function formatFloatForFk(f: number): string {
+  if (Number.isNaN(f)) {
+    throw new Error("emitTrivial: NaN has no .fk literal form");
+  }
+  if (!Number.isFinite(f)) {
+    throw new Error("emitTrivial: Infinity has no .fk literal form");
+  }
+  const s = String(f);
+  if (s.includes(".") || s.includes("e") || s.includes("E")) {
+    return s;
+  }
+  return `${s}.0`;
 }
 
 function emitIdent(k: Kernel, n: NodeID): string {

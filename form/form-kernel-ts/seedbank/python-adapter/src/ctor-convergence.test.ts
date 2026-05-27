@@ -28,7 +28,7 @@
 // downstream refinement task; what convergence delivers HERE is the
 // shared ctor-name layer.
 
-import { Kernel, Level, RBasic, nodeKey, type NodeID } from "./kernel.ts";
+import { Kernel, Level, RBasic, nodeKey, type NodeID } from "../../../src/kernel.ts";
 import {
   canonicalizeCapturedTree,
   canonicalCtorOf,
@@ -39,11 +39,11 @@ import {
   rustCtorsMap,
   typescriptCtorsMap,
 } from "./ctor-convergence.ts";
-import { capturedCtor, capturedChildren } from "./languages.ts";
+import { capturedCtor, capturedChildren } from "../../../src/languages.ts";
 import { buildPythonLanguage, parsePython } from "./lang-python.ts";
-import { buildTypeScriptLanguage, parseTypeScript } from "./lang-typescript.ts";
-import { parseRust, registerRustLanguage } from "./lang-rust.ts";
-import { parseGo } from "./lang-go.ts";
+import { buildTypeScriptLanguage, parseTypeScript } from "../../../src/lang-typescript.ts";
+import { parseRust, registerRustLanguage } from "../../../src/lang-rust.ts";
+import { parseGo } from "../../../src/lang-go.ts";
 
 let failures = 0;
 let passes = 0;

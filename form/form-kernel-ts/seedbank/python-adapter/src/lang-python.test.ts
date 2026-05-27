@@ -3,7 +3,7 @@
 // Run with: npx tsx src/lang-python.test.ts
 // Exits non-zero on failure.
 
-import { Kernel, nodeKey } from "./kernel.ts";
+import { Kernel, nodeKey } from "../../../src/kernel.ts";
 import {
   CTOR,
   buildPythonLanguage,
@@ -11,7 +11,7 @@ import {
   evalPython,
   parsePython,
 } from "./lang-python.ts";
-import { capturedChildren, capturedCtor } from "./languages.ts";
+import { capturedChildren, capturedCtor } from "../../../src/languages.ts";
 
 let failures = 0;
 let count = 0;
