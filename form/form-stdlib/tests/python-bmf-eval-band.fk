@@ -59,6 +59,45 @@
     (defn py-module (stmts)
         (intern_node PY-BMF-MODULE stmts))
 
+    (defn mk-py-list (elems)
+        (intern_node PY-BMF-LIST elems))
+
+    (defn mk-py-subscript (obj idx)
+        (intern_node PY-BMF-SUBSCRIPT (list obj idx)))
+
+    (defn mk-py-aug-assign (name op delta)
+        (intern_node PY-BMF-AUG-ASSIGN
+            (list (intern_trivial_string name)
+                  (intern_trivial_string op)
+                  delta)))
+
+    (defn mk-py-while (cond body-stmts)
+        ;; WHILE children: cond-recipe, body-stmt-recipes... — flatten the
+        ;; body list onto a (cond . body) child stream.
+        (intern_node PY-BMF-WHILE (cons cond body-stmts)))
+
+    (defn mk-leaf-str (s) (intern_trivial_string s))
+
+    (defn mk-py-lambda (pms body)
+        ;; LAMBDA children: param-leaves..., body-recipe (last child).
+        ;; Naming note: the parameter is "pms" not "params" because
+        ;; `params` is a reserved Form verb (builds a SEQUENCE block);
+        ;; using it as a defn parameter silently truncates the arg list
+        ;; at parse time.
+        (do
+            (let param-leaves (map mk-leaf-str pms))
+            (intern_node PY-BMF-LAMBDA (append param-leaves (list body)))))
+
+    (defn mk-py-str-lit (s)
+        ;; PY-BMF-STRING wraps a trivial-string leaf; py-eval reads
+        ;; node_value to recover the runtime string. Same shape as INT.
+        (intern_node PY-BMF-STRING (list (intern_trivial_string s))))
+
+    (defn mk-py-dict (pairs)
+        ;; pairs is a flat (k1-recipe v1-recipe k2-recipe v2-recipe ...)
+        ;; list; the interpreter expects exactly that shape.
+        (intern_node PY-BMF-DICT pairs))
+
     ;; ---- cell 1: bare arithmetic — CPython: 7 + 3 = 10 ---------------
 
     (let cell1
@@ -164,9 +203,121 @@
     (let cell7-value (py-run cell7))                           ; 720
     (let cell7-score (if (eq cell7-value 720) 7000 0))
 
+    ;; ---- cell 8: LIST + SUBSCRIPT — indexed access.
+    ;;   xs = [10, 20, 30, 40]
+    ;;   xs[2] + xs[0]
+    ;; CPython: 30 + 10 = 40 ---------------------------------------------
+
+    (let cell8
+        (py-module
+            (list
+                (py-assign "xs"
+                    (mk-py-list (list (py-int-lit 10) (py-int-lit 20)
+                                   (py-int-lit 30) (py-int-lit 40))))
+                (py-binop
+                    (mk-py-subscript (py-ident "xs") (py-int-lit 2))
+                    "+"
+                    (mk-py-subscript (py-ident "xs") (py-int-lit 0))))))
+    (let cell8-value (py-run cell8))                           ; 40
+    (let cell8-score (if (eq cell8-value 40) 8000 0))
+
+    ;; ---- cell 9: WHILE + AUG-ASSIGN — counted sum.
+    ;;   total = 0
+    ;;   i = 1
+    ;;   while i <= 10:
+    ;;       total += i
+    ;;       i += 1
+    ;;   total
+    ;; CPython: 55 -------------------------------------------------------
+
+    (let cell9
+        (py-module
+            (list
+                (py-assign "total" (py-int-lit 0))
+                (py-assign "i" (py-int-lit 1))
+                (mk-py-while
+                    (py-compare (py-ident "i") "<=" (py-int-lit 10))
+                    (list
+                        (mk-py-aug-assign "total" "+" (py-ident "i"))
+                        (mk-py-aug-assign "i" "+" (py-int-lit 1))))
+                (py-ident "total"))))
+    (let cell9-value (py-run cell9))                           ; 55
+    (let cell9-score (if (eq cell9-value 55) 9000 0))
+
+    ;; ---- cell 10: LAMBDA — anonymous closure bound by ASSIGN.
+    ;;   square = lambda n: n * n
+    ;;   square(7) + square(3)
+    ;; CPython: 49 + 9 = 58 ---------------------------------------------
+
+    (let square-body
+        (py-binop (py-ident "n") "*" (py-ident "n")))
+    (let cell10
+        (py-module
+            (list
+                (py-assign "square" (mk-py-lambda (list "n") square-body))
+                (py-binop
+                    (py-call "square" (list (py-int-lit 7)))
+                    "+"
+                    (py-call "square" (list (py-int-lit 3)))))))
+    (let cell10-value (py-run cell10))                         ; 58
+    (let cell10-score (if (eq cell10-value 58) 10000 0))
+
+    ;; ---- cell 11: DICT + SUBSCRIPT — string-keyed lookup.
+    ;;   d = {"a": 11, "b": 22, "c": 33}
+    ;;   d["a"] + d["c"]
+    ;; CPython: 11 + 33 = 44 --------------------------------------------
+
+    (let cell11
+        (py-module
+            (list
+                (py-assign "d"
+                    (mk-py-dict
+                        (list (mk-py-str-lit "a") (py-int-lit 11)
+                              (mk-py-str-lit "b") (py-int-lit 22)
+                              (mk-py-str-lit "c") (py-int-lit 33))))
+                (py-binop
+                    (mk-py-subscript (py-ident "d") (mk-py-str-lit "a"))
+                    "+"
+                    (mk-py-subscript (py-ident "d") (mk-py-str-lit "c"))))))
+    (let cell11-value (py-run cell11))                         ; 44
+    (let cell11-score (if (eq cell11-value 44) 11000 0))
+
+    ;; ---- cell 12: nested LIST + WHILE iteration over indexed access.
+    ;;   xs = [3, 5, 7, 9, 11]
+    ;;   i = 0
+    ;;   acc = 0
+    ;;   while i < 5:
+    ;;       acc += xs[i]
+    ;;       i += 1
+    ;;   acc
+    ;; CPython: 3+5+7+9+11 = 35 -----------------------------------------
+
+    (let cell12
+        (py-module
+            (list
+                (py-assign "xs"
+                    (mk-py-list (list (py-int-lit 3) (py-int-lit 5)
+                                   (py-int-lit 7) (py-int-lit 9)
+                                   (py-int-lit 11))))
+                (py-assign "i" (py-int-lit 0))
+                (py-assign "acc" (py-int-lit 0))
+                (mk-py-while
+                    (py-compare (py-ident "i") "<" (py-int-lit 5))
+                    (list
+                        (mk-py-aug-assign "acc" "+"
+                            (mk-py-subscript (py-ident "xs") (py-ident "i")))
+                        (mk-py-aug-assign "i" "+" (py-int-lit 1))))
+                (py-ident "acc"))))
+    (let cell12-value (py-run cell12))                         ; 35
+    (let cell12-score (if (eq cell12-value 35) 12000 0))
+
     ;; ---- aggregate ---------------------------------------------------
-    ;; Total when every cell agrees with CPython:
-    ;;   1000 + 2000 + 3000 + 4000 + 5000 + 6000 + 7000 = 28000
+    ;; Cell-N awards N*1000 when its value matches CPython. Total when
+    ;; every cell agrees: (1+2+3+4+5+6+7+8+9+10+11+12)*1000 = 78000.
+    ;; Any single cell failing leaves the aggregate sensitive to which
+    ;; arm broke — a cell-9 failure shows up as 78000-9000=69000.
 
     (sum (list cell1-score cell2-score cell3-score cell4-score
-               cell5-score cell6-score cell7-score)))
+               cell5-score cell6-score cell7-score
+               cell8-score cell9-score cell10-score
+               cell11-score cell12-score)))
