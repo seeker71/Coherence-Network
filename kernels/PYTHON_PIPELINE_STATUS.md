@@ -50,6 +50,7 @@ result
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary; **production API image** (`Dockerfile.api` at repo root, two-stage build) bakes the `form-kernel-rust` release binary into `/app/bin/form-kernel-rust` and sets `FORM_KERNEL_RUST_BIN` so the bridge picks it up — `/api/health` reports `kernel_runtime.available=true` and the endpoint responds with `runtime: "form-kernel-rust"` (no Python fallback) |
 | `python_dict_demo.py` | 88 | dict literal, subscript-read, subscript-assign, `in` membership, iter over keys, `len(d)` |
 | `python_inheritance_demo.py` | 337 | `class Y(X):` single inheritance, `super().__init__(args)` chaining, `super().method(args)` for override calls, method dispatch walks `__base__` chain |
+| `endpoint_lattice_stats_demo.py` | 1089 | substrate transmute shape — dict over `/api/substrate/lattice/stats` response, sum across three counts. Kernel-side natives `http_get` + `_json_to_dict` + `_json_get` carry the live fetch path (see `api/tests/test_substrate_kernel_parity.py`). |
 
 **Run it:**
 ```bash

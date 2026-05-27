@@ -14,6 +14,7 @@
 // kernels. Cross-kernel NodeID agreement is the conformance contract.
 
 import { closeSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -1367,6 +1368,89 @@ export class Kernel {
         return { kind: "bool", bool: hay.str.includes(needle.str) };
       }
       return { kind: "bool", bool: false };
+    });
+    // --- Substrate read primitives — kernel reaches the REST surface ----
+    // Sibling-parity with the Rust kernel's http_get + _json_get + _json_to_dict.
+    // The kernel walker is synchronous, so HTTP rides on curl via execFileSync
+    // rather than on Node's async fetch. Matches Rust's blocking ureq path.
+    // Surface stays /api/substrate/* shaped (public read, no credentials).
+    //
+    // http_get(url) → str|null. null on transport error so Form-side caller
+    // can match and decide.
+    this.registerNative("http_get", catCall(), (_k, args) => {
+      const url = argStr(args, 0);
+      try {
+        // -sS: silent but show errors; --fail: non-2xx exits non-zero.
+        const out = execFileSync("curl", ["-sS", "--fail", "--max-time", "30", url], {
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024, // 64 MB — enough for the substrate's
+                                         // largest read surfaces (histograms,
+                                         // cell lists) without truncation.
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+        return { kind: "str", str: out };
+      } catch {
+        return { kind: "null" };
+      }
+    });
+    // _json_get(json_str, key) → str|int|float|bool|null. Parse a top-level
+    // JSON object and extract obj[key]. Returns null on miss / parse error.
+    // Nested objects come back as JSON strings so Form code composes via
+    // repeated _json_get (jq-pipeline shape).
+    this.registerNative("_json_get", catAccess(), (_k, args) => {
+      const body = argStr(args, 0);
+      const key = argStr(args, 1);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(body);
+      } catch {
+        return { kind: "null" };
+      }
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { kind: "null" };
+      }
+      const v = (parsed as Record<string, unknown>)[key];
+      if (v === undefined || v === null) return { kind: "null" };
+      if (typeof v === "boolean") return { kind: "bool", bool: v };
+      if (typeof v === "number") {
+        return Number.isInteger(v)
+          ? { kind: "int", int: v }
+          : { kind: "f64", float: v };
+      }
+      if (typeof v === "string") return { kind: "str", str: v };
+      // Arrays / nested objects: re-serialize so the caller can re-parse.
+      return { kind: "str", str: JSON.stringify(v) };
+    });
+    // _json_to_dict(json_str) → __dict__-tagged list. Convenience for the
+    // common /api/substrate/lattice/stats shape — a flat object the caller
+    // wants to address as a dict directly. Nested values come back as JSON
+    // string children, consistent with _json_get.
+    this.registerNative("_json_to_dict", catMethod(), (_k, args) => {
+      const body = argStr(args, 0);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(body);
+      } catch {
+        return { kind: "null" };
+      }
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { kind: "null" };
+      }
+      const out: Value[] = [{ kind: "str", str: "__dict__" }];
+      for (const [k, v] of Object.entries(parsed)) {
+        out.push({ kind: "str", str: k });
+        if (v === null) out.push({ kind: "null" });
+        else if (typeof v === "boolean") out.push({ kind: "bool", bool: v });
+        else if (typeof v === "number") {
+          out.push(
+            Number.isInteger(v)
+              ? { kind: "int", int: v }
+              : { kind: "f64", float: v },
+          );
+        } else if (typeof v === "string") out.push({ kind: "str", str: v });
+        else out.push({ kind: "str", str: JSON.stringify(v) });
+      }
+      return { kind: "list", list: out };
     });
     // Common Python builtins. Sibling-parity with Rust + Go.
     this.registerNative("min", catMethod(), (_k, args) => {
