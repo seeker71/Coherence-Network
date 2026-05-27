@@ -94,10 +94,11 @@ function emitStmtSeq(
   }
 
   if (ctor === CTOR.assign) {
-    const target = emitIdent(k, kids[0]!);
-    const value = emit(k, kids[1]!, opts);
+    // Reuse the assign emitter so subscript-targets (d[k] = v) work
+    // inside def bodies the same way they work at module scope.
+    const assignStr = emit(k, stmt, opts);
     const rest = emitStmtSeq(k, stmts, start + 1, opts);
-    return `(do (let ${target} ${value}) ${rest})`;
+    return `(do ${assignStr} ${rest})`;
   }
 
   // Side-effect statement (call, etc.) — emit, then continue.
@@ -196,13 +197,25 @@ function collectAssignTargets(k: Kernel, n: NodeID, out: string[], seen: Set<str
   const ctor = capturedCtor(k, n);
   const kids = capturedChildren(k, n);
   if (ctor === CTOR.assign) {
-    const tn = emitIdent(k, kids[0]!);
-    if (!seen.has(tn)) {
+    // Loop variable is the rebound name in scope. For ident targets that's
+    // the target itself; for subscript targets (d[k] = v) the rebound
+    // name is the container ident (the kernel-level emit rebuilds the
+    // dict and rebinds `d`).
+    const target = kids[0]!;
+    const tCtor = capturedCtor(k, target);
+    let tn: string | null = null;
+    if (tCtor === CTOR.ident) {
+      tn = emitIdent(k, target);
+    } else if (tCtor === CTOR.subscript) {
+      const subKids = capturedChildren(k, target);
+      if (capturedCtor(k, subKids[0]!) === CTOR.ident) {
+        tn = emitIdent(k, subKids[0]!);
+      }
+    }
+    if (tn !== null && !seen.has(tn)) {
       seen.add(tn);
       out.push(tn);
     }
-    // Also scan the value side — though assignments-into-assignments
-    // (walrus) are unusual; skip for now.
     return;
   }
   // Don't recurse INTO def_/lambda — their bodies are separate scopes.
@@ -454,6 +467,31 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       return parts.length === 0 ? "(list)" : `(list ${parts.join(" ")})`;
     }
 
+    // ── dict literal ──────────────────────────────────────────
+    // Python `{k: v, ...}` → kernel `(_dict_new k0 v0 k1 v1 ...)`
+    // The _dict_new native builds a "__dict__"-tagged list; subsequent
+    // subscript / `in` / iteration go through the dict-aware _get / _in
+    // natives so the same .fk runs over either container.
+    case CTOR.dict_literal: {
+      const flat: string[] = [];
+      for (const entry of kids) {
+        const eKids = capturedChildren(k, entry);
+        flat.push(emit(k, eKids[0]!, opts), emit(k, eKids[1]!, opts));
+      }
+      return flat.length === 0 ? "(_dict_new)" : `(_dict_new ${flat.join(" ")})`;
+    }
+    case CTOR.dict_entry: {
+      // Standalone — shouldn't normally happen; emit as a 2-list.
+      return `(list ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
+    }
+
+    // ── membership: `k in container` ──────────────────────────
+    case CTOR.in_: {
+      // Note arg order: Form's _in takes (needle, hay) matching the
+      // Python source `needle in hay`.
+      return `(_in ${emit(k, kids[0]!, opts)} ${emit(k, kids[1]!, opts)})`;
+    }
+
     // ── assignment ─────────────────────────────────────────────
     // Python `x = expr` compiles to kernel `(let x expr)`. The
     // kernel's LET binds in the enclosing block; subsequent `(let x
@@ -463,20 +501,46 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
     // tuple unpacking, and attribute/subscript targets need richer
     // lowering — honest gaps for follow-up breaths.
     case "assign": {
-      // children: [target-ident-node, value-node]
-      const target = emitIdent(k, kids[0]!);
-      const value = emit(k, kids[1]!, opts);
-      return `(let ${target} ${value})`;
+      // children: [target-node, value-node]. Targets:
+      //   ident      → (let name expr)
+      //   subscript  → (let container (_dict_set container key value))
+      //                Dicts are immutable in the kernel layer; rebinding
+      //                the container LET in the enclosing scope gives the
+      //                same observable effect as `d[k] = v` within one
+      //                scope. Multi-alias mutation would need a mutable
+      //                dict variant — pending.
+      const target = kids[0]!;
+      const tCtor = capturedCtor(k, target);
+      if (tCtor === CTOR.ident) {
+        return `(let ${emitIdent(k, target)} ${emit(k, kids[1]!, opts)})`;
+      }
+      if (tCtor === CTOR.subscript) {
+        const subKids = capturedChildren(k, target);
+        const containerNode = subKids[0]!;
+        if (capturedCtor(k, containerNode) !== CTOR.ident) {
+          throw new Error(
+            "emitFk: subscript-assign target's container must be a simple name (v1)",
+          );
+        }
+        const containerName = emitIdent(k, containerNode);
+        const key = emit(k, subKids[1]!, opts);
+        const value = emit(k, kids[1]!, opts);
+        return `(let ${containerName} (_dict_set ${containerName} ${key} ${value}))`;
+      }
+      throw new Error(
+        `emitFk: unsupported assign target ${tCtor}`,
+      );
     }
 
     // ── subscript ─────────────────────────────────────────────
-    // Python `lst[i]` → kernel `(nth lst i)` using the existing nth
-    // native. Closes the lst[i] gap the python_demo had to avoid.
+    // Python `lst[i]` / `d[k]` / `s[i]` → kernel `(_get value index)`.
+    // _get is polymorphic over list / dict / str so the same .fk runs
+    // regardless of container shape. Pre-dict code used `nth`; _get
+    // delegates to nth for list/str so behaviour is identical there.
     case "subscript": {
-      // children: [value-node, slice-node]
       const value = emit(k, kids[0]!, opts);
       const slice = emit(k, kids[1]!, opts);
-      return `(nth ${value} ${slice})`;
+      return `(_get ${value} ${slice})`;
     }
 
     // ── for-loop over a list ────────────────────────────────────
@@ -493,7 +557,10 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
     case CTOR.for_: {
       // children: [target-ident, iter-expr, body]
       const target = emitIdent(k, kids[0]!);
-      const iterExpr = emit(k, kids[1]!, opts);
+      // Wrap in _iter so dicts iterate as keys (matching Python) and
+      // lists pass through unchanged. Avoids the helper having to know
+      // whether _remaining is a dict or a list.
+      const iterExpr = `(_iter ${emit(k, kids[1]!, opts)})`;
       const bodyNode = kids[2]!;
 
       // Recursively collect every assignment target in the body —

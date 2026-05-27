@@ -1440,7 +1440,16 @@ impl Kernel {
             }
         });
         self.register_native("len", cat_access(), |_, _, args| match &args[0] {
-            Value::List(xs) => Value::Int(xs.len() as i64),
+            Value::List(xs) => {
+                // Dict-aware: tagged "__dict__" lists report pair count,
+                // matching Python's `len(d)` semantics.
+                if let Some(Value::Str(s)) = xs.first() {
+                    if s == "__dict__" {
+                        return Value::Int(((xs.len() - 1) / 2) as i64);
+                    }
+                }
+                Value::Int(xs.len() as i64)
+            }
             Value::Str(s) => Value::Int(s.len() as i64),
             _ => Value::Int(0),
         });
@@ -1550,6 +1559,222 @@ impl Kernel {
                 a.bind(frame, *p, call_args[i].clone());
             }
             walk(k, a, cl.body, frame)
+        // --- Dict natives ---------------------------------------------------
+        // Dicts are first-class but ride on Value::List with a "__dict__"
+        // tag in slot 0, followed by alternating key/value pairs:
+        //   ["__dict__", k0, v0, k1, v1, ...]
+        // Keeps the dict model uniform with how the existing _plus / nth /
+        // subscript path already moves through Value::List, and lets the TS
+        // evaluator (which has no separate Dict variant) share the same
+        // shape across runtimes. Keys may be strings or ints; equality uses
+        // value-level compare (str==str, int==int). Updates are immutable —
+        // _dict_set returns a fresh dict so closures over the original keep
+        // their view. This is enough surface to write a real endpoint
+        // response shape; method-style .update / .pop / .items remain
+        // pending (named in PYTHON_PIPELINE_STATUS.md, not blocking #2059
+        // dict transmute work).
+        fn is_dict(v: &Value) -> bool {
+            if let Value::List(xs) = v {
+                if let Some(Value::Str(s)) = xs.first() {
+                    return s == "__dict__";
+                }
+            }
+            false
+        }
+        fn dict_key_eq(a: &Value, b: &Value) -> bool {
+            match (a, b) {
+                (Value::Str(x), Value::Str(y)) => x == y,
+                (Value::Int(x), Value::Int(y)) => x == y,
+                _ => false,
+            }
+        }
+        self.register_native("_dict_new", cat_list_nat(), |_, _, args| {
+            // (_dict_new k0 v0 k1 v1 ...) — variadic constructor used by
+            // the emitter for dict literals.
+            let mut out = vec![Value::Str("__dict__".to_string())];
+            out.extend(args.iter().cloned());
+            Value::List(out)
+        });
+        self.register_native("_dict_get", cat_access(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if let Some(Value::Str(tag)) = xs.first() {
+                    if tag == "__dict__" {
+                        let mut i = 1;
+                        while i + 1 < xs.len() {
+                            if dict_key_eq(&xs[i], &args[1]) {
+                                return xs[i + 1].clone();
+                            }
+                            i += 2;
+                        }
+                        return Value::Null;
+                    }
+                }
+            }
+            Value::Null
+        });
+        self.register_native("_dict_set", cat_method(), |_, _, args| {
+            // Immutable update — return a new dict; existing references unchanged.
+            if let Value::List(xs) = &args[0] {
+                if let Some(Value::Str(tag)) = xs.first() {
+                    if tag == "__dict__" {
+                        let mut out = xs.clone();
+                        let mut i = 1;
+                        while i + 1 < out.len() {
+                            if dict_key_eq(&out[i], &args[1]) {
+                                out[i + 1] = args[2].clone();
+                                return Value::List(out);
+                            }
+                            i += 2;
+                        }
+                        out.push(args[1].clone());
+                        out.push(args[2].clone());
+                        return Value::List(out);
+                    }
+                }
+            }
+            args[0].clone()
+        });
+        self.register_native("_dict_has", cat_compare(RCMP_EQ), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if let Some(Value::Str(tag)) = xs.first() {
+                    if tag == "__dict__" {
+                        let mut i = 1;
+                        while i + 1 < xs.len() {
+                            if dict_key_eq(&xs[i], &args[1]) {
+                                return Value::Bool(true);
+                            }
+                            i += 2;
+                        }
+                    }
+                }
+            }
+            Value::Bool(false)
+        });
+        self.register_native("_dict_keys", cat_access(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if let Some(Value::Str(tag)) = xs.first() {
+                    if tag == "__dict__" {
+                        let mut out = Vec::new();
+                        let mut i = 1;
+                        while i + 1 < xs.len() {
+                            out.push(xs[i].clone());
+                            i += 2;
+                        }
+                        return Value::List(out);
+                    }
+                }
+            }
+            Value::List(vec![])
+        });
+        self.register_native("_dict_values", cat_access(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                if let Some(Value::Str(tag)) = xs.first() {
+                    if tag == "__dict__" {
+                        let mut out = Vec::new();
+                        let mut i = 1;
+                        while i + 1 < xs.len() {
+                            out.push(xs[i + 1].clone());
+                            i += 2;
+                        }
+                        return Value::List(out);
+                    }
+                }
+            }
+            Value::List(vec![])
+        });
+        // _get — polymorphic subscript. Dispatches list[i] to nth and
+        // dict[k] to _dict_get. The Python emitter compiles subscript to
+        // (_get value index) so the same .fk runs over either container.
+        self.register_native("_get", cat_access(), |_, _, args| {
+            if is_dict(&args[0]) {
+                if let Value::List(xs) = &args[0] {
+                    let mut i = 1;
+                    while i + 1 < xs.len() {
+                        if dict_key_eq(&xs[i], &args[1]) {
+                            return xs[i + 1].clone();
+                        }
+                        i += 2;
+                    }
+                    return Value::Null;
+                }
+            }
+            if let Value::List(xs) = &args[0] {
+                let i = args[1].as_int();
+                if i < 0 || (i as usize) >= xs.len() {
+                    return Value::Null;
+                }
+                return xs[i as usize].clone();
+            }
+            if let Value::Str(s) = &args[0] {
+                let i = args[1].as_int();
+                if i < 0 || (i as usize) >= s.len() {
+                    return Value::Str(String::new());
+                }
+                return Value::Str((s.as_bytes()[i as usize] as char).to_string());
+            }
+            Value::Null
+        });
+        // _iter — turn any container into a flat list suitable for the
+        // for-loop emitter's head/tail walk. Lists pass through; dicts
+        // become their keys (Python's `for k in d:`); strings become
+        // one-character strings per byte.
+        self.register_native("_iter", cat_list_nat(), |_, _, args| {
+            if is_dict(&args[0]) {
+                if let Value::List(xs) = &args[0] {
+                    let mut out = Vec::new();
+                    let mut i = 1;
+                    while i + 1 < xs.len() {
+                        out.push(xs[i].clone());
+                        i += 2;
+                    }
+                    return Value::List(out);
+                }
+            }
+            if let Value::List(_) = &args[0] {
+                return args[0].clone();
+            }
+            if let Value::Str(s) = &args[0] {
+                return Value::List(
+                    s.as_bytes()
+                        .iter()
+                        .map(|b| Value::Str((*b as char).to_string()))
+                        .collect(),
+                );
+            }
+            Value::List(vec![])
+        });
+        // _in — polymorphic membership. (`k in d` → _in d k). For dicts
+        // checks keys; for lists checks elements; for strings checks
+        // substring presence.
+        self.register_native("_in", cat_compare(RCMP_EQ), |_, _, args| {
+            if is_dict(&args[1]) {
+                if let Value::List(xs) = &args[1] {
+                    let mut i = 1;
+                    while i + 1 < xs.len() {
+                        if dict_key_eq(&xs[i], &args[0]) {
+                            return Value::Bool(true);
+                        }
+                        i += 2;
+                    }
+                    return Value::Bool(false);
+                }
+            }
+            if let Value::List(xs) = &args[1] {
+                for v in xs {
+                    match (&args[0], v) {
+                        (Value::Int(a), Value::Int(b)) if a == b => return Value::Bool(true),
+                        (Value::Str(a), Value::Str(b)) if a == b => return Value::Bool(true),
+                        (Value::Float(a), Value::Float(b)) if a == b => return Value::Bool(true),
+                        (Value::Bool(a), Value::Bool(b)) if a == b => return Value::Bool(true),
+                        _ => {}
+                    }
+                }
+                return Value::Bool(false);
+            }
+            if let (Value::Str(needle), Value::Str(hay)) = (&args[0], &args[1]) {
+                return Value::Bool(hay.contains(needle.as_str()));
+            }
+            Value::Bool(false)
         });
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
