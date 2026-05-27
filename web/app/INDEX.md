@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 158
+**Total files**: 159
 
 | Route | File | Purpose |
 |---|---|---|
@@ -48,6 +48,7 @@
 | `/creators/submit` | [page.tsx](creators/submit/page.tsx) | _no top-of-file purpose_ |
 | `/dashboard` | [page.tsx](dashboard/page.tsx) | _no top-of-file purpose_ |
 | `/demo` | [page.tsx](demo/page.tsx) | _no top-of-file purpose_ |
+| `/deploy` | [page.tsx](deploy/page.tsx) | /deploy — real-time deploy log viewer. Phone-first surface for the |
 | `/diagnostics` | [page.tsx](diagnostics/page.tsx) | _no top-of-file purpose_ |
 | `/discover` | [page.tsx](discover/page.tsx) | _no top-of-file purpose_ |
 | `/discover/resonance` | [page.tsx](discover/resonance/page.tsx) | _no top-of-file purpose_ |

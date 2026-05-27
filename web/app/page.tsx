@@ -654,6 +654,7 @@ export default async function Home() {
             <AttributedExternalLink href="https://www.npmjs.com/package/coherence-mcp-server" entityId="npm:coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devMcp")}</AttributedExternalLink>
             <AttributedExternalLink href="https://api.coherencycoin.com/docs" entityId="api-docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devDocs")}</AttributedExternalLink>
             <AttributedExternalLink href="https://clawhub.ai/skills/coherence-network" entityId="openclaw-skill:coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devOpenClaw")}</AttributedExternalLink>
+            <AttributedInternalLink href="/deploy" className="hover:text-foreground transition-colors">deploy log</AttributedInternalLink>
           </div>
         </details>
         <p className="text-xs text-foreground/85 leading-relaxed">
