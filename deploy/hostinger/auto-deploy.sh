@@ -312,14 +312,20 @@ else
   # their HEALTHCHECK), so we never declare "deployed" while Traefik is
   # still routing to a half-warm container. --wait-timeout 180s matches the
   # wait_for_running deadline used below for the legacy state-only check.
-  # If --wait is unsupported by the installed compose version (very old
-  # docker), fall back to plain `up -d`.
-  log "docker compose up -d --wait --wait-timeout 180 ${REBUILD_SERVICES}"
+  # --force-recreate guarantees a fresh container even when the image hash
+  # didn't change — a build that's an all-cache-hit produces the same image,
+  # and without --force-recreate compose would skip the restart, leaving the
+  # running container's env (GIT_COMMIT_SHA, DEPLOYED_SHA) at the old values.
+  # That was the silent-skip pattern that pinned production at 4183d306 for
+  # 5h+; we never again trust compose's "no config change detected" verdict.
+  # If --wait is unsupported by the installed compose version, fall back to
+  # plain `up -d --force-recreate`.
+  log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
   # shellcheck disable=SC2086 -- intentional word-splitting on service list
-  if ! docker compose up -d --wait --wait-timeout 180 ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
-    log "docker compose up --wait failed or unsupported; falling back to plain up -d"
+  if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
+    log "docker compose up --wait failed or unsupported; falling back to plain up -d --force-recreate"
     # shellcheck disable=SC2086
-    docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+    docker compose up -d --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
   fi
   up_ended="$(date +%s)"
   up_elapsed=$((up_ended - up_started))
@@ -533,6 +539,34 @@ sync_substrate_content
 # is new. Same reasoning as the rebuild gate above: the repo advances on
 # git reset even when the container didn't see the change.
 run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
+
+# Post-deploy assertion: the api container's /api/health must now report
+# TARGET_SHA. If it doesn't, the deploy is silently stuck — either the
+# build was a cache-noop with stale env, the restart didn't actually
+# happen, or the env vars didn't propagate. Failing here makes the stall
+# loud instead of letting workflow Verify-step retries chase a ghost.
+# Skipped only when the static-only fast path ran (no rebuild expected
+# to change the running SHA).
+if [[ "$DIFF_BASE" != "$TARGET_SHA" ]] && ! is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
+  POST_SHA=""
+  POST_HEALTH="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+      sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
+      2>/dev/null || true)"
+  if [[ -n "$POST_HEALTH" ]]; then
+    POST_SHA="$(printf '%s' "$POST_HEALTH" \
+      | python3 -c 'import sys, json
+try:
+    print((json.loads(sys.stdin.read()).get("deployed_sha") or "").strip())
+except Exception:
+    pass' 2>/dev/null || true)"
+  fi
+  if [[ "$POST_SHA" != "$TARGET_SHA" ]]; then
+    log "FAIL: post-deploy /api/health reports deployed_sha=${POST_SHA:0:12} but target=${TARGET_SHA:0:12}"
+    log "      the api container did not advance — build cache-noop, restart missed, or env didn't propagate"
+    exit 1
+  fi
+  log "Post-deploy verify: api container at ${POST_SHA:0:12} ✓"
+fi
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 
