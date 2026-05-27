@@ -1461,6 +1461,96 @@ impl Kernel {
             Value::Null
         });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        // _get — attribute-style read on a record-as-flat-alist. The
+        // Python adapter lowers `obj.field` to `(_get obj "field")`. The
+        // record is a Value::List with alternating (key, value) entries:
+        //   (list "x" 3 "y" 4 "__class__" "Counter")
+        // Two natives — `_get` for read, `_dispatch` for method call —
+        // are the v1 attribute/method surface for Python classes. No
+        // mutation native today: constructors build the whole record up
+        // front; methods that "modify" return a new record.
+        self.register_native("_get", cat_access(), |_, _, args| {
+            let key = match &args[1] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("_get: second arg must be a string field name"),
+            };
+            if let Value::List(xs) = &args[0] {
+                let mut i = 0;
+                while i + 1 < xs.len() {
+                    if let Value::Str(k) = &xs[i] {
+                        if k == &key {
+                            return xs[i + 1].clone();
+                        }
+                    }
+                    i += 2;
+                }
+                panic!("_get: no field '{}' on record", key);
+            }
+            panic!("_get: receiver is not a record (got {:?})", args[0]);
+        });
+        // _dispatch — method-call entry. The adapter lowers `obj.m(arg, …)`
+        // to `(_dispatch obj "m" arg …)`. Reads obj's "__class__" field
+        // to find the function bound as `<ClassName>__<methodName>` in
+        // the surrounding scope; calls it with obj as the first argument.
+        // Env-aware so it can look up the method closure in the caller's
+        // frame chain (which is where the lifted method `defn`s landed).
+        self.register_env_native("_dispatch", cat_call(), |k, a, env, args| {
+            let class_name = if let Value::List(xs) = &args[0] {
+                let mut i = 0;
+                let mut found: Option<String> = None;
+                while i + 1 < xs.len() {
+                    if let Value::Str(key) = &xs[i] {
+                        if key == "__class__" {
+                            if let Value::Str(c) = &xs[i + 1] {
+                                found = Some(c.clone());
+                            }
+                            break;
+                        }
+                    }
+                    i += 2;
+                }
+                match found {
+                    Some(c) => c,
+                    None => panic!("_dispatch: receiver record has no '__class__' field"),
+                }
+            } else {
+                panic!("_dispatch: receiver is not a record (got {:?})", args[0]);
+            };
+            let method_name = match &args[1] {
+                Value::Str(s) => s.clone(),
+                _ => panic!("_dispatch: second arg must be the method name string"),
+            };
+            let qualified = format!("{}__{}", class_name, method_name);
+            let name_id = match k.str_idx.get(&qualified).copied() {
+                Some(id) => id,
+                None => panic!("_dispatch: no method '{}' in scope", qualified),
+            };
+            let cl_val = match a.lookup(env, name_id) {
+                Some(v) => v,
+                None => panic!("_dispatch: method '{}' not bound in scope", qualified),
+            };
+            let cl = match cl_val {
+                Value::Closure(c) => c,
+                _ => panic!("_dispatch: '{}' is not a closure", qualified),
+            };
+            // Build the call frame: bind self (args[0]) + the remaining
+            // method args (args[2..]) to the closure's parameters.
+            let call_args: Vec<&Value> =
+                std::iter::once(&args[0]).chain(args[2..].iter()).collect();
+            if cl.params.len() != call_args.len() {
+                panic!(
+                    "_dispatch: arity mismatch on {} (expected {}, got {})",
+                    qualified,
+                    cl.params.len(),
+                    call_args.len()
+                );
+            }
+            let frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            for (i, p) in cl.params.iter().enumerate() {
+                a.bind(frame, *p, call_args[i].clone());
+            }
+            walk(k, a, cl.body, frame)
+        });
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
         // int element. All three handle empty lists honestly (sum=0,

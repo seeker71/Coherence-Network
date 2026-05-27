@@ -46,6 +46,7 @@ result
 | `python_float_demo.py` | 4.875 | float literals, mixed int/float promotion, float comparison |
 | `python_import_demo.py` | 20.853981633974485 | `import math`, `from math import sqrt, pi`, attribute access (`math.pi`), kernel-native module bindings |
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary |
+| `python_class_demo.py` | 176 | `class X:`, `__init__(self, …)`, instance methods, attribute reads, method dispatch via `__class__` tag |
 
 **Run it:**
 ```bash
@@ -104,15 +105,23 @@ Features the pipeline currently compiles to native kernel:
 - Helper-function calls within def bodies
 - Builtins: `len`, `range`, `sum`, `min`, `max`, `abs`
 - **Imports** — `import math`, `import math as m`, `from math import sqrt, pi`, `from math import sqrt as s`. The `math` module is a kernel-native record (`sqrt`, `pi`, `floor`, `ceil`, `pow`); imports rewrite to direct native calls at parse time, so the runtime path carries no module-system overhead.
+- **Classes** — v1 minimum: `class X:`, `__init__(self, …)` storing attributes
+  on self, instance methods taking self and reading `self.x`. Lowers to a
+  constructor function plus lifted `<ClassName>__<methodName>` defns; instances
+  are records (Value::List alists tagged with `__class__`); method dispatch goes
+  through the kernel's `_dispatch` native (which reads `__class__` and calls
+  the qualified method) and the `_get` native handles attribute reads.
 
 ### Honest GAPs (each is one breath)
 - Tuple unpacking `a, b = pair`
-- Augmented assignment `x += y`
-- Attribute/subscript assignment `obj.x = y`, `lst[i] = z`
+- Subscript assignment `lst[i] = z`
 - Slicing `lst[a:b]`
 - Walrus `:=`
-- Lambdas (parsed but not emitted to .fk yet)
-- Classes
+- **Class inheritance**, `super()`, `classmethod`, `staticmethod`, metaclasses,
+  `__slots__`, decorators on classes, dunder methods beyond `__init__`,
+  conditional `self.x =` inside `__init__`, mid-method attribute writes
+  (the v1 ctor reconstructs the record up front; methods read fields but
+  don't mutate)
 - Decorators
 - User-defined module imports (the kernel-resident `math` is wired; arbitrary `.py` files aren't loaded as modules yet — needs module-system semantics, path resolution, circular-import handling)
 - Iterator protocol (`range()`, generators)
