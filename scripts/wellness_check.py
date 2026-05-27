@@ -1307,6 +1307,92 @@ def sense_witness_trace() -> list[str]:
     return lines
 
 
+def sense_deploy_lag() -> list[str]:
+    """How far behind production is from main.
+
+    The hostinger auto-deploy pipeline merges main → production via
+    `deploy/hostinger/auto-deploy.sh`. When merges land on main but
+    production stays on an older sha, the body's most-recent work
+    isn't reaching visitors — the witness probes that watch production
+    surfaces (substrate_form, page_*, etc.) keep firing on stale code
+    paths even after a fix has merged.
+
+    This probe compares production's `/api/health.deployed_sha` to
+    `origin/main` HEAD via `git ls-remote`. A clean state has
+    deployed_sha equal to (or a recent ancestor of) origin/main; a
+    deploy-lagged state surfaces with the count of commits behind.
+
+    First sighting: 2026-05-27, when 17 PRs merged to main during a
+    session and production stayed at the pre-session sha while the
+    witness substrate_form silence persisted for hours because the
+    healing-PR was on main but undeployed.
+    """
+    import subprocess
+    import urllib.request
+    import json as _json
+
+    lines: list[str] = []
+
+    # Production's deployed_sha
+    try:
+        req = urllib.request.Request(
+            "https://api.coherencycoin.com/api/health",
+            headers={"User-Agent": "coherence-wellness/0.1"},
+        )
+        resp = urllib.request.urlopen(req, timeout=5)
+        body = _json.loads(resp.read())
+        deployed_sha = body.get("deployed_sha", "")
+        uptime = body.get("uptime_human", "?")
+    except Exception as exc:
+        return [f"  (could not reach https://api.coherencycoin.com/api/health — {exc})"]
+
+    if not deployed_sha:
+        return ["  production /api/health did not report deployed_sha"]
+
+    # origin/main HEAD via local git (no network if we already fetched)
+    try:
+        # Try local first — main may already track origin
+        head_main = subprocess.run(
+            ["git", "ls-remote", "origin", "main"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=10,
+        )
+        if head_main.returncode != 0:
+            return [f"  (git ls-remote failed: {head_main.stderr.strip()[:80]})"]
+        origin_sha = head_main.stdout.split()[0] if head_main.stdout else ""
+    except Exception as exc:
+        return [f"  (git ls-remote raised: {exc})"]
+
+    if not origin_sha:
+        return ["  could not resolve origin/main sha"]
+
+    if deployed_sha == origin_sha:
+        lines.append(
+            f"  deploy aligned — production at {deployed_sha[:8]} matches origin/main (uptime {uptime})"
+        )
+        return lines
+
+    # How many commits between them?
+    try:
+        rev_list = subprocess.run(
+            ["git", "rev-list", "--count", f"{deployed_sha}..{origin_sha}"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=10,
+        )
+        behind = rev_list.stdout.strip() if rev_list.returncode == 0 else "?"
+    except Exception:
+        behind = "?"
+
+    lines.append(
+        f"  deploy lagged — production at {deployed_sha[:8]} is {behind} commit(s) "
+        f"behind origin/main ({origin_sha[:8]}), uptime {uptime}"
+    )
+    lines.append(
+        "  unmerged work doesn't reach visitors until hostinger auto-deploy "
+        "fires; if this persists, check `deploy/hostinger/auto-deploy.sh` "
+        "workflow runs or ssh-trigger per CLAUDE.md deploy section."
+    )
+    return lines
+
+
 def _wellness_attention_line(line: str) -> bool:
     lower = line.lower()
     attention_markers = (
@@ -1398,6 +1484,7 @@ def main() -> int:
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
         ("Substrate shape — do cell CTORs carry composition or flat type-markers?", sense_substrate_shape()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
+        ("Deploy lag — is the body's main reach production?", sense_deploy_lag()),
     ]
     reading = build_reading(sections)
 
