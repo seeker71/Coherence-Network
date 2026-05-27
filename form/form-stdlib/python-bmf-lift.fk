@@ -62,6 +62,7 @@
     (let MATH-MINUS    (make_nodeid 1 2 12 2))
     (let MATH-MULTIPLY (make_nodeid 1 2 12 3))
     (let MATH-DIVIDE   (make_nodeid 1 2 12 4))
+    (let MATH-MOD      (make_nodeid 1 2 12 5))
 
     ;; ---- COMPARE-13 NodeIDs (CTOR Shape B for comparisons) ---------
     ;;
@@ -348,10 +349,12 @@
                             (intern_node MATH-MULTIPLY (list left rhs-recipe))
                         (if (str_eq op "/")
                             (intern_node MATH-DIVIDE   (list left rhs-recipe))
+                        (if (str_eq op "%")
+                            (intern_node MATH-MOD      (list left rhs-recipe))
                             (intern_node PY-BMF-BINOP
                                 (list left
                                       (intern_trivial_string op)
-                                      rhs-recipe))))))))))))))
+                                      rhs-recipe)))))))))))))))
                     (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
 
     ;; --- conditional expression ------------------------------------

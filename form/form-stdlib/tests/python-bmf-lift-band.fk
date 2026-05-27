@@ -165,12 +165,33 @@ sign(5) + sign(0 - 3) + 5
     (let lifted-lt (head (node_children lifted-cmp-module)))
     (let cell11-score (if (node_eq handbuilt-lt lifted-lt) 10000 0))
 
+    ;; ---- cell 12: CTOR Shape B convergence for `mod` (%) -------------
+    ;; Closes the last arithmetic operator MATH-12 carries today:
+    ;; mod (inst=5). Same shape as cells 10 and 11 — a hand-built
+    ;; MATH-MOD recipe with PY-BMF-INT leaves AND a Python-lifted
+    ;; `10 % 3` must node_eq to 1. Before this breath `%` rode the
+    ;; PY-BMF-BINOP fallback (type=99 inst=522 with op-string-leaf);
+    ;; after, it carries MATH-MOD (type=12 inst=5, positional only).
+    ;;
+    ;; The arithmetic surface that's still on PY-BMF-BINOP after this:
+    ;; ** and // (no MATH instances exist for power or floor-div today).
+
+    (let MATH-MOD-REF (make_nodeid 1 2 12 5))
+    (let handbuilt-mod
+        (intern_node MATH-MOD-REF
+            (list (intern_node PY-BMF-INT (list (intern_trivial_int 10)))
+                  (intern_node PY-BMF-INT (list (intern_trivial_int 3))))))
+    (let lifted-mod-module (lift-module-text "10 % 3
+"))
+    (let lifted-mod (head (node_children lifted-mod-module)))
+    (let cell12-score (if (node_eq handbuilt-mod lifted-mod) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
-    ;; both arithmetic (cell 10) and comparison (cell 11):
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000 = 65000
+    ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
+    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000 = 75000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
-               cell10-score cell11-score)))
+               cell10-score cell11-score cell12-score)))
