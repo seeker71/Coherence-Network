@@ -12,11 +12,46 @@ Companion docs: [`PYTHON_PIPELINE_STATUS.md`](PYTHON_PIPELINE_STATUS.md),
 [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md),
 [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md),
 [`PHASE_A_FIRING_QUESTIONS.md`](PHASE_A_FIRING_QUESTIONS.md),
+[`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md),
 [`form/kernel-roadmap.md`](../form/kernel-roadmap.md),
 [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md),
 [`lc-grammar-is-the-universal-recipe`](../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md),
 [`lc-form-kernel-runtime-visualizer`](../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md),
 [`lc-universal-translator-via-keys`](../docs/vision-kb/concepts/lc-universal-translator-via-keys.md).
+
+## Living progress (2026-05-27 — landed since this audit was written)
+
+The audit's *Section 5* names ten next breaths. Several have closed; this
+section tracks the body's actual walk so future readers see what IS, not
+the stale roadmap.
+
+- **#1 — Close G6** — *LANDED (#2087, #2100).* The `kernel-bmf-run`
+  wrapper script orchestrates pre-compile + invoke; G1, G3, G4, G5, G6
+  are all closed (`PYTHON_BMF_CONTRACT.md` for the full table). Four
+  parity demos now pass under `PARITY_THIRD_RUNTIME=kernel-bmf` (#2106).
+- **#4 — Unify CTOR vocabulary** — *PARTIAL LANDED.* Shape B from
+  `CTOR_UNIFICATION_PLAN.md` landed in #2113 for `+ - * /`: Python-source
+  arithmetic now interns as `RBasic.MATH` (NodeIDs `(1, 2, 12, 1..4)`)
+  with positional children — the same Blueprint a hand-built
+  `(intern_node MATH-PLUS …)` interns to. `** // %` still ride
+  `PY-BMF-BINOP`; comparisons (`== != < <= > >=`) are the next breath.
+- **JSON-as-recipe in default gate** — *LANDED (#2105)*, closing
+  cross-modal forward-map walk #5 ([`form/form-samples/cross-modal/NEXT_BREATHS.md`](../form/form-samples/cross-modal/NEXT_BREATHS.md)).
+  `./validate.sh` now exercises the grammar-driven JSON parser
+  three-way on every run.
+- **Audio-as-recipe** — *LANDED (#2108)*, closing cross-modal forward-map walk #1.
+  Procedural `.wav` generation via Form, byte-identical across kernels;
+  along the way closed a sibling-parity gap (`write_file_bytes` in the
+  TS kernel was a comment-only stub).
+- **Kernel-bmf parity widened** — *LANDED (#2106)*. The PY-BMF lift
+  surface now covers `True/False/None`, list literals, postfix subscript
+  chains, `while`, and a right-associative ternary fix; the parity demos
+  it newly unlocked are named above.
+
+The walks for #2 (grammar rules-as-data-rows), #3 (tail-call elimination),
+#5 (modality grammars), #6 (`form-ontology.json` into the substrate),
+#7 (`python-native.fk` ↔ `lang-python-fk.ts` equivalence-gate), and
+#8–#10 are still open — each one is one shippable breath, in any order.
 
 ---
 
