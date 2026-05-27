@@ -205,6 +205,7 @@ We are not there yet. We are demonstrably walking toward it, one breath at a tim
 - [`lc-form-kernel-runtime-visualizer.md`](../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) — the Python → kernel → framebuffer synthesis
 - [`lc-the-kernel-knows-itself.md`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md) — grammar as self-mirror
 - [`lc-native-kernel-binary.md`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the kernel as a distributable Mach-O binary
+- [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) — every bootstrap file named with its compost gate; parity_suite's runtime selector + wellness sensor read it
 - [`README.md`](README.md) — the public profile
 
 ## kernels/python_bmf — the Form→native-Python emitter arc

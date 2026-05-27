@@ -741,6 +741,122 @@ def sense_form_ontology() -> list[str]:
     return lines
 
 
+def sense_bootstrap_compost() -> list[str]:
+    """How much bootstrap tissue remains, what runtime fills the parity seam,
+    what compost is deferred behind which gate.
+
+    The destination is Form-native parsing + compiling: source bytes → BMF
+    source objects → Form rules in form-stdlib/grammars/*-bmf.fk → recipe →
+    native walker. Every file named in kernels/BOOTSTRAP_COMPOST_MANIFEST.md
+    is bootstrap tissue with a named compost gate. The body sees its own
+    weight by reading the named files and reporting LOC.
+
+    Selector currently in effect: the default of
+    seedbank/python-adapter/scripts/parity_suite.sh's PARITY_THIRD_RUNTIME.
+    When that default flips from ts-eval to kernel-bmf, the Phase-A rows
+    are residue.
+    """
+    manifest = ROOT / "kernels" / "BOOTSTRAP_COMPOST_MANIFEST.md"
+    if not manifest.is_file():
+        return ["  (kernels/BOOTSTRAP_COMPOST_MANIFEST.md not present; skipping)"]
+
+    # Each row of the manifest names a file path with a LOC column. Sum the
+    # actual on-disk LOC of every named file that still exists, grouped by
+    # Phase A / B / C. Files that have already composted simply don't sum
+    # (they're missing). The manifest is the named-for-compost surface;
+    # the on-disk LOC is the actual remaining weight.
+    phase_files = {
+        "A": [
+            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
+            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
+            "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
+            "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
+            "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
+            "form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts.ts",
+            "form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts-fk.ts",
+        ],
+        "B": [
+            "form/form-kernel-ts/seedbank/python-adapter/src/main.ts",
+            "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
+            "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
+            "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
+            "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
+        ],
+        "C": [
+            "api/app/services/form_kernel_bridge.py",
+            "api/app/services/substrate/form_runtime.py",
+            "api/app/services/substrate/self_host.py",
+            "api/app/services/substrate/form_rules.py",
+            "api/app/services/substrate/form_builders.py",
+        ],
+    }
+
+    lines: list[str] = []
+    totals: dict[str, tuple[int, int, int]] = {}
+    for phase, paths in phase_files.items():
+        present = 0
+        loc = 0
+        absent = 0
+        for rel in paths:
+            p = ROOT / rel
+            if p.is_file():
+                try:
+                    loc += sum(1 for _ in p.open("rb"))
+                    present += 1
+                except OSError:
+                    pass
+            else:
+                absent += 1
+        totals[phase] = (present, absent, loc)
+
+    grand_loc = sum(t[2] for t in totals.values())
+    grand_files = sum(t[0] for t in totals.values())
+    lines.append(
+        f"  bootstrap weight — {grand_files} files still tissue, "
+        f"{grand_loc} LOC remaining"
+    )
+    for phase, (present, absent, loc) in totals.items():
+        label = {
+            "A": "parsers + emitters",
+            "B": "CLIs + scripts",
+            "C": "Python bridge + runtime",
+        }[phase]
+        composted = f"; {absent} already composted" if absent else ""
+        lines.append(
+            f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
+        )
+
+    # Third-runtime selector — read the default out of the parity script.
+    # Today: ts-eval (bootstrap). Destination: kernel-bmf (Form-native).
+    parity = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
+    third = "unknown"
+    if parity.is_file():
+        m = re.search(
+            r'PARITY_THIRD_RUNTIME="?\$\{PARITY_THIRD_RUNTIME:-([a-z0-9-]+)\}',
+            parity.read_text(),
+        )
+        if m:
+            third = m.group(1)
+    if third == "ts-eval":
+        lines.append(
+            "  third runtime default: ts-eval (TS bootstrap) — flip to "
+            "kernel-bmf when Form-native compiles every PARITY_FILES demo"
+        )
+    elif third == "kernel-bmf":
+        lines.append(
+            "  third runtime default: kernel-bmf (Form-native) — Phase A "
+            "files are COMPOST READY; check manifest RELEASED section"
+        )
+    else:
+        lines.append(f"  third runtime default: {third}")
+
+    lines.append(
+        "  (kernels/BOOTSTRAP_COMPOST_MANIFEST.md holds the named compost "
+        "gates per file.)"
+    )
+    return lines
+
+
 def sense_substrate_surprise() -> list[str]:
     """Names structural twins of recently-touched cells that haven't been
     looked at yet.
@@ -1219,6 +1335,7 @@ def main() -> int:
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
         ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
+        ("Bootstrap compost — how much parser tissue still stands between us and Form-native?", sense_bootstrap_compost()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),
