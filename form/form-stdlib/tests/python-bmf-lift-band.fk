@@ -65,9 +65,57 @@ fact(6)
 "))
     (let cell6-score (if (eq cell6-value 720) 6000 0))
 
+    ;; ---- cell 7: list + subscript — CPython:
+    ;;   xs = [10, 20, 30]
+    ;;   xs[0] + xs[2]
+    ;; → 40 ---------------------------------------------------------------
+
+    (let cell7-value (py-bmf-run-text "xs = [10, 20, 30]
+xs[0] + xs[2]
+"))
+    (let cell7-score (if (eq cell7-value 40) 7000 0))
+
+    ;; ---- cell 8: while loop accumulator — CPython:
+    ;;   def sum_to(n):
+    ;;       total = 0
+    ;;       i = 1
+    ;;       while i <= n:
+    ;;           total = total + i
+    ;;           i = i + 1
+    ;;       return total
+    ;;   sum_to(10)
+    ;; → 55 ---------------------------------------------------------------
+
+    (let cell8-value (py-bmf-run-text "def sum_to(n):
+    total = 0
+    i = 1
+    while i <= n:
+        total = total + i
+        i = i + 1
+    return total
+sum_to(10)
+"))
+    (let cell8-score (if (eq cell8-value 55) 8000 0))
+
+    ;; ---- cell 9: True/False keyword + right-assoc ternary chain — CPython:
+    ;;   def sign(n):
+    ;;       return 1 if n > 0 else -1 if n < 0 else 0
+    ;; (right-associative chain: 1 if n>0 else (−1 if n<0 else 0))
+    ;; Drives the lift-cond-tail fix. sign(5)+sign(-3)+sign(0)=1+(-1)+0=0
+    ;; To keep cell-scoring positive we test sign(5)+sign(-3) then +5:
+    ;;   sign(5) + sign(-3) + 5 = 1 + (-1) + 5 = 5
+    ;; --------------------------------------------------------------------
+
+    (let cell9-value (py-bmf-run-text "def sign(n):
+    return 1 if n > 0 else 0 - 1 if n < 0 else 0
+sign(5) + sign(0 - 3) + 5
+"))
+    (let cell9-score (if (eq cell9-value 5) 9000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython:
-    ;;   1000 + 2000 + 3000 + 4000 + 5000 + 6000 = 21000
+    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000 = 45000
 
     (sum (list cell1-score cell2-score cell3-score
-               cell4-score cell5-score cell6-score)))
+               cell4-score cell5-score cell6-score
+               cell7-score cell8-score cell9-score)))

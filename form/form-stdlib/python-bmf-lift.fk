@@ -21,10 +21,19 @@
 ;     a OP b                      → PY-BMF-BINOP / PY-BMF-COMPARE
 ;     x if cond else y            → PY-BMF-IF
 ;
+; Second breath adds:
+;
+;     keyword literals            → True/False/None lift to PY-BMF-INT
+;                                    (1 / 0 / 0 — matches the interpreter's
+;                                    int-as-bool convention).
+;     [ a, b, c ]                 → PY-BMF-LIST (interpreter arm exists).
+;     expr [ idx ]                → PY-BMF-SUBSCRIPT (interpreter arm exists).
+;     while-statement             → PY-BMF-WHILE (interpreter arm exists).
+;
 ; What does NOT lift yet (honest pending, surfaces on the next breath):
 ;
-;     class / while / for / try / with / import / from-import,
-;     lists / dicts / tuples / sets, subscripts, attribute access,
+;     class / for / try / with / import / from-import,
+;     dicts / tuples / sets, attribute access,
 ;     method calls, lambdas, augmented assignment, multi-target
 ;     assignment, decorators, comprehensions, f-strings, slices,
 ;     async / yield / global / nonlocal, type annotations.
@@ -91,9 +100,55 @@
 
     (defn lift-args (tokens) (lift-args-loop tokens (empty)))
 
+    ;; --- list literal: consume `[ a, b, c ]` -----------------------
+    ;;
+    ;; Caller has already consumed the open `[`. Reads expressions
+    ;; separated by `,` until `]`. Returns (elements-list . rest-after-close).
+    ;; Same shape as lift-args but with `]` as the closer.
+
+    (defn lift-list-elements-loop (tokens acc)
+        (if (nil? tokens)
+            (lift-result (reverse acc) tokens)
+            (if (tok-op? (head tokens) "]")
+                (lift-result (reverse acc) (tail tokens))
+                (do
+                    (let el-result (lift-expr tokens))
+                    (let next (lift-rest el-result))
+                    (let acc2 (cons (lift-recipe el-result) acc))
+                    (if (and (not (nil? next))
+                             (tok-op? (head next) ","))
+                        (lift-list-elements-loop (tail next) acc2)
+                        (lift-list-elements-loop next acc2))))))
+
+    (defn lift-list-elements (tokens) (lift-list-elements-loop tokens (empty)))
+
+    ;; --- subscript postfix: fold `[ idx ]` trailers onto a primary -
+    ;;
+    ;; After lift-primary parses a base recipe, peek for `[`. If present,
+    ;; parse the index expression, require `]`, build a PY-BMF-SUBSCRIPT
+    ;; node, and loop (so `xs[i][j]` chains). This matches Python's
+    ;; left-to-right subscript chaining.
+
+    (defn lift-subscript-tail (base tokens)
+        (if (and (not (nil? tokens))
+                 (tok-op? (head tokens) "["))
+            (do
+                (let idx-result (lift-expr (tail tokens)))
+                (let after (lift-rest idx-result))
+                (if (and (not (nil? after))
+                         (tok-op? (head after) "]"))
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-SUBSCRIPT
+                            (list base (lift-recipe idx-result)))
+                        (tail after))
+                    (lift-result base after)))
+            (lift-result base tokens)))
+
     ;; --- primary expression ----------------------------------------
     ;;
-    ;; Integers, identifiers, calls, parenthesised expressions.
+    ;; Integers, identifiers, calls, parenthesised expressions, list
+    ;; literals, True/False/None keyword literals. Subscript trailers
+    ;; (xs[i]) are folded on after the base via lift-subscript-tail.
 
     (defn lift-primary (tokens)
         (if (nil? tokens)
@@ -102,9 +157,28 @@
             (let t (head tokens))
             (let rest (tail tokens))
             (if (tok-int? t)
-                (lift-result
+                (lift-subscript-tail
                     (intern_node PY-BMF-INT
                         (list (intern_trivial_int (str_to_int (tok-value t)))))
+                    rest)
+            (if (tok-keyword? t "True")
+                ;; True → PY-BMF-INT(1). Matches the interpreter's
+                ;; int-as-bool convention (compare/if treat 1 as true).
+                (lift-subscript-tail
+                    (intern_node PY-BMF-INT (list (intern_trivial_int 1)))
+                    rest)
+            (if (tok-keyword? t "False")
+                ;; False → PY-BMF-INT(0). Same convention.
+                (lift-subscript-tail
+                    (intern_node PY-BMF-INT (list (intern_trivial_int 0)))
+                    rest)
+            (if (tok-keyword? t "None")
+                ;; None → PY-BMF-INT(0). Python's None compares unequal
+                ;; to integers, but every demo today uses None only as
+                ;; a placeholder where 0/falsy semantics suffice; richer
+                ;; None handling is a later breath.
+                (lift-subscript-tail
+                    (intern_node PY-BMF-INT (list (intern_trivial_int 0)))
                     rest)
             (if (tok-name? t)
                 ;; name or call
@@ -112,15 +186,25 @@
                          (tok-op? (head rest) "("))
                     (do
                         (let args-result (lift-args (tail rest)))
-                        (lift-result
+                        (lift-subscript-tail
                             (intern_node PY-BMF-CALL
                                 (cons (intern_trivial_string (tok-value t))
                                       (lift-recipe args-result)))
                             (lift-rest args-result)))
-                    (lift-result
+                    (lift-subscript-tail
                         (intern_node PY-BMF-IDENT
                             (list (intern_trivial_string (tok-value t))))
                         rest))
+            (if (tok-op? t "[")
+                ;; list literal: collect comma-separated expressions
+                ;; until `]`. Empty list `[]` lifts to PY-BMF-LIST with
+                ;; no children — the interpreter walks that to an empty
+                ;; Form list naturally.
+                (do
+                    (let elems-result (lift-list-elements rest))
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-LIST (lift-recipe elems-result))
+                        (lift-rest elems-result)))
             (if (tok-op? t "(")
                 ;; parenthesised expression: parse inner, consume ")"
                 (do
@@ -128,14 +212,14 @@
                     (let after (lift-rest inner))
                     (if (and (not (nil? after))
                              (tok-op? (head after) ")"))
-                        (lift-result (lift-recipe inner) (tail after))
-                        (lift-result (lift-recipe inner) after)))
+                        (lift-subscript-tail (lift-recipe inner) (tail after))
+                        (lift-subscript-tail (lift-recipe inner) after)))
                 (do
                     (trace "lift-primary: unsupported token kind/value"
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest))))))))
+                        rest))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
@@ -225,7 +309,17 @@
                 (if (and (not (nil? after-cond))
                          (tok-keyword? (head after-cond) "else"))
                     (do
-                        (let else-result (lift-cond-expr (tail after-cond)))
+                        ;; The else-branch is itself a full conditional
+                        ;; expression — parse the primary+binop layer, then
+                        ;; recurse into lift-cond-tail so a chain like
+                        ;; `a if b else c if d else e` lifts as
+                        ;; `IF(b, a, IF(d, c, e))` (right-associative,
+                        ;; matching CPython's ternary chaining).
+                        (let else-prim (lift-cond-expr (tail after-cond)))
+                        (let else-result
+                            (lift-cond-tail
+                                (lift-recipe else-prim)
+                                (lift-rest else-prim)))
                         (lift-result
                             (intern_node PY-BMF-IF
                                 (list (lift-recipe cond-result)
@@ -258,14 +352,14 @@
     ;; block constructs like def) and emits one PY-BMF-* recipe.
 
     (defn lift-def-body (children)
-        ;; A def's body is a list of statement-trees. The G4 interpreter's
-        ;; PY-BMF-DEF arm reads the body as a single recipe — if it's a
-        ;; single statement, lift it directly; otherwise wrap in a
-        ;; PY-BMF-MODULE-style block so py-eval-module-loop threads the
-        ;; environment statement-by-statement.
-        (if (eq (len children) 1)
-            (lift-statement (head children))
-            (intern_node PY-BMF-MODULE (lift-statements children))))
+        ;; A def's body is a list of statement-trees. Always wrap in a
+        ;; PY-BMF-MODULE so py-eval routes through py-eval-module-loop,
+        ;; which then dispatches statement-shapes (ASSIGN, WHILE, ...)
+        ;; through py-eval-statement. The single-statement short-circuit
+        ;; that was here previously broke any body that consisted only
+        ;; of a WHILE or ASSIGN — those arms live on py-eval-statement,
+        ;; not py-eval.
+        (intern_node PY-BMF-MODULE (lift-statements children)))
 
     (defn lift-statements-loop (statements acc)
         (if (nil? statements) (reverse acc)
@@ -331,6 +425,38 @@
             (let tokens (python-statement-tree-tokens statement-tree))
             (lift-recipe (lift-expr tokens))))
 
+    ;; while-statement: tokens look like `while <cond-tokens> :`. Drop the
+    ;; leading `while` keyword and the trailing `:`, lift the middle as a
+    ;; condition expression. Body children are lifted as statements and
+    ;; appended after the condition recipe — the interpreter's WHILE arm
+    ;; reads `(cond . body-stmts)` from the children list.
+
+    (defn lift-while-cond-tokens (tokens)
+        ;; Strip the `while` keyword (head) and the trailing `:` (last token).
+        ;; Tokens after stripping: the condition expression body.
+        (do
+            (let n (len tokens))
+            (let stripped-tail (tail tokens))
+            ;; Walk to drop the final `:` if present.
+            (lift-while-strip-colon stripped-tail (empty))))
+
+    (defn lift-while-strip-colon (tokens acc)
+        (if (nil? tokens) (reverse acc)
+            (if (and (nil? (tail tokens))
+                     (tok-op? (head tokens) ":"))
+                (reverse acc)
+                (lift-while-strip-colon (tail tokens)
+                    (cons (head tokens) acc)))))
+
+    (defn lift-while (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            (let cond-tokens (lift-while-cond-tokens tokens))
+            (let cond (lift-recipe (lift-expr cond-tokens)))
+            (let body-recipes (lift-statements children))
+            (intern_node PY-BMF-WHILE (cons cond body-recipes))))
+
     ;; lift-statement dispatches on both `kind` (first-token classifier) and
     ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
     ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
@@ -346,11 +472,12 @@
             (let rule (python-statement-tree-cpython-rule statement-tree))
             (if (str_eq kind "def")              (lift-def statement-tree)
             (if (str_eq kind "return")           (lift-return statement-tree)
+            (if (str_eq kind "while")            (lift-while statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty)))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
