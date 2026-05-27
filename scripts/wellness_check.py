@@ -813,7 +813,7 @@ def sense_bootstrap_compost() -> list[str]:
     grand_files = sum(t[0] for t in totals.values())
     lines.append(
         f"  bootstrap weight — {grand_files} files still tissue, "
-        f"{grand_loc} LOC remaining"
+        f"{grand_loc} LOC remaining (named in manifest)"
     )
     for phase, (present, absent, loc) in totals.items():
         label = {
@@ -824,6 +824,37 @@ def sense_bootstrap_compost() -> list[str]:
         composted = f"; {absent} already composted" if absent else ""
         lines.append(
             f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
+        )
+
+    # Wider perimeter — the substrate-Python directory carries more than
+    # the manifest's Phase C names. The audit at
+    # kernels/UNIVERSAL_TRANSLATOR_AUDIT.md found 16,309 LOC across 24
+    # modules in api/app/services/substrate/, of which the manifest names
+    # ~2,938 (form_runtime + self_host + form_rules + form_builders).
+    # Surfacing the gap so the body sees its TRUE bootstrap weight,
+    # not just the named subset. Each unnamed module is a future row
+    # in the manifest waiting for its firing-question walk.
+    substrate_dir = ROOT / "api" / "app" / "services" / "substrate"
+    if substrate_dir.is_dir():
+        substrate_files = sorted(substrate_dir.glob("*.py"))
+        substrate_loc = 0
+        for p in substrate_files:
+            try:
+                substrate_loc += sum(1 for _ in p.open("rb"))
+            except OSError:
+                pass
+        # Manifest Phase C subset already counted in totals['C']
+        named_c_loc = totals.get("C", (0, 0, 0))[2]
+        unnamed = substrate_loc - named_c_loc
+        unnamed_files = len(substrate_files) - totals.get("C", (0, 0, 0))[0]
+        lines.append(
+            f"  wider perimeter — api/app/services/substrate/ has "
+            f"{len(substrate_files)} modules, {substrate_loc} LOC total"
+        )
+        lines.append(
+            f"    · manifest names {totals.get('C', (0, 0, 0))[0]} files / "
+            f"{named_c_loc} LOC; the remaining {unnamed_files} files / "
+            f"{unnamed} LOC are unnamed bootstrap awaiting firing-questions"
         )
 
     # Lifecycle motion — count rows that have walked from tissue → PROVEN →
