@@ -866,6 +866,43 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
   const e = parseExpr(k, c);
   if (e === null) return null;
   skipSpacesAndComments(c);
+  // Variable type annotation: `name: <type-expr>` or `name: <type-expr> = <rhs>`.
+  // Parse-and-ignore the annotation. The bare form becomes a no-op
+  // expression statement (None); the annotated-assign form lowers to a
+  // plain assignment — annotations carry no runtime semantics.
+  if (
+    c.pos < c.src.length &&
+    c.src.charCodeAt(c.pos) === 58 /* : */ &&
+    c.src.charCodeAt(c.pos + 1) !== 61 /* not := (walrus) */
+  ) {
+    const lhsCtor = capturedCtor(k, e);
+    if (lhsCtor === CTOR.ident) {
+      c.pos++; // skip `:`
+      const ann = parseExpr(k, c);
+      if (ann === null) {
+        throw new SyntaxError(`python: type expression required after ':' at ${c.pos}`);
+      }
+      skipSpacesAndComments(c);
+      // Annotated assignment: `name: T = value`
+      if (
+        c.pos < c.src.length &&
+        c.src.charCodeAt(c.pos) === 61 /* = */ &&
+        c.src.charCodeAt(c.pos + 1) !== 61 /* not == */
+      ) {
+        c.pos++; // skip `=`
+        skipSpacesAndComments(c);
+        const value = parseExpr(k, c);
+        if (value === null) {
+          throw new SyntaxError(`python: expr required after '=' in annotated assignment at ${c.pos}`);
+        }
+        consumeEndOfLine(c);
+        return captureNode(k, CTOR.assign, [e, value]);
+      }
+      // Bare annotation: `name: T` — no runtime effect.
+      consumeEndOfLine(c);
+      return captureNode(k, CTOR.expr_stmt, [captureNode(k, CTOR.none_literal, [])]);
+    }
+  }
   // Check for augmented assignment first: += -= *= /= %=
   // Each is `<op>=` followed by an expr; the LHS must be an IDENT (v1).
   const augOp = (() => {
@@ -972,6 +1009,17 @@ function parseDef(k: Kernel, c: Cursor, lineIndent: number): NodeID {
   expect(c, "(");
   const params = parseDefParams(k, c);
   expect(c, ")");
+  // Optional return-type annotation: `-> <type-expr>` before the `:`.
+  // Parse-and-ignore — annotations carry no runtime semantics. The type
+  // expression reuses the full expression parser so `-> List[int]`,
+  // `-> Optional[T]`, `-> "Forward"` etc. all consume cleanly.
+  skipSpacesAndComments(c);
+  if (consume(c, "->")) {
+    const ann = parseExpr(k, c);
+    if (ann === null) {
+      throw new SyntaxError(`python: type expression required after '->' at ${c.pos}`);
+    }
+  }
   expect(c, ":");
   const body = parseBlock(k, c, lineIndent);
   return captureNode(k, CTOR.def_, [
@@ -989,6 +1037,19 @@ function parseDefParams(k: Kernel, c: Cursor): NodeID {
     skipAllWhitespace(c);
     const name = readIdentRaw(c);
     if (name === null) break;
+    // Optional parameter type annotation: `name: <type-expr>`.
+    // Parse-and-ignore — the type is metadata; the kernel doesn't
+    // type-check. The type expression goes through parseExpr so subscripted
+    // generics (`List[int]`, `Dict[str, int]`) and pipe/Optional unions
+    // are absorbed.
+    skipAllWhitespace(c);
+    if (peek(c) === ":") {
+      c.pos++;
+      const ann = parseExpr(k, c);
+      if (ann === null) {
+        throw new SyntaxError(`python: type expression required after ':' for param '${name}' at ${c.pos}`);
+      }
+    }
     params.push(captureNode(k, CTOR.param, [k.internString(name)]));
     skipAllWhitespace(c);
     if (!consume(c, ",")) break;
