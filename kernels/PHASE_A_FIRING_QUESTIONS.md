@@ -268,6 +268,55 @@ but on different breaths.
 
 ---
 
+## `api/app/services/substrate/form_render.py` (187 LOC) — Shape 1 (Form-surface, render direction)
+
+**Date:** 2026-05-27 · **Status:** *Form-surface renderer — Shape 1, mirror of form_lexer*
+
+### What the file does today
+
+Walks `bootstrap_self_host(session)`'s grammar Recipes and emits Form-flavored
+*source text* — so a human or agent can read the body's own grammar in the
+body's own voice. The reverse direction of `form_lexer.py`: lexer reads source
+→ tokens; renderer reads recipes → source.
+
+### What `python-bmf.fk` + Form-native primitives replace
+
+For Python source: irrelevant — Python has its own emitter
+(`form-stdlib/emits/python-native.fk`, proven via #2082's roundtrip).
+
+For Form-surface rendering: a Form-native renderer (`form-stdlib/emits/form-surface.fk`
+or similar) would walk Form recipes and emit Form-flavored source text without
+Python. The renderer is **symmetric to `form_lexer.py`**: both Form-surface,
+both Shape 1, both compost when the body parses + renders its own source
+Form-native.
+
+### What still carries
+
+The Python rendering pipeline keeps working until the Form-native renderer
+ships. Composts WITH `form_lexer.py` and `form.py`'s evaluator as a Form-surface
+release-bundle.
+
+### What blocks its compost
+
+Same gate as `form_lexer.py`: the Form-surface parser+renderer moving
+Form-native, gated on the audit's #2 next breath (rules-as-data migration
+in `runtime-grammar.fk`).
+
+### What the body now knows from this attestation
+
+`form_render.py` is the **mirror** of `form_lexer.py`. Both are Shape 1 for the
+Form-surface language. They compost together — the lexer reads source, the
+renderer writes source, and when both move to Form-native rules, both Python
+files release in the same compost-PR.
+
+The Form-surface release-bundle now has at least two known members:
+- `form_lexer.py` (189 LOC) — source → tokens
+- `form_render.py` (187 LOC) — recipes → source
+
+When this bundle ships, **~376 LOC of Form-surface Python composts together**.
+
+---
+
 ## Next files to walk
 
 Phase A inventory remaining (per manifest):
