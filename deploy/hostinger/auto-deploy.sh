@@ -273,15 +273,31 @@ services_to_rebuild() {
   echo "${out[*]}"
 }
 
-if is_static_only_change "$OLD_SHA" "$TARGET_SHA"; then
-  log "Static-only change detected ($OLD_SHA -> $TARGET_SHA); skipping rebuild"
-  sync_web_public "$OLD_SHA" "$TARGET_SHA"
+# Pick the comparison base: prefer what's ACTUALLY RUNNING in the api
+# container over what the repo claims is its HEAD. The repo's OLD_SHA
+# gets advanced by `git reset --hard` on every deploy, but if a prior
+# rebuild stalled silently the container is still at an older SHA.
+# Detecting changes from OLD_SHA in that case sees an empty/static-only
+# diff and skips rebuild — pinning the container at the old SHA forever.
+# Using RUNNING_SHA as the comparison base means: change-detection asks
+# what the CONTAINER is missing, not what the filesystem is missing.
+DIFF_BASE="$OLD_SHA"
+if [[ -n "$RUNNING_SHA" ]] && git cat-file -e "${RUNNING_SHA}^{commit}" 2>/dev/null; then
+  if [[ "$RUNNING_SHA" != "$OLD_SHA" ]]; then
+    log "Diff base: using RUNNING_SHA=${RUNNING_SHA:0:12} (container) instead of OLD_SHA=${OLD_SHA:0:12} (repo) — the repo may have advanced past a stalled rebuild"
+  fi
+  DIFF_BASE="$RUNNING_SHA"
+fi
+
+if [[ "$DIFF_BASE" != "$TARGET_SHA" ]] && is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
+  log "Static-only change detected ($DIFF_BASE -> $TARGET_SHA); skipping rebuild"
+  sync_web_public "$DIFF_BASE" "$TARGET_SHA"
   # The subsequent sync_field_docs / sync_repo_docs / etc. functions
   # below will pick up the api-side static syncs as they would in a
   # rebuild flow. No `docker compose build` needed.
 else
-  REBUILD_SERVICES="$(services_to_rebuild "$OLD_SHA" "$TARGET_SHA")"
-  log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services)"
+  REBUILD_SERVICES="$(services_to_rebuild "$DIFF_BASE" "$TARGET_SHA")"
+  log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services, diff_base=${DIFF_BASE:0:12})"
 
   build_started="$(date +%s)"
   log "docker compose build ${REBUILD_SERVICES}"
@@ -512,7 +528,11 @@ else
 fi
 
 sync_substrate_content
-run_substrate_ingest "$OLD_SHA" "$TARGET_SHA"
+# Use DIFF_BASE (RUNNING_SHA when known) so substrate ingest catches any
+# content the container is missing, not just what the repo's HEAD claims
+# is new. Same reasoning as the rebuild gate above: the repo advances on
+# git reset even when the container didn't see the change.
+run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 
