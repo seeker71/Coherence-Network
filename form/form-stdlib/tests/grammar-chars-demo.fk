@@ -1,0 +1,96 @@
+; tests/grammar-chars-demo.fk — content-addressed proof that a data-grammar
+; and a hand-written recipe produce the SAME NodeID.
+;
+; This is the load-bearing demonstration for Breath 2e: a `.fk` grammar
+; walks source text and emits a recipe; the kernel walks that recipe; the
+; result is bit-identical to building the recipe by hand. Two paths into
+; the substrate, one NodeID — that's what content-addressing makes visible.
+;
+; Grammar (right-associative; rule recursion):
+;   expr := digits ('+' expr)?
+;
+; Source: "3+4+5"  →  parsed recipe  →  walk_recipe → 12
+; Hand:   (+ 3 (+ 4 5))               →  walk_recipe → 12
+; Test:   node_eq(parsed, hand)       →  true (content-addressed identity)
+;
+; preludes: form-stdlib/grammar-chars.fk
+
+(do
+    ;; --- Category constant ----------------------------------------------
+    ;; Kernel substrate numbering: LEVEL_BASIC=2, RB_MATH=12, RMATH_PLUS=1.
+    (let math-plus (make_nodeid 1 2 12 1))
+
+    ;; --- Cap accessor (engine.fk's cap-get is keyed by string head) -----
+    (defn caps-get (caps name)
+        (if (nil? caps) (empty)
+            (if (str_eq (head (head caps)) name)
+                (head (tail (head caps)))
+                (caps-get (tail caps) name))))
+
+    (defn caps-has? (caps name)
+        (if (nil? caps) false
+            (if (str_eq (head (head caps)) name)
+                true
+                (caps-has? (tail caps) name))))
+
+    ;; --- Rule actions ---------------------------------------------------
+    ;; Each rule's action receives the merged captures from its pattern.
+    ;; Returns a recipe NodeID, which becomes the rule's `_result`.
+
+    ;; INT rule: capture a digit-run as "txt", return its int-recipe.
+    (defn int-action (caps)
+        (intern_trivial_int (str_to_int (caps-get caps "txt"))))
+
+    ;; expr rule: capture LHS-int as "lhs" (the INT rule's _result is bound
+    ;; only inside the rule, but the SEQUENCE here uses (capture "lhs" digits)
+    ;; — text-span — then builds the int locally). The recursive right-hand
+    ;; side is via (rule "expr") whose _result lives in the merged caps as
+    ;; "_result". When the optional '+expr' is absent, _result is missing
+    ;; and we return just the LHS.
+    (defn expr-action (caps)
+        (do
+            (let lhs (intern_trivial_int (str_to_int (caps-get caps "lhs"))))
+            (if (caps-has? caps "_result")
+                (intern_node math-plus (list lhs (caps-get caps "_result")))
+                lhs)))
+
+    ;; --- Pattern primitives reused from grammar-chars.fk ----------------
+    (let digit (list "char-range" 48 57))
+    (let digits
+        (list "sequence" digit (list "star" digit)))
+
+    ;; --- Rule set ------------------------------------------------------
+    ;; expr := (lhs:digits) ('+' expr)?
+    (let rules
+        (list
+            (list "expr"
+                  (list "sequence"
+                        (list "capture" "lhs" digits)
+                        (list "opt"
+                              (list "sequence"
+                                    (list "char" "+")
+                                    (list "rule" "expr"))))
+                  expr-action)))
+
+    ;; --- Path A: grammar parses "3+4+5" → recipe ------------------------
+    (let parsed-recipe (cm-parse "3+4+5" rules "expr"))
+    (let parsed-result (walk_recipe parsed-recipe))     ; expected 12
+
+    ;; --- Path B: hand-built right-associative recipe (3 + (4 + 5)) -----
+    (let h3 (intern_trivial_int 3))
+    (let h4 (intern_trivial_int 4))
+    (let h5 (intern_trivial_int 5))
+    (let h-4p5 (intern_node math-plus (list h4 h5)))
+    (let hand-recipe (intern_node math-plus (list h3 h-4p5)))
+    (let hand-result (walk_recipe hand-recipe))         ; expected 12
+
+    ;; --- Content-addressed proof ---------------------------------------
+    ;; Same shape → same NodeID. The kernel's intern table is content-
+    ;; addressed: two recipes built from the same (category, children)
+    ;; are literally the same NodeID, indistinguishable by node_eq.
+    (let same-node (if (node_eq parsed-recipe hand-recipe) 1 0))
+    (let same-value (if (eq parsed-result hand-result) 1 0))
+
+    ;; Aggregate: parsed=12, hand=12, same-node=1, same-value=1, sum=26.
+    ;; All three sibling kernels must produce 26.
+    (add parsed-result (add hand-result (add same-node same-value))))
