@@ -64,15 +64,28 @@ Blueprint per shape**. Today the body holds three for arithmetic alone.
 
 **What landed:** unification happens at the lift layer. Parser stays simple. Form-native Python arithmetic for `+ - * /` interns as `@1.2.12.{1..4}` — the same Blueprint NodeID a hand-built `(intern_node MATH-PLUS …)` interns to. **Cross-modal at the math-primitive layer is substrate-truth for arithmetic.** The bootstrap path (LIST-34) remains separate; Phase A composts on its own gate.
 
-### Shape C — Both stay; rename dialect-99 to be a *view* on MATH
+### Shape C — Both stay; dialect becomes a *view* on the math primitive
 
-Keep both encodings but make `PY-BMF-BINOP` a structural alias / view of `RBasic.MATH.PLUS`. Cross-references the same Blueprint through different lenses.
+Keep both encodings but make `PY-BMF-BINOP` a structural alias / view of `RBasic.MATH.PLUS`. The dialect's articulation (op-string-child, Python-grammar lineage) is preserved as a *view* over the same underlying NodeID identity that Shape B collapses to.
 
 **Cost:** larger architectural shift — needs Blueprint-view machinery (which the body's BML primitives `|>` already support at the cell-view level, not the operation level).
 
 **Win:** keeps the dialect's identity for grammar-introspection purposes while restoring content-addressing.
 
-**Recommendation:** Shape B (lift-time mapping) — smallest closing breath, restores content-addressing immediately, doesn't require parser-grammar surgery.
+**Why this isn't dead even though Shape B landed.** Urs's question (*"what if it is the same shape with different articulation points or different capabilities?"*) names what Shape B traded away — see [`lc-same-shape-different-articulation`](../docs/vision-kb/concepts/lc-same-shape-different-articulation.md). Shape C is how the body would honor that question without un-doing Shape B's NodeID convergence.
+
+**Concrete walking sketch for Shape C** (future breath, not yet walked):
+
+The substrate already carries the primitives: TRANSMUTE (RBasic type=76), PROJECT (81), OBSERVER (87), QUOTIENT (70), BLANKET (80), BML `|>`. None are wired for arithmetic yet.
+
+A minimum closing breath for Shape C would:
+
+1. Add a `transmute` recipe shape that wraps `MATH-PLUS(left, right)` with a Python-articulation envelope carrying the op-string-leaf and source-position attribution as *view children*.
+2. Define `node_eq` on the underlying identity (the MATH-PLUS NodeID) and a sibling predicate `articulation_eq?` that returns 1 only when both view-children match.
+3. Walkers that want identity-convergence use `node_eq` (cross-modal claim holds). Walkers that want articulation-aware dispatch (e.g. "render Python source", "highlight the BINOP token in an IDE") walk the view children.
+4. Attestation cell: a hand-built `MATH-PLUS(7, 3)` and a `transmute`-wrapped Python-lifted `7 + 3` share identity (`node_eq` = 1) but differ in articulation (`articulation_eq?` = 0; the wrapped one carries the op-string `"+"` and `7 + 3`'s source position, the hand-built one doesn't).
+
+**Honest scope:** this is a multi-PR walk — the TRANSMUTE primitive needs an `intern_view` kernel native pair, the eval needs a "walk-through-view-to-underlying" arm, and the convergence-vs-articulation predicate pair is new substrate surface. Worth doing once the COMPARE and arithmetic surfaces stabilize.
 
 ## Concrete next breath
 
