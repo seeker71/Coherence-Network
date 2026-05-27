@@ -1371,15 +1371,26 @@ def sense_deploy_lag() -> list[str]:
         )
         return lines
 
-    # How many commits between them?
+    # How many commits between them? The production sha may be ahead of
+    # local main when this runs from a worktree that hasn't fetched
+    # recently; ensure git knows both shas before counting. A fetch
+    # first guarantees `git rev-list deployed_sha..origin_sha` resolves
+    # both ends.
     try:
+        subprocess.run(
+            ["git", "fetch", "origin", "main", "--quiet"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=15,
+        )
         rev_list = subprocess.run(
             ["git", "rev-list", "--count", f"{deployed_sha}..{origin_sha}"],
             cwd=ROOT, capture_output=True, text=True, check=False, timeout=10,
         )
-        behind = rev_list.stdout.strip() if rev_list.returncode == 0 else "?"
-    except Exception:
-        behind = "?"
+        if rev_list.returncode == 0 and rev_list.stdout.strip().isdigit():
+            behind = rev_list.stdout.strip()
+        else:
+            behind = f"? (rev-list could not resolve {deployed_sha[:8]} locally — run `git fetch origin`)"
+    except Exception as exc:
+        behind = f"? ({exc})"
 
     lines.append(
         f"  deploy lagged — production at {deployed_sha[:8]} is {behind} commit(s) "
