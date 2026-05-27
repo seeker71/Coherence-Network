@@ -223,12 +223,27 @@ We are not there yet. We are demonstrably walking toward it, one breath at a tim
 
 ## Companion docs
 
-- [`lc-parser-as-form-recipe.md`](../docs/vision-kb/concepts/lc-parser-as-form-recipe.md) — the parser-self-hosting arc
-- [`lc-form-kernel-runtime-visualizer.md`](../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) — the Python → kernel → framebuffer synthesis
-- [`lc-the-kernel-knows-itself.md`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md) — grammar as self-mirror
-- [`lc-native-kernel-binary.md`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the kernel as a distributable Mach-O binary
-- [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) — every bootstrap file named with its compost gate; parity_suite's runtime selector + wellness sensor read it
-- [`README.md`](README.md) — the public profile
+The Python→Form→native-kernel arc is one organ of a larger body. The body's
+highest goal — *universal translator across any media type, recipe
+orchestration in pure numeric space, content-addressing carrying meaning
+across modalities* — lives in these teachings:
+
+- [`lc-grammar-is-the-universal-recipe.md`](../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md) — every structured input is a (parse, emit) pair in the substrate. Code, data, prose, audio, image, video — same bridge.
+- [`lc-cross-modal-unity.md`](../docs/vision-kb/concepts/lc-cross-modal-unity.md) — one shape speaks in many tongues; cross-modal content-addressing via Form NodeIDs. Same semantic shape in text, image, audio → same NodeID.
+- [`lc-the-kernel-knows-itself.md`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md) — grammar as self-mirror. Each kernel implementation reads itself through its own host-language BMF grammar.
+- [`lc-parser-as-form-recipe.md`](../docs/vision-kb/concepts/lc-parser-as-form-recipe.md) — the parser-self-hosting arc.
+- [`lc-form-kernel-runtime-visualizer.md`](../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) — the Python → kernel → framebuffer synthesis.
+- [`lc-native-kernel-binary.md`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the kernel as a distributable Mach-O binary.
+
+The first three carry the destination most directly. The Python pipeline this
+doc tracks is one instance of the universal pattern they name.
+
+Discipline docs that practice these teachings:
+
+- [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) — every bootstrap file named with its compost gate; parity_suite's runtime selector + wellness sensor read it.
+- [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) — the G1–G6 gaps between today's reach and full Form-native Python.
+- [`PHASE_A_FIRING_QUESTIONS.md`](PHASE_A_FIRING_QUESTIONS.md) — per-file honest reads of what each bootstrap file carries vs. what's already replaced.
+- [`README.md`](README.md) — the public profile.
 
 ## kernels/python_bmf — the Form→native-Python emitter arc
 
