@@ -1,0 +1,385 @@
+; form-stdlib/python-bmf-lift.fk
+;
+; G1 + G3 close — the parser-to-recipe bridge that lifts the
+; statement-classified BMF objects from python-parse-module-tree-file
+; into PY-BMF-* recipes the G4 interpreter walks.
+;
+; The first breath holds the smallest healthy surface that fits the 9
+; arms shipped by python-bmf-eval.fk:
+;
+;     statement kind "def"        → PY-BMF-DEF
+;     statement kind "return"     → PY-BMF-RETURN
+;     statement kind "assignment" → PY-BMF-ASSIGN
+;     statement kind "expr"       → expression-only (eval the value)
+;
+; Inside an expression (G3 — precedence climbing over the token list):
+;
+;     integer literal             → PY-BMF-INT
+;     identifier                  → PY-BMF-IDENT
+;     identifier (args)           → PY-BMF-CALL
+;     ( expr )                    → grouped expression
+;     a OP b                      → PY-BMF-BINOP / PY-BMF-COMPARE
+;     x if cond else y            → PY-BMF-IF
+;
+; What does NOT lift yet (honest pending, surfaces on the next breath):
+;
+;     class / while / for / try / with / import / from-import,
+;     lists / dicts / tuples / sets, subscripts, attribute access,
+;     method calls, lambdas, augmented assignment, multi-target
+;     assignment, decorators, comprehensions, f-strings, slices,
+;     async / yield / global / nonlocal, type annotations.
+;
+; Anything the lifter can't shape today becomes an honest PY-BMF-PASS
+; recipe (the interpreter logs its category and panics) — never a faked
+; green recipe. The discipline scales: each new arm = one new dispatch
+; branch here + one new arm in python-bmf-eval.fk.
+;
+; preludes (load order): core.fk, json.fk, cache.fk, form-ontology-loader.fk,
+;                        engine.fk, compiler.fk, source-compiler.fk,
+;                        grammars/python-bmf.fk, python-bmf-eval.fk
+
+(do
+    ;; ---- token accessors -------------------------------------------
+    ;;
+    ;; Tokens are bare BMF objects from python-source-scan-*. Each carries
+    ;; (kind, value). Kinds we care about: py-keyword, py-name, py-int,
+    ;; py-op. The lifter is total over a fixed set of kinds — others fall
+    ;; through to PY-BMF-PASS.
+
+    (defn tok-kind (t) (bmf-object-kind t))
+    (defn tok-value (t) (bmf-object-value t))
+
+    (defn tok-is? (t kind value)
+        (and (str_eq (tok-kind t) kind)
+             (str_eq (tok-value t) value)))
+
+    (defn tok-op? (t op) (tok-is? t "py-op" op))
+    (defn tok-keyword? (t kw) (tok-is? t "py-keyword" kw))
+    (defn tok-name? (t) (str_eq (tok-kind t) "py-name"))
+    (defn tok-int? (t) (str_eq (tok-kind t) "py-int"))
+
+    ;; ---- expression parser (G3) -------------------------------------
+    ;;
+    ;; The parser is recursive descent with precedence climbing. The
+    ;; return shape is a (recipe . rest-tokens) pair encoded as a
+    ;; two-element list — head is the recipe, head-tail is the remaining
+    ;; token list. Pairs thread through the recursive calls.
+
+    (defn lift-result (recipe rest) (list recipe rest))
+    (defn lift-recipe (r) (head r))
+    (defn lift-rest (r) (head (tail r)))
+
+    ;; --- collect args inside a paren-group -------------------------
+    ;;
+    ;; Caller has already consumed the open "(". Reads expressions
+    ;; separated by "," until the matching close ")". Returns
+    ;; (args-list . rest-after-close).
+
+    (defn lift-args-loop (tokens acc)
+        (if (nil? tokens)
+            (lift-result (reverse acc) tokens)
+            (if (tok-op? (head tokens) ")")
+                (lift-result (reverse acc) (tail tokens))
+                (do
+                    (let arg-result (lift-expr tokens))
+                    (let next (lift-rest arg-result))
+                    (let acc2 (cons (lift-recipe arg-result) acc))
+                    (if (and (not (nil? next))
+                             (tok-op? (head next) ","))
+                        (lift-args-loop (tail next) acc2)
+                        (lift-args-loop next acc2))))))
+
+    (defn lift-args (tokens) (lift-args-loop tokens (empty)))
+
+    ;; --- primary expression ----------------------------------------
+    ;;
+    ;; Integers, identifiers, calls, parenthesised expressions.
+
+    (defn lift-primary (tokens)
+        (if (nil? tokens)
+            (lift-result (intern_node PY-BMF-PASS (empty)) tokens)
+        (do
+            (let t (head tokens))
+            (let rest (tail tokens))
+            (if (tok-int? t)
+                (lift-result
+                    (intern_node PY-BMF-INT
+                        (list (intern_trivial_int (str_to_int (tok-value t)))))
+                    rest)
+            (if (tok-name? t)
+                ;; name or call
+                (if (and (not (nil? rest))
+                         (tok-op? (head rest) "("))
+                    (do
+                        (let args-result (lift-args (tail rest)))
+                        (lift-result
+                            (intern_node PY-BMF-CALL
+                                (cons (intern_trivial_string (tok-value t))
+                                      (lift-recipe args-result)))
+                            (lift-rest args-result)))
+                    (lift-result
+                        (intern_node PY-BMF-IDENT
+                            (list (intern_trivial_string (tok-value t))))
+                        rest))
+            (if (tok-op? t "(")
+                ;; parenthesised expression: parse inner, consume ")"
+                (do
+                    (let inner (lift-expr rest))
+                    (let after (lift-rest inner))
+                    (if (and (not (nil? after))
+                             (tok-op? (head after) ")"))
+                        (lift-result (lift-recipe inner) (tail after))
+                        (lift-result (lift-recipe inner) after)))
+                (do
+                    (trace "lift-primary: unsupported token kind/value"
+                           (list (tok-kind t) (tok-value t)))
+                    (lift-result
+                        (intern_node PY-BMF-PASS (empty))
+                        rest))))))))
+
+    ;; --- operator precedence ---------------------------------------
+    ;;
+    ;; Higher number = tighter binding. -1 for non-operator tokens
+    ;; (signals "stop climbing"). Python's actual precedence is richer
+    ;; (lambda, or, and, not, in/is, bitwise, shifts) but the demo
+    ;; surface this carries is: comparison < add/sub < mul/div < **.
+
+    (defn op-prec (s)
+        (if (str_eq s "**") 50
+        (if (str_eq s "*")  40
+        (if (str_eq s "/")  40
+        (if (str_eq s "//") 40
+        (if (str_eq s "%")  40
+        (if (str_eq s "+")  30
+        (if (str_eq s "-")  30
+        (if (str_eq s "==") 20
+        (if (str_eq s "!=") 20
+        (if (str_eq s "<")  20
+        (if (str_eq s "<=") 20
+        (if (str_eq s ">")  20
+        (if (str_eq s ">=") 20
+            (sub 0 1)))))))))))))))
+
+    (defn op-is-compare? (s)
+        (or (str_eq s "==")
+        (or (str_eq s "!=")
+        (or (str_eq s "<")
+        (or (str_eq s "<=")
+        (or (str_eq s ">")
+            (str_eq s ">=")))))))
+
+    (defn tok-binop-prec (tokens)
+        (if (nil? tokens) (sub 0 1)
+            (do
+                (let t (head tokens))
+                (if (str_eq (tok-kind t) "py-op")
+                    (op-prec (tok-value t))
+                    (sub 0 1)))))
+
+    ;; --- binop climbing ---------------------------------------------
+    ;;
+    ;; Standard precedence-climbing: given a left-hand recipe and the
+    ;; remaining tokens, fold in higher- or equal-precedence binops on
+    ;; the right while their precedence ≥ min-prec. `**` is the only
+    ;; right-associative op in this surface; everything else is
+    ;; left-associative (recurse with prec+1).
+
+    (defn lift-binop-loop (left tokens min-prec)
+        (do
+            (let prec (tok-binop-prec tokens))
+            (if (lt prec min-prec) (lift-result left tokens)
+                (do
+                    (let op (tok-value (head tokens)))
+                    (let next-min
+                        (if (str_eq op "**") prec (add prec 1)))
+                    (let rhs-primary (lift-primary (tail tokens)))
+                    (let rhs-climb
+                        (lift-binop-loop (lift-recipe rhs-primary)
+                                         (lift-rest rhs-primary)
+                                         next-min))
+                    (let new-left
+                        (if (op-is-compare? op)
+                            (intern_node PY-BMF-COMPARE
+                                (list left
+                                      (intern_trivial_string op)
+                                      (lift-recipe rhs-climb)))
+                            (intern_node PY-BMF-BINOP
+                                (list left
+                                      (intern_trivial_string op)
+                                      (lift-recipe rhs-climb)))))
+                    (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
+
+    ;; --- conditional expression ------------------------------------
+    ;;
+    ;; Python's `x if cond else y` — a ternary that lifts to PY-BMF-IF
+    ;; with children (cond, then, else). After parsing the lhs, peek
+    ;; for the `if` keyword; if present, recursively parse the
+    ;; condition, expect `else`, parse the alternative.
+
+    (defn lift-cond-tail (then-recipe tokens)
+        (if (and (not (nil? tokens))
+                 (tok-keyword? (head tokens) "if"))
+            (do
+                (let cond-result (lift-cond-expr (tail tokens)))
+                (let after-cond (lift-rest cond-result))
+                (if (and (not (nil? after-cond))
+                         (tok-keyword? (head after-cond) "else"))
+                    (do
+                        (let else-result (lift-cond-expr (tail after-cond)))
+                        (lift-result
+                            (intern_node PY-BMF-IF
+                                (list (lift-recipe cond-result)
+                                      then-recipe
+                                      (lift-recipe else-result)))
+                            (lift-rest else-result)))
+                    (lift-result then-recipe after-cond)))
+            (lift-result then-recipe tokens)))
+
+    ;; lift-cond-expr: a non-conditional layer (primary + binops); used
+    ;; for the condition and the else-branch so we don't recurse into
+    ;; nested `if` at the same precedence.
+    (defn lift-cond-expr (tokens)
+        (do
+            (let p (lift-primary tokens))
+            (lift-binop-loop (lift-recipe p) (lift-rest p) 0)))
+
+    ;; lift-expr: full expression — climbs binops, then attaches a
+    ;; trailing `if cond else y` if present.
+    (defn lift-expr (tokens)
+        (do
+            (let p (lift-primary tokens))
+            (let climbed (lift-binop-loop (lift-recipe p) (lift-rest p) 0))
+            (lift-cond-tail (lift-recipe climbed) (lift-rest climbed))))
+
+    ;; ---- statement lifters (G1) -------------------------------------
+    ;;
+    ;; Dispatch by python-statement-tree-kind. Each lifter consumes the
+    ;; statement-tree (carries tokens + nested children-statements for
+    ;; block constructs like def) and emits one PY-BMF-* recipe.
+
+    (defn lift-def-body (children)
+        ;; A def's body is a list of statement-trees. The G4 interpreter's
+        ;; PY-BMF-DEF arm reads the body as a single recipe — if it's a
+        ;; single statement, lift it directly; otherwise wrap in a
+        ;; PY-BMF-MODULE-style block so py-eval-module-loop threads the
+        ;; environment statement-by-statement.
+        (if (eq (len children) 1)
+            (lift-statement (head children))
+            (intern_node PY-BMF-MODULE (lift-statements children))))
+
+    (defn lift-statements-loop (statements acc)
+        (if (nil? statements) (reverse acc)
+            (lift-statements-loop
+                (tail statements)
+                (cons (lift-statement (head statements)) acc))))
+
+    (defn lift-statements (statements)
+        (lift-statements-loop statements (empty)))
+
+    ;; def-statement tokens: `def NAME ( PARAM, PARAM, ... ) :`
+    ;; Walk to extract name + param-names; ignore the trailing ":".
+
+    (defn lift-def-params-loop (tokens acc)
+        (if (nil? tokens) (reverse acc)
+            (do
+                (let t (head tokens))
+                (if (tok-op? t ")") (reverse acc)
+                    (if (tok-op? t ",")
+                        (lift-def-params-loop (tail tokens) acc)
+                        (if (tok-name? t)
+                            (lift-def-params-loop (tail tokens)
+                                (cons (intern_trivial_string (tok-value t)) acc))
+                            (lift-def-params-loop (tail tokens) acc)))))))
+
+    (defn lift-def (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            ;; tokens[0]=def, tokens[1]=name, tokens[2]="("
+            (let name (tok-value (nth tokens 1)))
+            (let param-leaves (lift-def-params-loop (drop 3 tokens) (empty)))
+            (let body (lift-def-body children))
+            (intern_node PY-BMF-DEF
+                (append
+                    (cons (intern_trivial_string name) param-leaves)
+                    (list body)))))
+
+    ;; return-statement tokens: `return EXPR...`. Drop the keyword,
+    ;; lift the rest as an expression.
+
+    (defn lift-return (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let value (lift-recipe (lift-expr (tail tokens))))
+            (intern_node PY-BMF-RETURN (list value))))
+
+    ;; assignment-statement tokens: `NAME = EXPR...`. The cpython-rule
+    ;; classifier already filtered this to "assignment" iff tokens[1]="=".
+
+    (defn lift-assign (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let name (tok-value (head tokens)))
+            (let value (lift-recipe (lift-expr (drop 2 tokens))))
+            (intern_node PY-BMF-ASSIGN
+                (list (intern_trivial_string name) value))))
+
+    ;; expr-statement: just an expression in statement position.
+
+    (defn lift-expr-stmt (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (lift-recipe (lift-expr tokens))))
+
+    ;; lift-statement dispatches on both `kind` (first-token classifier) and
+    ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
+    ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
+    ;;   `return 7`     — kind "return", cpython-rule "return_stmt"
+    ;;   `def f(): ...` — kind "def", cpython-rule "function_def"
+    ;;
+    ;; The dispatcher prefers the keyword `kind` when it carries enough
+    ;; information; otherwise it falls back to cpython-rule.
+
+    (defn lift-statement (statement-tree)
+        (do
+            (let kind (python-statement-tree-kind statement-tree))
+            (let rule (python-statement-tree-cpython-rule statement-tree))
+            (if (str_eq kind "def")              (lift-def statement-tree)
+            (if (str_eq kind "return")           (lift-return statement-tree)
+            (if (str_eq rule "assignment")       (lift-assign statement-tree)
+            (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
+                (do
+                    (trace "lift-statement: unsupported kind/rule" (list kind rule))
+                    (intern_node PY-BMF-PASS (empty)))))))))
+
+    ;; ---- module lifter (the public surface) ------------------------
+    ;;
+    ;; Given a py-module-tree (from python-parse-module-tree-file or
+    ;; python-parse-module-tree-object), emit a PY-BMF-MODULE recipe
+    ;; whose children are the per-statement recipes. This is the shape
+    ;; py-run (in python-bmf-eval.fk) walks to a value.
+
+    (defn lift-module-tree (module-tree)
+        (intern_node PY-BMF-MODULE
+            (lift-statements (python-module-tree-statements module-tree))))
+
+    (defn lift-module-text (source)
+        (lift-module-tree
+            (python-parse-module-tree-object
+                (python-parse-module-text source))))
+
+    (defn lift-module-file (path)
+        (lift-module-tree (python-parse-module-tree-file path)))
+
+    ;; py-bmf-run-file — the end-to-end alias: source path → value.
+    ;; This is what kernel-bmf-run wires to once G1+G3 land.
+
+    (defn py-bmf-run-file (path)
+        (py-run (lift-module-file path)))
+
+    (defn py-bmf-run-text (source)
+        (py-run (lift-module-text source)))
+
+    ;; sentinel return so the file evaluates to 0 when loaded as a
+    ;; prelude — same convention every form-stdlib file follows.
+    0)

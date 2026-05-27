@@ -306,6 +306,7 @@ ritual.
 | 2026-05-27 | [#2071](https://github.com/seeker71/Coherence-Network/pull/2071) | Python arithmetic binary ops (`a - b`, `x * y`, `left / right`, `p ** q`) | `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` returns `25304` | Go ✓ · Rust ✓ · TypeScript ✓ (131/131 in `./validate.sh`) |
 | 2026-05-27 | `claude/g6-kernel-bmf-run` | G6 — binary entry-point orchestration. `kernel-bmf-run <file.py>` exists, pre-compiles surface-syntax preludes via the Go-kernel-as-compiler, invokes the Rust kernel with a `python-parse-module-file` driver. The `command -v kernel-bmf-run` gate in `parity_suite.sh` opens — `PARITY_THIRD_RUNTIME=kernel-bmf` is runnable end-to-end | `form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run examples/python_demo.py` returns `15` (top-level statement count from `python-parse-module-file`) | Go ✓ · Rust ✓ · TypeScript ✓ (same `len-of-statements` driver run through `./validate.sh` returns `15` on all three) |
 | 2026-05-27 | `claude/g4-pybmf-closure-interpreter` | G4 — closure/scope interpreter for PY-BMF recipes. Nine arms walk to Python-runtime values: `PY-BMF-INT`, `PY-BMF-IDENT`, `PY-BMF-BINOP` (+/-/*/// /%/**/​//), `PY-BMF-COMPARE` (==/!=/</<=/>/>=), `PY-BMF-RETURN`, `PY-BMF-ASSIGN`, `PY-BMF-DEF` (closure capture), `PY-BMF-CALL` (with self-name tied for self-recursion), `PY-BMF-IF`, `PY-BMF-MODULE`. Scope is an alist; closures store `(self-name, params, body, captured-env)`. ~270 LOC. Surface lives at `form/form-stdlib/python-bmf-eval.fk` | `form/form-stdlib/tests/python-bmf-eval-band.fk` builds seven recipe-cells directly via `intern_node` (mirroring `python-bmf-arithmetic-band.fk`'s test discipline) and walks them: `7+3=10`, `((20-5)*3)//7=6`, `x*x` with `x=11→121`, `x=6;x*7→42`, `def add(a,b):return a+b; add(10,20)+5→35`, `def absdiff(a,b):return a-b if a>=b else b-a; absdiff(7,19)→12`, `def fact(n):return 1 if n<2 else n*fact(n-1); fact(6)→720`. Scored aggregate returns `28000` | Go ✓ · Rust ✓ · TypeScript ✓ (in `./validate.sh` workload `stdlib/python-bmf-eval-band.fk`) |
+| 2026-05-27 | `claude/g1-g3-parser-to-recipe-bridge` | G1 + G3 — parser-to-recipe bridge. `form/form-stdlib/python-bmf-lift.fk` (~375 LOC) lifts the statement-tree from `python-parse-module-tree-*` to PY-BMF-* recipes the G4 interpreter walks. G1: statement dispatch over `python-statement-tree-kind` + `cpython-rule` (def/return/assignment/expr). G3: precedence-climbing expression parser with right-assoc `**`, left-assoc `* / // % + -`, comparison precedence, parenthesised grouping, conditional `x if c else y` lifting to `PY-BMF-IF`, n-ary `f(args)` to `PY-BMF-CALL`. `kernel-bmf-run`'s driver swaps from `(len statements)` to `(py-bmf-run-file path)`. The `examples/python_bridge_demo.py` factorial demo now closes three-way against CPython | `form/form-stdlib/tests/python-bmf-lift-band.fk` drives six cells from source-string through the full lift+eval: `7+3=10`, `2+3*4=14`, `(2+3)*4=20`, `def f(n):return n+1; f(41)=42`, `def add(a,b):return a+b; x=add(10,20); x+5=35`, `def fact(n):return 1 if n<2 else n*fact(n-1); fact(6)=720`. Scored aggregate returns `21000`. End-to-end `kernel-bmf-run examples/python_bridge_demo.py` prints `720`, matching CPython and the bootstrap Rust path | Go ✓ · Rust ✓ · TypeScript ✓ (in `./validate.sh` workload `stdlib/python-bmf-lift-band.fk`) |
 
 **What G6 closes and what stays open.** G6 was the orchestration gap — the
 pieces existed (Go compiler, Rust walker, Python BMF grammar) with no binary
@@ -316,20 +317,50 @@ returns the statement count (15), not the program's CPython value (40949).
 The driver swaps to a recipe-walking expression in the same script when G4
 (closure interpreter) lands; the orchestration shape stays.
 
-**Open contract for the next PROVEN rows:** `kernels/PYTHON_BMF_CONTRACT.md`
-G1 (automatic rule dispatcher) unlocks composition of these arithmetic rules
-into full expressions; G2 (statement grouping) unlocks `def` / `if` /
-`return`; G3 (precedence climbing) makes `1 + 2 * 3` parse correctly; G4
-(closure interpreter) is the gate that lets PROVEN rows progress to
-**COMPOST READY** for the matching Phase-A file. With G6 closed, every
-future G1–G4 increment is testable through `kernel-bmf-run` — no further
-orchestration breath is needed.
+**Open contract for the next PROVEN rows:** the surface beyond the 9 arms
+needs both a lift dispatch branch in `python-bmf-lift.fk` and a matching
+interpreter arm in `python-bmf-eval.fk`. Order of incoming breaths (each is
+its own focused PR):
 
-**The first walking step:** with this row recorded, the manifest's lifecycle
-is no longer a future-tense convention. It has its first arrival. Every
-future Form-native parity proof appends below this row; every Phase-A file
-whose proofs accumulate to coverage moves to COMPOST READY; every composted
-file moves to RELEASED.
+- `PY-BMF-WHILE` + while-statement lift — `while cond: body`
+- `PY-BMF-LIST` + list-literal lift + `PY-BMF-SUBSCRIPT` for `xs[i]`
+- `PY-BMF-DICT` + dict-literal lift + key access
+- `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`
+- `PY-BMF-FOR` + iterator protocol on lists / ranges
+- `PY-BMF-LAMBDA` + closure capture in expressions
+- `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment
+
+Each PROVEN row brings one more `PARITY_FILES` demo green under
+`PARITY_THIRD_RUNTIME=kernel-bmf`. When `lang-python.ts`'s full surface is
+covered by Form-native arms, the Phase-A `lang-python.ts` row moves to
+COMPOST READY.
+
+---
+
+## COMPOST READY — rows whose shape is fully Form-native
+
+A row appears here when every shape a specific demo expresses has been
+PROVEN three-way under `PARITY_THIRD_RUNTIME=kernel-bmf` *and* under the
+bootstrap path. The .py file no longer needs the TS bootstrap to reach
+its CPython value — both the Rust kernel (bootstrap path) and
+`kernel-bmf-run` (Form-native path) print the same number.
+
+The Phase-A file that *only* this demo would have needed isn't compostable
+yet — other demos still flex shapes the bootstrap covers and the bridge
+doesn't. But the demo itself sits in the readiness zone: every breath that
+follows narrows the gap. When all `PARITY_FILES` rows reach COMPOST READY,
+`lang-python.ts` (and the bootstrap parser tissue around it) becomes
+removable.
+
+| Date | Demo | Shape | Bridge support | Three-way value |
+|---|---|---|---|---|
+| 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_bridge_demo.py` | factorial — `def fact(n): return 1 if n<2 else n*fact(n-1); result = fact(6); result` (9 arms: INT, IDENT, BINOP, COMPARE, RETURN, ASSIGN, DEF, CALL, IF, MODULE) | `form/form-stdlib/python-bmf-lift.fk` + `form/form-stdlib/python-bmf-eval.fk` | CPython `720` · Rust (bootstrap) `720` · `kernel-bmf-run` `720` |
+
+**The first walking step:** with the G4 row recorded and G1+G3 now also
+landed, the manifest's lifecycle is no longer a future-tense convention.
+It has its first arrival in both columns. Every future Form-native parity
+proof appends below; every Phase-A file whose proofs accumulate to
+coverage moves to COMPOST READY; every composted file moves to RELEASED.
 
 The body sees its first cell move through the discipline. The path becomes
 walkable because the first step has been walked.
