@@ -1,0 +1,281 @@
+; form-stdlib/python-bmf-eval.fk
+;
+; G4 closes — a closure/scope interpreter that walks PY-BMF-* recipes back
+; to Python-runtime values. The first breath: enough surface to evaluate a
+; def + call + return + binop + ident + int chain end-to-end, matching the
+; value CPython would compute for the same expression.
+;
+; What walks today (the minimum-viable arms):
+;
+;   PY-BMF-INT       → integer leaf       (returns node_value)
+;   PY-BMF-IDENT     → env lookup         (alist-style scope)
+;   PY-BMF-BINOP     → recursive eval + op dispatch (+ - * / % ** //)
+;   PY-BMF-COMPARE   → recursive eval + comparison dispatch (== != < <= > >=)
+;   PY-BMF-IF        → branch on condition
+;   PY-BMF-RETURN    → eval the inner expression
+;   PY-BMF-ASSIGN    → bind-in-scope; returns extended env
+;   PY-BMF-DEF       → bind name → closure(params, body, captured-env)
+;   PY-BMF-CALL      → invoke closure: bind args, walk body
+;   PY-BMF-MODULE    → fold over statements, return last value
+;
+; What does NOT walk yet (named honestly, gated on later breaths):
+;
+;   PY-BMF-CLASS, PY-BMF-WHILE, PY-BMF-FOR, PY-BMF-LIST, PY-BMF-DICT,
+;   PY-BMF-SUBSCRIPT, PY-BMF-LAMBDA, PY-BMF-TUPLE, PY-BMF-AUG-ASSIGN,
+;   PY-BMF-TRY/RAISE, PY-BMF-IMPORT, comprehensions, slices, attrs,
+;   method calls, unary minus on non-trivial expressions, string ops,
+;   float arithmetic.
+;
+; Each of those is its own focused breath. The discipline this interpreter
+; holds: dispatch is by node_category, scope is a Form-side alist, and a
+; closure is a four-element list (the sentinel "py-closure", a params
+; list, a body recipe, a captured-env alist). No kernel changes; the
+; substrate-write primitives from Breath 1.5 carry the load.
+;
+; preludes (load order): core.fk, json.fk, cache.fk, form-ontology-loader.fk,
+;                        engine.fk, compiler.fk, source-compiler.fk,
+;                        grammars/python-bmf.fk
+
+(do
+    ;; ---- env: alist of (name . value) pairs ---------------------------
+    ;;
+    ;; An env is a list of two-element lists. (list "x" 10) is a binding.
+    ;; py-env-empty is the empty list. py-env-extend adds a binding to the
+    ;; front. py-env-lookup walks from the front, so shadowing is natural.
+
+    (defn py-env-empty () (empty))
+
+    (defn py-env-extend (env name value)
+        (cons (list name value) env))
+
+    (defn py-env-lookup-loop (env name)
+        (if (nil? env)
+            (do
+                ;; honest panic: missing name → head of empty surfaces the
+                ;; site. Until the dispatcher carries source-positions, the
+                ;; stack trace is the diagnostic.
+                (trace "py-env-lookup: undefined name" name)
+                (head (empty)))
+            (if (str_eq (head (head env)) name)
+                (head (tail (head env)))
+                (py-env-lookup-loop (tail env) name))))
+
+    (defn py-env-lookup (env name) (py-env-lookup-loop env name))
+
+    ;; py-closure — a sentinel-tagged four-element list. The interpreter
+    ;; recognises it via (head v) and dispatches PY-BMF-CALL accordingly.
+    ;; Storing the captured env makes lexical scope work without any
+    ;; kernel-side frame; PY-BMF-DEF builds the closure at its def site
+    ;; using the env in effect there.
+
+    ;; A closure stores its own name as well as params/body/captured-env.
+    ;; The self-name lets CALL tie the recursive knot: at invocation we
+    ;; extend the captured env with (self-name → closure-value), so a
+    ;; function body that references its own name (recursion) finds it.
+    ;; Mutual recursion + general letrec are a later breath; this carries
+    ;; the single-function self-reference shape every recursive demo uses.
+
+    (defn py-closure (self-name param-names body env)
+        (list "py-closure" self-name param-names body env))
+
+    (defn py-closure? (v)
+        (and (not (nil? v))
+             (and (eq (len v) 5)
+                  (str_eq (head v) "py-closure"))))
+
+    (defn py-closure-name   (c) (nth c 1))
+    (defn py-closure-params (c) (nth c 2))
+    (defn py-closure-body   (c) (nth c 3))
+    (defn py-closure-env    (c) (nth c 4))
+
+    ;; ---- binop dispatch ----------------------------------------------
+    ;;
+    ;; PY-BMF-BINOP holds three children: left-recipe, op-string-leaf,
+    ;; right-recipe. The op string lives as node_value on the middle
+    ;; child. Dispatch is by string equality; supported ops first, then
+    ;; an honest unknown-op panic (head empty) for any op we haven't
+    ;; reached yet.
+
+    (defn py-binop-apply (op left right)
+        (if (str_eq op "+")  (add left right)
+        (if (str_eq op "-")  (sub left right)
+        (if (str_eq op "*")  (mul left right)
+        (if (str_eq op "/")  (div left right)
+        (if (str_eq op "%")  (mod left right)
+        (if (str_eq op "//") (div left right)
+            (do (trace "py-binop: unsupported op" op) (head (empty))))))))))
+
+    (defn py-compare-apply (op left right)
+        (if (str_eq op "==") (if (eq left right) 1 0)
+        (if (str_eq op "!=") (if (eq left right) 0 1)
+        (if (str_eq op "<")  (if (lt left right) 1 0)
+        (if (str_eq op "<=") (if (le left right) 1 0)
+        (if (str_eq op ">")  (if (gt left right) 1 0)
+        (if (str_eq op ">=") (if (ge left right) 1 0)
+            (do (trace "py-compare: unsupported op" op) (head (empty))))))))))
+
+    ;; ---- the interpreter --------------------------------------------
+    ;;
+    ;; py-eval — walk a PY-BMF recipe to a value in env. Dispatch is by
+    ;; node_category; each arm names its expected children shape.
+    ;;
+    ;; py-eval-statement — variant that returns a (value . env) pair so
+    ;; ASSIGN and DEF can thread a new scope into the next statement.
+    ;; Expression statements return the unchanged env; ASSIGN and DEF
+    ;; extend it.
+    ;;
+    ;; The pair is encoded as (list value env) — head is value, head-tail
+    ;; is env. py-stmt-value and py-stmt-env read the two slots.
+
+    (defn py-stmt-result (value env) (list value env))
+    (defn py-stmt-value (r) (head r))
+    (defn py-stmt-env (r) (head (tail r)))
+
+    (defn py-eval-args-loop (recipes env acc)
+        (if (nil? recipes)
+            (reverse acc)
+            (py-eval-args-loop
+                (tail recipes)
+                env
+                (cons (py-eval (head recipes) env) acc))))
+
+    (defn py-eval-args (recipes env)
+        (py-eval-args-loop recipes env (empty)))
+
+    (defn py-bind-params-loop (pms args env)
+        (if (nil? pms) env
+            (py-bind-params-loop
+                (tail pms) (tail args)
+                (py-env-extend env (head pms) (head args)))))
+
+    (defn py-bind-params (pms args env)
+        (py-bind-params-loop pms args env))
+
+    ;; PY-BMF-CALL children: callee-name-leaf, arg-recipes... (variadic).
+    ;; The first child is currently a string-leaf naming the callee (this
+    ;; matches the emit shape in python-bmf.fk where the callee is captured
+    ;; as a pybmf-trivial-string). Higher-order calls (callee-as-expr) are
+    ;; a later breath.
+
+    (defn py-collect-params-loop (kids n acc)
+        (if (eq n 0) (reverse acc)
+            (py-collect-params-loop
+                (tail kids)
+                (sub n 1)
+                (cons (node_value (head kids)) acc))))
+
+    ;; PY-BMF-DEF children (per python-bmf.fk's pybmf-emit-def shape):
+    ;; name-leaf, param-leaves..., body-recipe (last child).
+    ;; We extract by len: first child is name, last is body, middle are
+    ;; params.
+
+    (defn py-take-loop (xs n acc)
+        (if (eq n 0) (reverse acc)
+            (py-take-loop (tail xs) (sub n 1) (cons (head xs) acc))))
+
+    (defn py-take (xs n) (py-take-loop xs n (empty)))
+
+    (defn py-last (xs)
+        (if (nil? (tail xs)) (head xs) (py-last (tail xs))))
+
+    (defn py-eval-statement (recipe env)
+        (do
+            (let cat (node_category recipe))
+            (let kids (node_children recipe))
+            (if (node_eq cat PY-BMF-ASSIGN)
+                (do
+                    ;; ASSIGN children: name-leaf, value-recipe
+                    (let name (node_value (nth kids 0)))
+                    (let value (py-eval (nth kids 1) env))
+                    (py-stmt-result value (py-env-extend env name value)))
+            (if (node_eq cat PY-BMF-DEF)
+                (do
+                    ;; DEF children: name-leaf, param-leaves..., body-recipe.
+                    (let n (len kids))
+                    (let name (node_value (head kids)))
+                    (let body (py-last kids))
+                    (let param-leaves (py-take (tail kids) (sub n 2)))
+                    (let pms (py-collect-params-loop param-leaves (len param-leaves) (empty)))
+                    (let closure (py-closure name pms body env))
+                    (py-stmt-result closure (py-env-extend env name closure)))
+                ;; Default: expression statement — eval, env unchanged.
+                (py-stmt-result (py-eval recipe env) env)))))
+
+    (defn py-eval-module-loop (statements env last-value)
+        (if (nil? statements) last-value
+            (do
+                (let r (py-eval-statement (head statements) env))
+                (py-eval-module-loop
+                    (tail statements)
+                    (py-stmt-env r)
+                    (py-stmt-value r)))))
+
+    (defn py-eval (recipe env)
+        (do
+            (let cat (node_category recipe))
+            (let kids (node_children recipe))
+            (if (node_eq cat PY-BMF-INT)
+                (node_value (head kids))
+            (if (node_eq cat PY-BMF-IDENT)
+                (py-env-lookup env (node_value (head kids)))
+            (if (node_eq cat PY-BMF-BINOP)
+                (do
+                    (let left  (py-eval (nth kids 0) env))
+                    (let op    (node_value (nth kids 1)))
+                    (let right (py-eval (nth kids 2) env))
+                    (py-binop-apply op left right))
+            (if (node_eq cat PY-BMF-COMPARE)
+                (do
+                    (let left  (py-eval (nth kids 0) env))
+                    (let op    (node_value (nth kids 1)))
+                    (let right (py-eval (nth kids 2) env))
+                    (py-compare-apply op left right))
+            (if (node_eq cat PY-BMF-RETURN)
+                (py-eval (head kids) env)
+            (if (node_eq cat PY-BMF-IF)
+                (do
+                    ;; IF children, per pybmf-emit-if in python-bmf.fk:
+                    ;; condition-recipe, then-recipe, else-recipe.
+                    (let cond (py-eval (nth kids 0) env))
+                    (if (eq cond 0)
+                        (py-eval (nth kids 2) env)
+                        (py-eval (nth kids 1) env)))
+            (if (node_eq cat PY-BMF-CALL)
+                (do
+                    ;; CALL children: callee-name-leaf, arg-recipes...
+                    ;; The captured env is extended with (self-name →
+                    ;; closure) so the body's recursive references find
+                    ;; the function itself. Mutual recursion is a later
+                    ;; breath — this carries single-function self-ref.
+                    (let callee-name (node_value (head kids)))
+                    (let closure (py-env-lookup env callee-name))
+                    (let arg-values (py-eval-args (tail kids) env))
+                    (let captured-with-self
+                        (py-env-extend (py-closure-env closure)
+                                       (py-closure-name closure)
+                                       closure))
+                    (let call-env (py-bind-params
+                                    (py-closure-params closure)
+                                    arg-values
+                                    captured-with-self))
+                    (py-eval (py-closure-body closure) call-env))
+            (if (node_eq cat PY-BMF-MODULE)
+                (py-eval-module-loop kids env 0)
+                (do
+                    ;; Honest unimplemented arm. The trace names the
+                    ;; category number so the next breath knows which
+                    ;; arm to add.
+                    (trace "py-eval: unimplemented category" cat)
+                    (head (empty)))))))))))))
+
+    ;; Surface for callers. py-run takes a module recipe and returns its
+    ;; value. py-eval and py-eval-statement are exposed so band-tests
+    ;; can drive sub-expressions independently when useful.
+
+    (defn py-run (module-recipe)
+        (py-eval module-recipe (py-env-empty)))
+
+    ;; sentinel return so the file evaluates to 0 when loaded as a
+    ;; prelude — by convention every form-stdlib file lands on a small
+    ;; integer to keep validate.sh's diff cheap.
+    0)

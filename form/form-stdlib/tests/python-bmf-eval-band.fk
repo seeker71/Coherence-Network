@@ -1,0 +1,172 @@
+; tests/python-bmf-eval-band.fk — G4 first attestation
+;
+; The closure/scope interpreter at form-stdlib/python-bmf-eval.fk walks
+; PY-BMF-* recipes back to Python-runtime values. This band-test builds
+; recipes directly (the way python-bmf-arithmetic-band.fk does) and walks
+; them to values that CPython would compute for the same shape. No source
+; parsing — that's G1+G3's gate. This test exists to prove G4 in isolation.
+;
+; Each cell builds a recipe whose CPython equivalent is named in a comment
+; alongside; the asserted score-value is the expected runtime value plus a
+; cell-specific offset to keep the aggregate sensitive to which arm broke.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/python-bmf-eval.fk
+
+(do
+    ;; ---- recipe builders (sugar over intern_node) ---------------------
+
+    (defn py-int-lit (n)
+        (intern_node PY-BMF-INT (list (intern_trivial_int n))))
+
+    (defn py-ident (name)
+        (intern_node PY-BMF-IDENT (list (intern_trivial_string name))))
+
+    (defn py-binop (left op right)
+        (intern_node PY-BMF-BINOP
+            (list left (intern_trivial_string op) right)))
+
+    (defn py-compare (left op right)
+        (intern_node PY-BMF-COMPARE
+            (list left (intern_trivial_string op) right)))
+
+    (defn py-return (expr)
+        (intern_node PY-BMF-RETURN (list expr)))
+
+    (defn py-assign (name value)
+        (intern_node PY-BMF-ASSIGN
+            (list (intern_trivial_string name) value)))
+
+    (defn py-def (name params body)
+        ;; DEF children: name-leaf, param-leaves..., body-recipe.
+        ;; Build param-leaves from the string list, then concat with name + body.
+        (do
+            (let param-leaves
+                (map (defn _mk (p) (intern_trivial_string p))
+                     params))
+            (intern_node PY-BMF-DEF
+                (append
+                    (cons (intern_trivial_string name) param-leaves)
+                    (list body)))))
+
+    (defn py-call (callee args)
+        (intern_node PY-BMF-CALL
+            (cons (intern_trivial_string callee) args)))
+
+    (defn py-if (cond then-branch else-branch)
+        (intern_node PY-BMF-IF
+            (list cond then-branch else-branch)))
+
+    (defn py-module (stmts)
+        (intern_node PY-BMF-MODULE stmts))
+
+    ;; ---- cell 1: bare arithmetic — CPython: 7 + 3 = 10 ---------------
+
+    (let cell1
+        (py-binop (py-int-lit 7) "+" (py-int-lit 3)))
+    (let cell1-value (py-eval cell1 (py-env-empty)))           ; 10
+    (let cell1-score (if (eq cell1-value 10) 1000 0))
+
+    ;; ---- cell 2: subtract, divide, mod — CPython:
+    ;;   ((20 - 5) * 3) // 7  =  45 // 7  =  6 -------------------------
+
+    (let cell2
+        (py-binop
+            (py-binop
+                (py-binop (py-int-lit 20) "-" (py-int-lit 5))
+                "*"
+                (py-int-lit 3))
+            "//"
+            (py-int-lit 7)))
+    (let cell2-value (py-eval cell2 (py-env-empty)))           ; 6
+    (let cell2-score (if (eq cell2-value 6) 2000 0))
+
+    ;; ---- cell 3: ident lookup — env says x=11; x*x → 121 ------------
+
+    (let cell3
+        (py-binop (py-ident "x") "*" (py-ident "x")))
+    (let cell3-env (py-env-extend (py-env-empty) "x" 11))
+    (let cell3-value (py-eval cell3 cell3-env))                ; 121
+    (let cell3-score (if (eq cell3-value 121) 3000 0))
+
+    ;; ---- cell 4: ASSIGN extends scope; subsequent stmt reads it.
+    ;;   x = 6
+    ;;   x * 7
+    ;; CPython: 42 -------------------------------------------------------
+
+    (let cell4
+        (py-module
+            (list
+                (py-assign "x" (py-int-lit 6))
+                (py-binop (py-ident "x") "*" (py-int-lit 7)))))
+    (let cell4-value (py-run cell4))                           ; 42
+    (let cell4-score (if (eq cell4-value 42) 4000 0))
+
+    ;; ---- cell 5: def + call — closure walks back to value.
+    ;;   def add(a, b):
+    ;;       return a + b
+    ;;   add(10, 20) + 5
+    ;; CPython: 35 ------------------------------------------------------
+
+    (let add-body
+        (py-return (py-binop (py-ident "a") "+" (py-ident "b"))))
+
+    (let cell5
+        (py-module
+            (list
+                (py-def "add" (list "a" "b") add-body)
+                (py-binop
+                    (py-call "add" (list (py-int-lit 10) (py-int-lit 20)))
+                    "+"
+                    (py-int-lit 5)))))
+    (let cell5-value (py-run cell5))                           ; 35
+    (let cell5-score (if (eq cell5-value 35) 5000 0))
+
+    ;; ---- cell 6: IF + COMPARE — branching on a comparison.
+    ;;   def absdiff(a, b):
+    ;;       return a - b if a >= b else b - a
+    ;;   absdiff(7, 19)
+    ;; CPython: 12 ------------------------------------------------------
+
+    (let absdiff-body
+        (py-return
+            (py-if (py-compare (py-ident "a") ">=" (py-ident "b"))
+                   (py-binop (py-ident "a") "-" (py-ident "b"))
+                   (py-binop (py-ident "b") "-" (py-ident "a")))))
+
+    (let cell6
+        (py-module
+            (list
+                (py-def "absdiff" (list "a" "b") absdiff-body)
+                (py-call "absdiff" (list (py-int-lit 7) (py-int-lit 19))))))
+    (let cell6-value (py-run cell6))                           ; 12
+    (let cell6-score (if (eq cell6-value 12) 6000 0))
+
+    ;; ---- cell 7: recursive call — factorial.
+    ;;   def fact(n):
+    ;;       return 1 if n < 2 else n * fact(n - 1)
+    ;;   fact(6)
+    ;; CPython: 720 -----------------------------------------------------
+
+    (let fact-body
+        (py-return
+            (py-if (py-compare (py-ident "n") "<" (py-int-lit 2))
+                   (py-int-lit 1)
+                   (py-binop (py-ident "n")
+                             "*"
+                             (py-call "fact"
+                                 (list (py-binop (py-ident "n") "-" (py-int-lit 1))))))))
+
+    (let cell7
+        (py-module
+            (list
+                (py-def "fact" (list "n") fact-body)
+                (py-call "fact" (list (py-int-lit 6))))))
+    (let cell7-value (py-run cell7))                           ; 720
+    (let cell7-score (if (eq cell7-value 720) 7000 0))
+
+    ;; ---- aggregate ---------------------------------------------------
+    ;; Total when every cell agrees with CPython:
+    ;;   1000 + 2000 + 3000 + 4000 + 5000 + 6000 + 7000 = 28000
+
+    (sum (list cell1-score cell2-score cell3-score cell4-score
+               cell5-score cell6-score cell7-score)))
