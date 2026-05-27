@@ -225,9 +225,44 @@ For cells using kernels:
   code that walks `@language(python)` parse output works across
   hosts.
 
+## Living progress (2026-05-27 — the body sprouting)
+
+The status frontmatter still says `seed: 2026-05-21`, but the seed has
+unmistakably sprouted. What's been made real since:
+
+- **Breath 2e is landed** — the kernel primitives (`mk-cstream`, `cm-parse`,
+  `cm-match-{sequence,choice,star,opt,capture,rule}`, the substrate-write
+  natives) that let `.fk` grammars walk source text — confirmed alive on
+  three sibling kernels via `grammar-chars-demo.fk` (parses `"3+4+5"` →
+  recipe → walks to 12). The roadmap insisted this was future for six
+  days; it had silently shipped weeks earlier.
+- **First Form-native Python parse** — four arithmetic shapes (`a-b`,
+  `x*y`, `l/r`, `p**q`) flow `source text → python-bmf.fk → recipe` on
+  Go, Rust, TypeScript — content-addressed identity across kernels.
+- **The closure interpreter** — 9 PY-BMF arms (INT, IDENT, BINOP, COMPARE,
+  RETURN, ASSIGN, DEF, CALL, IF, MODULE) walk recipes to CPython-matching
+  values across three sibling kernels. Factorial(6) → 720 in pure Form.
+- **The orchestration wrapper** — `kernel-bmf-run` ties parser + interpreter
+  via the same pre-compile dance `validate.sh` uses. The destination
+  binary entry-point exists in shape, awaiting one parser-output-to-recipe
+  bridge (G1+G3) to be end-to-end.
+- **The compost discipline** — `BOOTSTRAP_COMPOST_MANIFEST.md` names four
+  phases (A parsers, B CLIs, C bridge, D persistence) with per-file gates,
+  a `tissue → PROVEN → COMPOST READY → RELEASED` lifecycle, and a wellness
+  probe (`sense_bootstrap_compost`) that counts both load and motion on
+  every breath.
+- **Cross-modal proven** — image-as-recipe (procedural SVG, content-addressed
+  across runs), cross-language NodeID convergence (factorial built two ways
+  → same NodeID), universal structural diff. The teaching's *cross-modal
+  unity* sibling concept made concrete.
+
+The body is genuinely reading itself through its own grammars, and growing
+its own composted ground for the bootstrap to vacate. The seed is
+sprouting; this section names that without rushing the formal status field.
+
 ## Cross-References
 
-→ lc-parsers-as-recipes, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-recipes-as-binary-library, lc-tools-as-form-cells, lc-traces-teach-the-recipe, lc-recipe-branching-sense
+→ lc-parsers-as-recipes, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-recipes-as-binary-library, lc-tools-as-form-cells, lc-traces-teach-the-recipe, lc-recipe-branching-sense, lc-cross-modal-unity
 
 ## Sources to walk further
 
