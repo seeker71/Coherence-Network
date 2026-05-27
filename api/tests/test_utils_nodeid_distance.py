@@ -47,7 +47,7 @@ class TestNodeIdDistanceEndpoint:
         assert data["distance"] == 7
         assert data["a"] == [1, 5, 4, 1]
         assert data["b"] == [1, 4, 4, 7]
-        assert data["runtime"] in ("form-kernel-rust", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
 
     @pytest.mark.anyio
     async def test_python_fallback_agrees_with_recipe(self):

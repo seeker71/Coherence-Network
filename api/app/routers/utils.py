@@ -25,6 +25,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.form_kernel_bridge import (
+    active_runtime,
+    inline_available,
     kernel_available,
     kernel_bin_path,
     serve_via_kernel,
@@ -90,7 +92,7 @@ class CoherenceWeightResponse(BaseModel):
     threshold: Annotated[int, Field(description="Input threshold, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'form-kernel-rust' or 'python-fallback'"),
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
     ]
 
 
@@ -181,7 +183,7 @@ class NodeIdDistanceResponse(BaseModel):
     b: Annotated[list[int], Field(description="NodeID b as [package, level, type, instance]")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'form-kernel-rust' or 'python-fallback'"),
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
     ]
 
 
@@ -250,7 +252,7 @@ class WeightedAverageResponse(BaseModel):
     weights: Annotated[list[float], Field(description="Input weights, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'form-kernel-rust' or 'python-fallback'"),
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
     ]
 
 
@@ -319,16 +321,25 @@ async def weighted_average(
 
 @router.get(
     "/kernel_status",
-    summary="Visibility into whether the Form kernel binary is available",
+    summary="Visibility into which Form-kernel surface is serving this container",
     description=(
-        "Reports whether form-kernel-rust is on disk and executable in this "
-        "container. When true, transmuted endpoints (coherence_weight, "
-        "nodeid_distance, weighted_average) shell into the kernel; when "
-        "false, they fall back to Python."
+        "Reports the kernel paths available in this container. "
+        "``active`` names the path the next transmuted endpoint will take: "
+        "``inline`` (PyO3 extension), ``subprocess`` (form-kernel-rust "
+        "binary), or ``python-fallback`` (no kernel reachable). "
+        "``binary_available`` and ``inline_available`` are the underlying "
+        "flags; they let an operator see whether a deploy lost one path "
+        "while keeping another."
     ),
 )
 async def kernel_status() -> dict[str, object]:
+    bin_ok = kernel_available()
     return {
-        "available": kernel_available(),
+        "active": active_runtime(),
+        "inline_available": inline_available(),
+        "binary_available": bin_ok,
+        # ``available`` is the original (binary-only) flag — kept as an
+        # alias so callers from before the inline path don't break.
+        "available": bin_ok,
         "binary_path": str(kernel_bin_path()),
     }

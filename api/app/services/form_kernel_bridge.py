@@ -1,17 +1,28 @@
-"""Form kernel bridge — shell into form-kernel-rust for endpoint bodies.
+"""Form kernel bridge — run form-kernel-rust inline (PyO3) or via subprocess.
 
 The transmutation gesture, made into a habit: a FastAPI endpoint's body
 is a Form recipe compiled from Python. The route delegates to the kernel
-binary instead of executing Python inline. FastAPI stays as the HTTP
-doorway; the computation IS a Recipe.
+instead of executing Python inline. FastAPI stays as the HTTP doorway;
+the computation IS a Recipe.
+
+Three paths, ordered by speed:
+
+  1. ``inline``           — PyO3 extension ``form_kernel_rust`` imported
+                            once at module load; each request is a C call
+                            into Rust, no process spawn. Sub-millisecond
+                            overhead. The hot path when available.
+  2. ``subprocess``       — shell out to the ``form-kernel-rust`` binary.
+                            Same kernel, but fork+exec ~ms-scale overhead.
+                            Used when the PyO3 module failed to build but
+                            the binary did.
+  3. ``python-fallback``  — the caller's Python function, semantically
+                            identical to the recipe. Used when neither
+                            kernel surface is reachable. Parity is the
+                            regression gate (parity_suite.sh).
 
 Companion to form/form-kernel-ts/seedbank/python-adapter/examples/
 endpoint_*_demo.py — every endpoint that transmutes its body lands a
 .fk recipe next to a .py demo, both verified by parity_suite.sh.
-
-If the kernel binary is unavailable (build missing in container), the
-caller's fallback Python function runs. Same result either path —
-parity_suite.sh is the regression gate.
 
 The habit form. Three layers, each shorter to reach for than the last:
 
@@ -41,6 +52,50 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Inline kernel (PyO3) — imported once at module load.
+#
+# Built from form/form-kernel-rust via `maturin develop --release` (or the
+# wheel installed by the deploy pipeline). If the import fails — extension
+# missing, ABI mismatch, env without Rust — we set _INLINE_KERNEL to None
+# and fall back to the subprocess path. Either way the public API is the
+# same; callers see (value, runtime) and runtime names the path that served.
+# ---------------------------------------------------------------------------
+try:
+    import form_kernel_rust as _INLINE_KERNEL  # type: ignore[import-not-found]
+    logger.info("form-kernel: inline PyO3 extension loaded")
+except Exception as _e:  # pragma: no cover — environment-dependent
+    _INLINE_KERNEL = None
+    logger.info("form-kernel: PyO3 extension not available (%s) — subprocess path", _e)
+
+
+def inline_available() -> bool:
+    """True when the form_kernel_rust PyO3 extension is importable."""
+    return _INLINE_KERNEL is not None
+
+
+def active_runtime() -> str:
+    """Name the kernel path that would serve the next transmuted endpoint.
+
+    Reads as one of ``inline``, ``subprocess``, ``python-fallback`` — same
+    string the per-request ``runtime`` field carries. Used by /api/health
+    to give the witness a one-glance view of which path is hot today.
+    Lazy: no kernel call is made; this checks availability flags only.
+    """
+    if _INLINE_KERNEL is not None:
+        return "inline"
+    if _kernel_binary_available_lazy():
+        return "subprocess"
+    return "python-fallback"
+
+
+def _kernel_binary_available_lazy() -> bool:
+    """Same as ``kernel_available()`` but never raises — for health probes."""
+    try:
+        return kernel_available()
+    except Exception:
+        return False
 
 _KERNEL_BIN_ENV = "FORM_KERNEL_RUST_BIN"
 # Default path: repo-relative to api/app/services/, four levels up to repo
@@ -109,27 +164,65 @@ def run_recipe(fk_source: str, timeout: float = 10.0) -> str:
     return out[-1]
 
 
+def run_inline(fk_source: str) -> Any:
+    """Run fk_source through the inline PyO3 kernel.
+
+    Returns a native Python value — the same shape Value.display() would
+    print, but typed (ints stay ints, floats stay floats, lists are list).
+    Raises RuntimeError if the PyO3 module isn't loaded; the kernel itself
+    raises RuntimeError on malformed input.
+    """
+    if _INLINE_KERNEL is None:
+        raise RuntimeError("form-kernel PyO3 extension not loaded")
+    return _INLINE_KERNEL.compile_and_run(fk_source)
+
+
 def run_with_fallback(
     fk_source: str,
     fallback: Callable[[], Any],
     parse: Callable[[str], Any] = lambda s: s,
     timeout: float = 10.0,
 ) -> tuple[Any, str]:
-    """Run fk_source through the kernel; fall back to Python on missing binary.
+    """Run fk_source through the kernel; choose the fastest available path.
 
-    Returns (value, runtime) where runtime is "form-kernel-rust" or
-    "python-fallback". Errors from the kernel beyond the binary-missing
-    case propagate — the parity_suite guarantees the recipe matches
-    Python; an actual kernel failure is a real problem worth surfacing.
+    Returns ``(value, runtime)`` where runtime is one of:
+      - ``"inline"``         — PyO3 extension served the request
+      - ``"subprocess"``     — fork+exec of the form-kernel-rust binary
+      - ``"python-fallback"`` — the caller's Python function (kernel absent)
+
+    The two kernel paths share the same Rust runtime; ``parse`` is applied
+    to the kernel's textual output only on the subprocess path (the inline
+    path already returns typed values). Errors beyond a missing
+    binary/extension propagate — the parity_suite guarantees the recipe
+    matches Python; an actual kernel failure is worth surfacing.
     """
-    if not kernel_available():
-        logger.info(
-            "form-kernel-rust binary missing at %s — falling back to Python",
-            kernel_bin_path(),
-        )
-        return fallback(), "python-fallback"
-    raw = run_recipe(fk_source, timeout=timeout)
-    return parse(raw), "form-kernel-rust"
+    # Hot path: PyO3 inline. Already-typed return — `parse` is a no-op for
+    # ints/floats/lists, and the routers' `parse=int` lambdas are safe to
+    # apply to an int (int(int) == int).
+    if _INLINE_KERNEL is not None:
+        value = run_inline(fk_source)
+        # Be tolerant: if parse is the default (returns input) or accepts
+        # both str and the native type, run it; if it strictly wants str
+        # (rare), the caller will see the same value either way.
+        try:
+            return parse(value), "inline"
+        except (TypeError, ValueError):
+            # Fall through to stringified-roundtrip so a str-only parse
+            # still works inline.
+            return parse(str(value) if not isinstance(value, str) else value), "inline"
+
+    # Warm path: subprocess to the bin.
+    if kernel_available():
+        raw = run_recipe(fk_source, timeout=timeout)
+        return parse(raw), "subprocess"
+
+    # Cold path: Python.
+    logger.info(
+        "form-kernel: PyO3 extension unavailable and binary missing at %s — "
+        "running Python fallback",
+        kernel_bin_path(),
+    )
+    return fallback(), "python-fallback"
 
 
 # ---------------------------------------------------------------------------
