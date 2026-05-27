@@ -19,11 +19,22 @@ A Form recipe that procedurally generates a `.wav` file. Same content-addressing
 
 **Landed:** [`06-audio-as-recipe/gen-sine.fk`](06-audio-as-recipe/gen-sine.fk) — 1-second 440 Hz tone, mono 8-bit PCM at 8000 Hz, 8044-byte WAV with sha256 `6d170ffe323b378ce29b886252105cb5e6d68e0bc1589160a472075afc635447`, byte-identical across Go/Rust/TS kernels. The walk also closed a sibling-parity gap: the TS kernel was missing `write_file_bytes`. Envelope and FM synthesis remain for future breaths.
 
-### 2. **Image-as-recipe — parameterized**
+### 2. **Image-as-recipe — parameterized** — **landed 2026-05-27**
 
-Extend `01-image-as-recipe/gradient-circles.fk` to take a seed and produce 5 visibly distinct SVGs from 5 seeds. Shows that the recipe is **the parameter space**, not a single output. Proves: same recipe + different parameters = different content-addressed outputs whose only difference is the parameter NodeID.
+A single recipe `(gen-circles seed)` takes one integer cell and emits a
+visibly distinct SVG. Five seeds (5, 86, 17, 138, 254) chosen so `(mod
+seed 5)` spans 0..4 — five distinct palettes — while count, radius, and
+y-baseline also vary.
 
-**Smallest closing breath:** 5 SVGs with their SHAs documented; same recipe, 5 NodeIDs differing only in parameter children.
+**Landed:** [`01-image-as-recipe/gradient-circles-seeded.fk`](01-image-as-recipe/gradient-circles-seeded.fk)
+emits five SVGs totalling 3614 bytes; three-way Go/Rust/TS kernel
+agreement on every seed (verified file-by-file with `cmp`). Each emission
+shares the same Form tree shape — `svg-document → svg-defs + svg-bg +
+circle-row + svg-text` — and differs only in the seed-derived sub-tree.
+
+The deeper proof (structural diff over two of the SVGs surfacing *only*
+the parameter cell as the delta, not the byte-level moves) is forward-map
+walk #7. This walk lays the parameter space; #7 will measure it.
 
 ### 3. **NL→recipe broadened**
 
