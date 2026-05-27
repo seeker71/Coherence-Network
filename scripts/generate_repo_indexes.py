@@ -29,11 +29,17 @@ purpose statements before they land.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# Where the route manifest lives. The API container ships api/ but not
+# web/, so the manifest is committed inside api/app/data/ to travel with
+# the image — see `_resolve_route_to_page_path` in substrate.py.
+WEB_ROUTES_MANIFEST_PATH = REPO_ROOT / "api" / "app" / "data" / "web_routes.json"
 
 
 # Directories that carry source code and would benefit from an INDEX.
@@ -430,6 +436,47 @@ def update_vision_kb_header(check: bool) -> bool:
     return True
 
 
+def render_web_routes_manifest() -> str:
+    """Build the JSON map from Next.js route patterns to page.tsx paths.
+
+    The API container only carries `api/` + `scripts/`, so the
+    substrate badge's filesystem walker in `web/app/` is blind in
+    production. This manifest is the substitute the container can read,
+    committed at `api/app/data/web_routes.json` so it ships with the
+    image. Generated alongside `web/app/INDEX.md` so they stay in lock-
+    step; CI `--check` fails the same way for both.
+
+    Patterns keep Next.js's dynamic-segment notation (`/ideas/[idea_id]`).
+    The resolver matches an incoming route by walking the trie of static
+    segments first, then dynamic. Format:
+
+        {
+          "generated_by": "scripts/generate_repo_indexes.py",
+          "routes": {
+            "/": "web/app/page.tsx",
+            "/ideas/[idea_id]": "web/app/ideas/[idea_id]/page.tsx",
+            ...
+          }
+        }
+    """
+    app_dir = REPO_ROOT / "web" / "app"
+    if not app_dir.is_dir():
+        return ""
+
+    routes: dict[str, str] = {}
+    for page in sorted(app_dir.rglob("page.tsx")):
+        route_dir = page.parent.relative_to(app_dir)
+        route = "/" if str(route_dir) == "." else f"/{route_dir.as_posix()}"
+        rel_source = page.relative_to(REPO_ROOT).as_posix()
+        routes[route] = rel_source
+
+    payload = {
+        "generated_by": "scripts/generate_repo_indexes.py",
+        "routes": routes,
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def write_or_check(path: Path, content: str, check: bool) -> bool:
     """Write content to path. Returns True if the file changed (or would change in --check)."""
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -474,6 +521,14 @@ def main() -> int:
     manifest = render_manifest(target_data)
     if write_or_check(manifest_path, manifest, args.check):
         changed.append("MANIFEST.md")
+
+    web_routes_manifest = render_web_routes_manifest()
+    if web_routes_manifest and write_or_check(
+        WEB_ROUTES_MANIFEST_PATH, web_routes_manifest, args.check
+    ):
+        changed.append(
+            str(WEB_ROUTES_MANIFEST_PATH.relative_to(REPO_ROOT))
+        )
 
     if args.check:
         if changed:
