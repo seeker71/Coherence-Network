@@ -1675,6 +1675,23 @@ export class Kernel {
         if (fd !== undefined) closeSync(fd);
       }
     });
+    // write_file_bytes — sibling of read_file_bytes; writes a byte list.
+    // Sibling-parity with form-kernel-go + form-kernel-rust. Values out of
+    // 0..255 truncate per Go's `byte(v.Int)` and Rust's `as u8`.
+    this.registerNative("write_file_bytes", catCall(), (_k, args) => {
+      try {
+        const path = argStr(args, 0);
+        const list = argList(args, 1);
+        const buf = Buffer.alloc(list.length);
+        for (let i = 0; i < list.length; i++) {
+          buf[i] = argInt(list, i) & 0xff;
+        }
+        writeFileSync(path, buf);
+        return { kind: "int", int: buf.length };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
     // Host text output. Byte codecs still use write_file_bytes in kernels
     // that expose it; text compilers do not need to materialize byte lists.
     this.registerNative("write_file_text", catCall(), (_k, args) => {
