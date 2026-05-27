@@ -45,6 +45,7 @@ result
 | `python_string_demo.py` | 45 | str concat via `_plus`, `len(s)` |
 | `python_float_demo.py` | 4.875 | float literals, mixed int/float promotion, float comparison |
 | `python_import_demo.py` | 20.853981633974485 | `import math`, `from math import sqrt, pi`, attribute access (`math.pi`), kernel-native module bindings |
+| `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary |
 
 **Run it:**
 ```bash

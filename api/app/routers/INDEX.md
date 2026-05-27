@@ -5,6 +5,7 @@
 > a description, edit the file's first line and re-run the script.
 
 **Total files**: 133
+**Total files**: 134
 
 | File | Purpose |
 |---|---|
@@ -131,6 +132,7 @@
 | [translations.py](translations.py) | Translations router — POST human or machine translations for any entity. |
 | [treasury.py](treasury.py) | Implements: spec-122 (crypto treasury bridge) |
 | [ui_preferences.py](ui_preferences.py) | UI Preferences router — spec ux-tabs-mobile-friendly. |
+| [utils.py](utils.py) | Utility endpoints whose bodies live as Form recipes, not Python functions. |
 | [value_lineage.py](value_lineage.py) | API routes for value lineage and payout attribution. |
 | [verification.py](verification.py) | Verification router — public endpoints for auditing CC flows. |
 | [views.py](views.py) | Views router — per-contributor view tracking, analytics, discovery rewards. |

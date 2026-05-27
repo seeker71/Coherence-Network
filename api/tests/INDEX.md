@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 214
+**Total files**: 215
 
 | File | Purpose |
 |---|---|
@@ -216,6 +216,7 @@
 | [test_timeout_adaptive_service.py](test_timeout_adaptive_service.py) | _no top-of-file purpose_ |
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
+| [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
