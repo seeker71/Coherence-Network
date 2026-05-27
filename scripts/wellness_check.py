@@ -826,6 +826,32 @@ def sense_bootstrap_compost() -> list[str]:
             f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
         )
 
+    # Lifecycle motion — count rows that have walked from tissue → PROVEN →
+    # COMPOST READY → RELEASED. The body senses not just load but movement-
+    # through-load. A row appears under each heading when a sibling PR proves
+    # parity for a shape; the count grows as the discipline is practiced.
+    manifest_text = manifest.read_text(encoding="utf-8")
+    sections = {
+        "PROVEN": 0,
+        "COMPOST READY": 0,
+        "RELEASED": 0,
+    }
+    # Each section's data rows match `| YYYY-MM-DD |` at the start.
+    # The heading is `## PROVEN` (etc); we scan rows between headings.
+    current_section: str | None = None
+    for raw in manifest_text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("## "):
+            heading = stripped[3:].split(" — ", 1)[0].strip()
+            current_section = heading if heading in sections else None
+            continue
+        if current_section and re.match(r"^\|\s*\d{4}-\d{2}-\d{2}\s*\|", raw):
+            sections[current_section] += 1
+    lifecycle_summary = ", ".join(
+        f"{name.lower()}: {count}" for name, count in sections.items()
+    )
+    lines.append(f"  lifecycle motion — {lifecycle_summary}")
+
     # Third-runtime selector — read the default out of the parity script.
     # Today: ts-eval (bootstrap). Destination: kernel-bmf (Form-native).
     parity = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
