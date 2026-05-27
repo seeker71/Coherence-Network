@@ -1,0 +1,274 @@
+; recipe-to-nl.fk — Form recipe walked to natural-language English.
+;
+; The reverse direction of 05-nl-to-recipe. Hand-build a small arithmetic
+; recipe, walk it via node_category + node_children + node_value, emit
+; an English description, and write the lines to recipe-to-nl.txt.
+;
+; Recipes walked here:
+;   (mul 7 7)               -> "the square of seven"
+;   (add 4 6)               -> "the sum of four and six"
+;   (mul (add 2 3) 4)       -> "the product of the sum of two and three and four"
+;   (sub 0 12)              -> "negative twelve"
+;   (mul 5 6)               -> "the product of five and six"
+;
+; The bonus claim — structural round-trip across the NL/recipe boundary.
+; The emitted "the product of five and six" feeds back through cm-parse
+; (the same surface #05 uses) and rebuilds (mul 5 6); node_eq attests
+; the reconstituted recipe is the SAME NodeID as the original.
+;
+; The honest distinction the README names:
+;   structural round-trip: NodeID identity preserved exactly.
+;   lexical round-trip:    paraphrase, not byte-identity — the (mul 7 7)
+;                          branch emits "the square of seven", which the
+;                          symmetric grammar only accepts via an added
+;                          rule. One breath of rule-mapping would close
+;                          the lexical gap; the structural claim is
+;                          already attested across all three kernels.
+;
+; preludes: form-stdlib/grammar-chars.fk
+
+(do
+    ;; --- Form math categories (kernel substrate numbering) -------------
+    ;; LEVEL_BASIC=2, RB_MATH=12, MUL=3, PLUS=1, MINUS=2.
+    (let math-mul   (make_nodeid 1 2 12 3))
+    (let math-plus  (make_nodeid 1 2 12 1))
+    (let math-minus (make_nodeid 1 2 12 2))
+
+    ;; --- Trivial-int detector ------------------------------------------
+    ;; LEVEL_TRIVIAL=1, TYPE_INT=1.  A leaf int has level=1 and type=1.
+    (defn trivial-int? (n)
+        (if (eq (node_level n) 1)
+            (eq (node_type n) 1)
+            false))
+
+    ;; --- Integer-to-English number-word table --------------------------
+    ;; Mirrors #05's word-to-int table, reversed. Covers 0..20 and the
+    ;; round tens through 100; anything outside the table falls back to
+    ;; the decimal numeral (honest absence of structure rather than
+    ;; an invented paraphrase).
+    (defn int-to-word (n)
+        (if (eq n 0) "zero"
+        (if (eq n 1) "one"
+        (if (eq n 2) "two"
+        (if (eq n 3) "three"
+        (if (eq n 4) "four"
+        (if (eq n 5) "five"
+        (if (eq n 6) "six"
+        (if (eq n 7) "seven"
+        (if (eq n 8) "eight"
+        (if (eq n 9) "nine"
+        (if (eq n 10) "ten"
+        (if (eq n 11) "eleven"
+        (if (eq n 12) "twelve"
+        (if (eq n 13) "thirteen"
+        (if (eq n 14) "fourteen"
+        (if (eq n 15) "fifteen"
+        (if (eq n 16) "sixteen"
+        (if (eq n 17) "seventeen"
+        (if (eq n 18) "eighteen"
+        (if (eq n 19) "nineteen"
+        (if (eq n 20) "twenty"
+            (int_to_str n)))))))))))))))))))))))
+
+    ;; spell-int — handle negatives honestly: "negative twelve" rather
+    ;; than relying on the int-to-word table for the sign.
+    (defn spell-int (n)
+        (if (lt n 0)
+            (str_concat "negative " (int-to-word (sub 0 n)))
+            (int-to-word n)))
+
+    ;; --- The walker — recipe NodeID -> English description -------------
+    ;; Dispatch order:
+    ;;   1. Trivial int leaf      -> spelled number
+    ;;   2. (mul a a) same-NodeID -> "the square of {nl(a)}"
+    ;;   3. (mul a b)             -> "the product of {nl(a)} and {nl(b)}"
+    ;;   4. (add a b)             -> "the sum of {nl(a)} and {nl(b)}"
+    ;;   5. (sub 0 b)             -> "negative {nl(b)}"  (mirror of #05's negate)
+    ;;   6. (sub a b)             -> "the difference of {nl(a)} and {nl(b)}"
+    ;;   7. Unknown               -> honest "a node with category X and N children"
+
+    (defn nl-of (n)
+        (if (trivial-int? n)
+            (spell-int (node_value n))
+            (do
+                (let cat (node_category n))
+                (let kids (node_children n))
+                (if (node_eq cat math-mul) (nl-mul kids)
+                (if (node_eq cat math-plus) (nl-add kids)
+                (if (node_eq cat math-minus) (nl-sub kids)
+                    (nl-unknown cat kids)))))))
+
+    (defn nl-mul (kids)
+        (do
+            (let a (head kids))
+            (let b (head (tail kids)))
+            (if (node_eq a b)
+                (str_concat "the square of " (nl-of a))
+                (str_concat "the product of "
+                (str_concat (nl-of a)
+                (str_concat " and " (nl-of b)))))))
+
+    (defn nl-add (kids)
+        (do
+            (let a (head kids))
+            (let b (head (tail kids)))
+            (str_concat "the sum of "
+            (str_concat (nl-of a)
+            (str_concat " and " (nl-of b))))))
+
+    (defn nl-sub (kids)
+        (do
+            (let a (head kids))
+            (let b (head (tail kids)))
+            ;; The "negate N" idiom from #05 is (sub 0 N); when we see
+            ;; that exact shape, emit "negative N" — the symmetric arm
+            ;; of #05's negate-action. Any other (sub a b) becomes
+            ;; "the difference of a and b" so the body stays honest.
+            (if (if (trivial-int? a) (eq (node_value a) 0) false)
+                (str_concat "negative " (nl-of b))
+                (str_concat "the difference of "
+                (str_concat (nl-of a)
+                (str_concat " and " (nl-of b)))))))
+
+    (defn nl-unknown (cat kids)
+        (str_concat "a node with category "
+        (str_concat (int_to_str (node_type cat))
+        (str_concat " and " (str_concat (int_to_str (len kids)) " children")))))
+
+    ;; --- Build the recipes by hand -------------------------------------
+    ;; These are the same shapes #05 walks from NL — built directly
+    ;; here so we can prove the reverse map without depending on the NL
+    ;; parser running first.
+    (let n0  (intern_trivial_int 0))
+    (let n2  (intern_trivial_int 2))
+    (let n3  (intern_trivial_int 3))
+    (let n4  (intern_trivial_int 4))
+    (let n5  (intern_trivial_int 5))
+    (let n6  (intern_trivial_int 6))
+    (let n7  (intern_trivial_int 7))
+    (let n12 (intern_trivial_int 12))
+
+    (let r-square     (intern_node math-mul   (list n7 n7)))
+    (let r-sum        (intern_node math-plus  (list n4 n6)))
+    (let r-add-2-3    (intern_node math-plus  (list n2 n3)))
+    (let r-nested-mul (intern_node math-mul   (list r-add-2-3 n4)))
+    (let r-neg-12     (intern_node math-minus (list n0 n12)))
+    ;; r-product — a (mul 5 6) shape so we can exercise the product
+    ;; arm (children differ) and parse "the product of five and six"
+    ;; back into the same NodeID. r-square's NL surface is "the square
+    ;; of seven", which the symmetric grammar would also need to accept
+    ;; — naming that gap honestly is better than hiding it.
+    (let r-product    (intern_node math-mul   (list n5 n6)))
+
+    ;; --- Emit lines ----------------------------------------------------
+    (let nl-square     (nl-of r-square))
+    (let nl-sum        (nl-of r-sum))
+    (let nl-nested-mul (nl-of r-nested-mul))
+    (let nl-neg-12     (nl-of r-neg-12))
+    (let nl-product    (nl-of r-product))
+
+    ;; --- Round-trip bonus: parse the emitted NL back to a recipe -------
+    ;; A minimal grammar that recognizes the verbose form "the product
+    ;; of seven and seven" and re-builds (mul 7 7). If that recipe's
+    ;; NodeID matches the original r-square, the loop has closed
+    ;; structurally across the NL boundary.
+
+    ;; Number-word -> int (subset of #05's table, written explicitly so
+    ;; this sample is self-contained — the round-trip should NOT depend
+    ;; on a parser file we don't own at this altitude).
+    (defn word-to-int (w)
+        (if (str_eq w "zero")    0
+        (if (str_eq w "one")     1
+        (if (str_eq w "two")     2
+        (if (str_eq w "three")   3
+        (if (str_eq w "four")    4
+        (if (str_eq w "five")    5
+        (if (str_eq w "six")     6
+        (if (str_eq w "seven")   7
+        (if (str_eq w "eight")   8
+        (if (str_eq w "nine")    9
+        (if (str_eq w "ten")    10
+        (if (str_eq w "eleven") 11
+        (if (str_eq w "twelve") 12
+            (sub 0 1)))))))))))))))
+
+    (defn caps-get (caps name)
+        (if (nil? caps) (empty)
+            (if (str_eq (head (head caps)) name)
+                (head (tail (head caps)))
+                (caps-get (tail caps) name))))
+
+    (let lower      (list "char-range" 97 122))
+    (let word-tok   (list "sequence" lower (list "star" lower)))
+
+    (defn product-action (caps)
+        (do
+            (let lhs (intern_trivial_int (word-to-int (caps-get caps "lhs"))))
+            (let rhs (intern_trivial_int (word-to-int (caps-get caps "rhs"))))
+            (intern_node math-mul (list lhs rhs))))
+
+    (let round-trip-rules
+        (list
+            (list "product"
+                  (list "sequence"
+                        (list "string" "the product of ")
+                        (list "capture" "lhs" word-tok)
+                        (list "string" " and ")
+                        (list "capture" "rhs" word-tok))
+                  product-action)))
+
+    ;; Parse nl-product ("the product of five and six") back to recipe.
+    ;; The grammar is symmetric only on the (mul a b) shape where a != b
+    ;; — the (mul 7 7) -> "the square of seven" branch is a paraphrase,
+    ;; not a literal match (named in README as the structural-vs-lexical
+    ;; round-trip distinction).
+    (let r-product-from-nl (cm-parse nl-product round-trip-rules "product"))
+    (let loop-closed (if (node_eq r-product r-product-from-nl) 1 0))
+
+    ;; --- Compose the output text --------------------------------------
+    (let nl
+        (str_concat
+            (str_concat "(mul 7 7)            -> " (str_concat nl-square     "\n"))
+            (str_concat
+                (str_concat "(add 4 6)            -> " (str_concat nl-sum        "\n"))
+                (str_concat
+                    (str_concat "(mul (add 2 3) 4)    -> " (str_concat nl-nested-mul "\n"))
+                    (str_concat
+                        (str_concat "(sub 0 12)           -> " (str_concat nl-neg-12     "\n"))
+                        (str_concat
+                            (str_concat "(mul 5 6)            -> " (str_concat nl-product    "\n"))
+                            (str_concat
+                                "\n"
+                                (str_concat
+                                    "round-trip: NL(r-product) parsed back -> node_eq with original = "
+                                    (str_concat (int_to_str loop-closed) "\n")))))))))
+
+    ;; Path is relative to whatever cwd ran the kernel. validate.sh
+    ;; changes into form/ before invoking, so the sample-relative path
+    ;; resolves to form/form-samples/cross-modal/07-recipe-to-nl/.
+    (write_file_text "form-samples/cross-modal/07-recipe-to-nl/recipe-to-nl.txt" nl)
+
+    ;; --- ASCII-clean print so all three kernels agree -----------------
+    (print "square=")
+    (print nl-square)
+    (print " sum=")
+    (print nl-sum)
+    (print " nested-mul=")
+    (print nl-nested-mul)
+    (print " neg-12=")
+    (print nl-neg-12)
+    (print " product=")
+    (print nl-product)
+    (print " loop_closed=")
+    (print (int_to_str loop-closed))
+    (print "\n")
+
+    ;; --- Aggregate so the three-way verifier sees a stable scalar.
+    ;; loop_closed is 1 when the (mul 5 6) round-trip holds; the walked
+    ;; recipe values are 49 + 10 + 20 + (-12) + 30 = 97. Plus loop_closed
+    ;; (1) = 98. All three sibling kernels must produce 98.
+    (add (walk_recipe r-square)
+    (add (walk_recipe r-sum)
+    (add (walk_recipe r-nested-mul)
+    (add (walk_recipe r-neg-12)
+    (add (walk_recipe r-product) loop-closed))))))

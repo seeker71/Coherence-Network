@@ -29,9 +29,15 @@ Extend `01-image-as-recipe/gradient-circles.fk` to take a seed and produce 5 vis
 
 Once `cross-modal-nl-to-recipe` lands, extend the NL grammar with one or two more operations: conditionals ("if X is greater than Y, …"), let-bindings ("let x equal 5; the square of x"). Shows the grammar can grow without changing its driver — the universal-translator scaling pattern.
 
-### 4. **Recipe→NL reverse**
+### 4. **Recipe→NL reverse** — **landed 2026-05-27**
 
 Walk a recipe NodeID and emit an English description. The reverse of #3. Together with #3, demonstrates **round-trip across the NL/recipe boundary** — the substrate-of-meaning is preserved through both translations.
+
+**Landed:** [`07-recipe-to-nl/recipe-to-nl.fk`](07-recipe-to-nl/recipe-to-nl.fk) — a 7-rule walker dispatching on `node_category` / `node_children` / `node_value` emits English for `(mul 7 7)` → `the square of seven`, `(add 4 6)` → `the sum of four and six`, nested `(mul (add 2 3) 4)` → `the product of the sum of two and three and four`, `(sub 0 12)` → `negative twelve`, `(mul 5 6)` → `the product of five and six`. Output written to `recipe-to-nl.txt`, byte-identical across Go/Rust/TS (sha256 `94555ee6a6fd8764838bcd934d2910d0e01b944a7654b3015b3ee35862aa5d7e`).
+
+**Round-trip claim attested.** The `(mul 5 6)` emission ("the product of five and six") parses back through `cm-parse` to the original NodeID — `node_eq=1` across all three kernels. **Structural round-trip across the NL/recipe boundary closes; the recipe NodeID is preserved exactly through walk → emit → parse → walk.**
+
+The honest gap: `(mul 7 7)` emits as `the square of seven`, not `the product of seven and seven`. The grammar at this altitude recognizes only `the product of … and …`, so `nl-square`'s round-trip is a *paraphrase* (substrate identity preserved, surface English differs). One breath of additive rule-mapping would close the lexical gap; the structural claim is already attested.
 
 ### 5. **JSON-as-recipe** — *landed in default gate 2026-05-27 (#2105)*
 

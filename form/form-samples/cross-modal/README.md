@@ -1,6 +1,6 @@
 # Cross-Modal Recipe Experiments
 
-Six small demos exploring how Form recipes carry semantic content across
+Seven small demos exploring how Form recipes carry semantic content across
 modalities (text, structured data, image, audio, code, natural language).
 Each subdirectory has its own runnable sample and a README documenting
 what's reachable today, what surprised, and what's not yet reachable.
@@ -16,6 +16,7 @@ discoveries.
 | 04 | [Universal diff](04-universal-diff/) | Structural diff of two algorithms surfaces "the predicate is the same; the accumulation strategy diverges" — text diff can't see this. |
 | 05 | [NL to recipe](05-nl-to-recipe/) | A 4-rule English grammar parses sentences into arithmetic recipes; NL `the square of 7` interns to the **same NodeID** as hand-built `(mul 7 7)`. |
 | 06 | [Audio as recipe](06-audio-as-recipe/) | A 1-second 440 Hz sine `.wav` composes from a 200-entry table + integer math; same recipe → byte-identical 8044-byte WAV across Go/Rust/TS kernels. Surfaced a sibling-parity gap: TS was missing `write_file_bytes`. |
+| 07 | [Recipe to NL](07-recipe-to-nl/) | A 7-rule walker emits English from arithmetic recipe NodeIDs (`(mul 5 6)` → `the product of five and six`). Round-trip with #05 closes structurally — `node_eq` proves the parsed-back NodeID matches the original; the surface English paraphrases (`square` ↔ `product of N and N`). |
 
 ## What every experiment shares
 
@@ -38,7 +39,7 @@ for d in form/form-samples/cross-modal/*/; do
 done
 ```
 
-## What the four together teach
+## What the seven together teach
 
 The body's surface area for cross-modality is **smaller than the marketing
 slogan and larger than the engineering reflex**.
@@ -72,11 +73,22 @@ The deeper teachings the body holds about all of this:
 
 ## Not in this directory (yet)
 
-Shapes from Urs's prompt that still haven't shipped:
+The reverse roundtrip — recipe → NL description — **landed in #07**.
+The remaining gap is *lexical* round-trip: the substrate identity
+preserves cleanly (`node_eq=1`) but `(mul 7 7)` emits as `the square
+of seven` and the symmetric grammar recognizes only `the product of N
+and N`. One breath of additive rule-mapping closes it.
 
-- **Reverse roundtrip** (recipe → NL description) — sketch-only territory;
-  needs an NL emitter the body doesn't carry yet at the arithmetic
-  altitude. The `nl-emit.fk` track is i18n surface bindings, a different
-  shape than generative arithmetic English.
+Remaining shapes from the cross-modal arc:
 
-Naming the absence so the next breath has somewhere to land.
+- **CSV → Form-table → NL summary** (#6 in NEXT_BREATHS) — three-modality
+  chain.
+- **Image structural diff** (#7) — show structural diff highlights
+  parameter-level deltas, not pixel-level deltas.
+- **Audio → melody recipe → re-synthesis** (#8) — same-modality
+  round-trip with content extraction.
+- **Image → NL description → Image** (#9) — the triangle made literal.
+- **One recipe, four target languages** (#10) — universal-translator's
+  cleanest small proof.
+
+Naming what remains so the next breath has somewhere to land.

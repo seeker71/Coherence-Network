@@ -1,0 +1,7 @@
+(mul 7 7)            -> the square of seven
+(add 4 6)            -> the sum of four and six
+(mul (add 2 3) 4)    -> the product of the sum of two and three and four
+(sub 0 12)           -> negative twelve
+(mul 5 6)            -> the product of five and six
+
+round-trip: NL(r-product) parsed back -> node_eq with original = 1
