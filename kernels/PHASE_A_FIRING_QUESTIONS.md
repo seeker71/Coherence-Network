@@ -84,11 +84,67 @@ its parser is.
 
 ---
 
+## `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` (342 LOC)
+
+**Date:** 2026-05-27 · **Status:** *triple-bound residue — test → parser → emitter*
+
+### What the file does today
+
+Imports `parsePython`, `evalPython`, `emitPython`, `CTOR` directly from
+`./lang-python.ts` and tests their behavior on canonical Python sources.
+A proof-of-shape unit-test suite for the bootstrap parser + evaluator +
+emitter.
+
+### What `python-bmf.fk` + the test bands already replace
+
+Eighteen Form-native test bands live in `form/form-stdlib/tests/`:
+
+- `python-bmf-arithmetic-band.fk` · `python-bmf-attr-band.fk` · `python-bmf-class-band.fk`
+- `python-bmf-comprehension-band.fk` · `python-bmf-coverage.fk` · `python-bmf-decorator-band.fk`
+- `python-bmf-exception-band.fk` · `python-bmf-extra-coverage.fk` · `python-bmf-from-import-band.fk`
+- `python-bmf-fstring-slice-band.fk` · …and 8 more
+
+Each band exercises a Python construct through `python-bmf.fk` rules
+driven by the kernel, sibling-validated on Go + Rust + TypeScript. These
+are the Form-native test surface — same proof-of-shape claims, no host
+language in the test path.
+
+### What still carries
+
+**The coupling to `lang-python.ts`.** This test file exists to prove the
+bootstrap parser's behavior. As long as the bootstrap parser is in the
+parity path, its tests are load-bearing — without them, a regression in
+`parsePython` could land silently. The tests are *not* covered by the
+`python-bmf-*.fk` bands; those test the Form-native path, not the bootstrap.
+
+### What blocks its compost
+
+Same gate as `lang-python.ts` and `lang-python-fk.ts`:
+`PARITY_THIRD_RUNTIME=kernel-bmf` becoming the default. When the bootstrap
+parser stops being in the parity path, its test file's claims become
+redundant — the `python-bmf-*.fk` bands cover the same constructs through
+the live runtime.
+
+### What the body now knows from this attestation
+
+This is **triple-bound residue**: test → parser → emitter. All three compost
+together when their parity gate flips. The pair-bound observation from the
+previous walk extends to a triple: `lang-python.ts` (2,199 LOC) +
+`lang-python-fk.ts` (1,044 LOC) + `lang-python.test.ts` (342 LOC) = **3,585 LOC
+drops together** when `PARITY_THIRD_RUNTIME=kernel-bmf` is the default and the
+manifest's three rows move to RELEASED in the same compost-PR.
+
+The firing-question answer is clean: no deferred breaths. The
+`python-bmf-*.fk` test bands already exist and are validated; the bootstrap
+tests are honest residue waiting on the same parity flip as their unit.
+
+---
+
 ## Next files to walk
 
 Phase A inventory remaining (per manifest):
 
-- `lang-python.ts` (2,199 LOC) — the parser this file is coupled to
+- `lang-python.ts` (2,199 LOC) — the parser these two files are coupled to
 - `ctor-convergence.ts` (672 LOC) — CTOR vocabulary + convergence helpers
 - `lang-python.test.ts` (342 LOC) — bootstrap parser tests
 - `ctor-convergence.test.ts` (358 LOC) — convergence tests
