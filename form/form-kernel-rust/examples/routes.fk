@@ -1,0 +1,29 @@
+; routes.fk — proof-of-shape route map for `form-kernel-rust serve`.
+;
+; Each route is (path handler-closure). The serve subcommand passes the
+; query alist (a list of (key value) string pairs) to 1-arg handlers, or
+; nothing to 0-arg handlers. The handler's return value becomes the HTTP
+; response body via Value::display().
+;
+;   curl http://127.0.0.1:8001/hello       → "Hello from the kernel"
+;   curl http://127.0.0.1:8001/echo?msg=foo → "foo"
+
+; Tiny assoc — find the value for `key` in an alist of (k v) pairs.
+; Returns "" if missing so the response body stays a string.
+(defn assoc (key pairs)
+  (if (eq (len pairs) 0)
+      ""
+      (if (str_eq (head (head pairs)) key)
+          (head (tail (head pairs)))
+          (assoc key (tail pairs)))))
+
+(defn route_hello ()
+  "Hello from the kernel")
+
+(defn route_echo (q)
+  (assoc "msg" q))
+
+(let routes
+  (list
+    (list "/hello" route_hello)
+    (list "/echo"  route_echo)))

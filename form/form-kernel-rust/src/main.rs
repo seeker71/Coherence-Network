@@ -3609,6 +3609,7 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
+  serve --port <p> --routes <file.fk>  HTTP/1.0 listener dispatching to Form recipes
 
 Source adapter modes:
   <file.fk> [more.fk ...]              run .fk files
@@ -3616,6 +3617,261 @@ Source adapter modes:
   --bench                              benchmark run
   --numeric-bench                      numeric kernel comparison"
     );
+}
+
+// ---------------------------------------------------------------------------
+// `serve` — proof-of-shape kernel-as-HTTP-listener
+// ---------------------------------------------------------------------------
+//
+// The deepest move toward Breath 8 of `form/kernel-roadmap.md`: a tiny
+// HTTP/1.0 listener that lives *inside* the kernel binary, parses the
+// request into Form values, looks up a handler closure from a routes.fk
+// file's top-level `routes` binding, walks the closure, and writes the
+// returned value back as the response body.
+//
+// This is gesture, not replacement. FastAPI remains the body's primary
+// doorway; this exists so the body can feel "kernel CAN be the HTTP
+// layer" before betting more of the stack on it. ~50 lines of raw
+// `std::net` HTTP/1.0 — no hyper, no actix, no async runtime. The whole
+// dependency footprint is what already shipped (ureq for `fetch`).
+//
+// routes.fk shape:
+//   (defn route_hello () "Hello from the kernel")
+//   (defn route_echo (q) (dict_get q "msg"))
+//   (let routes (list
+//     (list "/hello" route_hello)
+//     (list "/echo"  route_echo)))
+//
+// A 1-arg handler receives the query as a List of (key value) pairs
+// (an alist; `dict_get` reads from it). A 0-arg handler receives no
+// argument. The walker turns either return value into a string for
+// the response body via `Value::display()`.
+
+fn cli_serve(args: &[String]) -> i32 {
+    // --port <p> --routes <file.fk>
+    let mut port: u16 = 8001;
+    let mut routes_path: Option<String> = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--port" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --port requires an argument");
+                    return 2;
+                }
+                port = match args[i + 1].parse() {
+                    Ok(p) => p,
+                    Err(_) => {
+                        eprintln!("serve: --port must be a number");
+                        return 2;
+                    }
+                };
+                i += 2;
+            }
+            "--routes" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --routes requires an argument");
+                    return 2;
+                }
+                routes_path = Some(args[i + 1].clone());
+                i += 2;
+            }
+            other => {
+                eprintln!("serve: unknown argument: {}", other);
+                return 2;
+            }
+        }
+    }
+    let routes_path = match routes_path {
+        Some(p) => p,
+        None => {
+            eprintln!("serve: --routes <file.fk> is required");
+            return 2;
+        }
+    };
+    let src = match fs::read_to_string(&routes_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("serve: read {}: {}", routes_path, e);
+            return 1;
+        }
+    };
+
+    // Load the routes file into a long-lived kernel + arena. The root
+    // frame holds the `routes` binding after the file runs; each request
+    // gets a child frame so handler-local lets don't pollute the root.
+    let mut k = Kernel::new();
+    let root = read_root_from_source(&mut k, &src);
+    let mut arena = Arena::new();
+    let root_env = arena.new_frame(None);
+    k.active_roots = vec![root];
+    let _ = walk(&mut k, &mut arena, root, root_env);
+
+    let routes_name = k.intern_string("routes").inst;
+    let routes_val = match arena.lookup(root_env, routes_name) {
+        Some(v) => v,
+        None => {
+            eprintln!("serve: {} must bind a top-level `routes` list", routes_path);
+            return 1;
+        }
+    };
+    let route_pairs: Vec<(String, Arc<Closure>)> = match &routes_val {
+        Value::List(xs) => xs
+            .iter()
+            .map(|row| match row {
+                Value::List(ys) if ys.len() == 2 => {
+                    let path = match &ys[0] {
+                        Value::Str(s) => s.clone(),
+                        _ => panic!("serve: route key must be a string"),
+                    };
+                    let cl = match &ys[1] {
+                        Value::Closure(c) => c.clone(),
+                        _ => panic!("serve: route value for {} must be a closure", path),
+                    };
+                    (path, cl)
+                }
+                _ => panic!("serve: each route must be (path closure)"),
+            })
+            .collect(),
+        _ => {
+            eprintln!("serve: `routes` must be a list of (path closure) pairs");
+            return 1;
+        }
+    };
+
+    let listener = match TcpListener::bind(("127.0.0.1", port)) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("serve: bind 127.0.0.1:{}: {}", port, e);
+            return 1;
+        }
+    };
+    eprintln!(
+        "form-kernel-rust serve: listening on 127.0.0.1:{} ({} route{})",
+        port,
+        route_pairs.len(),
+        if route_pairs.len() == 1 { "" } else { "s" }
+    );
+    for r in &route_pairs {
+        eprintln!("  {}", r.0);
+    }
+
+    for incoming in listener.incoming() {
+        let mut stream = match incoming {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        // Read up to 8 KiB of request — enough for line + headers; this
+        // is HTTP/1.0, no chunked bodies, no keep-alive.
+        let mut buf = [0u8; 8192];
+        let n = match stream.read(&mut buf) {
+            Ok(n) => n,
+            Err(_) => continue,
+        };
+        let req = String::from_utf8_lossy(&buf[..n]).to_string();
+        let (method, path, query) = parse_request_line(&req);
+
+        let body: String;
+        let status: &str;
+        if method != "GET" {
+            status = "405 Method Not Allowed";
+            body = format!("method not allowed: {}\n", method);
+        } else if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
+            // Build the query alist as Value::List of (key, value) pairs.
+            let q_alist = Value::List(
+                query
+                    .iter()
+                    .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), Value::Str(v.clone())]))
+                    .collect(),
+            );
+            let cl = cl.clone();
+            let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            if cl.params.len() == 1 {
+                arena.bind(call_frame, cl.params[0], q_alist);
+            } else if cl.params.len() != 0 {
+                status = "500 Internal Server Error";
+                body = format!(
+                    "handler for {} wants {} params; serve passes 0 or 1\n",
+                    path,
+                    cl.params.len()
+                );
+                let _ = stream.write_all(http_response(status, &body).as_bytes());
+                continue;
+            }
+            let result = walk(&mut k, &mut arena, cl.body, call_frame);
+            status = "200 OK";
+            body = result.display();
+        } else {
+            status = "404 Not Found";
+            body = format!("no route for {}\n", path);
+        }
+        let _ = stream.write_all(http_response(status, &body).as_bytes());
+    }
+    0
+}
+
+// Parse the request line "GET /path?k=v HTTP/1.0" into (method, path, query).
+// Query string is decoded as a flat list of (key, value) pairs — sufficient
+// for the proof-of-shape; no percent-decoding beyond '+' → ' '.
+fn parse_request_line(req: &str) -> (String, String, Vec<(String, String)>) {
+    let line = req.lines().next().unwrap_or("");
+    let mut parts = line.split_whitespace();
+    let method = parts.next().unwrap_or("").to_string();
+    let target = parts.next().unwrap_or("/").to_string();
+    let (path, qs) = match target.find('?') {
+        Some(i) => (target[..i].to_string(), target[i + 1..].to_string()),
+        None => (target, String::new()),
+    };
+    let mut query = Vec::new();
+    if !qs.is_empty() {
+        for pair in qs.split('&') {
+            let (k, v) = match pair.find('=') {
+                Some(i) => (pair[..i].to_string(), pair[i + 1..].to_string()),
+                None => (pair.to_string(), String::new()),
+            };
+            query.push((url_decode(&k), url_decode(&v)));
+        }
+    }
+    (method, path, query)
+}
+
+fn url_decode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'+' => {
+                out.push(' ');
+                i += 1;
+            }
+            b'%' if i + 2 < bytes.len() => {
+                let hi = (bytes[i + 1] as char).to_digit(16);
+                let lo = (bytes[i + 2] as char).to_digit(16);
+                if let (Some(h), Some(l)) = (hi, lo) {
+                    out.push(((h * 16 + l) as u8) as char);
+                    i += 3;
+                } else {
+                    out.push(bytes[i] as char);
+                    i += 1;
+                }
+            }
+            other => {
+                out.push(other as char);
+                i += 1;
+            }
+        }
+    }
+    out
+}
+
+fn http_response(status: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.0 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        status,
+        body.len(),
+        body
+    )
 }
 
 fn cli_list(args: &[String]) -> i32 {
@@ -3998,6 +4254,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
         "query" => cli_query(&args[1..]),
         "trace" => cli_trace(&args[1..]),
         "fetch" => cli_fetch(&args[1..]),
+        "serve" => cli_serve(&args[1..]),
         _ => {
             // Source adapter: --expr or <file.fk> [more.fk ...]
             let src = if args[0] == "--expr" {
