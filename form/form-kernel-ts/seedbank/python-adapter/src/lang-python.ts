@@ -95,6 +95,7 @@ export const CTOR = {
   or_: "or",
   not_: "not",
   neg: "neg",
+  in_: "in",
   // Statements
   if_: "if",
   elif_: "elif",
@@ -829,6 +830,7 @@ function parseCmp(k: Kernel, c: Cursor): NodeID | null {
     else if (consume(c, ">=")) ctor = CTOR.ge;
     else if (consume(c, "<")) ctor = CTOR.lt;
     else if (consume(c, ">")) ctor = CTOR.gt;
+    else if (consumeKeyword(c, "in")) ctor = CTOR.in_;
     else break;
     const right = parseAdd(k, c);
     if (right === null) throw new SyntaxError(`python: rhs expected at ${c.pos}`);
@@ -1053,6 +1055,11 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
     // Confirm LHS is a target Python permits (IDENT or ATTR for v1).
     const lhsCtor = capturedCtor(k, e);
     if (lhsCtor === CTOR.ident || lhsCtor === CTOR.attr) {
+    const lhsCtor = capturedCtor(k, e);
+    // CTOR.ident → plain `x = expr`. CTOR.subscript → `d[k] = v`
+    // (dict / list mutation; emitFk lowers via _dict_set so dicts are
+    // immutable-updated). Other targets remain pending.
+    if (lhsCtor === CTOR.ident || lhsCtor === CTOR.subscript) {
       c.pos++; // skip `=`
       skipSpacesAndComments(c);
       const value = parseExpr(k, c);
@@ -1065,6 +1072,8 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
     // Subscript target — not yet supported as an assignment LHS.
     throw new SyntaxError(
       `python: assignment target must be a name or attribute (v1) at ${savedPos}`,
+    throw new SyntaxError(
+      `python: assignment target must be a name or subscript (v1) at ${savedPos}`,
     );
   }
   consumeEndOfLine(c);
@@ -1984,6 +1993,31 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
     case CTOR.tuple_literal: {
       return { kind: "list", list: kids.map((c) => evalNode(k, c, env)) };
     }
+    case CTOR.dict_literal: {
+      // Build a "__dict__"-tagged alist sibling-parity with the kernel's
+      // dict natives. Children are CTOR.dict_entry pairs.
+      const items: Value[] = [{ kind: "str", str: "__dict__" }];
+      for (const entry of kids) {
+        const eKids = capturedChildren(k, entry);
+        items.push(evalNode(k, eKids[0]!, env));
+        items.push(evalNode(k, eKids[1]!, env));
+      }
+      return { kind: "list", list: items };
+    }
+    case CTOR.dict_entry: {
+      // dict_entry is handled by dict_literal; reaching here standalone
+      // means someone built one outside that context. Return a 2-list.
+      return {
+        kind: "list",
+        list: [evalNode(k, kids[0]!, env), evalNode(k, kids[1]!, env)],
+      };
+    }
+    case CTOR.in_: {
+      // `k in container` — dict-key check, list membership, or substring.
+      const needle = evalNode(k, kids[0]!, env);
+      const hay = evalNode(k, kids[1]!, env);
+      return { kind: "bool", bool: pythonIn(needle, hay) };
+    }
     case CTOR.add:
       return numBinop(evalNode(k, kids[0]!, env), evalNode(k, kids[1]!, env), "+");
     case CTOR.sub:
@@ -2055,6 +2089,9 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       // (simple name) and CTOR.attr (attribute write — the __init__
       // shape for classes). Richer targets (tuple unpack, subscript)
       // would dispatch here with their own assignment lowering.
+      // children: [target-node, value-node]. Targets supported:
+      //   ident         → bind in env
+      //   subscript     → dict[k] = v (immutable rebind) or list[i] = v (in place)
       const target = kids[0]!;
       const value = evalNode(k, kids[1]!, env);
       const targetCtor = capturedCtor(k, target);
@@ -2072,12 +2109,48 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       }
       throw new Error(
         `python: assignment target must be a name or attribute (got ${targetCtor})`,
+      }
+      if (targetCtor === CTOR.subscript) {
+        const subKids = capturedChildren(k, target);
+        const container = evalNode(k, subKids[0]!, env);
+        const idx = evalNode(k, subKids[1]!, env);
+        if (isPyDict(container)) {
+          // Find or append the key. Mutates the underlying list in-place
+          // to match Python's dict semantics — d[k] = v changes d for
+          // every alias.
+          const xs = pyDictList(container);
+          for (let i = 1; i + 1 < xs.length; i += 2) {
+            if (pyDictKeyEq(xs[i]!, idx)) {
+              xs[i + 1] = value;
+              return { kind: "null" };
+            }
+          }
+          xs.push(idx, value);
+          return { kind: "null" };
+        }
+        if (container.kind === "list" && idx.kind === "int") {
+          container.list[idx.int] = value;
+          return { kind: "null" };
+        }
+        throw new Error(
+          `python: subscript-assign requires dict or list container`,
+        );
+      }
+      throw new Error(
+        `python: assignment target must be a name or subscript (got ${targetCtor})`,
       );
     }
     case CTOR.subscript: {
-      // children: [value-node, index-node]. Python lst[i] semantics.
+      // children: [value-node, index-node]. Python d[k] / lst[i] / s[i] semantics.
       const v = evalNode(k, kids[0]!, env);
       const i = evalNode(k, kids[1]!, env);
+      if (isPyDict(v)) {
+        const xs = pyDictList(v);
+        for (let j = 1; j + 1 < xs.length; j += 2) {
+          if (pyDictKeyEq(xs[j]!, i)) return xs[j + 1]!;
+        }
+        return { kind: "null" };
+      }
       if (v.kind === "list" && i.kind === "int") {
         const item = v.list[i.int];
         return item ?? { kind: "null" };
@@ -2086,7 +2159,7 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
         return { kind: "str", str: v.str[i.int] ?? "" };
       }
       throw new Error(
-        `python: subscript requires list or str on LHS and int index`,
+        `python: subscript requires dict, list, or str on LHS`,
       );
     }
     case CTOR.def_: {
@@ -2173,8 +2246,16 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       const iter = evalNode(k, kids[1]!, env);
       const body = kids[2]!;
       if (iter.kind !== "list") throw new Error("for: expected iterable");
+      // Iterating a dict yields its keys (Python semantics).
+      const items: Value[] = [];
+      if (isPyDict(iter)) {
+        const xs = pyDictList(iter);
+        for (let i = 1; i + 1 < xs.length; i += 2) items.push(xs[i]!);
+      } else {
+        for (const item of iter.list) items.push(item);
+      }
       let last: Value = { kind: "null" };
-      for (const item of iter.list) {
+      for (const item of items) {
         envBind(env, varNameID, item);
         last = evalNode(k, body, env);
       }
@@ -2520,7 +2601,10 @@ function builtinByName(name: string): ((args: Value[]) => Value) | null {
     case "len":
       return (args) => {
         const v = args[0];
-        if (v?.kind === "list") return { kind: "int", int: v.list.length };
+        if (v?.kind === "list") {
+          if (isPyDict(v)) return { kind: "int", int: (pyDictList(v).length - 1) / 2 };
+          return { kind: "int", int: v.list.length };
+        }
         if (v?.kind === "str") return { kind: "int", int: v.str.length };
         return { kind: "int", int: 0 };
       };
@@ -2588,10 +2672,69 @@ function renderForPrint(v: Value): string {
     case "str":
       return v.str;
     case "list":
+      if (isPyDict(v)) {
+        const xs = pyDictList(v);
+        const parts: string[] = [];
+        for (let i = 1; i + 1 < xs.length; i += 2) {
+          parts.push(`${renderForPrint(xs[i]!)}: ${renderForPrint(xs[i + 1]!)}`);
+        }
+        return "{" + parts.join(", ") + "}";
+      }
       return "[" + v.list.map(renderForPrint).join(", ") + "]";
     default:
       return "<value>";
   }
+}
+
+// Dict tagged-list helpers — shared by evalNode + builtins. Same shape
+// the kernel's _dict_* natives use, so the evaluator and the kernel
+// agree on what counts as a dict. Plain boolean predicate (not a TS
+// type guard) so the "v.kind === 'list'" narrowing after the dict
+// branch still admits the regular list path.
+function isPyDict(v: Value): boolean {
+  return (
+    v.kind === "list" &&
+    v.list.length > 0 &&
+    v.list[0]!.kind === "str" &&
+    (v.list[0] as { kind: "str"; str: string }).str === "__dict__"
+  );
+}
+// Cast a dict-shaped value's underlying list — TS narrowing has been
+// satisfied by isPyDict, this just makes the access ergonomic.
+function pyDictList(v: Value): Value[] {
+  return (v as { kind: "list"; list: Value[] }).list;
+}
+
+function pyDictKeyEq(a: Value, b: Value): boolean {
+  if (a.kind === "str" && b.kind === "str") return a.str === b.str;
+  if (a.kind === "int" && b.kind === "int") return a.int === b.int;
+  return false;
+}
+
+function pythonIn(needle: Value, hay: Value): boolean {
+  if (isPyDict(hay)) {
+    const xs = pyDictList(hay);
+    for (let i = 1; i + 1 < xs.length; i += 2) {
+      if (pyDictKeyEq(xs[i]!, needle)) return true;
+    }
+    return false;
+  }
+  if (hay.kind === "list") {
+    for (const v of hay.list) {
+      if (
+        (needle.kind === "int" && v.kind === "int" && needle.int === v.int) ||
+        (needle.kind === "str" && v.kind === "str" && needle.str === v.str) ||
+        (needle.kind === "bool" && v.kind === "bool" && needle.bool === v.bool)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (needle.kind === "str" && hay.kind === "str") {
+    return hay.str.includes(needle.str);
+  }
+  return false;
 }
 
 function dispatchMethod(k: Kernel, recv: Value, name: string, args: Value[]): Value {
