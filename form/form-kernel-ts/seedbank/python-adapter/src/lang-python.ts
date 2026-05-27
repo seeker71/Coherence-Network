@@ -107,6 +107,7 @@ export const CTOR = {
   expr_stmt: "expr-stmt",
   assign: "assign",
   subscript: "subscript",
+  import_: "import",
   // Function/lambda params
   params: "params",
   param: "param",
@@ -164,10 +165,46 @@ function buildEmissionTemplate(k: Kernel): NodeID {
 // the program structure, not the surface text.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Known kernel-resident module bindings. Each module attribute maps to a
+// flat kernel-native name. `math.sqrt` → `math_sqrt`; `math.pi` → `math_pi`.
+//
+// Imports are noops at runtime — the import statement records aliases in
+// the parser cursor, and subsequent identifiers/attribute accesses are
+// rewritten to call the kernel native directly. Three runtimes converge:
+// CPython resolves math.sqrt through the real module; TS evalPython and
+// form-kernel-rust resolve `math_sqrt` through their native table.
+//
+// Keep this list tight: each entry needs a matching native in the Rust
+// kernel (and the TS kernel for evalPython parity). Demonstrably useful
+// for substrate code is the bar.
+// ---------------------------------------------------------------------------
+
+const KERNEL_MODULES: Record<string, Record<string, string>> = {
+  math: {
+    sqrt: "math_sqrt",
+    pi: "math_pi",
+    floor: "math_floor",
+    ceil: "math_ceil",
+    pow: "math_pow",
+  },
+};
+
+interface ImportState {
+  // Module aliases: alias name → real module name (e.g. `m` → `math`).
+  // `import math` and `import math as m` both populate this; the value
+  // is what we look up in KERNEL_MODULES.
+  moduleAliases: Map<string, string>;
+  // Direct name bindings from `from <module> import <name> [as alias]`:
+  // alias → native name (e.g. `sqrt` → `math_sqrt`).
+  directImports: Map<string, string>;
+}
+
 interface Cursor {
   readonly src: string;
   pos: number;
   indent: number; // current indent level being parsed inside a block
+  imports: ImportState;
 }
 
 function ctorCategory(k: Kernel, ctor: string): NodeID {
@@ -271,6 +308,9 @@ const KEYWORDS = new Set([
   "or",
   "not",
   "in",
+  "import",
+  "from",
+  "as",
 ]);
 
 function readIdentRaw(c: Cursor): string | null {
@@ -554,6 +594,27 @@ function parseAtom(k: Kernel, c: Cursor): NodeID | null {
       c.pos = savedPos;
       return null;
     }
+    // `from <module> import <name>` rewrite: bare identifier `sqrt`
+    // becomes ident("math_sqrt"). If `(` follows, parsePostfix wraps as
+    // a normal call. If not, the name refers to a value (e.g. `pi`); we
+    // synthesize a 0-arg call so the kernel native fires. CPython
+    // resolves the same `pi` through the module's attribute table — same
+    // result, no behavioural divergence.
+    const directNative = c.imports.directImports.get(name);
+    if (directNative !== undefined) {
+      const savedAfter = c.pos;
+      skipSpacesAndComments(c);
+      const followsCall = !atEnd(c) && peek(c) === "(";
+      c.pos = savedAfter;
+      if (followsCall) {
+        return captureNode(k, CTOR.ident, [k.internString(directNative)]);
+      }
+      // Value-import — wrap as 0-arg call so the kernel native fires.
+      return captureNode(k, CTOR.call, [
+        captureNode(k, CTOR.ident, [k.internString(directNative)]),
+        captureNode(k, CTOR.args, []),
+      ]);
+    }
     return captureNode(k, CTOR.ident, [k.internString(name)]);
   }
 
@@ -612,6 +673,32 @@ function parsePostfix(k: Kernel, c: Cursor): NodeID | null {
       if (member === null) {
         c.pos = savedDot;
         break;
+      }
+      // `<module-alias>.<member>` rewrite: if the LHS is a bare ident
+      // whose name is registered as a module alias (`import math`,
+      // `import math as m`), and the member is one the kernel exposes,
+      // produce a direct call to the kernel-native binding. The module
+      // itself never becomes a runtime value — same as CPython's bound-
+      // method resolution shortcut, but happening at parse time.
+      const moduleNative = resolveModuleMember(k, node, member, c);
+      if (moduleNative !== null) {
+        // If followed by '(', collect args; else 0-arg call (constant).
+        skipSpacesAndComments(c);
+        if (peek(c) === "(") {
+          c.pos++;
+          const args = parseArgs(k, c);
+          expect(c, ")");
+          node = captureNode(k, CTOR.call, [
+            captureNode(k, CTOR.ident, [k.internString(moduleNative)]),
+            args,
+          ]);
+        } else {
+          node = captureNode(k, CTOR.call, [
+            captureNode(k, CTOR.ident, [k.internString(moduleNative)]),
+            captureNode(k, CTOR.args, []),
+          ]);
+        }
+        continue;
       }
       // If followed by '(', it's a method call; else attribute.
       skipSpacesAndComments(c);
@@ -857,6 +944,8 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
   if (peekKeyword(c, "for")) return parseForStmt(k, c, lineIndent);
   if (peekKeyword(c, "while")) return parseWhileStmt(k, c, lineIndent);
   if (peekKeyword(c, "return")) return parseReturn(k, c);
+  if (peekKeyword(c, "import")) return parseImportStmt(k, c);
+  if (peekKeyword(c, "from")) return parseFromImportStmt(k, c);
 
   // Expression statement OR assignment.
   // Lookahead: parse an expression, then check for `=` (single-target
@@ -985,6 +1074,130 @@ function currentLineIndentRemaining(c: Cursor): number {
 function consumeEndOfLine(c: Cursor): void {
   skipSpacesAndComments(c);
   if (!atEnd(c) && c.src.charCodeAt(c.pos) === 10) c.pos++;
+}
+
+// resolveModuleMember — when the LHS of `X.Y` is a bare ident `X` that
+// was bound by `import math` (or `import math as X`), return the kernel-
+// native name for `math.Y`. Returns null if X isn't a module alias or Y
+// isn't a known module member; in that case parsePostfix falls through
+// to ordinary method_call shape.
+function resolveModuleMember(
+  k: Kernel,
+  lhs: NodeID,
+  member: string,
+  c: Cursor,
+): string | null {
+  if (capturedCtor(k, lhs) !== CTOR.ident) return null;
+  const nameKid = capturedChildren(k, lhs)[0]!;
+  if (nameKid.level !== Level.TRIVIAL || nameKid.type !== Triv.STRING) return null;
+  const aliasName = k.strs[nameKid.inst] ?? "";
+  const moduleName = c.imports.moduleAliases.get(aliasName);
+  if (moduleName === undefined) return null;
+  const members = KERNEL_MODULES[moduleName];
+  if (members === undefined) return null;
+  const native = members[member];
+  if (native === undefined) {
+    throw new SyntaxError(
+      `python: '${moduleName}' has no kernel-resident attribute '${member}' (have: ${Object.keys(members).join(", ")})`,
+    );
+  }
+  return native;
+}
+
+// `import math` and `import math as m`. The body of the program never
+// references the import-statement node again — it's emitted as a noop
+// at runtime. The real effect lives in the cursor's import table, which
+// the parser consults when rewriting subsequent identifiers and method
+// calls into kernel-native invocations.
+//
+// Only KERNEL_MODULES entries (today: `math`) are recognized. Any other
+// `import X` is an honest error — the substrate-resident module surface
+// is exactly what the kernel has natives for; pretending otherwise would
+// drift CPython away from the kernel runtimes silently.
+function parseImportStmt(k: Kernel, c: Cursor): NodeID {
+  expectKeyword(c, "import");
+  skipSpacesAndComments(c);
+  const moduleName = readIdentRaw(c);
+  if (moduleName === null) {
+    throw new SyntaxError(`python: module name required after 'import' at ${c.pos}`);
+  }
+  if (!(moduleName in KERNEL_MODULES)) {
+    throw new SyntaxError(
+      `python: 'import ${moduleName}' — only kernel-resident modules supported (have: ${Object.keys(KERNEL_MODULES).join(", ")})`,
+    );
+  }
+  // Optional `as <alias>`
+  let alias = moduleName;
+  if (consumeKeyword(c, "as")) {
+    skipSpacesAndComments(c);
+    const a = readIdentRaw(c);
+    if (a === null) {
+      throw new SyntaxError(`python: alias name required after 'as' at ${c.pos}`);
+    }
+    alias = a;
+  }
+  c.imports.moduleAliases.set(alias, moduleName);
+  consumeEndOfLine(c);
+  // The import node is structural — emit/eval treat it as a noop. The
+  // children carry the module name and alias for round-trip / introspection.
+  return captureNode(k, CTOR.import_, [
+    captureNode(k, CTOR.ident, [k.internString(moduleName)]),
+    captureNode(k, CTOR.ident, [k.internString(alias)]),
+  ]);
+}
+
+// `from math import sqrt, pi` and `from math import sqrt as s, pi as p`.
+// Each imported name binds directly to a kernel-native; the parser
+// records the binding so subsequent references to `sqrt` rewrite to
+// `(math_sqrt ...)` and bare references to `pi` rewrite to `(math_pi)`.
+function parseFromImportStmt(k: Kernel, c: Cursor): NodeID {
+  expectKeyword(c, "from");
+  skipSpacesAndComments(c);
+  const moduleName = readIdentRaw(c);
+  if (moduleName === null) {
+    throw new SyntaxError(`python: module name required after 'from' at ${c.pos}`);
+  }
+  if (!(moduleName in KERNEL_MODULES)) {
+    throw new SyntaxError(
+      `python: 'from ${moduleName} import ...' — only kernel-resident modules supported`,
+    );
+  }
+  const moduleMembers = KERNEL_MODULES[moduleName]!;
+  expectKeyword(c, "import");
+  // Comma-separated list of `name [as alias]` entries.
+  const importedNames: NodeID[] = [];
+  while (true) {
+    skipSpacesAndComments(c);
+    const name = readIdentRaw(c);
+    if (name === null) {
+      throw new SyntaxError(`python: name required after 'import' at ${c.pos}`);
+    }
+    const native = moduleMembers[name];
+    if (native === undefined) {
+      throw new SyntaxError(
+        `python: '${moduleName}' has no kernel-resident attribute '${name}' (have: ${Object.keys(moduleMembers).join(", ")})`,
+      );
+    }
+    let alias = name;
+    if (consumeKeyword(c, "as")) {
+      skipSpacesAndComments(c);
+      const a = readIdentRaw(c);
+      if (a === null) {
+        throw new SyntaxError(`python: alias name required after 'as' at ${c.pos}`);
+      }
+      alias = a;
+    }
+    c.imports.directImports.set(alias, native);
+    importedNames.push(
+      captureNode(k, CTOR.ident, [k.internString(alias)]),
+    );
+    if (!consume(c, ",")) break;
+  }
+  consumeEndOfLine(c);
+  return captureNode(k, CTOR.import_, [
+    captureNode(k, CTOR.ident, [k.internString(moduleName)]),
+    ...importedNames,
+  ]);
 }
 
 function parseReturn(k: Kernel, c: Cursor): NodeID {
@@ -1192,7 +1405,12 @@ function parseBlock(k: Kernel, c: Cursor, parentIndent: number): NodeID {
 // ---------------------------------------------------------------------------
 
 export function parsePython(k: Kernel, source: string): NodeID {
-  const c: Cursor = { src: source, pos: 0, indent: 0 };
+  const c: Cursor = {
+    src: source,
+    pos: 0,
+    indent: 0,
+    imports: { moduleAliases: new Map(), directImports: new Map() },
+  };
   const stmts: NodeID[] = [];
   while (true) {
     skipBlankLines(c);
@@ -1651,6 +1869,12 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
       for (const s of kids) last = evalNode(k, s, env);
       return last;
     }
+    case CTOR.import_:
+      // Noop at runtime — the parser already rewrote member accesses to
+      // resolve through k.natives at the call site (kernel.natives carries
+      // the math_sqrt / math_pi / math_floor / math_ceil / math_pow
+      // bindings registered alongside the other Python builtins).
+      return { kind: "null" };
     case CTOR.expr_stmt:
       return evalNode(k, kids[0]!, env);
     case CTOR.int_literal:

@@ -237,12 +237,26 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
   switch (ctor) {
     case CTOR.module: {
       // Module is a sequence of statements. Wrap in (do ...) so the
-      // kernel reader treats them as one program. Single-statement
-      // modules emit bare to keep the .fk minimal.
-      const parts = kids.map((c: NodeID) => emit(k, c, opts));
+      // kernel reader treats them as one program. Import statements
+      // are noops at runtime — drop them from the emitted .fk rather
+      // than emitting (do "import"). Single-statement modules emit
+      // bare to keep the .fk minimal.
+      const parts: string[] = [];
+      for (const c of kids) {
+        if (capturedCtor(k, c) === CTOR.import_) continue;
+        parts.push(emit(k, c, opts));
+      }
+      if (parts.length === 0) return "false";
       if (parts.length === 1) return parts[0]!;
       return `(do ${parts.join(" ")})`;
     }
+    case CTOR.import_:
+      // Imports never compile to a runtime instruction — the parser
+      // already rewrote member accesses to call the kernel native
+      // directly. An import node appearing outside a module top-level
+      // (e.g. inside a function — currently unreachable) emits the
+      // same noop.
+      return "false";
     case CTOR.expr_stmt:
       return emit(k, kids[0]!, opts);
 

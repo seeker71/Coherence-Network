@@ -23,7 +23,7 @@ PARITY_FILES=(
     "examples/python_lambda_demo.py"
     "examples/python_string_demo.py"
     "examples/python_float_demo.py"
-    "examples/python_typeann_demo.py"
+    "examples/python_import_demo.py"
 )
 
 # Locate the native binary. The script lives at
