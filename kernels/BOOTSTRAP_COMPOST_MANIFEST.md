@@ -163,6 +163,55 @@ side becomes a thin client (or disappears).
 
 ---
 
+## Phase D — Foundational persistence + infrastructure
+
+Surfaced by the `orm.py` firing-question walk
+([`PHASE_A_FIRING_QUESTIONS.md`](PHASE_A_FIRING_QUESTIONS.md) — *Shape 2*).
+These files aren't parser-shape residue waiting on a parity flip; they're
+**foundational substrate machinery** — ORM tables, atomicity gates,
+content-addressed storage helpers. Their compost gate is different from
+Phase A/B/C.
+
+**Gate per file:** the body has a **Form-native persistence story** — a
+durable store that the kernel writes/reads with the same atomicity guarantee
+`orm.py`'s UNIQUE constraint provides, with sibling-kernel portability
+(Go/Rust/TS can all read/write the same store). Possible shapes:
+
+1. Kernel-native serialization to `.fkb` Form-binary artifacts as the
+   canonical store (closest to the audit's #10 single-binary-distribution
+   breath)
+2. Kernel-native binding to PG/SQLite directly (replaces SQLAlchemy without
+   changing the backend)
+3. A hybrid — kernel-native primitives walk an underlying SQLAlchemy /
+   PG / SQLite layer, but the *contract* is Form-side
+
+This is a **much bigger arc** than Phase A's parity flip. The audit names it
+as the #10 next breath. The manifest carries the named shape so future
+sessions know which phase a substrate-Python file belongs to before assuming
+the parser discipline fits.
+
+### Phase D candidates (initial inventory)
+
+The wellness probe's wider-perimeter measurement (after #2089) sees 30
+substrate-Python modules totaling ~16,362 LOC. The 25 unnamed ones (beyond
+Phase C's 5) are awaiting firing-questions. Likely Phase D candidates from
+that pool:
+
+| File | Approx LOC | Why Phase D |
+|---|---|---|
+| `api/app/services/substrate/orm.py` | 101 | SQLAlchemy ORM tables, atomicity gate (walked in `PHASE_A_FIRING_QUESTIONS.md`) |
+| `api/app/services/substrate/substrate_strings.py` | 109 | String interning subsystem; foundational |
+| `api/app/services/substrate/kernel.py` | ~745 | Kernel core; mixed — some parts Form-native today, some persistence-bound |
+
+Each future firing-question that lands on a Phase D candidate **adds a row
+here**, not in Phase A. The manifest carries all four shapes; the discipline
+knows where each file belongs.
+
+**Phase D total: TBD** — requires firing-questions on each candidate to
+confirm Shape 2 classification + LOC count.
+
+---
+
 ## Summary
 
 | Phase | What | LOC named for compost |
@@ -170,7 +219,8 @@ side becomes a thin client (or disappears).
 | A | Bootstrap parsers + emitters (Python adapter + TS adapter) | **5,781** |
 | B | Adapter CLIs + scripts + emitted .fk files | **714** (~+20 .fk files) |
 | C | Python bridge + form_runtime + self-host registry | **2,938** + utility-router rows |
-| **Total** | | **~9,433 LOC** of bootstrap tissue with named compost gates |
+| D | Foundational persistence + infrastructure | **TBD** (firing-questions in flight) |
+| **Total** | | **~9,433 LOC + Phase D** of bootstrap tissue with named compost gates |
 
 ---
 
