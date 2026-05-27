@@ -140,6 +140,80 @@ tests are honest residue waiting on the same parity flip as their unit.
 
 ---
 
+## The wider perimeter — two shapes of compost
+
+The wellness probe (after #2084) surfaces a fact the manifest's named subset
+hides: `api/app/services/substrate/` has **30 modules, 16,362 LOC**, but the
+manifest names only 5 files / 3,328 LOC. The other 25 files are bootstrap
+*in some sense* — they're host-language code where Form-native counterparts
+would eventually live. But the firing question reveals **the perimeter is
+heterogeneous**: not all 25 are the same kind of compost target.
+
+### Shape 1 — Parser-side residue (the original firing-question discipline)
+
+What the discipline above walks. Files where the corresponding `*-bmf.fk`
+grammar (or emitter) does the same work via Form-native rules; the compost
+gate is the parity-suite's `PARITY_THIRD_RUNTIME` flip.
+
+### Shape 2 — Foundational persistence + infrastructure (new)
+
+Files that hold the body's runtime tissue — table definitions, ORM models,
+string interning, atomicity gates. Their compost gate is *not* a parity
+flip; it's a **substrate-storage rewrite** — Form-native persistence,
+content-addressed durable store. A separate (larger) arc.
+
+## `api/app/services/substrate/orm.py` (101 LOC) — Shape 2
+
+**Date:** 2026-05-27 · **Status:** *foundational infrastructure, not residue*
+
+### What the file does today
+
+Defines two SQLAlchemy ORM tables that *are* the substrate's kernel storage:
+
+- `substrate_nodes` — per-level interning store. Identity is content-addressed
+  by `(package, level, domain, serialized)`. The UNIQUE constraint is the
+  Make_SelfID atomicity gate — INSERT either succeeds with a fresh `node_id`
+  or fails on conflict, then we read the existing row.
+- `substrate_named_cells` — the registry of named instances. Each cell is
+  `(Recipe access, Base blueprint, Name, CTOR recipe)`.
+
+Both portable across SQLite and PostgreSQL per CLAUDE.md schema discipline.
+
+### What `python-bmf.fk` + Form-native primitives replace
+
+**Nothing.** This file isn't parser-shape residue — it's **persistence
+infrastructure**. The kernel's content-addressed numeric lattice needs
+*some* durable store; `orm.py` is one implementation of that contract.
+
+### What still carries
+
+Atomicity. Portability (SQLite + Postgres). FastAPI/SQLAlchemy compatibility.
+The actual production substrate runs through these models.
+
+### What blocks its compost
+
+This file composts only when the body has a **Form-native persistence story**:
+
+1. Same atomicity guarantee (`intern_node` substrate-write native gives the
+   kernel side; the durable store underneath needs naming)
+2. Replaces SQLAlchemy — either kernel-native serialization (`.fkb`
+   artifacts as canonical store) or kernel-native binding to PG/SQLite
+3. Preserves cross-language portability (sibling kernels read/write same store)
+
+A much bigger arc than a parity-suite flip.
+
+### What the body now knows from this attestation
+
+The compost manifest's three phases need a **fourth shape**: **Phase D —
+foundational persistence**. Files like `orm.py`, `substrate_strings.py`,
+parts of `kernel.py` belong here. Their compost is gated on Form-native
+persistence, not on the parity selector. The audit's #10 next breath
+(single-binary distribution) touches this — when the kernel ships as a
+distributable binary with its own persistence story, Phase D files compost
+together.
+
+---
+
 ## Next files to walk
 
 Phase A inventory remaining (per manifest):
