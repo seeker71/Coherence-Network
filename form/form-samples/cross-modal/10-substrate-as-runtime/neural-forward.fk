@@ -1,0 +1,104 @@
+; neural-forward.fk — a one-layer linear+ReLU neural network as a Form recipe.
+;
+; The translator IS substrate machinery, not an external binary. Weights live as
+; content-addressed tensor cells; inference is a recipe the kernel walks. This
+; demo runs a 4×4 weight matrix times a 4-vector through ReLU and sums, three-way.
+;
+; W = [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16]]
+; x = [1, 1, 1, 1]
+; y = W @ x = [10, 26, 42, 58]
+; ReLU(y) = [10, 26, 42, 58] (all positive)
+; sum(ReLU(y)) = 136
+;
+; This is scalar matmul through the interpreter — slow at 4×4 throughput, but
+; the architectural shape is right: the substrate carries tensors as recipes,
+; ops compose, sibling-three-way attests outputs. The throughput optimization
+; (kernel JIT to BLAS/SIMD for tensor-op recipes) is the next layer.
+;
+; What this proves:
+;   - Tensors as substrate-resident recipes (NodeID identity for weights)
+;   - Neural inference is a recipe the kernel walks
+;   - Three-way sibling parity holds at the tensor-walking altitude
+;
+; What this doesn't prove:
+;   - Throughput (4×4 in seconds, not GB/s — we need the JIT layer)
+;   - Float support (this is integer-scaled; needs Go floats sibling-parity)
+;   - Trained weights (this uses hand-coded weights; real weights would be
+;     read from substrate-resident cells loaded from disk or distributed)
+;
+; The destination: gigabytes of audio/video streaming through tensor recipes
+; the kernel JIT-vectorizes. This demo is the substrate-side handshake; the
+; throughput layer is the engineering work that follows.
+
+(do
+    ;; --- helpers (Go kernel lacks `nth` and `nil?` natives) ---------
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs)
+            (nth (tail xs) (sub i 1))))
+
+    ;; --- tensor schema (dialect-99 experimental) ---------------------
+    (let CAT-TENSOR (make_nodeid 1 2 99 900))
+    (let CAT-SHAPE  (make_nodeid 1 2 99 901))
+    (let CAT-DATA   (make_nodeid 1 2 99 902))
+
+    ;; A tensor is a recipe with two children: shape (list of dim-ints) and
+    ;; data (list of int-trivials, row-major). NodeID identity over the
+    ;; entire shape + every data element — content-addressed.
+    (defn tensor (shape-list data-list)
+        (intern_node CAT-TENSOR
+            (list (intern_node CAT-SHAPE shape-list)
+                  (intern_node CAT-DATA  data-list))))
+
+    (defn tensor-data (t)
+        (node_children (head (tail (node_children t)))))
+
+    ;; --- ReLU and matvec primitives ----------------------------------
+    (defn relu (v) (if (lt v 0) 0 v))
+
+    ;; Inner: sum_k W[i,k] * x[k] for fixed i, walking k from 0..K-1.
+    (defn dot-row (W-cells x-cells K i k acc)
+        (if (eq k K) acc
+            (do
+                (let Wik (node_value (nth W-cells (add (mul i K) k))))
+                (let xk  (node_value (nth x-cells k)))
+                (dot-row W-cells x-cells K i (add k 1)
+                         (add acc (mul Wik xk))))))
+
+    ;; Outer: sum_i ReLU(dot-row(W, x, K, i, 0, 0))
+    (defn sum-relu-matvec (W-cells x-cells N K i acc)
+        (if (eq i N) acc
+            (do
+                (let yi (dot-row W-cells x-cells K i 0 0))
+                (sum-relu-matvec W-cells x-cells N K (add i 1)
+                                  (add acc (relu yi))))))
+
+    ;; --- the actual weights and input (substrate-resident) -----------
+    ;;
+    ;; W = [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16]]
+    ;; x = [1,1,1,1]
+
+    (let W
+        (tensor
+            (list (intern_trivial_int 4) (intern_trivial_int 4))
+            (list (intern_trivial_int 1)  (intern_trivial_int 2)
+                  (intern_trivial_int 3)  (intern_trivial_int 4)
+                  (intern_trivial_int 5)  (intern_trivial_int 6)
+                  (intern_trivial_int 7)  (intern_trivial_int 8)
+                  (intern_trivial_int 9)  (intern_trivial_int 10)
+                  (intern_trivial_int 11) (intern_trivial_int 12)
+                  (intern_trivial_int 13) (intern_trivial_int 14)
+                  (intern_trivial_int 15) (intern_trivial_int 16))))
+
+    (let x
+        (tensor
+            (list (intern_trivial_int 4))
+            (list (intern_trivial_int 1) (intern_trivial_int 1)
+                  (intern_trivial_int 1) (intern_trivial_int 1))))
+
+    ;; --- forward pass: sum(ReLU(W @ x)) ------------------------------
+    ;;
+    ;; Expected: y = [10, 26, 42, 58], ReLU is identity (all positive),
+    ;; sum = 136. Three-way attested by validate.sh.
+
+    (sum-relu-matvec (tensor-data W) (tensor-data x) 4 4 0 0))
