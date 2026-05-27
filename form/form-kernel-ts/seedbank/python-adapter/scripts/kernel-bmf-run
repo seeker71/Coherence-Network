@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# kernel-bmf-run — Form-native Python entry point.
+#
+# Closes G6 of kernels/PYTHON_BMF_CONTRACT.md: the orchestration breath
+# between surface-syntax preludes (python-bmf.fk and friends) and the
+# standalone kernel binary that reads S-expression artifacts.
+#
+# Interface (per parity_suite.sh):
+#   kernel-bmf-run <file.py>  → prints the final expression's value to stdout
+#
+# What this script does:
+#   1. Pre-compile the surface-syntax preludes (json.fk, cache.fk,
+#      form-ontology-loader.fk, engine.fk, compiler.fk, source-compiler.fk,
+#      grammars/python-bmf.fk) using the Go kernel as a compiler. This is
+#      the same dance form/validate.sh's prepare_sources() runs — it
+#      detects `section [...]` syntax and lowers each file to a kernel-
+#      readable S-expression artifact via form-source-compile-file.
+#   2. Emit a driver .fk that calls (python-parse-module-file <path>) and
+#      reports a value derived from the parsed module.
+#   3. Invoke the Rust kernel against (compiled preludes + driver), printing
+#      the kernel's final value.
+#
+# What this script does NOT do (yet — honest pending):
+#   - Walk PY-BMF-* recipes back to Python runtime values. The grammar at
+#     form-stdlib/grammars/python-bmf.fk parses Python into PY-BMF-CALL /
+#     PY-BMF-IF / PY-BMF-ASSIGN / PY-BMF-DEF recipes, but the closure-
+#     scoping interpreter that walks those recipes to a value (G4 from
+#     PYTHON_BMF_CONTRACT.md) is the next breath. Until G4 lands, the
+#     value this script reports is the parsed-module statement count, NOT
+#     the program's CPython result.
+#
+# So `kernel-bmf-run examples/python_demo.py` prints the count of top-
+# level statements (≠ 40949). The three-way parity gate against CPython's
+# program value reaches green when G4 (and G3 precedence climbing) ship.
+# `PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh` will name
+# every demo as "diverges from CPython, gated on G3+G4" until then —
+# honest red, not faked green.
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "usage: kernel-bmf-run <file.py>" >&2
+    exit 2
+fi
+
+target_py="$1"
+if [[ ! -f "$target_py" ]]; then
+    echo "kernel-bmf-run: file not found: $target_py" >&2
+    exit 2
+fi
+
+# Resolve target_py to an absolute path so the driver works regardless of
+# where the kernel runs from.
+target_py_abs="$(cd "$(dirname "$target_py")" && pwd)/$(basename "$target_py")"
+
+# Locate the form/ directory — siblings live as form/form-kernel-{go,rust}.
+# This script lives at form/form-kernel-ts/seedbank/python-adapter/scripts/.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FORM_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+
+GO_BIN="$FORM_DIR/form-kernel-go/bin-go"
+RS_BIN="$FORM_DIR/form-kernel-rust/target/release/form-kernel-rust"
+
+if [[ ! -x "$GO_BIN" ]]; then
+    echo "kernel-bmf-run: go kernel not built at $GO_BIN" >&2
+    echo "  build it: (cd $FORM_DIR/form-kernel-go && go build -o bin-go .)" >&2
+    exit 2
+fi
+if [[ ! -x "$RS_BIN" ]]; then
+    echo "kernel-bmf-run: rust kernel not built at $RS_BIN" >&2
+    echo "  build it: (cd $FORM_DIR/form-kernel-rust && cargo build --release)" >&2
+    exit 2
+fi
+
+# Preludes the parse path needs. Order matters: core, json, cache, ontology
+# loader, engine, compiler, source-compiler, then the python grammar. This
+# mirrors the workload in PYTHON_BMF_CONTRACT.md's "How to run the proof".
+PRELUDES=(
+    "form-stdlib/core.fk"
+    "form-stdlib/json.fk"
+    "form-stdlib/cache.fk"
+    "form-stdlib/form-ontology-loader.fk"
+    "form-stdlib/engine.fk"
+    "form-stdlib/compiler.fk"
+    "form-stdlib/source-compiler.fk"
+    "form-stdlib/grammars/python-bmf.fk"
+)
+
+# Working directory for compiled artifacts. cleanup() removes it on any exit.
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/kernel-bmf.XXXXXX")"
+cleanup() { rm -rf "$work_dir"; }
+trap cleanup EXIT
+
+# prepare_sources — mirrors form/validate.sh prepare_sources(). For any
+# prelude that uses surface syntax (lines starting with `section [`),
+# compile it through the Go kernel via form-source-compile-file. Files
+# that are already S-expression syntax pass through unchanged.
+cd "$FORM_DIR"
+prepared=()
+for src in "${PRELUDES[@]}"; do
+    if grep -Eq '^[[:space:]]*section \[' "$src" 2>/dev/null; then
+        safe="${src//\//__}"
+        out="$work_dir/$safe"
+        driver="$work_dir/compile-${safe}.fk"
+        printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
+        "$GO_BIN" \
+            "form-stdlib/json.fk" "form-stdlib/cache.fk" \
+            "form-stdlib/form-ontology-loader.fk" \
+            "form-stdlib/source-compiler.fk" \
+            "$driver" >/dev/null
+        prepared+=("$out")
+    else
+        prepared+=("$src")
+    fi
+done
+
+# Emit the driver. Until G4 (closure-walking interpreter for PY-BMF-*
+# recipes) lands, the honest report from a Form-native kernel pass over a
+# .py file is the parsed-module statement count. When G4 lands, this
+# driver swaps to walk the recipe tree to its program value, and the
+# parity gate goes green at the actual CPython output.
+driver="$work_dir/kernel-bmf-driver.fk"
+cat > "$driver" <<DRIVER_EOF
+(do
+    (let module (python-parse-module-file "$target_py_abs"))
+    (let statements (python-module-statements module))
+    (len statements))
+DRIVER_EOF
+
+# Run the Rust kernel over the prepared preludes + driver.
+"$RS_BIN" "${prepared[@]}" "$driver"

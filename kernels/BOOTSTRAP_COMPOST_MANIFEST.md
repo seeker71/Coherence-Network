@@ -254,13 +254,25 @@ ritual.
 | Date | PR | Shape proved | Selector | Sibling parity |
 |---|---|---|---|---|
 | 2026-05-27 | [#2071](https://github.com/seeker71/Coherence-Network/pull/2071) | Python arithmetic binary ops (`a - b`, `x * y`, `left / right`, `p ** q`) | `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` returns `25304` | Go ✓ · Rust ✓ · TypeScript ✓ (131/131 in `./validate.sh`) |
+| 2026-05-27 | `claude/g6-kernel-bmf-run` | G6 — binary entry-point orchestration. `kernel-bmf-run <file.py>` exists, pre-compiles surface-syntax preludes via the Go-kernel-as-compiler, invokes the Rust kernel with a `python-parse-module-file` driver. The `command -v kernel-bmf-run` gate in `parity_suite.sh` opens — `PARITY_THIRD_RUNTIME=kernel-bmf` is runnable end-to-end | `form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run examples/python_demo.py` returns `15` (top-level statement count from `python-parse-module-file`) | Go ✓ · Rust ✓ · TypeScript ✓ (same `len-of-statements` driver run through `./validate.sh` returns `15` on all three) |
+
+**What G6 closes and what stays open.** G6 was the orchestration gap — the
+pieces existed (Go compiler, Rust walker, Python BMF grammar) with no binary
+on PATH to drive them together. That gap closes: `kernel-bmf-run` is the
+walking shape. What G6 does NOT close: the parsed PY-BMF-* recipes are not
+yet walked back to Python runtime values, so `kernel-bmf-run python_demo.py`
+returns the statement count (15), not the program's CPython value (40949).
+The driver swaps to a recipe-walking expression in the same script when G4
+(closure interpreter) lands; the orchestration shape stays.
 
 **Open contract for the next PROVEN rows:** `kernels/PYTHON_BMF_CONTRACT.md`
 G1 (automatic rule dispatcher) unlocks composition of these arithmetic rules
 into full expressions; G2 (statement grouping) unlocks `def` / `if` /
 `return`; G3 (precedence climbing) makes `1 + 2 * 3` parse correctly; G4
 (closure interpreter) is the gate that lets PROVEN rows progress to
-**COMPOST READY** for the matching Phase-A file.
+**COMPOST READY** for the matching Phase-A file. With G6 closed, every
+future G1–G4 increment is testable through `kernel-bmf-run` — no further
+orchestration breath is needed.
 
 **The first walking step:** with this row recorded, the manifest's lifecycle
 is no longer a future-tense convention. It has its first arrival. Every

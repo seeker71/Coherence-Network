@@ -1554,6 +1554,7 @@ impl Kernel {
                 a.bind(frame, *p, call_args[i].clone());
             }
             walk(k, a, cl.body, frame)
+        });
         // --- Dict natives ---------------------------------------------------
         // Dicts are first-class but ride on Value::List with a "__dict__"
         // tag in slot 0, followed by alternating key/value pairs:
@@ -1880,6 +1881,9 @@ impl Kernel {
                     }
                 }
                 i += 2;
+            }
+            Value::List(out)
+        });
         // --- Substrate read primitives — kernel reaches the REST surface ----
         // The body's substrate lives behind /api/substrate/*. Until now the
         // kernel could compute over data it was handed but could not pull

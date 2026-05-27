@@ -76,6 +76,13 @@ fi
 # `src/main.ts` path the README documents stays honest.
 cd "$ADAPTER_DIR"
 
+# Put this script's own directory on PATH so `command -v kernel-bmf-run`
+# finds the sibling binary without operator-side installation. The
+# kernel-bmf-run script lives next to this one when G6 of
+# kernels/PYTHON_BMF_CONTRACT.md is closed.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PATH="$SCRIPT_DIR:$PATH"
+
 # Resolve the third-runtime invoker. The interface is:
 #   third_runtime_run <file.py>  →  prints the final expression's value to stdout
 #
