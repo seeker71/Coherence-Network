@@ -42,31 +42,27 @@ Blueprint per shape**. Today the body holds three for arithmetic alone.
 
 **Win:** one Blueprint per shape from the moment the parser emits. Cross-modal convergence holds end-to-end.
 
-### Shape B — Lift maps BINOP → MATH at recipe time
+### Shape B — Lift maps BINOP → MATH at recipe time — **LANDED 2026-05-27 (#2113)**
 
-`python-bmf-lift.fk` (already exists from #2100) translates statement-tree → PY-BMF recipes. Extend it: when it sees a BINOP shape with `+ - * /`, intern as `RBasic.MATH` (1, 2, 12, 1–4) instead of `PY-BMF-BINOP`.
+`python-bmf-lift.fk`'s `lift-binop-loop` now switches on the operator: `+ - * /` intern as `MATH-PLUS/MINUS/MULTIPLY/DIVIDE` (NodeIDs `(1, 2, 12, 1..4)`, positional children, no op-string-leaf). `** // %` stay on `PY-BMF-BINOP` until MATH instances exist for them. `python-bmf-eval.fk` gained a MATH-12 arm that dispatches on `node_inst`.
 
-**Cost (refined honestly):** *not* the one-branch change the first draft claimed.
-The honest closing breath is **two changes**:
-1. `python-bmf-lift.fk:206` — in `lift-binop-loop`, switch on `op` and intern
-   under `MATH-PLUS/MINUS/MULTIPLY/DIVIDE` for `+ - * /`; keep
-   `PY-BMF-BINOP` for `** // %` (no MATH instances exist for those today).
-2. `python-bmf-eval.fk:322` — add a MATH-12 arm that dispatches on the
-   instance (1=add, 2=sub, 3=mul, 4=div) and walks the two children.
-   The existing `PY-BMF-BINOP` arm stays for `** // %` until those land
-   in MATH too.
+**The substrate-truth claim of Shape B is attestable:** a hand-built `(intern_node MATH-PLUS (list a b))` and a Python-lifted `"7 + 3"` `node_eq` to `1` across all three sibling kernels. Cell 10 of `tests/python-bmf-lift-band.fk` is the proof.
 
-**Why the refinement:** the audit's first framing implied the interpreter
-already had a MATH arm (because bootstrap supposedly emitted MATH). It
-doesn't — bootstrap emits LIST-34 with operator NameIDs (see top of doc).
-Adding the MATH arm is part of the breath.
+**Honest scope — what landed, what didn't:**
 
-**Win:** unification happens at the lift layer. Parser stays simple.
-Form-native Python arithmetic interns as `@1.2.12.{1..4}` — the same
-Blueprint NodeID the (pure-Form) `(intern_node CAT-PLUS …)` interns to.
-**Cross-modal at the math-primitive layer becomes substrate-truth for
-arithmetic.** The bootstrap path (LIST-34) remains separate until Phase A
-composts — but that compost is named and walking.
+- Unified at the BINOP layer for `+ - * /`. ✅
+- Integer **leaves** still wrap in `PY-BMF-INT(value)` on both the hand-built reference and the lifted recipe. The convergence test makes this explicit by building both sides with the same leaf shape. Bare-int vs `PY-BMF-INT(...)` leaves are a *next* breath, not Shape B's scope.
+- `** // %` not yet unified; they continue interning as `PY-BMF-BINOP`.
+- The bootstrap path (LIST-34) remains separate — that compost is Phase A and walks on its own gate.
+
+**The shape that landed (two changes, +85 / -6 LOC):**
+
+1. `python-bmf-lift.fk` — `lift-binop-loop` switches on `op`, interns under `MATH-PLUS/MINUS/MULTIPLY/DIVIDE` for `+ - * /`, keeps `PY-BMF-BINOP` for `** // %`.
+2. `python-bmf-eval.fk` — new MATH-12 arm before the existing `PY-BMF-BINOP` arm, dispatched by `(eq node_pkg 1)` + `(eq node_level 2)` + `(eq node_type 12)`, then `node_inst` selects `add`/`sub`/`mul`/`div`.
+
+**Why this needed two changes** (first draft's "one-branch" claim composted): the audit's framing implied the interpreter already had a MATH arm because bootstrap supposedly emitted MATH. It didn't — bootstrap emits LIST-34 with operator NameIDs (see top of doc). Adding the MATH arm was part of the breath.
+
+**What landed:** unification happens at the lift layer. Parser stays simple. Form-native Python arithmetic for `+ - * /` interns as `@1.2.12.{1..4}` — the same Blueprint NodeID a hand-built `(intern_node MATH-PLUS …)` interns to. **Cross-modal at the math-primitive layer is substrate-truth for arithmetic.** The bootstrap path (LIST-34) remains separate; Phase A composts on its own gate.
 
 ### Shape C — Both stay; rename dialect-99 to be a *view* on MATH
 
