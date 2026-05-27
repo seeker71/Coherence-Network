@@ -1,0 +1,92 @@
+; preludes: form-stdlib/emit-engine.fk form-stdlib/seedbank/codec.fk form-stdlib/seedbank/grammars/json.fk form-stdlib/seedbank/grammars/yaml.fk form-stdlib/seedbank/grammars/markdown.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/emits/json.fk form-stdlib/seedbank/emits/yaml.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/typescript.fk form-stdlib/seedbank/emits/go.fk form-stdlib/seedbank/emits/rust.fk form-stdlib/seedbank/emits/form.fk form-stdlib/seedbank/emits/sql.fk form-stdlib/seedbank/emits/xml.fk form-stdlib/seedbank/emits/html.fk form-stdlib/seedbank/emits/css.fk form-stdlib/seedbank/emits/image.fk form-stdlib/seedbank/emits/audio.fk form-stdlib/seedbank/emits/video.fk form-stdlib/seedbank/emits/model.fk form-stdlib/seedbank/universal-emit.fk
+; tests/form-binary-multi-emit.fk — the universal translator made visible
+;
+; The spec's load-bearing demand: a Form binary is the substrate source
+; of truth; native code in any tongue emits from it through ONE engine
+; with each tongue as DATA.
+;
+; This proof closes the loop end-to-end through binary:
+;   1. Build a tiny function-decl Recipe in memory using universal-emit
+;      (the target-neutral semantic IR).
+;   2. write_form_binary to disk — Form-callable artifact writer.
+;   3. read_form_binary back from disk — same NodeID identity preserved.
+;   4. Walk the loaded Recipe through emit-all across all 16 targets
+;      via the same registry — Python, TypeScript, Go, Rust, JSON, YAML,
+;      Markdown, SQL, XML, HTML, CSS, Form, Image, Audio, Video, Model.
+;   5. Every target produces non-empty text from the same loaded binary.
+;
+; No host-language emitter. No source-text generator. No Form graph
+; interpreter. One engine. Sixteen tongues. The binary speaks them all.
+
+(do
+    ;; ── Step 1: build the source Recipe — `def double(x): return x * 2`
+    ;; in universal semantic IR, target-neutral. The same Recipe will
+    ;; render in every tongue without any per-tongue branching here.
+    (let body
+        (emit-return
+            (emit-math-op "*"
+                (emit-local-access "x")
+                (intern_trivial_int 2))))
+    (let source-recipe
+        (emit-function-decl "double" (emit-ident "x") body))
+
+    ;; ── Step 2: write to disk as .fkb (artifact format read_form_binary
+    ;; reads — FORMBIN2 with string-table header). This is the same
+    ;; format the Go/Rust/TS --emit-binary CLI mode produces.
+    (let path "/tmp/form-binary-multi-emit.fkb")
+    (let bytes-written (write_form_binary path source-recipe))
+
+    ;; ── Probe 1: write succeeded (byte count > 0; -1 on failure)
+    (let probe-1 (if (gt bytes-written 0) 1 0))
+
+    ;; ── Step 3: read it back through the binary-sensing primitive
+    (let loaded (read_form_binary path))
+
+    ;; ── Probe 2: loaded NodeID equals the original — content-addressed
+    ;; identity survives the disk round-trip
+    (let probe-2 (if (node_eq source-recipe loaded) 1 0))
+
+    ;; ── Step 4: build the 16-target registry. ONE engine, every tongue
+    ;; as a row. No per-target branching in the dispatcher itself.
+    (let registry
+        (list
+            (list "json"        json-templates)
+            (list "yaml"        yaml-templates)
+            (list "markdown"    markdown-templates)
+            (list "python"      python-templates)
+            (list "typescript"  typescript-templates)
+            (list "go"          go-templates)
+            (list "rust"        rust-templates)
+            (list "form"        form-templates)
+            (list "sql"         sql-templates)
+            (list "xml"         xml-templates)
+            (list "html"        html-templates)
+            (list "css"         css-templates)
+            (list "image"       image-templates)
+            (list "audio"       audio-templates)
+            (list "video"       video-templates)
+            (list "model"       model-templates)))
+
+    ;; ── Probe 3: registry holds 16 targets
+    (let names (list-targets registry))
+    (let probe-3 (len names))
+
+    ;; ── Step 5: fan out the LOADED-from-disk Recipe through every
+    ;; tongue. The dispatcher walks the same Recipe tree 16 times,
+    ;; only the template table changes.
+    (let fan-out (emit-all loaded registry))
+
+    ;; ── Probe 4: every target emitted non-empty text from the binary
+    (defn count-nonempty (acc entry)
+        (if (gt (str_len (head (tail entry))) 0)
+            (add acc 1) acc))
+    (let probe-4 (foldl count-nonempty 0 fan-out))
+
+    ;; ── Probe 5: the Python emission carries the function shape — a
+    ;; structural sanity check that the loaded binary still holds what
+    ;; we wrote. Length of "def double(x):\n    return x * 2" = 31.
+    (let py-text (emit-to "python" loaded registry))
+    (let probe-5 (str_len py-text))
+
+    ;; Sum: 1 + 1 + 16 + 16 + 31 = 65
+    (add probe-1 (add probe-2 (add probe-3 (add probe-4 probe-5)))))

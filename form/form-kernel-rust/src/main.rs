@@ -2206,6 +2206,13 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        self.register_native("write_form_binary", cat_call(), |k, _, args| {
+            let bytes = serialize_artifact(k, args[1].as_nid());
+            match fs::write(args[0].as_str(), &bytes) {
+                Ok(_) => Value::Int(bytes.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
         self.register_native("file_size", cat_call(), |_, _, args| {
             match fs::metadata(args[0].as_str()) {
                 Ok(meta) => Value::Int(meta.len() as i64),
