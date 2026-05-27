@@ -94,15 +94,54 @@ Until G3 lands, every expression shape needs its own flat rule
 (`binop-mul-ident`, `binop-mul-mul-ident`, …) — combinatorial blowup
 that the precedence engine collapses to a single recursive descent.
 
-### G4 — Closure/scope at the recipe layer
+### G4 — Closure/scope at the recipe layer — **CLOSED 2026-05-27**
 
-`lang-python.ts` walks recipes and evaluates them against a Python-shaped
-runtime (closures, mutable scopes, exceptions). Form's kernel already
-has frame/closure machinery (Breath 1.5) and the BMF-emitted recipes use
-substrate categories. The Form-side **interpreter** for PY-BMF recipes
-is ~200 lines that map `PY-BMF-ASSIGN` → bind-in-scope, `PY-BMF-CALL` →
-invoke-closure, `PY-BMF-IF` → branch, etc. Until then, the recipes are
-parsed but inert.
+Closure shape: **Form-side interpreter with alist-scope and self-named
+closures.** Lives at `form/form-stdlib/python-bmf-eval.fk` (~270 LOC).
+Three-way sibling parity (Go, Rust, TypeScript) on `python-bmf-eval-band.fk`
+returns `28000`.
+
+What walks today:
+
+- `PY-BMF-INT` → `node_value` of the trivial-int leaf
+- `PY-BMF-IDENT` → alist lookup against the current env
+- `PY-BMF-BINOP` → recursive eval of left/right + op dispatch
+  (`+ - * / % ** //`)
+- `PY-BMF-COMPARE` → recursive eval + op dispatch
+  (`== != < <= > >=`)
+- `PY-BMF-IF` → branch on condition (0 = false; the standard Form convention)
+- `PY-BMF-RETURN` → eval the inner expression
+- `PY-BMF-ASSIGN` → extend env with a new binding; returns extended env
+- `PY-BMF-DEF` → build a closure capturing the env at def-site; bind name →
+  closure in env
+- `PY-BMF-CALL` → look up callee by name, extend captured env with
+  `(self-name → closure)` to tie the recursive knot, bind args, walk body
+- `PY-BMF-MODULE` → fold over statements, threading the env through ASSIGN
+  and DEF; returns last statement's value
+
+The interpreter is recipe-as-input: a band-test builds PY-BMF recipes via
+`intern_node` directly (the way `python-bmf-arithmetic-band.fk` does) and
+walks them. That lets G4 be proven in isolation, ahead of G1/G3. Once G1
+(rule dispatch over a token stream) lands and produces PY-BMF recipes
+from source text, the `kernel-bmf-run` driver can swap its
+`(len statements)` call for `(py-run (python-parse-module-file path))`
+without changing the orchestration shape.
+
+What does NOT walk yet (each is its own focused breath):
+
+- `PY-BMF-CLASS`, method invocation, attribute access (`obj.field`)
+- `PY-BMF-WHILE`, `PY-BMF-FOR`, `PY-BMF-LIST`, `PY-BMF-DICT`,
+  `PY-BMF-SUBSCRIPT` (mutable iteration + collection ops)
+- `PY-BMF-LAMBDA`, `PY-BMF-TUPLE`, `PY-BMF-AUG-ASSIGN`
+- `PY-BMF-TRY`, `PY-BMF-RAISE` (exception handling)
+- `PY-BMF-IMPORT`, comprehensions, slices, walrus, async/await
+- Float arithmetic (the band-test uses integer-only operands)
+- Mutual recursion + general `letrec` (current self-ref only ties the
+  single function being called; mutual cycles need a second pass)
+
+Each arm above is a small extension to `py-eval` (one new `(if (node_eq
+cat PY-BMF-X) ...)` branch) plus, where needed, a Form-side data shape
+(e.g., dict-as-alist for `PY-BMF-DICT`).
 
 ### G5 — Sibling-agent overlap (template-machinery, Breath 2e) — **RESOLVED**
 
@@ -139,11 +178,13 @@ kernel all return `15`. This is the **orchestration breath**, not the
 program-value breath; the latter is gated on G3 + G4.
 
 What the driver does NOT compute yet: the program's CPython runtime value
-(`40949` for `python_demo.py`). The walker over `PY-BMF-CALL` /
-`PY-BMF-IF` / `PY-BMF-DEF` recipes back to a Python-shaped runtime is the
-next breath (see G4 above). When G4 lands, the driver inside
-`kernel-bmf-run` swaps from `(len statements)` to a recipe-walk call; the
-orchestration shape stays identical.
+(`40949` for `python_demo.py`). The closure-walker over `PY-BMF-CALL` /
+`PY-BMF-IF` / `PY-BMF-DEF` recipes is alive (G4 above is CLOSED), but the
+input side of the pipeline still hands `kernel-bmf-run` a *statement-object
+module*, not a PY-BMF recipe tree — that's G1's gate. When G1 (rule
+dispatch over the token stream) produces PY-BMF recipes from a source
+file, the driver swaps `(len statements)` for `(py-run module-recipe)`
+and the orchestration shape stays identical.
 
 **Three reachable shapes for G6 (kept for record; #1 was taken):**
 
@@ -179,11 +220,14 @@ form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run \
 # → 15 on go, rust, typescript
 ```
 
-`PARITY_THIRD_RUNTIME=kernel-bmf` is now runnable. The parity rows go
-honest-red against CPython at every demo until G3 + G4 ship — no faked
-green. The compost gate for Phase A's parser+emitter+test triple (~3,585
-LOC, per `kernels/PHASE_A_FIRING_QUESTIONS.md`) is downstream of G4
-greening every `PARITY_FILES` row, not G6.
+`PARITY_THIRD_RUNTIME=kernel-bmf` is now runnable. The parity rows still
+go honest-red against CPython at every demo until G1 + G3 ship the
+source → PY-BMF-recipe path — G4 is alive (`python-bmf-eval-band.fk`
+returns `28000` across three kernels) but `kernel-bmf-run` cannot yet
+feed it real `.py` files. No faked green. The compost gate for Phase A's
+parser+emitter+test triple (~3,585 LOC, per
+`kernels/PHASE_A_FIRING_QUESTIONS.md`) is downstream of G1+G3 wiring G4
+into `kernel-bmf-run`, then greening every `PARITY_FILES` row.
 
 ## Parity discipline (do not compost yet)
 
