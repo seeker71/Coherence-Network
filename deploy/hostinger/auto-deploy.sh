@@ -196,6 +196,65 @@ sync_web_public() {
   done <<< "$changed"
 }
 
+# Compute the minimal set of services that actually need a rebuild based on
+# which paths changed. Each service has its own source tree:
+#   - api    ← api/**, scripts/** (api copies scripts into the image at build)
+#   - web    ← web/**
+#   - pulse  ← pulse/**
+# When only the web/ tree changed, rebuilding the api container is pure waste
+# AND it forces a 502 window on the api Traefik route for no code reason.
+# This narrows both the build time and the swap window: if api isn't touched,
+# the api container is never stopped, and clients on /api/* see zero downtime
+# while web rolls.
+#
+# Conservative fallback: anything outside the recognized roots → rebuild ALL
+# three services (current behavior). We only narrow the set when we can
+# positively account for every changed file.
+services_to_rebuild() {
+  local from="$1" to="$2"
+  if [[ -z "$from" || -z "$to" || "$from" == "$to" ]]; then
+    echo "api web pulse"
+    return 0
+  fi
+  local changed
+  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null || true)"
+  if [[ -z "$changed" ]]; then
+    echo "api web pulse"
+    return 0
+  fi
+  local need_api=0 need_web=0 need_pulse=0
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    case "$path" in
+      api/*)           need_api=1 ;;
+      web/*)           need_web=1 ;;
+      pulse/*)         need_pulse=1 ;;
+      # scripts/ is mounted as content but also copied into the api image
+      # at build time for the substrate ingester. Rebuild api when they change.
+      scripts/*.py)    need_api=1 ;;
+      scripts/*.sh)    need_api=1 ;;
+      # Anything else (deploy/, docs/, README.md, .github/, etc.) does not
+      # require a service rebuild. The static-only path handled docs above;
+      # if we're here, at least one change wasn't static-only — but it still
+      # may not touch a service tree (e.g. deploy/hostinger/auto-deploy.sh
+      # itself, which is synced separately by the workflow).
+      *) ;;
+    esac
+  done <<< "$changed"
+  local out=()
+  (( need_api ))   && out+=("api")
+  (( need_web ))   && out+=("web")
+  (( need_pulse )) && out+=("pulse")
+  if [[ ${#out[@]} -eq 0 ]]; then
+    # No service-touching changes detected — but we entered the rebuild branch
+    # because static-only said "no." Be conservative: rebuild all so we don't
+    # silently skip an intentional rebuild trigger we didn't classify.
+    echo "api web pulse"
+    return 0
+  fi
+  echo "${out[*]}"
+}
+
 if is_static_only_change "$OLD_SHA" "$TARGET_SHA"; then
   log "Static-only change detected ($OLD_SHA -> $TARGET_SHA); skipping rebuild"
   sync_web_public "$OLD_SHA" "$TARGET_SHA"
@@ -203,16 +262,31 @@ if is_static_only_change "$OLD_SHA" "$TARGET_SHA"; then
   # below will pick up the api-side static syncs as they would in a
   # rebuild flow. No `docker compose build` needed.
 else
+  REBUILD_SERVICES="$(services_to_rebuild "$OLD_SHA" "$TARGET_SHA")"
+  log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services)"
+
   build_started="$(date +%s)"
-  log "docker compose build api web pulse"
-  docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
+  log "docker compose build ${REBUILD_SERVICES}"
+  # shellcheck disable=SC2086 -- intentional word-splitting on service list
+  docker compose build ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
   build_ended="$(date +%s)"
   build_elapsed=$((build_ended - build_started))
   log "TIMING: docker compose build took ${build_elapsed}s"
 
   up_started="$(date +%s)"
-  log "docker compose up -d api web pulse"
-  docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
+  # --wait holds the command until the new containers report healthy (per
+  # their HEALTHCHECK), so we never declare "deployed" while Traefik is
+  # still routing to a half-warm container. --wait-timeout 180s matches the
+  # wait_for_running deadline used below for the legacy state-only check.
+  # If --wait is unsupported by the installed compose version (very old
+  # docker), fall back to plain `up -d`.
+  log "docker compose up -d --wait --wait-timeout 180 ${REBUILD_SERVICES}"
+  # shellcheck disable=SC2086 -- intentional word-splitting on service list
+  if ! docker compose up -d --wait --wait-timeout 180 ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
+    log "docker compose up --wait failed or unsupported; falling back to plain up -d"
+    # shellcheck disable=SC2086
+    docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+  fi
   up_ended="$(date +%s)"
   up_elapsed=$((up_ended - up_started))
   log "TIMING: docker compose up took ${up_elapsed}s"
