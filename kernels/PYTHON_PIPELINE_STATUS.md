@@ -47,6 +47,7 @@ result
 | `python_import_demo.py` | 20.853981633974485 | `import math`, `from math import sqrt, pi`, attribute access (`math.pi`), kernel-native module bindings |
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary |
 | `python_class_demo.py` | 176 | `class X:`, `__init__(self, …)`, instance methods, attribute reads, method dispatch via `__class__` tag |
+| `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary; **production API image** (`Dockerfile.api` at repo root, two-stage build) bakes the `form-kernel-rust` release binary into `/app/bin/form-kernel-rust` and sets `FORM_KERNEL_RUST_BIN` so the bridge picks it up — `/api/health` reports `kernel_runtime.available=true` and the endpoint responds with `runtime: "form-kernel-rust"` (no Python fallback) |
 
 **Run it:**
 ```bash

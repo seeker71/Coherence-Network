@@ -136,6 +136,20 @@ class HealthResponse(_BaseHealthResponse):
             )
         ),
     ] = None
+    kernel_runtime: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description=(
+                "form-kernel-rust visibility — reports whether the native "
+                "binary is reachable from this API process. When "
+                "kernel_runtime.available is false, transmuted endpoints "
+                "(/api/utils/coherence_weight, ...) fall back to inline "
+                "Python and answers carry runtime=\"python-fallback\". "
+                "Production should report available=true after the API "
+                "image bakes in form-kernel-rust at /app/bin/."
+            )
+        ),
+    ] = None
 
 
 class ReadyResponse(_BaseHealthResponse):
@@ -270,6 +284,27 @@ async def health():
     except Exception:
         recent_outcomes = None
 
+    # form-kernel-rust visibility. The bridge resolves the binary path from
+    # FORM_KERNEL_RUST_BIN (set by Dockerfile.api) or a repo-relative default.
+    # When the binary is present and executable, transmuted endpoint bodies
+    # shell into the native kernel; when missing, they fall back to inline
+    # Python and the field shows what's missing. The check is one stat()
+    # call — cheap enough to run every /api/health.
+    kernel_runtime: dict[str, Any] | None
+    try:
+        from app.services.form_kernel_bridge import (
+            kernel_available as _kernel_available,
+            kernel_bin_path as _kernel_bin_path,
+        )
+        bin_path = _kernel_bin_path()
+        kernel_runtime = {
+            "available": _kernel_available(),
+            "binary_path": str(bin_path),
+            "env_override": os.environ.get("FORM_KERNEL_RUST_BIN") or None,
+        }
+    except Exception as _kernel_err:
+        kernel_runtime = {"available": False, "error": str(_kernel_err)}
+
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -284,4 +319,5 @@ async def health():
         smart_reap_available=smart_reap_available,
         smart_reap_import_error=smart_reap_import_error,
         recent_outcomes=recent_outcomes,
+        kernel_runtime=kernel_runtime,
     )

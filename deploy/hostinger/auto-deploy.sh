@@ -124,6 +124,23 @@ tmp_path.replace(config_path)
 PY
 
 cd "$COMPOSE_ROOT"
+
+# Sync the Dockerfile.api from the repo into the compose root. The api
+# image is built with form-kernel-rust baked in at /app/bin/ so transmuted
+# endpoints (/api/utils/coherence_weight, ...) shell into the native
+# binary instead of falling back to inline Python. The build context for
+# the api service stays the repo dir; only the Dockerfile path is sourced
+# from the repo so the compose root can keep referencing it as
+# `dockerfile: Dockerfile.api` without manual VPS upkeep.
+if [[ -f "$REPO_DIR/Dockerfile.api" ]]; then
+  if ! cmp -s "$REPO_DIR/Dockerfile.api" "$COMPOSE_ROOT/Dockerfile.api" 2>/dev/null; then
+    log "Dockerfile.api: syncing repo -> compose root"
+    cp "$REPO_DIR/Dockerfile.api" "$COMPOSE_ROOT/Dockerfile.api"
+  fi
+else
+  log "Dockerfile.api: not present in repo (legacy image path in use)"
+fi
+
 # api + web + pulse share the same repo and SHA. Rebuilding all three
 # on every push keeps the witness in step with what it's probing —
 # when the web page's marker vocabulary drifts (as it did when locale
