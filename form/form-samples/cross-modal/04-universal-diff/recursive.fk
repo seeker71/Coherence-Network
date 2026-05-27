@@ -1,0 +1,7 @@
+; recursive.fk — sum 1..n by recursion.
+(do
+    (defn sum (n)
+        (if (le n 0)
+            0
+            (add n (sum (sub n 1)))))
+    (sum 10))
