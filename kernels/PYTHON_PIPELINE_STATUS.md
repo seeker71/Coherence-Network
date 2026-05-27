@@ -275,4 +275,6 @@ The TS pipeline (top of this doc) is the path that currently runs end-to-end on 
 
 **What's next:** classes (the largest remaining Python construct), iterator protocol (range is a partial proxy), strings beyond literal/concat, tuple unpacking. Then real substrate-stack files (form_atoms.py, form_lexer.py, form_eval.py) become candidates for compilation.
 
+**The Form-native parse-path companion:** [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) names what is reachable today on the *pure-Form* parse path (no TypeScript at all — source text through Form-native scanner and BMF rule application produces real PY-BMF-BINOP recipes on every sibling kernel) and the five focused breaths (G1–G5) that remain before `lang-python.ts` can compost.
+
 — shipped 18 PRs in this session, each with sibling parity across kernels, each with the parity gate green at merge.

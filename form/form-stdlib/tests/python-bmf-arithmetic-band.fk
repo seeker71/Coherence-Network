@@ -1,0 +1,124 @@
+; tests/python-bmf-arithmetic-band.fk — Python arithmetic, parsed Form-native
+;
+; The first cell of the Form-native Python parser that replaces lang-python.ts.
+; This proof shows the *full* path runs through Form on every sibling kernel:
+;
+;   source text  →  python-source-scan-text   →  BMF object stream
+;                →  apply-python-bmf-rule     →  PY-BMF-BINOP recipe (NodeID)
+;
+; No TypeScript in the path. The kernel walks grammar-rule recipes already
+; declared in form-stdlib/grammars/python-bmf.fk; this test asks the body
+; to do it from real source text.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk
+
+(do
+    ;; ---- helpers --------------------------------------------------------
+
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-recipe (m)
+        (bmf-object-value (result-object m)))
+
+    (defn result-kids (m)
+        (node_children (result-recipe m)))
+
+    (defn result-kid-value (m n)
+        (node_value (nth (result-kids m) n)))
+
+    (defn match-success-bit (m)
+        (if (bmf-object? (result-object m)) 1 0))
+
+    ;; Drive the Form-native parse path end-to-end. Source text in,
+    ;; recipe out — no host parser anywhere on the path.
+    (defn parse-binop (source rule-name)
+        (do
+            (let toks (python-source-scan-text source))
+            (apply-python-bmf-rule rule-name toks)))
+
+    ;; ---- scanner sanity: source text → BMF objects ----------------------
+    ;; "a - b" must emit exactly three objects: name "a", op "-", name "b".
+
+    (let sub-toks (python-source-scan-text "a - b"))
+    (let sub-tok-count (len sub-toks))                                  ; 3
+    (let sub-tok-k0 (bmf-object-kind (nth sub-toks 0)))                 ; "py-name"
+    (let sub-tok-v0 (bmf-object-value (nth sub-toks 0)))                ; "a"
+    (let sub-tok-k1 (bmf-object-kind (nth sub-toks 1)))                 ; "py-op"
+    (let sub-tok-v1 (bmf-object-value (nth sub-toks 1)))                ; "-"
+    (let sub-tok-v2 (bmf-object-value (nth sub-toks 2)))                ; "b"
+
+    (defn score-eq-str (actual want score) (if (str_eq actual want) score 0))
+    (defn score-eq-int (actual want score) (if (eq actual want) score 0))
+
+    (let scanner-score
+        (sum
+            (list
+                (score-eq-int sub-tok-count 3 100)
+                (score-eq-str sub-tok-k0 "py-name" 200)
+                (score-eq-str sub-tok-v0 "a" 300)
+                (score-eq-str sub-tok-k1 "py-op" 400)
+                (score-eq-str sub-tok-v1 "-" 500)
+                (score-eq-str sub-tok-v2 "b" 600))))
+
+    ;; ---- rule application: BMF object stream → PY-BMF-BINOP recipe ------
+
+    ;; "a - b" → binop-sub-ident → PY-BMF-BINOP(a, "-", b)
+    (let sub-match (parse-binop "a - b" "binop-sub-ident"))
+    (let sub-recipe-kids (result-kids sub-match))
+    (let sub-score
+        (sum
+            (list
+                (match-success-bit sub-match)                            ; 1
+                (score-eq-int (len sub-recipe-kids) 3 700)               ; 3 children
+                (score-eq-str (node_value (nth sub-recipe-kids 0)) "a" 800)
+                (score-eq-str (node_value (nth sub-recipe-kids 1)) "-" 900)
+                (score-eq-str (node_value (nth sub-recipe-kids 2)) "b" 1000))))
+
+    ;; "x * y" → binop-mul-ident → PY-BMF-BINOP(x, "*", y)
+    (let mul-match (parse-binop "x * y" "binop-mul-ident"))
+    (let mul-kids (result-kids mul-match))
+    (let mul-score
+        (sum
+            (list
+                (match-success-bit mul-match)
+                (score-eq-int (len mul-kids) 3 1100)
+                (score-eq-str (node_value (nth mul-kids 0)) "x" 1200)
+                (score-eq-str (node_value (nth mul-kids 1)) "*" 1300)
+                (score-eq-str (node_value (nth mul-kids 2)) "y" 1400))))
+
+    ;; "left / right" → binop-div-ident
+    (let div-match (parse-binop "left / right" "binop-div-ident"))
+    (let div-kids (result-kids div-match))
+    (let div-score
+        (sum
+            (list
+                (match-success-bit div-match)
+                (score-eq-int (len div-kids) 3 1500)
+                (score-eq-str (node_value (nth div-kids 0)) "left" 1600)
+                (score-eq-str (node_value (nth div-kids 2)) "right" 1700))))
+
+    ;; "p ** q" — multi-char op survives the scanner ----------------------
+    (let pow-match (parse-binop "p ** q" "binop-pow-ident"))
+    (let pow-kids (result-kids pow-match))
+    (let pow-score
+        (sum
+            (list
+                (match-success-bit pow-match)
+                (score-eq-int (len pow-kids) 3 1800)
+                (score-eq-str (node_value (nth pow-kids 0)) "p" 1900)
+                (score-eq-str (node_value (nth pow-kids 1)) "**" 2000)
+                (score-eq-str (node_value (nth pow-kids 2)) "q" 2100))))
+
+    ;; ---- content-addressing check ---------------------------------------
+    ;; Same source parsed twice yields the same NodeID. The substrate's
+    ;; promise: content-addressed identity comes for free.
+
+    (let sub-match-2 (parse-binop "a - b" "binop-sub-ident"))
+    (let content-addressing-bit
+        (if (node_eq (result-recipe sub-match) (result-recipe sub-match-2)) 2200 0))
+
+    ;; ---- aggregate ------------------------------------------------------
+
+    (sum (list scanner-score sub-score mul-score div-score pow-score
+               content-addressing-bit)))
