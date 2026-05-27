@@ -214,54 +214,57 @@ together.
 
 ---
 
-## `api/app/services/substrate/substrate_strings.py` (109 LOC) — Shape 2
+## `api/app/services/substrate/form_lexer.py` (189 LOC) — Shape 1
 
-**Date:** 2026-05-27 · **Status:** *foundational infrastructure, Phase D*
+**Date:** 2026-05-27 · **Status:** *parser-side residue, runtime-extensible registry*
 
 ### What the file does today
 
-Provides cross-process-stable string interning. The previous hash-based
-allocation (`abs(hash(value)) % (10**9) + 1`) only worked in-process —
-Python's hash() is salted differently per process, so a pattern serialized
-in process A would not match the same pattern serialized in process B.
-
-`substrate_strings.py` replaces that: each unique string gets a
-sequentially-allocated instance number persisted in the database. The same
-string in any process gets the same instance.
-
-Used by `form_rules.py`, `form_builders.py`, future `markdown_frontend.py`.
+Runtime-extensible token pattern registry for the **Form-surface tokenizer**
+(NOT the Python tokenizer). The legacy `_TOKEN_PATTERNS` list in `form.py`
+was hardcoded — adding a new token kind meant editing `form.py`. This module
+lifts the patterns into an ordered registry; the tokenizer reads from it,
+modules can register new patterns at runtime.
 
 ### What `python-bmf.fk` + Form-native primitives replace
 
-**Nothing in shape; partially in scope.** The Form-native side has
-`intern_trivial_string` (a substrate-write native that interns a string by
-content-addressed identity). That handles the in-substrate case. But
-cross-process atomicity + DB persistence sits in Python today; the
-Form-native counterpart needs the same Phase-D persistence story `orm.py`
-needs.
+For Python source tokenization: **`python-source-scan-text` in
+`form-stdlib/grammars/python-bmf.fk` replaces this entirely** for the
+Python pipeline. It scans Python source bytes → BMF objects (py-keyword,
+py-name, py-op, py-int, py-float, py-string, py-fstring, py-layout, etc.)
+without any TS or Python tokenizer in the path.
+
+For Form-surface tokenization (what `form_lexer.py` actually serves):
+`form-stdlib/grammars/` carries the equivalent Form-side grammar. The
+Form-surface tokenizer ALSO moves into Form-native rules; the registry
+pattern (ordered list of `(regex, token-kind)`) becomes a Form data structure.
 
 ### What still carries
 
-- The DB-backed sequential-instance allocator
-- Cross-process consistency guarantee
-- FastAPI/SQLAlchemy compatibility
+- The form.py AST evaluator uses this registry for Form-surface tokens
+  (not Python tokens)
+- Runtime-extensible registration — code can add new tokens at runtime;
+  the Form-native side needs the same registry-as-data shape
 
 ### What blocks its compost
 
-Same gate as `orm.py`: a Form-native persistence story. When the kernel
-ships a durable store (kernel-native `.fkb` artifacts as canonical, or
-kernel-native DB binding), `substrate_strings.py`'s allocation logic moves
-into the kernel layer.
+Composts together with `form.py`'s evaluator (Phase C) when the Form-surface
+parser also moves Form-native. The Python pipeline already has its
+Form-native tokenizer (`python-source-scan-text`); the Form-surface pipeline
+needs the equivalent for self-host. This is one rung up from the Python
+pipeline's discipline — the body parsing its own source-syntax Form-native.
 
 ### What the body now knows from this attestation
 
-The Phase D pattern *fits* — two files walked, both confirmed Shape 2.
-The compost gate is shared: Form-native persistence. When that arrives,
-multiple Phase D files release in one breath (similar to how Phase A's
-parser+emitter+test triple releases together).
+`form_lexer.py` is Shape 1 (parser-side residue) but for the **Form-surface
+language**, not Python. It composts with `form.py`'s evaluator (Phase C).
+The runtime-extensible registry pattern is load-bearing and needs to
+preserve when the lexer moves — into `runtime-grammar.fk` per the audit's
+#2 next breath (rules-as-data migration).
 
-The audit's #10 next breath (single-binary distribution) is the natural
-unlock for Phase D collectively.
+This file is bootstrap-residue from the perspective of "Form-language
+self-host" — different gate from "Python parses Form-native." Both compost,
+but on different breaths.
 
 ---
 
