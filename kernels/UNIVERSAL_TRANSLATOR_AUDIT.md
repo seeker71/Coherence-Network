@@ -30,11 +30,15 @@ the stale roadmap.
   are all closed (`PYTHON_BMF_CONTRACT.md` for the full table). Four
   parity demos now pass under `PARITY_THIRD_RUNTIME=kernel-bmf` (#2106).
 - **#4 — Unify CTOR vocabulary** — *PARTIAL LANDED.* Shape B from
-  `CTOR_UNIFICATION_PLAN.md` landed in #2113 for `+ - * /`: Python-source
-  arithmetic now interns as `RBasic.MATH` (NodeIDs `(1, 2, 12, 1..4)`)
-  with positional children — the same Blueprint a hand-built
-  `(intern_node MATH-PLUS …)` interns to. `** // %` still ride
-  `PY-BMF-BINOP`; comparisons (`== != < <= > >=`) are the next breath.
+  `CTOR_UNIFICATION_PLAN.md` landed across three PRs:
+  - **#2113** — `+ - * /` intern as `RBasic.MATH-12` (positional children)
+  - **#2119** — `== != < <= > >=` intern as `RBasic.COMPARE-13`
+  - **#2122** — `%` (mod) intern as `RBasic.MATH-12 inst=5`
+  Cells 10, 11, 12 of `python-bmf-lift-band.fk` prove NodeID convergence
+  three-way. `**` and `//` still ride `PY-BMF-BINOP` (no MATH instances
+  exist yet for power and floor-div). Shape C — preserving *articulations*
+  over the shared identity — opened in #2124 with the seed concept
+  [`lc-same-shape-different-articulation`](../docs/vision-kb/concepts/lc-same-shape-different-articulation.md) (#2123).
 - **JSON-as-recipe in default gate** — *LANDED (#2105)*, closing
   cross-modal forward-map walk #5 ([`form/form-samples/cross-modal/NEXT_BREATHS.md`](../form/form-samples/cross-modal/NEXT_BREATHS.md)).
   `./validate.sh` now exercises the grammar-driven JSON parser
@@ -47,6 +51,22 @@ the stale roadmap.
   surface now covers `True/False/None`, list literals, postfix subscript
   chains, `while`, and a right-associative ternary fix; the parity demos
   it newly unlocked are named above.
+- **Cross-modal #2 — Image-as-recipe parameterized** — *LANDED (#2121)*.
+  One recipe `(gen-circles seed)` produces 5 byte-distinct SVGs from 5
+  seeds, three-way clean. The recipe IS the parameter space —
+  content-addressing scales from single artifacts to artifact families.
+- **Cross-modal #4 — Recipe→NL reverse** — *LANDED (#2120)*. A 7-rule
+  walker emits English from arithmetic recipes (`(mul 5 6)` → `the
+  product of five and six`). Round-trip with #05 attested:
+  `node_eq` over the parsed-back recipe matches the original three-way.
+  Lexical paraphrase distinction (square vs product) named honestly.
+- **Articulation teaching seeded** — *LANDED (#2123)*. Urs's question
+  *"same shape with different articulation points or different
+  capabilities?"* names what Shape B's collapse traded away. New
+  concept doc `lc-same-shape-different-articulation` frames the
+  cell-as-cluster teaching; Shape C in the plan thickens with a
+  concrete walking sketch using TRANSMUTE/PROJECT/OBSERVER substrate
+  primitives (#2124).
 
 The walks for #2 (grammar rules-as-data-rows), #3 (tail-call elimination),
 #5 (modality grammars), #6 (`form-ontology.json` into the substrate),
