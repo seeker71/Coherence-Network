@@ -29,6 +29,7 @@ PARITY_FILES=(
     "examples/python_dict_demo.py"
     "examples/endpoint_nodeid_distance_demo.py"
     "examples/endpoint_weighted_average_demo.py"
+    "examples/python_inheritance_demo.py"
 )
 
 # Locate the native binary. The script lives at
