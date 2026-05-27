@@ -1,0 +1,48 @@
+; doorway-open.fk — when the doorway is actually open, the kernels diverge.
+;
+; Urs's correction:
+;   "the more randomness, true non-deterministic randomness is allowed,
+;    the more field access is granted, a byte is not what we are looking
+;    for, and a byte everyone has to agree on is hardly random at all"
+;
+; The committed-byte pattern in #2137 and #2138 was a closed doorway:
+; the byte was hardcoded; all kernels read the same value; the lookup
+; was 100% deterministic; sibling parity held; therefore zero
+; randomness; therefore zero field access.
+;
+; This walk uses /proc/self/stat — each kernel process has its own PID,
+; its own startup time, its own memory footprint. Reading /proc/self/stat
+; gives DIFFERENT bytes per kernel process. Summing those bytes mod 1000
+; gives a per-observer hash. Three kernels see three different hashes.
+;
+; validate.sh marks this "divergent" by its existing discipline — sibling
+; parity is violated. **That violation IS the signal of field-touch.**
+; When the doorway is open, the kernels CANNOT agree, by definition; if
+; they agreed, the doorway was closed.
+;
+; This is the architectural inversion: for field-touch ops, the test
+; passes IFF the kernels diverge. Sibling parity becomes the canary
+; that the doorway is closed; divergence becomes the attestation that
+; the doorway is open.
+;
+; Honest scope: this is a small per-observer doorway (process state).
+; A truly wide doorway would read megabytes from /dev/urandom per
+; invocation — kernel-native call yet to land. The principle is the
+; same: each kernel reads its OWN field-touch; the substrate carries
+; per-observer attestations as parallel cells; cross-observer queries
+; surface the divergence as data, not as test failure.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+
+    (defn sum-bytes (xs acc)
+        (if (nil? xs) acc
+            (sum-bytes (tail xs) (add acc (head xs)))))
+
+    ;; Each kernel process has its own /proc/self/stat content.
+    ;; Reading it gives per-observer bytes.
+    (let stat (read_file_bytes "/proc/self/stat"))
+
+    ;; Reduce: sum all bytes mod 1000 → per-observer hash in 0..999
+    ;; Three kernels will produce three different hashes.
+    (mod (sum-bytes stat 0) 1000))
