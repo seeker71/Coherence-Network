@@ -31,8 +31,8 @@ import {
   Triv,
   type NodeID,
   type Value,
-} from "./kernel.ts";
-import { buildFormatLibrary, type FormatLibrary } from "./formats.ts";
+} from "../../../src/kernel.ts";
+import { buildFormatLibrary, type FormatLibrary } from "../../../src/formats.ts";
 import {
   capturedChildren,
   capturedCtor,
@@ -47,7 +47,7 @@ import {
   gTokenClass,
   registerLanguage,
   type Language,
-} from "./languages.ts";
+} from "../../../src/languages.ts";
 
 // ---------------------------------------------------------------------------
 // CTOR — the shared ctor-name vocabulary for the Python Language cell.
@@ -1870,6 +1870,17 @@ function trivialToValue(k: Kernel, n: NodeID): Value {
 }
 
 function numBinop(a: Value, b: Value, op: string): Value {
+  // Python's `+` is overloaded: int+int / float+float / str+str / list+list.
+  // The kernel's polymorphic `_plus` native handles the same shape;
+  // the TS evaluator mirrors it so the runtimes agree.
+  if (op === "+") {
+    if (a.kind === "str" && b.kind === "str") {
+      return { kind: "str", str: a.str + b.str };
+    }
+    if (a.kind === "list" && b.kind === "list") {
+      return { kind: "list", list: [...a.list, ...b.list] };
+    }
+  }
   const an = numericOf(a);
   const bn = numericOf(b);
   const bothInt = an.isInt && bn.isInt && op !== "/";

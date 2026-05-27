@@ -66,13 +66,13 @@ import {
   RBasic,
   Triv,
   type NodeID,
-} from "./kernel.ts";
+} from "../../../src/kernel.ts";
 import {
   Decidability,
   makeEquivalence,
   registerHandler,
   type EquivalenceRelation,
-} from "./quotient.ts";
+} from "../../../src/quotient.ts";
 
 // ---------------------------------------------------------------------------
 // CANONICAL — the cross-language shared ctor vocabulary.

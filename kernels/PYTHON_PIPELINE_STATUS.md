@@ -41,6 +41,9 @@ result
 | `python_substrate_demo.py` | 17680 | for loop, multi-return def with early-exit ifs, helpers |
 | `python_range_demo.py` | 41650 | `range()` native, recursive sq |
 | `python_builtins_demo.py` | 131 | aug-assign (`+=`), `sum`/`min`/`max`/`abs` natives |
+| `python_lambda_demo.py` | 216 | lambda lifting, higher-order calls |
+| `python_string_demo.py` | 45 | str concat via `_plus`, `len(s)` |
+| `python_float_demo.py` | 4.875 | float literals, mixed int/float promotion, float comparison |
 
 **Run it:**
 ```bash
@@ -90,8 +93,9 @@ Features the pipeline currently compiles to native kernel:
 - **Augmented assignment** `x += y`, `-=`, `*=`, `/=`, `%=`
 - List literal `[a, b, c]`
 - Subscript `lst[i]`
-- Arithmetic: `+ - * / %` (integer)
-- Comparison: `== != < <= > >=`
+- Arithmetic: `+ - * / %` (integer **and float**, mixed-type promotion)
+- Comparison: `== != < <= > >=` (float on either side promotes the comparison)
+- Float literals: `0.5`, `1.0`, `3.14`, exponent form `1e-9`
 - Logic: `and or not`
 - Function calls `f(args)`
 - Recursion (any depth)
@@ -99,7 +103,6 @@ Features the pipeline currently compiles to native kernel:
 - Builtins: `len`, `range`, `sum`, `min`, `max`, `abs`
 
 ### Honest GAPs (each is one breath)
-- Float arithmetic (kernel is int-only today)
 - Tuple unpacking `a, b = pair`
 - Augmented assignment `x += y`
 - Attribute/subscript assignment `obj.x = y`, `lst[i] = z`
