@@ -2158,6 +2158,17 @@ impl Kernel {
         self.register_native("math_pow", cat_method(), |_, _, args| {
             Value::Float(args[0].as_float().powf(args[1].as_float()))
         });
+        // ── Python `typing` module — opaque sentinels ─────────────────
+        // Every typing import (List, Optional, Dict, Tuple, Any, Callable,
+        // Union, Iterable, Iterator, Mapping, Sequence, Set, FrozenSet)
+        // binds to this one native. Type annotations are parse-and-ignored
+        // at compile time, so this never fires in real code; its existence
+        // makes the `from typing import …` binding round-trip honest. Any
+        // accidental runtime reference returns the same opaque string
+        // across CPython, TS eval, and Rust kernel.
+        self.register_native("typing_opaque", cat_method(), |_, _, _args| {
+            Value::Str("<typing>".to_string())
+        });
         self.register_native(
             "read_file",
             cat_call(),
