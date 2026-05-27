@@ -41,7 +41,11 @@ class UpstreamResult:
 
 
 async def _probe_upstream(
-    client: httpx.AsyncClient, url: str, kind: str
+    client: httpx.AsyncClient,
+    url: str,
+    kind: str,
+    method: str = "GET",
+    json_body: dict[str, Any] | None = None,
 ) -> UpstreamResult:
     """Fetch one upstream once, return a shared UpstreamResult.
 
@@ -49,12 +53,18 @@ async def _probe_upstream(
     response text for content-marker checks). JSON responses for
     "text" upstreams still parse successfully; that's fine.
 
+    `method` defaults to GET. Pass "POST" with `json_body` for endpoints
+    that need a request payload (e.g. the substrate Form evaluator).
+
     We swallow all exceptions deliberately: a probe failure is a signal,
     not an error in the monitor.
     """
     start = time.perf_counter()
     try:
-        resp = await client.get(url)
+        if method == "POST":
+            resp = await client.post(url, json=json_body)
+        else:
+            resp = await client.get(url)
         elapsed = int((time.perf_counter() - start) * 1000)
         body: dict[str, Any] | None = None
         text: str | None = None
@@ -129,18 +139,45 @@ def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
     )
 
 
-def _build_url(upstream: str, api_base: str, web_base: str) -> tuple[str, str]:
-    """Map an upstream label to (url, kind). See organs.py for the labels."""
+def _build_url(
+    upstream: str, api_base: str, web_base: str
+) -> tuple[str, str, str, dict[str, Any] | None]:
+    """Map an upstream label to (url, kind, method, json_body).
+
+    See organs.py for the labels. Most entries are GETs and keep
+    json_body=None; the substrate Form evaluator needs a POST with a
+    known-good expression so the witness keeps tension on it.
+    """
     api = api_base.rstrip("/")
     web = web_base.rstrip("/")
-    mapping: dict[str, tuple[str, str]] = {
-        "api_health": (f"{api}/api/health", "json"),
-        "api_ready": (f"{api}/api/ready", "json"),
-        "api_ideas": (f"{api}/api/ideas", "json"),
-        "api_vitality": (f"{api}/api/workspaces/coherence-network/vitality", "json"),
-        "web_root": (f"{web}/", "text"),
-        "web_pulse": (f"{web}/pulse", "text"),
-        "web_vitality": (f"{web}/vitality", "text"),
+    mapping: dict[str, tuple[str, str, str, dict[str, Any] | None]] = {
+        "api_health": (f"{api}/api/health", "json", "GET", None),
+        "api_ready": (f"{api}/api/ready", "json", "GET", None),
+        "api_ideas": (f"{api}/api/ideas", "json", "GET", None),
+        "api_vitality": (
+            f"{api}/api/workspaces/coherence-network/vitality", "json", "GET", None,
+        ),
+        "web_root": (f"{web}/", "text", "GET", None),
+        "web_pulse": (f"{web}/pulse", "text", "GET", None),
+        "web_vitality": (f"{web}/vitality", "text", "GET", None),
+        # Substrate badge resolver — the surface that broke silently on
+        # every page (the user noticed via mobile on the home page). Probe
+        # the home route specifically because it's the most-visited and
+        # the resolver's simplest path; if `/` doesn't resolve, none do.
+        "api_substrate_page": (
+            f"{api}/api/substrate/page?route=/", "json", "GET", None,
+        ),
+        # Substrate Form evaluator — the playground's primary surface.
+        # The known-good expression is one that any healthy lattice
+        # carries (lc-pulse is the Living Collective root). A 4xx/5xx
+        # here means the structural evaluator regressed or the cell
+        # disappeared from the body — either is a real silence.
+        "api_substrate_form": (
+            f"{api}/api/substrate/form",
+            "json",
+            "POST",
+            {"expression": "@concept(lc-pulse).blueprint"},
+        ),
     }
     if upstream not in mapping:
         raise ValueError(f"unknown upstream label: {upstream}")
@@ -166,8 +203,10 @@ async def probe_all(
     try:
         results: dict[str, UpstreamResult] = {}
         for upstream in upstreams_in_use():
-            url, kind = _build_url(upstream, api_base, web_base)
-            results[upstream] = await _probe_upstream(client, url, kind)
+            url, kind, method, json_body = _build_url(upstream, api_base, web_base)
+            results[upstream] = await _probe_upstream(
+                client, url, kind, method=method, json_body=json_body
+            )
 
         return [_apply(o, results[o.upstream], ts) for o in ORGANS]
     finally:

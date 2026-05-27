@@ -70,6 +70,8 @@ UPSTREAM_API_VITALITY = "api_vitality"  # {API_BASE}/api/workspaces/coherence-ne
 UPSTREAM_WEB_ROOT = "web_root"         # {WEB_BASE}/
 UPSTREAM_WEB_PULSE = "web_pulse"       # {WEB_BASE}/pulse
 UPSTREAM_WEB_VITALITY = "web_vitality"  # {WEB_BASE}/vitality
+UPSTREAM_API_SUBSTRATE_PAGE = "api_substrate_page"   # {API_BASE}/api/substrate/page?route=/
+UPSTREAM_API_SUBSTRATE_FORM = "api_substrate_form"   # POST {API_BASE}/api/substrate/form
 
 
 # Error boundary marker rendered by the Next.js root error.tsx
@@ -290,6 +292,64 @@ def extract_api_ideas(r: "UpstreamResult") -> OrganVerdict:
     return OrganVerdict(True)
 
 
+def extract_substrate_page(r: "UpstreamResult") -> OrganVerdict:
+    """Substrate badge resolver: /api/substrate/page?route=/ returns a real path.
+
+    The ⋄ badge in the web layout calls this endpoint to reveal what
+    cells compose the current page. Before this organ existed, the
+    resolver silently returned `{"source_path": null, "note": "no
+    page.tsx resolves for this route"}` on every page in production
+    because the API container ships only `api/` + `scripts/` and the
+    resolver walked `web/app/` from disk. The badge has shipped to prod
+    showing "page.tsx not found" for an unknown length of time before
+    a user on mobile finally surfaced it.
+
+    The witness now flags this on its own. A healthy response carries
+    `source_path: "web/app/page.tsx"` for the home route. A null
+    source_path or a missing key both register as silence.
+    """
+    if not _is_ok(r.status):
+        return OrganVerdict(False, f"HTTP {r.status}")
+    body = _require_body(r)
+    if body is None:
+        return OrganVerdict(False, "empty response body")
+    source_path = body.get("source_path")
+    if not source_path:
+        note = body.get("note") or "no source_path resolved"
+        return OrganVerdict(False, f"badge sees no page: {note}")
+    return OrganVerdict(True)
+
+
+def extract_substrate_form(r: "UpstreamResult") -> OrganVerdict:
+    """Substrate Form evaluator: POST /api/substrate/form returns kind=node_id.
+
+    Probes with `@concept(lc-pulse).blueprint` — a known-good
+    expression against the Living Collective root, the warmest cell
+    in the lattice. A healthy substrate returns
+    `{"kind": "node_id", "node_id": {...}}`. A 4xx with a TypeError
+    detail (the AST evaluator missing a branch for tree-navigation
+    nodes) or a 404 (lc-pulse missing from the body) both register
+    as real silence.
+
+    This organ keeps tension on the playground's primary surface so
+    the next regression in Form evaluation wakes the body instead of
+    waiting for a visitor to notice the first quest is broken.
+    """
+    if r.status == 0:
+        return OrganVerdict(False, r.error or "transport failure")
+    if r.status >= 400:
+        body = _require_body(r)
+        detail = (body or {}).get("detail") if body else None
+        return OrganVerdict(False, f"HTTP {r.status}: {detail}" if detail else f"HTTP {r.status}")
+    body = _require_body(r)
+    if body is None:
+        return OrganVerdict(False, "empty response body")
+    kind = body.get("kind")
+    if kind != "node_id":
+        return OrganVerdict(False, f"kind={kind!r}, expected 'node_id'")
+    return OrganVerdict(True)
+
+
 def extract_api_vitality(r: "UpstreamResult") -> OrganVerdict:
     """/api/workspaces/coherence-network/vitality returns the expected signals shape.
 
@@ -393,6 +453,31 @@ ORGANS: list[Organ] = [
         upstream=UPSTREAM_API_VITALITY,
         extractor=extract_api_vitality,
         latency_threshold_ms=1500,
+    ),
+    Organ(
+        name="substrate_badge",
+        label="Substrate badge",
+        description=(
+            "GET /api/substrate/page?route=/ — the resolver that lets the ⋄ "
+            "badge on every page name its own cell. Silenced for an unknown "
+            "length of time before a visitor on mobile caught it."
+        ),
+        upstream=UPSTREAM_API_SUBSTRATE_PAGE,
+        extractor=extract_substrate_page,
+        latency_threshold_ms=1500,
+    ),
+    Organ(
+        name="substrate_form",
+        label="Substrate Form",
+        description=(
+            "POST /api/substrate/form — the playground's primary surface. "
+            "Tested with @concept(lc-pulse).blueprint, the warmest cell in the "
+            "Living Collective. A regression here is the silence the first "
+            "quest button was suffering."
+        ),
+        upstream=UPSTREAM_API_SUBSTRATE_FORM,
+        extractor=extract_substrate_form,
+        latency_threshold_ms=2000,
     ),
 ]
 
