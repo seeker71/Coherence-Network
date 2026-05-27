@@ -214,6 +214,57 @@ together.
 
 ---
 
+## `api/app/services/substrate/substrate_strings.py` (109 LOC) — Shape 2
+
+**Date:** 2026-05-27 · **Status:** *foundational infrastructure, Phase D*
+
+### What the file does today
+
+Provides cross-process-stable string interning. The previous hash-based
+allocation (`abs(hash(value)) % (10**9) + 1`) only worked in-process —
+Python's hash() is salted differently per process, so a pattern serialized
+in process A would not match the same pattern serialized in process B.
+
+`substrate_strings.py` replaces that: each unique string gets a
+sequentially-allocated instance number persisted in the database. The same
+string in any process gets the same instance.
+
+Used by `form_rules.py`, `form_builders.py`, future `markdown_frontend.py`.
+
+### What `python-bmf.fk` + Form-native primitives replace
+
+**Nothing in shape; partially in scope.** The Form-native side has
+`intern_trivial_string` (a substrate-write native that interns a string by
+content-addressed identity). That handles the in-substrate case. But
+cross-process atomicity + DB persistence sits in Python today; the
+Form-native counterpart needs the same Phase-D persistence story `orm.py`
+needs.
+
+### What still carries
+
+- The DB-backed sequential-instance allocator
+- Cross-process consistency guarantee
+- FastAPI/SQLAlchemy compatibility
+
+### What blocks its compost
+
+Same gate as `orm.py`: a Form-native persistence story. When the kernel
+ships a durable store (kernel-native `.fkb` artifacts as canonical, or
+kernel-native DB binding), `substrate_strings.py`'s allocation logic moves
+into the kernel layer.
+
+### What the body now knows from this attestation
+
+The Phase D pattern *fits* — two files walked, both confirmed Shape 2.
+The compost gate is shared: Form-native persistence. When that arrives,
+multiple Phase D files release in one breath (similar to how Phase A's
+parser+emitter+test triple releases together).
+
+The audit's #10 next breath (single-binary distribution) is the natural
+unlock for Phase D collectively.
+
+---
+
 ## Next files to walk
 
 Phase A inventory remaining (per manifest):
