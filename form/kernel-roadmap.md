@@ -229,23 +229,48 @@ Final piece of the hand-coded surface syntax. `let name = value` parses to a `BL
 
 **The hand-coded parser is now structurally complete** for the bootstrap surface syntax. Anything written in S-expressions can also be written in Form surface syntax with identical recipes. The next major arc moves grammar from hand-coded code into data.
 
-### Breath 2e — Template machinery *(next major arc — substantial)*
+### Breath 2e — Template machinery *(landed)*
 
-This is the substrate's actual long-term goal — what PR #1718 was building toward. The hand-coded parser proves Form-on-top can parse Form; the template registry makes grammar *growable without parser changes*.
+Grammar as data, parsing as engine. The hand-coded parser is no longer the only path: pattern-primitive recipes drive parsing against source text, and the kernel walks the resulting recipes. The body holds three complementary surfaces, each validated continuously by `validate.sh`:
 
-**Three deliverables:**
+**1. Character-stream pattern engine** — [`form-stdlib/grammar-chars.fk`](form-stdlib/grammar-chars.fk).
 
-1. **Pattern primitives in Form** — `(pat-lit kind value)`, `(pat-cap name parse-fn)`, `(pat-seq matchers...)`, `(pat-opt matcher)`. Each is a Form data structure (a recipe / list) describing what to match.
+Pattern primitives are data:
+- `(list "char" "x")` — exact character
+- `(list "char-range" lo hi)` — codepoint range
+- `(list "string" "def")` — exact substring
+- `(list "any")`, `(list "eof")`, `(list "eol")` — stream-position primitives
+- `(list "not" pat)`, `(list "peek" pat)` — lookahead
+- `(list "sequence" ...)`, `(list "choice" ...)`, `(list "star" pat)`, `(list "opt" pat)` — structural composition
+- `(list "capture" name pat)` — bind a match span to a name
+- `(list "cut")`, `(list "stop" reason)` — disambiguation at decision points (BMF discipline: ambiguity at rule boundary, not at lex time)
+- `(list "rule" name)` — recursive call into the rule set
 
-2. **Matcher engine in Form** — `(match-pat pat toks)` walks a pattern against a token stream, returns `(captures-dict remaining-toks)` on success or `null` on failure. ~80 lines of Form.
+`(cm-parse text rules start-name)` walks a `(text index line col)` stream against a rule set, returns the recipe the matching template emitted. The character stream carries 1-based line/col so `intern_node_at` records source locations on every emitted NodeID. Tested end-to-end in [`tests/grammar-chars.fk`](form-stdlib/tests/grammar-chars.fk).
 
-3. **Template-as-closure** — a template is a Form closure `(captures) → recipe`. Combined with a pattern into a registry row `(register-rule pat tmpl)`. The registry is just a list of pairs.
+**2. BMF object engine** — [`form-stdlib/engine.fk`](form-stdlib/engine.fk).
 
-**First migration target:** move `let`, `if`, `defn` out of hand-coded `parse-stmt` / `parse-factor` and into the template registry. The hand-coded precedence ladder (`cmp/sum/term/factor`) stays for now; precedence-as-data is a separate move (operator registry).
+Above the character layer: rules match BMF source objects (kind + value + cursor span + inverse), not raw characters. Same primitive composition (sequence/choice/star/opt/capture), plus rule-reduction via template closures `(captures) → recipe`. Carries the cut/stop semantics from `grammar-chars.fk`. The sensing layer (the dialect-specific scanner) produces BMF objects; rules consume them; matches reduce into reversible Form objects whose `inverse` carries the source-shape back out.
 
-**Success criterion:** adding a new keyword (e.g. `unless cond then body else other` desugaring to `if (not cond) ...`) is ONE registry row, no parser code changes. All sibling kernels see identical recipes.
+**3. Dynamic grammar registry** — [`form-stdlib/runtime-grammar.fk`](form-stdlib/runtime-grammar.fk).
 
-**What this unlocks:** the BMF-style streaming-emit engine (Breath 2f) consumes the same registry — different traversal strategy, same grammar. The 6-way cross-validation matrix (Breath 2g) follows naturally: same source × same registry × 2 engines × 3 kernels = 6 implementations, all must produce the same NodeID.
+Grammar selection by data: each binding is a substrate cell carrying (selector kind, selector value, capsule, dialect, source-surface, form-surface, parse-kind, emit-kind). Resolution is `(form-runtime-grammar-resolve registry kind value)`; parsing is `(form-runtime-grammar-parse registry kind value rule source anchor ctx)`. New grammar = one registry row; both engines (character-stream + BMF object) consult the same registry. The capsule is content-addressed; the binding's blueprint encodes (selector-shape, capsule-shape).
+
+**Tiny grammar demo — character engine producing kernel-walkable recipes:**
+
+[`tests/grammar-chars-demo.fk`](form-stdlib/tests/grammar-chars-demo.fk) — a one-rule grammar that consumes `"3+4+5"` through `cm-parse` and produces the same NodeID as the hand-written recipe `(add 3 (add 4 5))`. Content-addressing makes the equivalence visible: both paths intern to the same shape; `walk_recipe` returns `12` from either; `node_eq` confirms identity. Two paths into the substrate, one NodeID.
+
+**Production grammar — Python via BMF objects:**
+
+[`form-stdlib/grammars/python-bmf.fk`](form-stdlib/grammars/python-bmf.fk) — 3000 lines of Python rules driving real Python files through the BMF engine. Validated by 18 test bands ([`python-bmf-attr-band`](form-stdlib/tests/python-bmf-attr-band.fk), [`python-bmf-class-band`](form-stdlib/tests/python-bmf-class-band.fk), [`python-bmf-comprehension-band`](form-stdlib/tests/python-bmf-comprehension-band.fk), [`python-bmf-decorator-band`](form-stdlib/tests/python-bmf-decorator-band.fk), [`python-bmf-exception-band`](form-stdlib/tests/python-bmf-exception-band.fk), [`python-bmf-from-import-band`](form-stdlib/tests/python-bmf-from-import-band.fk), [`python-bmf-fstring-slice-band`](form-stdlib/tests/python-bmf-fstring-slice-band.fk), [`python-bmf-full-file-band`](form-stdlib/tests/python-bmf-full-file-band.fk), [`python-bmf-grammar-band`](form-stdlib/tests/python-bmf-grammar-band.fk), [`python-bmf-module-parse-band`](form-stdlib/tests/python-bmf-module-parse-band.fk), [`python-bmf-repo-band`](form-stdlib/tests/python-bmf-repo-band.fk), [`python-bmf-reversible-band`](form-stdlib/tests/python-bmf-reversible-band.fk), [`python-bmf-runtime`](form-stdlib/tests/python-bmf-runtime.fk), [`python-bmf-scanner-real-syntax-band`](form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk), [`python-bmf-typeann-band`](form-stdlib/tests/python-bmf-typeann-band.fk), [`python-bmf-coverage`](form-stdlib/tests/python-bmf-coverage.fk), [`python-bmf-extra-coverage`](form-stdlib/tests/python-bmf-extra-coverage.fk), [`python-bmf-class-band`](form-stdlib/tests/python-bmf-class-band.fk)). Sibling grammars for Go, Rust, TypeScript, image, audio, video, document, natural-language, BML each live next to it in [`form-stdlib/grammars/`](form-stdlib/grammars/).
+
+**What this means for bootstrapping.** The `lang-python.ts` / `lang-python-fk.ts` / `lang-ts.ts` host-language adapters under `form-kernel-ts/` are no longer load-bearing for parsing — `python-bmf.fk` already drives the parse through the kernel, no TS in the path. Their compost has its own breath; this one names that the path is open.
+
+**What still needs sibling-cell work (deferred breaths):**
+
+- *Breath 2f — host-adapter compost.* Walk each `lang-*.ts` and identify what is still wanted vs what `*-bmf.fk` already covers. Likely most of it composts; some pieces (editor integration, IDE protocols, format-detection) may want different homes.
+- *Breath 2g — six-way cross-validation harness.* Today `validate.sh` confirms all three sibling kernels produce the same output from the same `.fk` source. The next step is comparing **same source × same registry × two engines (character + BMF) × three kernels** in one validation pass, surfacing any disagreement as a single bug locus.
+- *Breath 2h — registry persistence.* The registry currently materializes per-session from `.fk` source. The substrate cells it builds could persist directly, so a fresh kernel boot loads the registry from the lattice instead of re-evaluating the rules. The capsules are already content-addressed; the missing piece is the persistence bridge (overlaps with Breath 5).
 
 ### Breath 2 — Grammar as data: template registry + two engines
 
