@@ -48,6 +48,21 @@
 ;                        grammars/python-bmf.fk, python-bmf-eval.fk
 
 (do
+    ;; ---- MATH-12 NodeIDs (CTOR Shape B) ----------------------------
+    ;;
+    ;; The canonical RBasic.MATH category — same NodeIDs the kernel's
+    ;; arithmetic primitives carry (see form-ontology.json `primitives`
+    ;; rows for add/sub/mul/div and tests/emit-engine.fk lines 30-33).
+    ;; lift-binop-loop interns `+ - * /` against these — picking up the
+    ;; one Blueprint per shape so a hand-built `(intern_node MATH-PLUS
+    ;; ...)` and a Python-lifted `7 + 3` content-address to the same
+    ;; cell. The other arithmetic ops (** // %) stay on PY-BMF-BINOP
+    ;; until MATH instances ship for them.
+    (let MATH-PLUS     (make_nodeid 1 2 12 1))
+    (let MATH-MINUS    (make_nodeid 1 2 12 2))
+    (let MATH-MULTIPLY (make_nodeid 1 2 12 3))
+    (let MATH-DIVIDE   (make_nodeid 1 2 12 4))
+
     ;; ---- token accessors -------------------------------------------
     ;;
     ;; Tokens are bare BMF objects from python-source-scan-*. Each carries
@@ -281,16 +296,31 @@
                         (lift-binop-loop (lift-recipe rhs-primary)
                                          (lift-rest rhs-primary)
                                          next-min))
+                    (let rhs-recipe (lift-recipe rhs-climb))
+                    ;; CTOR Shape B: + - * / intern as RBasic.MATH-12 nodes
+                    ;; (positional children only — the instance number IS the
+                    ;; operator, no op-string-leaf). Comparisons stay on
+                    ;; PY-BMF-COMPARE, and ** // % stay on PY-BMF-BINOP until
+                    ;; their MATH instances exist. The eval side has a
+                    ;; matching MATH-12 arm that dispatches on inst.
                     (let new-left
                         (if (op-is-compare? op)
                             (intern_node PY-BMF-COMPARE
                                 (list left
                                       (intern_trivial_string op)
-                                      (lift-recipe rhs-climb)))
+                                      rhs-recipe))
+                        (if (str_eq op "+")
+                            (intern_node MATH-PLUS     (list left rhs-recipe))
+                        (if (str_eq op "-")
+                            (intern_node MATH-MINUS    (list left rhs-recipe))
+                        (if (str_eq op "*")
+                            (intern_node MATH-MULTIPLY (list left rhs-recipe))
+                        (if (str_eq op "/")
+                            (intern_node MATH-DIVIDE   (list left rhs-recipe))
                             (intern_node PY-BMF-BINOP
                                 (list left
                                       (intern_trivial_string op)
-                                      (lift-recipe rhs-climb)))))
+                                      rhs-recipe))))))))
                     (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
 
     ;; --- conditional expression ------------------------------------
