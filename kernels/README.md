@@ -57,6 +57,8 @@ Companion teaching: [`lc-one-kernel-many-tongues`](../docs/vision-kb/concepts/lc
 
 Python source code interns directly into the substrate as Form recipes. The latest breath landed real Python closures (import + from-import) — see commit `fde50d3e6 — tend: BMF today, not tomorrow`. The native macOS binary executes Form recipes without a Python interpreter in the runtime (`cee6a26a2`). The path is open: arbitrary Python code → recipe tree → kernel walker → real-time observation.
 
+The **emit direction** closed end-to-end on 2026-05-27: a Form recipe walks through `form/form-stdlib/emits/python-native.fk` and produces idiomatic native Python that CPython runs to the same values the Form kernel computes. See [`UNIVERSAL_TRANSLATOR_ROUNDTRIP.md`](UNIVERSAL_TRANSLATOR_ROUNDTRIP.md) for the proof-of-shape and the gap-map from "one recipe" to "the BMF compiler-compiler itself".
+
 Companion: [`lc-form-perceptron`](../docs/vision-kb/concepts/lc-form-perceptron.md), [`lc-parsers-as-recipes`](../docs/vision-kb/concepts/lc-parsers-as-recipes.md).
 
 #### 5. Memory-as-Framebuffer — observability is a coordinate space
