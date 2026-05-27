@@ -112,10 +112,39 @@ sign(5) + sign(0 - 3) + 5
 "))
     (let cell9-score (if (eq cell9-value 5) 9000 0))
 
+    ;; ---- cell 10: CTOR Shape B Blueprint convergence -------------------
+    ;; The substrate-truth claim of CTOR Shape B (kernels/CTOR_UNIFICATION_PLAN.md):
+    ;; same shape → same Blueprint NodeID. A hand-built MATH-PLUS recipe
+    ;; with PY-BMF-INT-wrapped int leaves AND a Python-lifted `7 + 3`
+    ;; must `node_eq` to 1 — both content-address to the canonical
+    ;; RBasic.MATH-12 inst=1 (plus) Blueprint. Before Shape B the lifted
+    ;; recipe carried PY-BMF-BINOP (type=99 inst=522); after, it carries
+    ;; MATH-PLUS (type=12 inst=1) — same as the hand-built reference.
+    ;;
+    ;; Honest scope: this proves convergence at the BINOP layer. The
+    ;; integer LEAVES are PY-BMF-INT(trivial_int) on both sides — that
+    ;; vocabulary is shared because both sides use the same leaf shape,
+    ;; not because the substrate normalises bare ints into PY-BMF-INT.
+
+    (let MATH-PLUS-REF (make_nodeid 1 2 12 1))
+    (let handbuilt-plus
+        (intern_node MATH-PLUS-REF
+            (list (intern_node PY-BMF-INT (list (intern_trivial_int 7)))
+                  (intern_node PY-BMF-INT (list (intern_trivial_int 3))))))
+    ;; Lift "7 + 3" via the same lift-module-text path the other cells use,
+    ;; then walk into the PY-BMF-MODULE's first (and only) statement —
+    ;; an expression-statement that IS the BINOP recipe. node_children of
+    ;; the module gives the statement list; head of that is the binop.
+    (let lifted-module (lift-module-text "7 + 3
+"))
+    (let lifted-plus (head (node_children lifted-module)))
+    (let cell10-score (if (node_eq handbuilt-plus lifted-plus) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
-    ;; Sum when every cell agrees with CPython:
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000 = 45000
+    ;; Sum when every cell agrees with CPython + Shape B converges:
+    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000 = 55000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
-               cell7-score cell8-score cell9-score)))
+               cell7-score cell8-score cell9-score
+               cell10-score)))

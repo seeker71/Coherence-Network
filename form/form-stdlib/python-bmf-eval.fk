@@ -319,6 +319,26 @@
                 (node_value (head kids))
             (if (node_eq cat PY-BMF-IDENT)
                 (py-env-lookup env (node_value (head kids)))
+            (if (and (eq (node_pkg cat) 1)
+                     (and (eq (node_level cat) 2)
+                          (eq (node_type cat) 12)))
+                ;; CTOR Shape B: RBasic.MATH-12 arm. The Python lift now
+                ;; interns + - * / as MATH-12 nodes (positional children,
+                ;; no op-string-leaf) so a hand-built (intern_node MATH-PLUS
+                ;; (list 7 3)) and a Python-lifted "7 + 3" share one
+                ;; Blueprint NodeID. Dispatch on the cat's inst — 1=plus,
+                ;; 2=minus, 3=mul, 4=div — matching form-ontology.json.
+                (do
+                    (let lhs-val (py-eval (nth kids 0) env))
+                    (let rhs-val (py-eval (nth kids 1) env))
+                    (let math-inst (node_inst cat))
+                    (if (eq math-inst 1) (add lhs-val rhs-val)
+                    (if (eq math-inst 2) (sub lhs-val rhs-val)
+                    (if (eq math-inst 3) (mul lhs-val rhs-val)
+                    (if (eq math-inst 4) (div lhs-val rhs-val)
+                        (do
+                            (trace "py-eval MATH: unknown inst" math-inst)
+                            (head (empty))))))))
             (if (node_eq cat PY-BMF-BINOP)
                 (do
                     (let left  (py-eval (nth kids 0) env))
@@ -398,7 +418,7 @@
                     ;; category number so the next breath knows which
                     ;; arm to add.
                     (trace "py-eval: unimplemented category" cat)
-                    (head (empty))))))))))))))))))
+                    (head (empty)))))))))))))))))))
 
     ;; Surface for callers. py-run takes a module recipe and returns its
     ;; value. py-eval and py-eval-statement are exposed so band-tests
