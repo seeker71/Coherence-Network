@@ -1880,6 +1880,108 @@ impl Kernel {
                     }
                 }
                 i += 2;
+        // --- Substrate read primitives — kernel reaches the REST surface ----
+        // The body's substrate lives behind /api/substrate/*. Until now the
+        // kernel could compute over data it was handed but could not pull
+        // its own data from the lattice. http_get + _json_get + _json_to_dict
+        // are the smallest closing breath that lets a .fk recipe stand up
+        // a `?lattice` or `?cell` query end-to-end without a Python shim.
+        //
+        // Why three minimal natives and not a fat client: the substrate's
+        // REST surface is already designed for outside callers (Pydantic
+        // response models, content-type JSON). The kernel just needs to
+        // speak HTTP + JSON well enough to consume those responses; the
+        // structural reasoning still happens in Form code over the dict
+        // values that come back.
+        //
+        // http_get(url) → str|null. Blocking GET via the existing ureq
+        // dependency that already powers the `fetch` CLI subcommand. No
+        // headers, no auth, no body — the surface stays /api/substrate/*
+        // shaped (public read, no credentials). null on transport error
+        // so Form-side caller can match and decide.
+        self.register_native("http_get", cat_call(), |_, _, args| {
+            let url = args[0].as_str();
+            match ureq::get(url).call() {
+                Ok(resp) => match resp.into_string() {
+                    Ok(body) => Value::Str(body),
+                    Err(_) => Value::Null,
+                },
+                Err(_) => Value::Null,
+            }
+        });
+        // _json_get(json_str, key) → str|int|float|bool|null. Parse a top-level
+        // JSON object and extract `obj[key]`. Returns null when key is missing
+        // or the JSON is malformed — same shape http_get uses, so Form code can
+        // chain (let body (http_get url)) (let n (_json_get body "key")).
+        // Only top-level keys; nested traversal lives in Form code via repeated
+        // _json_get on the sub-string.
+        self.register_native("_json_get", cat_access(), |_, _, args| {
+            let body = args[0].as_str();
+            let key = args[1].as_str();
+            let parsed: serde_json::Value = match serde_json::from_str(body) {
+                Ok(v) => v,
+                Err(_) => return Value::Null,
+            };
+            let val = match parsed.get(key) {
+                Some(v) => v,
+                None => return Value::Null,
+            };
+            match val {
+                serde_json::Value::Null => Value::Null,
+                serde_json::Value::Bool(b) => Value::Bool(*b),
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        Value::Int(i)
+                    } else if let Some(f) = n.as_f64() {
+                        Value::Float(f)
+                    } else {
+                        Value::Null
+                    }
+                }
+                serde_json::Value::String(s) => Value::Str(s.clone()),
+                // For arrays/objects, return the re-serialized JSON string
+                // so Form code can re-parse with another _json_get call.
+                // Keeps the native surface flat (no recursive Value structure
+                // beyond what the kernel already has) and matches the way
+                // jq pipelines compose at the shell.
+                _ => Value::Str(val.to_string()),
+            }
+        });
+        // _json_to_dict(json_str) → __dict__-tagged list (the kernel's dict
+        // shape). Convenience for the common case where the response is a
+        // small flat object — e.g. /api/substrate/lattice/stats returns
+        // {blueprints_total, recipes_total, cells_total} and the calling
+        // Form code wants to address it like a dict.
+        // Only top-level keys; nested objects/arrays come back as JSON
+        // string values (consistent with _json_get).
+        self.register_native("_json_to_dict", cat_method(), |_, _, args| {
+            let body = args[0].as_str();
+            let parsed: serde_json::Value = match serde_json::from_str(body) {
+                Ok(v) => v,
+                Err(_) => return Value::Null,
+            };
+            let obj = match parsed.as_object() {
+                Some(o) => o,
+                None => return Value::Null,
+            };
+            let mut out = vec![Value::Str("__dict__".to_string())];
+            for (k, v) in obj {
+                out.push(Value::Str(k.clone()));
+                out.push(match v {
+                    serde_json::Value::Null => Value::Null,
+                    serde_json::Value::Bool(b) => Value::Bool(*b),
+                    serde_json::Value::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            Value::Int(i)
+                        } else if let Some(f) = n.as_f64() {
+                            Value::Float(f)
+                        } else {
+                            Value::Null
+                        }
+                    }
+                    serde_json::Value::String(s) => Value::Str(s.clone()),
+                    _ => Value::Str(v.to_string()),
+                });
             }
             Value::List(out)
         });
