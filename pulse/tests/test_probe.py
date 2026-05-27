@@ -48,6 +48,35 @@ HEALTHY_IDEAS = {
     "summary": {"count": 2},
 }
 
+HEALTHY_SUBSTRATE_PAGE = {
+    "route": "/",
+    "source_path": "web/app/page.tsx",
+    "in_substrate": True,
+    "source": None,
+    "twins": [],
+    "twins_count": 0,
+    "twins_kind": "tsx",
+    "kind": "tsx",
+    "note": None,
+}
+
+BROKEN_SUBSTRATE_PAGE = {
+    "route": "/",
+    "source_path": None,
+    "in_substrate": False,
+    "source": None,
+    "twins": [],
+    "twins_count": 0,
+    "twins_kind": None,
+    "kind": None,
+    "note": "no page.tsx resolves for this route",
+}
+
+HEALTHY_SUBSTRATE_FORM = {
+    "kind": "node_id",
+    "node_id": {"package": 1, "level": 5, "type": 4, "instance": 1},
+}
+
 HEALTHY_VITALITY = {
     "workspace_id": "coherence-network",
     "vitality_score": 0.69,
@@ -104,6 +133,10 @@ def _handler(
     web_pulse_body=HEALTHY_PULSE_HTML,
     web_vitality_status=200,
     web_vitality_body=HEALTHY_VITALITY_HTML,
+    substrate_page_body=None,
+    substrate_page_status=200,
+    substrate_form_body=None,
+    substrate_form_status=200,
 ):
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -129,6 +162,26 @@ def _handler(
             return httpx.Response(
                 vitality_api_status,
                 content=json.dumps(vitality_api_body if vitality_api_body is not None else HEALTHY_VITALITY),
+                headers={"content-type": "application/json"},
+            )
+        if path == "/api/substrate/page":
+            return httpx.Response(
+                substrate_page_status,
+                content=json.dumps(
+                    substrate_page_body
+                    if substrate_page_body is not None
+                    else HEALTHY_SUBSTRATE_PAGE
+                ),
+                headers={"content-type": "application/json"},
+            )
+        if path == "/api/substrate/form":
+            return httpx.Response(
+                substrate_form_status,
+                content=json.dumps(
+                    substrate_form_body
+                    if substrate_form_body is not None
+                    else HEALTHY_SUBSTRATE_FORM
+                ),
                 headers={"content-type": "application/json"},
             )
         if path == "/":
@@ -157,10 +210,52 @@ async def test_all_healthy():
     expected = {
         "api", "web", "postgres", "neo4j", "schema", "audit_integrity",
         "page_pulse", "page_vitality", "endpoint_ideas", "endpoint_vitality",
+        "substrate_badge", "substrate_form",
     }
     assert set(by.keys()) == expected
     for name, sample in by.items():
         assert sample.ok is True, f"{name} not ok: {sample.detail}"
+
+
+@pytest.mark.asyncio
+async def test_substrate_badge_flags_silence_when_resolver_returns_no_path():
+    """The real production silence: source_path=null with the not-found note.
+
+    This is the shape `/api/substrate/page?route=/` returned on every
+    page for an unknown length of time. The witness now lights up.
+    """
+    by = await _run(_handler(substrate_page_body=BROKEN_SUBSTRATE_PAGE))
+    sample = by["substrate_badge"]
+    assert sample.ok is False
+    assert sample.detail is not None
+    assert "no page.tsx" in sample.detail
+
+
+@pytest.mark.asyncio
+async def test_substrate_form_flags_silence_on_eval_typeerror():
+    """The playground first-quest TypeError shape — 400 with a detail string."""
+    eval_failure = {"detail": "form parse/eval failed: TypeError: Form: cannot evaluate Access"}
+    by = await _run(
+        _handler(
+            substrate_form_status=400,
+            substrate_form_body=eval_failure,
+        )
+    )
+    sample = by["substrate_form"]
+    assert sample.ok is False
+    assert sample.detail is not None
+    assert "HTTP 400" in sample.detail
+    assert "TypeError" in sample.detail
+
+
+@pytest.mark.asyncio
+async def test_substrate_form_flags_unexpected_kind():
+    """A 200 response with the wrong shape (kind != node_id) is still silence."""
+    surprise = {"kind": "value", "value": 42}
+    by = await _run(_handler(substrate_form_body=surprise))
+    sample = by["substrate_form"]
+    assert sample.ok is False
+    assert "kind='value'" in (sample.detail or "")
 
 
 @pytest.mark.asyncio
@@ -405,8 +500,8 @@ async def test_slow_probe_flags_strained_not_silent(monkeypatch):
     # Rewrite the test to inject a slow latency by monkey-patching the probe helper.
     original = probe._probe_upstream
 
-    async def slow_probe(client, url, kind):
-        r = await original(client, url, kind)
+    async def slow_probe(client, url, kind, method="GET", json_body=None):
+        r = await original(client, url, kind, method=method, json_body=json_body)
         # Replace with a 3-second latency on the api_health upstream
         if url.endswith("/api/health"):
             return probe.UpstreamResult(
