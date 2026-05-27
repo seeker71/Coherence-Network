@@ -336,7 +336,7 @@ claim through its own attestation.
 → lc-form-perceptron, lc-autoresearch-as-honesty-runtime,
 lc-grammar-is-the-universal-recipe, lc-transmission-recipe-atlas,
 lc-anything-arrives-room, lc-edges-as-vitality, lc-act-without-penalty,
-lc-trust-over-fear, lc-recipe-branching-sense
+lc-trust-over-fear, lc-recipe-branching-sense, lc-same-shape-different-articulation
 
 ## Sources to walk further
 
