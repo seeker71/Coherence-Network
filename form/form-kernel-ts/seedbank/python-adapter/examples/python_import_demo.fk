@@ -1,0 +1,1 @@
+(do (let r (math_sqrt 2.25)) (let s (math_sqrt 0.25)) (let diameter (mul 2.0 (math_pi))) (let half (div (math_pi) 2.0)) (let quarter (math_floor 3.7)) (let cube (math_pow 2.0 3.0)) (_plus (_plus (_plus (_plus (_plus r s) diameter) half) quarter) cube))

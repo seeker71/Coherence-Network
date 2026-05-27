@@ -1610,6 +1610,30 @@ impl Kernel {
             }
             Value::List(out)
         });
+        // ── Python `math` module — a tight kernel-native shape ─────
+        // The Python adapter rewrites `math.sqrt(x)` → `(math_sqrt x)`,
+        // `math.pi` → `(math_pi)`, etc. at parse time, so imports
+        // compile to nothing at runtime. Sibling-parity with the TS
+        // kernel; the entries are tight (sqrt, pi, floor, ceil, pow) —
+        // demonstrably useful for substrate code without enlarging the
+        // bootstrap surface. Each entry returns the same shape CPython
+        // produces so the parity gate's string compare stays honest:
+        // sqrt/pi/pow → Float; floor/ceil → Int (CPython 3 behaviour).
+        self.register_native("math_sqrt", cat_method(), |_, _, args| {
+            Value::Float(args[0].as_float().sqrt())
+        });
+        self.register_native("math_pi", cat_method(), |_, _, _args| {
+            Value::Float(std::f64::consts::PI)
+        });
+        self.register_native("math_floor", cat_method(), |_, _, args| {
+            Value::Int(args[0].as_float().floor() as i64)
+        });
+        self.register_native("math_ceil", cat_method(), |_, _, args| {
+            Value::Int(args[0].as_float().ceil() as i64)
+        });
+        self.register_native("math_pow", cat_method(), |_, _, args| {
+            Value::Float(args[0].as_float().powf(args[1].as_float()))
+        });
         self.register_native(
             "read_file",
             cat_call(),

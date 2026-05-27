@@ -1280,6 +1280,38 @@ export class Kernel {
       }
       return { kind: "list", list: out };
     });
+    // ── Python `math` module — a tight kernel-native shape ─────────
+    // The Python adapter rewrites `math.sqrt(x)` → `(math_sqrt x)`,
+    // `math.pi` → `(math_pi)`, etc. at parse time, so imports compile to
+    // nothing at runtime. Sibling-parity with the Rust kernel; the
+    // entries are deliberately tight (sqrt, pi, floor, ceil, pow) —
+    // demonstrably useful for substrate code without enlarging the
+    // bootstrap surface.
+    this.registerNative("math_sqrt", catMethod(), (_k, args) => {
+      return { kind: "f64", float: Math.sqrt(argFloat(args, 0)) };
+    });
+    this.registerNative("math_pi", catMethod(), () => ({
+      kind: "f64",
+      float: Math.PI,
+    }));
+    // math.floor — CPython 3 returns an `int`. We follow suit so
+    // parity-suite string comparisons match. Math.floor in JS returns
+    // a number; we coerce to int explicitly.
+    this.registerNative("math_floor", catMethod(), (_k, args) => {
+      return { kind: "int", int: Math.floor(argFloat(args, 0)) };
+    });
+    this.registerNative("math_ceil", catMethod(), (_k, args) => {
+      return { kind: "int", int: Math.ceil(argFloat(args, 0)) };
+    });
+    // math.pow — always returns float, matching CPython's behaviour.
+    // (CPython's `math.pow(2, 3)` returns `8.0`, not `8`. The built-in
+    // `pow()` would return int for int arguments; we don't expose that.)
+    this.registerNative("math_pow", catMethod(), (_k, args) => {
+      return {
+        kind: "f64",
+        float: Math.pow(argFloat(args, 0), argFloat(args, 1)),
+      };
+    });
     // File I/O
     this.registerNative("read_file", catCall(), (_k, args) => {
       try {

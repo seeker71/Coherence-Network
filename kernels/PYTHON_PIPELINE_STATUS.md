@@ -44,6 +44,7 @@ result
 | `python_lambda_demo.py` | 216 | lambda lifting, higher-order calls |
 | `python_string_demo.py` | 45 | str concat via `_plus`, `len(s)` |
 | `python_float_demo.py` | 4.875 | float literals, mixed int/float promotion, float comparison |
+| `python_import_demo.py` | 20.853981633974485 | `import math`, `from math import sqrt, pi`, attribute access (`math.pi`), kernel-native module bindings |
 
 **Run it:**
 ```bash
@@ -101,6 +102,7 @@ Features the pipeline currently compiles to native kernel:
 - Recursion (any depth)
 - Helper-function calls within def bodies
 - Builtins: `len`, `range`, `sum`, `min`, `max`, `abs`
+- **Imports** — `import math`, `import math as m`, `from math import sqrt, pi`, `from math import sqrt as s`. The `math` module is a kernel-native record (`sqrt`, `pi`, `floor`, `ceil`, `pow`); imports rewrite to direct native calls at parse time, so the runtime path carries no module-system overhead.
 
 ### Honest GAPs (each is one breath)
 - Tuple unpacking `a, b = pair`
@@ -111,7 +113,7 @@ Features the pipeline currently compiles to native kernel:
 - Lambdas (parsed but not emitted to .fk yet)
 - Classes
 - Decorators
-- Imports (parsed as Form recipes; not yet wired into eval)
+- User-defined module imports (the kernel-resident `math` is wired; arbitrary `.py` files aren't loaded as modules yet — needs module-system semantics, path resolution, circular-import handling)
 - Iterator protocol (`range()`, generators)
 - Exception handling (`try/except/finally`)
 - f-strings
