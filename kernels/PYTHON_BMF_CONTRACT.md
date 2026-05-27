@@ -104,15 +104,71 @@ is ~200 lines that map `PY-BMF-ASSIGN` → bind-in-scope, `PY-BMF-CALL` →
 invoke-closure, `PY-BMF-IF` → branch, etc. Until then, the recipes are
 parsed but inert.
 
-### G5 — Sibling-agent overlap (template-machinery, Breath 2e)
+### G5 — Sibling-agent overlap (template-machinery, Breath 2e) — **RESOLVED**
 
-The Form-side template-machinery breath
-(`claude/template-machinery-breath-2e`) is building the general
-pattern/template/registry primitives that would let `python-bmf.fk`'s
-rule shape be expressed as data rather than as a parser-section literal.
-When that breath lands, G1's dispatcher is a one-liner over the
-template registry; until then, the per-dialect rule list in
-`python-bmf.fk` plus `apply-python-bmf-rule` is the right home.
+PR #2076 (`claude/template-machinery-breath-2e`) attested that Breath 2e
+is **already landed**. The primitives that would let `python-bmf.fk`'s
+rule shape be expressed as data are alive: `mk-cstream`, `cs-peek-cp`,
+`cs-advance`, `cm-char`, `cm-char-range`, `cm-string`, `cm-not`,
+`cm-peek`, `cm-match-{sequence,choice,star,opt,capture,rule}`,
+`cm-parse`, plus `make_nodeid`, `intern_trivial_int`, `intern_node`,
+`walk_recipe`, `node_eq`, `node_children`, `node_value`. The agent's
+load-bearing proof in `form-stdlib/tests/grammar-chars-demo.fk` parses
+`"3+4+5"` end-to-end on three sibling kernels and walks to 12.
+
+G1's dispatcher can now be written. G5 is no longer a blocker.
+
+### G6 — Binary entry-point orchestration — *next concrete gap*
+
+Surfaced 2026-05-27 while trying to wire `PARITY_THIRD_RUNTIME=kernel-bmf`
+end-to-end via the existing pieces. The finding:
+
+- `python-bmf.fk` uses surface syntax (`def`, `if`, `then`, `else`, ...)
+- The Rust + TS + Go kernel binaries read **S-expression syntax only**
+- `validate.sh` handles this via `prepare_sources()` — it detects surface
+  syntax (`section [...]`) and pre-compiles each file through the
+  Go-kernel-as-compiler invoking `form-source-compile-file`. The resulting
+  S-expression artifact is what the kernel binaries actually walk.
+
+`kernel-bmf-run` doesn't exist today because there's a compile-step gap
+between surface-syntax `.fk` files (like `python-bmf.fk`) and the
+standalone kernel binary. The pieces exist; they need orchestration.
+
+**Three reachable shapes for closing G6:**
+
+1. **Wrapper script** — `kernel-bmf-run` is a bash script that runs the
+   same pre-compile dance `validate.sh` does (Go-kernel compiles the
+   source-syntax preludes → Rust kernel reads the compiled artifacts +
+   the target `.py`'s parse expression). Cheapest; most fragile under
+   load-order drift.
+
+2. **Pre-shipped compiled artifacts** — `python-bmf.fk` + its prelude
+   chain ship as pre-compiled `.fkb` (Form binary) artifacts in the repo;
+   `kernel-bmf-run` invokes the Rust kernel with the `--binary` flag and
+   feeds it those. Cleaner; introduces a build-step artifact.
+
+3. **Native binary load-step** — extend the Rust kernel to detect
+   surface-syntax `.fk` files and run the source-compile internally
+   (embedding the same path `validate.sh` walks externally). Deepest;
+   single-binary entry on PATH.
+
+**Repro of the finding:**
+
+```bash
+# Standalone kernel can't read python-bmf.fk's surface syntax:
+form-kernel-rust form-stdlib/core.fk → parse error at line 23 col 43
+
+# validate.sh works green via the pre-compile dance:
+./validate.sh form-stdlib/core.fk form-stdlib/grammars/python-bmf.fk \
+              form-stdlib/tests/python-bmf-arithmetic-band.fk
+# → 25304 on go, rust, typescript
+```
+
+`PARITY_THIRD_RUNTIME=kernel-bmf` is reachable today only after G6 closes.
+The compost gate for Phase A's parser+emitter+test triple (~3,585 LOC,
+per `kernels/PHASE_A_FIRING_QUESTIONS.md`) sits behind this gap.
+
+This is the next concrete walking step toward the body's bootstrap shedding.
 
 ## Parity discipline (do not compost yet)
 
