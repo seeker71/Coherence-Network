@@ -65,8 +65,11 @@ schema can grow. The extractor improves.
 | `re-extracted/melody-features.md` | LLM re-extracting from melody |
 | `re-extracted/composition-features.md` | LLM re-extracting from SVG |
 | `re-extracted/aphoristic-features.md` | LLM re-extracting from tercet |
-| `validation.fk` | Form recipe — builds all four feature-recipes + does per-feature `node_eq` checks → **score 1000 three-way** |
+| `validation.fk` | Form recipe — builds all four feature-recipes + does per-feature `node_eq` checks → **score 323110 three-way** |
 | `findings.md` | Honest pattern-naming of what survived and what was lossy |
+| `reasoning.md` | The "how does encoding help translate streams?" challenge, answered honestly |
+| `validation-v2.fk` | Sub-agent's independent bidirectional validation → **score 322110 three-way** |
+| `sub-agent-bidirectional.md` | Sub-agent's findings — token agreement, forward + reverse round-trips, honest scope |
 
 ## Run it
 
