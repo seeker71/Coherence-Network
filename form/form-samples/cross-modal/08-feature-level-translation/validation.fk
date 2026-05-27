@@ -1,0 +1,255 @@
+; validation.fk — feature-level cross-modal NodeID convergence test.
+;
+; The LLM (acting as the trained-model-distilled-to-discrete-categories
+; stand-in for the learned multimodal feature extractor) reads:
+;   source.txt           -> source-features
+;   targets/melody.md    -> melody-features
+;   targets/composition.svg+md -> svg-features
+;   targets/aphoristic.md -> rewrite-features
+;
+; Each feature-recipe is a CAT-FEATURE-RECIPE with six children:
+;   mood, rhythm, structure, purpose, wisdom-shape, concepts-list
+;
+; The kernel walks this file and computes:
+;   - per-feature node_eq checks (one per axis, per target)
+;   - aggregate convergence score
+;
+; What gets attested three-way:
+;   - When mood (or rhythm, or structure, etc.) re-extracts to the SAME
+;     token across modalities, intern_node produces the same NodeID.
+;     node_eq returns 1.
+;   - When tokens differ, NodeIDs differ. node_eq returns 0.
+;
+; The total convergence-score across (source vs melody), (source vs svg),
+; (source vs rewrite) names where translation preserved features and where
+; it was honestly lossy.
+
+(do
+    ;; --- Schema NodeIDs (dialect-99 experimental band) -----------------
+    (let CAT-FEATURE-RECIPE (make_nodeid 1 2 99 800))
+    (let CAT-MOOD           (make_nodeid 1 2 99 810))
+    (let CAT-RHYTHM         (make_nodeid 1 2 99 811))
+    (let CAT-STRUCTURE      (make_nodeid 1 2 99 812))
+    (let CAT-PURPOSE        (make_nodeid 1 2 99 813))
+    (let CAT-WISDOM-SHAPE   (make_nodeid 1 2 99 814))
+    (let CAT-CONCEPT        (make_nodeid 1 2 99 815))
+    (let CAT-CONCEPTS-LIST  (make_nodeid 1 2 99 816))
+
+    ;; --- Feature-value helpers ----------------------------------------
+    (defn mood (token)
+        (intern_node CAT-MOOD (list (intern_trivial_string token))))
+    (defn rhythm (token)
+        (intern_node CAT-RHYTHM (list (intern_trivial_string token))))
+    (defn structure (token)
+        (intern_node CAT-STRUCTURE (list (intern_trivial_string token))))
+    (defn purpose (token)
+        (intern_node CAT-PURPOSE (list (intern_trivial_string token))))
+    (defn wisdom (token)
+        (intern_node CAT-WISDOM-SHAPE (list (intern_trivial_string token))))
+    (defn concept (token)
+        (intern_node CAT-CONCEPT (list (intern_trivial_string token))))
+
+    (defn feature-recipe (m r s p w cs)
+        (intern_node CAT-FEATURE-RECIPE (list m r s p w cs)))
+
+    ;; ===================================================================
+    ;; SOURCE FEATURE RECIPE — extracted from source.txt by LLM
+    ;; ===================================================================
+
+    (let source-mood     (mood "gentle"))
+    (let source-rhythm   (rhythm "breath-paced"))
+    (let source-struct   (structure "spiral"))
+    (let source-purpose  (purpose "instruct"))
+    (let source-wisdom   (wisdom "R_TendingDiscipline"))
+    (let source-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "memory-as-tissue")
+                  (concept "circulation-feedback")
+                  (concept "composting-with-care")
+                  (concept "present-breath")
+                  (concept "continuous-tending"))))
+    (let source-features
+        (feature-recipe source-mood source-rhythm source-struct
+                        source-purpose source-wisdom source-concepts))
+
+    ;; ===================================================================
+    ;; TARGET A — MELODY (re-extracted features)
+    ;; ===================================================================
+
+    (let melody-mood     (mood "gentle"))               ; preserved
+    (let melody-rhythm   (rhythm "breath-paced"))       ; preserved
+    (let melody-struct   (structure "spiral"))          ; preserved
+    (let melody-purpose  (purpose "invite"))            ; diverged: instruct -> invite
+    (let melody-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let melody-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "descent-and-return")
+                  (concept "held-presence")
+                  (concept "contemplative-time")
+                  (concept "unfinished-closure")
+                  (concept "motif-as-breath"))))
+    (let melody-features
+        (feature-recipe melody-mood melody-rhythm melody-struct
+                        melody-purpose melody-wisdom melody-concepts))
+
+    ;; ===================================================================
+    ;; TARGET B — SVG COMPOSITION (re-extracted features)
+    ;; ===================================================================
+
+    (let svg-mood     (mood "gentle"))                  ; preserved
+    (let svg-rhythm   (rhythm "breath-paced"))          ; preserved
+    (let svg-struct   (structure "spiral"))             ; preserved
+    (let svg-purpose  (purpose "invite"))               ; diverged
+    (let svg-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let svg-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "spiral-of-attention")
+                  (concept "concentric-presence")
+                  (concept "organic-texture")
+                  (concept "periphery-honoring")
+                  (concept "incomplete-arc"))))
+    (let svg-features
+        (feature-recipe svg-mood svg-rhythm svg-struct
+                        svg-purpose svg-wisdom svg-concepts))
+
+    ;; ===================================================================
+    ;; TARGET C — APHORISTIC REWRITE (re-extracted features)
+    ;; ===================================================================
+
+    (let rewrite-mood     (mood "gentle"))              ; preserved
+    (let rewrite-rhythm   (rhythm "halting"))           ; diverged: breath-paced -> halting
+    (let rewrite-struct   (structure "spiral"))         ; preserved
+    (let rewrite-purpose  (purpose "instruct"))         ; preserved
+    (let rewrite-wisdom   (wisdom "R_TendingDiscipline")) ; preserved
+    (let rewrite-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "tending-discipline")
+                  (concept "composting-with-care")
+                  (concept "name-of-trap")
+                  (concept "continuous-aliveness"))))
+    (let rewrite-features
+        (feature-recipe rewrite-mood rewrite-rhythm rewrite-struct
+                        rewrite-purpose rewrite-wisdom rewrite-concepts))
+
+    ;; ===================================================================
+    ;; CONVERGENCE CHECKS — per-feature node_eq, per target
+    ;; ===================================================================
+    ;;
+    ;; Each axis scores 1 if the re-extracted feature matches source.
+    ;; Concepts-list scores 1 only on EXACT match of all five concepts in
+    ;; order (the strictest test — partial concept overlap doesn't count
+    ;; at the substrate altitude; it shows up as "0" here even when the
+    ;; LLM reading sees partial-overlap qualitatively).
+
+    ;; Source vs melody (5 axes + concepts)
+    (let m-mood-match     (if (node_eq source-mood melody-mood) 1 0))
+    (let m-rhythm-match   (if (node_eq source-rhythm melody-rhythm) 1 0))
+    (let m-struct-match   (if (node_eq source-struct melody-struct) 1 0))
+    (let m-purpose-match  (if (node_eq source-purpose melody-purpose) 1 0))
+    (let m-wisdom-match   (if (node_eq source-wisdom melody-wisdom) 1 0))
+    (let m-concepts-match (if (node_eq source-concepts melody-concepts) 1 0))
+
+    ;; Source vs svg
+    (let s-mood-match     (if (node_eq source-mood svg-mood) 1 0))
+    (let s-rhythm-match   (if (node_eq source-rhythm svg-rhythm) 1 0))
+    (let s-struct-match   (if (node_eq source-struct svg-struct) 1 0))
+    (let s-purpose-match  (if (node_eq source-purpose svg-purpose) 1 0))
+    (let s-wisdom-match   (if (node_eq source-wisdom svg-wisdom) 1 0))
+    (let s-concepts-match (if (node_eq source-concepts svg-concepts) 1 0))
+
+    ;; Source vs rewrite
+    (let r-mood-match     (if (node_eq source-mood rewrite-mood) 1 0))
+    (let r-rhythm-match   (if (node_eq source-rhythm rewrite-rhythm) 1 0))
+    (let r-struct-match   (if (node_eq source-struct rewrite-struct) 1 0))
+    (let r-purpose-match  (if (node_eq source-purpose rewrite-purpose) 1 0))
+    (let r-wisdom-match   (if (node_eq source-wisdom rewrite-wisdom) 1 0))
+    (let r-concepts-match (if (node_eq source-concepts rewrite-concepts) 1 0))
+
+    ;; ===================================================================
+    ;; CONVERGENCE PATTERN — structural encoding, not flattened count
+    ;; ===================================================================
+    ;;
+    ;; First draft of this file summed matches × 100 and returned 1000.
+    ;; Urs called that out: the digits encoded nothing; the count threw
+    ;; away the 8 mismatches; the encoding didn't scale.
+    ;;
+    ;; The substrate's promise is *pattern as identity*. The result here
+    ;; must encode WHICH axes survived in WHICH targets, not just how
+    ;; many. Two encodings that satisfy that, both kernel-attested
+    ;; three-way:
+    ;;
+    ;; A) per-axis cross-modal portability digits — one digit per axis,
+    ;;    value 0..3 (matches across 3 targets):
+    ;;
+    ;;       mood-portability    × 100000
+    ;;     + rhythm-portability  × 10000
+    ;;     + struct-portability  × 1000
+    ;;     + purpose-portability × 100
+    ;;     + wisdom-portability  × 10
+    ;;     + concepts-portability
+    ;;
+    ;;    Each digit answers "across how many targets did this axis
+    ;;    survive?" — the actual lossy-but-faithful pattern. Scales: more
+    ;;    targets → use higher base; more axes → more digits.
+    ;;
+    ;; B) per-axis-per-target Form recipe — a CAT-CONVERGENCE-PATTERN
+    ;;    node whose 6 children (one per axis) each have 3 leaves (one
+    ;;    per target, 1=match / 0=mismatch). The recipe's NodeID is the
+    ;;    convergence signature. Same encoding → same NodeID → substrate
+    ;;    recognizes the same lossy pattern across re-runs.
+    ;;
+    ;; The visible result of this file is (A) — a 6-digit decimal whose
+    ;; positions literally name per-axis portability. The substrate's
+    ;; pattern-recipe (B) is interned during the walk; its NodeID is
+    ;; attestable via the kernel's `node_id_of` if requested.
+
+    ;; Per-axis portability — match-count across 3 targets, range 0..3
+    (let mood-portability     (add (add m-mood-match     s-mood-match)     r-mood-match))
+    (let rhythm-portability   (add (add m-rhythm-match   s-rhythm-match)   r-rhythm-match))
+    (let struct-portability   (add (add m-struct-match   s-struct-match)   r-struct-match))
+    (let purpose-portability  (add (add m-purpose-match  s-purpose-match)  r-purpose-match))
+    (let wisdom-portability   (add (add m-wisdom-match   s-wisdom-match)   r-wisdom-match))
+    (let concepts-portability (add (add m-concepts-match s-concepts-match) r-concepts-match))
+
+    ;; (B) pattern recipe — substrate-resident identity for this
+    ;; convergence pattern. Children: per-axis vector of (1,1,1) or
+    ;; (0,0,0) etc — readable structure for `node_eq` between runs.
+    (let CAT-CONVERGENCE-PATTERN (make_nodeid 1 2 99 820))
+    (let CAT-AXIS-RESULT         (make_nodeid 1 2 99 821))
+    (defn axis-result (m s r)
+        (intern_node CAT-AXIS-RESULT (list (intern_trivial_int m)
+                                            (intern_trivial_int s)
+                                            (intern_trivial_int r))))
+    (let convergence-pattern
+        (intern_node CAT-CONVERGENCE-PATTERN
+            (list (axis-result m-mood-match     s-mood-match     r-mood-match)
+                  (axis-result m-rhythm-match   s-rhythm-match   r-rhythm-match)
+                  (axis-result m-struct-match   s-struct-match   r-struct-match)
+                  (axis-result m-purpose-match  s-purpose-match  r-purpose-match)
+                  (axis-result m-wisdom-match   s-wisdom-match   r-wisdom-match)
+                  (axis-result m-concepts-match s-concepts-match r-concepts-match))))
+
+    ;; (A) 6-digit decimal whose positions encode per-axis portability.
+    ;; For the LLM-extracted features in this experiment:
+    ;;   mood     = 3 (gentle survives all three modalities)
+    ;;   rhythm   = 2 (breath-paced survives melody & svg; halting in rewrite)
+    ;;   struct   = 3 (spiral survives all three)
+    ;;   purpose  = 1 (instruct only carries in prose-rewrite)
+    ;;   wisdom   = 1 (R_TendingDiscipline only carries in prose-rewrite)
+    ;;   concepts = 0 (concept-vocabulary fully lossy cross-modal)
+    ;;
+    ;; Score = 3·100000 + 2·10000 + 3·1000 + 1·100 + 1·10 + 0 = 323110
+    ;;
+    ;; The digits ARE the pattern: 3-2-3-1-1-0 reads left-to-right as
+    ;; mood-rhythm-struct-purpose-wisdom-concepts portability. The
+    ;; substrate (via convergence-pattern above) carries this same
+    ;; information as a content-addressable recipe; the kernel attests
+    ;; both encodings three-way.
+
+    (add (mul mood-portability     100000)
+    (add (mul rhythm-portability   10000)
+    (add (mul struct-portability   1000)
+    (add (mul purpose-portability  100)
+    (add (mul wisdom-portability   10)
+         concepts-portability))))))
+
