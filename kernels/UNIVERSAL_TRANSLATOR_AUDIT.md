@@ -292,6 +292,11 @@ which is the substrate property the universal-translator promise rests on.
 manifest); the rest of the operators follow the same pattern. Honest separate
 PRs let the parity-gate confirm the equivalence one rule-family at a time.
 
+**Closing shapes:** see [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md)
+— three shapes named (A: rules emit MATH directly; B: lift maps BINOP→MATH at
+recipe time; C: BINOP as Blueprint-view on MATH), with **Shape B** recommended
+as the smallest closing breath.
+
 ### 5. Author the missing modality grammars — *the universal-translator's actual coverage gap*
 
 **What:** Fill out the BMF grammars for image, audio, video, natural language
