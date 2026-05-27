@@ -31,6 +31,7 @@ PARITY_FILES=(
     "examples/endpoint_weighted_average_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
+    "examples/python_typing_compose_demo.py"
 )
 
 # Locate the native binary. The script lives at
