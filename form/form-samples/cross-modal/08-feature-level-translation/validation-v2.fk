@@ -1,0 +1,398 @@
+; validation-v2.fk — independent sub-agent bidirectional cross-modal validation.
+;
+; A fresh LLM session (this one) extracted features from source.txt and from
+; targets/composition.svg INDEPENDENTLY (without reading claude's prior
+; extraction-source.md or re-extracted/*-features.md), then ran two
+; new round-trip tests on top of the v1 schema:
+;
+;   FORWARD round-trip:
+;     source-features-v2 (my extraction)
+;       -> generate new SVG, new melody description, new tercet
+;       -> re-extract features from each generation
+;       -> compare to source-features-v2
+;
+;   REVERSE round-trip:
+;     composition.svg
+;       -> svg-features-v2 (my extraction, independent of claude's)
+;       -> generate new prose passage from svg-features-v2 alone
+;       -> re-extract features from that prose
+;       -> compare to svg-features-v2
+;
+; All comparisons run as kernel-attested `node_eq` over feature-recipes
+; built from the v1 schema (CAT-* NodeIDs are identical so cross-version
+; comparison is possible).
+;
+; The substrate's role under test: addressing (same token → same NodeID
+; across sessions) and verifying (node_eq tells the truth about which
+; axes survived). Translation itself is done by the LLM; the substrate
+; doesn't decode or encode streams. It is the addressable, verifiable
+; pivot in the middle.
+
+(do
+    ;; --- Schema NodeIDs (dialect-99 experimental band; same as v1) ----
+    (let CAT-FEATURE-RECIPE (make_nodeid 1 2 99 800))
+    (let CAT-MOOD           (make_nodeid 1 2 99 810))
+    (let CAT-RHYTHM         (make_nodeid 1 2 99 811))
+    (let CAT-STRUCTURE      (make_nodeid 1 2 99 812))
+    (let CAT-PURPOSE        (make_nodeid 1 2 99 813))
+    (let CAT-WISDOM-SHAPE   (make_nodeid 1 2 99 814))
+    (let CAT-CONCEPT        (make_nodeid 1 2 99 815))
+    (let CAT-CONCEPTS-LIST  (make_nodeid 1 2 99 816))
+
+    (defn mood (token)
+        (intern_node CAT-MOOD (list (intern_trivial_string token))))
+    (defn rhythm (token)
+        (intern_node CAT-RHYTHM (list (intern_trivial_string token))))
+    (defn structure (token)
+        (intern_node CAT-STRUCTURE (list (intern_trivial_string token))))
+    (defn purpose (token)
+        (intern_node CAT-PURPOSE (list (intern_trivial_string token))))
+    (defn wisdom (token)
+        (intern_node CAT-WISDOM-SHAPE (list (intern_trivial_string token))))
+    (defn concept (token)
+        (intern_node CAT-CONCEPT (list (intern_trivial_string token))))
+
+    (defn feature-recipe (m r s p w cs)
+        (intern_node CAT-FEATURE-RECIPE (list m r s p w cs)))
+
+    ;; ===================================================================
+    ;; CLAUDE'S SOURCE FEATURES (v1) — for cross-session comparison
+    ;; ===================================================================
+    ;;
+    ;; Mirrors validation.fk lines 59-73. Reproduced here so this file
+    ;; can stand on its own under ./form/validate.sh.
+
+    (let claude-source-mood     (mood "gentle"))
+    (let claude-source-rhythm   (rhythm "breath-paced"))
+    (let claude-source-struct   (structure "spiral"))
+    (let claude-source-purpose  (purpose "instruct"))
+    (let claude-source-wisdom   (wisdom "R_TendingDiscipline"))
+    (let claude-source-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "memory-as-tissue")
+                  (concept "circulation-feedback")
+                  (concept "composting-with-care")
+                  (concept "present-breath")
+                  (concept "continuous-tending"))))
+
+    ;; ===================================================================
+    ;; SUB-AGENT SOURCE FEATURES (v2) — extracted independently from
+    ;; source.txt without reading extraction-source.md
+    ;; ===================================================================
+    ;;
+    ;; Fixed-vocab tokens are identical to claude's. Concept-list diverges
+    ;; on 2 of 5 tokens (mine: breath-paced-action vs claude's
+    ;; present-breath; mine: calcification-as-trap vs claude's
+    ;; continuous-tending — same anchors, opposite poles).
+
+    (let v2-source-mood     (mood "gentle"))
+    (let v2-source-rhythm   (rhythm "breath-paced"))
+    (let v2-source-struct   (structure "spiral"))
+    (let v2-source-purpose  (purpose "instruct"))
+    (let v2-source-wisdom   (wisdom "R_TendingDiscipline"))
+    (let v2-source-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "memory-as-tissue")
+                  (concept "circulation-feedback")
+                  (concept "composting-with-care")
+                  (concept "breath-paced-action")
+                  (concept "calcification-as-trap"))))
+
+    ;; ===================================================================
+    ;; CROSS-SESSION REPRODUCIBILITY — claude's source vs v2's source
+    ;; ===================================================================
+
+    (let xs-mood-match     (if (node_eq claude-source-mood     v2-source-mood)     1 0))
+    (let xs-rhythm-match   (if (node_eq claude-source-rhythm   v2-source-rhythm)   1 0))
+    (let xs-struct-match   (if (node_eq claude-source-struct   v2-source-struct)   1 0))
+    (let xs-purpose-match  (if (node_eq claude-source-purpose  v2-source-purpose)  1 0))
+    (let xs-wisdom-match   (if (node_eq claude-source-wisdom   v2-source-wisdom)   1 0))
+    (let xs-concepts-match (if (node_eq claude-source-concepts v2-source-concepts) 1 0))
+
+    ;; ===================================================================
+    ;; SUB-AGENT v2 SVG EXTRACTION — features extracted from
+    ;; targets/composition.svg ALONE (no companion .md, no source.txt)
+    ;; ===================================================================
+
+    (let v2-svg-mood     (mood "gentle"))
+    (let v2-svg-rhythm   (rhythm "breath-paced"))
+    (let v2-svg-struct   (structure "spiral"))
+    (let v2-svg-purpose  (purpose "invite"))
+    (let v2-svg-wisdom   (wisdom "R_FieldHoldingPresence"))
+    (let v2-svg-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "central-spiral")
+                  (concept "concentric-incompletion")
+                  (concept "periphery-marks")
+                  (concept "organic-texture")
+                  (concept "breathing-radius"))))
+
+    ;; ===================================================================
+    ;; FORWARD ROUND-TRIP — v2-source-features used to generate three NEW
+    ;; targets; re-extract features from each generation; compare to
+    ;; v2-source-features.
+    ;;
+    ;; Generated artifacts described in sub-agent-bidirectional.md.
+    ;; ===================================================================
+
+    ;; My new SVG (vertical breath-column + descending tissue-fibers +
+    ;; numbered breath-marks). Re-extracted features:
+    (let gen-svg-mood     (mood "gentle"))                  ; preserved
+    (let gen-svg-rhythm   (rhythm "breath-paced"))          ; preserved
+    (let gen-svg-struct   (structure "spiral"))             ; preserved (helix shape)
+    (let gen-svg-purpose  (purpose "invite"))               ; diverged (visual)
+    (let gen-svg-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let gen-svg-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "vertical-breath")
+                  (concept "descending-instruction")
+                  (concept "tissue-fade")
+                  (concept "unresolved-fade")
+                  (concept "numbered-steps"))))
+
+    ;; My new melody (solo viola + hurdy-gurdy drone, 5/4, descending
+    ;; five-section breath-line, no cadence). Re-extracted features:
+    (let gen-melody-mood     (mood "gentle"))               ; preserved
+    (let gen-melody-rhythm   (rhythm "breath-paced"))       ; preserved
+    (let gen-melody-struct   (structure "descending"))      ; DIVERGED from spiral
+    (let gen-melody-purpose  (purpose "invite"))            ; diverged
+    (let gen-melody-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let gen-melody-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "descending-breath")
+                  (concept "viola-solo")
+                  (concept "unresolved-fade")
+                  (concept "asymmetric-pulse")
+                  (concept "step-by-step-fall"))))
+
+    ;; My new tercet (three imperative lines). Re-extracted features:
+    (let gen-tercet-mood     (mood "gentle"))               ; preserved
+    (let gen-tercet-rhythm   (rhythm "halting"))            ; diverged (terseness)
+    (let gen-tercet-struct   (structure "spiral"))          ; preserved
+    (let gen-tercet-purpose  (purpose "instruct"))          ; preserved
+    (let gen-tercet-wisdom   (wisdom "R_TendingDiscipline")) ; preserved
+    (let gen-tercet-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "circulation-and-hardening")
+                  (concept "release-with-care")
+                  (concept "naming-as-forgetting"))))
+
+    ;; ===================================================================
+    ;; FORWARD ROUND-TRIP node_eq — does feature → generation → feature
+    ;; preserve NodeIDs?
+    ;; ===================================================================
+
+    ;; v2-source vs gen-svg
+    (let fs-mood-match     (if (node_eq v2-source-mood     gen-svg-mood)     1 0))
+    (let fs-rhythm-match   (if (node_eq v2-source-rhythm   gen-svg-rhythm)   1 0))
+    (let fs-struct-match   (if (node_eq v2-source-struct   gen-svg-struct)   1 0))
+    (let fs-purpose-match  (if (node_eq v2-source-purpose  gen-svg-purpose)  1 0))
+    (let fs-wisdom-match   (if (node_eq v2-source-wisdom   gen-svg-wisdom)   1 0))
+    (let fs-concepts-match (if (node_eq v2-source-concepts gen-svg-concepts) 1 0))
+
+    ;; v2-source vs gen-melody
+    (let fm-mood-match     (if (node_eq v2-source-mood     gen-melody-mood)     1 0))
+    (let fm-rhythm-match   (if (node_eq v2-source-rhythm   gen-melody-rhythm)   1 0))
+    (let fm-struct-match   (if (node_eq v2-source-struct   gen-melody-struct)   1 0))
+    (let fm-purpose-match  (if (node_eq v2-source-purpose  gen-melody-purpose)  1 0))
+    (let fm-wisdom-match   (if (node_eq v2-source-wisdom   gen-melody-wisdom)   1 0))
+    (let fm-concepts-match (if (node_eq v2-source-concepts gen-melody-concepts) 1 0))
+
+    ;; v2-source vs gen-tercet
+    (let ft-mood-match     (if (node_eq v2-source-mood     gen-tercet-mood)     1 0))
+    (let ft-rhythm-match   (if (node_eq v2-source-rhythm   gen-tercet-rhythm)   1 0))
+    (let ft-struct-match   (if (node_eq v2-source-struct   gen-tercet-struct)   1 0))
+    (let ft-purpose-match  (if (node_eq v2-source-purpose  gen-tercet-purpose)  1 0))
+    (let ft-wisdom-match   (if (node_eq v2-source-wisdom   gen-tercet-wisdom)   1 0))
+    (let ft-concepts-match (if (node_eq v2-source-concepts gen-tercet-concepts) 1 0))
+
+    ;; ===================================================================
+    ;; REVERSE ROUND-TRIP — svg-features (extracted from SVG alone) used
+    ;; to generate new prose; re-extract features from prose; compare to
+    ;; the svg-features that conditioned generation.
+    ;; ===================================================================
+
+    ;; Re-extracted features from MY generated reverse-prose passage:
+    (let rev-prose-mood     (mood "gentle"))                ; preserved
+    (let rev-prose-rhythm   (rhythm "breath-paced"))        ; preserved
+    (let rev-prose-struct   (structure "spiral"))           ; preserved
+    (let rev-prose-purpose  (purpose "instruct"))           ; DIVERGED from invite
+    (let rev-prose-wisdom   (wisdom "R_FieldHoldingPresence")) ; preserved
+    (let rev-prose-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "still-center")
+                  (concept "breath-expanding")
+                  (concept "periphery-presences")
+                  (concept "unforced-incompletion")
+                  (concept "continuing-turn"))))
+
+    ;; svg-features (the conditioning input) vs prose-features (the
+    ;; re-extracted output) — does image → features → prose → features
+    ;; preserve NodeIDs?
+    (let rs-mood-match     (if (node_eq v2-svg-mood     rev-prose-mood)     1 0))
+    (let rs-rhythm-match   (if (node_eq v2-svg-rhythm   rev-prose-rhythm)   1 0))
+    (let rs-struct-match   (if (node_eq v2-svg-struct   rev-prose-struct)   1 0))
+    (let rs-purpose-match  (if (node_eq v2-svg-purpose  rev-prose-purpose)  1 0))
+    (let rs-wisdom-match   (if (node_eq v2-svg-wisdom   rev-prose-wisdom)   1 0))
+    (let rs-concepts-match (if (node_eq v2-svg-concepts rev-prose-concepts) 1 0))
+
+    ;; ===================================================================
+    ;; SUBSTRATE-RESIDENT CONVERGENCE PATTERN (B-encoding)
+    ;; ===================================================================
+    ;;
+    ;; A six-axis recipe per round-trip, each axis carrying a vector of
+    ;; (1,0) results. The NodeID of each such pattern is the substrate's
+    ;; content-addressable signature for that round-trip's outcome.
+
+    (let CAT-CONVERGENCE-PATTERN (make_nodeid 1 2 99 820))
+    (let CAT-AXIS-RESULT         (make_nodeid 1 2 99 821))
+
+    (defn axis2 (a b)
+        (intern_node CAT-AXIS-RESULT (list (intern_trivial_int a)
+                                            (intern_trivial_int b))))
+
+    (defn axis3 (a b c)
+        (intern_node CAT-AXIS-RESULT (list (intern_trivial_int a)
+                                            (intern_trivial_int b)
+                                            (intern_trivial_int c))))
+
+    ;; Cross-session pattern (claude-source vs v2-source) — single
+    ;; comparison per axis, so axis2 with the same value twice for shape.
+    (let cross-session-pattern
+        (intern_node CAT-CONVERGENCE-PATTERN
+            (list (axis2 xs-mood-match     xs-mood-match)
+                  (axis2 xs-rhythm-match   xs-rhythm-match)
+                  (axis2 xs-struct-match   xs-struct-match)
+                  (axis2 xs-purpose-match  xs-purpose-match)
+                  (axis2 xs-wisdom-match   xs-wisdom-match)
+                  (axis2 xs-concepts-match xs-concepts-match))))
+
+    ;; Forward round-trip pattern (v2-source vs each generation)
+    (let forward-pattern
+        (intern_node CAT-CONVERGENCE-PATTERN
+            (list (axis3 fs-mood-match     fm-mood-match     ft-mood-match)
+                  (axis3 fs-rhythm-match   fm-rhythm-match   ft-rhythm-match)
+                  (axis3 fs-struct-match   fm-struct-match   ft-struct-match)
+                  (axis3 fs-purpose-match  fm-purpose-match  ft-purpose-match)
+                  (axis3 fs-wisdom-match   fm-wisdom-match   ft-wisdom-match)
+                  (axis3 fs-concepts-match fm-concepts-match ft-concepts-match))))
+
+    ;; Reverse round-trip pattern (svg-features vs prose-features)
+    (let reverse-pattern
+        (intern_node CAT-CONVERGENCE-PATTERN
+            (list (axis2 rs-mood-match     rs-mood-match)
+                  (axis2 rs-rhythm-match   rs-rhythm-match)
+                  (axis2 rs-struct-match   rs-struct-match)
+                  (axis2 rs-purpose-match  rs-purpose-match)
+                  (axis2 rs-wisdom-match   rs-wisdom-match)
+                  (axis2 rs-concepts-match rs-concepts-match))))
+
+    ;; ===================================================================
+    ;; A-ENCODING — three pattern digits, one per validation lane.
+    ;; ===================================================================
+    ;;
+    ;; Each lane gets ONE 6-digit number whose positions encode per-axis
+    ;; outcome. Crucially, the digits never compress to a count — each
+    ;; position names an axis, each digit names that axis's outcome under
+    ;; the lane's comparison.
+    ;;
+    ;; Lane 1: cross-session (claude-source vs v2-source) — 1 per matched
+    ;;         axis, 0 otherwise. 6 digits ∈ {0,1}.
+    ;; Lane 2: forward round-trip portability — match-count across 3
+    ;;         generated targets (svg, melody, tercet). 6 digits ∈ {0..3}.
+    ;; Lane 3: reverse round-trip (svg-features vs prose-features) — 1
+    ;;         per matched axis, 0 otherwise. 6 digits ∈ {0,1}.
+    ;;
+    ;; Then concatenate lanes into one composite integer:
+    ;;   lane1 * 1e12 + lane2 * 1e6 + lane3
+    ;;
+    ;; The composite preserves all three pattern signatures losslessly.
+    ;; This is the substrate's promise — pattern as identity, not count.
+
+    ;; Lane 1: cross-session reproducibility (concepts get a 0 since
+    ;; 2/5 tokens differed → NodeID of CONCEPTS-LIST differs)
+    (let lane1
+        (add (mul xs-mood-match     100000)
+        (add (mul xs-rhythm-match   10000)
+        (add (mul xs-struct-match   1000)
+        (add (mul xs-purpose-match  100)
+        (add (mul xs-wisdom-match   10)
+             xs-concepts-match))))))
+
+    ;; Lane 2: per-axis portability across 3 forward generations
+    (let mood-portability     (add (add fs-mood-match     fm-mood-match)     ft-mood-match))
+    (let rhythm-portability   (add (add fs-rhythm-match   fm-rhythm-match)   ft-rhythm-match))
+    (let struct-portability   (add (add fs-struct-match   fm-struct-match)   ft-struct-match))
+    (let purpose-portability  (add (add fs-purpose-match  fm-purpose-match)  ft-purpose-match))
+    (let wisdom-portability   (add (add fs-wisdom-match   fm-wisdom-match)   ft-wisdom-match))
+    (let concepts-portability (add (add fs-concepts-match fm-concepts-match) ft-concepts-match))
+    (let lane2
+        (add (mul mood-portability     100000)
+        (add (mul rhythm-portability   10000)
+        (add (mul struct-portability   1000)
+        (add (mul purpose-portability  100)
+        (add (mul wisdom-portability   10)
+             concepts-portability))))))
+
+    ;; Lane 3: reverse round-trip per-axis match
+    (let lane3
+        (add (mul rs-mood-match     100000)
+        (add (mul rs-rhythm-match   10000)
+        (add (mul rs-struct-match   1000)
+        (add (mul rs-purpose-match  100)
+        (add (mul rs-wisdom-match   10)
+             rs-concepts-match))))))
+
+    ;; Expected lane outputs (under this sub-agent's extractions):
+    ;;
+    ;;   Lane 1 — cross-session match:
+    ;;     mood=1 rhythm=1 struct=1 purpose=1 wisdom=1 concepts=0
+    ;;     → 111110
+    ;;
+    ;;   Lane 2 — forward portability (svg, melody, tercet):
+    ;;     mood     = 3 (gentle survives all 3)
+    ;;     rhythm   = 2 (breath-paced survives svg+melody; tercet=halting)
+    ;;     struct   = 2 (spiral survives svg+tercet; melody=descending)
+    ;;     purpose  = 1 (instruct only in tercet; svg+melody=invite)
+    ;;     wisdom   = 1 (R_TendingDiscipline only in tercet)
+    ;;     concepts = 0 (vocabulary fully lossy across all generations)
+    ;;     → 322110
+    ;;
+    ;;   Lane 3 — reverse round-trip (svg → features → prose → features):
+    ;;     mood=1 rhythm=1 struct=1 purpose=0 wisdom=1 concepts=0
+    ;;     → 111010
+    ;;
+    ;; The kernel returns ONE value per file. To stay within 2^53 (so
+    ;; Go int64 / Rust i64 / TypeScript number agree three-way), we
+    ;; concatenate the three lanes via `lane1 * 1e12 + lane2 * 1e6 + lane3`
+    ;; (max 18 digits, exceeds 2^53) — DON'T do that.
+    ;;
+    ;; Instead: the substrate's content-addressable convergence-pattern
+    ;; recipes (cross-session-pattern, forward-pattern, reverse-pattern
+    ;; above) carry all three lanes losslessly. They live in the lattice
+    ;; whether or not we surface them in the kernel return value.
+    ;;
+    ;; The kernel's surface output is the lane that most directly
+    ;; mirrors v1 — Lane 2 (forward portability). That's the apples-to-
+    ;; apples comparison with v1's 323110: both are 6-digit per-axis-
+    ;; portability patterns over (svg, melody, tercet) targets generated
+    ;; from a source feature-recipe.
+    ;;
+    ;;   v1 (claude's pipeline):     323110
+    ;;   v2 (sub-agent's pipeline):  322110
+    ;;
+    ;; The single-digit difference at position 3 (structure) is the
+    ;; honest finding: my melody generation (descending five-section
+    ;; breath-line) drifted from `spiral` to `descending` where claude's
+    ;; (A-A'-B-A'' with unresolved return) stayed `spiral`. The structure
+    ;; axis is portable BUT not robust — same feature-recipe can yield
+    ;; different structural readings in non-prose modalities depending
+    ;; on which structural idiom the generator reaches for.
+    ;;
+    ;; Lane 1 (111110) and Lane 3 (111010) are substrate-resident as
+    ;; cross-session-pattern and reverse-pattern recipes — their NodeIDs
+    ;; are addressable, their per-axis structure is queryable, the
+    ;; kernel attests their construction three-way even though only
+    ;; Lane 2 appears in the printed return.
+
+    lane2)
