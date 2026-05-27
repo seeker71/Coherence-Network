@@ -120,3 +120,5 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 ## Roadmap
 
 The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.
+
+[`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The parity suite's `PARITY_THIRD_RUNTIME` selector flips the third runtime atomically; `make wellness` surfaces the remaining bootstrap weight each breath.
