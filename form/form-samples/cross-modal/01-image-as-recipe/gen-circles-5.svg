@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5e6d3"/>
+      <stop offset="100%" stop-color="#c8d8e8"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="300" fill="url(#bg)"/>
+  <circle cx="120" cy="120" r="40" fill="#e07b5a"/>
+  <circle cx="240" cy="120" r="40" fill="#7ab37a"/>
+  <circle cx="360" cy="120" r="40" fill="#5a7ab3"/>
+  <circle cx="480" cy="120" r="40" fill="#e07b5a"/>
+  <text x="300" y="270" font-family="sans-serif" font-size="20" text-anchor="middle" fill="#1a1a1a">seed=5</text>
+</svg>
