@@ -1,0 +1,22 @@
+; emits/python-native-roundtrip-driver.fk — universal-translator proof-of-shape
+;
+; The emit direction: take a Form recipe expressed as source text, walk it
+; through the same `pn-emit-string` entry-point that emits objects.py, and
+; write idiomatic native Python to disk. The output uses `def`, `return`,
+; `+`, ternary `if/else` — Python a Python programmer would write, not
+; Form-recipes wrapped in Python syntax.
+;
+; Sibling driver to python-native-driver.fk (which emits objects.py from
+; an .fkb category table). This one drives the recipe → Python source
+; arc on the smallest viable recipe: arithmetic + recursion.
+;
+; Run by hand: see scripts/emit_native_python_roundtrip.sh for the
+; orchestrated pipeline (build core, run the emitter, run CPython, compare
+; against form-kernel-go on the same recipes).
+(do
+    (let src "(defn add (a b) (add a b))\n(defn factorial (n) (if (le n 1) 1 (mul n (factorial (sub n 1)))))\n")
+    (let py (pn-emit-string src))
+    (let out-path "kernels/python_bmf/_emitted_roundtrip.py")
+    (let nbytes (write_file_text out-path py))
+    (print "wrote kernels/python_bmf/_emitted_roundtrip.py")
+    nbytes)
