@@ -1,0 +1,1 @@
+(do (let stats (_dict_new "blueprints_total" 128 "recipes_total" 642 "cells_total" 319)) (let blueprints (_get stats "blueprints_total")) (let recipes (_get stats "recipes_total")) (let cells (_get stats "cells_total")) (_plus (_plus blueprints recipes) cells))

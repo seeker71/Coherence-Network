@@ -1,0 +1,27 @@
+; endpoint_lattice_stats_live.fk — the kernel transmute, end to end.
+;
+; Calls /api/substrate/lattice/stats over HTTP, parses the response as
+; a kernel dict, returns the same total as endpoint_lattice_stats_demo.py
+; would compute given the same response. The proof that substrate-aware
+; compute through the kernel is real, not staged.
+;
+; Pass the base URL as a CLI arg via --expr substitution, or accept the
+; default localhost:8000 for the in-repo dev server.
+;
+; Run:
+;   form-kernel-rust --expr "(do (let url \"http://localhost:8000/api/substrate/lattice/stats\") $(cat endpoint_lattice_stats_live.fk))"
+;
+; The api/tests/test_substrate_kernel_parity.py test orchestrates the
+; live comparison: spins up the FastAPI test client, captures the JSON
+; response, feeds the URL or the raw body to the kernel binary, asserts
+; the kernel-side total matches Python's lattice_stats(session).
+
+(do
+  (let body (http_get url))
+  (if (eq body null)
+      -1
+      (do
+        (let stats (_json_to_dict body))
+        (_plus (_plus (_get stats "blueprints_total")
+                       (_get stats "recipes_total"))
+                (_get stats "cells_total")))))
