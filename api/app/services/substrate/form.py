@@ -71,6 +71,7 @@ from app.services.substrate.category import (
     RTry,
 )
 from app.services.substrate.kernel import (
+    CellView,
     NamedCell,
     NodeID,
     find_cells_compatible_with,
@@ -1916,6 +1917,19 @@ def evaluate(session: Session, ast: Any) -> FormResult:
     if isinstance(ast, Query):
         return _evaluate_query(session, ast)
 
+    # Tree navigation — fractal seams.
+    # `.field` and `.method(args)` are structural walks into the cell tree
+    # (blueprint, ctor, children, etc.). The full runtime in form_runtime.py
+    # already knows how to resolve them; the structural evaluator delegates
+    # there and wraps the raw value back into a FormResult. Without this
+    # the playground's first quest (`@concept(x).blueprint`) returned
+    # `TypeError: Form: cannot evaluate Access`.
+    if isinstance(ast, (Access, MethodCall)):
+        from app.services.substrate.form_runtime import Frame as _RuntimeFrame
+        from app.services.substrate.form_runtime import execute as _runtime_execute
+        value = _runtime_execute(session, ast, _RuntimeFrame())
+        return _wrap_runtime_value(value)
+
     # Recipe-AST nodes: compile to a Recipe NodeID (intern as we go)
     if isinstance(ast, (
         IntLit, BoolLit, StringLit, Identifier,
@@ -1932,6 +1946,29 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         return FormResult("recipe", rid)
 
     raise TypeError(f"Form: cannot evaluate {type(ast).__name__}")
+
+
+def _wrap_runtime_value(value: Any) -> FormResult:
+    """Wrap a raw runtime value back into a FormResult for the AST evaluator.
+
+    Walks the type ladder the runtime returns (NodeID, NamedCell,
+    CellView, homogeneous lists, primitives) and picks the matching kind
+    so the REST surface and the playground UI render it under the same
+    code paths they already use for direct structural results.
+    """
+    from app.services.substrate.kernel import NamedCell
+    if isinstance(value, NodeID):
+        return FormResult("node_id", value)
+    if isinstance(value, NamedCell):
+        return FormResult("cell", value)
+    if isinstance(value, CellView):
+        return FormResult("view", value)
+    if isinstance(value, list):
+        if value and all(isinstance(v, NamedCell) for v in value):
+            return FormResult("cells", value)
+        if value and all(isinstance(v, CellView) for v in value):
+            return FormResult("views", value)
+    return FormResult("value", value)
 
 
 def _evaluate_query(session: Session, q: Query) -> FormResult:
