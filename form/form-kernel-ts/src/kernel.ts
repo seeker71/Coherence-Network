@@ -1195,7 +1195,18 @@ export class Kernel {
     }));
     this.registerNative("len", catAccess(), (_k, args) => {
       const v = args[0];
-      if (v?.kind === "list") return { kind: "int", int: v.list.length };
+      if (v?.kind === "list") {
+        // Dict-aware: tagged "__dict__" lists report pair count,
+        // matching Python's len(d) semantics.
+        if (
+          v.list.length > 0 &&
+          v.list[0]!.kind === "str" &&
+          v.list[0]!.str === "__dict__"
+        ) {
+          return { kind: "int", int: (v.list.length - 1) / 2 };
+        }
+        return { kind: "int", int: v.list.length };
+      }
       if (v?.kind === "str") return { kind: "int", int: v.str.length };
       return { kind: "int", int: 0 };
     });
@@ -1205,6 +1216,158 @@ export class Kernel {
       return lst[i] ?? { kind: "null" };
     });
     this.registerNative("empty", catListNat(), () => ({ kind: "list", list: [] }));
+    // --- Dict natives — sibling-parity with Rust _dict_* + _get + _in ---
+    // Dicts are first-class but ride on Value{kind:"list"} with a
+    // "__dict__" tag in slot 0 followed by alternating key/value pairs:
+    //   ["__dict__", k0, v0, k1, v1, ...]
+    // Keys can be strings or ints; equality uses value-level compare.
+    // Updates are immutable: _dict_set returns a fresh dict.
+    // Plain boolean predicate (not a TS type guard) so the kind narrowing
+    // after the dict branch still allows the regular "list" path through.
+    const isDictValue = (v: Value): boolean =>
+      v.kind === "list" &&
+      v.list.length > 0 &&
+      v.list[0]!.kind === "str" &&
+      v.list[0]!.str === "__dict__";
+    const dictKeyEq = (a: Value, b: Value): boolean => {
+      if (a.kind === "str" && b.kind === "str") return a.str === b.str;
+      if (a.kind === "int" && b.kind === "int") return a.int === b.int;
+      return false;
+    };
+    this.registerNative("_dict_new", catListNat(), (_k, args) => ({
+      kind: "list",
+      list: [{ kind: "str", str: "__dict__" }, ...args],
+    }));
+    // Local helper to access the underlying list of a dict-shaped value
+    // without losing type info — TS narrows away the "list" branch after
+    // the boolean predicate, so this cast is the cheapest reconciliation.
+    const dictList = (v: Value): Value[] => (v as { kind: "list"; list: Value[] }).list;
+    this.registerNative("_dict_get", catAccess(), (_k, args) => {
+      const d = args[0]!;
+      const key = args[1]!;
+      if (!isDictValue(d)) return { kind: "null" };
+      const xs = dictList(d);
+      for (let i = 1; i + 1 < xs.length; i += 2) {
+        if (dictKeyEq(xs[i]!, key)) return xs[i + 1]!;
+      }
+      return { kind: "null" };
+    });
+    this.registerNative("_dict_set", catMethod(), (_k, args) => {
+      const d = args[0]!;
+      const key = args[1]!;
+      const val = args[2]!;
+      if (!isDictValue(d)) return d;
+      const out = dictList(d).slice();
+      for (let i = 1; i + 1 < out.length; i += 2) {
+        if (dictKeyEq(out[i]!, key)) {
+          out[i + 1] = val;
+          return { kind: "list", list: out };
+        }
+      }
+      out.push(key, val);
+      return { kind: "list", list: out };
+    });
+    this.registerNative("_dict_has", catCompareEq(), (_k, args) => {
+      const d = args[0]!;
+      const key = args[1]!;
+      if (!isDictValue(d)) return { kind: "bool", bool: false };
+      const xs = dictList(d);
+      for (let i = 1; i + 1 < xs.length; i += 2) {
+        if (dictKeyEq(xs[i]!, key)) return { kind: "bool", bool: true };
+      }
+      return { kind: "bool", bool: false };
+    });
+    this.registerNative("_dict_keys", catAccess(), (_k, args) => {
+      const d = args[0]!;
+      if (!isDictValue(d)) return { kind: "list", list: [] };
+      const xs = dictList(d);
+      const out: Value[] = [];
+      for (let i = 1; i + 1 < xs.length; i += 2) out.push(xs[i]!);
+      return { kind: "list", list: out };
+    });
+    this.registerNative("_dict_values", catAccess(), (_k, args) => {
+      const d = args[0]!;
+      if (!isDictValue(d)) return { kind: "list", list: [] };
+      const xs = dictList(d);
+      const out: Value[] = [];
+      for (let i = 1; i + 1 < xs.length; i += 2) out.push(xs[i + 1]!);
+      return { kind: "list", list: out };
+    });
+    // _get — polymorphic subscript. Dispatches list[i]/str[i] to nth and
+    // dict[k] to _dict_get. The Python emitter compiles subscript to
+    // (_get value index) so the same .fk runs over either container.
+    this.registerNative("_get", catAccess(), (_k, args) => {
+      const v = args[0]!;
+      const idx = args[1]!;
+      if (isDictValue(v)) {
+        const xs = dictList(v);
+        for (let i = 1; i + 1 < xs.length; i += 2) {
+          if (dictKeyEq(xs[i]!, idx)) return xs[i + 1]!;
+        }
+        return { kind: "null" };
+      }
+      if (v.kind === "list") {
+        const i = idx.kind === "int" ? idx.int : 0;
+        if (i < 0 || i >= v.list.length) return { kind: "null" };
+        return v.list[i]!;
+      }
+      if (v.kind === "str") {
+        const i = idx.kind === "int" ? idx.int : 0;
+        if (i < 0 || i >= v.str.length) return { kind: "str", str: "" };
+        return { kind: "str", str: v.str[i] ?? "" };
+      }
+      return { kind: "null" };
+    });
+    // _iter — turn any container into a flat list suitable for the
+    // for-loop emitter's head/tail walk. Lists pass through; dicts
+    // become their keys (Python's `for k in d:`); strings split per char.
+    this.registerNative("_iter", catListNat(), (_k, args) => {
+      const v = args[0]!;
+      if (isDictValue(v)) {
+        const xs = dictList(v);
+        const out: Value[] = [];
+        for (let i = 1; i + 1 < xs.length; i += 2) out.push(xs[i]!);
+        return { kind: "list", list: out };
+      }
+      if (v.kind === "list") return v;
+      if (v.kind === "str") {
+        return {
+          kind: "list",
+          list: v.str.split("").map((c) => ({ kind: "str", str: c }) as Value),
+        };
+      }
+      return { kind: "list", list: [] };
+    });
+    // _in — polymorphic membership. (`k in d` → _in d k). Dict keys,
+    // list elements, or substring presence in a string.
+    this.registerNative("_in", catCompareEq(), (_k, args) => {
+      const needle = args[0]!;
+      const hay = args[1]!;
+      if (isDictValue(hay)) {
+        const xs = dictList(hay);
+        for (let i = 1; i + 1 < xs.length; i += 2) {
+          if (dictKeyEq(xs[i]!, needle))
+            return { kind: "bool", bool: true };
+        }
+        return { kind: "bool", bool: false };
+      }
+      if (hay.kind === "list") {
+        for (const v of hay.list) {
+          if (
+            (needle.kind === "int" && v.kind === "int" && needle.int === v.int) ||
+            (needle.kind === "str" && v.kind === "str" && needle.str === v.str) ||
+            (needle.kind === "bool" && v.kind === "bool" && needle.bool === v.bool)
+          ) {
+            return { kind: "bool", bool: true };
+          }
+        }
+        return { kind: "bool", bool: false };
+      }
+      if (needle.kind === "str" && hay.kind === "str") {
+        return { kind: "bool", bool: hay.str.includes(needle.str) };
+      }
+      return { kind: "bool", bool: false };
+    });
     // Common Python builtins. Sibling-parity with Rust + Go.
     this.registerNative("min", catMethod(), (_k, args) => {
       const v = args[0];

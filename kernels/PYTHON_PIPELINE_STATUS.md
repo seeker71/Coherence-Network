@@ -48,6 +48,7 @@ result
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary |
 | `python_class_demo.py` | 176 | `class X:`, `__init__(self, …)`, instance methods, attribute reads, method dispatch via `__class__` tag |
 | `endpoint_coherence_weight_demo.py` | 16185 | first transmuted FastAPI endpoint body — `/api/utils/coherence_weight` runs this exact recipe through the kernel binary; **production API image** (`Dockerfile.api` at repo root, two-stage build) bakes the `form-kernel-rust` release binary into `/app/bin/form-kernel-rust` and sets `FORM_KERNEL_RUST_BIN` so the bridge picks it up — `/api/health` reports `kernel_runtime.available=true` and the endpoint responds with `runtime: "form-kernel-rust"` (no Python fallback) |
+| `python_dict_demo.py` | 88 | dict literal, subscript-read, subscript-assign, `in` membership, iter over keys, `len(d)` |
 
 **Run it:**
 ```bash
@@ -100,6 +101,8 @@ Features the pipeline currently compiles to native kernel:
 - Arithmetic: `+ - * / %` (integer **and float**, mixed-type promotion)
 - Comparison: `== != < <= > >=` (float on either side promotes the comparison)
 - Float literals: `0.5`, `1.0`, `3.14`, exponent form `1e-9`
+- Dict literal `{k: v, ...}`, subscript `d[k]`, subscript-assign `d[k] = v`,
+  membership `k in d`, iteration `for k in d:`, `len(d)`
 - Logic: `and or not`
 - Function calls `f(args)`
 - Recursion (any depth)
