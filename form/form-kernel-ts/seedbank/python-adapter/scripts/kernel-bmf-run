@@ -21,19 +21,23 @@
 #      the kernel's final value.
 #
 # What this script does NOT do (yet — honest pending):
-#   - Walk PY-BMF-* recipes back to Python runtime values. The grammar at
-#     form-stdlib/grammars/python-bmf.fk parses Python into PY-BMF-CALL /
-#     PY-BMF-IF / PY-BMF-ASSIGN / PY-BMF-DEF recipes, but the closure-
-#     scoping interpreter that walks those recipes to a value (G4 from
-#     PYTHON_BMF_CONTRACT.md) is the next breath. Until G4 lands, the
-#     value this script reports is the parsed-module statement count, NOT
-#     the program's CPython result.
+#   - Feed real .py files into the PY-BMF closure interpreter. The grammar
+#     at form-stdlib/grammars/python-bmf.fk parses Python into source-
+#     statement objects (kind-classified token groups), but the rule
+#     dispatcher that lifts those statements to PY-BMF-* recipes (G1 from
+#     PYTHON_BMF_CONTRACT.md) plus precedence climbing for nested
+#     expressions (G3) is still the gate. The closure-walking interpreter
+#     itself (G4) is alive at form-stdlib/python-bmf-eval.fk and proven
+#     three-way against CPython for direct-recipe inputs — see
+#     form-stdlib/tests/python-bmf-eval-band.fk (returns 28000). When
+#     G1+G3 land, the driver below swaps from (len statements) to
+#     (py-run module-recipe) and the orchestration shape stays identical.
 #
 # So `kernel-bmf-run examples/python_demo.py` prints the count of top-
 # level statements (≠ 40949). The three-way parity gate against CPython's
-# program value reaches green when G4 (and G3 precedence climbing) ship.
+# program value reaches green when G1+G3 wire source → PY-BMF recipes.
 # `PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh` will name
-# every demo as "diverges from CPython, gated on G3+G4" until then —
+# every demo as "diverges from CPython, gated on G1+G3" until then —
 # honest red, not faked green.
 
 set -euo pipefail
