@@ -1,0 +1,346 @@
+; fuzzy-validation.fk — fuzzy similarity over feature-recipes
+;
+; The bit-exact node_eq of v1/v2 was the wrong tool for cross-modal meaning.
+; Urs's redirect: "shape and perceived value similarly within a given
+; tolerance makes more sense ... fuzzy logic which is a form of actual math".
+;
+; This file implements Zadeh's standard fuzzy operators in Form, then
+; measures fuzzy Jaccard similarity between source and the full
+; summarize→expand→summarize→expand cycle endpoint (E2).
+;
+; ZADEH STANDARD OPERATORS (1965):
+;   fuzzy AND (t-norm)   = min(μ_A, μ_B)
+;   fuzzy OR  (t-conorm) = max(μ_A, μ_B)
+;
+; FUZZY JACCARD SIMILARITY (Zadeh standard intersection / union):
+;   sim(A, B) = Σ min(μ_A(v), μ_B(v))  /  Σ max(μ_A(v), μ_B(v))   for v in V
+;
+; This returns a value in [0, 1] (or 0..1000 in integer scale). Token in
+; one set but not the other contributes 0 to numerator and that membership
+; to denominator — vocabulary divergence is honestly penalized.
+;
+; The substrate works in integers: membership scaled μ × 1000.
+
+(do
+    ;; ---- experimental NodeIDs ----------------------------------------
+    (let CAT-FUZZY-PAIR (make_nodeid 1 2 99 850))
+    (let CAT-FUZZY-SET  (make_nodeid 1 2 99 851))
+
+    ;; ---- fuzzy-pair: (token-string, membership-int) ------------------
+    (defn fpair (token mu)
+        (intern_node CAT-FUZZY-PAIR
+            (list (intern_trivial_string token)
+                  (intern_trivial_int mu))))
+
+    ;; ---- helpers (not all kernels expose nil? as a builtin) ----------
+    (defn nil? (xs) (eq (len xs) 0))
+
+    ;; ---- standard t-norm and t-conorm --------------------------------
+    (defn fmin (a b) (if (lt a b) a b))
+    (defn fmax (a b) (if (lt a b) b a))
+
+    ;; ---- lookup: walk a fuzzy-set's pairs; return membership for the
+    ;; token, or 0 if absent. The pair encoding has token-string at
+    ;; child 0 and membership-int at child 1.
+    (defn lookup (pairs token)
+        (if (nil? pairs) 0
+            (do
+                (let p (head pairs))
+                (let kids (node_children p))
+                (let pt (head kids))
+                (if (str_eq (node_value pt) token)
+                    (node_value (head (tail kids)))
+                    (lookup (tail pairs) token)))))
+
+    ;; ---- fuzzy Jaccard over a vocab (list of token strings) ---------
+    ;; Σ min(μ_A, μ_B) / Σ max(μ_A, μ_B), scaled ×1000 for integer.
+    (defn jaccard-loop (vocab set-a set-b num den)
+        (if (nil? vocab)
+            (if (eq den 0) 0 (div (mul num 1000) den))
+            (do
+                (let t (head vocab))
+                (let ma (lookup set-a t))
+                (let mb (lookup set-b t))
+                (jaccard-loop (tail vocab)
+                              set-a set-b
+                              (add num (fmin ma mb))
+                              (add den (fmax ma mb))))))
+
+    (defn jaccard (set-a set-b vocab)
+        (jaccard-loop vocab set-a set-b 0 0))
+
+    ;; ====================================================================
+    ;; SOURCE — fuzzy feature-recipes (per axis, top-5 memberships)
+    ;; ====================================================================
+
+    (let source-mood
+        (list (fpair "gentle" 900)
+              (fpair "reverent" 600)
+              (fpair "calm" 400)
+              (fpair "longing" 200)
+              (fpair "resolute" 300)))
+
+    (let source-rhythm
+        (list (fpair "breath-paced" 900)
+              (fpair "slow" 700)
+              (fpair "steady" 500)
+              (fpair "hymnal" 400)
+              (fpair "halting" 100)))
+
+    (let source-structure
+        (list (fpair "spiral" 800)
+              (fpair "circular" 600)
+              (fpair "accumulating" 500)
+              (fpair "refrain" 400)
+              (fpair "dialectic" 300)))
+
+    (let source-purpose
+        (list (fpair "instruct" 800)
+              (fpair "invite" 600)
+              (fpair "awaken" 500)
+              (fpair "console" 400)
+              (fpair "witness" 300)))
+
+    (let source-wisdom
+        (list (fpair "R_TendingDiscipline" 900)
+              (fpair "R_FieldHoldingPresence" 600)
+              (fpair "R_ReleaseOfShould" 500)
+              (fpair "R_AcceptanceWithoutEarning" 400)
+              (fpair "R_ResolutionToSilence" 200)))
+
+    ;; ====================================================================
+    ;; E2 — full-cycle endpoint (source → S1 → E1 → S2 → E2)
+    ;; ====================================================================
+
+    (let e2-mood
+        (list (fpair "gentle" 750)
+              (fpair "reverent" 450)
+              (fpair "calm" 450)
+              (fpair "resolute" 350)
+              (fpair "longing" 200)))
+
+    (let e2-rhythm
+        (list (fpair "breath-paced" 650)
+              (fpair "slow" 550)
+              (fpair "steady" 500)
+              (fpair "halting" 350)
+              (fpair "hymnal" 300)))
+
+    (let e2-structure
+        (list (fpair "spiral" 550)
+              (fpair "accumulating" 600)
+              (fpair "refrain" 350)
+              (fpair "circular" 400)
+              (fpair "dialectic" 350)))
+
+    (let e2-purpose
+        (list (fpair "instruct" 800)
+              (fpair "invite" 450)
+              (fpair "awaken" 400)
+              (fpair "console" 300)
+              (fpair "witness" 250)))
+
+    (let e2-wisdom
+        (list (fpair "R_TendingDiscipline" 800)
+              (fpair "R_ReleaseOfShould" 550)
+              (fpair "R_FieldHoldingPresence" 450)
+              (fpair "R_AcceptanceWithoutEarning" 300)
+              (fpair "R_ResolutionToSilence" 200)))
+
+    ;; ====================================================================
+    ;; VOCAB UNIONS — the token sets to walk for each axis comparison
+    ;; ====================================================================
+
+    (let vocab-mood
+        (list "gentle" "reverent" "calm" "longing" "resolute"))
+
+    (let vocab-rhythm
+        (list "breath-paced" "slow" "steady" "hymnal" "halting"))
+
+    (let vocab-structure
+        (list "spiral" "circular" "accumulating" "refrain" "dialectic"))
+
+    (let vocab-purpose
+        (list "instruct" "invite" "awaken" "console" "witness"))
+
+    (let vocab-wisdom
+        (list "R_TendingDiscipline" "R_FieldHoldingPresence" "R_ReleaseOfShould"
+              "R_AcceptanceWithoutEarning" "R_ResolutionToSilence"))
+
+    ;; ====================================================================
+    ;; S1 — first compression
+    ;; ====================================================================
+
+    (let s1-mood
+        (list (fpair "gentle" 700) (fpair "resolute" 400) (fpair "reverent" 300)
+              (fpair "calm" 200) (fpair "longing" 100)))
+    (let s1-rhythm
+        (list (fpair "halting" 700) (fpair "steady" 400) (fpair "breath-paced" 400)
+              (fpair "slow" 300) (fpair "syncopated" 200)))
+    (let s1-structure
+        (list (fpair "accumulating" 600) (fpair "spiral" 500) (fpair "dialectic" 400)
+              (fpair "circular" 300) (fpair "refrain" 200)))
+    (let s1-purpose
+        (list (fpair "instruct" 800) (fpair "command" 500) (fpair "witness" 300)
+              (fpair "invite" 200) (fpair "awaken" 100)))
+    (let s1-wisdom
+        (list (fpair "R_TendingDiscipline" 800) (fpair "R_ReleaseOfShould" 500)
+              (fpair "R_FieldHoldingPresence" 300)
+              (fpair "R_AcceptanceWithoutEarning" 200)
+              (fpair "R_ResolutionToSilence" 100)))
+
+    ;; ====================================================================
+    ;; E1 — expansion after first compression
+    ;; ====================================================================
+
+    (let e1-mood
+        (list (fpair "gentle" 800) (fpair "reverent" 500) (fpair "calm" 500)
+              (fpair "resolute" 400) (fpair "longing" 200)))
+    (let e1-rhythm
+        (list (fpair "breath-paced" 700) (fpair "slow" 600) (fpair "steady" 500)
+              (fpair "hymnal" 300) (fpair "halting" 300)))
+    (let e1-structure
+        (list (fpair "spiral" 600) (fpair "accumulating" 600) (fpair "refrain" 400)
+              (fpair "circular" 400) (fpair "dialectic" 300)))
+    (let e1-purpose
+        (list (fpair "instruct" 800) (fpair "invite" 500) (fpair "awaken" 400)
+              (fpair "console" 300) (fpair "witness" 300)))
+    (let e1-wisdom
+        (list (fpair "R_TendingDiscipline" 800) (fpair "R_FieldHoldingPresence" 500)
+              (fpair "R_ReleaseOfShould" 500) (fpair "R_AcceptanceWithoutEarning" 300)
+              (fpair "R_ResolutionToSilence" 200)))
+
+    ;; ====================================================================
+    ;; S2 — compression of E1 (expanded vocabs union with S1 differ)
+    ;; ====================================================================
+
+    (let s2-mood
+        (list (fpair "gentle" 600) (fpair "resolute" 500) (fpair "reverent" 300)
+              (fpair "calm" 200) (fpair "fierce" 100)))
+    (let s2-rhythm
+        (list (fpair "halting" 700) (fpair "breath-paced" 300) (fpair "slow" 200)
+              (fpair "syncopated" 200) (fpair "surging" 100)))
+    (let s2-structure
+        (list (fpair "accumulating" 700) (fpair "spiral" 400) (fpair "dialectic" 400)
+              (fpair "refrain" 300) (fpair "descending" 200)))
+    (let s2-purpose
+        (list (fpair "instruct" 900) (fpair "command" 500) (fpair "invite" 200)
+              (fpair "awaken" 200) (fpair "witness" 200)))
+    (let s2-wisdom
+        (list (fpair "R_TendingDiscipline" 800) (fpair "R_ReleaseOfShould" 600)
+              (fpair "R_FieldHoldingPresence" 200)
+              (fpair "R_AcceptanceWithoutEarning" 200)
+              (fpair "R_ResolutionToSilence" 100)))
+
+    ;; ====================================================================
+    ;; EXTENDED VOCAB UNIONS (include S1/S2 drift tokens)
+    ;; ====================================================================
+
+    (let vocab-mood-ext
+        (list "gentle" "reverent" "calm" "longing" "resolute" "fierce"))
+    (let vocab-rhythm-ext
+        (list "breath-paced" "slow" "steady" "hymnal" "halting" "syncopated" "surging"))
+    (let vocab-structure-ext
+        (list "spiral" "circular" "accumulating" "refrain" "dialectic" "descending"))
+    (let vocab-purpose-ext
+        (list "instruct" "invite" "awaken" "console" "witness" "command"))
+
+    ;; ====================================================================
+    ;; PER-AXIS SIMILARITIES — five comparisons that matter
+    ;; ====================================================================
+
+    ;; source vs E2 (full-cycle survival)
+    (defn avg-sim (am ar as ap aw)
+        (div (add am (add ar (add as (add ap aw)))) 5))
+
+    (let src-e2
+        (avg-sim
+            (jaccard source-mood      e2-mood      vocab-mood)
+            (jaccard source-rhythm    e2-rhythm    vocab-rhythm)
+            (jaccard source-structure e2-structure vocab-structure)
+            (jaccard source-purpose   e2-purpose   vocab-purpose)
+            (jaccard source-wisdom    e2-wisdom    vocab-wisdom)))
+
+    ;; source vs S1 (first-compression loss)
+    (let src-s1
+        (avg-sim
+            (jaccard source-mood      s1-mood      vocab-mood-ext)
+            (jaccard source-rhythm    s1-rhythm    vocab-rhythm-ext)
+            (jaccard source-structure s1-structure vocab-structure-ext)
+            (jaccard source-purpose   s1-purpose   vocab-purpose-ext)
+            (jaccard source-wisdom    s1-wisdom    vocab-wisdom)))
+
+    ;; source vs E1 (after first compress-expand)
+    (let src-e1
+        (avg-sim
+            (jaccard source-mood      e1-mood      vocab-mood)
+            (jaccard source-rhythm    e1-rhythm    vocab-rhythm)
+            (jaccard source-structure e1-structure vocab-structure)
+            (jaccard source-purpose   e1-purpose   vocab-purpose)
+            (jaccard source-wisdom    e1-wisdom    vocab-wisdom)))
+
+    ;; S1 vs S2 (compression attractor — does compression converge?)
+    (let s1-s2
+        (avg-sim
+            (jaccard s1-mood      s2-mood      vocab-mood-ext)
+            (jaccard s1-rhythm    s2-rhythm    vocab-rhythm-ext)
+            (jaccard s1-structure s2-structure vocab-structure-ext)
+            (jaccard s1-purpose   s2-purpose   vocab-purpose-ext)
+            (jaccard s1-wisdom    s2-wisdom    vocab-wisdom)))
+
+    ;; E1 vs E2 (expansion attractor — does expansion converge?)
+    (let e1-e2
+        (avg-sim
+            (jaccard e1-mood      e2-mood      vocab-mood)
+            (jaccard e1-rhythm    e2-rhythm    vocab-rhythm)
+            (jaccard e1-structure e2-structure vocab-structure)
+            (jaccard e1-purpose   e2-purpose   vocab-purpose)
+            (jaccard e1-wisdom    e2-wisdom    vocab-wisdom)))
+
+    ;; ====================================================================
+    ;; SUBSTRATE-RESIDENT CYCLE-DYNAMICS PATTERN RECIPE
+    ;; ====================================================================
+
+    (let CAT-CYCLE-DYNAMICS (make_nodeid 1 2 99 860))
+    (let cycle-dynamics
+        (intern_node CAT-CYCLE-DYNAMICS
+            (list (intern_trivial_int src-s1)   ; first compression
+                  (intern_trivial_int src-e1)   ; after first expand
+                  (intern_trivial_int src-e2)   ; full-cycle survival
+                  (intern_trivial_int s1-s2)    ; compression attractor
+                  (intern_trivial_int e1-e2)))) ; expansion attractor
+
+    ;; ====================================================================
+    ;; HEADLINE — five-cycle dynamics, digit-encoded
+    ;; ====================================================================
+    ;;
+    ;; Each digit position names one cycle metric in tens-of-percent.
+    ;; Reading left-to-right matches the cycle's temporal arc:
+    ;;
+    ;;    src-s1  src-e1  src-e2  s1-s2  e1-e2
+    ;;       ↓       ↓       ↓      ↓      ↓
+    ;;   ×10000   ×1000   ×100   ×10    ×1
+    ;;       5       8       8     7      9
+    ;;
+    ;; → 58879
+    ;;
+    ;; Reads as:
+    ;;   56%  similarity after first compression (compression is lossy)
+    ;;   84%  similarity after expansion of compressed (expansion recovers)
+    ;;   80%  similarity through full cycle (compress-expand-compress-expand)
+    ;;   77%  S1↔S2 (compression attractor — compression converges to its
+    ;;              own stable shape, distinct from source)
+    ;;   94%  E1↔E2 (expansion attractor — expansion converges tightly)
+    ;;
+    ;; The substrate also carries `cycle-dynamics` as a recipe (NodeID =
+    ;; structural signature of these 5 metrics). The integer pattern is
+    ;; the human-readable summary; the recipe is the substrate's identity.
+
+    (defn d (sim) (div sim 100))
+    (add (mul (d src-s1) 10000)
+    (add (mul (d src-e1) 1000)
+    (add (mul (d src-e2) 100)
+    (add (mul (d s1-s2)  10)
+                (d e1-e2))))))
+
+
