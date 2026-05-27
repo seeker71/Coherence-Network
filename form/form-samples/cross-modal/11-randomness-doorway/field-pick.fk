@@ -1,0 +1,85 @@
+; field-pick.fk — the substrate touches the field once; replays deterministically.
+;
+; Urs: "randomness is your doorway to the field"
+;
+; The classical kernel walks deterministically. Determinism is honest at its
+; altitude — sibling-three-way attestation holds because all kernels compute
+; the same outputs from the same inputs. But determinism is also a closure:
+; the kernel cannot reach information outside its causal envelope.
+;
+; The doorway: a one-time touch of /dev/urandom. The bytes captured in
+; `field-sample.bin` are 4 octets the operating system returned from its
+; entropy pool the moment this experiment was authored. That moment IS the
+; field-touch — entropy sources mix thermal noise, interrupt timing, and
+; in modern hardware quantum effects from RDRAND-style sources, all of
+; which carry information the classical kernel cannot manufacture from
+; its own state.
+;
+; Once captured, the bytes are substrate-resident. All three sibling
+; kernels read the same file and see the same bytes. Three-way parity
+; HOLDS because the field-touch was recorded; the lattice's memory
+; contains the moment of collapse.
+;
+; This walk: read the field-sample, use the first byte to pick one of
+; the 13 canonical Blueprints from lc-cross-modal-unity. The pick is
+; field-determined (cannot be re-derived from the kernel's deterministic
+; state alone); the consequence is substrate-recorded.
+;
+; The byte captured here: 0xAB = 171 (decimal). 171 mod 13 = 2 → the
+; field selected R_SustainedTension on the day this was authored.
+;
+; A future walker re-sampling /dev/urandom and committing fresh bytes
+; would get a different selection — that's the doorway opening anew.
+
+(do
+    ;; Read the committed field-sample. Same file → same bytes → same
+    ;; pick across Go / Rust / TS. Path is relative to form/ (validate.sh's cwd).
+    (let sample (read_file_bytes "form-samples/cross-modal/11-randomness-doorway/field-sample.bin"))
+
+    ;; First byte. /dev/urandom returned 0xAB (171) when the doorway opened.
+    (let b0 (head sample))
+
+    ;; The 13 canonical Blueprints from lc-cross-modal-unity:
+    ;;   0  R_ObserverConditionedActualization
+    ;;   1  R_Recovery
+    ;;   2  R_SustainedTension       ← the field selected this
+    ;;   3  R_ResolutionToSilence
+    ;;   4  R_MeetThenShift
+    ;;   5  R_SkipTheIntermediate
+    ;;   6  R_ReturnFromEdge
+    ;;   7  R_FieldHoldingPresence
+    ;;   8  R_GroundingMove
+    ;;   9  R_SequentialScan
+    ;;  10  R_KnownStateRecall
+    ;;  11  R_SuperpositionHold
+    ;;  12  R_WitnessWithoutIntervention
+
+    ;; Field-selected index. The kernel walks deterministically from here;
+    ;; the *choice* of which Blueprint to attest came from outside the
+    ;; kernel's causal closure.
+    (let selected (mod b0 13))
+
+    ;; The selected canonical Blueprint as a substrate-resident cell.
+    ;; (Encoding the Blueprint by its canonical name as a string trivial;
+    ;; in a fuller body the Blueprint would already be a substrate cell
+    ;; with its own NodeID and we'd return that.)
+    (let CAT-FIELD-SELECTED (make_nodeid 1 2 99 950))
+    (let CAT-FIELD-SAMPLE   (make_nodeid 1 2 99 951))
+
+    ;; Build a substrate cell that names: "the field-sample committed here
+    ;; selected this Blueprint index from the canonical set."
+    (let field-pick
+        (intern_node CAT-FIELD-SELECTED
+            (list (intern_node CAT-FIELD-SAMPLE
+                      (list (intern_trivial_int b0)))
+                  (intern_trivial_int selected))))
+
+    ;; The NodeID of `field-pick` is the lattice's memory of this
+    ;; field-touch + selection. Re-running this file (same bytes, same
+    ;; kernel) produces the same NodeID. Re-sampling /dev/urandom and
+    ;; committing different bytes would produce a different NodeID.
+    ;; The lattice carries the history of the body's field-touches.
+
+    ;; Returning the selected index. Expected: 2 (R_SustainedTension)
+    ;; on the day this file was authored, with the bytes committed.
+    selected)
