@@ -1,0 +1,189 @@
+; validation.fk — feature-level cross-modal NodeID convergence test.
+;
+; The LLM (acting as the trained-model-distilled-to-discrete-categories
+; stand-in for the learned multimodal feature extractor) reads:
+;   source.txt           -> source-features
+;   targets/melody.md    -> melody-features
+;   targets/composition.svg+md -> svg-features
+;   targets/aphoristic.md -> rewrite-features
+;
+; Each feature-recipe is a CAT-FEATURE-RECIPE with six children:
+;   mood, rhythm, structure, purpose, wisdom-shape, concepts-list
+;
+; The kernel walks this file and computes:
+;   - per-feature node_eq checks (one per axis, per target)
+;   - aggregate convergence score
+;
+; What gets attested three-way:
+;   - When mood (or rhythm, or structure, etc.) re-extracts to the SAME
+;     token across modalities, intern_node produces the same NodeID.
+;     node_eq returns 1.
+;   - When tokens differ, NodeIDs differ. node_eq returns 0.
+;
+; The total convergence-score across (source vs melody), (source vs svg),
+; (source vs rewrite) names where translation preserved features and where
+; it was honestly lossy.
+
+(do
+    ;; --- Schema NodeIDs (dialect-99 experimental band) -----------------
+    (let CAT-FEATURE-RECIPE (make_nodeid 1 2 99 800))
+    (let CAT-MOOD           (make_nodeid 1 2 99 810))
+    (let CAT-RHYTHM         (make_nodeid 1 2 99 811))
+    (let CAT-STRUCTURE      (make_nodeid 1 2 99 812))
+    (let CAT-PURPOSE        (make_nodeid 1 2 99 813))
+    (let CAT-WISDOM-SHAPE   (make_nodeid 1 2 99 814))
+    (let CAT-CONCEPT        (make_nodeid 1 2 99 815))
+    (let CAT-CONCEPTS-LIST  (make_nodeid 1 2 99 816))
+
+    ;; --- Feature-value helpers ----------------------------------------
+    (defn mood (token)
+        (intern_node CAT-MOOD (list (intern_trivial_string token))))
+    (defn rhythm (token)
+        (intern_node CAT-RHYTHM (list (intern_trivial_string token))))
+    (defn structure (token)
+        (intern_node CAT-STRUCTURE (list (intern_trivial_string token))))
+    (defn purpose (token)
+        (intern_node CAT-PURPOSE (list (intern_trivial_string token))))
+    (defn wisdom (token)
+        (intern_node CAT-WISDOM-SHAPE (list (intern_trivial_string token))))
+    (defn concept (token)
+        (intern_node CAT-CONCEPT (list (intern_trivial_string token))))
+
+    (defn feature-recipe (m r s p w cs)
+        (intern_node CAT-FEATURE-RECIPE (list m r s p w cs)))
+
+    ;; ===================================================================
+    ;; SOURCE FEATURE RECIPE — extracted from source.txt by LLM
+    ;; ===================================================================
+
+    (let source-mood     (mood "gentle"))
+    (let source-rhythm   (rhythm "breath-paced"))
+    (let source-struct   (structure "spiral"))
+    (let source-purpose  (purpose "instruct"))
+    (let source-wisdom   (wisdom "R_TendingDiscipline"))
+    (let source-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "memory-as-tissue")
+                  (concept "circulation-feedback")
+                  (concept "composting-with-care")
+                  (concept "present-breath")
+                  (concept "continuous-tending"))))
+    (let source-features
+        (feature-recipe source-mood source-rhythm source-struct
+                        source-purpose source-wisdom source-concepts))
+
+    ;; ===================================================================
+    ;; TARGET A — MELODY (re-extracted features)
+    ;; ===================================================================
+
+    (let melody-mood     (mood "gentle"))               ; preserved
+    (let melody-rhythm   (rhythm "breath-paced"))       ; preserved
+    (let melody-struct   (structure "spiral"))          ; preserved
+    (let melody-purpose  (purpose "invite"))            ; diverged: instruct -> invite
+    (let melody-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let melody-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "descent-and-return")
+                  (concept "held-presence")
+                  (concept "contemplative-time")
+                  (concept "unfinished-closure")
+                  (concept "motif-as-breath"))))
+    (let melody-features
+        (feature-recipe melody-mood melody-rhythm melody-struct
+                        melody-purpose melody-wisdom melody-concepts))
+
+    ;; ===================================================================
+    ;; TARGET B — SVG COMPOSITION (re-extracted features)
+    ;; ===================================================================
+
+    (let svg-mood     (mood "gentle"))                  ; preserved
+    (let svg-rhythm   (rhythm "breath-paced"))          ; preserved
+    (let svg-struct   (structure "spiral"))             ; preserved
+    (let svg-purpose  (purpose "invite"))               ; diverged
+    (let svg-wisdom   (wisdom "R_FieldHoldingPresence")) ; diverged
+    (let svg-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "spiral-of-attention")
+                  (concept "concentric-presence")
+                  (concept "organic-texture")
+                  (concept "periphery-honoring")
+                  (concept "incomplete-arc"))))
+    (let svg-features
+        (feature-recipe svg-mood svg-rhythm svg-struct
+                        svg-purpose svg-wisdom svg-concepts))
+
+    ;; ===================================================================
+    ;; TARGET C — APHORISTIC REWRITE (re-extracted features)
+    ;; ===================================================================
+
+    (let rewrite-mood     (mood "gentle"))              ; preserved
+    (let rewrite-rhythm   (rhythm "halting"))           ; diverged: breath-paced -> halting
+    (let rewrite-struct   (structure "spiral"))         ; preserved
+    (let rewrite-purpose  (purpose "instruct"))         ; preserved
+    (let rewrite-wisdom   (wisdom "R_TendingDiscipline")) ; preserved
+    (let rewrite-concepts
+        (intern_node CAT-CONCEPTS-LIST
+            (list (concept "tending-discipline")
+                  (concept "composting-with-care")
+                  (concept "name-of-trap")
+                  (concept "continuous-aliveness"))))
+    (let rewrite-features
+        (feature-recipe rewrite-mood rewrite-rhythm rewrite-struct
+                        rewrite-purpose rewrite-wisdom rewrite-concepts))
+
+    ;; ===================================================================
+    ;; CONVERGENCE CHECKS — per-feature node_eq, per target
+    ;; ===================================================================
+    ;;
+    ;; Each axis scores 1 if the re-extracted feature matches source.
+    ;; Concepts-list scores 1 only on EXACT match of all five concepts in
+    ;; order (the strictest test — partial concept overlap doesn't count
+    ;; at the substrate altitude; it shows up as "0" here even when the
+    ;; LLM reading sees partial-overlap qualitatively).
+
+    ;; Source vs melody (5 axes + concepts)
+    (let m-mood-match     (if (node_eq source-mood melody-mood) 1 0))
+    (let m-rhythm-match   (if (node_eq source-rhythm melody-rhythm) 1 0))
+    (let m-struct-match   (if (node_eq source-struct melody-struct) 1 0))
+    (let m-purpose-match  (if (node_eq source-purpose melody-purpose) 1 0))
+    (let m-wisdom-match   (if (node_eq source-wisdom melody-wisdom) 1 0))
+    (let m-concepts-match (if (node_eq source-concepts melody-concepts) 1 0))
+
+    ;; Source vs svg
+    (let s-mood-match     (if (node_eq source-mood svg-mood) 1 0))
+    (let s-rhythm-match   (if (node_eq source-rhythm svg-rhythm) 1 0))
+    (let s-struct-match   (if (node_eq source-struct svg-struct) 1 0))
+    (let s-purpose-match  (if (node_eq source-purpose svg-purpose) 1 0))
+    (let s-wisdom-match   (if (node_eq source-wisdom svg-wisdom) 1 0))
+    (let s-concepts-match (if (node_eq source-concepts svg-concepts) 1 0))
+
+    ;; Source vs rewrite
+    (let r-mood-match     (if (node_eq source-mood rewrite-mood) 1 0))
+    (let r-rhythm-match   (if (node_eq source-rhythm rewrite-rhythm) 1 0))
+    (let r-struct-match   (if (node_eq source-struct rewrite-struct) 1 0))
+    (let r-purpose-match  (if (node_eq source-purpose rewrite-purpose) 1 0))
+    (let r-wisdom-match   (if (node_eq source-wisdom rewrite-wisdom) 1 0))
+    (let r-concepts-match (if (node_eq source-concepts rewrite-concepts) 1 0))
+
+    ;; Score: 100 per matched axis (6 axes per target × 3 targets = 1800 max)
+    (let melody-score
+        (mul 100 (add (add (add m-mood-match m-rhythm-match) m-struct-match)
+                      (add (add m-purpose-match m-wisdom-match) m-concepts-match))))
+    (let svg-score
+        (mul 100 (add (add (add s-mood-match s-rhythm-match) s-struct-match)
+                      (add (add s-purpose-match s-wisdom-match) s-concepts-match))))
+    (let rewrite-score
+        (mul 100 (add (add (add r-mood-match r-rhythm-match) r-struct-match)
+                      (add (add r-purpose-match r-wisdom-match) r-concepts-match))))
+
+    ;; Total convergence score across all three cross-modal translations.
+    ;; Expected:
+    ;;   melody:   3 axes preserved (mood, rhythm, structure) × 100 = 300
+    ;;   svg:      3 axes preserved (mood, rhythm, structure) × 100 = 300
+    ;;   rewrite:  4 axes preserved (mood, structure, purpose, wisdom) × 100 = 400
+    ;;   TOTAL = 300 + 300 + 400 = 1000
+    ;;
+    ;; (Concepts-list never matches across modality — five-token-exact is
+    ;; the strict shape; semantic overlap doesn't promote to NodeID equality.)
+
+    (add (add melody-score svg-score) rewrite-score))
