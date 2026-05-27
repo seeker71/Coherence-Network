@@ -54,6 +54,7 @@
 | [credentials.py](credentials.py) | API router for Repo Credentials. |
 | [data_retention.py](data_retention.py) | Data retention management API routes. |
 | [debug.py](debug.py) | Debug mode toggle — runtime log-level control and diagnostic flags. |
+| [deploy.py](deploy.py) | Deploy log surface — `/api/deploy/log/tail`, `/api/deploy/log/stream` (SSE), `/api/deploy/status`. Public, no-auth visibility into the VPS auto-deploy. |
 | [dif_feedback.py](dif_feedback.py) | DIF feedback router — track verification accuracy for quality improvement. |
 | [discord_votes.py](discord_votes.py) | Discord reaction vote endpoint (spec-164 API Changes). |
 | [discovery.py](discovery.py) | Discovery router — Serendipity Discovery feed endpoints. |
