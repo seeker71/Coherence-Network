@@ -1,0 +1,17 @@
+; payload.fk — the "water" we will freeze into recipe ice.
+;
+; This file is the source representation of a tiny structured payload:
+; a list of records, each with three fields. The source bytes count is
+; the unstructured baseline.
+(do
+    (defn rec (name score note)
+        (list name score note))
+
+    (let payload (list
+        (rec "alice"   42 "first")
+        (rec "bob"     17 "second")
+        (rec "carol"   88 "third")
+        (rec "dave"     5 "fourth")
+        (rec "erin"   100 "fifth")))
+
+    payload)

@@ -1,0 +1,7 @@
+; iterative.fk — sum 1..n by tail-recursive accumulation.
+(do
+    (defn sum (n acc)
+        (if (le n 0)
+            acc
+            (sum (sub n 1) (add acc n))))
+    (sum 10 0))

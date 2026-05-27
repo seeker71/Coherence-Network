@@ -38,4 +38,8 @@ Natives (called via `(<name> ...)` when no user binding shadows): `print`, `list
 
 Binary fixtures live alongside the `.fk` samples: [`tiny.png`](tiny.png) is a 45-byte 1x1 PNG (signature + IHDR + IEND) that exercises `read_file_bytes` and `form/form-stdlib/grammars/png.fk`.
 
+## Cross-modal experiments
+
+See [`cross-modal/`](cross-modal/) for four small demos exploring how Form recipes carry semantic content across modalities — image-as-recipe (SVG), cross-language content-addressing (Python/TS/Form factorial NodeID convergence), recipe-as-compression (honest finding: ice is *larger* than water at small scale), and universal diff (structural NodeID diff vs textual diff).
+
 The Form-surface-syntax parser written in Form (next turn) will sugar these into the `1 + 2` / `if x then a else b` / `defn f(x) = ...` syntax the Python kernel currently accepts. The recipes produced are identical either way.

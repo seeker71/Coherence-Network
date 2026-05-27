@@ -1,0 +1,49 @@
+; freeze.fk — freeze the payload into a content-addressed Form binary,
+; then thaw it back. Compare bytes at each phase.
+;
+; Three phases of the same content:
+;   1. source  (.fk text)       — what the human writes
+;   2. ice     (.fkb binary)    — the substrate's canonical serialized form
+;   3. memory  (NodeID + tree)  — what the kernel holds at runtime
+
+(do
+    ; A category band specific to this sample.
+    (let CAT-REC    (make_nodeid 1 2 99 900))
+    (let CAT-LIST   (make_nodeid 1 2 99 901))
+
+    (defn rec (name score note)
+        (intern_node CAT-REC
+            (list (intern_trivial_string name)
+                  (intern_trivial_int score)
+                  (intern_trivial_string note))))
+
+    (let payload (intern_node CAT-LIST
+        (list
+            (rec "alice"   42 "first")
+            (rec "bob"     17 "second")
+            (rec "carol"   88 "third")
+            (rec "dave"     5 "fourth")
+            (rec "erin"   100 "fifth"))))
+
+    (let source-bytes (file_size "form/form-samples/cross-modal/03-recipe-as-compression/payload.fk"))
+    (let ice-bytes    (write_form_binary "form/form-samples/cross-modal/03-recipe-as-compression/payload.fkb" payload))
+
+    (print "source (payload.fk, the 'water' as text):  ")
+    (print (int_to_str source-bytes))
+    (print " bytes\n")
+
+    (print "ice    (payload.fkb, canonical recipe):     ")
+    (print (int_to_str ice-bytes))
+    (print " bytes\n")
+
+    ; Thaw and verify roundtrip — same NodeID after read?
+    (let restored (read_form_binary "form/form-samples/cross-modal/03-recipe-as-compression/payload.fkb"))
+    (print "roundtrip identity: ")
+    (print (if (node_eq payload restored) "yes — same NodeID after thaw" "no"))
+    (print "\n")
+
+    (print "ratio (ice / source): ")
+    (print (int_to_str (div (mul ice-bytes 100) source-bytes)))
+    (print "%\n")
+
+    0)

@@ -1,0 +1,89 @@
+; converge.fk — content-addressed convergence demo.
+;
+; Three different surface authors build what they think is "factorial". We
+; intern each as a Form recipe-tree and print the resulting NodeIDs. Where
+; the structural shape matches, the NodeIDs match — bytewise. Where the shape
+; diverges (recursive vs iterative), the NodeIDs diverge.
+;
+; This is the substance under "cross-language content-addressing": even
+; before we wire python-grammar / typescript-grammar end-to-end, the same
+; convergence property is provable at the kernel altitude.
+
+(do
+    ; Fictional category NodeIDs in instance band 99 (sample-local).
+    ; The numeric specifics don't matter — what matters is whether equal
+    ; shapes intern to equal NodeIDs.
+    (let CAT-IF       (make_nodeid 1 2 99 800))
+    (let CAT-LE       (make_nodeid 1 2 99 801))
+    (let CAT-MUL      (make_nodeid 1 2 99 802))
+    (let CAT-SUB      (make_nodeid 1 2 99 803))
+    (let CAT-CALL     (make_nodeid 1 2 99 804))
+    (let CAT-VAR-N    (make_nodeid 1 2 99 805))
+    (let CAT-LIT-1    (make_nodeid 1 2 99 806))
+    (let CAT-WHILE    (make_nodeid 1 2 99 807))
+    (let CAT-ASSIGN   (make_nodeid 1 2 99 808))
+
+    ; Helpers — make_leaf has no children; make_node folds a list.
+    (defn leaf (cat) (intern_node cat (list)))
+    (defn nd1 (cat a) (intern_node cat (list a)))
+    (defn nd2 (cat a b) (intern_node cat (list a b)))
+    (defn nd3 (cat a b c) (intern_node cat (list a b c)))
+
+    ; Tree #1 — "the Python author's" recursive factorial.
+    ;   if (n <= 1) { 1 } else { n * factorial(n - 1) }
+    (defn recursive-fact-tree-1 ()
+        (nd3 CAT-IF
+            (nd2 CAT-LE (leaf CAT-VAR-N) (leaf CAT-LIT-1))
+            (leaf CAT-LIT-1)
+            (nd2 CAT-MUL
+                (leaf CAT-VAR-N)
+                (nd1 CAT-CALL
+                    (nd2 CAT-SUB (leaf CAT-VAR-N) (leaf CAT-LIT-1))))))
+
+    ; Tree #2 — "the TypeScript author's" recursive factorial. Same shape,
+    ; built by a different helper-route to make the convergence honest.
+    (defn recursive-fact-tree-2 ()
+        (do
+            (let test  (intern_node CAT-LE  (list (leaf CAT-VAR-N) (leaf CAT-LIT-1))))
+            (let arg   (intern_node CAT-SUB (list (leaf CAT-VAR-N) (leaf CAT-LIT-1))))
+            (let recur (intern_node CAT-CALL (list arg)))
+            (let body  (intern_node CAT-MUL (list (leaf CAT-VAR-N) recur)))
+            (intern_node CAT-IF (list test (leaf CAT-LIT-1) body))))
+
+    ; Tree #3 — the iterative form: while (n > 1) { acc = acc * n; n = n - 1 }.
+    ; Different *shape*, same answer for the same input.
+    (defn iterative-fact-tree ()
+        (nd2 CAT-WHILE
+            (nd2 CAT-LE (leaf CAT-LIT-1) (leaf CAT-VAR-N))
+            (nd2 CAT-MUL (leaf CAT-VAR-N) (leaf CAT-VAR-N))))
+
+    (let id1 (recursive-fact-tree-1))
+    (let id2 (recursive-fact-tree-2))
+    (let id3 (iterative-fact-tree))
+
+    (print "recursive-tree-1: ")
+    (print (int_to_str (node_level id1)))
+    (print " level, ")
+    (print (int_to_str (node_inst id1)))
+    (print " instance\n")
+
+    (print "recursive-tree-2: ")
+    (print (int_to_str (node_level id2)))
+    (print " level, ")
+    (print (int_to_str (node_inst id2)))
+    (print " instance\n")
+
+    (print "iterative-tree:   ")
+    (print (int_to_str (node_level id3)))
+    (print " level, ")
+    (print (int_to_str (node_inst id3)))
+    (print " instance\n")
+
+    (print "recursive-1 == recursive-2? ")
+    (print (if (node_eq id1 id2) "yes — same NodeID, structural identity" "no"))
+    (print "\n")
+
+    (print "recursive-1 == iterative? ")
+    (print (if (node_eq id1 id3) "yes" "no — different shape, different NodeID"))
+    (print "\n")
+    0)

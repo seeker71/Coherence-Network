@@ -1,0 +1,80 @@
+; gradient-circles.fk — image as Form recipe.
+;
+; A small procedural image: three colored circles laid out horizontally on a
+; gradient background, with a centered text label. Authored entirely as Form;
+; the SVG bytes are derived. Because the recipe is content-addressed, two
+; runs of this file produce byte-identical SVG.
+;
+; Run with the Go kernel:
+;   ./form-kernel-go form/form-samples/cross-modal/01-image-as-recipe/gradient-circles.fk
+; The SVG is written to ./gradient-circles.svg next to this file.
+
+(do
+    ; --- small string-builder helpers --------------------------------
+    (defn s2 (a b) (str_concat a b))
+    (defn s3 (a b c) (str_concat a (str_concat b c)))
+    (defn s4 (a b c d) (str_concat (str_concat a b) (str_concat c d)))
+    (defn s5 (a b c d e) (str_concat (s4 a b c d) e))
+    (defn s6 (a b c d e f) (str_concat (s4 a b c d) (str_concat e f)))
+    (defn s7 (a b c d e f g) (str_concat (s4 a b c d) (str_concat e (str_concat f g))))
+
+    (defn istr (n) (int_to_str n))
+
+    ; --- a single SVG element ----------------------------------------
+    (defn svg-circle (cx cy r fill)
+        (str_concat
+            (s4 "  <circle cx=\"" (istr cx) "\" cy=\"" (istr cy))
+            (s5 "\" r=\"" (istr r) "\" fill=\"" fill "\"/>\n")))
+
+    (defn svg-text (x y size content)
+        (str_concat
+            (s4 "  <text x=\"" (istr x) "\" y=\"" (istr y))
+            (str_concat
+                (s3 "\" font-family=\"sans-serif\" font-size=\"" (istr size) "\" text-anchor=\"middle\" fill=\"#1a1a1a\">")
+                (s3 "" content "</text>\n"))))
+
+    ; --- the gradient defs block -------------------------------------
+    (defn svg-defs ()
+        (str_concat
+            "  <defs>\n"
+            (str_concat
+                "    <linearGradient id=\"bg\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">\n"
+                (str_concat
+                    "      <stop offset=\"0%\" stop-color=\"#f5e6d3\"/>\n"
+                    (str_concat
+                        "      <stop offset=\"100%\" stop-color=\"#c8d8e8\"/>\n"
+                        (str_concat "    </linearGradient>\n" "  </defs>\n"))))))
+
+    (defn svg-bg (w h)
+        (s5 "  <rect width=\"" (istr w) "\" height=\"" (istr h)
+            "\" fill=\"url(#bg)\"/>\n"))
+
+    ; --- the full document -------------------------------------------
+    (defn svg-document (w h body)
+        (str_concat
+            (s5 "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\""
+                (istr w)
+                "\" height=\""
+                (istr h)
+                "\" viewBox=\"0 0 ")
+            (str_concat
+                (s3 (istr w) " " (istr h))
+                (s3 "\">\n" body "</svg>\n"))))
+
+    ; Compose: three circles + a label, on a gradient.
+    (defn body ()
+        (str_concat
+            (svg-defs)
+            (str_concat
+                (svg-bg 600 300)
+                (str_concat
+                    (svg-circle 150 150 60 "#e07b5a")
+                    (str_concat
+                        (svg-circle 300 150 60 "#7ab37a")
+                        (str_concat
+                            (svg-circle 450 150 60 "#5a7ab3")
+                            (svg-text 300 260 22 "three colored circles, derived from one recipe")))))))
+
+    (let svg-bytes (svg-document 600 300 (body)))
+    (write_file_text "form/form-samples/cross-modal/01-image-as-recipe/gradient-circles.svg" svg-bytes)
+    (str_len svg-bytes))

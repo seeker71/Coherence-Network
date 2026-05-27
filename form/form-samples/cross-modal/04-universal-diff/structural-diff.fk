@@ -1,0 +1,92 @@
+; structural-diff.fk — diff by structural NodeID, not text.
+;
+; A text diff between recursive.fk and iterative.fk lists every changed line.
+; That answer is lexically true but semantically blunt: it can't tell that
+; both files compute the same sum, only that the bytes differ.
+;
+; A structural diff walks the recipe trees. Equal sub-trees collapse to
+; "same"; differing sub-trees surface as the actual semantic delta.
+
+(do
+    ; Category band for this experiment.
+    (let CAT-IF   (make_nodeid 1 2 99 920))
+    (let CAT-LE   (make_nodeid 1 2 99 921))
+    (let CAT-ADD  (make_nodeid 1 2 99 922))
+    (let CAT-SUB  (make_nodeid 1 2 99 923))
+    (let CAT-CALL-1 (make_nodeid 1 2 99 924)) ; 1-arg call (recursive sum n)
+    (let CAT-CALL-2 (make_nodeid 1 2 99 925)) ; 2-arg call (iterative sum n acc)
+    (let CAT-VAR-N (make_nodeid 1 2 99 926))
+    (let CAT-VAR-ACC (make_nodeid 1 2 99 927))
+    (let CAT-LIT-0 (make_nodeid 1 2 99 928))
+
+    (defn leaf (cat) (intern_node cat (list)))
+
+    ; nth — not native in the Go kernel; tail-walk to position i.
+    (defn nth (xs i)
+        (if (le i 0)
+            (head xs)
+            (nth (tail xs) (sub i 1))))
+
+    ; Recursive shape:
+    ;   if (n <= 0) 0 else (n + sum(n - 1))
+    (let recursive-body
+        (intern_node CAT-IF (list
+            (intern_node CAT-LE (list (leaf CAT-VAR-N) (leaf CAT-LIT-0)))
+            (leaf CAT-LIT-0)
+            (intern_node CAT-ADD (list
+                (leaf CAT-VAR-N)
+                (intern_node CAT-CALL-1 (list
+                    (intern_node CAT-SUB (list (leaf CAT-VAR-N) (leaf CAT-LIT-0))))))))))
+
+    ; Iterative shape:
+    ;   if (n <= 0) acc else sum(n - 1, acc + n)
+    (let iterative-body
+        (intern_node CAT-IF (list
+            (intern_node CAT-LE (list (leaf CAT-VAR-N) (leaf CAT-LIT-0)))
+            (leaf CAT-VAR-ACC)
+            (intern_node CAT-CALL-2 (list
+                (intern_node CAT-SUB (list (leaf CAT-VAR-N) (leaf CAT-LIT-0)))
+                (intern_node CAT-ADD (list (leaf CAT-VAR-ACC) (leaf CAT-VAR-N))))))))
+
+    ; The "diff" — walk the trees in parallel; categorize each pair.
+    (defn diff-step (a b indent label)
+        (do
+            (print indent)
+            (print label)
+            (print ": ")
+            (if (node_eq a b)
+                (do
+                    (print "SAME ")
+                    (print (int_to_str (node_inst a)))
+                    (print "\n"))
+                (do
+                    (print "DIFF a=@")
+                    (print (int_to_str (node_pkg a))) (print ".")
+                    (print (int_to_str (node_level a))) (print ".")
+                    (print (int_to_str (node_type a))) (print ".")
+                    (print (int_to_str (node_inst a)))
+                    (print " vs b=@")
+                    (print (int_to_str (node_pkg b))) (print ".")
+                    (print (int_to_str (node_level b))) (print ".")
+                    (print (int_to_str (node_type b))) (print ".")
+                    (print (int_to_str (node_inst b)))
+                    (print "\n")))))
+
+    (print "structural diff: recursive-body vs iterative-body\n")
+    (print "=================================================\n\n")
+
+    (diff-step recursive-body iterative-body "" "root (if-expr)")
+
+    (let r-kids (node_children recursive-body))
+    (let i-kids (node_children iterative-body))
+
+    (diff-step (nth r-kids 0) (nth i-kids 0) "  " "test (n <= 0)")
+    (diff-step (nth r-kids 1) (nth i-kids 1) "  " "then-branch")
+    (diff-step (nth r-kids 2) (nth i-kids 2) "  " "else-branch")
+
+    (print "\n")
+    (print "reading: the predicate is SAME in both; the then-branch and\n")
+    (print "else-branch diverge structurally. A text diff would report\n")
+    (print "'every line is different'. A structural diff says 'the test is\n")
+    (print "the same gesture; the accumulation strategy is what diverges.'\n")
+    0)
