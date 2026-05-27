@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"math"
 	"net"
 	"os"
 	"sort"
@@ -99,6 +100,19 @@ const (
 	TrivString uint32 = 2
 	TrivBool   uint32 = 3
 	TrivNull   uint32 = 4
+	// FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries
+	// the IEEE bit pattern reinterpreted as u32. No overflow table needed.
+	// Matches sibling TS kernel's Triv.FLOAT32 = 6.
+	TrivFloat32 uint32 = 6
+	// FLOAT64 — IEEE 754 64-bit value; 64 bits exceed the 32-bit inst slot,
+	// so the inst carries an index into the kernel's `f64s` overflow table.
+	// Canonicalization on intern: NaN bit patterns collapse to qNaN, -0.0
+	// collapses to +0.0, ±Inf stay distinct (mirrors Rust + TS sibling
+	// kernels). Matches TS kernel's Triv.FLOAT64 = 7. (The Rust kernel uses
+	// 5 for FLOAT64 internally — each kernel's trivial-type constants are
+	// private to its substrate; cross-kernel parity rides on .fk source
+	// where the token shape — digits+dot vs digits — names the type.)
+	TrivFloat64 uint32 = 7
 )
 
 // RMath / RCompare / RLogic / RCond / RBlock instance constants
@@ -381,6 +395,13 @@ type Kernel struct {
 	strs    []string
 	strIdx  map[string]NameID
 	next    uint32
+	// Float64 overflow table — IEEE 754 values don't fit the 32-bit `inst`
+	// field, so the FLOAT64 trivial NodeID carries an index into `f64s`.
+	// `f64Idx` is keyed by the IEEE bit pattern after canonicalization
+	// (NaN → qNaN, -0.0 → +0.0) so the same value parsed twice yields the
+	// same NodeID. Mirrors Rust + TS sibling kernels.
+	f64s   []float64
+	f64Idx map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
 	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
@@ -416,6 +437,7 @@ func NewKernel() *Kernel {
 		importSeq:  1,
 		walkCache:  make(map[NodeID]Value),
 		next:       1,
+		f64Idx:     make(map[uint64]uint32),
 		natives:    make(map[NameID]NativeEntry),
 		envNatives: make(map[NameID]EnvAwareNativeEntry),
 	}
@@ -466,6 +488,60 @@ func (k *Kernel) intern(category NodeID, children []NodeID) NodeID {
 
 func (k *Kernel) internTrivialInt(n int64) NodeID {
 	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: uint32(int32(n))}
+}
+
+// internTrivialFloat32 — IEEE 754 32-bit inline encoding. The float's bit
+// pattern (cast through math.Float32bits) lives directly in the inst slot;
+// no overflow table needed. Two f32 values with the same bit pattern share
+// the same NodeID by construction. NaN bit patterns are NOT canonicalized
+// here because f32 NaNs are uncommon at the substrate boundary; if needed,
+// the caller (or a typed-numeric layer above) collapses them first.
+// Sibling parity with TS kernel's internTrivialFloat32.
+func (k *Kernel) internTrivialFloat32(f float32) NodeID {
+	bits := math.Float32bits(f)
+	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivFloat32, Inst: bits}
+}
+
+// internTrivialFloat64 — content-addressed insertion into the f64 overflow
+// table. The trivial NodeID carries the table index in `inst`. Canonicalization
+// matches the Rust + TS sibling kernels so the same float value parsed twice
+// produces the same NodeID:
+//   - any NaN bit pattern collapses to qNaN (0x7ff8000000000000)
+//   - -0.0 collapses to +0.0
+//   - ±Inf keep distinct identity
+func (k *Kernel) internTrivialFloat64(f float64) NodeID {
+	var canonical float64
+	switch {
+	case math.IsNaN(f):
+		canonical = math.Float64frombits(0x7ff8000000000000)
+	case f == 0.0:
+		// IEEE 754: -0.0 == +0.0 by value comparison; collapse both to +0.0
+		// so the substrate doesn't carry a redundant duplicate entry.
+		canonical = 0.0
+	default:
+		canonical = f
+	}
+	bits := math.Float64bits(canonical)
+	if idx, ok := k.f64Idx[bits]; ok {
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivFloat64, Inst: idx}
+	}
+	idx := uint32(len(k.f64s))
+	k.f64s = append(k.f64s, canonical)
+	k.f64Idx[bits] = idx
+	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivFloat64, Inst: idx}
+}
+
+// decodeFloat32 — read back the IEEE bit pattern from the inst slot.
+func (k *Kernel) decodeFloat32(inst uint32) float32 {
+	return math.Float32frombits(inst)
+}
+
+// decodeFloat64 — read back the value from the overflow table.
+func (k *Kernel) decodeFloat64(inst uint32) float64 {
+	if int(inst) >= len(k.f64s) {
+		panic(fmt.Sprintf("decodeFloat64: bad index %d", inst))
+	}
+	return k.f64s[inst]
 }
 
 func (k *Kernel) internString(s string) NodeID {
@@ -704,6 +780,10 @@ func (k *Kernel) trivialValue(n NodeID) Value {
 		return Value{Kind: VBool, Bool: n.Inst != 0}
 	case TrivNull:
 		return Value{Kind: VNull}
+	case TrivFloat32:
+		return Value{Kind: VFloat, Float: float64(k.decodeFloat32(n.Inst))}
+	case TrivFloat64:
+		return Value{Kind: VFloat, Float: k.decodeFloat64(n.Inst)}
 	}
 	panic(fmt.Sprintf("trivialValue: unknown trivial type %d", n.Type))
 }
@@ -743,19 +823,28 @@ const (
 	// foundational step that lets Form construct recipes, not just walk
 	// them. Without it, templates (Breath 2) literally cannot exist.
 	VNodeID
+	// VFloat — IEEE 754 64-bit float at the value level. Both f32 (decoded
+	// inline from the inst bits) and f64 (read from the overflow table)
+	// surface as VFloat at runtime; the trivial's Type tag preserves the
+	// width identity at the substrate, the walker treats them uniformly.
+	// Mirrors Rust's Value::Float; TS keeps f32/f64 distinct at the value
+	// level via Math.fround, which the Rust+Go kernels don't do because
+	// host-language hardware always promotes to 64-bit in arithmetic.
+	VFloat
 )
 
 // Value — runtime tagged union. List and Closure carry pointers; the rest
 // are inline. Kept as a flat struct so the walker's hot path is allocation-
 // free for ints and bools.
 type Value struct {
-	Kind ValueKind
-	Int  int64
-	Str  string
-	Bool bool
-	List []Value
-	Cl   *Closure
-	Nid  NodeID
+	Kind  ValueKind
+	Int   int64
+	Float float64
+	Str   string
+	Bool  bool
+	List  []Value
+	Cl    *Closure
+	Nid   NodeID
 }
 
 func (v Value) String() string {
@@ -764,6 +853,8 @@ func (v Value) String() string {
 		return "null"
 	case VInt:
 		return strconv.FormatInt(v.Int, 10)
+	case VFloat:
+		return formatFloatJS(v.Float)
 	case VStr:
 		return v.Str
 	case VBool:
@@ -784,6 +875,53 @@ func (v Value) String() string {
 		return fmt.Sprintf("@%d.%d.%d.%d", v.Nid.Pkg, v.Nid.Level, v.Nid.Type, v.Nid.Inst)
 	}
 	return "?"
+}
+
+// asFloat — coerce a Value to float64 for IEEE 754 arithmetic. VFloat
+// passes through; VInt and VBool widen by Go's standard conversion. Other
+// kinds panic — float arithmetic on a string or list is a Form-author
+// bug, not a kernel fallback. Mirrors Rust's Value::as_float.
+func (v Value) asFloat() float64 {
+	switch v.Kind {
+	case VFloat:
+		return v.Float
+	case VInt:
+		return float64(v.Int)
+	case VBool:
+		if v.Bool {
+			return 1.0
+		}
+		return 0.0
+	}
+	panic(fmt.Sprintf("asFloat: %v", v))
+}
+
+// formatFloatJS — render a float the way JavaScript's String(number) does,
+// so the Go kernel's output is byte-identical to the TS kernel's. (The
+// Rust kernel uses Python-style formatting which adds a trailing ".0" to
+// integer-valued floats; that's a known divergence between Rust and TS.
+// This Go kernel follows TS — the bootstrap reference — and a future
+// breath will harmonize Rust's render to match.) Specials follow the JS
+// surface: NaN → "NaN", +Inf → "Infinity", -Inf → "-Infinity".
+func formatFloatJS(f float64) string {
+	if math.IsNaN(f) {
+		return "NaN"
+	}
+	if math.IsInf(f, 1) {
+		return "Infinity"
+	}
+	if math.IsInf(f, -1) {
+		return "-Infinity"
+	}
+	// JS's String(number) uses the shortest round-trippable representation.
+	// strconv.FormatFloat(f, 'g', -1, 64) is Go's equivalent — minimum digits
+	// for exact round-trip, scientific notation only when shorter, no trailing
+	// ".0" on integer-valued floats.
+	s := strconv.FormatFloat(f, 'g', -1, 64)
+	// JS uses "e+N" / "e-N"; Go's 'g' verb already uses "e+N"/"e-N" with
+	// signs, so the only remaining gap is JS's "1e+21" vs Go's "1e+21" —
+	// already identical. No further adjustment needed for the common case.
+	return s
 }
 
 type Closure struct {
@@ -1136,6 +1274,9 @@ func (k *Kernel) registerNatives() {
 	// existing foldl + plus primitives. First of 9 composable natives
 	// named in kernel-minimality-audit.md.
 	k.registerNative("abs", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VFloat {
+			return Value{Kind: VFloat, Float: math.Abs(args[0].Float)}
+		}
 		n := args[0].Int
 		if n < 0 {
 			n = -n
@@ -1143,11 +1284,19 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: n}
 	})
 	// Polymorphic `+` for Python: int+int=add, str+str=concat,
-	// list+list=concat. Sibling-parity with Rust + TS kernels.
+	// list+list=concat, with float promotion on numeric mixes.
+	// Sibling-parity with Rust + TS kernels.
 	k.registerNative("_plus", catMethod(), func(_ *Kernel, args []Value) Value {
 		a, b := args[0], args[1]
 		if a.Kind == VInt && b.Kind == VInt {
 			return Value{Kind: VInt, Int: a.Int + b.Int}
+		}
+		// Float promotion — matches Python: int+float, float+int, float+float
+		// all return float. Mirrors Rust's _plus dispatch.
+		if (a.Kind == VFloat || a.Kind == VInt) && (b.Kind == VFloat || b.Kind == VInt) {
+			if a.Kind == VFloat || b.Kind == VFloat {
+				return Value{Kind: VFloat, Float: a.asFloat() + b.asFloat()}
+			}
 		}
 		if a.Kind == VStr && b.Kind == VStr {
 			return Value{Kind: VStr, Str: a.Str + b.Str}
@@ -1157,6 +1306,12 @@ func (k *Kernel) registerNatives() {
 		}
 		if a.Kind == VInt && b.Kind == VStr {
 			return Value{Kind: VStr, Str: strconv.FormatInt(a.Int, 10) + b.Str}
+		}
+		if a.Kind == VStr && b.Kind == VFloat {
+			return Value{Kind: VStr, Str: a.Str + formatFloatJS(b.Float)}
+		}
+		if a.Kind == VFloat && b.Kind == VStr {
+			return Value{Kind: VStr, Str: formatFloatJS(a.Float) + b.Str}
 		}
 		if a.Kind == VList && b.Kind == VList {
 			out := append([]Value{}, a.List...)
@@ -1170,6 +1325,47 @@ func (k *Kernel) registerNatives() {
 	// Sibling-parity with the Rust + TS kernels.
 	// `range` composted 2026-05-22 — core.fk has (defn range (start end) ...).
 	// Sibling-parity with Rust kernel removal.
+
+	// ── Python `math` module — a tight kernel-native shape ─────
+	// The Python adapter rewrites `math.sqrt(x)` → `(math_sqrt x)`,
+	// `math.pi` → `(math_pi)`, etc. at parse time, so imports compile
+	// to nothing at runtime. Sibling-parity with the Rust + TS kernels;
+	// the entries are tight (sqrt, pi, floor, ceil, pow) and follow
+	// CPython's return-type convention: sqrt/pi/pow → float; floor/ceil
+	// → int (CPython 3 behaviour).
+	k.registerNative("math_sqrt", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VFloat, Float: math.Sqrt(args[0].asFloat())}
+	})
+	k.registerNative("math_pi", catMethod(), func(_ *Kernel, _ []Value) Value {
+		return Value{Kind: VFloat, Float: math.Pi}
+	})
+	k.registerNative("math_floor", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(math.Floor(args[0].asFloat()))}
+	})
+	k.registerNative("math_ceil", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: int64(math.Ceil(args[0].asFloat()))}
+	})
+	k.registerNative("math_pow", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VFloat, Float: math.Pow(args[0].asFloat(), args[1].asFloat())}
+	})
+
+	// ── Float construction + introspection — sibling-parity with the
+	// TS kernel's make_float32/make_float64 + f32/f64 transmute casts.
+	// The Rust kernel doesn't currently expose these as natives (it
+	// only parses float literals from .fk source); Go matches TS so
+	// Form code that constructs floats explicitly has a verb to call.
+	//
+	// make_float64 — intern a float-valued substrate trivial. Takes an
+	// int or float arg; returns a NodeID. Sibling to make_int* /
+	// make_uint* — used when Form code wants to hold the substrate
+	// identity rather than the value.
+	k.registerNative("make_float32", catWitness(), func(k *Kernel, args []Value) Value {
+		return Value{Kind: VNodeID, Nid: k.internTrivialFloat32(float32(args[0].asFloat()))}
+	})
+	k.registerNative("make_float64", catWitness(), func(k *Kernel, args []Value) Value {
+		return Value{Kind: VNodeID, Nid: k.internTrivialFloat64(args[0].asFloat())}
+	})
+
 	// File I/O
 	k.registerNative("read_file", catCall(), func(_ *Kernel, args []Value) Value {
 		b, err := os.ReadFile(args[0].Str)
@@ -2211,8 +2407,30 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 
 	switch cat.Type {
 	case RBasicMath:
-		a := k.walk(kids[0], env).Int
-		b := k.walk(kids[1], env).Int
+		lv := k.walk(kids[0], env)
+		rv := k.walk(kids[1], env)
+		// Width promotion: if either operand is Float, the result is
+		// Float (matches Python `int + float → float`, and IEEE 754
+		// arithmetic on mixed inputs). Pure int/int stays on the
+		// fast int path. Mirrors Rust kernel's RB_MATH dispatch.
+		if lv.Kind == VFloat || rv.Kind == VFloat {
+			l := lv.asFloat()
+			r := rv.asFloat()
+			switch cat.Inst {
+			case RMathPlus:
+				return Value{Kind: VFloat, Float: l + r}
+			case RMathMinus:
+				return Value{Kind: VFloat, Float: l - r}
+			case RMathMultiply:
+				return Value{Kind: VFloat, Float: l * r}
+			case RMathDivide:
+				return Value{Kind: VFloat, Float: l / r}
+			case RMathModulo:
+				return Value{Kind: VFloat, Float: l - math.Floor(l/r)*r}
+			}
+		}
+		a := lv.Int
+		b := rv.Int
 		switch cat.Inst {
 		case RMathPlus:
 			return Value{Kind: VInt, Int: a + b}
@@ -2227,8 +2445,30 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		}
 
 	case RBasicCompare:
-		a := k.walk(kids[0], env).Int
-		b := k.walk(kids[1], env).Int
+		lv := k.walk(kids[0], env)
+		rv := k.walk(kids[1], env)
+		// Same width-promotion rule as math: float on either side forces
+		// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
+		if lv.Kind == VFloat || rv.Kind == VFloat {
+			l := lv.asFloat()
+			r := rv.asFloat()
+			switch cat.Inst {
+			case RCompareEq:
+				return Value{Kind: VBool, Bool: l == r}
+			case RCompareNe:
+				return Value{Kind: VBool, Bool: l != r}
+			case RCompareLt:
+				return Value{Kind: VBool, Bool: l < r}
+			case RCompareLe:
+				return Value{Kind: VBool, Bool: l <= r}
+			case RCompareGt:
+				return Value{Kind: VBool, Bool: l > r}
+			case RCompareGe:
+				return Value{Kind: VBool, Bool: l >= r}
+			}
+		}
+		a := lv.Int
+		b := rv.Int
 		switch cat.Inst {
 		case RCompareEq:
 			return Value{Kind: VBool, Bool: a == b}
@@ -2491,7 +2731,36 @@ func tokenizeSexp(src string) []sexpToken {
 			for i < len(src) && src[i] >= '0' && src[i] <= '9' {
 				i++
 			}
-			tokens = append(tokens, sexpToken{"INT", src[start:i], startLine, startCol})
+			isFloat := false
+			// Fractional part: `.` followed by at least one digit.
+			if i < len(src) && src[i] == '.' && i+1 < len(src) && src[i+1] >= '0' && src[i+1] <= '9' {
+				isFloat = true
+				i++ // consume '.'
+				for i < len(src) && src[i] >= '0' && src[i] <= '9' {
+					i++
+				}
+			}
+			// Exponent: e/E [+/-] one-or-more digits. Accepted on both
+			// pure-int mantissa (1e5) and fractional mantissa (1.5e3),
+			// matching the TS kernel reader's float regex.
+			if i < len(src) && (src[i] == 'e' || src[i] == 'E') {
+				j := i + 1
+				if j < len(src) && (src[j] == '+' || src[j] == '-') {
+					j++
+				}
+				if j < len(src) && src[j] >= '0' && src[j] <= '9' {
+					isFloat = true
+					i = j
+					for i < len(src) && src[i] >= '0' && src[i] <= '9' {
+						i++
+					}
+				}
+			}
+			if isFloat {
+				tokens = append(tokens, sexpToken{"FLOAT", src[start:i], startLine, startCol})
+			} else {
+				tokens = append(tokens, sexpToken{"INT", src[start:i], startLine, startCol})
+			}
 			advance(i - start)
 			continue
 		}
@@ -2547,6 +2816,13 @@ func (k *Kernel) readSexpr(toks []sexpToken, i int) (NodeID, int) {
 	case "INT":
 		n, _ := strconv.ParseInt(t.value, 10, 64)
 		return k.internTrivialInt(n), i + 1
+	case "FLOAT":
+		f, err := strconv.ParseFloat(t.value, 64)
+		if err != nil {
+			panic(fmt.Sprintf("parse error: bad float literal %q at line %d col %d: %v",
+				t.value, t.line, t.col, err))
+		}
+		return k.internTrivialFloat64(f), i + 1
 	case "STRING":
 		return k.internString(t.value), i + 1
 	case "IDENT":
