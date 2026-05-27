@@ -29,6 +29,7 @@ require_file "$COMPOSE_ROOT/.env"
 
 cd "$REPO_DIR"
 OLD_SHA="$(git rev-parse HEAD)"
+log "Deploy begin — old_sha=${OLD_SHA:0:12} target_sha=${TARGET_SHA:-(resolving)} branch=${BRANCH}"
 git fetch --prune origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" --quiet
 
 if [[ -z "$TARGET_SHA" ]]; then
