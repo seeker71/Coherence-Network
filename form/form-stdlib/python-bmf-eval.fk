@@ -339,6 +339,32 @@
                         (do
                             (trace "py-eval MATH: unknown inst" math-inst)
                             (head (empty))))))))
+            (if (and (eq (node_pkg cat) 1)
+                     (and (eq (node_level cat) 2)
+                          (eq (node_type cat) 13)))
+                ;; CTOR Shape B: RBasic.COMPARE-13 arm. The Python lift now
+                ;; interns == != < <= > >= as COMPARE-13 nodes (positional
+                ;; children, no op-string-leaf) so a hand-built
+                ;; (intern_node COMPARE-LT (list 5 7)) and a Python-lifted
+                ;; "5 < 7" share one Blueprint NodeID. Dispatch on the cat's
+                ;; inst — 1=eq, 2=ne, 3=lt, 4=le, 5=gt, 6=ge — matching
+                ;; form-ontology.json. Python convention: 1 for true, 0 for
+                ;; false (mirroring py-compare-apply, which is the OLD
+                ;; PY-BMF-COMPARE arm and still serves any unrecognised
+                ;; compare op the lift falls back to).
+                (do
+                    (let lhs-val (py-eval (nth kids 0) env))
+                    (let rhs-val (py-eval (nth kids 1) env))
+                    (let cmp-inst (node_inst cat))
+                    (if (eq cmp-inst 1) (if (eq lhs-val rhs-val) 1 0)
+                    (if (eq cmp-inst 2) (if (eq lhs-val rhs-val) 0 1)
+                    (if (eq cmp-inst 3) (if (lt lhs-val rhs-val) 1 0)
+                    (if (eq cmp-inst 4) (if (le lhs-val rhs-val) 1 0)
+                    (if (eq cmp-inst 5) (if (gt lhs-val rhs-val) 1 0)
+                    (if (eq cmp-inst 6) (if (ge lhs-val rhs-val) 1 0)
+                        (do
+                            (trace "py-eval COMPARE: unknown inst" cmp-inst)
+                            (head (empty))))))))))
             (if (node_eq cat PY-BMF-BINOP)
                 (do
                     (let left  (py-eval (nth kids 0) env))
@@ -418,7 +444,7 @@
                     ;; category number so the next breath knows which
                     ;; arm to add.
                     (trace "py-eval: unimplemented category" cat)
-                    (head (empty)))))))))))))))))))
+                    (head (empty))))))))))))))))))))
 
     ;; Surface for callers. py-run takes a module recipe and returns its
     ;; value. py-eval and py-eval-statement are exposed so band-tests
