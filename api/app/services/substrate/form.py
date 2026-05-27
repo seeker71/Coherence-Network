@@ -71,6 +71,7 @@ from app.services.substrate.category import (
     RTry,
 )
 from app.services.substrate.kernel import (
+    CellView,
     NamedCell,
     NodeID,
     find_cells_compatible_with,
@@ -1916,6 +1917,33 @@ def evaluate(session: Session, ast: Any) -> FormResult:
     if isinstance(ast, Query):
         return _evaluate_query(session, ast)
 
+    # Tree navigation — `.field` / `.method(args)`.
+    #
+    # The runtime in form_runtime.py already resolves these against cells,
+    # NodeIDs, dicts, and structured CTORs. The structural evaluator
+    # delegates and wraps the raw value back into a FormResult so the REST
+    # surface and the playground render through the same code paths they
+    # already use for direct structural results.
+    #
+    # BOOTSTRAP-RESIDUE: this branch is scheduled for compost together
+    # with form.py's evaluate() function as a whole when G6 lands and the
+    # Form-native runtime (form-kernel-rust walking python-bmf.fk recipes
+    # via kernel-bmf-run) takes over. Named in:
+    # - kernels/BOOTSTRAP_COMPOST_MANIFEST.md (Phase C)
+    # - kernels/PHASE_A_FIRING_QUESTIONS.md (the parser+emitter+test triple
+    #   that this evaluator is downstream of)
+    # - kernels/PYTHON_BMF_CONTRACT.md (G6 — binary entry-point orchestration)
+    #
+    # The pulse witness organ substrate_form (#2054) detected this exact
+    # path's silence in production at 2026-05-27T07:48Z. Healing the
+    # silence now keeps the playground breathing while the Form-native
+    # path completes.
+    if isinstance(ast, (Access, MethodCall)):
+        from app.services.substrate.form_runtime import Frame as _RuntimeFrame
+        from app.services.substrate.form_runtime import execute as _runtime_execute
+        value = _runtime_execute(session, ast, _RuntimeFrame())
+        return _wrap_runtime_value(value)
+
     # Recipe-AST nodes: compile to a Recipe NodeID (intern as we go)
     if isinstance(ast, (
         IntLit, BoolLit, StringLit, Identifier,
@@ -1932,6 +1960,31 @@ def evaluate(session: Session, ast: Any) -> FormResult:
         return FormResult("recipe", rid)
 
     raise TypeError(f"Form: cannot evaluate {type(ast).__name__}")
+
+
+def _wrap_runtime_value(value: Any) -> FormResult:
+    """Wrap a raw runtime value back into a FormResult for the AST evaluator.
+
+    Walks the type ladder the runtime returns (NodeID, NamedCell,
+    CellView, homogeneous lists, primitives) and picks the matching kind
+    so the REST surface and the playground UI render under the same code
+    paths they already use for direct structural results.
+
+    BOOTSTRAP-RESIDUE: composts with `evaluate()` when G6 closes — see
+    kernels/PYTHON_BMF_CONTRACT.md.
+    """
+    if isinstance(value, NodeID):
+        return FormResult("node_id", value)
+    if isinstance(value, NamedCell):
+        return FormResult("cell", value)
+    if isinstance(value, CellView):
+        return FormResult("view", value)
+    if isinstance(value, list):
+        if value and all(isinstance(v, NamedCell) for v in value):
+            return FormResult("cells", value)
+        if value and all(isinstance(v, CellView) for v in value):
+            return FormResult("views", value)
+    return FormResult("value", value)
 
 
 def _evaluate_query(session: Session, q: Query) -> FormResult:
