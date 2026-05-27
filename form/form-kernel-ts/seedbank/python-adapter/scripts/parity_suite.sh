@@ -27,6 +27,8 @@ PARITY_FILES=(
     "examples/endpoint_coherence_weight_demo.py"
     "examples/python_class_demo.py"
     "examples/python_dict_demo.py"
+    "examples/endpoint_nodeid_distance_demo.py"
+    "examples/endpoint_weighted_average_demo.py"
 )
 
 # Locate the native binary. The script lives at
