@@ -11,15 +11,24 @@ End-to-end, on every sibling kernel (Go, Rust, TypeScript), with no
 TypeScript on the parse path:
 
 ```
-source text  →  python-source-scan-text   →  BMF object stream
-            →  apply-python-bmf-rule       →  PY-BMF-* recipe (NodeID)
+source text  →  python-source-scan-text     →  BMF object stream
+            →  python-parse-module-tree-*   →  statement-tree
+            →  python-bmf-lift.fk           →  PY-BMF-* recipe (NodeID)
+            →  python-bmf-eval.fk (py-run)  →  Python-runtime value
 ```
 
-Proved by `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` (returns
-25304 on all three kernels). The test drives the full path from real
-source strings like `"a - b"`, `"x * y"`, `"left / right"`, `"p ** q"`,
-producing `PY-BMF-BINOP` recipes with content-addressed identity (same
-source twice → identical NodeID).
+Proved by:
+
+- `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` (returns `25304`
+  on all three kernels) — flat-rule arithmetic recipes are content-
+  addressed and round-trip to source.
+- `form/form-stdlib/tests/python-bmf-eval-band.fk` (returns `28000`) —
+  recipe-walker (G4) covers the 9 arms.
+- `form/form-stdlib/tests/python-bmf-lift-band.fk` (returns `21000`) —
+  source-string → PY-BMF recipe → value round-trip across six cells,
+  including factorial(6) = 720.
+- `kernel-bmf-run examples/python_bridge_demo.py` returns `720` — three-way
+  parity with CPython and the bootstrap Rust path.
 
 What's already in `python-bmf.fk` and reachable today:
 
@@ -42,57 +51,68 @@ The pieces below currently live in `form/form-kernel-ts/seedbank/python-adapter/
 (TS) and have no Form-native equivalent yet. Each is one focused breath
 the body has not yet taken.
 
-### G1 — Rule dispatch over a stream
+### G1 — Statement dispatch over a parsed tree — **CLOSED 2026-05-27**
 
-Today's surface forces callers to name the rule:
+Closure shape: rather than dispatch over a flat rule-index of object-stream
+rules, the bridge dispatches over the **statement-tree** that
+`python-parse-module-tree-object` already builds (G2 territory). The tree
+groups tokens by indent and exposes each statement's `kind` (first-token
+classifier) and `cpython-rule` (rule-name based on token shape).
 
-```form
-(apply-python-bmf-rule "binop-sub-ident" toks)
-```
-
-To parse arbitrary Python, the body needs a **dispatch loop** that, given
-a token stream, tries registered rules in some order (longest-match,
-priority, or left-anchored by first-token kind/value) and emits a stream
-of recipes. Two viable Form-native shapes:
+Lives at `form/form-stdlib/python-bmf-lift.fk`. The `lift-statement` arm
+dispatches by both:
 
 ```form
-;; Shape G1a — try rules in priority order
-(parse-python-stream toks)         → list-of-recipe
-;; Shape G1b — peek-driven dispatch (faster, needs a first-token index)
-(python-bmf-dispatch toks rule-index)
+(if (str_eq kind "def")        (lift-def statement-tree)
+(if (str_eq kind "return")     (lift-return statement-tree)
+(if (str_eq rule "assignment") (lift-assign statement-tree)
+(if (str_eq kind "expr")       (lift-expr-stmt statement-tree) ...)))))
 ```
 
-Either shape is ~80 lines of Form sitting on top of the existing
-`apply-object-rule`. No new kernel primitive needed.
+Each branch consumes the statement's tokens (and, for `def`, its nested
+children-statements) and emits a `PY-BMF-*` recipe via `intern_node` — the
+exact constructors `python-bmf-eval.fk`'s arms expect. The `PY-BMF-MODULE`
+recipe wraps the per-statement recipes so `py-eval-module-loop` threads the
+env across `ASSIGN` and `DEF`.
 
-### G2 — Statement-level grouping
+**What G1 does NOT close yet:** statement kinds beyond the four above
+(`class` / `while` / `for` / `try` / `with` / `import` / `from-import`)
+fall through to `PY-BMF-PASS` with a `trace` naming the shape. Each is one
+focused breath: add the lift dispatch branch + the matching interpreter arm.
 
-A Python module is a sequence of statements; statements close on
-NEWLINE/INDENT/DEDENT. The scanner already emits layout tokens; what's
-missing is a Form-side **statement-stream slicer** that hands one
-statement's worth of tokens to G1 at a time:
+### G2 — Statement-level grouping — **CLOSED (existing)**
 
-```form
-(python-statement-stream layout-toks)   → list-of-(token-sublist)
-```
+`python-parse-module-tree-object` and friends already grouped tokens into
+statement-trees by indent. G1's lifter consumes them directly; no separate
+slicer was needed.
 
-`python-bmf.fk` already has `python-parse-statement`,
-`python-parse-module-objects`, and `python-parse-module-tree-object` —
-they group statements by indent. Wire them into G1 and most CPython
-syntax becomes parseable Form-native.
+### G3 — Expression precedence climbing — **CLOSED 2026-05-27**
 
-### G3 — Expression precedence climbing
+Closure shape: **recursive-descent expression parser in
+`python-bmf-lift.fk`** sitting alongside G1's statement dispatch.
+`lift-expr` calls `lift-primary` for the leftmost token, then
+`lift-binop-loop` climbs by precedence, then attaches a trailing
+`x if cond else y` (the Python conditional expression) by lifting to
+`PY-BMF-IF`.
 
-The current BMF rules are *flat* — `binop-mul-ident ::= $left:name "*"
-$right:name` only matches two name terminals separated by `*`. Real
-expressions like `a + b * c` need a precedence-aware engine: the body's
-`form-stdlib/parser.fk` already has hand-coded precedence climbing for
-Form-surface arithmetic; the Python-BMF equivalent reuses that pattern
-against BMF objects rather than Form tokens.
+Precedence table (higher = tighter):
 
-Until G3 lands, every expression shape needs its own flat rule
-(`binop-mul-ident`, `binop-mul-mul-ident`, …) — combinatorial blowup
-that the precedence engine collapses to a single recursive descent.
+| Prec | Ops |
+|---|---|
+| 50 | `**` (right-assoc) |
+| 40 | `* / // %` |
+| 30 | `+ -` |
+| 20 | `== != < <= > >=` |
+
+`lift-primary` handles integer literals → `PY-BMF-INT`, identifiers →
+`PY-BMF-IDENT`, `f(args)` → `PY-BMF-CALL` (with `lift-args` reading
+comma-separated expressions until `)`), and parenthesised expressions for
+grouping.
+
+**What G3 does NOT close yet:** unary minus on non-trivial expressions,
+boolean `and` / `or` / `not`, bitwise / shift ops, `in` / `is` /
+`is not` / `not in`, attribute access `obj.field`, subscripts `xs[i]`,
+slices `xs[a:b:c]`, walrus `:=`, lambdas, comprehensions, f-strings.
 
 ### G4 — Closure/scope at the recipe layer — **CLOSED 2026-05-27**
 
@@ -171,20 +191,22 @@ compiled artifacts plus an inline driver that calls
 `command -v kernel-bmf-run` check, so `PARITY_THIRD_RUNTIME=kernel-bmf
 bash parity_suite.sh` runs end-to-end with no operator-side install.
 
-What the driver computes today: the count of top-level statements in the
-parsed module (e.g. `15` for `examples/python_demo.py`). Three-way sibling
-parity holds at the structural-attestation layer — Go, Rust, and the TS
-kernel all return `15`. This is the **orchestration breath**, not the
-program-value breath; the latter is gated on G3 + G4.
+What the driver computes today (with G1 + G3 + G4 all closed): the
+program's CPython runtime value, for any `.py` file whose shapes fit the
+9 PY-BMF arms shipped. The preludes load `python-bmf-eval.fk` and
+`python-bmf-lift.fk`; the driver expression is `(py-bmf-run-file path)`.
 
-What the driver does NOT compute yet: the program's CPython runtime value
-(`40949` for `python_demo.py`). The closure-walker over `PY-BMF-CALL` /
-`PY-BMF-IF` / `PY-BMF-DEF` recipes is alive (G4 above is CLOSED), but the
-input side of the pipeline still hands `kernel-bmf-run` a *statement-object
-module*, not a PY-BMF recipe tree — that's G1's gate. When G1 (rule
-dispatch over the token stream) produces PY-BMF recipes from a source
-file, the driver swaps `(len statements)` for `(py-run module-recipe)`
-and the orchestration shape stays identical.
+`kernel-bmf-run form-kernel-ts/seedbank/python-adapter/examples/python_bridge_demo.py`
+returns `720` (factorial of 6) — three-way sibling parity green, matching
+CPython.
+
+Demos that use shapes outside the 9 arms (lists, dicts, classes, while/for,
+comprehensions, attribute access, subscripts, etc.) still surface honest
+traces from `py-env-lookup` or `lift-statement: unsupported kind/rule`.
+Each unsupported shape is one focused breath: add the lift dispatch
+branch in `python-bmf-lift.fk` + the matching interpreter arm in
+`python-bmf-eval.fk`. The contract scales linearly with surface coverage;
+no further orchestration breath is needed.
 
 **Three reachable shapes for G6 (kept for record; #1 was taken):**
 
