@@ -1,11 +1,11 @@
 # Cross-Modal Recipe Experiments
 
-Four small demos exploring how Form recipes carry semantic content across
-modalities (text, structured data, image, code). Each subdirectory has its own
-runnable sample and a README documenting what's reachable today, what
-surprised, and what's not yet reachable. **The point isn't to ship a universal
-translator** — it's to feel the body's current surface area for cross-modality
-and name the honest discoveries.
+Five small demos exploring how Form recipes carry semantic content across
+modalities (text, structured data, image, code, natural language). Each
+subdirectory has its own runnable sample and a README documenting what's
+reachable today, what surprised, and what's not yet reachable. **The point
+isn't to ship a universal translator** — it's to feel the body's current
+surface area for cross-modality and name the honest discoveries.
 
 | # | Experiment | One-line finding |
 |---|---|---|
@@ -13,6 +13,7 @@ and name the honest discoveries.
 | 02 | [Cross-language content-addressing](02-cross-language-content-addressing/) | Two recursive trees built by different author-routes intern to the **same** NodeID; iterative shape interns to a different one. |
 | 03 | [Recipe as compression](03-recipe-as-compression/) | The substrate's "ice" (`.fkb`) is **4.17× larger** than the "water" (`.fk` text) at small payload sizes. Compression isn't automatic. |
 | 04 | [Universal diff](04-universal-diff/) | Structural diff of two algorithms surfaces "the predicate is the same; the accumulation strategy diverges" — text diff can't see this. |
+| 05 | [NL to recipe](05-nl-to-recipe/) | A 4-rule English grammar parses sentences into arithmetic recipes; NL `the square of 7` interns to the **same NodeID** as hand-built `(mul 7 7)`. |
 
 ## What every experiment shares
 
@@ -69,13 +70,11 @@ The deeper teachings the body holds about all of this:
 
 ## Not in this directory (yet)
 
-The other shapes from Urs's prompt that didn't ship in this breath:
+Shapes from Urs's prompt that still haven't shipped:
 
-- **Natural-language-to-recipe sketch** — a small `nl → recipe` walk via
-  `form/form-stdlib/grammars/natural-bmf.fk`. The grammar exists; wiring a
-  demo through it from a Form sample is the next breath.
 - **Reverse roundtrip** (recipe → NL description) — sketch-only territory;
-  needs an NL emitter the body doesn't carry yet.
+  needs an NL emitter the body doesn't carry yet at the arithmetic
+  altitude. The `nl-emit.fk` track is i18n surface bindings, a different
+  shape than generative arithmetic English.
 
-Naming them here so the absence is visible and the next breath has somewhere
-to land.
+Naming the absence so the next breath has somewhere to land.
