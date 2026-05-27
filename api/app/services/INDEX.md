@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 238
+**Total files**: 239
 
 | File | Purpose |
 |---|---|
@@ -105,6 +105,7 @@
 | [field_story_service.py](field_story_service.py) | Published field-story artifacts and contribution hooks. |
 | [field_view_attribution_adjustment_service.py](field_view_attribution_adjustment_service.py) | Living append-only adjustments for field-story view attribution flow. |
 | [field_view_attribution_service.py](field_view_attribution_service.py) | Field story view attribution receipts and CC circulation rows. |
+| [form_kernel_bridge.py](form_kernel_bridge.py) | Form kernel bridge — shell into form-kernel-rust for endpoint bodies. |
 | [frequency_editor.py](frequency_editor.py) | Frequency editor — finds and rewrites institutional-frequency phrases. |
 | [frequency_field.py](frequency_field.py) | Frequency field analysis — token and phrase level dissonance detection. |
 | [frequency_profile_service.py](frequency_profile_service.py) | Frequency profile service — dynamic, multi-view, multi-hop. |

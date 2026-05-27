@@ -710,6 +710,8 @@ app.include_router(inspired_by_router.router, prefix="/api", tags=["inspired-by"
 app.include_router(gatherings_router.router, prefix="/api", tags=["gatherings"])
 app.include_router(presence_resonance_router.router, prefix="/api", tags=["presence-resonance"])
 app.include_router(places_router.router, prefix="/api", tags=["places"])
+from app.routers import utils as utils_router
+app.include_router(utils_router.router, prefix="/api", tags=["utils"])
 
 # Auto-index repository content on startup
 @app.on_event("startup")
