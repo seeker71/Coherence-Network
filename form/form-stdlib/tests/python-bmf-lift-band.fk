@@ -140,11 +140,37 @@ sign(5) + sign(0 - 3) + 5
     (let lifted-plus (head (node_children lifted-module)))
     (let cell10-score (if (node_eq handbuilt-plus lifted-plus) 10000 0))
 
+    ;; ---- cell 11: CTOR Shape B Blueprint convergence for COMPARE -------
+    ;; Same substrate-truth claim as cell 10, walked one breath further:
+    ;; a hand-built COMPARE-LT recipe with PY-BMF-INT-wrapped int leaves
+    ;; AND a Python-lifted `5 < 7` must `node_eq` to 1 — both content-
+    ;; address to the canonical RBasic.COMPARE-13 inst=3 (lt) Blueprint.
+    ;; Before this breath the lifted recipe carried PY-BMF-COMPARE
+    ;; (type=99 inst=527 with an op-string-leaf child); after, it carries
+    ;; COMPARE-LT (type=13 inst=3, positional children only) — same
+    ;; Blueprint as the hand-built reference.
+    ;;
+    ;; Honest scope: this proves convergence at the COMPARE layer. The
+    ;; integer LEAVES are PY-BMF-INT(trivial_int) on both sides — same
+    ;; leaf-vocabulary residue as cell 10 — because both sides build leaves
+    ;; the same way, not because the substrate normalises bare ints.
+
+    (let COMPARE-LT-REF (make_nodeid 1 2 13 3))
+    (let handbuilt-lt
+        (intern_node COMPARE-LT-REF
+            (list (intern_node PY-BMF-INT (list (intern_trivial_int 5)))
+                  (intern_node PY-BMF-INT (list (intern_trivial_int 7))))))
+    (let lifted-cmp-module (lift-module-text "5 < 7
+"))
+    (let lifted-lt (head (node_children lifted-cmp-module)))
+    (let cell11-score (if (node_eq handbuilt-lt lifted-lt) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
-    ;; Sum when every cell agrees with CPython + Shape B converges:
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000 = 55000
+    ;; Sum when every cell agrees with CPython + Shape B converges for
+    ;; both arithmetic (cell 10) and comparison (cell 11):
+    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000 = 65000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
-               cell10-score)))
+               cell10-score cell11-score)))

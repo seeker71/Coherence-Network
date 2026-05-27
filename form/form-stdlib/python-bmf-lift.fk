@@ -63,6 +63,22 @@
     (let MATH-MULTIPLY (make_nodeid 1 2 12 3))
     (let MATH-DIVIDE   (make_nodeid 1 2 12 4))
 
+    ;; ---- COMPARE-13 NodeIDs (CTOR Shape B for comparisons) ---------
+    ;;
+    ;; The canonical RBasic.COMPARE category — same NodeIDs the kernel's
+    ;; comparison primitives carry (see form-ontology.json `primitives`
+    ;; rows for eq/ne/lt/le/gt/ge at type=13). lift-binop-loop interns
+    ;; `== != < <= > >=` against these — picking up the one Blueprint
+    ;; per shape so a hand-built `(intern_node COMPARE-LT ...)` and a
+    ;; Python-lifted `5 < 7` content-address to the same cell. Unknown
+    ;; compare ops (none today, but defensive) fall back to PY-BMF-COMPARE.
+    (let COMPARE-EQ (make_nodeid 1 2 13 1))
+    (let COMPARE-NE (make_nodeid 1 2 13 2))
+    (let COMPARE-LT (make_nodeid 1 2 13 3))
+    (let COMPARE-LE (make_nodeid 1 2 13 4))
+    (let COMPARE-GT (make_nodeid 1 2 13 5))
+    (let COMPARE-GE (make_nodeid 1 2 13 6))
+
     ;; ---- token accessors -------------------------------------------
     ;;
     ;; Tokens are bare BMF objects from python-source-scan-*. Each carries
@@ -297,13 +313,28 @@
                                          (lift-rest rhs-primary)
                                          next-min))
                     (let rhs-recipe (lift-recipe rhs-climb))
-                    ;; CTOR Shape B: + - * / intern as RBasic.MATH-12 nodes
+                    ;; CTOR Shape B: + - * / intern as RBasic.MATH-12 nodes,
+                    ;; and == != < <= > >= intern as RBasic.COMPARE-13 nodes
                     ;; (positional children only — the instance number IS the
-                    ;; operator, no op-string-leaf). Comparisons stay on
-                    ;; PY-BMF-COMPARE, and ** // % stay on PY-BMF-BINOP until
-                    ;; their MATH instances exist. The eval side has a
-                    ;; matching MATH-12 arm that dispatches on inst.
+                    ;; operator, no op-string-leaf). ** // % stay on
+                    ;; PY-BMF-BINOP until their MATH instances exist; any
+                    ;; unrecognised compare op (none today) falls back to
+                    ;; PY-BMF-COMPARE so the path stays total. The eval side
+                    ;; has matching MATH-12 and COMPARE-13 arms that dispatch
+                    ;; on inst.
                     (let new-left
+                        (if (str_eq op "==")
+                            (intern_node COMPARE-EQ    (list left rhs-recipe))
+                        (if (str_eq op "!=")
+                            (intern_node COMPARE-NE    (list left rhs-recipe))
+                        (if (str_eq op "<")
+                            (intern_node COMPARE-LT    (list left rhs-recipe))
+                        (if (str_eq op "<=")
+                            (intern_node COMPARE-LE    (list left rhs-recipe))
+                        (if (str_eq op ">")
+                            (intern_node COMPARE-GT    (list left rhs-recipe))
+                        (if (str_eq op ">=")
+                            (intern_node COMPARE-GE    (list left rhs-recipe))
                         (if (op-is-compare? op)
                             (intern_node PY-BMF-COMPARE
                                 (list left
@@ -320,7 +351,7 @@
                             (intern_node PY-BMF-BINOP
                                 (list left
                                       (intern_trivial_string op)
-                                      rhs-recipe))))))))
+                                      rhs-recipe))))))))))))))
                     (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
 
     ;; --- conditional expression ------------------------------------
