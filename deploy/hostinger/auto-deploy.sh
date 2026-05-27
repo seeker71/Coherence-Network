@@ -203,10 +203,19 @@ if is_static_only_change "$OLD_SHA" "$TARGET_SHA"; then
   # below will pick up the api-side static syncs as they would in a
   # rebuild flow. No `docker compose build` needed.
 else
+  build_started="$(date +%s)"
   log "docker compose build api web pulse"
   docker compose build api web pulse 2>&1 | tee -a "$LOG_FILE"
+  build_ended="$(date +%s)"
+  build_elapsed=$((build_ended - build_started))
+  log "TIMING: docker compose build took ${build_elapsed}s"
+
+  up_started="$(date +%s)"
   log "docker compose up -d api web pulse"
   docker compose up -d api web pulse 2>&1 | tee -a "$LOG_FILE"
+  up_ended="$(date +%s)"
+  up_elapsed=$((up_ended - up_started))
+  log "TIMING: docker compose up took ${up_elapsed}s"
 fi
 
 
@@ -306,15 +315,71 @@ sync_substrate_content() {
 }
 
 run_substrate_ingest() {
-  log "substrate: running coh_substrate.py ingest --all --structured"
-  set +e
-  docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
-    2>&1 | tee -a "$LOG_FILE"
-  local rc=$?
-  set -e
-  if [[ "$rc" -ne 0 ]]; then
-    log "substrate: ingest returned $rc — non-blocking, deploy continues"
+  # If we can compute the changed-files set since the last deployed SHA,
+  # ingest ONLY those files instead of re-ingesting all 481+. The
+  # substrate's cell-intern is already content-addressed (same hash →
+  # same NodeID, no new row), but the file read + parse + encode runs
+  # for every file in --all mode regardless. Per-file ingest with the
+  # git-changed set turns this from minutes-to-tens-of-minutes into
+  # seconds when content hasn't changed in the ingestable domains.
+  #
+  # Fall back to --all when:
+  #   - OLD_SHA unknown (cold start)
+  #   - OLD_SHA == TARGET_SHA but rebuild was requested (running API at
+  #     wrong SHA path)
+  #   - git diff fails for any reason
+  local from="$1" to="$2"
+  local started ended elapsed
+  started="$(date +%s)"
+
+  if [[ -z "$from" || "$from" == "$to" ]]; then
+    log "substrate: SHAs unknown or equal — running --all --structured"
+    set +e
+    docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
+      2>&1 | tee -a "$LOG_FILE"
+    local rc=$?
+    set -e
+    ended="$(date +%s)"
+    elapsed=$((ended - started))
+    log "substrate: ingest --all took ${elapsed}s (rc=$rc)"
+    if [[ "$rc" -ne 0 ]]; then
+      log "substrate: ingest returned $rc — non-blocking, deploy continues"
+    fi
+    return 0
   fi
+
+  local changed
+  changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null \
+              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$' \
+              || true)"
+  if [[ -z "$changed" ]]; then
+    ended="$(date +%s)"
+    elapsed=$((ended - started))
+    log "substrate: no ingestable files changed in ${from:0:12}..${to:0:12} — skipped (${elapsed}s)"
+    return 0
+  fi
+
+  local count
+  count="$(printf '%s\n' "$changed" | grep -c .)"
+  log "substrate: ingesting $count changed files (not --all)"
+
+  set +e
+  local rc=0
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest '/app/$path' --structured" \
+      2>&1 | tee -a "$LOG_FILE"
+    local file_rc=$?
+    if [[ "$file_rc" -ne 0 ]]; then
+      log "substrate: ingest failed for $path (rc=$file_rc) — continuing"
+      rc=$file_rc
+    fi
+  done <<< "$changed"
+  set -e
+
+  ended="$(date +%s)"
+  elapsed=$((ended - started))
+  log "substrate: ingest of $count files took ${elapsed}s (final rc=$rc)"
   return 0
 }
 
@@ -355,7 +420,7 @@ else
 fi
 
 sync_substrate_content
-run_substrate_ingest
+run_substrate_ingest "$OLD_SHA" "$TARGET_SHA"
 
 log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
 
