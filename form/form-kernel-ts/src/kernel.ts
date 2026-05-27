@@ -1559,6 +1559,18 @@ export class Kernel {
         float: Math.pow(argFloat(args, 0), argFloat(args, 1)),
       };
     });
+    // ── Python `typing` module — opaque sentinels ───────────────────
+    // Every typing import (List, Optional, Dict, Tuple, Any, Callable,
+    // Union, Iterable, Iterator, Mapping, Sequence, Set, FrozenSet) binds
+    // to this single native. Type annotations are parse-and-ignored at
+    // compile time, so this never fires in real code; its existence makes
+    // the `from typing import …` binding round-trip honest. Any accidental
+    // runtime reference returns the same opaque string in all three
+    // runtimes (CPython, TS eval, Rust kernel).
+    this.registerNative("typing_opaque", catMethod(), () => ({
+      kind: "str",
+      str: "<typing>",
+    }));
     // File I/O
     this.registerNative("read_file", catCall(), (_k, args) => {
       try {

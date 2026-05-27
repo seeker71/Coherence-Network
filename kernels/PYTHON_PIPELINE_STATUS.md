@@ -51,6 +51,7 @@ result
 | `python_dict_demo.py` | 88 | dict literal, subscript-read, subscript-assign, `in` membership, iter over keys, `len(d)` |
 | `python_inheritance_demo.py` | 337 | `class Y(X):` single inheritance, `super().__init__(args)` chaining, `super().method(args)` for override calls, method dispatch walks `__base__` chain |
 | `endpoint_lattice_stats_demo.py` | 1089 | substrate transmute shape — dict over `/api/substrate/lattice/stats` response, sum across three counts. Kernel-side natives `http_get` + `_json_to_dict` + `_json_get` carry the live fetch path (see `api/tests/test_substrate_kernel_parity.py`). |
+| `python_typing_compose_demo.py` | 241 | `from typing import List, Optional, Dict, Tuple, Any, Callable` + classes + parameter/return/variable annotations interleaved (proves the three surfaces compose) |
 
 **Run it:**
 ```bash
@@ -111,6 +112,7 @@ Features the pipeline currently compiles to native kernel:
 - Helper-function calls within def bodies
 - Builtins: `len`, `range`, `sum`, `min`, `max`, `abs`
 - **Imports** — `import math`, `import math as m`, `from math import sqrt, pi`, `from math import sqrt as s`. The `math` module is a kernel-native record (`sqrt`, `pi`, `floor`, `ceil`, `pow`); imports rewrite to direct native calls at parse time, so the runtime path carries no module-system overhead.
+- **typing module** — `from typing import List, Optional, Dict, Tuple, Any, Callable, Union, Iterable, Iterator, Mapping, Sequence, Set, FrozenSet`. Every name binds to a single opaque-sentinel native (`typing_opaque`); since type annotations are parse-and-ignored, the binding never fires at runtime but the imports compile cleanly and round-trip through all three runtimes. Composes with the type-annotation surface so `def f(xs: List[int]) -> Optional[int]:` works end-to-end.
 - **Classes** — v1 minimum: `class X:`, `__init__(self, …)` storing attributes
   on self, instance methods taking self and reading `self.x`. Lowers to a
   constructor function plus lifted `<ClassName>__<methodName>` defns; instances
@@ -135,6 +137,16 @@ Features the pipeline currently compiles to native kernel:
   beyond `__init__` (`__repr__`, `__eq__`, …), conditional `self.x =` inside
   `__init__`, mid-method attribute writes (the v2 ctor reconstructs the
   record up front; methods read fields but don't mutate), two-arg `super(C, self)`
+- Multi-argument generic subscripts in type expressions (`Dict[str, int]`,
+  `Tuple[int, str]`, `Callable[[int], int]`). The v1 subscript parser
+  takes a single index expression; the typing names (Dict, Tuple, Callable)
+  import cleanly but their multi-argument use inside subscripts needs
+  comma-separated index parsing
+- **Class inheritance**, `super()`, `classmethod`, `staticmethod`, metaclasses,
+  `__slots__`, decorators on classes, dunder methods beyond `__init__`,
+  conditional `self.x =` inside `__init__`, mid-method attribute writes
+  (the v1 ctor reconstructs the record up front; methods read fields but
+  don't mutate)
 - Decorators
 - User-defined module imports (the kernel-resident `math` is wired; arbitrary `.py` files aren't loaded as modules yet — needs module-system semantics, path resolution, circular-import handling)
 - Iterator protocol (`range()`, generators)

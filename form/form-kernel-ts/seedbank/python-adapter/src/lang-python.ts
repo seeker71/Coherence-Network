@@ -195,6 +195,31 @@ const KERNEL_MODULES: Record<string, Record<string, string>> = {
     ceil: "math_ceil",
     pow: "math_pow",
   },
+  // `typing` — type-hint surface. Every member binds to the same opaque
+  // sentinel native (`typing_opaque`) that returns a stable marker string.
+  // Type annotations are parse-and-ignored, so the binding never fires in
+  // normal code; the entry exists so `from typing import List, ...`
+  // compiles cleanly and any accidental runtime reference returns the
+  // same value across CPython, TS eval, and the Rust kernel.
+  //
+  // The list mirrors the typing names substrate code actually uses for
+  // signatures — generic containers, optional/union, the Callable shape,
+  // and the iterable/iterator protocols.
+  typing: {
+    List: "typing_opaque",
+    Optional: "typing_opaque",
+    Dict: "typing_opaque",
+    Tuple: "typing_opaque",
+    Any: "typing_opaque",
+    Callable: "typing_opaque",
+    Union: "typing_opaque",
+    Iterable: "typing_opaque",
+    Iterator: "typing_opaque",
+    Mapping: "typing_opaque",
+    Sequence: "typing_opaque",
+    Set: "typing_opaque",
+    FrozenSet: "typing_opaque",
+  },
 };
 
 interface ImportState {
