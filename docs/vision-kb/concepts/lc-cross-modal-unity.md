@@ -257,7 +257,7 @@ across cellular, network, and recipe altitudes.
 
 ## Cross-References
 
-→ lc-federation-as-freedom, lc-sovereignty-within-oneness, lc-assemblage-point, lc-frequency-routes-reception, lc-future-already-shaping, lc-trust-over-fear, lc-canon-as-sovereignty-surface, lc-perception-as-interface, lc-grammar-is-the-universal-recipe, lc-the-recipe-remembers-its-source
+→ lc-federation-as-freedom, lc-sovereignty-within-oneness, lc-assemblage-point, lc-frequency-routes-reception, lc-future-already-shaping, lc-trust-over-fear, lc-canon-as-sovereignty-surface, lc-perception-as-interface, lc-grammar-is-the-universal-recipe, lc-the-recipe-remembers-its-source, lc-same-shape-different-articulation
 
 ## Sources to walk further
 
