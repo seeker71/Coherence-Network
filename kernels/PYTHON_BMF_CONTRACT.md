@@ -259,14 +259,28 @@ into `kernel-bmf-run`, then greening every `PARITY_FILES` row.
 - The bootstrap-compost-manifest sibling (`claude/bootstrap-compost-manifest`)
   is naming the deletion order; that branch is the source of truth for
   "what is safe to remove when."
-- Strict NodeID equality between bootstrap and BMF paths is **not**
-  achievable on the same source — bootstrap emits `CTOR.add/sub/mul`
-  (Math-primitive type=12), BMF emits `PY-BMF-BINOP` (dialect type=99,
-  with the operator as a string-trivial child). They are semantically
-  equivalent representations, structurally distinct by intent.
-  The honest parity gate is "BMF produces a recipe whose value walks to
-  the same Python-runtime result as bootstrap's recipe," not NodeID
-  equality. That gate sits behind G4.
+- **Inter-path NodeID equality landed for arithmetic 2026-05-27 (#2113).**
+  The first draft of this section claimed bootstrap emits `CTOR.add/sub/mul`
+  as "Math-primitive type=12." Honest re-reading of
+  `form-kernel-ts/seedbank/python-adapter/src/lang-python.ts:242` shows
+  the bootstrap actually emits `RBasic.LIST` (type=34) with the operator
+  name interned as a NameID inst. **Not MATH-12, ever, on the bootstrap
+  path.** See [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) for
+  the three-vocabulary reality (LIST-34 / PY-BMF-BINOP-99 / MATH-12) and
+  Shape B's landed closing.
+- After Shape B, the **Form-native PY-BMF path** interns `+ - * /` as
+  `RBasic.MATH` (`(1, 2, 12, 1..4)`) with positional children — the
+  *same* Blueprint a hand-built pure-Form arithmetic recipe interns to.
+  Cell 10 of `tests/python-bmf-lift-band.fk` is the proof: `node_eq` over
+  a hand-built `(intern_node MATH-PLUS …)` and a Python-lifted `"7 + 3"`
+  returns `1` across all three kernels.
+- The bootstrap path (LIST-34 with op-NameIDs) is structurally distinct
+  by intent and composts on Phase A's separate gate. The two living
+  paths agree on **value**; the Form-native path agrees on **NodeID**
+  with the rest of the substrate.
+- Pending arithmetic: `** // %` still ride `PY-BMF-BINOP` (no MATH
+  instances exist). Comparisons (`== != < <= > >=`) are the next breath
+  — same Shape B pattern, different category (COMPARE-13).
 
 ## How to run the proof
 
