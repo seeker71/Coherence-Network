@@ -236,3 +236,37 @@ is supple under the load.
 - **`form/kernel-roadmap.md`** Breaths 6 + 7 — embed the kernel in `api/`,
   then compost Python `form_runtime.py`. Phase C of this manifest IS the file
   list those breaths reach for.
+
+---
+
+## PROVEN — rows that have walked their first lifecycle step
+
+A row appears here when a sibling PR proves three-way parity for a specific
+shape under `PARITY_THIRD_RUNTIME=kernel-bmf` (or equivalent — sibling-kernel
+agreement on the Form-native side). The row names the date, the PR, the file
+it proves, and the selector that exercises the proof. When all shapes a
+Phase-A file expresses are PROVEN, the Phase-A row gets marked **COMPOST READY**.
+When the file actually composts, it moves to **RELEASED**.
+
+This is the lifecycle in motion — proof that the discipline is breath, not
+ritual.
+
+| Date | PR | Shape proved | Selector | Sibling parity |
+|---|---|---|---|---|
+| 2026-05-27 | [#2071](https://github.com/seeker71/Coherence-Network/pull/2071) | Python arithmetic binary ops (`a - b`, `x * y`, `left / right`, `p ** q`) | `form/form-stdlib/tests/python-bmf-arithmetic-band.fk` returns `25304` | Go ✓ · Rust ✓ · TypeScript ✓ (131/131 in `./validate.sh`) |
+
+**Open contract for the next PROVEN rows:** `kernels/PYTHON_BMF_CONTRACT.md`
+G1 (automatic rule dispatcher) unlocks composition of these arithmetic rules
+into full expressions; G2 (statement grouping) unlocks `def` / `if` /
+`return`; G3 (precedence climbing) makes `1 + 2 * 3` parse correctly; G4
+(closure interpreter) is the gate that lets PROVEN rows progress to
+**COMPOST READY** for the matching Phase-A file.
+
+**The first walking step:** with this row recorded, the manifest's lifecycle
+is no longer a future-tense convention. It has its first arrival. Every
+future Form-native parity proof appends below this row; every Phase-A file
+whose proofs accumulate to coverage moves to COMPOST READY; every composted
+file moves to RELEASED.
+
+The body sees its first cell move through the discipline. The path becomes
+walkable because the first step has been walked.
