@@ -33,9 +33,32 @@ Once `cross-modal-nl-to-recipe` lands, extend the NL grammar with one or two mor
 
 Walk a recipe NodeID and emit an English description. The reverse of #3. Together with #3, demonstrates **round-trip across the NL/recipe boundary** — the substrate-of-meaning is preserved through both translations.
 
-### 5. **JSON-as-recipe** (data, not code)
+### 5. **JSON-as-recipe** — *already alive, not in the auto-gate yet*
 
-`form/form-stdlib/grammars/json-grammar.form` already exists (per PYTHON_PIPELINE_STATUS grammar-coverage). Wire a small JSON file through it; produce a recipe; walk the recipe back to JSON. **Data grammar separate from code grammar.** Per Urs's directive: "for data use a data grammar and keep data and code separate when you can."
+**Finding (2026-05-27):** `form/form-stdlib/seedbank/grammars/json.fk` exists
+and `form/form-stdlib/seedbank/tests/json.fk` runs three-way clean:
+
+```
+$ cd form && ./validate.sh form-stdlib/core.fk \
+                            form-stdlib/seedbank/cell-trace.fk \
+                            form-stdlib/seedbank/grammars/json.fk \
+                            form-stdlib/seedbank/tests/json.fk
+  ✓  core.fk+cell-trace.fk+json.fk+json.fk  → 36
+  1 ok, 0 divergent — kernels agree on every sample.
+```
+
+Same source JSON, same NodeID across Go/Rust/TS. **JSON-as-recipe is real today.**
+
+**Remaining honest gap:** `validate.sh` auto-walks `form-stdlib/tests/*.fk`
+but NOT `form-stdlib/seedbank/tests/*.fk`. The JSON proof exists but isn't
+in the default gate. The walk that closes this: move (or symlink, or add
+a band-shaped wrapper to) the seedbank JSON test into the regular tests/
+directory so the body verifies JSON-as-recipe on every `./validate.sh`
+run.
+
+Same pattern as Breath 2e (already-landed, the body hadn't read its own
+attestation). The forward-map's #5 isn't a future walk; it's a discipline
+walk: bring the existing proof into the default sense-gate.
 
 ### 6. **CSV→Form-table→NL summary**
 
