@@ -110,6 +110,13 @@ pub(crate) const TRIV_INT: u32 = 1;
 pub(crate) const TRIV_STRING: u32 = 2;
 const TRIV_BOOL: u32 = 3;
 const TRIV_NULL: u32 = 4;
+// FLOAT64 — value lives in the kernel's `f64s` overflow table; the inst
+// field carries the table index. Sibling TS kernel uses Triv.FLOAT64 = 7;
+// we use 5 here because the Rust kernel never shipped 8/16/32 variants and
+// FLOAT64 is the next number after NULL. Both kernels read .fk source where
+// the type tag is implicit in token shape (digits+dot vs digits), so the
+// numeric constants stay private to each side.
+pub(crate) const TRIV_FLOAT64: u32 = 5;
 
 // Per-RBasic instance constants
 const RMATH_PLUS: u32 = 1;
@@ -217,6 +224,12 @@ pub(crate) struct Kernel {
     import_seq: u32,
     strs: Vec<String>,
     str_idx: HashMap<String, NameID>,
+    // Float64 overflow table — values don't fit the 32-bit `inst` field,
+    // so the trivial NodeID carries an index into `f64s`. Canonicalization
+    // on intern: NaN bit patterns collapse to qNaN, ±0.0 share +0.0, but
+    // ±Inf stay distinct (matches the TS kernel's f64Idx behavior).
+    f64s: Vec<f64>,
+    f64_idx: HashMap<u64, u32>, // keyed by IEEE bit pattern after canonicalization
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
     env_natives: HashMap<NameID, EnvAwareNativeEntry>,
@@ -495,6 +508,8 @@ impl Kernel {
             import_seq: 1,
             strs: Vec::new(),
             str_idx: HashMap::new(),
+            f64s: Vec::new(),
+            f64_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
             env_natives: HashMap::new(),
@@ -552,6 +567,48 @@ impl Kernel {
             ty: TRIV_INT,
             inst: (n as i32) as u32,
         }
+    }
+
+    // intern_trivial_float64 — content-addressed insertion into the f64
+    // overflow table. The trivial NodeID carries the table index in `inst`.
+    // Canonicalization matches the TS sibling kernel so the same float
+    // value parsed twice produces the same NodeID:
+    //   - any NaN bit pattern collapses to qNaN (0x7ff8000000000000)
+    //   - -0.0 collapses to +0.0
+    //   - ±Inf keep distinct identity
+    pub(crate) fn intern_trivial_float64(&mut self, f: f64) -> NodeID {
+        let canonical = if f.is_nan() {
+            f64::from_bits(0x7ff8000000000000)
+        } else if f == 0.0 {
+            0.0
+        } else {
+            f
+        };
+        let bits = canonical.to_bits();
+        if let Some(&idx) = self.f64_idx.get(&bits) {
+            return NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_FLOAT64,
+                inst: idx,
+            };
+        }
+        let idx = self.f64s.len() as u32;
+        self.f64s.push(canonical);
+        self.f64_idx.insert(bits, idx);
+        NodeID {
+            pkg: 1,
+            level: LEVEL_TRIVIAL,
+            ty: TRIV_FLOAT64,
+            inst: idx,
+        }
+    }
+
+    pub(crate) fn decode_float64(&self, inst: u32) -> f64 {
+        self.f64s
+            .get(inst as usize)
+            .copied()
+            .unwrap_or_else(|| panic!("decode_float64: bad index {}", inst))
     }
 
     pub(crate) fn intern_string(&mut self, s: &str) -> NodeID {
@@ -803,6 +860,8 @@ impl Kernel {
             import_seq: self.import_seq,
             strs: self.strs.clone(),
             str_idx: self.str_idx.clone(),
+            f64s: self.f64s.clone(),
+            f64_idx: self.f64_idx.clone(),
             next_inst: self.next_inst,
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
@@ -836,6 +895,7 @@ impl Kernel {
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone()),
             TRIV_BOOL => Value::Bool(n.inst != 0),
             TRIV_NULL => Value::Null,
+            TRIV_FLOAT64 => Value::Float(self.decode_float64(n.inst)),
             _ => panic!("trivial_value: unknown trivial type {}", n.ty),
         }
     }
@@ -878,6 +938,7 @@ impl Kernel {
 pub(crate) enum Value {
     Null,
     Int(i64),
+    Float(f64),
     Str(String),
     Bool(bool),
     List(Vec<Value>),
@@ -899,6 +960,7 @@ impl Value {
         match self {
             Value::Null => "null".to_string(),
             Value::Int(n) => n.to_string(),
+            Value::Float(f) => format_float_python(*f),
             Value::Str(s) => s.clone(),
             Value::Bool(b) => {
                 if *b {
@@ -926,7 +988,30 @@ impl Value {
     fn as_int(&self) -> i64 {
         match self {
             Value::Int(n) => *n,
+            Value::Float(f) => *f as i64,
+            Value::Bool(b) => {
+                if *b {
+                    1
+                } else {
+                    0
+                }
+            }
             _ => panic!("as_int: {:?}", self),
+        }
+    }
+
+    fn as_float(&self) -> f64 {
+        match self {
+            Value::Float(f) => *f,
+            Value::Int(n) => *n as f64,
+            Value::Bool(b) => {
+                if *b {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            _ => panic!("as_float: {:?}", self),
         }
     }
 
@@ -934,6 +1019,7 @@ impl Value {
         match self {
             Value::Bool(b) => *b,
             Value::Int(n) => *n != 0,
+            Value::Float(f) => *f != 0.0,
             Value::Null => false,
             _ => true,
         }
@@ -944,6 +1030,29 @@ impl Value {
             Value::Str(s) => s,
             _ => panic!("as_str: {:?}", self),
         }
+    }
+}
+
+// format_float_python — render an f64 the way CPython's `print(float)`
+// renders it. Rust's default `{}` format drops the trailing zero for
+// integer-valued floats (`1.0` → `"1"`); CPython keeps it (`"1.0"`).
+// The parity suite compares stdout strings, so we match Python's format
+// at the kernel's render boundary. NaN and ±Inf also follow CPython.
+fn format_float_python(f: f64) -> String {
+    if f.is_nan() {
+        return "nan".to_string();
+    }
+    if f.is_infinite() {
+        return if f > 0.0 { "inf".to_string() } else { "-inf".to_string() };
+    }
+    // Rust's `{}` produces "1", "1.5", "0.125", "5e-10" etc. Add a trailing
+    // ".0" iff the rendered form has neither a "." nor an exponent — that
+    // matches CPython's repr/print behaviour for integer-valued floats.
+    let s = format!("{}", f);
+    if s.contains('.') || s.contains('e') || s.contains('E') {
+        s
+    } else {
+        format!("{}.0", s)
     }
 }
 
@@ -1335,11 +1444,22 @@ impl Kernel {
             Value::Str(s) => Value::Int(s.len() as i64),
             _ => Value::Int(0),
         });
-        // `nth` composted 2026-05-22 — unused in form-stdlib/, can be
-        // re-authored in core.fk as needed:
-        //   (defn nth (xs n)
-        //       (if (eq n 0) (head xs)
-        //           (nth (tail xs) (sub n 1))))
+        // nth — list subscript by integer index. Sibling-parity with the
+        // TS kernel; the Python emitter generates `(nth xs i)` for
+        // `xs[i]`. `core.fk` has a recursive version that could replace
+        // this once auto-prelude loading lands; keeping it native today
+        // is what closes the parity-suite assign/imperative/substrate
+        // demos against the live binary.
+        self.register_native("nth", cat_access(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                let i = args[1].as_int();
+                if i < 0 || (i as usize) >= xs.len() {
+                    return Value::Null;
+                }
+                return xs[i as usize].clone();
+            }
+            Value::Null
+        });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
@@ -1377,14 +1497,37 @@ impl Kernel {
             }
             Value::Int(args[0].as_int())
         });
-        // `sum` composted from the kernel native list 2026-05-22 —
-        // core.fk's `(defn sum (xs) (foldl plus 0 xs))` covers it
-        // via the existing `foldl` + `plus` primitives. Kernel
-        // minimality audit (kernel-minimality-audit.md) named this
-        // one of 9 composable natives; this is the first compost.
-        self.register_native("abs", cat_method(), |_, _, args| {
-            let n = args[0].as_int();
-            Value::Int(if n < 0 { -n } else { n })
+        // sum — integer (or float-aware) total of a list. Sibling-parity
+        // with the TS kernel. The earlier compost note pointed at core.fk's
+        // `(defn sum (xs) (foldl plus 0 xs))`, but core.fk is not in the
+        // bootstrap load path today; restoring the native is what keeps
+        // the parity gate honest until auto-prelude lands.
+        self.register_native("sum", cat_method(), |_, _, args| {
+            if let Value::List(xs) = &args[0] {
+                // If any element is a float, promote the running total
+                // to float — matches Python's behaviour for sum([1, 2.5]).
+                let any_float = xs.iter().any(|v| matches!(v, Value::Float(_)));
+                if any_float {
+                    let mut total = 0.0f64;
+                    for v in xs {
+                        total += v.as_float();
+                    }
+                    return Value::Float(total);
+                }
+                let mut total: i64 = 0;
+                for v in xs {
+                    total += v.as_int();
+                }
+                return Value::Int(total);
+            }
+            Value::Int(0)
+        });
+        self.register_native("abs", cat_method(), |_, _, args| match &args[0] {
+            Value::Float(f) => Value::Float(f.abs()),
+            _ => {
+                let n = args[0].as_int();
+                Value::Int(if n < 0 { -n } else { n })
+            }
         });
         // Polymorphic `+` for Python compilation: int+int→add,
         // str+str→concat, list+list→concat. The compile-time emitter
@@ -1393,6 +1536,11 @@ impl Kernel {
         self.register_native("_plus", cat_method(), |_, _, args| {
             match (&args[0], &args[1]) {
                 (Value::Int(a), Value::Int(b)) => Value::Int(a + b),
+                // Float promotion — matches Python: int+float→float,
+                // float+int→float, float+float→float.
+                (Value::Float(a), Value::Float(b)) => Value::Float(a + b),
+                (Value::Int(a), Value::Float(b)) => Value::Float(*a as f64 + b),
+                (Value::Float(a), Value::Int(b)) => Value::Float(a + *b as f64),
                 (Value::Str(a), Value::Str(b)) => {
                     let mut s = a.clone();
                     s.push_str(b);
@@ -1408,6 +1556,16 @@ impl Kernel {
                     s.push_str(b);
                     Value::Str(s)
                 }
+                (Value::Str(a), Value::Float(b)) => {
+                    let mut s = a.clone();
+                    s.push_str(&format_float_python(*b));
+                    Value::Str(s)
+                }
+                (Value::Float(a), Value::Str(b)) => {
+                    let mut s = format_float_python(*a);
+                    s.push_str(b);
+                    Value::Str(s)
+                }
                 (Value::List(a), Value::List(b)) => {
                     let mut out = a.clone();
                     out.extend(b.iter().cloned());
@@ -1418,17 +1576,40 @@ impl Kernel {
         });
         // range(n)        → [0, 1, ..., n-1]
         // range(a, b)     → [a, a+1, ..., b-1]
-        // range(a, b, s)  → [a, a+s, a+2s, ..., < b]
+        // range(a, b, s)  → [a, a+s, a+2s, ..., < b] (or > b for negative step)
         // Opens `for i in range(N):` end-to-end through the kernel —
         // the most common Python loop idiom. Same semantics as CPython's
         // range builtin (returning an eager list rather than a lazy
         // iterator, which the kernel doesn't yet have iterators for).
-        // `range` composted 2026-05-22 — core.fk's
-        //   (defn range (start end)
-        //       (if (ge start end) (empty)
-        //           (cons start (range (add start 1) end))))
-        // covers the (start, end) variant. Step variant can be re-
-        // authored in core.fk if/when needed (no current usage).
+        // Sibling-parity with TS kernel; the earlier compost note pointed
+        // at core.fk's recursive (start, end) variant, but core.fk isn't
+        // bootstrap-loaded today, so keeping range native is what keeps
+        // python_range_demo running end-to-end against the native binary.
+        self.register_native("range", cat_list_nat(), |_, _, args| {
+            let (start, stop, step) = match args.len() {
+                1 => (0i64, args[0].as_int(), 1i64),
+                2 => (args[0].as_int(), args[1].as_int(), 1i64),
+                _ => (args[0].as_int(), args[1].as_int(), args[2].as_int()),
+            };
+            let mut out: Vec<Value> = Vec::new();
+            if step == 0 {
+                return Value::List(out);
+            }
+            if step > 0 {
+                let mut i = start;
+                while i < stop {
+                    out.push(Value::Int(i));
+                    i += step;
+                }
+            } else {
+                let mut i = start;
+                while i > stop {
+                    out.push(Value::Int(i));
+                    i += step;
+                }
+            }
+            Value::List(out)
+        });
         self.register_native(
             "read_file",
             cat_call(),
@@ -2114,29 +2295,66 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
 
     match cat.ty {
         RB_MATH => {
-            let l = walk(k, a, kids[0], env).as_int();
-            let r = walk(k, a, kids[1], env).as_int();
-            Value::Int(match cat.inst {
-                RMATH_PLUS => l + r,
-                RMATH_MINUS => l - r,
-                RMATH_MULTIPLY => l * r,
-                RMATH_DIVIDE => l / r,
-                RMATH_MODULO => l % r,
-                _ => panic!("math: unknown op {}", cat.inst),
-            })
+            let lv = walk(k, a, kids[0], env);
+            let rv = walk(k, a, kids[1], env);
+            // Width promotion: if either operand is Float, the result is
+            // Float (matches Python `int + float → float`, and IEEE 754
+            // arithmetic on mixed inputs). Pure int/int stays on the
+            // fast i64 path.
+            if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
+                let l = lv.as_float();
+                let r = rv.as_float();
+                Value::Float(match cat.inst {
+                    RMATH_PLUS => l + r,
+                    RMATH_MINUS => l - r,
+                    RMATH_MULTIPLY => l * r,
+                    RMATH_DIVIDE => l / r,
+                    RMATH_MODULO => l - (l / r).floor() * r,
+                    _ => panic!("math.f64: unknown op {}", cat.inst),
+                })
+            } else {
+                let l = lv.as_int();
+                let r = rv.as_int();
+                Value::Int(match cat.inst {
+                    RMATH_PLUS => l + r,
+                    RMATH_MINUS => l - r,
+                    RMATH_MULTIPLY => l * r,
+                    RMATH_DIVIDE => l / r,
+                    RMATH_MODULO => l % r,
+                    _ => panic!("math: unknown op {}", cat.inst),
+                })
+            }
         }
         RB_COMPARE => {
-            let l = walk(k, a, kids[0], env).as_int();
-            let r = walk(k, a, kids[1], env).as_int();
-            Value::Bool(match cat.inst {
-                RCMP_EQ => l == r,
-                RCMP_NE => l != r,
-                RCMP_LT => l < r,
-                RCMP_LE => l <= r,
-                RCMP_GT => l > r,
-                RCMP_GE => l >= r,
-                _ => panic!("compare: unknown op {}", cat.inst),
-            })
+            let lv = walk(k, a, kids[0], env);
+            let rv = walk(k, a, kids[1], env);
+            // Same width-promotion rule as math: float on either side
+            // forces an IEEE comparison. Pure int/int stays integer.
+            if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
+                let l = lv.as_float();
+                let r = rv.as_float();
+                Value::Bool(match cat.inst {
+                    RCMP_EQ => l == r,
+                    RCMP_NE => l != r,
+                    RCMP_LT => l < r,
+                    RCMP_LE => l <= r,
+                    RCMP_GT => l > r,
+                    RCMP_GE => l >= r,
+                    _ => panic!("compare.f64: unknown op {}", cat.inst),
+                })
+            } else {
+                let l = lv.as_int();
+                let r = rv.as_int();
+                Value::Bool(match cat.inst {
+                    RCMP_EQ => l == r,
+                    RCMP_NE => l != r,
+                    RCMP_LT => l < r,
+                    RCMP_LE => l <= r,
+                    RCMP_GT => l > r,
+                    RCMP_GE => l >= r,
+                    _ => panic!("compare: unknown op {}", cat.inst),
+                })
+            }
         }
         RB_LOGIC => match cat.inst {
             RLOG_AND => {
@@ -2388,12 +2606,42 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                toks.push(SexpTok {
-                    kind: "INT",
-                    value: src[start..i].to_string(),
-                    line: sline,
-                    col: scol,
-                });
+                // Float: digits '.' digits, optionally with an exponent.
+                // The dot must be followed by a digit so `(.foo bar)` and
+                // bare integers stay legible. Sibling-parity: TS reader
+                // recognises the same shape.
+                let is_float = i + 1 < bytes.len()
+                    && bytes[i] == b'.'
+                    && bytes[i + 1].is_ascii_digit();
+                if is_float {
+                    i += 1; // consume '.'
+                    while i < bytes.len() && bytes[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    // Optional exponent: [eE][+-]?[0-9]+
+                    if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
+                        i += 1;
+                        if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
+                            i += 1;
+                        }
+                        while i < bytes.len() && bytes[i].is_ascii_digit() {
+                            i += 1;
+                        }
+                    }
+                    toks.push(SexpTok {
+                        kind: "FLOAT",
+                        value: src[start..i].to_string(),
+                        line: sline,
+                        col: scol,
+                    });
+                } else {
+                    toks.push(SexpTok {
+                        kind: "INT",
+                        value: src[start..i].to_string(),
+                        line: sline,
+                        col: scol,
+                    });
+                }
                 col += (i - start) as u32;
             }
             b'-' if i + 1 < bytes.len() && bytes[i + 1].is_ascii_digit() => {
@@ -2402,12 +2650,37 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                toks.push(SexpTok {
-                    kind: "INT",
-                    value: src[start..i].to_string(),
-                    line: sline,
-                    col: scol,
-                });
+                let is_float = i + 1 < bytes.len()
+                    && bytes[i] == b'.'
+                    && bytes[i + 1].is_ascii_digit();
+                if is_float {
+                    i += 1;
+                    while i < bytes.len() && bytes[i].is_ascii_digit() {
+                        i += 1;
+                    }
+                    if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
+                        i += 1;
+                        if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
+                            i += 1;
+                        }
+                        while i < bytes.len() && bytes[i].is_ascii_digit() {
+                            i += 1;
+                        }
+                    }
+                    toks.push(SexpTok {
+                        kind: "FLOAT",
+                        value: src[start..i].to_string(),
+                        line: sline,
+                        col: scol,
+                    });
+                } else {
+                    toks.push(SexpTok {
+                        kind: "INT",
+                        value: src[start..i].to_string(),
+                        line: sline,
+                        col: scol,
+                    });
+                }
                 col += (i - start) as u32;
             }
             _ => {
@@ -2476,6 +2749,15 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
         "INT" => {
             let n: i64 = t.value.parse().unwrap();
             (k.intern_trivial_int(n), i + 1)
+        }
+        "FLOAT" => {
+            let f: f64 = t.value.parse().unwrap_or_else(|e| {
+                panic!(
+                    "parse error: bad float literal {:?} at line {}, col {}: {}",
+                    t.value, t.line, t.col, e
+                )
+            });
+            (k.intern_trivial_float64(f), i + 1)
         }
         "STRING" => (k.intern_string(&t.value), i + 1),
         "IDENT" => {

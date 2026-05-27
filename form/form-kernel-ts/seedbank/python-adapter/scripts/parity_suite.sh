@@ -22,15 +22,25 @@ PARITY_FILES=(
     "examples/python_builtins_demo.py"
     "examples/python_lambda_demo.py"
     "examples/python_string_demo.py"
+    "examples/python_float_demo.py"
 )
 
-# Locate the native binary.
-RUST_BIN="$(cd "$(dirname "$0")/.." && pwd)/../form-kernel-rust/target/release/form-kernel-rust"
+# Locate the native binary. The script lives at
+#   form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh
+# the rust kernel at
+#   form/form-kernel-rust/target/release/form-kernel-rust
+# → four levels up from `scripts/` (scripts → python-adapter → seedbank
+# → form-kernel-ts → form/), then down into form-kernel-rust.
+ADAPTER_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+RUST_BIN="$ADAPTER_DIR/../../../form-kernel-rust/target/release/form-kernel-rust"
 if [[ ! -x "$RUST_BIN" ]]; then
     echo "error: form-kernel-rust binary not found at $RUST_BIN" >&2
-    echo "build it first: cd ../form-kernel-rust && cargo build --release" >&2
+    echo "build it first: cd $ADAPTER_DIR/../../../form-kernel-rust && cargo build --release" >&2
     exit 1
 fi
+# Always run subcommands from the adapter directory so the relative
+# `src/main.ts` path the README documents stays honest.
+cd "$ADAPTER_DIR"
 
 PASS=0
 FAIL=0
@@ -66,8 +76,10 @@ else:
     npx tsx src/main.ts python-compile "$f" "$fk_path" >/dev/null 2>&1
     rust_result=$("$RUST_BIN" "$fk_path" 2>&1 | tail -1)
 
-    # Also run via TS evalPython for sibling-parity.
-    ts_result=$(npx tsx src/main.ts python-run "$f" 2>&1 | tail -1)
+    # Walk the parsed Python tree through the TS evaluator directly.
+    # Distinct path from python-run (which shells to the Rust binary)
+    # — this is the third runtime that makes parity genuinely three-way.
+    ts_result=$(npx tsx src/main.ts python-eval "$f" 2>&1 | tail -1)
 
     if [[ "$py_result" == "$rust_result" && "$py_result" == "$ts_result" ]]; then
         echo "  ✓ $f  → $py_result"
