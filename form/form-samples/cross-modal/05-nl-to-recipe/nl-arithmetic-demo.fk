@@ -1,0 +1,171 @@
+; nl-arithmetic-demo.fk — natural-language sentences become Form recipes.
+;
+; A small character-grammar walks 4 English sentences, emits arithmetic
+; recipes, and the kernel walks each recipe to a value. The companion
+; (mul 7 7) hand-built recipe lives in the same body — node_eq is the
+; content-addressed proof that NL and S-expression are two source
+; tongues pointing at one substrate identity.
+;
+; Sentences walked here:
+;   "the square of 7"           ->  (mul 7 7)         ->  49
+;   "the sum of 4 and 6"        ->  (add 4 6)         ->  10
+;   "twice 5 plus 3"            ->  (add (mul 2 5) 3) ->  13
+;   "negate 12"                 ->  (sub 0 12)        ->  -12
+;
+; The bonus claim — NL "the square of 7" interns to the SAME NodeID as
+; the hand-built (mul 7 7) — is what makes this a universal-translator
+; proof and not merely a parser demo. Two source modalities, one
+; content-addressed identity.
+;
+; preludes: form-stdlib/grammar-chars.fk
+
+(do
+    ;; --- Form math categories (kernel substrate numbering) -------------
+    ;; LEVEL_BASIC=2, RB_MATH=12, MUL=3, PLUS=1, MINUS=2.
+    (let math-mul   (make_nodeid 1 2 12 3))
+    (let math-plus  (make_nodeid 1 2 12 1))
+    (let math-minus (make_nodeid 1 2 12 2))
+
+    ;; --- Cap accessor (mirrors grammar-chars-demo.fk's caps-get) -------
+    (defn caps-get (caps name)
+        (if (nil? caps) (empty)
+            (if (str_eq (head (head caps)) name)
+                (head (tail (head caps)))
+                (caps-get (tail caps) name))))
+
+    ;; --- Number-word table: "one" -> 1, ..., "twelve" -> 12 ------------
+    ;; A spelled English numeral resolves to an int via this lookup.
+    ;; Digit runs ("7", "12") flow through str_to_int directly.
+    (defn word-to-int (w)
+        (if (str_eq w "one") 1
+        (if (str_eq w "two") 2
+        (if (str_eq w "three") 3
+        (if (str_eq w "four") 4
+        (if (str_eq w "five") 5
+        (if (str_eq w "six") 6
+        (if (str_eq w "seven") 7
+        (if (str_eq w "eight") 8
+        (if (str_eq w "nine") 9
+        (if (str_eq w "ten") 10
+        (if (str_eq w "eleven") 11
+        (if (str_eq w "twelve") 12
+            (sub 0 1)))))))))))))) ; -1 sentinel for an unmapped word
+
+    ;; A digit-run is parsed as int directly; a lowercase-word is looked
+    ;; up. The captured text-span doesn't tell us which path it came
+    ;; from, so we test the first byte: 48..57 is a digit.
+    (defn text-to-int (txt)
+        (do
+            (let cp (ord (char_at txt 0)))
+            (if (and (ge cp 48) (le cp 57))
+                (str_to_int txt)
+                (word-to-int txt))))
+
+    ;; --- Character patterns -------------------------------------------
+    (let digit       (list "char-range" 48 57))     ; '0'..'9'
+    (let lower       (list "char-range" 97 122))    ; 'a'..'z'
+    (let space-ch    (list "char" " "))
+
+    (let digits      (list "sequence" digit (list "star" digit)))
+    (let word        (list "sequence" lower (list "star" lower)))
+    (let number-tok  (list "choice" digits word))
+
+    ;; --- Rule actions: each builds a recipe NodeID --------------------
+
+    ;; square: caps has "n" -> "the square of N"
+    (defn square-action (caps)
+        (do
+            (let n (intern_trivial_int (text-to-int (caps-get caps "n"))))
+            (intern_node math-mul (list n n))))
+
+    ;; sum: caps has "lhs", "rhs" -> "the sum of L and R"
+    (defn sum-action (caps)
+        (do
+            (let lhs (intern_trivial_int (text-to-int (caps-get caps "lhs"))))
+            (let rhs (intern_trivial_int (text-to-int (caps-get caps "rhs"))))
+            (intern_node math-plus (list lhs rhs))))
+
+    ;; twice-plus: "twice N plus M" -> (add (mul 2 N) M)
+    (defn twice-action (caps)
+        (do
+            (let two (intern_trivial_int 2))
+            (let n (intern_trivial_int (text-to-int (caps-get caps "n"))))
+            (let m (intern_trivial_int (text-to-int (caps-get caps "m"))))
+            (let twice-n (intern_node math-mul (list two n)))
+            (intern_node math-plus (list twice-n m))))
+
+    ;; negate: "negate N" -> (sub 0 N)
+    (defn negate-action (caps)
+        (do
+            (let zero (intern_trivial_int 0))
+            (let n (intern_trivial_int (text-to-int (caps-get caps "n"))))
+            (intern_node math-minus (list zero n))))
+
+    ;; --- Grammar rules ------------------------------------------------
+    ;; One rule per sentence shape; each captures the number-tokens
+    ;; needed by its action.
+    (let rules
+        (list
+            (list "square"
+                  (list "sequence"
+                        (list "string" "the square of ")
+                        (list "capture" "n" number-tok))
+                  square-action)
+            (list "sum"
+                  (list "sequence"
+                        (list "string" "the sum of ")
+                        (list "capture" "lhs" number-tok)
+                        (list "string" " and ")
+                        (list "capture" "rhs" number-tok))
+                  sum-action)
+            (list "twice"
+                  (list "sequence"
+                        (list "string" "twice ")
+                        (list "capture" "n" number-tok)
+                        (list "string" " plus ")
+                        (list "capture" "m" number-tok))
+                  twice-action)
+            (list "negate"
+                  (list "sequence"
+                        (list "string" "negate ")
+                        (list "capture" "n" number-tok))
+                  negate-action)))
+
+    ;; --- Walk each NL sentence through grammar -> recipe -> value -----
+
+    (let r-square  (cm-parse "the square of 7"     rules "square"))
+    (let r-sum     (cm-parse "the sum of 4 and 6"  rules "sum"))
+    (let r-twice   (cm-parse "twice 5 plus 3"      rules "twice"))
+    (let r-negate  (cm-parse "negate 12"           rules "negate"))
+
+    (let v-square  (walk_recipe r-square))
+    (let v-sum     (walk_recipe r-sum))
+    (let v-twice   (walk_recipe r-twice))
+    (let v-negate  (walk_recipe r-negate))
+
+    ;; --- Hand-built S-expression recipe for the bonus claim -----------
+    ;; "the square of 7" should intern to the same NodeID as (mul 7 7)
+    ;; assembled directly. Same shape, same NodeID — content-addressed.
+    (let h7      (intern_trivial_int 7))
+    (let hand-square (intern_node math-mul (list h7 h7)))
+    (let same-node (if (node_eq r-square hand-square) 1 0))
+    (let same-value (if (eq v-square (walk_recipe hand-square)) 1 0))
+
+    ;; --- Print results (ASCII-clean so all three kernels agree) -------
+    (print "square=")
+    (print (int_to_str v-square))
+    (print " sum=")
+    (print (int_to_str v-sum))
+    (print " twice=")
+    (print (int_to_str v-twice))
+    (print " negate=")
+    (print (int_to_str v-negate))
+    (print " node_eq=")
+    (print (int_to_str same-node))
+    (print " value_eq=")
+    (print (int_to_str same-value))
+    (print "\n")
+
+    ;; Aggregate: 49 + 10 + 13 + (-12) + 1 + 1 = 62
+    ;; All three sibling kernels must produce 62.
+    (add v-square (add v-sum (add v-twice (add v-negate (add same-node same-value))))))
