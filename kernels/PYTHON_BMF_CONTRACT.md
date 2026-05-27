@@ -118,28 +118,39 @@ load-bearing proof in `form-stdlib/tests/grammar-chars-demo.fk` parses
 
 G1's dispatcher can now be written. G5 is no longer a blocker.
 
-### G6 — Binary entry-point orchestration — *next concrete gap*
+### G6 — Binary entry-point orchestration — **CLOSED 2026-05-27**
 
-Surfaced 2026-05-27 while trying to wire `PARITY_THIRD_RUNTIME=kernel-bmf`
-end-to-end via the existing pieces. The finding:
+Closure shape: **wrapper script** (the first of the three reachable shapes
+named below). Lives at
+`form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run`.
+The script pre-compiles each surface-syntax prelude through the Go kernel
+(`form-source-compile-file`), then invokes the Rust kernel with the
+compiled artifacts plus an inline driver that calls
+`python-parse-module-file` against the target `.py`.
 
-- `python-bmf.fk` uses surface syntax (`def`, `if`, `then`, `else`, ...)
-- The Rust + TS + Go kernel binaries read **S-expression syntax only**
-- `validate.sh` handles this via `prepare_sources()` — it detects surface
-  syntax (`section [...]`) and pre-compiles each file through the
-  Go-kernel-as-compiler invoking `form-source-compile-file`. The resulting
-  S-expression artifact is what the kernel binaries actually walk.
+`parity_suite.sh` puts its own `scripts/` directory on `PATH` before the
+`command -v kernel-bmf-run` check, so `PARITY_THIRD_RUNTIME=kernel-bmf
+bash parity_suite.sh` runs end-to-end with no operator-side install.
 
-`kernel-bmf-run` doesn't exist today because there's a compile-step gap
-between surface-syntax `.fk` files (like `python-bmf.fk`) and the
-standalone kernel binary. The pieces exist; they need orchestration.
+What the driver computes today: the count of top-level statements in the
+parsed module (e.g. `15` for `examples/python_demo.py`). Three-way sibling
+parity holds at the structural-attestation layer — Go, Rust, and the TS
+kernel all return `15`. This is the **orchestration breath**, not the
+program-value breath; the latter is gated on G3 + G4.
 
-**Three reachable shapes for closing G6:**
+What the driver does NOT compute yet: the program's CPython runtime value
+(`40949` for `python_demo.py`). The walker over `PY-BMF-CALL` /
+`PY-BMF-IF` / `PY-BMF-DEF` recipes back to a Python-shaped runtime is the
+next breath (see G4 above). When G4 lands, the driver inside
+`kernel-bmf-run` swaps from `(len statements)` to a recipe-walk call; the
+orchestration shape stays identical.
 
-1. **Wrapper script** — `kernel-bmf-run` is a bash script that runs the
-   same pre-compile dance `validate.sh` does (Go-kernel compiles the
-   source-syntax preludes → Rust kernel reads the compiled artifacts +
-   the target `.py`'s parse expression). Cheapest; most fragile under
+**Three reachable shapes for G6 (kept for record; #1 was taken):**
+
+1. **Wrapper script** *(taken)* — `kernel-bmf-run` is a bash script that
+   runs the same pre-compile dance `validate.sh` does (Go-kernel compiles
+   the source-syntax preludes → Rust kernel reads the compiled artifacts
+   + the target `.py`'s parse expression). Cheapest; most fragile under
    load-order drift.
 
 2. **Pre-shipped compiled artifacts** — `python-bmf.fk` + its prelude
@@ -152,23 +163,27 @@ standalone kernel binary. The pieces exist; they need orchestration.
    (embedding the same path `validate.sh` walks externally). Deepest;
    single-binary entry on PATH.
 
-**Repro of the finding:**
+**Repro of the closure:**
 
 ```bash
-# Standalone kernel can't read python-bmf.fk's surface syntax:
-form-kernel-rust form-stdlib/core.fk → parse error at line 23 col 43
+cd form
+form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run \
+    form-kernel-ts/seedbank/python-adapter/examples/python_demo.py
+# → 15  (top-level statement count, sibling-parity ✓)
 
-# validate.sh works green via the pre-compile dance:
-./validate.sh form-stdlib/core.fk form-stdlib/grammars/python-bmf.fk \
-              form-stdlib/tests/python-bmf-arithmetic-band.fk
-# → 25304 on go, rust, typescript
+# Same value through validate.sh, confirming three-kernel agreement:
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk \
+              form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk \
+              form-stdlib/compiler.fk form-stdlib/source-compiler.fk \
+              form-stdlib/grammars/python-bmf.fk /tmp/parse-demo.fk
+# → 15 on go, rust, typescript
 ```
 
-`PARITY_THIRD_RUNTIME=kernel-bmf` is reachable today only after G6 closes.
-The compost gate for Phase A's parser+emitter+test triple (~3,585 LOC,
-per `kernels/PHASE_A_FIRING_QUESTIONS.md`) sits behind this gap.
-
-This is the next concrete walking step toward the body's bootstrap shedding.
+`PARITY_THIRD_RUNTIME=kernel-bmf` is now runnable. The parity rows go
+honest-red against CPython at every demo until G3 + G4 ship — no faked
+green. The compost gate for Phase A's parser+emitter+test triple (~3,585
+LOC, per `kernels/PHASE_A_FIRING_QUESTIONS.md`) is downstream of G4
+greening every `PARITY_FILES` row, not G6.
 
 ## Parity discipline (do not compost yet)
 

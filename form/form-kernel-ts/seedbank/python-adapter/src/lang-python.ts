@@ -1077,14 +1077,16 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
     c.src.charCodeAt(c.pos) === 61 /* = */ &&
     c.src.charCodeAt(c.pos + 1) !== 61 /* not == */
   ) {
-    // Confirm LHS is a target Python permits (IDENT or ATTR for v1).
+    // Confirm LHS is a target Python permits.
+    // CTOR.ident → plain `x = expr`. CTOR.attr → `obj.x = expr`.
+    // CTOR.subscript → `d[k] = v` (dict / list mutation; emitFk lowers via
+    // _dict_set so dicts are immutable-updated). Other targets remain pending.
     const lhsCtor = capturedCtor(k, e);
-    if (lhsCtor === CTOR.ident || lhsCtor === CTOR.attr) {
-    const lhsCtor = capturedCtor(k, e);
-    // CTOR.ident → plain `x = expr`. CTOR.subscript → `d[k] = v`
-    // (dict / list mutation; emitFk lowers via _dict_set so dicts are
-    // immutable-updated). Other targets remain pending.
-    if (lhsCtor === CTOR.ident || lhsCtor === CTOR.subscript) {
+    if (
+      lhsCtor === CTOR.ident ||
+      lhsCtor === CTOR.attr ||
+      lhsCtor === CTOR.subscript
+    ) {
       c.pos++; // skip `=`
       skipSpacesAndComments(c);
       const value = parseExpr(k, c);
@@ -1094,11 +1096,9 @@ function parseStmt(k: Kernel, c: Cursor, blockIndent: number): NodeID | null {
       consumeEndOfLine(c);
       return captureNode(k, CTOR.assign, [e, value]);
     }
-    // Subscript target — not yet supported as an assignment LHS.
+    // Unsupported assignment target.
     throw new SyntaxError(
-      `python: assignment target must be a name or attribute (v1) at ${savedPos}`,
-    throw new SyntaxError(
-      `python: assignment target must be a name or subscript (v1) at ${savedPos}`,
+      `python: assignment target must be a name, attribute, or subscript (v1) at ${savedPos}`,
     );
   }
   consumeEndOfLine(c);
@@ -2160,9 +2160,6 @@ function evalNode(k: Kernel, n: NodeID, env: PyEnv): Value {
         const field = k.nameStr(fieldID);
         recordPut(recv, field, value);
         return { kind: "null" };
-      }
-      throw new Error(
-        `python: assignment target must be a name or attribute (got ${targetCtor})`,
       }
       if (targetCtor === CTOR.subscript) {
         const subKids = capturedChildren(k, target);
