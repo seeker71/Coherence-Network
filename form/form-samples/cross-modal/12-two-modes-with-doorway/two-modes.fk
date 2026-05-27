@@ -1,0 +1,157 @@
+; two-modes.fk — lossless transport + lossy perception + doorway in the slack.
+;
+; Urs's framing:
+;   1. content-addressed substrate is lossless compression transport
+;      across many media
+;   2. perceived value comparison: recipe over data condensed as number
+;      is a fuzzy, lossy alternative, allowing random doorways to enter
+;      the field
+;
+; Demonstrates BOTH modes against a small catalog of 4 canonical Blueprint
+; feature-recipes (fuzzy sets on one mood axis). Three queries test the
+; three modes:
+;   Q1 — exact clone of B1   → LOSSLESS wins
+;   Q2 — close to B3         → LOSSY single winner
+;   Q3 — tied between B1, B4 → SLACK; doorway opens; field-sample selects
+;
+; Encoded result: per query, (mode * 10) + (selected-index 1-based).
+;   Q1: lossless=1 * 10 + 1 = 11
+;   Q2: lossy=2    * 10 + 3 = 23
+;   Q3: doorway=3  * 10 + (1 or 4 depending on field-sample LSB)
+;
+; field-sample byte = 0xAB (171), LSB = 1 → doorway picks tied (=B4) → 34.
+; Total: 11 * 10000 + 23 * 100 + 34 = 112334. Three-way attested.
+
+(do
+    ;; --- helpers ----------------------------------------------------
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    ;; --- fuzzy machinery --------------------------------------------
+    (let CAT-FUZZY-PAIR (make_nodeid 1 2 99 850))
+    (let CAT-FUZZY-SET  (make_nodeid 1 2 99 851))
+
+    (defn fpair (token mu)
+        (intern_node CAT-FUZZY-PAIR
+            (list (intern_trivial_string token) (intern_trivial_int mu))))
+
+    (defn fmin (a b) (if (lt a b) a b))
+    (defn fmax (a b) (if (lt a b) b a))
+
+    (defn lookup (pairs token)
+        (if (nil? pairs) 0
+            (do
+                (let p (head pairs))
+                (let kids (node_children p))
+                (if (str_eq (node_value (head kids)) token)
+                    (node_value (head (tail kids)))
+                    (lookup (tail pairs) token)))))
+
+    (defn jaccard-loop (vocab set-a set-b num den)
+        (if (nil? vocab)
+            (if (eq den 0) 0 (div (mul num 1000) den))
+            (do
+                (let t (head vocab))
+                (let ma (lookup set-a t))
+                (let mb (lookup set-b t))
+                (jaccard-loop (tail vocab) set-a set-b
+                              (add num (fmin ma mb))
+                              (add den (fmax ma mb))))))
+
+    (defn jaccard (set-a set-b vocab)
+        (jaccard-loop vocab set-a set-b 0 0))
+
+    ;; --- catalog: 4 canonical Blueprint feature-recipes -------------
+    (let B1 (list (fpair "gentle" 900) (fpair "calm" 500) (fpair "reverent" 300)))
+    (let B2 (list (fpair "fierce" 900) (fpair "urgent" 600) (fpair "resolute" 400)))
+    (let B3 (list (fpair "melancholy" 800) (fpair "longing" 700) (fpair "calm" 300)))
+    (let B4 (list (fpair "joyful" 900) (fpair "wonder" 600) (fpair "gentle" 400)))
+
+    (let vocab-all
+        (list "gentle" "calm" "reverent" "fierce" "urgent" "resolute"
+              "melancholy" "longing" "joyful" "wonder"))
+
+    ;; --- three queries ----------------------------------------------
+    (let Q1 (list (fpair "gentle" 900) (fpair "calm" 500) (fpair "reverent" 300)))
+    (let Q2 (list (fpair "melancholy" 700) (fpair "longing" 700) (fpair "calm" 400)))
+    (let Q3 (list (fpair "gentle" 800) (fpair "calm" 400)
+                  (fpair "joyful" 400) (fpair "wonder" 400)))
+
+    (defn fset (pairs) (intern_node CAT-FUZZY-SET pairs))
+
+    (let B1-set (fset B1)) (let B2-set (fset B2))
+    (let B3-set (fset B3)) (let B4-set (fset B4))
+    (let Q1-set (fset Q1)) (let Q2-set (fset Q2)) (let Q3-set (fset Q3))
+
+    ;; --- LOSSLESS lookup --------------------------------------------
+    (defn lossless-match (q)
+        (if (node_eq q B1-set) 1
+            (if (node_eq q B2-set) 2
+                (if (node_eq q B3-set) 3
+                    (if (node_eq q B4-set) 4 0)))))
+
+    ;; --- LOSSY scoring ----------------------------------------------
+    (defn lossy-scores (q)
+        (list (jaccard q B1 vocab-all)
+              (jaccard q B2 vocab-all)
+              (jaccard q B3 vocab-all)
+              (jaccard q B4 vocab-all)))
+
+    (let SLACK-TOLERANCE 50)
+
+    ;; Top index of 4 scores (1-based)
+    (defn argmax4 (s1 s2 s3 s4)
+        (do
+            (let m12 (if (lt s1 s2) 2 1))
+            (let m12v (if (eq m12 1) s1 s2))
+            (let m34 (if (lt s3 s4) 4 3))
+            (let m34v (if (eq m34 3) s3 s4))
+            (if (lt m12v m34v) m34 m12)))
+
+    ;; Returns 0 if score not within tolerance of top, else 1
+    (defn near-top? (s top-score top-idx self-idx)
+        (and (not (eq self-idx top-idx))
+             (lt (sub top-score s) SLACK-TOLERANCE)))
+
+    ;; Find a tied-second index, or 0 if none. Linear check.
+    (defn find-tied (s1 s2 s3 s4 top-score top-idx)
+        (if (near-top? s1 top-score top-idx 1) 1
+            (if (near-top? s2 top-score top-idx 2) 2
+                (if (near-top? s3 top-score top-idx 3) 3
+                    (if (near-top? s4 top-score top-idx 4) 4 0)))))
+
+    ;; --- DOORWAY -----------------------------------------------------
+    ;; Field-sample byte committed from /dev/urandom on day of authoring.
+    ;; Same value as 11-randomness-doorway's first byte: 0xAB = 171.
+    (let field-sample-byte 171)
+
+    ;; LSB selects between top and tied. 0 → top, 1 → tied.
+    (defn doorway-pick (top-idx tied-idx)
+        (if (eq (mod field-sample-byte 2) 0) top-idx tied-idx))
+
+    ;; --- the two-mode lookup ----------------------------------------
+    (defn two-mode-lookup (q-set q-pairs)
+        (do
+            (let lossless-idx (lossless-match q-set))
+            (if (lt 0 lossless-idx)
+                (add 10 lossless-idx)
+                (do
+                    (let scores (lossy-scores q-pairs))
+                    (let s1 (nth scores 0)) (let s2 (nth scores 1))
+                    (let s3 (nth scores 2)) (let s4 (nth scores 3))
+                    (let top-idx (argmax4 s1 s2 s3 s4))
+                    (let top-score
+                        (if (eq top-idx 1) s1
+                            (if (eq top-idx 2) s2
+                                (if (eq top-idx 3) s3 s4))))
+                    (let tied-idx (find-tied s1 s2 s3 s4 top-score top-idx))
+                    (if (eq tied-idx 0)
+                        (add 20 top-idx)
+                        (add 30 (doorway-pick top-idx tied-idx)))))))
+
+    (let r1 (two-mode-lookup Q1-set Q1))
+    (let r2 (two-mode-lookup Q2-set Q2))
+    (let r3 (two-mode-lookup Q3-set Q3))
+
+    (add (mul r1 10000) (add (mul r2 100) r3)))
