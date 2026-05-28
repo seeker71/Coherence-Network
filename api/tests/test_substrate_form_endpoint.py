@@ -7,6 +7,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.routers import substrate as substrate_router
+from app.services.substrate.kernel import NodeID
 
 
 @pytest.mark.asyncio
@@ -49,6 +51,30 @@ async def test_form_endpoint_streaming_mode_emits_same_recipe_node() -> None:
     assert ast_body["kind"] == "recipe"
     assert streaming_body["kind"] == "recipe"
     assert streaming_body["node_id"] == ast_body["node_id"]
+
+
+def test_form_endpoint_access_bootstrap_gap_falls_back_to_runtime(monkeypatch) -> None:
+    """Default AST mode stays breathing when old bootstrap Access eval regresses."""
+
+    def broken_ast(_session, _expression):
+        raise TypeError("Form: cannot evaluate Access")
+
+    def runtime_value(_session, _expression):
+        return NodeID(1, 5, 4, 1)
+
+    monkeypatch.setattr(substrate_router, "form_evaluate_text", broken_ast)
+    monkeypatch.setattr(substrate_router, "form_execute_text", runtime_value)
+
+    result = substrate_router.evaluate_form(
+        substrate_router.FormRequest(expression="@concept(lc-pulse).blueprint")
+    )
+
+    assert result.kind == "node_id"
+    assert result.node_id is not None
+    assert result.node_id.package == 1
+    assert result.node_id.level == 5
+    assert result.node_id.type_ == 4
+    assert result.node_id.instance == 1
 
 
 @pytest.mark.asyncio
