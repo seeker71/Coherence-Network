@@ -223,7 +223,7 @@ For cells consuming recipes:
 
 ## Cross-References
 
-→ lc-one-kernel-many-tongues, lc-grammar-is-the-universal-recipe, lc-tools-as-form-cells, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-assemblage-point, lc-each-breath-whole, lc-coherence-over-control, lc-same-shape-different-articulation
+→ lc-one-kernel-many-tongues, lc-grammar-is-the-universal-recipe, lc-tools-as-form-cells, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-assemblage-point, lc-each-breath-whole, lc-coherence-over-control
 
 ## Sources to walk further
 
