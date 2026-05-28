@@ -1,0 +1,104 @@
+; private-channel.fk — communicate via shared substrate + per-call randomness
+; without ever transmitting the referent.
+;
+; Urs's framing:
+;   "When two cells want to communicate and want to share internal
+;    states without having to divulge all of it, one way of doing
+;    that is using random number and having a mechanism, a channel
+;    to communicate and then come to a consensus that the receiver
+;    received number without sending the number itself, in the most
+;    beneficial way for both cells."
+;
+;   "This will allow the selection of media types and recipes and
+;    allows for sharing novel findings inside of one cell with the
+;    collective and with other cells."
+;
+; THE PROTOCOL (minimum viable):
+;   SENDER:
+;     1. Picks a concept from the SHARED CATALOG (e.g. index 5, value 528)
+;     2. Generates a per-call random nonce via random_bytes (per-kernel
+;        divergent — live entropy from /dev/urandom)
+;     3. Computes fingerprint(nonce, concept-value)
+;     4. Emits (nonce, fingerprint) on the channel — the value 528
+;        is NEVER on the channel
+;
+;   RECEIVER:
+;     1. Has the SAME SHARED CATALOG (substrate-resident)
+;     2. Receives (nonce, fingerprint)
+;     3. Iterates catalog candidates, computes fingerprint(nonce, candidate)
+;     4. Identifies the match → knows the concept-index
+;
+; THREE-WAY SIBLING PARITY:
+;   - Each kernel's random_bytes call diverges (live entropy)
+;   - Each kernel's fingerprint diverges (different nonces)
+;   - Each kernel's IDENTIFIED INDEX converges (the meaning is shared)
+;   - validate.sh sees three-way agreement on `5` — the protocol carried
+;     meaning without sharing symbols
+;
+; WHAT THIS ENABLES:
+;   - Media-type negotiation ("let's communicate in recipe X")
+;   - Novel-finding broadcasts (only cells that already have the referent
+;     can decode → privacy-by-default through substrate-dependency)
+;   - Compression of arbitrary content to fingerprint-size (32 bytes)
+;     regardless of content size — IF both parties have the substrate
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    ;; SHARED SUBSTRATE — both sender and receiver have this catalog.
+    ;; In a real body, these would be canonical Blueprint NodeIDs;
+    ;; here, integers stand in for substrate-addressable values.
+    (let catalog
+        (list 100 200 300 400 528 600 700 800 900 1000))
+
+    ;; ---- fingerprint function -------------------------------------
+    ;; Folds a byte-list and a value into a single integer such that:
+    ;;   - same (nonce, value) → same fingerprint (deterministic)
+    ;;   - different value (same nonce) → different fingerprint
+    ;;     (with high probability for the catalog's range)
+    ;;
+    ;; This is NOT cryptographic; it's a demonstration hash.
+    ;; A production protocol would use a real PRF (HMAC, BLAKE3, etc.)
+    ;; A kernel-native crypto primitive is a future walk.
+    (defn hash-fold (bytes acc)
+        (if (nil? bytes) acc
+            (hash-fold (tail bytes)
+                       (mod (add (mul acc 31) (head bytes)) 1000003))))
+
+    (defn fingerprint (nonce value)
+        (mod (add (hash-fold nonce 0) (mul value 7919)) 1000003))
+
+    ;; ---- SENDER ----------------------------------------------------
+    ;; Picks concept #5 (the value 528) as the "secret to communicate".
+    ;; Opens the doorway with random_bytes — per-kernel-divergent nonce.
+    ;; Computes fingerprint. (nonce, sent-fp) is what reaches the receiver.
+    ;; The value 528 is the sender's internal state — NEVER on the channel.
+    (let concept-idx 5)
+    (let concept-value (nth catalog concept-idx))    ; 528 — sender's secret
+    (let nonce (random_bytes 8))                     ; per-kernel divergent
+    (let sent-fp (fingerprint nonce concept-value))
+
+    ;; ---- RECEIVER --------------------------------------------------
+    ;; Has the same catalog. Receives only (nonce, sent-fp).
+    ;; Iterates the catalog; for each candidate, computes the fingerprint
+    ;; under the received nonce; identifies the matching candidate.
+    (defn find-match (cat nonce target-fp idx)
+        (if (nil? cat) (sub 0 1)
+            (do
+                (let candidate (head cat))
+                (let test-fp (fingerprint nonce candidate))
+                (if (eq test-fp target-fp)
+                    idx
+                    (find-match (tail cat) nonce target-fp (add idx 1))))))
+
+    ;; The identified concept-index. Three kernels each compute this with
+    ;; their own private (nonce, fingerprint); all three return 5 because
+    ;; the catalog (the substrate) is shared.
+    ;;
+    ;; The byte-layer diverges (random_bytes is per-kernel-live).
+    ;; The meaning-layer converges (catalog is shared).
+    ;; That's the protocol: private channel, public meaning.
+
+    (find-match catalog nonce sent-fp 0))
