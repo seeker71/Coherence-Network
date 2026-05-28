@@ -1,0 +1,102 @@
+; tests/async-correlation-band.fk — multi-in-flight correlation routing band.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+;
+; Validates that the channel + query/response vocabulary supports
+; multiple in-flight queries whose replies arrive in jumbled order, and
+; that each reply is routable to its originating query by the
+; correlation field — NOT by arrival position.
+;
+; Band verdict: 5 when every assertion holds across all three kernels.
+
+(do
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+
+    ;; A separate /tmp path so this band doesn't collide with the
+    ;; sample or other band runs.
+    (let request-path "/tmp/async-correlation-band-req.fkb")
+    (let reply-path   "/tmp/async-correlation-band-rep.fkb")
+    (channel-create request-path)
+    (channel-create reply-path)
+
+    ;; Three queries on three distinct topics. Each gets its own
+    ;; correlation seed = the inst of the QUERY Recipe's NodeID.
+    (let topic-a (make_nodeid 1 2 99 8101))
+    (let topic-b (make_nodeid 1 2 99 8102))
+    (let topic-c (make_nodeid 1 2 99 8103))
+
+    (let q1 (cq-query "about"      topic-a (intern_trivial_string "what")))
+    (let q2 (cq-query "fetch"      topic-b (intern_trivial_string "give")))
+    (let q3 (cq-query "introspect" topic-c (intern_trivial_string "tell")))
+
+    (let corr-1 (node_inst q1))
+    (let corr-2 (node_inst q2))
+    (let corr-3 (node_inst q3))
+
+    ;; All three queries onto the request channel before any reply.
+    (channel-append request-path (channel-message q1))
+    (channel-append request-path (channel-message q2))
+    (channel-append request-path (channel-message q3))
+
+    ;; Handler reads ALL pending queries, then replies in jumbled
+    ;; order: q2 first, q3 second, q1 third. Each response carries
+    ;; the matching query's NodeID-inst as correlation.
+    (let msgs (channel-read request-path))
+    (let mq1 (channel-msg-payload (band-nth msgs 0)))
+    (let mq2 (channel-msg-payload (band-nth msgs 1)))
+    (let mq3 (channel-msg-payload (band-nth msgs 2)))
+
+    (let resp-q1 (cq-response (node_inst mq1) "ok" (list (cq-substrate-ref topic-a))))
+    (let resp-q2 (cq-response (node_inst mq2) "ok" (list (cq-substrate-ref topic-b))))
+    (let resp-q3 (cq-response (node_inst mq3) "ok" (list (cq-substrate-ref topic-c))))
+
+    (channel-append reply-path (channel-message resp-q2))
+    (channel-append reply-path (channel-message resp-q3))
+    (channel-append reply-path (channel-message resp-q1))
+
+    ;; Read all replies; extract each one's correlation field.
+    (let replies (channel-read reply-path))
+
+    (defn band-reply-corr (reply-msg)
+        (node_inst (head (node_children (channel-msg-payload reply-msg)))))
+
+    (let arr-1-corr (band-reply-corr (band-nth replies 0)))
+    (let arr-2-corr (band-reply-corr (band-nth replies 1)))
+    (let arr-3-corr (band-reply-corr (band-nth replies 2)))
+
+    (defn band-match (corr)
+        (if (eq corr corr-1) 1
+            (if (eq corr corr-2) 2
+                (if (eq corr corr-3) 3 0))))
+
+    (let arr-1-q (band-match arr-1-corr))
+    (let arr-2-q (band-match arr-2-corr))
+    (let arr-3-q (band-match arr-3-corr))
+
+    ;; 1. Three replies arrived.
+    (let count-ok (if (eq (len replies) 3) 1 0))
+
+    ;; 2. Arrival order is the jumbled order (q2, q3, q1).
+    (let jumble-ok
+        (if (and (eq arr-1-q 2)
+                 (and (eq arr-2-q 3) (eq arr-3-q 1))) 1 0))
+
+    ;; 3. Sum of matches is 1+2+3 = 6 (every query matched once).
+    (let sum-ok
+        (if (eq (add arr-1-q (add arr-2-q arr-3-q)) 6) 1 0))
+
+    ;; 4. The three correlations are distinct.
+    (let distinct-ok
+        (if (and (not (eq corr-1 corr-2))
+                 (and (not (eq corr-1 corr-3))
+                      (not (eq corr-2 corr-3)))) 1 0))
+
+    ;; 5. Honest absence: a fabricated correlation matches no query.
+    (let bogus-corr 999999999)
+    (let bogus-match (band-match bogus-corr))
+    (let bogus-ok (if (eq bogus-match 0) 1 0))
+
+    ;; Band verdict: 5 when all assertions hold.
+    (add count-ok (add jumble-ok (add sum-ok (add distinct-ok bogus-ok)))))

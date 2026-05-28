@@ -1,0 +1,45 @@
+; cell-a-send.fk — cell A's send half, run as its own kernel process.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; A's flow in this process:
+;   1. Look up the registry for cells handling "symbols" (L3).
+;   2. Read B's channel-path from the registration.
+;   3. Construct a QUERY Recipe (verb "symbols", topic-nid).
+;   4. Wrap as CHANNEL-MSG and append to B's channel (L2/L1).
+;   5. Exit. The kernel process terminates; the QUERY persists on disk.
+;
+; Cell B's handler runs in a SEPARATE process (cell-b-handle.fk) and
+; reads the QUERY from the same .fkb file. That's what makes this
+; "distributed" in the cell sense — no shared in-process state, only
+; the content-addressed file on disk.
+
+(do
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let registry-path  "/tmp/28-dist-registry.fkb")
+
+    ;; ---------- LOOK UP B IN THE REGISTRY --------------------------
+    (let symbol-cells (find-by-capability registry-path "symbols"))
+    (print "a-cells-handling-symbols:" (len symbol-cells))
+
+    ;; ---------- READ B'S ADDRESS -----------------------------------
+    (let b-found (head symbol-cells))
+    (let b-channel (reg-channel-path b-found))
+
+    ;; ---------- CONSTRUCT THE QUERY --------------------------------
+    ;; Topic-nid is a substrate-resident anchor; verb "symbols" is the
+    ;; L7 vocabulary word B handles.
+    (let topic-nid (make_nodeid 1 2 99 7777))
+    (let query (cq-query "symbols" topic-nid (intern_trivial_string "")))
+
+    ;; ---------- APPEND THE QUERY TO B'S CHANNEL --------------------
+    ;; The query's NodeID is content-addressed within this kernel's
+    ;; intern table; the absolute value differs between sibling
+    ;; kernels (Go/Rust share a bootstrap order; TS interns a slightly
+    ;; different set first), so we don't print the raw correlation —
+    ;; we print only the structural ack and let B verify the round-trip.
+    (let msg-count (channel-append b-channel (channel-message query)))
+    (print "a-msgs-on-b-channel:" msg-count)
+    (print "a-send-ok:" (if (ge msg-count 1) 1 0))
+    msg-count)

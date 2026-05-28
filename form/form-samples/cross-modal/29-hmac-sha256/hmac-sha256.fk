@@ -1,0 +1,38 @@
+; hmac-sha256.fk — HMAC-SHA-256 from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk
+;
+; HMAC-SHA-256 (RFC 2104, RFC 4231) is a composition over SHA-256.
+; The recipe in form-stdlib/hmac-sha256.fk uses ONLY the canonical
+; sha256 recipe + the kernel's bitwise primitives — no HMAC native,
+; no host crypto library. Three sibling kernels (Go, Rust, TypeScript)
+; agree on every byte of the output.
+;
+; Inputs stay short here because the underlying sha256 recipe is
+; O(n²) per round (Form-list nth lookups). The next walk — a real
+; Form→host-asm JIT — lifts the SAME recipe to machine-code speed,
+; so HMAC over real-world payloads becomes practical without changing
+; the canonical source.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+
+    ;; ---------- TEST CASE 1: key="x" (1 byte), msg="abc" (3 bytes) ---
+    ;; "x" = 120, "abc" = 97 98 99.
+    (let h1 (hmac-sha256 (list 120) (list 97 98 99)))
+    (print "hmac-x-abc-len:" (len h1))
+    (print "hmac-x-abc-sum:" (sum-bytes h1 0))
+
+    ;; ---------- TEST CASE 2: empty key, msg="abc" --------------------
+    (let h2 (hmac-sha256 (list) (list 97 98 99)))
+    (print "hmac-empty-abc-len:" (len h2))
+    (print "hmac-empty-abc-sum:" (sum-bytes h2 0))
+
+    ;; Final verdict: 2 when both byte-sums match the locked values.
+    ;; Cross-checked against Python's hmac.new(...).digest():
+    ;;   HMAC-SHA-256("x",  "abc") = e7f79a9d…4b714f32   (byte-sum 4150)
+    ;;   HMAC-SHA-256("",   "abc") = fd7adb15…91836351   (byte-sum 4557)
+    (add (if (eq (sum-bytes h1 0) 4150) 1 0)
+         (if (eq (sum-bytes h2 0) 4557) 1 0)))

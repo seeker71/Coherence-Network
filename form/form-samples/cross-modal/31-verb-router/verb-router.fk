@@ -1,0 +1,154 @@
+; verb-router.fk — a cell with four verbs uses verb-router to dispatch
+; incoming QUERY recipes to per-verb handlers, instead of an N-way
+; if-chain comparing the verb string at each branch.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+;           form-stdlib/symbols.fk form-stdlib/verb-router.fk
+;
+; THE SCENE:
+;
+;   Cell C exposes four verbs: "ping", "about", "symbols", "echo".
+;   In the hand-rolled shape (sample 21, sample 25), each verb's
+;   handler-selection cost an additional nested if comparing the
+;   incoming verb string. By N=4 the if-chain is already heavy.
+;
+;   verb-router lifts the routing into a data-shaped handler-table.
+;   Each entry pairs a verb-string with the name of the handler-
+;   function. find-handler-name walks the table once and returns the
+;   matched handler-name (a substrate-resident trivial-string NodeID)
+;   or HANDLER-NOT-FOUND. The cell does a shallow dispatch on the
+;   resolved name — one branch per verb the cell actually supports,
+;   no nested string compares.
+;
+;   We construct five queries — one per known verb plus one "zzz" the
+;   cell does NOT support — and run them through the router. Four
+;   resolve to their handlers; one returns HANDLER-NOT-FOUND, which
+;   the cell answers with a "not-known" RESPONSE. That honest absence
+;   is the fifth point in the verdict.
+;
+; Verdict: 5 = 4 correct routings + 1 honest absence.
+
+(do
+    (defn vrs-nil? (xs) (eq (len xs) 0))
+    (defn vrs-nth (xs i)
+        (if (eq i 0) (head xs) (vrs-nth (tail xs) (sub i 1))))
+
+    ;; ---------- CELL C: four per-verb handlers ---------------------
+    ;;
+    ;; Each handler takes the QUERY Recipe and returns a RESPONSE.
+    ;; They use cq-response, cq-substrate-ref, cq-recipe-content from
+    ;; channel-query, and symbol-table from symbols.
+
+    ;; "ping" — empty body, status "ok".
+    (defn handle-ping (query)
+        (cq-response (node_inst query) "ok" (list)))
+
+    ;; "about" — answer with one SUBSTRATE-REF naming a related cell.
+    (defn handle-about (query)
+        (do
+            (let related-nid (make_nodeid 1 2 99 9101))
+            (cq-response (node_inst query) "ok"
+                (list (cq-substrate-ref related-nid)))))
+
+    ;; "symbols" — answer with C's symbol-table wrapped as recipe-content.
+    (defn handle-symbols (query)
+        (do
+            (let table
+                (symbol-table
+                    (list (symbol-bind "alpha"
+                              (intern_trivial_string "alpha-value"))
+                          (symbol-bind "beta"
+                              (intern_trivial_string "beta-value")))))
+            (cq-response (node_inst query) "ok"
+                (list (cq-recipe-content table)))))
+
+    ;; "echo" — answer with recipe-content wrapping the query's body.
+    (defn handle-echo (query)
+        (do
+            (let body (vrs-nth (node_children query) 2))
+            (cq-response (node_inst query) "ok"
+                (list (cq-recipe-content body)))))
+
+    ;; ---------- CELL C: build the handler-table -------------------
+    ;; Four entries — first-match-wins, but verbs are unique so order
+    ;; only matters for the introspection view (advertised surface).
+    (let handlers
+        (handler-table
+            (list (handler "ping"    "handle-ping")
+                  (handler "about"   "handle-about")
+                  (handler "symbols" "handle-symbols")
+                  (handler "echo"    "handle-echo"))))
+
+    ;; Advertised surface — the table can name the verbs C dispatches.
+    (print "verbs-advertised:" (len (handler-table-verbs handlers)))
+
+    ;; ---------- Construct five queries (4 known + 1 unknown) -------
+    (let topic-nid (make_nodeid 1 2 99 7700))
+    (let empty-body (intern_trivial_string ""))
+    (let q-ping    (cq-query "ping"    topic-nid empty-body))
+    (let q-about   (cq-query "about"   topic-nid empty-body))
+    (let q-symbols (cq-query "symbols" topic-nid empty-body))
+    (let q-echo    (cq-query "echo"    topic-nid
+                       (intern_trivial_string "echo-payload")))
+    (let q-unknown (cq-query "zzz"     topic-nid empty-body))
+
+    ;; ---------- The dispatch pattern ------------------------------
+    ;;
+    ;; find-handler-name takes the table and the verb-string (extracted
+    ;; from the query via query-verb). It returns the matched handler's
+    ;; fn-name NodeID, or HANDLER-NOT-FOUND. The cell does a shallow
+    ;; dispatch on the resolved name.
+    ;;
+    ;; The expected handler names — interned once, compared by node_eq.
+    (let name-ping    (intern_trivial_string "handle-ping"))
+    (let name-about   (intern_trivial_string "handle-about"))
+    (let name-symbols (intern_trivial_string "handle-symbols"))
+    (let name-echo    (intern_trivial_string "handle-echo"))
+
+    (defn dispatch (query)
+        (do
+            (let verb (query-verb query))
+            (let name (find-handler-name handlers verb))
+            (if (eq (handler-found? name) 1)
+                (if (node_eq name name-ping)    (handle-ping query)
+                    (if (node_eq name name-about)   (handle-about query)
+                        (if (node_eq name name-symbols) (handle-symbols query)
+                            (handle-echo query))))
+                ;; Honest absence: no handler matched. Reply with a
+                ;; "not-known" RESPONSE so the caller sees it explicitly.
+                (cq-response (node_inst query) "not-known" (list)))))
+
+    ;; ---------- Run all five through the router -------------------
+    (let r-ping    (dispatch q-ping))
+    (let r-about   (dispatch q-about))
+    (let r-symbols (dispatch q-symbols))
+    (let r-echo    (dispatch q-echo))
+    (let r-unknown (dispatch q-unknown))
+
+    ;; ---------- Inspect each response's status field --------------
+    ;; RESPONSE children: [correlation, status, items-LIST]. The status
+    ;; is a substrate-resident trivial-string we compare by node_eq.
+    (defn response-status (r) (vrs-nth (node_children r) 1))
+
+    (let expected-ok (intern_trivial_string "ok"))
+    (let expected-not-known (intern_trivial_string "not-known"))
+
+    (let ping-ok    (if (node_eq (response-status r-ping)    expected-ok) 1 0))
+    (let about-ok   (if (node_eq (response-status r-about)   expected-ok) 1 0))
+    (let symbols-ok (if (node_eq (response-status r-symbols) expected-ok) 1 0))
+    (let echo-ok    (if (node_eq (response-status r-echo)    expected-ok) 1 0))
+    (let unknown-ok
+        (if (node_eq (response-status r-unknown) expected-not-known) 1 0))
+
+    (print "ping-routed:"    ping-ok)
+    (print "about-routed:"   about-ok)
+    (print "symbols-routed:" symbols-ok)
+    (print "echo-routed:"    echo-ok)
+    (print "unknown-absent:" unknown-ok)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 4 correct routings + 1 honest absence = 5.
+    (add ping-ok
+         (add about-ok
+              (add symbols-ok
+                   (add echo-ok unknown-ok)))))

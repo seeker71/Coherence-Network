@@ -1,0 +1,64 @@
+; tests/external-uri-band.fk — EXTERNAL-URI verify-loop sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; Validates that the sha256-bound EXTERNAL-URI item's verify-loop works
+; symmetrically: an honest URI with a matching claimed-hash verifies, a
+; tampered URI with a mismatched claimed-hash is detected as a fraud.
+;
+; Band verdict is 2 when both the happy path and the tampered-detection
+; path resolve correctly on every kernel.
+
+(do
+    (defn ext-nil? (xs) (eq (len xs) 0))
+
+    ;; Compare two byte lists element-wise.
+    (defn ext-bytes-eq (a b)
+        (if (ext-nil? a)
+            (if (ext-nil? b) 1 0)
+            (if (ext-nil? b) 0
+                (if (eq (head a) (head b))
+                    (ext-bytes-eq (tail a) (tail b))
+                    0))))
+
+    ;; EXTERNAL-URI accessors. First child is the URL substring; the
+    ;; remaining children are the claimed sha256 bytes.
+    (defn ext-extract-url (uri-item)
+        (node_value (head (node_children uri-item))))
+
+    (defn ext-children-to-bytes (kids)
+        (if (ext-nil? kids) (list)
+            (cons (node_value (head kids))
+                  (ext-children-to-bytes (tail kids)))))
+
+    (defn ext-extract-claimed-bytes (uri-item)
+        (ext-children-to-bytes (tail (node_children uri-item))))
+
+    ;; Verify: read the URI's local content, compute sha256, compare
+    ;; to the claimed bytes embedded in the EXTERNAL-URI.
+    (defn ext-verify (uri-item)
+        (do
+            (let url (ext-extract-url uri-item))
+            (let claimed (ext-extract-claimed-bytes uri-item))
+            (let fetched (read_file_bytes url))
+            (let computed (sha256 fetched))
+            (ext-bytes-eq claimed computed)))
+
+    ;; Stage the fixture: short bytes "hello".
+    (let fixture-path "/tmp/external-uri-band-fixture.txt")
+    (let fixture-bytes (list 104 101 108 108 111))
+    (write_file_bytes fixture-path fixture-bytes)
+
+    ;; Honest path: sender hashes the same content it's pointing at.
+    (let honest-hash (sha256 fixture-bytes))
+    (let honest-uri (cq-external-uri fixture-path honest-hash))
+    (let honest-ok (ext-verify honest-uri))
+
+    ;; Tampered path: sender claims a different hash than the file's.
+    ;; Same byte-count, different content → different sha256.
+    (let wrong-hash (sha256 (list 119 111 114 108 100)))
+    (let tampered-uri (cq-external-uri fixture-path wrong-hash))
+    (let tampered-rejected (if (eq (ext-verify tampered-uri) 0) 1 0))
+
+    ;; Verdict: 2 when both behaviors hold across all three kernels.
+    (add honest-ok tampered-rejected))
