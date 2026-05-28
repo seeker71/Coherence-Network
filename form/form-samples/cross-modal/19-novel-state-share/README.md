@@ -12,21 +12,22 @@
 
 ```
 $ ./validate.sh form-samples/cross-modal/19-novel-state-share/novel-state-share.fk
-  ✓  novel-state-share.fk → jit-bindings: 2
-                            packet-1: integrity= 1  recognized= 0  bytes-received= 1048576
-                            packet-2: integrity= 1  recognized= 1  bytes-received= 1048576
+  ✓  novel-state-share.fk → packet-1: integrity= 1  recognized= 0  bytes-received= 4096
+                            packet-2: integrity= 1  recognized= 1  bytes-received= 4096
                             3
   1 ok, 0 divergent — kernels agree on every sample.
 ```
 
 Three sibling kernels (Go, Rust, TypeScript) each transmitted **two
-1-MB packets of truly novel data** from cell A to cell B. Each
-kernel's data was different (live `/dev/urandom` per kernel — the
-doorway). The protocol verdict converged across all three: integrity
-verified twice, identity recognized on the second packet, total `3`.
+4-KB packets of truly novel data** from cell A to cell B. Each kernel's
+data was different (live `/dev/urandom` per kernel — the doorway).
+The protocol verdict converged across all three: integrity verified
+twice, identity recognized on the second packet, total `3`.
 
-**2 MB of novel state per kernel** flowed through the in-process
-channel under sibling parity.
+The 4 KB scale is the recursion-safe ceiling for Form-walk integrity
+computation. Multi-megabyte transmission needs the Form→host-asm
+JIT (next walk) — the SAME canonical Form recipes compiled to host
+machine code, no in-kernel composite natives required.
 
 ## The honest shape
 
@@ -72,9 +73,9 @@ can replay or forge the public id without proof of secret. With
 ed25519 (composable as a Form recipe over byte arithmetic — future
 walk), the id becomes **authenticated**.
 
-## How the megabyte scale was honest
+## What scaling to megabytes actually needs
 
-Form recipes for `sum-bytes` and `hash-fold` are canonical:
+The Form recipes for `sum-bytes` and `hash-fold` are canonical:
 
 ```
 (defn sum-bytes (bs acc)
@@ -86,21 +87,21 @@ Form recipes for `sum-bytes` and `hash-fold` are canonical:
                    (mod (add (mul acc 31) (head bs)) 1000003))))
 ```
 
-These recipes are correct but cap at ~8 KB per packet under Form
-recursion. The demo **binds those Form names to kernel-native
-iterative versions**:
+They are correct but Form-walk recursion limits them to ~8 KB before
+stack pressure. An earlier version of this sample bound the Form
+names to in-kernel iterative natives (`bytes_sum`, `bytes_hash`) —
+but those composites had no business in the kernel. Composted.
 
-```
-(register_jit "sum-bytes" "bytes_sum")
-(register_jit "hash-fold" "bytes_hash")
-```
+The principled path is the real Form→host-asm JIT (next walk):
 
-Same Form symbol, same canonical meaning, host-iterative dispatch —
-no recursion ceiling. The `bytes_sum` and `bytes_hash` natives use
-the same constants (31, 1000003) so JIT-aliased and Form-walk paths
-produce **identical** results. This is the 16-jit-registry pattern
-applied where it earns its keep: the hot path that scales the body
-from kilobytes to megabytes.
+- Rust: cranelift compiles the recipe to native machine code at
+  registration time.
+- Go: emit a Go function, compile to `.so`, `plugin.Open`.
+- TS: `compiler.ts` already exists — wire it to `register_jit` so
+  `new Function(src)` lets V8 JIT to native.
+
+Same canonical Form recipe; host-fast dispatch per kernel. No new
+natives required for any composite operation.
 
 ## Sibling parity at the meaning layer
 

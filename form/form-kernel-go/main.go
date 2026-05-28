@@ -19,7 +19,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -1460,52 +1459,12 @@ func (k *Kernel) registerNatives() {
 		b := uint32(args[1].Int)
 		return Value{Kind: VInt, Int: int64(a + b)}
 	})
-	// sha256_bytes bytes-list → list-of-32-bytes
-	//   Cryptographic hash. Form-stdlib's sha256.fk is the canonical
-	//   recipe; this native is the host-speed opt-in via:
-	//     (register_jit "sha256" "sha256_bytes")
-	k.registerNative("sha256_bytes", catMethod(), func(_ *Kernel, args []Value) Value {
-		var bytes []byte
-		if args[0].Kind == VList {
-			bytes = make([]byte, len(args[0].List))
-			for i, v := range args[0].List {
-				bytes[i] = byte(v.Int)
-			}
-		}
-		digest := sha256.Sum256(bytes)
-		out := make([]Value, 32)
-		for i, b := range digest {
-			out[i] = Value{Kind: VInt, Int: int64(b)}
-		}
-		return Value{Kind: VList, List: out}
-	})
-	// bytes_sum bytes-list init → int
-	//   Iterative sum of an arbitrary byte-list. Equivalent to the Form
-	//   recipe `(defn sum-bytes (bs acc) (if (nil? bs) acc (sum-bytes
-	//   (tail bs) (add acc (head bs)))))`. Provided so Form code can
-	//   `register_jit "sum-bytes" "bytes_sum"` and process megabyte
-	//   byte-streams without piling kernel stack frames.
-	k.registerNative("bytes_sum", catMethod(), func(_ *Kernel, args []Value) Value {
-		acc := args[1].Int
-		if args[0].Kind == VList {
-			for _, v := range args[0].List {
-				acc += v.Int
-			}
-		}
-		return Value{Kind: VInt, Int: acc}
-	})
-	// bytes_hash bytes-list init → int
-	//   Iterative modular fingerprint, matching the Form recipe with
-	//   constants 31 and 1000003. NOT cryptographically strong.
-	k.registerNative("bytes_hash", catMethod(), func(_ *Kernel, args []Value) Value {
-		acc := args[1].Int
-		if args[0].Kind == VList {
-			for _, v := range args[0].List {
-				acc = (acc*31 + v.Int) % 1000003
-			}
-		}
-		return Value{Kind: VInt, Int: acc}
-	})
+	// sha256_bytes / bytes_sum / bytes_hash were temporarily added as
+	// natives here but composted: those are composites, not primitives.
+	// SHA-256 lives in form-stdlib/sha256.fk as a Form recipe over the
+	// bitwise primitives above. The real JIT path (Form recipe → host
+	// machine code via recipe-emitter+plugin.Open) is the next walk;
+	// this kernel currently relies on recipe-walk for composite ops.
 	// register_jit form-name-str native-name-str → 1 on bind, 0 if
 	// native-name has no registered native (refuse silent miss).
 	// Inserts (form-name → native-name) into k.jitAliases. After this,

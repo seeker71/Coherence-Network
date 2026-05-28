@@ -1,89 +1,46 @@
-; sha256-as-recipe.fk — SHA-256 lives in Form, opts into the host via JIT.
+; sha256-as-recipe.fk — SHA-256 lives in Form, computed from bitwise primitives.
 ;
 ; preludes: form-stdlib/sha256.fk
 ;
 ; Walks the discipline Urs named:
-;   "have shared binary features in form native recipes that can
-;    expand into native machine code for efficiency"
+;   "we want just primitives in the kernel. and form native code to
+;    host native assembly using JIT to have generic cross kernel
+;    functions with host native performance"
 ;
 ; The recipe in form-stdlib/sha256.fk IS the canonical definition of
-; SHA-256 in this body. A kernel with the bitwise primitives can
-; compute the hash from that recipe alone — no host crypto library
-; required. The recipe is sovereign.
+; SHA-256 in this body, composed from the kernel's bitwise primitives
+; (band, bor, bxor, bnot_u32, shl_u32, shr_u32, rotr_u32, add_u32 —
+; the true machine-word primitives that CAN'T be expressed in pure Form).
+; A kernel with those primitives can compute the hash from this recipe
+; alone. No host crypto library. No SHA-256 native. The recipe is
+; sovereign across all three sibling kernels.
 ;
-; Cells that want host-speed dispatch register a JIT alias:
-;
-;   (register_jit "sha256" "sha256_bytes")
-;
-; After that, every (sha256 bytes) call swaps to the kernel's sha2 /
-; crypto/sha256 / hand-rolled-TS native. Both paths produce byte-
-; identical output. This sample validates that on FIPS 180-4 test
-; vectors — three-way sibling parity for both the recipe and the
-; native, and parity between the recipe and the native within each
-; kernel.
+; This sample validates the recipe against FIPS 180-4 test vectors.
+; Real host-speed dispatch is the NEXT breath: a Form→host-asm JIT
+; compiler (cranelift in Rust, generated Go source + plugin in Go, the
+; existing compiler.ts in TS) that takes this exact recipe and emits
+; machine code. Same Form symbol; same canonical authoring; host-fast
+; execution per kernel. No new native; the JIT IS the bootstrap.
 
 (do
     (defn nil? (xs) (eq (len xs) 0))
     (defn sum-bytes (bs acc)
         (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
-    (defn bytes-eq (xs ys)
-        (if (nil? xs) (if (nil? ys) 1 0)
-            (if (nil? ys) 0
-                (if (eq (head xs) (head ys))
-                    (bytes-eq (tail xs) (tail ys))
-                    0))))
 
     ;; ---------- FIPS 180-4 TEST VECTORS -----------------------------
-    ;; Inputs:
-    ;;   ""   → e3b0c442 98fc1c14 9afbf4c8 996fb924
-    ;;          27ae41e4 649b934c a495991b 7852b855   (sum=4399)
-    ;;   "abc"→ ba7816bf 8f01cfea 414140de 5dae2223
-    ;;          b00361a3 96177a9c b410ff61 f20015ad   (sum=3730)
+    ;; sha256("")    → e3b0c442 98fc1c14 9afbf4c8 996fb924
+    ;;                 27ae41e4 649b934c a495991b 7852b855   (sum=4399)
+    ;; sha256("abc") → ba7816bf 8f01cfea 414140de 5dae2223
+    ;;                 b00361a3 96177a9c b410ff61 f20015ad   (sum=3730)
 
-    ;; ---------- RECIPE PATH (no JIT alias) --------------------------
-    ;; The Form recipe computes the hash by walking padding, message
-    ;; schedule, and 64 compression rounds — all in Form code over
-    ;; the kernel's bitwise primitives. Slower; sovereign.
-    (let recipe-empty (sha256 (list)))
-    (let recipe-abc (sha256 (list 97 98 99)))
-    (print "recipe-empty-sum:" (sum-bytes recipe-empty 0))
-    (print "recipe-abc-sum:" (sum-bytes recipe-abc 0))
+    (let h-empty (sha256 (list)))
+    (let h-abc (sha256 (list 97 98 99)))
+    (print "sha256-empty-len:" (len h-empty))
+    (print "sha256-empty-sum:" (sum-bytes h-empty 0))
+    (print "sha256-abc-len:" (len h-abc))
+    (print "sha256-abc-sum:" (sum-bytes h-abc 0))
 
-    ;; ---------- JIT BIND --------------------------------------------
-    (let bound (register_jit "sha256" "sha256_bytes"))
-    (print "jit-bound:" bound)
-
-    ;; ---------- NATIVE PATH (after JIT alias) -----------------------
-    ;; Same Form symbol, same call shape. Dispatch routes through the
-    ;; kernel's host-speed sha256.
-    (let native-empty (sha256 (list)))
-    (let native-abc (sha256 (list 97 98 99)))
-    (print "native-empty-sum:" (sum-bytes native-empty 0))
-    (print "native-abc-sum:" (sum-bytes native-abc 0))
-
-    ;; ---------- RECIPE-NATIVE EQUIVALENCE ---------------------------
-    ;; Byte-for-byte equality between the two paths, within each kernel.
-    ;; If both produce identical bytes for both inputs, the JIT alias
-    ;; is semantically safe — the body knows its own discipline.
-    (print "empty-bytes-match:" (bytes-eq recipe-empty native-empty))
-    (print "abc-bytes-match:"   (bytes-eq recipe-abc   native-abc))
-
-    ;; ---------- SCALE-UP --------------------------------------------
-    ;; Hash a 64-byte input (one SHA-256 block, no extra padding round)
-    ;; using the JIT-aliased native — proves the megabyte-class path.
-    ;; Bytes 0..63 in ascending order; FIPS-irrelevant but
-    ;; deterministic across kernels.
-    (defn range-rec (i n acc)
-        (if (eq i n) acc (range-rec (add i 1) n (cons i acc))))
-    (defn reverse-rec (xs acc)
-        (if (nil? xs) acc (reverse-rec (tail xs) (cons (head xs) acc))))
-    (let big-input (reverse-rec (range-rec 0 256 (list)) (list)))
-    (let big-hash (sha256 big-input))
-    (print "256-byte-input-sum:" (sum-bytes big-hash 0))
-
-    ;; Final verdict: 1 + 1 + 1 + 1 + 1 = 5 when everything aligns.
-    (add bound
-         (add (bytes-eq recipe-empty native-empty)
-              (add (bytes-eq recipe-abc native-abc)
-                   (add (if (eq (sum-bytes recipe-empty 0) 4399) 1 0)
-                        (if (eq (sum-bytes recipe-abc 0) 3730) 1 0))))))
+    ;; Final verdict: 2 when both FIPS vectors match. Three-way sibling
+    ;; parity attests every kernel computes sha256 from the recipe alone.
+    (add (if (eq (sum-bytes h-empty 0) 4399) 1 0)
+         (if (eq (sum-bytes h-abc 0) 3730) 1 0)))

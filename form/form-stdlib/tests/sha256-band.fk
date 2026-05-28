@@ -4,49 +4,23 @@
 ;
 ; Validates that the Form-recipe sha256 (in form-stdlib/sha256.fk)
 ; produces FIPS 180-4-correct hashes on every kernel that carries
-; the bitwise primitives. Also verifies the JIT-aliased native path
-; produces byte-identical output to the recipe — the discipline
-; that makes register_jit semantically safe.
+; the bitwise primitives. No SHA-256 native exists; the recipe IS
+; the sole implementation. Three-way sibling parity attests that
+; each kernel can compute SHA-256 from primitives alone.
 ;
-; Sibling-parity rule: all three kernels run the same Form recipe
-; over the same input; all three arrive at the same FIPS-known sums.
-; The TS native is hand-rolled (no @noble/hashes dep); the Go native
-; uses crypto/sha256; the Rust native uses sha2 crate. All three
-; produce the same bytes the Form recipe produces.
+; The real Form→host-asm JIT is a future walk; once landed, calling
+; (sha256 bs) will dispatch through host-fast compiled code derived
+; from THIS recipe — no separate native required.
 
 (do
     (defn nil? (xs) (eq (len xs) 0))
     (defn sum-bytes (bs acc)
         (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
-    (defn bytes-eq (xs ys)
-        (if (nil? xs) (if (nil? ys) 1 0)
-            (if (nil? ys) 0
-                (if (eq (head xs) (head ys))
-                    (bytes-eq (tail xs) (tail ys))
-                    0))))
 
-    ;; ---- recipe path: FIPS test vectors ----------------------------
     (let h-empty (sha256 (list)))
     (let h-abc (sha256 (list 97 98 99)))
     (let empty-ok (if (eq (sum-bytes h-empty 0) 4399) 1 0))
     (let abc-ok (if (eq (sum-bytes h-abc 0) 3730) 1 0))
 
-    ;; ---- JIT bind and re-run; bytes must match ---------------------
-    (let bound (register_jit "sha256" "sha256_bytes"))
-    (let n-empty (sha256 (list)))
-    (let n-abc (sha256 (list 97 98 99)))
-    (let parity-empty (bytes-eq h-empty n-empty))
-    (let parity-abc (bytes-eq h-abc n-abc))
-
-    ;; ---- restore recipe path; calls again ---------------------------
-    (unregister_jit "sha256")
-    (let r-empty (sha256 (list)))
-    (let r-ok (bytes-eq r-empty h-empty))
-
-    ;; ---- band verdict: sum of all attestations ---------------------
-    ;; 5 when every check passes; <5 otherwise.
-    (add empty-ok
-         (add abc-ok
-              (add bound
-                   (add parity-empty
-                        (add parity-abc r-ok))))))
+    ;; Band verdict: 2 when both FIPS vectors match.
+    (add empty-ok abc-ok))

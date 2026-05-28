@@ -40,14 +40,11 @@
 ;
 ; SCALE: the Form recipes for sum-bytes / hash-fold are canonical truth
 ; but Form-level recursion caps in-process scale around 8 KB per packet.
-; The demo `register_jit`s those names to the kernel-native `bytes_sum`
-; and `bytes_hash` (added alongside JIT in 16-jit-registry) — the same
-; Form symbol now dispatches through a host-iterative loop, so packets
-; scale to **a full megabyte each** without piling kernel stack frames.
-; Two breaths braided: novel-state crosses honestly (the bytes travel),
-; and the JIT registry lets the kernel stay on top of the size honestly
-; (the Form recipe stays the canonical definition; the native is opt-in
-; bootstrap for the hot path).
+; Scaling to multi-megabyte packets needs the real Form→host-asm JIT
+; (next breath; the discipline is: kernel holds primitives only, JIT
+; compiles Form recipes to machine code at runtime — same canonical
+; recipe, host-fast performance). For now this demo runs at recursion-
+; safe scale (4 KB) so the protocol shape is attestable three-way.
 
 (do
     (defn nil? (xs) (eq (len xs) 0))
@@ -121,26 +118,17 @@
             ;; identity recognition.
             (list integrity recognized (len bytes))))
 
-    ;; ---------- JIT BOOTSTRAP: scale to megabyte payloads -----------
-    ;; The Form recipes above are correct but cap at ~8 KB per packet
-    ;; (Form recursion depth). Bind the same Form names to the kernel-
-    ;; native iterative versions — same shape, host-loop speed, no
-    ;; recursion ceiling. The recipes stay canonical; the natives are
-    ;; opt-in bootstrap. (See 16-jit-registry for the mechanism.)
-    (let jit-sum (register_jit "sum-bytes" "bytes_sum"))
-    (let jit-hash (register_jit "hash-fold" "bytes_hash"))
-    (print "jit-bindings:" (add jit-sum jit-hash))
-
     ;; ---------- TWO TRANSMISSIONS — IDENTITY PERSISTS ---------------
     ;; A sends two packets back-to-back. Each carries fresh novel bytes
     ;; (different per random_bytes call). The IDENTITY is stable across
     ;; both — B recognizes "same source" on the second packet.
     ;;
-    ;; payload-size: 1 MB. The full novel state crosses the channel
-    ;; (it's truly novel — no shortcut possible). The JIT-aliased
-    ;; natives carry the integrity computation over the megabyte
-    ;; without piling Form-recursion frames.
-    (let payload-size 1048576)
+    ;; payload-size: 4 KB — the recursion-safe scale for Form-walk
+    ;; integrity computation. The full novel state crosses the channel
+    ;; (it's truly novel — no shortcut possible). Real megabyte scale
+    ;; needs the Form→host-asm JIT (next breath). The PROTOCOL shape
+    ;; is identical regardless of scale.
+    (let payload-size 4096)
 
     (let packet-1 (cell-a-transmit payload-size))
     (let result-1 (cell-b-receive packet-1 (list)))

@@ -1,48 +1,36 @@
-# 20-sha256-as-recipe — SHA-256 in Form, opt-in to native via JIT
+# 20-sha256-as-recipe — SHA-256 in Form, computed from kernel primitives
 
-> *"have shared binary features in form native recipes that can
-> expand into native machine code for efficiency, allowing the kernel
-> to bootstrap from primitives into an efficient, flexibility,
-> sovereign cell"*  — Urs
->
-> *"we already have sha256 in core as form native recipes available
-> as JIT function?"*  — Urs (the question that opened this walk)
+> *"we want just primitives in the kernel. and form native code to
+> host native assembly using JIT to have generic cross kernel
+> functions with host native performance"*  — Urs
 
 ## What walked
 
 ```
 $ ./validate.sh form-stdlib/sha256.fk form-samples/cross-modal/20-sha256-as-recipe/sha256-as-recipe.fk
-  ✓  sha256.fk+sha256-as-recipe.fk → recipe-empty-sum: 4399
-                                     recipe-abc-sum: 3730
-                                     jit-bound: 1
-                                     native-empty-sum: 4399
-                                     native-abc-sum: 3730
-                                     empty-bytes-match: 1
-                                     abc-bytes-match: 1
-                                     256-byte-input-sum: 4118
-                                     5
+  ✓  sha256.fk+sha256-as-recipe.fk → sha256-empty-len: 32
+                                     sha256-empty-sum: 4399
+                                     sha256-abc-len: 32
+                                     sha256-abc-sum: 3730
+                                     2
   1 ok, 0 divergent — kernels agree on every sample.
 ```
 
-Three sibling kernels (Go, Rust, TypeScript) each ran SHA-256 two
-ways and agreed on every line. **Final verdict: 5** — all five
-attestations pass:
+Three sibling kernels (Go, Rust, TypeScript) each ran SHA-256 from
+the Form recipe **only** — no SHA-256 native exists in any kernel.
+The recipe in `form-stdlib/sha256.fk` composes the FIPS 180-4 round
+function from the kernel's bitwise primitives, and produces correct
+hashes for both FIPS test vectors three-way.
 
-1. `recipe sha256("")` byte-sum equals **4399** — matches FIPS 180-4
-   test vector `e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c
-   a495991b 7852b855`.
-2. `recipe sha256("abc")` byte-sum equals **3730** — matches FIPS 180-4
-   `ba7816bf 8f01cfea 414140de 5dae2223 b00361a3 96177a9c b410ff61
-   f20015ad`.
-3. `register_jit "sha256" "sha256_bytes"` binds successfully.
-4. After binding, `(sha256 ...)` calls produce **byte-identical** output
-   to the recipe path for the empty input.
-5. Same for `"abc"`.
+- `sha256("")` byte-sum = **4399** ✓ matches FIPS `e3b0c442…7852b855`
+- `sha256("abc")` byte-sum = **3730** ✓ matches FIPS `ba7816bf…f20015ad`
 
-## The shape
+**Final verdict: 2** — both vectors match in every kernel.
+
+## The shape (today, and next breath)
 
 ```
-                  ┌─ FORM RECIPE (canonical, slow) ─┐
+                  ┌─ FORM RECIPE (canonical) ───────┐
                   │  form-stdlib/sha256.fk           │
                   │                                  │
                   │  uses kernel bitwise primitives  │
@@ -55,19 +43,26 @@ attestations pass:
                   │  → 32-byte digest                │
                   └──────────────────────────────────┘
                                    │
-                  (register_jit "sha256" "sha256_bytes")
+                  [next walk: register_jit triggers]
+                  [a real Form→host-asm compiler:    ]
+                  [  Rust : cranelift                ]
+                  [  Go   : recipe→Go-source→plugin  ]
+                  [  TS   : compiler.ts → new Function]
                                    ▼
-                  ┌─ NATIVE (fast, opt-in) ─────────┐
-                  │  Rust : sha2 crate              │
-                  │  Go   : crypto/sha256 (stdlib)  │
-                  │  TS   : hand-rolled FIPS 180-4  │
-                  │                                  │
+                  ┌─ HOST MACHINE CODE (fast) ──────┐
+                  │  same Form recipe; emitted as    │
+                  │  the host's native instructions  │
                   │  → 32-byte digest                │
                   └──────────────────────────────────┘
 ```
 
-Same Form symbol. Same input. Same output. Two dispatch paths. The
-cell chooses which.
+Today: only the top half walks — the Form recipe computes SHA-256
+from primitives. Validates FIPS test vectors three-way.
+
+Next walk: the bottom half. `register_jit` triggers a real recipe→
+host-asm compiler, so the SAME Form recipe dispatches at machine-code
+speed. No new natives; no JIT-alias-to-native. The recipe IS the
+canonical source the compiler reads.
 
 ## The kernel additions
 
@@ -85,16 +80,10 @@ in pure Form without exponential cost):
 | `(rotr_u32 a n)` | rotate right within 32 bits |
 | `(add_u32 a b)` | (a + b) mod 2^32 |
 
-**One new fast-path native** matching the Form recipe's I/O:
-
-| Native | Semantics |
-|--------|-----------|
-| `(sha256_bytes bytes-list)` | FIPS 180-4 SHA-256 → 32-byte digest |
-
 The bitwise primitives are TRUE primitives — they let any cryptographic
 construction (HMAC, BLAKE3, ChaCha20, future PRFs) be composed as a
-Form recipe over machine-word integers. The `sha256_bytes` native is
-the host-speed optimization specifically for SHA-256.
+Form recipe over machine-word integers. There is no SHA-256 native;
+the recipe IS the implementation across all three kernels.
 
 ## The Form recipe shape
 
@@ -110,16 +99,11 @@ the host-speed optimization specifically for SHA-256.
     ...big-endian digest emission...)
 ```
 
-Slower than the native by a couple of orders of magnitude (each
-`nth-rec` is O(n) on a Form list), but **correct** — produces the
-same bytes the native does for any input. The recipe is the canonical
-authoring of "what SHA-256 means" in this body.
-
-When a cell calls `(sha256 bs)`:
-
-- Without JIT alias: walks the recipe. Sovereign. Slow.
-- With `(register_jit "sha256" "sha256_bytes")`: dispatches through
-  the native. Same bytes out. Fast.
+The recipe is the canonical authoring of "what SHA-256 means" in
+this body. Today it walks via the recipe interpreter — each
+`nth-rec` is O(n) on a Form list, so it's slow for large inputs.
+Test vectors and small inputs validate fine; large inputs need the
+real Form→host-asm JIT (next walk) for practical speed.
 
 ## Why this matters for novel-state sharing
 
