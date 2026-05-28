@@ -1,0 +1,122 @@
+; tests/biography-band.fk — biography self-description sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; Validates that a cell can build a BIOGRAPHY Recipe, wrap it in a
+; channel-query RESPONSE under the "about-self" verb, and have a peer
+; recover every one of the five biography fields byte-identically across
+; every sibling kernel.
+;
+; BIOGRAPHY shape (Blueprint NodeID = (make_nodeid 1 2 99 1830)):
+;
+;   ( self-identity     : int
+;     self-name         : string
+;     self-capabilities : list of trivial-string verb names
+;     self-blueprints   : list of SUBSTRATE-REF items
+;     created-at        : int timestamp )
+;
+; Five checks, each contributing 1 to the verdict:
+;
+;   - self-identity round-trips intact (node_inst on trivial-int)
+;   - self-name round-trips intact      (str_eq on node_value)
+;   - capability list length is 2 AND both verb strings match in order
+;   - blueprint list length is 2 AND the first SUBSTRATE-REF unpacks
+;     to the same Blueprint NodeID inst the cell published
+;   - created-at round-trips intact
+;
+; Band verdict locks at 5 — any divergence is a kernel bug.
+;
+; sha256 is included in the prelude chain because channel-query.fk
+; depends on it (the EXTERNAL-URI item kind uses sha256 to bind
+; URLs to expected content hashes). The biography itself uses only
+; channel-query's RECIPE-CONTENT/SUBSTRATE-REF wrappers, but the
+; prelude order must include sha256 ahead of channel-query so the
+; sha256 definitions are in scope when channel-query is read.
+
+(do
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+
+    ;; ---------- BIOGRAPHY Blueprint --------------------------------
+    (let BIOGRAPHY (make_nodeid 1 2 99 1830))
+
+    ;; ---------- THE CELL'S SELF-FACTS ------------------------------
+    (let cell-identity     42)
+    (let cell-name         "biographer")
+    (let cell-cap-1        "about-self")
+    (let cell-cap-2        "ping")
+    (let cell-bp-1-nid     (make_nodeid 1 2 99 1830))
+    (let cell-bp-2-nid     (make_nodeid 1 2 99 1710))
+    (let cell-created-at   1700000001)
+
+    ;; ---------- THE BIOGRAPHY RECIPE -------------------------------
+    (defn make-biography (identity name caps bps created-at)
+        (intern_node BIOGRAPHY
+            (list (intern_trivial_int identity)
+                  (intern_trivial_string name)
+                  (intern_node (make_nodeid 1 1 14 0) caps)
+                  (intern_node (make_nodeid 1 1 14 0) bps)
+                  (intern_trivial_int created-at))))
+
+    (let my-bio
+        (make-biography cell-identity
+                        cell-name
+                        (list (intern_trivial_string cell-cap-1)
+                              (intern_trivial_string cell-cap-2))
+                        (list (cq-substrate-ref cell-bp-1-nid)
+                              (cq-substrate-ref cell-bp-2-nid))
+                        cell-created-at))
+
+    ;; ---------- about-self HANDLER + ASKER ------------------------
+    (defn about-self-handler (query bio)
+        (do
+            (let correlation (node_inst query))
+            (cq-response correlation "ok"
+                (list (cq-recipe-content bio)))))
+
+    (let cell-locator (make_nodeid 1 2 99 1830))
+    (let q (cq-query "about-self" cell-locator (intern_trivial_string "")))
+    (let r (about-self-handler q my-bio))
+
+    ;; ---------- UNWRAP THE BIOGRAPHY ------------------------------
+    (let items        (node_children (band-nth (node_children r) 2)))
+    (let received-bio (head (node_children (head items))))
+    (let bio-children (node_children received-bio))
+
+    (let got-identity   (node_inst (band-nth bio-children 0)))
+    (let got-name       (node_value (band-nth bio-children 1)))
+    (let got-caps-list  (node_children (band-nth bio-children 2)))
+    (let got-bps-list   (node_children (band-nth bio-children 3)))
+    (let got-created-at (node_inst (band-nth bio-children 4)))
+
+    ;; ---------- FIVE FIELD CHECKS ---------------------------------
+    (let identity-ok
+        (if (eq got-identity cell-identity) 1 0))
+
+    (let name-ok
+        (if (str_eq got-name cell-name) 1 0))
+
+    (let got-cap-1 (node_value (band-nth got-caps-list 0)))
+    (let got-cap-2 (node_value (band-nth got-caps-list 1)))
+    (let capabilities-ok
+        (if (eq (len got-caps-list) 2)
+            (if (str_eq got-cap-1 cell-cap-1)
+                (if (str_eq got-cap-2 cell-cap-2) 1 0)
+                0)
+            0))
+
+    (let first-bp       (head got-bps-list))
+    (let recovered-nid  (cq-nid-unpack-from-children (node_children first-bp)))
+    (let blueprints-ok
+        (if (eq (len got-bps-list) 2)
+            (if (eq (node_inst recovered-nid) (node_inst cell-bp-1-nid)) 1 0)
+            0))
+
+    (let created-at-ok
+        (if (eq got-created-at cell-created-at) 1 0))
+
+    ;; Band verdict: 5 when every assertion holds.
+    (add identity-ok
+         (add name-ok
+              (add capabilities-ok
+                   (add blueprints-ok created-at-ok)))))

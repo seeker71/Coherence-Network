@@ -1,0 +1,150 @@
+; merkle.fk — Merkle tree as a Form recipe over the canonical sha256.
+;
+; preludes: form-stdlib/sha256.fk
+;
+; Canonical truth: this recipe MEANS a Merkle tree. The canonical sha256
+; recipe in form-stdlib/sha256.fk supplies the digest primitive; the
+; kernel's bitwise + list primitives carry the rest. No native Merkle
+; opcode exists — the recipe IS the sole implementation, sovereign
+; across the Go, Rust, and TypeScript sibling kernels.
+;
+; The shape we commit to (matches the RFC-6962 / Bitcoin family with a
+; small clarification):
+;
+;   leaf-hash(b)        = SHA-256( 0x00 || b )
+;   branch-hash(L, R)   = SHA-256( 0x01 || L || R )
+;
+; The 0x00 / 0x01 domain-separation prefix defends against second-pre-
+; image collisions where a leaf payload could be mistaken for a branch
+; node — without it, an attacker could craft a 64-byte leaf that hashes
+; to the same digest as an inner node.
+;
+; Odd-count rule (Bitcoin convention): when a level has an odd number
+; of nodes, the last node is paired with itself. We document this so
+; sibling kernels stay byte-identical and so verifiers know how to walk
+; the proof on the wire.
+;
+; Surface:
+;   (merkle-leaf bytes)                                → 32-byte digest
+;   (merkle-pair left-digest right-digest)             → 32-byte digest
+;   (merkle-root list-of-byte-blocks)                  → 32-byte digest
+;   (merkle-proof list-of-byte-blocks leaf-index)      → list of digests
+;   (merkle-verify leaf-bytes leaf-index proof root)   → 1 or 0
+;
+; Cost: each SHA-256 call is O(n²) in the underlying recipe (Form-list
+; nth lookups), so leaves should stay small for recipe-mode runs. A
+; future Form→host-asm JIT lifts the same recipe to host speed without
+; changing the source.
+
+(do
+    ;; ---- LOCAL BYTE / LIST HELPERS ---------------------------------
+    ;; sha256.fk already defines nil?, append-1, append-list, nth-rec
+    ;; in the outer (do ...); we reuse those and add only what's new.
+
+    (defn mk-nil? (xs) (eq (len xs) 0))
+
+    (defn mk-append (xs ys)
+        (if (mk-nil? xs) ys (cons (head xs) (mk-append (tail xs) ys))))
+
+    ;; Element-wise byte-list equality. Returns 1 if every byte matches
+    ;; AND both lists are the same length; 0 otherwise. Used only for
+    ;; digest compare, but the int return shape lets callers add /
+    ;; tally results across kernels (Form has no bool/int coercion
+    ;; contract across the sibling kernels — TS rejects bool→int).
+    (defn bytes-eq (a b)
+        (if (mk-nil? a)
+            (if (mk-nil? b) 1 0)
+            (if (mk-nil? b) 0
+                (if (eq (head a) (head b))
+                    (bytes-eq (tail a) (tail b))
+                    0))))
+
+    ;; ---- LEAF / BRANCH HASHES --------------------------------------
+    ;; Domain-separation prefix bytes: 0x00 for leaves, 0x01 for branches.
+    (defn merkle-leaf (bytes)
+        (sha256 (cons 0 bytes)))
+
+    (defn merkle-pair (left right)
+        (sha256 (cons 1 (mk-append left right))))
+
+    ;; ---- LEVEL CONSTRUCTION ----------------------------------------
+    ;; Build the list of leaf-digests from the raw block list.
+    (defn hash-leaves (blocks)
+        (if (mk-nil? blocks) (list)
+            (cons (merkle-leaf (head blocks))
+                  (hash-leaves (tail blocks)))))
+
+    ;; Reduce one level: pair (L, R) sequentially. Odd-count rule:
+    ;; if a node has no right sibling, pair it with itself. The kernel
+    ;; collapses two-element pairs left-to-right, producing the next
+    ;; level's digest list.
+    (defn reduce-level (level)
+        (if (mk-nil? level) (list)
+            (do
+                (let L (head level))
+                (let rest (tail level))
+                (if (mk-nil? rest)
+                    ;; Odd-count: duplicate the lone node.
+                    (list (merkle-pair L L))
+                    (cons (merkle-pair L (head rest))
+                          (reduce-level (tail rest)))))))
+
+    ;; Walk levels until a single digest remains. That's the root.
+    (defn fold-to-root (level)
+        (if (eq (len level) 1) (head level)
+            (fold-to-root (reduce-level level))))
+
+    ;; ---- ROOT ENTRY POINT ------------------------------------------
+    ;; (merkle-root [b0 b1 ... bn]) → 32-byte digest of the balanced tree.
+    ;; Empty list is not allowed; callers must supply at least one block.
+    ;; Single-block input returns merkle-leaf(b0) — no branch is built.
+    (defn merkle-root (blocks)
+        (fold-to-root (hash-leaves blocks)))
+
+    ;; ---- PROOF CONSTRUCTION ----------------------------------------
+    ;; At a given level, return the digest of the sibling for `idx`.
+    ;; Index parity tells us which side we live on:
+    ;;   idx even → sibling at idx+1 (or self, if no right node)
+    ;;   idx odd  → sibling at idx-1
+    (defn sibling-at (level idx)
+        (if (eq (mod idx 2) 0)
+            ;; Left position: sibling is the next node, or self if missing.
+            (if (lt (add idx 1) (len level))
+                (nth-rec level (add idx 1))
+                (nth-rec level idx))
+            ;; Right position: sibling is the previous node.
+            (nth-rec level (sub idx 1))))
+
+    ;; Walk levels collecting sibling digests until a single-node level.
+    (defn build-proof-walk (level idx acc)
+        (if (eq (len level) 1) acc
+            (do
+                (let sib (sibling-at level idx))
+                (let next-level (reduce-level level))
+                (let next-idx (div idx 2))
+                (build-proof-walk next-level next-idx (append-1 acc sib)))))
+
+    ;; (merkle-proof blocks leaf-index) → list of sibling digests, leaf→root.
+    (defn merkle-proof (blocks leaf-index)
+        (build-proof-walk (hash-leaves blocks) leaf-index (list)))
+
+    ;; ---- PROOF VERIFICATION ----------------------------------------
+    ;; Re-run the proof: at each step, combine the current digest with
+    ;; the next sibling. Parity of the running index says which side
+    ;; we're on: odd → current is right, sibling is left; even → reversed.
+    (defn fold-proof (current idx proof)
+        (if (mk-nil? proof) current
+            (do
+                (let sib (head proof))
+                (let combined
+                    (if (eq (mod idx 2) 0)
+                        (merkle-pair current sib)
+                        (merkle-pair sib current)))
+                (fold-proof combined (div idx 2) (tail proof)))))
+
+    ;; (merkle-verify leaf-bytes leaf-index proof claimed-root) → 1 or 0.
+    (defn merkle-verify (leaf-bytes leaf-index proof claimed-root)
+        (do
+            (let leaf-digest (merkle-leaf leaf-bytes))
+            (let reconstructed (fold-proof leaf-digest leaf-index proof))
+            (bytes-eq reconstructed claimed-root))))

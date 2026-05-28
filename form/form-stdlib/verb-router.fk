@@ -1,0 +1,132 @@
+; verb-router.fk — clean dispatch of QUERY recipes to per-verb handlers.
+;
+; A cell that exposes N verbs over the channel-query protocol used to
+; write an N-way if-chain comparing the incoming verb to each known
+; string. This module lifts that pattern into a reusable handler-table.
+;
+; The shape:
+;
+;   (let handlers
+;       (handler-table
+;           (list (handler "about"   "handle-about")
+;                 (handler "symbols" "handle-symbols")
+;                 (handler "fetch"   "handle-fetch"))))
+;
+;   (let name (find-handler-name handlers (query-verb query)))
+;   (if (handler-found? name)
+;       (if (node_eq name (intern_trivial_string "handle-about"))
+;           (handle-about query)
+;           (if (node_eq name (intern_trivial_string "handle-symbols"))
+;               (handle-symbols query)
+;               (handle-fetch query)))
+;       (cq-response (node_inst query) "not-known" (list)))
+;
+; The router does the verb-string compare once; the caller does a
+; shallow dispatch on the resolved handler-name. No nested string
+; comparisons over the verb itself, and the table is data — a cell
+; can introspect its own routing surface, ship it across the wire,
+; or compose tables from other tables.
+;
+; ---- Design note: why function-NAME, not function-VALUE -----------
+;
+; Form's higher-order story is intentionally narrow — passing a
+; function as a first-class Value the way you would in Lisp isn't
+; supported uniformly across kernels yet. We sidestep that by storing
+; the handler-function's NAME (a substrate-resident string) in the
+; HANDLER entry. The router resolves verb → name; the calling cell
+; performs a small if-chain to invoke the named function. This keeps
+; the router data-shaped and sibling-portable while preserving the
+; pattern's benefit: one walk over the table, one branch on the result.
+;
+; ---- BLUEPRINTS ---------------------------------------------------
+;
+;   HANDLER       (verb-string, fn-name-string)
+;   HANDLER-TABLE (handler*)
+;   HANDLER-NOT-FOUND — sentinel returned when no handler matches.
+;
+; preludes: form-stdlib/channel-query.fk
+
+;; Inst slots 1740..1742 reserve the verb-router family
+;; (1730..1732 are symbol-table, 1720..1721 are cell-registry,
+;;  1710..1716 are channel-query).
+(let HANDLER           (make_nodeid 1 2 99 1740))
+(let HANDLER-TABLE     (make_nodeid 1 2 99 1741))
+(let HANDLER-NOT-FOUND (make_nodeid 1 2 99 1742))
+
+;; --- helpers ------------------------------------------------------
+
+(defn vr-nil? (xs) (eq (len xs) 0))
+
+;; --- construction -------------------------------------------------
+
+;; (handler verb-str fn-name-str) → HANDLER Recipe.
+;; Both children are substrate-resident trivial strings; content
+;; addressing makes the entry sovereign across kernels.
+(defn handler (verb fn-name)
+    (intern_node HANDLER
+        (list (intern_trivial_string verb)
+              (intern_trivial_string fn-name))))
+
+;; (handler-table handlers-list) → HANDLER-TABLE Recipe.
+;; Children are HANDLER recipes in insertion order. First-match wins.
+(defn handler-table (handlers)
+    (intern_node HANDLER-TABLE handlers))
+
+;; --- accessors ----------------------------------------------------
+
+(defn handler-verb (h)
+    (head (node_children h)))
+
+(defn handler-fn-name (h)
+    (head (tail (node_children h))))
+
+(defn handler-table-entries (table)
+    (node_children table))
+
+;; --- query introspection ------------------------------------------
+
+;; (query-verb query) → SubstrateString content of the QUERY's verb.
+;; QUERY children are [verb-trivial-string, address-substrate-ref, body].
+;; node_value extracts the string content from the trivial-string NodeID.
+(defn query-verb (query)
+    (node_value (head (node_children query))))
+
+;; --- lookup -------------------------------------------------------
+
+;; (find-handler-name table verb-str) → fn-name trivial-string NodeID,
+;; or HANDLER-NOT-FOUND. Linear scan over the table's entries; the
+;; first entry whose verb matches wins. Verb comparison is by node_eq
+;; on the substrate-resident trivial-string NodeIDs — content
+;; addressing means equal strings intern to the same NodeID, so the
+;; compare is a single integer test on the inst slot.
+(defn find-handler-name (table verb)
+    (vr-find (node_children table)
+             (intern_trivial_string verb)))
+
+(defn vr-find (entries verb-id)
+    (if (vr-nil? entries) HANDLER-NOT-FOUND
+        (if (node_eq (handler-verb (head entries)) verb-id)
+            (handler-fn-name (head entries))
+            (vr-find (tail entries) verb-id))))
+
+;; (handler-found? name-or-not-found) → 1 if a real fn-name, 0 if the
+;; NOT-FOUND sentinel. Caller uses this to choose between dispatching
+;; the named handler and producing a "not-known" RESPONSE.
+(defn handler-found? (name)
+    (if (node_eq name HANDLER-NOT-FOUND) 0 1))
+
+;; --- introspection ------------------------------------------------
+
+;; (handler-table-verbs table) → list of verb-string NodeIDs the table
+;; can dispatch. Useful for a cell to advertise its routing surface
+;; (e.g. as the capability-list in its registry entry).
+(defn handler-table-verbs (table)
+    (vr-collect-verbs (node_children table) (list)))
+
+(defn vr-collect-verbs (entries acc)
+    (if (vr-nil? entries) acc
+        (vr-collect-verbs (tail entries)
+                          (vr-append acc (list (handler-verb (head entries)))))))
+
+(defn vr-append (xs ys)
+    (if (vr-nil? xs) ys (cons (head xs) (vr-append (tail xs) ys))))

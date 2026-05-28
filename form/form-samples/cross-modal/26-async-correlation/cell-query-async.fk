@@ -1,0 +1,248 @@
+; cell-query-async.fk — three in-flight queries, replies arrive jumbled,
+; correlation matching pairs each reply back to its originating query.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+;
+; THE SCENE:
+;
+;   Cell A has THREE questions for Cell B. A doesn't wait for any
+;   reply before sending the next query — all three travel down the
+;   channel back-to-back. B answers ALL THREE, but appends responses
+;   in an INTENTIONALLY jumbled order (q3, then q1, then q2). A reads
+;   the reply channel, walks every response, and routes each one back
+;   to its originating query using the correlation field — NOT arrival
+;   order.
+;
+;   The proof: arrival order is q3,q1,q2; pairing is correct anyway,
+;   because the correlation field on the RESPONSE carries the inst of
+;   the matching QUERY's NodeID, and A kept a (correlation, query)
+;   map at send time.
+;
+;   This is OSI L5 (session correlation) made concrete on top of the
+;   L2 channel and the L7 vocabulary the prior walks established.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn list-nth (xs i)
+        (if (eq i 0) (head xs) (list-nth (tail xs) (sub i 1))))
+
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let registry-path  "/tmp/e2e-async-registry.fkb")
+    (let b-channel-path "/tmp/e2e-async-cell-b.fkb")
+    (let a-reply-path   "/tmp/e2e-async-cell-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create b-channel-path)
+    (channel-create a-reply-path)
+
+    ;; ---------- CELL B: register a single "answer" capability -------
+    ;; B advertises one capability that knows three verbs ("about",
+    ;; "fetch", "introspect"). The router only needs one entry in the
+    ;; registry for A to reach it.
+    (register-cell registry-path 3003 b-channel-path (list "answer"))
+
+    ;; B's verb-dispatch: each verb maps to a small response shape.
+    ;; The point of THIS walk is the correlation routing, not what
+    ;; B says. So each reply is one substrate-ref item that encodes
+    ;; "B handled verb V for topic T" structurally.
+    (defn cell-b-build-item-for (verb-str topic-nid)
+        (do
+            (let verb-tok (intern_trivial_string verb-str))
+            (let topic-ref (cq-substrate-ref topic-nid))
+            (cq-recipe-content
+                (intern_node (make_nodeid 1 1 14 0)
+                    (list verb-tok topic-ref)))))
+
+    ;; B's handler. Reads ALL pending queries from its channel FIRST
+    ;; (this is the async part — B doesn't reply between reads), then
+    ;; appends responses in a JUMBLED order (q3 first, then q1, then
+    ;; q2) to A's reply channel. Each response carries the matching
+    ;; query's NodeID-inst as its correlation field.
+    (defn cell-b-handle-batch (request-channel reply-channel)
+        (do
+            ;; Read every query waiting on B's channel.
+            (let msgs (channel-read request-channel))
+            (let q1 (channel-msg-payload (list-nth msgs 0)))
+            (let q2 (channel-msg-payload (list-nth msgs 1)))
+            (let q3 (channel-msg-payload (list-nth msgs 2)))
+
+            ;; Pull verb + topic out of each query.
+            ;; QUERY children: [verb-str, address-as-substrate-ref, body]
+            (let q1-children (node_children q1))
+            (let q2-children (node_children q2))
+            (let q3-children (node_children q3))
+
+            (let q1-verb-node (list-nth q1-children 0))
+            (let q2-verb-node (list-nth q2-children 0))
+            (let q3-verb-node (list-nth q3-children 0))
+
+            (let q1-verb (node_value q1-verb-node))
+            (let q2-verb (node_value q2-verb-node))
+            (let q3-verb (node_value q3-verb-node))
+
+            ;; The address inside a query is a SUBSTRATE-REF carrying a
+            ;; packed nid-tuple as its children. Unpack to get the topic
+            ;; NodeID B should echo back.
+            (let q1-addr (list-nth q1-children 1))
+            (let q2-addr (list-nth q2-children 1))
+            (let q3-addr (list-nth q3-children 1))
+
+            (let q1-topic (cq-nid-unpack-from-children (node_children q1-addr)))
+            (let q2-topic (cq-nid-unpack-from-children (node_children q2-addr)))
+            (let q3-topic (cq-nid-unpack-from-children (node_children q3-addr)))
+
+            ;; Build one response item per query, then wrap each in a
+            ;; RESPONSE whose correlation field is the matching query's
+            ;; NodeID-inst.
+            (let item1 (cell-b-build-item-for q1-verb q1-topic))
+            (let item2 (cell-b-build-item-for q2-verb q2-topic))
+            (let item3 (cell-b-build-item-for q3-verb q3-topic))
+
+            (let resp1 (cq-response (node_inst q1) "ok" (list item1)))
+            (let resp2 (cq-response (node_inst q2) "ok" (list item2)))
+            (let resp3 (cq-response (node_inst q3) "ok" (list item3)))
+
+            ;; Jumbled append order: q3 first, then q1, then q2.
+            ;; A real distributed handler might reply in this order
+            ;; because lookups complete at different speeds. The
+            ;; correlation field on each response is what makes the
+            ;; jumbling safe.
+            (channel-append reply-channel (channel-message resp3))
+            (channel-append reply-channel (channel-message resp1))
+            (channel-append reply-channel (channel-message resp2))))
+
+    ;; ---------- CELL A: send THREE queries without waiting ----------
+    ;; A discovers B's address through the registry, just like 25.
+    (let answer-cells (find-by-capability registry-path "answer"))
+    (let b-found (head answer-cells))
+    (let b-channel (reg-channel-path b-found))
+
+    ;; A constructs three distinct queries on three distinct topics.
+    ;; Different verbs, different topic NodeIDs, different bodies —
+    ;; nothing about their shape biases which reply could be confused
+    ;; for which sender.
+    (let topic-a (make_nodeid 1 2 99 7001))
+    (let topic-b (make_nodeid 1 2 99 7002))
+    (let topic-c (make_nodeid 1 2 99 7003))
+
+    (let q1 (cq-query "about"      topic-a (intern_trivial_string "what-is-the-shape")))
+    (let q2 (cq-query "fetch"      topic-b (intern_trivial_string "give-me-the-content")))
+    (let q3 (cq-query "introspect" topic-c (intern_trivial_string "tell-me-your-state")))
+
+    ;; A remembers each query's correlation-seed (the inst of its
+    ;; NodeID). Three parallel lists keep correlation, verb, and topic
+    ;; matched by index. A real implementation would use a map keyed
+    ;; on correlation; lists keep the demo dependency-free.
+    (let corr-1 (node_inst q1))
+    (let corr-2 (node_inst q2))
+    (let corr-3 (node_inst q3))
+
+    ;; A appends all three queries to B's channel BEFORE reading any
+    ;; reply. This is the in-flight-ness — at this point three queries
+    ;; have left A and zero replies have arrived.
+    (channel-append b-channel (channel-message q1))
+    (channel-append b-channel (channel-message q2))
+    (channel-append b-channel (channel-message q3))
+
+    (let queries-sent 3)
+
+    ;; ---------- B HANDLES ALL THREE, REPLIES IN JUMBLED ORDER -------
+    (cell-b-handle-batch b-channel a-reply-path)
+
+    ;; ---------- A READS ALL REPLIES, MATCHES BY CORRELATION ---------
+    (let reply-msgs (channel-read a-reply-path))
+    (let replies-received (len reply-msgs))
+
+    ;; Per-reply: extract its correlation field and route to the
+    ;; original query. The correlation field is (head (node_children
+    ;; response)) — the trivial-int child cq-response placed first.
+    ;; node_inst of a trivial-int returns its value.
+    (defn reply-correlation (reply-msg)
+        (do
+            (let response (channel-msg-payload reply-msg))
+            (let response-children (node_children response))
+            (let corr-node (head response-children))
+            (node_inst corr-node)))
+
+    (let arrival-1-corr (reply-correlation (list-nth reply-msgs 0)))
+    (let arrival-2-corr (reply-correlation (list-nth reply-msgs 1)))
+    (let arrival-3-corr (reply-correlation (list-nth reply-msgs 2)))
+
+    ;; A's expectation (encoded by the jumbled append in B's handler):
+    ;;   arrival[0] should correlate to q3
+    ;;   arrival[1] should correlate to q1
+    ;;   arrival[2] should correlate to q2
+    ;; A doesn't depend on arrival order though — it routes each reply
+    ;; by checking its correlation field against the remembered map.
+    (defn match-to-query (corr)
+        (if (eq corr corr-1) 1
+            (if (eq corr corr-2) 2
+                (if (eq corr corr-3) 3 0))))
+
+    (let arrival-1-matches (match-to-query arrival-1-corr))
+    (let arrival-2-matches (match-to-query arrival-2-corr))
+    (let arrival-3-matches (match-to-query arrival-3-corr))
+
+    ;; Witness the jumbled-order claim: B replied to q3 first.
+    (let order-as-expected
+        (if (and (eq arrival-1-matches 3)
+                 (and (eq arrival-2-matches 1)
+                      (eq arrival-3-matches 2))) 1 0))
+
+    ;; Also witness the stronger claim: each correlation is unique
+    ;; and pairs to exactly one originating query. Sum of matches
+    ;; should be 1+2+3 = 6 with no zeros.
+    (let all-matched
+        (if (and (gt arrival-1-matches 0)
+                 (and (gt arrival-2-matches 0)
+                      (gt arrival-3-matches 0))) 1 0))
+
+    (let match-sum
+        (add arrival-1-matches (add arrival-2-matches arrival-3-matches)))
+
+    (let no-duplicate-matches
+        (if (eq match-sum 6) 1 0))
+
+    ;; Also: every correlation MUST be distinct (no two queries share
+    ;; the same inst — content-addressing protects this because each
+    ;; query Recipe has different children).
+    (let corrs-distinct
+        (if (and (not (eq corr-1 corr-2))
+                 (and (not (eq corr-1 corr-3))
+                      (not (eq corr-2 corr-3)))) 1 0))
+
+    ;; A peeks inside one matched reply to confirm the payload's
+    ;; structure made the trip too — not just the routing header.
+    ;; arrival[1] correlates to q1, so its single response item should
+    ;; carry the verb "about".
+    (let reply-for-q1 (channel-msg-payload (list-nth reply-msgs 1)))
+    (let q1-response-children (node_children reply-for-q1))
+    (let q1-items-list (list-nth q1-response-children 2))
+    (let q1-items (node_children q1-items-list))
+    (let q1-first-item (head q1-items))
+    ;; RECIPE-CONTENT wraps the inner recipe; unwrap and read the
+    ;; first child which is the verb-string.
+    (let q1-inner (head (node_children q1-first-item)))
+    (let q1-inner-verb-node (head (node_children q1-inner)))
+    (let q1-verb-matches
+        (if (str_eq (node_value q1-inner-verb-node) "about") 1 0))
+
+    ;; ---------- ATTESTATIONS ---------------------------------------
+    (print "queries-sent:" queries-sent)
+    (print "replies-received:" replies-received)
+    (print "correlations-distinct:" corrs-distinct)
+    (print "arrival-order-was-jumbled:" order-as-expected)
+    (print "all-replies-matched-a-query:" all-matched)
+    (print "no-duplicate-or-missing-matches:" no-duplicate-matches)
+    (print "matched-payload-carries-q1-verb:" q1-verb-matches)
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Seven attestations. Verdict = 7 when correlation routing held
+    ;; through the in-flight async path on every sibling kernel.
+    (add (if (eq queries-sent 3) 1 0)
+         (add (if (eq replies-received 3) 1 0)
+              (add corrs-distinct
+                   (add order-as-expected
+                        (add all-matched
+                             (add no-duplicate-matches q1-verb-matches)))))))

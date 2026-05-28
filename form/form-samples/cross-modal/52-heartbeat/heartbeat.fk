@@ -1,0 +1,68 @@
+; heartbeat.fk — periodic liveness tracking as a Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/heartbeat.fk
+;
+; Three cells (ids 1, 2, 3) emit heartbeats at t=100, t=200, t=300.
+; An observer with its own clock asks "who's alive?" at now=350 with
+; threshold=100 — the freshness rule is last-seen ≥ now - threshold,
+; so the window starts at t=250. Cell 3 (last-seen 300) lands inside;
+; cells 1 and 2 (last-seen 100, 200) fell off the wire and are stale.
+;
+; No heartbeat native exists in any sibling kernel — the recipe IS the
+; implementation, and Go, Rust, and TypeScript answer the same liveness
+; verdict from the same table.
+;
+; Walk:
+;   1. Build the table by recording 3 cells in order.
+;   2. Ask alive?(cell 3, now=350, threshold=100) → 1 (fresh).
+;   3. Ask alive?(cell 1, now=350, threshold=100) → 0 (stale).
+;   4. Ask alive-count(now=350, threshold=100) → 1 (only cell 3).
+;   5. Prune(now=350, threshold=100) → table with one entry (cell 3).
+;
+; Verdict = 1 (fresh) + 1 (stale-correctly-0) + 1 (count is 1)
+;          + 1 (pruned length is 1) = 4 on every sibling kernel.
+
+(do
+    ;; ---------- BUILD THE TABLE -----------------------------------
+    ;; Three cells emit heartbeats in temporal order. The table is
+    ;; threaded forward — each (heartbeat-record) reads the prior
+    ;; table and returns a new one carrying the fresh entry.
+    (let t0 (heartbeat-empty))
+    (let t1 (heartbeat-record t0 1 100))
+    (let t2 (heartbeat-record t1 2 200))
+    (let t3 (heartbeat-record t2 3 300))
+
+    ;; ---------- ATTESTATION 1: CELL 3 IS ALIVE --------------------
+    ;; now=350, threshold=100 → freshness window starts at 250.
+    ;; cell 3's last-seen is 300 (≥ 250) → 1.
+    (let alive-3 (heartbeat-alive? t3 3 350 100))
+    (print "alive-3:" alive-3)
+
+    ;; ---------- ATTESTATION 2: CELL 1 IS STALE --------------------
+    ;; cell 1's last-seen is 100 (< 250) → 0.
+    (let alive-1 (heartbeat-alive? t3 1 350 100))
+    (print "alive-1:" alive-1)
+
+    ;; ---------- ATTESTATION 3: ALIVE-COUNT ------------------------
+    ;; Only cell 3 falls inside the window → 1.
+    (let alive-n (heartbeat-alive-count t3 350 100))
+    (print "alive-count:" alive-n)
+
+    ;; ---------- ATTESTATION 4: PRUNE LEAVES CELL 3 ----------------
+    ;; (heartbeat-prune) composts the two stale entries; the surviving
+    ;; table has length 1.
+    (let pruned   (heartbeat-prune t3 350 100))
+    (let pruned-n (heartbeat-len pruned))
+    (print "pruned-len:" pruned-n)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 4 = alive-3 (1) + stale-1-is-zero (1) + alive-count==1 (1)
+    ;;   + pruned-len==1 (1). Sibling parity attests every kernel
+    ;; walks the same freshness rule from the recipe alone.
+    (let verdict
+        (add alive-3
+            (add (if (eq alive-1 0) 1 0)
+                (add (if (eq alive-n 1) 1 0)
+                     (if (eq pruned-n 1) 1 0)))))
+    (print "verdict:" verdict)
+    verdict)

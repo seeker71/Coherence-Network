@@ -1,0 +1,168 @@
+; schema.fk — recipe-shape validator as a Form recipe.
+;
+; preludes: (none — uses only kernel primitives)
+;
+; A SCHEMA describes the expected category + children shape of a Recipe.
+; Schemas are themselves Recipes (substrate-resident), so they cross any
+; channel that carries recipes — wire bytes, registry messages, sockets.
+; The same schema validates the same way in every sibling kernel because
+; the walker uses only content-addressed primitives.
+;
+; Five variants, each interned as a recipe under a distinct application
+; category in the 1780-1784 inst-slot range:
+;
+;   (schema-cat cat-nid)      — match any recipe whose category equals
+;                                cat-nid, ignore children count/types.
+;   (schema-leaf leaf-type)   — match a level-TRIVIAL leaf of the given
+;                                type (TRIV_INT=1 / TRIV_STRING=2 /
+;                                TRIV_BOOL=3 — the Triv constants every
+;                                sibling kernel agrees on).
+;   (schema-list child-schema) — match a LIST recipe whose every child
+;                                 matches child-schema (homogeneous).
+;   (schema-tuple sub-schemas) — match a recipe whose children match the
+;                                 given schemas positionally; arity must
+;                                 match the schema's child count.
+;   (schema-any)               — match anything.
+;
+; The TRIVIAL leaf-type constants are NOT exposed as Form natives, so
+; this module hardcodes them. The three sibling kernels (Go, Rust, TS)
+; all agree on these values; see:
+;   form-kernel-go/main.go      TrivInt = 1, TrivString = 2, TrivBool = 3
+;   form-kernel-rust/src/main.rs TRIV_INT = 1, TRIV_STRING = 2, TRIV_BOOL = 3
+;   form-kernel-ts/src/kernel.ts Triv.INT = 1, .STRING = 2, .BOOL = 3
+; LEVEL_TRIVIAL = 1 in all three kernels.
+;
+; The LIST category convention used by schema-list is the substrate-
+; canonical LIST blueprint (make_nodeid 1 1 14 0) — the same shape used
+; by 17-novel-nodes, channel-query.fk, kv-store-band, etc.
+
+(let SCHEMA-CAT   (make_nodeid 1 2 99 1780))
+(let SCHEMA-LEAF  (make_nodeid 1 2 99 1781))
+(let SCHEMA-LIST  (make_nodeid 1 2 99 1782))
+(let SCHEMA-TUPLE (make_nodeid 1 2 99 1783))
+(let SCHEMA-ANY   (make_nodeid 1 2 99 1784))
+
+;; Substrate-canonical LIST category. Same constant the rest of the body
+;; uses for list-literal recipes (novel-nodes.fk, channel-query.fk).
+;;
+;; NOTE on detection: this category has level=1 (the TRIVIAL slot), which
+;; means the walker's `node_category` short-circuits and returns the
+;; recipe NodeID itself rather than the stored category. To recognize a
+;; LIST recipe we therefore probe (node_level, node_type) = (1, 14)
+;; directly. The kernel's intern still records the recipe's children
+;; correctly; node_children works as expected.
+(let SCHEMA-LIST-CAT       (make_nodeid 1 1 14 0))
+(let SCHEMA-LIST-CAT-LEVEL 1)
+(let SCHEMA-LIST-CAT-TYPE  14)
+
+;; Trivial leaf-type constants — see preamble above.
+(let SCHEMA-LEVEL-TRIVIAL 1)
+(let SCHEMA-TRIV-INT      1)
+(let SCHEMA-TRIV-STRING   2)
+(let SCHEMA-TRIV-BOOL     3)
+
+;; --- helpers ------------------------------------------------------
+
+(defn schema-nil? (xs) (eq (len xs) 0))
+
+;; --- constructors -------------------------------------------------
+
+;; (schema-cat cat-nid) → SCHEMA-CAT recipe. cat-nid is itself a NodeID.
+(defn schema-cat (cat-nid)
+    (intern_node SCHEMA-CAT (list cat-nid)))
+
+;; (schema-leaf leaf-type-int) → SCHEMA-LEAF recipe. leaf-type-int is one
+;; of SCHEMA-TRIV-INT / SCHEMA-TRIV-STRING / SCHEMA-TRIV-BOOL.
+(defn schema-leaf (leaf-type)
+    (intern_node SCHEMA-LEAF (list (intern_trivial_int leaf-type))))
+
+;; (schema-list child-schema) → SCHEMA-LIST recipe.
+(defn schema-list (child-schema)
+    (intern_node SCHEMA-LIST (list child-schema)))
+
+;; (schema-tuple sub-schemas) → SCHEMA-TUPLE recipe. sub-schemas is a list
+;; of schema recipes; children match positionally.
+(defn schema-tuple (sub-schemas)
+    (intern_node SCHEMA-TUPLE sub-schemas))
+
+;; (schema-any) → SCHEMA-ANY recipe. Matches anything.
+(defn schema-any ()
+    (intern_node SCHEMA-ANY (list)))
+
+;; --- validator walker --------------------------------------------
+
+;; schema-children-all? — check that every child in `kids` matches the
+;; same single schema `child-schema`. Used by SCHEMA-LIST.
+(defn schema-children-all? (kids child-schema)
+    (if (schema-nil? kids) 1
+        (if (eq (schema-validate child-schema (head kids)) 1)
+            (schema-children-all? (tail kids) child-schema)
+            0)))
+
+;; schema-positional? — walk two lists in parallel, validating each child
+;; against its positional schema. Returns 1 only when both lists drain
+;; together (arity match) and every pair validates.
+(defn schema-positional? (sub-schemas kids)
+    (if (schema-nil? sub-schemas)
+        (if (schema-nil? kids) 1 0)
+        (if (schema-nil? kids) 0
+            (if (eq (schema-validate (head sub-schemas) (head kids)) 1)
+                (schema-positional? (tail sub-schemas) (tail kids))
+                0))))
+
+;; schema-validate — return 1 if `recipe` matches `schema`, 0 otherwise.
+;;
+;; Dispatch is by the schema's own category — every schema is itself a
+;; recipe interned under one of the five SCHEMA-* application categories.
+;; node_category yields the schema's category NodeID; node_eq compares
+;; categories without the int-coercion trap that bare `eq` falls into.
+(defn schema-validate (schema recipe)
+    (do
+        (let scat (node_category schema))
+        (if (node_eq scat SCHEMA-ANY) 1
+            (if (node_eq scat SCHEMA-CAT)
+                ;; SCHEMA-CAT: match recipe's category against the
+                ;; cat-nid carried as the schema's only child. When the
+                ;; target cat-nid uses the substrate's level=1 LIST-style
+                ;; slot (which the walker treats as TRIVIAL),
+                ;; node_category short-circuits to return the recipe
+                ;; itself — so we fall back to matching (level, type)
+                ;; instead. For ordinary level=2 application categories,
+                ;; node_eq on node_category is the principled compare.
+                (do
+                    (let target-cat (head (node_children schema)))
+                    (if (eq (node_level target-cat) SCHEMA-LEVEL-TRIVIAL)
+                        (if (eq (node_level recipe) (node_level target-cat))
+                            (if (eq (node_type recipe) (node_type target-cat))
+                                1 0)
+                            0)
+                        (if (node_eq (node_category recipe) target-cat) 1 0)))
+                (if (node_eq scat SCHEMA-LEAF)
+                    ;; SCHEMA-LEAF: recipe must be level-TRIVIAL with the
+                    ;; encoded leaf-type. node_value on the schema's child
+                    ;; reads the trivial-int back as an integer.
+                    (if (eq (node_level recipe) SCHEMA-LEVEL-TRIVIAL)
+                        (if (eq (node_type recipe)
+                                (node_value (head (node_children schema))))
+                            1 0)
+                        0)
+                    (if (node_eq scat SCHEMA-LIST)
+                        ;; SCHEMA-LIST: recipe is a LIST and every child
+                        ;; matches child-schema. LIST recipes carry the
+                        ;; (level=1, type=14) shape; node_category can't
+                        ;; be used because level=1 makes the walker
+                        ;; short-circuit category lookup.
+                        (if (eq (node_level recipe) SCHEMA-LIST-CAT-LEVEL)
+                            (if (eq (node_type recipe) SCHEMA-LIST-CAT-TYPE)
+                                (schema-children-all?
+                                    (node_children recipe)
+                                    (head (node_children schema)))
+                                0)
+                            0)
+                        (if (node_eq scat SCHEMA-TUPLE)
+                            ;; SCHEMA-TUPLE: positional + arity match.
+                            (schema-positional?
+                                (node_children schema)
+                                (node_children recipe))
+                            ;; Unknown schema category — refuse.
+                            0)))))))

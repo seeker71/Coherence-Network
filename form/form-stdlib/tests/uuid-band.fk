@@ -1,0 +1,110 @@
+; tests/uuid-band.fk — UUID v4 sibling-witness band.
+;
+; preludes: form-stdlib/uuid.fk
+;
+; Validates that the Form-recipe UUID v4 (in form-stdlib/uuid.fk) produces
+; RFC 4122 §4.4 correct outputs on every kernel that carries the bitwise
+; primitives plus the string natives. No UUID native exists; the recipe IS
+; the sole implementation. Three-way sibling parity attests every kernel
+; can compute UUID v4 from primitives alone.
+;
+; Vectors cover the canonical shapes:
+;   - zero input               ([0]*16 → "00000000-0000-4000-8000-000000000000")
+;   - max input                ([255]*16 → "ffffffff-ffff-4fff-bfff-ffffffffffff")
+;   - patched-byte witness     (byte 6 high nibble = 4; byte 8 variant = 10)
+;   - length is always 36
+;   - round-trip identity      (uuid-parse(uuid-v4(bs)) → patched-bs)
+;   - parse rejects bad length, bad hyphens, bad hex
+;     all return UUID-PARSE-ERROR
+
+(do
+    (defn h-nil? (xs) (eq (len xs) 0))
+
+    (defn byte-sum (xs)
+        (if (h-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    ;; Build a list of n copies of byte v.
+    (defn rep-byte (n v acc)
+        (if (eq n 0) acc (rep-byte (sub n 1) v (cons v acc))))
+
+    ;; Walk to the k-th element (0-indexed). nth-walk doesn't need to live
+    ;; in core for the band — it's a small recursion.
+    (defn nth-of (xs k)
+        (if (eq k 0) (head xs) (nth-of (tail xs) (sub k 1))))
+
+    ;; --- INPUT FIXTURES --------------------------------------------
+    (let all-zero (rep-byte 16 0   (list)))
+    (let all-ff   (rep-byte 16 255 (list)))
+
+    ;; --- TEXTUAL ENCODE CHECKS -------------------------------------
+    (let uuid-zero (uuid-v4 all-zero))
+    (let uuid-ff   (uuid-v4 all-ff))
+
+    (let e0 (if (str_eq uuid-zero "00000000-0000-4000-8000-000000000000") 1 0))
+    (let e1 (if (str_eq uuid-ff   "ffffffff-ffff-4fff-bfff-ffffffffffff") 1 0))
+
+    ;; --- LENGTH CHECKS ---------------------------------------------
+    (let l0 (if (eq (str_len uuid-zero) 36) 1 0))
+    (let l1 (if (eq (str_len uuid-ff)   36) 1 0))
+
+    ;; --- PATCHED-BYTE WITNESSES ------------------------------------
+    ;; uuid-v4-from-list returns the binary form with version+variant set.
+    ;; For all-zero input:  byte 6 = 0x40 = 64,  byte 8 = 0x80 = 128
+    ;; For all-ff input:    byte 6 = 0x4f = 79,  byte 8 = 0xbf = 191
+    (let bin-zero (uuid-v4-from-list all-zero))
+    (let bin-ff   (uuid-v4-from-list all-ff))
+
+    (let p0 (if (eq (nth-of bin-zero 6) 64)  1 0))
+    (let p1 (if (eq (nth-of bin-zero 8) 128) 1 0))
+    (let p2 (if (eq (nth-of bin-ff   6) 79)  1 0))
+    (let p3 (if (eq (nth-of bin-ff   8) 191) 1 0))
+
+    ;; --- ROUND-TRIP via byte-sum -----------------------------------
+    ;; uuid-parse(uuid-v4(bs)) returns the patched binary form; the
+    ;; byte-sums match because both represent the same 16 bytes.
+    (let parsed-zero (uuid-parse uuid-zero))
+    (let parsed-ff   (uuid-parse uuid-ff))
+
+    ;; Zero input: byte-sum = 64 + 128 = 192
+    ;; FF input:   byte-sum = 14 * 255 + 79 + 191 = 3570 + 270 = 3840
+    (let r0 (if (eq (byte-sum parsed-zero) 192)  1 0))
+    (let r1 (if (eq (byte-sum parsed-ff)   3840) 1 0))
+
+    ;; --- ERROR sentinel --------------------------------------------
+    ;; UUID-PARSE-ERROR = NodeID(1, 2, 99, 1871)
+    (let SENTINEL (make_nodeid 1 2 99 1871))
+
+    ;; Wrong length (too short)
+    (let err-short
+        (if (value_eq (uuid-parse "00000000-0000-4000-8000-00000000000") SENTINEL) 1 0))
+
+    ;; Wrong length (too long)
+    (let err-long
+        (if (value_eq (uuid-parse "00000000-0000-4000-8000-0000000000000") SENTINEL) 1 0))
+
+    ;; Hyphen missing — "00000000_0000_4000_8000_000000000000" has the right
+    ;; length but underscores where hyphens belong.
+    (let err-sep
+        (if (value_eq (uuid-parse "00000000_0000_4000_8000_000000000000") SENTINEL) 1 0))
+
+    ;; Non-hex char in data position
+    (let err-hex
+        (if (value_eq (uuid-parse "0000000z-0000-4000-8000-000000000000") SENTINEL) 1 0))
+
+    ;; --- VALID PARSE ROUND-TRIP ------------------------------------
+    ;; A well-formed UUID (uppercase too) round-trips through parse.
+    ;; "FFFFFFFF-FFFF-4FFF-BFFF-FFFFFFFFFFFF" decodes to the same bytes
+    ;; as the lowercase form — total byte-sum 3840.
+    (let parsed-upper (uuid-parse "FFFFFFFF-FFFF-4FFF-BFFF-FFFFFFFFFFFF"))
+    (let u0 (if (eq (byte-sum parsed-upper) 3840) 1 0))
+
+    ;; Band verdict: 13 when every check passes
+    ;;   2 encode + 2 length + 4 patched-byte + 2 round-trip
+    ;;   + 4 error + 1 uppercase-parse = 15
+    (add e0 (add e1
+        (add l0 (add l1
+            (add p0 (add p1 (add p2 (add p3
+                (add r0 (add r1
+                    (add err-short (add err-long
+                        (add err-sep (add err-hex u0)))))))))))))))

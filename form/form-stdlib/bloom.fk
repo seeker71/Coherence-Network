@@ -1,0 +1,120 @@
+; bloom.fk — A tiny Bloom filter as a Form recipe.
+;
+; preludes: form-stdlib/sha256.fk
+;
+; Canonical truth: this recipe MEANS a 256-bit / 3-hash Bloom filter.
+; With the kernel's bitwise primitives (band, bor, shl_u32) plus the
+; sha256 recipe already living in form-stdlib/sha256.fk, the filter
+; composes without any host bitset library. The recipe stays sovereign
+; across sibling kernels — Go, Rust, TypeScript all answer the same
+; "might contain?" for the same insertion sequence.
+;
+; Why this shape:
+;   A Bloom filter is the simplest content-addressable bag — it answers
+;   "have I seen something shaped like this?" with constant-time bit
+;   probes, accepting a tunable false-positive rate as the trade for
+;   not storing the inputs themselves. The substrate already speaks
+;   sha256 as a Form recipe (20-sha256-as-recipe), so a Bloom filter
+;   built on top inherits sha256's cross-kernel attestation for free.
+;
+; The shape:
+;   - 256-bit bit-array carried as a 32-byte list (bit at position p
+;     lives in byte (p / 8), at bit-position (p mod 8) within that byte).
+;   - 3 independent hash positions per value, derived from the sha256
+;     digest of the value: bytes [0,1], [2,3], [4,5] each read as a
+;     16-bit big-endian int, then taken mod 256 to land in range.
+;
+; The three entry points:
+;   (bloom-empty)                       → fresh 256-bit filter (32 zeros)
+;   (bloom-add filter byte-list)        → new filter with the 3 bits set
+;   (bloom-might-contain? filter b-list) → 1 if all 3 bits set, else 0
+;
+; Caveats (Bloom semantics, not bugs):
+;   - "Might contain" is honest: false positives are possible (two
+;     values can hash to the same 3 bits). False negatives never
+;     happen — a value that was added always reads back as present.
+;   - Filters are functional: bloom-add returns a NEW filter; the old
+;     one is unchanged. The cons/recursive walk is O(n) over 32 bytes
+;     per operation, which is fine for demo-sized inputs.
+;
+; Cost note:
+;   sha256 itself is O(n²) per round through Form-list nth lookups,
+;   so keep input values SHORT (a few bytes) when running in pure
+;   recipe-walk mode. The Form→host-asm JIT lifts the same source
+;   to host speed without changing the recipe.
+
+(do
+    ;; ---- BYTE-LIST UTILITIES ---------------------------------------
+    ;; nil? / nth-rec / append-1 are already in scope from sha256.fk;
+    ;; we add the two list-mutation helpers Bloom needs.
+
+    ;; Replace the byte at index i with b. Functional — returns a new
+    ;; list, leaves the input unchanged. O(i) walk.
+    (defn set-byte-rec (bs i b)
+        (if (eq i 0)
+            (cons b (tail bs))
+            (cons (head bs) (set-byte-rec (tail bs) (sub i 1) b))))
+
+    ;; Build a list of n zeros. Used to seed an empty filter.
+    (defn zeros-rec (n acc)
+        (if (eq n 0) acc (zeros-rec (sub n 1) (cons 0 acc))))
+
+    ;; ---- BIT OPS ON THE 256-BIT FILTER -----------------------------
+    ;; Bit position p ∈ [0, 256). Lives in byte (p / 8), at bit (p mod 8).
+    ;; (set-bit filter p) → new filter with that bit forced to 1.
+    (defn set-bit (filter p)
+        (do
+            (let byte-idx (div p 8))
+            (let bit-idx (mod p 8))
+            (let mask (shl_u32 1 bit-idx))
+            (let cur (nth-rec filter byte-idx))
+            (set-byte-rec filter byte-idx (bor cur mask))))
+
+    ;; (test-bit filter p) → 1 if the bit at p is set, else 0.
+    (defn test-bit (filter p)
+        (do
+            (let byte-idx (div p 8))
+            (let bit-idx (mod p 8))
+            (let mask (shl_u32 1 bit-idx))
+            (let cur (nth-rec filter byte-idx))
+            (if (eq (band cur mask) 0) 0 1)))
+
+    ;; ---- HASH INDEX DERIVATION FROM A SHA-256 DIGEST ---------------
+    ;; The three hash positions are read directly from the digest:
+    ;;   h1 = ((digest[0] << 8) | digest[1]) mod 256
+    ;;   h2 = ((digest[2] << 8) | digest[3]) mod 256
+    ;;   h3 = ((digest[4] << 8) | digest[5]) mod 256
+    ;; A 16-bit window mod 256 is just the low byte, but we keep the
+    ;; full bigendian-then-mod form so the spec reads honestly.
+    (defn hash-pos (digest off)
+        (mod (bor (shl_u32 (nth-rec digest off) 8)
+                  (nth-rec digest (add off 1)))
+             256))
+
+    ;; ---- THE THREE ENTRY POINTS ------------------------------------
+
+    ;; Fresh empty filter — 32 zero bytes (256 bits all clear).
+    (defn bloom-empty ()
+        (zeros-rec 32 (list)))
+
+    ;; Add a value (byte-list) to the filter; returns the new filter.
+    (defn bloom-add (filter bytes)
+        (do
+            (let d (sha256 bytes))
+            (let p1 (hash-pos d 0))
+            (let p2 (hash-pos d 2))
+            (let p3 (hash-pos d 4))
+            (set-bit (set-bit (set-bit filter p1) p2) p3)))
+
+    ;; Probe the filter for a value. Returns 1 iff all three derived
+    ;; bits are set — honest Bloom semantics (may false-positive,
+    ;; never false-negative on values previously added).
+    (defn bloom-might-contain? (filter bytes)
+        (do
+            (let d (sha256 bytes))
+            (let p1 (hash-pos d 0))
+            (let p2 (hash-pos d 2))
+            (let p3 (hash-pos d 4))
+            (if (eq (test-bit filter p1) 0) 0
+                (if (eq (test-bit filter p2) 0) 0
+                    (test-bit filter p3))))))

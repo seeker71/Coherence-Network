@@ -1,0 +1,119 @@
+; base64.fk — Base64 (RFC 4648 §4) from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/base64.fk
+;
+; Base64 is the textual envelope for bytes traveling over ASCII-only
+; pipes — HTTP headers, JSON fields, URIs, terminal copy/paste. The
+; 24-wire-binary-symbols sample showed raw Recipe bytes traveling over
+; a byte-shaped wire; Base64 is the same bytes wearing a string costume
+; so they survive ASCII-only channels.
+;
+; This sample walks the RFC 4648 §10 test vectors (the canonical
+; "f / fo / foo / foob / fooba / foobar" sequence) plus an empty
+; input case. Each round-trip — encode then decode — must return
+; the original byte-list. Three sibling kernels (Go, Rust, TypeScript)
+; agree on every result.
+;
+; The recipe in form-stdlib/base64.fk uses ONLY the kernel's bitwise
+; primitives plus the string natives (ord, byte_to_str, str_concat,
+; substring, str_len) — no host base64 library, no native fallback.
+
+(do
+    (defn b64-nil? (xs) (eq (len xs) 0))
+
+    ;; Byte-list equality — same length AND every byte matches.
+    (defn bytes-eq (a b)
+        (if (b64-nil? a)
+            (b64-nil? b)
+            (if (b64-nil? b)
+                false
+                (if (eq (head a) (head b))
+                    (bytes-eq (tail a) (tail b))
+                    false))))
+
+    ;; ---------- RFC 4648 §10 TEST VECTORS ---------------------------
+    ;; Inputs are the ASCII byte-lists for "", "f", "fo", "foo", "foob",
+    ;; "fooba", "foobar". ASCII codes:
+    ;;   f=102  o=111  b=98  a=97  r=114
+    (let in-empty  (list))
+    (let in-f      (list 102))
+    (let in-fo     (list 102 111))
+    (let in-foo    (list 102 111 111))
+    (let in-foob   (list 102 111 111 98))
+    (let in-fooba  (list 102 111 111 98 97))
+    (let in-foobar (list 102 111 111 98 97 114))
+
+    ;; ---------- ENCODE: COMPARE AGAINST KNOWN OUTPUTS ---------------
+    (let enc-empty  (base64-encode in-empty))
+    (let enc-f      (base64-encode in-f))
+    (let enc-fo     (base64-encode in-fo))
+    (let enc-foo    (base64-encode in-foo))
+    (let enc-foob   (base64-encode in-foob))
+    (let enc-fooba  (base64-encode in-fooba))
+    (let enc-foobar (base64-encode in-foobar))
+
+    (print "enc-empty-ok:"  (if (str_eq enc-empty  "")        1 0))
+    (print "enc-f-ok:"      (if (str_eq enc-f      "Zg==")    1 0))
+    (print "enc-fo-ok:"     (if (str_eq enc-fo     "Zm8=")    1 0))
+    (print "enc-foo-ok:"    (if (str_eq enc-foo    "Zm9v")    1 0))
+    (print "enc-foob-ok:"   (if (str_eq enc-foob   "Zm9vYg==") 1 0))
+    (print "enc-fooba-ok:"  (if (str_eq enc-fooba  "Zm9vYmE=") 1 0))
+    (print "enc-foobar-ok:" (if (str_eq enc-foobar "Zm9vYmFy") 1 0))
+
+    ;; ---------- DECODE: COMPARE AGAINST KNOWN BYTE-LISTS ------------
+    (let dec-empty  (base64-decode ""))
+    (let dec-f      (base64-decode "Zg=="))
+    (let dec-fo     (base64-decode "Zm8="))
+    (let dec-foo    (base64-decode "Zm9v"))
+    (let dec-foob   (base64-decode "Zm9vYg=="))
+    (let dec-fooba  (base64-decode "Zm9vYmE="))
+    (let dec-foobar (base64-decode "Zm9vYmFy"))
+
+    (print "dec-empty-ok:"  (if (bytes-eq dec-empty  in-empty)  1 0))
+    (print "dec-f-ok:"      (if (bytes-eq dec-f      in-f)      1 0))
+    (print "dec-fo-ok:"     (if (bytes-eq dec-fo     in-fo)     1 0))
+    (print "dec-foo-ok:"    (if (bytes-eq dec-foo    in-foo)    1 0))
+    (print "dec-foob-ok:"   (if (bytes-eq dec-foob   in-foob)   1 0))
+    (print "dec-fooba-ok:"  (if (bytes-eq dec-fooba  in-fooba)  1 0))
+    (print "dec-foobar-ok:" (if (bytes-eq dec-foobar in-foobar) 1 0))
+
+    ;; ---------- ROUND-TRIP: decode(encode(bs)) = bs -----------------
+    ;; The honest correctness witness: every byte sequence survives the
+    ;; encode→decode loop unchanged. Sum the per-vector matches.
+    (let rt-empty  (if (bytes-eq (base64-decode (base64-encode in-empty))  in-empty)  1 0))
+    (let rt-f      (if (bytes-eq (base64-decode (base64-encode in-f))      in-f)      1 0))
+    (let rt-fo     (if (bytes-eq (base64-decode (base64-encode in-fo))     in-fo)     1 0))
+    (let rt-foo    (if (bytes-eq (base64-decode (base64-encode in-foo))    in-foo)    1 0))
+    (let rt-foob   (if (bytes-eq (base64-decode (base64-encode in-foob))   in-foob)   1 0))
+    (let rt-fooba  (if (bytes-eq (base64-decode (base64-encode in-fooba))  in-fooba)  1 0))
+    (let rt-foobar (if (bytes-eq (base64-decode (base64-encode in-foobar)) in-foobar) 1 0))
+
+    (let rt-sum
+        (add rt-empty
+            (add rt-f
+                (add rt-fo
+                    (add rt-foo
+                        (add rt-foob
+                            (add rt-fooba rt-foobar)))))))
+
+    (print "round-trip-sum-match:" (if (eq rt-sum 7) 1 0))
+
+    ;; ---------- VERDICT ---------------------------------------------
+    ;; Final score is the count of passing assertions:
+    ;;   7 encode matches + 7 decode matches + 1 round-trip sum = 15.
+    ;; Three sibling kernels (Go, Rust, TypeScript) converge on 15.
+    (add (if (str_eq enc-empty  "")        1 0)
+        (add (if (str_eq enc-f      "Zg==")    1 0)
+            (add (if (str_eq enc-fo     "Zm8=")    1 0)
+                (add (if (str_eq enc-foo    "Zm9v")    1 0)
+                    (add (if (str_eq enc-foob   "Zm9vYg==") 1 0)
+                        (add (if (str_eq enc-fooba  "Zm9vYmE=") 1 0)
+                            (add (if (str_eq enc-foobar "Zm9vYmFy") 1 0)
+                                (add (if (bytes-eq dec-empty  in-empty)  1 0)
+                                    (add (if (bytes-eq dec-f      in-f)      1 0)
+                                        (add (if (bytes-eq dec-fo     in-fo)     1 0)
+                                            (add (if (bytes-eq dec-foo    in-foo)    1 0)
+                                                (add (if (bytes-eq dec-foob   in-foob)   1 0)
+                                                    (add (if (bytes-eq dec-fooba  in-fooba)  1 0)
+                                                        (add (if (bytes-eq dec-foobar in-foobar) 1 0)
+                                                            (if (eq rt-sum 7) 1 0))))))))))))))))

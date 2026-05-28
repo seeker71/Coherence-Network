@@ -1,0 +1,65 @@
+; adler32.fk — RFC 1950 §9 Adler-32 checksum, as a Form recipe.
+;
+; Canonical truth: this recipe MEANS Adler-32. A kernel with the bitwise
+; primitives (band, bor, shl_u32, add_u32) and integer mod can compute
+; the checksum from this definition alone — no host adler32 library
+; required. The recipe stays sovereign across sibling kernels
+; (Go, Rust, TypeScript).
+;
+; The flavor: this is the Adler-32 that ships in zlib (the checksum
+; on the tail of every DEFLATE stream, used in PNG's zTXt and IDAT
+; framing, in HTTP "deflate" Content-Encoding, in the .zip 0x08 method
+; envelope when zlib framing is on, and in countless legacy formats).
+; The canonical 9-byte test vector "123456789" → 152961502 = 0x091E01DE
+; attests every implementation in the world cross-checks against it,
+; alongside zlib's own "Wikipedia" → 0x11E60398.
+;
+; Algorithm (RFC 1950 §9):
+;
+;   adler32-step(a, b, byte):
+;     a = (a + byte) mod 65521
+;     b = (b + a)    mod 65521
+;     return (a, b)
+;
+;   adler32(bytes):
+;     a = 1, b = 0
+;     for byte in bytes: (a, b) = adler32-step(a, b, byte)
+;     return (b << 16) | a
+;
+; The modulus 65521 is the largest prime below 2^16; bounding both
+; halves there ensures `b << 16 | a` is a stable 32-bit checksum.
+; Cost is O(n) over input length — head/tail straight through, no
+; precomputed table, no nth lookups.
+
+(do
+    (defn adler32-nil? (xs) (eq (len xs) 0))
+
+    ;; Walk the byte-list head-to-tail, folding (a, b) along the way.
+    ;; Form has no native tuple/multiple-return, so a and b are carried
+    ;; as separate arguments. After the byte is consumed:
+    ;;   a' = (a + byte) mod 65521
+    ;;   b' = (b + a')   mod 65521
+    ;; The byte is masked to its low 8 bits — input bytes in this body
+    ;; arrive as ints 0..255, but the band keeps the recipe honest if
+    ;; a caller hands in something wider.
+    (defn adler32-loop (a b bs)
+        (if (adler32-nil? bs)
+            ;; End of input — combine the two halves into a 32-bit value.
+            ;; b can reach 65520, so b << 16 reaches 0xFFF10000 — above
+            ;; the signed i32 ceiling. shl_u32 + add_u32 keep the result
+            ;; in u32-space across sibling kernels (Go/Rust/TS) so the
+            ;; printed integer is identical three-way.
+            (add_u32 (shl_u32 b 16) a)
+            (do
+                (let a-next (mod (add a (band (head bs) 255)) 65521))
+                (let b-next (mod (add b a-next) 65521))
+                (adler32-loop a-next b-next (tail bs)))))
+
+    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
+    ;; (adler32 byte-list) → Adler-32 as an unsigned 32-bit int.
+    ;; Initial state: a = 1, b = 0. RFC 1950 §9 fixes these so that the
+    ;; empty input checksum is (0 << 16) | 1 = 1, distinct from "no
+    ;; data seen yet" sentinels. zlib, PNG, and every wire format that
+    ;; carries Adler-32 agrees: adler32("") = 1.
+    (defn adler32 (bytes)
+        (adler32-loop 1 0 bytes)))

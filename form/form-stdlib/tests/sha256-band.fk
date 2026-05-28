@@ -1,0 +1,26 @@
+; tests/sha256-band.fk — FIPS 180-4 SHA-256 sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk
+;
+; Validates that the Form-recipe sha256 (in form-stdlib/sha256.fk)
+; produces FIPS 180-4-correct hashes on every kernel that carries
+; the bitwise primitives. No SHA-256 native exists; the recipe IS
+; the sole implementation. Three-way sibling parity attests that
+; each kernel can compute SHA-256 from primitives alone.
+;
+; The real Form→host-asm JIT is a future walk; once landed, calling
+; (sha256 bs) will dispatch through host-fast compiled code derived
+; from THIS recipe — no separate native required.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+
+    (let h-empty (sha256 (list)))
+    (let h-abc (sha256 (list 97 98 99)))
+    (let empty-ok (if (eq (sum-bytes h-empty 0) 4399) 1 0))
+    (let abc-ok (if (eq (sum-bytes h-abc 0) 3730) 1 0))
+
+    ;; Band verdict: 2 when both FIPS vectors match.
+    (add empty-ok abc-ok))

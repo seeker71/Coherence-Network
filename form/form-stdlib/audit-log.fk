@@ -1,0 +1,162 @@
+; audit-log.fk — append-only audit log with SHA-256 hash chain.
+;
+; preludes: form-stdlib/sha256.fk
+;
+; Canonical truth: this recipe MEANS an append-only audit log. Each
+; AUDIT-ENTRY carries a SHA-256 hash that binds it to the previous
+; entry — tampering with any payload breaks every downstream hash and
+; (audit-verify log) returns 0. The recipe uses ONLY the canonical
+; sha256 recipe + the kernel's list primitives; no native audit-log
+; opcode exists in any sibling kernel.
+;
+; The shape we commit to:
+;
+;   AUDIT-ENTRY (
+;     prev-hash : byte-list (32 bytes; all-zeros for the genesis entry),
+;     payload   : byte-list (arbitrary),
+;     this-hash : byte-list (32 bytes; sha256(prev-hash || payload))
+;   )
+;
+;   AUDIT-LOG = ordered list of AUDIT-ENTRYs where each entry's
+;               prev-hash equals the previous entry's this-hash.
+;
+; The chain rule:
+;   - genesis entry's prev-hash is 32 zero bytes
+;   - every subsequent entry's prev-hash = previous entry's this-hash
+;   - every entry's this-hash = SHA-256( prev-hash || payload )
+;
+; (audit-verify log) walks the log and returns 1 iff both rules hold
+; for every entry, 0 otherwise. Any byte mutated in any payload, any
+; reordering, any silent insertion — all break the chain.
+;
+; Surface:
+;   (audit-empty)                       → empty log
+;   (audit-append log payload-bytes)    → new log + 1 entry
+;   (audit-entry-prev-hash entry)       → 32-byte byte-list
+;   (audit-entry-payload entry)         → byte-list
+;   (audit-entry-this-hash entry)       → 32-byte byte-list
+;   (audit-verify log)                  → 1 (valid chain) or 0 (broken)
+;   (audit-len log)                     → number of entries
+;
+; Blueprint NodeIDs (substrate-resident; pkg=1 level=2 type=99 user
+; channel; inst slots 1770/1771 reserve the audit-log family):
+;   AUDIT-ENTRY  = inst 1770
+;   AUDIT-LOG    = inst 1771
+;
+; Cost: each sha256 call is O(n²) in the underlying recipe (Form-list
+; nth lookups), so payloads stay tiny in recipe-mode runs. The same
+; recipe lifts to host-asm speed via the Form→host-JIT path; the
+; canonical source doesn't change.
+
+(do
+    ;; --- Blueprints (substrate-resident NodeIDs) --------------------
+    (let AUDIT-ENTRY (make_nodeid 1 2 99 1770))
+    (let AUDIT-LOG   (make_nodeid 1 2 99 1771))
+
+    ;; --- LOCAL BYTE / LIST HELPERS ----------------------------------
+    ;; sha256.fk already defines nil?, append-1, append-list, nth-rec
+    ;; in the outer (do ...). We add only what's new for audit-log.
+
+    (defn al-nil? (xs) (eq (len xs) 0))
+
+    ;; Concat two byte-lists. Alias for append-list, kept local so the
+    ;; intent at call sites reads as "byte-list concatenation."
+    (defn concat-bytes (a b) (append-list a b))
+
+    ;; Build a byte-list of length n where every byte is v.
+    ;; Used for the 32-byte all-zeros prev-hash of the genesis entry.
+    (defn al-repeat-byte (v n acc)
+        (if (eq n 0) acc
+            (al-repeat-byte v (sub n 1) (cons v acc))))
+
+    ;; The 32-byte all-zeros prev-hash that anchors the genesis entry.
+    (defn audit-zero-hash () (al-repeat-byte 0 32 (list)))
+
+    ;; Element-wise byte-list equality. Returns 1 iff lengths match
+    ;; AND every byte matches; 0 otherwise. Used to check that an
+    ;; entry's prev-hash equals the previous entry's this-hash, and
+    ;; that the entry's this-hash matches sha256(prev || payload).
+    (defn al-bytes-eq (a b)
+        (if (al-nil? a)
+            (if (al-nil? b) 1 0)
+            (if (al-nil? b) 0
+                (if (eq (head a) (head b))
+                    (al-bytes-eq (tail a) (tail b))
+                    0))))
+
+    ;; --- ENTRY CONSTRUCTION & ACCESSORS -----------------------------
+    ;; Entries are plain Form lists of three byte-lists. The Blueprint
+    ;; NodeIDs above name the family for cross-cell recognition; the
+    ;; data shape stays list-based so it composes directly with the
+    ;; sha256 recipe (which takes a byte-list).
+
+    ;; (make-audit-entry prev payload this) → AUDIT-ENTRY list.
+    (defn make-audit-entry (prev payload this)
+        (list prev payload this))
+
+    (defn audit-entry-prev-hash (entry) (head entry))
+    (defn audit-entry-payload   (entry) (head (tail entry)))
+    (defn audit-entry-this-hash (entry) (head (tail (tail entry))))
+
+    ;; --- LOG-LEVEL HELPERS ------------------------------------------
+
+    ;; (audit-empty) → empty AUDIT-LOG (an empty list).
+    (defn audit-empty () (list))
+
+    ;; (audit-len log) → count of entries.
+    (defn audit-len (log) (len log))
+
+    ;; (audit-last-entry log) → the last entry in the log. Caller must
+    ;; not invoke on an empty log; audit-append guards against that.
+    (defn audit-last-entry (log)
+        (if (eq (len log) 1) (head log)
+            (audit-last-entry (tail log))))
+
+    ;; (audit-last-hash log) → the last entry's this-hash, or the
+    ;; 32-byte zero-hash if the log is empty (so the genesis entry
+    ;; chains naturally from the same accessor).
+    (defn audit-last-hash (log)
+        (if (al-nil? log) (audit-zero-hash)
+            (audit-entry-this-hash (audit-last-entry log))))
+
+    ;; --- APPEND -----------------------------------------------------
+    ;; (audit-append log payload-bytes) → log + 1 AUDIT-ENTRY.
+    ;;
+    ;; Computes the new entry's prev-hash from the existing log's tail,
+    ;; computes this-hash = sha256(prev-hash || payload), constructs
+    ;; the entry, appends it. Single sha256 call per append (the cost
+    ;; budget callers should plan around).
+    (defn audit-append (log payload)
+        (do
+            (let prev (audit-last-hash log))
+            (let this (sha256 (concat-bytes prev payload)))
+            (let entry (make-audit-entry prev payload this))
+            (append-1 log entry)))
+
+    ;; --- VERIFY -----------------------------------------------------
+    ;; Walk the log entry-by-entry. At each entry, check:
+    ;;   (a) entry.prev-hash == expected (zero-hash for genesis,
+    ;;       previous entry's this-hash otherwise)
+    ;;   (b) entry.this-hash == sha256(entry.prev-hash || entry.payload)
+    ;; If either check fails, return 0 immediately. If the walk
+    ;; completes without a break, return 1.
+    ;;
+    ;; expected-prev threads through the recursion as the prev-hash
+    ;; the next entry MUST carry.
+    (defn audit-verify-walk (log expected-prev)
+        (if (al-nil? log) 1
+            (do
+                (let entry (head log))
+                (let entry-prev (audit-entry-prev-hash entry))
+                (let entry-payload (audit-entry-payload entry))
+                (let entry-this (audit-entry-this-hash entry))
+                (if (eq (al-bytes-eq entry-prev expected-prev) 0) 0
+                    (do
+                        (let recomputed (sha256 (concat-bytes entry-prev entry-payload)))
+                        (if (eq (al-bytes-eq entry-this recomputed) 0) 0
+                            (audit-verify-walk (tail log) entry-this)))))))
+
+    ;; (audit-verify log) → 1 if the chain is valid, 0 otherwise.
+    ;; Genesis entry's expected prev-hash is the 32-byte zero-hash.
+    (defn audit-verify (log)
+        (audit-verify-walk log (audit-zero-hash))))

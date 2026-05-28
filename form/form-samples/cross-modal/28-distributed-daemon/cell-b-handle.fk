@@ -1,0 +1,66 @@
+; cell-b-handle.fk — cell B's handler, run as its own kernel process.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+;           form-stdlib/symbols.fk
+;
+; B's flow in this process:
+;   1. Read its channel for incoming queries (L2/L1).
+;   2. Unwrap the latest CHANNEL-MSG to get the QUERY Recipe (L2).
+;   3. Build its local symbol-table (re-authored fresh each invocation;
+;      content-addressing guarantees the same NodeIDs across runs).
+;   4. Wrap the table as a RECIPE-CONTENT item, build a RESPONSE
+;      (correlation from the query's NodeID), and append to A's reply
+;      channel (L7/L6/L2/L1).
+;   5. Exit. The substrate state vanishes; the RESPONSE persists.
+;
+; B is a "daemon" only in the cell sense — each invocation processes
+; ONE query and exits. A true polling loop is the next-walk (kernel
+; needs a (while ...) or non-stack-bounded loop primitive).
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn list-nth (xs i)
+        (if (eq i 0) (head xs) (list-nth (tail xs) (sub i 1))))
+
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let b-channel-path "/tmp/28-dist-cell-b.fkb")
+    (let a-reply-path   "/tmp/28-dist-cell-a-reply.fkb")
+
+    ;; ---------- READ THE QUERY -------------------------------------
+    (let msgs (channel-read b-channel-path))
+    (print "b-pending-msgs:" (len msgs))
+    (let query (channel-msg-payload (head msgs)))
+
+    ;; ---------- BUILD THE SYMBOL-TABLE -----------------------------
+    ;; Re-authored each invocation. Content-addressing makes the NodeIDs
+    ;; structurally identical to the version any other process would
+    ;; author with the same source — no shared in-process state needed.
+    (defn cell-b-build-table ()
+        (symbol-table
+            (list (symbol-bind "concepts"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "trust-over-fear")
+                                 (intern_trivial_string "field-substrate")
+                                 (intern_trivial_string "divergence-doorway"))))
+                  (symbol-bind "presences"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "ilena")
+                                 (intern_trivial_string "ranakami")))))))
+
+    (let table (cell-b-build-table))
+    (print "b-table-bindings:" (len (symbol-table-bindings table)))
+
+    ;; ---------- BUILD THE RESPONSE ---------------------------------
+    (let item (cq-recipe-content table))
+    (let correlation (node_inst query))
+    (let response (cq-response correlation "ok" (list item)))
+
+    ;; ---------- APPEND TO A'S REPLY CHANNEL ------------------------
+    ;; Correlation value is kernel-local (intern-table-dependent) so
+    ;; we don't print it; A verifies the round-trip on its side by
+    ;; looking up the symbol-table the response carries.
+    (let reply-count (channel-append a-reply-path (channel-message response)))
+    (print "b-replies-on-a-channel:" reply-count)
+    (print "b-handle-ok:" (if (ge reply-count 1) 1 0))
+    reply-count)

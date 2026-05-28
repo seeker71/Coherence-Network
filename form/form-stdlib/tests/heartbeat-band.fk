@@ -1,0 +1,61 @@
+; tests/heartbeat-band.fk — heartbeat sibling-witness band.
+;
+; preludes: form-stdlib/heartbeat.fk
+;
+; Validates that the Form-recipe liveness table (in form-stdlib/heartbeat.fk)
+; records, queries, counts, and prunes byte-identically across every sibling
+; kernel that carries the core list + int primitives. No heartbeat native
+; exists; the recipe IS the sole implementation. Three-way sibling parity
+; attests each kernel agrees on the same freshness verdict from the recipe
+; alone.
+;
+; Five checks, each contributing 1 to the verdict:
+;   - table length is 3 after recording 3 distinct identities       → 1
+;   - re-recording an existing identity overwrites, length stays 3  → 1
+;   - alive? for a fresh cell at now=350, threshold=100             → 1
+;   - alive? for a stale cell, counted via (eq 0 0)                 → 1
+;   - alive-count and pruned-len both equal 1                       → 1
+;
+; Band verdict locks at 5 — any divergence is a kernel bug.
+
+(do
+    ;; ---------- BUILD A 3-ENTRY TABLE -----------------------------
+    (let t0 (heartbeat-empty))
+    (let t1 (heartbeat-record t0 1 100))
+    (let t2 (heartbeat-record t1 2 200))
+    (let t3 (heartbeat-record t2 3 300))
+
+    (let len-ok (if (eq (heartbeat-len t3) 3) 1 0))
+
+    ;; ---------- RE-RECORDING OVERWRITES ---------------------------
+    ;; Recording cell 2 again with a fresher timestamp must not grow
+    ;; the table (each identity appears at most once). Length stays 3.
+    (let t3b (heartbeat-record t3 2 400))
+    (let overwrite-ok (if (eq (heartbeat-len t3b) 3) 1 0))
+
+    ;; ---------- FRESHNESS QUERIES AT now=350, threshold=100 -------
+    ;; Window starts at 250; cell 3 (last-seen 300) is fresh, cell 1
+    ;; (last-seen 100) is stale. Use the ORIGINAL t3 (without the
+    ;; cell-2 overwrite) so the recipe is exercised under the same
+    ;; conditions the sample documents.
+    (let alive-3 (heartbeat-alive? t3 3 350 100))
+    (let alive-1 (heartbeat-alive? t3 1 350 100))
+    (let alive-3-ok (if (eq alive-3 1) 1 0))
+    (let alive-1-ok (if (eq alive-1 0) 1 0))
+
+    ;; ---------- COUNT AND PRUNE LINE UP ---------------------------
+    ;; alive-count and (len (prune ...)) must agree — both report 1.
+    (let alive-n  (heartbeat-alive-count t3 350 100))
+    (let pruned-n (heartbeat-len (heartbeat-prune t3 350 100)))
+    (let count-prune-ok
+        (if (eq alive-n 1)
+            (if (eq pruned-n 1) 1 0)
+            0))
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 5 when length=3, overwrite keeps length=3, alive?-fresh=1,
+    ;; alive?-stale=0, and alive-count = pruned-len = 1.
+    (add len-ok
+        (add overwrite-ok
+            (add alive-3-ok
+                (add alive-1-ok count-prune-ok)))))

@@ -1,0 +1,98 @@
+; cell-registry-osi.fk — three cells register themselves to be addressable;
+; a fourth cell queries the registry by capability and finds them.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk
+;
+; Walks Urs's framing:
+;   "we can use the iso osi 7 layer protocol on the channel.
+;    an optional way for cells to register themselves to be addressable"
+;
+; THE OSI LAYERS THIS DEMO TOUCHES:
+;
+;   L1 Physical  — file I/O (write_form_binary in channel.fk).
+;   L2 Data Link — channel.fk's CHANNEL-V0 framing carries the registry.
+;   L3 Network   — cell-registry.fk: REGISTRATION messages, capability
+;                  filter, opt-in addressability.
+;
+;   (The higher layers — transport integrity, session correlation,
+;    presentation encoding, application verbs — are documented in
+;    21-cell-query-protocol; this walk focuses on L3 specifically.)
+;
+; THE SCENE:
+;
+;   • Cell A is a teaching cell that handles "about" and "recipe".
+;   • Cell B is a fetcher cell that handles "fetch" (external URIs).
+;   • Cell C is a computer cell that handles "compute".
+;   • Cell D is a router cell that wants to find all cells handling
+;     "compute" (it has a heavy task to delegate).
+;
+;   A, B, C each register themselves. C handles compute and shows up
+;   in D's query. A and B don't — they're invisible to D for this verb.
+;
+;   Cells that never register (a hypothetical Cell X) stay PRIVATE —
+;   no traversal of the registry ever surfaces them. Optional
+;   addressability honored by absence.
+
+(do
+    ;; A shared registry channel. In a real body it's a substrate file
+    ;; both processes write to; here we use a tmp path.
+    (let registry-path "/tmp/cell-registry-osi-demo.fkb")
+
+    ;; Initialize an empty registry (single writer at startup is fine).
+    (channel-create registry-path)
+
+    ;; ---------- Cells register (opt-in) -----------------------------
+
+    (let count-after-a
+        (register-cell registry-path
+                       1001                                   ; identity
+                       "/tmp/cell-a.channel"
+                       (list "about" "recipe")))
+
+    (let count-after-b
+        (register-cell registry-path
+                       1002
+                       "/tmp/cell-b.channel"
+                       (list "fetch")))
+
+    (let count-after-c
+        (register-cell registry-path
+                       1003
+                       "/tmp/cell-c.channel"
+                       (list "compute" "witness")))
+
+    (print "registered-count:" count-after-c)               ; 3
+
+    ;; ---------- Cell D queries the registry -------------------------
+    ;; D wants cells handling "compute". The registry filter returns
+    ;; only those whose capabilities list includes the verb.
+
+    (let compute-cells (find-by-capability registry-path "compute"))
+    (print "cells-handling-compute:" (len compute-cells))    ; 1
+
+    ;; D inspects the one result.
+    (let chosen (head compute-cells))
+    (print "chosen-identity:" (reg-identity chosen))         ; 1003
+    (let cap-count (len (reg-capabilities chosen)))
+    (print "chosen-capability-count:" cap-count)             ; 2
+
+    ;; ---------- Verify a less-popular verb shows up correctly -------
+    (let fetch-cells (find-by-capability registry-path "fetch"))
+    (print "cells-handling-fetch:" (len fetch-cells))        ; 1
+    (let about-cells (find-by-capability registry-path "about"))
+    (print "cells-handling-about:" (len about-cells))        ; 1
+
+    ;; ---------- Verb with no providers ------------------------------
+    (let unknown-cells (find-by-capability registry-path "introspect"))
+    (print "cells-handling-introspect:" (len unknown-cells)) ; 0
+    ;; The body is honest about what it can't do — the absence is the
+    ;; answer. A cell that needs "introspect" knows none has volunteered.
+
+    ;; ---------- Verdict ---------------------------------------------
+    ;; Three registrations land; capability filter works; absence is
+    ;; honest. Sibling parity attests every kernel runs the same L3.
+    (add count-after-c
+         (add (len compute-cells)
+              (add (len fetch-cells)
+                   (add (len about-cells)
+                        (sub 1 (len unknown-cells)))))))

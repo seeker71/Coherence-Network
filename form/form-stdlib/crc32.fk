@@ -1,0 +1,67 @@
+; crc32.fk — IEEE 802.3 CRC-32 (the zlib / PNG / Ethernet flavor), as a Form recipe.
+;
+; Canonical truth: this recipe MEANS CRC32. A kernel with the bitwise
+; primitives (band, bxor, shr_u32) can compute the checksum from this
+; definition alone — no host crc32 library required. The recipe stays
+; sovereign across sibling kernels (Go, Rust, TypeScript).
+;
+; The flavor: reverse polynomial 0xEDB88320, initial value 0xFFFFFFFF,
+; final XOR 0xFFFFFFFF. This is the universal "CRC-32" that ships in
+; zlib, PNG, Ethernet (802.3), gzip, ZIP, POSIX cksum is NOT this one
+; (it uses a different polynomial and no final XOR). When in doubt,
+; the canonical 9-byte test vector "123456789" → 0xCBF43926 attests.
+;
+; Algorithm (per-byte, no precomputed table — Form-list nth lookups
+; would dominate cost anyway; the inner 8-iteration loop is cheap):
+;
+;   crc32-byte(c, b):
+;     c = c XOR b   (low byte only)
+;     for j in 0..8:
+;       c = (c & 1) ? (0xEDB88320 ^ (c >> 1)) : (c >> 1)
+;     return c
+;
+;   crc32(bytes):
+;     c = 0xFFFFFFFF
+;     for b in bytes: c = crc32-byte(c, b)
+;     return c XOR 0xFFFFFFFF
+;
+; Cost is O(n) over input length with a fixed 8-iteration per-byte
+; inner loop. No nth lookups, no quadratic terms — the recipe walks
+; head/tail straight through.
+
+(do
+    (defn crc32-nil? (xs) (eq (len xs) 0))
+
+    ;; Inner 8-iteration shift/xor loop. At each step:
+    ;;   if low bit set: c = 0xEDB88320 XOR (c >> 1)
+    ;;   else:           c = c >> 1
+    ;; After 8 steps, the byte has been folded into the running CRC.
+    (defn crc32-fold8 (c i)
+        (if (eq i 8) c
+            (crc32-fold8
+                (if (eq (band c 1) 1)
+                    (bxor 3988292384 (shr_u32 c 1))
+                    (shr_u32 c 1))
+                (add i 1))))
+
+    ;; Fold one byte into the running CRC. XOR the byte into the low
+    ;; 8 bits of c, then run the 8-iteration inner loop.
+    (defn crc32-step (c b)
+        (crc32-fold8 (bxor c (band b 255)) 0))
+
+    ;; Walk the byte-list head-to-tail, folding each byte into c.
+    (defn crc32-loop (c bs)
+        (if (crc32-nil? bs) c
+            (crc32-loop (crc32-step c (head bs)) (tail bs))))
+
+    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
+    ;; (crc32 byte-list) → CRC32 as an unsigned 32-bit int.
+    ;; Initial value 0xFFFFFFFF (= 4294967295); final XOR 0xFFFFFFFF.
+    ;; Empty input → 4294967295 XOR 4294967295 = 0, as zlib agrees.
+    ;;
+    ;; The trailing (add_u32 _ 0) normalizes the result to an unsigned
+    ;; 32-bit integer across sibling kernels — bxor/band on Go/Rust
+    ;; print high-bit-set values as signed, while add_u32 always lives
+    ;; in u32-space. Three-way printed parity stays intact.
+    (defn crc32 (bytes)
+        (add_u32 (bxor (crc32-loop 4294967295 bytes) 4294967295) 0)))

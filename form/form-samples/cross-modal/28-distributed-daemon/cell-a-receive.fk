@@ -1,0 +1,86 @@
+; cell-a-receive.fk — cell A's receive half, run as its own kernel process.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+;           form-stdlib/symbols.fk
+;
+; A's flow in this process:
+;   1. Read its reply channel for incoming responses (L2/L1).
+;   2. Unwrap the CHANNEL-MSG to get the RESPONSE Recipe (L2).
+;   3. Walk the RESPONSE structure to extract the items list (L7).
+;   4. Verify the first item is a RECIPE-CONTENT carrying B's
+;      symbol-table (L6).
+;   5. Look up symbols in the recovered table — "concepts",
+;      "presences", and a known-absent key (L7).
+;   6. Print the verdict.
+;
+; This process never saw B in memory — only the .fkb on disk.
+; Content-addressing makes the local NodeIDs structurally identical
+; to B's authored Recipes, so the lookup converges with no extra
+; protocol.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn list-nth (xs i)
+        (if (eq i 0) (head xs) (list-nth (tail xs) (sub i 1))))
+
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let a-reply-path "/tmp/28-dist-cell-a-reply.fkb")
+
+    ;; ---------- READ THE REPLY -------------------------------------
+    (let reply-msgs (channel-read a-reply-path))
+    (print "a-reply-msgs-count:" (len reply-msgs))
+    (let response (channel-msg-payload (head reply-msgs)))
+
+    ;; ---------- WALK THE RESPONSE STRUCTURE ------------------------
+    ;; children: [correlation, status, items-LIST]
+    (let response-children (node_children response))
+    (let items-list-node (list-nth response-children 2))
+    (let items (node_children items-list-node))
+    (print "a-response-item-count:" (len items))
+
+    ;; ---------- VERIFY THE ITEM SHAPE ------------------------------
+    (let first-item (head items))
+    (let item-cat (node_category first-item))
+    (let item-cat-inst (node_inst item-cat))
+    (print "a-first-item-is-recipe-content:"
+        (if (eq item-cat-inst 1714) 1 0))    ; RECIPE-CONTENT=1714
+
+    ;; ---------- UNWRAP THE SYMBOL-TABLE ----------------------------
+    (let recovered-table (head (node_children first-item)))
+    (print "a-recovered-table-bindings:"
+        (len (symbol-table-bindings recovered-table)))
+
+    ;; ---------- LOOK UP B'S SYMBOLS --------------------------------
+    (let concepts (symbol-lookup recovered-table "concepts"))
+    (print "a-concepts-found:" (symbol-found? concepts))
+    (let concept-children (node_children concepts))
+    (print "a-concept-count:" (len concept-children))
+
+    ;; ---------- VERIFY CONTENT-ADDRESS CONVERGENCE -----------------
+    ;; A interns "divergence-doorway" locally; the NodeID must match
+    ;; what B serialized into the .fkb. This is what proves the
+    ;; cross-process content-addressing actually works.
+    (let third-concept (list-nth concept-children 2))
+    (let expected-name (intern_trivial_string "divergence-doorway"))
+    (print "a-third-concept-matches:"
+        (if (node_eq third-concept expected-name) 1 0))
+
+    (let presences (symbol-lookup recovered-table "presences"))
+    (print "a-presences-found:" (symbol-found? presences))
+    (print "a-presence-count:" (len (node_children presences)))
+
+    ;; Honest absence.
+    (let unknown (symbol-lookup recovered-table "unknown-key"))
+    (print "a-unknown-found:" (symbol-found? unknown))
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Eight assertions, each binary-clean across all three kernels.
+    (add (if (eq (len reply-msgs) 1) 1 0)
+         (add (if (eq (len items) 1) 1 0)
+              (add (if (eq item-cat-inst 1714) 1 0)
+                   (add (symbol-found? concepts)
+                        (add (if (eq (len concept-children) 3) 1 0)
+                             (add (if (node_eq third-concept expected-name) 1 0)
+                                  (add (symbol-found? presences)
+                                       (if (eq (symbol-found? unknown) 0) 1 0)))))))))

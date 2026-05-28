@@ -1,0 +1,45 @@
+; tests/channel-query-band.fk — channel-query vocabulary sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; Validates that the query/response Blueprints and their constructors
+; produce structurally-identical messages on every kernel. Band verdict
+; is 5 when all five mixed-content item-types classify correctly via
+; node_category.
+
+(do
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+
+    (defn classify (item)
+        (do
+            (let cat (node_category item))
+            (let cat-inst (node_inst cat))
+            (if (eq cat-inst 1712) "substrate-ref"
+                (if (eq cat-inst 1713) "novel-blueprint"
+                    (if (eq cat-inst 1714) "recipe-content"
+                        (if (eq cat-inst 1715) "cell-ref"
+                            (if (eq cat-inst 1716) "external-uri"
+                                "unknown")))))))
+
+    ;; Construct one item of each kind.
+    (let topic-nid (make_nodeid 1 2 99 7000))
+    (let s1 (cq-substrate-ref topic-nid))
+    (let n1 (cq-novel-blueprint (make_nodeid 1 1 14 0)
+                                (list (intern_trivial_string "leaf"))))
+    (let r1 (cq-recipe-content (cq-substrate-ref topic-nid)))
+    (let c1 (cq-cell-ref topic-nid))
+    (let u1 (cq-external-uri "https://example.com/x"
+                              (list 1 2 3 4 5 6 7 8)))
+
+    ;; Wrap into a RESPONSE to exercise that path too.
+    (let r (cq-response 42 "ok" (list s1 n1 r1 c1 u1)))
+    (let items (node_children (band-nth (node_children r) 2)))
+
+    (defn str-eq? (a b) (if (str_eq a b) 1 0))
+
+    (add (str-eq? (classify (band-nth items 0)) "substrate-ref")
+         (add (str-eq? (classify (band-nth items 1)) "novel-blueprint")
+              (add (str-eq? (classify (band-nth items 2)) "recipe-content")
+                   (add (str-eq? (classify (band-nth items 3)) "cell-ref")
+                        (str-eq? (classify (band-nth items 4)) "external-uri"))))))

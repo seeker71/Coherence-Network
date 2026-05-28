@@ -1,0 +1,262 @@
+; multi-hop.fk — three-cell routing: A → B → C → B → A.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+;
+; THE SCENE:
+;
+;   Three cells share one registry and one capability vocabulary:
+;
+;     CELL C  (id 3003) — the primary source. Owns the symbol-table
+;                         that maps "concepts" → three names.
+;     CELL B  (id 2002) — a router. Advertises capability "concepts"
+;                         but holds no local data; when asked it looks
+;                         up OTHER providers and forwards.
+;     CELL A  (id 1001) — the asker. Wants the value of "concepts".
+;
+;   Both B and C register under capability "concepts". A picks the
+;   FIRST result it finds — registration order puts B first, so A
+;   sends to the router. The router then asks the registry the same
+;   question, excludes its own identity, finds C, forwards.
+;
+;   Two hops. Two reply forwards. One file-backed channel per cell.
+;   Every Recipe crosses the wire via channel.fk's .fkb serialization;
+;   content-addressing makes the symbol-table A finally inspects
+;   structurally identical to the one C authored.
+;
+;   The walk:
+;
+;     L3 — A queries registry for "concepts", picks first (= B).
+;     L7 — A constructs QUERY (verb "concepts", topic-nid).
+;     L2 — A appends QUERY to B's channel.
+;     L7 — B reads its channel, recognizes verb, BUT has no local
+;          table. B queries registry for "concepts", filters out
+;          its own identity, picks first remaining (= C).
+;     L2 — B forwards the QUERY to C's channel.
+;     L7 — C reads its channel, builds RESPONSE with its
+;          symbol-table as one RECIPE-CONTENT item.
+;     L2 — C appends RESPONSE to B's reply channel.
+;     L2 — B reads C's reply, forwards (re-wraps as channel-message)
+;          to A's reply channel.
+;     L7 — A reads its reply, walks items, extracts symbol-table,
+;          looks up "concepts", verifies three names.
+;
+;   Three sibling kernels run the whole protocol; the verdict
+;   integer must match across all of them.
+
+(do
+    (defn mh-nil? (xs) (eq (len xs) 0))
+    (defn mh-nth (xs i)
+        (if (eq i 0) (head xs) (mh-nth (tail xs) (sub i 1))))
+    (defn mh-append (xs ys)
+        (if (mh-nil? xs) ys (cons (head xs) (mh-append (tail xs) ys))))
+
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let registry-path  "/tmp/48-mh-registry.fkb")
+    (let b-channel-path "/tmp/48-mh-cell-b.fkb")
+    (let c-channel-path "/tmp/48-mh-cell-c.fkb")
+    (let b-reply-path   "/tmp/48-mh-cell-b-reply.fkb")
+    (let a-reply-path   "/tmp/48-mh-cell-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create b-channel-path)
+    (channel-create c-channel-path)
+    (channel-create b-reply-path)
+    (channel-create a-reply-path)
+
+    ;; ---------- IDENTITIES ------------------------------------------
+    (let a-identity 1001)
+    (let b-identity 2002)
+    (let c-identity 3003)
+
+    ;; ---------- REGISTRATION ----------------------------------------
+    ;; Order matters: B registers first so A's (head ...) picks B.
+    ;; Both advertise "concepts"; only C actually has the data.
+    (register-cell registry-path b-identity b-channel-path
+                   (list "concepts"))
+    (register-cell registry-path c-identity c-channel-path
+                   (list "concepts"))
+
+    ;; ---------- CELL C: the primary source --------------------------
+    ;; C's local symbol-table — the ground truth for "concepts".
+    (defn cell-c-build-table ()
+        (symbol-table
+            (list (symbol-bind "concepts"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "trust-over-fear")
+                                 (intern_trivial_string "field-substrate")
+                                 (intern_trivial_string "divergence-doorway")))))))
+
+    ;; C reads its channel, builds a RESPONSE around its table,
+    ;; appends to the reply path it was given.
+    (defn cell-c-handle (request-channel reply-channel)
+        (do
+            (let msgs (channel-read request-channel))
+            (let query (channel-msg-payload (head msgs)))
+            (let table (cell-c-build-table))
+            (let item (cq-recipe-content table))
+            (let correlation (node_inst query))
+            (let response (cq-response correlation "ok" (list item)))
+            (channel-append reply-channel (channel-message response))))
+
+    ;; ---------- CELL B: the router ----------------------------------
+    ;; B advertises "concepts" but holds no table. When asked, it
+    ;; queries the registry for OTHER providers, forwards, then
+    ;; re-publishes the reply to the original asker's channel.
+    ;;
+    ;; Exclusion is by identity — B reads each registration's
+    ;; identity int and skips the one matching its own.
+    (defn cell-b-other-providers (regs self-id acc)
+        (if (mh-nil? regs) acc
+            (if (eq (reg-identity (head regs)) self-id)
+                (cell-b-other-providers (tail regs) self-id acc)
+                (cell-b-other-providers (tail regs) self-id
+                    (mh-append acc (list (head regs)))))))
+
+    (defn cell-b-handle (request-channel reply-out-channel)
+        (do
+            ;; 1. Read A's query from B's channel.
+            (let msgs (channel-read request-channel))
+            (let query (channel-msg-payload (head msgs)))
+
+            ;; 2. Look up other providers of "concepts" — exclude self.
+            (let all-providers (find-by-capability registry-path "concepts"))
+            (let others (cell-b-other-providers all-providers b-identity (list)))
+
+            ;; 3. Pick first remaining (= C). Forward the query.
+            (let next-hop (head others))
+            (let next-channel (reg-channel-path next-hop))
+            (channel-append next-channel (channel-message query))
+
+            ;; 4. C handles (orchestrated for in-process demo).
+            (cell-c-handle next-channel b-reply-path)
+
+            ;; 5. Read C's reply on B's reply channel.
+            (let c-reply-msgs (channel-read b-reply-path))
+            (let c-response (channel-msg-payload (head c-reply-msgs)))
+
+            ;; 6. Forward C's response to A's reply channel.
+            ;;    Content-addressing means the forwarded response
+            ;;    has the same NodeID as C's original — the router
+            ;;    is structurally transparent.
+            (channel-append reply-out-channel (channel-message c-response))
+
+            ;; Return how many forwards happened (1 outbound + 1 inbound).
+            2))
+
+    ;; ---------- CELL A: the asker -----------------------------------
+    ;; A queries the registry for "concepts", picks first.
+    (let concept-cells (find-by-capability registry-path "concepts"))
+    (print "providers-found:" (len concept-cells))
+
+    (let chosen (head concept-cells))
+    (let chosen-id (reg-identity chosen))
+    (let chosen-is-b (if (eq chosen-id b-identity) 1 0))
+    (print "first-pick-is-router:" chosen-is-b)
+
+    (let target-channel (reg-channel-path chosen))
+
+    ;; A constructs the QUERY. Topic-nid is a substrate-resident
+    ;; anchor — the address slot of the channel-query Blueprint.
+    (let topic-nid (make_nodeid 1 2 99 7777))
+    (let query (cq-query "concepts" topic-nid (intern_trivial_string "")))
+
+    ;; A appends to B's channel.
+    (channel-append target-channel (channel-message query))
+
+    ;; ---------- B HANDLES (which calls C) ---------------------------
+    ;; In a real distributed body, B and C are independent daemons
+    ;; polling their channels. Here we drive the chain in-process;
+    ;; every Recipe still crosses through file-backed channels.
+    (let hop-count (cell-b-handle b-channel-path a-reply-path))
+    (print "router-hops:" hop-count)
+
+    ;; ---------- A RECEIVES ------------------------------------------
+    (let reply-msgs (channel-read a-reply-path))
+    (print "a-reply-msg-count:" (len reply-msgs))
+
+    (let response (channel-msg-payload (head reply-msgs)))
+
+    ;; Walk RESPONSE children: [correlation, status, items-LIST].
+    (let response-children (node_children response))
+    (let status-node (mh-nth response-children 1))
+    (let status-ok (if (str_eq (node_value status-node) "ok") 1 0))
+    (print "status-ok:" status-ok)
+
+    (let items-list-node (mh-nth response-children 2))
+    (let items (node_children items-list-node))
+    (print "response-item-count:" (len items))
+
+    ;; The single item is a RECIPE-CONTENT carrying C's symbol-table.
+    (let first-item (head items))
+    (let item-cat (node_category first-item))
+    (let item-cat-inst (node_inst item-cat))
+    (print "first-item-is-recipe-content:"
+        (if (eq item-cat-inst 1714) 1 0))
+
+    ;; Unwrap RECIPE-CONTENT → the table.
+    (let recovered-table (head (node_children first-item)))
+    (print "recovered-table-bindings:"
+        (len (symbol-table-bindings recovered-table)))
+
+    ;; Look up "concepts" — C's three names should round-trip.
+    (let concepts (symbol-lookup recovered-table "concepts"))
+    (print "concepts-found:" (symbol-found? concepts))
+
+    (let concept-children (node_children concepts))
+    (print "concept-count:" (len concept-children))
+
+    ;; Each name compares by node_eq against a freshly-interned local
+    ;; SubstrateString — content-addressing carries the binding across
+    ;; two channel hops without a schema negotiation.
+    (let name-0 (mh-nth concept-children 0))
+    (let name-1 (mh-nth concept-children 1))
+    (let name-2 (mh-nth concept-children 2))
+    (let expected-0 (intern_trivial_string "trust-over-fear"))
+    (let expected-1 (intern_trivial_string "field-substrate"))
+    (let expected-2 (intern_trivial_string "divergence-doorway"))
+    (let name-0-ok (if (node_eq name-0 expected-0) 1 0))
+    (let name-1-ok (if (node_eq name-1 expected-1) 1 0))
+    (let name-2-ok (if (node_eq name-2 expected-2) 1 0))
+    (print "name-0-match:" name-0-ok)
+    (print "name-1-match:" name-1-ok)
+    (print "name-2-match:" name-2-ok)
+
+    ;; ---------- HOP ATTESTATIONS ------------------------------------
+    ;; The B channel saw A's query. C's channel saw the forwarded
+    ;; query. B's reply channel saw C's response. A's reply channel
+    ;; saw the forwarded response. Four file-backed transits, each
+    ;; observable after the fact by re-reading.
+    (let b-channel-msgs (channel-read b-channel-path))
+    (let c-channel-msgs (channel-read c-channel-path))
+    (let b-reply-msgs (channel-read b-reply-path))
+    (print "b-channel-saw:" (len b-channel-msgs))
+    (print "c-channel-saw:" (len c-channel-msgs))
+    (print "b-reply-saw:" (len b-reply-msgs))
+
+    (let hop1-ok (if (eq (len b-channel-msgs) 1) 1 0))
+    (let hop2-ok (if (eq (len c-channel-msgs) 1) 1 0))
+    (let hop3-ok (if (eq (len b-reply-msgs) 1) 1 0))
+    (let hop4-ok (if (eq (len reply-msgs) 1) 1 0))
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Twelve attestations:
+    ;;   - 2 providers under "concepts"
+    ;;   - first pick is the router (B)
+    ;;   - status "ok"
+    ;;   - item is RECIPE-CONTENT
+    ;;   - "concepts" found in recovered table
+    ;;   - each of three names round-trips by node_eq
+    ;;   - each of the four channel hops persisted one message
+    ;; Verdict = 12 when the body routes cleanly on every kernel.
+    (add (if (eq (len concept-cells) 2) 1 0)
+         (add chosen-is-b
+              (add status-ok
+                   (add (if (eq item-cat-inst 1714) 1 0)
+                        (add (symbol-found? concepts)
+                             (add name-0-ok
+                                  (add name-1-ok
+                                       (add name-2-ok
+                                            (add hop1-ok
+                                                 (add hop2-ok
+                                                      (add hop3-ok hop4-ok))))))))))))

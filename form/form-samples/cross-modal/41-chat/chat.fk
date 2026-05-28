@@ -1,0 +1,128 @@
+; chat.fk — two cells exchange free-form text over channel.fk.
+;
+; preludes: form-stdlib/channel.fk
+;
+; THE SCENE:
+;
+;   Cell A and Cell B each have their OWN incoming channel — a tiny
+;   mailbox file on disk. When A wants to talk to B, A appends a MESSAGE
+;   Recipe to /tmp/chat-b.fkb. When B wants to reply, B appends to
+;   /tmp/chat-a.fkb. Either side reads its own channel to pick up what
+;   the other dropped off.
+;
+;   Two mailboxes, one shape per envelope, four turns of conversation.
+;   No registry, no router, no session layer — just two channels and a
+;   Blueprint they both know.
+;
+; THE ENVELOPE:
+;
+;   MESSAGE (sender-string, body-string, sequence-int)
+;
+;   Every chat message is a Recipe whose Blueprint is MESSAGE and whose
+;   ordered children are the sender's name, the body text, and a
+;   per-direction sequence counter. The Blueprint NodeID is fixed by
+;   `make_nodeid 1 2 99 1760` — both cells use the same call site, so
+;   their MESSAGE Recipes content-address identically.
+;
+; WHAT WE PRINT:
+;
+;   For each read, the recipient extracts (sender, body, seq) via
+;   accessors using `node_value`, checks the body text with `str_eq`,
+;   and prints the seq number along with the body-match result. Raw
+;   NodeID values stay off the wire of stdout — per-kernel inst
+;   counters diverge on those, but `str_eq` results and ints are
+;   canonical across Go, Rust, and TypeScript.
+
+(do
+    ;; ---------- Blueprints ------------------------------------------
+    ;; MESSAGE Blueprint: every chat envelope is interned under this
+    ;; NodeID. Both sides import the same call site → identical Bp.
+    (let MESSAGE-CAT (make_nodeid 1 2 99 1760))
+
+    ;; ---------- envelope construction -------------------------------
+    ;; make-message — wrap (sender, body, seq) into a MESSAGE Recipe.
+    ;; All three slots intern as trivial Recipes; content-addressing
+    ;; means same-text + same-seq → same NodeID across kernels.
+    (defn make-message (sender body seq)
+        (intern_node MESSAGE-CAT
+            (list (intern_trivial_string sender)
+                  (intern_trivial_string body)
+                  (intern_trivial_int seq))))
+
+    ;; ---------- accessors -------------------------------------------
+    ;; The children list is positional: 0=sender, 1=body, 2=seq.
+    ;; node_value reads the underlying SubstrateString / int back out
+    ;; of each trivial Recipe — no Blueprint negotiation needed.
+    (defn message-sender (m)
+        (node_value (head (node_children m))))
+    (defn message-body (m)
+        (node_value (head (tail (node_children m)))))
+    (defn message-seq (m)
+        (node_value (head (tail (tail (node_children m))))))
+
+    ;; ---------- topology --------------------------------------------
+    ;; Two mailboxes — one per recipient. Cell A reads /tmp/chat-a.fkb
+    ;; and writes to /tmp/chat-b.fkb. Cell B reads/writes the mirror.
+    (let chat-a-path "/tmp/chat-a.fkb")
+    (let chat-b-path "/tmp/chat-b.fkb")
+
+    (channel-create chat-a-path)
+    (channel-create chat-b-path)
+
+    ;; ---------- Step 1: A sends "hello" to B ------------------------
+    (let m1 (make-message "A" "hello" 1))
+    (channel-append chat-b-path (channel-message m1))
+
+    ;; B reads its mailbox: one new message waiting.
+    (let b-inbox-1 (channel-read chat-b-path))
+    (let b-msg-1 (channel-msg-payload (head b-inbox-1)))
+    (let b-seq-1 (message-seq b-msg-1))
+    (let b-body-1-ok (if (str_eq (message-body b-msg-1) "hello") 1 0))
+    (print "B-received-seq:" b-seq-1)
+    (print "B-body-hello-match:" b-body-1-ok)
+
+    ;; ---------- Step 2: B responds "hi" to A ------------------------
+    (let m2 (make-message "B" "hi" 1))
+    (channel-append chat-a-path (channel-message m2))
+
+    ;; A reads its mailbox.
+    (let a-inbox-1 (channel-read chat-a-path))
+    (let a-msg-1 (channel-msg-payload (head a-inbox-1)))
+    (let a-seq-1 (message-seq a-msg-1))
+    (let a-body-1-ok (if (str_eq (message-body a-msg-1) "hi") 1 0))
+    (print "A-received-seq:" a-seq-1)
+    (print "A-body-hi-match:" a-body-1-ok)
+
+    ;; ---------- Step 3: A asks "what's your name" (seq 2) -----------
+    (let m3 (make-message "A" "what's your name" 2))
+    (channel-append chat-b-path (channel-message m3))
+
+    ;; B reads its mailbox — now two messages total, take the second.
+    (let b-inbox-2 (channel-read chat-b-path))
+    (let b-msg-2 (channel-msg-payload (head (tail b-inbox-2))))
+    (let b-seq-2 (message-seq b-msg-2))
+    (let b-body-2-ok
+        (if (str_eq (message-body b-msg-2) "what's your name") 1 0))
+    (print "B-received-seq:" b-seq-2)
+    (print "B-body-name-match:" b-body-2-ok)
+
+    ;; ---------- Step 4: B responds "I am Beta" (seq 2) --------------
+    (let m4 (make-message "B" "I am Beta" 2))
+    (channel-append chat-a-path (channel-message m4))
+
+    ;; A reads its mailbox — second message is B's name.
+    (let a-inbox-2 (channel-read chat-a-path))
+    (let a-msg-2 (channel-msg-payload (head (tail a-inbox-2))))
+    (let a-seq-2 (message-seq a-msg-2))
+    (let a-body-2-ok
+        (if (str_eq (message-body a-msg-2) "I am Beta") 1 0))
+    (print "A-received-seq:" a-seq-2)
+    (print "A-body-beta-match:" a-body-2-ok)
+
+    ;; ---------- verdict ---------------------------------------------
+    ;; Four successful body matches across two channels. Sequence
+    ;; numbers carried through the envelope; bodies survived the
+    ;; .fkb round-trip; sender field is along for the ride.
+    (add b-body-1-ok
+         (add a-body-1-ok
+              (add b-body-2-ok a-body-2-ok))))

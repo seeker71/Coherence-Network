@@ -1,0 +1,139 @@
+; symbols-merge.fk — set-algebra over symbol-tables.
+;
+; Symbol-tables (form-stdlib/symbols.fk) are name → value bindings.
+; Once two cells exchange tables via the wire, the receiving cell often
+; wants to compose them: union with a winner, strict union with a
+; conflict signal, intersect down to shared keys, or diff to see what
+; one side carries that the other doesn't.
+;
+; These four operations are the natural set algebra on tables:
+;
+;   (symbols-merge        A B)  → A ∪ B, B wins on overlap.
+;   (symbols-merge-strict A B)  → A ∪ B, or SYMBOLS-CONFLICT if any
+;                                 key appears in both.
+;   (symbols-intersect    A B)  → keys ∩, values from A.
+;   (symbols-diff         A B)  → name-list of (keys-of-A − keys-of-B).
+;
+; SYMBOLS-CONFLICT is a substrate-resident sentinel — callers compare
+; the result against it with node_eq to distinguish "merged table" from
+; "conflict refused."
+;
+; preludes: form-stdlib/symbols.fk
+
+(let SYMBOLS-CONFLICT (make_nodeid 1 2 99 1810))
+
+;; --- helpers ------------------------------------------------------
+
+(defn smerge-nil? (xs) (eq (len xs) 0))
+
+(defn smerge-append (xs ys)
+    (if (smerge-nil? xs) ys
+        (cons (head xs) (smerge-append (tail xs) ys))))
+
+;; Does the binding-list `binds` contain a binding whose name has the
+;; given trivial-string node-inst id?
+(defn smerge-has-name? (binds name-id)
+    (if (smerge-nil? binds) 0
+        (if (eq (node_inst (symbol-name (head binds))) name-id)
+            1
+            (smerge-has-name? (tail binds) name-id))))
+
+;; Drop every binding from `binds` whose name appears in the inst-id
+;; set `b-ids`. Preserves order of survivors.
+(defn smerge-drop-overlap (binds b-ids)
+    (if (smerge-nil? binds) (list)
+        (if (eq (smerge-id-in? b-ids
+                                (node_inst (symbol-name (head binds))))
+                1)
+            (smerge-drop-overlap (tail binds) b-ids)
+            (cons (head binds)
+                  (smerge-drop-overlap (tail binds) b-ids)))))
+
+;; Collect the node_inst id of every binding's name into a flat list.
+(defn smerge-name-ids (binds)
+    (if (smerge-nil? binds) (list)
+        (cons (node_inst (symbol-name (head binds)))
+              (smerge-name-ids (tail binds)))))
+
+;; Is `id` present in the id-list `ids`?
+(defn smerge-id-in? (ids id)
+    (if (smerge-nil? ids) 0
+        (if (eq (head ids) id) 1
+            (smerge-id-in? (tail ids) id))))
+
+;; Any name in `a-binds` that also appears in `b-ids`?
+(defn smerge-any-overlap? (a-binds b-ids)
+    (if (smerge-nil? a-binds) 0
+        (if (eq (smerge-id-in? b-ids
+                                (node_inst (symbol-name (head a-binds))))
+                1)
+            1
+            (smerge-any-overlap? (tail a-binds) b-ids))))
+
+;; --- merge --------------------------------------------------------
+
+;; (symbols-merge tableA tableB)
+;; New table: every binding of A that B does NOT also bind, followed
+;; by every binding of B. B wins on overlap, insertion order preserves
+;; A's surviving keys first then all of B's.
+(defn symbols-merge (a b)
+    (do
+        (let a-binds (node_children a))
+        (let b-binds (node_children b))
+        (let b-ids   (smerge-name-ids b-binds))
+        (let kept-a  (smerge-drop-overlap a-binds b-ids))
+        (symbol-table (smerge-append kept-a b-binds))))
+
+;; (symbols-merge-strict tableA tableB)
+;; If any name appears in both, return SYMBOLS-CONFLICT; otherwise the
+;; concatenated table.
+(defn symbols-merge-strict (a b)
+    (do
+        (let a-binds (node_children a))
+        (let b-binds (node_children b))
+        (let b-ids   (smerge-name-ids b-binds))
+        (if (eq (smerge-any-overlap? a-binds b-ids) 1)
+            SYMBOLS-CONFLICT
+            (symbol-table (smerge-append a-binds b-binds)))))
+
+;; --- intersect ----------------------------------------------------
+
+;; (symbols-intersect tableA tableB)
+;; A table containing every binding of A whose name also appears in B.
+;; Values come from A; B's values are ignored on overlap.
+(defn smerge-keep-overlap (a-binds b-ids)
+    (if (smerge-nil? a-binds) (list)
+        (if (eq (smerge-id-in? b-ids
+                                (node_inst (symbol-name (head a-binds))))
+                1)
+            (cons (head a-binds)
+                  (smerge-keep-overlap (tail a-binds) b-ids))
+            (smerge-keep-overlap (tail a-binds) b-ids))))
+
+(defn symbols-intersect (a b)
+    (do
+        (let a-binds (node_children a))
+        (let b-binds (node_children b))
+        (let b-ids   (smerge-name-ids b-binds))
+        (symbol-table (smerge-keep-overlap a-binds b-ids))))
+
+;; --- diff ---------------------------------------------------------
+
+;; (symbols-diff tableA tableB) → list of name SubstrateStrings present
+;; in A but not in B. Names are returned (not full bindings) — the
+;; caller can resolve back to values via symbol-lookup if needed.
+(defn smerge-names-not-in (a-binds b-ids)
+    (if (smerge-nil? a-binds) (list)
+        (if (eq (smerge-id-in? b-ids
+                                (node_inst (symbol-name (head a-binds))))
+                1)
+            (smerge-names-not-in (tail a-binds) b-ids)
+            (cons (symbol-name (head a-binds))
+                  (smerge-names-not-in (tail a-binds) b-ids)))))
+
+(defn symbols-diff (a b)
+    (do
+        (let a-binds (node_children a))
+        (let b-binds (node_children b))
+        (let b-ids   (smerge-name-ids b-binds))
+        (smerge-names-not-in a-binds b-ids)))

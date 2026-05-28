@@ -1,0 +1,116 @@
+; tree-diff.fk — sample: structural diff and patch on Form Recipes.
+;
+; preludes: form-stdlib/tree-diff.fk
+;
+; Three scenarios drive every arm of the diff/patch walker:
+;
+;   1. IDENTICAL TREES  — two recipes built from the same Blueprint
+;                          + same children intern to the same NodeID.
+;                          tree-diff collapses to (diff-equal); patch
+;                          returns the original; diff-empty? is 1.
+;
+;   2. LEAF SUBSTITUTION — two binary-shape trees that share root cat
+;                          and arity, differing only in one leaf. The
+;                          diff is a (diff-children ...) whose differing
+;                          position carries a (diff-replace ...). Patch
+;                          reconstructs the target byte-for-byte.
+;
+;   3. ROOT CATEGORY DIFF — two trees with different root categories.
+;                            tree-diff short-circuits to a top-level
+;                            (diff-replace b). Patch returns b unchanged.
+;
+; The verdict counts ten load-bearing attestations across the three
+; scenarios. Sibling parity over the verdict means every kernel walks
+; the same diff/patch trees and arrives at the same content-addressed
+; reconstruction.
+
+(do
+    ;; --- application categories for the toy trees -------------------
+    (let CAT-PLUS  (make_nodeid 1 2 99 7700))
+    (let CAT-MINUS (make_nodeid 1 2 99 7701))
+    (let CAT-N     (make_nodeid 1 2 99 7702))
+
+    (defn leaf (cat) (intern_node cat (list)))
+
+    ;; bool-to-int — stored predicates we want to sum at the verdict
+    ;; need to be ints. node_eq returns bool in TS and int-or-bool in
+    ;; the other kernels; collapse everything via (if pred 1 0) at the
+    ;; point where the predicate is computed (immediate-use site, where
+    ;; the (if) directly consumes the bool).
+    (defn b2i (p) (if p 1 0))
+
+    ;; --- scenario 1: identical trees -------------------------------
+    ;; Two recipes built from the same building blocks. Content-
+    ;; addressing makes them the same NodeID; tree-diff returns
+    ;; diff-equal; patch returns the original.
+
+    (let a1 (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let b1 (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let d1 (tree-diff a1 b1))
+    (let p1 (tree-patch a1 d1))
+    (let s1-diff-equal (b2i (node_eq (node_category d1) DIFF-EQUAL)))
+    (let s1-patch-ok   (b2i (node_eq p1 b1)))
+    (let s1-empty      (diff-empty? d1))
+    (print "scenario-1-diff-equal:" s1-diff-equal)
+    (print "scenario-1-patch-eq-b:" s1-patch-ok)
+    (print "scenario-1-empty:"      s1-empty)
+
+    ;; --- scenario 2: leaf substitution -----------------------------
+    ;; Two PLUS-rooted recipes with two children each. The first child
+    ;; matches (N == N). The second child differs (N vs MINUS leaf).
+    ;; Expected diff shape:
+    ;;   (diff-children [ (diff-equal) , (diff-replace <MINUS-leaf>) ])
+
+    (let a2 (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let b2 (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-MINUS))))
+    (let d2 (tree-diff a2 b2))
+    (let d2-kids (node_children d2))
+    (let d2-kid0-cat (node_category (head d2-kids)))
+    (let d2-kid1-cat (node_category (head (tail d2-kids))))
+    (let p2 (tree-patch a2 d2))
+
+    (let s2-root-children (b2i (node_eq (node_category d2) DIFF-CHILDREN)))
+    (let s2-kid0-equal    (b2i (node_eq d2-kid0-cat DIFF-EQUAL)))
+    (let s2-kid1-replace  (b2i (node_eq d2-kid1-cat DIFF-REPLACE)))
+    (let s2-nonempty      (sub 1 (diff-empty? d2)))
+    (let s2-patch-ok      (b2i (node_eq p2 b2)))
+
+    (print "scenario-2-diff-children:" s2-root-children)
+    (print "scenario-2-kid0-equal:"    s2-kid0-equal)
+    (print "scenario-2-kid1-replace:"  s2-kid1-replace)
+    (print "scenario-2-nonempty:"      s2-nonempty)
+    (print "scenario-2-patch-eq-b:"    s2-patch-ok)
+
+    ;; --- scenario 3: root category differs --------------------------
+    ;; PLUS vs MINUS at the root — no per-child recursion possible.
+    ;; tree-diff short-circuits to (diff-replace b3); patch returns b3.
+
+    (let a3 (intern_node CAT-PLUS  (list (leaf CAT-N) (leaf CAT-N))))
+    (let b3 (intern_node CAT-MINUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let d3 (tree-diff a3 b3))
+    (let p3 (tree-patch a3 d3))
+    (let s3-diff-replace (b2i (node_eq (node_category d3) DIFF-REPLACE)))
+    (let s3-patch-ok     (b2i (node_eq p3 b3)))
+
+    (print "scenario-3-diff-replace:" s3-diff-replace)
+    (print "scenario-3-patch-eq-b:"   s3-patch-ok)
+
+    ;; --- verdict ----------------------------------------------------
+    ;; Three scenarios, ten checks total:
+    ;;   1. equal trees produce an empty diff that patches back (3).
+    ;;   2. leaf substitution → children-diff w/ one replace, patch
+    ;;      reconstructs b, diff is non-empty (5).
+    ;;   3. category divergence at root → top-level replace, patch
+    ;;      returns the new tree (2).
+    ;;
+    ;; Verdict is the sum; 10 when every kernel walks the same trees.
+
+    (add s1-diff-equal
+        (add s1-patch-ok
+            (add s1-empty
+                (add s2-root-children
+                    (add s2-kid0-equal
+                        (add s2-kid1-replace
+                            (add s2-nonempty
+                                (add s2-patch-ok
+                                    (add s3-diff-replace s3-patch-ok))))))))))

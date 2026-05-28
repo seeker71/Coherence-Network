@@ -1,0 +1,126 @@
+; rate-limit.fk — token-bucket rate limiter as a Form recipe.
+;
+; preludes: (none — pure list + int primitives)
+;
+; Canonical truth: this recipe MEANS a token-bucket rate limiter that
+; observers consult to ask "may this request go now?" Every BUCKET
+; carries (capacity, tokens-remaining, last-refill-time, refill-rate).
+; Cells consume from a bucket by calling
+; (bucket-consume bucket cost now); the recipe refills lazily based
+; on elapsed time since last-refill, capped at capacity. If the
+; refilled bucket holds enough tokens the request is admitted and a
+; debited bucket returned; otherwise the bucket is returned unchanged.
+; No rate-limit native exists in any sibling kernel — the recipe IS
+; the implementation, and Go, Rust, and TypeScript answer the same
+; admit/reject verdict from the same bucket.
+;
+; The shape we commit to:
+;
+;   BUCKET (
+;     capacity         : int (max tokens the bucket can hold),
+;     tokens-remaining : int (current available token count),
+;     last-refill-time : int (caller-clock timestamp in ms),
+;     refill-rate      : int (tokens per second)
+;   )
+;
+; The refill rule:
+;   new-tokens = min(capacity,
+;                    tokens-remaining + (now - last-refill) * refill-rate / 1000)
+;
+;   Refill is lazy — the bucket doesn't tick on its own. It catches up
+;   at the moment of query, computing how many tokens would have
+;   accumulated since last-refill at refill-rate tokens/second, then
+;   clamping at capacity so a long-idle bucket can't burst beyond its
+;   declared ceiling. Integer division on the (elapsed * rate / 1000)
+;   keeps the recipe portable across kernels — fractional tokens are
+;   dropped, which is the correct conservative behavior for a limiter.
+;
+; Surface:
+;   (bucket-new capacity refill-rate)                  → fresh bucket (full)
+;   (bucket-consume bucket cost now-time)              → new bucket OR same
+;   (bucket-can-consume? bucket cost now-time)         → 1 or 0
+;   (bucket-capacity bucket)                           → int
+;   (bucket-tokens bucket)                             → int (raw, unfilled)
+;   (bucket-last-refill bucket)                        → int
+;   (bucket-refill-rate bucket)                        → int
+;
+; Blueprint NodeID (substrate-resident; pkg=1 level=2 type=99 user
+; channel; inst slot 1840 reserves the rate-limit family, adjacent to
+; the tree-diff cluster at 1830 and the session cluster at 1860):
+;   BUCKET = inst 1840
+;
+; Cost: every operation is O(1) — bucket is a 4-element list, refill
+; is one subtraction + one multiplication + one division + one min.
+; No history is kept; the bucket carries only its current state and
+; the last-refill timestamp.
+
+(do
+    ;; --- Blueprint (substrate-resident NodeID) ---------------------
+    (let BUCKET (make_nodeid 1 2 99 1840))
+
+    ;; --- LOCAL HELPERS ---------------------------------------------
+    (defn rl-min2 (a b) (if (lt a b) a b))
+
+    ;; --- BUCKET CONSTRUCTION & ACCESSORS ---------------------------
+    ;; Buckets are plain Form lists of (capacity, tokens-remaining,
+    ;; last-refill-time, refill-rate). The Blueprint NodeID above
+    ;; names the family for cross-cell recognition; the data shape
+    ;; stays list-based so the recipe composes directly with the
+    ;; kernel's list primitives.
+
+    ;; (bucket-new capacity refill-rate) → BUCKET starting full.
+    ;; last-refill is 0 so a fresh bucket's first consume sees no
+    ;; extra refill — it carries the full capacity from birth.
+    (defn bucket-new (capacity refill-rate)
+        (list capacity capacity 0 refill-rate))
+
+    (defn bucket-capacity     (b) (head b))
+    (defn bucket-tokens       (b) (head (tail b)))
+    (defn bucket-last-refill  (b) (head (tail (tail b))))
+    (defn bucket-refill-rate  (b) (head (tail (tail (tail b)))))
+
+    ;; --- REFILL CALCULATION ----------------------------------------
+    ;; (rl-refilled bucket now) → tokens the bucket would carry if
+    ;; refilled to "now" but not yet debited. Computes the elapsed
+    ;; window since last-refill, multiplies by refill-rate, divides
+    ;; by 1000 (rate is per-second; we work in ms), adds to current
+    ;; tokens, then clamps at capacity. Lazy refill — no work happens
+    ;; until someone asks.
+    (defn rl-refilled (bucket now)
+        (do
+            (let capacity     (bucket-capacity bucket))
+            (let tokens       (bucket-tokens bucket))
+            (let last-refill  (bucket-last-refill bucket))
+            (let refill-rate  (bucket-refill-rate bucket))
+            (let elapsed      (sub now last-refill))
+            (let added        (div (mul elapsed refill-rate) 1000))
+            (rl-min2 capacity (add tokens added))))
+
+    ;; --- CAN-CONSUME? ----------------------------------------------
+    ;; (bucket-can-consume? bucket cost now) → 1 if the refilled
+    ;; bucket would hold at least cost tokens, else 0. Pure query —
+    ;; the bucket is not mutated.
+    (defn bucket-can-consume? (bucket cost now)
+        (if (ge (rl-refilled bucket now) cost) 1 0))
+
+    ;; --- CONSUME ---------------------------------------------------
+    ;; (bucket-consume bucket cost now) → bucket.
+    ;;
+    ;; If the refilled bucket holds at least cost tokens, returns a
+    ;; new bucket carrying (capacity, refilled - cost, now, refill-rate)
+    ;; — the debit lands AND the last-refill stamp advances to now so
+    ;; subsequent refills accumulate from this moment. If not enough
+    ;; tokens, returns the bucket unchanged (NOT a refilled bucket);
+    ;; the rejection leaves no trace, which means a tight loop of
+    ;; rejected consumes doesn't slowly burn the refill window. The
+    ;; caller observes admit/reject by comparing the returned bucket's
+    ;; tokens to the input bucket's tokens or by asking can-consume?
+    ;; ahead of time.
+    (defn bucket-consume (bucket cost now)
+        (do
+            (let capacity     (bucket-capacity bucket))
+            (let refill-rate  (bucket-refill-rate bucket))
+            (let refilled     (rl-refilled bucket now))
+            (if (ge refilled cost)
+                (list capacity (sub refilled cost) now refill-rate)
+                bucket))))

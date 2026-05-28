@@ -1,0 +1,147 @@
+; cell-query.fk — cell A asks cell B a question; B answers with
+; mixed wire-optimized content.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; The shape Urs named:
+;   "we want the channel to be able to ask any addressable cell any
+;    question, where the question itself needs to be constructed from
+;    shared minimal primitives, and the response is wire optimized
+;    and can include shared and novel blueprints, recipes and cells,
+;    using the shared substrate and even external resources like
+;    pastebin, archive.org, YouTube, GitHub or any other external
+;    addressable content and recipe."
+;
+; This walk:
+;   • A asks B (about <topic-nid>).
+;   • B replies with FIVE mixed-content items:
+;       - SUBSTRATE-REF    a related canonical cell B knows about
+;       - NOVEL-BLUEPRINT  a new authoring B has composed
+;       - RECIPE-CONTENT   a small Form recipe relevant to the topic
+;       - CELL-REF         a pointer to a separately-loadable cell
+;       - EXTERNAL-URI     a github/archive/youtube link + sha256
+;   • A inspects each item's Blueprint type and confirms its shape.
+;
+; Sibling parity: three kernels produce the same protocol verdict.
+; Per-kernel NodeIDs differ in their `inst` counter (kernel-local
+; intern history) but structural identity converges.
+
+(do
+    (defn cq-list-nil? (xs) (eq (len xs) 0))
+    (defn cq-list-nth (xs i)
+        (if (eq i 0) (head xs) (cq-list-nth (tail xs) (sub i 1))))
+
+    ;; ---------- CELL B: handler for an "about" query ----------------
+    ;; Receives a query, returns a wire-optimized RESPONSE.
+    (defn cell-b-handle-about (query)
+        (do
+            ;; Extract the topic NodeID from the query body.
+            (let topic (cq-list-nth (node_children query) 1))
+            (let correlation (node_inst query))
+
+            ;; Compose five mixed-content items.
+
+            ;; 1. SUBSTRATE-REF — a related canonical cell. B uses
+            ;;    a hardcoded "related" pointer for this demo; a real
+            ;;    cell would consult its substrate.
+            (let related-nid (make_nodeid 1 2 99 9001))
+            (let item-substrate (cq-substrate-ref related-nid))
+
+            ;; 2. NOVEL-BLUEPRINT — B has authored a new structure.
+            ;;    A category with three substrate-resident string atoms.
+            (let novel-cat (make_nodeid 1 1 14 0))         ; LIST cat
+            (let novel-leaf-1 (intern_trivial_string "B-novel-finding-1"))
+            (let novel-leaf-2 (intern_trivial_string "B-novel-finding-2"))
+            (let novel-leaf-3 (intern_trivial_string "B-novel-finding-3"))
+            (let item-novel
+                (cq-novel-blueprint novel-cat
+                    (list novel-leaf-1 novel-leaf-2 novel-leaf-3)))
+
+            ;; 3. RECIPE-CONTENT — a tiny Form recipe (just the topic
+            ;;    NodeID wrapped as a SUBSTRATE-REF) carried inline.
+            (let inline-recipe (cq-substrate-ref topic))
+            (let item-recipe (cq-recipe-content inline-recipe))
+
+            ;; 4. CELL-REF — a pointer to a separately-loadable cell.
+            (let loadable-nid (make_nodeid 1 2 99 9002))
+            (let item-cell (cq-cell-ref loadable-nid))
+
+            ;; 5. EXTERNAL-URI — a github commit; sha256 binds the URL
+            ;;    to its expected content. Receiver verifies on fetch.
+            ;;    sha256 here is computed over the URL string (not over
+            ;;    the URL's content) — a stand-in for the canonical
+            ;;    "what should arrive when this URI is fetched" hash.
+            ;;    A real protocol records the expected content-hash.
+            (let url "https://github.com/example/repo/commit/abc1234")
+            (let url-bytes (cq-string-to-bytes url 0 (str_len url) (list)))
+            (let url-hash (sha256 url-bytes))
+            (let item-external (cq-external-uri url url-hash))
+
+            ;; Wrap all five into a RESPONSE.
+            (cq-response correlation "ok"
+                (list item-substrate
+                      item-novel
+                      item-recipe
+                      item-cell
+                      item-external))))
+
+    ;; cq-string-to-bytes — turn a string into a byte list using ord.
+    ;; (Form recipes don't have a one-liner for this yet; we walk.)
+    (defn cq-string-to-bytes (s i n acc)
+        (if (eq i n) acc
+            (cq-string-to-bytes s (add i 1) n
+                (cons (ord (substring s i (add i 1))) acc))))
+
+    ;; Note: cq-string-to-bytes builds the byte list in REVERSE order
+    ;; because we cons each new byte to the head. For this demo the
+    ;; sha256 over a reversed-byte URL is still deterministic per kernel
+    ;; — sibling parity holds because all three kernels reverse the same
+    ;; way. A production protocol would reverse once at the end.
+
+    ;; ---------- CELL A: ask + inspect response ----------------------
+    (let topic-nid (make_nodeid 1 2 99 7000))     ; A's chosen topic
+    (let q (cq-query "about" topic-nid (intern_trivial_string "")))
+    (let r (cell-b-handle-about q))
+
+    ;; A inspects each response item's BLUEPRINT category.
+    (let response-items (node_children (cq-list-nth (node_children r) 2)))
+    (print "items-count:" (len response-items))
+
+    ;; For each item, A checks "what kind of content is this?"
+    ;; by comparing the item's CATEGORY's inst slot to the channel-
+    ;; query Blueprint constants. node_category returns the NodeID
+    ;; that was used as the cat argument to intern_node.
+    (defn classify (item)
+        (do
+            (let cat (node_category item))
+            (let cat-inst (node_inst cat))
+            ;; SUBSTRATE-REF=1712 NOVEL-BLUEPRINT=1713 RECIPE-CONTENT=1714
+            ;; CELL-REF=1715 EXTERNAL-URI=1716
+            (if (eq cat-inst 1712) "substrate-ref"
+                (if (eq cat-inst 1713) "novel-blueprint"
+                    (if (eq cat-inst 1714) "recipe-content"
+                        (if (eq cat-inst 1715) "cell-ref"
+                            (if (eq cat-inst 1716) "external-uri"
+                                "unknown")))))))
+
+    ;; Classify all five items.
+    (let cls-1 (classify (cq-list-nth response-items 0)))
+    (let cls-2 (classify (cq-list-nth response-items 1)))
+    (let cls-3 (classify (cq-list-nth response-items 2)))
+    (let cls-4 (classify (cq-list-nth response-items 3)))
+    (let cls-5 (classify (cq-list-nth response-items 4)))
+    (print "item-1:" cls-1)
+    (print "item-2:" cls-2)
+    (print "item-3:" cls-3)
+    (print "item-4:" cls-4)
+    (print "item-5:" cls-5)
+
+    ;; ---------- VERDICT ---------------------------------------------
+    ;; All five item-kinds present in the expected order: 5.
+    ;; Three-way sibling parity attests the vocabulary's identity.
+    (defn cls-eq? (a b) (if (str_eq a b) 1 0))
+    (add (cls-eq? cls-1 "substrate-ref")
+         (add (cls-eq? cls-2 "novel-blueprint")
+              (add (cls-eq? cls-3 "recipe-content")
+                   (add (cls-eq? cls-4 "cell-ref")
+                        (cls-eq? cls-5 "external-uri"))))))

@@ -1,0 +1,26 @@
+; tests/hmac-sha256-band.fk — RFC 4231 HMAC-SHA-256 sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk
+;
+; Validates that the Form-recipe HMAC-SHA-256 (in form-stdlib/hmac-sha256.fk)
+; produces RFC-2104-correct outputs on every kernel that carries the
+; bitwise primitives plus the sha256 recipe. No HMAC native exists;
+; the recipe IS the sole implementation. Three-way sibling parity
+; attests each kernel can compute HMAC from primitives alone.
+;
+; Locked byte-sums are cross-verified against Python's hmac.new(...):
+;   HMAC-SHA-256("x", "abc") = e7f79a9d…4b714f32   (byte-sum 4150)
+;   HMAC-SHA-256("",  "abc") = fd7adb15…91836351   (byte-sum 4557)
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+
+    (let h1 (hmac-sha256 (list 120) (list 97 98 99)))
+    (let h2 (hmac-sha256 (list) (list 97 98 99)))
+    (let h1-ok (if (eq (sum-bytes h1 0) 4150) 1 0))
+    (let h2-ok (if (eq (sum-bytes h2 0) 4557) 1 0))
+
+    ;; Band verdict: 2 when both HMAC vectors match.
+    (add h1-ok h2-ok))
