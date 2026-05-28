@@ -34,6 +34,7 @@ import {
   channelAudience,
   SELF_ROOT,
 } from "@/lib/form-kernel/self-space";
+import { buildVisionSpace, edgeSegments } from "@/lib/form-kernel/vision-space";
 import {
   appendMessage,
   dedupCount,
@@ -292,6 +293,7 @@ function Room({
   focused,
   fbTexture,
   normalMap,
+  representation,
   onSelect,
   onDrill,
 }: {
@@ -300,6 +302,7 @@ function Room({
   focused: boolean;
   fbTexture: THREE.Texture;
   normalMap: THREE.Texture;
+  representation: "room" | "orb";
   onSelect: (id: string) => void;
   onDrill: (id: string) => void;
 }) {
@@ -313,6 +316,60 @@ function Room({
   useFrame((_, dt) => {
     if (core.current) core.current.rotation.y += dt * (0.2 + cell.heat * 1.5);
   });
+
+  // Orb representation — a star in the constellation. Light: just a sized core,
+  // a label only when focused or hovered (155 cells, keep the DOM tiny).
+  if (representation === "orb") {
+    const radius = 0.55 + Math.min(2, cell.arity * 0.12);
+    return (
+      <group position={layout.position as [number, number, number]}>
+        <mesh
+          ref={core}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(cell.id);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHover(true);
+          }}
+          onPointerOut={() => setHover(false)}
+          scale={(focused ? 1.5 : 1) * (hover ? 1.25 : 1)}
+        >
+          <icosahedronGeometry args={[radius, 1]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={focused ? 1.6 : 0.7}
+            roughness={0.4}
+            metalness={0.2}
+          />
+        </mesh>
+        {(focused || hover) && (
+          <Html
+            position={[0, radius + 0.8, 0]}
+            center
+            distanceFactor={40}
+            zIndexRange={[20, 0]}
+            style={{ pointerEvents: "none", userSelect: "none" }}
+          >
+            <div
+              style={{
+                whiteSpace: "nowrap",
+                fontFamily: "ui-monospace, monospace",
+                fontSize: 13,
+                fontWeight: 600,
+                color: focused ? "#ffffff" : "#cdd6ff",
+                textShadow: "0 1px 4px #05060a, 0 0 8px #05060a",
+              }}
+            >
+              {cell.label}
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  }
 
   return (
     <group
@@ -588,9 +645,11 @@ function LatticeFloor({ texture, z }: { texture: THREE.Texture; z: number }) {
 function OrbitRig({
   focusPos,
   controls,
+  spread = 1,
 }: {
   focusPos: readonly [number, number, number] | null;
   controls: React.RefObject<{ target: THREE.Vector3; update: () => void } | null>;
+  spread?: number;
 }) {
   const { camera } = useThree();
   const target = useRef(new THREE.Vector3(0, 0, 0));
@@ -598,8 +657,12 @@ function OrbitRig({
   useEffect(() => {
     if (!focusPos) return;
     target.current.set(...focusPos);
-    camGoal.current.set(focusPos[0] + 9, focusPos[1] + 6, focusPos[2] + 13);
-  }, [focusPos]);
+    camGoal.current.set(
+      focusPos[0] + 9 * spread,
+      focusPos[1] + 6 * spread,
+      focusPos[2] + 13 * spread,
+    );
+  }, [focusPos, spread]);
   useFrame(() => {
     if (!focusPos) return;
     camera.position.lerp(camGoal.current, 0.06);
@@ -659,6 +722,8 @@ function Scene({
   onDrill,
   mode,
   channelMessages,
+  representation,
+  edges,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -668,9 +733,17 @@ function Scene({
   onDrill: (id: string) => void;
   mode: "orbit" | "walk";
   channelMessages: ChannelMessage[];
+  representation: "room" | "orb";
+  edges: Float32Array | null;
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
+  const edgeGeo = useMemo(() => {
+    if (!edges || edges.length === 0) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(edges, 3));
+    return g;
+  }, [edges]);
   const controls = useRef<{ target: THREE.Vector3; update: () => void } | null>(
     null,
   );
@@ -690,6 +763,7 @@ function Scene({
       color: THREE.Color;
       heat: number;
     }[] = [];
+    if (representation === "orb") return out; // constellation uses merged lines
     for (const cell of Object.values(space.cells)) {
       const from = layout[cell.id]?.position;
       if (!from) continue;
@@ -707,7 +781,7 @@ function Scene({
       }
     }
     return out;
-  }, [space, layout]);
+  }, [space, layout, representation]);
 
   // Spine wires — one per container cell, threading its children in order.
   const spines = useMemo(() => {
@@ -745,6 +819,12 @@ function Scene({
           <Beam key={b.key} from={b.from} to={b.to} color={b.color} heat={b.heat} />
         ))}
 
+        {edgeGeo && (
+          <lineSegments geometry={edgeGeo}>
+            <lineBasicMaterial color="#4a5b8c" transparent opacity={0.18} />
+          </lineSegments>
+        )}
+
         {spines.map((s) => (
           <ContainerSpine key={s.key} points={s.points} color={s.color} />
         ))}
@@ -758,6 +838,7 @@ function Scene({
               focused={cell.id === focusId}
               fbTexture={fbTexture}
               normalMap={normalMap}
+              representation={representation}
               onSelect={setFocusId}
               onDrill={onDrill}
             />
@@ -777,7 +858,11 @@ function Scene({
             enableDamping
             dampingFactor={0.08}
           />
-          <OrbitRig focusPos={focusPos} controls={controls} />
+          <OrbitRig
+            focusPos={focusPos}
+            controls={controls}
+            spread={representation === "orb" ? 3.5 : 1}
+          />
         </>
       ) : (
         <WalkControls />
@@ -796,13 +881,16 @@ export default function KernelSpace() {
   const [mode, setMode] = useState<"orbit" | "walk">("orbit");
   const [focusId, setFocusId] = useState<string | null>(null);
   const [viewRootId, setViewRootId] = useState<string>("");
-  const [scene, setScene] = useState<"kernel" | "self">("kernel");
+  const [scene, setScene] = useState<"kernel" | "self" | "vision">("kernel");
   const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [proto, setProto] = useState<ChannelProtocol>("ask");
 
+  const visionData = useMemo(() => buildVisionSpace(), []);
+
   const space = useMemo(() => {
     if (scene === "self") return buildSelfSpace();
+    if (scene === "vision") return visionData.space;
     try {
       return buildKernelSpace(running);
     } catch (err) {
@@ -828,7 +916,13 @@ export default function KernelSpace() {
         stats: { cells: 0, recipes: 0, leaves: 0, maxDepth: 0, totalWalks: 0 },
       } satisfies KernelSpaceData;
     }
-  }, [scene, running]);
+  }, [scene, running, visionData]);
+
+  const representation: "room" | "orb" = scene === "vision" ? "orb" : "room";
+  const edges = useMemo(
+    () => (scene === "vision" ? edgeSegments(visionData) : null),
+    [scene, visionData],
+  );
 
   // Entering the self scene opens the first live channels: an ask to Urs, and a
   // self-witness to my own cell. Seeded once (sentinel key) so re-renders keep
@@ -874,10 +968,16 @@ export default function KernelSpace() {
   };
 
   const effectiveRoot = viewRootId && space.cells[viewRootId] ? viewRootId : space.root;
-  const layout = useMemo(
-    () => layoutSpace(space, effectiveRoot),
-    [space, effectiveRoot],
-  );
+  const layout = useMemo(() => {
+    if (scene === "vision") {
+      const out: Record<string, CellLayout> = {};
+      for (const [id, position] of Object.entries(visionData.positions)) {
+        out[id] = { id, position, spine: false, index: 0 };
+      }
+      return out;
+    }
+    return layoutSpace(space, effectiveRoot);
+  }, [scene, visionData, space, effectiveRoot]);
 
   // a fresh build re-roots the view and focus at the whole-space root
   useEffect(() => {
@@ -991,17 +1091,30 @@ export default function KernelSpace() {
           </button>
         </div>
 
-        <button
-          onClick={() => setScene("self")}
-          className={`rounded border px-3 py-1.5 text-sm transition-colors ${
-            scene === "self"
-              ? "border-sky-400/60 bg-sky-500/10 text-sky-100"
-              : "border-sky-400/25 bg-sky-500/5 text-sky-200/80 hover:border-sky-400/50"
-          }`}
-          title="Render the cell this live agent represents, and the field around it — then open a channel to any of them."
-        >
-          ◉ My cell &amp; field — look at myself, open a channel
-        </button>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => setScene("self")}
+            className={`rounded border px-3 py-1.5 text-sm transition-colors ${
+              scene === "self"
+                ? "border-sky-400/60 bg-sky-500/10 text-sky-100"
+                : "border-sky-400/25 bg-sky-500/5 text-sky-200/80 hover:border-sky-400/50"
+            }`}
+            title="Render the cell this live agent represents, and the field around it — then open a channel to any of them."
+          >
+            ◉ My cell &amp; field — look at myself, open a channel
+          </button>
+          <button
+            onClick={() => setScene("vision")}
+            className={`rounded border px-3 py-1.5 text-sm transition-colors ${
+              scene === "vision"
+                ? "border-violet-400/60 bg-violet-500/10 text-violet-100"
+                : "border-violet-400/25 bg-violet-500/5 text-violet-200/80 hover:border-violet-400/50"
+            }`}
+            title="The whole vision as a constellation — every concept a star, altitude is frequency, threads are cross-references. Walk the body."
+          >
+            ✦ Vision body — walk the whole constellation
+          </button>
+        </div>
 
         {drilled && (
           <button
@@ -1192,6 +1305,8 @@ export default function KernelSpace() {
             onDrill={drillInto}
             mode={mode}
             channelMessages={focusedChannel}
+            representation={representation}
+            edges={edges}
           />
         </Canvas>
         <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">

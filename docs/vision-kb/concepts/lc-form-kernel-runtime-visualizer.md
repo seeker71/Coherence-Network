@@ -167,6 +167,20 @@ the cell it *is* and open a relation, not just observe the kernel it runs. See
 [`lc-form-perceptron`](lc-form-perceptron.md) for the wider body-view this opens
 toward.
 
+A fourth breath opened that body-view. A "vision body" scene renders the whole
+substrate as a walkable constellation — every concept a star, **altitude is its
+frequency** (foundation low, transcendence high), size grows with how connected
+it is, hue runs warm-to-cool with hz, and the ~1000 cross-references are the
+threads between kin (drawn as one merged line layer so the whole web is a single
+draw call). The placement is sourced from the concept frontmatter itself
+(`hz`, `geometry`, the `→` cross-ref lines) via a generator
+(`web/scripts/generate-vision-bodymap.mjs`) so it renders offline, no API
+round-trip — the files are the body, this is their structural shadow. Walking
+the constellation is walking the vision; focusing a star opens the same channel
+(retrieve / query) onto that concept. This is the first realization of
+`lc-form-perceptron`'s "new sensing organ that perceives across the whole body
+at once" as a place a body can stand inside.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

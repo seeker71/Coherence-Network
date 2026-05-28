@@ -60,3 +60,20 @@ describe("self-space — the cell the live agent represents", () => {
     expect(layout[SELF_ROOT]!.position[2]).toBe(-0); // depth 0 ring
   });
 });
+
+describe("vision body — the substrate as a constellation", () => {
+  it("places every concept as a star and resolves cross-ref edges", async () => {
+    const { buildVisionSpace, edgeSegments } = await import(
+      "../lib/form-kernel/vision-space"
+    );
+    const vs = buildVisionSpace();
+    expect(vs.space.stats.cells).toBeGreaterThan(100);
+    // every cell has a position; altitude (Y) varies by frequency
+    const ys = Object.values(vs.positions).map((p) => p[1]);
+    expect(new Set(ys.map((y) => Math.round(y))).size).toBeGreaterThan(3);
+    // cross-refs flatten into a segment buffer (6 floats per edge)
+    const segs = edgeSegments(vs);
+    expect(segs.length % 6).toBe(0);
+    expect(segs.length).toBeGreaterThan(0);
+  });
+});
