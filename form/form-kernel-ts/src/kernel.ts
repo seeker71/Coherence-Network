@@ -1727,6 +1727,34 @@ export class Kernel {
       const formID = k.internName(formName);
       return { kind: "int", int: k.jitAliases.has(formID) ? 1 : 0 };
     });
+    // recipe_to_bytes nid → list-of-bytes (or null on error).
+    //   Serializes a Recipe subtree to the .fkb wire format as a byte
+    //   list — usable over any byte channel without a file detour.
+    this.registerNative("recipe_to_bytes", catWitness(), (k, args) => {
+      const nid = argNodeID(args, 0);
+      const bytes = serializeRecipeArtifact(k, nid);
+      const out: Value[] = new Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        out[i] = { kind: "int", int: bytes[i]! };
+      }
+      return { kind: "list", list: out };
+    });
+    // bytes_to_recipe bytes-list → nid (or null on parse error).
+    this.registerNative("bytes_to_recipe", catWitness(), (k, args) => {
+      const a0 = args[0];
+      if (!a0 || a0.kind !== "list") return { kind: "null" };
+      const bytes = new Uint8Array(a0.list.length);
+      for (let i = 0; i < a0.list.length; i++) {
+        const v = a0.list[i];
+        bytes[i] = v && v.kind === "int" ? v.int & 0xff : 0;
+      }
+      try {
+        const nid = deserializeRecipeArtifact(k, bytes);
+        return { kind: "nodeid", nodeid: nid };
+      } catch {
+        return { kind: "null" };
+      }
+    });
     // jit_compile form-name-str → 1 if a host-JIT compile succeeded
     // for the closure under this name, 0 if no compiler is available
     // (Rust + Go return 0 today; cranelift + plugin paths are future

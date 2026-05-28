@@ -1,0 +1,109 @@
+; symbols.fk — cross-cell symbol references over the wire.
+;
+; A SYMBOL is a name (substrate-resident string) bound to a value
+; (any Recipe — substrate-ref, novel-blueprint, recipe-content, etc).
+; A SYMBOL-TABLE is a Recipe whose children are SYMBOL-BINDs in
+; insertion order.
+;
+; The cross-cell story:
+;
+;   Cell A constructs a symbol-table, binds names to recipes, then
+;   serializes the table via (recipe_to_bytes table) and sends the
+;   bytes over any channel (registry message, socket, file, etc).
+;
+;   Cell B receives the bytes, calls (bytes_to_recipe bytes) to get a
+;   local NodeID for the SAME table. Looking up a symbol by name
+;   returns the bound value Recipe — same structure as A authored.
+;
+;   Symbol names are stable across cells via content-addressing:
+;   (intern_trivial_string "foo") returns the same trivial NodeID in
+;   any kernel with the same intern history. Values carry through the
+;   wire intact; the substrate's content-addressing makes the binding
+;   sovereign.
+;
+; Sentinel:
+;
+;   SYMBOL-NOT-FOUND is a substrate-resident NodeID returned when a
+;   lookup misses. Callers compare with node_eq to distinguish "bound
+;   to a Recipe" from "not bound."
+;
+; preludes: (none — uses only kernel primitives)
+
+(let SYMBOL-BIND      (make_nodeid 1 2 99 1730))
+(let SYMBOL-TABLE     (make_nodeid 1 2 99 1731))
+(let SYMBOL-NOT-FOUND (make_nodeid 1 2 99 1732))
+
+;; --- helpers ------------------------------------------------------
+
+(defn sym-nil? (xs) (eq (len xs) 0))
+
+(defn sym-append (xs ys)
+    (if (sym-nil? xs) ys (cons (head xs) (sym-append (tail xs) ys))))
+
+;; --- construction -------------------------------------------------
+
+;; (symbol-bind name-str value-recipe) → SYMBOL-BIND Recipe.
+(defn symbol-bind (name value)
+    (intern_node SYMBOL-BIND
+        (list (intern_trivial_string name) value)))
+
+;; (symbol-table bindings-list) → SYMBOL-TABLE Recipe.
+(defn symbol-table (bindings)
+    (intern_node SYMBOL-TABLE bindings))
+
+;; --- accessors ----------------------------------------------------
+
+(defn symbol-name (bind)
+    (head (node_children bind)))
+
+(defn symbol-value (bind)
+    (head (tail (node_children bind))))
+
+(defn symbol-table-bindings (table)
+    (node_children table))
+
+;; --- lookup -------------------------------------------------------
+
+;; (symbol-lookup table name-str) → value-Recipe, or SYMBOL-NOT-FOUND.
+;; Linear scan over the table's bindings. For larger tables, a future
+;; walk wraps this in a hash-indexed accessor.
+(defn symbol-lookup (table name)
+    (sym-find (node_children table)
+              (node_inst (intern_trivial_string name))))
+
+(defn sym-find (binds name-id)
+    (if (sym-nil? binds) SYMBOL-NOT-FOUND
+        (if (eq (node_inst (symbol-name (head binds))) name-id)
+            (symbol-value (head binds))
+            (sym-find (tail binds) name-id))))
+
+;; (symbol-found? value-or-not-found) → 1 if value is a real value,
+;; 0 if it's the NOT-FOUND sentinel.
+(defn symbol-found? (v)
+    (if (node_eq v SYMBOL-NOT-FOUND) 0 1))
+
+;; --- introspection ------------------------------------------------
+
+;; (symbol-table-names table) → list of name SubstrateStrings.
+(defn symbol-table-names (table)
+    (sym-collect-names (node_children table) (list)))
+
+(defn sym-collect-names (binds acc)
+    (if (sym-nil? binds) acc
+        (sym-collect-names (tail binds)
+                           (sym-append acc (list (symbol-name (head binds)))))))
+
+;; --- wire transport ----------------------------------------------
+
+;; (symbol-table-to-wire table) → byte-list ready to cross any channel.
+;; Inverse of (symbol-table-from-wire bytes).
+(defn symbol-table-to-wire (table)
+    (recipe_to_bytes table))
+
+;; (symbol-table-from-wire bytes) → local SYMBOL-TABLE NodeID.
+;; The receiving cell calls this on bytes received from a sender.
+;; Content-addressing makes the local NodeID structurally identical
+;; to the sender's — looking up the same name in either cell's table
+;; returns the same value-Recipe.
+(defn symbol-table-from-wire (bytes)
+    (bytes_to_recipe bytes))

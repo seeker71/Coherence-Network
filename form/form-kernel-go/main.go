@@ -1496,6 +1496,32 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
+	// recipe_to_bytes nid → list-of-bytes (or null on error).
+	//   Serializes a Recipe subtree to the .fkb wire format as a byte
+	//   list — usable over any byte channel without a file detour.
+	k.registerNative("recipe_to_bytes", catWitness(), func(k *Kernel, args []Value) Value {
+		bytes := serializeArtifact(k, args[0].Nid)
+		out := make([]Value, len(bytes))
+		for i, b := range bytes {
+			out[i] = Value{Kind: VInt, Int: int64(b)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// bytes_to_recipe bytes-list → nid (or null on parse error).
+	k.registerNative("bytes_to_recipe", catWitness(), func(k *Kernel, args []Value) Value {
+		if args[0].Kind != VList {
+			return Value{Kind: VNull}
+		}
+		bytes := make([]byte, len(args[0].List))
+		for i, v := range args[0].List {
+			bytes[i] = byte(v.Int)
+		}
+		root, err := deserializeArtifact(k, bytes)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: root}
+	})
 	// jit_compile form-name-str → 1 if a host-JIT compile succeeded,
 	//   0 if no compiler is available on this kernel build, -1 if the
 	//   name isn't bound to a closure. Go kernel returns 0 today

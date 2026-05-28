@@ -2302,6 +2302,33 @@ impl Kernel {
                 Value::Int(0)
             }
         });
+        // recipe_to_bytes nid → list-of-bytes (or null on error).
+        //   Serializes a Recipe subtree to the .fkb wire format (string
+        //   table + tree) as a byte list — usable over ANY byte channel
+        //   (socket, in-memory list, registry message) without needing
+        //   a file. Sibling-parity with read_form_binary semantics: the
+        //   same bytes deserialize back to the same content-addressed
+        //   structure in any kernel.
+        self.register_native("recipe_to_bytes", cat_witness(), |k, _, args| {
+            let bytes = serialize_artifact(k, args[0].as_nid());
+            Value::List(bytes.into_iter().map(|b| Value::Int(b as i64)).collect())
+        });
+        // bytes_to_recipe bytes-list → nid (or null on parse error).
+        //   Inverse of recipe_to_bytes. The bytes are the .fkb wire
+        //   format from any sibling kernel. The receiver re-interns the
+        //   structure locally and returns its NodeID — same content
+        //   produces the same NodeID under the substrate's content-
+        //   addressing.
+        self.register_native("bytes_to_recipe", cat_witness(), |k, _, args| {
+            let bytes: Vec<u8> = match &args[0] {
+                Value::List(xs) => xs.iter().map(|v| v.as_int() as u8).collect(),
+                _ => return Value::Null,
+            };
+            match deserialize_artifact(k, &bytes) {
+                Ok(root) => Value::Nid(root),
+                Err(_) => Value::Null,
+            }
+        });
         // jit_compile form-name-str → 1 if a host-JIT compile succeeded,
         //   0 if no compiler is available on this kernel build, -1 if the
         //   name isn't bound to a closure. Rust kernel returns 0 today

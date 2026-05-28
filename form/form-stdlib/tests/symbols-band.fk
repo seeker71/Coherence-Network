@@ -1,0 +1,37 @@
+; tests/symbols-band.fk — symbols + wire serialization sibling-witness band.
+;
+; preludes: form-stdlib/symbols.fk
+;
+; Validates the cross-cell symbol-table round-trip:
+;   1. Build a table on the sender side.
+;   2. Serialize via recipe_to_bytes.
+;   3. Deserialize via bytes_to_recipe.
+;   4. Look up symbols by name; verify values match by structure.
+;
+; Three-way sibling parity attests the wire path + NodeID resolution.
+
+(do
+    ;; Build sender's symbol table with three bindings.
+    (let v1 (intern_trivial_string "one-value"))
+    (let v2 (intern_trivial_int 222))
+    (let v3 (intern_node (make_nodeid 1 1 14 0)
+                         (list (intern_trivial_int 1)
+                               (intern_trivial_int 2))))
+    (let tbl (symbol-table
+                 (list (symbol-bind "a" v1)
+                       (symbol-bind "b" v2)
+                       (symbol-bind "c" v3))))
+
+    ;; Round-trip via wire bytes.
+    (let bytes (symbol-table-to-wire tbl))
+    (let tbl-b (symbol-table-from-wire bytes))
+
+    ;; Receiver looks up each symbol; verify structural identity.
+    (let a-ok (if (node_eq (symbol-lookup tbl-b "a") v1) 1 0))
+    (let b-ok (if (node_eq (symbol-lookup tbl-b "b") v2) 1 0))
+    (let c-ok (if (node_eq (symbol-lookup tbl-b "c") v3) 1 0))
+    (let miss-ok (if (eq (symbol-found? (symbol-lookup tbl-b "z")) 0) 1 0))
+    (let count-ok (if (eq (len (symbol-table-bindings tbl-b)) 3) 1 0))
+
+    ;; Band verdict: 5 when every assertion holds.
+    (add a-ok (add b-ok (add c-ok (add miss-ok count-ok)))))
