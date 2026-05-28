@@ -33,7 +33,7 @@
 ;                       a plain list, but the NodeID is available for
 ;                       structural tagging by downstream cells.
 ;
-; The resolution rule:
+; The resolution rules:
 ;
 ;   (dns-resolve table name)
 ;     scans the table in order; the first record whose name equals
@@ -41,9 +41,16 @@
 ;
 ;   (dns-resolve-prefix table prefix)
 ;     scans the table in order; returns every record whose name
-;     starts with the prefix string. "starts with" is exactly the
-;     condition (str_find name prefix 0) == 0 — needle-at-offset-zero.
-;     Empty prefix → all records. Missing → empty list.
+;     "carries" the prefix — i.e. the prefix appears somewhere in
+;     the name string. (str_find name prefix 0) returns 0 if the
+;     prefix is at the start of the name, returns a positive index
+;     when the prefix appears later (e.g. as a parent label
+;     "cells.local" inside "a.cells.local"), and returns -1 when
+;     absent. Any non-negative return is a match — that's what makes
+;     DNS-style zone lookup work: a record at "a.cells.local"
+;     belongs to the "cells.local" zone even though that zone string
+;     sits at offset 2, not offset 0. Empty prefix → all records
+;     (host indexOf returns 0 for an empty needle).
 ;
 ; Surface:
 ;   (dns-record name value)              → NAME-RECORD Recipe
@@ -56,7 +63,7 @@
 ;
 ; Blueprint NodeIDs (substrate-resident; pkg=1 level=2 type=99 user
 ; channel; inst slots 1850-1853 reserve the DNS family, sitting
-; between session at 1860 and tree-diff at 1830-1832):
+; between tree-diff at 1830-1832 and session at 1860-1862):
 ;   NAME-RECORD       = inst 1850
 ;   DNS-TABLE         = inst 1851
 ;   DNS-NOT-FOUND     = inst 1852
@@ -133,25 +140,26 @@
         (dns-resolve-walk (dns-table-records table) name))
 
     ;; --- RESOLVE-PREFIX ---------------------------------------------
-    ;; "starts with prefix" is exactly the condition
-    ;;   (str_find name prefix 0) == 0
-    ;; — needle-at-offset-zero. str_find returns -1 when absent,
-    ;; >0 when present-but-not-at-start, 0 only when the prefix sits
-    ;; at the very front of the name. Empty prefix matches every
-    ;; record because indexOf("", 0) is always 0 in the host
-    ;; substring search the kernels share.
-    (defn dns-starts-with? (name prefix)
-        (if (eq (str_find name prefix 0) 0) 1 0))
+    ;; A name "carries" the prefix when (str_find name prefix 0) is
+    ;; non-negative — i.e. the prefix appears somewhere in the name.
+    ;; This is the DNS-zone shape: "a.cells.local" carries the
+    ;; "cells.local" zone even though that zone string sits at offset
+    ;; 2, not offset 0. str_find returns 0 when the prefix is at the
+    ;; very start, a positive index when it sits further in, and -1
+    ;; when absent. The empty prefix matches every record because
+    ;; host indexOf returns 0 for an empty needle in all three
+    ;; sibling kernels.
+    (defn dns-carries-prefix? (name prefix)
+        (if (ge (str_find name prefix 0) 0) 1 0))
 
     ;; (dns-prefix-walk records prefix acc) → accumulated matches in
-    ;; insertion order. Walks once with an accumulator so the result
-    ;; preserves the table's order — the same record order another
-    ;; cell would see after reading the same DNS-TABLE.
+    ;; reverse-of-insertion order. Walks once with an accumulator;
+    ;; the caller reverses to recover insertion order.
     (defn dns-prefix-walk (records prefix acc)
         (if (dns-nil? records) acc
             (do
                 (let record (head records))
-                (if (eq (dns-starts-with? (dns-record-name record) prefix) 1)
+                (if (eq (dns-carries-prefix? (dns-record-name record) prefix) 1)
                     (dns-prefix-walk (tail records) prefix
                                      (cons record acc))
                     (dns-prefix-walk (tail records) prefix acc)))))
@@ -164,8 +172,8 @@
     (defn dns-reverse (xs) (dns-reverse-walk xs (list)))
 
     ;; (dns-resolve-prefix table prefix) → list of NAME-RECORDs whose
-    ;; names start with the prefix, in the table's insertion order.
-    ;; Empty list when nothing matches (or the table is empty).
+    ;; names carry the prefix, in the table's insertion order. Empty
+    ;; list when nothing matches (or the table is empty).
     (defn dns-resolve-prefix (table prefix)
         (dns-reverse
             (dns-prefix-walk (dns-table-records table) prefix (list)))))
