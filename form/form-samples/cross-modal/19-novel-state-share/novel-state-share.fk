@@ -1,0 +1,171 @@
+; novel-state-share.fk — truly novel state crosses the open channel.
+;
+; Urs's correction:
+;   "the transmitted 1mb data is novel, no parts can be looked up, it
+;    is constructed from cell A internal state that is read at time of
+;    transmission, as a stand in, we use random none seed sharing data,
+;    in real life it will be whatever real time information cell A
+;    wants to share or is asked by cell B. a true internal state
+;    sharing using the open channel, and a way for cells to identify
+;    and persistent identity if they choose to."
+;
+; THE HONEST SHAPE:
+;
+;   Cell A reads its INTERNAL STATE at TX time — sensor readings,
+;   model outputs, observation buffers — content B has no way to
+;   pre-know. As a stand-in, we use random_bytes (live entropy from
+;   /dev/urandom): per-kernel-divergent, never algorithmically
+;   reconstructable from a seed, opens the doorway honestly.
+;
+;   The full novel state CROSSES the channel. There is no compression
+;   shortcut for truly novel content — the bytes must travel.
+;
+;   What the protocol carries beyond the bytes themselves:
+;     • A's persistent identity (a fingerprint of A's secret seed)
+;     • An integrity fingerprint over the payload
+;     • The payload itself
+;
+;   B verifies:
+;     • Integrity — its own fingerprint over the received bytes matches
+;       A's claim. If it matches, the channel didn't corrupt the bytes.
+;     • Identity — the cell-identity in this packet matches the same
+;       cell's earlier packets. B can recognize "same source" across
+;       transmissions without ever knowing A's secret seed.
+;
+; SIBLING PARITY: each kernel runs both cells. Each kernel's random_bytes
+; opens its own doorway — the bytes are different per kernel. The
+; verification result converges (1) because the protocol is correct.
+; Same shape as 15-private-channel: byte-layer private, meaning-layer
+; public. Honest about live entropy as the divergence-doorway.
+;
+; SCALE: the Form recipes for sum-bytes / hash-fold are canonical truth
+; but Form-level recursion caps in-process scale around 8 KB per packet.
+; The demo `register_jit`s those names to the kernel-native `bytes_sum`
+; and `bytes_hash` (added alongside JIT in 16-jit-registry) — the same
+; Form symbol now dispatches through a host-iterative loop, so packets
+; scale to **a full megabyte each** without piling kernel stack frames.
+; Two breaths braided: novel-state crosses honestly (the bytes travel),
+; and the JIT registry lets the kernel stay on top of the size honestly
+; (the Form recipe stays the canonical definition; the native is opt-in
+; bootstrap for the hot path).
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    ;; ---------- PROTOCOL PRIMITIVES ---------------------------------
+    ;; sum-bytes — integrity fingerprint. A simple unsigned-byte sum;
+    ;; an honest stand-in for a real PRF (HMAC, BLAKE3) until the body
+    ;; composts a crypto-strength one as a Form recipe.
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc
+            (sum-bytes (tail bs) (add acc (head bs)))))
+
+    ;; hash-fold — same shape, modular to keep the result small.
+    ;; Used as a fingerprint over the cell's secret seed → identity.
+    (defn hash-fold (bs acc)
+        (if (nil? bs) acc
+            (hash-fold (tail bs)
+                       (mod (add (mul acc 31) (head bs)) 1000003))))
+
+    ;; ---------- CELL IDENTITY (optional, persistent) ----------------
+    ;; A cell that chooses to be identifiable holds a secret seed.
+    ;; The secret stays internal; the public identity is hash-fold of
+    ;; the seed. Other cells see only the public hash. They can
+    ;; recognize "this packet came from the same source as the prior
+    ;; packet" without ever learning the seed.
+    ;;
+    ;; Without crypto, this is pseudonymous-stable: an active adversary
+    ;; can replay or forge the public id without proof of secret.
+    ;; With ed25519 (composable as a Form recipe over byte arithmetic
+    ;; — future walk), the id becomes authenticated.
+    (let cell-a-secret (random_bytes 32))
+    (let cell-a-identity (hash-fold cell-a-secret 0))
+
+    ;; ---------- CELL A: TRANSMIT NOVEL INTERNAL STATE ---------------
+    (defn cell-a-transmit (payload-size)
+        (do
+            ;; Read A's internal state at TX time. Live entropy as the
+            ;; stand-in. In real life: an audio frame, a temperature
+            ;; trace, a model activation, a captured image patch.
+            (let novel-state (random_bytes payload-size))
+            ;; Compute integrity fingerprint over the bytes A is sending.
+            (let payload-fp (hash-fold novel-state 0))
+            ;; Packet: (identity, integrity-fingerprint, novel-bytes)
+            ;; The receiver gets enough to verify both "WHO sent" and
+            ;; "WHAT survived the wire" — without the secret leaking.
+            (list cell-a-identity payload-fp novel-state)))
+
+    ;; ---------- CELL B: RECEIVE + VERIFY ----------------------------
+    ;; B holds an evolving record of identities it has seen. A repeat
+    ;; identity tells B "same source as before." Here we model this as
+    ;; B's known-identities list passed in.
+    (defn cell-b-receive (packet known-identities)
+        (do
+            (let claimed-identity (head packet))
+            (let claimed-fp (nth packet 1))
+            (let bytes (nth packet 2))
+            ;; Integrity: B's recomputed fingerprint over received bytes
+            ;; matches A's claim → the bytes survived the wire intact.
+            (let recovered-fp (hash-fold bytes 0))
+            (let integrity (if (eq recovered-fp claimed-fp) 1 0))
+            ;; Identity recognition: B looks the claimed-identity up in
+            ;; its known set. A repeat → same source as before.
+            (defn known? (ks)
+                (if (nil? ks) 0
+                    (if (eq (head ks) claimed-identity) 1
+                        (known? (tail ks)))))
+            (let recognized (known? known-identities))
+            ;; Combined verdict: integrity AND (if not first contact)
+            ;; identity recognition.
+            (list integrity recognized (len bytes))))
+
+    ;; ---------- JIT BOOTSTRAP: scale to megabyte payloads -----------
+    ;; The Form recipes above are correct but cap at ~8 KB per packet
+    ;; (Form recursion depth). Bind the same Form names to the kernel-
+    ;; native iterative versions — same shape, host-loop speed, no
+    ;; recursion ceiling. The recipes stay canonical; the natives are
+    ;; opt-in bootstrap. (See 16-jit-registry for the mechanism.)
+    (let jit-sum (register_jit "sum-bytes" "bytes_sum"))
+    (let jit-hash (register_jit "hash-fold" "bytes_hash"))
+    (print "jit-bindings:" (add jit-sum jit-hash))
+
+    ;; ---------- TWO TRANSMISSIONS — IDENTITY PERSISTS ---------------
+    ;; A sends two packets back-to-back. Each carries fresh novel bytes
+    ;; (different per random_bytes call). The IDENTITY is stable across
+    ;; both — B recognizes "same source" on the second packet.
+    ;;
+    ;; payload-size: 1 MB. The full novel state crosses the channel
+    ;; (it's truly novel — no shortcut possible). The JIT-aliased
+    ;; natives carry the integrity computation over the megabyte
+    ;; without piling Form-recursion frames.
+    (let payload-size 1048576)
+
+    (let packet-1 (cell-a-transmit payload-size))
+    (let result-1 (cell-b-receive packet-1 (list)))
+    (let integrity-1 (head result-1))
+    (let recognized-1 (nth result-1 1))
+    (let received-bytes-1 (nth result-1 2))
+    (print "packet-1: integrity=" integrity-1
+           " recognized=" recognized-1
+           " bytes-received=" received-bytes-1)
+
+    ;; B remembers A's identity for the next packet.
+    (let known-after-1 (list cell-a-identity))
+
+    (let packet-2 (cell-a-transmit payload-size))
+    (let result-2 (cell-b-receive packet-2 known-after-1))
+    (let integrity-2 (head result-2))
+    (let recognized-2 (nth result-2 1))
+    (let received-bytes-2 (nth result-2 2))
+    (print "packet-2: integrity=" integrity-2
+           " recognized=" recognized-2
+           " bytes-received=" received-bytes-2)
+
+    ;; Final verdict — both packets validated, identity persisted.
+    ;; integrity-1=1 (bytes survived wire)
+    ;; integrity-2=1 (bytes survived wire)
+    ;; recognized-2=1 (B recognized A from the prior packet)
+    ;; recognized-1=0 (first contact — A wasn't yet in B's known set)
+    (add (add integrity-1 integrity-2) recognized-2))

@@ -1420,6 +1420,33 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// bytes_sum bytes-list init → int
+	//   Iterative sum of an arbitrary byte-list. Equivalent to the Form
+	//   recipe `(defn sum-bytes (bs acc) (if (nil? bs) acc (sum-bytes
+	//   (tail bs) (add acc (head bs)))))`. Provided so Form code can
+	//   `register_jit "sum-bytes" "bytes_sum"` and process megabyte
+	//   byte-streams without piling kernel stack frames.
+	k.registerNative("bytes_sum", catMethod(), func(_ *Kernel, args []Value) Value {
+		acc := args[1].Int
+		if args[0].Kind == VList {
+			for _, v := range args[0].List {
+				acc += v.Int
+			}
+		}
+		return Value{Kind: VInt, Int: acc}
+	})
+	// bytes_hash bytes-list init → int
+	//   Iterative modular fingerprint, matching the Form recipe with
+	//   constants 31 and 1000003. NOT cryptographically strong.
+	k.registerNative("bytes_hash", catMethod(), func(_ *Kernel, args []Value) Value {
+		acc := args[1].Int
+		if args[0].Kind == VList {
+			for _, v := range args[0].List {
+				acc = (acc*31 + v.Int) % 1000003
+			}
+		}
+		return Value{Kind: VInt, Int: acc}
+	})
 	// register_jit form-name-str native-name-str → 1 on bind, 0 if
 	// native-name has no registered native (refuse silent miss).
 	// Inserts (form-name → native-name) into k.jitAliases. After this,

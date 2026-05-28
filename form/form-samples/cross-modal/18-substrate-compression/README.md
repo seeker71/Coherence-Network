@@ -1,10 +1,16 @@
 # 18-substrate-compression — the shared substrate IS the compression surface
 
-> *"the data can be anything novel with a novel blueprint that only
-> cell A knows about and can be real time sensory data, sharing data
-> like lora tables, images, algorithms, anything cell A wants to
-> transmit that cell B cannot just reconstruct from a pure recipe.
-> you can use the shared substrate and content addressable nodes as
+> **Scope clarification.** This sample addresses the case where most
+> of a transmission's content is **already in both cells' substrates**
+> (canonical concept bodies, shared model layers, repeating sensor
+> patterns). For **truly novel** state that B cannot derive — sensor
+> readings, model outputs at TX time, observation buffers — see
+> [`19-novel-state-share`](../19-novel-state-share/README.md). That
+> demo carries the full bytes honestly across the channel; this one
+> carries indices instead, valid only when the body legitimately holds
+> the referenced atoms.
+
+> *"you can use the shared substrate and content addressable nodes as
 > part of the compression surface, and you can share recipes and
 > nodes as part of the transmission. and try to keep the shared
 > payload minimal."*  — Urs

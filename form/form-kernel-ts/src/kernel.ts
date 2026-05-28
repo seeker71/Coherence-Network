@@ -1627,6 +1627,35 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // bytes_sum bytes-list init → int
+    //   Iterative sum of an arbitrary byte-list. Equivalent to the Form
+    //   recipe `(defn sum-bytes (bs acc) (if (nil? bs) acc (sum-bytes
+    //   (tail bs) (add acc (head bs)))))`. Provided so Form code can
+    //   `register_jit "sum-bytes" "bytes_sum"` and process megabyte
+    //   byte-streams without piling kernel stack frames.
+    this.registerNative("bytes_sum", catMethod(), (_k, args) => {
+      let acc = argInt(args, 1);
+      const a0 = args[0];
+      if (a0 && a0.kind === "list") {
+        for (const v of a0.list) {
+          if (v.kind === "int") acc += v.int;
+        }
+      }
+      return { kind: "int", int: acc };
+    });
+    // bytes_hash bytes-list init → int
+    //   Iterative modular fingerprint, matching the Form recipe with
+    //   constants 31 and 1000003. NOT cryptographically strong.
+    this.registerNative("bytes_hash", catMethod(), (_k, args) => {
+      let acc = argInt(args, 1);
+      const a0 = args[0];
+      if (a0 && a0.kind === "list") {
+        for (const v of a0.list) {
+          if (v.kind === "int") acc = (acc * 31 + v.int) % 1000003;
+        }
+      }
+      return { kind: "int", int: acc };
+    });
     // register_jit form-name-str native-name-str → 1 on bind, 0 if
     // native-name has no registered native (refuse silent miss).
     // Inserts (form-name → native-name) into k.jitAliases. After this,

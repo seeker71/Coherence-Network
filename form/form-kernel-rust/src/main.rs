@@ -2216,6 +2216,41 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // bytes_sum bytes-list init → int
+        //   Iterative sum of an arbitrary byte-list. Equivalent to the Form
+        //   recipe:
+        //     (defn sum-bytes (bs acc)
+        //         (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+        //   Provided so Form code can `register_jit "sum-bytes" "bytes_sum"`
+        //   and process megabyte byte-streams without piling kernel stack
+        //   frames. Sibling parity: same loop, same result, on all three.
+        self.register_native("bytes_sum", cat_method(), |_, _, args| {
+            let mut acc = args[1].as_int();
+            if let Value::List(xs) = &args[0] {
+                for v in xs {
+                    acc += v.as_int();
+                }
+            }
+            Value::Int(acc)
+        });
+        // bytes_hash bytes-list init → int
+        //   Iterative modular fingerprint, matching the Form recipe:
+        //     (defn hash-fold (bs acc)
+        //         (if (nil? bs) acc
+        //             (hash-fold (tail bs)
+        //                        (mod (add (mul acc 31) (head bs)) 1000003))))
+        //   The constants (31, 1000003) match the recipe so JIT-aliased and
+        //   recipe-walk paths produce identical results. NOT cryptographically
+        //   strong; a real PRF is a future walk.
+        self.register_native("bytes_hash", cat_method(), |_, _, args| {
+            let mut acc = args[1].as_int();
+            if let Value::List(xs) = &args[0] {
+                for v in xs {
+                    acc = (acc * 31 + v.as_int()) % 1000003;
+                }
+            }
+            Value::Int(acc)
+        });
         // register_jit form-name-str native-name-str → 1 on bind, 0 if
         // native-name has no registered native (refuse silent miss).
         // Inserts (form-name → native-name) into k.jit_aliases. After this,
