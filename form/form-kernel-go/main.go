@@ -2291,6 +2291,15 @@ func (k *Kernel) registerNatives() {
 		fmt.Fprintf(os.Stderr, "[trace] %s\n", args[0].String())
 		return args[0]
 	})
+
+	// `now_unix_ms` — current wall-clock as a millisecond unix timestamp.
+	// External effect (reads the host clock) so it's catCall. Sibling
+	// parity holds on shape, NOT on value: every kernel returns an int,
+	// every kernel's int is > a recent past epoch — but the exact
+	// milliseconds diverge between invocations. Bands check shape only.
+	k.registerNative("now_unix_ms", catCall(), func(_ *Kernel, _ []Value) Value {
+		return Value{Kind: VInt, Int: time.Now().UnixMilli()}
+	})
 }
 
 // ---------------------------------------------------------------------------
