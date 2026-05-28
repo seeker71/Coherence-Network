@@ -1,0 +1,115 @@
+{
+  "date": "2026-05-28",
+  "thread_branch": "codex/substrate-form-access-fallback-20260528",
+  "commit_scope": "Keep POST /api/substrate/form breathing when the bootstrap structural evaluator hits the Access or MethodCall gap by falling back to the Form runtime and returning the normal response shape.",
+  "files_owned": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_form_endpoint.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "scripts/check_pr_followthrough.py",
+    "docs/system_audit/commit_evidence_2026-05-28_substrate_form_access_fallback.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_substrate_form_ast_access.py tests/test_substrate_form_endpoint.py -q",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_check_pr_followthrough.py -q",
+      "cd api && /opt/homebrew/bin/ruff check app/routers/substrate.py tests/test_substrate_form_endpoint.py",
+      "/opt/homebrew/bin/ruff check scripts/check_pr_followthrough.py api/tests/test_check_pr_followthrough.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-28_substrate_form_access_fallback.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "Focused Form access and endpoint suite passed: 11 passed.",
+      "Focused PR follow-through REST fallback suite passed.",
+      "Ruff passed on the touched router and endpoint test.",
+      "Ruff passed on the follow-through script and new script test.",
+      "Whitespace diff check passed.",
+      "Commit evidence validation passed.",
+      "Local PR guard passed with ready_for_push=True.",
+      "Follow-through gate passed with codex_open_prs=0 after the REST fallback handled live GraphQL quota exhaustion.",
+      "The follow-through gate initially hit GitHub GraphQL rate limit while REST/core quota remained available; the script now falls back to REST for open PR listing and git remote parsing for repo resolution.",
+      "The worktree-local api/.venv pytest was unavailable earlier in this thread, so validation used the shared API virtualenv from /Users/ursmuff/source/Coherence-Network/api/.venv."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "Awaiting PR checks after branch push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "Production still reports deployed_sha=93f8dafc while origin/main is 53bef5c8 before this hotfix lands.",
+      "Hostinger Auto Deploy runs 26579871807 and 26580146908 did not clear substrate_form; the deploy path treated the prior range as static-only and skipped the API rebuild."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and public deployment proof remain pending until this API-scoped hotfix is pushed, reviewed, merged, deployed, and verified."
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "specs/form-question-effects-kernel-conformance.md",
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "task_ids": [
+    "substrate-form-access-fallback-20260528"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-signal"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Production POST https://api.coherencycoin.com/api/substrate/form with {\"expression\":\"@concept(lc-pulse).blueprint\"} returned HTTP 400: TypeError: Form: cannot evaluate Access before this hotfix.",
+    "Production POST https://api.coherencycoin.com/api/substrate/form with mode=run returned a NodeID value for the same expression, proving the runtime path can resolve the access.",
+    "https://pulse.coherencycoin.com/pulse/now reported substrate_form silent with detail HTTP 400: form parse/eval failed: TypeError: Form: cannot evaluate Access.",
+    "api/tests/test_substrate_form_ast_access.py pins the structural evaluator Access and MethodCall behavior.",
+    "api/tests/test_substrate_form_endpoint.py::test_form_endpoint_access_bootstrap_gap_falls_back_to_runtime pins the endpoint-level fallback shape.",
+    "api/tests/test_check_pr_followthrough.py pins the GitHub GraphQL-to-REST fallback used by the required follow-through gate."
+  ],
+  "change_files": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_form_endpoint.py",
+    "api/tests/test_check_pr_followthrough.py",
+    "scripts/check_pr_followthrough.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Default POST /api/substrate/form should return kind=node_id for @concept(lc-pulse).blueprint even if the bootstrap AST evaluator raises the known Access or MethodCall TypeError, while non-bootstrap TypeError failures continue to surface as HTTP 400.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/substrate/form",
+      "GET https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "Local endpoint unit flow monkeypatches form_evaluate_text to raise TypeError: Form: cannot evaluate Access and asserts the runtime fallback returns kind=node_id.",
+      "Post-deploy public flow will call @concept(lc-pulse).blueprint in default mode and confirm substrate_form clears on the pulse endpoint."
+    ]
+  }
+}
