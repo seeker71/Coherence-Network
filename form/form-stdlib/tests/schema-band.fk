@@ -1,0 +1,94 @@
+; tests/schema-band.fk — schema validator sibling-witness band.
+;
+; preludes: form-stdlib/schema.fk
+;
+; Exercises every schema variant against both a matching and a
+; mismatching recipe. Three-way sibling parity (Go, Rust, TypeScript)
+; attests that the walker's category-dispatch, leaf-type check, list
+; homogeneity walk, tuple positional/arity check, and any-match
+; short-circuit all behave the same way across kernels.
+;
+; Band verdict: 10 when every assertion lands.
+;   ANY    matches anything                       → 1
+;   CAT    matches recipe with same category       → 1
+;   CAT    refuses recipe with different category  → 0  (1 when expect 0)
+;   LEAF   matches trivial-string against TRIV_STRING → 1
+;   LEAF   refuses trivial-int against TRIV_STRING  → 0  (1 when expect 0)
+;   LIST   matches homogeneous list of ints        → 1
+;   LIST   refuses list with one mixed string      → 0  (1 when expect 0)
+;   TUPLE  matches (string, int) recipe            → 1
+;   TUPLE  refuses wrong arity (3 children)        → 0  (1 when expect 0)
+;   TUPLE  refuses wrong leaf type (string slot int)→ 0  (1 when expect 0)
+
+(do
+    (let LIST-CAT (make_nodeid 1 1 14 0))
+    (let OTHER-CAT (make_nodeid 1 2 99 1790))
+
+    ;; ---- ANY -------------------------------------------------------
+    (let s-any (schema-any))
+    (let any-ok (if (eq (schema-validate s-any
+                            (intern_trivial_int 42)) 1) 1 0))
+
+    ;; ---- CAT -------------------------------------------------------
+    (let s-cat-list (schema-cat LIST-CAT))
+    (let cat-recipe
+        (intern_node LIST-CAT (list (intern_trivial_int 1)
+                                    (intern_trivial_int 2))))
+    (let cat-other
+        (intern_node OTHER-CAT (list (intern_trivial_int 1))))
+    (let cat-ok      (if (eq (schema-validate s-cat-list cat-recipe) 1) 1 0))
+    (let cat-refuse  (if (eq (schema-validate s-cat-list cat-other) 0) 1 0))
+
+    ;; ---- LEAF ------------------------------------------------------
+    (let s-leaf-str (schema-leaf 2)) ;; TRIV_STRING
+    (let leaf-ok     (if (eq (schema-validate s-leaf-str
+                                  (intern_trivial_string "hello")) 1) 1 0))
+    (let leaf-refuse (if (eq (schema-validate s-leaf-str
+                                  (intern_trivial_int 1)) 0) 1 0))
+
+    ;; ---- LIST ------------------------------------------------------
+    (let s-list-int (schema-list (schema-leaf 1))) ;; TRIV_INT
+    (let homo-list
+        (intern_node LIST-CAT
+            (list (intern_trivial_int 10)
+                  (intern_trivial_int 20)
+                  (intern_trivial_int 30))))
+    (let mixed-list
+        (intern_node LIST-CAT
+            (list (intern_trivial_int 10)
+                  (intern_trivial_string "twenty"))))
+    (let list-ok     (if (eq (schema-validate s-list-int homo-list) 1) 1 0))
+    (let list-refuse (if (eq (schema-validate s-list-int mixed-list) 0) 1 0))
+
+    ;; ---- TUPLE -----------------------------------------------------
+    (let s-tuple
+        (schema-tuple
+            (list (schema-leaf 2)    ;; TRIV_STRING
+                  (schema-leaf 1)))) ;; TRIV_INT
+    (let person-ok
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_int 37))))
+    (let person-arity
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_int 37)
+                  (intern_trivial_int 1815))))
+    (let person-leaf
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_string "thirty-seven"))))
+    (let tuple-ok     (if (eq (schema-validate s-tuple person-ok) 1) 1 0))
+    (let tuple-arity  (if (eq (schema-validate s-tuple person-arity) 0) 1 0))
+    (let tuple-leaf   (if (eq (schema-validate s-tuple person-leaf) 0) 1 0))
+
+    ;; Band verdict — 10 when every assertion holds.
+    (add any-ok
+        (add cat-ok
+            (add cat-refuse
+                (add leaf-ok
+                    (add leaf-refuse
+                        (add list-ok
+                            (add list-refuse
+                                (add tuple-ok
+                                    (add tuple-arity tuple-leaf))))))))))

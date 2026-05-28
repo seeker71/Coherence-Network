@@ -1,0 +1,185 @@
+; uuid.fk — UUID v4 (RFC 4122 §4.4) generation and parsing as a Form recipe.
+;
+; preludes: form-stdlib/hex.fk
+;
+; Canonical truth: this recipe MEANS the UUID v4 encoding. With the kernel's
+; bitwise primitives (band, bor) for the version / variant nibbles, plus the
+; string natives (str_concat, substring, byte_to_str) and the hex.fk
+; primitives for nibble↔char (re-using the lowercase alphabet "0123456789abcdef"),
+; UUID v4 textual encoding composes without any host-library detour. The
+; recipe stays sovereign across sibling kernels (Go, Rust, TypeScript).
+;
+; The spec (RFC 4122 §4.4 — random-number UUID):
+;   128 bits total (16 bytes), with two fields rewritten from raw randomness:
+;     byte 6 (zero-indexed) — high nibble forced to 0x4 (version = random)
+;       (bor (band byte 0x0F) 0x40)
+;     byte 8 (zero-indexed) — high two bits forced to 10 (variant = RFC 4122)
+;       (bor (band byte 0x3F) 0x80)   →  Y nibble is one of 8, 9, a, b
+;
+; Canonical textual form (RFC 4122 §3):  8-4-4-4-12 = 36 chars (32 hex + 4 '-')
+;     xxxxxxxx-xxxx-4xxx-Yxxx-xxxxxxxxxxxx
+;       bytes 0..3   4..5   6..7   8..9   10..15
+;
+; The three entry points:
+;   (uuid-v4 random-16-bytes)           → 36-char textual UUID (with hyphens)
+;   (uuid-v4-from-list random-16-bytes) → 16-byte list with version+variant patched
+;                                          (the binary form, useful for round-trip)
+;   (uuid-parse uuid-string)            → byte-list, or UUID-PARSE-ERROR sentinel
+;
+; Round-trip identity holds for every well-formed UUID string:
+;   uuid-parse(uuid-v4(bs)) = uuid-v4-from-list(bs)
+;
+; Determinism notes:
+;   random-16-bytes: a list of exactly 16 byte values (0..255). For production
+;     use the kernel's (random_bytes 16); for sibling-parity tests pass a
+;     deterministic byte-list — (random_bytes ...) diverges across kernels
+;     by design (Go/Rust/TS draw from different entropy sources).
+;
+; Cost is O(1) over the input: one walk of a 16-byte list, emitting 36 chars.
+;
+; Substrate-resident NodeIDs (pkg=1, level=2, type=99 — user-channel range):
+;   UUID              inst 1870 — the UUID concept itself
+;   UUID-PARSE-ERROR  inst 1871 — sentinel returned by uuid-parse on bad input
+
+(do
+    ;; ---- SENTINELS ------------------------------------------------
+    (let UUID             (make_nodeid 1 2 99 1870))
+    (let UUID-PARSE-ERROR (make_nodeid 1 2 99 1871))
+
+    ;; ---- LIST UTILITIES -------------------------------------------
+    (defn uuid-nil? (xs) (eq (len xs) 0))
+    (defn uuid-len-of (xs)
+        (if (uuid-nil? xs) 0 (add 1 (uuid-len-of (tail xs)))))
+
+    ;; ---- LOWERCASE HEX ALPHABET (matches hex.fk) ------------------
+    ;; Position i in this string is the character for 4-bit value i.
+    (defn uuid-alphabet () "0123456789abcdef")
+    (defn uuid-char-of (idx)
+        (substring (uuid-alphabet) idx (add idx 1)))
+
+    ;; Render a byte (0..255) as two lowercase hex chars.
+    (defn uuid-byte-to-pair (b)
+        (str_concat (uuid-char-of (div b 16))
+                    (uuid-char-of (mod b 16))))
+
+    ;; ---- VERSION / VARIANT PATCHING -------------------------------
+    ;; Byte 6: clear the high nibble, set it to 0x4 (UUID version 4).
+    ;;   (bor (band byte 0x0F) 0x40)
+    (defn uuid-patch-version (b)
+        (bor (band b 15) 64))
+
+    ;; Byte 8: clear the high two bits, set them to 10 (RFC 4122 variant).
+    ;;   (bor (band byte 0x3F) 0x80)
+    ;; Result: the Y nibble of byte 8 is one of 8, 9, a, b.
+    (defn uuid-patch-variant (b)
+        (bor (band b 63) 128))
+
+    ;; ---- THE 16-BYTE BINARY FORM ----------------------------------
+    ;; Walk the input list, patching bytes 6 and 8 in place. Returns a
+    ;; new 16-byte list with version+variant correctly set.
+    ;;
+    ;; Iterates by index so the recipe stays explicit about which byte
+    ;; gets patched. Bytes 0..5, 7, 9..15 pass through unchanged.
+    (defn uuid-patch-loop (bs i acc)
+        (if (uuid-nil? bs) acc
+            (do
+                (let b (head bs))
+                (let patched
+                    (if (eq i 6) (uuid-patch-version b)
+                        (if (eq i 8) (uuid-patch-variant b) b)))
+                (uuid-patch-loop (tail bs) (add i 1) (cons patched acc)))))
+
+    ;; Reverse a list (the patch loop accumulates head-first for cheap
+    ;; cons; flip once at the end so the natural byte order is restored).
+    (defn uuid-reverse-into (xs acc)
+        (if (uuid-nil? xs) acc
+            (uuid-reverse-into (tail xs) (cons (head xs) acc))))
+
+    (defn uuid-v4-from-list (random-16-bytes)
+        (uuid-reverse-into (uuid-patch-loop random-16-bytes 0 (list)) (list)))
+
+    ;; ---- 16 BYTES → 36-CHAR TEXTUAL UUID --------------------------
+    ;; The canonical form interleaves hyphens at byte indices 4, 6, 8, 10
+    ;; (i.e. after 4, 6, 8, 10 bytes have been emitted as 8, 12, 16, 20
+    ;; hex chars). Walk the patched 16-byte list and emit byte-pair +
+    ;; possibly a hyphen separator.
+    (defn uuid-emit-loop (bs i acc)
+        (if (uuid-nil? bs) acc
+            (do
+                (let pair (uuid-byte-to-pair (head bs)))
+                (let sep
+                    (if (or (eq i 3) (or (eq i 5) (or (eq i 7) (eq i 9))))
+                        "-"
+                        ""))
+                (uuid-emit-loop (tail bs) (add i 1)
+                    (str_concat acc (str_concat pair sep))))))
+
+    ;; ---- THE TEXTUAL ENTRY POINT ----------------------------------
+    ;; (uuid-v4 random-16-bytes) → 36-char canonical UUID string
+    (defn uuid-v4 (random-16-bytes)
+        (uuid-emit-loop (uuid-v4-from-list random-16-bytes) 0 ""))
+
+    ;; ---- PARSE: 36-CHAR STRING → 16-BYTE LIST OR SENTINEL ---------
+    ;; Accepts the canonical form xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    ;; (8-4-4-4-12). Hyphen positions must sit exactly at indices 8, 13,
+    ;; 18, 23 and every other character must be a hex digit. Both
+    ;; lowercase and uppercase hex digits are accepted (matches hex.fk).
+    ;;
+    ;; Returns either a 16-byte list, OR the UUID-PARSE-ERROR sentinel.
+    ;; Callers distinguish via:
+    ;;   (value_eq result UUID-PARSE-ERROR)
+
+    ;; Decode one ASCII hex char to its 4-bit value, or -1 on miss.
+    ;;   '0'..'9' = 48..57 → 0..9
+    ;;   'A'..'F' = 65..70 → 10..15
+    ;;   'a'..'f' = 97..102 → 10..15
+    (defn uuid-digit-value (c)
+        (if (and (ge c 48) (le c 57))
+            (sub c 48)
+            (if (and (ge c 65) (le c 70))
+                (add (sub c 65) 10)
+                (if (and (ge c 97) (le c 102))
+                    (add (sub c 97) 10)
+                    (sub 0 1)))))
+
+    (defn uuid-byte-at (s i)
+        (ord (substring s i (add i 1))))
+
+    ;; Is the i-th char one of the four hyphen positions?
+    (defn uuid-hyphen-pos? (i)
+        (or (eq i 8) (or (eq i 13) (or (eq i 18) (eq i 23)))))
+
+    ;; Parse loop. Walks the 36-char string left-to-right. When the
+    ;; current index is a hyphen position, the char must be '-' (45);
+    ;; otherwise it must be a valid hex digit. Pairs of hex digits at
+    ;; non-hyphen positions accumulate into bytes in reverse order.
+    ;;
+    ;; The hex-digit cursor `j` tracks how many hex chars we have seen
+    ;; so far — when it's even and we're about to read another, that
+    ;; char is the high nibble of a new byte; when odd, it's the low
+    ;; nibble that finishes the byte being assembled in `pending`.
+    (defn uuid-parse-loop (s i pending j acc)
+        (if (ge i 36) acc
+            (if (uuid-hyphen-pos? i)
+                (if (eq (uuid-byte-at s i) 45)
+                    (uuid-parse-loop s (add i 1) pending j acc)
+                    UUID-PARSE-ERROR)
+                (do
+                    (let v (uuid-digit-value (uuid-byte-at s i)))
+                    (if (eq v (sub 0 1))
+                        UUID-PARSE-ERROR
+                        (if (eq (mod j 2) 0)
+                            ;; high nibble: stash in pending, advance
+                            (uuid-parse-loop s (add i 1) v (add j 1) acc)
+                            ;; low nibble: combine with pending → byte
+                            (uuid-parse-loop s (add i 1) 0 (add j 1)
+                                (cons (add (mul pending 16) v) acc))))))))
+
+    (defn uuid-parse (s)
+        (if (eq (str_len s) 36)
+            (do
+                (let result (uuid-parse-loop s 0 0 0 (list)))
+                (if (value_eq result UUID-PARSE-ERROR)
+                    UUID-PARSE-ERROR
+                    (uuid-reverse-into result (list))))
+            UUID-PARSE-ERROR)))

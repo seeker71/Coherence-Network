@@ -1,0 +1,155 @@
+; substrate-compression.fk — the shared substrate IS the compression surface.
+;
+; Urs's framing (correcting an earlier wrong direction):
+;   "the data can be anything novel with a novel blueprint that only
+;    cell A knows about and can be real time sensory data, sharing data
+;    like lora tables, images, algorithms, anything cell A wants to
+;    transmit that cell B cannot just reconstruct from a pure recipe.
+;    you can use the shared substrate and content addressable nodes as
+;    part of the compression surface, and you can share recipes and
+;    nodes as part of the transmission. and try to keep the shared
+;    payload minimal."
+;
+; THE INSIGHT: cell A wants to share a novel composite. Most of the
+; composite's CONTENT is already present in cell B's substrate — both
+; cells share canonical Blueprints, concept bodies, atom strings, etc.
+; What A truly invents is the ARRANGEMENT plus a small TRULY-NOVEL leaf
+; that B cannot derive (sensor reading, image-patch label, weight delta).
+;
+; The wire carries a minimal payload: catalog INDICES into the shared
+; substrate (cheap) + the truly-novel leaf (must travel). Cell B looks
+; up the indexed atoms in its own substrate (it has them) and re-interns
+; the composite with the novel leaf interned locally. The substrate's
+; content-addressing makes B's NodeID converge with A's claim.
+;
+; Compression ratio at runtime: bytes(full-composite-content) /
+; bytes(transmitted-payload). Larger atoms in the shared catalog ⇒
+; better ratio, because more of the content NEVER crosses the channel.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    ;; nid-pack / nid-unpack — 4-int wire format for a NodeID.
+    (defn nid-pack (nid)
+        (list (node_pkg nid) (node_level nid) (node_type nid) (node_inst nid)))
+    (defn nid-unpack (packed)
+        (make_nodeid (nth packed 0) (nth packed 1) (nth packed 2) (nth packed 3)))
+
+    ;; ---------- SHARED CATALOG --------------------------------------
+    ;; Both cells already hold these atoms. In a real body they'd be
+    ;; canonical Living Collective concept bodies, LoRA-layer matrices,
+    ;; image-patch tensors — substrate-resident content with potentially
+    ;; thousands of bytes each. Here we use a chunk of fixed-content
+    ;; strings to keep the demo small while still showing the ratio.
+    ;; Doubles the string log2(n) times. (double x 6) → 64× the original.
+    ;; Each "atom" below ends up ~1.8 KB of representative canonical
+    ;; content. Larger atoms mean a higher compression ratio because the
+    ;; atoms NEVER cross the channel — only their indices do.
+    (defn double (s n)
+        (if (eq n 0) s
+            (double (str_concat s s) (sub n 1))))
+    (defn make-chunk (label)
+        (double label 13))
+    (let catalog
+        (list
+            (make-chunk "blueprint-circle------------")
+            (make-chunk "blueprint-blue--------------")
+            (make-chunk "blueprint-large-------------")
+            (make-chunk "blueprint-spinning----------")
+            (make-chunk "blueprint-temperature-curve-")
+            (make-chunk "blueprint-edge-detection----")
+            (make-chunk "blueprint-attention-pattern-")
+            (make-chunk "blueprint-resonance-shape---")))
+
+    ;; ---------- COMPOSITE CONSTRUCTION ------------------------------
+    ;; intern every catalog atom AS THE SAME SUBSTRATE STRING-NODE.
+    ;; Cell A and Cell B both walk this list — same content, same
+    ;; intern result, same NodeID per atom. The substrate's content-
+    ;; addressing makes "I have this atom" lookup trivial across cells.
+    (defn intern-catalog (cat)
+        (if (nil? cat) (list)
+            (cons (intern_trivial_string (head cat))
+                  (intern-catalog (tail cat)))))
+    (let catalog-nids (intern-catalog catalog))
+
+    ;; ---------- CELL A: invents a novel composite -------------------
+    ;; The composite uses 5 substrate atoms (referenced by index into
+    ;; the shared catalog) PLUS one truly-novel payload — data that
+    ;; only A holds. B cannot derive it; it must cross the channel.
+    (defn nth-nid (idxs)
+        (if (nil? idxs) (list)
+            (cons (nth catalog-nids (head idxs))
+                  (nth-nid (tail idxs)))))
+
+    (defn cell-a-share ()
+        (do
+            ;; Truly novel — A's private moment. A sensor reading, an
+            ;; image-patch label, a LoRA-delta — content B has no
+            ;; algorithm to reconstruct.
+            (let novel-payload "A's-private-reading@14:32:08:42.7C")
+            (let novel-nid (intern_trivial_string novel-payload))
+            ;; Catalog indices A composes from.
+            (let indices (list 3 7 1 4 0))
+            ;; The full composite: 5 substrate atoms + 1 novel leaf.
+            (let children (cons novel-nid (nth-nid indices)))
+            (let cat (make_nodeid 1 1 14 0))    ; LIST category
+            (let composite-nid (intern_node cat children))
+            ;; THE WIRE PAYLOAD — minimal:
+            ;;   • catalog indices (small ints; B already has the atoms)
+            ;;   • novel-payload string (must travel — truly new)
+            ;;   • A's claimed composite NodeID (so B can verify)
+            (list indices novel-payload (nid-pack composite-nid))))
+
+    ;; ---------- CELL B: reconstructs from minimal wire --------------
+    (defn cell-b-receive (packet)
+        (do
+            (let indices (head packet))
+            (let novel-payload (nth packet 1))
+            (let claimed (nid-unpack (nth packet 2)))
+            ;; B interns the novel-payload locally (it's NEW to B).
+            (let novel-nid (intern_trivial_string novel-payload))
+            ;; B looks up the catalog atoms in its OWN substrate (B has
+            ;; the same content — content-addressing converges).
+            (let children (cons novel-nid (nth-nid indices)))
+            (let cat (make_nodeid 1 1 14 0))
+            (let recovered (intern_node cat children))
+            (if (node_eq recovered claimed) 1 0)))
+
+    ;; ---------- COMPRESSION RATIO -----------------------------------
+    ;; Honest count:
+    ;;   full-content = sum(str_len of each referenced atom) + novel-payload
+    ;;   wire = small-bytes(indices) + str_len(novel-payload) +
+    ;;          ~16 bytes of NodeID metadata
+    (defn sum-lens (atoms acc)
+        (if (nil? atoms) acc
+            (sum-lens (tail atoms) (add acc (str_len (head atoms))))))
+    (defn pick-atoms (idxs)
+        (if (nil? idxs) (list)
+            (cons (nth catalog (head idxs))
+                  (pick-atoms (tail idxs)))))
+
+    (let packet (cell-a-share))
+    (let used-indices (head packet))
+    (let novel-payload (nth packet 1))
+    (let referenced-atoms (pick-atoms used-indices))
+    (let full-content-bytes
+        (add (sum-lens referenced-atoms 0) (str_len novel-payload)))
+    ;; Wire bytes: 1 byte per catalog index + novel-payload bytes +
+    ;; 16 bytes for the claimed-NodeID tuple.
+    (let wire-bytes
+        (add (len used-indices)
+             (add (str_len novel-payload) 16)))
+
+    (print "atoms-referenced:" (len used-indices))
+    (print "full-content-bytes:" full-content-bytes)
+    (print "wire-bytes:" wire-bytes)
+    ;; Integer compression ratio (full / wire). The atoms never crossed
+    ;; the channel; only their indices and the truly-novel leaf did.
+    (print "compression-ratio:" (div full-content-bytes wire-bytes))
+
+    (let verified (cell-b-receive packet))
+    (print "B-verified:" verified)
+
+    verified)

@@ -1,0 +1,73 @@
+; audit-log.fk — append-only hash-chained audit log, sibling-verified.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/audit-log.fk
+;
+; An audit log is a sequence of AUDIT-ENTRYs in which each entry's
+; prev-hash binds it to the previous entry's this-hash. The canonical
+; sha256 recipe supplies the digest primitive; the kernel's list +
+; bitwise primitives carry the rest. No audit-log native exists in any
+; sibling kernel — the recipe IS the implementation, and three siblings
+; (Go, Rust, TypeScript) agree byte-for-byte on every verdict.
+;
+; What walks here:
+;   - Build an empty log, append 3 short payloads (1-3 bytes each so
+;     the underlying sha256 recipe stays inside the recursion budget).
+;   - Verify the valid log (returns 1).
+;   - Tamper the second entry's payload while preserving its old
+;     this-hash, then verify (returns 0 because sha256(prev || payload)
+;     no longer matches the entry's claimed this-hash).
+;   - Print log length, both verdicts, final verdict.
+;
+; The locked verdict is 2: valid-verify returns 1, tampered-verify
+; returns 0, sum is 2. Any sibling that diverges has a bug.
+
+(do
+    ;; ---- LOCAL HELPERS --------------------------------------------
+    (defn nil? (xs) (eq (len xs) 0))
+
+    ;; List splice: replace the i-th element of xs with v. Used to
+    ;; tamper a specific entry of the log without rebuilding the
+    ;; whole structure by hand.
+    (defn list-set (xs i v)
+        (if (eq i 0) (cons v (tail xs))
+            (cons (head xs) (list-set (tail xs) (sub i 1) v))))
+
+    ;; ---- BUILD A 3-ENTRY VALID LOG --------------------------------
+    ;; Payloads are tiny (1-3 bytes) so each sha256 call stays well
+    ;; inside the Form-recipe recursion budget.
+    (let log0 (audit-empty))
+    (let log1 (audit-append log0 (list 65)))             ; "A"
+    (let log2 (audit-append log1 (list 66 67)))          ; "BC"
+    (let log3 (audit-append log2 (list 68 69 70)))       ; "DEF"
+
+    (print "log-len:" (audit-len log3))
+
+    ;; ---- VERIFY THE VALID LOG -------------------------------------
+    ;; The chain is intact: genesis prev-hash is 32 zero bytes; every
+    ;; subsequent entry's prev-hash equals the previous this-hash;
+    ;; every this-hash = sha256(prev || payload). Returns 1.
+    (let ok-valid (audit-verify log3))
+    (print "verify-valid:" ok-valid)
+
+    ;; ---- TAMPER THE SECOND ENTRY ----------------------------------
+    ;; Replace the second entry's payload with different bytes, but
+    ;; keep its old prev-hash and old this-hash. The chain still
+    ;; LOOKS connected (prev-hashes line up) but sha256(prev || new-
+    ;; payload) no longer equals the claimed this-hash, so verify=0.
+    (let e1 (head (tail log3)))
+    (let e1-bad (make-audit-entry
+                    (audit-entry-prev-hash e1)
+                    (list 88 89)                         ; tampered: "XY"
+                    (audit-entry-this-hash e1)))         ; old this-hash kept
+    (let log3-bad (list-set log3 1 e1-bad))
+
+    (let ok-tampered (audit-verify log3-bad))
+    (print "verify-tampered:" ok-tampered)
+
+    ;; ---- VERDICT --------------------------------------------------
+    ;; Locked at 2: valid log verifies (1) AND tampered log fails (0).
+    ;; Sibling parity attests every kernel walked the hash chain the
+    ;; same way and produced the same verdict from the recipe alone.
+    (let verdict (add ok-valid (if (eq ok-tampered 0) 1 0)))
+    (print "verdict:" verdict)
+    verdict)

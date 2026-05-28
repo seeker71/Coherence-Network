@@ -1,0 +1,67 @@
+; rust-jit.fk — Form recipe → Rust source → cdylib → libloading dispatch.
+;
+; The shape Urs named for Rust:
+;   "as it does for rust" — Rust's parallel to (TS: new Function via V8) and
+;   (Go: go build -buildmode=plugin + plugin.Open) is the system rustc
+;   toolchain — emit Rust source, invoke `rustc --crate-type=cdylib`, load
+;   the resulting plugin.so via libloading.
+;
+; Pipeline this sample walks:
+;   1. Define a recursive Form recipe (double-and-sum).
+;   2. Run it WITHOUT JIT — recipe walked, canonical Form behavior.
+;   3. (jit_compile "double-and-sum") — emits Rust source for the recipe,
+;      shells out to `rustc --crate-type=cdylib`, loads plugin.so.
+;   4. Run it again — same answer, now dispatched through the loaded
+;      function pointer in Rust; walker stays the path in TS and Go.
+;
+; Three-way sibling parity: every printed value converges across Go, Rust,
+; and TypeScript kernels regardless of which dispatch path each kernel
+; actually used. compile-attempted is `1` in every kernel (every kernel
+; returns ≥ 0 from jit_compile honestly); the post-jit outputs are the
+; meaning-layer attestation that the recipe IS what the recipe SAYS.
+
+(do
+    ;; A recursive Form recipe — sum 2*0 + 2*1 + ... + 2*(n-1).
+    ;; Equals n*(n-1). Recursion exercises the compiled-fn-calls-itself
+    ;; path inside the loaded .so (the Rust cdylib has the recipe's own
+    ;; sibling defn registered, so recursive calls stay in native code).
+    (defn double-and-sum (n)
+        (if (eq n 0) 0
+            (add (mul 2 (sub n 1)) (double-and-sum (sub n 1)))))
+
+    ;; Baseline — recipe walked, no JIT.
+    (let r1 (double-and-sum 10))
+    (print "baseline:" r1)         ; 10 * 9 = 90
+
+    ;; Compile to host-native. In the Rust kernel this:
+    ;;   • Walks the recipe AST and emits a Rust source string with the
+    ;;     recursive defn and a C-ABI `compiled_fn` wrapper.
+    ;;   • Writes lib.rs to a temp dir.
+    ;;   • Spawns `rustc --crate-type=cdylib -C opt-level=2 -o plugin.so lib.rs`.
+    ;;   • Loads plugin.so via libloading::Library::new (unsafe; documented).
+    ;;   • Resolves the `compiled_fn` symbol and stashes (Library, raw fn ptr)
+    ;;     in the kernel keyed by the closure's body NodeID.
+    ;;
+    ;; Returns 1 on success, 0 on any failure (rustc absent, compile error,
+    ;; recipe uses a shape outside the JIT subset, .so load failed). All
+    ;; three kernels return ≥ 0, so compile-attempted is `1` across the board.
+    (let compiled (jit_compile "double-and-sum"))
+    (print "compile-attempted:" (if (ge compiled 0) 1 0))
+
+    ;; Call again. In Rust (with rustc on PATH), this dispatches through
+    ;; the loaded native function — host-native Rust code, recursive calls
+    ;; staying inside the .so. In TS, V8 JITs the compiled JS to native.
+    ;; In Go (no plugin path today), the recipe walks. Same answer.
+    (let r2 (double-and-sum 10))
+    (print "post-jit-10:" r2)      ; 90
+
+    ;; Larger input — still dispatches through whichever path the kernel
+    ;; chose. The .so handles its own recursion without re-entering the
+    ;; walker; the only Rust-side cost is the i64-marshalling at the entry.
+    (let r3 (double-and-sum 50))
+    (print "post-jit-50:" r3)      ; 50 * 49 = 2450
+
+    ;; Verdict: same answer regardless of dispatch path.
+    (add (if (eq r1 90) 1 0)
+         (add (if (eq r2 90) 1 0)
+              (if (eq r3 2450) 1 0))))

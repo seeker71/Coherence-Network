@@ -1,0 +1,36 @@
+; tests/pubsub-band.fk — polling-based pub/sub sibling-witness band.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk
+;
+; Validates that a subscriber repeatedly polling the registry by
+; capability sees the count grow as cells with that capability
+; register, and stays put when an unrelated capability registers.
+
+(do
+    (let registry-path "/tmp/pubsub-band-registry.fkb")
+    (channel-create registry-path)
+
+    (let watched "compute")
+
+    ;; Step 0: empty registry, no compute cells.
+    (let s0 (len (find-by-capability registry-path watched)))
+    (let s0-ok (if (eq s0 0) 1 0))
+
+    ;; Step 1: one cell registers with "compute".
+    (register-cell registry-path 1 "/tmp/p-b" (list "compute"))
+    (let s1 (len (find-by-capability registry-path watched)))
+    (let s1-ok (if (eq s1 1) 1 0))
+
+    ;; Step 2: second cell registers with "compute" (plus another verb).
+    (register-cell registry-path 2 "/tmp/p-c" (list "compute" "witness"))
+    (let s2 (len (find-by-capability registry-path watched)))
+    (let s2-ok (if (eq s2 2) 1 0))
+
+    ;; Step 3: a cell with a DIFFERENT verb registers. Count must not move.
+    (register-cell registry-path 3 "/tmp/p-d" (list "fetch"))
+    (let s3 (len (find-by-capability registry-path watched)))
+    (let s3-ok (if (eq s3 2) 1 0))
+
+    ;; Band verdict: 5 when every assertion holds (4 ok + total count check).
+    (let total-ok (if (eq (len (lookup-cells registry-path)) 3) 1 0))
+    (add s0-ok (add s1-ok (add s2-ok (add s3-ok total-ok)))))

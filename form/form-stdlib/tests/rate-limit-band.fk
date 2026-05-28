@@ -1,0 +1,62 @@
+; tests/rate-limit-band.fk — token-bucket sibling-witness band.
+;
+; preludes: form-stdlib/rate-limit.fk
+;
+; Validates that the Form-recipe token-bucket rate limiter (in
+; form-stdlib/rate-limit.fk) constructs, refills, admits, and rejects
+; byte-identically across every sibling kernel that carries the core
+; list + int primitives. No rate-limit native exists; the recipe IS
+; the sole implementation. Three-way sibling parity attests each
+; kernel agrees on the same admit/reject verdict from the recipe alone.
+;
+; Six checks, each contributing 1 to the verdict:
+;   - fresh bucket reports full capacity                       → 1
+;   - consume 5 from a 10-bucket leaves 5 tokens                → 1
+;   - second consume of 5 leaves 0 tokens (bucket empty)         → 1
+;   - can-consume? 1 at t=500 returns 0 (no refill yet)         → 1
+;   - can-consume? 1 at t=1500 returns 1 (1 token refilled)     → 1
+;   - refill clamps at capacity: can-consume? 11 at t=20000 → 0 → 1
+;
+; Band verdict locks at 6 — any divergence is a kernel bug.
+
+(do
+    ;; ---------- BUILD A FULL BUCKET -------------------------------
+    ;; capacity = 10, refill-rate = 1 token/second.
+    (let b0 (bucket-new 10 1))
+    (let full-ok (if (eq (bucket-tokens b0) 10) 1 0))
+
+    ;; ---------- CONSUME 5 AT t=0 LEAVES 5 -------------------------
+    (let b1 (bucket-consume b0 5 0))
+    (let after-5-ok (if (eq (bucket-tokens b1) 5) 1 0))
+
+    ;; ---------- CONSUME 5 MORE AT t=0 LEAVES 0 --------------------
+    ;; No refill at the same instant; the second consume drains the
+    ;; bucket to exactly 0.
+    (let b2 (bucket-consume b1 5 0))
+    (let empty-ok (if (eq (bucket-tokens b2) 0) 1 0))
+
+    ;; ---------- 500ms ISN'T ENOUGH FOR 1 TOKEN --------------------
+    ;; refill-rate = 1/sec, elapsed = 500ms → 500*1/1000 = 0 tokens
+    ;; refilled. can-consume? returns 0.
+    (let reject-500-ok (if (eq (bucket-can-consume? b2 1 500) 0) 1 0))
+
+    ;; ---------- 1500ms IS ENOUGH FOR 1 TOKEN ----------------------
+    ;; elapsed = 1500ms → 1500*1/1000 = 1 token refilled. 1 ≥ 1 →
+    ;; can-consume? returns 1.
+    (let accept-1500-ok (if (eq (bucket-can-consume? b2 1 1500) 1) 1 0))
+
+    ;; ---------- REFILL CAPS AT CAPACITY ---------------------------
+    ;; 20 seconds elapsed would refill 20 tokens, but capacity=10
+    ;; clamps the bucket. Asking for 11 tokens must be rejected
+    ;; because the bucket cannot exceed its declared ceiling.
+    (let cap-clamp-ok (if (eq (bucket-can-consume? b2 11 20000) 0) 1 0))
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 6 when fresh bucket full, debit lands, second debit empties,
+    ;; sub-second window rejects, full-second window admits, and
+    ;; refill clamps at capacity.
+    (add full-ok
+        (add after-5-ok
+            (add empty-ok
+                (add reject-500-ok
+                    (add accept-1500-ok cap-clamp-ok))))))

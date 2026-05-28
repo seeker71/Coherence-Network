@@ -1,0 +1,121 @@
+; wire-binary-symbols.fk — Form binary recipes + NodeID resolution +
+; cell construction + shared symbols, all over the wire.
+;
+; preludes: form-stdlib/symbols.fk
+;
+; Walks Urs's framing:
+;   "form native binary and node id resolution over the wire, and cell
+;    constr over the wire makes sense and a way to reference and share
+;    symbols"
+;
+; THE PIECES THIS DEMONSTRATES:
+;
+;   1. recipe_to_bytes — any Recipe subtree serializes to .fkb-format
+;      bytes (string table + tree). Works over ANY byte channel — no
+;      file detour.
+;
+;   2. bytes_to_recipe — the receiver re-interns from bytes; the
+;      substrate's content-addressing returns a local NodeID for the
+;      structurally-identical Recipe. NodeID resolution lives in the
+;      kernel; no schema negotiation needed.
+;
+;   3. Cell construction over the wire — A constructs a novel
+;      composite (a SYMBOL-TABLE with mixed-value bindings), serializes
+;      it, sends bytes; B deserializes and CALLS into the
+;      reconstructed cell by symbol name. The cell traveled as bytes
+;      and got built sovereignly on the receiving side.
+;
+;   4. Symbol references — both cells refer to the same names. Names
+;      are SubstrateStrings (content-addressed via
+;      intern_trivial_string), so "alpha" in A's table and "alpha"
+;      in B's lookup share substrate identity. Both cells understand
+;      the symbol vocabulary because the substrate IS the vocabulary.
+
+(do
+    ;; ---------- CELL A: build a symbol table ------------------------
+    ;; A binds three symbols. The values are heterogeneous — substrate
+    ;; atoms, novel composites, and recipe-content carriers — exactly
+    ;; the mix a real channel response would carry.
+
+    ;; Value 1: a substrate-resident atom (a string).
+    (let v-alpha (intern_trivial_string "the-alpha-value"))
+
+    ;; Value 2: a novel composite — three atoms wrapped in a LIST
+    ;; category. Demonstrates a NOVEL BLUEPRINT crossing the wire.
+    (let v-beta (intern_node (make_nodeid 1 1 14 0)
+                             (list (intern_trivial_int 100)
+                                   (intern_trivial_int 200)
+                                   (intern_trivial_int 300))))
+
+    ;; Value 3: a SUBSTRATE-REF tuple (deepest field is the inst slot
+    ;; of a canonical cell). A real protocol would point at a real
+    ;; substrate cell; here we use a synthetic NodeID for illustration.
+    (let v-gamma (intern_trivial_int 42))
+
+    ;; Build the table.
+    (let table-a
+        (symbol-table
+            (list (symbol-bind "alpha" v-alpha)
+                  (symbol-bind "beta"  v-beta)
+                  (symbol-bind "gamma" v-gamma))))
+
+    (print "table-a-binding-count:" (len (symbol-table-bindings table-a)))
+
+    ;; ---------- WIRE: serialize for transmission -------------------
+    ;; recipe_to_bytes produces .fkb-format bytes (string table + tree).
+    ;; The bytes can travel over ANY channel — socket, file, in-memory
+    ;; list (which is what we use here). The wire is byte-list-shaped.
+
+    (let wire (symbol-table-to-wire table-a))
+    (print "wire-bytes-nonempty:" (if (gt (len wire) 16) 1 0))
+
+    ;; ---------- CELL B: receive, reconstruct, query -----------------
+    ;; B has never seen table-a. B receives wire bytes, deserializes
+    ;; into its own substrate. NodeID resolution happens in
+    ;; bytes_to_recipe — the receiver gets a content-addressed local
+    ;; NodeID for the same recipe structure.
+
+    (let table-b (symbol-table-from-wire wire))
+    (print "table-b-binding-count:" (len (symbol-table-bindings table-b)))
+
+    ;; B looks up each symbol. Names cross via content-addressing.
+    (let lookup-alpha (symbol-lookup table-b "alpha"))
+    (let lookup-beta  (symbol-lookup table-b "beta"))
+    (let lookup-gamma (symbol-lookup table-b "gamma"))
+    (let lookup-miss  (symbol-lookup table-b "epsilon"))
+
+    (print "alpha-found:" (symbol-found? lookup-alpha))
+    (print "beta-found:"  (symbol-found? lookup-beta))
+    (print "gamma-found:" (symbol-found? lookup-gamma))
+    (print "miss-found:"  (symbol-found? lookup-miss))
+
+    ;; ---------- CELL CONSTRUCTION VERIFICATION ----------------------
+    ;; B's looked-up values should structurally match A's originals.
+    ;; node_eq attests structural identity via content-addressing.
+
+    (print "alpha-structure-matches:"
+        (if (node_eq lookup-alpha v-alpha) 1 0))
+    (print "beta-structure-matches:"
+        (if (node_eq lookup-beta v-beta) 1 0))
+    (print "gamma-structure-matches:"
+        (if (node_eq lookup-gamma v-gamma) 1 0))
+
+    ;; B can traverse the novel composite it never saw before.
+    (let beta-children (node_children lookup-beta))
+    (print "beta-child-count:" (len beta-children))
+    (let beta-first (head beta-children))
+    (print "beta-first-inst:" (node_inst beta-first))     ; 100
+
+    ;; ---------- VERDICT ---------------------------------------------
+    ;; Every assertion converges three-way sibling parity at the
+    ;; meaning layer (the underlying bytes may differ slightly per
+    ;; kernel's serialization details, but the recovered structure
+    ;; reconstructs identically).
+    (add (if (eq (len (symbol-table-bindings table-b)) 3) 1 0)
+         (add (symbol-found? lookup-alpha)
+              (add (symbol-found? lookup-beta)
+                   (add (symbol-found? lookup-gamma)
+                        (add (if (eq (symbol-found? lookup-miss) 0) 1 0)
+                             (add (if (node_eq lookup-alpha v-alpha) 1 0)
+                                  (add (if (node_eq lookup-beta v-beta) 1 0)
+                                       (if (node_eq lookup-gamma v-gamma) 1 0)))))))))

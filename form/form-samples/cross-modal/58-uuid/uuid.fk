@@ -1,0 +1,80 @@
+; uuid.fk — UUID v4 (RFC 4122 §4.4) generation from the Form recipe,
+; sibling-verified across Go, Rust, TypeScript.
+;
+; preludes: form-stdlib/uuid.fk
+;
+; The recipe in form-stdlib/uuid.fk IS the canonical definition of UUID v4
+; in this body — 16 random bytes with the version (0x4) patched into byte 6's
+; high nibble and the variant (0b10) patched into byte 8's high two bits,
+; rendered as the canonical 8-4-4-4-12 hyphenated hex form. The recipe stays
+; sovereign across sibling kernels.
+;
+; This sample walks three shapes through the Form recipe:
+;
+;   1. zero-input  — sixteen 0x00 bytes
+;      → "00000000-0000-4000-8000-000000000000"
+;        (version nibble 4 lives at position 14; variant nibble 8 at
+;         position 19; everything else is '0'.)
+;
+;   2. max-input   — sixteen 0xFF bytes
+;      → "ffffffff-ffff-4fff-bfff-ffffffffffff"
+;        (byte 6 becomes 0x4f because the high nibble is forced to 4;
+;         byte 8 becomes 0xbf because the variant bits 10 plus the
+;         remaining 6 set bits give 10111111 = 0xbf.)
+;
+;   3. round-trip  — uuid-parse(zero-uuid) must return the same 16-byte
+;                    list that uuid-v4-from-list would produce for the
+;                    zero input. Verified by byte-sum.
+;
+; Note: (random_bytes 16) is the production source of randomness. We do NOT
+; use it here — random_bytes DIVERGES per kernel by design, so sibling-parity
+; tests must pass deterministic byte-lists.
+
+(do
+    ;; ---- INPUT FIXTURES --------------------------------------------
+    ;; Build a list of n copies of byte v.
+    (defn rep-byte (n v acc)
+        (if (eq n 0) acc (rep-byte (sub n 1) v (cons v acc))))
+
+    (let all-zero (rep-byte 16 0   (list)))
+    (let all-ff   (rep-byte 16 255 (list)))
+
+    ;; ---- GENERATE THE TWO CANONICAL UUIDS --------------------------
+    (let uuid-zero (uuid-v4 all-zero))
+    (let uuid-max  (uuid-v4 all-ff))
+
+    ;; ---- EXPECTED OUTPUTS ------------------------------------------
+    (let exp-zero "00000000-0000-4000-8000-000000000000")
+    (let exp-max  "ffffffff-ffff-4fff-bfff-ffffffffffff")
+
+    ;; ---- LENGTH CHECK ----------------------------------------------
+    (let len-zero (str_len uuid-zero))
+
+    ;; ---- ROUND-TRIP: parse the zero-uuid, compare to the patched
+    ;; binary form. The patched form has byte 6 = 0x40 and byte 8 = 0x80;
+    ;; every other byte stays 0. Byte-sum = 0x40 + 0x80 = 192.
+    (defn h-nil? (xs) (eq (len xs) 0))
+    (defn byte-sum (xs)
+        (if (h-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    (let parsed   (uuid-parse uuid-zero))
+    (let bin-form (uuid-v4-from-list all-zero))
+
+    (let roundtrip-match
+        (if (eq (byte-sum parsed) (byte-sum bin-form)) 1 0))
+
+    ;; ---- PRINT FOUR CANONICAL RESULTS ------------------------------
+    (print "zero-matches:"     (if (str_eq uuid-zero exp-zero) 1 0))
+    (print "max-matches:"      (if (str_eq uuid-max  exp-max)  1 0))
+    (print "len-zero:"         len-zero)
+    (print "roundtrip-match:"  roundtrip-match)
+
+    ;; ---- VERDICT ---------------------------------------------------
+    ;; Final score is the count of passing checks. Sums to 4 when every
+    ;; kernel produces correct UUID v4 behaviour:
+    ;;   zero-matches + max-matches + (len == 36) + roundtrip-match
+    (add (if (str_eq uuid-zero exp-zero) 1 0)
+        (add (if (str_eq uuid-max  exp-max)  1 0)
+            (add (if (eq len-zero 36) 1 0)
+                 roundtrip-match))))

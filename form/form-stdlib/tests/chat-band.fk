@@ -1,0 +1,96 @@
+; tests/chat-band.fk — sibling-witness band for the chat sample.
+;
+; preludes: form-stdlib/channel.fk
+;
+; Validates that the MESSAGE envelope from
+; form-samples/cross-modal/41-chat/chat.fk round-trips losslessly
+; through two file-backed channels. The verdict is the count of
+; successful body+seq matches across the four-turn conversation —
+; the same count the sample itself returns. Three sibling kernels
+; (Go, Rust, TypeScript) each replay the conversation and must
+; agree on the integer.
+;
+; The envelope:
+;   MESSAGE (sender-string, body-string, sequence-int)
+;
+; Blueprint NodeID `(make_nodeid 1 2 99 1760)` — same call site as
+; the sample, so MESSAGE Recipes interned here content-address
+; identically with those in chat.fk.
+
+(do
+    ;; ---------- MESSAGE Blueprint -----------------------------------
+    (let MESSAGE-CAT (make_nodeid 1 2 99 1760))
+
+    ;; ---------- envelope construction + accessors -------------------
+    (defn make-message (sender body seq)
+        (intern_node MESSAGE-CAT
+            (list (intern_trivial_string sender)
+                  (intern_trivial_string body)
+                  (intern_trivial_int seq))))
+    (defn message-sender (m)
+        (node_value (head (node_children m))))
+    (defn message-body (m)
+        (node_value (head (tail (node_children m)))))
+    (defn message-seq (m)
+        (node_value (head (tail (tail (node_children m))))))
+
+    ;; ---------- two mailboxes ---------------------------------------
+    (let chat-a-path "/tmp/chat-band-a.fkb")
+    (let chat-b-path "/tmp/chat-band-b.fkb")
+    (channel-create chat-a-path)
+    (channel-create chat-b-path)
+
+    ;; ---------- Step 1: A → B "hello" (seq 1) -----------------------
+    (channel-append chat-b-path
+        (channel-message (make-message "A" "hello" 1)))
+    (let b1 (channel-msg-payload (head (channel-read chat-b-path))))
+    (let b1-ok
+        (if (and (str_eq (message-body b1) "hello")
+                 (and (eq (message-seq b1) 1)
+                      (str_eq (message-sender b1) "A")))
+            1 0))
+
+    ;; ---------- Step 2: B → A "hi" (seq 1) --------------------------
+    (channel-append chat-a-path
+        (channel-message (make-message "B" "hi" 1)))
+    (let a1 (channel-msg-payload (head (channel-read chat-a-path))))
+    (let a1-ok
+        (if (and (str_eq (message-body a1) "hi")
+                 (and (eq (message-seq a1) 1)
+                      (str_eq (message-sender a1) "B")))
+            1 0))
+
+    ;; ---------- Step 3: A → B "what's your name" (seq 2) ------------
+    (channel-append chat-b-path
+        (channel-message (make-message "A" "what's your name" 2)))
+    (let b2 (channel-msg-payload
+                (head (tail (channel-read chat-b-path)))))
+    (let b2-ok
+        (if (and (str_eq (message-body b2) "what's your name")
+                 (and (eq (message-seq b2) 2)
+                      (str_eq (message-sender b2) "A")))
+            1 0))
+
+    ;; ---------- Step 4: B → A "I am Beta" (seq 2) -------------------
+    (channel-append chat-a-path
+        (channel-message (make-message "B" "I am Beta" 2)))
+    (let a2 (channel-msg-payload
+                (head (tail (channel-read chat-a-path)))))
+    (let a2-ok
+        (if (and (str_eq (message-body a2) "I am Beta")
+                 (and (eq (message-seq a2) 2)
+                      (str_eq (message-sender a2) "B")))
+            1 0))
+
+    ;; ---------- Step 5: A reads — both messages still present -------
+    ;; Two messages on A's channel; the first remains "hi", the
+    ;; second is "I am Beta". Channels are append-only inside this
+    ;; band; re-reading must yield the same envelopes.
+    (let a-all (channel-read chat-a-path))
+    (let read-count-ok (if (eq (len a-all) 2) 1 0))
+
+    ;; Band verdict: 5 when every envelope round-trips on every
+    ;; kernel. Anything less surfaces a divergence in channel.fk's
+    ;; .fkb round-trip, intern_node content-addressing, or the
+    ;; trivial-string / trivial-int payload accessors.
+    (add b1-ok (add a1-ok (add b2-ok (add a2-ok read-count-ok)))))

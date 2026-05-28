@@ -39,6 +39,9 @@ async function main(): Promise<void> {
   }
 
   const k = new Kernel();
+  // Install the Form→host-JS JIT hook so (jit_compile "name") from Form
+  // code compiles the named closure's body through compiler.ts.
+  k.jitCompileHook = compileNode;
   const frame = new Frame(null);
 
   if (args[0] === "--binary") {
@@ -132,6 +135,9 @@ async function runTrace(args: string[]): Promise<void> {
   }
 
   const k = new Kernel();
+  // Install the Form→host-JS JIT hook so (jit_compile "name") from Form
+  // code compiles the named closure's body through compiler.ts.
+  k.jitCompileHook = compileNode;
   k.trace = new Trace();
   const frame = new Frame(null);
   const node = readAll(k, src);

@@ -1,0 +1,56 @@
+; crc32.fk — IEEE 802.3 CRC-32 lives in Form, computed from bitwise primitives.
+;
+; preludes: form-stdlib/crc32.fk
+;
+; The recipe in form-stdlib/crc32.fk IS the canonical definition of
+; CRC-32 (the zlib / PNG / Ethernet / gzip / ZIP flavor) in this body,
+; composed from the kernel's bitwise primitives (band, bxor, shr_u32,
+; add_u32). A kernel with those primitives can compute the checksum
+; from this recipe alone — no host crc32 library required. The recipe
+; stays sovereign across sibling kernels (Go, Rust, TypeScript).
+;
+; This sample validates the recipe against the canonical CRC-32 test
+; vectors: the empty input, single-byte "a", three-byte "abc", and
+; the universal "123456789" check value (0xCBF43926 = 3421780262)
+; — the value every CRC-32 implementation in the world cross-checks
+; itself against.
+;
+; Note: kernel integer literals parse as signed 32-bit and wrap, so
+; expected CRC values above 0x7FFFFFFF are reconstructed via the u32
+; primitives: (add_u32 (shl_u32 hi 16) lo). The two halves stay below
+; the i16 ceiling so the literal source stays honest across kernels.
+
+(do
+    ;; ---------- CANONICAL CRC-32 TEST VECTORS -----------------------
+    ;; crc32("")          = 0x00000000 = 0          (initial XOR final)
+    ;; crc32("a")         = 0xE8B7BE43 = 3904355907  (hi=0xE8B7 lo=0xBE43)
+    ;; crc32("abc")       = 0x352441C2 = 891568578   (fits in i32)
+    ;; crc32("123456789") = 0xCBF43926 = 3421780262  (hi=0xCBF4 lo=0x3926) ← universal check
+    ;;
+    ;; ASCII codes used:
+    ;;   a=97 b=98 c=99
+    ;;   1=49 2=50 3=51 4=52 5=53 6=54 7=55 8=56 9=57
+    (let c-empty  (crc32 (list)))
+    (let c-a      (crc32 (list 97)))
+    (let c-abc    (crc32 (list 97 98 99)))
+    (let c-check  (crc32 (list 49 50 51 52 53 54 55 56 57)))
+
+    ;; Expected values, reconstructed via u32 primitives so the literals
+    ;; cross all three kernels without signed-overflow drift.
+    (let exp-empty  0)
+    (let exp-a      (add_u32 (shl_u32 59575 16) 48707))   ; 0xE8B7BE43
+    (let exp-abc    891568578)                            ; 0x352441C2 fits in i32
+    (let exp-check  (add_u32 (shl_u32 52212 16) 14630))   ; 0xCBF43926
+
+    (print "crc32-empty:"     c-empty)
+    (print "crc32-a:"         c-a)
+    (print "crc32-abc:"       c-abc)
+    (print "crc32-123456789:" c-check)
+
+    ;; Final verdict: 4 when every canonical vector matches. Three-way
+    ;; sibling parity attests every kernel computes CRC-32 from the
+    ;; recipe alone — no native crc32, no host library.
+    (add (if (eq c-empty exp-empty) 1 0)
+        (add (if (eq c-a     exp-a)     1 0)
+            (add (if (eq c-abc   exp-abc)   1 0)
+                 (if (eq c-check exp-check) 1 0)))))

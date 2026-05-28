@@ -1,0 +1,49 @@
+; tests/http-parse-band.fk — HTTP/1.1 sibling-witness band.
+;
+; preludes: form-stdlib/http-parse.fk
+;
+; Validates that the Form-recipe HTTP/1.1 parser (in form-stdlib/http-parse.fk)
+; produces structurally identical Recipes across every kernel that carries
+; the string natives plus the substrate write surface. No HTTP native exists;
+; the recipe IS the sole implementation.
+;
+; Three vectors — one per shape variant:
+;   - minimal request (no headers, no body)
+;   - request with body
+;   - multi-header request
+;
+; Each assertion compares a deterministic int or a string against the
+; expected literal. Eleven checks; band verdict is 11 when every kernel
+; parses every vector to spec.
+
+(do
+    (let req1 "GET / HTTP/1.1\n\n")
+    (let req2 "POST /api/echo HTTP/1.1\nContent-Type: text/plain\nContent-Length: 5\n\nhello")
+    (let req3 "GET /api/health HTTP/1.1\nHost: example.com\nAccept: application/json\n\n")
+
+    (let r1 (http-parse-request req1))
+    (let r2 (http-parse-request req2))
+    (let r3 (http-parse-request req3))
+
+    ;; Request 1 — minimal.
+    (let a1 (if (str_eq (http-method r1)  "GET")       1 0))
+    (let a2 (if (str_eq (http-path r1)    "/")         1 0))
+    (let a3 (if (str_eq (http-version r1) "HTTP/1.1")  1 0))
+    (let a4 (if (eq (len (http-headers r1)) 0)         1 0))
+    (let a5 (if (eq (str_len (http-body r1)) 0)        1 0))
+
+    ;; Request 2 — body.
+    (let b1 (if (str_eq (http-method r2) "POST")       1 0))
+    (let b2 (if (str_eq (http-body r2)   "hello")      1 0))
+    (let b3 (if (eq (len (http-headers r2)) 2)         1 0))
+
+    ;; Request 3 — multi-header. The first header is name=Host, value=example.com.
+    (let h0 (head (http-headers r3)))
+    (let c1 (if (str_eq (http-header-name h0)  "Host")        1 0))
+    (let c2 (if (str_eq (http-header-value h0) "example.com") 1 0))
+    (let c3 (if (eq (len (http-headers r3)) 2)                1 0))
+
+    ;; Band verdict: 11 when every kernel parses every vector to spec.
+    (add a1 (add a2 (add a3 (add a4 (add a5
+        (add b1 (add b2 (add b3
+            (add c1 (add c2 c3)))))))))))

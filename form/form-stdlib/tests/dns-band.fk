@@ -1,0 +1,72 @@
+; tests/dns-band.fk — DNS sibling-witness band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/dns.fk
+;
+; Validates that the Form-recipe name directory (in form-stdlib/dns.fk)
+; records, resolves, distinguishes absent, and walks prefix-matches
+; byte-identically across every sibling kernel that carries the core
+; list + int + string primitives. No DNS native exists; the recipe IS
+; the sole implementation. Three-way sibling parity attests each
+; kernel agrees on the same resolution verdict from the recipe alone.
+;
+; Five checks, each contributing 1 to the verdict:
+;   - table holds 3 records after construction                       → 1
+;   - resolve a known name returns the bound value (1)               → 1
+;   - resolve an unknown name returns DNS-NOT-FOUND                  → 1
+;   - prefix walk on "cells.local" finds exactly 2 records           → 1
+;   - prefix walk on the empty string finds all 3 records            → 1
+;
+; Band verdict locks at 5 — any divergence is a kernel bug.
+
+(do
+    ;; ---------- BUILD A 3-RECORD TABLE ----------------------------
+    (let v1 (intern_trivial_int 1))
+    (let v2 (intern_trivial_int 2))
+    (let v3 (intern_trivial_int 3))
+
+    (let r1 (dns-record "a.cells.local"  v1))
+    (let r2 (dns-record "b.cells.local"  v2))
+    (let r3 (dns-record "c.peers.remote" v3))
+
+    (let table (dns-table (list r1 r2 r3)))
+
+    ;; ---------- CHECK 1: TABLE LENGTH ------------------------------
+    ;; The table wraps the records as a Recipe; the record list comes
+    ;; back via (dns-table-records). Length must be 3.
+    (let len-ok
+        (if (eq (len (dns-table-records table)) 3) 1 0))
+
+    ;; ---------- CHECK 2: RESOLVE FOUND -----------------------------
+    ;; Resolve "a.cells.local" → trivial-int Recipe carrying 1.
+    (let resolved-a (dns-resolve table "a.cells.local"))
+    (let resolve-ok
+        (if (eq (node_value resolved-a) 1) 1 0))
+
+    ;; ---------- CHECK 3: RESOLVE MISSING ---------------------------
+    ;; Resolve a name not in the table → DNS-NOT-FOUND sentinel.
+    (let missing (dns-resolve table "z.elsewhere.net"))
+    (let missing-ok
+        (if (node_eq missing DNS-NOT-FOUND) 1 0))
+
+    ;; ---------- CHECK 4: PREFIX FINDS 2 ----------------------------
+    ;; "cells.local" appears in two of three names — the two records
+    ;; under that zone. Walk returns them in insertion order.
+    (let zone-matches (dns-resolve-prefix table "cells.local"))
+    (let zone-ok
+        (if (eq (len zone-matches) 2) 1 0))
+
+    ;; ---------- CHECK 5: EMPTY PREFIX FINDS ALL --------------------
+    ;; Empty prefix matches every name because the host indexOf
+    ;; returns 0 for an empty needle. Walk returns all 3 records.
+    (let all-matches (dns-resolve-prefix table ""))
+    (let all-ok
+        (if (eq (len all-matches) 3) 1 0))
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 5 when length=3, resolve found value 1, missing returned the
+    ;; NOT-FOUND sentinel, the "cells.local" walk found exactly 2,
+    ;; and the empty-prefix walk found all 3.
+    (add len-ok
+        (add resolve-ok
+            (add missing-ok
+                (add zone-ok all-ok)))))

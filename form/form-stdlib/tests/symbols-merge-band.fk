@@ -1,0 +1,97 @@
+; tests/symbols-merge-band.fk — symbols-merge sibling-witness band.
+;
+; preludes: form-stdlib/symbols.fk form-stdlib/symbols-merge.fk
+;
+; Exercises every operation in symbols-merge.fk against a tiny
+; overlap-shaped pair plus a disjoint pair. Three-way sibling parity
+; (Go, Rust, TypeScript) attests that NodeID-based name comparison,
+; the SYMBOLS-CONFLICT sentinel, and the four set-algebra walks all
+; agree across kernels.
+;
+; Band verdict: 12 when every assertion lands.
+;   merge.count == 3                                 → 1
+;   merge."a" == 1   (A's value)                     → 1
+;   merge."b" == 20  (B wins on overlap)             → 1
+;   merge."c" == 30  (B's only value)                → 1
+;   merge-strict overlap → SYMBOLS-CONFLICT          → 1
+;   merge-strict disjoint .count == 3                → 1
+;   merge-strict disjoint not conflict               → 1
+;   intersect.count == 1                             → 1
+;   intersect."b" == 2  (A's value)                  → 1
+;   intersect."a" missing                            → 1
+;   diff.count == 1                                  → 1
+;   diff.head == "a"                                 → 1
+
+(do
+    ;; ---- BUILD TABLES ----------------------------------------------
+    (let v-a-1  (intern_trivial_int 1))
+    (let v-a-2  (intern_trivial_int 2))
+    (let v-b-20 (intern_trivial_int 20))
+    (let v-b-30 (intern_trivial_int 30))
+    (let v-d-40 (intern_trivial_int 40))
+
+    (let table-a
+        (symbol-table
+            (list (symbol-bind "a" v-a-1)
+                  (symbol-bind "b" v-a-2))))
+    (let table-b
+        (symbol-table
+            (list (symbol-bind "b" v-b-20)
+                  (symbol-bind "c" v-b-30))))
+    (let table-d
+        (symbol-table
+            (list (symbol-bind "d" v-d-40))))
+
+    ;; ---- MERGE -----------------------------------------------------
+    (let merged (symbols-merge table-a table-b))
+    (let merge-count-ok
+        (if (eq (len (symbol-table-bindings merged)) 3) 1 0))
+    (let merge-a-ok
+        (if (node_eq (symbol-lookup merged "a") v-a-1) 1 0))
+    (let merge-b-ok
+        (if (node_eq (symbol-lookup merged "b") v-b-20) 1 0))
+    (let merge-c-ok
+        (if (node_eq (symbol-lookup merged "c") v-b-30) 1 0))
+
+    ;; ---- MERGE-STRICT ----------------------------------------------
+    (let strict-overlap (symbols-merge-strict table-a table-b))
+    (let strict-overlap-ok
+        (if (node_eq strict-overlap SYMBOLS-CONFLICT) 1 0))
+
+    (let strict-disjoint (symbols-merge-strict table-a table-d))
+    (let strict-disjoint-not-conflict
+        (if (node_eq strict-disjoint SYMBOLS-CONFLICT) 0 1))
+    (let strict-disjoint-count-ok
+        (if (node_eq strict-disjoint SYMBOLS-CONFLICT)
+            0
+            (if (eq (len (symbol-table-bindings strict-disjoint)) 3) 1 0)))
+
+    ;; ---- INTERSECT -------------------------------------------------
+    (let inter (symbols-intersect table-a table-b))
+    (let inter-count-ok
+        (if (eq (len (symbol-table-bindings inter)) 1) 1 0))
+    (let inter-b-ok
+        (if (node_eq (symbol-lookup inter "b") v-a-2) 1 0))
+    (let inter-a-missing-ok
+        (if (eq (symbol-found? (symbol-lookup inter "a")) 0) 1 0))
+
+    ;; ---- DIFF ------------------------------------------------------
+    (let diff (symbols-diff table-a table-b))
+    (let diff-count-ok (if (eq (len diff) 1) 1 0))
+    (let diff-head-ok
+        (if (eq (len diff) 0)
+            0
+            (if (node_eq (head diff) (intern_trivial_string "a")) 1 0)))
+
+    ;; ---- VERDICT (12) ---------------------------------------------
+    (add merge-count-ok
+        (add merge-a-ok
+            (add merge-b-ok
+                (add merge-c-ok
+                    (add strict-overlap-ok
+                        (add strict-disjoint-not-conflict
+                            (add strict-disjoint-count-ok
+                                (add inter-count-ok
+                                    (add inter-b-ok
+                                        (add inter-a-missing-ok
+                                            (add diff-count-ok diff-head-ok))))))))))))

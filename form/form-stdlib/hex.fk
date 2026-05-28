@@ -1,0 +1,147 @@
+; hex.fk — Hexadecimal (RFC 4648 §8) encoding and decoding as a Form recipe.
+;
+; Canonical truth: this recipe MEANS hex. With the kernel's small-int
+; primitives (div, mod, add, sub, mul) and the string natives (ord,
+; byte_to_str, str_concat, substring, str_len), hex encoding composes
+; without any host-library detour. The recipe stays sovereign across
+; sibling kernels (Go, Rust, TypeScript).
+;
+; Why this exists:
+;   Hex is the textual envelope of last resort for bytes: when Base64's
+;   alphabet noise gets in the way (URLs, content hashes, low-bandwidth
+;   debug prints, raw RAM dumps), two-chars-per-byte is the universally
+;   readable form. SHA-256 digests, Merkle roots, ETags, content-addresses
+;   — all the wire shapes that already live in this body — speak hex.
+;
+; The three entry points:
+;   (hex-encode byte-list)   → lowercase hex string (e.g. [222 173] → "dead")
+;   (hex-decode hex-string)  → byte-list, or HEX-DECODE-ERROR sentinel
+;   (hex-valid? hex-string)  → 1 when decode would succeed, 0 otherwise
+;
+; Round-trip identity holds for every byte sequence:
+;   decode(encode(b)) = b
+;
+; Decode accepts BOTH lowercase ('a'..'f') and uppercase ('A'..'F') input;
+; encode always produces lowercase (RFC 4648 §8 recommends lowercase for
+; canonical wire form).
+;
+; Error cases (HEX-DECODE-ERROR sentinel, a substrate-resident NodeID):
+;   - odd input length    — every byte needs 2 hex digits
+;   - any non-hex char    — only 0-9, a-f, A-F are valid
+;
+; The alphabet is fixed: "0123456789abcdef". Position i is the character
+; for 4-bit value i.
+;
+; Cost is O(n) over input length. Form-list traversal walks head/tail
+; only; the encode-side list-of-2char-strings collapses left-to-right
+; in one pass.
+
+(do
+    ;; --- HEX-DECODE-ERROR sentinel -----------------------------------
+    ;; Substrate-resident NodeID. pkg=1, level=2, type=99 stays in the
+    ;; user-channel range; inst=1770 reserves a slot in the hex family.
+    (let HEX-DECODE-ERROR (make_nodeid 1 2 99 1770))
+
+    ;; The canonical lowercase hex alphabet. Position i in this string
+    ;; is the character for 4-bit value i.
+    (defn hex-alphabet () "0123456789abcdef")
+
+    ;; --- list utilities ---------------------------------------------
+    (defn hex-nil? (xs) (eq (len xs) 0))
+
+    ;; --- ENCODE: 1 byte → 2 alphabet chars --------------------------
+    ;; Upper nibble = b div 16; lower nibble = b mod 16. Each maps to
+    ;; one character via (substring alphabet i (add i 1)).
+
+    (defn hex-char-of (idx)
+        (substring (hex-alphabet) idx (add idx 1)))
+
+    (defn hex-byte-to-pair (b)
+        (str_concat (hex-char-of (div b 16))
+                    (hex-char-of (mod b 16))))
+
+    ;; Walk the byte-list head-to-tail, accumulating the output string.
+    (defn hex-encode-loop (bs acc)
+        (if (hex-nil? bs) acc
+            (hex-encode-loop (tail bs)
+                (str_concat acc (hex-byte-to-pair (head bs))))))
+
+    ;; --- THE ENCODE ENTRY POINT -------------------------------------
+    (defn hex-encode (bytes)
+        (hex-encode-loop bytes ""))
+
+    ;; --- DECODE: 1 char → 4-bit value -------------------------------
+    ;; Returns 0..15 for a valid hex char, or -1 for any other byte.
+    ;; ASCII codes:
+    ;;   '0'..'9' = 48..57
+    ;;   'A'..'F' = 65..70
+    ;;   'a'..'f' = 97..102
+
+    (defn hex-digit-value (c)
+        (if (and (ge c 48) (le c 57))
+            (sub c 48)
+            (if (and (ge c 65) (le c 70))
+                (add (sub c 65) 10)
+                (if (and (ge c 97) (le c 102))
+                    (add (sub c 97) 10)
+                    (sub 0 1)))))
+
+    ;; Read the i-th byte of string s as an int code.
+    (defn hex-byte-at (s i)
+        (ord (substring s i (add i 1))))
+
+    ;; --- hex-valid? scan --------------------------------------------
+    ;; Walks the string left-to-right; returns 1 only if every char is
+    ;; a valid hex digit. Short-circuits on first miss.
+    (defn hex-valid-loop (s i s-len)
+        (if (ge i s-len) 1
+            (if (eq (hex-digit-value (hex-byte-at s i)) (sub 0 1))
+                0
+                (hex-valid-loop s (add i 1) s-len))))
+
+    (defn hex-valid? (s)
+        (do
+            (let n (str_len s))
+            (if (eq (mod n 2) 0)
+                (hex-valid-loop s 0 n)
+                0)))
+
+    ;; --- decode loop -------------------------------------------------
+    ;; Builds output bytes in REVERSE (cheap cons), reverses once at
+    ;; the entry point. On invalid char, returns the error sentinel
+    ;; directly; callers detect via value_eq against HEX-DECODE-ERROR.
+    ;;
+    ;; The accumulator is a byte-list while bytes are valid. The moment
+    ;; an invalid char surfaces, the loop returns the sentinel NodeID,
+    ;; and the entry point passes it through unchanged.
+
+    (defn hex-decode-loop (s i s-len acc)
+        (if (ge i s-len) acc
+            (do
+                (let hi (hex-digit-value (hex-byte-at s i)))
+                (let lo (hex-digit-value (hex-byte-at s (add i 1))))
+                (if (or (eq hi (sub 0 1)) (eq lo (sub 0 1)))
+                    HEX-DECODE-ERROR
+                    (hex-decode-loop s (add i 2) s-len
+                        (cons (add (mul hi 16) lo) acc))))))
+
+    ;; Reverse a list (decode loop builds in reverse for cheap cons;
+    ;; flip once at the end so the natural byte order is restored).
+    (defn hex-reverse-into (xs acc)
+        (if (hex-nil? xs) acc
+            (hex-reverse-into (tail xs) (cons (head xs) acc))))
+
+    ;; --- THE DECODE ENTRY POINT -------------------------------------
+    ;; Returns either a byte-list, OR the HEX-DECODE-ERROR NodeID.
+    ;; Callers distinguish via:
+    ;;   (value_eq result HEX-DECODE-ERROR)
+    (defn hex-decode (s)
+        (do
+            (let n (str_len s))
+            (if (eq (mod n 2) 0)
+                (do
+                    (let result (hex-decode-loop s 0 n (list)))
+                    (if (value_eq result HEX-DECODE-ERROR)
+                        HEX-DECODE-ERROR
+                        (hex-reverse-into result (list))))
+                HEX-DECODE-ERROR))))

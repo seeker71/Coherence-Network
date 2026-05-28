@@ -1,0 +1,105 @@
+; doc-xpath-band.fk — document-internal addressability sibling-witness.
+;
+; preludes: form-stdlib/doc-xpath.fk
+;
+; Exercises every path selector doc-xpath supports against a
+; deterministic 3-section document. Three-way sibling parity
+; (Go, Rust, TypeScript) attests that the path splitter, predicate
+; parser (positional + heading equality), field selector (title,
+; heading, paragraph[j], paragraphs), and flat-headings collection
+; all behave the same way across kernels.
+;
+; Band verdict: 10 when every assertion lands.
+;   /doc/title                                → "Test"             → 1
+;   /doc/sections                             → 3 sections          → 1
+;   /doc/section[0]                           → SECTION recipe      → 1
+;   /doc/section[1]/heading                   → "Why"               → 1
+;   /doc/section[heading='Why']/paragraph[0]  → "Because reasons."  → 1
+;   /doc/section[2]/paragraph[1]              → "The conclusion."   → 1
+;   /doc/section[1]/paragraphs                → 2 paragraphs         → 1
+;   /doc/headings                             → 3 headings           → 1
+;   dxpath-first missing                      → DOC-NOT-FOUND        → 1
+;   section-paragraph-at out-of-range         → DOC-NOT-FOUND        → 1
+;
+; The two sentinel probes ride along — their passing is required
+; for the not-found discipline to hold across kernels.
+
+(do
+    ;; ---- BUILD THE 3-SECTION DOCUMENT -----------------------------
+    (let s-intro
+        (make-section "Intro"
+                      (list "First intro line."
+                            "Second intro line.")))
+    (let s-why
+        (make-section "Why"
+                      (list "Because reasons."
+                            "And more reasons.")))
+    (let s-done
+        (make-section "Done"
+                      (list "Wrapping up."
+                            "The conclusion.")))
+    (let doc (make-doc "Test" (list s-intro s-why s-done)))
+
+    ;; ---- /doc/title → "Test" --------------------------------------
+    (let q-title (dxpath-first "/doc/title" doc))
+    (let title-ok (if (str_eq (node_value q-title) "Test") 1 0))
+
+    ;; ---- /doc/sections → 3 -----------------------------------------
+    (let q-secs (dxpath "/doc/sections" doc))
+    (let secs-ok (if (eq (len q-secs) 3) 1 0))
+
+    ;; ---- /doc/section[0] → first section --------------------------
+    (let q-s0 (dxpath-first "/doc/section[0]" doc))
+    (let s0-ok
+        (if (str_eq (node_value (section-heading q-s0)) "Intro") 1 0))
+
+    ;; ---- /doc/section[1]/heading → "Why" --------------------------
+    (let q-h1 (dxpath-first "/doc/section[1]/heading" doc))
+    (let h1-ok (if (str_eq (node_value q-h1) "Why") 1 0))
+
+    ;; ---- /doc/section[heading='Why']/paragraph[0] -----------------
+    (let q-why-p0
+        (dxpath-first
+            "/doc/section[heading='Why']/paragraph[0]" doc))
+    (let why-p0-ok
+        (if (str_eq (node_value q-why-p0) "Because reasons.") 1 0))
+
+    ;; ---- /doc/section[2]/paragraph[1] → "The conclusion." ---------
+    (let q-done-p1
+        (dxpath-first "/doc/section[2]/paragraph[1]" doc))
+    (let done-p1-ok
+        (if (str_eq (node_value q-done-p1) "The conclusion.") 1 0))
+
+    ;; ---- /doc/section[1]/paragraphs → 2 ---------------------------
+    (let q-why-ps (dxpath "/doc/section[1]/paragraphs" doc))
+    (let why-ps-ok (if (eq (len q-why-ps) 2) 1 0))
+
+    ;; ---- /doc/headings → 3 ----------------------------------------
+    (let q-headings (dxpath "/doc/headings" doc))
+    (let headings-ok (if (eq (len q-headings) 3) 1 0))
+
+    ;; ---- missing-section probe ------------------------------------
+    ;; A positional index past the end returns the DOC-NOT-FOUND
+    ;; sentinel via dxpath-first. Documents the contract; callers
+    ;; detect via node_eq.
+    (let q-miss
+        (dxpath-first "/doc/section[99]/paragraph[0]" doc))
+    (let miss-ok (if (node_eq q-miss DOC-NOT-FOUND) 1 0))
+
+    ;; ---- section-paragraph-at out-of-range ------------------------
+    ;; Direct accessor returns the same sentinel for out-of-range j.
+    (let oor (section-paragraph-at s-why 99))
+    (let oor-ok (if (node_eq oor DOC-NOT-FOUND) 1 0))
+
+    ;; ---- VERDICT --------------------------------------------------
+    ;; Sum lands on 10 when every selector behaves the same way
+    ;; across all three sibling kernels.
+    (add title-ok
+        (add secs-ok
+            (add s0-ok
+                (add h1-ok
+                    (add why-p0-ok
+                        (add done-p1-ok
+                            (add why-ps-ok
+                                (add headings-ok
+                                    (add miss-ok oor-ok))))))))))

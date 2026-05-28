@@ -1,0 +1,164 @@
+; channel-query.fk — query/response vocabulary over channel.fk
+;
+; Builds the Form expressions cells use to ask each other questions
+; and reply with wire-optimized mixed-content responses. All Blueprints
+; are substrate cells; the protocol is just composition of those.
+;
+; Discipline (from Urs):
+;   "we want the channel to be able to ask any addressable cell any
+;    question, where the question itself needs to be constructed from
+;    shared minimal primitives, and the response is wire optimized
+;    and can include shared and novel blueprints, recipes and cells,
+;    using the shared substrate and even external resources like
+;    pastebin, archive.org, YouTube, GitHub or any other external
+;    addressable content and recipe."
+;
+; ---- BLUEPRINTS ---------------------------------------------------
+;
+;   QUERY    (verb, address, body)
+;     verb    — a substrate-resident SubstrateString naming the query
+;               kind (e.g. "about", "recipe", "fetch", "compute",
+;               "introspect"). Both cells must understand the verb;
+;               the vocabulary IS the shared substrate.
+;     address — a NodeID, an EXTERNAL-URI, or a CELL-REF identifying
+;               what the question is ABOUT.
+;     body    — optional Recipe carrying additional arguments.
+;
+;   RESPONSE (correlation, status, items)
+;     correlation — a fingerprint of the query (so async responses
+;                   can be matched to questions).
+;     status      — a substrate-resident token: "ok", "partial",
+;                   "not-known", "external-only", "error".
+;     items       — a Recipe with one child per content item, each
+;                   wrapped in one of the mixed-content Blueprints.
+;
+; ---- MIXED-CONTENT ITEMS ------------------------------------------
+;
+;   SUBSTRATE-REF (nid-tuple)
+;     Cheapest. Points at a cell that EXISTS in both substrates.
+;     Wire: 4 small ints. The receiver looks it up locally.
+;
+;   NOVEL-BLUEPRINT (cat-nid-tuple, structural-recipe)
+;     New structural authoring. Receiver re-interns the structural
+;     recipe; content-addressing converges. (17-novel-nodes shape.)
+;     Wire: 4-int category + the child-structure as a list.
+;
+;   RECIPE-CONTENT (recipe-tree-as-child)
+;     A full Recipe transmitted as a substrate child (the kernel's
+;     serialization carries it). Use when the receiver doesn't have
+;     the recipe AND can't get it from a shared name. Larger.
+;
+;   CELL-REF (nid-tuple, optional fetch-hint)
+;     A reference to a substrate-addressable cell. Like SUBSTRATE-REF
+;     but allows a hint (e.g. a path the receiver can use to LOAD
+;     the cell if it doesn't have it yet).
+;
+;   EXTERNAL-URI (url-string, sha256-bytes-list)
+;     A pointer into the external world: pastebin, archive.org,
+;     youtube, github, etc. The sha256 binds the URI to its expected
+;     content so the receiver verifies before trusting. Tiny on the
+;     wire (~120 chars URL + 32 bytes hash) regardless of content size.
+;
+; preludes: form-stdlib/sha256.fk
+
+;; --- Blueprints (substrate-resident NodeIDs) -----------------------
+;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
+;; type=99); inst slots 1710..1719 reserve the channel-query family.
+(let QUERY            (make_nodeid 1 2 99 1710))
+(let RESPONSE         (make_nodeid 1 2 99 1711))
+(let SUBSTRATE-REF    (make_nodeid 1 2 99 1712))
+(let NOVEL-BLUEPRINT  (make_nodeid 1 2 99 1713))
+(let RECIPE-CONTENT   (make_nodeid 1 2 99 1714))
+(let CELL-REF         (make_nodeid 1 2 99 1715))
+(let EXTERNAL-URI     (make_nodeid 1 2 99 1716))
+
+;; --- Helpers -------------------------------------------------------
+(defn cq-nil? (xs) (eq (len xs) 0))
+
+(defn cq-nth (xs i)
+    (if (eq i 0) (head xs) (cq-nth (tail xs) (sub i 1))))
+
+;; nid-tuple: 4 trivial-ints encoding pkg/level/type/inst of a NodeID.
+;; The wire format that lets a NodeID-reference travel without binding
+;; to either cell's local intern table.
+(defn cq-nid-pack (nid)
+    (list (intern_trivial_int (node_pkg nid))
+          (intern_trivial_int (node_level nid))
+          (intern_trivial_int (node_type nid))
+          (intern_trivial_int (node_inst nid))))
+
+(defn cq-nid-unpack-from-children (kids)
+    (make_nodeid (node_inst (cq-nth kids 0))
+                 (node_inst (cq-nth kids 1))
+                 (node_inst (cq-nth kids 2))
+                 (node_inst (cq-nth kids 3))))
+
+;; Helper to lift a byte-list into a list of trivial NodeIDs.
+(defn map-bytes-to-trivials (bs)
+    (if (cq-nil? bs) (list)
+        (cons (intern_trivial_int (head bs))
+              (map-bytes-to-trivials (tail bs)))))
+
+;; --- Item constructors --------------------------------------------
+
+;; substrate-ref nid → SUBSTRATE-REF Recipe with the nid-tuple.
+(defn cq-substrate-ref (nid)
+    (intern_node SUBSTRATE-REF (cq-nid-pack nid)))
+
+;; novel-blueprint cat-nid children-list → NOVEL-BLUEPRINT Recipe.
+;; The children-list is the structural-recipe the receiver should
+;; intern locally. Content-addressing converges (17-novel-nodes shape).
+(defn cq-novel-blueprint (cat-nid children)
+    (intern_node NOVEL-BLUEPRINT
+        (cons (intern_node SUBSTRATE-REF (cq-nid-pack cat-nid))
+              children)))
+
+;; recipe-content recipe → RECIPE-CONTENT Recipe holding the recipe
+;; as a single child. The substrate's serialization carries the full
+;; sub-tree across the wire.
+(defn cq-recipe-content (recipe)
+    (intern_node RECIPE-CONTENT (list recipe)))
+
+;; cell-ref nid → CELL-REF Recipe. Like substrate-ref but semantically
+;; marks "this is a pointer to a separately-loadable cell."
+(defn cq-cell-ref (nid)
+    (intern_node CELL-REF (cq-nid-pack nid)))
+
+;; external-uri url-string sha256-bytes → EXTERNAL-URI Recipe with
+;; (url-as-substrate-string, sha256-children). Receiver verifies by
+;; (http_get url) + (sha256 result) == claimed-sha256.
+(defn cq-external-uri (url sha256-bytes)
+    (intern_node EXTERNAL-URI
+        (cons (intern_trivial_string url)
+              (map-bytes-to-trivials sha256-bytes))))
+
+;; --- Query and response constructors ------------------------------
+
+;; query verb-string address-nid body-recipe → QUERY Recipe.
+;; verb-string and address are bundled. body is optional extra args.
+(defn cq-query (verb address-nid body-recipe)
+    (intern_node QUERY
+        (list (intern_trivial_string verb)
+              (intern_node SUBSTRATE-REF (cq-nid-pack address-nid))
+              body-recipe)))
+
+;; response correlation-int status-string items-list → RESPONSE Recipe.
+;; correlation is the fingerprint of the matching query (for async
+;; matching). status is a token. items is a list of MIXED-CONTENT
+;; Recipes (substrate-ref / novel-blueprint / etc.).
+(defn cq-response (correlation status items-list)
+    (intern_node RESPONSE
+        (list (intern_trivial_int correlation)
+              (intern_trivial_string status)
+              (intern_node (make_nodeid 1 1 14 0) items-list))))
+
+;; --- Wire-fingerprint helpers -------------------------------------
+
+;; Fingerprint a query for correlation. Uses the canonical sha256
+;; recipe over the query's serialized substrate form, then folds
+;; the first 4 bytes into an int for compact correlation.
+;; (Fast and good-enough for matching; full hash stays available.)
+(defn cq-query-fingerprint (query-recipe)
+    (do
+        (let nid (node_inst query-recipe))
+        nid))

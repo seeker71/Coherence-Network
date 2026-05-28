@@ -1,0 +1,48 @@
+; tests/adler32-band.fk — RFC 1950 §9 Adler-32 sibling-witness band.
+;
+; preludes: form-stdlib/adler32.fk
+;
+; Validates that the Form-recipe adler32 (in form-stdlib/adler32.fk)
+; produces zlib/PNG/HTTP-deflate-correct checksums on every kernel
+; that carries the primitives (band, mod, add) and the u32 pair
+; (shl_u32, add_u32). No Adler-32 native exists; the recipe IS the
+; sole implementation. Three-way sibling parity attests that each
+; kernel can compute Adler-32 from primitives alone.
+;
+; The real Form→host-asm JIT is a future walk; once landed, calling
+; (adler32 bs) will dispatch through host-fast compiled code derived
+; from THIS recipe — no separate native required.
+;
+; Vectors:
+;   adler32("")          = 0x00000001 = 1          (RFC fixes empty = 1)
+;   adler32("a")         = 0x00620062 = 6422626
+;   adler32("abc")       = 0x024D0127 = 38600999
+;   adler32("Wikipedia") = 0x11E60398 = 300286872  (zlib reference)
+;   adler32("123456789") = 0x091E01DE = 152961502  ← canonical Adler-32 check
+;
+; Every expected value here fits in signed i32 (max ~3e8, well under
+; 2^31), so integer literals cross all three kernels without
+; u32-literal-rebuild. The recipe's internal (add_u32 (shl_u32 b 16) a)
+; still matters — it carries the b=65520 case across the i32 ceiling.
+
+(do
+    (let c-empty (adler32 (list)))
+    (let c-a     (adler32 (list 97)))
+    (let c-abc   (adler32 (list 97 98 99)))
+    (let c-wiki  (adler32 (list 87 105 107 105 112 101 100 105 97)))
+    (let c-check (adler32 (list 49 50 51 52 53 54 55 56 57)))
+
+    (let exp-empty 1)
+    (let exp-a     6422626)        ; (98 << 16) | 98
+    (let exp-abc   38600999)       ; 0x024D0127
+    (let exp-wiki  300286872)      ; 0x11E60398
+    (let exp-check 152961502)      ; 0x091E01DE
+
+    (let ok-empty (if (eq c-empty exp-empty) 1 0))
+    (let ok-a     (if (eq c-a     exp-a)     1 0))
+    (let ok-abc   (if (eq c-abc   exp-abc)   1 0))
+    (let ok-wiki  (if (eq c-wiki  exp-wiki)  1 0))
+    (let ok-check (if (eq c-check exp-check) 1 0))
+
+    ;; Band verdict: 5 when every canonical Adler-32 vector matches.
+    (add ok-empty (add ok-a (add ok-abc (add ok-wiki ok-check)))))

@@ -1,0 +1,196 @@
+; biography.fk — a cell publishes its own self-description and answers
+; "about-self" queries from peers.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; THE SHAPE:
+;
+;   BIOGRAPHY (
+;     self-identity     : int          — cell fingerprint
+;     self-name         : string       — human-readable name
+;     self-capabilities : list of      — verb strings this cell answers
+;                          trivial-strings
+;     self-blueprints   : list of      — substrate-refs this cell exposes
+;                          SUBSTRATE-REF items                (cq-substrate-ref shape)
+;     created-at        : int          — caller-clock ms timestamp
+;   )
+;
+;   Blueprint NodeID: (make_nodeid 1 2 99 1830) — BIOGRAPHY family.
+;
+; THE WALK:
+;
+;   1. The cell builds its own BIOGRAPHY on startup. The identity, name,
+;      capability list, exposed blueprints, and creation stamp are all
+;      authored once and re-used; the bio recipe content-addresses
+;      identically across sibling kernels.
+;   2. The cell registers an "about-self" handler — when asked the
+;      about-self verb, it wraps its BIOGRAPHY as a RECIPE-CONTENT
+;      response item and returns the RESPONSE.
+;   3. An asker cell sends QUERY(verb="about-self") and receives the
+;      RESPONSE. The asker unwraps the items list, takes the first
+;      item (which is a RECIPE-CONTENT wrapping the bio), and extracts
+;      each of the five BIOGRAPHY fields directly.
+;   4. The asker checks each field against the known-true value:
+;        - identity-ok           (1 if int matches)
+;        - name-ok               (1 if string matches via str_eq)
+;        - capabilities-len-ok   (1 if list length matches AND verb
+;                                 strings match in order)
+;        - blueprints-len-ok     (1 if list length matches AND first
+;                                 SUBSTRATE-REF unpacks to the same
+;                                 NodeID inst)
+;        - created-at-ok         (1 if int matches)
+;
+;   Verdict: 5 when all five fields round-trip the channel-query
+;   envelope intact across every sibling kernel.
+;
+; The walk is in-process: no channel file is required because the same
+; cell that builds the biography also evaluates the handler. The shape
+; that matters is the BIOGRAPHY Recipe traveling through the
+; channel-query items wrapper — that's what a real peer would receive,
+; and that's what the asker walks here.
+
+(do
+    (defn bio-nth (xs i)
+        (if (eq i 0) (head xs) (bio-nth (tail xs) (sub i 1))))
+
+    ;; ---------- BIOGRAPHY Blueprint --------------------------------
+    ;; Pkg/level/type in the user-channel range; inst 1830 names the
+    ;; biography family. The same call site on every sibling kernel
+    ;; means BIOGRAPHY recipes content-address identically — a peer
+    ;; that knows the Blueprint can read any cell's biography.
+    (let BIOGRAPHY (make_nodeid 1 2 99 1830))
+
+    ;; ---------- THE CELL'S SELF-FACTS ------------------------------
+    ;; A real cell would compute these from its own state; the demo
+    ;; hardcodes them so the verdict is sibling-checkable. Each value
+    ;; is the truth the asker will compare against after the round-
+    ;; trip through the channel-query envelope.
+    (let cell-identity     42)
+    (let cell-name         "biographer")
+    (let cell-cap-1        "about-self")
+    (let cell-cap-2        "ping")
+    (let cell-bp-1-nid     (make_nodeid 1 2 99 1830))  ; BIOGRAPHY itself
+    (let cell-bp-2-nid     (make_nodeid 1 2 99 1710))  ; QUERY
+    (let cell-created-at   1700000001)                 ; hardcoded unix-seconds stamp;
+                                                       ; fits the trivial-int slot
+                                                       ; (uint32) across all kernels.
+
+    ;; ---------- THE CELL'S BIOGRAPHY -------------------------------
+    ;; make-biography wraps the five fields into a BIOGRAPHY Recipe.
+    ;; Capabilities and blueprints are themselves list-recipes; the
+    ;; LIST category is the canonical (make_nodeid 1 1 14 0) used by
+    ;; every other channel-query sample.
+    (defn make-biography (identity name caps bps created-at)
+        (intern_node BIOGRAPHY
+            (list (intern_trivial_int identity)
+                  (intern_trivial_string name)
+                  (intern_node (make_nodeid 1 1 14 0) caps)
+                  (intern_node (make_nodeid 1 1 14 0) bps)
+                  (intern_trivial_int created-at))))
+
+    ;; The cell builds its biography ONCE at startup. Same recipe on
+    ;; every later about-self query; content-addressed so the bio
+    ;; NodeID stays stable across calls.
+    (let my-bio
+        (make-biography cell-identity
+                        cell-name
+                        (list (intern_trivial_string cell-cap-1)
+                              (intern_trivial_string cell-cap-2))
+                        (list (cq-substrate-ref cell-bp-1-nid)
+                              (cq-substrate-ref cell-bp-2-nid))
+                        cell-created-at))
+
+    ;; ---------- THE CELL'S about-self HANDLER ----------------------
+    ;; Receives a QUERY whose verb is "about-self"; returns a RESPONSE
+    ;; with one RECIPE-CONTENT item carrying the biography. The
+    ;; correlation is the query's NodeID-inst, matching the same
+    ;; discipline ping/multi-hop/async-correlation use.
+    (defn about-self-handler (query bio)
+        (do
+            (let correlation (node_inst query))
+            (let item (cq-recipe-content bio))
+            (cq-response correlation "ok" (list item))))
+
+    ;; ---------- ASKER: SEND THE QUERY ------------------------------
+    ;; The asker doesn't know the cell's identity yet — that's exactly
+    ;; what about-self is for. It just addresses the cell (via a
+    ;; well-known cell-locator NodeID) and asks the verb.
+    (let cell-locator (make_nodeid 1 2 99 1830))  ; the cell's address
+    (let q (cq-query "about-self" cell-locator (intern_trivial_string "")))
+    (let r (about-self-handler q my-bio))
+
+    ;; ---------- ASKER: UNWRAP THE BIOGRAPHY -----------------------
+    ;; RESPONSE children: [correlation-int, status-string, items-list].
+    ;; The items-list itself is a Recipe whose children are the wrapped
+    ;; mixed-content items. The first item is our RECIPE-CONTENT, and
+    ;; its single child is the bio recipe.
+    (let r-children   (node_children r))
+    (let items-node   (bio-nth r-children 2))
+    (let items        (node_children items-node))
+    (let first-item   (head items))
+    (let received-bio (head (node_children first-item)))
+
+    ;; ---------- ASKER: EXTRACT EACH FIELD --------------------------
+    ;; The bio's children are positional: 0=identity, 1=name,
+    ;; 2=capabilities-list, 3=blueprints-list, 4=created-at.
+    (let bio-children (node_children received-bio))
+
+    (let got-identity     (node_inst (bio-nth bio-children 0)))
+    (let got-name         (node_value (bio-nth bio-children 1)))
+    (let got-caps-list    (node_children (bio-nth bio-children 2)))
+    (let got-bps-list     (node_children (bio-nth bio-children 3)))
+    (let got-created-at   (node_inst (bio-nth bio-children 4)))
+
+    ;; ---------- FIELD 1: identity ----------------------------------
+    (let identity-ok
+        (if (eq got-identity cell-identity) 1 0))
+    (print "identity-ok:" identity-ok)
+
+    ;; ---------- FIELD 2: name --------------------------------------
+    (let name-ok
+        (if (str_eq got-name cell-name) 1 0))
+    (print "name-ok:" name-ok)
+
+    ;; ---------- FIELD 3: capabilities ------------------------------
+    ;; Length must be 2, and both verbs must round-trip intact.
+    (let got-cap-1 (node_value (bio-nth got-caps-list 0)))
+    (let got-cap-2 (node_value (bio-nth got-caps-list 1)))
+    (let capabilities-ok
+        (if (eq (len got-caps-list) 2)
+            (if (str_eq got-cap-1 cell-cap-1)
+                (if (str_eq got-cap-2 cell-cap-2) 1 0)
+                0)
+            0))
+    (print "capabilities-ok:" capabilities-ok)
+
+    ;; ---------- FIELD 4: blueprints --------------------------------
+    ;; Length must be 2; each entry is a SUBSTRATE-REF whose packed
+    ;; nid-tuple unpacks back to the original NodeID. We unpack the
+    ;; first one and check its inst — that's the canonical wire test
+    ;; for substrate-ref round-trips (same shape as the cell-query
+    ;; protocol sample 21).
+    (let first-bp        (head got-bps-list))
+    (let first-bp-kids   (node_children first-bp))
+    (let recovered-nid   (cq-nid-unpack-from-children first-bp-kids))
+    (let blueprints-ok
+        (if (eq (len got-bps-list) 2)
+            (if (eq (node_inst recovered-nid) (node_inst cell-bp-1-nid)) 1 0)
+            0))
+    (print "blueprints-ok:" blueprints-ok)
+
+    ;; ---------- FIELD 5: created-at --------------------------------
+    (let created-at-ok
+        (if (eq got-created-at cell-created-at) 1 0))
+    (print "created-at-ok:" created-at-ok)
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; 5 = identity-ok + name-ok + capabilities-ok + blueprints-ok
+    ;;     + created-at-ok. Three-way sibling parity attests every
+    ;; kernel walks the same envelope and recovers the same bio.
+    (let verdict
+        (add identity-ok
+             (add name-ok
+                  (add capabilities-ok
+                       (add blueprints-ok created-at-ok)))))
+    (print "verdict:" verdict)
+    verdict)

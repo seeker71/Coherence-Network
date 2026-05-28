@@ -18,15 +18,22 @@
 //     • Local FNDEFs become local JS function declarations — V8 JITs them.
 //     • Arithmetic on raw numbers stays raw (a + b) | 0.
 //     • Comparisons return raw bool.
+//     • (list a b c) constructs a Value{kind:"list", ...} inline; items
+//       get boxAny'd at the boundary.
+//     • Chained (let x ...) inside a do-block declares JS `const` at IIFE
+//       statement level so later siblings resolve directly to the JS var,
+//       no frame.lookup.
 //     • The top-level result gets boxed back into a Value at the boundary.
 //     • Closure-over-outer-frame names fall back to frame.lookup — the
 //       slow path. The fast path is pure arithmetic + locally-defined fns.
 //
 // What the compiler can NOT do (falls back to walker):
 //     • Reflection over substrate (intern_node, walk_recipe, etc.)
-//     • Native function calls with non-int args (delegates to walker)
-//     • IDENT references to frame variables (e.g. dynamic closures over
-//       outer state) — supported via frame.lookup but slow
+//     • Free IDENT references to frame variables (e.g. dynamic closures
+//       over outer state) — supported via frame.lookup but slow
+//     • Categories outside the handled set (WITNESS, CALL, ACCESS,
+//       METHOD, TRANSMUTE, INDUCTIVE, CONSTRUCTOR, CHOICE, QUOTIENT,
+//       ALIAS) — fall through to the walker fallback for now.
 //
 // For the bench cases (fib28, fact12, sum1000, ackermann) the compiler
 // emits straight-line recursive JS that's structurally identical to the
@@ -110,6 +117,7 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     "Frame",
     "lookupName",
     "callNative",
+    "callFreeFn",
     "valueAsInt",
     "valueAsBool",
     "valueAsNum",
@@ -127,6 +135,7 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     Frame,
     lookupName,
     callNative,
+    callFreeFn,
     valueAsInt,
     valueAsBool,
     valueAsNum,
@@ -160,6 +169,37 @@ function callNative(
   return ne.fn(k, args);
 }
 
+// callFreeFn — runtime helper for emitFnCall's free-fn fallback path.
+// Looks up the closure under nameID in the caller's frame, binds args
+// to the closure's params, and walks the body. If the body itself has
+// been JIT-compiled (in kernel.jitCompiled), dispatches through the
+// compiled fn instead — so recursive recipes stay JIT'd through every
+// recursion level.
+function callFreeFn(
+  k: Kernel,
+  frame: Frame,
+  nameID: number,
+  args: Value[],
+): Value {
+  const v = frame.lookup(nameID);
+  if (v === undefined) throw new Error(`callFreeFn: unbound name#${nameID}`);
+  if (v.kind !== "closure") {
+    throw new Error(`callFreeFn: name#${nameID} is not a closure (got ${v.kind})`);
+  }
+  const cl = v.closure;
+  if (args.length !== cl.params.length) {
+    throw new Error(
+      `callFreeFn: name#${nameID} arity mismatch (expected ${cl.params.length}, got ${args.length})`,
+    );
+  }
+  const cf = new Frame(cl.env);
+  for (let i = 0; i < cl.params.length; i++) cf.bind(cl.params[i]!, args[i]!);
+  const bodyKey = `${cl.body.pkg}.${cl.body.level}.${cl.body.type}.${cl.body.inst}`;
+  const compiled = k.jitCompiled.get(bodyKey);
+  if (compiled !== undefined) return compiled(cf);
+  return walk(k, cl.body, cf);
+}
+
 function valueAsInt(v: Value): number {
   if (
     v.kind === "int" ||
@@ -180,8 +220,16 @@ function valueAsBool(v: Value): boolean {
   throw new Error(`expected bool, got ${v.kind}`);
 }
 
-// Generic primitive extractor — returns raw JS number / bigint / bool / etc.
-function valueAsNum(v: Value): number | bigint | boolean | null | string {
+// Generic primitive extractor — returns raw JS number / bigint / bool /
+// string / null for scalar Value kinds, or passes the Value through
+// unchanged for composite kinds (list / closure / nodeid / ctor). The
+// downstream consumer (typically boxAny on the next call site, or the
+// top-level emitBox at the boundary) recognizes Value shapes and forwards
+// them, so a list returned from a free-fn or native crosses the compiled
+// boundary intact.
+function valueAsNum(
+  v: Value,
+): number | bigint | boolean | null | string | Value {
   if (
     v.kind === "int" ||
     v.kind === "i8" ||
@@ -196,7 +244,9 @@ function valueAsNum(v: Value): number | bigint | boolean | null | string {
   if (v.kind === "bool") return v.bool;
   if (v.kind === "str") return v.str;
   if (v.kind === "null") return null;
-  throw new Error(`valueAsNum: cannot unbox ${v.kind}`);
+  // list / closure / nodeid / ctor — pass the Value through; downstream
+  // boxAny / emitBox recognize Value-shapes and forward them unchanged.
+  return v;
 }
 
 // Generic boxer — wraps a raw JS primitive into the smallest fitting Value.
@@ -267,10 +317,15 @@ function emitExpr(k: Kernel, node: NodeID, scope: CompileScope): string {
       return emitFnDef(k, kids, scope);
     case RBasic.FNCALL:
       return emitFnCall(k, kids, scope);
-    case RBasic.LIST:
-      // Lists aren't on the hot path for the bench cases; fall back to
-      // walker for correctness rather than implementing list-emit.
-      return emitWalkerFallback(node);
+    case RBasic.LIST: {
+      // (list a b c) → a Value{kind:"list", list:[boxAny(a), boxAny(b), ...]}.
+      // Each element gets boxAny'd at the boundary — raw JS numbers/bools
+      // become Value{kind:"int"|"bool"|...}, existing Values pass through.
+      // The result is itself a Value, so callers that consume lists (e.g.
+      // natives with list args) receive a properly-shaped object.
+      const items = kids.map((c) => `boxAny(${emitExpr(k, c, scope)})`);
+      return `({ kind: "list", list: [${items.join(", ")}] })`;
+    }
     default:
       return emitWalkerFallback(node);
   }
@@ -447,32 +502,35 @@ function emitBlock(
   scope: CompileScope,
 ): string {
   if (op === RBlock.LET) {
+    // Standalone LET as expression — IIFE-scoped binding (no escape to
+    // siblings). When a LET sits inside a DO/SEQUENCE block,
+    // emitBlockAsIife handles it as a statement so the binding stays
+    // visible to later siblings in the same block, matching the walker's
+    // frame.bind semantics.
     const name = kids[0]!;
     const valueSrc = emitExpr(k, kids[1]!, scope);
     if (name.level !== Level.TRIVIAL || name.type !== Triv.STRING) {
       return emitWalkerFallback(kids[1]!);
     }
     const jsName = fresh(scope, `let_${name.inst}`);
-    scope.vars.set(name.inst, jsName);
-    // Block.LET in v0 evaluates to the bound value; we return it via comma.
-    // Since `let` is statement-y, we wrap in an IIFE so the expression
-    // can sit inline anywhere.
+    // NOTE: do NOT mutate scope.vars here — the JS variable lives only
+    // inside the IIFE we emit below, so sibling expressions in an outer
+    // block cannot reference it. Statement-form LETs (declared inside
+    // emitBlockAsIife) DO bind into the surrounding scope.
     return `(function(){ const ${jsName} = ${valueSrc}; return ${jsName}; })()`;
   }
   // DO / SEQUENCE — evaluate each, return last
   if (kids.length === 0) return "null";
   if (kids.length === 1) return emitExpr(k, kids[0]!, scope);
-  // Emit a comma-sequence inside parens; FNDEFs handled specially below.
-  const parts: string[] = [];
-  for (let i = 0; i < kids.length; i++) {
-    const c = kids[i]!;
-    if (isFnDef(k, c)) {
-      // FNDEFs need to be statements (function declarations) for V8 to
-      // JIT them; wrap the whole block in an IIFE.
+  // If any child is a FNDEF or LET, switch to statement-form IIFE so the
+  // declarations bind visibly across siblings. Otherwise emit a flat
+  // comma-sequence — cheaper, no extra closure.
+  for (const c of kids) {
+    if (isStatementForm(k, c)) {
       return emitBlockAsIife(k, kids, scope);
     }
-    parts.push(`(${emitExpr(k, c, scope)})`);
   }
+  const parts = kids.map((c) => `(${emitExpr(k, c, scope)})`);
   return `(${parts.join(", ")})`;
 }
 
@@ -480,6 +538,19 @@ function isFnDef(k: Kernel, node: NodeID): boolean {
   if (node.level === Level.TRIVIAL) return false;
   const cat = k.category(node);
   return cat.type === RBasic.FNDEF;
+}
+
+function isLetForm(k: Kernel, node: NodeID): boolean {
+  if (node.level === Level.TRIVIAL) return false;
+  const cat = k.category(node);
+  return cat.type === RBasic.BLOCK && cat.inst === RBlock.LET;
+}
+
+// Statement-form constructs need to be declared at the IIFE's statement
+// level so their bindings (function name, let name) become visible to
+// later siblings in the same block.
+function isStatementForm(k: Kernel, node: NodeID): boolean {
+  return isFnDef(k, node) || isLetForm(k, node);
 }
 
 function emitBlockAsIife(
@@ -496,8 +567,35 @@ function emitBlockAsIife(
     const isLast = i === kids.length - 1;
     if (isFnDef(k, c)) {
       stmts.push(emitFnDefAsStatement(k, c, scope));
-      lastIsExpr = false;
-      lastExpr = "null";
+      if (isLast) {
+        lastIsExpr = false;
+        lastExpr = "null";
+      }
+    } else if (isLetForm(k, c)) {
+      // (let name value) as statement — declares a JS const so later
+      // siblings in this block can reference the binding directly,
+      // matching the walker's frame.bind semantics. Falls back to walker
+      // for the value subtree if the name is malformed.
+      const letKids = k.children(c);
+      const nameNode = letKids[0]!;
+      if (nameNode.level !== Level.TRIVIAL || nameNode.type !== Triv.STRING) {
+        const fb = emitWalkerFallback(c);
+        if (isLast) {
+          lastIsExpr = true;
+          lastExpr = fb;
+        } else {
+          stmts.push(`(${fb});`);
+        }
+      } else {
+        const valueSrc = emitExpr(k, letKids[1]!, scope);
+        const jsName = fresh(scope, `let_${nameNode.inst}`);
+        scope.vars.set(nameNode.inst, jsName);
+        stmts.push(`const ${jsName} = ${valueSrc};`);
+        if (isLast) {
+          lastIsExpr = true;
+          lastExpr = jsName;
+        }
+      }
     } else {
       const e = emitExpr(k, c, scope);
       if (isLast) {
@@ -599,8 +697,14 @@ function emitFnCall(
       .map((a) => `boxAny(${emitExpr(k, a, scope)})`);
     return `valueAsNum(callNative(k, ${nameID}, [${argExprs.join(", ")}]))`;
   }
-  // Unknown — fallback to walker
-  return emitWalkerFallback(kids[0]!);
+  // Free-fn (closure resolved via frame) — emit a callFreeFn dispatch
+  // that looks up the closure at runtime and walks its body in a fresh
+  // frame. Lets recursive Form-defined functions compile cleanly even
+  // when their definition isn't in the compile scope.
+  const argExprs = kids
+    .slice(1)
+    .map((a) => `boxAny(${emitExpr(k, a, scope)})`);
+  return `valueAsNum(callFreeFn(k, frame, ${nameID}, [${argExprs.join(", ")}]))`;
 }
 
 function emitWalkerFallback(node: NodeID): string {

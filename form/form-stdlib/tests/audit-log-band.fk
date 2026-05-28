@@ -1,0 +1,60 @@
+; tests/audit-log-band.fk — audit-log sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/audit-log.fk
+;
+; Validates that the Form-recipe audit log (in form-stdlib/audit-log.fk)
+; chains hashes byte-identically across every sibling kernel that
+; carries the bitwise primitives and the canonical sha256 recipe.
+; No audit-log native exists; the recipe IS the sole implementation.
+;
+; We commit to tiny payloads (1-3 bytes) so the underlying O(n²)
+; sha256 recipe stays inside the recursion budget. The band verdict
+; locks at 4 — any divergence is a kernel bug.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+
+    ;; Replace the i-th element of xs with v (used for tampering).
+    (defn list-set (xs i v)
+        (if (eq i 0) (cons v (tail xs))
+            (cons (head xs) (list-set (tail xs) (sub i 1) v))))
+
+    ;; ---- BUILD A 3-ENTRY VALID LOG --------------------------------
+    (let log0 (audit-empty))
+    (let log1 (audit-append log0 (list 65)))
+    (let log2 (audit-append log1 (list 66 67)))
+    (let log3 (audit-append log2 (list 68 69 70)))
+
+    (let len-ok (if (eq (audit-len log3) 3) 1 0))
+
+    ;; ---- GENESIS prev-hash IS 32 ZERO BYTES -----------------------
+    ;; The first entry's prev-hash anchors the chain at zero.
+    (let genesis-prev (audit-entry-prev-hash (head log3)))
+    (let genesis-ok
+        (if (eq (len genesis-prev) 32)
+            (if (eq (head genesis-prev) 0)
+                (if (eq (head (tail genesis-prev)) 0) 1 0)
+                0)
+            0))
+
+    ;; ---- VERIFY VALID LOG -----------------------------------------
+    (let ok-valid (audit-verify log3))
+
+    ;; ---- VERIFY TAMPERED LOG --------------------------------------
+    ;; Replace the second entry's payload with different bytes but
+    ;; keep its old prev-hash + this-hash. sha256(prev || new-payload)
+    ;; no longer matches the claimed this-hash, so verify=0.
+    (let e1 (head (tail log3)))
+    (let e1-bad (make-audit-entry
+                    (audit-entry-prev-hash e1)
+                    (list 88 89)
+                    (audit-entry-this-hash e1)))
+    (let log3-bad (list-set log3 1 e1-bad))
+    (let ok-tampered (audit-verify log3-bad))
+
+    ;; Band verdict: 4 when length=3, genesis prev-hash is 32 zeros,
+    ;; valid log verifies (1), and tampered log fails (0).
+    (add len-ok
+        (add genesis-ok
+            (add ok-valid
+                (if (eq ok-tampered 0) 1 0)))))

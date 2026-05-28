@@ -1,0 +1,61 @@
+; tests/jit-coverage-band.fk — JIT compiler coverage band.
+;
+; Witnesses two RBasic arms the form-kernel-ts compiler now emits as
+; direct JS instead of falling back to walker:
+;
+;   • RBasic.LIST   — (list ...) constructs an inline Value{kind:"list"};
+;                     items get boxAny'd at the boundary.
+;
+;   • RBasic.BLOCK / RBlock.LET — chained let-bindings inside a do-block
+;                     declare JS const at IIFE-statement level. Later
+;                     siblings in the block resolve the IDENT to the JS
+;                     variable directly, no frame.lookup.
+;
+; Sibling parity: Rust and Go walk the recipe (their JIT backends are
+; honest stubs, returning 0). TS may walk or JIT-compile depending on
+; whether jit_compile is wired. The OUTPUT must converge three-way.
+
+(do
+    ;; ---- chained let-bindings: every later sibling can see earlier
+    ;;      bindings via direct JS scope, not frame.lookup. -----------
+    (let a 7)
+    (let b 11)
+    (let c (add a b))                 ; 18
+    (let d (mul c 2))                 ; 36
+    (let e (sub d a))                 ; 29
+
+    ;; ---- list constructed from those let-bindings ----------------
+    (let xs (list a b c d e))
+    (let n (len xs))                  ; 5
+    (let first (head xs))             ; 7
+
+    ;; ---- defn whose body composes both: returns a list of doubled
+    ;;      sums via chained let-bindings. ---------------------------
+    (defn pair-doubled (x y)
+        (do
+            (let s (add x y))
+            (let s2 (mul s 2))
+            (list x y s2)))
+
+    (let r1 (pair-doubled a b))       ; (list 7 11 36)
+    (let r1-len (len r1))             ; 3
+    (let r1-nth-2 (nth r1 2))         ; 36
+
+    ;; ---- jit-compile pair-doubled (TS: compiles; Rust/Go: honest 0)
+    (let compiled (jit_compile "pair-doubled"))
+
+    (let r2 (pair-doubled c d))       ; (list 18 36 108) — same answer either path
+    (let r2-nth-2 (nth r2 2))         ; 108
+
+    ;; ---- five sibling-witness assertions ------------------------
+    (let ok-let-chain (if (eq e 29) 1 0))
+    (let ok-list-len  (if (eq n 5) 1 0))
+    (let ok-list-head (if (eq first 7) 1 0))
+    (let ok-defn-list (if (eq r1-nth-2 36) 1 0))
+    (let ok-post-jit  (if (eq r2-nth-2 108) 1 0))
+
+    ;; Band verdict: 5 when every coverage point witnesses correctly.
+    (add ok-let-chain
+    (add ok-list-len
+    (add ok-list-head
+    (add ok-defn-list ok-post-jit)))))

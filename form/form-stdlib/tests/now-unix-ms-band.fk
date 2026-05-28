@@ -1,0 +1,55 @@
+; tests/now-unix-ms-band.fk — sibling-witness band for the now_unix_ms native.
+;
+; preludes:
+;
+; (No preludes — the band uses only int primitives and the
+; now_unix_ms native, both kernel-resident.)
+;
+; The clock native that closes the freshness gap. Every richer
+; freshness walk (token expiry, ping stamps, heartbeat aging, async
+; correlation windows) needs a sibling-aligned "right now" reading.
+; This band attests that three sibling kernels (Go, Rust, TypeScript)
+; each register the same native with the same SHAPE — even though
+; the VALUE each kernel returns must differ (every kernel reads its
+; own host clock at its own instant of invocation).
+;
+; Sibling parity therefore CAN'T check the exact value. It checks
+; the SHAPE:
+;
+;   1. (now_unix_ms) returns a positive int.
+;   2. (now_unix_ms) returns an int greater than a recent past epoch.
+;
+; Both checks land 1 on every kernel whose host clock is set sanely.
+; The verdict is the sum of these booleans, which IS sibling-stable
+; because every kernel sees the same booleans (1+1+1+1 = 4) — the
+; underlying timestamp ints are NOT printed and NOT compared.
+;
+; The epoch threshold (1700000000000 = 2023-11-14T22:13:20.000Z) is
+; chosen well before the band's authoring date but well after any
+; uninitialized-RTC fallback (which typically resets to 0 or
+; 1970-01-01), so a broken host fails the epoch check while still
+; passing the positivity check — the band detects which failure mode
+; without divergence between kernels.
+;
+; Costs: two native invocations, four integer comparisons, three
+; adds. The walk fits inside the kernel's interpreter loop without
+; any allocation. The Form→host JIT (when it lands) will compile
+; this band to a few host instructions per clock read.
+
+(do
+    (let t1 (now_unix_ms))
+    (let t2 (now_unix_ms))
+
+    (let epoch 1700000000000)
+
+    (let t1-positive (if (gt t1 0) 1 0))
+    (let t2-positive (if (gt t2 0) 1 0))
+    (let t1-after-epoch (if (gt t1 epoch) 1 0))
+    (let t2-after-epoch (if (gt t2 epoch) 1 0))
+
+    ;; Band verdict: 4 = two positivity checks + two epoch checks.
+    ;; Every kernel reads its own clock; the VALUE diverges between
+    ;; kernels but the BOOLEAN doesn't, so the sum is sibling-stable.
+    (add t1-positive
+         (add t2-positive
+              (add t1-after-epoch t2-after-epoch))))

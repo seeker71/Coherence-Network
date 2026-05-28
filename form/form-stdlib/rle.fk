@@ -1,0 +1,116 @@
+; rle.fk — Run-Length Encoding compression as a Form recipe.
+;
+; Canonical truth: this recipe MEANS byte RLE. With nothing but the
+; kernel's small-int primitives and cons/head/tail list ops, a stream
+; of bytes compresses to (count, byte) pairs and back without any host
+; library. The recipe stays sovereign across sibling kernels (Go, Rust,
+; TypeScript).
+;
+; Why this exists:
+;   RLE is the simplest non-trivial compression and the canonical
+;   "encoder + decoder must round-trip" pair. Wire formats from PCX
+;   through TIFF Packbits through Quake1 sprite frames live on top of
+;   variants of this exact shape — collapse a run of identical bytes
+;   into a (count, byte) pair, emit non-runs as count=1 pairs. The
+;   substrate's body already carries CRC32, Adler32, hex, base64,
+;   sha256 as recipes; RLE adds the smallest reversible compression
+;   so the same content-addressing arc — bytes-in → recipe-walk →
+;   bytes-out — extends to a payload that has shrunk along the way.
+;
+; The two entry points:
+;   (rle-encode byte-list)   → encoded byte-list (alternating count, byte)
+;   (rle-decode byte-list)   → original byte-list
+;
+; Round-trip identity holds for every byte sequence:
+;   (rle-decode (rle-encode xs)) ≡ xs
+;
+; The format (byte RLE, count + value pairs):
+;   - Output is a flat byte-list. Bytes at even positions are counts
+;     (1..255); bytes at odd positions are the value being repeated.
+;   - Runs of 1 emit as (1, byte). No escape codes, no sentinel — the
+;     decoder always reads pairs.
+;   - Runs > 255 split into multiple pairs of count <= 255. The split
+;     is deterministic: emit (255, byte) zero or more times, then a
+;     final (remainder, byte) pair for whatever's left.
+;
+; Examples:
+;   [0xAA 0xAA 0xAA 0xBB 0xCC 0xCC]  → [3 0xAA 1 0xBB 2 0xCC]
+;   [5 5 5 5]                        → [4 5]
+;   []                               → []
+;   257 repeats of byte 7            → [255 7 2 7]
+;
+; Cost is O(n) over input length — head/tail straight through, single
+; pass for both encode and decode. The accumulator-then-reverse pattern
+; keeps every cons cheap.
+
+(do
+    (defn rle-nil? (xs) (eq (len xs) 0))
+
+    ;; Reverse a list into an accumulator (the cheap-cons closer).
+    (defn rle-reverse-into (xs acc)
+        (if (rle-nil? xs) acc
+            (rle-reverse-into (tail xs) (cons (head xs) acc))))
+
+    ;; ---- ENCODE -----------------------------------------------------
+    ;; emit-run pushes (count, value) onto acc, splitting runs > 255
+    ;; into successive (255, value) chunks followed by the remainder.
+    ;; acc is built in REVERSE — emit-run conses VALUE first, then
+    ;; COUNT, so after the final rle-reverse-into the natural
+    ;; (count, value, count, value, ...) order surfaces.
+    (defn rle-emit-run (count value acc)
+        (if (le count 255)
+            (cons value (cons count acc))
+            (rle-emit-run (sub count 255) value
+                (cons value (cons 255 acc)))))
+
+    ;; Walk the input byte-list head-to-tail. cur-val is the byte we're
+    ;; currently running; cur-count is how many of it we've seen in a
+    ;; row. When the next byte differs (or input ends), flush via
+    ;; emit-run. The has-run? flag distinguishes "no run seen yet"
+    ;; from "current run is the byte 0".
+    (defn rle-encode-loop (bs has-run? cur-val cur-count acc)
+        (if (rle-nil? bs)
+            (if (eq has-run? 1)
+                (rle-emit-run cur-count cur-val acc)
+                acc)
+            (do
+                (let b (band (head bs) 255))
+                (if (eq has-run? 0)
+                    (rle-encode-loop (tail bs) 1 b 1 acc)
+                    (if (eq b cur-val)
+                        (rle-encode-loop (tail bs) 1 cur-val (add cur-count 1) acc)
+                        (rle-encode-loop (tail bs) 1 b 1
+                            (rle-emit-run cur-count cur-val acc)))))))
+
+    ;; ---- THE ENCODE ENTRY POINT ------------------------------------
+    ;; (rle-encode byte-list) → encoded byte-list of (count, value) pairs.
+    ;; Empty input → empty output. Runs > 255 split into successive
+    ;; (255, value) chunks plus a remainder pair.
+    (defn rle-encode (bytes)
+        (rle-reverse-into (rle-encode-loop bytes 0 0 0 (list)) (list)))
+
+    ;; ---- DECODE -----------------------------------------------------
+    ;; Expand-pair pushes `count` copies of `value` onto acc. Runs are
+    ;; built bottom-up via cons; the outer reverse restores order.
+    (defn rle-expand-pair (count value acc)
+        (if (eq count 0) acc
+            (rle-expand-pair (sub count 1) value (cons value acc))))
+
+    ;; Walk the encoded list two bytes at a time. The encoder never
+    ;; emits an odd-length output, so on a well-formed input the loop
+    ;; always finds a (count, value) pair to consume.
+    (defn rle-decode-loop (bs acc)
+        (if (rle-nil? bs) acc
+            (do
+                (let count (head bs))
+                (let rest (tail bs))
+                (if (rle-nil? rest) acc
+                    (rle-decode-loop (tail rest)
+                        (rle-expand-pair count (head rest) acc))))))
+
+    ;; ---- THE DECODE ENTRY POINT ------------------------------------
+    ;; (rle-decode byte-list) → original byte-list.
+    ;; Empty input → empty output. Round-trip identity:
+    ;;   (rle-decode (rle-encode xs)) ≡ xs
+    (defn rle-decode (bytes)
+        (rle-reverse-into (rle-decode-loop bytes (list)) (list))))

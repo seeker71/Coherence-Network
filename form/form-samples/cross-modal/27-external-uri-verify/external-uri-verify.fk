@@ -1,0 +1,125 @@
+; external-uri-verify.fk — closing the verify-loop on EXTERNAL-URI items.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; THE SCENE:
+;
+;   21-cell-query-protocol constructs an EXTERNAL-URI item with a URL
+;   and a sha256 fingerprint, but never actually FETCHES the resource
+;   and verifies. THIS walk closes that loop.
+;
+;   A sender stages a fixture file on disk with a known byte content,
+;   computes the canonical sha256 of the file, and constructs an
+;   EXTERNAL-URI item carrying (file-path, expected-sha256).
+;
+;   A receiver extracts the URI and the claimed sha256, reads the
+;   file via read_file_bytes, computes sha256 of the fetched bytes,
+;   and compares to the claimed hash.
+;
+;   Match → trust the content. Mismatch → reject.
+;
+;   The bad-path: a tampered EXTERNAL-URI carrying a claimed-hash that
+;   does NOT match the file's real content. The same verify-loop
+;   surfaces the mismatch and the receiver refuses to trust.
+;
+;   Why a local file fixture instead of real http_get:
+;     The kernel native http_get exists (and is the production path),
+;     but live network fetches diverge across CI runs (TLS retries,
+;     proxy headers, transient 5xx). The verify-shape is identical
+;     for either source; local file content is the deterministic
+;     three-way validation surface.
+
+(do
+    ;; ---------- helpers --------------------------------------------
+    (defn ev-nil? (xs) (eq (len xs) 0))
+
+    (defn ev-nth (xs i)
+        (if (eq i 0) (head xs) (ev-nth (tail xs) (sub i 1))))
+
+    ;; Walk a string into a list of byte ints (forward order).
+    (defn ev-string-to-bytes (s i n acc)
+        (if (eq i n) (ev-reverse acc (list))
+            (ev-string-to-bytes s (add i 1) n
+                (cons (ord (substring s i (add i 1))) acc))))
+
+    (defn ev-reverse (xs acc)
+        (if (ev-nil? xs) acc
+            (ev-reverse (tail xs) (cons (head xs) acc))))
+
+    ;; Compare two byte lists element-wise. 1 if equal, 0 otherwise.
+    (defn ev-bytes-eq (a b)
+        (if (ev-nil? a)
+            (if (ev-nil? b) 1 0)
+            (if (ev-nil? b) 0
+                (if (eq (head a) (head b))
+                    (ev-bytes-eq (tail a) (tail b))
+                    0))))
+
+    ;; EXTERNAL-URI children: (url-string-nid byte0-nid byte1-nid ...).
+    ;; Extract URL and claimed-bytes from those children.
+    (defn ev-extract-url (uri-item)
+        (node_value (head (node_children uri-item))))
+
+    (defn ev-extract-claimed-bytes (uri-item)
+        (ev-children-to-bytes (tail (node_children uri-item))))
+
+    (defn ev-children-to-bytes (kids)
+        (if (ev-nil? kids) (list)
+            (cons (node_value (head kids))
+                  (ev-children-to-bytes (tail kids)))))
+
+    ;; The verify protocol: given an EXTERNAL-URI item, read the URI,
+    ;; compute sha256 of the fetched bytes, compare to the claimed hash
+    ;; embedded in the item. Returns 1 on match, 0 on mismatch.
+    (defn ev-verify (uri-item)
+        (do
+            (let url (ev-extract-url uri-item))
+            (let claimed (ev-extract-claimed-bytes uri-item))
+            (let fetched (read_file_bytes url))
+            (let computed (sha256 fetched))
+            (ev-bytes-eq claimed computed)))
+
+    ;; ---------- SENDER ---------------------------------------------
+    ;; Stage a small fixture file. Keep bytes short — the sha256 recipe
+    ;; walks slowly per round on lists, so we use 5 bytes ("hello").
+    (let fixture-path "/tmp/e2e-external-fixture.txt")
+    (let fixture-bytes (list 104 101 108 108 111))     ; "hello"
+    (write_file_bytes fixture-path fixture-bytes)
+
+    ;; Sender computes the canonical sha256 of the fixture's bytes and
+    ;; embeds it in the EXTERNAL-URI. This is the honest case.
+    (let canonical-hash (sha256 fixture-bytes))
+    (print "canonical-hash-len:" (len canonical-hash))
+
+    (let honest-uri (cq-external-uri fixture-path canonical-hash))
+
+    ;; ---------- RECEIVER: HAPPY PATH -------------------------------
+    ;; Receiver extracts URL + claimed-hash from the item, reads the
+    ;; file, computes sha256, compares. Match expected.
+    (let fetched-bytes (read_file_bytes fixture-path))
+    (print "bytes-fetched:" (len fetched-bytes))
+
+    (let honest-verdict (ev-verify honest-uri))
+    (print "hash-matches:" honest-verdict)
+
+    ;; ---------- TAMPERED PATH --------------------------------------
+    ;; The sender (or a man-in-the-middle) constructs an EXTERNAL-URI
+    ;; with a claimed-hash that doesn't match the file. The receiver's
+    ;; verify-loop must catch this and return 0.
+    ;;
+    ;; We forge a "wrong" hash by hashing different bytes ("world", 5
+    ;; bytes — same length, different content → different hash).
+    (let wrong-hash (sha256 (list 119 111 114 108 100)))
+    (let tampered-uri (cq-external-uri fixture-path wrong-hash))
+
+    (let tampered-verdict (ev-verify tampered-uri))
+    (print "hash-mismatch-detected:" (if (eq tampered-verdict 0) 1 0))
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Three attestations, each binary-clean across all three kernels:
+    ;;   1. Sender computed a 32-byte sha256 digest.
+    ;;   2. Honest URI verifies (claimed == computed).
+    ;;   3. Tampered URI fails to verify (claimed != computed).
+    (add (if (eq (len canonical-hash) 32) 1 0)
+         (add honest-verdict
+              (if (eq tampered-verdict 0) 1 0))))

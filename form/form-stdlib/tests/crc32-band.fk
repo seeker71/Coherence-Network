@@ -1,0 +1,41 @@
+; tests/crc32-band.fk — IEEE 802.3 CRC-32 sibling-witness band.
+;
+; preludes: form-stdlib/crc32.fk
+;
+; Validates that the Form-recipe crc32 (in form-stdlib/crc32.fk)
+; produces zlib/PNG/Ethernet-correct checksums on every kernel that
+; carries the bitwise primitives. No CRC32 native exists; the recipe
+; IS the sole implementation. Three-way sibling parity attests that
+; each kernel can compute CRC-32 from primitives alone.
+;
+; The real Form→host-asm JIT is a future walk; once landed, calling
+; (crc32 bs) will dispatch through host-fast compiled code derived
+; from THIS recipe — no separate native required.
+;
+; Vectors:
+;   crc32("")          = 0x00000000
+;   crc32("a")         = 0xE8B7BE43
+;   crc32("abc")       = 0x352441C2
+;   crc32("123456789") = 0xCBF43926   ← canonical CRC-32 check value
+;
+; Expected values for the high-bit cases are reconstructed via u32
+; primitives so integer literals don't drift across kernels.
+
+(do
+    (let c-empty  (crc32 (list)))
+    (let c-a      (crc32 (list 97)))
+    (let c-abc    (crc32 (list 97 98 99)))
+    (let c-check  (crc32 (list 49 50 51 52 53 54 55 56 57)))
+
+    (let exp-empty  0)
+    (let exp-a      (add_u32 (shl_u32 59575 16) 48707))   ; 0xE8B7BE43
+    (let exp-abc    891568578)                            ; 0x352441C2
+    (let exp-check  (add_u32 (shl_u32 52212 16) 14630))   ; 0xCBF43926
+
+    (let ok-empty (if (eq c-empty exp-empty) 1 0))
+    (let ok-a     (if (eq c-a     exp-a)     1 0))
+    (let ok-abc   (if (eq c-abc   exp-abc)   1 0))
+    (let ok-check (if (eq c-check exp-check) 1 0))
+
+    ;; Band verdict: 4 when every canonical CRC-32 vector matches.
+    (add ok-empty (add ok-a (add ok-abc ok-check))))

@@ -1,0 +1,98 @@
+; symbols-merge.fk — sample: set-algebra over symbol tables.
+;
+; preludes: form-stdlib/symbols.fk form-stdlib/symbols-merge.fk
+;
+; Two cells (A and B) each hold a symbol table. Once they meet over a
+; channel, the natural questions are set-theoretic: union, strict union,
+; intersection, difference. This walk exercises all four against a tiny
+; overlap-shaped pair:
+;
+;   table A:  {a → 1,  b → 2}
+;   table B:  {b → 20, c → 30}
+;
+; Expected verdicts:
+;
+;   merge          → {a → 1, b → 20, c → 30}    (3 bindings; B wins on b)
+;   merge-strict   → SYMBOLS-CONFLICT            (b appears in both)
+;   intersect      → {b → 2}                     (only b shared; A's value)
+;   diff (A − B)   → [a]                         (only a is unique to A)
+;
+; Three sibling kernels (Go, Rust, TypeScript) compose the same tables,
+; run the same four operations, and arrive at the same lookups + counts.
+
+(do
+    ;; ---------- BUILD TABLES ---------------------------------------
+    (let v-a-1  (intern_trivial_int 1))
+    (let v-a-2  (intern_trivial_int 2))
+    (let v-b-20 (intern_trivial_int 20))
+    (let v-b-30 (intern_trivial_int 30))
+
+    (let table-a
+        (symbol-table
+            (list (symbol-bind "a" v-a-1)
+                  (symbol-bind "b" v-a-2))))
+
+    (let table-b
+        (symbol-table
+            (list (symbol-bind "b" v-b-20)
+                  (symbol-bind "c" v-b-30))))
+
+    ;; ---------- MERGE (B WINS ON OVERLAP) --------------------------
+    (let merged (symbols-merge table-a table-b))
+    (let merged-count (len (symbol-table-bindings merged)))
+    (let merged-a (symbol-lookup merged "a"))
+    (let merged-b (symbol-lookup merged "b"))
+    (let merged-c (symbol-lookup merged "c"))
+    (print "merge-count:" merged-count)
+    (print "merge-a-is-1:"  (if (node_eq merged-a v-a-1) 1 0))
+    (print "merge-b-is-20:" (if (node_eq merged-b v-b-20) 1 0))
+    (print "merge-c-is-30:" (if (node_eq merged-c v-b-30) 1 0))
+
+    ;; ---------- MERGE-STRICT (CONFLICT ON b) -----------------------
+    (let strict (symbols-merge-strict table-a table-b))
+    (print "strict-is-conflict:"
+        (if (node_eq strict SYMBOLS-CONFLICT) 1 0))
+
+    ;; A strict merge over disjoint tables succeeds.
+    (let table-d
+        (symbol-table
+            (list (symbol-bind "d" (intern_trivial_int 40)))))
+    (let strict-ok (symbols-merge-strict table-a table-d))
+    (let strict-ok-count
+        (if (node_eq strict-ok SYMBOLS-CONFLICT)
+            0
+            (len (symbol-table-bindings strict-ok))))
+    (print "strict-disjoint-count:" strict-ok-count)
+
+    ;; ---------- INTERSECT (b ONLY, A's VALUE) ----------------------
+    (let inter (symbols-intersect table-a table-b))
+    (let inter-count (len (symbol-table-bindings inter)))
+    (let inter-b (symbol-lookup inter "b"))
+    (let inter-a (symbol-lookup inter "a"))
+    (print "intersect-count:" inter-count)
+    (print "intersect-b-is-2:" (if (node_eq inter-b v-a-2) 1 0))
+    (print "intersect-a-missing:"
+        (if (eq (symbol-found? inter-a) 0) 1 0))
+
+    ;; ---------- DIFF (A − B) → [a] ---------------------------------
+    (let diff (symbols-diff table-a table-b))
+    (let diff-count (len diff))
+    (let diff-head-is-a
+        (if (eq diff-count 0)
+            0
+            (if (node_eq (head diff) (intern_trivial_string "a")) 1 0)))
+    (print "diff-count:" diff-count)
+    (print "diff-head-is-a:" diff-head-is-a)
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Nine attestations, one per print. Verdict = sum.
+    (add (if (eq merged-count 3) 1 0)
+        (add (if (node_eq merged-a v-a-1) 1 0)
+            (add (if (node_eq merged-b v-b-20) 1 0)
+                (add (if (node_eq merged-c v-b-30) 1 0)
+                    (add (if (node_eq strict SYMBOLS-CONFLICT) 1 0)
+                        (add (if (eq strict-ok-count 3) 1 0)
+                            (add (if (eq inter-count 1) 1 0)
+                                (add (if (node_eq inter-b v-a-2) 1 0)
+                                    (add (if (eq diff-count 1) 1 0)
+                                         diff-head-is-a))))))))))

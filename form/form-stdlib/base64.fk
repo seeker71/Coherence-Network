@@ -1,0 +1,178 @@
+; base64.fk — Base64 (RFC 4648 §4) encoding and decoding as a Form recipe.
+;
+; Canonical truth: this recipe MEANS Base64. With the kernel's bitwise
+; primitives (band, bor, shl_u32, shr_u32) and the string natives
+; (ord, byte_to_str, str_concat, substring, str_len), Base64 composes
+; without any host-library detour. The recipe stays sovereign across
+; sibling kernels (Go, Rust, TypeScript).
+;
+; Why this exists:
+;   Wire channels that don't accept raw bytes — HTTP headers, JSON
+;   string fields, URIs, .env files, terminal copy/paste — need a
+;   textual envelope. RFC 4648 §4 (the standard alphabet, not §5
+;   url-safe) is the canonical envelope. The 24-wire-binary-symbols
+;   sample shows raw Recipe bytes traveling; Base64 is the same bytes
+;   wearing a string costume so they survive ASCII-only pipes.
+;
+; The two entry points:
+;   (base64-encode byte-list)  → string
+;   (base64-decode string)     → byte-list
+;
+; Round-trip identity holds for every byte sequence: decode(encode(b)) = b.
+;
+; Edge cases (RFC 4648 §4):
+;   - input length ≡ 0 (mod 3) → no padding             (e.g. "foo"   → "Zm9v")
+;   - input length ≡ 1 (mod 3) → "xx==" tail            (e.g. "f"     → "Zg==")
+;   - input length ≡ 2 (mod 3) → "xxx=" tail            (e.g. "fo"    → "Zm8=")
+;   - empty input              → empty output           (""           → "")
+;
+; The alphabet is fixed at 64 ASCII characters:
+;   ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+; with "=" as the pad byte.
+;
+; Cost is O(n) over input length (each 3-byte chunk → 4 chars, each
+; 4-char chunk → 3 bytes). Form-list traversal is linear here because
+; we walk head/tail, never index. No nth lookups, no quadratic terms.
+
+(do
+    ;; ---- BYTE-LIST UTILITIES ---------------------------------------
+    (defn b64-nil? (xs) (eq (len xs) 0))
+
+    ;; The canonical Base64 alphabet as a 64-char string. Position i in
+    ;; this string is the character for 6-bit value i.
+    (defn base64-alphabet-of ()
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+
+    ;; Look up the character for a 6-bit value (0..63).
+    (defn b64-char-of (idx)
+        (substring (base64-alphabet-of) idx (add idx 1)))
+
+    ;; Fold a list of single-char strings into one string. Walks the
+    ;; list head-to-tail; cost is O(n) but n stays small (4 chars per
+    ;; chunk in the encode path, the full output in the final fold).
+    (defn concat-str-list (xs)
+        (if (b64-nil? xs) ""
+            (str_concat (head xs) (concat-str-list (tail xs)))))
+
+    ;; ---- ENCODE: 3 BYTES → 4 ALPHABET CHARS ------------------------
+    ;; The canonical chunk transform (RFC 4648 §4):
+    ;;   bits 0..5   : (b0 >> 2) & 0x3F
+    ;;   bits 6..11  : ((b0 & 0x03) << 4) | (b1 >> 4)
+    ;;   bits 12..17 : ((b1 & 0x0F) << 2) | (b2 >> 6)
+    ;;   bits 18..23 : b2 & 0x3F
+    ;; When fewer than 3 bytes remain, the missing bytes are treated as
+    ;; zero for the bit computation, and trailing alphabet chars are
+    ;; replaced by "=" pad bytes — one "=" per missing input byte.
+    ;;
+    ;; (chunk-3-to-4 b0 b1 b2 pad-count) → 4-character string.
+    ;; pad-count ∈ {0,1,2}: 0 for a full triple, 1 when only b0+b1 are
+    ;; real, 2 when only b0 is real. b1/b2 must be 0 in those cases.
+    (defn chunk-3-to-4 (b0 b1 b2 pad-count)
+        (do
+            (let c0 (b64-char-of (band (shr_u32 b0 2) 63)))
+            (let c1 (b64-char-of (band (bor (shl_u32 (band b0 3) 4)
+                                            (shr_u32 b1 4)) 63)))
+            (let c2 (b64-char-of (band (bor (shl_u32 (band b1 15) 2)
+                                            (shr_u32 b2 6)) 63)))
+            (let c3 (b64-char-of (band b2 63)))
+            (if (eq pad-count 0)
+                (str_concat c0 (str_concat c1 (str_concat c2 c3)))
+                (if (eq pad-count 1)
+                    (str_concat c0 (str_concat c1 (str_concat c2 "=")))
+                    (str_concat c0 (str_concat c1 "==")))))) ;; pad-count = 2
+
+    ;; Walk the byte-list 3 at a time, accumulating the output string.
+    (defn b64-encode-loop (bs acc)
+        (if (b64-nil? bs) acc
+            (do
+                (let b0 (head bs))
+                (let r1 (tail bs))
+                (if (b64-nil? r1)
+                    ;; 1 byte remaining → "xx=="
+                    (str_concat acc (chunk-3-to-4 b0 0 0 2))
+                    (do
+                        (let b1 (head r1))
+                        (let r2 (tail r1))
+                        (if (b64-nil? r2)
+                            ;; 2 bytes remaining → "xxx="
+                            (str_concat acc (chunk-3-to-4 b0 b1 0 1))
+                            ;; ≥3 bytes remaining → full chunk, recurse
+                            (b64-encode-loop (tail r2)
+                                (str_concat acc
+                                    (chunk-3-to-4 b0 b1 (head r2) 0)))))))))
+
+    ;; ---- THE ENCODE ENTRY POINT ------------------------------------
+    (defn base64-encode (bytes)
+        (b64-encode-loop bytes ""))
+
+    ;; ---- DECODE: ALPHABET CHAR → 6-BIT VALUE -----------------------
+    ;; Walk the alphabet string looking for the input char; return its
+    ;; index (0..63). The pad char "=" never reaches this lookup —
+    ;; the decode loop handles padding before calling here. An unknown
+    ;; character returns -1 (computed as (sub 0 1)); the loop treats
+    ;; that as "stop here" but well-formed inputs never trigger it.
+    (defn b64-index-rec (alpha ch i alpha-len)
+        (if (eq i alpha-len) (sub 0 1)
+            (if (str_eq (substring alpha i (add i 1)) ch)
+                i
+                (b64-index-rec alpha ch (add i 1) alpha-len))))
+
+    (defn b64-index-of (ch)
+        (b64-index-rec (base64-alphabet-of) ch 0 64))
+
+    ;; Read the i-th byte of string s as an int.
+    (defn b64-byte-at (s i)
+        (ord (substring s i (add i 1))))
+
+    ;; Read the i-th character of string s as a 1-char string.
+    (defn b64-char-at (s i)
+        (substring s i (add i 1)))
+
+    ;; Decode one 4-char chunk into 1..3 output bytes, appending to acc.
+    ;; pad-count tells how many of the last two characters were "=":
+    ;;   0 → emit 3 bytes (b0, b1, b2)
+    ;;   1 → emit 2 bytes (b0, b1)             — last char was "="
+    ;;   2 → emit 1 byte  (b0)                 — last two chars were "="
+    (defn chunk-4-to-3 (acc v0 v1 v2 v3 pad-count)
+        (do
+            (let b0 (band (bor (shl_u32 v0 2) (shr_u32 v1 4)) 255))
+            (let b1 (band (bor (shl_u32 (band v1 15) 4) (shr_u32 v2 2)) 255))
+            (let b2 (band (bor (shl_u32 (band v2 3) 6) v3) 255))
+            ;; acc accumulates output bytes in REVERSE (cheap cons); the
+            ;; entry point reverses once at the end. So push bytes onto
+            ;; acc in their NATURAL order — newest-on-top ends up first
+            ;; after the reverse, restoring b0, b1, b2 ordering.
+            (if (eq pad-count 0) (cons b2 (cons b1 (cons b0 acc)))
+                (if (eq pad-count 1) (cons b1 (cons b0 acc))
+                    (cons b0 acc)))))
+
+    ;; Walk the input string 4 chars at a time. The loop accumulates
+    ;; output bytes in REVERSE (cheap cons), then the entry point
+    ;; reverses once at the end.
+    (defn b64-decode-loop (s i s-len acc)
+        (if (ge i s-len) acc
+            (do
+                (let c0 (b64-char-at s i))
+                (let c1 (b64-char-at s (add i 1)))
+                (let c2 (b64-char-at s (add i 2)))
+                (let c3 (b64-char-at s (add i 3)))
+                (let v0 (b64-index-of c0))
+                (let v1 (b64-index-of c1))
+                ;; c2 or c3 may be the pad char "=". Detect and count.
+                (let c3-pad (str_eq c3 "="))
+                (let c2-pad (str_eq c2 "="))
+                (let pad-count (if c2-pad 2 (if c3-pad 1 0)))
+                (let v2 (if c2-pad 0 (b64-index-of c2)))
+                (let v3 (if c3-pad 0 (b64-index-of c3)))
+                (b64-decode-loop s (add i 4) s-len
+                    (chunk-4-to-3 acc v0 v1 v2 v3 pad-count)))))
+
+    ;; Reverse a list (the decode loop builds output in reverse for
+    ;; cheap cons; flip once at the end).
+    (defn b64-reverse-into (xs acc)
+        (if (b64-nil? xs) acc
+            (b64-reverse-into (tail xs) (cons (head xs) acc))))
+
+    ;; ---- THE DECODE ENTRY POINT ------------------------------------
+    (defn base64-decode (s)
+        (b64-reverse-into (b64-decode-loop s 0 (str_len s) (list)) (list))))

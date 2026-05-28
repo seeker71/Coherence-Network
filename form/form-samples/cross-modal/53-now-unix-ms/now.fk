@@ -1,0 +1,62 @@
+; now.fk — clock as a native, sibling-verified by SHAPE not VALUE.
+;
+; preludes: (none)
+;
+; Every richer "freshness" walk — capability tokens that expire, ping
+; stamps that mean "right now", heartbeat tables that age, async
+; correlation windows — has been parked at the same gap: no sibling
+; kernel exposes a (now) native. The closest existing primitive is
+; file_mtime, which reads an mtime off disk — useful for caching,
+; useless for "right now". 42-ping documents the gap explicitly; this
+; sample closes it.
+;
+; The shape we commit to:
+;   (now_unix_ms)  → int, milliseconds since 1970-01-01T00:00:00Z
+;
+; Three sibling kernels (Go, Rust, TypeScript) each register the same
+; native — same name, same arity, same return shape. But the VALUE
+; differs by definition: each kernel reads its own host clock at its
+; own instant of invocation, and even on the same host the three
+; processes run sequentially, so the timestamp drifts microseconds
+; (sometimes more) between siblings.
+;
+; Sibling parity therefore CAN'T check the exact value. It checks the
+; SHAPE: every kernel returns a positive int, every kernel's int is
+; greater than a recent past epoch (1700000000000 = 2023-11-14 UTC,
+; chosen well before the band's authoring date). The verdict is the
+; sum of these shape checks, which IS sibling-stable because every
+; kernel sees the same booleans.
+;
+; Walk:
+;   1. Call (now_unix_ms) twice — capture two timestamps t1, t2.
+;   2. Check each is > 0 (any sane unix-ms must be positive).
+;   3. Check each is > 1700000000000 (any sane current-era clock).
+;   4. Print only the booleans — never the timestamps themselves.
+;   5. Verdict: 4 = (t1>0) + (t2>0) + (t1>epoch) + (t2>epoch).
+
+(do
+    ;; Two clock reads — the actual ms values diverge between kernels
+    ;; and between calls, but the shape verdict is stable.
+    (let t1 (now_unix_ms))
+    (let t2 (now_unix_ms))
+
+    ;; Recent-past epoch: 2023-11-14T22:13:20.000Z. Any clock that
+    ;; matters today is comfortably past this; any clock that isn't
+    ;; (uninitialized embedded host, broken VM, RTC reset to 1970)
+    ;; would fail the second check while still passing the first.
+    (let epoch 1700000000000)
+
+    (let t1-positive (if (gt t1 0) 1 0))
+    (let t2-positive (if (gt t2 0) 1 0))
+    (let t1-after-epoch (if (gt t1 epoch) 1 0))
+    (let t2-after-epoch (if (gt t2 epoch) 1 0))
+
+    (print "t1-positive:" t1-positive)
+    (print "t2-positive:" t2-positive)
+    (print "t1-after-epoch:" t1-after-epoch)
+    (print "t2-after-epoch:" t2-after-epoch)
+
+    ;; Verdict: 4 = two positivity checks + two epoch checks.
+    (add t1-positive
+         (add t2-positive
+              (add t1-after-epoch t2-after-epoch))))

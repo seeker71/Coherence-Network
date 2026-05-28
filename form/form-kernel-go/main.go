@@ -405,6 +405,13 @@ type Kernel struct {
 	f64Idx map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
+	// jitAliases: Form-function-name → native-name redirect. When a
+	// function call's name is in this map, the walker substitutes the
+	// aliased name before native lookup. Lets a Form recipe DEFINE an
+	// algorithm as canonical truth; a `register_jit` call makes its
+	// calls dispatch to a kernel-resident optimized native. Removing
+	// the entry falls back to walking the Form recipe.
+	jitAliases map[NameID]NameID
 	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
 	// intern_node_at; read by node_source. The satsang-load-bearing
 	// surface: every cell's state traceable to the source line that
@@ -421,6 +428,14 @@ type Kernel struct {
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
+	// jitCompiledGo — body-NodeID-key → host-native int64 function pointer.
+	// Populated by the recipe→Go-source+plugin.Open JIT path (see jit.go's
+	// machinery wired into the `jit_compile` env-aware native). Read on
+	// every FNCALL closure dispatch: when present, marshal Form int args
+	// to int64, call the loaded function, box the int64 result back to
+	// VInt. Same shape as TS kernel's k.jitCompiled. Linux-only by design
+	// — Go's `plugin` package only loads ELF .so on Linux.
+	jitCompiledGo map[string]func([]int64) int64
 }
 
 type sourceLoc struct {
@@ -439,8 +454,10 @@ func NewKernel() *Kernel {
 		walkCache:  make(map[NodeID]Value),
 		next:       1,
 		f64Idx:     make(map[uint64]uint32),
-		natives:    make(map[NameID]NativeEntry),
-		envNatives: make(map[NameID]EnvAwareNativeEntry),
+		natives:       make(map[NameID]NativeEntry),
+		envNatives:    make(map[NameID]EnvAwareNativeEntry),
+		jitAliases:    make(map[NameID]NameID),
+		jitCompiledGo: make(map[string]func([]int64) int64),
 	}
 	k.registerNatives()
 	return k
@@ -1412,6 +1429,158 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// ---- bitwise primitives -----------------------------------
+	// True kernel primitives — cannot be expressed in pure Form
+	// without exponential cost. Operate on 32-bit-unsigned semantics
+	// so SHA-256-style recipes compose round functions consistently.
+	k.registerNative("band", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int & args[1].Int}
+	})
+	k.registerNative("bor", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int | args[1].Int}
+	})
+	k.registerNative("bxor", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int ^ args[1].Int}
+	})
+	k.registerNative("bnot_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		return Value{Kind: VInt, Int: int64(^a)}
+	})
+	k.registerNative("shl_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64(a << n)}
+	})
+	k.registerNative("shr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64(a >> n)}
+	})
+	k.registerNative("rotr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64((a >> n) | (a << (32 - n)))}
+	})
+	// add_u32: modular 32-bit addition — SHA-256's round constants
+	// and message schedule both require this discipline.
+	k.registerNative("add_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		b := uint32(args[1].Int)
+		return Value{Kind: VInt, Int: int64(a + b)}
+	})
+	// sha256_bytes / bytes_sum / bytes_hash were temporarily added as
+	// natives here but composted: those are composites, not primitives.
+	// SHA-256 lives in form-stdlib/sha256.fk as a Form recipe over the
+	// bitwise primitives above. The real JIT path (Form recipe → host
+	// machine code via recipe-emitter+plugin.Open) is the next walk;
+	// this kernel currently relies on recipe-walk for composite ops.
+	// register_jit form-name-str native-name-str → 1 on bind, 0 if
+	// native-name has no registered native (refuse silent miss).
+	// Inserts (form-name → native-name) into k.jitAliases. After this,
+	// every (form-name ...) call goes through the aliased native instead
+	// of walking the Form definition. Form recipes are canonical truth;
+	// register_jit is the opt-in that promotes a recipe to host-native
+	// execution. Removing the entry restores the Form walk.
+	k.registerNative("register_jit", catWitness(), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		nativeName := args[1].Str
+		nativeID := k.internName(nativeName)
+		_, hasN := k.natives[nativeID]
+		_, hasE := k.envNatives[nativeID]
+		if !hasN && !hasE {
+			return Value{Kind: VInt, Int: 0}
+		}
+		formID := k.internName(formName)
+		k.jitAliases[formID] = nativeID
+		return Value{Kind: VInt, Int: 1}
+	})
+	// unregister_jit form-name-str → 1 if removed, 0 if no alias was
+	// bound. Restores the Form-recipe walk path for that name.
+	k.registerNative("unregister_jit", catWitness(), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		formID := k.internName(formName)
+		if _, ok := k.jitAliases[formID]; ok {
+			delete(k.jitAliases, formID)
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	// recipe_to_bytes nid → list-of-bytes (or null on error).
+	//   Serializes a Recipe subtree to the .fkb wire format as a byte
+	//   list — usable over any byte channel without a file detour.
+	k.registerNative("recipe_to_bytes", catWitness(), func(k *Kernel, args []Value) Value {
+		bytes := serializeArtifact(k, args[0].Nid)
+		out := make([]Value, len(bytes))
+		for i, b := range bytes {
+			out[i] = Value{Kind: VInt, Int: int64(b)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// bytes_to_recipe bytes-list → nid (or null on parse error).
+	k.registerNative("bytes_to_recipe", catWitness(), func(k *Kernel, args []Value) Value {
+		if args[0].Kind != VList {
+			return Value{Kind: VNull}
+		}
+		bytes := make([]byte, len(args[0].List))
+		for i, v := range args[0].List {
+			bytes[i] = byte(v.Int)
+		}
+		root, err := deserializeArtifact(k, bytes)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: root}
+	})
+	// jit_compile form-name-str → 1 if a host-JIT compile succeeded,
+	//   0 if the compile fell back (toolchain missing, body uses ops the
+	//   emitter can't lower, plugin.Open failed), -1 if the name isn't
+	//   bound to a closure at all. Env-aware: needs the caller's env to
+	//   resolve the named closure.
+	//
+	// The Go path: Form recipe body → generated Go source under /tmp/
+	//   → `go build -buildmode=plugin -o plugin.so` (via os/exec)
+	//   → plugin.Open + plugin.Lookup("Fn") to load the symbol
+	//   → store func([]int64) int64 under bodyKey in k.jitCompiledGo
+	//   → FNCALL closure path checks the map and dispatches when present.
+	//
+	// Same shape as TS kernel's compileNode+jitCompiled — same canonical
+	// truth (the recipe) expressed through each host's available compiler.
+	k.registerEnvNative("jit_compile", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 1 || args[0].Kind != VStr {
+			return Value{Kind: VInt, Int: -1}
+		}
+		nameID := k.internName(args[0].Str)
+		v, ok := env.Lookup(nameID)
+		if !ok || v.Kind != VClosure {
+			return Value{Kind: VInt, Int: -1}
+		}
+		cl := v.Cl
+		bodyKey := nodeIDKey(cl.Body)
+		// Already compiled? Reuse — the body NodeID is content-addressed,
+		// so the same shape across calls always resolves to the same .so.
+		if _, exists := k.jitCompiledGo[bodyKey]; exists {
+			return Value{Kind: VInt, Int: 1}
+		}
+		fn, err := jitCompileClosureGo(k, cl)
+		if err != nil {
+			// Honest fallback — the recipe still walks. The body remains
+			// canonical truth; the JIT path is just unavailable for this
+			// shape today.
+			return Value{Kind: VInt, Int: 0}
+		}
+		k.jitCompiledGo[bodyKey] = fn
+		return Value{Kind: VInt, Int: 1}
+	})
+	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
+	// for this name, else 0. Lets Form code introspect dispatch routing.
+	k.registerNative("jit_aliased?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		formID := k.internName(formName)
+		if _, ok := k.jitAliases[formID]; ok {
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
 	// seeded_bytes(seed, count) — deterministic LCG byte stream.
 	// Same (seed, count) → byte-identical output across Go / Rust / TS.
 	// glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
@@ -2149,6 +2318,15 @@ func (k *Kernel) registerNatives() {
 		fmt.Fprintf(os.Stderr, "[trace] %s\n", args[0].String())
 		return args[0]
 	})
+
+	// `now_unix_ms` — current wall-clock as a millisecond unix timestamp.
+	// External effect (reads the host clock) so it's catCall. Sibling
+	// parity holds on shape, NOT on value: every kernel returns an int,
+	// every kernel's int is > a recent past epoch — but the exact
+	// milliseconds diverge between invocations. Bands check shape only.
+	k.registerNative("now_unix_ms", catCall(), func(_ *Kernel, _ []Value) Value {
+		return Value{Kind: VInt, Int: time.Now().UnixMilli()}
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -2595,7 +2773,15 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		return Value{Kind: VClosure, Cl: cl}
 
 	case RBasicFnCall:
-		name := k.identID(kids[0])
+		rawName := k.identID(kids[0])
+		// JIT alias: if a Form function-name is JIT-registered, swap to
+		// the aliased native-name before native lookup. Form recipes are
+		// the canonical truth; `register_jit form-name native-name` opts
+		// calls into a kernel-resident optimized native.
+		name := rawName
+		if aliased, ok := k.jitAliases[rawName]; ok {
+			name = aliased
+		}
 		// Env-aware natives first — they need the caller env to splice
 		// pre-built Recipes (walk_recipe_here, etc.). Checked before
 		// plain natives so a name registered both ways prefers env-aware.
@@ -2634,20 +2820,55 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 				return ne.Fn(k, args)
 			}
 		}
-		v, ok := env.Lookup(name)
+		// Closure lookup uses the ORIGINAL function-name (not the JIT-
+		// aliased one) — the user defined this function and wants to
+		// call THEIR version when no JIT mapping resolved a native.
+		v, ok := env.Lookup(rawName)
 		if !ok {
-			panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(name)))
+			panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(rawName)))
 		}
 		if v.Kind != VClosure {
-			panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(name)))
+			panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(rawName)))
 		}
 		cl := v.Cl
 		if len(kids)-1 != len(cl.Params) {
-			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(name), len(cl.Params), len(kids)-1))
+			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
+		}
+		// JIT dispatch: if this closure's body has been JIT-compiled to
+		// host-native Go (via `jit_compile name` → recipe-to-Go-source
+		// → go build -buildmode=plugin → plugin.Open), marshal args to
+		// int64, call the loaded function, box the int64 result back to
+		// VInt. The recipe stays canonical truth — the JIT path is just
+		// a faster way to evaluate it. If the closure body needs args
+		// the int64-only signature can't carry (a float, string, list),
+		// we fall through to the walker with the args we already evaluated.
+		// Same answer either way.
+		argVals := make([]Value, len(cl.Params))
+		for i := 1; i < len(kids); i++ {
+			argVals[i-1] = k.walk(kids[i], env)
+		}
+		bodyKey := nodeIDKey(cl.Body)
+		if fn, ok := k.jitCompiledGo[bodyKey]; ok {
+			allInt := true
+			intArgs := make([]int64, len(cl.Params))
+			for i, av := range argVals {
+				if av.Kind != VInt {
+					allInt = false
+					break
+				}
+				intArgs[i] = av.Int
+			}
+			if allInt {
+				if k.Trace != nil {
+					k.Trace.recordFn(k.nameStr(cl.Name))
+					k.Trace.recordNative("jit-go-dispatch")
+				}
+				return Value{Kind: VInt, Int: fn(intArgs)}
+			}
 		}
 		call := NewCallFrame(cl.Env, len(cl.Params))
 		for i, p := range cl.Params {
-			call.Bind(p, k.walk(kids[i+1], env))
+			call.Bind(p, argVals[i])
 		}
 		if k.Trace != nil {
 			k.Trace.recordFn(k.nameStr(cl.Name))

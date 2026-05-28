@@ -1,0 +1,48 @@
+; tests/verb-router-band.fk — verb-router sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/symbols.fk form-stdlib/verb-router.fk
+;
+; Builds a small handler-table with three entries, then performs three
+; lookups: two hits (verbs present in the table) and one miss (verb
+; absent). The band verdict is 3 when every assertion holds across
+; all sibling kernels.
+;
+; The hits return the fn-name trivial-string NodeID. We compare it
+; against the substrate-resident expected name via node_eq — content
+; addressing means equal strings intern to the same NodeID, so the
+; compare is canonical.
+;
+; The miss returns HANDLER-NOT-FOUND; handler-found? collapses that
+; to 0 / 1.
+
+(do
+    ;; Build a 3-entry handler-table.
+    (let handlers
+        (handler-table
+            (list (handler "about"   "handle-about")
+                  (handler "symbols" "handle-symbols")
+                  (handler "fetch"   "handle-fetch"))))
+
+    ;; Hit 1 — "about" → "handle-about"
+    (let n-about (find-handler-name handlers "about"))
+    (let expected-about (intern_trivial_string "handle-about"))
+    (let about-ok
+        (if (eq (handler-found? n-about) 1)
+            (if (node_eq n-about expected-about) 1 0)
+            0))
+
+    ;; Hit 2 — "fetch" → "handle-fetch"
+    (let n-fetch (find-handler-name handlers "fetch"))
+    (let expected-fetch (intern_trivial_string "handle-fetch"))
+    (let fetch-ok
+        (if (eq (handler-found? n-fetch) 1)
+            (if (node_eq n-fetch expected-fetch) 1 0)
+            0))
+
+    ;; Miss — "zzz" is absent; expect HANDLER-NOT-FOUND.
+    (let n-missing (find-handler-name handlers "zzz"))
+    (let miss-ok
+        (if (eq (handler-found? n-missing) 0) 1 0))
+
+    ;; Verdict: 3 when every assertion holds.
+    (add about-ok (add fetch-ok miss-ok)))

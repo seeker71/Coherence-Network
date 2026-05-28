@@ -1,0 +1,121 @@
+; session.fk — multi-request session state as a Form recipe.
+;
+; preludes: (none — pure list + int + node primitives)
+;
+; Canonical truth: this recipe MEANS "a server-side binding between
+; one client identity and the per-connection state that travels with
+; it across multiple requests." Each request carries a session-id;
+; the server looks up the matching SESSION, processes the request
+; against its bound state, and optionally puts back an updated
+; SESSION that the next request will see.
+;
+; A SESSION carries:
+;
+;   SESSION (
+;     id     : int            (stable across requests),
+;     state  : Recipe         (whatever the server hangs off this
+;                              session — counter, cart, auth claims,
+;                              cursor position; the recipe IS the state)
+;   )
+;
+; A SESSION-TABLE is an ordered list of SESSIONs where each id
+; appears at most once. session-table-set inserts or overwrites
+; (filter-out-matching-id then prepend); session-table-get scans for
+; a matching id and returns SESSION-NOT-FOUND if no session bears it.
+;
+; Trust shape: the session-id is the only handle the client carries
+; across requests. The server's table is the authority; the client
+; cannot fabricate state because (session-table-get) returns the
+; server's stored SESSION, not anything the client sent.
+;
+; No native exists for sessions in any sibling kernel — the recipe IS
+; the implementation, and Go, Rust, and TypeScript answer the same
+; lookup verdict from the same table.
+;
+; Surface:
+;   (session-create id init-state-recipe)      → SESSION
+;   (session-id session)                       → int
+;   (session-state session)                    → state Recipe
+;   (session-update session new-state)         → SESSION (same id)
+;   (session-table-new)                        → empty table
+;   (session-table-set table session)          → table with session
+;                                                inserted or overwritten
+;   (session-table-get table id)               → SESSION or
+;                                                SESSION-NOT-FOUND
+;
+; Blueprint NodeIDs (substrate-resident; pkg=1 level=2 type=99 user
+; channel; inst slots 1860/1861/1862 reserve the session family,
+; the next free decade after tree-diff at 1830-1832):
+;   SESSION            = inst 1860
+;   SESSION-TABLE      = inst 1861
+;   SESSION-NOT-FOUND  = inst 1862
+;
+; Cost: every operation is O(n) over the table — set walks once to
+; filter out any prior session for the id, then prepends a fresh
+; entry; get walks until found. The table stays small in recipe-mode
+; runs because sessions are added on connect and removed when the
+; client signs off (a future session-table-drop).
+
+(let SESSION           (make_nodeid 1 2 99 1860))
+(let SESSION-TABLE     (make_nodeid 1 2 99 1861))
+(let SESSION-NOT-FOUND (make_nodeid 1 2 99 1862))
+
+(do
+    ;; --- LOCAL HELPERS ----------------------------------------------
+    (defn sess-nil? (xs) (eq (len xs) 0))
+
+    ;; --- SESSION CONSTRUCTION & ACCESSORS ---------------------------
+    ;; A SESSION is a plain Form list (id, state-recipe). The Blueprint
+    ;; NodeID above names the family for cross-cell recognition; the
+    ;; data shape stays list-based so the recipe composes directly
+    ;; with the kernel's list primitives — same convention heartbeat
+    ;; uses for HEARTBEAT-ENTRY.
+
+    ;; (session-create id init-state) → SESSION list.
+    (defn session-create (id init-state)
+        (list id init-state))
+
+    (defn session-id    (session) (head session))
+    (defn session-state (session) (head (tail session)))
+
+    ;; (session-update session new-state) → SESSION list with the same
+    ;; id and new-state. Returns a new SESSION; the original is
+    ;; untouched (Form is functional). Callers thread the result back
+    ;; into the table via (session-table-set).
+    (defn session-update (session new-state)
+        (list (session-id session) new-state))
+
+    ;; --- TABLE-LEVEL HELPERS ----------------------------------------
+
+    ;; (session-table-new) → empty SESSION-TABLE (an empty list).
+    (defn session-table-new () (list))
+
+    ;; (sess-drop-id table id) → table with any SESSION matching id
+    ;; removed, preserving order of remaining sessions. Used by
+    ;; session-table-set so each id appears at most once.
+    (defn sess-drop-id (table id)
+        (if (sess-nil? table) (list)
+            (if (eq (session-id (head table)) id)
+                (sess-drop-id (tail table) id)
+                (cons (head table)
+                      (sess-drop-id (tail table) id)))))
+
+    ;; (session-table-set table session) → updated table.
+    ;;
+    ;; Filters out any existing entry with the session's id, then
+    ;; prepends the fresh SESSION. The most recent write wins; the
+    ;; older binding for that id is composted in the same breath.
+    ;; Convention: prepend (not append) on update — fresher sessions
+    ;; sit at the head of the table.
+    (defn session-table-set (table session)
+        (cons session
+              (sess-drop-id table (session-id session))))
+
+    ;; (session-table-get table id) → SESSION list with that id, or
+    ;; SESSION-NOT-FOUND if no session bears it. Callers compare with
+    ;; node_eq to distinguish "found" from "absent."
+    (defn session-table-get (table id)
+        (if (sess-nil? table) SESSION-NOT-FOUND
+            (if (eq (session-id (head table)) id)
+                (head table)
+                (session-table-get (tail table) id)))))

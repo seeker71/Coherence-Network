@@ -1,0 +1,34 @@
+; setup.fk — initialize the distributed-daemon topology.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk
+;
+; This step runs ONCE before A and B speak. It:
+;   1. Creates the three /tmp/ channel files clean (registry, B's
+;      channel, A's reply channel).
+;   2. Registers cell B in the registry under capability "symbols".
+;
+; After this step exits the kernel process terminates. The substrate
+; state vanishes; the only durable knowledge is the three .fkb files.
+; cell-a-send.fk reads the registry from those files; cell-b-handle.fk
+; reads its channel from those files.
+
+(do
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let registry-path  "/tmp/28-dist-registry.fkb")
+    (let b-channel-path "/tmp/28-dist-cell-b.fkb")
+    (let a-reply-path   "/tmp/28-dist-cell-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create b-channel-path)
+    (channel-create a-reply-path)
+
+    ;; ---------- REGISTER CELL B -------------------------------------
+    ;; B advertises capability "symbols" pointing at its channel path.
+    ;; Identity 2002 is arbitrary; in a real body this is a fingerprint.
+    (register-cell registry-path 2002 b-channel-path (list "symbols"))
+
+    ;; Attestation: how many registrations are now visible.
+    (let regs (lookup-cells registry-path))
+    (print "setup-registered:" (len regs))
+    (print "setup-ok:" (if (eq (len regs) 1) 1 0))
+    (len regs))

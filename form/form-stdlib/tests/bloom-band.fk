@@ -1,0 +1,39 @@
+; tests/bloom-band.fk — Sibling-witness band for the Bloom recipe.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/bloom.fk
+;
+; Validates that the Form-recipe Bloom filter (form-stdlib/bloom.fk)
+; produces the same membership answers on every kernel that carries
+; the bitwise primitives plus the sha256 recipe. No Bloom native
+; exists; the recipe IS the sole implementation. Three-way sibling
+; parity (Go, Rust, TypeScript) attests each kernel can build the
+; filter from primitives alone.
+;
+; Vectors are single-byte values — cheap for the underlying sha256
+; recipe walk while still exercising every part of the filter (the
+; 32-zero seed, the 3-hash insertion, the 3-probe membership check):
+;   a (97), b (98), c (99)  — added; must each read present
+;   d (100)                 — never added; hash positions disjoint
+;                              from the union of a/b/c, so an honest
+;                              true-negative (Bloom's bit-collision
+;                              false-positive does not fire here).
+
+(do
+    ;; Build a filter with three short values inserted.
+    (let f (bloom-add
+              (bloom-add
+                (bloom-add (bloom-empty) (list 97))
+                (list 98))
+              (list 99)))
+
+    ;; Three present-probes (no false negatives, ever).
+    (let p-a (if (eq (bloom-might-contain? f (list 97)) 1) 1 0))
+    (let p-b (if (eq (bloom-might-contain? f (list 98)) 1) 1 0))
+    (let p-c (if (eq (bloom-might-contain? f (list 99)) 1) 1 0))
+    ;; One absent-probe — disjoint-positions value reads 0.
+    (let p-d (if (eq (bloom-might-contain? f (list 100)) 0) 1 0))
+
+    ;; Band verdict: 4 when all four expected answers land in every
+    ;; kernel. Anything less surfaces a kernel divergence in the
+    ;; bitwise primitives, the sha256 recipe, or the Bloom recipe.
+    (add p-a (add p-b (add p-c p-d))))

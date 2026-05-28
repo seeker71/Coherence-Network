@@ -1,0 +1,92 @@
+; pubsub.fk — polling-based pub/sub over the cell registry.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk
+;
+; The framing:
+;   Today: queries are pull-based. A cell finds peers by reading the
+;   registry at query time.
+;   The pub/sub pattern is just that pull, periodized: a subscriber
+;   declares interest in a capability, then re-polls the registry as
+;   new cells register. No new primitive is needed — registration is
+;   already append-only, and the registry already filters by verb.
+;
+;   This is the body's natural shape for "learn when something arrives":
+;   the registry is the bulletin board; the subscriber is the cell that
+;   keeps reading it.
+;
+; THE SCENE:
+;
+;   • Cell A subscribes to capability "compute" — it wants to learn
+;     about every cell handling compute, including ones that haven't
+;     registered yet.
+;   • Step 0: A polls the registry. Empty body → 0 compute cells.
+;   • Step 1: Cell B registers with capability "compute". A polls
+;     again → 1 cell.
+;   • Step 2: Cell C registers with capability "compute" (different
+;     identity). A polls → 2 cells.
+;   • Step 3: Cell D registers with capability "fetch" (NOT compute).
+;     A polls → still 2 cells. The filter is honest.
+;
+; SIBLING NOTE:
+;
+;   We print the COUNT after each poll, not the registrations
+;   themselves — per-kernel inst counters diverge on NodeIDs, but len
+;   of a filtered list is canonical across Go, Rust, and TypeScript.
+
+(do
+    (let registry-path "/tmp/pubsub-demo-registry.fkb")
+
+    ;; Fresh registry. (channel-create resets the channel.)
+    (channel-create registry-path)
+
+    ;; ---------- A's "subscription" -----------------------------------
+    ;; A subscription in this body is just: hold the verb you care
+    ;; about, and poll the registry for it. The act of subscribing
+    ;; doesn't change the registry — A doesn't have to be addressable
+    ;; to be a listener. It just needs to keep reading.
+    (let watched-verb "compute")
+
+    ;; ---------- Step 0: initial poll ---------------------------------
+    ;; Empty registry. A learns: no one handles compute yet.
+    (let step0-count
+        (len (find-by-capability registry-path watched-verb)))
+    (print "step0-compute-count:" step0-count)                  ; 0
+
+    ;; ---------- Step 1: Cell B registers -----------------------------
+    (register-cell registry-path
+                   2001                                          ; identity
+                   "/tmp/pubsub-cell-b.channel"
+                   (list "compute"))
+
+    (let step1-count
+        (len (find-by-capability registry-path watched-verb)))
+    (print "step1-compute-count:" step1-count)                  ; 1
+
+    ;; ---------- Step 2: Cell C registers -----------------------------
+    (register-cell registry-path
+                   2002
+                   "/tmp/pubsub-cell-c.channel"
+                   (list "compute" "witness"))
+
+    (let step2-count
+        (len (find-by-capability registry-path watched-verb)))
+    (print "step2-compute-count:" step2-count)                  ; 2
+
+    ;; ---------- Step 3: Cell D registers with a DIFFERENT verb -------
+    ;; D handles "fetch", not "compute". A's poll must NOT pick it up
+    ;; — the filter is part of what makes pub/sub useful.
+    (register-cell registry-path
+                   2003
+                   "/tmp/pubsub-cell-d.channel"
+                   (list "fetch"))
+
+    (let step3-count
+        (len (find-by-capability registry-path watched-verb)))
+    (print "step3-compute-count:" step3-count)                  ; 2
+
+    ;; ---------- Verdict ----------------------------------------------
+    ;; Sum of all four polls: 0 + 1 + 2 + 2 = 5. Sibling parity attests
+    ;; every kernel sees the same arrivals in the same order.
+    (add step0-count
+         (add step1-count
+              (add step2-count step3-count))))

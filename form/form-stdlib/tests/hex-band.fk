@@ -1,0 +1,68 @@
+; tests/hex-band.fk — Hexadecimal sibling-witness band.
+;
+; preludes: form-stdlib/hex.fk
+;
+; Validates that the Form-recipe hex (in form-stdlib/hex.fk) produces
+; RFC 4648 §8 correct outputs on every kernel that carries the small-int
+; primitives plus the string natives. No hex native exists; the recipe
+; IS the sole implementation. Three-way sibling parity attests every
+; kernel can compute hex from primitives alone.
+;
+; Vectors cover the canonical shapes:
+;   - empty input              ([] ↔ "")
+;   - edge nibbles + carry     ([0 1 15 16 255] ↔ "00010f10ff")
+;   - classic vector           ("deadbeef" ↔ [222 173 190 239])
+;   - uppercase accepted       ("DEADBEEF" decodes to the same bytes)
+;   - round-trip survives      (decode(encode(bs)) = bs by sum)
+;   - error sentinel triggers  ("xx" → HEX-DECODE-ERROR)
+;   - hex-valid? agrees        (1 for "deadbeef", 0 for "xx", 0 for "abc")
+
+(do
+    (defn h-nil? (xs) (eq (len xs) 0))
+
+    (defn byte-sum (xs)
+        (if (h-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    ;; --- ENCODE checks ---------------------------------------------
+    (let e0 (if (str_eq (hex-encode (list))             "")           1 0))
+    (let e1 (if (str_eq (hex-encode (list 0 1 15 16 255)) "00010f10ff") 1 0))
+    (let e2 (if (str_eq (hex-encode (list 222 173 190 239)) "deadbeef") 1 0))
+
+    ;; --- DECODE checks (byte-sums; recipe stays a list comparison
+    ;; while the band stays a sum comparison — same evidence, simpler
+    ;; surface across kernels).
+    (let d-lower (hex-decode "deadbeef"))
+    (let d-upper (hex-decode "DEADBEEF"))
+    (let d-empty (hex-decode ""))
+
+    (let d0 (if (eq (byte-sum d-empty) 0)   1 0))
+    (let d1 (if (eq (byte-sum d-lower) 824) 1 0))   ; 222+173+190+239
+    (let d2 (if (eq (byte-sum d-upper) 824) 1 0))   ; uppercase accepted
+
+    ;; --- ROUND-TRIP via byte-sum -----------------------------------
+    (let in-trip (list 42 200 7 255 0 128))
+    (let r0 (if (eq (byte-sum (hex-decode (hex-encode in-trip)))
+                    (byte-sum in-trip)) 1 0))
+
+    ;; --- ERROR sentinel --------------------------------------------
+    ;; "xx" — even length, invalid chars   → sentinel
+    ;; "abc" — odd length, valid chars     → sentinel
+    (let SENTINEL (make_nodeid 1 2 99 1770))
+    (let err-xx  (if (value_eq (hex-decode "xx")  SENTINEL) 1 0))
+    (let err-odd (if (value_eq (hex-decode "abc") SENTINEL) 1 0))
+
+    ;; --- hex-valid? ------------------------------------------------
+    (let v0 (if (eq (hex-valid? "deadbeef") 1) 1 0))
+    (let v1 (if (eq (hex-valid? "DEADBEEF") 1) 1 0))
+    (let v2 (if (eq (hex-valid? "xx")       0) 1 0))
+    (let v3 (if (eq (hex-valid? "abc")      0) 1 0))
+    (let v4 (if (eq (hex-valid? "")         1) 1 0))
+
+    ;; Band verdict: 14 when every check passes
+    ;;   3 encode + 3 decode + 1 round-trip + 2 error + 5 valid? = 14
+    (add e0 (add e1 (add e2
+        (add d0 (add d1 (add d2
+            (add r0
+                (add err-xx (add err-odd
+                    (add v0 (add v1 (add v2 (add v3 v4))))))))))))))

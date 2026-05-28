@@ -1,0 +1,77 @@
+; session.fk — multi-request session state across requests, sibling-verified.
+;
+; preludes: form-stdlib/session.fk
+;
+; The walk binds one client to per-connection state, then makes three
+; "requests" against the same session-id and watches the state evolve.
+; The state here is a simple counter (an int Recipe); the same pattern
+; carries any Recipe — cart contents, auth claims, cursor position, a
+; full document — without changing the surface.
+;
+; No session native exists in any sibling kernel — the recipe IS the
+; implementation, and Go, Rust, and TypeScript land the same answers
+; from the same table.
+;
+; Walk:
+;   1. Create session id=42 with counter=0, insert into the table.
+;   2. Retrieve the session, read its counter, bump to 1, put back.
+;   3. Retrieve again — counter is 1 (state survived across requests).
+;   4. Ask for id=99 — table returns SESSION-NOT-FOUND.
+;
+; Verdict = 1 (id matches) + 1 (initial counter is 0) + 1 (post-update
+;          counter is 1) + 1 (missing id is SESSION-NOT-FOUND) = 4 on
+; every sibling kernel.
+
+(do
+    ;; ---------- ATTESTATION 1: CREATE & RETRIEVE -------------------
+    ;; The first request: open a session, record its id and initial
+    ;; state in the server's table. (session-create) builds a SESSION
+    ;; carrying (id=42, state=0); (session-table-set) installs it.
+    (let t0 (session-table-new))
+    (let s1 (session-create 42 0))
+    (let t1 (session-table-set t0 s1))
+
+    ;; Retrieve to confirm the id round-trips through the table.
+    (let got1 (session-table-get t1 42))
+    (let id-ok (if (eq (session-id got1) 42) 1 0))
+    (print "id-ok:" id-ok)
+
+    ;; ---------- ATTESTATION 2: INITIAL STATE IS 0 ------------------
+    ;; The second request reads the state the first request committed.
+    ;; The counter starts at 0 — what the client saw at session-create.
+    (let counter0 (session-state got1))
+    (let counter0-ok (if (eq counter0 0) 1 0))
+    (print "counter0-ok:" counter0-ok)
+
+    ;; ---------- ATTESTATION 3: UPDATE SURVIVES NEXT REQUEST --------
+    ;; The third request: bump the counter to 1, thread the new
+    ;; SESSION back into the table, then in a fourth request retrieve
+    ;; the session again and read the counter. The state survives
+    ;; across requests because the table — not the client — is the
+    ;; authority.
+    (let s2 (session-update got1 (add counter0 1)))
+    (let t2 (session-table-set t1 s2))
+    (let got2 (session-table-get t2 42))
+    (let counter1 (session-state got2))
+    (let counter1-ok (if (eq counter1 1) 1 0))
+    (print "counter1-ok:" counter1-ok)
+
+    ;; ---------- ATTESTATION 4: MISSING ID IS NOT-FOUND -------------
+    ;; A request carrying an id the server doesn't know lands on the
+    ;; SESSION-NOT-FOUND sentinel — the table is the authority, and a
+    ;; client cannot fabricate a session by claiming an unknown id.
+    (let miss (session-table-get t2 99))
+    (let miss-ok (if (node_eq miss SESSION-NOT-FOUND) 1 0))
+    (print "miss-ok:" miss-ok)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 4 = id round-trip (1) + initial counter 0 (1) + post-update
+    ;; counter 1 (1) + missing-id is SESSION-NOT-FOUND (1). Sibling
+    ;; parity attests every kernel walks the same session lifecycle
+    ;; from the recipe alone.
+    (let verdict
+        (add id-ok
+            (add counter0-ok
+                (add counter1-ok miss-ok))))
+    (print "verdict:" verdict)
+    verdict)

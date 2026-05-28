@@ -1,0 +1,54 @@
+; tests/base64-band.fk — RFC 4648 §4 sibling-witness band for Base64.
+;
+; preludes: form-stdlib/base64.fk
+;
+; Validates that the Form-recipe Base64 (in form-stdlib/base64.fk)
+; produces RFC-4648-correct outputs on every kernel that carries the
+; bitwise primitives plus the string natives. No Base64 native exists;
+; the recipe IS the sole implementation. Three-way sibling parity
+; attests each kernel can compute Base64 from primitives alone.
+;
+; Vectors are a subset of RFC 4648 §10 — one representative per
+; padding shape (no-pad, one-pad, two-pad) plus the empty input
+; and a round-trip check.
+
+(do
+    (defn b64-nil? (xs) (eq (len xs) 0))
+    (defn bytes-eq (a b)
+        (if (b64-nil? a)
+            (b64-nil? b)
+            (if (b64-nil? b)
+                false
+                (if (eq (head a) (head b))
+                    (bytes-eq (tail a) (tail b))
+                    false))))
+
+    ;; Padding shapes covered: 0-byte, 1-byte ("xx=="), 2-byte ("xxx="),
+    ;; 3-byte (full quartet). f=102 o=111 b=98 a=97 r=114.
+    (let in-empty  (list))
+    (let in-f      (list 102))
+    (let in-fo     (list 102 111))
+    (let in-foobar (list 102 111 111 98 97 114))
+
+    ;; Encode matches.
+    (let e0 (if (str_eq (base64-encode in-empty)  "")         1 0))
+    (let e1 (if (str_eq (base64-encode in-f)      "Zg==")     1 0))
+    (let e2 (if (str_eq (base64-encode in-fo)     "Zm8=")     1 0))
+    (let e3 (if (str_eq (base64-encode in-foobar) "Zm9vYmFy") 1 0))
+
+    ;; Decode matches.
+    (let d0 (if (bytes-eq (base64-decode "")         in-empty)  1 0))
+    (let d1 (if (bytes-eq (base64-decode "Zg==")     in-f)      1 0))
+    (let d2 (if (bytes-eq (base64-decode "Zm8=")     in-fo)     1 0))
+    (let d3 (if (bytes-eq (base64-decode "Zm9vYmFy") in-foobar) 1 0))
+
+    ;; Round-trip: decode(encode(bs)) = bs for each shape.
+    (let r0 (if (bytes-eq (base64-decode (base64-encode in-empty))  in-empty)  1 0))
+    (let r1 (if (bytes-eq (base64-decode (base64-encode in-f))      in-f)      1 0))
+    (let r2 (if (bytes-eq (base64-decode (base64-encode in-fo))     in-fo)     1 0))
+    (let r3 (if (bytes-eq (base64-decode (base64-encode in-foobar)) in-foobar) 1 0))
+
+    ;; Band verdict: 12 when every check passes (4 encode + 4 decode + 4 round-trip).
+    (add e0 (add e1 (add e2 (add e3
+        (add d0 (add d1 (add d2 (add d3
+            (add r0 (add r1 (add r2 r3))))))))))))

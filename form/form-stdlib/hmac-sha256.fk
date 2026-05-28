@@ -1,0 +1,71 @@
+; hmac-sha256.fk — HMAC-SHA-256 (RFC 2104, RFC 4231) as a Form recipe.
+;
+; preludes: form-stdlib/sha256.fk
+;
+; Canonical truth: this recipe MEANS HMAC-SHA-256. With sha256 already
+; living in form-stdlib/sha256.fk and the kernel's bitwise primitives,
+; HMAC composes naturally:
+;
+;   HMAC(K, m) = SHA-256( (K' XOR opad) || SHA-256( (K' XOR ipad) || m ) )
+;
+; where K' is K padded/hashed to the SHA-256 block size (64 bytes):
+;   - if len(K) > 64: K' = SHA-256(K) padded to 64 with zeros
+;   - else:           K' = K right-padded to 64 with zeros
+;
+; ipad = 0x36 repeated 64 times.  opad = 0x5C repeated 64 times.
+;
+; The recipe is sovereign across all three sibling kernels: any kernel
+; that runs the sha256 recipe runs HMAC for free — no new natives, no
+; host crypto library. Future Form→host-asm JIT will accelerate both
+; from the same canonical source.
+;
+; Cost is the same shape as sha256 (O(n²) per round through Form-list
+; nth lookups), so keep inputs short for recipe-mode validation. The
+; JIT path will lift this to host speed without changing the source.
+
+(do
+    ;; ---- BYTE-LIST UTILITIES ---------------------------------------
+    ;; Reused names from sha256.fk are already in scope (nil?, append-1,
+    ;; append-list); we lean on those plus a few local helpers.
+
+    ;; Concat two byte-lists (alias for append-list, kept local for clarity).
+    (defn concat-bytes (a b) (append-list a b))
+
+    ;; Generate a byte-list of length n where every byte is v.
+    ;; Builds in reverse but every byte is identical so order is moot.
+    (defn repeat-byte (v n acc)
+        (if (eq n 0) acc
+            (repeat-byte v (sub n 1) (cons v acc))))
+
+    ;; Right-pad a byte-list to exactly 64 bytes with zeros.
+    (defn pad-to-64 (bs)
+        (if (ge (len bs) 64) bs
+            (pad-to-64 (append-1 bs 0))))
+
+    ;; XOR two equal-length byte-lists element-wise.
+    (defn xor-bytes (a b)
+        (if (eq (len a) 0) (list)
+            (cons (bxor (head a) (head b))
+                  (xor-bytes (tail a) (tail b)))))
+
+    ;; ---- BLOCK-SIZE KEY PREP (RFC 2104 §2) -------------------------
+    ;; K' = K hashed (if too long) then zero-padded to 64 bytes.
+    (defn prep-key (key)
+        (if (gt (len key) 64)
+            (pad-to-64 (sha256 key))
+            (pad-to-64 key)))
+
+    ;; ---- PADS (RFC 2104) -------------------------------------------
+    ;; ipad = 0x36 × 64, opad = 0x5C × 64. 0x36 = 54, 0x5C = 92.
+    (defn ipad-block () (repeat-byte 54 64 (list)))
+    (defn opad-block () (repeat-byte 92 64 (list)))
+
+    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
+    ;; (hmac-sha256 key-bytes msg-bytes) → 32-byte digest as list of ints.
+    (defn hmac-sha256 (key msg)
+        (do
+            (let k-prime (prep-key key))
+            (let inner-in (concat-bytes (xor-bytes k-prime (ipad-block)) msg))
+            (let inner-hash (sha256 inner-in))
+            (let outer-in (concat-bytes (xor-bytes k-prime (opad-block)) inner-hash))
+            (sha256 outer-in))))

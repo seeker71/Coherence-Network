@@ -1,0 +1,64 @@
+; schema.fk — sample: validating recipe shapes against schema recipes.
+;
+; A SCHEMA describes the expected category + children shape of a recipe.
+; (schema-validate schema recipe) walks both and returns 1 if the shape
+; matches, 0 otherwise. The walker uses only kernel primitives and the
+; substrate's content-addressing, so every sibling kernel arrives at the
+; same verdict for the same (schema, recipe) pair.
+;
+; Four scenarios below:
+;   1. tuple (string, int) matched by a well-formed person recipe → 1
+;   2. tuple (string, int) failed by a wrong-arity recipe          → 0
+;   3. tuple (string, int) failed by a wrong-leaf-type recipe       → 0
+;   4. list-of-int failed by a list with a string mixed in          → 0
+;
+; The single positive line plus three negative lines exercise every
+; variant of the walker (SCHEMA-TUPLE positional walk + arity match,
+; SCHEMA-LEAF level/type check, SCHEMA-LIST homogeneity walk).
+
+(do
+    ;; The schema for a person: (name-string, age-int).
+    (let person-schema
+        (schema-tuple
+            (list (schema-leaf 2)    ;; TRIV_STRING
+                  (schema-leaf 1)))) ;; TRIV_INT
+
+    ;; A schema for a list whose every child is a trivial int.
+    (let list-of-int-schema
+        (schema-list (schema-leaf 1))) ;; TRIV_INT
+
+    ;; The substrate-canonical LIST category — the same constant the
+    ;; rest of the body uses for list-literal recipes.
+    (let LIST-CAT (make_nodeid 1 1 14 0))
+
+    ;; ---- case 1: well-formed person — expect 1 ----------------------
+    (let person-ok
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_int 37))))
+    (print "tuple-match:" (schema-validate person-schema person-ok))
+
+    ;; ---- case 2: wrong arity — expect 0 -----------------------------
+    ;; Three children but the schema expects exactly two.
+    (let person-arity
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_int 37)
+                  (intern_trivial_int 1815))))
+    (print "tuple-wrong-arity:" (schema-validate person-schema person-arity))
+
+    ;; ---- case 3: wrong leaf type — expect 0 -------------------------
+    ;; Age slot carries a string instead of an int.
+    (let person-leaf
+        (intern_node LIST-CAT
+            (list (intern_trivial_string "ada")
+                  (intern_trivial_string "thirty-seven"))))
+    (print "tuple-wrong-leaf:" (schema-validate person-schema person-leaf))
+
+    ;; ---- case 4: list-of-int with a string mixed in — expect 0 -----
+    (let mixed
+        (intern_node LIST-CAT
+            (list (intern_trivial_int 1)
+                  (intern_trivial_int 2)
+                  (intern_trivial_string "three"))))
+    (print "list-mixed:" (schema-validate list-of-int-schema mixed)))

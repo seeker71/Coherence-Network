@@ -1,0 +1,66 @@
+; merkle.fk — Merkle tree from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/merkle.fk
+;
+; A Merkle tree composes a single 32-byte digest from a list of byte
+; blocks, and lets any one block prove its membership via a short list
+; of sibling-digests (the Merkle proof). The canonical use cases —
+; content-addressed integrity, blockchains, certificate transparency,
+; data availability — all reduce to the same shape: hash the leaves,
+; pair upward, walk the proof back.
+;
+; The recipe in form-stdlib/merkle.fk uses ONLY the canonical sha256
+; recipe + the kernel's list / bitwise primitives — no Merkle native,
+; no host crypto library. Three sibling kernels (Go, Rust, TypeScript)
+; agree on every digest byte and every proof verdict.
+;
+; The recipe walks under the recipe interpreter — sha256 is O(n²) per
+; round through Form-list nth lookups, so we keep the corpus tiny
+; (4 single-byte leaves = 7 sha256 calls). The next walk lifts the
+; SAME recipe to host-asm speed; the canonical source doesn't change.
+;
+; Shape we commit to:
+;   leaf-hash(b)        = SHA-256( 0x00 || b )      (domain-separation)
+;   branch-hash(L, R)   = SHA-256( 0x01 || L || R )
+;   odd-count rule      = duplicate the lone right node (Bitcoin convention)
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+
+    ;; ---------- CORPUS: 4 single-byte leaves ------------------------
+    ;; Leaves are bytes 1, 2, 3, 4 wrapped as single-byte byte-lists.
+    ;; Tiny on purpose — the underlying sha256 recipe is slow.
+    (let blocks (list (list 1) (list 2) (list 3) (list 4)))
+
+    ;; ---------- ROOT ------------------------------------------------
+    (let root (merkle-root blocks))
+    (print "merkle-root-len:" (len root))
+    (print "merkle-root-sum:" (sum-bytes root 0))
+
+    ;; ---------- PROOF FOR LEAF 1 ------------------------------------
+    ;; Proof carries sibling-digests from leaf upward to root.
+    ;; For 4 leaves the proof has 2 entries (one per tree level).
+    (let proof-1 (merkle-proof blocks 1))
+    (print "merkle-proof-len:" (len proof-1))
+
+    ;; ---------- VERIFY VALID PROOF ----------------------------------
+    ;; Re-runs the proof against the leaf bytes and claimed root.
+    ;; Returns 1 when the reconstructed digest matches the root.
+    (let ok-valid (merkle-verify (list 2) 1 proof-1 root))
+    (print "verify-valid:" ok-valid)
+
+    ;; ---------- VERIFY TAMPERED PROOF -------------------------------
+    ;; Flip one byte in the first sibling-digest of the proof and try
+    ;; again. The reconstructed root no longer matches, so verify=0.
+    (let sib0 (head proof-1))
+    (let sib0-bad (cons (add (head sib0) 1) (tail sib0)))
+    (let proof-bad (cons sib0-bad (tail proof-1)))
+    (let ok-tampered (merkle-verify (list 2) 1 proof-bad root))
+    (print "verify-tampered:" ok-tampered)
+
+    ;; Final verdict: 2 when valid verifies (1) AND tampered fails (0).
+    ;; Three-way sibling parity attests every kernel computes the same
+    ;; Merkle root and the same proof verdict from the recipe alone.
+    (add ok-valid (if (eq ok-tampered 0) 1 0)))

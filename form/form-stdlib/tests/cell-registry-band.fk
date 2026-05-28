@@ -1,0 +1,38 @@
+; tests/cell-registry-band.fk — cell registry (OSI L3) sibling-witness band.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk
+;
+; Validates that cells register, look up, and filter by capability the
+; same way on every kernel. Three-way sibling parity attests the L3
+; addressing layer.
+
+(do
+    (let registry-path "/tmp/cell-registry-band.fkb")
+    (channel-create registry-path)
+
+    (register-cell registry-path 1 "/tmp/c1" (list "a" "b"))
+    (register-cell registry-path 2 "/tmp/c2" (list "b" "c"))
+    (register-cell registry-path 3 "/tmp/c3" (list "c"))
+
+    ;; All three are registered.
+    (let all (lookup-cells registry-path))
+    (let total-ok (if (eq (len all) 3) 1 0))
+
+    ;; "a" only matches cell 1.
+    (let a-cells (find-by-capability registry-path "a"))
+    (let a-ok (if (eq (len a-cells) 1) 1 0))
+
+    ;; "b" matches cells 1 and 2.
+    (let b-cells (find-by-capability registry-path "b"))
+    (let b-ok (if (eq (len b-cells) 2) 1 0))
+
+    ;; "c" matches cells 2 and 3.
+    (let c-cells (find-by-capability registry-path "c"))
+    (let c-ok (if (eq (len c-cells) 2) 1 0))
+
+    ;; "z" matches none — honest absence.
+    (let z-cells (find-by-capability registry-path "z"))
+    (let z-ok (if (eq (len z-cells) 0) 1 0))
+
+    ;; Band verdict: 5 when every assertion holds.
+    (add total-ok (add a-ok (add b-ok (add c-ok z-ok)))))

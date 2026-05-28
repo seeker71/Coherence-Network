@@ -1,0 +1,267 @@
+; kv-store.fk — a cell that exposes "kv-set" / "kv-get" verbs over the
+; channel-query protocol. The first reusable cell pattern: not a one-shot
+; demo of the protocol, a HABITABLE cell — one that holds state, answers
+; questions about that state, lets another cell mutate it.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+;
+; THE SCENE:
+;
+;   Cell K (the kv-store) registers with capabilities "kv-set" and
+;   "kv-get". It starts with an empty symbol-table.
+;
+;   Cell A discovers K by capability (no hardcoded path) and sends a
+;   sequence of queries through file-backed channels:
+;
+;     (kv-set "name"    "alice")  → K updates table
+;     (kv-set "color"   "blue")   → K updates table
+;     (kv-get "name")             → K replies "alice"
+;     (kv-get "color")            → K replies "blue"
+;     (kv-get "unknown")          → K replies status "not-known"
+;
+;   Form is functional — K has no mutable global. Its "state" is just
+;   the current symbol-table value, threaded through each call. The
+;   demo orchestrator passes the post-set table into the next step.
+;   In a long-lived process, K would persist the table back to its own
+;   channel or .fkb file after each mutation; here the in-process
+;   thread IS the state.
+;
+;   Multiple queries still travel through file-backed channels both
+;   ways — every kv-set and kv-get is appended to K's request channel,
+;   every response is appended to A's reply channel. The shape lifts
+;   straight to two processes without changing K's handler.
+;
+; THE QUERY-BODY SHAPE:
+;
+;   kv-set carries (key, value) as a 2-child list under the generic
+;   list-NodeID (make_nodeid 1 1 14 0):
+;     (cq-query "kv-set" topic-nid
+;         (intern_node (make_nodeid 1 1 14 0)
+;             (list (intern_trivial_string key)
+;                   (intern_trivial_string value))))
+;
+;   kv-get carries just the key as the body:
+;     (cq-query "kv-get" topic-nid (intern_trivial_string key))
+;
+;   K's handler peels the body by node_children for kv-set and
+;   node_value for kv-get. Same protocol, different body-shapes per
+;   verb — the verb tells the handler what to expect.
+
+(do
+    (defn kv-nil? (xs) (eq (len xs) 0))
+    (defn kv-nth (xs i)
+        (if (eq i 0) (head xs) (kv-nth (tail xs) (sub i 1))))
+
+    ;; ---------- TOPOLOGY ------------------------------------------
+    (let registry-path  "/tmp/kv-store-demo-registry.fkb")
+    (let k-channel-path "/tmp/kv-store-demo-k.fkb")
+    (let a-reply-path   "/tmp/kv-store-demo-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create k-channel-path)
+    (channel-create a-reply-path)
+
+    ;; ---------- CELL K: register with two capabilities -------------
+    ;; K advertises both verbs at one channel-path. find-by-capability
+    ;; on either verb finds K.
+    (register-cell registry-path 4001 k-channel-path
+                   (list "kv-set" "kv-get"))
+
+    ;; ---------- CELL K: per-verb handlers -------------------------
+    ;;
+    ;; Each handler takes (current-table, query) and returns
+    ;; (new-table, response). For kv-get the table doesn't change;
+    ;; we return the same table. For kv-set the table grows by one
+    ;; binding (or is unchanged if the key already exists — naive
+    ;; first-write-wins; the cleanup walk is "shadowing".).
+
+    ;; kv-set body: a list-NodeID with [key-string, value-string] as
+    ;; children. We extract both, build a SYMBOL-BIND, and append it
+    ;; to the current table's bindings.
+    (defn handle-kv-set (table query)
+        (do
+            (let body (kv-nth (node_children query) 2))
+            (let body-children (node_children body))
+            (let key   (node_value (kv-nth body-children 0)))
+            (let value (kv-nth body-children 1))
+            (let new-binding (symbol-bind key value))
+            (let new-bindings
+                (append (symbol-table-bindings table)
+                        (list new-binding)))
+            (let new-table (symbol-table new-bindings))
+            (let response
+                (cq-response (node_inst query) "ok" (list)))
+            (list new-table response)))
+
+    ;; kv-get body: a trivial-string holding the key. We look it up
+    ;; in the current table. Found → "ok" with the value wrapped as
+    ;; recipe-content. Missing → "not-known" with no items.
+    (defn handle-kv-get (table query)
+        (do
+            (let body (kv-nth (node_children query) 2))
+            (let key (node_value body))
+            (let v (symbol-lookup table key))
+            (if (eq (symbol-found? v) 1)
+                (list table
+                      (cq-response (node_inst query) "ok"
+                          (list (cq-recipe-content v))))
+                (list table
+                      (cq-response (node_inst query) "not-known"
+                          (list))))))
+
+    ;; K's dispatch: read the verb, choose the handler. Returns
+    ;; (new-table, response). The two known verbs match by node_eq
+    ;; against pre-interned name NodeIDs; anything else is honest-
+    ;; absence "not-known".
+    (let verb-set (intern_trivial_string "kv-set"))
+    (let verb-get (intern_trivial_string "kv-get"))
+
+    (defn k-dispatch (table query)
+        (do
+            (let verb-node (head (node_children query)))
+            (if (node_eq verb-node verb-set)
+                (handle-kv-set table query)
+                (if (node_eq verb-node verb-get)
+                    (handle-kv-get table query)
+                    (list table
+                          (cq-response (node_inst query) "not-known"
+                              (list)))))))
+
+    ;; K's step: pull the LATEST message from its request channel,
+    ;; dispatch on the table, append the response to the reply
+    ;; channel, return the new table. In a daemon this would loop;
+    ;; here the orchestrator below calls it once per ask.
+    (defn k-step (table request-channel reply-channel)
+        (do
+            (let msgs (channel-read request-channel))
+            (let last-msg (kv-nth msgs (sub (len msgs) 1)))
+            (let query (channel-msg-payload last-msg))
+            (let result (k-dispatch table query))
+            (let new-table (head result))
+            (let response (head (tail result)))
+            (channel-append reply-channel (channel-message response))
+            new-table))
+
+    ;; ---------- CELL A: helpers -----------------------------------
+    ;; A discovers K by capability — no hardcoded path. Either
+    ;; "kv-set" or "kv-get" finds the same cell because K registered
+    ;; both verbs.
+    (let k-cells (find-by-capability registry-path "kv-set"))
+    (print "kv-cells-found:" (len k-cells))
+    (let k-found (head k-cells))
+    (let k-channel (reg-channel-path k-found))
+
+    ;; A's topic-nid — substrate anchor naming what the queries are
+    ;; ABOUT. For a KV store, the topic doesn't need to vary per
+    ;; query; one anchor is enough for this demo.
+    (let topic-nid (make_nodeid 1 2 99 7800))
+
+    ;; (a-send-set key value) → constructs the kv-set query, appends
+    ;; to K's channel.
+    (defn a-send-set (key value)
+        (channel-append k-channel
+            (channel-message
+                (cq-query "kv-set" topic-nid
+                    (intern_node (make_nodeid 1 1 14 0)
+                        (list (intern_trivial_string key)
+                              (intern_trivial_string value)))))))
+
+    ;; (a-send-get key) → constructs the kv-get query, appends.
+    (defn a-send-get (key)
+        (channel-append k-channel
+            (channel-message
+                (cq-query "kv-get" topic-nid
+                    (intern_trivial_string key)))))
+
+    ;; A reads the LATEST response on its reply channel. Each step
+    ;; appends exactly one reply, so the count grows by one per ask.
+    (defn a-last-response ()
+        (do
+            (let msgs (channel-read a-reply-path))
+            (channel-msg-payload
+                (kv-nth msgs (sub (len msgs) 1)))))
+
+    ;; Extract a response's status as a string we can str_eq against.
+    (defn response-status (r) (node_value (kv-nth (node_children r) 1)))
+
+    ;; Extract a response's first-item value (for kv-get's recipe-
+    ;; content wrapping). Returns the value-Recipe's string content.
+    ;; kv-get wraps the value in cq-recipe-content; cq-recipe-content
+    ;; has one child = the value-Recipe itself. We unwrap and read.
+    (defn response-first-value (r)
+        (do
+            (let items
+                (node_children (kv-nth (node_children r) 2)))
+            (let item (head items))           ; RECIPE-CONTENT
+            (let value (head (node_children item)))
+            (node_value value)))
+
+    ;; ---------- THE WALK: five steps ------------------------------
+    ;; K starts empty. Each set returns a new table; each get reads
+    ;; the table-current-as-of-now. The orchestrator threads the
+    ;; table through; the request/reply channels are the proof that
+    ;; the queries crossed the (file-backed) wire.
+
+    (let table-0 (symbol-table (list)))
+    (print "table-0-bindings:"
+           (len (symbol-table-bindings table-0)))    ; 0
+
+    ;; Step 1: A sets "name" → "alice".
+    (a-send-set "name" "alice")
+    (let table-1 (k-step table-0 k-channel a-reply-path))
+    (let r1 (a-last-response))
+    (let r1-ok (if (str_eq (response-status r1) "ok") 1 0))
+    (print "step1-set-name-status-ok:" r1-ok)
+    (print "table-1-bindings:"
+           (len (symbol-table-bindings table-1)))    ; 1
+
+    ;; Step 2: A sets "color" → "blue".
+    (a-send-set "color" "blue")
+    (let table-2 (k-step table-1 k-channel a-reply-path))
+    (let r2 (a-last-response))
+    (let r2-ok (if (str_eq (response-status r2) "ok") 1 0))
+    (print "step2-set-color-status-ok:" r2-ok)
+    (print "table-2-bindings:"
+           (len (symbol-table-bindings table-2)))    ; 2
+
+    ;; Step 3: A gets "name" → expect "alice".
+    (a-send-get "name")
+    (let table-3 (k-step table-2 k-channel a-reply-path))
+    (let r3 (a-last-response))
+    (let r3-status-ok (if (str_eq (response-status r3) "ok") 1 0))
+    (let r3-value-ok
+        (if (str_eq (response-first-value r3) "alice") 1 0))
+    (print "step3-get-name-status-ok:" r3-status-ok)
+    (print "step3-get-name-value-ok:"  r3-value-ok)
+
+    ;; Step 4: A gets "color" → expect "blue".
+    (a-send-get "color")
+    (let table-4 (k-step table-3 k-channel a-reply-path))
+    (let r4 (a-last-response))
+    (let r4-status-ok (if (str_eq (response-status r4) "ok") 1 0))
+    (let r4-value-ok
+        (if (str_eq (response-first-value r4) "blue") 1 0))
+    (print "step4-get-color-status-ok:" r4-status-ok)
+    (print "step4-get-color-value-ok:"  r4-value-ok)
+
+    ;; Step 5: A gets "unknown" → expect status "not-known".
+    (a-send-get "unknown")
+    (let table-5 (k-step table-4 k-channel a-reply-path))
+    (let r5 (a-last-response))
+    (let r5-status-ok
+        (if (str_eq (response-status r5) "not-known") 1 0))
+    (print "step5-get-unknown-status-not-known:" r5-status-ok)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; Seven successful operations:
+    ;;   - 2 set acknowledgements
+    ;;   - 2 get-hits (status + value each)
+    ;;   - 1 get-miss honest-absence
+    ;; Sum = 2 + 2 + 2 + 1 = 7.
+    (add r1-ok
+         (add r2-ok
+              (add r3-status-ok
+                   (add r3-value-ok
+                        (add r4-status-ok
+                             (add r4-value-ok r5-status-ok)))))))

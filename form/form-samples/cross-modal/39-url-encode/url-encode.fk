@@ -1,0 +1,94 @@
+; url-encode.fk — RFC 3986 percent-encoding from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/url-encode.fk
+;
+; URL percent-encoding is the textual envelope for arbitrary bytes
+; traveling through URIs — query strings, form-urlencoded bodies, REST
+; path parameters, OAuth signatures. Hex (sample 38) covers the
+; unconditional 2-chars-per-byte form; URL-encode is the per-byte
+; conditional version that lets the unreserved set (A-Z a-z 0-9 - _ . ~)
+; pass through unescaped so URLs stay human-readable.
+;
+; This sample walks four vectors:
+;
+;   1. "hello world" → "hello%20world"          — space (0x20) escapes
+;   2. "a/b?c=d"     → "a%2Fb%3Fc%3Dd"          — URI reserved chars escape
+;   3. "héllo"       → "h%C3%A9llo"             — UTF-8 multibyte (é = 0xC3 0xA9)
+;   4. decode(encode(bs)) = bs                  — round-trip identity
+;
+; The recipe in form-stdlib/url-encode.fk uses ONLY the kernel's small-int
+; and string natives — no host URL library, no native fallback. Three
+; sibling kernels (Go, Rust, TypeScript) agree on every result.
+;
+; ---- WHY BYTE-LISTS, NOT STRING LITERALS --------------------------
+;
+; Multibyte string literals diverge across sibling kernels at the parser
+; level (Rust's unescape re-encodes byte 0xC3 as Unicode codepoint U+00C3,
+; doubling the byte count; TS keeps UTF-16 length; Go preserves bytes).
+; The only fully-portable carrier of arbitrary bytes is a byte-list. So
+; url-encode takes a byte-list; for ASCII strings we walk the literal
+; via substring/ord (which agrees across kernels for ASCII), and for
+; multibyte text we spell the UTF-8 byte sequence directly.
+
+(do
+    (defn s-nil? (xs) (eq (len xs) 0))
+
+    ;; Byte-list equality — same length AND every byte matches.
+    (defn bytes-eq (a b)
+        (if (s-nil? a)
+            (s-nil? b)
+            (if (s-nil? b)
+                false
+                (if (eq (head a) (head b))
+                    (bytes-eq (tail a) (tail b))
+                    false))))
+
+    ;; Walk an ASCII string into a byte-list (reverse acc, flip at end).
+    ;; ASCII-only — bytes < 128 round-trip through substring/ord cleanly
+    ;; across all three sibling kernels.
+    (defn ascii-to-bytes-loop (s i n acc)
+        (if (ge i n) acc
+            (ascii-to-bytes-loop s (add i 1) n
+                (cons (ord (substring s i (add i 1))) acc))))
+
+    (defn s-reverse-into (xs acc)
+        (if (s-nil? xs) acc
+            (s-reverse-into (tail xs) (cons (head xs) acc))))
+
+    (defn ascii-to-bytes (s)
+        (s-reverse-into (ascii-to-bytes-loop s 0 (str_len s) (list)) (list)))
+
+    ;; ---------- VECTOR 1: "hello world" → "hello%20world" -----------
+    ;; ASCII-only; literal walks cleanly via substring/ord.
+    ;; ASCII codes: h=104 e=101 l=108 o=111 (space)=32 w=119 r=114 d=100
+    (let in-hello (ascii-to-bytes "hello world"))
+    (let enc-hello (url-encode in-hello))
+    (print "enc-hello-ok:" (if (str_eq enc-hello "hello%20world") 1 0))
+
+    ;; ---------- VECTOR 2: "a/b?c=d" → "a%2Fb%3Fc%3Dd" ---------------
+    ;; Reserved URI characters: '/' = 47 = 0x2F, '?' = 63 = 0x3F, '=' = 61 = 0x3D
+    (let in-path (ascii-to-bytes "a/b?c=d"))
+    (let enc-path (url-encode in-path))
+    (print "enc-path-ok:" (if (str_eq enc-path "a%2Fb%3Fc%3Dd") 1 0))
+
+    ;; ---------- VECTOR 3: "héllo" → "h%C3%A9llo" --------------------
+    ;; "héllo" as UTF-8 bytes: h=104, é=(195,169), l=108, l=108, o=111.
+    ;; We construct the byte-list directly — multibyte literals don't
+    ;; survive Rust's source-string parser unchanged.
+    (let in-utf8 (list 104 195 169 108 108 111))
+    (let enc-utf8 (url-encode in-utf8))
+    (print "enc-utf8-ok:" (if (str_eq enc-utf8 "h%C3%A9llo") 1 0))
+
+    ;; ---------- VECTOR 4: ROUND-TRIP --------------------------------
+    ;; decode(encode(bs)) = bs for each of the three input byte-lists.
+    ;; Sum the per-vector matches; passes only when all three round-trip.
+    (let rt-hello (if (bytes-eq (url-decode (url-encode in-hello)) in-hello) 1 0))
+    (let rt-path  (if (bytes-eq (url-decode (url-encode in-path))  in-path)  1 0))
+    (let rt-utf8  (if (bytes-eq (url-decode (url-encode in-utf8))  in-utf8)  1 0))
+    (print "round-trip-ok:" (if (eq (add rt-hello (add rt-path rt-utf8)) 3) 1 0))
+
+    ;; Final verdict: 4 passing str_eq pairs.
+    (add (if (str_eq enc-hello "hello%20world") 1 0)
+        (add (if (str_eq enc-path "a%2Fb%3Fc%3Dd") 1 0)
+            (add (if (str_eq enc-utf8 "h%C3%A9llo") 1 0)
+                (if (eq (add rt-hello (add rt-path rt-utf8)) 3) 1 0)))))

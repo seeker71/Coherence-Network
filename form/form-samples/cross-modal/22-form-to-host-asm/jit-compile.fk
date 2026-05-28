@@ -1,0 +1,63 @@
+; jit-compile.fk — Form recipe → host-native code via JIT.
+;
+; The discipline (Urs):
+;   "we want just primitives in the kernel. and form native code to
+;    host native assembly using JIT to have generic cross kernel
+;    functions with host native performance for channel protocol and
+;    other core support"
+;
+; (jit_compile "name") compiles the Form recipe under `name` to the
+; host's native form:
+;   • TypeScript : compileNode emits a JS function; V8 JITs it to
+;                  machine code on first invocation.
+;   • Rust       : returns 0 today; cranelift integration is the next
+;                  walk (Form-AST → cranelift IR → x86_64/aarch64).
+;   • Go         : returns 0 today; recipe→Go-source+plugin.Open is
+;                  the next walk.
+;
+; The Form recipe stays canonical truth across all kernels. When the
+; compile succeeds (return 1), subsequent (name args...) calls dispatch
+; through the compiled function — same output, host-fast speed. When
+; the compile is unavailable (return 0), recipe-walk continues to
+; produce the canonical result.
+;
+; Sibling parity: the OUTPUT converges across all three kernels (the
+; recipe defines the meaning). The COMPILE STATUS may diverge (only
+; TS has a backend installed today) — Form code branches on the return
+; value if it cares.
+
+(do
+    ;; A simple Form recipe — sum 1 + 2 + ... + n via recursion.
+    (defn sum-to-n (n)
+        (if (eq n 0) 0
+            (add n (sum-to-n (sub n 1)))))
+
+    ;; Verify the recipe walks correctly without any JIT.
+    (let r1 (sum-to-n 10))
+    (print "recipe-walk:" r1)          ; 55
+
+    ;; Try to compile to host-native. Returns 1 if a compiler backend
+    ;; is installed on this kernel, 0 if not. This is honest per-kernel
+    ;; backend divergence — TS has compiler.ts wired today; Rust and Go
+    ;; return 0 until cranelift + plugin paths land. The compile-status
+    ;; itself is NOT printed (would break sibling parity for a status
+    ;; that's expected to differ); the OUTPUT of subsequent calls is
+    ;; what matters and converges three-way.
+    (let compiled (jit_compile "sum-to-n"))
+    (print "compile-attempted:" (if (ge compiled 0) 1 0))
+
+    ;; Call again. In TS, the call dispatches through compiled JS
+    ;; (V8 JIT-compiled to native code). In Rust/Go, the recipe walks.
+    ;; Both produce the same answer — that's the sibling-parity attestation.
+    (let r2 (sum-to-n 10))
+    (print "post-jit-call:" r2)
+
+    ;; Same recipe, larger input — still TS-compiled / Rust-Go-walked.
+    (let r3 (sum-to-n 100))
+    (print "post-jit-100:" r3)         ; 5050
+
+    ;; Verdict: same answer regardless of dispatch path.
+    ;; The compile happened (or was honestly not attempted) on every kernel.
+    (add (if (eq r1 55) 1 0)
+         (add (if (eq r2 55) 1 0)
+              (if (eq r3 5050) 1 0))))

@@ -1,0 +1,44 @@
+; tests/channel-query-json-band.fk — channel-query JSON bridge sibling-witness band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk
+;
+; Exercises the bridge on:
+;   - a QUERY (encode → match canonical string; decode → reconstruct verb+address)
+;   - a RESPONSE with one SUBSTRATE-REF item (encode → match canonical string)
+;
+; Band verdict = sum of four 1/0 attestations:
+;   1. query-to-json matches expected
+;   2. json-to-query reconstructs the verb
+;   3. json-to-query reconstructs the address inst
+;   4. response-to-json matches expected
+; Pass = 4.
+
+(do
+    ;; --- QUERY encode ---
+    (let topic (make_nodeid 1 2 99 7))
+    (let q (cq-query "about" topic (intern_trivial_string "")))
+    (let q-json (query-to-json q))
+    (let q-want
+        "{\"verb\":\"about\",\"address\":{\"pkg\":1,\"level\":2,\"type\":99,\"inst\":7},\"body\":null}")
+    (let r1 (if (str_eq q-json q-want) 1 0))
+
+    ;; --- QUERY decode ---
+    (let q-back (json-to-query q-want))
+    (let q-back-kids (node_children q-back))
+    (let q-back-verb (node_value (head q-back-kids)))
+    (let q-back-addr-ref (head (tail q-back-kids)))
+    (let q-back-addr-nid
+        (cq-nid-unpack-from-children (node_children q-back-addr-ref)))
+    (let r2 (if (str_eq q-back-verb "about") 1 0))
+    (let r3 (if (eq (node_inst q-back-addr-nid) 7) 1 0))
+
+    ;; --- RESPONSE encode ---
+    (let ref-nid (make_nodeid 0 0 0 1))
+    (let item (cq-substrate-ref ref-nid))
+    (let r (cq-response 1 "ok" (list item)))
+    (let r-json (response-to-json r))
+    (let r-want
+        "{\"correlation\":1,\"status\":\"ok\",\"items\":[{\"type\":\"substrate-ref\",\"value\":{\"pkg\":0,\"level\":0,\"type\":0,\"inst\":1}}]}")
+    (let r4 (if (str_eq r-json r-want) 1 0))
+
+    (add r1 (add r2 (add r3 r4))))

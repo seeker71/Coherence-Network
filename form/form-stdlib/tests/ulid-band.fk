@@ -1,0 +1,67 @@
+; tests/ulid-band.fk — ULID Crockford-Base32 sibling-witness band.
+;
+; preludes: form-stdlib/ulid.fk
+;
+; Validates that the Form-recipe ULID encoder (in form-stdlib/ulid.fk)
+; produces spec-conformant outputs on every kernel that carries the
+; bitwise primitives plus the string natives. No ULID native exists;
+; the recipe IS the sole implementation. Three-way sibling parity
+; attests each kernel can compute the ULID encoding from primitives alone.
+;
+; The real Form→host-asm JIT is a future walk; once landed, calling
+; (ulid-from-bytes bs) will dispatch through host-fast compiled code
+; derived from THIS recipe — no separate native required.
+;
+; Vectors (the two corner shapes that pin the encoding):
+;   ts=0, random=10 zero bytes
+;     → "00000000000000000000000000"   (26 zeros: all-zero ULID)
+;
+;   ts=2^48-1, random=10 zero bytes
+;     → "7ZZZZZZZZZ0000000000000000"   (max-timestamp; first char '7'
+;        because the ULID layout prepends 2 zero pad bits to the 128-bit
+;        body before 5-bit chunking, capping the first char at index 7)
+;
+; Plus three structural checks:
+;   - the convenience entry point (ulid-from-parts) returns the same
+;     output as (ulid-from-bytes) when the top 16 timestamp bits are zero
+;   - both outputs are exactly 26 chars long
+;   - the all-zero ULID round-trips the all-zero input
+
+(do
+    ;; Build zero-byte and 0xFF-byte runs of arbitrary length.
+    (defn zero-cons (n acc)
+        (if (eq n 0) acc (zero-cons (sub n 1) (cons 0 acc))))
+    (defn ff-cons (n acc)
+        (if (eq n 0) acc (ff-cons (sub n 1) (cons 255 acc))))
+
+    (defn bytes-append (xs ys)
+        (if (eq (len xs) 0) ys
+            (cons (head xs) (bytes-append (tail xs) ys))))
+
+    (let zero-random (zero-cons 10 (list)))
+    (let zero-ts     (zero-cons 6 (list)))
+    (let ff-ts       (ff-cons 6 (list)))
+
+    ;; --- Corner 1: all-zero ULID. ----------------------------------
+    (let ulid-zero (ulid-from-bytes (bytes-append zero-ts zero-random)))
+    (let exp-zero  "00000000000000000000000000")
+    (let ok-zero   (if (str_eq ulid-zero exp-zero) 1 0))
+
+    ;; --- Corner 2: max-timestamp ULID. -----------------------------
+    (let ulid-max  (ulid-from-bytes (bytes-append ff-ts zero-random)))
+    (let exp-max   "7ZZZZZZZZZ0000000000000000")
+    (let ok-max    (if (str_eq ulid-max exp-max) 1 0))
+
+    ;; --- Convenience entry: 32-bit ts variant agrees with byte-list. ---
+    ;; timestamp-32 = 0 should produce the same all-zero ULID as the
+    ;; byte-list path with a six-zero-byte timestamp prefix.
+    (let ulid-conv-zero (ulid-from-parts 0 zero-random))
+    (let ok-conv-zero   (if (str_eq ulid-conv-zero exp-zero) 1 0))
+
+    ;; --- Length check: 26 chars on every ULID we produce. ----------
+    (let ok-len  (if (and (eq (str_len ulid-zero) 26)
+                         (and (eq (str_len ulid-max) 26)
+                              (eq (str_len ulid-conv-zero) 26))) 1 0))
+
+    ;; Band verdict: 4 when every canonical assertion holds.
+    (add ok-zero (add ok-max (add ok-conv-zero ok-len))))

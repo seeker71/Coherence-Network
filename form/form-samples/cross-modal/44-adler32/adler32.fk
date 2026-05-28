@@ -1,0 +1,69 @@
+; adler32.fk — RFC 1950 §9 Adler-32 lives in Form, computed from primitives.
+;
+; preludes: form-stdlib/adler32.fk
+;
+; The recipe in form-stdlib/adler32.fk IS the canonical definition of
+; Adler-32 (the zlib / PNG / HTTP "deflate" flavor) in this body,
+; composed from the kernel's primitives (band, mod, add) plus the u32
+; pair shl_u32 / add_u32 used to fold the two 16-bit halves into a
+; single unsigned 32-bit checksum. A kernel with those primitives can
+; compute the checksum from this recipe alone — no host adler32
+; library required. The recipe stays sovereign across sibling kernels
+; (Go, Rust, TypeScript).
+;
+; This sample validates the recipe against canonical Adler-32 test
+; vectors: the empty input (RFC fixes adler32("") = 1, NOT 0 — the
+; initial state a=1, b=0 collapses to (0 << 16) | 1), the single-byte
+; "a", the three-byte "abc", the zlib-canonical "Wikipedia" vector
+; documented across every Adler-32 reference, and the universal
+; "123456789" 9-byte check value 0x091E01DE = 152961502 — the value
+; every Adler-32 implementation in the world cross-checks itself
+; against, sister to CRC-32's 0xCBF43926.
+;
+; Note: every canonical Adler-32 vector below fits in signed i32
+; (max under 2^30), so plain integer literals stay honest across
+; kernels — no u32-literal rebuild needed for these expected values.
+; The recipe's own (add_u32 (shl_u32 b 16) a) final step IS required,
+; though, because b can reach 65520 and b << 16 = 0xFFF10000 sits
+; above the signed i32 ceiling during reduction.
+
+(do
+    ;; ---------- CANONICAL ADLER-32 TEST VECTORS ---------------------
+    ;; adler32("")          = 0x00000001 = 1          (a=1, b=0)
+    ;; adler32("a")         = 0x00620062 = 6422626    (a=98, b=98)
+    ;; adler32("abc")       = 0x024D0127 = 38600999   (well-known vector)
+    ;; adler32("Wikipedia") = 0x11E60398 = 300286872  (zlib reference)
+    ;; adler32("123456789") = 0x091E01DE = 152961502  ← universal check
+    ;;
+    ;; ASCII codes used:
+    ;;   a=97 b=98 c=99
+    ;;   W=87 i=105 k=107 p=112 e=101 d=100
+    ;;   1=49 2=50 3=51 4=52 5=53 6=54 7=55 8=56 9=57
+    (let c-empty (adler32 (list)))
+    (let c-a     (adler32 (list 97)))
+    (let c-abc   (adler32 (list 97 98 99)))
+    (let c-wiki  (adler32 (list 87 105 107 105 112 101 100 105 97)))
+    (let c-check (adler32 (list 49 50 51 52 53 54 55 56 57)))
+
+    ;; Expected values. Each fits comfortably in signed i32, so the
+    ;; literals cross all three kernels without u32-rebuild.
+    (let exp-empty 1)
+    (let exp-a     6422626)        ; (98 << 16) | 98
+    (let exp-abc   38600999)       ; 0x024D0127
+    (let exp-wiki  300286872)      ; 0x11E60398
+    (let exp-check 152961502)      ; 0x091E01DE ← universal check
+
+    (print "adler32-empty:"     c-empty)
+    (print "adler32-a:"         c-a)
+    (print "adler32-abc:"       c-abc)
+    (print "adler32-Wikipedia:" c-wiki)
+    (print "adler32-123456789:" c-check)
+
+    ;; Final verdict: 5 when every canonical vector matches. Three-way
+    ;; sibling parity attests every kernel computes Adler-32 from the
+    ;; recipe alone — no native adler32, no host library.
+    (add (if (eq c-empty exp-empty) 1 0)
+        (add (if (eq c-a     exp-a)     1 0)
+            (add (if (eq c-abc   exp-abc)   1 0)
+                (add (if (eq c-wiki  exp-wiki)  1 0)
+                     (if (eq c-check exp-check) 1 0))))))

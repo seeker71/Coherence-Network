@@ -1,0 +1,81 @@
+; tests/session-band.fk — session sibling-witness band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/session.fk
+;
+; Validates that the Form-recipe session table (in form-stdlib/session.fk)
+; constructs, retrieves, updates, overwrites, and probes for missing ids
+; byte-identically across every sibling kernel that carries the core list
+; + int primitives. No session native exists; the recipe IS the sole
+; implementation. Three-way sibling parity attests each kernel walks the
+; same session lifecycle from the recipe alone.
+;
+; Nine checks, each contributing 1 to the verdict:
+;   - (session-id) round-trips the id passed to session-create        → 1
+;   - (session-state) round-trips the initial state recipe            → 1
+;   - (session-update) preserves the id                               → 1
+;   - (session-update) replaces the state                             → 1
+;   - empty table returns SESSION-NOT-FOUND for any id                → 1
+;   - after one insert, table length is 1                             → 1
+;   - inserting a fresh id grows the table to 2                       → 1
+;   - re-inserting an existing id overwrites in place (length stays 2)→ 1
+;   - the overwritten id carries the new state                        → 1
+;
+; Band verdict locks at 9 — any divergence is a kernel bug.
+
+(do
+    ;; ---------- DIRECT CONSTRUCTOR / ACCESSOR ROUND-TRIPS ----------
+    ;; The surface promises (session-id) and (session-state) name the
+    ;; two fields of the SESSION carried in. Re-reading them must
+    ;; return the values passed to (session-create) exactly.
+    (let s1 (session-create 7 100))
+    (let id-roundtrip-ok    (if (eq (session-id s1)    7)   1 0))
+    (let state-roundtrip-ok (if (eq (session-state s1) 100) 1 0))
+
+    ;; ---------- UPDATE PRESERVES ID, REPLACES STATE ----------------
+    ;; (session-update) is the request-cycle's "thread state forward"
+    ;; verb. It produces a new SESSION carrying the same id but the
+    ;; new state — the id is the client-stable handle, the state is
+    ;; what evolves request-to-request.
+    (let s2 (session-update s1 200))
+    (let update-id-ok    (if (eq (session-id s2)    7)   1 0))
+    (let update-state-ok (if (eq (session-state s2) 200) 1 0))
+
+    ;; ---------- EMPTY TABLE → SESSION-NOT-FOUND --------------------
+    ;; A request carrying any id against an empty table lands on
+    ;; the sentinel. node_eq because SESSION-NOT-FOUND is a NodeID.
+    (let t0 (session-table-new))
+    (let miss-empty (session-table-get t0 1))
+    (let miss-empty-ok (if (node_eq miss-empty SESSION-NOT-FOUND) 1 0))
+
+    ;; ---------- INSERT + LEN GROWS BY 1 ----------------------------
+    ;; First insert: table grows from 0 to 1.
+    (let t1 (session-table-set t0 s1))
+    (let len-1-ok (if (eq (len t1) 1) 1 0))
+
+    ;; Fresh id: table grows from 1 to 2.
+    (let sB (session-create 9 999))
+    (let t2 (session-table-set t1 sB))
+    (let len-2-ok (if (eq (len t2) 2) 1 0))
+
+    ;; ---------- OVERWRITE EXISTING ID ------------------------------
+    ;; Re-inserting an existing id must NOT grow the table — each id
+    ;; appears at most once. The post-overwrite length stays at 2.
+    ;; The session bearing id 7 now carries state 555 (the new write
+    ;; wins; the older 100 is composted in the same breath).
+    (let s1b (session-create 7 555))
+    (let t3 (session-table-set t2 s1b))
+    (let overwrite-len-ok (if (eq (len t3) 2) 1 0))
+    (let got-7 (session-table-get t3 7))
+    (let overwrite-state-ok (if (eq (session-state got-7) 555) 1 0))
+
+    ;; ---------- VERDICT (9) ---------------------------------------
+    ;; 9 when every assertion lands. Sibling parity attests every
+    ;; kernel walks the same session lifecycle.
+    (add id-roundtrip-ok
+        (add state-roundtrip-ok
+            (add update-id-ok
+                (add update-state-ok
+                    (add miss-empty-ok
+                        (add len-1-ok
+                            (add len-2-ok
+                                (add overwrite-len-ok overwrite-state-ok)))))))))

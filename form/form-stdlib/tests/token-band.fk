@@ -1,0 +1,45 @@
+; tests/token-band.fk — capability-token sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/token.fk
+;
+; Validates that the Form-recipe capability token (in form-stdlib/token.fk)
+; mints and validates correctly on every kernel that carries the bitwise
+; primitives, the sha256 recipe, and the hmac-sha256 recipe. No token
+; native exists; the recipe IS the sole implementation. Three-way
+; sibling parity attests each kernel can compose token semantics from
+; primitives alone.
+;
+; Three checks, each contributing 1 to the verdict:
+;   - fresh token validates at now < expires-at      → 1
+;   - same token at now > expires-at                  → 0  (counted as 1)
+;   - holder-tampered token (HMAC mismatch) at now    → 0  (counted as 1)
+;
+; Band verdict: 3 when all three land where the recipe says they should.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth-tok (xs i)
+        (if (eq i 0) (head xs) (nth-tok (tail xs) (sub i 1))))
+
+    (let issuer-id  1)
+    (let holder-id  2)
+    (let capability (list 114 101 97 100))
+    (let expires-at 1000)
+    (let secret     (list 1 2 3))
+
+    (let tok (token-mint issuer-id holder-id capability expires-at secret))
+
+    (let ok-fresh    (token-valid? tok 500 secret))
+    (let ok-expired  (token-valid? tok 2000 secret))
+
+    (let tampered (list (nth-tok tok 0)
+                        3
+                        (nth-tok tok 2)
+                        (nth-tok tok 3)
+                        (nth-tok tok 4)))
+    (let ok-tampered (token-valid? tampered 500 secret))
+
+    ;; Band verdict: 3 when every check lands where expected.
+    (add ok-fresh
+         (add (if (eq ok-expired 0) 1 0)
+              (if (eq ok-tampered 0) 1 0))))

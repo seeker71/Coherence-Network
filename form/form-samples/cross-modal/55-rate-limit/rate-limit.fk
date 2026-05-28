@@ -1,0 +1,85 @@
+; rate-limit.fk — token-bucket rate limiter as a Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/rate-limit.fk
+;
+; A bucket with capacity=10 and refill-rate=1 token/sec walks through
+; five admission decisions across simulated wall-clock time. The
+; refill is lazy and per-query — the bucket doesn't tick on its own;
+; each consume catches up to "now" before deciding admit/reject.
+;
+; No rate-limit native exists in any sibling kernel — the recipe IS
+; the implementation, and Go, Rust, and TypeScript answer the same
+; admit/reject verdict from the same bucket.
+;
+; Walk:
+;   1. (bucket-new 10 1) → fresh bucket: (10, 10, 0, 1).
+;   2. Consume 5 at t=0     → ACCEPT (10 ≥ 5). Bucket now (10, 5, 0, 1).
+;   3. Consume 5 at t=0     → ACCEPT (5 ≥ 5). Bucket now (10, 0, 0, 1).
+;   4. Try consume 1 at t=500 → REJECT (500ms * 1/sec / 1000 = 0 tokens
+;                                refilled, 0 < 1). Bucket unchanged.
+;   5. Try consume 1 at t=1500 → ACCEPT (1500ms = 1 token refilled,
+;                                 1 ≥ 1). Bucket now (10, 0, 1500, 1).
+;   6. Try consume 100 at t=20000 → REJECT (refill capped at capacity
+;                                    10, 10 < 100). Bucket unchanged.
+;
+; Verdict = 5 (count of correct accept/reject decisions).
+
+(do
+    ;; ---------- BUILD THE BUCKET ----------------------------------
+    ;; capacity = 10, refill-rate = 1 token/second. The bucket is
+    ;; threaded forward — each (bucket-consume) reads the prior
+    ;; bucket and returns a new one carrying the debit, or the same
+    ;; bucket on rejection.
+    (let b0 (bucket-new 10 1))
+
+    ;; ---------- ATTESTATION 1: CONSUME 5 AT t=0 -------------------
+    ;; Fresh bucket holds 10 tokens; 5 ≤ 10 → admit. The returned
+    ;; bucket has 5 tokens left. accept-1 records the decision: 1
+    ;; means the recipe agreed to admit.
+    (let b1 (bucket-consume b0 5 0))
+    (let accept-1 (if (lt (bucket-tokens b1) (bucket-tokens b0)) 1 0))
+    (print accept-1)
+
+    ;; ---------- ATTESTATION 2: CONSUME 5 AT t=0 -------------------
+    ;; Same instant — no refill happens. Bucket holds 5; 5 ≤ 5 →
+    ;; admit. The returned bucket has 0 tokens left.
+    (let b2 (bucket-consume b1 5 0))
+    (let accept-2 (if (lt (bucket-tokens b2) (bucket-tokens b1)) 1 0))
+    (print accept-2)
+
+    ;; ---------- ATTESTATION 3: REJECT 1 AT t=500 ------------------
+    ;; 500ms elapsed, refill-rate 1/sec → 500*1/1000 = 0 tokens
+    ;; refilled (integer division). Bucket still empty; 0 < 1 →
+    ;; reject. The returned bucket is the SAME object (no debit,
+    ;; no last-refill advance). reject-3 = 1 means correctly rejected.
+    (let b3 (bucket-consume b2 1 500))
+    (let reject-3 (if (eq (bucket-can-consume? b2 1 500) 0) 1 0))
+    (print reject-3)
+
+    ;; ---------- ATTESTATION 4: ACCEPT 1 AT t=1500 -----------------
+    ;; 1500ms elapsed since last-refill=0, refill-rate 1/sec →
+    ;; 1500*1/1000 = 1 token refilled. 1 ≥ 1 → admit. Bucket now
+    ;; carries (10, 0, 1500, 1) — last-refill advances to 1500.
+    (let b4 (bucket-consume b3 1 1500))
+    (let accept-4 (if (eq (bucket-can-consume? b3 1 1500) 1) 1 0))
+    (print accept-4)
+
+    ;; ---------- ATTESTATION 5: REJECT 100 AT t=20000 --------------
+    ;; 20000 - 1500 = 18500ms elapsed since last-refill, refill-rate
+    ;; 1/sec → 18500*1/1000 = 18 tokens would refill, but clamped at
+    ;; capacity=10. Bucket holds at most 10; 10 < 100 → reject.
+    (let reject-5 (if (eq (bucket-can-consume? b4 100 20000) 0) 1 0))
+    (print reject-5)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 5 = accept-1 (1) + accept-2 (1) + reject-3 (1) + accept-4 (1)
+    ;;   + reject-5 (1). Sibling parity attests every kernel walks the
+    ;; same refill arithmetic and the same admit/reject rule from the
+    ;; recipe alone.
+    (let verdict
+        (add accept-1
+            (add accept-2
+                (add reject-3
+                    (add accept-4 reject-5)))))
+    (print verdict)
+    verdict)

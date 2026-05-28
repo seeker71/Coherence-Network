@@ -1,0 +1,57 @@
+; ping.fk — heartbeat verb walk: cell A pings cell B, B echoes "ok".
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/ping.fk
+;
+; The smallest honest message the channel-query vocabulary supports.
+; A asks "are you there?"; B answers "ok" with a stamp. The walk
+; checks three things:
+;
+;   1. ping-ok? returns 1 on the real handler response.
+;   2. The response's correlation field matches the query's NodeID-inst
+;      (the same correlation discipline async-correlation depends on).
+;   3. A tampered response with status "error" makes ping-ok? return 0
+;      (the predicate doesn't just trust the shape — it reads the value).
+;
+; Verdict: 3 when all three attestations hold across all three kernels.
+
+(do
+    (defn sample-nth (xs i)
+        (if (eq i 0) (head xs) (sample-nth (tail xs) (sub i 1))))
+
+    ;; ---------- 1. Construct a ping and run it through the handler --
+    (let q (ping-request))
+    (let r (ping-handler q))
+
+    ;; ping-ok? on the real response — expected 1.
+    (let real-ok (ping-ok? r))
+    (print "real-ok:" real-ok)
+
+    ;; ---------- 2. Correlation matches the query's inst -------------
+    ;; RESPONSE children: [correlation-int, status-string, items-list].
+    ;; The correlation field is a trivial-int whose value is the
+    ;; node_inst of the originating QUERY (set by ping-handler).
+    (let response-children (node_children r))
+    (let correlation-node (sample-nth response-children 0))
+    (let correlation-value (node_inst correlation-node))
+    (let query-inst (node_inst q))
+    (let correlation-matches
+        (if (eq correlation-value query-inst) 1 0))
+    (print "correlation-matches:" correlation-matches)
+
+    ;; ---------- 3. Tampered status fails the predicate --------------
+    ;; Construct a RESPONSE shaped like B's reply but with status
+    ;; "error" instead of "ok". The predicate reads the field; it
+    ;; doesn't trust the shape blindly.
+    (let stamp-node (intern_trivial_int 0))
+    (let bad-item (cq-recipe-content stamp-node))
+    (let bad (cq-response query-inst "error" (list bad-item)))
+    (let bad-ok (ping-ok? bad))
+    (print "tampered-ok:" bad-ok)
+
+    ;; ---------- VERDICT ---------------------------------------------
+    ;; Three attestations: real-ok=1, correlation-matches=1, bad-ok=0.
+    ;; Verdict = 1+1+(1-0) = 3 when ping behaves as named on every
+    ;; sibling kernel.
+    (add real-ok
+         (add correlation-matches
+              (if (eq bad-ok 0) 1 0))))

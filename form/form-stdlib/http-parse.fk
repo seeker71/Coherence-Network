@@ -1,0 +1,214 @@
+; http-parse.fk — minimal HTTP/1.1 request parser as a Form recipe.
+;
+; Canonical truth: this recipe MEANS "parse an HTTP/1.1 request into a
+; structured tree." A kernel with the string natives (str_len, substring,
+; str_find, str_eq, str_concat, ord, char_at) plus the substrate write
+; surface (make_nodeid, intern_node, intern_trivial_string) can produce
+; the structured Recipe directly. No host HTTP library required; the
+; recipe is the sole implementation, sibling-verified.
+;
+; The shape produced:
+;
+;   HTTP-REQUEST  (method-string, path-string, version-string, HEADERS, body-string)
+;   HEADERS       (HEADER, HEADER, ...)
+;   HEADER        (name-string, value-string)
+;
+; method/path/version/body are trivial-string recipes; HEADERS is a
+; composite whose children are HEADER recipes; each HEADER's children
+; are two trivial-strings.
+;
+; The two entry points:
+;   (http-parse-request request-string) → HTTP-REQUEST Recipe (or HTTP-PARSE-ERROR sentinel)
+;   accessors:
+;     (http-method   req-node)  → string
+;     (http-path     req-node)  → string
+;     (http-version  req-node)  → string
+;     (http-headers  req-node)  → list of HEADER recipes
+;     (http-body     req-node)  → string
+;
+; Input shape (lines separated by \n; real HTTP uses \r\n but for
+; simplicity we accept \n):
+;
+;   GET /api/health HTTP/1.1\n
+;   Host: example.com\n
+;   User-Agent: form/1.0\n
+;   \n
+;   (optional body bytes — everything after the blank line)
+;
+; The request-line is the first line; it has three space-separated
+; tokens. Header lines have the shape `name: value` — the colon split
+; uses the FIRST colon; everything after the colon (with one optional
+; leading space skipped) is the value. The blank line terminates
+; headers; everything after is body.
+;
+; Cost is O(n) — each str_find/substring walks the native string once,
+; and we never re-scan from index 0. The recursion is on the cursor
+; advancing through the input, never on string length.
+
+;; --- Blueprints (substrate-resident NodeIDs) -----------------------
+;; pkg/level/type chosen in the user-channel range (pkg=1, level=2,
+;; type=99); inst slots 1750..1759 reserve the http-parse family.
+(let HTTP-REQUEST       (make_nodeid 1 2 99 1750))
+(let HTTP-HEADERS       (make_nodeid 1 2 99 1751))
+(let HTTP-HEADER        (make_nodeid 1 2 99 1752))
+(let HTTP-PARSE-ERROR   (make_nodeid 1 2 99 1753))
+
+;; --- Small helpers -------------------------------------------------
+
+(defn http-trivial-str (s) (intern_trivial_string s))
+
+;; http-find-newline — index of next '\n' starting at `from`, or
+;; str_len(s) when no newline remains (so the last header line is
+;; reachable without a special case).
+(defn http-find-newline (s from)
+    (do
+        (let i (str_find s "\n" from))
+        (if (eq i -1) (str_len s) i)))
+
+;; http-find-char — index of `needle` (a single-char string) starting
+;; at `from`, or -1 if absent. Thin wrapper for readability.
+(defn http-find-char (s needle from) (str_find s needle from))
+
+;; http-skip-space-once — when char at index `i` is ASCII space (32),
+;; advance one position; otherwise return i. The HTTP header grammar
+;; allows optional whitespace after the colon — exactly one space is
+;; the common shape; we skip just one to stay deterministic.
+(defn http-skip-space-once (s i)
+    (if (ge i (str_len s)) i
+        (if (eq (ord (char_at s i)) 32) (add i 1) i)))
+
+;; http-error — the parse-error sentinel Recipe. Caller distinguishes
+;; via node_category compared to HTTP-REQUEST.
+(defn http-error () (intern_node HTTP-PARSE-ERROR (list)))
+
+;; --- Request-line parsing ------------------------------------------
+;;
+;; The first line is `METHOD SP PATH SP VERSION` — exactly two spaces
+;; separate the three tokens. We split on the first space (method end),
+;; then the next space after that (path end); whatever remains up to
+;; the line's `\n` is the version.
+
+(defn http-parse-request-line (s line-end)
+    (do
+        (let sp1 (http-find-char s " " 0))
+        (if (or (eq sp1 -1) (ge sp1 line-end))
+            (http-error)
+            (do
+                (let method-str (substring s 0 sp1))
+                (let sp2 (http-find-char s " " (add sp1 1)))
+                (if (or (eq sp2 -1) (ge sp2 line-end))
+                    (http-error)
+                    (do
+                        (let path-str    (substring s (add sp1 1) sp2))
+                        (let version-str (substring s (add sp2 1) line-end))
+                        (list (http-trivial-str method-str)
+                              (http-trivial-str path-str)
+                              (http-trivial-str version-str))))))))
+
+;; --- Header-line parsing -------------------------------------------
+;;
+;; A header line is `NAME ":" OWS VALUE` where OWS is optional white-
+;; space. We split on the FIRST colon (so values containing ':' such
+;; as URLs or timestamps stay intact), then skip one leading space if
+;; present.
+
+(defn http-parse-header-line (s start end)
+    (do
+        (let colon (http-find-char s ":" start))
+        (if (or (eq colon -1) (ge colon end))
+            (http-error)
+            (do
+                (let name-str  (substring s start colon))
+                (let val-start (http-skip-space-once s (add colon 1)))
+                (let value-str (substring s val-start end))
+                (intern_node HTTP-HEADER
+                    (list (http-trivial-str name-str)
+                          (http-trivial-str value-str)))))))
+
+;; http-collect-headers — walk lines starting at cursor `i`. Each line
+;; ends at the next `\n` (or str_len when no further newline). A blank
+;; line (start == newline-index) terminates headers; the cursor after
+;; the terminating `\n` points at the body.
+;;
+;; Returns (list headers-recipe body-start-index). headers-recipe is
+;; an HTTP-HEADERS node whose children are HTTP-HEADER nodes. body-
+;; start-index is the offset where the body bytes begin (== str_len
+;; when no body remains).
+
+(defn http-collect-headers-loop (s i acc)
+    (do
+        (let nl (http-find-newline s i))
+        (if (eq nl i)
+            ;; blank line — headers done; body starts after this \n.
+            (list (http-headers-from-list (http-reverse acc))
+                  (if (lt nl (str_len s)) (add nl 1) nl))
+            (do
+                (let header (http-parse-header-line s i nl))
+                (let next-i (if (lt nl (str_len s)) (add nl 1) nl))
+                (if (eq nl (str_len s))
+                    ;; reached end-of-input with no blank line —
+                    ;; treat last line as a header, no body.
+                    (list (http-headers-from-list
+                              (http-reverse (cons header acc)))
+                          nl)
+                    (http-collect-headers-loop s next-i (cons header acc)))))))
+
+;; Build an HTTP-HEADERS recipe from a list of header recipes.
+(defn http-headers-from-list (xs)
+    (intern_node HTTP-HEADERS xs))
+
+;; Reverse a list — direct tail recursion (no foldl dep on core.fk so
+;; this module can load standalone).
+(defn http-reverse-loop (xs acc)
+    (if (eq (len xs) 0) acc
+        (http-reverse-loop (tail xs) (cons (head xs) acc))))
+
+(defn http-reverse (xs) (http-reverse-loop xs (list)))
+
+;; --- Top-level entry -----------------------------------------------
+
+(defn http-parse-request (s)
+    (do
+        (let line1-end (http-find-newline s 0))
+        (if (eq line1-end 0)
+            (http-error)
+            (do
+                (let parts (http-parse-request-line s line1-end))
+                (if (eq (len parts) 0)
+                    ;; request-line parser already returned an error sentinel.
+                    parts
+                    (do
+                        ;; advance past the first \n into the headers region.
+                        (let headers-start
+                            (if (lt line1-end (str_len s))
+                                (add line1-end 1)
+                                line1-end))
+                        (let collected (http-collect-headers-loop s headers-start (list)))
+                        (let headers-recipe (head collected))
+                        (let body-start     (head (tail collected)))
+                        (let body-str       (substring s body-start (str_len s)))
+                        (intern_node HTTP-REQUEST
+                            (list (head parts)
+                                  (head (tail parts))
+                                  (head (tail (tail parts)))
+                                  headers-recipe
+                                  (http-trivial-str body-str)))))))))
+
+;; --- Accessors -----------------------------------------------------
+;;
+;; All accessors take an HTTP-REQUEST node and return either a string
+;; (method/path/version/body) or a list of HEADER nodes (headers).
+;; node_value reads back the underlying SubstrateString from a
+;; trivial-string leaf.
+
+(defn http-method   (req) (node_value (head (node_children req))))
+(defn http-path     (req) (node_value (head (tail (node_children req)))))
+(defn http-version  (req) (node_value (head (tail (tail (node_children req))))))
+(defn http-headers  (req) (node_children (head (tail (tail (tail (node_children req)))))))
+(defn http-body     (req) (node_value (head (tail (tail (tail (tail (node_children req))))))))
+
+;; Header accessors — name and value of a single HTTP-HEADER node.
+(defn http-header-name  (h) (node_value (head (node_children h))))
+(defn http-header-value (h) (node_value (head (tail (node_children h)))))
+
+0

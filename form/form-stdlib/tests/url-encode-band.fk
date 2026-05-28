@@ -1,0 +1,81 @@
+; tests/url-encode-band.fk — RFC 3986 percent-encoding sibling-witness band.
+;
+; preludes: form-stdlib/url-encode.fk
+;
+; Validates that the Form-recipe url-encode (in form-stdlib/url-encode.fk)
+; produces RFC-3986-correct outputs on every kernel that carries the
+; small-int primitives plus the string natives. No URL-encode native
+; exists; the recipe IS the sole implementation. Three-way sibling
+; parity attests every kernel can compute percent-encoding from
+; primitives alone.
+;
+; Vectors cover the canonical shapes:
+;   - empty input            ([] ↔ "")
+;   - ASCII unreserved       ("hello"      passes through unchanged)
+;   - ASCII space            ("hello world" → "hello%20world")
+;   - URI reserved set       ("a/b?c=d"   → "a%2Fb%3Fc%3Dd")
+;   - UTF-8 multibyte        ([h,0xC3,0xA9,l,l,o] → "h%C3%A9llo")
+;   - all unreserved punct   ([45 46 95 126] → "-._~")
+;   - round-trip survives    (decode(encode(bs)) = bs by sum)
+;   - error sentinel triggers ("%2", "%2G", "%G2" → URL-DECODE-ERROR)
+;   - lowercase hex decodes  ("%c3%a9" → [195 169])
+
+(do
+    (defn u-nil? (xs) (eq (len xs) 0))
+
+    (defn byte-sum (xs)
+        (if (u-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    ;; --- ENCODE checks ---------------------------------------------
+    ;; Empty → empty.
+    (let e0 (if (str_eq (url-encode (list)) "") 1 0))
+
+    ;; "hello" = 104 101 108 108 111 — all unreserved, passes through.
+    (let e1 (if (str_eq (url-encode (list 104 101 108 108 111)) "hello") 1 0))
+
+    ;; "hello world" — space (32) escapes to "%20".
+    (let e2 (if (str_eq (url-encode (list 104 101 108 108 111 32 119 111 114 108 100))
+                        "hello%20world") 1 0))
+
+    ;; "a/b?c=d" — '/' (47) → "%2F", '?' (63) → "%3F", '=' (61) → "%3D".
+    (let e3 (if (str_eq (url-encode (list 97 47 98 63 99 61 100))
+                        "a%2Fb%3Fc%3Dd") 1 0))
+
+    ;; UTF-8 "héllo" — bytes 104 195 169 108 108 111 → "h%C3%A9llo".
+    (let e4 (if (str_eq (url-encode (list 104 195 169 108 108 111))
+                        "h%C3%A9llo") 1 0))
+
+    ;; All four unreserved punctuation marks: '-' (45) '.' (46) '_' (95) '~' (126).
+    (let e5 (if (str_eq (url-encode (list 45 46 95 126)) "-._~") 1 0))
+
+    ;; --- DECODE checks (byte-sum equality) -------------------------
+    (let d0 (if (eq (byte-sum (url-decode "")) 0) 1 0))
+    (let d1 (if (eq (byte-sum (url-decode "hello")) 532) 1 0))                ; 104+101+108+108+111
+    (let d2 (if (eq (byte-sum (url-decode "hello%20world")) 1116) 1 0))       ; 104+101+108+108+111+32+119+111+114+108+100
+    (let d3 (if (eq (byte-sum (url-decode "a%2Fb%3Fc%3Dd")) 565) 1 0))         ; 97+47+98+63+99+61+100
+    (let d4 (if (eq (byte-sum (url-decode "h%C3%A9llo")) 795) 1 0))           ; 104+195+169+108+108+111
+
+    ;; Lowercase hex digits accepted: "%c3%a9" → bytes [195 169].
+    (let d5 (if (eq (byte-sum (url-decode "%c3%a9")) 364) 1 0))               ; 195+169
+
+    ;; --- ROUND-TRIP via byte-sum -----------------------------------
+    (let in-trip (list 0 32 47 65 97 126 127 195 169 255))
+    (let r0 (if (eq (byte-sum (url-decode (url-encode in-trip)))
+                    (byte-sum in-trip)) 1 0))
+
+    ;; --- ERROR sentinel --------------------------------------------
+    ;; "%2"  — '%' followed by only one char, no room for two hex digits.
+    ;; "%2G" — even length, but 'G' isn't a hex digit.
+    ;; "%G2" — first char after '%' isn't a hex digit.
+    (let SENTINEL (make_nodeid 1 2 99 1771))
+    (let err-short (if (value_eq (url-decode "%2")  SENTINEL) 1 0))
+    (let err-tail  (if (value_eq (url-decode "%2G") SENTINEL) 1 0))
+    (let err-head  (if (value_eq (url-decode "%G2") SENTINEL) 1 0))
+
+    ;; Band verdict: 16 when every check passes
+    ;;   6 encode + 6 decode + 1 round-trip + 3 error = 16
+    (add e0 (add e1 (add e2 (add e3 (add e4 (add e5
+        (add d0 (add d1 (add d2 (add d3 (add d4 (add d5
+            (add r0
+                (add err-short (add err-tail err-head))))))))))))))))

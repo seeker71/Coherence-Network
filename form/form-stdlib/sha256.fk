@@ -1,0 +1,194 @@
+; sha256.fk — FIPS 180-4 SHA-256, expressed as a Form recipe.
+;
+; Canonical truth: this recipe MEANS sha256. A kernel with the bitwise
+; primitives (band, bor, bxor, bnot_u32, shl_u32, shr_u32, rotr_u32,
+; add_u32) can compute the hash from this definition alone — no host
+; sha-library required. The recipe stays sovereign across cells.
+;
+; Opt-in bootstrap: cells that need host-speed dispatch can do
+;
+;   (register_jit "sha256" "sha256_bytes")
+;
+; and every (sha256 bytes) call swaps to the kernel's host-native
+; implementation. Both paths produce byte-identical output for every
+; input — verifiable against FIPS 180-4 test vectors and against each
+; other in 20-sha256-as-recipe.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+
+    (defn nth-rec (xs i)
+        (if (eq i 0) (head xs) (nth-rec (tail xs) (sub i 1))))
+
+    ;; Append a single element. O(n) but the call sites bound it.
+    (defn append-1 (xs x)
+        (if (nil? xs) (list x) (cons (head xs) (append-1 (tail xs) x))))
+
+    ;; Append a list to a list.
+    (defn append-list (xs ys)
+        (if (nil? xs) ys (cons (head xs) (append-list (tail xs) ys))))
+
+    ;; ---- BIG-ENDIAN BYTE / WORD ENCODING ---------------------------
+    (defn u32-to-bytes (w)
+        (list (band (shr_u32 w 24) 255)
+              (band (shr_u32 w 16) 255)
+              (band (shr_u32 w 8) 255)
+              (band w 255)))
+
+    (defn bytes-to-u32 (b0 b1 b2 b3)
+        (bor (shl_u32 b0 24)
+             (bor (shl_u32 b1 16)
+                  (bor (shl_u32 b2 8) b3))))
+
+    ;; ---- PADDING (FIPS 180-4 §5.1.1) -------------------------------
+    ;; Append 0x80, then zero bytes until len ≡ 56 (mod 64), then the
+    ;; original message bit-length as a 64-bit big-endian integer.
+    ;; This implementation assumes byte-length fits in u29 (≤ 64 MB);
+    ;; sufficient for demo inputs and most cell-to-cell payloads.
+    (defn zero-pad (xs)
+        (if (eq (mod (len xs) 64) 56) xs
+            (zero-pad (append-1 xs 0))))
+
+    (defn pad-message (bytes)
+        (do
+            (let orig-len (len bytes))
+            (let bits-lo (mul orig-len 8))
+            (let with-bit (append-1 bytes 128))
+            (let padded (zero-pad with-bit))
+            (append-list padded
+                (list 0 0 0 0
+                      (band (shr_u32 bits-lo 24) 255)
+                      (band (shr_u32 bits-lo 16) 255)
+                      (band (shr_u32 bits-lo 8) 255)
+                      (band bits-lo 255)))))
+
+    ;; ---- INITIAL HASH VALUES (FIPS 180-4 §5.3.3) -------------------
+    (defn sha256-h-init ()
+        (list 1779033703 3144134277 1013904242 2773480762
+              1359893119 2600822924  528734635 1541459225))
+
+    ;; ---- ROUND CONSTANTS (FIPS 180-4 §4.2.2) -----------------------
+    (defn sha256-k ()
+        (list 1116352408 1899447441 3049323471 3921009573  961987163 1508970993
+              2453635748 2870763221 3624381080  310598401  607225278 1426881987
+              1925078388 2162078206 2614888103 3248222580 3835390401 4022224774
+                264347078  604807628  770255983 1249150122 1555081692 1996064986
+              2554220882 2821834349 2952996808 3210313671 3336571891 3584528711
+                113926993  338241895  666307205  773529912 1294757372 1396182291
+              1695183700 1986661051 2177026350 2456956037 2730485921 2820302411
+              3259730800 3345764771 3516065817 3600352804 4094571909  275423344
+                430227734  506948616  659060556  883997877  958139571 1322822218
+              1537002063 1747873779 1955562222 2024104815 2227730452 2361852424
+              2428436474 2756734187 3204031479 3329325298))
+
+    ;; ---- BUILD 64-WORD MESSAGE SCHEDULE FROM 16 INPUT WORDS --------
+    ;; w[i] = w[i-16] + s0(w[i-15]) + w[i-7] + s1(w[i-2])   (i ≥ 16)
+    (defn sigma-0 (x)
+        (bxor (rotr_u32 x 7) (bxor (rotr_u32 x 18) (shr_u32 x 3))))
+
+    (defn sigma-1 (x)
+        (bxor (rotr_u32 x 17) (bxor (rotr_u32 x 19) (shr_u32 x 10))))
+
+    (defn build-schedule (w i)
+        (if (eq i 64) w
+            (do
+                (let x (nth-rec w (sub i 15)))
+                (let y (nth-rec w (sub i 2)))
+                (let new-w (add_u32 (nth-rec w (sub i 16))
+                                    (add_u32 (sigma-0 x)
+                                             (add_u32 (nth-rec w (sub i 7))
+                                                      (sigma-1 y)))))
+                (build-schedule (append-1 w new-w) (add i 1)))))
+
+    ;; ---- COMPRESSION ROUND -----------------------------------------
+    ;; Working variables a..h evolve through 64 rounds.
+    (defn big-sigma-0 (x)
+        (bxor (rotr_u32 x 2) (bxor (rotr_u32 x 13) (rotr_u32 x 22))))
+
+    (defn big-sigma-1 (x)
+        (bxor (rotr_u32 x 6) (bxor (rotr_u32 x 11) (rotr_u32 x 25))))
+
+    (defn ch (x y z)
+        (bxor (band x y) (band (bnot_u32 x) z)))
+
+    (defn maj (x y z)
+        (bxor (band x y) (bxor (band x z) (band y z))))
+
+    ;; State as 8-element list: (a b c d e f g h).
+    (defn compress-round (state w-list k-list i)
+        (if (eq i 64) state
+            (do
+                (let a (nth-rec state 0))
+                (let b (nth-rec state 1))
+                (let c (nth-rec state 2))
+                (let d (nth-rec state 3))
+                (let e (nth-rec state 4))
+                (let f (nth-rec state 5))
+                (let g (nth-rec state 6))
+                (let h (nth-rec state 7))
+                (let t1 (add_u32 h
+                          (add_u32 (big-sigma-1 e)
+                            (add_u32 (ch e f g)
+                              (add_u32 (nth-rec k-list i)
+                                       (nth-rec w-list i))))))
+                (let t2 (add_u32 (big-sigma-0 a) (maj a b c)))
+                (compress-round
+                    (list (add_u32 t1 t2) a b c (add_u32 d t1) e f g)
+                    w-list k-list (add i 1)))))
+
+    ;; ---- PER-BLOCK PROCESSING --------------------------------------
+    ;; Pull 16 u32 words from a 64-byte block (starting at offset off).
+    (defn block-to-words-rec (block i acc)
+        (if (eq i 16) acc
+            (do
+                (let p (mul i 4))
+                (let word (bytes-to-u32
+                              (nth-rec block p)
+                              (nth-rec block (add p 1))
+                              (nth-rec block (add p 2))
+                              (nth-rec block (add p 3))))
+                (block-to-words-rec block (add i 1) (append-1 acc word)))))
+
+    (defn process-block (state block)
+        (do
+            (let w16 (block-to-words-rec block 0 (list)))
+            (let w64 (build-schedule w16 16))
+            (let new-state (compress-round state w64 (sha256-k) 0))
+            ;; Add new state to incoming state, element-wise (u32).
+            (list (add_u32 (nth-rec state 0) (nth-rec new-state 0))
+                  (add_u32 (nth-rec state 1) (nth-rec new-state 1))
+                  (add_u32 (nth-rec state 2) (nth-rec new-state 2))
+                  (add_u32 (nth-rec state 3) (nth-rec new-state 3))
+                  (add_u32 (nth-rec state 4) (nth-rec new-state 4))
+                  (add_u32 (nth-rec state 5) (nth-rec new-state 5))
+                  (add_u32 (nth-rec state 6) (nth-rec new-state 6))
+                  (add_u32 (nth-rec state 7) (nth-rec new-state 7)))))
+
+    ;; ---- SPLIT PADDED MESSAGE INTO 64-BYTE BLOCKS, PROCESS EACH ----
+    (defn take-rec (xs n acc)
+        (if (eq n 0) acc
+            (take-rec (tail xs) (sub n 1) (append-1 acc (head xs)))))
+
+    (defn drop-rec (xs n)
+        (if (eq n 0) xs (drop-rec (tail xs) (sub n 1))))
+
+    (defn process-all-blocks (state msg)
+        (if (eq (len msg) 0) state
+            (process-all-blocks
+                (process-block state (take-rec msg 64 (list)))
+                (drop-rec msg 64))))
+
+    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
+    ;; (sha256 bytes-list) → 32-byte digest as list of ints.
+    (defn sha256 (bytes)
+        (do
+            (let padded (pad-message bytes))
+            (let final (process-all-blocks (sha256-h-init) padded))
+            (append-list (u32-to-bytes (nth-rec final 0))
+              (append-list (u32-to-bytes (nth-rec final 1))
+                (append-list (u32-to-bytes (nth-rec final 2))
+                  (append-list (u32-to-bytes (nth-rec final 3))
+                    (append-list (u32-to-bytes (nth-rec final 4))
+                      (append-list (u32-to-bytes (nth-rec final 5))
+                        (append-list (u32-to-bytes (nth-rec final 6))
+                                     (u32-to-bytes (nth-rec final 7))))))))))))
