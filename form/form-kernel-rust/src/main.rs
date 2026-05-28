@@ -21,6 +21,8 @@ use std::env;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
+use std::process::Command;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
@@ -240,6 +242,16 @@ pub(crate) struct Kernel {
     // calls dispatch to a kernel-resident optimized native. Removing the
     // entry falls back to walking the Form recipe.
     jit_aliases: HashMap<NameID, NameID>,
+    // jit_compiled — closure-body-NodeID → loaded host-native plugin.
+    // When (jit_compile "name") succeeds, the kernel generates Rust source
+    // for the closure's body, builds a cdylib via `rustc`, loads it with
+    // libloading, and stores the resulting plugin keyed by the closure's
+    // body NodeID. Every FNCALL whose closure body matches dispatches
+    // through the loaded function pointer instead of walking the recipe.
+    // Sibling to the TS kernel's k.jitCompiled map.
+    // Arc lets the kernel be cloned cheaply for parallel workers; the
+    // Library handle inside is shared, not duplicated.
+    jit_compiled: HashMap<NodeID, Arc<JitCompiled>>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -521,6 +533,7 @@ impl Kernel {
             natives: HashMap::new(),
             env_natives: HashMap::new(),
             jit_aliases: HashMap::new(),
+            jit_compiled: HashMap::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -874,6 +887,9 @@ impl Kernel {
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
             jit_aliases: self.jit_aliases.clone(),
+            // Arc clones — Library handles stay shared across the kernel and
+            // its workers; the .so stays mapped for the duration.
+            jit_compiled: self.jit_compiled.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -963,6 +979,72 @@ pub(crate) struct Closure {
     body: NodeID,
     env: FrameId,
 }
+
+// JitCompiled — a Form recipe that has been compiled to host-native code
+// through the system Rust toolchain.
+//
+// Shape parallel to TS (compileNode → new Function → V8 JIT) and Go
+// (recipe → Go source → plugin.Open). For Rust the equivalent toolchain
+// is: recipe → Rust source → `rustc --crate-type=cdylib` → libloading.
+//
+// The C-ABI cdylib exports a single fixed symbol `compiled_fn` whose
+// signature is `unsafe extern "C" fn(i64, i64, ..., i64) -> i64`. Arity
+// matches the closure's param count; the field `arity` is the runtime
+// signature dispatch tag (1, 2, 3, … up to JIT_MAX_ARITY).
+//
+// LIBRARY LIFETIME: the Library handle must outlive the function pointer
+// it produced — `libloading::Symbol` borrows the Library, and dropping
+// the Library unmaps the .so so the function pointer dangles. We store
+// the Library + the raw function pointer together in this struct; the
+// struct is held by Arc and never dropped until the kernel is dropped.
+// The Library and the function pointer share that lifetime, which is
+// what makes the unsafe call later sound.
+pub(crate) struct JitCompiled {
+    // Holds the loaded .so. Underscore prefix: read only via Drop.
+    // Must not be dropped while `func` may still be invoked.
+    _library: libloading::Library,
+    // Raw function pointer — typed by arity at call sites.
+    // For arity N, callers cast this to `unsafe extern "C" fn(i64,…,i64) -> i64`
+    // with N i64 parameters and invoke it in a tight unsafe block.
+    func: *const (),
+    arity: usize,
+    // Keep the temp dir's path so we can clean up on drop. Owning the
+    // PathBuf (not a TempDir handle) lets the directory survive process
+    // restart in case of crash — a tiny leak in /tmp is recoverable; an
+    // unmappable .so during the cdylib's lifetime is not.
+    _temp_dir: PathBuf,
+}
+
+// JitCompiled holds a *const ptr; the underlying memory is the loaded .so
+// which is process-global and read-only after rustc emitted it. Send + Sync
+// are sound here because the function we call is a pure i64→i64 transformer
+// with no shared mutable state.
+unsafe impl Send for JitCompiled {}
+unsafe impl Sync for JitCompiled {}
+
+impl std::fmt::Debug for JitCompiled {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<JitCompiled arity={}>", self.arity)
+    }
+}
+
+impl Drop for JitCompiled {
+    fn drop(&mut self) {
+        // Manual drop runs BEFORE field drops, so we can't depend on _library
+        // having been unmapped here. Instead: on Linux removing a file that
+        // libloading currently has dlopen'd is safe — the kernel keeps the
+        // mapping alive until dlclose runs. So we can remove the temp dir
+        // now; the dlclose that happens when _library drops (immediately
+        // after this Drop::drop returns) will close the mapping cleanly even
+        // though the on-disk file is gone. Best-effort: ignore errors.
+        let _ = fs::remove_dir_all(&self._temp_dir);
+    }
+}
+
+// Maximum arity the JIT supports — bounded so dispatch can be a static
+// match instead of dynamic generation. Form recipes with more parameters
+// fall back to recipe-walk; the recipe stays canonical truth.
+const JIT_MAX_ARITY: usize = 8;
 
 impl Value {
     pub(crate) fn display(&self) -> String {
@@ -2330,15 +2412,48 @@ impl Kernel {
             }
         });
         // jit_compile form-name-str → 1 if a host-JIT compile succeeded,
-        //   0 if no compiler is available on this kernel build, -1 if the
-        //   name isn't bound to a closure. Rust kernel returns 0 today
-        //   (cranelift integration is the next walk). Sibling-Form code
-        //   can branch on the return value: 1 = compiled, 0 = recipe-walk
-        //   path, -1 = name binding missing.
-        self.register_native("jit_compile", cat_witness(), |_k, _a, _args| {
-            // No Form→cranelift backend yet. Recipe-walk continues to
-            // produce the canonical result; the body just isn't accelerated.
-            Value::Int(0)
+        //   0 if no compiler is available on this kernel build OR the
+        //   recipe contains a shape outside the JIT subset OR rustc isn't
+        //   in PATH OR the .so failed to load, -1 if the name isn't bound
+        //   to a closure in the caller env.
+        //
+        // The Rust path mirrors the user-named shape: emit valid Rust
+        // source from the Form recipe, invoke the system `rustc
+        // --crate-type=cdylib`, load the resulting plugin.so via
+        // libloading, and dispatch subsequent calls through the loaded
+        // function pointer. Form recipe stays canonical truth — every
+        // failure mode honestly returns 0, and recipe-walk continues
+        // producing the same observable result.
+        self.register_env_native("jit_compile", cat_witness(), |k, a, env, args| {
+            if args.is_empty() {
+                return Value::Int(-1);
+            }
+            let form_name = args[0].as_str().to_string();
+            let form_id = k.intern_string(&form_name).inst;
+            let v = match a.lookup(env, form_id) {
+                Some(v) => v,
+                None => return Value::Int(-1),
+            };
+            let cl = match v {
+                Value::Closure(c) => c,
+                _ => return Value::Int(-1),
+            };
+            // Already compiled? Idempotent: return 1.
+            if k.jit_compiled.contains_key(&cl.body) {
+                return Value::Int(1);
+            }
+            // Emit Rust source for the recipe.
+            let src = match emit_rust_source(k, cl.name, &cl.params, cl.body) {
+                Some(s) => s,
+                None => return Value::Int(0),
+            };
+            // Compile + load. Any failure → honest 0.
+            let jc = match compile_rust_cdylib(&src, cl.params.len()) {
+                Some(j) => j,
+                None => return Value::Int(0),
+            };
+            k.jit_compiled.insert(cl.body, Arc::new(jc));
+            Value::Int(1)
         });
         // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
         // for this name, else 0. Lets Form code introspect dispatch routing.
@@ -3074,6 +3189,706 @@ fn resolve_method(
 }
 
 // ---------------------------------------------------------------------------
+// Form → Rust source JIT
+// ---------------------------------------------------------------------------
+//
+// Sibling to the TS kernel's compileNode (recipe → JS via `new Function`).
+// Pipeline:
+//   1. emit_rust_function_source(k, name, params, body) → Rust source string,
+//      or None if the recipe contains a node the emitter can't yet handle.
+//   2. compile_rust_cdylib(src) → JitCompiled (Library + fn ptr), or None
+//      on rustc failure / load failure.
+//   3. dispatch at FNCALL: when the closure body NodeID is in k.jit_compiled
+//      and all args are Int, call the function pointer directly.
+//
+// What the emitter handles structurally (every other shape falls back to a
+// `compile_fail` return that aborts the compile, so the kernel never silently
+// emits broken Rust):
+//   - i64 arithmetic: add / sub / mul / div / mod
+//   - i64 comparisons: eq / ne / lt / le / gt / ge   (yields bool)
+//   - logic on bool: and / or / not
+//   - if / if-else
+//   - let-bindings (body is the bound value's continuation in the block)
+//   - recursive free-function calls (recipes that reference each other)
+//   - parameter references
+//   - integer literals
+//
+// Lists, native calls, substrate reflection: out of scope by design — the
+// walker still owns those. The compile is best-effort acceleration; failure
+// is honest (returns 0 from jit_compile, recipe-walk continues).
+
+/// Result of trying to emit a Rust expression for a Form node.
+/// `Int(src)` → expression evaluates to i64.
+/// `Bool(src)` → expression evaluates to bool.
+/// We track the type at emit time so comparisons-in-if and i64 returns get
+/// the right casts.
+enum EmittedExpr {
+    Int(String),
+    Bool(String),
+}
+
+impl EmittedExpr {
+    fn into_i64(self) -> String {
+        match self {
+            EmittedExpr::Int(s) => s,
+            // bool→i64 via `if b { 1 } else { 0 }` keeps it C-ABI clean.
+            EmittedExpr::Bool(s) => format!("(if ({}) {{ 1i64 }} else {{ 0i64 }})", s),
+        }
+    }
+
+    fn into_bool(self) -> String {
+        match self {
+            EmittedExpr::Bool(s) => s,
+            // i64→bool via `!= 0` lets Form's truthy-int convention survive.
+            EmittedExpr::Int(s) => format!("(({}) != 0i64)", s),
+        }
+    }
+
+    fn src(&self) -> &str {
+        match self {
+            EmittedExpr::Int(s) | EmittedExpr::Bool(s) => s.as_str(),
+        }
+    }
+}
+
+/// Tracks compile-time scope while emitting. `vars` maps NameID → Rust
+/// variable name; `siblings` maps NameID → arity (so a recursive call can
+/// emit a direct Rust function call to a sibling defn).
+struct EmitScope<'a> {
+    vars: HashMap<NameID, String>,
+    siblings: &'a HashMap<NameID, (String, usize)>,
+    uid: u32,
+}
+
+impl<'a> EmitScope<'a> {
+    fn new(siblings: &'a HashMap<NameID, (String, usize)>) -> Self {
+        Self {
+            vars: HashMap::new(),
+            siblings,
+            uid: 0,
+        }
+    }
+
+    fn fresh(&mut self, hint: &str) -> String {
+        self.uid += 1;
+        let sanitized: String = hint
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+            .collect();
+        format!("v_{}_{}", sanitized, self.uid)
+    }
+}
+
+/// Sanitize an arbitrary string for use as a Rust identifier.
+fn sanitize_rust_ident(s: &str) -> String {
+    let cleaned: String = s
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .collect();
+    if cleaned.is_empty() {
+        return "fn_".to_string();
+    }
+    // Rust keywords / leading-digit guard.
+    if cleaned.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+        format!("f_{}", cleaned)
+    } else {
+        format!("fn_{}", cleaned)
+    }
+}
+
+/// Collect every recipe-defined sibling function discoverable from the
+/// closure body. Walks BLOCK.DO/SEQ/LET-trees looking for FNDEFs at any
+/// position so mutually-recursive recipes still resolve.
+///
+/// Returns a map of NameID → (sanitized Rust identifier, arity, body NodeID).
+/// The siblings get emitted as Rust `fn name(arg0: i64, ...) -> i64` at the
+/// top of the generated .rs file so calls between them link cleanly.
+fn collect_siblings(
+    k: &Kernel,
+    body: NodeID,
+    target: NameID,
+    target_arity: usize,
+    target_body: NodeID,
+) -> HashMap<NameID, (String, usize, NodeID)> {
+    let mut out: HashMap<NameID, (String, usize, NodeID)> = HashMap::new();
+    // The target itself is always a sibling — recursive calls dispatch to
+    // its own Rust definition (which IS `compiled_fn` exported with C ABI).
+    out.insert(
+        target,
+        (
+            sanitize_rust_ident(k.name_str(target)),
+            target_arity,
+            target_body,
+        ),
+    );
+    let mut visit: Vec<NodeID> = vec![body];
+    let mut seen: HashSet<NodeID> = HashSet::new();
+    while let Some(n) = visit.pop() {
+        if !seen.insert(n) {
+            continue;
+        }
+        if n.level == LEVEL_TRIVIAL {
+            continue;
+        }
+        let cat = k.category(n);
+        let kids = k.children(n);
+        if cat.ty == RB_FNDEF && kids.len() >= 3 {
+            let name = k.ident_id(kids[0]);
+            let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
+            let arity = params.len();
+            let fbody = kids[2];
+            out.entry(name).or_insert_with(|| {
+                (sanitize_rust_ident(k.name_str(name)), arity, fbody)
+            });
+        }
+        for c in kids {
+            visit.push(c);
+        }
+    }
+    out
+}
+
+/// Emit a single Form expression as a Rust expression. Returns None when
+/// the expression contains a shape outside the JIT subset.
+fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<EmittedExpr> {
+    if n.level == LEVEL_TRIVIAL {
+        return match n.ty {
+            TRIV_INT => {
+                let v = (n.inst as i32) as i64;
+                Some(EmittedExpr::Int(format!("{}i64", v)))
+            }
+            TRIV_BOOL => Some(EmittedExpr::Bool(if n.inst != 0 {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            })),
+            // STRING / NULL / FLOAT64 — not on the JIT path.
+            _ => None,
+        };
+    }
+    let cat = k.category(n);
+    let kids = k.children(n);
+    match cat.ty {
+        RB_IDENT => {
+            let name = k.ident_id(n);
+            if let Some(v) = scope.vars.get(&name) {
+                Some(EmittedExpr::Int(v.clone()))
+            } else {
+                None
+            }
+        }
+        RB_MATH => {
+            if kids.is_empty() {
+                return None;
+            }
+            let op = match cat.inst {
+                RMATH_PLUS => "+",
+                RMATH_MINUS => "-",
+                RMATH_MULTIPLY => "*",
+                RMATH_DIVIDE => "/",
+                RMATH_MODULO => "%",
+                _ => return None,
+            };
+            let mut parts: Vec<String> = Vec::with_capacity(kids.len());
+            for c in &kids {
+                parts.push(emit_expr(k, *c, scope)?.into_i64());
+            }
+            // Wrapping arithmetic — Form recipes treat i64 overflow as wrap,
+            // matching the walker's `.wrapping_*` behavior and the TS kernel's
+            // `| 0` semantics for i32. We use wrapping_* so panic-free hot loops.
+            let wrap_method = match cat.inst {
+                RMATH_PLUS => "wrapping_add",
+                RMATH_MINUS => "wrapping_sub",
+                RMATH_MULTIPLY => "wrapping_mul",
+                RMATH_DIVIDE => "wrapping_div",
+                RMATH_MODULO => "wrapping_rem",
+                _ => return None,
+            };
+            let mut acc = parts[0].clone();
+            for p in &parts[1..] {
+                acc = format!("({}).{}({})", acc, wrap_method, p);
+            }
+            let _ = op; // kept for symbolic clarity; wrap_method is what we emit
+            Some(EmittedExpr::Int(acc))
+        }
+        RB_COMPARE => {
+            if kids.len() != 2 {
+                return None;
+            }
+            let op = match cat.inst {
+                RCMP_EQ => "==",
+                RCMP_NE => "!=",
+                RCMP_LT => "<",
+                RCMP_LE => "<=",
+                RCMP_GT => ">",
+                RCMP_GE => ">=",
+                _ => return None,
+            };
+            let a = emit_expr(k, kids[0], scope)?.into_i64();
+            let b = emit_expr(k, kids[1], scope)?.into_i64();
+            Some(EmittedExpr::Bool(format!("(({}) {} ({}))", a, op, b)))
+        }
+        RB_LOGIC => {
+            match cat.inst {
+                RLOG_NOT => {
+                    if kids.len() != 1 {
+                        return None;
+                    }
+                    let a = emit_expr(k, kids[0], scope)?.into_bool();
+                    Some(EmittedExpr::Bool(format!("(!({}))", a)))
+                }
+                RLOG_AND | RLOG_OR => {
+                    let op = if cat.inst == RLOG_AND { "&&" } else { "||" };
+                    let mut parts: Vec<String> = Vec::new();
+                    for c in &kids {
+                        parts.push(emit_expr(k, *c, scope)?.into_bool());
+                    }
+                    Some(EmittedExpr::Bool(format!(
+                        "({})",
+                        parts.join(&format!(" {} ", op))
+                    )))
+                }
+                _ => None,
+            }
+        }
+        RB_COND => {
+            match cat.inst {
+                RCOND_IF => {
+                    if kids.len() != 2 {
+                        return None;
+                    }
+                    let c = emit_expr(k, kids[0], scope)?.into_bool();
+                    let t = emit_expr(k, kids[1], scope)?.into_i64();
+                    // No `else` in Form — TS encodes as `null`; we encode as 0
+                    // (only sound when the recipe author never reads the result
+                    // of a no-else `if`; fib/fact patterns always pair if with
+                    // else, so this rarely fires).
+                    Some(EmittedExpr::Int(format!(
+                        "(if ({}) {{ {} }} else {{ 0i64 }})",
+                        c, t
+                    )))
+                }
+                RCOND_IF_ELSE => {
+                    if kids.len() != 3 {
+                        return None;
+                    }
+                    let c = emit_expr(k, kids[0], scope)?.into_bool();
+                    let t = emit_expr(k, kids[1], scope)?.into_i64();
+                    let e = emit_expr(k, kids[2], scope)?.into_i64();
+                    Some(EmittedExpr::Int(format!(
+                        "(if ({}) {{ {} }} else {{ {} }})",
+                        c, t, e
+                    )))
+                }
+                _ => None,
+            }
+        }
+        RB_BLOCK => {
+            // LET binds and the block evaluates to its last expression.
+            // We emit a Rust block `{ let v = ...; ...; tail }`.
+            match cat.inst {
+                RBLK_LET => {
+                    // LET shape in this kernel: kids = [name-trivial, value, ...continuation?]
+                    // Form-on-top emits LET as a single (name, value) pair in
+                    // most surfaces; multi-form continuations appear only inside DO.
+                    if kids.len() < 2 {
+                        return None;
+                    }
+                    let name_node = kids[0];
+                    if name_node.level != LEVEL_TRIVIAL || name_node.ty != TRIV_STRING {
+                        return None;
+                    }
+                    let name_id = name_node.inst;
+                    let value_src = emit_expr(k, kids[1], scope)?.into_i64();
+                    let var = scope.fresh(k.name_str(name_id));
+                    // LET's expression value, in the walker, is the bound
+                    // value itself. Subsequent forms in the surrounding DO
+                    // pick up the binding via scope.vars.
+                    scope.vars.insert(name_id, var.clone());
+                    Some(EmittedExpr::Int(format!(
+                        "{{ let {} = {}; {} }}",
+                        var, value_src, var
+                    )))
+                }
+                RBLK_DO | RBLK_SEQ => {
+                    if kids.is_empty() {
+                        return Some(EmittedExpr::Int("0i64".to_string()));
+                    }
+                    // DO produces a Rust block. Each inner form becomes a
+                    // statement; the last is the block's expression value.
+                    // LET inside DO binds for subsequent forms — we mutate
+                    // scope.vars in-place, mirroring how the walker layers
+                    // bindings into the same frame.
+                    let mut stmts: Vec<String> = Vec::new();
+                    let mut tail: Option<String> = None;
+                    for (i, c) in kids.iter().enumerate() {
+                        let is_last = i == kids.len() - 1;
+                        // Inline LET specially so the binding stays in scope
+                        // for siblings within the DO block.
+                        let cat_c = k.category(*c);
+                        if cat_c.ty == RB_BLOCK && cat_c.inst == RBLK_LET {
+                            let kc = k.children(*c);
+                            if kc.len() < 2 || kc[0].level != LEVEL_TRIVIAL
+                                || kc[0].ty != TRIV_STRING
+                            {
+                                return None;
+                            }
+                            let name_id = kc[0].inst;
+                            let value_src = emit_expr(k, kc[1], scope)?.into_i64();
+                            let var = scope.fresh(k.name_str(name_id));
+                            scope.vars.insert(name_id, var.clone());
+                            if is_last {
+                                stmts.push(format!("let {} = {};", var, value_src));
+                                tail = Some(var);
+                            } else {
+                                stmts.push(format!("let {} = {};", var, value_src));
+                            }
+                        } else {
+                            let expr = emit_expr(k, *c, scope)?.into_i64();
+                            if is_last {
+                                tail = Some(expr);
+                            } else {
+                                // Side-effect-bearing inner forms aren't in
+                                // the JIT subset — only let-bindings, math,
+                                // and tail expressions. A pure inner expression
+                                // we can simply discard with `let _ = ...;`.
+                                stmts.push(format!("let _ = {};", expr));
+                            }
+                        }
+                    }
+                    let body = format!(
+                        "{{ {} {} }}",
+                        stmts.join(" "),
+                        tail.unwrap_or_else(|| "0i64".to_string())
+                    );
+                    Some(EmittedExpr::Int(body))
+                }
+                _ => None,
+            }
+        }
+        RB_FNCALL => {
+            if kids.is_empty() {
+                return None;
+            }
+            let callee = kids[0];
+            // Resolve callee name — either bare string-trivial (parser-fast
+            // path) or an IDENT wrapping a string-trivial.
+            let nameid = if callee.level == LEVEL_TRIVIAL && callee.ty == TRIV_STRING {
+                callee.inst
+            } else if k.category(callee).ty == RB_IDENT {
+                k.ident_id(callee)
+            } else {
+                return None;
+            };
+            // Sibling Form fn?
+            if let Some((rust_name, arity)) = scope.siblings.get(&nameid) {
+                if kids.len() - 1 != *arity {
+                    return None;
+                }
+                let mut args: Vec<String> = Vec::with_capacity(*arity);
+                for a in &kids[1..] {
+                    args.push(emit_expr(k, *a, scope)?.into_i64());
+                }
+                return Some(EmittedExpr::Int(format!(
+                    "{}({})",
+                    rust_name,
+                    args.join(", ")
+                )));
+            }
+            // Unknown callee — would need to call back into the walker, which
+            // the JIT subset doesn't support. Caller falls back.
+            None
+        }
+        // FNDEF appears inside DO blocks for nested recipes. The sibling
+        // collector already discovered them and they get emitted as Rust
+        // fns. An FNDEF expression itself evaluates to the closure value;
+        // in the JIT subset we represent it as 0 (the def already happened
+        // at the Rust top-level — this is a placeholder so DO continues).
+        RB_FNDEF => Some(EmittedExpr::Int("0i64".to_string())),
+        _ => None,
+    }
+}
+
+/// Emit the full Rust source for a top-level closure. The exported symbol
+/// `compiled_fn` carries the C ABI; internal sibling defns become regular
+/// Rust functions in the same crate. Returns None if any node in the body
+/// (or any reachable sibling body) is outside the JIT subset.
+fn emit_rust_source(
+    k: &Kernel,
+    target_name: NameID,
+    target_params: &[NameID],
+    target_body: NodeID,
+) -> Option<String> {
+    let siblings_full =
+        collect_siblings(k, target_body, target_name, target_params.len(), target_body);
+    // Strip body NodeIDs for the scope (the scope just needs name → (rust_name, arity)).
+    let siblings: HashMap<NameID, (String, usize)> = siblings_full
+        .iter()
+        .map(|(k, (rn, ar, _))| (*k, (rn.clone(), *ar)))
+        .collect();
+
+    // Emit every sibling, target last.
+    let mut emitted_fns: Vec<String> = Vec::new();
+    let mut target_rust_name = String::new();
+    for (name, (rust_name, arity, body)) in &siblings_full {
+        let params: Vec<NameID> = if *name == target_name {
+            target_params.to_vec()
+        } else {
+            // Sibling — find the FNDEF that registered it and pull params.
+            // We re-traverse to recover the params list (small cost; emit is rare).
+            find_fndef_params(k, target_body, *name)?
+        };
+        if params.len() != *arity {
+            return None;
+        }
+        if params.len() > JIT_MAX_ARITY {
+            return None;
+        }
+        let mut scope = EmitScope::new(&siblings);
+        let mut param_decls: Vec<String> = Vec::new();
+        for (i, p) in params.iter().enumerate() {
+            let var = format!("a{}", i);
+            scope.vars.insert(*p, var.clone());
+            param_decls.push(format!("{}: i64", var));
+        }
+        let body_src = emit_expr(k, *body, &mut scope)?.into_i64();
+        let is_target = *name == target_name;
+        if is_target {
+            target_rust_name = rust_name.clone();
+            // Target gets two definitions: the internal one and a C-ABI
+            // wrapper. This way recursive sibling calls go through the
+            // internal Rust fn (zero-overhead), while the external loader
+            // gets a stable symbol.
+            emitted_fns.push(format!(
+                "fn {}({}) -> i64 {{ {} }}",
+                rust_name,
+                param_decls.join(", "),
+                body_src
+            ));
+        } else {
+            emitted_fns.push(format!(
+                "fn {}({}) -> i64 {{ {} }}",
+                rust_name,
+                param_decls.join(", "),
+                body_src
+            ));
+        }
+    }
+
+    // C-ABI wrapper for the target. Arity-specific signature: callers
+    // dispatch through a match on arity at the call site, casting the raw
+    // pointer to the exactly-shaped `unsafe extern "C" fn(i64,…,i64) -> i64`.
+    let arity = target_params.len();
+    let params: Vec<String> = (0..arity).map(|i| format!("a{}: i64", i)).collect();
+    let args: Vec<String> = (0..arity).map(|i| format!("a{}", i)).collect();
+    let wrapper = format!(
+        "#[no_mangle]\npub extern \"C\" fn compiled_fn({}) -> i64 {{ {}({}) }}",
+        params.join(", "),
+        target_rust_name,
+        args.join(", ")
+    );
+
+    // Header: silence the unused-fn lint that fires when a sibling defn
+    // isn't called by the body (rare but possible — author left a helper
+    // they didn't end up using).
+    let header = "#![allow(unused)]\n#![allow(dead_code)]\n";
+    Some(format!(
+        "{}\n{}\n\n{}\n",
+        header,
+        emitted_fns.join("\n\n"),
+        wrapper
+    ))
+}
+
+/// Walk the recipe tree starting at `root` and return the params NameIDs
+/// for the FNDEF whose name matches `target`. Returns None if not found.
+fn find_fndef_params(k: &Kernel, root: NodeID, target: NameID) -> Option<Vec<NameID>> {
+    let mut visit: Vec<NodeID> = vec![root];
+    let mut seen: HashSet<NodeID> = HashSet::new();
+    while let Some(n) = visit.pop() {
+        if !seen.insert(n) {
+            continue;
+        }
+        if n.level == LEVEL_TRIVIAL {
+            continue;
+        }
+        let cat = k.category(n);
+        let kids = k.children(n);
+        if cat.ty == RB_FNDEF && kids.len() >= 3 {
+            let name = k.ident_id(kids[0]);
+            if name == target {
+                return Some(k.children(kids[1]).iter().map(|p| p.inst).collect());
+            }
+        }
+        for c in kids {
+            visit.push(c);
+        }
+    }
+    None
+}
+
+/// Compile a Rust source string to a cdylib and load it. Returns None on
+/// any failure — rustc not in PATH, compile error, library load error.
+/// Caller treats None as honest "compile unavailable" and returns 0 from
+/// jit_compile so Form code branches on availability.
+fn compile_rust_cdylib(src: &str, arity: usize) -> Option<JitCompiled> {
+    // Unique temp dir per compile — multiple JIT calls in one session
+    // don't fight for the same lib.rs / plugin.so file.
+    let mut temp = std::env::temp_dir();
+    let nonce = format!(
+        "form-rust-jit-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    temp.push(nonce);
+    if fs::create_dir_all(&temp).is_err() {
+        return None;
+    }
+    let src_path = temp.join("lib.rs");
+    let out_path = temp.join("plugin.so");
+    if fs::write(&src_path, src).is_err() {
+        return None;
+    }
+    // Invoke rustc. -C opt-level=2 is the sweet spot — most of the gain
+    // for a small fraction of the compile cost. We pass --edition=2021
+    // explicitly so the host's rustc default doesn't change behavior.
+    let status = Command::new("rustc")
+        .arg("--crate-type=cdylib")
+        .arg("--edition=2021")
+        .arg("-C")
+        .arg("opt-level=2")
+        .arg("-o")
+        .arg(&out_path)
+        .arg(&src_path)
+        .stderr(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .status();
+    let status = match status {
+        Ok(s) => s,
+        Err(_) => {
+            // rustc not in PATH — cleanup and bail. The Form sample stays
+            // honest: compile-attempted=1 (we tried), recipe walks instead.
+            let _ = fs::remove_dir_all(&temp);
+            return None;
+        }
+    };
+    if !status.success() {
+        let _ = fs::remove_dir_all(&temp);
+        return None;
+    }
+    // Load the .so. libloading::Library::new is unsafe because the dynamic
+    // linker can run arbitrary init code in the loaded image. We trust the
+    // .so because we just emitted its source from a Form recipe and built
+    // it with the same rustc this process trusts.
+    let library = match unsafe { libloading::Library::new(&out_path) } {
+        Ok(l) => l,
+        Err(_) => {
+            let _ = fs::remove_dir_all(&temp);
+            return None;
+        }
+    };
+    // Resolve the symbol. We immediately extract the raw pointer so the
+    // Library can outlive the Symbol (Symbol borrows the Library, but the
+    // raw pointer is just an address that's valid as long as the .so stays
+    // mapped — and the Library staying alive guarantees that).
+    let func_ptr: *const () = unsafe {
+        let sym: libloading::Symbol<unsafe extern "C" fn() -> i64> =
+            match library.get(b"compiled_fn") {
+                Ok(s) => s,
+                Err(_) => {
+                    let _ = fs::remove_dir_all(&temp);
+                    return None;
+                }
+            };
+        // Cast through *const () so callers can re-cast to the arity-
+        // specific signature. raw_pointer is the dlsym address.
+        *sym.into_raw() as *const ()
+    };
+    Some(JitCompiled {
+        _library: library,
+        func: func_ptr,
+        arity,
+        _temp_dir: temp,
+    })
+}
+
+/// Dispatch a call through a loaded JitCompiled. Returns None if the args
+/// don't all unbox to i64 (the caller must fall back to recipe-walk).
+///
+/// SAFETY: We loaded the .so via libloading and the Library handle is kept
+/// alive by Arc<JitCompiled>. The function signature is arity-specific i64→i64.
+/// The cast and call happen inside a single unsafe block so the contract is
+/// localized. The body of the function was emitted from a Form recipe via
+/// our own emit_rust_source — same crate this kernel was built with — so
+/// ABI compatibility is guaranteed.
+fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
+    if args.len() != jc.arity {
+        return None;
+    }
+    let mut i64s: Vec<i64> = Vec::with_capacity(args.len());
+    for a in args {
+        match a {
+            Value::Int(n) => i64s.push(*n),
+            Value::Bool(b) => i64s.push(if *b { 1 } else { 0 }),
+            _ => return None,
+        }
+    }
+    let p = jc.func;
+    let result: i64 = unsafe {
+        match i64s.len() {
+            0 => {
+                let f: unsafe extern "C" fn() -> i64 = std::mem::transmute(p);
+                f()
+            }
+            1 => {
+                let f: unsafe extern "C" fn(i64) -> i64 = std::mem::transmute(p);
+                f(i64s[0])
+            }
+            2 => {
+                let f: unsafe extern "C" fn(i64, i64) -> i64 = std::mem::transmute(p);
+                f(i64s[0], i64s[1])
+            }
+            3 => {
+                let f: unsafe extern "C" fn(i64, i64, i64) -> i64 = std::mem::transmute(p);
+                f(i64s[0], i64s[1], i64s[2])
+            }
+            4 => {
+                let f: unsafe extern "C" fn(i64, i64, i64, i64) -> i64 =
+                    std::mem::transmute(p);
+                f(i64s[0], i64s[1], i64s[2], i64s[3])
+            }
+            5 => {
+                let f: unsafe extern "C" fn(i64, i64, i64, i64, i64) -> i64 =
+                    std::mem::transmute(p);
+                f(i64s[0], i64s[1], i64s[2], i64s[3], i64s[4])
+            }
+            6 => {
+                let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64) -> i64 =
+                    std::mem::transmute(p);
+                f(i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5])
+            }
+            7 => {
+                let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64) -> i64 =
+                    std::mem::transmute(p);
+                f(i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6])
+            }
+            8 => {
+                let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64, i64) -> i64 =
+                    std::mem::transmute(p);
+                f(
+                    i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6], i64s[7],
+                )
+            }
+            _ => return None,
+        }
+    };
+    Some(Value::Int(result))
+}
+
+// ---------------------------------------------------------------------------
 // Walker — full RBasic dispatch
 // ---------------------------------------------------------------------------
 
@@ -3284,15 +4099,39 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
             }
             let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
             // Evaluate args in CALLER's env, then bind in call_frame.
+            // We collect them into `arg_values` first so the JIT dispatch
+            // path can use them directly without re-walking from the frame.
             // The clone is Arc<Closure> — bump-the-refcount, not deep.
             let cl2 = cl.clone();
+            let mut arg_values: Vec<Value> = Vec::with_capacity(cl2.params.len());
             for (i, p) in cl2.params.iter().enumerate() {
                 let arg = walk(k, a, kids[i + 1], env);
+                arg_values.push(arg.clone());
                 a.bind(call_frame, *p, arg);
             }
             let fn_name = k.name_str(cl.name).to_string();
             if let Some(t) = &mut k.trace {
                 t.record_fn(&fn_name);
+            }
+            // JIT-compiled fast path: if (jit_compile "name") landed for
+            // this closure's body, dispatch through the loaded function
+            // pointer. Form recipe stays canonical truth; the .so is opt-in
+            // bootstrap to host-native speed. Sibling-attested: TS uses
+            // V8's `new Function`; Go uses `plugin.Open`; Rust uses
+            // libloading over a rustc-produced cdylib. Same observable
+            // result, three real host-native paths.
+            //
+            // We hold an Arc<JitCompiled> through the call so the Library
+            // can't be dropped mid-call (kernel mutation is safe; the Arc
+            // bumps refcount synchronously).
+            if let Some(jc) = k.jit_compiled.get(&cl.body).cloned() {
+                if let Some(v) = jit_dispatch(&jc, &arg_values) {
+                    return v;
+                }
+                // Args don't unbox to i64 — fall back to the walker.
+                // This preserves Form semantics for closures over non-int
+                // values (lists, strings, closures) even after jit_compile
+                // succeeded for the integer-only path.
             }
             walk(k, a, cl.body, call_frame)
         }
