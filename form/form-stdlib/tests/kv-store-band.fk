@@ -1,8 +1,6 @@
 ; tests/kv-store-band.fk — kv-store cell pattern sibling-witness band.
 ;
-; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
-;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
-;           form-stdlib/symbols.fk
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/symbols.fk
 ;
 ; Validates the kv-store cell pattern from sample 40-kv-store:
 ;   - K registers with two capabilities and is discoverable by either.

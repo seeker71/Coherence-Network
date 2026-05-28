@@ -1,6 +1,9 @@
 ; tests/now-unix-ms-band.fk — sibling-witness band for the now_unix_ms native.
 ;
-; preludes: (none — pure int primitives + the now_unix_ms native)
+; preludes:
+;
+; (No preludes — the band uses only int primitives and the
+; now_unix_ms native, both kernel-resident.)
 ;
 ; The clock native that closes the freshness gap. Every richer
 ; freshness walk (token expiry, ping stamps, heartbeat aging, async

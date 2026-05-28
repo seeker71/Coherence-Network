@@ -1,7 +1,6 @@
 ; tests/async-correlation-band.fk — multi-in-flight correlation routing band.
 ;
-; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
-;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/symbols.fk
 ;
 ; Validates that the channel + query/response vocabulary supports
 ; multiple in-flight queries whose replies arrive in jumbled order, and

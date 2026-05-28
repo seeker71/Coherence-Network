@@ -1,7 +1,6 @@
 ; tests/verb-router-band.fk — verb-router sibling-witness band.
 ;
-; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk \
-;           form-stdlib/symbols.fk form-stdlib/verb-router.fk
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/symbols.fk form-stdlib/verb-router.fk
 ;
 ; Builds a small handler-table with three entries, then performs three
 ; lookups: two hits (verbs present in the table) and one miss (verb

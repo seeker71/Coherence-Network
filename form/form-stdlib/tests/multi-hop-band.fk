@@ -1,8 +1,6 @@
 ; tests/multi-hop-band.fk — sibling-witness band for multi-hop routing.
 ;
-; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
-;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
-;           form-stdlib/symbols.fk
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/symbols.fk
 ;
 ; The tightest possible band for the routing core: three cells share
 ; one registry, A picks the first provider of capability "concepts"
