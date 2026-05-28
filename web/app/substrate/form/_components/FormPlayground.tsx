@@ -22,6 +22,8 @@ import {
   compilePythonToForm,
   type GrammarLaneId,
 } from "@/lib/form-kernel/grammar-lanes";
+import { XPathDemo } from "./XPathDemo";
+import { ChannelDemo } from "./ChannelDemo";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
 
@@ -1361,6 +1363,10 @@ export function FormPlayground() {
 
       <LocalKernelPanel />
 
+      <XPathDemo />
+
+      <ChannelDemo />
+
       <GrammarLanesPanel onLoadExpression={loadGeneratedExpression} />
 
       <section className="space-y-4" aria-labelledby="form-atlas-heading">
@@ -1415,18 +1421,6 @@ export function FormPlayground() {
               blurb:
                 "form/form-stdlib/ — codec, parser, emit, tracer, recipe-distance, encoders, grammars. Substrate-native library on top of the kernel.",
               href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#the-standard-library--formform-stdlib",
-            },
-            {
-              title: "XPath queries",
-              blurb:
-                "xpath.fk / doc-xpath / concept-xpath — path-string lens over substrate trees. /step, //step, cat:N, name:s, predicates.",
-              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#xpath-queries--path-strings-over-substrate-trees",
-            },
-            {
-              title: "Channels",
-              blurb:
-                "channel.fk — file-backed inter-cell Recipe transport. Content-addressing IS the dedup; two senders with the same payload land one NodeID.",
-              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#channels--inter-cell-recipe-transport",
             },
             {
               title: "Universal translator",
