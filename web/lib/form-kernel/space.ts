@@ -179,6 +179,7 @@ export interface SpaceCell {
   depth: number; // first-seen depth from root
   heat: number; // 0..1 — share of total walks this arm took at runtime
   arity: number; // number of children
+  hz?: number; // resonant frequency, when the cell carries one (vision concepts)
   note?: string; // optional sourced description (presence/field cells)
 }
 

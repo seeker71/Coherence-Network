@@ -36,6 +36,13 @@ import {
 } from "@/lib/form-kernel/self-space";
 import { buildVisionSpace, edgeSegments } from "@/lib/form-kernel/vision-space";
 import {
+  pitchForCell,
+  playSequence,
+  playTone,
+  stopSequence,
+  unlockAudio,
+} from "@/lib/form-kernel/cell-audio";
+import {
   LENSES,
   LensCell,
   LensEdge,
@@ -926,6 +933,7 @@ export default function KernelSpace() {
   const [viewRootId, setViewRootId] = useState<string>("");
   const [scene, setScene] = useState<"kernel" | "self" | "vision">("kernel");
   const [lensId, setLensId] = useState<LensId>("rooms");
+  const [muted, setMuted] = useState(false);
   const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [proto, setProto] = useState<ChannelProtocol>("ask");
@@ -1074,6 +1082,14 @@ export default function KernelSpace() {
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, focusId, visibleOrder, effectiveRoot]);
+
+  // a focused cell sounds its voice — silent until the first gesture unlocks audio
+  useEffect(() => {
+    if (muted || !focusId) return;
+    const cell = space.cells[focusId];
+    if (cell) playTone(pitchForCell(cell));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, muted]);
 
   const focusCell = focusId ? space.cells[focusId] : undefined;
   const rootCell = space.cells[effectiveRoot];
@@ -1339,7 +1355,7 @@ export default function KernelSpace() {
       </div>
 
       {/* right: the space */}
-      <div className="relative min-h-[50vh] flex-1">
+      <div className="relative min-h-[50vh] flex-1" onPointerDown={unlockAudio}>
         <Canvas camera={{ position: [12, 8, 22], fov: 60 }} dpr={[1, 2]}>
           <Scene
             space={space}
@@ -1374,9 +1390,33 @@ export default function KernelSpace() {
             ))}
           </div>
         )}
-        <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
+        <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 backdrop-blur">
+          <button
+            onClick={() => {
+              if (!muted) stopSequence();
+              setMuted((m) => !m);
+            }}
+            title={muted ? "Cells are silent — unmute" : "Each cell sounds its voice on focus — mute"}
+            className="rounded px-2 py-1 text-sm text-white/80 hover:bg-white/10"
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+          <button
+            onClick={() => {
+              setMuted(false);
+              playSequence(
+                visibleOrder.map((id) => space.cells[id]!).filter(Boolean),
+              );
+            }}
+            title="Play the recipe — hear each cell in order; repeated structure repeats as a motif"
+            className="rounded px-2 py-1 text-xs text-white/80 hover:bg-white/10"
+          >
+            ▶ Play
+          </button>
+        </div>
+        <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
           🜂 water = rooms + flowing doors · 🜁 ice = blueprint crystals · 🜄 gas
-          = name haze · int=gem float=droplet str=tablet bool=coin
+          = name haze · 🔊 pitch keyed to blueprint — twins ring alike
         </div>
       </div>
     </div>

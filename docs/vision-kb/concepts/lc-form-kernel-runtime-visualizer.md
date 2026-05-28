@@ -199,6 +199,18 @@ landscape), circuit answers *how it HAPPENS* (current flowing the dispatch).
 Switching lenses on one held recipe is the teaching made tangible: structure is
 one, manifestation is many.
 
+A sixth breath gave every cell a voice. A cell's pitch is keyed to its
+*blueprint*, so structurally identical cells (same blueprintKey) ring the same
+note — the coherence the blueprint-shader gives the eye, the ear gets too:
+twins shimmer alike, twins sound alike. Focusing a cell sounds it; pressing play
+walks the recipe as a melody, and repeated structure returns as a repeated
+motif — recursion you can *hear*. Vision concepts carry a real `hz`, so they
+sound their literal solfeggio frequency (lc-rest emits 174Hz, lc-love 528Hz);
+recipe cells with no stated frequency draw from a major-pentatonic scale so any
+combination stays consonant. The tone is a soft three-harmonic bell, unlocked
+on first gesture per browser audio rules. Hearing a recipe is another way of
+perceiving its shape — the second sense added to this organ.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

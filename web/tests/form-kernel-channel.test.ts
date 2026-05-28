@@ -96,3 +96,25 @@ describe("manifestation lenses — one recipe, many realities", () => {
     }
   });
 });
+
+describe("cell audio — every cell has a voice keyed to its blueprint", () => {
+  it("rings twins alike and sounds a concept's literal hz", async () => {
+    const { pitchForCell } = await import("../lib/form-kernel/cell-audio");
+    const base = {
+      id: "a", node: { pkg: 1, level: 2, type: 3, inst: 1 }, kind: "recipe" as const,
+      arm: "X", dataType: "" as const, container: null, label: "A",
+      color: [1, 1, 1] as const, blueprintColor: [1, 1, 1] as const,
+      childIds: [], isName: false, depth: 0, heat: 0, arity: 0,
+    };
+    // same blueprintKey ⇒ same pitch (structural twins ring alike)
+    const twinA = { ...base, id: "a", blueprintKey: "2.9" };
+    const twinB = { ...base, id: "b", blueprintKey: "2.9" };
+    expect(pitchForCell(twinA)).toBe(pitchForCell(twinB));
+    // different blueprint ⇒ generally a different voice
+    const other = { ...base, id: "c", blueprintKey: "5.4" };
+    expect(pitchForCell(other)).not.toBe(pitchForCell(twinA));
+    // a concept's literal hz is its voice
+    const concept = { ...base, id: "lc", blueprintKey: "x", hz: 528 };
+    expect(pitchForCell(concept)).toBe(528);
+  });
+});

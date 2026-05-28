@@ -74,6 +74,7 @@ export function buildVisionSpace(): VisionSpace {
       depth: 0,
       heat: 0,
       arity: c.crossRefs.length,
+      hz: c.hz || undefined,
       note: `${c.form || "—"} · ${c.topology || "—"} · ${c.hz}Hz · ${c.band || "—"} · ${c.status}`,
     };
     order.push(c.id);
