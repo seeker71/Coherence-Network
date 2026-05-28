@@ -46,15 +46,22 @@
     (let all-ok (if (eq (len q-all) 3) 1 0))
 
     ;; ---- /concept/<id> → 1, id round-trips ------------------------
+    ;; `concept-found?` guards the accessor — node_children on the
+    ;; CONCEPT-NOT-FOUND sentinel (a composite, no slot 0) would
+    ;; panic in every sibling kernel.
     (let q-by-id (cxpath-first "/concept/lc-trust-over-fear" corpus))
+    (let q-by-id-str
+        (if (eq (concept-found? q-by-id) 1) (concept-id q-by-id) ""))
     (let id-ok
-        (if (str_eq (concept-id q-by-id) "lc-trust-over-fear") 1 0))
+        (if (str_eq q-by-id-str "lc-trust-over-fear") 1 0))
 
     ;; ---- /concept/<id>/title → string -----------------------------
     (let q-title
         (cxpath-first "/concept/lc-trust-over-fear/title" corpus))
+    (let title-str
+        (if (eq (concept-found? q-title) 1) (node_value q-title) ""))
     (let title-ok
-        (if (str_eq (node_value q-title) "Trust over Fear") 1 0))
+        (if (str_eq title-str "Trust over Fear") 1 0))
 
     ;; ---- /concept/<id>/cross-refs → list of 2 ---------------------
     (let q-refs
@@ -65,14 +72,18 @@
     (let q-ref1
         (cxpath-first "/concept/lc-trust-over-fear/cross-refs[1]"
                       corpus))
+    (let ref1-str
+        (if (eq (concept-found? q-ref1) 1) (node_value q-ref1) ""))
     (let ref1-ok
-        (if (str_eq (node_value q-ref1) "lc-edges-as-vitality") 1 0))
+        (if (str_eq ref1-str "lc-edges-as-vitality") 1 0))
 
     ;; ---- /concept/<id>/parent → trivial-string --------------------
     (let q-parent
         (cxpath-first "/concept/lc-field-substrate/parent" corpus))
+    (let parent-str
+        (if (eq (concept-found? q-parent) 1) (node_value q-parent) ""))
     (let parent-ok
-        (if (str_eq (node_value q-parent) "lc-trust-over-fear") 1 0))
+        (if (str_eq parent-str "lc-trust-over-fear") 1 0))
 
     ;; ---- /concept/by-cross-ref/<id> → 1 ---------------------------
     (let q-rev
@@ -83,9 +94,13 @@
     (let q-orphans (cxpath "/concept/orphans" corpus))
     (let orphans-ok (if (eq (len q-orphans) 2) 1 0))
 
-    ;; ---- missing-id probe (not part of verdict) -------------------
-    ;; cxpath-first on an unknown id returns CONCEPT-NOT-FOUND.
-    ;; Documents the sentinel; callers detect via node_eq.
+    ;; ---- missing-id probe (load-bearing) ---------------------------
+    ;; cxpath-first on an unknown id returns the CONCEPT-NOT-FOUND
+    ;; sentinel — a composite NodeID at 1.2.99.1911. Callers detect
+    ;; the miss via `node_eq` (or the `concept-found?` helper) and
+    ;; never via `node_value`, which would panic across all three
+    ;; sibling kernels (the sentinel is a composite, not a trivial).
+    ;; This probe attests the sentinel is what every kernel returns.
     (let q-miss
         (cxpath-first "/concept/lc-nonexistent" corpus))
     (let miss-ok

@@ -72,16 +72,32 @@
     ;; ---- QUERY 4: /concept/lc-field-substrate/parent -------------
     ;; → trivial-string "lc-trust-over-fear". cxpath-first peels the
     ;; one-element list; node_value reads the string content.
+    ;;
+    ;; The `concept-found?` guard is load-bearing: cxpath-first
+    ;; returns the bare CONCEPT-NOT-FOUND sentinel on miss (a
+    ;; composite NodeID at 1.2.99.1911), and calling `node_value`
+    ;; on a composite panics in every sibling kernel:
+    ;;   go         → "trivialValue: {1 2 99 1911} is composite"
+    ;;   rust       → "trivial_value: unknown trivial type 99"
+    ;;   typescript → "trivialValue: 1.2.99.1911 is composite"
+    ;; The guard returns "" on miss so the str_eq lands at 0
+    ;; deterministically across kernels.
     (let q4 (cxpath-first "/concept/lc-field-substrate/parent" corpus))
+    (let parent-string
+        (if (eq (concept-found? q4) 1) (node_value q4) ""))
     (let parent-matches
-        (if (str_eq (node_value q4) "lc-trust-over-fear") 1 0))
+        (if (str_eq parent-string "lc-trust-over-fear") 1 0))
 
     ;; ---- QUERY 5: /concept/lc-trust-over-fear (find-by-id) -------
     ;; cxpath-first returns the concept Recipe; we confirm by reading
-    ;; its id back through the accessor.
+    ;; its id back through the accessor. Same `concept-found?` guard
+    ;; — accessor calls on the sentinel would walk node_children on a
+    ;; composite that has no slot 0, also panicking.
     (let q5 (cxpath-first "/concept/lc-trust-over-fear" corpus))
+    (let q5-id
+        (if (eq (concept-found? q5) 1) (concept-id q5) ""))
     (let id-roundtrip
-        (if (str_eq (concept-id q5) "lc-trust-over-fear") 1 0))
+        (if (str_eq q5-id "lc-trust-over-fear") 1 0))
 
     ;; ---- PRINT FOUR CANONICAL RESULTS ------------------------------
     (print "xrefs-count:"    xrefs-count)

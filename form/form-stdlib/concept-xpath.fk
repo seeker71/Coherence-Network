@@ -66,6 +66,11 @@
 ;   (concept-xref-list c)  → plain list of trivial-string Recipes
 ;   (concept-parent c)     → trivial-string OR trivial-int 0
 ;   (concept-has-parent? c) → 1 if parent is a string, 0 if int 0
+;   (concept-found? r)     → 1 if r is a real Recipe, 0 if r is the
+;                            CONCEPT-NOT-FOUND sentinel. Callers must
+;                            guard `node_value` and accessor calls
+;                            with this — node_value on the sentinel
+;                            (a composite NodeID) is a kernel error.
 ;
 ; --- BLUEPRINTS --------------------------------------------------
 ;
@@ -168,6 +173,18 @@
     ;;   trivial-string → node_type 2
     (defn concept-has-parent? (c)
         (if (eq (node_type (concept-parent c)) CXP-TRIV-STRING) 1 0))
+
+    ;; concept-found? — 1 when r is a real Recipe, 0 when r is the
+    ;; CONCEPT-NOT-FOUND sentinel. `cxpath-first` returns the bare
+    ;; sentinel NodeID on miss (a composite at level 2, type 99) —
+    ;; calling `node_value` on it panics in every sibling kernel:
+    ;;   go         → "trivialValue: {1 2 99 1911} is composite"
+    ;;   rust       → "trivial_value: unknown trivial type 99"
+    ;;   typescript → "trivialValue: 1.2.99.1911 is composite"
+    ;; Guard every node_value / accessor call on a cxpath-first
+    ;; result with this predicate.
+    (defn concept-found? (r)
+        (if (node_eq r CONCEPT-NOT-FOUND) 0 1))
 
     ;; --- CORPUS CONSTRUCTION ---------------------------------------
     (defn concept-corpus (concepts-list)
