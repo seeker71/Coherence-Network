@@ -77,3 +77,22 @@ describe("vision body — the substrate as a constellation", () => {
     expect(segs.length).toBeGreaterThan(0);
   });
 });
+
+describe("manifestation lenses — one recipe, many realities", () => {
+  it("registers distinct lenses and falls back to rooms", async () => {
+    const { LENSES, lensById } = await import(
+      "../app/substrate/form/space/_components/lenses"
+    );
+    const ids = LENSES.map((l) => l.id);
+    expect(new Set(ids).size).toBe(ids.length); // all unique
+    expect(ids).toContain("rooms");
+    expect(ids).toContain("crystal");
+    // unknown lens id resolves to the default architecture lens
+    expect(lensById("nope" as never).id).toBe("rooms");
+    // every lens declares a complete manifestation recipe
+    for (const l of LENSES) {
+      expect(l.cellShape).toBeTruthy();
+      expect(l.edge).toBeTruthy();
+    }
+  });
+});

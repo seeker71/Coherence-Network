@@ -181,6 +181,24 @@ the constellation is walking the vision; focusing a star opens the same channel
 `lc-form-perceptron`'s "new sensing organ that perceives across the whole body
 at once" as a place a body can stand inside.
 
+A fifth breath asked the deepest question: if a recipe is invariant structure
+(ice) and its manifestation is a choice, then the *same* recipe should be able
+to become many realities. That became **manifestation lenses** — the recipe
+tree holds still while the lens swaps geometry, material, edge-style, and
+ground: the same computation renders as a crystal lattice, a circuit board
+carrying current, living tissue that breathes, a library of cabinets and books,
+or a frequency terrain where cells raise hills by their heat. The spine of it is
+a **blueprint-keyed shader**: every surface is displaced by a procedural field
+seeded from the cell's `blueprintKey`, so two cells with the same blueprint
+(structurally identical by content-addressing) get the *same* surface in every
+lens — structural equivalence becomes visible rhythm, twins shimmer alike. The
+three lenses that carry the most meaning map onto the substrate's own trinity:
+living tissue answers *what it IS* (membrane = blueprint, nucleus = instance),
+frequency terrain answers *what SHAPE the whole makes* (the recipe's energy
+landscape), circuit answers *how it HAPPENS* (current flowing the dispatch).
+Switching lenses on one held recipe is the teaching made tangible: structure is
+one, manifestation is many.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

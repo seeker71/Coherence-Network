@@ -36,6 +36,15 @@ import {
 } from "@/lib/form-kernel/self-space";
 import { buildVisionSpace, edgeSegments } from "@/lib/form-kernel/vision-space";
 import {
+  LENSES,
+  LensCell,
+  LensEdge,
+  TerrainField,
+  lensById,
+  type Lens,
+  type LensId,
+} from "./lenses";
+import {
   appendMessage,
   dedupCount,
   type ChannelMessage,
@@ -724,6 +733,7 @@ function Scene({
   channelMessages,
   representation,
   edges,
+  lens,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -735,6 +745,7 @@ function Scene({
   channelMessages: ChannelMessage[];
   representation: "room" | "orb";
   edges: Float32Array | null;
+  lens: Lens;
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
@@ -803,45 +814,77 @@ function Scene({
     return out;
   }, [space, layout]);
 
+  const orb = representation === "orb";
+  const lensMode = !orb && lens.id !== "rooms";
+  const bg = orb ? "#05060c" : lens.bg;
+
   return (
     <>
-      <color attach="background" args={["#05060c"]} />
-      <fog attach="fog" args={["#05060c", 30, 120]} />
-      <ambientLight intensity={0.35} />
+      <color attach="background" args={[bg]} />
+      <fog attach="fog" args={[bg, 30, lensMode ? 160 : 120]} />
+      <ambientLight intensity={lens.translucent ? 0.6 : 0.35} />
       <pointLight position={[10, 20, 10]} intensity={1.2} />
       <pointLight position={[-15, 5, -30]} intensity={0.8} color="#5b7cff" />
       <Stars radius={120} depth={60} count={3000} factor={4} fade speed={1} />
 
-      <LatticeFloor texture={fbTexture} z={midZ} />
+      {!lensMode && <LatticeFloor texture={fbTexture} z={midZ} />}
+      {lensMode && lens.ground && (
+        <TerrainField cells={Object.values(space.cells)} layout={layout} />
+      )}
 
       <DrillGroup key={viewRootId}>
-        {beams.map((b) => (
-          <Beam key={b.key} from={b.from} to={b.to} color={b.color} heat={b.heat} />
-        ))}
-
-        {edgeGeo && (
+        {/* edges — manifestation differs per lens */}
+        {orb && edgeGeo && (
           <lineSegments geometry={edgeGeo}>
             <lineBasicMaterial color="#4a5b8c" transparent opacity={0.18} />
           </lineSegments>
         )}
+        {!orb &&
+          (lensMode
+            ? lens.edge !== "none" &&
+              beams.map((b) => (
+                <LensEdge
+                  key={b.key}
+                  from={b.from}
+                  to={b.to}
+                  color={[b.color.r, b.color.g, b.color.b] as [number, number, number]}
+                  heat={b.heat}
+                  lens={lens}
+                />
+              ))
+            : beams.map((b) => (
+                <Beam key={b.key} from={b.from} to={b.to} color={b.color} heat={b.heat} />
+              )))}
 
-        {spines.map((s) => (
-          <ContainerSpine key={s.key} points={s.points} color={s.color} />
-        ))}
+        {!lensMode &&
+          spines.map((s) => (
+            <ContainerSpine key={s.key} points={s.points} color={s.color} />
+          ))}
 
         {Object.values(space.cells).map((cell) =>
           layout[cell.id] ? (
-            <Room
-              key={cell.id}
-              cell={cell}
-              layout={layout[cell.id]!}
-              focused={cell.id === focusId}
-              fbTexture={fbTexture}
-              normalMap={normalMap}
-              representation={representation}
-              onSelect={setFocusId}
-              onDrill={onDrill}
-            />
+            lensMode ? (
+              <LensCell
+                key={cell.id}
+                cell={cell}
+                layout={layout[cell.id]!}
+                lens={lens}
+                focused={cell.id === focusId}
+                onSelect={setFocusId}
+              />
+            ) : (
+              <Room
+                key={cell.id}
+                cell={cell}
+                layout={layout[cell.id]!}
+                focused={cell.id === focusId}
+                fbTexture={fbTexture}
+                normalMap={normalMap}
+                representation={representation}
+                onSelect={setFocusId}
+                onDrill={onDrill}
+              />
+            )
           ) : null,
         )}
 
@@ -882,6 +925,7 @@ export default function KernelSpace() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [viewRootId, setViewRootId] = useState<string>("");
   const [scene, setScene] = useState<"kernel" | "self" | "vision">("kernel");
+  const [lensId, setLensId] = useState<LensId>("rooms");
   const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [proto, setProto] = useState<ChannelProtocol>("ask");
@@ -919,6 +963,7 @@ export default function KernelSpace() {
   }, [scene, running, visionData]);
 
   const representation: "room" | "orb" = scene === "vision" ? "orb" : "room";
+  const activeLens: Lens = lensById(lensId);
   const edges = useMemo(
     () => (scene === "vision" ? edgeSegments(visionData) : null),
     [scene, visionData],
@@ -1307,8 +1352,28 @@ export default function KernelSpace() {
             channelMessages={focusedChannel}
             representation={representation}
             edges={edges}
+            lens={activeLens}
           />
         </Canvas>
+        {scene !== "vision" && (
+          <div className="absolute left-1/2 top-3 flex -translate-x-1/2 flex-wrap justify-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 backdrop-blur">
+            {LENSES.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setLensId(l.id)}
+                title={l.blurb}
+                className={`rounded px-2.5 py-1 text-xs transition-colors ${
+                  lensId === l.id
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white/90"
+                }`}
+              >
+                <span className="mr-1">{l.glyph}</span>
+                {l.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
           🜂 water = rooms + flowing doors · 🜁 ice = blueprint crystals · 🜄 gas
           = name haze · int=gem float=droplet str=tablet bool=coin
