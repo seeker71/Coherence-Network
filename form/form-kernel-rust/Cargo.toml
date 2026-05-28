@@ -30,6 +30,10 @@ serde_json = "1"
 # Tiny blocking HTTP client for the `fetch` subcommand (network resources).
 # Pure Rust, ~200 KB binary impact; zero-async.
 ureq = { version = "2", default-features = false, features = ["tls"] }
+# Cryptographic hash for the sha256_bytes native. Form-stdlib carries
+# the Form-recipe canonical definition; this native is the host-speed
+# opt-in via register_jit. ~50 KB binary impact; well-audited.
+sha2 = "0.10"
 # PyO3 — optional, only pulled when building the Python extension.
 # extension-module skips linking libpython (the interpreter provides it).
 # abi3-py39 keeps the .so importable across CPython 3.9+ without rebuilds.

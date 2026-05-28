@@ -1627,6 +1627,62 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // ---- bitwise primitives -----------------------------------
+    // True kernel primitives — cannot be expressed in pure Form
+    // without exponential cost. Operate on 32-bit-unsigned semantics
+    // (>>> 0 to coerce back to unsigned) so SHA-256-style recipes
+    // compose round functions over machine-word integers consistently.
+    this.registerNative("band", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: (argInt(args, 0) & argInt(args, 1)) >>> 0,
+    }));
+    this.registerNative("bor", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: (argInt(args, 0) | argInt(args, 1)) >>> 0,
+    }));
+    this.registerNative("bxor", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: (argInt(args, 0) ^ argInt(args, 1)) >>> 0,
+    }));
+    this.registerNative("bnot_u32", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: ~argInt(args, 0) >>> 0,
+    }));
+    this.registerNative("shl_u32", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: (argInt(args, 0) << (argInt(args, 1) & 31)) >>> 0,
+    }));
+    this.registerNative("shr_u32", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: argInt(args, 0) >>> (argInt(args, 1) & 31),
+    }));
+    this.registerNative("rotr_u32", catMethod(), (_k, args) => {
+      const a = argInt(args, 0) >>> 0;
+      const n = argInt(args, 1) & 31;
+      return { kind: "int", int: ((a >>> n) | (a << (32 - n))) >>> 0 };
+    });
+    // add_u32: modular 32-bit addition — SHA-256's round constants
+    // and message schedule both require this discipline.
+    this.registerNative("add_u32", catMethod(), (_k, args) => ({
+      kind: "int",
+      int: (argInt(args, 0) + argInt(args, 1)) >>> 0,
+    }));
+    // sha256_bytes bytes-list → list-of-32-bytes
+    //   Cryptographic hash. Form-stdlib's sha256.fk is the canonical
+    //   recipe; this native is the host-speed opt-in via:
+    //     (register_jit "sha256" "sha256_bytes")
+    //   Hand-rolled (no @noble/hashes dep) so the TS kernel matches
+    //   Go's crypto/sha256 and Rust's sha2 byte-for-byte.
+    this.registerNative("sha256_bytes", catMethod(), (_k, args) => {
+      const a0 = args[0];
+      const bytes: number[] =
+        a0 && a0.kind === "list"
+          ? a0.list.map((v) => (v.kind === "int" ? v.int & 0xff : 0))
+          : [];
+      const digest = sha256Hash(bytes);
+      const out: Value[] = digest.map((b) => ({ kind: "int", int: b }));
+      return { kind: "list", list: out };
+    });
     // bytes_sum bytes-list init → int
     //   Iterative sum of an arbitrary byte-list. Equivalent to the Form
     //   recipe `(defn sum-bytes (bs acc) (if (nil? bs) acc (sum-bytes
@@ -3507,4 +3563,126 @@ function hasMagic(bytes: Uint8Array, magic: Buffer): boolean {
     if (bytes[i] !== magic[i]) return false;
   }
   return true;
+}
+
+// sha256Hash — FIPS 180-4 SHA-256. Hand-rolled so the TS kernel
+// carries no @noble/hashes dep; matches Go's crypto/sha256 and Rust's
+// sha2 byte-for-byte for every input. The Form-recipe sha256.fk in
+// form-stdlib is the canonical truth; this is the host-speed opt-in
+// reachable via (register_jit "sha256" "sha256_bytes").
+const SHA256_K: readonly number[] = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+];
+
+function sha256Hash(input: readonly number[]): number[] {
+  const msg = new Uint8Array(input.length + 1 + 8 + 63);
+  for (let i = 0; i < input.length; i++) msg[i] = input[i]! & 0xff;
+  msg[input.length] = 0x80;
+  let padEnd = input.length + 1;
+  while ((padEnd + 8) % 64 !== 0) {
+    msg[padEnd] = 0;
+    padEnd += 1;
+  }
+  const bitLenHi = Math.floor(input.length / 0x20000000);
+  const bitLenLo = (input.length * 8) >>> 0;
+  msg[padEnd + 0] = (bitLenHi >>> 24) & 0xff;
+  msg[padEnd + 1] = (bitLenHi >>> 16) & 0xff;
+  msg[padEnd + 2] = (bitLenHi >>> 8) & 0xff;
+  msg[padEnd + 3] = bitLenHi & 0xff;
+  msg[padEnd + 4] = (bitLenLo >>> 24) & 0xff;
+  msg[padEnd + 5] = (bitLenLo >>> 16) & 0xff;
+  msg[padEnd + 6] = (bitLenLo >>> 8) & 0xff;
+  msg[padEnd + 7] = bitLenLo & 0xff;
+  const totalLen = padEnd + 8;
+
+  let h0 = 0x6a09e667;
+  let h1 = 0xbb67ae85;
+  let h2 = 0x3c6ef372;
+  let h3 = 0xa54ff53a;
+  let h4 = 0x510e527f;
+  let h5 = 0x9b05688c;
+  let h6 = 0x1f83d9ab;
+  let h7 = 0x5be0cd19;
+
+  const w = new Uint32Array(64);
+  for (let chunkStart = 0; chunkStart < totalLen; chunkStart += 64) {
+    for (let i = 0; i < 16; i++) {
+      const p = chunkStart + i * 4;
+      w[i] =
+        ((msg[p]! << 24) |
+          (msg[p + 1]! << 16) |
+          (msg[p + 2]! << 8) |
+          msg[p + 3]!) >>>
+        0;
+    }
+    for (let i = 16; i < 64; i++) {
+      const x = w[i - 15]!;
+      const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const y = w[i - 2]!;
+      const s1 =
+        ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      w[i] = (w[i - 16]! + s0 + w[i - 7]! + s1) >>> 0;
+    }
+    let a = h0,
+      b = h1,
+      c = h2,
+      d = h3,
+      e = h4,
+      f = h5,
+      g = h6,
+      hh = h7;
+    for (let i = 0; i < 64; i++) {
+      const S1 =
+        ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (hh + S1 + ch + SHA256_K[i]! + w[i]!) >>> 0;
+      const S0 =
+        ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) >>> 0;
+      hh = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+    h0 = (h0 + a) >>> 0;
+    h1 = (h1 + b) >>> 0;
+    h2 = (h2 + c) >>> 0;
+    h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0;
+    h5 = (h5 + f) >>> 0;
+    h6 = (h6 + g) >>> 0;
+    h7 = (h7 + hh) >>> 0;
+  }
+
+  const out = new Array<number>(32);
+  const writeWord = (w: number, off: number): void => {
+    out[off] = (w >>> 24) & 0xff;
+    out[off + 1] = (w >>> 16) & 0xff;
+    out[off + 2] = (w >>> 8) & 0xff;
+    out[off + 3] = w & 0xff;
+  };
+  writeWord(h0, 0);
+  writeWord(h1, 4);
+  writeWord(h2, 8);
+  writeWord(h3, 12);
+  writeWord(h4, 16);
+  writeWord(h5, 20);
+  writeWord(h6, 24);
+  writeWord(h7, 28);
+  return out;
 }

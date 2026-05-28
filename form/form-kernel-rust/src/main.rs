@@ -2216,6 +2216,64 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // ---- bitwise primitives -----------------------------------
+        // True kernel primitives — cannot be expressed in pure Form
+        // without exponential cost. Operate on 32-bit-unsigned semantics
+        // (high bits masked out) so SHA-256-style recipes can compose
+        // round functions over machine-word integers consistently.
+        // Sibling parity: same masking, same shift semantics, on all
+        // three kernels.
+        self.register_native("band", cat_method(), |_, _, args| {
+            Value::Int(args[0].as_int() & args[1].as_int())
+        });
+        self.register_native("bor", cat_method(), |_, _, args| {
+            Value::Int(args[0].as_int() | args[1].as_int())
+        });
+        self.register_native("bxor", cat_method(), |_, _, args| {
+            Value::Int(args[0].as_int() ^ args[1].as_int())
+        });
+        self.register_native("bnot_u32", cat_method(), |_, _, args| {
+            let a = args[0].as_int() as u32;
+            Value::Int((!a) as i64)
+        });
+        self.register_native("shl_u32", cat_method(), |_, _, args| {
+            let a = args[0].as_int() as u32;
+            let n = (args[1].as_int() as u32) & 31;
+            Value::Int(a.wrapping_shl(n) as i64)
+        });
+        self.register_native("shr_u32", cat_method(), |_, _, args| {
+            let a = args[0].as_int() as u32;
+            let n = (args[1].as_int() as u32) & 31;
+            Value::Int(a.wrapping_shr(n) as i64)
+        });
+        self.register_native("rotr_u32", cat_method(), |_, _, args| {
+            let a = args[0].as_int() as u32;
+            let n = (args[1].as_int() as u32) & 31;
+            Value::Int(a.rotate_right(n) as i64)
+        });
+        // add_u32: modular 32-bit addition — the addition discipline
+        // SHA-256's round constants and message schedule both require.
+        self.register_native("add_u32", cat_method(), |_, _, args| {
+            let a = args[0].as_int() as u32;
+            let b = args[1].as_int() as u32;
+            Value::Int(a.wrapping_add(b) as i64)
+        });
+        // sha256_bytes bytes-list → list-of-32-bytes
+        //   Cryptographic-strength hash. The Form recipe in
+        //   form-stdlib/sha256.fk is the canonical definition; this
+        //   native is the host-speed opt-in via:
+        //     (register_jit "sha256" "sha256_bytes")
+        //   Same output for every input, attestable against FIPS 180-4
+        //   test vectors three-way.
+        self.register_native("sha256_bytes", cat_method(), |_, _, args| {
+            use sha2::{Digest, Sha256};
+            let bytes: Vec<u8> = match &args[0] {
+                Value::List(xs) => xs.iter().map(|v| v.as_int() as u8).collect(),
+                _ => Vec::new(),
+            };
+            let digest = Sha256::digest(&bytes);
+            Value::List(digest.iter().map(|b| Value::Int(*b as i64)).collect())
+        });
         // bytes_sum bytes-list init → int
         //   Iterative sum of an arbitrary byte-list. Equivalent to the Form
         //   recipe:

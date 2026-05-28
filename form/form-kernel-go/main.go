@@ -19,6 +19,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -1417,6 +1418,64 @@ func (k *Kernel) registerNatives() {
 		out := make([]Value, n)
 		for i, by := range buf {
 			out[i] = Value{Kind: VInt, Int: int64(by)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// ---- bitwise primitives -----------------------------------
+	// True kernel primitives — cannot be expressed in pure Form
+	// without exponential cost. Operate on 32-bit-unsigned semantics
+	// so SHA-256-style recipes compose round functions consistently.
+	k.registerNative("band", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int & args[1].Int}
+	})
+	k.registerNative("bor", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int | args[1].Int}
+	})
+	k.registerNative("bxor", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VInt, Int: args[0].Int ^ args[1].Int}
+	})
+	k.registerNative("bnot_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		return Value{Kind: VInt, Int: int64(^a)}
+	})
+	k.registerNative("shl_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64(a << n)}
+	})
+	k.registerNative("shr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64(a >> n)}
+	})
+	k.registerNative("rotr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		n := uint32(args[1].Int) & 31
+		return Value{Kind: VInt, Int: int64((a >> n) | (a << (32 - n)))}
+	})
+	// add_u32: modular 32-bit addition — SHA-256's round constants
+	// and message schedule both require this discipline.
+	k.registerNative("add_u32", catMethod(), func(_ *Kernel, args []Value) Value {
+		a := uint32(args[0].Int)
+		b := uint32(args[1].Int)
+		return Value{Kind: VInt, Int: int64(a + b)}
+	})
+	// sha256_bytes bytes-list → list-of-32-bytes
+	//   Cryptographic hash. Form-stdlib's sha256.fk is the canonical
+	//   recipe; this native is the host-speed opt-in via:
+	//     (register_jit "sha256" "sha256_bytes")
+	k.registerNative("sha256_bytes", catMethod(), func(_ *Kernel, args []Value) Value {
+		var bytes []byte
+		if args[0].Kind == VList {
+			bytes = make([]byte, len(args[0].List))
+			for i, v := range args[0].List {
+				bytes[i] = byte(v.Int)
+			}
+		}
+		digest := sha256.Sum256(bytes)
+		out := make([]Value, 32)
+		for i, b := range digest {
+			out[i] = Value{Kind: VInt, Int: int64(b)}
 		}
 		return Value{Kind: VList, List: out}
 	})
