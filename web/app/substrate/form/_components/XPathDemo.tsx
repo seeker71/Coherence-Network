@@ -19,8 +19,13 @@ type SynthNode = {
   // For named cell-refs or struct-fields
   name?: string;
   // Holographic descent
-  children: SynthNode[];
+  children?: SynthNode[];
 };
+
+// Children with a stable empty default so the walker doesn't branch on undefined.
+function kids(n: SynthNode): SynthNode[] {
+  return n.children ?? [];
+}
 
 // A small illustrative tree: a Memory cell with its Blueprint and CTOR
 // hung off it. Matches the fractal-tree explanation in form-language.md
@@ -151,11 +156,11 @@ function evaluatePath(path: string, root: SynthNode): SynthNode[] {
         while (stack.length) {
           const n = stack.shift()!;
           if (nodeMatches(n, sel)) next.push(n);
-          stack.push(...n.children);
+          stack.push(...kids(n));
         }
       } else {
         // / — immediate children
-        for (const c of node.children) {
+        for (const c of kids(node)) {
           if (nodeMatches(c, sel)) next.push(c);
         }
       }
@@ -176,7 +181,7 @@ function TreeNodeView({ node, depth }: { node: SynthNode; depth: number }) {
       <span className="text-stone-600"> · cat.inst={node.catInst}</span>
       {node.name && <span className="text-amber-300/80"> · {node.name}</span>}
       {node.text && <span className="text-teal-300/80"> · "{node.text}"</span>}
-      {node.children.map((c) => (
+      {kids(node).map((c) => (
         <TreeNodeView key={c.nid} node={c} depth={depth + 1} />
       ))}
     </div>
