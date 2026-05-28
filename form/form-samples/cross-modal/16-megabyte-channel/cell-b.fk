@@ -1,0 +1,53 @@
+; cell-b.fk — Cell B (receiver) in the megabyte-channel protocol.
+;
+; B reads the channel files A wrote, switches media-types as instructed,
+; reconstructs the 1 MB payload locally via the shared seeded_bytes
+; native, and writes its sum for verification.
+;
+; The channel transmitted ~15 bytes total. The reconstructed payload
+; is 1 MB. If B's sum matches A's sum, the protocol is verified.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    ;; ---- Phase 0: read handshake (media-type-0 = raw bytes) -------
+    (let handshake
+        (read_file_bytes
+            "form-samples/cross-modal/16-megabyte-channel/channel/handshake.bin"))
+    ;; (Could verify it's "Hello" but the demo doesn't need it.)
+
+    ;; ---- Phase 1: read media-type-1 definition --------------------
+    (let mt1-def
+        (read_file_bytes
+            "form-samples/cross-modal/16-megabyte-channel/channel/mt1-def.bin"))
+    ;; mt1-def = [media-type-id, parameter-count] = [1, 2]
+
+    ;; ---- Phase 2: read payload-via-media-type-1 -------------------
+    (let payload-msg
+        (read_file_bytes
+            "form-samples/cross-modal/16-megabyte-channel/channel/mt1-payload.bin"))
+
+    ;; Decode little-endian u32 from a 4-byte slice starting at offset.
+    (defn le32 (bytes off)
+        (add (nth bytes off)
+            (add (mul (nth bytes (add off 1)) 256)
+                (add (mul (nth bytes (add off 2)) 65536)
+                     (mul (nth bytes (add off 3)) 16777216)))))
+
+    (let seed  (le32 payload-msg 0))
+    (let count (le32 payload-msg 4))
+
+    ;; ---- Phase 3: reconstruct the 1 MB payload locally -----------
+    ;; The 1 MB never crossed the channel. B walks seeded_bytes with
+    ;; the parameters it received. Same parameters → same bytes (the
+    ;; LCG is deterministic and byte-identical across kernels).
+    (let payload (seeded_bytes seed count))
+    (let s (sum_bytes_list payload))
+
+    (write_file_text
+        "form-samples/cross-modal/16-megabyte-channel/channel/cell-b-sum.txt"
+        (int_to_str s))
+
+    s)

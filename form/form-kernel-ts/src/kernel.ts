@@ -1620,6 +1620,37 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // seeded_bytes(seed, count) — deterministic LCG byte stream.
+    // Same (seed, count) → byte-identical output across Go / Rust / TS.
+    // glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+    // BigInt used because intermediate product exceeds Number safe range.
+    this.registerNative("seeded_bytes", catCall(), (_k, args) => {
+      const count = argInt(args, 1);
+      if (count <= 0) return { kind: "list", list: [] };
+      let state = BigInt(argInt(args, 0)) & 0x7FFFFFFFn;
+      const A = 1103515245n;
+      const C = 12345n;
+      const M = 0x7FFFFFFFn;
+      const F = 0xFFn;
+      const out: Value[] = new Array(count);
+      for (let i = 0; i < count; i++) {
+        state = (state * A + C) & M;
+        out[i] = { kind: "int", int: Number(state & F) };
+      }
+      return { kind: "list", list: out };
+    });
+    // sum_bytes_list(list) — fast O(n) compiled sum, used by the
+    // private-channel protocol to verify large payloads agree without
+    // walking the list through interpreted Form recursion.
+    this.registerNative("sum_bytes_list", catCall(), (_k, args) => {
+      const a = args[0];
+      if (a.kind !== "list") return { kind: "int", int: 0 };
+      let s = 0;
+      for (const v of a.list) {
+        if (v.kind === "int") s += v.int;
+      }
+      return { kind: "int", int: s };
+    });
     // write_form_binary — emit a Recipe to .fkb in the full artifact
     // format (string table + tree). Sibling to read_form_binary.
     this.registerNative("write_form_binary", catCall(), (k, args) => {
