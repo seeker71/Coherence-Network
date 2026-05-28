@@ -110,6 +110,7 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     "Frame",
     "lookupName",
     "callNative",
+    "callFreeFn",
     "valueAsInt",
     "valueAsBool",
     "valueAsNum",
@@ -127,6 +128,7 @@ export function compileNode(k: Kernel, root: NodeID): CompiledFn {
     Frame,
     lookupName,
     callNative,
+    callFreeFn,
     valueAsInt,
     valueAsBool,
     valueAsNum,
@@ -158,6 +160,37 @@ function callNative(
     throw new Error(`no such native: name#${nameID}`);
   }
   return ne.fn(k, args);
+}
+
+// callFreeFn — runtime helper for emitFnCall's free-fn fallback path.
+// Looks up the closure under nameID in the caller's frame, binds args
+// to the closure's params, and walks the body. If the body itself has
+// been JIT-compiled (in kernel.jitCompiled), dispatches through the
+// compiled fn instead — so recursive recipes stay JIT'd through every
+// recursion level.
+function callFreeFn(
+  k: Kernel,
+  frame: Frame,
+  nameID: number,
+  args: Value[],
+): Value {
+  const v = frame.lookup(nameID);
+  if (v === undefined) throw new Error(`callFreeFn: unbound name#${nameID}`);
+  if (v.kind !== "closure") {
+    throw new Error(`callFreeFn: name#${nameID} is not a closure (got ${v.kind})`);
+  }
+  const cl = v.closure;
+  if (args.length !== cl.params.length) {
+    throw new Error(
+      `callFreeFn: name#${nameID} arity mismatch (expected ${cl.params.length}, got ${args.length})`,
+    );
+  }
+  const cf = new Frame(cl.env);
+  for (let i = 0; i < cl.params.length; i++) cf.bind(cl.params[i]!, args[i]!);
+  const bodyKey = `${cl.body.pkg}.${cl.body.level}.${cl.body.type}.${cl.body.inst}`;
+  const compiled = k.jitCompiled.get(bodyKey);
+  if (compiled !== undefined) return compiled(cf);
+  return walk(k, cl.body, cf);
 }
 
 function valueAsInt(v: Value): number {
@@ -599,8 +632,14 @@ function emitFnCall(
       .map((a) => `boxAny(${emitExpr(k, a, scope)})`);
     return `valueAsNum(callNative(k, ${nameID}, [${argExprs.join(", ")}]))`;
   }
-  // Unknown — fallback to walker
-  return emitWalkerFallback(kids[0]!);
+  // Free-fn (closure resolved via frame) — emit a callFreeFn dispatch
+  // that looks up the closure at runtime and walks its body in a fresh
+  // frame. Lets recursive Form-defined functions compile cleanly even
+  // when their definition isn't in the compile scope.
+  const argExprs = kids
+    .slice(1)
+    .map((a) => `boxAny(${emitExpr(k, a, scope)})`);
+  return `valueAsNum(callFreeFn(k, frame, ${nameID}, [${argExprs.join(", ")}]))`;
 }
 
 function emitWalkerFallback(node: NodeID): string {

@@ -492,6 +492,24 @@ export class Kernel {
   // native. Removing the entry restores the Form walk.
   jitAliases = new Map<NameID, NameID>();
 
+  // jitCompiled — closure-body-NodeID → CompiledFn. When (jit_compile
+  // "name") fires, the closure under `name` has its body compiled via
+  // compiler.ts and stored here. The walker checks this map on every
+  // FNCALL — if the closure body has a compiled version, dispatch
+  // through it instead of walking. Keyed by content-addressed body
+  // NodeID, so re-defining the same body re-uses the cached compile.
+  // Indexed by stringified NodeID tuple (pkg.level.type.inst).
+  jitCompiled = new Map<string, (frame: Frame) => Value>();
+
+  // jitCompileHook — pluggable Form→host-asm compiler. Installed at
+  // startup by main.ts via compiler.ts. The kernel holds the hook
+  // pointer rather than importing the compiler directly so this module
+  // stays the canonical foundation (compiler.ts imports kernel.ts;
+  // hoisting compiler into kernel would create a cycle). When the hook
+  // is null, the jit_compile native returns 0 honestly — telling the
+  // Form caller "no compiler available on this kernel."
+  jitCompileHook: ((k: Kernel, body: NodeID) => (frame: Frame) => Value) | null = null;
+
   // Optional tracing — undefined for hot-path runs, set by trace
   // subcommand. Sibling-parity with Go/Rust kernels.
   trace?: Trace;
@@ -1708,6 +1726,32 @@ export class Kernel {
       const formName = argStr(args, 0);
       const formID = k.internName(formName);
       return { kind: "int", int: k.jitAliases.has(formID) ? 1 : 0 };
+    });
+    // jit_compile form-name-str → 1 if a host-JIT compile succeeded
+    // for the closure under this name, 0 if no compiler is available
+    // (Rust + Go return 0 today; cranelift + plugin paths are future
+    // walks), -1 if the name isn't bound to a closure in the current
+    // env. After a successful compile, every (form-name args...) call
+    // dispatches through the compiled function instead of walking the
+    // recipe tree — same canonical Form recipe; host-native speed.
+    this.registerEnvNative("jit_compile", catWitness(), (k, env, args) => {
+      if (k.jitCompileHook === null) {
+        // Compiler not installed on this kernel build — honest 0 so
+        // sibling-Form code can branch on availability.
+        return { kind: "int", int: 0 };
+      }
+      const formName = argStr(args, 0);
+      const formID = k.internName(formName);
+      const v = env.lookup(formID);
+      if (v === undefined || v.kind !== "closure") {
+        return { kind: "int", int: -1 };
+      }
+      const compiled = k.jitCompileHook(k, v.closure.body);
+      k.jitCompiled.set(
+        `${v.closure.body.pkg}.${v.closure.body.level}.${v.closure.body.type}.${v.closure.body.inst}`,
+        compiled,
+      );
+      return { kind: "int", int: 1 };
     });
     // write_form_binary — emit a Recipe to .fkb in the full artifact
     // format (string table + tree). Sibling to read_form_binary.
@@ -3335,7 +3379,17 @@ function invokeClosure(
     callFrame.bind(closure.params[i]!, v);
   }
   k.trace?.recordFn(k.nameStr(closure.name));
+  // JIT-compiled fast path: if this closure's body has been compiled
+  // via (jit_compile ...), dispatch through the host-JIT'd function
+  // instead of walking the recipe tree. Form recipe stays canonical
+  // truth; the compiled fn is opt-in bootstrap to host speed.
+  const compiled = k.jitCompiled.get(nodeIDKey(closure.body));
+  if (compiled !== undefined) return compiled(callFrame);
   return walk(k, closure.body, callFrame);
+}
+
+function nodeIDKey(nid: NodeID): string {
+  return `${nid.pkg}.${nid.level}.${nid.type}.${nid.inst}`;
 }
 
 const FORM_BINARY_MAGIC_V1 = Buffer.from("FORMBIN1", "ascii");

@@ -1496,6 +1496,13 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
+	// jit_compile form-name-str → 1 if a host-JIT compile succeeded,
+	//   0 if no compiler is available on this kernel build, -1 if the
+	//   name isn't bound to a closure. Go kernel returns 0 today
+	//   (recipe→Go-source+plugin.Open is the next walk).
+	k.registerNative("jit_compile", catWitness(), func(_ *Kernel, _ []Value) Value {
+		return Value{Kind: VInt, Int: 0}
+	})
 	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
 	// for this name, else 0. Lets Form code introspect dispatch routing.
 	k.registerNative("jit_aliased?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {

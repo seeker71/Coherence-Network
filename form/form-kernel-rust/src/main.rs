@@ -2302,6 +2302,17 @@ impl Kernel {
                 Value::Int(0)
             }
         });
+        // jit_compile form-name-str → 1 if a host-JIT compile succeeded,
+        //   0 if no compiler is available on this kernel build, -1 if the
+        //   name isn't bound to a closure. Rust kernel returns 0 today
+        //   (cranelift integration is the next walk). Sibling-Form code
+        //   can branch on the return value: 1 = compiled, 0 = recipe-walk
+        //   path, -1 = name binding missing.
+        self.register_native("jit_compile", cat_witness(), |_k, _a, _args| {
+            // No Form→cranelift backend yet. Recipe-walk continues to
+            // produce the canonical result; the body just isn't accelerated.
+            Value::Int(0)
+        });
         // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
         // for this name, else 0. Lets Form code introspect dispatch routing.
         self.register_native("jit_aliased?", cat_compare(RCMP_EQ), |k, _, args| {
