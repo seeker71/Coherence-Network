@@ -1,0 +1,159 @@
+; end-to-end.fk — full channel walk through every OSI layer.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/channel-query.fk form-stdlib/symbols.fk
+;
+; THE SCENE:
+;
+;   Cell B exposes a "symbols" capability. Cell A wants to retrieve
+;   B's symbol-table for topic "concepts".
+;
+;   The full path:
+;     L3 — A queries the registry, finds B's channel-path.
+;     L7 — A constructs a QUERY (verb "symbols", address topic-nid).
+;     L2 — A wraps the QUERY as a CHANNEL-MSG and appends to B's channel.
+;     L1 — channel-append persists via write_form_binary (.fkb).
+;     L1 — B's channel-read deserializes via read_form_binary.
+;     L2 — B unwraps the CHANNEL-MSG to get the QUERY Recipe.
+;     L7 — B's handler reads the verb, looks up its symbol-table.
+;     L6 — B constructs a RESPONSE with one RECIPE-CONTENT item
+;          carrying the table.
+;     L2 — B appends RESPONSE to A's reply channel.
+;     L1 — write_form_binary persists, read_form_binary picks up.
+;     L7 — A reads the response, classifies items, extracts the
+;          symbol-table, looks up "concepts".
+;
+;   Three sibling kernels each run both halves of this protocol and
+;   converge on the same protocol verdict.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn list-nth (xs i)
+        (if (eq i 0) (head xs) (list-nth (tail xs) (sub i 1))))
+
+    ;; ---------- TOPOLOGY -------------------------------------------
+    (let registry-path  "/tmp/e2e-registry.fkb")
+    (let b-channel-path "/tmp/e2e-cell-b.fkb")
+    (let a-reply-path   "/tmp/e2e-cell-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create b-channel-path)
+    (channel-create a-reply-path)
+
+    ;; ---------- CELL B: register, build its symbol-table ------------
+    ;; B advertises capability "symbols" pointing at its channel.
+    (register-cell registry-path 2002 b-channel-path (list "symbols"))
+
+    ;; B's local symbol-table maps topic-names to value Recipes.
+    (defn cell-b-build-table ()
+        (symbol-table
+            (list (symbol-bind "concepts"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "trust-over-fear")
+                                 (intern_trivial_string "field-substrate")
+                                 (intern_trivial_string "divergence-doorway"))))
+                  (symbol-bind "presences"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "ilena")
+                                 (intern_trivial_string "ranakami")))))))
+
+    ;; B's query handler. Reads its channel, processes the latest
+    ;; QUERY, appends a RESPONSE to the reply channel encoded in the
+    ;; query body (a real protocol would route by correlation-id too).
+    (defn cell-b-handle (request-channel reply-channel)
+        (do
+            ;; Pull the latest message from B's channel.
+            (let msgs (channel-read request-channel))
+            (let query (channel-msg-payload (head msgs)))
+            ;; Build the response: one RECIPE-CONTENT item carrying B's
+            ;; full symbol-table.
+            (let table (cell-b-build-table))
+            (let item (cq-recipe-content table))
+            (let correlation (node_inst query))
+            (let response (cq-response correlation "ok" (list item)))
+            ;; Hand back via the reply channel.
+            (channel-append reply-channel (channel-message response))))
+
+    ;; ---------- CELL A: lookup, ask, receive, inspect ---------------
+    ;; A queries the registry for a cell handling "symbols".
+    (let symbol-cells (find-by-capability registry-path "symbols"))
+    (print "cells-handling-symbols:" (len symbol-cells))
+
+    ;; A picks the first match (only one here) and reads its address.
+    (let b-found (head symbol-cells))
+    (let b-channel (reg-channel-path b-found))
+
+    ;; A constructs a QUERY. Topic-nid is a substrate-resident anchor;
+    ;; verb "symbols" is the L7 vocabulary word B handles.
+    (let topic-nid (make_nodeid 1 2 99 7777))
+    (let query (cq-query "symbols" topic-nid (intern_trivial_string "")))
+
+    ;; A appends the QUERY to B's channel (L2 transport).
+    (channel-append b-channel (channel-message query))
+
+    ;; ---------- B HANDLES (orchestrated for in-process demo) --------
+    ;; In a real distributed body, B is a daemon polling its channel.
+    ;; Here we invoke B's handler directly; the Recipe still travels
+    ;; through the file-backed channel both ways.
+    (cell-b-handle b-channel a-reply-path)
+
+    ;; ---------- A RECEIVES, PARSES, USES THE TABLE ------------------
+    (let reply-msgs (channel-read a-reply-path))
+    (print "reply-msgs-count:" (len reply-msgs))
+
+    (let response (channel-msg-payload (head reply-msgs)))
+
+    ;; A walks the response structure:
+    ;;   children: [correlation, status, items-LIST]
+    (let response-children (node_children response))
+    (let items-list-node (list-nth response-children 2))
+    (let items (node_children items-list-node))
+    (print "response-item-count:" (len items))
+
+    ;; The single item is a RECIPE-CONTENT carrying B's symbol-table.
+    (let first-item (head items))
+    (let item-cat (node_category first-item))
+    (let item-cat-inst (node_inst item-cat))
+    (print "first-item-is-recipe-content:"
+        (if (eq item-cat-inst 1714) 1 0))    ; RECIPE-CONTENT=1714
+
+    ;; Unwrap: RECIPE-CONTENT has a single child — B's symbol-table.
+    (let recovered-table (head (node_children first-item)))
+    (print "recovered-table-bindings:"
+        (len (symbol-table-bindings recovered-table)))
+
+    ;; A looks up B's "concepts" — which B authored, which crossed the
+    ;; wire (via channel.fk's .fkb serialization implicitly), and
+    ;; which A now resolves locally via content-addressing.
+    (let concepts (symbol-lookup recovered-table "concepts"))
+    (print "concepts-found:" (symbol-found? concepts))
+    (let concept-children (node_children concepts))
+    (print "concept-count:" (len concept-children))
+
+    ;; A can read the third concept's content — a substrate string
+    ;; "divergence-doorway". The string crossed the wire and B's
+    ;; intern_trivial_string in A's substrate produces the same NodeID.
+    (let third-concept (list-nth concept-children 2))
+    (let expected-name (intern_trivial_string "divergence-doorway"))
+    (print "third-concept-matches:"
+        (if (node_eq third-concept expected-name) 1 0))
+
+    ;; A queries a different symbol that B exposed: "presences".
+    (let presences (symbol-lookup recovered-table "presences"))
+    (print "presences-found:" (symbol-found? presences))
+    (print "presence-count:" (len (node_children presences)))
+
+    ;; Honest absence — A asks for a symbol B didn't expose.
+    (let unknown (symbol-lookup recovered-table "unknown-key"))
+    (print "unknown-found:" (symbol-found? unknown))
+
+    ;; ---------- VERDICT --------------------------------------------
+    ;; Eight attestations, each binary-clean across all three kernels.
+    (add (if (eq (len symbol-cells) 1) 1 0)
+         (add (if (eq (len reply-msgs) 1) 1 0)
+              (add (if (eq (len items) 1) 1 0)
+                   (add (if (eq item-cat-inst 1714) 1 0)
+                        (add (symbol-found? concepts)
+                             (add (if (node_eq third-concept expected-name) 1 0)
+                                  (add (symbol-found? presences)
+                                       (if (eq (symbol-found? unknown) 0) 1 0)))))))))

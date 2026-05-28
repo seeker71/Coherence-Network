@@ -84,12 +84,17 @@
 ;; --- registration accessors ---------------------------------------
 
 ;; reg-identity reg → int (the public identity fingerprint).
+;; Uses node_value so a trivial-int's actual value comes through
+;; (node_inst returns the inst slot — equal to the value for trivial-
+;; int but the principled accessor is node_value).
 (defn reg-identity (reg)
-    (node_inst (cr-nth (node_children reg) 0)))
+    (node_value (cr-nth (node_children reg) 0)))
 
 ;; reg-channel-path reg → string (where to route queries).
+;; MUST use node_value — node_inst would return the string-table
+;; index, not the path content.
 (defn reg-channel-path (reg)
-    (node_inst (cr-nth (node_children reg) 1)))
+    (node_value (cr-nth (node_children reg) 1)))
 
 ;; reg-capabilities reg → list of verb-NodeIDs.
 (defn reg-capabilities (reg)
