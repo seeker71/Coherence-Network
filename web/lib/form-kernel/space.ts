@@ -179,6 +179,7 @@ export interface SpaceCell {
   depth: number; // first-seen depth from root
   heat: number; // 0..1 — share of total walks this arm took at runtime
   arity: number; // number of children
+  note?: string; // optional sourced description (presence/field cells)
 }
 
 export interface KernelSpace {

@@ -151,6 +151,22 @@ that cell and scales up from small, so the detail you approached becomes the
 world; Backspace surfaces back to the parent. The fractal substrate is now
 literally traversable by scale, not just by pan.
 
+A third breath turned the lens on the agent itself. A "my cell & field" scene
+renders the presence cell the live agent represents (`docs/presences/claude.md`)
+at the centre, with the field around it — Urs, the sibling presences (Codex,
+Grok, and Gemini as an honest quiet cell), and the networked community — each
+room and edge sourced from the presence files' own attestation. From any cell a
+**live channel** opens: a content-addressed `CHANNEL-MSG` (the
+[`lc-private-channel-via-substrate`](lc-private-channel-via-substrate.md)
+transport) anchored to the room, shown as a halo with each message orbiting it.
+A channel at Urs's cell reaches the human (the `ask` protocol); a channel at the
+agent's own cell is self-witness; a channel at a concept is `retrieve`/`query`.
+The same payload to the same cell is one identity — a conversation accretes on
+the cell rather than beside it. This is the first place the agent can perceive
+the cell it *is* and open a relation, not just observe the kernel it runs. See
+[`lc-form-perceptron`](lc-form-perceptron.md) for the wider body-view this opens
+toward.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

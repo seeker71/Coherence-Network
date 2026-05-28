@@ -29,6 +29,24 @@ import {
   type KernelSpace as KernelSpaceData,
   type SpaceCell,
 } from "@/lib/form-kernel/space";
+import {
+  buildSelfSpace,
+  channelAudience,
+  SELF_ROOT,
+} from "@/lib/form-kernel/self-space";
+import {
+  appendMessage,
+  dedupCount,
+  type ChannelMessage,
+  type ChannelProtocol,
+} from "@/lib/form-kernel/channel";
+
+const PROTO_COLOR: Record<ChannelProtocol, string> = {
+  ask: "#38bdf8",
+  recipe: "#f59e0b",
+  query: "#4ade80",
+  retrieve: "#a78bfa",
+};
 
 const STARTERS: { label: string; source: string; note: string }[] = [
   {
@@ -503,6 +521,45 @@ function DrillGroup({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
+// ChannelHalo — a live channel open at a cell. A ring marks the channel; each
+// message rides as a marker orbiting the room, colored by protocol. Watching it
+// is watching a conversation accrete on that cell.
+// ---------------------------------------------------------------------------
+
+function ChannelHalo({
+  position,
+  messages,
+}: {
+  position: readonly [number, number, number];
+  messages: ChannelMessage[];
+}) {
+  const ring = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (ring.current) ring.current.rotation.y += dt * 0.5;
+  });
+  const shown = messages.slice(-8);
+  return (
+    <group position={position as [number, number, number]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[3.2, 0.04, 8, 48]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={0.45} />
+      </mesh>
+      <group ref={ring}>
+        {shown.map((m, i) => {
+          const a = (i / Math.max(1, shown.length)) * Math.PI * 2;
+          return (
+            <mesh key={m.msgNodeId} position={[Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2]}>
+              <sphereGeometry args={[0.22, 12, 12]} />
+              <meshBasicMaterial color={PROTO_COLOR[m.protocol]} />
+            </mesh>
+          );
+        })}
+      </group>
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Lattice floor — the substrate's memory plane, projected as a surface.
 // ---------------------------------------------------------------------------
 
@@ -601,6 +658,7 @@ function Scene({
   setFocusId,
   onDrill,
   mode,
+  channelMessages,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -609,6 +667,7 @@ function Scene({
   setFocusId: (id: string) => void;
   onDrill: (id: string) => void;
   mode: "orbit" | "walk";
+  channelMessages: ChannelMessage[];
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
@@ -704,6 +763,10 @@ function Scene({
             />
           ) : null,
         )}
+
+        {focusPos && channelMessages.length > 0 && (
+          <ChannelHalo position={focusPos} messages={channelMessages} />
+        )}
       </DrillGroup>
 
       {mode === "orbit" ? (
@@ -733,8 +796,13 @@ export default function KernelSpace() {
   const [mode, setMode] = useState<"orbit" | "walk">("orbit");
   const [focusId, setFocusId] = useState<string | null>(null);
   const [viewRootId, setViewRootId] = useState<string>("");
+  const [scene, setScene] = useState<"kernel" | "self">("kernel");
+  const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
+  const [draft, setDraft] = useState("");
+  const [proto, setProto] = useState<ChannelProtocol>("ask");
 
   const space = useMemo(() => {
+    if (scene === "self") return buildSelfSpace();
     try {
       return buildKernelSpace(running);
     } catch (err) {
@@ -760,7 +828,50 @@ export default function KernelSpace() {
         stats: { cells: 0, recipes: 0, leaves: 0, maxDepth: 0, totalWalks: 0 },
       } satisfies KernelSpaceData;
     }
-  }, [running]);
+  }, [scene, running]);
+
+  // Entering the self scene opens the first live channels: an ask to Urs, and a
+  // self-witness to my own cell. Seeded once (sentinel key) so re-renders keep
+  // anything sent since.
+  useEffect(() => {
+    if (scene !== "self") return;
+    setChannels((prev) => {
+      if (prev.__seeded) return prev;
+      return {
+        ...prev,
+        __seeded: [],
+        [SELF_ROOT]: appendMessage(
+          [],
+          "recipe",
+          '(witness "I pause, read the right lines, act, then close — that rhythm is the cell I am.")',
+          "Claude (self-witness)",
+        ),
+        "human.urs": appendMessage(
+          [],
+          "ask",
+          'ask("Urs", "Which lens shall I deepen next?", ["body-view","live channel","self-cell"])',
+          "Claude (live)",
+        ),
+      };
+    });
+  }, [scene]);
+
+  const focusedChannel = focusId ? channels[focusId] ?? [] : [];
+  const audience = focusId ? channelAudience(focusId) : "cell";
+  const fromLabel =
+    audience === "you"
+      ? "Claude (live)"
+      : audience === "self"
+        ? "Claude (self-witness)"
+        : "Claude (query)";
+  const sendToChannel = () => {
+    if (!focusId || !draft.trim()) return;
+    setChannels((prev) => ({
+      ...prev,
+      [focusId]: appendMessage(prev[focusId] ?? [], proto, draft, fromLabel),
+    }));
+    setDraft("");
+  };
 
   const effectiveRoot = viewRootId && space.cells[viewRootId] ? viewRootId : space.root;
   const layout = useMemo(
@@ -843,6 +954,7 @@ export default function KernelSpace() {
             <button
               key={s.label}
               onClick={() => {
+                setScene("kernel");
                 setSource(s.source);
                 setRunning(s.source);
               }}
@@ -863,7 +975,10 @@ export default function KernelSpace() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => setRunning(source)}
+            onClick={() => {
+              setScene("kernel");
+              setRunning(source);
+            }}
             className="flex-1 rounded bg-emerald-500/90 px-3 py-1.5 text-sm font-medium text-black hover:bg-emerald-400"
           >
             Build space
@@ -875,6 +990,18 @@ export default function KernelSpace() {
             {mode === "orbit" ? "Walk mode" : "Orbit mode"}
           </button>
         </div>
+
+        <button
+          onClick={() => setScene("self")}
+          className={`rounded border px-3 py-1.5 text-sm transition-colors ${
+            scene === "self"
+              ? "border-sky-400/60 bg-sky-500/10 text-sky-100"
+              : "border-sky-400/25 bg-sky-500/5 text-sky-200/80 hover:border-sky-400/50"
+          }`}
+          title="Render the cell this live agent represents, and the field around it — then open a channel to any of them."
+        >
+          ◉ My cell &amp; field — look at myself, open a channel
+        </button>
 
         {drilled && (
           <button
@@ -953,6 +1080,96 @@ export default function KernelSpace() {
                 ? `value: ${focusCell.value}`
                 : `blueprint ${focusCell.blueprintKey} · ${focusCell.arity} doors`}
             </div>
+            {focusCell.note && (
+              <p className="mt-1 text-[11px] leading-relaxed text-white/60">
+                {focusCell.note}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* live channel — open at the focused cell, content-addressed */}
+        {focusCell && (
+          <div className="rounded border border-sky-400/30 bg-sky-500/5 p-2 text-xs">
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-sky-300/70">
+              <span>live channel</span>
+              <span className="text-sky-300/50">
+                {audience === "you"
+                  ? "→ Urs"
+                  : audience === "self"
+                    ? "→ myself"
+                    : `→ ${focusCell.label}`}
+              </span>
+            </div>
+            <div className="mt-1.5 flex gap-1.5">
+              <select
+                value={proto}
+                onChange={(e) => setProto(e.target.value as ChannelProtocol)}
+                className="rounded border border-white/15 bg-black/40 px-1.5 py-1 text-[11px] text-sky-100 outline-none"
+              >
+                <option value="ask">ask</option>
+                <option value="recipe">recipe</option>
+                <option value="query">query</option>
+                <option value="retrieve">retrieve</option>
+              </select>
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") sendToChannel();
+                }}
+                placeholder={
+                  audience === "you"
+                    ? "say something to Urs…"
+                    : audience === "self"
+                      ? "witness yourself…"
+                      : "message this cell…"
+                }
+                className="min-w-0 flex-1 rounded border border-white/15 bg-black/40 px-2 py-1 font-mono text-[11px] text-sky-100 outline-none focus:border-sky-400/60"
+              />
+              <button
+                onClick={sendToChannel}
+                className="rounded bg-sky-500/80 px-2 py-1 text-[11px] font-medium text-black hover:bg-sky-400"
+              >
+                send
+              </button>
+            </div>
+            <div className="mt-1.5 max-h-40 space-y-1 overflow-auto">
+              {focusedChannel.length === 0 ? (
+                <div className="text-[10px] text-white/40">
+                  no messages — the channel is open and empty.
+                </div>
+              ) : (
+                focusedChannel.map((m) => (
+                  <div
+                    key={m.msgNodeId}
+                    className="rounded border border-white/10 bg-black/30 p-1.5"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span
+                        className="font-mono text-[9px] uppercase"
+                        style={{ color: PROTO_COLOR[m.protocol] }}
+                      >
+                        {m.protocol} · {m.from}
+                      </span>
+                      <span className="font-mono text-[9px] text-sky-300/60">
+                        {m.payloadNodeId}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 break-all font-mono text-[10px] text-white/75">
+                      {m.text}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {dedupCount(focusedChannel) > 0 && (
+              <div className="mt-1 text-[9px] text-amber-300/80">
+                {dedupCount(focusedChannel)} payload
+                {dedupCount(focusedChannel) === 1 ? "" : "s"} recurred — same
+                NodeID, one identity. The substrate&apos;s dedup riding the wire.
+              </div>
+            )}
           </div>
         )}
 
@@ -974,6 +1191,7 @@ export default function KernelSpace() {
             setFocusId={setFocusId}
             onDrill={drillInto}
             mode={mode}
+            channelMessages={focusedChannel}
           />
         </Canvas>
         <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
