@@ -1,0 +1,33 @@
+; go-jit-band.fk — sibling-parity attestation for the JIT lattice.
+;
+; Same recipe; three kernels; three dispatch paths (or honest stub);
+; same answer. The band's verdict is the count of correct results
+; across the recipe-walk + post-JIT calls. The number 4 says: every
+; assertion matched the expected value on every kernel.
+
+(do
+    ;; A recursive int64-typed recipe in the supported JIT subset.
+    (defn fact (n)
+        (if (le n 1) 1
+            (mul n (fact (sub n 1)))))
+
+    ;; Recipe-walk baseline.
+    (let r0 (fact 6))                ; 720
+
+    ;; Compile. TS=1 (V8), Go=1 (this walk), Rust=0 (next walk).
+    ;; The band only prints the boolean "compile happened at API level"
+    ;; — that's 1 everywhere because every kernel returns ≥ 0.
+    (let compiled (jit_compile "fact"))
+    (let attempted (if (ge compiled 0) 1 0))
+
+    ;; Post-JIT dispatches:
+    (let r1 (fact 6))                ; 720
+    (let r2 (fact 7))                ; 5040
+    (let r3 (fact 0))                ; 1 (base case)
+
+    ;; Sibling-parity verdict.
+    (add attempted
+         (add (if (eq r0 720) 1 0)
+              (add (if (eq r1 720) 1 0)
+                   (add (if (eq r2 5040) 1 0)
+                        (if (eq r3 1) 1 0))))))

@@ -428,6 +428,14 @@ type Kernel struct {
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
+	// jitCompiledGo — body-NodeID-key → host-native int64 function pointer.
+	// Populated by the recipe→Go-source+plugin.Open JIT path (see jit.go's
+	// machinery wired into the `jit_compile` env-aware native). Read on
+	// every FNCALL closure dispatch: when present, marshal Form int args
+	// to int64, call the loaded function, box the int64 result back to
+	// VInt. Same shape as TS kernel's k.jitCompiled. Linux-only by design
+	// — Go's `plugin` package only loads ELF .so on Linux.
+	jitCompiledGo map[string]func([]int64) int64
 }
 
 type sourceLoc struct {
@@ -446,9 +454,10 @@ func NewKernel() *Kernel {
 		walkCache:  make(map[NodeID]Value),
 		next:       1,
 		f64Idx:     make(map[uint64]uint32),
-		natives:    make(map[NameID]NativeEntry),
-		envNatives: make(map[NameID]EnvAwareNativeEntry),
-		jitAliases: make(map[NameID]NameID),
+		natives:       make(map[NameID]NativeEntry),
+		envNatives:    make(map[NameID]EnvAwareNativeEntry),
+		jitAliases:    make(map[NameID]NameID),
+		jitCompiledGo: make(map[string]func([]int64) int64),
 	}
 	k.registerNatives()
 	return k
@@ -1523,11 +1532,44 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNodeID, Nid: root}
 	})
 	// jit_compile form-name-str → 1 if a host-JIT compile succeeded,
-	//   0 if no compiler is available on this kernel build, -1 if the
-	//   name isn't bound to a closure. Go kernel returns 0 today
-	//   (recipe→Go-source+plugin.Open is the next walk).
-	k.registerNative("jit_compile", catWitness(), func(_ *Kernel, _ []Value) Value {
-		return Value{Kind: VInt, Int: 0}
+	//   0 if the compile fell back (toolchain missing, body uses ops the
+	//   emitter can't lower, plugin.Open failed), -1 if the name isn't
+	//   bound to a closure at all. Env-aware: needs the caller's env to
+	//   resolve the named closure.
+	//
+	// The Go path: Form recipe body → generated Go source under /tmp/
+	//   → `go build -buildmode=plugin -o plugin.so` (via os/exec)
+	//   → plugin.Open + plugin.Lookup("Fn") to load the symbol
+	//   → store func([]int64) int64 under bodyKey in k.jitCompiledGo
+	//   → FNCALL closure path checks the map and dispatches when present.
+	//
+	// Same shape as TS kernel's compileNode+jitCompiled — same canonical
+	// truth (the recipe) expressed through each host's available compiler.
+	k.registerEnvNative("jit_compile", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 1 || args[0].Kind != VStr {
+			return Value{Kind: VInt, Int: -1}
+		}
+		nameID := k.internName(args[0].Str)
+		v, ok := env.Lookup(nameID)
+		if !ok || v.Kind != VClosure {
+			return Value{Kind: VInt, Int: -1}
+		}
+		cl := v.Cl
+		bodyKey := nodeIDKey(cl.Body)
+		// Already compiled? Reuse — the body NodeID is content-addressed,
+		// so the same shape across calls always resolves to the same .so.
+		if _, exists := k.jitCompiledGo[bodyKey]; exists {
+			return Value{Kind: VInt, Int: 1}
+		}
+		fn, err := jitCompileClosureGo(k, cl)
+		if err != nil {
+			// Honest fallback — the recipe still walks. The body remains
+			// canonical truth; the JIT path is just unavailable for this
+			// shape today.
+			return Value{Kind: VInt, Int: 0}
+		}
+		k.jitCompiledGo[bodyKey] = fn
+		return Value{Kind: VInt, Int: 1}
 	})
 	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
 	// for this name, else 0. Lets Form code introspect dispatch routing.
@@ -2249,15 +2291,6 @@ func (k *Kernel) registerNatives() {
 		fmt.Fprintf(os.Stderr, "[trace] %s\n", args[0].String())
 		return args[0]
 	})
-
-	// `now_unix_ms` — current wall-clock as a millisecond unix timestamp.
-	// External effect (reads the host clock) so it's catCall. Sibling
-	// parity holds on shape, NOT on value: every kernel returns an int,
-	// every kernel's int is > a recent past epoch — but the exact
-	// milliseconds diverge between invocations. Bands check shape only.
-	k.registerNative("now_unix_ms", catCall(), func(_ *Kernel, _ []Value) Value {
-		return Value{Kind: VInt, Int: time.Now().UnixMilli()}
-	})
 }
 
 // ---------------------------------------------------------------------------
@@ -2765,9 +2798,41 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		if len(kids)-1 != len(cl.Params) {
 			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
 		}
+		// JIT dispatch: if this closure's body has been JIT-compiled to
+		// host-native Go (via `jit_compile name` → recipe-to-Go-source
+		// → go build -buildmode=plugin → plugin.Open), marshal args to
+		// int64, call the loaded function, box the int64 result back to
+		// VInt. The recipe stays canonical truth — the JIT path is just
+		// a faster way to evaluate it. If the closure body needs args
+		// the int64-only signature can't carry (a float, string, list),
+		// we fall through to the walker with the args we already evaluated.
+		// Same answer either way.
+		argVals := make([]Value, len(cl.Params))
+		for i := 1; i < len(kids); i++ {
+			argVals[i-1] = k.walk(kids[i], env)
+		}
+		bodyKey := nodeIDKey(cl.Body)
+		if fn, ok := k.jitCompiledGo[bodyKey]; ok {
+			allInt := true
+			intArgs := make([]int64, len(cl.Params))
+			for i, av := range argVals {
+				if av.Kind != VInt {
+					allInt = false
+					break
+				}
+				intArgs[i] = av.Int
+			}
+			if allInt {
+				if k.Trace != nil {
+					k.Trace.recordFn(k.nameStr(cl.Name))
+					k.Trace.recordNative("jit-go-dispatch")
+				}
+				return Value{Kind: VInt, Int: fn(intArgs)}
+			}
+		}
 		call := NewCallFrame(cl.Env, len(cl.Params))
 		for i, p := range cl.Params {
-			call.Bind(p, k.walk(kids[i+1], env))
+			call.Bind(p, argVals[i])
 		}
 		if k.Trace != nil {
 			k.Trace.recordFn(k.nameStr(cl.Name))
