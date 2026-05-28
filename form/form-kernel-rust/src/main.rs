@@ -2188,6 +2188,25 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // random_bytes(n) — open the doorway. Reads n bytes from
+        // /dev/urandom every call. Different per invocation, per kernel
+        // process. lc-divergence-is-the-doorway: this native intentionally
+        // violates sibling parity when invoked — the divergence is the
+        // substrate's signal of live field-touch.
+        self.register_native("random_bytes", cat_call(), |_, _, args| {
+            let n = args[0].as_int();
+            if n <= 0 {
+                return Value::List(Vec::new());
+            }
+            let mut buf = vec![0u8; n as usize];
+            match fs::OpenOptions::new().read(true).open("/dev/urandom") {
+                Ok(mut f) => match f.read_exact(&mut buf) {
+                    Ok(_) => Value::List(buf.into_iter().map(|b| Value::Int(b as i64)).collect()),
+                    Err(_) => Value::Null,
+                },
+                Err(_) => Value::Null,
+            }
+        });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
         // Use when source-compile output crosses kernel invocations:

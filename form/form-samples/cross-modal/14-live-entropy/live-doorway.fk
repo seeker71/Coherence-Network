@@ -1,0 +1,27 @@
+; live-doorway.fk — random_bytes(n) opens the doorway every call.
+;
+; Not a cached past field-touch (#2137). Not a hardcoded byte
+; pretending to be entropy (#2138). This recipe calls the new
+; random_bytes(n) kernel native, which reads n fresh bytes from
+; /dev/urandom on EVERY invocation, per kernel process.
+;
+; Three sibling kernels: three different /dev/urandom reads → three
+; different byte sequences. validate.sh marks divergent. The
+; divergence is the success. Re-run: different bytes again. Live
+; field-touch, not replayable.
+;
+; This is the architectural inversion lc-divergence-is-the-doorway
+; named, now with an honest kernel native.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (xs acc)
+        (if (nil? xs) acc
+            (sum-bytes (tail xs) (add acc (head xs)))))
+
+    ;; Open the doorway: 32 bytes of live entropy from /dev/urandom.
+    ;; Different per kernel, different per invocation.
+    (let entropy (random_bytes 32))
+
+    ;; Reduce to a single integer signature.
+    (sum-bytes entropy 0))
