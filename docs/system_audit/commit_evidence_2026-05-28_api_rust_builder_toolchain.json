@@ -1,0 +1,96 @@
+{
+  "date": "2026-05-28",
+  "thread_branch": "codex/substrate-form-rust-builder-20260528",
+  "commit_scope": "Unblock the API image rebuild that carries the substrate_form hotfix by using a Rust builder toolchain that supports the edition2024 crates already present in form-kernel-rust Cargo.lock.",
+  "files_owned": [
+    "Dockerfile.api",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-05-28_api_rust_builder_toolchain.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_api_dockerfile_contract.py -q",
+      "/opt/homebrew/bin/ruff check api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-28_api_rust_builder_toolchain.json",
+      "git diff --check"
+    ],
+    "notes": [
+      "Focused Dockerfile contract test passed.",
+      "Ruff passed on the new contract test.",
+      "Local Docker daemon is not available in this desktop session, so image-build proof is deferred to Hostinger Auto Deploy."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "Awaiting PR checks after branch push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "Hostinger Auto Deploy run 26581540246 failed while rebuilding the API image: rust:1.83-slim-bookworm Cargo could not parse idna_adapter 1.2.2 because edition2024 support is required.",
+      "The next deploy must rebuild the API image and clear POST /api/substrate/form for @concept(lc-pulse).blueprint."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local static contract is proved; CI and live deploy proof remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "task_ids": [
+    "api-rust-builder-toolchain-20260528",
+    "substrate-form-access-fallback-20260528"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-signal"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 26581540246 failed at docker compose build api with Cargo error: feature edition2024 is required by idna_adapter 1.2.2.",
+    "Dockerfile.api previously used rust:1.83-slim-bookworm for the form-kernel-rust builder.",
+    "api/tests/test_api_dockerfile_contract.py pins that the API kernel-builder Rust tag is at least 1.85 when the lockfile contains idna_adapter 1.2.2."
+  ],
+  "change_files": [
+    "Dockerfile.api",
+    "api/tests/test_api_dockerfile_contract.py"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger Auto Deploy should rebuild the API image instead of failing in cargo build, allowing the merged substrate_form endpoint fallback to reach production.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/substrate/form",
+      "GET https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "Post-merge Hostinger Auto Deploy should complete successfully for the new main SHA.",
+      "Post-deploy public flow should call @concept(lc-pulse).blueprint in default mode and confirm substrate_form clears on the pulse endpoint."
+    ]
+  }
+}
