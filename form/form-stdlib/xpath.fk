@@ -1,0 +1,449 @@
+; xpath.fk — XPath-style query evaluator over substrate-resident cells.
+;
+; preludes: (none — uses only kernel primitives)
+;
+; A substrate tree is just a Recipe and its descendants. XPath is the
+; obvious lens: name the shape of the walk as a string, the evaluator
+; carries the walk through the tree. The query is a STRING (so it can
+; cross any channel, live in a config file, be authored by hand) and
+; the root is a NodeID. The result is a list of matching NodeIDs.
+;
+; --- PATH SYNTAX --------------------------------------------------
+;
+;   /                          the root cell (passed in)
+;   /step                      children of root matching `step`
+;   /step/step                 nested descent
+;   //step                     descendant-or-self matching `step`
+;   *                          wildcard (all children at this level)
+;   text()                     the trivial value of the current leaf
+;   @inst                      the inst slot as a leaf
+;   @type                      the type slot as a leaf
+;   step[predicate]            filter
+;
+; --- SELECTOR STEPS -----------------------------------------------
+;
+;   cat:N    — children whose category's inst slot equals N.
+;              N is parsed as a decimal integer.
+;   name:s   — children that are trivial strings with value s.
+;   *        — every child at this level (wildcard).
+;
+; --- PREDICATES ---------------------------------------------------
+;
+;   [N]              positional — N is a 0-based decimal index.
+;   [@inst=N]        node_inst of the candidate equals N.
+;   [text()='foo']   the candidate's trivial value equals foo.
+;   [count()=N]      the candidate has exactly N children.
+;
+; --- API ----------------------------------------------------------
+;
+;   (xpath path-string root-nid)       → list of matching NodeIDs.
+;   (xpath-first path-string root-nid) → first match, or
+;                                         XPATH-NOT-FOUND sentinel.
+;   (xpath-found? result)              → 1 if list is non-empty
+;                                         (or non-sentinel for first),
+;                                         0 otherwise.
+;
+; --- BLUEPRINTS ---------------------------------------------------
+;
+; The 1900-decade is the xpath family. Slot 1900 was already claimed
+; by inquiry.fk's INQUIRY blueprint before this walk arrived, so the
+; xpath family occupies 1910..1913 — one decade above, leaving 1900
+; intact and keeping the per-module decade convention this body uses.
+;
+;   1910  XPATH-RESULT     — list-of-NodeIDs wrapper category
+;                            (used by step evaluators when constructing
+;                            an intermediate node-set as a Recipe).
+;   1911  XPATH-NOT-FOUND  — sentinel returned by xpath-first on miss.
+;   1912  XPATH-STEP       — parsed step descriptor.
+;   1913  XPATH-PREDICATE  — parsed predicate descriptor.
+
+(let XPATH-RESULT    (make_nodeid 1 2 99 1910))
+(let XPATH-NOT-FOUND (make_nodeid 1 2 99 1911))
+(let XPATH-STEP      (make_nodeid 1 2 99 1912))
+(let XPATH-PREDICATE (make_nodeid 1 2 99 1913))
+
+;; --- list helpers -------------------------------------------------
+(defn xp-nil? (xs) (eq (len xs) 0))
+
+(defn xp-append (xs ys)
+    (if (xp-nil? xs) ys
+        (cons (head xs) (xp-append (tail xs) ys))))
+
+(defn xp-concat (xss)
+    (if (xp-nil? xss) (list)
+        (xp-append (head xss) (xp-concat (tail xss)))))
+
+(defn xp-nth (xs i)
+    (if (eq i 0) (head xs) (xp-nth (tail xs) (sub i 1))))
+
+;; --- string helpers -----------------------------------------------
+
+;; xp-substr-eq? — substring equality from index i for k characters.
+;; Returns BOOL (so it can drive `if` in the strict-bool kernel).
+(defn xp-substr-eq? (s i k probe)
+    (if (eq k 0) (eq 0 0)
+        (if (str_eq (char_at s i) (char_at probe 0))
+            (xp-substr-eq? s (add i 1) (sub k 1)
+                           (substring probe 1 (str_len probe)))
+            (eq 0 1))))
+
+;; xp-starts-with? — does s begin with probe? Returns BOOL.
+(defn xp-starts-with? (s probe)
+    (if (lt (str_len s) (str_len probe)) (eq 0 1)
+        (xp-substr-eq? s 0 (str_len probe) probe)))
+
+;; xp-index-of — first occurrence of needle in s starting at from;
+;; -1 if absent. Uses kernel-native str_find for O(n) scan.
+(defn xp-index-of (s needle from)
+    (str_find s needle from))
+
+;; xp-int-of — parse a decimal int from a string. Wraps str_to_int.
+(defn xp-int-of (s) (str_to_int s))
+
+;; --- step parsing -------------------------------------------------
+;;
+;; A path string like "/cat:1731/cat:1730[0]/text()" splits on '/' into
+;; ["", "cat:1731", "cat:1730[0]", "text()"]. The leading empty piece
+;; signals an absolute root path; we treat all xpath input as absolute.
+;;
+;; Each non-empty piece is parsed into an XPATH-STEP recipe carrying:
+;;   - selector-kind   trivial-int   1=cat, 2=name, 3=wildcard,
+;;                                   4=text(), 5=@inst, 6=@type,
+;;                                   7=descendant-or-self
+;;   - selector-arg    trivial leaf (int for cat / positions,
+;;                                   string for name)
+;;   - predicate-kind  trivial-int   0=none, 1=positional, 2=@inst,
+;;                                   3=text(), 4=count()
+;;   - predicate-arg   trivial leaf
+;;
+;; Selector-kind values double as XPATH-PREDICATE markers (see below).
+
+(let XP-SEL-CAT      1)
+(let XP-SEL-NAME     2)
+(let XP-SEL-WILD     3)
+(let XP-SEL-TEXT     4)
+(let XP-SEL-AT-INST  5)
+(let XP-SEL-AT-TYPE  6)
+(let XP-SEL-DESC     7)
+
+(let XP-PRED-NONE    0)
+(let XP-PRED-POS     1)
+(let XP-PRED-AT-INST 2)
+(let XP-PRED-TEXT    3)
+(let XP-PRED-COUNT   4)
+
+;; Build a step recipe with no predicate.
+(defn xp-step (kind arg)
+    (intern_node XPATH-STEP
+        (list (intern_trivial_int kind)
+              arg
+              (intern_trivial_int XP-PRED-NONE)
+              (intern_trivial_int 0))))
+
+;; Build a step recipe with a predicate.
+(defn xp-step-pred (kind arg pkind parg)
+    (intern_node XPATH-STEP
+        (list (intern_trivial_int kind)
+              arg
+              (intern_trivial_int pkind)
+              parg)))
+
+(defn xp-step-kind (s) (node_value (xp-nth (node_children s) 0)))
+(defn xp-step-arg  (s) (xp-nth (node_children s) 1))
+(defn xp-step-pkind (s) (node_value (xp-nth (node_children s) 2)))
+(defn xp-step-parg  (s) (xp-nth (node_children s) 3))
+
+;; --- parse one step (without its predicate) -----------------------
+
+;; Parse a step body (after any [..] suffix has been stripped).
+(defn xp-parse-step-body (s)
+    (if (str_eq s "*")
+        (xp-step XP-SEL-WILD (intern_trivial_int 0))
+    (if (str_eq s "text()")
+        (xp-step XP-SEL-TEXT (intern_trivial_int 0))
+    (if (str_eq s "@inst")
+        (xp-step XP-SEL-AT-INST (intern_trivial_int 0))
+    (if (str_eq s "@type")
+        (xp-step XP-SEL-AT-TYPE (intern_trivial_int 0))
+    (if (xp-starts-with? s "cat:")
+        (xp-step XP-SEL-CAT
+                 (intern_trivial_int (xp-int-of (substring s 4 (str_len s)))))
+    (if (xp-starts-with? s "name:")
+        (xp-step XP-SEL-NAME
+                 (intern_trivial_string (substring s 5 (str_len s))))
+        ;; Unknown — fall back to a name match on the raw token.
+        (xp-step XP-SEL-NAME (intern_trivial_string s)))))))))
+
+;; --- parse predicate ----------------------------------------------
+;;
+;; The predicate body lives inside `[..]`. Supported shapes:
+;;
+;;   [N]            positional      — body is all digits.
+;;   [@inst=N]      inst equality   — body starts with "@inst=".
+;;   [text()='foo'] text equality   — body starts with "text()='" and
+;;                                    ends with "'".
+;;   [count()=N]    count equality  — body starts with "count()=".
+
+(defn xp-is-digit? (c)
+    (if (lt (ord c) 48) (eq 0 1)
+        (if (lt 57 (ord c)) (eq 0 1) (eq 0 0))))
+
+(defn xp-all-digits? (s i n)
+    (if (eq i n) (eq 0 0)
+        (if (xp-is-digit? (char_at s i))
+            (xp-all-digits? s (add i 1) n)
+            (eq 0 1))))
+
+(defn xp-parse-pred (body)
+    (if (xp-all-digits? body 0 (str_len body))
+        (list XP-PRED-POS (intern_trivial_int (xp-int-of body)))
+    (if (xp-starts-with? body "@inst=")
+        (list XP-PRED-AT-INST
+              (intern_trivial_int
+                  (xp-int-of (substring body 6 (str_len body)))))
+    (if (xp-starts-with? body "text()='")
+        (list XP-PRED-TEXT
+              (intern_trivial_string
+                  ;; strip trailing quote
+                  (substring body 8 (sub (str_len body) 1))))
+    (if (xp-starts-with? body "count()=")
+        (list XP-PRED-COUNT
+              (intern_trivial_int
+                  (xp-int-of (substring body 8 (str_len body)))))
+        ;; unrecognized → no-op predicate
+        (list XP-PRED-NONE (intern_trivial_int 0)))))))
+
+;; --- split a path piece into (body, predicate-or-none) ------------
+;;
+;; "cat:1730[0]" → body "cat:1730", predicate-body "0".
+;; "cat:1730"    → body "cat:1730", predicate-body "".
+
+(defn xp-parse-piece (piece)
+    (do
+        (let lb (xp-index-of piece "[" 0))
+        (if (eq lb (sub 0 1))
+            (xp-parse-step-body piece)
+            (do
+                (let rb (xp-index-of piece "]" lb))
+                (let body (substring piece 0 lb))
+                (let predbody
+                    (if (eq rb (sub 0 1))
+                        ""
+                        (substring piece (add lb 1) rb)))
+                (let stepless (xp-parse-step-body body))
+                (if (str_eq predbody "")
+                    stepless
+                    (do
+                        (let pred (xp-parse-pred predbody))
+                        (xp-step-pred (xp-step-kind stepless)
+                                      (xp-step-arg stepless)
+                                      (xp-nth pred 0)
+                                      (xp-nth pred 1))))))))
+
+;; --- split path string on '/' --------------------------------------
+;;
+;; Returns a list of step pieces with empty leading element stripped.
+;; A "//" produces an empty intermediate piece, which the parser turns
+;; into a descendant-or-self marker for the following step.
+
+(defn xp-split-loop (s i n acc cur)
+    (if (eq i n)
+        (xp-append acc (list cur))
+        (if (str_eq (char_at s i) "/")
+            (xp-split-loop s (add i 1) n (xp-append acc (list cur)) "")
+            (xp-split-loop s (add i 1) n acc
+                           (str_concat cur (char_at s i))))))
+
+(defn xp-split (s)
+    (xp-split-loop s 0 (str_len s) (list) ""))
+
+;; --- assemble step list -------------------------------------------
+;;
+;; Walks the split pieces. Empty pieces at the start are stripped
+;; (absolute path leading slash). An empty piece between two non-empty
+;; ones signals "//" — the next step becomes a descendant-or-self.
+
+;; Strip ONE leading empty piece (the absolute-path "/" sentinel).
+;; Subsequent empties are real — they mark descendant-or-self.
+(defn xp-strip-one-leading-empty (pieces)
+    (if (xp-nil? pieces) pieces
+        (if (str_eq (head pieces) "")
+            (tail pieces)
+            pieces)))
+
+(defn xp-assemble (pieces desc-flag)
+    (if (xp-nil? pieces) (list)
+        (if (str_eq (head pieces) "")
+            ;; "//" marker — set flag for next piece
+            (xp-assemble (tail pieces) 1)
+            (do
+                (let step (xp-parse-piece (head pieces)))
+                (if (eq desc-flag 1)
+                    (cons (xp-step-pred XP-SEL-DESC
+                                        (intern_trivial_int 0)
+                                        (xp-step-kind step)
+                                        (xp-step-arg step))
+                          (xp-assemble (tail pieces) 0))
+                    (cons step (xp-assemble (tail pieces) 0)))))))
+
+;; (xp-parse-path path-string) → list of XPATH-STEP recipes.
+(defn xp-parse-path (s)
+    (xp-assemble (xp-strip-one-leading-empty (xp-split s)) 0))
+
+;; --- selector evaluation ------------------------------------------
+;;
+;; Each selector takes a NodeID and returns a LIST of matching NodeIDs.
+;; cat / name / wildcard inspect the CHILDREN of the node; text / @inst
+;; / @type produce a synthesized leaf carrying the value.
+
+(defn xp-children-with-cat (kids inst-target acc)
+    (if (xp-nil? kids) acc
+        (if (eq (node_inst (node_category (head kids))) inst-target)
+            (xp-children-with-cat (tail kids) inst-target
+                                  (xp-append acc (list (head kids))))
+            (xp-children-with-cat (tail kids) inst-target acc))))
+
+(defn xp-children-with-name (kids name-id acc)
+    (if (xp-nil? kids) acc
+        (if (eq (node_inst (head kids)) name-id)
+            (xp-children-with-name (tail kids) name-id
+                                   (xp-append acc (list (head kids))))
+            (xp-children-with-name (tail kids) name-id acc))))
+
+;; xp-descendants — flatten the subtree at node (excluding node itself).
+(defn xp-descendants (n)
+    (xp-desc-loop (node_children n) (list)))
+
+(defn xp-desc-loop (kids acc)
+    (if (xp-nil? kids) acc
+        (xp-desc-loop (tail kids)
+                      (xp-append (xp-append acc (list (head kids)))
+                                 (xp-descendants (head kids))))))
+
+;; xp-eval-selector — apply a single (un-predicated) selector to one
+;; NodeID, returning a list of resulting NodeIDs.
+(defn xp-eval-selector (kind arg n)
+    (if (eq kind XP-SEL-CAT)
+        (xp-children-with-cat (node_children n) (node_value arg) (list))
+    (if (eq kind XP-SEL-NAME)
+        (xp-children-with-name (node_children n) (node_inst arg) (list))
+    (if (eq kind XP-SEL-WILD)
+        (node_children n)
+    (if (eq kind XP-SEL-TEXT)
+        (list (intern_trivial_string
+                  (if (eq (len (node_children n)) 0)
+                      ;; trivial leaf → emit its string form
+                      (xp-leaf-string n)
+                      "")))
+    (if (eq kind XP-SEL-AT-INST)
+        (list (intern_trivial_int (node_inst n)))
+    (if (eq kind XP-SEL-AT-TYPE)
+        (list (intern_trivial_int (node_type n)))
+        (list))))))))
+
+;; xp-leaf-string — return the string form of a trivial leaf.
+;; Trivial-string: the bound string. Trivial-int: int_to_str. Otherwise
+;; the empty string (sentinel; caller compares with str_eq).
+(defn xp-leaf-string (n)
+    (if (eq (node_type n) 2)            ;; TrivString
+        (node_value n)
+    (if (eq (node_type n) 1)            ;; TrivInt
+        (int_to_str (node_value n))
+        "")))
+
+;; --- predicate evaluation -----------------------------------------
+;;
+;; A predicate filters a node-set. For each candidate it returns 1
+;; (keep) or 0 (drop). Positional predicates close over the index.
+
+(defn xp-pred-matches? (pkind parg candidate idx)
+    (if (eq pkind XP-PRED-NONE) (eq 0 0)
+    (if (eq pkind XP-PRED-POS)
+        (eq idx (node_value parg))
+    (if (eq pkind XP-PRED-AT-INST)
+        (eq (node_inst candidate) (node_value parg))
+    (if (eq pkind XP-PRED-TEXT)
+        (str_eq (xp-leaf-string candidate) (node_value parg))
+    (if (eq pkind XP-PRED-COUNT)
+        (eq (len (node_children candidate)) (node_value parg))
+        (eq 0 0)))))))
+
+(defn xp-filter-pred (xs pkind parg idx acc)
+    (if (xp-nil? xs) acc
+        (if (xp-pred-matches? pkind parg (head xs) idx)
+            (xp-filter-pred (tail xs) pkind parg (add idx 1)
+                            (xp-append acc (list (head xs))))
+            (xp-filter-pred (tail xs) pkind parg (add idx 1) acc))))
+
+;; --- apply one step to a node-set ---------------------------------
+
+(defn xp-step-on-one (step n)
+    (do
+        (let kind (xp-step-kind step))
+        (let arg  (xp-step-arg step))
+        (if (eq kind XP-SEL-DESC)
+            ;; descendant-or-self: gather all descendants of n, then
+            ;; apply the carried selector (predicate slots double as
+            ;; the inner selector's kind+arg).
+            (do
+                (let inner-kind (xp-step-pkind step))
+                (let inner-arg  (xp-step-parg step))
+                (xp-desc-apply (cons n (xp-descendants n))
+                               inner-kind inner-arg (list)))
+            (xp-eval-selector kind arg n))))
+
+(defn xp-desc-apply (nodes kind arg acc)
+    (if (xp-nil? nodes) acc
+        (xp-desc-apply (tail nodes) kind arg
+                       (xp-append acc
+                                  (xp-eval-selector kind arg (head nodes))))))
+
+(defn xp-step-on-set (step nodes)
+    (if (xp-nil? nodes) (list)
+        (do
+            (let raw
+                (xp-concat (xp-map-step-on step nodes)))
+            ;; DESC steps overload the predicate slots to carry the
+            ;; inner selector — no predicate filter applies. Every
+            ;; other step kind reads its predicate slots as a real
+            ;; predicate over the raw node-set.
+            (if (eq (xp-step-kind step) XP-SEL-DESC)
+                raw
+                (xp-filter-pred raw
+                                (xp-step-pkind step)
+                                (xp-step-parg step)
+                                0
+                                (list))))))
+
+(defn xp-map-step-on (step nodes)
+    (if (xp-nil? nodes) (list)
+        (cons (xp-step-on-one step (head nodes))
+              (xp-map-step-on step (tail nodes)))))
+
+;; --- top-level evaluator ------------------------------------------
+
+(defn xp-run-steps (steps nodes)
+    (if (xp-nil? steps) nodes
+        (xp-run-steps (tail steps)
+                      (xp-step-on-set (head steps) nodes))))
+
+;; (xpath path-string root-nid) → list of NodeIDs matching the path.
+(defn xpath (path root)
+    (do
+        (let steps (xp-parse-path path))
+        (if (xp-nil? steps)
+            (list root)
+            (xp-run-steps steps (list root)))))
+
+;; (xpath-first path-string root-nid) → first matching NodeID, or
+;; XPATH-NOT-FOUND when the result set is empty.
+(defn xpath-first (path root)
+    (do
+        (let res (xpath path root))
+        (if (xp-nil? res) XPATH-NOT-FOUND (head res))))
+
+;; (xpath-found? r) → 1 if r is a non-sentinel NodeID, 0 if it is
+;; XPATH-NOT-FOUND. Pairs with xpath-first. For the list-returning
+;; xpath form, callers test (eq (len result) 0) directly.
+(defn xpath-found? (r)
+    (if (node_eq r XPATH-NOT-FOUND) 0 1))

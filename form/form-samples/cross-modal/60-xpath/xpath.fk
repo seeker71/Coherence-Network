@@ -1,0 +1,89 @@
+; xpath.fk — sample: XPath-style queries over a substrate tree.
+;
+; preludes: form-stdlib/symbols.fk form-stdlib/xpath.fk
+;
+; A SYMBOL-TABLE with three SYMBOL-BIND children is the smallest tree
+; that exercises all three step kinds + every predicate the evaluator
+; supports. The table is wrapped in a tiny ROOT recipe so the query
+; root has children to navigate into — exactly the cross-cell shape:
+; a directory holding a table that holds bindings.
+;
+;   root  = ROOT-WRAPPER(SYMBOL-TABLE(
+;             SYMBOL-BIND("first-name",  v1)
+;             SYMBOL-BIND("second-name", v2)
+;             SYMBOL-BIND("third-name",  v3)))
+;
+; SYMBOL-TABLE has category inst 1731; SYMBOL-BIND has category inst
+; 1730. The queries below address them by those numbers — the same
+; numbers any cell would read off the substrate.
+
+(do
+    ;; ---------- BUILD TREE ----------------------------------------
+    (let v1 (intern_trivial_int 100))
+    (let v2 (intern_trivial_int 200))
+    (let v3 (intern_trivial_int 300))
+
+    (let tbl
+        (symbol-table
+            (list (symbol-bind "first-name"  v1)
+                  (symbol-bind "second-name" v2)
+                  (symbol-bind "third-name"  v3))))
+
+    ;; Wrap the table in a small parent so /cat:1731 has somewhere to
+    ;; descend from. The wrapper category is a generic list-node;
+    ;; xpath addresses children by their OWN category, not the parent's.
+    (let root (intern_node (make_nodeid 1 1 14 0) (list tbl)))
+
+    ;; ---------- QUERY 1: all children of the SYMBOL-TABLE ---------
+    ;; /cat:1731 finds the table (one child of root with cat-inst 1731).
+    ;; Then /* walks every child of that match → 3 SYMBOL-BINDs.
+    (let q1 (xpath "/cat:1731/*" root))
+    (let q1-count (len q1))
+    (print "all-bindings-count:" q1-count)
+
+    ;; ---------- QUERY 2: positional + text() on first binding -----
+    ;; /cat:1731 → the table.
+    ;; /cat:1730[0] → first SYMBOL-BIND child.
+    ;; /text() → the bind's first child is a trivial-string name.
+    ;;           But text() reads the trivial value of the CURRENT
+    ;;           node, so we drill one step further: the bind's first
+    ;;           child IS the name leaf. Use /*[0] to grab it, then
+    ;;           text() to read.
+    (let q2 (xpath "/cat:1731/cat:1730[0]/*[0]/text()" root))
+    (let q2-first (if (eq (len q2) 0) (intern_trivial_string "") (head q2)))
+    (let q2-is-first-name
+        (if (str_eq (node_value q2-first) "first-name") 1 0))
+    (print "first-binding-name-matches:" q2-is-first-name)
+
+    ;; ---------- QUERY 3: @inst predicate selects a specific bind --
+    ;; The first SYMBOL-BIND's NodeID's inst is whatever the kernel
+    ;; assigned. We grab it from the live tree and reuse it as the
+    ;; predicate target, so the test is kernel-local-counter
+    ;; independent (deterministic across siblings is NOT guaranteed
+    ;; for inst values — this query checks the predicate WORKS).
+    (let first-bind (head (xpath "/cat:1731/*" root)))
+    (let first-bind-inst (node_inst first-bind))
+    ;; Build the query string "cat:1730[@inst=N]" by hand.
+    (let q3-path
+        (str_concat "/cat:1731/cat:1730[@inst="
+        (str_concat (int_to_str first-bind-inst) "]")))
+    (let q3 (xpath q3-path root))
+    (let q3-count (len q3))
+    (print "at-inst-match-count:" q3-count)
+
+    ;; ---------- QUERY 4: xpath-first + xpath-found? ---------------
+    ;; A path that misses returns XPATH-NOT-FOUND from xpath-first.
+    (let q4-hit (xpath-first "/cat:1731" root))
+    (let q4-miss (xpath-first "/cat:9999" root))
+    (let q4-hit-found  (xpath-found? q4-hit))
+    (let q4-miss-found (xpath-found? q4-miss))
+    (print "first-hit-found:"  q4-hit-found)
+    (print "first-miss-found:" q4-miss-found)
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; Five attestations. Verdict = sum.
+    (add (if (eq q1-count 3) 1 0)
+        (add q2-is-first-name
+            (add (if (eq q3-count 1) 1 0)
+                (add q4-hit-found
+                     (if (eq q4-miss-found 0) 1 0))))))
