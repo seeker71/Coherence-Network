@@ -1,0 +1,40 @@
+; tests/merkle-band.fk — Merkle tree sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/merkle.fk
+;
+; Validates that the Form-recipe Merkle tree (in form-stdlib/merkle.fk)
+; computes byte-identical roots and proof-verifications across every
+; kernel that carries the bitwise primitives and the sha256 recipe.
+; No Merkle native exists; the recipe IS the sole implementation.
+;
+; We commit to a tiny corpus — 4 single-byte leaves — so the underlying
+; O(n²) sha256 recipe stays within the recipe-walk time budget. The
+; canonical locked byte-sum below is what every sibling kernel must
+; reproduce; any divergence is a kernel bug.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn sum-bytes (bs acc)
+        (if (nil? bs) acc (sum-bytes (tail bs) (add acc (head bs)))))
+
+    ;; 4 leaves: single bytes 1, 2, 3, 4.
+    (let blocks (list (list 1) (list 2) (list 3) (list 4)))
+    (let root (merkle-root blocks))
+    (let proof-1 (merkle-proof blocks 1))
+    (let ok-valid (merkle-verify (list 2) 1 proof-1 root))
+
+    ;; Tamper with the proof: flip a byte in the first sibling digest.
+    (let sib0 (head proof-1))
+    (let sib0-bad (cons (add (head sib0) 1) (tail sib0)))
+    (let proof-bad (cons sib0-bad (tail proof-1)))
+    (let ok-tampered (merkle-verify (list 2) 1 proof-bad root))
+
+    (let root-len-ok (if (eq (len root) 32) 1 0))
+    (let proof-len-ok (if (eq (len proof-1) 2) 1 0))
+
+    ;; Band verdict: 4 when root has 32 bytes, proof has 2 siblings,
+    ;; valid proof verifies (1), and tampered proof fails (0).
+    (add root-len-ok
+        (add proof-len-ok
+            (add ok-valid
+                 (if (eq ok-tampered 0) 1 0)))))

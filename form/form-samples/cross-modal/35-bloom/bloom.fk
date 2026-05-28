@@ -1,0 +1,76 @@
+; bloom.fk — Bloom filter from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/bloom.fk
+;
+; A Bloom filter is the simplest content-addressable bag: "have I
+; seen something shaped like this?" answered in constant-time bit
+; probes, with a tunable false-positive rate as the trade for not
+; storing the inputs. The recipe in form-stdlib/bloom.fk composes
+; it from the kernel's bitwise primitives plus the sha256 recipe
+; already living in form-stdlib/sha256.fk — no host bitset library,
+; no bloom native. Three sibling kernels (Go, Rust, TypeScript) all
+; answer the same "might contain?" for the same insertion sequence.
+;
+; The shape walked here:
+;   - 256-bit filter as 32 bytes, all zero at start.
+;   - Three values added: "a" (byte 97), "b" (98), "c" (99).
+;     Each one's sha256 derives three bit-positions (bytes [0,1],
+;     [2,3], [4,5] each as a 16-bit BE int mod 256); those three
+;     bits flip to 1.
+;   - bloom-might-contain? probes the three bits and returns 1 iff
+;     all three are set.
+;
+; Locked positions (cross-checked at sample-authoring time):
+;   sha256("a") → 151, 18, 27
+;   sha256("b") →  35, 22, 57
+;   sha256("c") → 125,  3, 80
+;   sha256("d") → 172,115,240   ← not added, and disjoint from above
+;
+; "d" was chosen specifically because none of its three positions
+; overlap the nine positions seeded by a/b/c — so the false-negative-
+; impossible guarantee is paired with an honest true-negative on a
+; value the filter has not seen. Bloom's only failure mode (false
+; positives from bit collision) doesn't fire on this fixture; if it
+; ever does, the chosen "d" is the wrong sentinel and needs swapping.
+;
+; Cost note: sha256 itself is O(n²) per round through Form-list nth
+; lookups. Inputs stay one byte each so the recipe-walk finishes in
+; reasonable time across all three kernels. The Form→host-asm JIT
+; lifts the same source to native speed without changing the recipe.
+
+(do
+    ;; Three short values to add. Single bytes keep the sha256 cost
+    ;; bounded; the bloom shape itself is independent of input size.
+    (let v-a (list 97))
+    (let v-b (list 98))
+    (let v-c (list 99))
+    ;; A fourth value never added, picked so its three hash positions
+    ;; (172, 115, 240) miss every bit a/b/c set. The honest "no".
+    (let v-d (list 100))
+
+    ;; Seed an empty filter, add the three values in order.
+    (let f0 (bloom-empty))
+    (let f1 (bloom-add f0 v-a))
+    (let f2 (bloom-add f1 v-b))
+    (let f3 (bloom-add f2 v-c))
+
+    ;; Probe each added value — expected 1 (no false negatives).
+    (let has-a (bloom-might-contain? f3 v-a))
+    (let has-b (bloom-might-contain? f3 v-b))
+    (let has-c (bloom-might-contain? f3 v-c))
+    ;; Probe the never-added value — expected 0 (no collision here).
+    (let has-d (bloom-might-contain? f3 v-d))
+
+    (print "bloom-has-a:" has-a)
+    (print "bloom-has-b:" has-b)
+    (print "bloom-has-c:" has-c)
+    (print "bloom-has-d:" has-d)
+
+    ;; Verdict: 4 when all three added values read present AND the
+    ;; never-added value reads absent. Three-way sibling parity
+    ;; attests every kernel computes the Bloom filter — including
+    ;; the underlying sha256 — from the recipe alone.
+    (add (if (eq has-a 1) 1 0)
+        (add (if (eq has-b 1) 1 0)
+            (add (if (eq has-c 1) 1 0)
+                 (if (eq has-d 0) 1 0)))))
