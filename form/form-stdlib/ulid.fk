@@ -1,0 +1,148 @@
+; ulid.fk — ULID (Universally Unique Lexicographically-sortable Identifier) as a Form recipe.
+;
+; Canonical truth: this recipe MEANS the ULID encoding. With the kernel's
+; bitwise primitives (band, bor, shl_u32, shr_u32) and the string natives
+; (substring, str_concat, str_len), Crockford-Base32 ULID encoding composes
+; without any host-library detour. The recipe stays sovereign across sibling
+; kernels (Go, Rust, TypeScript).
+;
+; The spec (https://github.com/ulid/spec):
+;   128 bits total = 48-bit unix-millisecond timestamp + 80 bits of randomness
+;   26 characters of Crockford Base32, lexicographically sortable
+;   The first 10 chars encode the timestamp (most-significant first); the
+;   trailing 16 chars encode the 80 bits of randomness.
+;
+; Crockford Base32 alphabet (32 chars; I, L, O, U omitted to avoid confusion
+; with digits and to dodge the accidental-profanity case):
+;   0123456789ABCDEFGHJKMNPQRSTVWXYZ
+;
+; Why a bit-stream encode works:
+;   Conceptually the ULID's 128 bits are prefixed with 2 zero pad bits to
+;   reach 130 = 26 × 5 bits, then chunked left-to-right into 5-bit indices.
+;   The 2-bit prefix lives at the high end of the timestamp half, so the
+;   first character only carries the top 3 bits of the 48-bit timestamp
+;   (max value 7 → '7'). Chars 2-10 carry the rest of the timestamp;
+;   chars 11-26 carry the 80 random bits exactly (16 × 5 = 80).
+;
+; The single entry point:
+;   (ulid-from-parts timestamp-48 random-10-bytes) → 26-char Crockford string
+;
+; Determinism notes:
+;   timestamp-48: a 48-bit unsigned integer the caller supplies. Wire it
+;     to whatever clock source the host has (millisecond unix epoch is the
+;     spec recommendation, but the recipe itself is clock-agnostic).
+;   random-10-bytes: a list of exactly 10 byte values (0..255). For
+;     production use the kernel's (random_bytes 10); for sibling-parity
+;     tests pass a deterministic byte-list — (random_bytes ...) diverges
+;     across kernels by design.
+;
+; Cost is O(1) over the input — 26 chars × 5 bits × constant-time bit
+; lookups. The 16-byte input is materialized once into a fixed-length
+; list and walked with nth (the list is short enough that nth's linear
+; cost stays bounded; no recursive list traversal is needed in the encode).
+
+(do
+    ;; ---- CROCKFORD BASE32 ALPHABET --------------------------------
+    ;; Position i in this string is the character for 5-bit value i.
+    ;; Excludes I, L, O, U (anti-confusion: I↔1, L↔1, O↔0, U↔V).
+    (defn ulid-alphabet-of ()
+        "0123456789ABCDEFGHJKMNPQRSTVWXYZ")
+
+    ;; Look up the character for a 5-bit value (0..31).
+    (defn ulid-char-of (idx)
+        (substring (ulid-alphabet-of) idx (add idx 1)))
+
+    ;; ---- 48-BIT TIMESTAMP → 6 BIG-ENDIAN BYTES --------------------
+    ;; Form integer literals parse as signed 32-bit, so a 48-bit value
+    ;; can't be a single literal. The recipe receives timestamp-48 as
+    ;; whatever integer shape the host produces (kernel ints are 64-bit
+    ;; in practice). The split below uses shr_u32 / band to peel the
+    ;; bytes; on a 48-bit value the top 16 bits are reached by shifting
+    ;; 32 bits (yielding the top 16) and then masking.
+    ;;
+    ;; Byte order: big-endian, b0 = most-significant byte of the 48-bit
+    ;; value. This is what makes ULIDs lexicographically sortable.
+    (defn ulid-ts-byte-0 (ts)
+        (band (shr_u32 (shr_u32 ts 32) 8) 255))
+    (defn ulid-ts-byte-1 (ts)
+        (band (shr_u32 ts 32) 255))
+    (defn ulid-ts-byte-2 (ts)
+        (band (shr_u32 ts 24) 255))
+    (defn ulid-ts-byte-3 (ts)
+        (band (shr_u32 ts 16) 255))
+    (defn ulid-ts-byte-4 (ts)
+        (band (shr_u32 ts 8) 255))
+    (defn ulid-ts-byte-5 (ts)
+        (band ts 255))
+
+    ;; Build the 6-byte big-endian timestamp prefix.
+    (defn ulid-ts-bytes (ts)
+        (cons (ulid-ts-byte-0 ts)
+        (cons (ulid-ts-byte-1 ts)
+        (cons (ulid-ts-byte-2 ts)
+        (cons (ulid-ts-byte-3 ts)
+        (cons (ulid-ts-byte-4 ts)
+        (cons (ulid-ts-byte-5 ts)
+              (list))))))))
+
+    ;; Concatenate two lists. cons-walk left list onto right.
+    (defn ulid-append (xs ys)
+        (if (eq (len xs) 0) ys
+            (cons (head xs) (ulid-append (tail xs) ys))))
+
+    ;; ---- BIT EXTRACTION OVER THE 16-BYTE STREAM -------------------
+    ;; The encoder treats the 16 bytes as a continuous 128-bit stream
+    ;; (bit 0 = MSB of byte 0; bit 127 = LSB of byte 15). The 26-char
+    ;; output covers a virtual 130-bit stream with two zero pad bits
+    ;; PREPENDED — i.e. char i (0-indexed) covers bits (5i-2) to (5i+2)
+    ;; of the real 128-bit stream, with negative positions reading as 0.
+
+    ;; (bit-at bytes pos) → 0 or 1. pos is 0..127 in the byte stream
+    ;; (MSB-first). nth walks the list head→tail, but for a 16-element
+    ;; list the cost stays bounded.
+    (defn ulid-bit-at (bs pos)
+        (do
+            (let byte-idx (div pos 8))
+            (let bit-in-byte (sub 7 (mod pos 8)))
+            (let b (nth bs byte-idx))
+            (band (shr_u32 b bit-in-byte) 1)))
+
+    ;; Safe bit lookup that returns 0 for negative positions (the front
+    ;; 2 pad bits of the virtual 130-bit stream).
+    (defn ulid-bit-safe (bs pos)
+        (if (lt pos 0) 0 (ulid-bit-at bs pos)))
+
+    ;; (chunk-5 bs base-pos) → integer 0..31 from 5 consecutive bits
+    ;; starting at base-pos in the virtual 130-bit stream (after the
+    ;; 2-bit zero prefix). base-pos may be negative; ulid-bit-safe
+    ;; covers the prefix.
+    (defn ulid-chunk-5 (bs base-pos)
+        (bor (shl_u32 (ulid-bit-safe bs       base-pos)    4)
+        (bor (shl_u32 (ulid-bit-safe bs (add base-pos 1)) 3)
+        (bor (shl_u32 (ulid-bit-safe bs (add base-pos 2)) 2)
+        (bor (shl_u32 (ulid-bit-safe bs (add base-pos 3)) 1)
+                      (ulid-bit-safe bs (add base-pos 4)))))))
+
+    ;; ---- WALK 26 CHARS ---------------------------------------------
+    ;; For char index i (0..25), the chunk's first bit lives at byte-
+    ;; stream position (5i - 2). The 2-bit prefix lives only at i=0:
+    ;; base = -2, so two ulid-bit-safe lookups return 0.
+    (defn ulid-encode-loop (bs i acc)
+        (if (eq i 26) acc
+            (do
+                (let base (sub (mul i 5) 2))
+                (let val  (ulid-chunk-5 bs base))
+                (ulid-encode-loop bs (add i 1)
+                    (str_concat acc (ulid-char-of val))))))
+
+    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
+    ;; (ulid-from-parts timestamp-48 random-10-bytes) → 26-char string.
+    ;; Caller provides the 48-bit timestamp (host clock) and a 10-byte
+    ;; list of randomness. The recipe never reads a clock or RNG itself
+    ;; — that's the cell's responsibility, keeping the encoder pure and
+    ;; sibling-parity-safe.
+    (defn ulid-from-parts (timestamp-48 random-10-bytes)
+        (do
+            (let ts-bytes  (ulid-ts-bytes timestamp-48))
+            (let all-bytes (ulid-append ts-bytes random-10-bytes))
+            (ulid-encode-loop all-bytes 0 ""))))

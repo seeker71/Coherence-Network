@@ -1,0 +1,64 @@
+; token.fk — time-bounded capability token, sibling-verified.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/token.fk
+;
+; A capability token binds (issuer, holder, capability, expires-at)
+; under an HMAC-SHA-256 over a shared secret. The recipe in
+; form-stdlib/token.fk uses ONLY the canonical sha256 + hmac-sha256
+; recipes — no token native, no host crypto library, no PKI assumption.
+; Three sibling kernels (Go, Rust, TypeScript) agree on every bit of
+; the mint and every bit of the validate verdict.
+;
+; Walk:
+;   1. Mint a token: issuer=1, holder=2, capability=[114 101 97 100]
+;      ("read"), expires-at=1000, secret=[1 2 3].
+;   2. Validate at now=500  → 1 (not expired, HMAC matches).
+;   3. Validate at now=2000 → 0 (expired, HMAC matches but stale).
+;   4. Tamper: rewrite the holder slot to 3, leaving the HMAC intact
+;      → validate at now=500 → 0 (HMAC mismatch).
+;   5. Final verdict: 3 when all three checks land where we expect.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth-tok (xs i)
+        (if (eq i 0) (head xs) (nth-tok (tail xs) (sub i 1))))
+
+    ;; ---------- CORPUS ---------------------------------------------
+    ;; capability = "read" as ASCII bytes (kept as a byte-list so the
+    ;; recipe stays portable across kernel string-intern surfaces).
+    (let issuer-id  1)
+    (let holder-id  2)
+    (let capability (list 114 101 97 100))
+    (let expires-at 1000)
+    (let secret     (list 1 2 3))
+
+    ;; ---------- MINT -----------------------------------------------
+    (let tok (token-mint issuer-id holder-id capability expires-at secret))
+
+    ;; ---------- VALIDATE AT now=500 (FRESH) ------------------------
+    ;; expires-at (1000) > now (500), HMAC matches → 1.
+    (let ok-fresh (token-valid? tok 500 secret))
+    (print "valid-fresh:" ok-fresh)
+
+    ;; ---------- VALIDATE AT now=2000 (EXPIRED) ---------------------
+    ;; expires-at (1000) <= now (2000) → 0 even though HMAC matches.
+    (let ok-expired (token-valid? tok 2000 secret))
+    (print "valid-expired:" ok-expired)
+
+    ;; ---------- TAMPER: REWRITE HOLDER TO 3 ------------------------
+    ;; Keep the same HMAC bound to the (1,2,...) tuple; the verifier
+    ;; recomputes over (1,3,...) and finds mismatch → 0.
+    (let tampered (list (nth-tok tok 0)
+                        3
+                        (nth-tok tok 2)
+                        (nth-tok tok 3)
+                        (nth-tok tok 4)))
+    (let ok-tampered (token-valid? tampered 500 secret))
+    (print "valid-tampered:" ok-tampered)
+
+    ;; Final verdict: 3 = fresh-passes (1) + expired-fails (1) + tampered-fails (1).
+    ;; Three-way sibling parity attests every kernel mints/validates
+    ;; the same token from the recipe alone.
+    (add ok-fresh
+         (add (if (eq ok-expired 0) 1 0)
+              (if (eq ok-tampered 0) 1 0))))

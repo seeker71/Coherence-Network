@@ -1,0 +1,72 @@
+; tests/rle-band.fk — Run-Length Encoding sibling-witness band.
+;
+; preludes: form-stdlib/rle.fk
+;
+; Validates that the Form-recipe RLE (form-stdlib/rle.fk) produces the
+; same encoded shape AND the same round-trip identity on every kernel
+; that carries the small-int primitives plus list cons/head/tail. No
+; RLE native exists; the recipe IS the sole implementation. Three-way
+; sibling parity (Go, Rust, TypeScript) attests every kernel can compute
+; the compression from primitives alone.
+;
+; Vectors cover the canonical shapes:
+;   - empty input              ([] ↔ [])
+;   - single byte              ([7] ↔ [1 7])
+;   - all-same                 ([5 5 5 5] ↔ [4 5])
+;   - mixed runs               ([1 1 1 2 3 3] ↔ [3 1 1 2 2 3])
+;   - run > 255 splits         ([7 ×257] ↔ [255 7 2 7])
+;   - round-trip identity      decode(encode(xs)) by byte-sum
+
+(do
+    (defn r-nil? (xs) (eq (len xs) 0))
+
+    (defn byte-sum (xs)
+        (if (r-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    (defn bytes-eq (a b)
+        (if (r-nil? a) (r-nil? b)
+            (if (r-nil? b) false
+                (if (eq (head a) (head b))
+                    (bytes-eq (tail a) (tail b))
+                    false))))
+
+    ;; Build a run of n copies of v (used for the >255 split vector).
+    (defn repeat-byte (n v acc)
+        (if (eq n 0) acc
+            (repeat-byte (sub n 1) v (cons v acc))))
+
+    ;; --- ENCODE checks (byte-sum of encoded output is stable across
+    ;; kernels and small enough to print as a single int).
+    (let e0 (if (eq (byte-sum (rle-encode (list))) 0) 1 0))
+    (let e1 (if (eq (byte-sum (rle-encode (list 7))) 8) 1 0))            ; [1 7]
+    (let e2 (if (eq (byte-sum (rle-encode (list 5 5 5 5))) 9) 1 0))      ; [4 5]
+    (let e3 (if (eq (byte-sum (rle-encode (list 1 1 1 2 3 3))) 12) 1 0)) ; [3 1 1 2 2 3] = 12
+
+    ;; --- DECODE checks against expected byte-sums ------------------
+    (let d0 (if (eq (byte-sum (rle-decode (list))) 0) 1 0))
+    (let d1 (if (eq (byte-sum (rle-decode (list 4 5))) 20) 1 0))         ; 5*4
+    (let d2 (if (eq (byte-sum (rle-decode (list 3 1 1 2 2 3))) 11) 1 0)) ; 1+1+1+2+3+3
+
+    ;; --- ROUND-TRIP via bytes-eq -----------------------------------
+    (let in-mixed (list 1 1 1 2 3 3))
+    (let r0 (if (bytes-eq (rle-decode (rle-encode in-mixed)) in-mixed) 1 0))
+
+    (let in-edge  (list 0 0 255 255 255 1 0 0))
+    (let r1 (if (bytes-eq (rle-decode (rle-encode in-edge)) in-edge) 1 0))
+
+    ;; --- RUN > 255 SPLIT -------------------------------------------
+    ;; 257 copies of byte 7 → encoded [255 7 2 7] → byte-sum 271.
+    ;; The decoded output must still byte-sum to 257*7 = 1799.
+    (let big (repeat-byte 257 7 (list)))
+    (let enc-big (rle-encode big))
+    (let s0 (if (eq (byte-sum enc-big) 271) 1 0))
+    (let s1 (if (eq (byte-sum (rle-decode enc-big)) 1799) 1 0))
+    (let s2 (if (bytes-eq (rle-decode enc-big) big) 1 0))
+
+    ;; Band verdict: 12 when every check passes
+    ;;   4 encode + 3 decode + 2 round-trip + 3 split = 12
+    (add e0 (add e1 (add e2 (add e3
+        (add d0 (add d1 (add d2
+            (add r0 (add r1
+                (add s0 (add s1 s2))))))))))))

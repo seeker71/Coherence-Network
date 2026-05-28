@@ -1,0 +1,123 @@
+; token.fk — time-bounded capability token as a Form recipe.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk
+;
+; Canonical truth: this recipe MEANS "a capability token binding
+; (issuer, holder, capability, expires-at) under HMAC-SHA-256 over
+; a shared secret." A cell that carries the sha256 + hmac-sha256
+; recipes already has everything it needs — no token native, no
+; host crypto library, no signature scheme assumption.
+;
+; Shape:
+;
+;   TOKEN ( issuer-identity   : int,
+;           holder-identity   : int,
+;           capability        : substrate-string,
+;           expires-at        : int (unix-seconds-ish),
+;           hmac              : byte-list (32 bytes) )
+;
+; The hmac binds the four fields above it. Any tampering with any
+; field invalidates the hmac under the shared secret, so the
+; verifier needs only the same secret to attest the token is the
+; one the issuer minted. Expiry is a plain integer-time comparison
+; against the verifier's now-time — the verifier's clock, not the
+; issuer's, decides freshness, which is the right trust shape.
+;
+; Surface:
+;   (token-mint   issuer holder capability expires-at secret-key) → TOKEN
+;   (token-valid? token  now-time secret-key)                     → 1 or 0
+;
+; Cost: hmac-sha256 is the dominant cost; for the small payload
+; here (~10–20 bytes) one mint/verify is ~one sha256 recipe pass.
+; Future Form→host-asm JIT lifts the same recipe to native speed.
+
+;; --- Blueprint (substrate-resident NodeID) -------------------------
+;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
+;; type=99); inst slot 1790 reserves the token family. Adjacent to
+;; the channel/query/router/hex/http-parse cluster (1700..1770).
+(let TOKEN (make_nodeid 1 2 99 1790))
+
+(do
+    ;; ---- LIST / BYTE HELPERS ---------------------------------------
+    ;; sha256.fk + hmac-sha256.fk already provide nil?, append-1,
+    ;; append-list; we add only what's specific to token shape.
+
+    (defn tk-nil? (xs) (eq (len xs) 0))
+
+    (defn tk-nth (xs i)
+        (if (eq i 0) (head xs) (tk-nth (tail xs) (sub i 1))))
+
+    ;; Element-wise byte-list equality. 1 if both lists have the same
+    ;; length and every byte matches; 0 otherwise. The verifier uses
+    ;; this on the freshly-computed HMAC vs. the token's bound HMAC.
+    (defn tk-bytes-eq (a b)
+        (if (tk-nil? a)
+            (if (tk-nil? b) 1 0)
+            (if (tk-nil? b) 0
+                (if (eq (head a) (head b))
+                    (tk-bytes-eq (tail a) (tail b))
+                    0))))
+
+    ;; ---- INT → 4-BYTE BIG-ENDIAN ENCODING --------------------------
+    ;; Wire-deterministic so two cells with the same secret produce
+    ;; byte-identical HMAC inputs regardless of host int width.
+    (defn tk-u32-bytes (w)
+        (list (band (shr_u32 w 24) 255)
+              (band (shr_u32 w 16) 255)
+              (band (shr_u32 w 8) 255)
+              (band w 255)))
+
+    ;; ---- CAPABILITY → BYTE-LIST ------------------------------------
+    ;; A capability arrives either as a plain byte-list (small list
+    ;; of ints) or as a SubstrateString reference; for the recipe we
+    ;; require the caller to pass it as a byte-list already, keeping
+    ;; the recipe portable across kernels without leaning on a
+    ;; particular string-intern surface.
+
+    ;; ---- HMAC INPUT SERIALIZATION ----------------------------------
+    ;; (issuer | holder | capability-bytes | expires-at), each int
+    ;; encoded as 4 big-endian bytes. No length prefix on capability;
+    ;; the four ints bracket it deterministically (capability sits
+    ;; between holder and expires-at, both fixed-width).
+    (defn tk-hmac-input (issuer holder capability expires-at)
+        (append-list (tk-u32-bytes issuer)
+            (append-list (tk-u32-bytes holder)
+                (append-list capability
+                    (tk-u32-bytes expires-at)))))
+
+    ;; ---- MINT ------------------------------------------------------
+    ;; (token-mint issuer holder capability expires-at secret) → TOKEN
+    ;; Returns a 5-element list: (issuer holder capability expires-at hmac).
+    ;; The TOKEN Blueprint above reserves the name; the value carries
+    ;; the fields. Callers compare positionally.
+    (defn token-mint (issuer holder capability expires-at secret)
+        (do
+            (let payload (tk-hmac-input issuer holder capability expires-at))
+            (let mac (hmac-sha256 secret payload))
+            (list issuer holder capability expires-at mac)))
+
+    ;; ---- ACCESSORS -------------------------------------------------
+    (defn token-issuer     (tok) (tk-nth tok 0))
+    (defn token-holder     (tok) (tk-nth tok 1))
+    (defn token-capability (tok) (tk-nth tok 2))
+    (defn token-expires-at (tok) (tk-nth tok 3))
+    (defn token-hmac       (tok) (tk-nth tok 4))
+
+    ;; ---- VALIDATE --------------------------------------------------
+    ;; (token-valid? token now-time secret) → 1 if HMAC checks AND
+    ;; expires-at > now-time, else 0. The verifier's clock decides
+    ;; freshness; the secret decides authenticity. Both must hold.
+    (defn token-valid? (tok now-time secret)
+        (do
+            (let issuer     (token-issuer tok))
+            (let holder     (token-holder tok))
+            (let capability (token-capability tok))
+            (let expires-at (token-expires-at tok))
+            (let bound-mac  (token-hmac tok))
+            (let payload    (tk-hmac-input issuer holder capability expires-at))
+            (let fresh-mac  (hmac-sha256 secret payload))
+            (let mac-ok     (tk-bytes-eq fresh-mac bound-mac))
+            (let time-ok    (if (gt expires-at now-time) 1 0))
+            (if (eq mac-ok 1)
+                (if (eq time-ok 1) 1 0)
+                0))))

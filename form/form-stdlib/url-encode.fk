@@ -1,0 +1,175 @@
+; url-encode.fk — URL percent-encoding (RFC 3986 §2.1, §2.3) as a Form recipe.
+;
+; Canonical truth: this recipe MEANS RFC-3986 percent-encoding. With the
+; kernel's small-int primitives (div, mod, add, sub) and the string natives
+; (ord, byte_to_str, str_concat, substring, str_len), URL-encoding composes
+; without any host-library detour. The recipe stays sovereign across
+; sibling kernels (Go, Rust, TypeScript).
+;
+; Why this exists:
+;   URIs travel through ASCII-only pipes — HTTP request lines, OAuth
+;   query strings, REST path parameters, form-urlencoded bodies. RFC 3986
+;   §2.3 defines the "unreserved" set of characters that pass through
+;   unescaped; everything else is encoded as `%XX` where XX is the
+;   uppercase hex of the BYTE value. Hex (form-stdlib/hex.fk) is the
+;   sibling textual envelope; URL-encoding is the per-byte conditional
+;   version that keeps URL-safe ASCII readable.
+;
+; The two entry points (operate on byte-lists, the only fully-portable
+; carrier of arbitrary bytes — multibyte string literals diverge across
+; sibling kernels at the parser level):
+;
+;   (url-encode byte-list)        → percent-encoded ASCII string
+;   (url-decode percent-string)   → byte-list, or URL-DECODE-ERROR sentinel
+;
+; Round-trip identity holds for every byte sequence:
+;   decode(encode(bs)) = bs
+;
+; ---- THE UNRESERVED SET (RFC 3986 §2.3) ----------------------------
+;
+; A byte passes through unescaped iff it is one of:
+;   A..Z   (65..90)
+;   a..z   (97..122)
+;   0..9   (48..57)
+;   '-'    (45)
+;   '.'    (46)
+;   '_'    (95)
+;   '~'    (126)
+;
+; Every other byte (including space, '/', '?', '=', '&', '#', and all
+; bytes ≥ 128) becomes `%` followed by two uppercase hex digits of the
+; byte value. UTF-8-encoded text passes through naturally: the 0xC3 0xA9
+; bytes of "é" become "%C3%A9".
+;
+; ---- WHY UPPERCASE HEX --------------------------------------------
+;
+; RFC 3986 §2.1 says decoders MUST accept both cases, but encoders
+; SHOULD produce uppercase. Real-world toolchains (Python urllib, JS
+; encodeURIComponent, Java URLEncoder) follow this; we do too. Decode
+; accepts either case so "%c3" and "%C3" both yield byte 195.
+;
+; ---- ERROR CASES (URL-DECODE-ERROR sentinel) ----------------------
+;
+;   - `%` not followed by 2 hex digits  (e.g. "%2", "%2G", "%G2")
+;
+; The sentinel is a substrate-resident NodeID; callers detect via
+; (value_eq result URL-DECODE-ERROR).
+;
+; Cost is O(n) over input length: encode walks head/tail once,
+; decode walks one character at a time and skips the 2 hex digits
+; after each `%`. No quadratic terms.
+
+(do
+    ;; --- URL-DECODE-ERROR sentinel ----------------------------------
+    ;; Substrate-resident NodeID. pkg=1, level=2, type=99 stays in the
+    ;; user-channel range; inst=1771 reserves a slot in the URL family
+    ;; (HEX-DECODE-ERROR sits at 1770, one breath earlier in the body).
+    (let URL-DECODE-ERROR (make_nodeid 1 2 99 1771))
+
+    ;; --- list utility ----------------------------------------------
+    (defn url-nil? (xs) (eq (len xs) 0))
+
+    ;; --- UPPERCASE HEX HELPER ---------------------------------------
+    ;; Map a 4-bit nibble (0..15) to its uppercase hex character.
+    ;;   0..9  → ASCII 48..57 ('0'..'9')
+    ;;   10..15 → ASCII 65..70 ('A'..'F')
+    (defn url-nibble-to-hex (n)
+        (if (lt n 10)
+            (byte_to_str (add n 48))
+            (byte_to_str (add n 55))))
+
+    ;; Render a byte (0..255) as a "%XX" 3-character escape.
+    (defn url-byte-to-escape (b)
+        (str_concat "%"
+            (str_concat (url-nibble-to-hex (div b 16))
+                        (url-nibble-to-hex (mod b 16)))))
+
+    ;; --- UNRESERVED PREDICATE (RFC 3986 §2.3) -----------------------
+    ;; Returns true iff the byte passes through unescaped.
+    (defn url-unreserved? (b)
+        (if (and (ge b 65) (le b 90))   true     ; A-Z
+            (if (and (ge b 97) (le b 122)) true  ; a-z
+                (if (and (ge b 48) (le b 57)) true ; 0-9
+                    (if (eq b 45) true           ; '-'
+                        (if (eq b 46) true       ; '.'
+                            (if (eq b 95) true   ; '_'
+                                (if (eq b 126) true ; '~'
+                                    false))))))))
+
+    ;; Emit one byte: either pass-through or "%XX".
+    (defn url-emit-byte (b)
+        (if (url-unreserved? b)
+            (byte_to_str b)
+            (url-byte-to-escape b)))
+
+    ;; --- ENCODE LOOP -------------------------------------------------
+    ;; Walk the byte-list head-to-tail, accumulating the output string.
+    (defn url-encode-loop (bs acc)
+        (if (url-nil? bs) acc
+            (url-encode-loop (tail bs)
+                (str_concat acc (url-emit-byte (head bs))))))
+
+    ;; --- THE ENCODE ENTRY POINT -------------------------------------
+    (defn url-encode (bytes)
+        (url-encode-loop bytes ""))
+
+    ;; --- DECODE: 1 char → 4-bit value -------------------------------
+    ;; Returns 0..15 for a valid hex char, or -1 for any other byte.
+    ;; ASCII codes:
+    ;;   '0'..'9' = 48..57
+    ;;   'A'..'F' = 65..70
+    ;;   'a'..'f' = 97..102
+    (defn url-hex-value (c)
+        (if (and (ge c 48) (le c 57))
+            (sub c 48)
+            (if (and (ge c 65) (le c 70))
+                (add (sub c 65) 10)
+                (if (and (ge c 97) (le c 102))
+                    (add (sub c 97) 10)
+                    (sub 0 1)))))
+
+    ;; Read the i-th byte of string s as an int code.
+    (defn url-byte-at (s i)
+        (ord (substring s i (add i 1))))
+
+    ;; --- DECODE LOOP -------------------------------------------------
+    ;; Builds output bytes in REVERSE (cheap cons), reverses once at
+    ;; the entry point. On any malformed escape ('%' not followed by
+    ;; two hex digits, or a `%` near the end with no room for two
+    ;; more chars), returns the sentinel directly; callers detect via
+    ;; value_eq against URL-DECODE-ERROR.
+    (defn url-decode-loop (s i s-len acc)
+        (if (ge i s-len) acc
+            (do
+                (let b (url-byte-at s i))
+                (if (eq b 37)   ; '%'
+                    (if (gt (add i 2) (sub s-len 1))
+                        ;; not enough chars for two hex digits
+                        URL-DECODE-ERROR
+                        (do
+                            (let hi (url-hex-value (url-byte-at s (add i 1))))
+                            (let lo (url-hex-value (url-byte-at s (add i 2))))
+                            (if (or (eq hi (sub 0 1)) (eq lo (sub 0 1)))
+                                URL-DECODE-ERROR
+                                (url-decode-loop s (add i 3) s-len
+                                    (cons (add (mul hi 16) lo) acc)))))
+                    ;; Non-'%' byte — pass through as-is.
+                    (url-decode-loop s (add i 1) s-len
+                        (cons b acc))))))
+
+    ;; Reverse a list (decode loop builds in reverse for cheap cons;
+    ;; flip once at the end so the natural byte order is restored).
+    (defn url-reverse-into (xs acc)
+        (if (url-nil? xs) acc
+            (url-reverse-into (tail xs) (cons (head xs) acc))))
+
+    ;; --- THE DECODE ENTRY POINT -------------------------------------
+    ;; Returns either a byte-list, OR the URL-DECODE-ERROR NodeID.
+    ;; Callers distinguish via:
+    ;;   (value_eq result URL-DECODE-ERROR)
+    (defn url-decode (s)
+        (do
+            (let result (url-decode-loop s 0 (str_len s) (list)))
+            (if (value_eq result URL-DECODE-ERROR)
+                URL-DECODE-ERROR
+                (url-reverse-into result (list))))))
