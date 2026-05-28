@@ -1,0 +1,118 @@
+; cell-registry.fk — opt-in addressing directory for cells (OSI L3).
+;
+; preludes: form-stdlib/channel.fk
+;
+; A REGISTRY is a substrate-resident CHANNEL-V0 (channel.fk) whose
+; messages are REGISTRATION Recipes. A cell that wants to be reachable
+; by name + capability appends a REGISTRATION; cells that don't
+; register stay private. Discovery is by reading the registry channel
+; — the cell-graph emerges from the registrations that exist.
+;
+; The OSI mapping this carries:
+;
+;   L1 Physical    — sockets, file I/O, /dev/urandom (kernel primitives)
+;   L2 Data Link   — channel.fk (CHANNEL-V0/MSG framing, append-and-poll)
+;   L3 Network     — THIS FILE (addressing, capability lookup)
+;   L4 Transport   — integrity fingerprints over packets (toy today)
+;   L5 Session     — channel-query.fk RESPONSE.correlation
+;   L6 Presentation— Form Recipes; substrate-as-codebook; EXTERNAL-URI
+;   L7 Application — channel-query.fk verbs (about, recipe, fetch, ...)
+;
+; A cell's REGISTRATION carries:
+;
+;   identity     — public fingerprint (from 19-novel-state-share's
+;                  hash-of-secret-seed pattern; ed25519 when crypto lands)
+;   channel-path — where to send queries (file path or socket addr)
+;   capabilities — list of verb-strings the cell handles
+;
+; Registration is intentionally minimal. Capabilities lists let askers
+; route by what cells DO, not just by name — a body where 100 cells
+; expose `about` for different topics still has one query path: query
+; the registry for cells handling `about`, then route to each.
+
+(let REGISTRATION (make_nodeid 1 2 99 1720))
+(let CAPABILITIES (make_nodeid 1 2 99 1721))
+
+;; --- helpers ------------------------------------------------------
+
+(defn cr-nil? (xs) (eq (len xs) 0))
+(defn cr-nth (xs i)
+    (if (eq i 0) (head xs) (cr-nth (tail xs) (sub i 1))))
+
+(defn cr-append (xs ys)
+    (if (cr-nil? xs) ys (cons (head xs) (cr-append (tail xs) ys))))
+
+(defn cr-strings-of (vs)
+    (if (cr-nil? vs) (list)
+        (cons (intern_trivial_string (head vs))
+              (cr-strings-of (tail vs)))))
+
+;; --- registration construction ------------------------------------
+
+;; (cr-registration identity-int channel-path-str verb-strings)
+;;   → REGISTRATION Recipe.
+(defn cr-registration (identity channel-path verbs)
+    (intern_node REGISTRATION
+        (list (intern_trivial_int identity)
+              (intern_trivial_string channel-path)
+              (intern_node CAPABILITIES (cr-strings-of verbs)))))
+
+;; --- register-cell -------------------------------------------------
+;; (register-cell registry-path identity channel-path verb-strings)
+;;   → message-count after the append.
+;;
+;; The cell takes the irreversible step of becoming addressable. It
+;; can later be UNREGISTERED by writing a REGISTRATION whose
+;; capabilities list is empty (the convention this body uses).
+(defn register-cell (registry-path identity channel-path verbs)
+    (channel-append registry-path
+        (channel-message (cr-registration identity channel-path verbs))))
+
+;; --- read registrations -------------------------------------------
+
+(defn cr-msgs-to-regs (msgs acc)
+    (if (cr-nil? msgs) acc
+        (cr-msgs-to-regs (tail msgs)
+            (cr-append acc (list (channel-msg-payload (head msgs)))))))
+
+;; (lookup-cells registry-path) → list of REGISTRATION Recipes.
+;; Returns every registration the registry currently holds; callers
+;; can filter by identity, channel, or capability.
+(defn lookup-cells (registry-path)
+    (cr-msgs-to-regs (channel-read registry-path) (list)))
+
+;; --- registration accessors ---------------------------------------
+
+;; reg-identity reg → int (the public identity fingerprint).
+(defn reg-identity (reg)
+    (node_inst (cr-nth (node_children reg) 0)))
+
+;; reg-channel-path reg → string (where to route queries).
+(defn reg-channel-path (reg)
+    (node_inst (cr-nth (node_children reg) 1)))
+
+;; reg-capabilities reg → list of verb-NodeIDs.
+(defn reg-capabilities (reg)
+    (node_children (cr-nth (node_children reg) 2)))
+
+;; --- capability lookup --------------------------------------------
+
+;; verb-in-caps? cap-list verb-str → 1 if any cap matches verb-str.
+(defn cr-verb-in-caps? (caps verb-id)
+    (if (cr-nil? caps) 0
+        (if (eq (node_inst (head caps)) verb-id) 1
+            (cr-verb-in-caps? (tail caps) verb-id))))
+
+;; (find-by-capability registry-path verb-string)
+;;   → list of REGISTRATIONs whose capabilities include verb-string.
+(defn find-by-capability (registry-path verb)
+    (do
+        (let verb-id (node_inst (intern_trivial_string verb)))
+        (cr-filter-caps (lookup-cells registry-path) verb-id (list))))
+
+(defn cr-filter-caps (regs verb-id acc)
+    (if (cr-nil? regs) acc
+        (if (eq (cr-verb-in-caps? (reg-capabilities (head regs)) verb-id) 1)
+            (cr-filter-caps (tail regs) verb-id
+                            (cr-append acc (list (head regs))))
+            (cr-filter-caps (tail regs) verb-id acc))))
