@@ -1,0 +1,65 @@
+; list-and-let.fk — JIT compiler coverage for RBasic.LIST + chained let-bindings.
+;
+; Two compile-time arms in form-kernel-ts/src/compiler.ts now emit
+; direct JS (no walker fallback):
+;
+;   • RBasic.LIST   — (list a b c) compiles to a Value{kind:"list", ...}
+;                     constructed inline. Items are boxed at the boundary,
+;                     so raw JS numbers / bools become typed Values.
+;
+;   • Chained LETs  — (let x ...) (let y ...) (... x y ...) in a do-block
+;                     declares JS `const` bindings at IIFE-statement level.
+;                     Later siblings reference the JS variable directly
+;                     instead of falling through to frame.lookup.
+;
+; Sibling parity: Rust and Go walk the recipe (their JIT backends are
+; honest stubs). TS may walk or JIT-compile depending on whether
+; jit_compile succeeds. Either way the OUTPUT must match three-way.
+;
+; We avoid printing list Values directly — the three kernels render lists
+; with different separators (Go/Rust = ", ", TS = " ") and that's an
+; orthogonal sibling-parity concern. We probe the list via len + first to
+; verify construction crossed correctly.
+
+(do
+    ;; ---- chained let-bindings, all visible to later siblings ----------
+    (let a 7)
+    (let b 11)
+    (let c (add a b))                 ; 18 — uses two earlier lets
+    (let d (mul c 2))                 ; 36 — uses one earlier let
+    (print "let-chain:" a b c d)      ; 7 11 18 36
+
+    ;; ---- list construction with let-bound elements --------------------
+    (let xs (list a b c d))
+    (print "list-len:" (len xs))      ; 4
+    (print "list-head:" (head xs))    ; 7
+
+    ;; ---- defn over lets; body wraps multiple forms in (do ...) ------
+    (defn sum-pair (x y)
+        (do
+            (let s (add x y))
+            (mul s 2)))
+    (let p1 (sum-pair a b))           ; (7+11)*2 = 36
+    (let p2 (sum-pair c d))           ; (18+36)*2 = 108
+    (print "sum-pair-results:" p1 p2)
+
+    ;; ---- request JIT compile of sum-pair; subsequent calls take the
+    ;;      compiled path in TS, the walker in Rust/Go. Status is NOT
+    ;;      printed — that's the divergent surface — but the OUTPUT below
+    ;;      must converge three-way.
+    (let compiled (jit_compile "sum-pair"))
+    (print "compile-attempted:" (if (ge compiled 0) 1 0))
+
+    ;; ---- post-JIT calls — same recipe, same answers ------------------
+    (let p3 (sum-pair 100 200))       ; 600
+    (let p4 (sum-pair 1 1))           ; 4
+    (print "post-jit:" p3 p4)
+
+    ;; Verdict: 6 when every assertion holds. Aggregates everything that
+    ;; crossed both new compiler paths.
+    (add (if (eq a 7)   1 0)
+    (add (if (eq d 36)  1 0)
+    (add (if (eq (len xs) 4) 1 0)
+    (add (if (eq p1 36) 1 0)
+    (add (if (eq p2 108) 1 0)
+         (if (eq p3 600) 1 0)))))))
