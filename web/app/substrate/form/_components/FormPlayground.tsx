@@ -22,6 +22,8 @@ import {
   compilePythonToForm,
   type GrammarLaneId,
 } from "@/lib/form-kernel/grammar-lanes";
+import { XPathDemo } from "./XPathDemo";
+import { ChannelDemo } from "./ChannelDemo";
 
 type NodeIDOut = { package: number; level: number; type: number; instance: number };
 
@@ -53,7 +55,8 @@ type FormResultOut = {
     | "views"
     | "lattice"
     | "keywords"
-    | "vocabulary";
+    | "vocabulary"
+    | "value";
   node_id?: NodeIDOut | null;
   cell?: CellOut | null;
   view?: CellViewOut | null;
@@ -62,13 +65,19 @@ type FormResultOut = {
   lattice?: Record<string, number> | null;
   keywords?: string[] | null;
   vocabulary?: { recipes: Record<string, number>; blueprints: Record<string, number> } | null;
+  value?: unknown;
 };
+
+type EvalMode = "evaluate" | "run";
 
 type Example = {
   label: string;
   expr: string;
   // Names the unique Form feature this example exercises.
   showcases: string;
+  // "run" executes through the runtime (defn, recipe introspection,
+  // filesystem facts). Default "evaluate" interns to a Recipe NodeID.
+  mode?: EvalMode;
 };
 
 type ExampleGroup = {
@@ -423,6 +432,97 @@ const GROUPS: ExampleGroup[] = [
         showcases:
           "Recipe-type counts grouped by RBasic category. Reveals which language layers the body actually circulates through.",
       },
+      {
+        label: "?queries — registered query verbs",
+        expr: "?queries",
+        showcases:
+          "Names every ?<verb> the parser knows. The body's query vocabulary is introspectable; new verbs register via form_queries.register_form_query.",
+      },
+    ],
+  },
+  {
+    heading: "Recipe introspection — meta-circular dispatch",
+    blurb:
+      "Three built-ins let Form code walk Recipe NodeIDs from inside Form. With them, an evaluator written in Form can dispatch on category and recurse on children — the meta-circular gap closed.",
+    examples: [
+      {
+        label: "category(...) — the recipe's verb",
+        expr: "category(@memory(presences_of_the_field).blueprint)",
+        showcases:
+          "Returns the category NodeID embedded in the serialized row. Form code dispatches on this to know what kind of recipe it's holding.",
+        mode: "run",
+      },
+      {
+        label: "nchildren(...) — arity",
+        expr: "nchildren(@memory(presences_of_the_field).blueprint)",
+        showcases:
+          "How many children the composite recipe carries. Zero for trivial leaves.",
+        mode: "run",
+      },
+      {
+        label: "child(..., n) — descend one level",
+        expr: "child(@memory(presences_of_the_field).blueprint, 0)",
+        showcases:
+          "Returns the n-th child Recipe NodeID. Composes with category and nchildren to walk the holographic tree.",
+        mode: "run",
+      },
+    ],
+  },
+  {
+    heading: "Functions, recursion, closures",
+    blurb:
+      "defn binds a name in the current frame; closures capture the defining frame; recursion works without a separate rec form. Form is Turing-complete.",
+    examples: [
+      {
+        label: "defn + immediate call",
+        expr: "do { defn double(x) = x * 2; double(7) }",
+        showcases:
+          "A function defined and called in one block. The closure carries params + body + the lexical frame.",
+        mode: "run",
+      },
+      {
+        label: "Recursion — factorial",
+        expr: "do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }",
+        showcases:
+          "The closure is registered in the defining frame before its body evaluates — recursion works without rec.",
+        mode: "run",
+      },
+      {
+        label: "Higher-order — map",
+        expr: "map(fn(x) => x * x, [1, 2, 3, 4])",
+        showcases:
+          "Built-in higher-order: every Python-callable built-in accepts a Form Closure too. List ops compose with user functions.",
+        mode: "run",
+      },
+    ],
+  },
+  {
+    heading: "Filesystem facts — predicates the body asserts",
+    blurb:
+      "Form predicates that read the repository's structural reality. Spec recipes use these in done_when items; the substrate caches the answer once evaluated.",
+    examples: [
+      {
+        label: "file_exists",
+        expr: 'file_exists("CLAUDE.md")',
+        showcases:
+          "Boolean — is this path tracked in the body? Useful as a leaf predicate inside larger Form expressions.",
+        mode: "run",
+      },
+      {
+        label: "file_contains",
+        expr: 'file_contains("CLAUDE.md", "structural composition discipline")',
+        showcases:
+          "Boolean substring search. Pairs with file_exists for spec assertions about content.",
+        mode: "run",
+      },
+      {
+        label: "symbol_in_file",
+        expr:
+          'symbol_in_file("api/app/services/substrate/form_runtime.py", "_builtin_category")',
+        showcases:
+          "Heuristic check that a named symbol lives in a file. Tighter than file_contains for code shape assertions.",
+        mode: "run",
+      },
     ],
   },
 ];
@@ -574,6 +674,35 @@ function ResultPanel({ result }: { result: FormResultOut }) {
           data={result.vocabulary.blueprints}
           label="Blueprints by BBasic category"
         />
+      </div>
+    );
+  }
+
+  if (result.kind === "value") {
+    const v = result.value;
+    const looksLikeNodeId =
+      v !== null &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      "package" in (v as Record<string, unknown>) &&
+      "instance" in (v as Record<string, unknown>);
+
+    return (
+      <div className="rounded border border-stone-800/40 bg-stone-900/30 p-3">
+        <div className="text-xs uppercase tracking-wide text-stone-500 mb-1">
+          Runtime value
+        </div>
+        {looksLikeNodeId ? (
+          <div className="font-mono text-amber-300/90">
+            {formatNodeId(v as NodeIDOut)}
+          </div>
+        ) : typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? (
+          <div className="font-mono text-amber-300/90">{String(v)}</div>
+        ) : (
+          <pre className="text-xs text-stone-400 overflow-auto whitespace-pre-wrap">
+            {JSON.stringify(v, null, 2)}
+          </pre>
+        )}
       </div>
     );
   }
@@ -1040,6 +1169,7 @@ export function FormPlayground() {
   const [nextMove, setNextMove] = useState(
     starter ? "Run it, then replace .blueprint with .ctor or prepend ?equivalent." : firstQuest.nextMove,
   );
+  const [mode, setMode] = useState<EvalMode>("evaluate");
   const [evaluating, setEvaluating] = useState(false);
   const [result, setResult] = useState<FormResultOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1048,6 +1178,7 @@ export function FormPlayground() {
     setExpression(quest.expr);
     setActiveShowcase(quest.showcases);
     setNextMove(quest.nextMove);
+    setMode("evaluate");
     setResult(null);
     setError(null);
   };
@@ -1056,6 +1187,7 @@ export function FormPlayground() {
     setExpression(ex.expr);
     setActiveShowcase(ex.showcases);
     setNextMove("Edit one symbol, run it again, and compare the returned shape.");
+    setMode(ex.mode ?? "evaluate");
     setResult(null);
     setError(null);
   };
@@ -1064,6 +1196,7 @@ export function FormPlayground() {
     setExpression(expr);
     setActiveShowcase(showcases);
     setNextMove(next);
+    setMode("evaluate");
     setResult(null);
     setError(null);
   };
@@ -1077,7 +1210,7 @@ export function FormPlayground() {
       const res = await fetch("/api/substrate/form", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expression }),
+        body: JSON.stringify({ expression, mode }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1161,8 +1294,44 @@ export function FormPlayground() {
               className="inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-5 py-2.5 text-sm font-medium text-amber-300/90 transition-all hover:border-amber-500/30 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Play className="h-4 w-4" aria-hidden="true" />
-              {evaluating ? "Evaluating..." : "Evaluate"}
+              {evaluating
+                ? mode === "run"
+                  ? "Running..."
+                  : "Evaluating..."
+                : mode === "run"
+                  ? "Run"
+                  : "Evaluate"}
             </button>
+            <div
+              role="group"
+              aria-label="Evaluation mode"
+              className="inline-flex items-center rounded-xl border border-stone-800/60 bg-stone-950/35 p-1 text-xs"
+            >
+              <button
+                type="button"
+                onClick={() => setMode("evaluate")}
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
+                  mode === "evaluate"
+                    ? "bg-amber-500/15 text-amber-200"
+                    : "text-stone-500 hover:text-stone-200"
+                }`}
+                title="Intern the expression to a Recipe NodeID (default)"
+              >
+                Intern
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("run")}
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
+                  mode === "run"
+                    ? "bg-teal-500/15 text-teal-200"
+                    : "text-stone-500 hover:text-stone-200"
+                }`}
+                title="Execute through the runtime — returns computed value"
+              >
+                Run
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -1173,7 +1342,7 @@ export function FormPlayground() {
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
               Reset
             </button>
-            <span className="text-xs text-stone-600">⌘↩ to evaluate</span>
+            <span className="text-xs text-stone-600">⌘↩ to {mode === "run" ? "run" : "evaluate"}</span>
           </div>
 
           {nextMove && (
@@ -1193,6 +1362,10 @@ export function FormPlayground() {
       </section>
 
       <LocalKernelPanel />
+
+      <XPathDemo />
+
+      <ChannelDemo />
 
       <GrammarLanesPanel onLoadExpression={loadGeneratedExpression} />
 
@@ -1227,6 +1400,81 @@ export function FormPlayground() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="space-y-4" aria-labelledby="beyond-evaluator-heading">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-stone-500">Beyond the evaluator</p>
+          <h2 id="beyond-evaluator-heading" className="mt-2 text-xl font-light text-stone-200">
+            Capabilities that live outside a single-expression query.
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-stone-500">
+            These surfaces are too rich to land in one textarea call. Each one ships in the body
+            and is documented in form-language.md — open the link to read the full teaching.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "Form standard library",
+              blurb:
+                "form/form-stdlib/ — codec, parser, emit, tracer, recipe-distance, encoders, grammars. Substrate-native library on top of the kernel.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#the-standard-library--formform-stdlib",
+            },
+            {
+              title: "Universal translator",
+              blurb:
+                "Seven Keys (forces, elements, DNA, music, primes, galactic forms, consciousness) as BDomain rows. The equivalence kernel IS the translator.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#universal-translator--seven-keys-one-substrate",
+            },
+            {
+              title: "Form as 7-layer protocol",
+              blurb:
+                "Content-addressing collapses L2 framing, L6 presentation, L7 application into intern_node. Channels are L4 transport.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#form-as-7-layer-protocol--content-addressing-collapses-three-layers",
+            },
+            {
+              title: "Multi-target codegen",
+              blurb:
+                "Substrate as MLIR — one Recipe, many target backends (JS, WebGPU, CUDA, Metal, WASM). TS-to-JS shipped today.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#multi-target-codegen--substrate-as-mlir",
+            },
+            {
+              title: "JIT — memoization shipped",
+              blurb:
+                "walk-cached / walk-cache-clear / walk-cache-size in the Go and Rust kernels. Progression toward typed annotations and native code.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#jit--memoization-shipped-native-codegen-the-next-stage",
+            },
+            {
+              title: "Cross-kernel conformance",
+              blurb:
+                "Five vectors (agent questions, core built-ins, infix, control flow, loop/mutation) across Python, Rust, Go, TypeScript.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#cross-kernel-conformance--python-rust-go-typescript",
+            },
+            {
+              title: "Self-hosting path",
+              blurb:
+                "bootstrap_full_self_host(session) registers 9 keywords + 13 operators as substrate-resident rules. prefer_registered=True flips the parser.",
+              href: "https://github.com/seeker71/Coherence-Network/blob/main/docs/coherence-substrate/form-language.md#the-path-from-bootstrap-to-self-hosting",
+            },
+          ].map((card) => (
+            <Link
+              key={card.title}
+              href={card.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-stone-800/50 bg-stone-900/25 p-4 transition-colors hover:border-amber-500/30 hover:bg-stone-900/40"
+            >
+              <div className="text-sm font-medium text-stone-200">{card.title}</div>
+              <p className="mt-1 text-xs leading-relaxed text-stone-500">{card.blurb}</p>
+              <div className="mt-2 inline-flex items-center gap-1 text-xs text-amber-300/70">
+                Read in form-language.md
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
+              </div>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <div className="rounded-xl border border-stone-800/50 bg-stone-900/25 p-4 text-sm leading-relaxed text-stone-400">

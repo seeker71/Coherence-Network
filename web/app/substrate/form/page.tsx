@@ -28,7 +28,8 @@ export default function FormPlaygroundPage() {
         <h1 className="text-3xl font-light tracking-tight text-stone-100 md:text-5xl">Ask the lattice one real question.</h1>
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-base">
           Form is the substrate's native query language. Pick a starter question, evaluate it, then change one word
-          and watch how the returned shape changes.
+          and watch how the returned shape changes. Intern mode returns the Recipe NodeID; Run mode executes through
+          the runtime — recipe introspection, functions and recursion, filesystem facts.
         </p>
 
         <p className="text-sm text-muted-foreground">
