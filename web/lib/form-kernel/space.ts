@@ -28,6 +28,7 @@ import {
   Kernel,
   Level,
   RBasic,
+  RBlock,
   RCmp,
   RMath,
   Trace,
@@ -144,11 +145,30 @@ export function blueprintColor(n: NodeID): RGB {
 
 // --- scene types -------------------------------------------------------------
 
+// dataType — the leaf's trivial flavor, used to pick geometry + surface so an
+// int reads as a faceted gem, a float as a droplet, a string as a tablet, a
+// bool as a coin, null as a hollow shell. Recipes carry "" (their shape is the
+// room, not the object).
+export type DataType =
+  | "int"
+  | "float"
+  | "string"
+  | "bool"
+  | "null"
+  | "";
+
+// container — recipes whose children have a known logical layout. A LIST is an
+// ordered spine; a LET binding is a (name → value) pair; a BLOCK/DO is a
+// sequence of statements. Other recipes leave children on the depth ring.
+export type Container = "list" | "binding" | "sequence" | null;
+
 export interface SpaceCell {
   id: string; // nodeKey — stable identity
   node: NodeID;
   kind: "recipe" | "leaf";
   arm: string; // RBasic arm name (recipes) or trivial type name (leaves)
+  dataType: DataType; // leaf flavor — drives object geometry + surface
+  container: Container; // logical child layout for known blueprint shapes
   label: string; // short human label shown over the room / on the window
   value?: string; // leaf rendered value
   color: RGB; // instance color (water — this exact cell)
@@ -165,6 +185,7 @@ export interface KernelSpace {
   root: string;
   cells: Record<string, SpaceCell>;
   order: string[]; // discovery order (stable, deterministic)
+  parentOf: Record<string, string | null>; // first-seen parent — drill pop-out
   trace: LocalFormTrace;
   armHeat: Record<string, number>; // arm name → normalized walk share
   result: string;
@@ -217,6 +238,39 @@ function leafLabel(k: Kernel, n: NodeID): { label: string; isName: boolean } {
     /* fall through */
   }
   return { label: TRIV_NAME[n.type] ?? `t${n.type}`, isName: false };
+}
+
+function dataTypeOf(n: NodeID): DataType {
+  switch (n.type) {
+    case Triv.INT:
+    case Triv.INT64:
+    case Triv.INT8:
+    case Triv.INT16:
+    case Triv.UINT8:
+    case Triv.UINT16:
+    case Triv.UINT32:
+    case Triv.UINT64:
+      return "int";
+    case Triv.FLOAT32:
+    case Triv.FLOAT64:
+      return "float";
+    case Triv.STRING:
+      return "string";
+    case Triv.BOOL:
+      return "bool";
+    case Triv.NULL:
+      return "null";
+    default:
+      return "";
+  }
+}
+
+function containerOf(category: NodeID): Container {
+  if (category.type === RBasic.LIST) return "list";
+  if (category.type === RBasic.BLOCK) {
+    return category.inst === RBlock.LET ? "binding" : "sequence";
+  }
+  return null;
 }
 
 function armLabel(category: NodeID): string {
@@ -317,16 +371,18 @@ export function buildKernelSpace(source: string): KernelSpace {
   // than a duplicated room.
   const cells: Record<string, SpaceCell> = {};
   const order: string[] = [];
-  const queue: Array<{ node: NodeID; depth: number }> = [
-    { node: root, depth: 0 },
+  const parentOf: Record<string, string | null> = { [nodeKey(root)]: null };
+  const queue: Array<{ node: NodeID; depth: number; parent: string | null }> = [
+    { node: root, depth: 0, parent: null },
   ];
   let recipes = 0;
   let leaves = 0;
   let maxDepth = 0;
 
   while (queue.length > 0) {
-    const { node, depth } = queue.shift()!;
+    const { node, depth, parent } = queue.shift()!;
     const id = nodeKey(node);
+    if (parentOf[id] === undefined) parentOf[id] = parent;
     if (cells[id]) continue;
 
     maxDepth = Math.max(maxDepth, depth);
@@ -341,6 +397,8 @@ export function buildKernelSpace(source: string): KernelSpace {
         node,
         kind: "leaf",
         arm: TRIV_NAME[node.type] ?? `t${node.type}`,
+        dataType: dataTypeOf(node),
+        container: null,
         label,
         value: label,
         color: instanceColor(node),
@@ -365,6 +423,8 @@ export function buildKernelSpace(source: string): KernelSpace {
       node,
       kind: "recipe",
       arm,
+      dataType: "",
+      container: containerOf(recipe.category),
       label: arm,
       color: instanceColor(node),
       blueprintColor: blueprintColor(node),
@@ -376,13 +436,14 @@ export function buildKernelSpace(source: string): KernelSpace {
       arity: kids.length,
     };
     order.push(id);
-    for (const c of kids) queue.push({ node: c, depth: depth + 1 });
+    for (const c of kids) queue.push({ node: c, depth: depth + 1, parent: id });
   }
 
   return {
     root: nodeKey(root),
     cells,
     order,
+    parentOf,
     trace,
     armHeat,
     result,
@@ -409,23 +470,62 @@ export function buildKernelSpace(source: string): KernelSpace {
 export interface CellLayout {
   id: string;
   position: readonly [number, number, number];
+  spine: boolean; // true ⇒ a compact object inside a parent's logical layout
+  index: number; // position within the parent's child order (spine ordering)
 }
 
-export function layoutSpace(space: KernelSpace): Record<string, CellLayout> {
-  const depths: Record<number, string[]> = {};
-  for (const id of space.order) {
-    const d = space.cells[id]!.depth;
-    (depths[d] ??= []).push(id);
-  }
+// layoutSpace — place the subtree rooted at `rootId` (default the whole space).
+// Re-rooting is the drill mechanic: entering a recipe lays out only its subtree,
+// so a detail becomes the world. Ring cells (ordinary recipes) sit on depth
+// rings along the into-axis; the children of a container cell (list / binding /
+// sequence) instead lay out as an ordered spine in front of their parent, so a
+// list reads as a list and a binding reads as name → value.
+export function layoutSpace(
+  space: KernelSpace,
+  rootId: string = space.root,
+): Record<string, CellLayout> {
   const out: Record<string, CellLayout> = {};
-  const ringGap = 16; // distance between depth rings along Z
+  if (!space.cells[rootId]) return out;
+
+  // BFS from rootId — depth + traversal parent over the static child edges.
+  const depthOf: Record<string, number> = { [rootId]: 0 };
+  const tParent: Record<string, string | null> = { [rootId]: null };
+  const orderBfs: string[] = [];
+  const seen = new Set<string>([rootId]);
+  const q: string[] = [rootId];
+  while (q.length) {
+    const id = q.shift()!;
+    orderBfs.push(id);
+    const cell = space.cells[id];
+    if (!cell) continue;
+    for (const c of cell.childIds) {
+      if (seen.has(c) || !space.cells[c]) continue;
+      seen.add(c);
+      depthOf[c] = (depthOf[id] ?? 0) + 1;
+      tParent[c] = id;
+      q.push(c);
+    }
+  }
+
+  const parentContainerOf = (id: string): Container => {
+    const p = tParent[id];
+    return p != null ? (space.cells[p]?.container ?? null) : null;
+  };
+  const isSpine = (id: string) => parentContainerOf(id) != null;
+
+  // Ring cells — reachable, not laid out as a spine child. Depth → Z ring.
+  const ringByDepth: Record<number, string[]> = {};
+  for (const id of orderBfs) {
+    if (isSpine(id)) continue;
+    (ringByDepth[depthOf[id] ?? 0] ??= []).push(id);
+  }
+  const ringGap = 16;
   const radiusBase = 9;
-  for (const [depthStr, ids] of Object.entries(depths)) {
-    const depth = Number(depthStr);
-    const z = -depth * ringGap;
+  for (const [dStr, ids] of Object.entries(ringByDepth)) {
+    const z = -Number(dStr) * ringGap;
     const n = ids.length;
     if (n === 1) {
-      out[ids[0]!] = { id: ids[0]!, position: [0, 0, z] };
+      out[ids[0]!] = { id: ids[0]!, position: [0, 0, z], spine: false, index: 0 };
       continue;
     }
     const radius = radiusBase + n * 1.2;
@@ -434,8 +534,34 @@ export function layoutSpace(space: KernelSpace): Record<string, CellLayout> {
       out[id] = {
         id,
         position: [Math.cos(a) * radius, Math.sin(a) * (radius * 0.35), z],
+        spine: false,
+        index: i,
       };
     });
   }
+
+  // Spine children — ordered line in front of and below their container parent,
+  // in the exact child order the recipe carries. BFS order means a parent is
+  // already placed before we lay out its children (lists can nest in lists).
+  const spacing = 3.4;
+  for (const parentId of orderBfs) {
+    const parent = space.cells[parentId];
+    if (!parent || parent.container == null) continue;
+    const base = out[parentId]?.position;
+    if (!base) continue;
+    const kids = parent.childIds.filter((c) => seen.has(c));
+    const n = kids.length;
+    kids.forEach((cid, i) => {
+      if (out[cid]) return;
+      const offset = (i - (n - 1) / 2) * spacing;
+      out[cid] = {
+        id: cid,
+        position: [base[0] + offset, base[1] - 4.6, base[2] + 4],
+        spine: true,
+        index: i,
+      };
+    });
+  }
+
   return out;
 }

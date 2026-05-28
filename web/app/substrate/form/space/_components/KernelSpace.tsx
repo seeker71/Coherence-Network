@@ -136,8 +136,136 @@ function GasHaze({ color }: { color: THREE.Color }) {
 }
 
 // ---------------------------------------------------------------------------
-// Room — one recipe (or leaf). The core mesh is the cell; the box frame is
-// its boundary. When focused, the core wears the lattice framebuffer skin.
+// Procedural normal map — a cheap value-noise bump shared across leaf objects.
+// Different data types apply it at different normalScale so a string reads as
+// papery, a gem as crisp, a droplet as nearly smooth: bump-as-data-type.
+// ---------------------------------------------------------------------------
+
+function makeNoiseNormalMap(size = 64): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  const h = (x: number, y: number) => {
+    const xi = (x + size) % size;
+    const yi = (y + size) % size;
+    let n = (Math.imul(xi, 374761393) + Math.imul(yi, 668265263)) >>> 0;
+    n = (n ^ (n >>> 13)) >>> 0;
+    n = Math.imul(n, 1274126177) >>> 0;
+    return (n % 1000) / 1000;
+  };
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = h(x - 1, y) - h(x + 1, y);
+      const ny = h(x, y - 1) - h(x, y + 1);
+      const nz = 1;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      const off = (y * size + x) * 4;
+      data[off] = ((nx / len) * 0.5 + 0.5) * 255;
+      data[off + 1] = ((ny / len) * 0.5 + 0.5) * 255;
+      data[off + 2] = ((nz / len) * 0.5 + 0.5) * 255;
+      data[off + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// LeafObject — a trivial value rendered as its data type's logical body.
+//   int    → faceted metallic gem (a die / crystal of magnitude)
+//   float  → smooth glassy droplet (continuous, liquid)
+//   string → papery tablet (text rests on its face)
+//   bool   → a coin, green/red by truth
+//   null   → a hollow wireframe shell (present but empty)
+function LeafObject({
+  cell,
+  normalMap,
+}: {
+  cell: SpaceCell;
+  normalMap: THREE.Texture;
+}) {
+  const color = useMemo(() => {
+    if (cell.dataType === "bool") {
+      return new THREE.Color(cell.value === "true" ? "#3ddc84" : "#ff5470");
+    }
+    return rgb(cell.color);
+  }, [cell.dataType, cell.value, cell.color]);
+
+  switch (cell.dataType) {
+    case "float":
+      return (
+        <mesh scale={[1, 0.85, 1]}>
+          <sphereGeometry args={[0.82, 28, 28]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={0.3}
+            metalness={0.1}
+            roughness={0.05}
+            normalMap={normalMap}
+            normalScale={new THREE.Vector2(0.12, 0.12)}
+          />
+        </mesh>
+      );
+    case "string":
+      return (
+        <mesh>
+          <boxGeometry args={[1.7, 1.0, 0.22]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={0.22}
+            metalness={0.0}
+            roughness={0.95}
+            normalMap={normalMap}
+            normalScale={new THREE.Vector2(1.3, 1.3)}
+          />
+        </mesh>
+      );
+    case "bool":
+      return (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.8, 0.8, 0.24, 28]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={0.5}
+            metalness={0.6}
+            roughness={0.35}
+          />
+        </mesh>
+      );
+    case "null":
+      return (
+        <mesh>
+          <octahedronGeometry args={[0.95, 0]} />
+          <meshBasicMaterial color={color} wireframe transparent opacity={0.7} />
+        </mesh>
+      );
+    case "int":
+    default:
+      return (
+        <mesh>
+          <icosahedronGeometry args={[0.92, 0]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={0.32}
+            metalness={0.85}
+            roughness={0.25}
+            normalMap={normalMap}
+            normalScale={new THREE.Vector2(0.3, 0.3)}
+            flatShading
+          />
+        </mesh>
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Room — one cell. Ring recipes get a boundary box (their Markov blanket);
+// leaves and spine children render as compact bodies. Double-click a recipe to
+// drill into it (re-root the space at that cell).
 // ---------------------------------------------------------------------------
 
 function Room({
@@ -145,18 +273,23 @@ function Room({
   layout,
   focused,
   fbTexture,
+  normalMap,
   onSelect,
+  onDrill,
 }: {
   cell: SpaceCell;
   layout: CellLayout;
   focused: boolean;
   fbTexture: THREE.Texture;
+  normalMap: THREE.Texture;
   onSelect: (id: string) => void;
+  onDrill: (id: string) => void;
 }) {
   const core = useRef<THREE.Mesh>(null);
   const [hover, setHover] = useState(false);
   const color = rgb(cell.color);
   const isLeaf = cell.kind === "leaf";
+  const compact = isLeaf || layout.spine;
   const emissive = 0.25 + cell.heat * 2.0;
 
   useFrame((_, dt) => {
@@ -164,26 +297,51 @@ function Room({
   });
 
   return (
-    <group position={layout.position as [number, number, number]}>
-      {/* boundary box — the Markov blanket of the cell */}
-      {!isLeaf && (
-        <mesh>
+    <group
+      position={layout.position as [number, number, number]}
+      scale={layout.spine ? 0.82 : 1}
+    >
+      {/* boundary box — the Markov blanket. Faintly solid so the whole room is
+          a forgiving click / double-click target (three skips invisible meshes
+          when raycasting), and the walls read as a room rather than a cage. */}
+      {!compact && (
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(cell.id);
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onDrill(cell.id);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHover(true);
+          }}
+          onPointerOut={() => setHover(false)}
+        >
           <boxGeometry args={[5, 5, 5]} />
-          <meshBasicMaterial visible={false} />
-          <Edges
-            color={focused ? "#ffffff" : color}
-            scale={1}
-            threshold={15}
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={focused ? 0.07 : 0.03}
+            depthWrite={false}
+            side={THREE.BackSide}
           />
+          <Edges color={focused ? "#ffffff" : color} threshold={15} />
         </mesh>
       )}
 
-      {/* core mesh — the cell itself; focused rooms wear the memory skin */}
-      <mesh
-        ref={core}
+      {/* the cell body — leaves by data type, recipes as an icosahedron core */}
+      <group
         onClick={(e) => {
           e.stopPropagation();
           onSelect(cell.id);
+        }}
+        onDoubleClick={(e) => {
+          if (isLeaf) return;
+          e.stopPropagation();
+          onDrill(cell.id);
         }}
         onPointerOver={(e) => {
           e.stopPropagation();
@@ -193,28 +351,30 @@ function Room({
         scale={hover ? 1.12 : 1}
       >
         {isLeaf ? (
-          <boxGeometry args={[1.1, 1.1, 1.1]} />
+          <LeafObject cell={cell} normalMap={normalMap} />
         ) : (
-          <icosahedronGeometry args={[1.2, 1]} />
+          <mesh ref={core}>
+            <icosahedronGeometry args={[1.2, 1]} />
+            {focused ? (
+              <meshStandardMaterial
+                map={fbTexture}
+                emissive={color}
+                emissiveIntensity={emissive}
+                roughness={0.4}
+                metalness={0.2}
+              />
+            ) : (
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={emissive}
+                roughness={0.5}
+                metalness={0.1}
+              />
+            )}
+          </mesh>
         )}
-        {focused && !isLeaf ? (
-          <meshStandardMaterial
-            map={fbTexture}
-            emissive={color}
-            emissiveIntensity={emissive}
-            roughness={0.4}
-            metalness={0.2}
-          />
-        ) : (
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={emissive}
-            roughness={0.5}
-            metalness={0.1}
-          />
-        )}
-      </mesh>
+      </group>
 
       {!isLeaf && <IceCrystal cell={cell} />}
       {cell.isName && <GasHaze color={color} />}
@@ -305,6 +465,41 @@ function Beam({
       </mesh>
     </group>
   );
+}
+
+// ---------------------------------------------------------------------------
+// ContainerSpine — the wire a list / sequence / binding's children rest on, so
+// the logical shape (ordered elements, name → value) reads as itself.
+// ---------------------------------------------------------------------------
+
+function ContainerSpine({
+  points,
+  color,
+}: {
+  points: [number, number, number][];
+  color: THREE.Color;
+}) {
+  if (points.length < 2) return null;
+  return (
+    <Line points={points} color={color} lineWidth={1.5} transparent opacity={0.5} dashed dashScale={3} />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DrillGroup — wraps the subtree and, on each re-root, scales up from small to
+// full. Superliminal's signature: the detail you approached becomes the world.
+// Remounts via `key` so the scale-in replays every drill.
+// ---------------------------------------------------------------------------
+
+function DrillGroup({ children }: { children: React.ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  const s = useRef(0.3);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    s.current += (1 - s.current) * Math.min(1, dt * 3.5);
+    ref.current.scale.setScalar(s.current);
+  });
+  return <group ref={ref}>{children}</group>;
 }
 
 // ---------------------------------------------------------------------------
@@ -401,17 +596,22 @@ function WalkControls() {
 function Scene({
   space,
   layout,
+  viewRootId,
   focusId,
   setFocusId,
+  onDrill,
   mode,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
+  viewRootId: string;
   focusId: string | null;
   setFocusId: (id: string) => void;
+  onDrill: (id: string) => void;
   mode: "orbit" | "walk";
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
+  const normalMap = useMemo(() => makeNoiseNormalMap(), []);
   const controls = useRef<{ target: THREE.Vector3; update: () => void } | null>(
     null,
   );
@@ -421,6 +621,8 @@ function Scene({
     return zs.length ? (Math.min(...zs) + Math.max(...zs)) / 2 : 0;
   }, [layout]);
 
+  // Beams are the doors between rooms. Children laid out as a container spine
+  // ride their parent's spine wire instead, so we skip beams for those.
   const beams = useMemo(() => {
     const out: {
       key: string;
@@ -433,17 +635,37 @@ function Scene({
       const from = layout[cell.id]?.position;
       if (!from) continue;
       for (const childId of cell.childIds) {
-        const to = layout[childId]?.position;
+        const childLayout = layout[childId];
         const child = space.cells[childId];
-        if (!to || !child) continue;
+        if (!childLayout || !child || childLayout.spine) continue;
         out.push({
           key: `${cell.id}->${childId}`,
           from,
-          to,
+          to: childLayout.position,
           color: rgb(child.color),
           heat: child.heat,
         });
       }
+    }
+    return out;
+  }, [space, layout]);
+
+  // Spine wires — one per container cell, threading its children in order.
+  const spines = useMemo(() => {
+    const out: { key: string; points: [number, number, number][]; color: THREE.Color }[] =
+      [];
+    for (const cell of Object.values(space.cells)) {
+      if (cell.container == null) continue;
+      const head = layout[cell.id]?.position;
+      if (!head) continue;
+      const pts: [number, number, number][] = [
+        [head[0], head[1], head[2]],
+      ];
+      for (const childId of cell.childIds) {
+        const cl = layout[childId];
+        if (cl?.spine) pts.push([cl.position[0], cl.position[1], cl.position[2]]);
+      }
+      if (pts.length >= 2) out.push({ key: cell.id, points: pts, color: rgb(cell.color) });
     }
     return out;
   }, [space, layout]);
@@ -459,22 +681,30 @@ function Scene({
 
       <LatticeFloor texture={fbTexture} z={midZ} />
 
-      {beams.map((b) => (
-        <Beam key={b.key} from={b.from} to={b.to} color={b.color} heat={b.heat} />
-      ))}
+      <DrillGroup key={viewRootId}>
+        {beams.map((b) => (
+          <Beam key={b.key} from={b.from} to={b.to} color={b.color} heat={b.heat} />
+        ))}
 
-      {Object.values(space.cells).map((cell) =>
-        layout[cell.id] ? (
-          <Room
-            key={cell.id}
-            cell={cell}
-            layout={layout[cell.id]!}
-            focused={cell.id === focusId}
-            fbTexture={fbTexture}
-            onSelect={setFocusId}
-          />
-        ) : null,
-      )}
+        {spines.map((s) => (
+          <ContainerSpine key={s.key} points={s.points} color={s.color} />
+        ))}
+
+        {Object.values(space.cells).map((cell) =>
+          layout[cell.id] ? (
+            <Room
+              key={cell.id}
+              cell={cell}
+              layout={layout[cell.id]!}
+              focused={cell.id === focusId}
+              fbTexture={fbTexture}
+              normalMap={normalMap}
+              onSelect={setFocusId}
+              onDrill={onDrill}
+            />
+          ) : null,
+        )}
+      </DrillGroup>
 
       {mode === "orbit" ? (
         <>
@@ -502,6 +732,7 @@ export default function KernelSpace() {
   const [running, setRunning] = useState(STARTERS[0]!.source);
   const [mode, setMode] = useState<"orbit" | "walk">("orbit");
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [viewRootId, setViewRootId] = useState<string>("");
 
   const space = useMemo(() => {
     try {
@@ -511,6 +742,7 @@ export default function KernelSpace() {
         root: "",
         cells: {},
         order: [],
+        parentOf: {},
         trace: {
           total_walks: 0,
           arms: [],
@@ -530,30 +762,66 @@ export default function KernelSpace() {
     }
   }, [running]);
 
-  const layout = useMemo(() => layoutSpace(space), [space]);
+  const effectiveRoot = viewRootId && space.cells[viewRootId] ? viewRootId : space.root;
+  const layout = useMemo(
+    () => layoutSpace(space, effectiveRoot),
+    [space, effectiveRoot],
+  );
 
+  // a fresh build re-roots the view and focus at the whole-space root
   useEffect(() => {
+    setViewRootId(space.root);
     if (space.root) setFocusId(space.root);
   }, [space.root]);
 
-  // step focus through discovery order with arrow keys (orbit mode)
+  const drillInto = (id: string) => {
+    if (!space.cells[id]) return;
+    setViewRootId(id);
+    setFocusId(id);
+  };
+  const surface = () => {
+    const parent = space.parentOf[effectiveRoot] ?? space.root;
+    setViewRootId(parent);
+    setFocusId(parent);
+  };
+
+  // visible cells in discovery order — what arrow-stepping cycles through
+  const visibleOrder = useMemo(
+    () => space.order.filter((id) => layout[id]),
+    [space.order, layout],
+  );
+
+  // step focus through the visible cells with arrow keys (orbit mode)
   useEffect(() => {
     if (mode !== "orbit") return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "Tab" && e.code !== "ArrowRight" && e.code !== "ArrowLeft")
+      // Enter drills into the focused cell; Backspace surfaces to its parent.
+      if (e.code === "Enter" && focusId) {
+        e.preventDefault();
+        drillInto(focusId);
         return;
-      if (space.order.length === 0) return;
+      }
+      if (e.code === "Backspace") {
+        e.preventDefault();
+        surface();
+        return;
+      }
+      if (e.code !== "ArrowRight" && e.code !== "ArrowLeft") return;
+      if (visibleOrder.length === 0) return;
       e.preventDefault();
-      const i = focusId ? space.order.indexOf(focusId) : -1;
+      const i = focusId ? visibleOrder.indexOf(focusId) : -1;
       const dir = e.code === "ArrowLeft" ? -1 : 1;
-      const next = (i + dir + space.order.length) % space.order.length;
-      setFocusId(space.order[next]!);
+      const next = (i + dir + visibleOrder.length) % visibleOrder.length;
+      setFocusId(visibleOrder[next]!);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, focusId, space.order]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, focusId, visibleOrder, effectiveRoot]);
 
   const focusCell = focusId ? space.cells[focusId] : undefined;
+  const rootCell = space.cells[effectiveRoot];
+  const drilled = effectiveRoot !== space.root;
   const topArms = [...space.trace.arms]
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
@@ -607,6 +875,16 @@ export default function KernelSpace() {
             {mode === "orbit" ? "Walk mode" : "Orbit mode"}
           </button>
         </div>
+
+        {drilled && (
+          <button
+            onClick={surface}
+            className="flex items-center justify-between rounded border border-amber-400/30 bg-amber-500/5 px-3 py-1.5 text-xs text-amber-200 hover:border-amber-400/60"
+          >
+            <span>▲ surface — inside {rootCell?.arm ?? "cell"}</span>
+            <span className="font-mono text-amber-400/60">@{effectiveRoot}</span>
+          </button>
+        )}
 
         <div className="rounded border border-white/10 bg-black/30 p-2 text-xs text-white/70">
           <div className="flex justify-between">
@@ -680,7 +958,7 @@ export default function KernelSpace() {
 
         <p className="mt-auto text-[10px] text-white/35">
           {mode === "orbit"
-            ? "Orbit: drag to look · scroll to zoom · click a room to fly in · ←/→ to step cells."
+            ? "Orbit: drag to look · scroll to zoom · click to focus · double-click (or Enter) to drill · Backspace to surface · ←/→ step cells."
             : "Walk: click canvas to capture mouse · WASD move · Q/E down/up · Esc to release."}
         </p>
       </div>
@@ -691,14 +969,16 @@ export default function KernelSpace() {
           <Scene
             space={space}
             layout={layout}
+            viewRootId={effectiveRoot}
             focusId={focusId}
             setFocusId={setFocusId}
+            onDrill={drillInto}
             mode={mode}
           />
         </Canvas>
         <div className="pointer-events-none absolute left-3 top-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
           🜂 water = rooms + flowing doors · 🜁 ice = blueprint crystals · 🜄 gas
-          = name haze
+          = name haze · int=gem float=droplet str=tablet bool=coin
         </div>
       </div>
     </div>

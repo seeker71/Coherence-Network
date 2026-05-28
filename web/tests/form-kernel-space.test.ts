@@ -62,6 +62,58 @@ describe("kernel space builder", () => {
     expect(Object.keys(rec.cells).length).toBeGreaterThan(0);
   });
 
+  it("classifies leaf data types and container shapes", () => {
+    const space = buildKernelSpace("(do (let xs (list 70 111 114 109)) (nth xs 0))");
+
+    // the list recipe is a container; its int elements are typed leaves
+    const list = Object.values(space.cells).find((c) => c.container === "list");
+    expect(list).toBeDefined();
+    const ints = Object.values(space.cells).filter((c) => c.dataType === "int");
+    expect(ints.length).toBeGreaterThanOrEqual(4);
+
+    // the do-block is a sequence; the let is a binding
+    expect(
+      Object.values(space.cells).some((c) => c.container === "sequence"),
+    ).toBe(true);
+    expect(
+      Object.values(space.cells).some((c) => c.container === "binding"),
+    ).toBe(true);
+
+    // every cell knows its first-seen parent (root's is null)
+    expect(space.parentOf[space.root]).toBeNull();
+  });
+
+  it("lays list elements out as an ordered spine in front of their parent", () => {
+    const space = buildKernelSpace("(list 1 2 3)");
+    const layout = layoutSpace(space);
+    const list = Object.values(space.cells).find((c) => c.container === "list")!;
+
+    // each element is a spine child, ordered left→right by child index
+    const elems = list.childIds.map((id) => layout[id]).filter(Boolean);
+    expect(elems.length).toBe(3);
+    expect(elems.every((e) => e!.spine)).toBe(true);
+    const xs = elems.map((e) => e!.position[0]);
+    expect(xs[0]).toBeLessThan(xs[1]!);
+    expect(xs[1]).toBeLessThan(xs[2]!);
+  });
+
+  it("re-roots the layout when drilling into a subtree", () => {
+    const space = buildKernelSpace("(add 1 (mul 2 3))");
+    const full = layoutSpace(space);
+    // drill into the inner (mul 2 3)
+    const mul = Object.values(space.cells).find((c) => c.arm.startsWith("MATH ×"))!;
+    const drilled = layoutSpace(space, mul.id);
+
+    // drilled view is a strict subset, and the drill target becomes the origin
+    expect(Object.keys(drilled).length).toBeLessThan(Object.keys(full).length);
+    const p = drilled[mul.id]!.position;
+    expect(p[0]).toBe(0);
+    expect(p[1]).toBe(0);
+    expect(Math.abs(p[2])).toBe(0);
+    // the outer `add` is no longer in view
+    expect(drilled[space.root]).toBeUndefined();
+  });
+
   it("rasterizes the lattice into an RGBA framebuffer surface", () => {
     const space = buildKernelSpace("(add 1 2)");
     const { width, height, rgba } = space.framebuffer;

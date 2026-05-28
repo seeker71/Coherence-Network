@@ -139,6 +139,18 @@ visualizer colors by NodeID category (blueprint / instance / level), not by
 raw tag. The Rust `render.rs` path still colors by tag; the two surfaces now
 sit side by side, the way Python and Form do.
 
+A second breath gave the cells bodies. Leaves now render as their data type —
+an int is a faceted metallic gem, a float a smooth droplet, a string a papery
+tablet, a bool a coin (green/red by truth), null a hollow shell — each with a
+procedural bump so the surface itself carries the type. Recipes with a known
+shape lay their children out *as that shape*: a `list` strings its elements
+along an ordered spine wire, a `let` binding reads as name → value, a `do`
+block as a sequence. And navigation took on a Superliminal cast: double-click
+(or Enter on a focused cell) **drills** into a recipe — the space re-roots at
+that cell and scales up from small, so the detail you approached becomes the
+world; Backspace surfaces back to the parent. The fractal substrate is now
+literally traversable by scale, not just by pan.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).
