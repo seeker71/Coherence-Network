@@ -2,7 +2,7 @@
 id: lc-form-kernel-runtime-visualizer
 hz: 528
 status: seed
-updated: 2026-05-21
+updated: 2026-05-28
 geometry:
   arity: 4
   form: synthesis
@@ -110,7 +110,39 @@ This means:
 
 None of these gaps invalidate the synthesis. They name where the next breaths land.
 
+## Walkable now — Kernel Space
+
+The first breath past the video is a place you can stand inside. The web
+surface at `/substrate/form/space` runs a Form expression through the embedded
+TypeScript kernel and reads the recipe tree back out as architecture:
+
+- **Recipes are rooms.** Each composite recipe becomes a room whose boundary
+  is its Markov blanket and whose core mesh is colored by the cell's NodeID.
+- **Children are doorways.** Every child of a recipe is a beam-portal you walk
+  toward; the deeper you go the further you travel along the into-axis, so a
+  recursive `(fact n)` lays down a corridor of FNCALL rooms — recursion as
+  literal hallway.
+- **Blueprints are crystals.** Above each room floats a frozen octahedron
+  whose geometry is seeded from the blueprint key (`level.type`). Two cells of
+  the same shape carry the *same crystal* anywhere in the space — the ice
+  register makes content-addressed equivalence visible at a glance, before the
+  analyst reasons it.
+- **The trace flows.** A pulse rides each doorway at a speed set by that arm's
+  share of runtime walks. You watch dispatch move, not read it after the fact.
+- **The lattice is the floor.** The substrate snapshot rasterizes to an RGBA
+  framebuffer — the same memory plane the video renders — projected as the
+  ground and, when a room is focused, as the skin of its core. The "object
+  surface as texture" arc closes inside the browser, no kernel process needed.
+
+This addresses the second honest gap on the web surface: the in-browser
+visualizer colors by NodeID category (blueprint / instance / level), not by
+raw tag. The Rust `render.rs` path still colors by tag; the two surfaces now
+sit side by side, the way Python and Form do.
+
 ## Source attestation
+
+- Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).
+- Scene builder: [`web/lib/form-kernel/space.ts`](../../../web/lib/form-kernel/space.ts) — `buildKernelSpace`, `layoutSpace`, `blueprintColor` (recipe tree → rooms / doors / crystals).
 
 - Rust kernel attribution: [`experiments/form-kernel-rust/src/main.rs`](../../../experiments/form-kernel-rust/src/main.rs) — `NativeEntry`, `Trace::arm_name`, `cat_*` helpers.
 - Go kernel attribution: [`experiments/form-kernel-go/main.go`](../../../experiments/form-kernel-go/main.go) — same shape.
