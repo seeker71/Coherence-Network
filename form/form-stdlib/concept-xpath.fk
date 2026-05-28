@@ -1,0 +1,335 @@
+; concept-xpath.fk — concept-and-edge addressability as a Form recipe.
+;
+; preludes: (none — uses only kernel primitives)
+;
+; The body's Living Collective KB holds ~149 concepts as markdown files
+; under docs/vision-kb/concepts/lc-*.md. Each concept carries an id, a
+; title, a list of cross-references to other concepts, and an optional
+; parent id (the hierarchical edge). concept-corpus.fk holds the full
+; cross-media surface (id, body, visuals, cross-refs); this file is the
+; thin shape — id, title, cross-refs, parent — that lets a cell address
+; concepts and their cross-reference edges via path expressions.
+;
+; Canonical truth: this recipe MEANS "a graph of concepts walkable by
+; path string". Two cells with the same corpus answer the same query
+; byte-identically. No concept-xpath native exists in any sibling
+; kernel — the recipe IS the implementation.
+;
+; --- IN-MEMORY SHAPE ---------------------------------------------
+;
+;   CONCEPT (
+;       id          : trivial-string  ("lc-trust-over-fear"),
+;       title       : trivial-string  ("Trust over Fear"),
+;       cross-refs  : CONCEPT-XREFS    (list-node of trivial-strings),
+;       parent      : trivial-string OR trivial-int 0 (none)
+;   )
+;
+;   CONCEPT-CORPUS = list of CONCEPT recipes wrapped under one node.
+;
+; A concept with no parent carries (intern_trivial_int 0) in slot 3.
+; Detection via node_type: 1 = trivial-int (no parent), 2 = trivial-
+; string (parent id present). The CONCEPT-XREFS wrapper makes the
+; cross-refs slot navigable by position — child[i] is the i-th xref
+; trivial-string.
+;
+; --- PATH SYNTAX -------------------------------------------------
+;
+;   /concept                       all concepts
+;   /concept/<id>                  one concept by id
+;   /concept/<id>/title            its title string
+;   /concept/<id>/cross-refs       its cross-refs list (the XREFS
+;                                  wrapper's children — each a
+;                                  trivial-string)
+;   /concept/<id>/cross-refs[i]    i-th cross-ref string (0-based)
+;   /concept/<id>/parent           parent id (trivial-string) or
+;                                  CONCEPT-NOT-FOUND if none
+;   /concept/by-cross-ref/<id>     reverse edge — concepts that
+;                                  reference <id>
+;   /concept/orphans               concepts whose parent slot is
+;                                  trivial-int 0 (no parent)
+;
+; --- API ---------------------------------------------------------
+;
+;   (concept-make id title cross-refs-list parent-or-empty)
+;       → CONCEPT Recipe. parent-or-empty is a string: pass ""
+;         for "no parent" (encoded as trivial-int 0).
+;   (concept-corpus concepts) → CONCEPT-CORPUS Recipe wrapping list.
+;   (cxpath path-string corpus)       → list of matching Recipes.
+;   (cxpath-first path-string corpus) → first match, or
+;                                       CONCEPT-NOT-FOUND sentinel.
+;
+; Accessors (also useful from caller code):
+;   (concept-id c)         → string
+;   (concept-title c)      → string
+;   (concept-xrefs c)      → CONCEPT-XREFS node (children are
+;                            trivial-string xref ids)
+;   (concept-xref-list c)  → plain list of trivial-string Recipes
+;   (concept-parent c)     → trivial-string OR trivial-int 0
+;   (concept-has-parent? c) → 1 if parent is a string, 0 if int 0
+;
+; --- BLUEPRINTS --------------------------------------------------
+;
+; The 1910-decade reserves the concept-xpath family. The slot
+; numbers parallel the xpath.fk decade — concept-xpath is the
+; concept-domain sibling lens, so the family identity sits at the
+; same altitude one channel over (concept-xpath is a domain lens,
+; not generic substrate xpath). Callers that load both modules
+; together address by name (CONCEPT vs XPATH-RESULT); kernels
+; address by NodeID + composition path.
+;
+;   1910  CONCEPT            — the concept Recipe family.
+;   1911  CONCEPT-NOT-FOUND  — sentinel returned by cxpath-first on
+;                              miss, and by /<id>/parent when the
+;                              concept has no parent.
+;   1912  CONCEPT-CORPUS     — corpus wrapper category.
+;   1913  CONCEPT-XREFS      — cross-refs list wrapper category.
+
+(let CONCEPT           (make_nodeid 1 2 99 1930))
+(let CONCEPT-NOT-FOUND (make_nodeid 1 2 99 1931))
+(let CONCEPT-CORPUS-C  (make_nodeid 1 2 99 1932))
+(let CONCEPT-XREFS     (make_nodeid 1 2 99 1933))
+
+;; Trivial leaf type constants — kernels agree on these:
+;;   TrivInt = 1, TrivString = 2. Used by concept-has-parent? to
+;;   distinguish a trivial-int 0 (no parent) from a parent id
+;;   string. See form-stdlib/schema.fk for the same constants.
+(let CXP-TRIV-INT    1)
+(let CXP-TRIV-STRING 2)
+
+(do
+    ;; --- LOCAL HELPERS ---------------------------------------------
+    (defn cxp-nil? (xs) (eq (len xs) 0))
+
+    (defn cxp-append (xs ys)
+        (if (cxp-nil? xs) ys
+            (cons (head xs) (cxp-append (tail xs) ys))))
+
+    (defn cxp-nth (xs i)
+        (if (eq i 0) (head xs) (cxp-nth (tail xs) (sub i 1))))
+
+    (defn cxp-reverse-walk (xs acc)
+        (if (cxp-nil? xs) acc
+            (cxp-reverse-walk (tail xs) (cons (head xs) acc))))
+
+    (defn cxp-reverse (xs) (cxp-reverse-walk xs (list)))
+
+    ;; --- CROSS-REFS WRAPPER ----------------------------------------
+    ;; Walk a list of raw strings, intern each as a trivial-string,
+    ;; and wrap the resulting child list under CONCEPT-XREFS so the
+    ;; concept's slot 2 is itself a Recipe with positionally-
+    ;; addressable children. (cxpath ... cross-refs[i]) calls
+    ;; node_children on this wrapper.
+    (defn cxp-intern-refs (refs acc)
+        (if (cxp-nil? refs) (cxp-reverse acc)
+            (cxp-intern-refs (tail refs)
+                (cons (intern_trivial_string (head refs)) acc))))
+
+    (defn cxp-xrefs-node (refs-list)
+        (intern_node CONCEPT-XREFS (cxp-intern-refs refs-list (list))))
+
+    ;; --- CONCEPT CONSTRUCTION --------------------------------------
+    ;; Caller passes id, title as raw strings; cross-refs as a list
+    ;; of raw strings; parent as a raw string ("" → no parent). The
+    ;; constructor interns each leaf and assembles the CONCEPT
+    ;; Recipe. The "" → trivial-int 0 rewrite is the encoder's job
+    ;; so callers stay in string land.
+    (defn cxp-intern-parent (p)
+        (if (str_eq p "")
+            (intern_trivial_int 0)
+            (intern_trivial_string p)))
+
+    (defn concept-make (id-str title-str refs-list parent-str)
+        (intern_node CONCEPT
+            (list (intern_trivial_string id-str)
+                  (intern_trivial_string title-str)
+                  (cxp-xrefs-node refs-list)
+                  (cxp-intern-parent parent-str))))
+
+    ;; --- ACCESSORS -------------------------------------------------
+    (defn concept-id (c)
+        (node_value (cxp-nth (node_children c) 0)))
+
+    (defn concept-title (c)
+        (node_value (cxp-nth (node_children c) 1)))
+
+    (defn concept-xrefs (c)
+        (cxp-nth (node_children c) 2))
+
+    (defn concept-xref-list (c)
+        (node_children (concept-xrefs c)))
+
+    (defn concept-parent (c)
+        (cxp-nth (node_children c) 3))
+
+    ;; concept-has-parent? — 1 when the parent slot is a trivial-
+    ;; string (parent id), 0 when it is a trivial-int 0 (no parent).
+    ;; Kernels store these under distinct node_type values:
+    ;;   trivial-int    → node_type 1
+    ;;   trivial-string → node_type 2
+    (defn concept-has-parent? (c)
+        (if (eq (node_type (concept-parent c)) CXP-TRIV-STRING) 1 0))
+
+    ;; --- CORPUS CONSTRUCTION ---------------------------------------
+    (defn concept-corpus (concepts-list)
+        (intern_node CONCEPT-CORPUS-C concepts-list))
+
+    (defn concept-corpus-concepts (corpus)
+        (node_children corpus))
+
+    ;; --- PATH SPLITTING --------------------------------------------
+    ;; Split the path string on '/'. A leading '/' produces an empty
+    ;; first piece, which the caller strips. Empty trailing piece
+    ;; (e.g. "/concept/") is preserved and ignored by the matcher.
+    (defn cxp-split-loop (s i n acc cur)
+        (if (eq i n)
+            (cxp-append acc (list cur))
+            (if (str_eq (char_at s i) "/")
+                (cxp-split-loop s (add i 1) n
+                                (cxp-append acc (list cur)) "")
+                (cxp-split-loop s (add i 1) n acc
+                                (str_concat cur (char_at s i))))))
+
+    (defn cxp-split (s)
+        (cxp-split-loop s 0 (str_len s) (list) ""))
+
+    ;; Strip leading empty pieces from absolute paths. A trailing
+    ;; empty piece (rare — only from "/concept/") would land in the
+    ;; matcher's tail as an empty string; the field selector
+    ;; refuses unknown bodies, so the only practical effect is an
+    ;; empty result. We strip leading-only to keep the walker
+    ;; tail-recursive and avoid double-consing the head.
+    (defn cxp-strip-empties (pieces)
+        (if (cxp-nil? pieces) pieces
+            (if (str_eq (head pieces) "")
+                (cxp-strip-empties (tail pieces))
+                pieces)))
+
+    ;; --- PARSE '[i]' SUFFIX ----------------------------------------
+    ;; The piece "cross-refs[2]" carries a positional index. Split
+    ;; into (body, index-or--1). Index -1 means no predicate present.
+    (defn cxp-piece-body (piece)
+        (do
+            (let lb (str_find piece "[" 0))
+            (if (lt lb 0)
+                piece
+                (substring piece 0 lb))))
+
+    (defn cxp-piece-index (piece)
+        (do
+            (let lb (str_find piece "[" 0))
+            (if (lt lb 0)
+                (sub 0 1)
+                (do
+                    (let rb (str_find piece "]" lb))
+                    (if (lt rb 0)
+                        (sub 0 1)
+                        (str_to_int (substring piece (add lb 1) rb)))))))
+
+    ;; --- LOOKUP BY ID ---------------------------------------------
+    (defn cxp-find-by-id (concepts target)
+        (if (cxp-nil? concepts) CONCEPT-NOT-FOUND
+            (if (str_eq (concept-id (head concepts)) target)
+                (head concepts)
+                (cxp-find-by-id (tail concepts) target))))
+
+    ;; --- REVERSE EDGE: concepts referencing target -----------------
+    (defn cxp-refs-contains? (refs target)
+        (if (cxp-nil? refs) 0
+            (if (str_eq (node_value (head refs)) target)
+                1
+                (cxp-refs-contains? (tail refs) target))))
+
+    (defn cxp-by-xref-walk (concepts target acc)
+        (if (cxp-nil? concepts) (cxp-reverse acc)
+            (if (eq (cxp-refs-contains?
+                        (concept-xref-list (head concepts)) target) 1)
+                (cxp-by-xref-walk (tail concepts) target
+                                  (cons (head concepts) acc))
+                (cxp-by-xref-walk (tail concepts) target acc))))
+
+    (defn cxp-by-xref (concepts target)
+        (cxp-by-xref-walk concepts target (list)))
+
+    ;; --- ORPHANS: concepts with no parent --------------------------
+    (defn cxp-orphans-walk (concepts acc)
+        (if (cxp-nil? concepts) (cxp-reverse acc)
+            (if (eq (concept-has-parent? (head concepts)) 0)
+                (cxp-orphans-walk (tail concepts)
+                                  (cons (head concepts) acc))
+                (cxp-orphans-walk (tail concepts) acc))))
+
+    (defn cxp-orphans (concepts)
+        (cxp-orphans-walk concepts (list)))
+
+    ;; --- FIELD SELECTOR --------------------------------------------
+    ;; Given a concept and a field piece ("title", "cross-refs",
+    ;; "cross-refs[i]", "parent"), return a list of matching value
+    ;; Recipes (always wrapped in a list so cxpath has uniform
+    ;; return shape).
+    (defn cxp-field (c piece)
+        (do
+            (let body (cxp-piece-body piece))
+            (let idx  (cxp-piece-index piece))
+            (if (str_eq body "title")
+                (list (cxp-nth (node_children c) 1))
+                (if (str_eq body "cross-refs")
+                    (if (lt idx 0)
+                        ;; bare /cross-refs → return the xref children
+                        (concept-xref-list c)
+                        ;; /cross-refs[i] → 0-based index into list
+                        (do
+                            (let refs (concept-xref-list c))
+                            (if (ge idx (len refs))
+                                (list CONCEPT-NOT-FOUND)
+                                (list (cxp-nth refs idx)))))
+                    (if (str_eq body "parent")
+                        (if (eq (concept-has-parent? c) 1)
+                            (list (concept-parent c))
+                            (list CONCEPT-NOT-FOUND))
+                        (list CONCEPT-NOT-FOUND))))))
+
+    ;; --- TOP-LEVEL EVALUATOR ---------------------------------------
+    ;; The path always starts with "concept". After that:
+    ;;   []                       → all concepts
+    ;;   [<id>]                   → one concept by id
+    ;;   [<id> <field>]           → field of that concept
+    ;;   [by-cross-ref <id>]      → reverse-edge list
+    ;;   [orphans]                → no-parent list
+    (defn cxp-eval-pieces (pieces concepts)
+        (if (cxp-nil? pieces)
+            ;; /concept — every concept in the corpus
+            concepts
+            (do
+                (let head-piece (head pieces))
+                (if (str_eq head-piece "orphans")
+                    (cxp-orphans concepts)
+                    (if (str_eq head-piece "by-cross-ref")
+                        (if (cxp-nil? (tail pieces))
+                            (list)
+                            (cxp-by-xref concepts (head (tail pieces))))
+                        ;; head-piece is a concept id.
+                        (do
+                            (let c (cxp-find-by-id concepts head-piece))
+                            (if (node_eq c CONCEPT-NOT-FOUND)
+                                (list)
+                                (if (cxp-nil? (tail pieces))
+                                    (list c)
+                                    (cxp-field c (head (tail pieces)))))))))))
+
+    (defn cxpath (path corpus)
+        (do
+            (let pieces (cxp-strip-empties (cxp-split path)))
+            (if (cxp-nil? pieces)
+                ;; bare "/" or "" → empty result
+                (list)
+                (if (str_eq (head pieces) "concept")
+                    (cxp-eval-pieces (tail pieces)
+                                     (concept-corpus-concepts corpus))
+                    (list)))))
+
+    (defn cxpath-first (path corpus)
+        (do
+            (let res (cxpath path corpus))
+            (if (cxp-nil? res) CONCEPT-NOT-FOUND (head res))))
+
+    0)

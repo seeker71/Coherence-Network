@@ -1,0 +1,99 @@
+; concept-xpath.fk — addressing concepts and cross-ref edges by path,
+; sibling-verified across Go, Rust, TypeScript.
+;
+; preludes: form-stdlib/concept-xpath.fk
+;
+; Builds a 3-concept corpus in memory (no file I/O — the recipe is
+; deterministic across kernels) and runs four path queries that
+; exercise every selector shape concept-xpath supports:
+;
+;   /concept/<id>/cross-refs           → list of xref Recipes
+;   /concept/by-cross-ref/<id>         → reverse-edge concepts
+;   /concept/orphans                   → concepts with no parent
+;   /concept/<id>/parent               → parent id Recipe
+;
+; The corpus is the smallest shape that lets every query land on a
+; non-trivial answer:
+;
+;     lc-trust-over-fear   parent: none       refs: [field-substrate,
+;                                                    edges-as-vitality]
+;     lc-field-substrate   parent: trust-     refs: [trust-over-fear]
+;                                  over-fear
+;     lc-edges-as-vitality parent: none       refs: []
+;
+; The reverse-edge query "who points at lc-field-substrate" finds
+; lc-trust-over-fear (it's the only concept whose cross-refs include
+; that id). The orphan query finds the two concepts with no parent.
+; The parent query on lc-field-substrate returns the trivial-string
+; "lc-trust-over-fear".
+;
+; Verdict counts five passing checks (one per query plus a
+; cxpath-first lookup); landing on 5 means every selector is
+; behaving the same way across all three sibling kernels.
+
+(do
+    ;; ---- BUILD THE 3-CONCEPT CORPUS --------------------------------
+    (let c-tof
+        (concept-make "lc-trust-over-fear"
+                      "Trust over Fear"
+                      (list "lc-field-substrate" "lc-edges-as-vitality")
+                      ""))
+
+    (let c-fs
+        (concept-make "lc-field-substrate"
+                      "The Field as Substrate"
+                      (list "lc-trust-over-fear")
+                      "lc-trust-over-fear"))
+
+    (let c-ev
+        (concept-make "lc-edges-as-vitality"
+                      "Edges as Vitality"
+                      (list)
+                      ""))
+
+    (let corpus (concept-corpus (list c-tof c-fs c-ev)))
+
+    ;; ---- QUERY 1: /concept/lc-trust-over-fear/cross-refs ----------
+    ;; → 2 entries (the two xref ids listed above).
+    (let q1 (cxpath "/concept/lc-trust-over-fear/cross-refs" corpus))
+    (let xrefs-count (len q1))
+
+    ;; ---- QUERY 2: /concept/by-cross-ref/lc-field-substrate --------
+    ;; → 1 concept (lc-trust-over-fear is the only one pointing at it).
+    (let q2 (cxpath "/concept/by-cross-ref/lc-field-substrate" corpus))
+    (let by-xref-count (len q2))
+
+    ;; ---- QUERY 3: /concept/orphans -------------------------------
+    ;; → 2 concepts (lc-trust-over-fear and lc-edges-as-vitality have
+    ;; no parent; lc-field-substrate has lc-trust-over-fear as parent).
+    (let q3 (cxpath "/concept/orphans" corpus))
+    (let orphans-count (len q3))
+
+    ;; ---- QUERY 4: /concept/lc-field-substrate/parent -------------
+    ;; → trivial-string "lc-trust-over-fear". cxpath-first peels the
+    ;; one-element list; node_value reads the string content.
+    (let q4 (cxpath-first "/concept/lc-field-substrate/parent" corpus))
+    (let parent-matches
+        (if (str_eq (node_value q4) "lc-trust-over-fear") 1 0))
+
+    ;; ---- QUERY 5: /concept/lc-trust-over-fear (find-by-id) -------
+    ;; cxpath-first returns the concept Recipe; we confirm by reading
+    ;; its id back through the accessor.
+    (let q5 (cxpath-first "/concept/lc-trust-over-fear" corpus))
+    (let id-roundtrip
+        (if (str_eq (concept-id q5) "lc-trust-over-fear") 1 0))
+
+    ;; ---- PRINT FOUR CANONICAL RESULTS ------------------------------
+    (print "xrefs-count:"    xrefs-count)
+    (print "by-xref-count:"  by-xref-count)
+    (print "orphans-count:"  orphans-count)
+    (print "parent-matches:" parent-matches)
+
+    ;; ---- VERDICT ---------------------------------------------------
+    ;; Sum of five passing checks. Lands on 5 when every query and the
+    ;; cxpath-first lookup behave the same way across all three
+    ;; sibling kernels.
+    (add (if (eq xrefs-count   2) 1 0)
+        (add (if (eq by-xref-count 1) 1 0)
+            (add (if (eq orphans-count 2) 1 0)
+                (add parent-matches id-roundtrip)))))

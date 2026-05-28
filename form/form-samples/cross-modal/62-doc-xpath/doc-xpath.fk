@@ -1,0 +1,92 @@
+; doc-xpath.fk — addressing content WITHIN one document by path,
+; sibling-verified across Go, Rust, TypeScript.
+;
+; preludes: form-stdlib/doc-xpath.fk
+;
+; Builds a small structured document in memory (no file I/O — the
+; recipe is deterministic across kernels) and runs four path queries
+; that exercise every selector shape doc-xpath supports:
+;
+;   /doc/title                               → title string
+;   /doc/section[heading='...']/paragraph[0] → first paragraph of a
+;                                              section addressed by
+;                                              heading equality
+;   /doc/headings                            → flat list of all
+;                                              section headings
+;   /doc/section[i]/paragraph[j]             → positional drill
+;
+; The doc is the smallest shape that lets every query land on a
+; non-trivial answer:
+;
+;     title    : "Test"
+;     section 0: "Intro"  paragraphs: ["First intro line."
+;                                       "Second intro line."]
+;     section 1: "Why"    paragraphs: ["Because reasons."
+;                                       "And more reasons."]
+;     section 2: "Done"   paragraphs: ["Wrapping up."
+;                                       "The conclusion."]
+;
+; Verdict counts four passing checks. Landing on 4 means every
+; selector behaves the same way across all three sibling kernels.
+
+(do
+    ;; ---- BUILD THE 3-SECTION DOCUMENT ------------------------------
+    (let s-intro
+        (make-section "Intro"
+                      (list "First intro line."
+                            "Second intro line.")))
+
+    (let s-why
+        (make-section "Why"
+                      (list "Because reasons."
+                            "And more reasons.")))
+
+    (let s-done
+        (make-section "Done"
+                      (list "Wrapping up."
+                            "The conclusion.")))
+
+    (let doc
+        (make-doc "Test" (list s-intro s-why s-done)))
+
+    ;; ---- QUERY 1: /doc/title --------------------------------------
+    ;; → trivial-string "Test". dxpath-first peels the one-element
+    ;; list; node_value reads the string content.
+    (let q1 (dxpath-first "/doc/title" doc))
+    (let title-matches
+        (if (str_eq (node_value q1) "Test") 1 0))
+
+    ;; ---- QUERY 2: /doc/section[heading='Why']/paragraph[0] -------
+    ;; → trivial-string "Because reasons.". The predicate addresses
+    ;; the "Why" section by heading equality; [0] indexes its first
+    ;; paragraph.
+    (let q2 (dxpath-first
+                "/doc/section[heading='Why']/paragraph[0]" doc))
+    (let why-first-matches
+        (if (str_eq (node_value q2) "Because reasons.") 1 0))
+
+    ;; ---- QUERY 3: /doc/headings ----------------------------------
+    ;; → list of three trivial-string headings, in document order.
+    (let q3 (dxpath "/doc/headings" doc))
+    (let headings-count (len q3))
+
+    ;; ---- QUERY 4: /doc/section[2]/paragraph[1] -------------------
+    ;; → trivial-string "The conclusion.". Positional drill into the
+    ;; third section, second paragraph.
+    (let q4 (dxpath-first "/doc/section[2]/paragraph[1]" doc))
+    (let conclusion-matches
+        (if (str_eq (node_value q4) "The conclusion.") 1 0))
+
+    ;; ---- PRINT FOUR CANONICAL RESULTS ------------------------------
+    (print "title-matches:"       title-matches)
+    (print "why-first-matches:"   why-first-matches)
+    (print "headings-count:"      headings-count)
+    (print "conclusion-matches:"  conclusion-matches)
+
+    ;; ---- VERDICT ---------------------------------------------------
+    ;; Sum of four passing checks. Lands on 4 when every query
+    ;; behaves the same way across all three sibling kernels.
+    (add title-matches
+        (add why-first-matches
+            (add (if (eq headings-count 3) 1 0)
+                 conclusion-matches))))

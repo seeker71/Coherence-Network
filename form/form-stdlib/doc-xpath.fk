@@ -1,0 +1,343 @@
+; doc-xpath.fk — document-internal addressability as a Form recipe.
+;
+; preludes: (none — uses only kernel primitives)
+;
+; A document parses into a structured tree: a title plus an ordered
+; list of sections, each section a heading plus an ordered list of
+; paragraphs. xpath.fk addresses cells in the substrate; concept-
+; xpath.fk addresses concepts in a corpus; this file addresses
+; content WITHIN one document — sections, headings, paragraphs —
+; via path expressions a human or a cell can author by hand.
+;
+; Canonical truth: this recipe MEANS "a structured document walkable
+; by path string". Two cells that intern the same document content
+; answer the same query byte-identically. No doc-xpath native exists
+; in any sibling kernel — the recipe IS the implementation.
+;
+; --- IN-MEMORY SHAPE ---------------------------------------------
+;
+;   DOC (
+;       title         : trivial-string,
+;       SECTION-LIST  : list-node of SECTION recipes,
+;   )
+;
+;   SECTION (
+;       heading       : trivial-string,
+;       paragraph-1   : trivial-string,
+;       paragraph-2   : trivial-string,
+;       ...
+;   )
+;
+; A section's first child is always its heading; subsequent children
+; are paragraph strings in document order. The SECTION-LIST wrapper
+; makes the doc's sections positionally addressable (child[i] is the
+; i-th section).
+;
+; --- PATH SYNTAX -------------------------------------------------
+;
+;   /doc/title                             → title string
+;   /doc/sections                          → all sections (list)
+;   /doc/section[i]                        → i-th section (0-based)
+;   /doc/section[heading='...']            → first section whose
+;                                            heading equals '...'
+;   /doc/section[i]/heading                → heading of i-th section
+;   /doc/section[i]/paragraph[j]           → j-th paragraph of i-th
+;                                            section (0-based)
+;   /doc/section[i]/paragraphs             → all paragraphs of i-th
+;                                            section (list)
+;   /doc/headings                          → all headings, flat list
+;
+; --- API ---------------------------------------------------------
+;
+;   (make-doc title-str sections-list)     → DOC Recipe
+;   (make-section heading-str paragraphs-list) → SECTION Recipe
+;   (doc-title doc)                        → trivial-string
+;   (doc-sections doc)                     → list of SECTION Recipes
+;   (section-heading sec)                  → trivial-string
+;   (section-paragraphs sec)               → list of trivial-strings
+;   (section-paragraph-at sec j)           → j-th paragraph string,
+;                                            or DOC-NOT-FOUND
+;   (dxpath path-string doc)               → list of matching cells
+;   (dxpath-first path-string doc)         → first match, or
+;                                            DOC-NOT-FOUND sentinel
+;
+; --- BLUEPRINTS --------------------------------------------------
+;
+; Slots 1920-1923 reserve the doc-xpath family. The 1910-decade is
+; taken by xpath.fk and concept-xpath.fk; doc-xpath sits one decade
+; higher as the document-domain sibling lens.
+;
+;   1920  DOC             — the document Recipe family.
+;   1921  SECTION-LIST    — wrapper around the doc's sections so
+;                            section[i] addresses positionally.
+;   1922  SECTION         — one section: heading plus paragraphs.
+;   1923  DOC-NOT-FOUND   — sentinel returned by dxpath-first on
+;                            miss, and by section-paragraph-at when
+;                            the index is out of range.
+
+(let DOC           (make_nodeid 1 2 99 1920))
+(let SECTION-LIST  (make_nodeid 1 2 99 1921))
+(let SECTION       (make_nodeid 1 2 99 1922))
+(let DOC-NOT-FOUND (make_nodeid 1 2 99 1923))
+
+(do
+    ;; --- LOCAL HELPERS ---------------------------------------------
+    (defn dxp-nil? (xs) (eq (len xs) 0))
+
+    (defn dxp-append (xs ys)
+        (if (dxp-nil? xs) ys
+            (cons (head xs) (dxp-append (tail xs) ys))))
+
+    (defn dxp-nth (xs i)
+        (if (eq i 0) (head xs) (dxp-nth (tail xs) (sub i 1))))
+
+    (defn dxp-reverse-walk (xs acc)
+        (if (dxp-nil? xs) acc
+            (dxp-reverse-walk (tail xs) (cons (head xs) acc))))
+
+    (defn dxp-reverse (xs) (dxp-reverse-walk xs (list)))
+
+    ;; --- INTERN A LIST OF RAW STRINGS ------------------------------
+    ;; Walk a list of raw strings, intern each as a trivial-string,
+    ;; preserving order.
+    (defn dxp-intern-strings (strs acc)
+        (if (dxp-nil? strs) (dxp-reverse acc)
+            (dxp-intern-strings (tail strs)
+                (cons (intern_trivial_string (head strs)) acc))))
+
+    ;; --- SECTION CONSTRUCTION --------------------------------------
+    ;; (make-section heading-str paragraphs-list) builds a SECTION
+    ;; whose first child is the heading and whose remaining children
+    ;; are paragraph trivial-strings in order.
+    (defn make-section (heading-str paragraphs-list)
+        (intern_node SECTION
+            (cons (intern_trivial_string heading-str)
+                  (dxp-intern-strings paragraphs-list (list)))))
+
+    ;; --- DOC CONSTRUCTION ------------------------------------------
+    ;; (make-doc title-str sections-list) wraps the sections under a
+    ;; SECTION-LIST node so section[i] is positionally addressable.
+    (defn make-doc (title-str sections-list)
+        (intern_node DOC
+            (list (intern_trivial_string title-str)
+                  (intern_node SECTION-LIST sections-list))))
+
+    ;; --- ACCESSORS -------------------------------------------------
+    (defn doc-title (doc)
+        (dxp-nth (node_children doc) 0))
+
+    (defn doc-sections-wrapper (doc)
+        (dxp-nth (node_children doc) 1))
+
+    (defn doc-sections (doc)
+        (node_children (doc-sections-wrapper doc)))
+
+    (defn section-heading (sec)
+        (head (node_children sec)))
+
+    (defn section-paragraphs (sec)
+        (tail (node_children sec)))
+
+    (defn section-paragraph-at (sec j)
+        (do
+            (let ps (section-paragraphs sec))
+            (if (ge j (len ps))
+                DOC-NOT-FOUND
+                (dxp-nth ps j))))
+
+    ;; --- PATH SPLITTING --------------------------------------------
+    ;; Split the path string on '/'. A leading '/' produces an empty
+    ;; first piece, which dxp-strip-empties drops. We also strip a
+    ;; trailing empty piece (e.g. "/doc/title/" → ["doc", "title"]).
+    (defn dxp-split-loop (s i n acc cur)
+        (if (eq i n)
+            (dxp-append acc (list cur))
+            (if (str_eq (char_at s i) "/")
+                (dxp-split-loop s (add i 1) n
+                                (dxp-append acc (list cur)) "")
+                (dxp-split-loop s (add i 1) n acc
+                                (str_concat cur (char_at s i))))))
+
+    (defn dxp-split (s)
+        (dxp-split-loop s 0 (str_len s) (list) ""))
+
+    ;; dxp-strip-trailing-empty — drop a single trailing empty piece
+    ;; if present (e.g. "/doc/title" splits with a leading empty,
+    ;; and "/doc/title/" splits with both a leading and trailing
+    ;; empty). Called after the leading empties are already gone.
+    (defn dxp-strip-trailing-empty (pieces)
+        (if (dxp-nil? pieces) (list)
+            (if (dxp-nil? (tail pieces))
+                (if (str_eq (head pieces) "")
+                    (list)
+                    pieces)
+                (cons (head pieces)
+                      (dxp-strip-trailing-empty (tail pieces))))))
+
+    (defn dxp-strip-leading-empties (pieces)
+        (if (dxp-nil? pieces) pieces
+            (if (str_eq (head pieces) "")
+                (dxp-strip-leading-empties (tail pieces))
+                pieces)))
+
+    (defn dxp-strip-empties (pieces)
+        (dxp-strip-trailing-empty (dxp-strip-leading-empties pieces)))
+
+    ;; --- PARSE PREDICATE SUFFIX ------------------------------------
+    ;; A piece like "section[2]" or "section[heading='Why']" carries
+    ;; a predicate. We split into (body, pred-body) where pred-body
+    ;; is the text between '[' and ']' (or empty if no predicate).
+
+    (defn dxp-piece-body (piece)
+        (do
+            (let lb (str_find piece "[" 0))
+            (if (lt lb 0)
+                piece
+                (substring piece 0 lb))))
+
+    (defn dxp-piece-pred (piece)
+        (do
+            (let lb (str_find piece "[" 0))
+            (if (lt lb 0)
+                ""
+                (do
+                    (let rb (str_find piece "]" lb))
+                    (if (lt rb 0)
+                        ""
+                        (substring piece (add lb 1) rb))))))
+
+    ;; Is the predicate body all digits? (positional index)
+    (defn dxp-is-digit? (c)
+        (if (lt (ord c) 48) 0
+            (if (lt 57 (ord c)) 0 1)))
+
+    (defn dxp-all-digits? (s i n)
+        (if (eq i n) 1
+            (if (eq (dxp-is-digit? (char_at s i)) 0) 0
+                (dxp-all-digits? s (add i 1) n))))
+
+    ;; Does the predicate body start with "heading='" and end with "'"?
+    ;; Returns 1 / 0 so the caller can compare with `eq`.
+    (defn dxp-starts-with? (s probe)
+        (if (lt (str_len s) (str_len probe)) 0
+            (if (str_eq (substring s 0 (str_len probe)) probe) 1 0)))
+
+    ;; --- FIND SECTION BY HEADING -----------------------------------
+    (defn dxp-section-by-heading (sections target)
+        (if (dxp-nil? sections) DOC-NOT-FOUND
+            (if (str_eq (node_value (section-heading (head sections)))
+                        target)
+                (head sections)
+                (dxp-section-by-heading (tail sections) target))))
+
+    ;; --- RESOLVE A SECTION FROM A PIECE ----------------------------
+    ;; The piece is "section[i]" or "section[heading='...']". Returns
+    ;; the matching SECTION Recipe, or DOC-NOT-FOUND when there's no
+    ;; match (bad index, missing heading).
+    (defn dxp-section-from-piece (sections piece)
+        (do
+            (let pred (dxp-piece-pred piece))
+            (if (str_eq pred "")
+                ;; bare "section" with no predicate — no concrete
+                ;; choice; caller should use "sections" instead.
+                DOC-NOT-FOUND
+                (if (eq (dxp-all-digits? pred 0 (str_len pred)) 1)
+                    ;; positional [i]
+                    (do
+                        (let i (str_to_int pred))
+                        (if (ge i (len sections))
+                            DOC-NOT-FOUND
+                            (dxp-nth sections i)))
+                    (if (eq (dxp-starts-with? pred "heading='") 1)
+                        ;; [heading='...']
+                        (do
+                            (let n (str_len pred))
+                            ;; strip "heading='" prefix and trailing "'"
+                            (let target
+                                (substring pred 9 (sub n 1)))
+                            (dxp-section-by-heading sections target))
+                        DOC-NOT-FOUND)))))
+
+    ;; --- HEADINGS COLLECTION ---------------------------------------
+    (defn dxp-headings-walk (sections acc)
+        (if (dxp-nil? sections) (dxp-reverse acc)
+            (dxp-headings-walk (tail sections)
+                (cons (section-heading (head sections)) acc))))
+
+    (defn dxp-headings (sections)
+        (dxp-headings-walk sections (list)))
+
+    ;; --- INNER FIELD RESOLVER --------------------------------------
+    ;; Given a chosen section and the remaining piece list, return a
+    ;; list of matching value Recipes. Pieces are "heading",
+    ;; "paragraph[j]", or "paragraphs".
+    (defn dxp-section-field (sec pieces)
+        (if (dxp-nil? pieces)
+            (list sec)
+            (do
+                (let piece (head pieces))
+                (let body (dxp-piece-body piece))
+                (let pred (dxp-piece-pred piece))
+                (if (str_eq body "heading")
+                    (list (section-heading sec))
+                    (if (str_eq body "paragraphs")
+                        (section-paragraphs sec)
+                        (if (str_eq body "paragraph")
+                            (if (str_eq pred "")
+                                (list DOC-NOT-FOUND)
+                                (if (eq (dxp-all-digits? pred 0 (str_len pred)) 1)
+                                    (do
+                                        (let j (str_to_int pred))
+                                        (let p (section-paragraph-at sec j))
+                                        (if (node_eq p DOC-NOT-FOUND)
+                                            (list DOC-NOT-FOUND)
+                                            (list p)))
+                                    (list DOC-NOT-FOUND)))
+                            (list DOC-NOT-FOUND)))))))
+
+    ;; --- TOP-LEVEL EVALUATOR ---------------------------------------
+    ;; The path always starts with "doc". After that:
+    ;;   []                       → return the doc itself
+    ;;   ["title"]                → the title trivial-string
+    ;;   ["sections"]             → all sections
+    ;;   ["headings"]             → flat list of headings
+    ;;   ["section[...]" tail...] → one section, then drill via tail
+    (defn dxp-eval-pieces (pieces doc)
+        (if (dxp-nil? pieces)
+            (list doc)
+            (do
+                (let head-piece (head pieces))
+                (let body (dxp-piece-body head-piece))
+                (if (str_eq body "title")
+                    (list (doc-title doc))
+                    (if (str_eq body "sections")
+                        (doc-sections doc)
+                        (if (str_eq body "headings")
+                            (dxp-headings (doc-sections doc))
+                            (if (str_eq body "section")
+                                (do
+                                    (let sec
+                                        (dxp-section-from-piece
+                                            (doc-sections doc)
+                                            head-piece))
+                                    (if (node_eq sec DOC-NOT-FOUND)
+                                        (list)
+                                        (dxp-section-field sec
+                                                           (tail pieces))))
+                                (list))))))))
+
+    (defn dxpath (path doc)
+        (do
+            (let pieces (dxp-strip-empties (dxp-split path)))
+            (if (dxp-nil? pieces)
+                (list)
+                (if (str_eq (head pieces) "doc")
+                    (dxp-eval-pieces (tail pieces) doc)
+                    (list)))))
+
+    (defn dxpath-first (path doc)
+        (do
+            (let res (dxpath path doc))
+            (if (dxp-nil? res) DOC-NOT-FOUND (head res))))
+
+    0)
