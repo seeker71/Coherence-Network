@@ -1,0 +1,171 @@
+; dns.fk — DNS-like name resolution as a Form recipe.
+;
+; preludes: (none — pure list + int + string + node primitives)
+;
+; Canonical truth: this recipe MEANS "a directory that maps hierarchical
+; dot-separated names (like 'a.b.example') to bound values, where any
+; observer can ask 'what does this name resolve to?' and 'which names
+; share this prefix?'" Every NAME-RECORD pairs a name string with a
+; value Recipe (typically a substrate-ref or a leaf trivial). A
+; DNS-TABLE is an ordered list of NAME-RECORDs; resolution walks the
+; table. Two cells with the same DNS-TABLE answer the same lookups
+; byte-identically. No DNS native exists in any sibling kernel — the
+; recipe IS the implementation.
+;
+; The shape we commit to:
+;
+;   NAME-RECORD (
+;     name   : string  (dot-separated, like "a.cells.local"),
+;     value  : Recipe  (substrate-ref, trivial-int, trivial-string, …)
+;   )
+;
+;   DNS-TABLE = ordered list of NAME-RECORDs. Insertion order is
+;               preserved; first match wins on (dns-resolve). Callers
+;               that need overwrite semantics can drop the prior
+;               record first; the recipe stays naive about uniqueness.
+;
+;   DNS-NOT-FOUND     — sentinel returned by (dns-resolve) when no
+;                       record bears the name. Callers distinguish
+;                       "found" from "absent" via node_eq.
+;
+;   DNS-PREFIX-MATCH  — Blueprint reserved for callers that want to
+;                       tag prefix-match results; the surface returns
+;                       a plain list, but the NodeID is available for
+;                       structural tagging by downstream cells.
+;
+; The resolution rule:
+;
+;   (dns-resolve table name)
+;     scans the table in order; the first record whose name equals
+;     the query string wins. Missing → DNS-NOT-FOUND.
+;
+;   (dns-resolve-prefix table prefix)
+;     scans the table in order; returns every record whose name
+;     starts with the prefix string. "starts with" is exactly the
+;     condition (str_find name prefix 0) == 0 — needle-at-offset-zero.
+;     Empty prefix → all records. Missing → empty list.
+;
+; Surface:
+;   (dns-record name value)              → NAME-RECORD Recipe
+;   (dns-table records)                  → DNS-TABLE Recipe
+;   (dns-table-records table)            → list of NAME-RECORDs
+;   (dns-record-name  record)            → string
+;   (dns-record-value record)            → value Recipe
+;   (dns-resolve table name)             → value Recipe or DNS-NOT-FOUND
+;   (dns-resolve-prefix table prefix)    → list of NAME-RECORDs
+;
+; Blueprint NodeIDs (substrate-resident; pkg=1 level=2 type=99 user
+; channel; inst slots 1850-1853 reserve the DNS family, sitting
+; between session at 1860 and tree-diff at 1830-1832):
+;   NAME-RECORD       = inst 1850
+;   DNS-TABLE         = inst 1851
+;   DNS-NOT-FOUND     = inst 1852
+;   DNS-PREFIX-MATCH  = inst 1853
+;
+; Cost: every operation is O(n) over the table — (dns-resolve) walks
+; until found; (dns-resolve-prefix) walks once with an accumulator,
+; calling str_find once per record. str_find is a kernel native
+; (Rust/Go/TS each map to host indexOf), so each scan is the host
+; substring search — not a Form-recursion per byte.
+
+(let NAME-RECORD      (make_nodeid 1 2 99 1850))
+(let DNS-TABLE        (make_nodeid 1 2 99 1851))
+(let DNS-NOT-FOUND    (make_nodeid 1 2 99 1852))
+(let DNS-PREFIX-MATCH (make_nodeid 1 2 99 1853))
+
+(do
+    ;; --- LOCAL HELPERS ----------------------------------------------
+    (defn dns-nil? (xs) (eq (len xs) 0))
+
+    ;; --- RECORD CONSTRUCTION & ACCESSORS ----------------------------
+    ;; A NAME-RECORD is a Recipe carrying two children: the name as a
+    ;; trivial-string Recipe and the bound value Recipe. The Blueprint
+    ;; NodeID above names the family so cross-cell recognition works
+    ;; off the NodeID, not the surface layout. The value is held as
+    ;; whatever Recipe the caller passed — trivial-int, trivial-string,
+    ;; substrate-ref, or a deeper composition.
+
+    ;; (dns-record name value) → NAME-RECORD Recipe.
+    (defn dns-record (name value)
+        (intern_node NAME-RECORD
+            (list (intern_trivial_string name) value)))
+
+    ;; dns-record-name record → string. Uses node_value because we
+    ;; want the path content, not the string-table index that
+    ;; node_inst would return.
+    (defn dns-record-name (record)
+        (node_value (head (node_children record))))
+
+    ;; dns-record-value record → value Recipe (whatever the caller
+    ;; bound; the recipe doesn't peel further).
+    (defn dns-record-value (record)
+        (head (tail (node_children record))))
+
+    ;; --- TABLE CONSTRUCTION & ACCESSORS -----------------------------
+    ;; A DNS-TABLE is a Recipe whose children are the NAME-RECORDs in
+    ;; insertion order. (dns-table-records) returns the child list so
+    ;; the resolution walks can iterate with plain head/tail.
+
+    ;; (dns-table records) → DNS-TABLE Recipe wrapping the records.
+    (defn dns-table (records)
+        (intern_node DNS-TABLE records))
+
+    ;; dns-table-records table → list of NAME-RECORDs.
+    (defn dns-table-records (table) (node_children table))
+
+    ;; --- RESOLVE ----------------------------------------------------
+    ;; (dns-resolve-walk records name) walks the record list; first
+    ;; matching name wins. Returns DNS-NOT-FOUND when no record bears
+    ;; the name. Internal helper; callers use (dns-resolve).
+    (defn dns-resolve-walk (records name)
+        (if (dns-nil? records) DNS-NOT-FOUND
+            (do
+                (let record (head records))
+                (if (str_eq (dns-record-name record) name)
+                    (dns-record-value record)
+                    (dns-resolve-walk (tail records) name)))))
+
+    ;; (dns-resolve table name) → bound value Recipe or DNS-NOT-FOUND.
+    ;; Compare the result against DNS-NOT-FOUND with node_eq to
+    ;; distinguish "absent" from a value that happens to share the
+    ;; trivial encoding shape.
+    (defn dns-resolve (table name)
+        (dns-resolve-walk (dns-table-records table) name))
+
+    ;; --- RESOLVE-PREFIX ---------------------------------------------
+    ;; "starts with prefix" is exactly the condition
+    ;;   (str_find name prefix 0) == 0
+    ;; — needle-at-offset-zero. str_find returns -1 when absent,
+    ;; >0 when present-but-not-at-start, 0 only when the prefix sits
+    ;; at the very front of the name. Empty prefix matches every
+    ;; record because indexOf("", 0) is always 0 in the host
+    ;; substring search the kernels share.
+    (defn dns-starts-with? (name prefix)
+        (if (eq (str_find name prefix 0) 0) 1 0))
+
+    ;; (dns-prefix-walk records prefix acc) → accumulated matches in
+    ;; insertion order. Walks once with an accumulator so the result
+    ;; preserves the table's order — the same record order another
+    ;; cell would see after reading the same DNS-TABLE.
+    (defn dns-prefix-walk (records prefix acc)
+        (if (dns-nil? records) acc
+            (do
+                (let record (head records))
+                (if (eq (dns-starts-with? (dns-record-name record) prefix) 1)
+                    (dns-prefix-walk (tail records) prefix
+                                     (cons record acc))
+                    (dns-prefix-walk (tail records) prefix acc)))))
+
+    ;; dns-reverse — flip the accumulator so callers see records in
+    ;; insertion order, not reverse-of-insertion. O(n).
+    (defn dns-reverse-walk (xs acc)
+        (if (dns-nil? xs) acc
+            (dns-reverse-walk (tail xs) (cons (head xs) acc))))
+    (defn dns-reverse (xs) (dns-reverse-walk xs (list)))
+
+    ;; (dns-resolve-prefix table prefix) → list of NAME-RECORDs whose
+    ;; names start with the prefix, in the table's insertion order.
+    ;; Empty list when nothing matches (or the table is empty).
+    (defn dns-resolve-prefix (table prefix)
+        (dns-reverse
+            (dns-prefix-walk (dns-table-records table) prefix (list)))))

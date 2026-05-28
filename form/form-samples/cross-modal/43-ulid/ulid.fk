@@ -1,21 +1,20 @@
 ; ulid.fk — ULID (https://github.com/ulid/spec) lives in Form, computed from
-; bitwise primitives and div/mod.
+; bitwise primitives.
 ;
 ; preludes: form-stdlib/ulid.fk
 ;
 ; The recipe in form-stdlib/ulid.fk IS the canonical definition of the
 ; ULID encoding in this body — Crockford Base32 over a 48-bit timestamp
 ; concatenated with 80 random bits, composed from the kernel's bitwise
-; primitives (band, bor, shl_u32, shr_u32) plus div/mod for the 48-bit
-; timestamp split (the timestamp lives in 64-bit integer space, beyond
-; the 32-bit shift primitives' reach). A kernel with those primitives
-; can produce a spec-conformant ULID from this recipe alone — no host
-; ulid library required. The recipe stays sovereign across sibling
-; kernels (Go, Rust, TypeScript).
+; primitives (band, bor, shl_u32, shr_u32) plus the string natives
+; (substring, str_concat). A kernel with those primitives can produce a
+; spec-conformant ULID from this recipe alone — no host ulid library
+; required. The recipe stays sovereign across sibling kernels (Go, Rust,
+; TypeScript).
 ;
 ; This sample validates two corner shapes that pin the encoding:
 ;
-;   timestamp = 0,        random = 10 zero bytes
+;   timestamp = 0,                    random = 10 zero bytes
 ;     → "00000000000000000000000000" (26 zeros)
 ;
 ;   timestamp = 0xFFFFFFFFFFFF (max 48-bit value), random = 10 zero bytes
@@ -24,24 +23,25 @@
 ; Why the max-timestamp output starts with "7", not "Z": the ULID layout
 ; allocates 10 chars × 5 bits = 50 bits to a 48-bit timestamp half, with
 ; 2 zero pad bits prepended at the very top. The first character therefore
-; covers `00` + `top-3-bits-of-timestamp`, capping its alphabet index at
+; covers `00 + top-3-bits-of-timestamp`, capping its alphabet index at
 ; `00111` = 7 → '7'. Chars 2-10 carry the remaining 45 timestamp bits
 ; (all 1s for max), each rendering as 'Z'. Chars 11-26 carry the 80
 ; random bits exactly (16 × 5 = 80) — all 0s here, rendering as '0'.
 ;
-; Note: (random_bytes 10) is the production source of the 80 random bits.
-; We do NOT use it here — random_bytes DIVERGES per kernel by design
-; (Go/Rust/TS draw from different entropy sources), so sibling-parity
-; tests must pass deterministic byte-lists. The README documents how
-; production cells wire random_bytes into ulid-from-parts.
+; Note on randomness: (random_bytes 10) is the production source of the
+; 80 random bits. We do NOT use it here — random_bytes DIVERGES per kernel
+; by design (Go/Rust/TS draw from different entropy sources), so sibling-
+; parity tests must pass deterministic byte-lists. The README documents
+; how production cells wire random_bytes into ulid-from-bytes.
 ;
-; The 48-bit max timestamp 0xFFFFFFFFFFFF = 281474976710655 exceeds the
-; signed-32 literal range, so we reconstruct it as
-;   (sub (mul 281474976 1000000) 1290945)  ; (282_000_000 * 1_000_000 - 1_290_945)
-; ...actually a much cleaner path: 0xFFFFFFFFFFFF = 2^48 - 1, and
-; 2^48 = (2^24)^2 = 16777216^2. Both 16777216 and the subtraction fit
-; the literal range, so the construction stays honest at parse time
-; across every kernel.
+; Note on the timestamp shape: the max 48-bit value 0xFFFFFFFFFFFF =
+; 281474976710655 exceeds the kernel's i32 default math width (the TS
+; sibling's literal parse / div / mod all funnel through `(n | 0)`). To
+; keep the corner case honest cross-kernel, this sample uses the workhorse
+; (ulid-from-bytes 16-byte-list) entry point and composes the 6 timestamp
+; bytes by hand. The (ulid-from-parts timestamp-32 random-10-bytes)
+; convenience covers the practical case where the 48-bit timestamp's top
+; 16 bits stay zero (true through the year ~2106).
 
 (do
     ;; ---- INPUT FIXTURES --------------------------------------------
@@ -53,13 +53,25 @@
         (if (eq n 0) acc (zero-byte-cons (sub n 1) (cons 0 acc))))
     (let zero-random (zero-byte-cons 10 (list)))
 
-    ;; Max 48-bit timestamp = 2^48 - 1 = 281474976710655. Constructed via
-    ;; mul so every literal stays within the kernel's signed-32 parse range.
-    (let ts-max (sub (mul 16777216 16777216) 1))
+    ;; Six zero bytes — the all-zero timestamp prefix.
+    (let zero-ts (zero-byte-cons 6 (list)))
+
+    ;; Six 0xFF bytes — the max-48-bit timestamp prefix.
+    (defn ff-byte-cons (n acc)
+        (if (eq n 0) acc (ff-byte-cons (sub n 1) (cons 255 acc))))
+    (let ff-ts (ff-byte-cons 6 (list)))
+
+    ;; Concatenate two byte lists head-onto-tail.
+    (defn bytes-append (xs ys)
+        (if (eq (len xs) 0) ys
+            (cons (head xs) (bytes-append (tail xs) ys))))
 
     ;; ---- GENERATE THE TWO CANONICAL ULIDS --------------------------
-    (let ulid-zero (ulid-from-parts 0       zero-random))
-    (let ulid-max  (ulid-from-parts ts-max  zero-random))
+    (let bytes-zero (bytes-append zero-ts zero-random))
+    (let bytes-max  (bytes-append ff-ts   zero-random))
+
+    (let ulid-zero (ulid-from-bytes bytes-zero))
+    (let ulid-max  (ulid-from-bytes bytes-max))
 
     ;; ---- EXPECTED OUTPUTS ------------------------------------------
     (let exp-zero "00000000000000000000000000")

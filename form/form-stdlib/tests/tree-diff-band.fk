@@ -1,0 +1,118 @@
+; tests/tree-diff-band.fk — sibling-witness band for tree-diff/patch.
+;
+; preludes: form-stdlib/tree-diff.fk
+;
+; Exercises every arm of the diff walker and the patch walker across
+; equal trees, leaf substitution, deeper nested substitution, root
+; category divergence, and child-arity divergence. Three-way sibling
+; parity (Go, Rust, TypeScript) attests that:
+;
+;   - identical trees collapse to diff-equal and round-trip via patch.
+;   - same-category same-arity differences descend into children and
+;     produce a diff-children whose differing positions hold the right
+;     diff-replace; patch reconstructs the target Recipe.
+;   - root-category divergence short-circuits to a top-level
+;     diff-replace; patch returns the new tree unchanged.
+;   - child-arity divergence at matching category also collapses to
+;     a top-level diff-replace.
+;   - diff-empty? is 1 only when no replace lives anywhere in the tree.
+;
+; Band verdict: 13 when every assertion lands.
+;
+;   eq-then-eq             1   identical → diff-equal
+;   eq-then-empty          1   identical → diff-empty? = 1
+;   eq-then-patch-eq-b     1   patch a (diff a a) == a (== b)
+;   leaf-children-cat      1   leaf substitution → diff-children at root
+;   leaf-patch-eq-b        1   patch reconstructs b
+;   leaf-nonempty          1   leaf substitution → diff-empty? = 0
+;   nested-children-cat    1   nested substitution descends to a child
+;                              whose own diff is also diff-children
+;   nested-patch-eq-b      1   patch reconstructs the deeper-changed tree
+;   cat-replace            1   root category change → diff-replace
+;   cat-patch-eq-b         1   patch returns b
+;   arity-replace          1   matching cat, different arity → replace
+;   arity-patch-eq-b       1   patch returns b
+;   any-empty-replace      1   diff-empty? of a diff-replace = 0
+
+(do
+    (let CAT-PLUS  (make_nodeid 1 2 99 7700))
+    (let CAT-MINUS (make_nodeid 1 2 99 7701))
+    (let CAT-N     (make_nodeid 1 2 99 7702))
+    (let CAT-M     (make_nodeid 1 2 99 7703))
+
+    (defn leaf (cat) (intern_node cat (list)))
+    (defn b2i (p) (if p 1 0))
+
+    ;; ---- identical trees ------------------------------------------
+    (let a-eq (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let b-eq (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let d-eq (tree-diff a-eq b-eq))
+    (let eq-then-eq        (b2i (node_eq (node_category d-eq) DIFF-EQUAL)))
+    (let eq-then-empty     (diff-empty? d-eq))
+    (let eq-then-patch-eq-b (b2i (node_eq (tree-patch a-eq d-eq) b-eq)))
+
+    ;; ---- leaf substitution at root's child ------------------------
+    (let a-leaf (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let b-leaf (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let d-leaf (tree-diff a-leaf b-leaf))
+    (let leaf-children-cat
+        (b2i (node_eq (node_category d-leaf) DIFF-CHILDREN)))
+    (let leaf-patch-eq-b
+        (b2i (node_eq (tree-patch a-leaf d-leaf) b-leaf)))
+    (let leaf-nonempty (sub 1 (diff-empty? d-leaf)))
+
+    ;; ---- nested substitution (two levels deep) -------------------
+    ;; PLUS(PLUS(N, N), N)  vs  PLUS(PLUS(N, M), N)
+    ;; The diff descends into the first child (which is itself a PLUS
+    ;; subtree), and within that subtree replaces the second N with M.
+    (let a-nest
+        (intern_node CAT-PLUS
+            (list (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N)))
+                  (leaf CAT-N))))
+    (let b-nest
+        (intern_node CAT-PLUS
+            (list (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M)))
+                  (leaf CAT-N))))
+    (let d-nest (tree-diff a-nest b-nest))
+    (let d-nest-kid0 (head (node_children d-nest)))
+    (let nested-children-cat
+        (b2i (node_eq (node_category d-nest-kid0) DIFF-CHILDREN)))
+    (let nested-patch-eq-b
+        (b2i (node_eq (tree-patch a-nest d-nest) b-nest)))
+
+    ;; ---- root category differs ------------------------------------
+    (let a-cat (intern_node CAT-PLUS  (list (leaf CAT-N) (leaf CAT-N))))
+    (let b-cat (intern_node CAT-MINUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let d-cat (tree-diff a-cat b-cat))
+    (let cat-replace    (b2i (node_eq (node_category d-cat) DIFF-REPLACE)))
+    (let cat-patch-eq-b (b2i (node_eq (tree-patch a-cat d-cat) b-cat)))
+
+    ;; ---- same cat, different arity -------------------------------
+    ;; Both PLUS but a has 2 children, b has 3. The descent path is
+    ;; refused (arity mismatch) and the diff collapses to replace.
+    (let a-ar (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let b-ar
+        (intern_node CAT-PLUS
+            (list (leaf CAT-N) (leaf CAT-N) (leaf CAT-M))))
+    (let d-ar (tree-diff a-ar b-ar))
+    (let arity-replace    (b2i (node_eq (node_category d-ar) DIFF-REPLACE)))
+    (let arity-patch-eq-b (b2i (node_eq (tree-patch a-ar d-ar) b-ar)))
+
+    ;; ---- diff-empty? of a diff-replace ---------------------------
+    ;; A standalone replace records change; diff-empty? must be 0.
+    (let any-empty-replace (sub 1 (diff-empty? (diff-replace b-cat))))
+
+    ;; ---- verdict -------------------------------------------------
+    (add eq-then-eq
+        (add eq-then-empty
+            (add eq-then-patch-eq-b
+                (add leaf-children-cat
+                    (add leaf-patch-eq-b
+                        (add leaf-nonempty
+                            (add nested-children-cat
+                                (add nested-patch-eq-b
+                                    (add cat-replace
+                                        (add cat-patch-eq-b
+                                            (add arity-replace
+                                                (add arity-patch-eq-b
+                                                    any-empty-replace))))))))))))))
