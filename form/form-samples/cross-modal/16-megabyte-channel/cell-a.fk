@@ -1,0 +1,60 @@
+; cell-a.fk — Cell A (sender) in the megabyte-channel protocol.
+;
+; The protocol's claim: two cells can share megabytes of private content
+; through a kilobyte-or-less channel by leveraging the shared substrate
+; — including the just-landed seeded_bytes native (a deterministic LCG
+; that is byte-identical across Go/Rust/TS).
+;
+; PHASES (cell A's side):
+;
+;   Phase 0 — handshake via media-type-0 (raw bytes): write a 5-byte
+;     greeting ("Hello") to channel/handshake.bin. This proves the
+;     channel works; both cells share the starting alphabet of
+;     ASCII bytes.
+;
+;   Phase 1 — invent media-type-1 ("seeded_bytes encoding"). A
+;     transmits a small definition: [media-type-id=1, parameter-count=2]
+;     to channel/mt1-def.bin (2 bytes). Both cells already have the
+;     seeded_bytes NATIVE in their kernel; A's transmission tells B
+;     "next message uses this encoding scheme."
+;
+;   Phase 2 — transmit 1 MB payload via media-type-1. A writes only
+;     the parameters (seed=42, count=1000000) to channel/mt1-payload.bin
+;     — 8 bytes for 1,000,000 bytes of payload. Compression: 125000:1
+;     on this hop alone.
+;
+;   Phase 3 — A computes its local payload sum for verification.
+;     B will compute the same sum locally from the channel parameters.
+
+(do
+    ;; ---- Phase 0: handshake via media-type-0 (raw bytes) ----------
+    (write_file_bytes
+        "form-samples/cross-modal/16-megabyte-channel/channel/handshake.bin"
+        (list 72 101 108 108 111))   ; "Hello" in ASCII
+
+    ;; ---- Phase 1: invent + transmit media-type-1 definition -------
+    ;; [media-type-id = 1, parameter-count = 2]
+    (write_file_bytes
+        "form-samples/cross-modal/16-megabyte-channel/channel/mt1-def.bin"
+        (list 1 2))
+
+    ;; ---- Phase 2: transmit 1 MB payload via media-type-1 ----------
+    ;; Parameters: seed = 42, count = 1000000
+    ;; Little-endian u32 encoding: 4 bytes each.
+    ;;   42       → [42, 0, 0, 0]
+    ;;   1000000 → 0xF4240 → [64, 66, 15, 0]
+    (write_file_bytes
+        "form-samples/cross-modal/16-megabyte-channel/channel/mt1-payload.bin"
+        (list 42 0 0 0   64 66 15 0))
+
+    ;; ---- Phase 3: A's local payload + verification sum -----------
+    ;; A walks seeded_bytes locally — the same 1 MB B will materialize
+    ;; from the parameters. The payload itself never crosses the channel.
+    (let payload (seeded_bytes 42 1000000))
+    (let s (sum_bytes_list payload))
+
+    (write_file_text
+        "form-samples/cross-modal/16-megabyte-channel/channel/cell-a-sum.txt"
+        (int_to_str s))
+
+    s)

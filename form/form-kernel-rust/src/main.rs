@@ -2466,6 +2466,42 @@ impl Kernel {
                 Value::Int(0)
             }
         });
+        // seeded_bytes(seed, count) — deterministic LCG byte stream.
+        // Same (seed, count) → byte-identical output across Go / Rust / TS.
+        // Used by the private-channel protocol to transmit megabytes of
+        // content by transmitting only (seed, count) on the wire; receiver
+        // reconstructs locally. Compression ratio: arbitrary / 16 bytes.
+        // LCG: glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+        self.register_native("seeded_bytes", cat_call(), |_, _, args| {
+            let seed = args[0].as_int() as u32;
+            let count = args[1].as_int();
+            if count <= 0 {
+                return Value::List(Vec::new());
+            }
+            let mut state: u32 = seed;
+            let n = count as usize;
+            let mut out: Vec<Value> = Vec::with_capacity(n);
+            for _ in 0..n {
+                state = state.wrapping_mul(1103515245).wrapping_add(12345) & 0x7FFFFFFF;
+                out.push(Value::Int((state & 0xFF) as i64));
+            }
+            Value::List(out)
+        });
+        // sum_bytes_list(list) — sum all integer elements. Used for fast
+        // verification that two cells' large byte-lists agree without
+        // materializing them through the Form recursion. O(n) compiled.
+        self.register_native("sum_bytes_list", cat_call(), |_, _, args| {
+            match &args[0] {
+                Value::List(xs) => {
+                    let mut s: i64 = 0;
+                    for v in xs {
+                        s = s.wrapping_add(v.as_int());
+                    }
+                    Value::Int(s)
+                }
+                _ => Value::Int(0),
+            }
+        });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
         // Use when source-compile output crosses kernel invocations:
