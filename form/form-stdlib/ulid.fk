@@ -1,13 +1,10 @@
 ; ulid.fk — ULID (Universally Unique Lexicographically-sortable Identifier) as a Form recipe.
 ;
 ; Canonical truth: this recipe MEANS the ULID encoding. With the kernel's
-; bitwise primitives (band, bor, shl_u32, shr_u32) for the 5-bit chunking,
-; div/mod for the 48-bit timestamp split (the timestamp exceeds the 32-bit
-; signed-literal range, so it lives in 64-bit integer space where shr_u32's
-; uint32-truncation would lose the top bytes; div/mod stay correct), and
-; the string natives (substring, str_concat), Crockford-Base32 ULID encoding
-; composes without any host-library detour. The recipe stays sovereign
-; across sibling kernels (Go, Rust, TypeScript).
+; bitwise primitives (band, bor, shl_u32, shr_u32) for the 5-bit chunking
+; and the string natives (substring, str_concat), Crockford-Base32 ULID
+; encoding composes without any host-library detour. The recipe stays
+; sovereign across sibling kernels (Go, Rust, TypeScript).
 ;
 ; The spec (https://github.com/ulid/spec):
 ;   128 bits total = 48-bit unix-millisecond timestamp + 80 bits of randomness
@@ -30,13 +27,32 @@
 ;   Chars 2-10 carry the remaining 45 timestamp bits; chars 11-26 carry
 ;   the 80 random bits exactly.
 ;
-; The single entry point:
-;   (ulid-from-parts timestamp-48 random-10-bytes) → 26-char Crockford string
+; Two entry points (workhorse + convenience):
+;   (ulid-from-bytes 16-byte-list)            → 26-char string
+;       The canonical entry. Caller pre-splits its 48-bit timestamp into
+;       6 big-endian bytes and concatenates the 10 random bytes. This shape
+;       sidesteps the i32-literal ceiling — every byte fits in 8 bits, so
+;       a max-timestamp ULID round-trips on every sibling kernel including
+;       TS (whose default math width is i32; see below).
+;
+;   (ulid-from-parts timestamp-32 random-10-bytes) → 26-char string
+;       Convenience: a single 32-bit timestamp + random tail. The top 16
+;       bits of the 48-bit ULID timestamp slot are filled with zeros, so
+;       outputs always start with '0' (the 3-bit chunk taken from the top
+;       of timestamp-32 saturates the next character at most). Production
+;       cells running on int64-capable kernels (Go, Rust) can extend the
+;       byte-shape via ulid-from-bytes; on the TS kernel the 32-bit window
+;       is the natural ceiling until TS gains an i64 math width.
+;
+; Why two entry points instead of a single 48-bit integer parameter:
+;   The TS sibling kernel's default math width is i32 (literal parse,
+;   div/mod/add all go through `(n | 0)`). A 48-bit integer literal
+;   silently truncates in TS, so any recipe that takes `timestamp-48 :
+;   integer` would diverge from Go/Rust on values above 2^32 - 1. The
+;   byte-list shape stays honest across all three kernels because each
+;   byte fits comfortably in 8 bits.
 ;
 ; Determinism notes:
-;   timestamp-48: a 48-bit unsigned integer the caller supplies. Wire it
-;     to whatever clock source the host has (millisecond unix epoch is the
-;     spec recommendation, but the recipe itself is clock-agnostic).
 ;   random-10-bytes: a list of exactly 10 byte values (0..255). For
 ;     production use the kernel's (random_bytes 10); for sibling-parity
 ;     tests pass a deterministic byte-list — (random_bytes ...) diverges
@@ -60,32 +76,6 @@
     ;; ---- LIST UTILITIES -------------------------------------------
     (defn ulid-nil? (xs) (eq (len xs) 0))
 
-    ;; ---- 48-BIT TIMESTAMP → 6 BIG-ENDIAN BYTES --------------------
-    ;; Form integer literals parse as signed 32-bit, so values above
-    ;; 2^31 - 1 can't appear as a literal — and shr_u32 truncates its
-    ;; operand to uint32 before shifting, which silently drops the top
-    ;; bytes of a 48-bit value. div/mod run in the kernel's wider int
-    ;; space (i64 in Go/Rust, JS Number's 53-bit safe-integer range in
-    ;; TS — covers the full 48-bit timestamp comfortably).
-    ;;
-    ;; Byte order: big-endian, byte 0 = most-significant byte of the
-    ;; 48-bit value. The high-byte-first stream is what gives ULID its
-    ;; lexicographic-sort guarantee — string sort matches time sort.
-    (defn ulid-ts-bytes (ts)
-        (do
-            (let b5 (mod ts 256))                                       ; LSB
-            (let t1 (div ts 256))
-            (let b4 (mod t1 256))
-            (let t2 (div t1 256))
-            (let b3 (mod t2 256))
-            (let t3 (div t2 256))
-            (let b2 (mod t3 256))
-            (let t4 (div t3 256))
-            (let b1 (mod t4 256))
-            (let t5 (div t4 256))
-            (let b0 (mod t5 256))                                       ; MSB
-            (cons b0 (cons b1 (cons b2 (cons b3 (cons b4 (cons b5 (list)))))))))
-
     ;; Concatenate two lists. Cons-walks the left list onto the right.
     (defn ulid-append (xs ys)
         (if (ulid-nil? xs) ys
@@ -94,29 +84,34 @@
     ;; ---- STREAMING 5-BIT ENCODER ----------------------------------
     ;; The 128-bit input (16 bytes) is prefixed with 2 zero pad bits to
     ;; reach 130 = 26 × 5 bits. The encoder maintains a small bit buffer
-    ;; (a 32-bit integer holding 0..12 pending bits, with `nbits` tracking
-    ;; how many are valid) and walks the byte list head→tail. Every time
-    ;; the buffer has ≥ 5 bits, it emits one Crockford char from the top
-    ;; 5 bits and drops them. Initial state: buffer = 0, nbits = 2
-    ;; (the two zero pad bits already sitting at the top).
+    ;; (the low bits of a uint32 holding 0..12 pending bits, with `nbits`
+    ;; tracking how many are valid) and walks the byte list head→tail.
+    ;; Every time the buffer has ≥ 5 bits, it emits one Crockford char
+    ;; from the top 5 bits and drops them. Initial state: buffer = 0,
+    ;; nbits = 2 (the two zero pad bits already sitting at the top).
     ;;
-    ;; The emit-loop drains the buffer recursively: as long as ≥ 5 bits
-    ;; are valid, peel one char. Then the outer loop folds in the next
-    ;; input byte (8 more bits, raising nbits to between 5 and 12).
+    ;; The drain function peels chars while the buffer holds ≥ 5 valid
+    ;; bits; the outer fold-loop then folds in the next input byte
+    ;; (raising nbits by 8, to between 5 and 12).
     ;;
-    ;; After all 16 bytes are consumed, nbits = 130 mod 8 - we've emitted
-    ;; 26 chars precisely (130 = 26 × 5), so the final drain finds nbits < 5
-    ;; and the recursion bottoms out with the full output string.
+    ;; After all 16 bytes are consumed, we've emitted exactly 26 chars
+    ;; (130 = 26 × 5) — the final drain finds nbits = 0 < 5 and the
+    ;; recursion bottoms out with the complete output string.
+    ;;
+    ;; Why each byte is masked with 255: a sibling kernel may carry the
+    ;; head value as a wider int (e.g. negative-on-int64 leaking into
+    ;; bor); masking forces the canonical 8-bit shape before it enters
+    ;; the buffer.
 
-    ;; Drain the buffer while it holds ≥ 5 bits. Each iteration peels the
-    ;; top 5 bits as one Crockford char and shifts the buffer left-aligned
-    ;; window down by 5.
+    ;; Drain the buffer while it holds ≥ 5 bits. Each iteration peels
+    ;; the top 5 bits as one Crockford char and shifts the buffer's
+    ;; left-aligned window down by 5.
     (defn ulid-drain (buf nbits acc)
         (if (lt nbits 5) (list buf nbits acc)
             (do
-                ;; The buffer's 5 highest valid bits are at positions
-                ;; (nbits-1) down to (nbits-5). Shift right by (nbits-5)
-                ;; to bring them into the low 5 bits, mask to 31.
+                ;; The 5 highest valid bits live at positions (nbits-1)
+                ;; down to (nbits-5). Shift right by (nbits-5) to bring
+                ;; them into the low 5 bits, mask to 31.
                 (let shift (sub nbits 5))
                 (let val   (band (shr_u32 buf shift) 31))
                 ;; Drop those 5 bits from the buffer; nbits -= 5.
@@ -125,11 +120,13 @@
                     (str_concat acc (ulid-char-of val))))))
 
     ;; Walk the byte list. For each byte: shift the existing buffer left
-    ;; by 8 and OR in the new byte, raising nbits by 8. Then drain.
+    ;; by 8 and OR in the new byte (masked to 8 bits), raising nbits by
+    ;; 8. Then drain.
     (defn ulid-emit-loop (bs buf nbits acc)
         (if (ulid-nil? bs) acc
             (do
-                (let buf2   (bor (shl_u32 buf 8) (head bs)))
+                (let b      (band (head bs) 255))
+                (let buf2   (bor (shl_u32 buf 8) b))
                 (let nbits2 (add nbits 8))
                 (let drained (ulid-drain buf2 nbits2 acc))
                 ;; drained = (list new-buf new-nbits new-acc)
@@ -138,19 +135,38 @@
                     (head (tail drained))
                     (head (tail (tail drained)))))))
 
-    ;; ---- THE CANONICAL ENTRY POINT ---------------------------------
-    ;; (ulid-from-parts timestamp-48 random-10-bytes) → 26-char string.
-    ;; Caller provides the 48-bit timestamp (host clock) and a 10-byte
-    ;; list of randomness. The recipe never reads a clock or RNG itself
-    ;; — that's the cell's responsibility, keeping the encoder pure and
-    ;; sibling-parity-safe.
+    ;; ---- WORKHORSE ENTRY POINT ------------------------------------
+    ;; (ulid-from-bytes 16-byte-list) → 26-char string.
+    ;; Caller composes the 16 bytes = 6 big-endian timestamp bytes +
+    ;; 10 random bytes. This shape is cross-kernel safe: bytes never
+    ;; exceed 8 bits, sidestepping any i32-literal truncation.
     ;;
     ;; Initial buffer state: buf = 0, nbits = 2. Those two zero bits
     ;; represent the front-pad needed to align the 128 input bits into
     ;; 26 × 5-bit chunks; they sit at the top of the buffer and become
     ;; the high 2 bits of the very first emitted character.
-    (defn ulid-from-parts (timestamp-48 random-10-bytes)
+    (defn ulid-from-bytes (sixteen-bytes)
+        (ulid-emit-loop sixteen-bytes 0 2 ""))
+
+    ;; ---- 32-BIT TIMESTAMP CONVENIENCE ENTRY POINT -----------------
+    ;; (ulid-from-parts timestamp-32 random-10-bytes) → 26-char string.
+    ;; The top 16 bits of the 48-bit ULID timestamp slot are zero (the
+    ;; full 48-bit case requires the byte-list shape above; see file
+    ;; header for the cross-kernel reasoning). timestamp-32 must fit in
+    ;; an unsigned 32-bit value; values up to 4294967295 round-trip on
+    ;; every sibling kernel.
+    ;;
+    ;; The byte split uses shr_u32 / band which operate within u32 —
+    ;; matching the 32-bit input range exactly.
+    (defn ulid-from-parts (timestamp-32 random-10-bytes)
         (do
-            (let ts-bytes  (ulid-ts-bytes timestamp-48))
-            (let all-bytes (ulid-append ts-bytes random-10-bytes))
-            (ulid-emit-loop all-bytes 0 2 ""))))
+            ;; Top 16 bits of the 48-bit slot are zero.
+            (let b0 0)
+            (let b1 0)
+            ;; Low 32 bits of the timestamp slot, MSB-first.
+            (let b2 (band (shr_u32 timestamp-32 24) 255))
+            (let b3 (band (shr_u32 timestamp-32 16) 255))
+            (let b4 (band (shr_u32 timestamp-32 8)  255))
+            (let b5 (band timestamp-32 255))
+            (let ts-bytes (cons b0 (cons b1 (cons b2 (cons b3 (cons b4 (cons b5 (list))))))))
+            (ulid-from-bytes (ulid-append ts-bytes random-10-bytes)))))
