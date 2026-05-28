@@ -1412,6 +1412,33 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// seeded_bytes(seed, count) — deterministic LCG byte stream.
+	// Same (seed, count) → byte-identical output across Go / Rust / TS.
+	// glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+	k.registerNative("seeded_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		seed := uint32(args[0].Int)
+		count := int(args[1].Int)
+		if count <= 0 {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		state := seed
+		out := make([]Value, count)
+		for i := 0; i < count; i++ {
+			state = (state*1103515245 + 12345) & 0x7FFFFFFF
+			out[i] = Value{Kind: VInt, Int: int64(state & 0xFF)}
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// sum_bytes_list(list) — fast O(n) compiled sum.
+	k.registerNative("sum_bytes_list", catCall(), func(_ *Kernel, args []Value) Value {
+		var s int64 = 0
+		if args[0].Kind == VList {
+			for _, v := range args[0].List {
+				s += v.Int
+			}
+		}
+		return Value{Kind: VInt, Int: s}
+	})
 	// write_form_binary — emit a Recipe to .fkb on disk in the full
 	// artifact format (string table + tree). Sibling to read_form_binary.
 	// Use when source-compile output needs to cross kernel invocations:
