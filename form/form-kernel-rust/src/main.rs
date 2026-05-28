@@ -2466,6 +2466,35 @@ impl Kernel {
                 Value::Int(0)
             }
         });
+        // mul_mod_u64(a, b, m) — exact unsigned modular multiply. It lets
+        // large-integer recipes keep algorithm truth in Form while kernels
+        // provide only the narrow arithmetic primitive.
+        self.register_native("mul_mod_u64", cat_method(), |_, _, args| {
+            let as_u64 = |v: &Value| {
+                let n = v.as_int();
+                if n < 0 { n as u32 as u64 } else { n as u64 }
+            };
+            let modulus = as_u64(&args[2]) as u128;
+            if modulus == 0 {
+                return Value::Int(0);
+            }
+            let a = as_u64(&args[0]) as u128;
+            let b = as_u64(&args[1]) as u128;
+            Value::Int(((a * b) % modulus) as u64 as i64)
+        });
+        self.register_native("add_mod_u64", cat_method(), |_, _, args| {
+            let as_u64 = |v: &Value| {
+                let n = v.as_int();
+                if n < 0 { n as u32 as u64 } else { n as u64 }
+            };
+            let modulus = as_u64(&args[2]) as u128;
+            if modulus == 0 {
+                return Value::Int(0);
+            }
+            let a = as_u64(&args[0]) as u128;
+            let b = as_u64(&args[1]) as u128;
+            Value::Int(((a + b) % modulus) as u64 as i64)
+        });
         // seeded_bytes(seed, count) — deterministic LCG byte stream.
         // Same (seed, count) → byte-identical output across Go / Rust / TS.
         // Used by the private-channel protocol to transmit megabytes of

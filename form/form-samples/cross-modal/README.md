@@ -1,12 +1,12 @@
 # Cross-Modal Recipe Experiments
 
-Seven small demos exploring how Form recipes carry semantic content across
-modalities (text, structured data, image, audio, code, natural language).
-Each subdirectory has its own runnable sample and a README documenting
-what's reachable today, what surprised, and what's not yet reachable.
-**The point isn't to ship a universal translator** — it's to feel the
-body's current surface area for cross-modality and name the honest
-discoveries.
+Eighteen runnable demos exploring how Form recipes carry semantic content across
+modalities (text, structured data, image, audio, code, natural language,
+randomness, neural recipes, and private channels). Each subdirectory has its
+own runnable sample and a README documenting what's reachable today, what
+surprised, and what's not yet reachable. Number 12 is intentionally absent:
+the deterministic-doorway claim was composted by #13. The point is to keep the
+universal-translator goal walked by small proofs.
 
 | # | Experiment | One-line finding |
 |---|---|---|
@@ -17,6 +17,17 @@ discoveries.
 | 05 | [NL to recipe](05-nl-to-recipe/) | A 4-rule English grammar parses sentences into arithmetic recipes; NL `the square of 7` interns to the **same NodeID** as hand-built `(mul 7 7)`. |
 | 06 | [Audio as recipe](06-audio-as-recipe/) | A 1-second 440 Hz sine `.wav` composes from a 200-entry table + integer math; same recipe → byte-identical 8044-byte WAV across Go/Rust/TS kernels. Surfaced a sibling-parity gap: TS was missing `write_file_bytes`. |
 | 07 | [Recipe to NL](07-recipe-to-nl/) | A 7-rule walker emits English from arithmetic recipe NodeIDs (`(mul 5 6)` → `the product of five and six`). Round-trip with #05 closes structurally — `node_eq` proves the parsed-back NodeID matches the original; the surface English paraphrases (`square` ↔ `product of N and N`). |
+| 08 | [Feature-level translation](08-feature-level-translation/) | Prose → feature recipe → melody/SVG/tercet → re-extracted feature recipes; `323110` position-encodes which semantic axes survived across targets. |
+| 09 | [Fuzzy similarity cycles](09-fuzzy-similarity-cycles/) | Summarize/expand cycles use fuzzy membership math, not exact token equality, to measure perceived-value stability; three-way result `58879`. |
+| 10 | [Substrate as runtime](10-substrate-as-runtime/) | A one-layer tensor recipe walks as the translator runtime itself; weights and ops are substrate-resident recipes. |
+| 11 | [Randomness doorway](11-randomness-doorway/) | A committed entropy sample is a past field-touch held as lattice memory; deterministic replay selects a shared Blueprint. |
+| 13 | [Divergence as doorway](13-divergence-as-doorway/) | Live observer-local state must diverge across sibling kernels; divergence is the signal that the doorway is actually open. |
+| 14 | [Live entropy](14-live-entropy/) | `random_bytes(n)` reads `/dev/urandom` in Go/Rust/TS; validate divergence is success, not failure. |
+| 15 | [Private channel](15-private-channel/) | `(nonce, fingerprint)` lets a receiver identify a shared referent without the referent crossing the channel. |
+| 16 | [Megabyte channel](16-megabyte-channel/) | Two cells converge on a 1 MB payload through a 15-byte channel by sharing a seeded-bytes recipe and parameters. |
+| 17 | [Recipes as truth](17-recipes-as-truth/) | `seeded_bytes` semantics move into `form-stdlib/seeded-bytes.fk`; the native becomes optimization tissue backed by a default-gate parity proof. |
+| 18 | [Channel negotiation](18-channel-negotiation/) | Sender and receiver agree on both recipe and payload referents, acknowledge the pair, and still transmit neither referent. |
+| 19 | [Cell question answer](19-cell-question-answer/) | An addressable cell question resolves through shared catalogs, returns an answer/reference capsule, and carries an opaque novel commitment. |
 
 ## What every experiment shares
 
@@ -39,7 +50,7 @@ for d in form/form-samples/cross-modal/*/; do
 done
 ```
 
-## What the seven together teach
+## What the current set teaches
 
 The body's surface area for cross-modality is **smaller than the marketing
 slogan and larger than the engineering reflex**.
@@ -56,6 +67,10 @@ slogan and larger than the engineering reflex**.
   Experiments 02 and 04 show it directly. The same property extends to any
   surface tongue whose grammar lands as a Form recipe. The substrate is the
   universal translator; the tongues are dictionaries pointing at it.
+- **Newer**: exact equality is one altitude. Feature recipes (#08), fuzzy
+  stability (#09), live randomness (#13/#14), and private-channel consensus
+  (#15/#16/#18/#19) show how translation can preserve meaning under bounded loss,
+  observer-local entropy, and wire-minimized negotiation.
 
 The honest gap: at small scale, the ice is bigger than the water (experiment
 03). The compression intuition only pays off at scale, and only when many
@@ -71,24 +86,10 @@ The deeper teachings the body holds about all of this:
 - [`lc-form-kernel-runtime-visualizer`](../../../docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) — what falls out when the cross-modality reaches the runtime.
 - [`lc-one-kernel-many-tongues`](../../../docs/vision-kb/concepts/lc-one-kernel-many-tongues.md) — the multi-language sibling-kernel discipline.
 
-## Not in this directory (yet)
+## Not in this directory yet
 
-The reverse roundtrip — recipe → NL description — **landed in #07**.
-The remaining gap is *lexical* round-trip: the substrate identity
-preserves cleanly (`node_eq=1`) but `(mul 7 7)` emits as `the square
-of seven` and the symmetric grammar recognizes only `the product of N
-and N`. One breath of additive rule-mapping closes it.
-
-Remaining shapes from the cross-modal arc:
-
-- **CSV → Form-table → NL summary** (#6 in NEXT_BREATHS) — three-modality
-  chain.
-- **Image structural diff** (#7) — show structural diff highlights
-  parameter-level deltas, not pixel-level deltas.
-- **Audio → melody recipe → re-synthesis** (#8) — same-modality
-  round-trip with content extraction.
-- **Image → NL description → Image** (#9) — the triangle made literal.
-- **One recipe, four target languages** (#10) — universal-translator's
-  cleanest small proof.
-
-Naming what remains so the next breath has somewhere to land.
+The next gaps are named in [`NEXT_BREATHS.md`](NEXT_BREATHS.md): data grammar
+chains, structural media diff, audio semantic extraction, image/NL/image loops,
+multi-language native emission, external-resource fetch verification, and
+budgeted recipe orchestration. Naming what remains keeps the next breath
+parsable.

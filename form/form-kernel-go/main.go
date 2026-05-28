@@ -24,6 +24,7 @@ import (
 	"hash/fnv"
 	"io"
 	"math"
+	"math/big"
 	"net"
 	"os"
 	"sort"
@@ -1580,6 +1581,47 @@ func (k *Kernel) registerNatives() {
 			return Value{Kind: VInt, Int: 1}
 		}
 		return Value{Kind: VInt, Int: 0}
+	})
+	// mul_mod_u64(a, b, m) — exact unsigned modular multiply. This keeps
+	// large-integer recipe arithmetic Form-native without promoting whole
+	// algorithms such as seeded byte streams into kernel-only truth.
+	k.registerNative("mul_mod_u64", catMethod(), func(_ *Kernel, args []Value) Value {
+		asU64 := func(v Value) uint64 {
+			if v.Int < 0 {
+				return uint64(uint32(v.Int))
+			}
+			return uint64(v.Int)
+		}
+		modulus := asU64(args[2])
+		if modulus == 0 {
+			return Value{Kind: VInt, Int: 0}
+		}
+		var a, b, m, product big.Int
+		a.SetUint64(asU64(args[0]))
+		b.SetUint64(asU64(args[1]))
+		m.SetUint64(modulus)
+		product.Mul(&a, &b)
+		product.Mod(&product, &m)
+		return Value{Kind: VInt, Int: int64(product.Uint64())}
+	})
+	k.registerNative("add_mod_u64", catMethod(), func(_ *Kernel, args []Value) Value {
+		asU64 := func(v Value) uint64 {
+			if v.Int < 0 {
+				return uint64(uint32(v.Int))
+			}
+			return uint64(v.Int)
+		}
+		modulus := asU64(args[2])
+		if modulus == 0 {
+			return Value{Kind: VInt, Int: 0}
+		}
+		var a, b, m, sum big.Int
+		a.SetUint64(asU64(args[0]))
+		b.SetUint64(asU64(args[1]))
+		m.SetUint64(modulus)
+		sum.Add(&a, &b)
+		sum.Mod(&sum, &m)
+		return Value{Kind: VInt, Int: int64(sum.Uint64())}
 	})
 	// seeded_bytes(seed, count) — deterministic LCG byte stream.
 	// Same (seed, count) → byte-identical output across Go / Rust / TS.

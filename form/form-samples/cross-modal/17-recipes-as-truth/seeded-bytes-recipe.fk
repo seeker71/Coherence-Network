@@ -4,61 +4,38 @@
 ; #2142 landed `seeded_bytes(seed, count)` as a kernel native. Urs's
 ; correction: don't put things in the kernel that can be expressed
 ; in Form-native code. The native is an OPTIMIZATION; the canonical
-; truth is the Form recipe. Both should produce byte-identical output.
+; truth is form-stdlib/seeded-bytes.fk. Both should produce byte-identical output.
 ;
-; THIS RECIPE walks the same LCG (glibc rand: state * 1103515245 + 12345
-; mod 2^31) in Form arithmetic, byte by byte. For small N this is
-; tractable; for large N it's slow without JIT — but the JIT layer's
-; eventual role is to pattern-match this recipe and dispatch to compiled
-; native code, retiring the native from the kernel's surface.
+; THIS SAMPLE compares the native to the reusable Form recipe. For small N this
+; is tractable; for large N it's slow without JIT — but the JIT layer's eventual
+; role is to pattern-match this recipe and dispatch to compiled native code,
+; retiring the native from the kernel's surface.
 ;
 ; HONEST FINDING surfaced by walking this:
 ;   Go kernel: recipe produces same bytes as native. ✓
 ;   Rust kernel: recipe produces same bytes as native. ✓
-;   TypeScript kernel: recipe DIVERGES from native.
+;   TypeScript kernel: recipe now produces the same bytes using the same
+;   fixed-width modular multiply primitive.
 ;
-; The TS finding is structural: JavaScript Number loses precision past
+; The TS finding was structural: JavaScript Number loses precision past
 ; 2^53. The LCG multiplies state (up to 2^31) by 1103515245 (~2^30),
-; producing intermediates up to 2^61. The native side uses BigInt for
-; this in TS; the FORM RECIPE has no such protection — it runs through
-; Form's integer arithmetic, which in TS is float64-backed and loses
-; precision at the bottom bits.
+; producing intermediates up to 2^61. `mul_mod_u64` is the narrow
+; primitive that keeps the algorithm in Form while giving each kernel
+; exact arithmetic for the two modular operations the recipe needs.
 ;
 ; This is a real architectural constraint:
 ;   * Composting native algorithms to Form recipes requires Form
 ;     arithmetic to host 64-bit modular operations precisely.
-;   * The TS kernel's int-as-float64 representation breaks this for
-;     crypto-style algorithms.
-;   * Path forward: TS kernel needs BigInt-backed Form integers (slower
-;     but precise), OR Form needs fixed-width modular-multiply
-;     primitives, OR algorithms must stay within 2^53 expressible shapes.
+;   * A fixed-width primitive is smaller kernel tissue than a whole
+;     algorithm native.
+;   * Wider numeric sovereignty still wants typed BigInt-backed Form
+;     integers; this proof closes the LCG slice without waiting for that.
 ;
-; Run on Go or Rust kernels: returns 1 (recipe == native).
-; Run on TS kernel: returns 0 (the honest signal of the precision gap).
+; Run on Go, Rust, or TS kernels: returns 1 (recipe == native).
+;
+; preludes: form-stdlib/seeded-bytes.fk
 
 (do
-    (defn nil? (xs) (eq (len xs) 0))
-
-    ;; The LCG step — glibc rand: state * 1103515245 + 12345, mod 2^31.
-    ;; In Go/Rust kernels: int64 precision; arithmetic is exact.
-    ;; In TS kernel: float64 precision; the product overflows safe-int.
-    (defn lcg-step (state)
-        (mod (add (mul state 1103515245) 12345) 2147483648))
-
-    ;; Build a list of N bytes by walking the LCG. cons builds reversed.
-    (defn seeded-loop (state n acc)
-        (if (eq n 0) acc
-            (do
-                (let next (lcg-step state))
-                (seeded-loop next (sub n 1) (cons (mod next 256) acc)))))
-
-    (defn reverse-loop (xs acc)
-        (if (nil? xs) acc
-            (reverse-loop (tail xs) (cons (head xs) acc))))
-
-    (defn seeded-bytes-recipe (seed count)
-        (reverse-loop (seeded-loop seed count (empty)) (empty)))
-
     ;; --- correctness check ------------------------------------------
     ;; The native (kernel-compiled LCG) vs the recipe (Form-walked LCG).
     ;; If they produce the same sum, the recipe is byte-equivalent to

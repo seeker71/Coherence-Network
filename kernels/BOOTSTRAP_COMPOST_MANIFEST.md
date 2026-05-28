@@ -233,9 +233,9 @@ confirm Shape 2 classification + LOC count.
   every existing gate runs unchanged.
 - `kernel-bmf` (the destination) — invokes `kernel-bmf-run <source.py>`,
   expecting the binary to read `.py` via `form-stdlib/grammars/python-bmf.fk`
-  and execute via Form-native walker. **The binary doesn't exist yet.** The
-  parity script prints a clear "deferred" message naming the file the
-  Form-native path must learn to compile.
+  and execute via Form-native walker. The binary exists and is now part of the
+  diagnostic matrix; rows that fail under `kernel-bmf` remain row failures
+  instead of aborting the suite.
 
 Switching the default from `ts-eval` to `kernel-bmf` is the single env-var
 change that flips the third runtime. Each demo gets promoted individually
@@ -245,6 +245,30 @@ are residue.
 
 The same selector shape can extend to the TS adapter parity gate
 (`PARITY_THIRD_RUNTIME` over `ts-eval` vs `kernel-bmf-ts`).
+
+---
+
+## Current kernel-bmf frontier — 2026-05-28
+
+`PARITY_THIRD_RUNTIME=kernel-bmf ./scripts/parity_suite.sh` now completes the
+full Python matrix and reports the frontier instead of stopping at the first
+nonzero row.
+
+- Ready: 4/19 demos are COMPOST READY under `kernel-bmf`:
+  `python_bridge_demo.py`, `python_demo.py`, `python_assign_demo.py`,
+  `python_imperative_demo.py`.
+- First open row: `examples/python_substrate_demo.py`.
+- Observed trace: three `if_stmt` lifts are unsupported, two `for_stmt` lifts
+  are unsupported, and the evaluator then reaches an unimplemented recipe
+  category before returning `0`.
+- Required next arm bundle: statement-level `if` lift/eval, `for` lift/eval
+  over lists/ranges, and return propagation through nested statement bodies so
+  early-return Python helpers keep CPython semantics.
+
+This is the biggest named tightness because it attacks
+`form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` directly: each
+green row removes surface from the hand-coded Python adapter rather than adding
+another algorithm native.
 
 ---
 
@@ -321,18 +345,18 @@ returns the statement count (15), not the program's CPython value (40949).
 The driver swaps to a recipe-walking expression in the same script when G4
 (closure interpreter) lands; the orchestration shape stays.
 
-**Open contract for the next PROVEN rows:** the surface beyond the 9 arms
-needs both a lift dispatch branch in `python-bmf-lift.fk` and a matching
-interpreter arm in `python-bmf-eval.fk`. Order of incoming breaths (each is
-its own focused PR):
+**Open contract for the next PROVEN rows:** the surface beyond the four
+COMPOST READY demos needs both a lift dispatch branch in
+`python-bmf-lift.fk` and a matching interpreter arm in
+`python-bmf-eval.fk`. Order of incoming breaths (each is its own focused PR):
 
-- `PY-BMF-WHILE` + while-statement lift — `while cond: body`
-- `PY-BMF-LIST` + list-literal lift + `PY-BMF-SUBSCRIPT` for `xs[i]`
-- `PY-BMF-DICT` + dict-literal lift + key access
-- `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`
-- `PY-BMF-FOR` + iterator protocol on lists / ranges
-- `PY-BMF-LAMBDA` + closure capture in expressions
-- `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment
+- Statement-level `if` + return propagation through nested bodies — first
+  blocker for `python_substrate_demo.py`.
+- `PY-BMF-FOR` + iterator protocol on lists / ranges — same first blocker.
+- `PY-BMF-DICT` + dict-literal lift + key access.
+- `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`.
+- `PY-BMF-LAMBDA` + closure capture in expressions.
+- `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment.
 
 Each PROVEN row brings one more `PARITY_FILES` demo green under
 `PARITY_THIRD_RUNTIME=kernel-bmf`. When `lang-python.ts`'s full surface is

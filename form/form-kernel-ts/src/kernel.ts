@@ -1781,6 +1781,30 @@ export class Kernel {
       );
       return { kind: "int", int: 1 };
     });
+    // mul_mod_u64(a, b, m) — exact unsigned modular multiply. This is the
+    // narrow arithmetic support needed for recipe-owned LCG/SHA-style work.
+    this.registerNative("mul_mod_u64", catMethod(), (_k, args) => {
+      const modulus = argU64(args, 2);
+      if (modulus === 0n) return { kind: "int", int: 0 };
+      const a = argU64(args, 0);
+      const b = argU64(args, 1);
+      const result = (a * b) % modulus;
+      if (result <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return { kind: "int", int: Number(result) };
+      }
+      return { kind: "u64", bigint: result };
+    });
+    this.registerNative("add_mod_u64", catMethod(), (_k, args) => {
+      const modulus = argU64(args, 2);
+      if (modulus === 0n) return { kind: "int", int: 0 };
+      const a = argU64(args, 0);
+      const b = argU64(args, 1);
+      const result = (a + b) % modulus;
+      if (result <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return { kind: "int", int: Number(result) };
+      }
+      return { kind: "u64", bigint: result };
+    });
     // seeded_bytes(seed, count) — deterministic LCG byte stream.
     // Same (seed, count) → byte-identical output across Go / Rust / TS.
     // glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
@@ -2625,6 +2649,21 @@ function argBigInt(args: Value[], i: number): bigint {
     v.kind === "u32"
   )
     return BigInt(v.int);
+  throw new Error(`arg ${i}: expected integer, got ${v.kind}`);
+}
+function argU64(args: Value[], i: number): bigint {
+  const v = args[i];
+  if (!v) throw new Error(`arg ${i}: missing`);
+  if (v.kind === "u64" || v.kind === "i64") return BigInt.asUintN(64, v.bigint);
+  if (
+    v.kind === "int" ||
+    v.kind === "i8" ||
+    v.kind === "i16" ||
+    v.kind === "u8" ||
+    v.kind === "u16" ||
+    v.kind === "u32"
+  )
+    return BigInt.asUintN(32, BigInt(v.int));
   throw new Error(`arg ${i}: expected integer, got ${v.kind}`);
 }
 function argStr(args: Value[], i: number): string {
@@ -3648,4 +3687,3 @@ function hasMagic(bytes: Uint8Array, magic: Buffer): boolean {
   }
   return true;
 }
-

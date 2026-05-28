@@ -1,0 +1,23 @@
+; seeded-bytes-recipe-band.fk — seeded_bytes native is optimization tissue.
+;
+; The Form recipe in form-stdlib/seeded-bytes.fk must remain byte-equivalent
+; to the native across sibling kernels. The native can then compost behind JIT
+; or pattern dispatch without changing meaning.
+;
+; preludes: form-stdlib/seeded-bytes.fk
+
+(do
+    (let native-sum-42 (sum_bytes_list (seeded_bytes 42 100)))
+    (let recipe-sum-42 (sum_bytes_list (seeded-bytes-recipe 42 100)))
+    (let score-42
+        (if (eq native-sum-42 recipe-sum-42) 100 0))
+
+    (let native-sum-7 (sum_bytes_list (seeded_bytes 7 17)))
+    (let recipe-sum-7 (sum_bytes_list (seeded-bytes-recipe 7 17)))
+    (let score-7
+        (if (eq native-sum-7 recipe-sum-7) 10 0))
+
+    (let zero-len-score
+        (if (eq (len (seeded-bytes-recipe 99 0)) 0) 1 0))
+
+    (add (add score-42 score-7) zero-len-score))

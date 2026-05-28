@@ -24,11 +24,11 @@
 #   PARITY_THIRD_RUNTIME=kernel-bmf  (the destination)
 #     Form-native: source bytes → BMF source objects → rules in
 #     form-stdlib/grammars/python-bmf.fk → Form recipe → native walker.
-#     Invokes `kernel-bmf-run <file.py>` which sibling agents on
-#     `template-machinery` + `python-bmf-driven-parse` are bringing up.
-#     When kernel-bmf-run can compile a file, that file's row promotes;
-#     the env-var flip happens demo-by-demo. When all files pass under
-#     kernel-bmf, the ts-eval path is residue per the compost manifest.
+#     Invokes `kernel-bmf-run <file.py>`. Rows that pass promote; rows
+#     that fail remain visible as row failures instead of aborting the
+#     matrix. The env-var flip happens demo-by-demo. When all files pass
+#     under kernel-bmf, the ts-eval path is residue per the compost
+#     manifest.
 #
 # Add new files to PARITY_FILES below as they're ripened.
 # Run from form/form-kernel-ts/.
@@ -96,10 +96,8 @@ PATH="$SCRIPT_DIR:$PATH"
 #
 # kernel-bmf: invokes a Form-native binary `kernel-bmf-run` that reads
 #             .py via form-stdlib/grammars/python-bmf.fk and executes via
-#             the native walker. Sibling agents on `template-machinery`
-#             + `python-bmf-driven-parse` are bringing this up. When the
-#             binary lands on $PATH, this selector becomes the default
-#             per kernels/BOOTSTRAP_COMPOST_MANIFEST.md.
+#             the native walker. It is runnable today for the first rows;
+#             remaining failures name the next lift/eval surface to teach.
 case "$PARITY_THIRD_RUNTIME" in
     ts-eval)
         third_runtime_run() {
@@ -163,15 +161,20 @@ else:
 
     # Compile to .fk and run via native binary.
     fk_path="${f%.py}.fk"
-    npx tsx src/main.ts python-compile "$f" "$fk_path" >/dev/null 2>&1
-    rust_result=$("$RUST_BIN" "$fk_path" 2>&1 | tail -1)
+    compile_status=0
+    compile_output=$(npx tsx src/main.ts python-compile "$f" "$fk_path" 2>&1) || compile_status=$?
+    if [[ $compile_status -eq 0 ]]; then
+        rust_result=$("$RUST_BIN" "$fk_path" 2>&1 | tail -1 || true)
+    else
+        rust_result="compile failed: $(printf '%s\n' "$compile_output" | tail -1)"
+    fi
 
     # Third runtime — selected by PARITY_THIRD_RUNTIME. Today's default
     # (ts-eval) walks the parsed Python tree through the TS evaluator;
     # the destination (kernel-bmf) invokes the Form-native walker via
     # kernel-bmf-run. Either way, this is the third path that makes
     # parity genuinely three-way.
-    third_result=$(third_runtime_run "$f")
+    third_result=$(third_runtime_run "$f" || true)
 
     if [[ "$py_result" == "$rust_result" && "$py_result" == "$third_result" ]]; then
         echo "  ✓ $f  → $py_result"

@@ -27,7 +27,8 @@ growing list of pre-compiled algorithms.
 PRs #2140, #2142, and the in-progress #2143 added:
 
 - `random_bytes(n)` — primitive ✓ (entropy at OS boundary)
-- `seeded_bytes(seed, count)` — **composable** (LCG: state = state * A + C mod M, expressible from `mul`/`add`/`mod`)
+- `mul_mod_u64(a, b, m)` / `add_mod_u64(a, b, m)` — primitive enough to keep fixed-width modular arithmetic exact across sibling kernels
+- `seeded_bytes(seed, count)` — **composable** (LCG: state = state * A + C mod M, now lives in `form-stdlib/seeded-bytes.fk` with exact u64 modular primitives)
 - `sum_bytes_list(list)` — **composable** (reduce-via-fold)
 - `sha256(byte-list)` — **composable** (SHA-256 is bit-ops + arithmetic; implementable in Form, just slow without JIT)
 - `ed25519_*` — **composable** (Ed25519 is field arithmetic on curve25519; implementable in Form, just slow without JIT)
@@ -39,7 +40,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 
 ## Current native surface (Go kernel — counted)
 
-**88 natives** registered. Breakdown:
+**90 natives** registered. Breakdown:
 
 ### Truly primitive (~25)
 
@@ -55,6 +56,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 | `read_form_binary`, `write_form_binary` | Substrate serialization to/from disk |
 | `file_byte_at`, `file_mtime`, `file_size` | File metadata at OS boundary |
 | `random_bytes` | Entropy at OS boundary (the doorway) |
+| `mul_mod_u64`, `add_mod_u64` | Fixed-width arithmetic boundary; smaller than carrying whole algorithm natives |
 | `socket_*` (6 natives) | Network I/O at OS boundary |
 | `walk_recipe` | The kernel's own recursive entry point |
 
@@ -75,7 +77,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 
 | Native | Algorithm | Status |
 |---|---|---|
-| `seeded_bytes` | LCG (multiply-add-mod loop) | **Added in #2142 — should be Form recipe** |
+| `seeded_bytes` | LCG (multiply-add-mod loop) | **Form recipe in `form-stdlib/seeded-bytes.fk` passes Go/Rust/TS; native is optimization tissue** |
 | `sum_bytes_list` | Reduce(+) | **Added in #2142 — should be Form recipe** |
 | `sha256` | SHA-256 (RFC 6234) | **Added in this branch — should be Form recipe** |
 | `ed25519_keypair_from_seed` | Ed25519 keygen (RFC 8032) | **Added in this branch — should be Form recipe** |
@@ -110,7 +112,7 @@ edge of "kernel internal" vs "composable."
 | Algorithmic-should-compost | ~7 | composting candidates NOW |
 | Walker/runtime/framebuffer | ~12 | likely stays kernel-internal |
 
-**Minimum kernel target: ~25 primitives.** Currently 88. The body could
+**Minimum kernel target: ~25-27 primitives.** Currently 90. The body could
 shed ~60 natives onto Form recipes once the JIT layer makes recipe
 execution fast enough for hot paths.
 
@@ -152,8 +154,10 @@ execution fast enough for hot paths.
 This concept seeds the discipline. Concrete walks that follow:
 
 1. **Walk a Form recipe for seeded_bytes** (LCG in Form arithmetic) —
-   demonstrate it produces identical bytes to the native; name the
-   slowness; preserve as the canonical reference.
+   done in `form-stdlib/seeded-bytes.fk` and witnessed by
+   `form-samples/cross-modal/17-recipes-as-truth/`; it produces identical
+   bytes to the native across Go/Rust/TS. Preserve it as the canonical
+   reference and measure slowness honestly.
 2. **Walk a JIT recognizer** that pattern-matches the LCG recipe and
    dispatches to compiled native code. The kernel's native registry
    loses one entry; the JIT gains a pattern.

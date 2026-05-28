@@ -51,7 +51,7 @@
     ;; In a real body, these would be canonical Blueprint NodeIDs;
     ;; here, integers stand in for substrate-addressable values.
     (let catalog
-        (list 100 200 300 400 528 600 700 800 900 1000))
+        (list 100 200 300 400 500 528 700 800 900 1000))
 
     ;; ---- fingerprint function -------------------------------------
     ;; Folds a byte-list and a value into a single integer such that:

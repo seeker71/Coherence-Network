@@ -793,6 +793,7 @@ def sense_bootstrap_compost() -> list[str]:
 
     lines: list[str] = []
     totals: dict[str, tuple[int, int, int]] = {}
+    named_tissue: list[tuple[str, str, int]] = []
     for phase, paths in phase_files.items():
         present = 0
         loc = 0
@@ -801,7 +802,9 @@ def sense_bootstrap_compost() -> list[str]:
             p = ROOT / rel
             if p.is_file():
                 try:
-                    loc += sum(1 for _ in p.open("rb"))
+                    file_loc = sum(1 for _ in p.open("rb"))
+                    loc += file_loc
+                    named_tissue.append((phase, rel, file_loc))
                     present += 1
                 except OSError:
                     pass
@@ -825,6 +828,12 @@ def sense_bootstrap_compost() -> list[str]:
         lines.append(
             f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
         )
+    if named_tissue:
+        lines.append("  largest named tissue:")
+        for phase, rel, loc in sorted(
+            named_tissue, key=lambda row: row[2], reverse=True
+        )[:3]:
+            lines.append(f"    · Phase {phase}: {rel} — {loc} LOC")
 
     # Wider perimeter — the substrate-Python directory carries more than
     # the manifest's Phase C names. The audit at
@@ -888,12 +897,36 @@ def sense_bootstrap_compost() -> list[str]:
     parity = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
     third = "unknown"
     if parity.is_file():
+        parity_text = parity.read_text()
         m = re.search(
             r'PARITY_THIRD_RUNTIME="?\$\{PARITY_THIRD_RUNTIME:-([a-z0-9-]+)\}',
-            parity.read_text(),
+            parity_text,
         )
         if m:
             third = m.group(1)
+        parity_block = re.search(r"PARITY_FILES=\(\n(.*?)\n\)", parity_text, re.DOTALL)
+        if parity_block:
+            parity_files = re.findall(r'"([^"]+\.py)"', parity_block.group(1))
+            ready_block = re.search(
+                r"## COMPOST READY\b(.*?)(?:\n## |\Z)",
+                manifest_text,
+                re.DOTALL,
+            )
+            ready_files: set[str] = set()
+            if ready_block:
+                ready_files = set(
+                    re.findall(
+                        r"`form/form-kernel-ts/seedbank/python-adapter/(examples/[^`]+\.py)`",
+                        ready_block.group(1),
+                    )
+                )
+            if parity_files:
+                first_unready = next((p for p in parity_files if p not in ready_files), None)
+                suffix = f"; next row: {first_unready}" if first_unready else ""
+                lines.append(
+                    f"  kernel-bmf readiness — {len(ready_files)}/{len(parity_files)} "
+                    f"parity demos marked COMPOST READY{suffix}"
+                )
     if third == "ts-eval":
         lines.append(
             "  third runtime default: ts-eval (TS bootstrap) — flip to "

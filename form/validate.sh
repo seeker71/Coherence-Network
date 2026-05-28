@@ -148,6 +148,10 @@ run_workload() {
     fi
 }
 
+declared_preludes() {
+    grep -E '^; preludes:' "$1" 2>/dev/null | head -1 | sed 's/^; preludes://' || true
+}
+
 ok=0
 fail=0
 
@@ -162,7 +166,17 @@ if [[ $# -gt 0 ]]; then
             label="$label+$base"
         fi
     done
-    run_workload "$label" "$@"
+    if [[ $# -eq 1 ]]; then
+        preludes=$(declared_preludes "$1")
+        if [[ -n "$preludes" ]]; then
+            # shellcheck disable=SC2086
+            run_workload "$label" "form-stdlib/core.fk" $preludes "$1"
+        else
+            run_workload "$label" "$@"
+        fi
+    else
+        run_workload "$label" "$@"
+    fi
 else
     # --- form-samples/*.fk: self-contained files ------------------------
     for f in form-samples/*.fk; do
@@ -185,7 +199,7 @@ else
             # When present, those modules load between core.fk and the test
             # (in the order declared). The same-name convention still works
             # — modules referenced by the header replace the auto-prepend.
-            preludes=$(grep -E '^; preludes:' "$f" 2>/dev/null | head -1 | sed 's/^; preludes://' || true)
+            preludes=$(declared_preludes "$f")
             if [[ -n "$preludes" ]]; then
                 # shellcheck disable=SC2086
                 run_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" $preludes "$f"

@@ -1,0 +1,31 @@
+; seeded-bytes.fk — canonical Form recipe for deterministic byte streams.
+;
+; The native `seeded_bytes(seed, count)` remains optimization tissue while
+; interpreter/JIT speed catches up. This recipe owns the semantics: glibc-style
+; LCG, state = state * 1103515245 + 12345 mod 2^31, emitting low bytes.
+
+(defn seeded-bytes-empty? (xs)
+    (eq (len xs) 0))
+
+(defn seeded-bytes-lcg-step (state)
+    (add_mod_u64
+        (mul_mod_u64 state 1103515245 2147483648)
+        12345
+        2147483648))
+
+(defn seeded-bytes-loop (state n acc)
+    (if (eq n 0) acc
+        (do
+            (let next (seeded-bytes-lcg-step state))
+            (seeded-bytes-loop next (sub n 1) (cons (mod next 256) acc)))))
+
+(defn seeded-bytes-reverse-loop (xs acc)
+    (if (seeded-bytes-empty? xs) acc
+        (seeded-bytes-reverse-loop (tail xs) (cons (head xs) acc))))
+
+(defn seeded-bytes-recipe (seed count)
+    (seeded-bytes-reverse-loop
+        (seeded-bytes-loop seed count (empty))
+        (empty)))
+
+0

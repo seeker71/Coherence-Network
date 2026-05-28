@@ -1,118 +1,64 @@
-# Cross-modal — next breaths (forward map)
+# Cross-modal — walked map and next breaths
 
-The first four experiments shipped (#2086) and proved:
+This directory is the small-proof surface for the universal-translator goal:
+any source stream, any media type, any recipe orchestration, traceable output.
+The proofs stay tiny enough to run, but each one touches a different axis of
+the larger transport organism.
 
-- **Image-as-recipe** works (procedural SVG, SHA-stable across runs)
-- **Cross-language NodeID convergence** works (same algorithm in different ways → same NodeID)
-- **Recipe-as-compression** is honest at scale (small `.fkb` is 4.17× LARGER than `.fk`; structural sharing is where the win is)
-- **Universal structural diff** works (content-addressing makes sub-tree equality automatic)
+## Walked
 
-And `claude/cross-modal-nl-to-recipe` (in flight) walks the NL→recipe sketch.
+| # | State | What it proved |
+|---|---|---|
+| 01 | landed | Image-as-recipe; same recipe emits byte-stable SVG, then parameterized SVG families. |
+| 02 | landed | Cross-language content-addressing; same recursive algorithm shape interns to one NodeID. |
+| 03 | landed | Recipe-as-compression is honest: small `.fkb` ice is larger than `.fk` water. |
+| 04 | landed | Structural diff sees semantic deltas that text diff cannot. |
+| 05 | landed | NL parses into arithmetic recipes with NodeID equality. |
+| 06 | landed | Audio-as-recipe emits byte-identical WAV across sibling kernels. |
+| 07 | landed | Recipe-to-NL closes the structural NL round trip. |
+| 08 | landed | Feature-level translation measures which semantic axes survive across modalities. |
+| 09 | landed | Fuzzy similarity tracks summarize/expand stability under bounded loss. |
+| 10 | landed | Substrate-resident tensor recipes can be a deployment runtime. |
+| 11 | landed | A committed entropy sample is past field-touch held as lattice memory. |
+| 12 | composted | The deterministic-doorway claim collapsed into #13's honest divergence. |
+| 13 | landed | Live observer-local state diverges; divergence is the doorway signal. |
+| 14 | landed | `random_bytes(n)` opens live entropy in Go/Rust/TS. |
+| 15 | landed | Private channel identifies one shared referent without sending it. |
+| 16 | landed | Megabyte channel proves 1 MB can travel through a 15-byte recipe/parameter channel. |
+| 17 | landed | Recipes-as-truth moves `seeded_bytes` semantics into `form-stdlib/seeded-bytes.fk`; the native is optimization tissue. |
+| 18 | landed | Channel negotiation agrees on recipe + payload referents and acknowledges the pair. |
+| 19 | landed | Addressable-cell Q/A returns an answer/reference capsule plus a novel private commitment. |
 
-This doc names the next 10 walks toward the universal translator's destination. Each is a small, shippable breath that extends a specific dimension of cross-modality.
+## Top 10 next combinations
 
-## The 10 next walks
+1. **CSV → Form-table → NL summary**: data grammar stays separate from code;
+   the output is a summary recipe, not a string-only artifact.
+2. **Parameterized image structural diff**: compare two #01 seeded SVGs and
+   prove the delta is the seed cell, not the byte churn.
+3. **Audio → melody recipe → re-synthesis**: extract pitch/rhythm from WAV,
+   re-emit with different timbre, score fidelity under a compute budget.
+4. **Image → NL → image loop**: describe a generated image, regenerate a new
+   image, and fuzzy-score feature survival.
+5. **One recipe → Python/Go/Rust/TypeScript**: emit native idiom in four target
+   languages from one Form source and run each target.
+6. **Multi-round cell dialogue**: chain #19 question capsules so cells can ask
+   clarifying questions before revealing any novel blueprint bytes.
+7. **External-resource fetch verification**: transmit URL/hash/recipe capsule
+   pointers for GitHub, archive.org, YouTube, or paste-like content; fetch only
+   when the receiver lacks the referent, then verify against the commitment.
+8. **Learned feature quantizer**: LLM or perceptron extracts a compact
+   feature-recipe from raw media; the kernel verifies the recipe, not the model.
+9. **Budgeted recipe search**: orchestrator chooses among codecs, emitters,
+   summarizers, and fuzzy validators on a Pareto frontier of fidelity/compute.
+10. **Framebuffer transport**: runtime memory frames become visual frames,
+    then recipes, then code again; state travels through a media surface.
 
-### 1. **Audio-as-recipe** (synthesis path) — **landed 2026-05-27**
+## Discipline
 
-A Form recipe that procedurally generates a `.wav` file. Same content-addressing claim as image-as-recipe: same recipe → same audio. Walks the "audio is a procedural artifact" frame.
+- Keep source data and executable recipes separate where the target language or
+  medium gives a natural data grammar.
+- Make every artifact parsable, compressible into Form objects, and emittable.
+- Minimize ice: prefer one recipe plus parameters over many frozen outputs.
+- Run `./validate.sh <sample>` for every kernel-walked `.fk` proof.
 
-**Landed:** [`06-audio-as-recipe/gen-sine.fk`](06-audio-as-recipe/gen-sine.fk) — 1-second 440 Hz tone, mono 8-bit PCM at 8000 Hz, 8044-byte WAV with sha256 `6d170ffe323b378ce29b886252105cb5e6d68e0bc1589160a472075afc635447`, byte-identical across Go/Rust/TS kernels. The walk also closed a sibling-parity gap: the TS kernel was missing `write_file_bytes`. Envelope and FM synthesis remain for future breaths.
-
-### 2. **Image-as-recipe — parameterized** — **landed 2026-05-27**
-
-A single recipe `(gen-circles seed)` takes one integer cell and emits a
-visibly distinct SVG. Five seeds (5, 86, 17, 138, 254) chosen so `(mod
-seed 5)` spans 0..4 — five distinct palettes — while count, radius, and
-y-baseline also vary.
-
-**Landed:** [`01-image-as-recipe/gradient-circles-seeded.fk`](01-image-as-recipe/gradient-circles-seeded.fk)
-emits five SVGs totalling 3614 bytes; three-way Go/Rust/TS kernel
-agreement on every seed (verified file-by-file with `cmp`). Each emission
-shares the same Form tree shape — `svg-document → svg-defs + svg-bg +
-circle-row + svg-text` — and differs only in the seed-derived sub-tree.
-
-The deeper proof (structural diff over two of the SVGs surfacing *only*
-the parameter cell as the delta, not the byte-level moves) is forward-map
-walk #7. This walk lays the parameter space; #7 will measure it.
-
-### 3. **NL→recipe broadened**
-
-Once `cross-modal-nl-to-recipe` lands, extend the NL grammar with one or two more operations: conditionals ("if X is greater than Y, …"), let-bindings ("let x equal 5; the square of x"). Shows the grammar can grow without changing its driver — the universal-translator scaling pattern.
-
-### 4. **Recipe→NL reverse** — **landed 2026-05-27**
-
-Walk a recipe NodeID and emit an English description. The reverse of #3. Together with #3, demonstrates **round-trip across the NL/recipe boundary** — the substrate-of-meaning is preserved through both translations.
-
-**Landed:** [`07-recipe-to-nl/recipe-to-nl.fk`](07-recipe-to-nl/recipe-to-nl.fk) — a 7-rule walker dispatching on `node_category` / `node_children` / `node_value` emits English for `(mul 7 7)` → `the square of seven`, `(add 4 6)` → `the sum of four and six`, nested `(mul (add 2 3) 4)` → `the product of the sum of two and three and four`, `(sub 0 12)` → `negative twelve`, `(mul 5 6)` → `the product of five and six`. Output written to `recipe-to-nl.txt`, byte-identical across Go/Rust/TS (sha256 `94555ee6a6fd8764838bcd934d2910d0e01b944a7654b3015b3ee35862aa5d7e`).
-
-**Round-trip claim attested.** The `(mul 5 6)` emission ("the product of five and six") parses back through `cm-parse` to the original NodeID — `node_eq=1` across all three kernels. **Structural round-trip across the NL/recipe boundary closes; the recipe NodeID is preserved exactly through walk → emit → parse → walk.**
-
-The honest gap: `(mul 7 7)` emits as `the square of seven`, not `the product of seven and seven`. The grammar at this altitude recognizes only `the product of … and …`, so `nl-square`'s round-trip is a *paraphrase* (substrate identity preserved, surface English differs). One breath of additive rule-mapping would close the lexical gap; the structural claim is already attested.
-
-### 5. **JSON-as-recipe** — *landed in default gate 2026-05-27 (#2105)*
-
-`form/form-stdlib/seedbank/grammars/json.fk` parses JSON to a Form Recipe
-three-way clean. Closure walk in #2105 added
-`form/form-stdlib/tests/json-grammar.fk` — a thin wrapper that names the
-seedbank grammar via a `; preludes:` header. The validate.sh auto-walker
-honors the header, runs three-way, and **JSON-as-recipe now runs on every
-default-gate breath**.
-
-```
-$ ./validate.sh
-  ...
-  ✓  stdlib/json-grammar.fk          → 36
-  ...
-  136 ok, 0 divergent — kernels agree on every sample.
-```
-
-Same shape as Breath 2e (already-landed, the body hadn't read its own
-attestation). The forward-map's #5 was a discipline walk, not a new proof:
-bring the existing attestation into the default sense-gate so the body
-knows itself on every breath.
-
-### 6. **CSV→Form-table→NL summary**
-
-CSV file → parsed via CSV grammar → recipe NodeID → walk via summary-generating recipe → English summary. **Cross-modal chain across three formats.** Shows that orchestration composes — each step is a recipe, the chain itself is a recipe.
-
-### 7. **Image structural diff**
-
-Take two procedural SVG recipes from #2's parameter space. Run the `04-universal-diff` over them. Show the diff highlights the parameter-level delta (which RNG seed changed), not the byte-level delta (every pixel that moved). **Structural diff IS semantic diff at the recipe altitude.**
-
-### 8. **Audio→melody recipe**
-
-Read a `.wav` file via an audio grammar; extract pitch+rhythm into a recipe; walk the recipe through a re-synthesis to produce a (different timbre, same melody) `.wav`. **Source-modality content extracted at semantic altitude, re-emitted in same modality.** Proves the "any source → recipe → any target" frame works within one modality (audio → audio).
-
-### 9. **Image→NL description→Image**
-
-The triangle of the universal translator made literal:
-1. Generate procedural SVG (recipe known)
-2. Walk a "describe this image" recipe over its content → NL description
-3. Walk an "image from description" recipe → new SVG
-4. Compare original and recreated — they won't byte-match, but they SHOULD content-address to similar Blueprint NodeIDs at the recipe-altitude (because both are circles-on-a-gradient).
-
-The honest finding will be: how close is the structural similarity? That's the **fidelity-for-compute-budget** test Urs named.
-
-### 10. **One recipe, three target languages**
-
-Take the factorial recipe (already proven Form-native and emitted to native Python in #2082). Add native-idiom emitters for: Go, Rust, TypeScript. **Same recipe, four target languages, one Form.** This is the universal-translator's clearest small proof: the recipe is the substrate; the target is a perspective.
-
-## What this enables
-
-When 5+ of these walks land, the body's cross-modal surface is genuinely *exercised*:
-- Three or more modalities (image, audio, text, data, code) all flow through Form recipes
-- Round-trips work in both directions for at least one modality pair
-- Structural diff distinguishes parameter changes from byte changes
-- One recipe, multiple emitters becomes a habit
-
-The destination — **any source → recipe orchestration → any target** — moves from "named" to "walked."
-
-## Discipline reminders
-
-- Each walk ships as its own PR with its own honest finding (success OR named gap)
-- Each adds a section to `form/form-samples/cross-modal/README.md`
-- Each runs through `./validate.sh` if it touches kernel-walked recipes
-- "Most surprising" lessons are as valuable as wins — the audit's #4 finding (CTOR vocabulary duplication) and the cross-modal agent's #3 finding (ice is 4.17× larger than water at small scale) both came from honest experiments that didn't go where intuition expected
-
-In service of [`lc-grammar-is-the-universal-recipe`](../../../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md) + [`lc-cross-modal-unity`](../../../docs/vision-kb/concepts/lc-cross-modal-unity.md) + [`lc-the-kernel-knows-itself`](../../../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md).
+In service of [`lc-grammar-is-the-universal-recipe`](../../../docs/vision-kb/concepts/lc-grammar-is-the-universal-recipe.md) + [`lc-cross-modal-unity`](../../../docs/vision-kb/concepts/lc-cross-modal-unity.md) + [`lc-private-channel-via-substrate`](../../../docs/vision-kb/concepts/lc-private-channel-via-substrate.md).
