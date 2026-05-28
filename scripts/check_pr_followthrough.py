@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import re
 import shutil
 import subprocess
 from typing import Any
@@ -30,31 +31,94 @@ def _run_gh(args: list[str]) -> str:
     return out.strip()
 
 
+def _repo_from_git_remote() -> str:
+    remote = subprocess.check_output(
+        ["git", "config", "--get", "remote.origin.url"],
+        text=True,
+    ).strip()
+    if remote.startswith("git@github.com:"):
+        path = remote.split(":", 1)[1]
+    elif "github.com/" in remote:
+        path = remote.split("github.com/", 1)[1]
+    else:
+        raise ValueError(f"unsupported GitHub remote URL: {remote}")
+    path = re.sub(r"\.git$", "", path.strip("/"))
+    parts = [part for part in path.split("/") if part]
+    if len(parts) < 2:
+        raise ValueError(f"unable to resolve owner/repo from remote URL: {remote}")
+    return f"{parts[0]}/{parts[1]}"
+
+
 def _resolve_repo(explicit_repo: str) -> str:
     if explicit_repo.strip():
         return explicit_repo.strip()
-    return _run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+    try:
+        return _run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
+    except subprocess.CalledProcessError:
+        return _repo_from_git_remote()
 
 
 def _list_open_prs(repo: str) -> list[dict[str, Any]]:
-    raw = _run_gh(
-        [
-            "pr",
-            "list",
-            "--repo",
-            repo,
-            "--state",
-            "open",
-            "--limit",
-            "200",
-            "--json",
-            "number,title,headRefName,updatedAt,url,isDraft",
-        ]
-    )
+    try:
+        raw = _run_gh(
+            [
+                "pr",
+                "list",
+                "--repo",
+                repo,
+                "--state",
+                "open",
+                "--limit",
+                "200",
+                "--json",
+                "number,title,headRefName,updatedAt,url,isDraft",
+            ]
+        )
+    except subprocess.CalledProcessError:
+        return _list_open_prs_rest(repo)
     payload = json.loads(raw or "[]")
     if not isinstance(payload, list):
         return []
     return [row for row in payload if isinstance(row, dict)]
+
+
+def _list_open_prs_rest(repo: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for page in (1, 2):
+        raw = _run_gh(
+            [
+                "api",
+                f"repos/{repo}/pulls",
+                "--method",
+                "GET",
+                "-f",
+                "state=open",
+                "-f",
+                "per_page=100",
+                "-f",
+                f"page={page}",
+            ]
+        )
+        payload = json.loads(raw or "[]")
+        if not isinstance(payload, list):
+            return rows
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            head = item.get("head")
+            rows.append(
+                {
+                    "number": item.get("number"),
+                    "title": item.get("title"),
+                    "headRefName": (head or {}).get("ref") if isinstance(head, dict) else "",
+                    "updatedAt": item.get("updated_at"),
+                    "url": item.get("html_url"),
+                    "isDraft": bool(item.get("draft")),
+                }
+            )
+        if len(payload) < 100:
+            break
+    return rows[:200]
 
 
 def _pr_details(repo: str, number: int) -> dict[str, Any]:
