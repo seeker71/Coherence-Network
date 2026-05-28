@@ -186,12 +186,102 @@ sign(5) + sign(0 - 3) + 5
     (let lifted-mod (head (node_children lifted-mod-module)))
     (let cell12-score (if (node_eq handbuilt-mod lifted-mod) 10000 0))
 
+    ;; ---- cell 13: statement IF + early RETURN propagation -----------
+    ;; CPython:
+    ;;   pick(0) + pick(1) + pick(2) = 100 + 50 + 7 = 157
+    ;; This proves statement-form IF bodies return through nested module
+    ;; walks instead of becoming ordinary expression values.
+
+    (let cell13-value (py-bmf-run-text "def pick(n):
+    if n == 0:
+        return 100
+    if n == 1:
+        return 50
+    return 7
+pick(0) + pick(1) + pick(2)
+"))
+    (let cell13-score (if (eq cell13-value 157) 13000 0))
+
+    ;; ---- cell 14: FOR + range + augmented assignment + builtins -----
+    ;; Mirrors python_builtins_demo.py:
+    ;;   sum(xs)=69, min=3, max=22, distance-to-10=37 => 131.
+
+    (let cell14-value (py-bmf-run-text "def dist(xs, target):
+    d = 0
+    for v in xs:
+        d += abs(v - target)
+    return d
+xs = [3, 17, 8, 22, 5, 14]
+sum(xs) + min(xs) + max(xs) + dist(xs, 10)
+"))
+    (let cell14-score (if (eq cell14-value 131) 14000 0))
+
+    ;; ---- cell 15: lambda values in vars/lists + higher-order call ---
+    ;; Mirrors python_lambda_demo.py. Lambdas are runtime closures; list
+    ;; iteration carries them through the same value channel as ints.
+
+    (let cell15-value (py-bmf-run-text "double = lambda x: x * 2
+add = lambda a, b: a + b
+sq = lambda n: n * n
+result = add(double(5), sq(6))
+fns = [double, sq, lambda x: x + 100]
+out = 0
+for f in fns:
+    out += f(7)
+result + out
+"))
+    (let cell15-score (if (eq cell15-value 216) 15000 0))
+
+    ;; ---- cell 16: string literal + polymorphic plus + len -----------
+    ;; Mirrors python_string_demo.py. `+` routes through the kernel's
+    ;; polymorphic `_plus` while Form-native CALL handles Python `len`.
+
+    (let cell16-value (py-bmf-run-text "def greet(name):
+    return \"hello, \" + name
+def banner_length(name, decoration):
+    msg = greet(name) + decoration
+    return len(msg)
+a = banner_length(\"world\", \"!\")
+b = banner_length(\"substrate\", \"!!!\")
+c = banner_length(\"kernel\", \"\")
+a + b + c
+"))
+    (let cell16-score (if (eq cell16-value 45) 16000 0))
+
+    ;; ---- cell 17: dict literal/read/write/in/iteration --------------
+    ;; Mirrors python_dict_demo.py's scalar proof:
+    ;;   7 + 11 + 43 + 1 + 0 + 22 + 4 = 88.
+
+    (let cell17-value (py-bmf-run-text "def score_response(payload):
+    out = {\"signal\": payload[\"signal\"], \"vitality\": payload[\"vitality\"]}
+    out[\"weighted\"] = out[\"signal\"] * 3 + out[\"vitality\"] * 2
+    return out
+req = {\"signal\": 7, \"vitality\": 11}
+resp = score_response(req)
+s = resp[\"signal\"]
+v = resp[\"vitality\"]
+w = resp[\"weighted\"]
+has_w = \"weighted\" in resp
+has_x = \"missing\" in resp
+key_chars = 0
+for k in resp:
+    key_chars = key_chars + len(k)
+resp[\"scope\"] = 4
+n_keys = len(resp)
+s + v + w + (1 if has_w else 0) + (1 if has_x else 0) + key_chars + n_keys
+"))
+    (let cell17-score (if (eq cell17-value 88) 17000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
-    ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000 = 75000
+    ;; arithmetic (cell 10), comparison (cell 11), mod (cell 12), and
+    ;; the Form-native Python runtime rows through dict/lambda/string
+    ;; semantics (cells 13-17):
+    ;;   previous 75000 + 13000+14000+15000+16000+17000 = 150000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
-               cell10-score cell11-score cell12-score)))
+               cell10-score cell11-score cell12-score
+               cell13-score cell14-score cell15-score
+               cell16-score cell17-score)))

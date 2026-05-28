@@ -106,7 +106,7 @@
     ;; reached yet.
 
     (defn py-binop-apply (op left right)
-        (if (str_eq op "+")  (add left right)
+        (if (str_eq op "+")  (_plus left right)
         (if (str_eq op "-")  (sub left right)
         (if (str_eq op "*")  (mul left right)
         (if (str_eq op "/")  (div left right)
@@ -121,24 +121,27 @@
         (if (str_eq op "<=") (if (le left right) 1 0)
         (if (str_eq op ">")  (if (gt left right) 1 0)
         (if (str_eq op ">=") (if (ge left right) 1 0)
-            (do (trace "py-compare: unsupported op" op) (head (empty))))))))))
+        (if (str_eq op "in") (py-container-contains left right)
+            (do (trace "py-compare: unsupported op" op) (head (empty)))))))))))
 
     ;; ---- the interpreter --------------------------------------------
     ;;
     ;; py-eval — walk a PY-BMF recipe to a value in env. Dispatch is by
     ;; node_category; each arm names its expected children shape.
     ;;
-    ;; py-eval-statement — variant that returns a (value . env) pair so
-    ;; ASSIGN and DEF can thread a new scope into the next statement.
-    ;; Expression statements return the unchanged env; ASSIGN and DEF
-    ;; extend it.
+    ;; py-eval-statement — variant that returns (value, env, return-flag)
+    ;; so ASSIGN and DEF can thread scope, while RETURN can escape nested
+    ;; IF/FOR/WHILE bodies instead of becoming an ordinary expression value.
     ;;
-    ;; The pair is encoded as (list value env) — head is value, head-tail
-    ;; is env. py-stmt-value and py-stmt-env read the two slots.
+    ;; The triple is encoded as (list value env return-flag). Flag 1 means a
+    ;; Python `return` has been observed and must propagate outward until the
+    ;; function/module boundary turns it into the function's value.
 
-    (defn py-stmt-result (value env) (list value env))
+    (defn py-stmt-result (value env) (list value env 0))
+    (defn py-stmt-return (value env) (list value env 1))
     (defn py-stmt-value (r) (head r))
     (defn py-stmt-env (r) (head (tail r)))
+    (defn py-stmt-return? (r) (nth r 2))
 
     (defn py-eval-args-loop (recipes env acc)
         (if (nil? recipes)
@@ -151,40 +154,56 @@
     (defn py-eval-args (recipes env)
         (py-eval-args-loop recipes env (empty)))
 
+    ;; ---- tiny builtins -----------------------------------------------
+    ;;
+    ;; These are Python-runtime library semantics, not kernel natives.
+    ;; They live in the Form interpreter so kernel-bmf rows can compost the
+    ;; TS bootstrap without expanding the kernel surface.
+
+    (defn py-range-loop (i end acc)
+        (if (ge i end) (reverse acc)
+            (py-range-loop (add i 1) end (cons i acc))))
+
+    (defn py-range (args)
+        (if (eq (len args) 1)
+            (py-range-loop 0 (head args) (empty))
+            (if (eq (len args) 2)
+                (py-range-loop (nth args 0) (nth args 1) (empty))
+                (do
+                    (trace "py-range: unsupported arity" (len args))
+                    (head (empty))))))
+
+    (defn py-sum-loop (xs acc)
+        (if (nil? xs) acc
+            (py-sum-loop (tail xs) (_plus acc (head xs)))))
+
+    (defn py-min-loop (xs best)
+        (if (nil? xs) best
+            (py-min-loop (tail xs)
+                (if (lt (head xs) best) (head xs) best))))
+
+    (defn py-max-loop (xs best)
+        (if (nil? xs) best
+            (py-max-loop (tail xs)
+                (if (gt (head xs) best) (head xs) best))))
+
+    (defn py-abs (x)
+        (if (lt x 0) (sub 0 x) x))
+
     ;; ---- collection values -------------------------------------------
     ;;
-    ;; PY-BMF-LIST values are plain Form lists. PY-BMF-DICT values are
-    ;; sentinel-tagged alists: (cons "py-dict" pairs) where each pair is
-    ;; a two-element list (key value). py-dict? lets SUBSCRIPT pick the
-    ;; right lookup path.
+    ;; PY-BMF-LIST values are plain Form lists. PY-BMF-DICT values use the
+    ;; same kernel-native dict encoding the bootstrap emitter uses:
+    ;; "__dict__", k1, v1, k2, v2, ...
 
-    (defn py-dict-tag () "py-dict")
+    (defn py-dict-tag () "__dict__")
 
-    ;; py-dict? — safe across kernels regardless of value kind. value_eq
-    ;; is polymorphic across Value variants (Int/Str/Null/etc) and returns
-    ;; false on kind mismatch; str_eq would panic on a non-string head.
-    ;; List literals routinely have int heads, so the polymorphic compare
-    ;; is the load-bearing piece.
-    (defn py-dict? (v)
-        (and (not (nil? v))
-             (value_eq (head v) (py-dict-tag))))
-
-    (defn py-dict-pairs (d) (tail d))
-
-    ;; Dict keys arrive as strings in today's surface; the lookup walks
-    ;; pairs with str_eq. Integer-keyed dicts are a later breath.
-    (defn py-dict-lookup-str-loop (pairs key)
-        (if (nil? pairs)
-            (do
-                (trace "py-dict-lookup: missing key" key)
-                (head (empty)))
-            (if (str_eq (head (head pairs)) key)
-                (head (tail (head pairs)))
-                (py-dict-lookup-str-loop (tail pairs) key))))
+    (defn py-container-contains (needle container)
+        (if (_in needle container) 1 0))
 
     ;; pairs-of-children: walk a flat (k1 v1 k2 v2 ...) child stream and
-    ;; eval each into a (key-value value-value) pair. Encoding: DICT
-    ;; children are 2*N recipes; even index = key-recipe, odd = value.
+    ;; eval each into the kernel-native flat dict shape:
+    ;;   "__dict__", k1, v1, k2, v2, ...
     (defn py-eval-dict-pairs-loop (kids env acc)
         (if (nil? kids)
             (reverse acc)
@@ -194,7 +213,7 @@
                 (py-eval-dict-pairs-loop
                     (tail (tail kids))
                     env
-                    (cons (list k v) acc)))))
+                    (cons v (cons k acc))))))
 
     (defn py-bind-params-loop (pms args env)
         (if (nil? pms) env
@@ -232,38 +251,69 @@
     (defn py-last (xs)
         (if (nil? (tail xs)) (head xs) (py-last (tail xs))))
 
-    ;; py-while-loop — drive a WHILE body, threading env until the cond
-    ;; recipe evaluates to 0. Each body iteration walks its statements
-    ;; through py-eval-statement (mutual recursion: py-while-loop calls
-    ;; py-eval-body-loop which calls py-eval-statement which calls back
-    ;; through py-while-loop when the body itself contains a WHILE). The
-    ;; Form runtime resolves forward references at call-time, so the
-    ;; ordering below works.
+    ;; Body drivers return the same statement triple. This lets `return`
+    ;; propagate through nested IF/FOR/WHILE bodies without losing the latest
+    ;; environment for non-returning bodies.
 
     (defn py-eval-body-loop (stmts env)
-        (if (nil? stmts) env
+        (if (nil? stmts) (py-stmt-result 0 env)
             (do
                 (let r (py-eval-statement (head stmts) env))
-                (py-eval-body-loop (tail stmts) (py-stmt-env r)))))
+                (if (eq (py-stmt-return? r) 1)
+                    r
+                    (py-eval-body-loop (tail stmts) (py-stmt-env r))))))
 
     (defn py-while-loop (cond-recipe body-stmts env)
         (if (eq (py-eval cond-recipe env) 0)
-            env
-            (py-while-loop
-                cond-recipe
-                body-stmts
-                (py-eval-body-loop body-stmts env))))
+            (py-stmt-result 0 env)
+            (do
+                (let body-result (py-eval-body-loop body-stmts env))
+                (if (eq (py-stmt-return? body-result) 1)
+                    body-result
+                    (py-while-loop
+                        cond-recipe
+                        body-stmts
+                        (py-stmt-env body-result))))))
+
+    (defn py-for-loop (items target-name body-stmts env)
+        (if (nil? items)
+            (py-stmt-result 0 env)
+            (do
+                (let item-env (py-env-extend env target-name (head items)))
+                (let body-result (py-eval-body-loop body-stmts item-env))
+                (if (eq (py-stmt-return? body-result) 1)
+                    body-result
+                    (py-for-loop
+                        (tail items)
+                        target-name
+                        body-stmts
+                        (py-stmt-env body-result))))))
 
     (defn py-eval-statement (recipe env)
         (do
             (let cat (node_category recipe))
             (let kids (node_children recipe))
+            (if (node_eq cat PY-BMF-RETURN)
+                (py-stmt-return (py-eval (head kids) env) env)
             (if (node_eq cat PY-BMF-ASSIGN)
                 (do
                     ;; ASSIGN children: name-leaf, value-recipe
                     (let name (node_value (nth kids 0)))
                     (let value (py-eval (nth kids 1) env))
                     (py-stmt-result value (py-env-extend env name value)))
+            (if (node_eq cat PY-BMF-SUB-ASSIGN)
+                (do
+                    ;; SUB-ASSIGN children: object-name-leaf, index-recipe,
+                    ;; value-recipe. Dict updates are persistent: rebind the
+                    ;; outer object name to an alist with one pair changed or
+                    ;; appended.
+                    (let object-name (node_value (nth kids 0)))
+                    (let old-object (py-env-lookup env object-name))
+                    (let idx (py-eval (nth kids 1) env))
+                    (let value (py-eval (nth kids 2) env))
+                    (let new-object (_dict_set old-object idx value))
+                    (py-stmt-result value
+                        (py-env-extend env object-name new-object)))
             (if (node_eq cat PY-BMF-AUG-ASSIGN)
                 (do
                     ;; AUG-ASSIGN children: name-leaf, op-leaf, value-recipe.
@@ -283,8 +333,26 @@
                     ;; itself returns 0 (Python None analogue).
                     (let cond-recipe (head kids))
                     (let body-stmts (tail kids))
-                    (let final-env (py-while-loop cond-recipe body-stmts env))
-                    (py-stmt-result 0 final-env))
+                    (py-while-loop cond-recipe body-stmts env))
+            (if (and (node_eq cat PY-BMF-IF)
+                     (node_eq (node_category (nth kids 1)) PY-BMF-MODULE))
+                (do
+                    ;; Statement-form IF uses PY-BMF-IF with module children:
+                    ;; cond, then-module, else-module. Expression-form IF is
+                    ;; handled by py-eval below.
+                    (let cond (py-eval (nth kids 0) env))
+                    (if (eq cond 0)
+                        (py-eval-body-loop (node_children (nth kids 2)) env)
+                        (py-eval-body-loop (node_children (nth kids 1)) env)))
+            (if (node_eq cat PY-BMF-FOR)
+                (do
+                    ;; FOR children: target-name-leaf, iter-recipe,
+                    ;; body-stmt-recipes... . List values iterate items;
+                    ;; dict values iterate insertion-ordered keys.
+                    (let target-name (node_value (nth kids 0)))
+                    (let iter-value (py-eval (nth kids 1) env))
+                    (let body-stmts (drop 2 kids))
+                    (py-for-loop (_iter iter-value) target-name body-stmts env))
             (if (node_eq cat PY-BMF-DEF)
                 (do
                     ;; DEF children: name-leaf, param-leaves..., body-recipe.
@@ -296,16 +364,18 @@
                     (let closure (py-closure name pms body env))
                     (py-stmt-result closure (py-env-extend env name closure)))
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env)))))))
+                (py-stmt-result (py-eval recipe env) env)))))))))))
 
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
             (do
                 (let r (py-eval-statement (head statements) env))
-                (py-eval-module-loop
-                    (tail statements)
-                    (py-stmt-env r)
-                    (py-stmt-value r)))))
+                (if (eq (py-stmt-return? r) 1)
+                    (py-stmt-value r)
+                    (py-eval-module-loop
+                        (tail statements)
+                        (py-stmt-env r)
+                        (py-stmt-value r))))))
 
     (defn py-eval (recipe env)
         (do
@@ -332,7 +402,7 @@
                     (let lhs-val (py-eval (nth kids 0) env))
                     (let rhs-val (py-eval (nth kids 1) env))
                     (let math-inst (node_inst cat))
-                    (if (eq math-inst 1) (add lhs-val rhs-val)
+                    (if (eq math-inst 1) (_plus lhs-val rhs-val)
                     (if (eq math-inst 2) (sub lhs-val rhs-val)
                     (if (eq math-inst 3) (mul lhs-val rhs-val)
                     (if (eq math-inst 4) (div lhs-val rhs-val)
@@ -396,17 +466,30 @@
                     ;; the function itself. Mutual recursion is a later
                     ;; breath — this carries single-function self-ref.
                     (let callee-name (node_value (head kids)))
-                    (let closure (py-env-lookup env callee-name))
                     (let arg-values (py-eval-args (tail kids) env))
-                    (let captured-with-self
-                        (py-env-extend (py-closure-env closure)
-                                       (py-closure-name closure)
-                                       closure))
-                    (let call-env (py-bind-params
-                                    (py-closure-params closure)
-                                    arg-values
-                                    captured-with-self))
-                    (py-eval (py-closure-body closure) call-env))
+                    (if (str_eq callee-name "range")
+                        (py-range arg-values)
+                    (if (str_eq callee-name "sum")
+                        (py-sum-loop (head arg-values) 0)
+                    (if (str_eq callee-name "min")
+                        (py-min-loop (tail (head arg-values)) (head (head arg-values)))
+                    (if (str_eq callee-name "max")
+                        (py-max-loop (tail (head arg-values)) (head (head arg-values)))
+                    (if (str_eq callee-name "abs")
+                        (py-abs (head arg-values))
+                    (if (str_eq callee-name "len")
+                        (len (head arg-values))
+                        (do
+                            (let closure (py-env-lookup env callee-name))
+                            (let captured-with-self
+                                (py-env-extend (py-closure-env closure)
+                                               (py-closure-name closure)
+                                               closure))
+                            (let call-env (py-bind-params
+                                            (py-closure-params closure)
+                                            arg-values
+                                            captured-with-self))
+                            (py-eval (py-closure-body closure) call-env)))))))))
             (if (node_eq cat PY-BMF-LIST)
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.
@@ -424,9 +507,7 @@
                     ;; band-test exercises the common string-keyed case.
                     (let obj (py-eval (nth kids 0) env))
                     (let idx (py-eval (nth kids 1) env))
-                    (if (py-dict? obj)
-                        (py-dict-lookup-str-loop (py-dict-pairs obj) idx)
-                        (nth obj idx)))
+                    (_get obj idx))
             (if (node_eq cat PY-BMF-LAMBDA)
                 ;; LAMBDA children: param-leaves..., body-recipe.
                 ;; Builds an anonymous closure with self-name "" so the

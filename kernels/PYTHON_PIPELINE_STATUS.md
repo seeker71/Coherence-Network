@@ -14,9 +14,9 @@ A bullet-by-bullet read of the four-bullet destination, with the live artifact e
 
 1. **ALL Python talking to substrate → native Form.** *In motion.* Three FastAPI utility endpoints (`/api/utils/coherence_weight`, `nodeid_distance`, `weighted_average`) carry their bodies as Form recipes via `serve_via_kernel`; the first substrate-touching endpoint (`/api/substrate/lattice/stats`) reads through kernel-native `http_get` + `_json_to_dict`. The kernel even serves HTTP directly (proof-of-shape `form-kernel-rust serve`). PyO3 inline removes the subprocess seam — kernel calls run sub-millisecond in the API process address space. Substrate-write transmutation is the next major arc.
 
-2. **ALL file types parseable via Form-native BMF grammars.** *First cell sprouted.* Python arithmetic shapes (`a-b`, `x*y`, `l/r`, `p**q`) parse through `form-stdlib/grammars/python-bmf.fk` driven by the kernel — sibling-validated on Go, Rust, TypeScript (179/179 in `./validate.sh` in this worktree). All five gates from [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) — G1 (rule dispatcher), G2 (statement grouping), G3 (precedence), G4 (closure interpreter), G5 (template-machinery overlap), G6 (binary entry-point orchestration) — are closed (PRs #2087, #2092, #2100, #2101). **CTOR Shape B** (PRs #2113, #2119, #2122) lands inter-path NodeID equality at the math-primitive layer: Python-source `+ - * / %` interns as `RBasic.MATH-12` and `== != < <= > >=` as `RBasic.COMPARE-13`, with the same Blueprint a hand-built pure-Form recipe interns to. See [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) for the full closing-shape map and the future Shape C walk that preserves dialect *articulations* over the shared identity.
+2. **ALL file types parseable via Form-native BMF grammars.** *First cell sprouted and branching.* Python arithmetic, control flow, lambdas, strings, dicts, and common builtins now parse through `form-stdlib/grammars/python-bmf.fk` driven by the kernel — sibling-validated on Go, Rust, TypeScript by `python-bmf-lift-band.fk` returning `150000`. All five gates from [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) — G1 (rule dispatcher), G2 (statement grouping), G3 (precedence), G4 (closure interpreter), G5 (template-machinery overlap), G6 (binary entry-point orchestration) — are closed (PRs #2087, #2092, #2100, #2101). **CTOR Shape B** (PRs #2113, #2119, #2122) lands inter-path NodeID equality at the math-primitive layer: Python-source `+ - * / %` interns as `RBasic.MATH-12` and `== != < <= > >=` as `RBasic.COMPARE-13`, with the same Blueprint a hand-built pure-Form recipe interns to. See [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) for the full closing-shape map and the future Shape C walk that preserves dialect *articulations* over the shared identity.
 
-3. **Compile any file → Form-recipe binary the kernel CLI runs standalone.** *Routine for the bootstrap demo set; partial for Form-native BMF.* Every demo in `parity_suite.sh` (19 entries) compiles to `.fk` through the bootstrap emitter and runs through `form-kernel-rust` standalone. The Form-native `kernel-bmf` selector is now runnable across the whole matrix: 4/19 demos are COMPOST READY, and the first open row is `python_substrate_demo.py`. The bootstrap emit path (`lang-python-fk.ts`) is named for compost in [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md); the next removal comes from teaching the Form-native lift/eval path statement-level `if`, `for`, and return propagation.
+3. **Compile any file → Form-recipe binary the kernel CLI runs standalone.** *Routine for the bootstrap demo set; widening for Form-native BMF.* Every demo in `parity_suite.sh` (19 entries) compiles to `.fk` through the bootstrap emitter and runs through `form-kernel-rust` standalone. The Form-native `kernel-bmf` selector is now runnable across the whole matrix: **13/19 demos are COMPOST READY**, and the first open row is `python_float_demo.py`. The bootstrap emit path (`lang-python-fk.ts`) is named for compost in [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md); the next removal comes from teaching the Form-native scanner/eval path float literals, then import/math attributes.
 
 4. **Framebuffer-driven optimization → same OOM as Python.** *Met and exceeded.* `form-kernel-rust` is 1.8× faster than CPython on the recursion workload (24.08ms vs 41.79ms per iter). Width-tagged trace dispatch is named as a separate breath.
 
@@ -53,12 +53,15 @@ result
 - TS evalPython (the bootstrap evaluator)
 - form-kernel-rust native binary
 
-**Form-native `kernel-bmf` frontier:** 4/19 rows already produce the same
+**Form-native `kernel-bmf` frontier:** 13/19 rows already produce the same
 CPython value without the TS evaluator:
-`python_bridge_demo.py`, `python_demo.py`, `python_assign_demo.py`, and
-`python_imperative_demo.py`. The first failing row,
-`python_substrate_demo.py`, traces to unsupported statement-level `if` and
-`for` lift/eval plus early-return propagation inside nested bodies.
+`python_bridge_demo.py`, `python_demo.py`, `python_assign_demo.py`,
+`python_imperative_demo.py`, `python_substrate_demo.py`, `python_range_demo.py`,
+`python_builtins_demo.py`, `python_lambda_demo.py`, `python_string_demo.py`,
+`endpoint_coherence_weight_demo.py`, `python_dict_demo.py`,
+`endpoint_nodeid_distance_demo.py`, and `endpoint_lattice_stats_demo.py`.
+The first failing row is `python_float_demo.py`, which now isolates the next
+gap to Form-native float source scanning/value construction.
 
 ## Parity suite — `scripts/parity_suite.sh`
 

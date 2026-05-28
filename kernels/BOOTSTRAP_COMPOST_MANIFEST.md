@@ -254,21 +254,22 @@ The same selector shape can extend to the TS adapter parity gate
 full Python matrix and reports the frontier instead of stopping at the first
 nonzero row.
 
-- Ready: 4/19 demos are COMPOST READY under `kernel-bmf`:
-  `python_bridge_demo.py`, `python_demo.py`, `python_assign_demo.py`,
-  `python_imperative_demo.py`.
-- First open row: `examples/python_substrate_demo.py`.
-- Observed trace: three `if_stmt` lifts are unsupported, two `for_stmt` lifts
-  are unsupported, and the evaluator then reaches an unimplemented recipe
-  category before returning `0`.
-- Required next arm bundle: statement-level `if` lift/eval, `for` lift/eval
-  over lists/ranges, and return propagation through nested statement bodies so
-  early-return Python helpers keep CPython semantics.
+- Ready: **13/19 demos are COMPOST READY** under `kernel-bmf`.
+- First open row: `examples/python_float_demo.py`.
+- Newly released shape bundle: statement-level `if`, `for`, return
+  propagation, `range`, `sum`/`min`/`max`/`abs`, augmented assignment,
+  lambda closures, string literals/concat/`len`, dict literal/read/write,
+  `in` membership, dict-key iteration, and the lattice-stats endpoint shape.
+- Required next arm bundle: float source scanning + Form-native float literal
+  values, then import/attribute access for `math`, followed by class,
+  inheritance, and typing-composition surfaces.
 
 This is the biggest named tightness because it attacks
 `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` directly: each
 green row removes surface from the hand-coded Python adapter rather than adding
-another algorithm native.
+another algorithm native. The only kernel-side edit in the 13/19 breath is
+Go sibling parity for dict/list/string polymorphic natives already present in
+Rust and TypeScript (`_get`, `_iter`, `_in`, `_dict_*`).
 
 ---
 
@@ -335,6 +336,7 @@ ritual.
 | 2026-05-27 | [#2113](https://github.com/seeker71/Coherence-Network/pull/2113) | CTOR Shape B for `+ - * /`. The PY-BMF lift now interns `+ - * /` as `RBasic.MATH-12` (NodeIDs `(1, 2, 12, 1..4)`) with positional children — the *same* Blueprint a hand-built `(intern_node MATH-PLUS …)` interns to. **Cross-modal NodeID equality at the math-primitive layer becomes substrate-truth for arithmetic.** New MATH-12 arm in `python-bmf-eval.fk` walks the unified shape; old `PY-BMF-BINOP` arm still services `** // %` (no MATH instances exist for those today). | Cell 10 of `python-bmf-lift-band.fk` builds a hand-built `MATH-PLUS(7, 3)` and a Python-lifted `"7 + 3"`; `node_eq` returns 1 across all three kernels. Aggregate moves 45000 → 55000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
 | 2026-05-27 | [#2119](https://github.com/seeker71/Coherence-Network/pull/2119) | CTOR Shape B extends to comparisons — `== != < <= > >=`. The PY-BMF lift now interns comparisons as `RBasic.COMPARE-13` (NodeIDs `(1, 2, 13, 1..6)`) with positional children. New COMPARE-13 arm in `py-eval` dispatches on `node_inst` to `eq`/`lt`/`le`/`gt`/`ge` natives (Python's 1/0 integer convention preserved). Old `PY-BMF-COMPARE` arm stays for unrecognised ops (defensive) | Cell 11 of `python-bmf-lift-band.fk` proves convergence: hand-built `COMPARE-LT(5, 7)` and Python-lifted `"5 < 7"` `node_eq` to 1 across all three kernels. Aggregate moves 55000 → 65000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
 | 2026-05-27 | [#2122](https://github.com/seeker71/Coherence-Network/pull/2122) | CTOR Shape B extends to `%` (mod) — closes the last arithmetic operator MATH-12 carries today (`inst=5`). Lift dispatcher gains the `%` case before falling back to `PY-BMF-BINOP`; eval MATH-12 arm gains the `(if (eq math-inst 5) (mod lhs rhs))` branch. What's still on `PY-BMF-BINOP` for arithmetic: `**` (power) and `//` (floor-div) — no MATH instances exist for those today; closing them is a separate breath that adds inst=6,7 to `form-ontology.json` + native registration in three kernels | Cell 12 of `python-bmf-lift-band.fk` proves: hand-built `MATH-MOD(10, 3)` and Python-lifted `"10 % 3"` `node_eq` to 1 across all three kernels. Aggregate moves 65000 → 75000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
+| 2026-05-28 | `codex/universal-transport-week-review-20260528` | Form-native Python runtime widens from 4/19 to 13/19. Lift/eval now covers statement `if`, `for`, return propagation, augmented assignment, lambdas, strings, dict literals, subscript assignment, `in`, dict-key iteration, and Python builtins `range`, `sum`, `min`, `max`, `abs`, `len`. Go gains the dict/list/string polymorphic natives already present in Rust/TypeScript so sibling kernels agree on the same Form-native dict surface. | `form/form-stdlib/tests/python-bmf-lift-band.fk` extends to 17 cells and returns `150000`. End-to-end `kernel-bmf-run` now matches CPython/bootstrap for `python_substrate_demo.py=17680`, `python_range_demo.py=41650`, `python_builtins_demo.py=131`, `python_lambda_demo.py=216`, `python_string_demo.py=45`, `python_dict_demo.py=88`, `endpoint_coherence_weight_demo.py=16185`, and `endpoint_lattice_stats_demo.py=1089`. | Go ✓ · Rust ✓ · TypeScript ✓ for the band; parity matrix: 13 passing / 6 open under `PARITY_THIRD_RUNTIME=kernel-bmf` |
 
 **What G6 closes and what stays open.** G6 was the orchestration gap — the
 pieces existed (Go compiler, Rust walker, Python BMF grammar) with no binary
@@ -345,18 +347,18 @@ returns the statement count (15), not the program's CPython value (40949).
 The driver swaps to a recipe-walking expression in the same script when G4
 (closure interpreter) lands; the orchestration shape stays.
 
-**Open contract for the next PROVEN rows:** the surface beyond the four
+**Open contract for the next PROVEN rows:** the surface beyond the thirteen
 COMPOST READY demos needs both a lift dispatch branch in
 `python-bmf-lift.fk` and a matching interpreter arm in
 `python-bmf-eval.fk`. Order of incoming breaths (each is its own focused PR):
 
-- Statement-level `if` + return propagation through nested bodies — first
-  blocker for `python_substrate_demo.py`.
-- `PY-BMF-FOR` + iterator protocol on lists / ranges — same first blocker.
-- `PY-BMF-DICT` + dict-literal lift + key access.
+- Float scanner + runtime value path for `python_float_demo.py` and
+  `endpoint_weighted_average_demo.py`.
+- Import no-op/binding + attribute access/calls for `python_import_demo.py`.
 - `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`.
-- `PY-BMF-LAMBDA` + closure capture in expressions.
-- `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment.
+- Inheritance/super dispatch for `python_inheritance_demo.py`.
+- Typing annotations/imports that compose with class surfaces for
+  `python_typing_compose_demo.py`.
 
 Each PROVEN row brings one more `PARITY_FILES` demo green under
 `PARITY_THIRD_RUNTIME=kernel-bmf`. When `lang-python.ts`'s full surface is
@@ -386,6 +388,15 @@ removable.
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.py` | mixed recursion — fact, fib, ackermann, is_prime + is_prime_helper, count_primes + count_primes_helper. Exercises `True`/`False` keyword lift, multi-level right-associative ternary chains (`a if p else b if q else c`), pure-recursive function composition `count_primes(30) + fact(8) + fib(15) + ackermann(2, 3)` | `python-bmf-lift.fk` (True/False keyword arms + lift-cond-tail right-assoc fix) | CPython `40949` · Rust (bootstrap) `40949` · `kernel-bmf-run` `40949` |
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_assign_demo.py` | assignment + list literal + subscript — `def add(a, b): return a+b; result = add(10, 20); xs = [1,2,3,4,5]; total = xs[0]+xs[1]+xs[2]+xs[3]+xs[4]; result + total` | `python-bmf-lift.fk` (PY-BMF-LIST list-literal arm + PY-BMF-SUBSCRIPT postfix arm) | CPython `45` · Rust (bootstrap) `45` · `kernel-bmf-run` `45` |
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_imperative_demo.py` | while-loop accumulators — `def sum_to(n): total=0; i=1; while i<=n: total=total+i; i=i+1; return total` and a parallel `fact_loop`; result `sum_to(100) + fact_loop(8)`. Drives the WHILE statement-lift, multi-statement def-body wrapping, env threading through loop-body assignments | `python-bmf-lift.fk` (lift-while statement arm + always-wrap-MODULE def-body) | CPython `45370` · Rust (bootstrap) `45370` · `kernel-bmf-run` `45370` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_substrate_demo.py` | substrate-style helper composition — `for` loops, statement `if`, early returns through nested bodies, and list/range helpers | `python-bmf-lift.fk` + `python-bmf-eval.fk` statement `if`/`for`/return propagation | CPython `17680` · Rust (bootstrap) `17680` · `kernel-bmf-run` `17680` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_range_demo.py` | `range()` as an eager Form list plus recursive square/sum composition | Form-side `py-range` builtin + `PY-BMF-FOR` iteration | CPython `41650` · Rust (bootstrap) `41650` · `kernel-bmf-run` `41650` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_builtins_demo.py` | builtins + augmented assignment — `sum`, `min`, `max`, `abs`, `+=` | Form-side builtin dispatch + `PY-BMF-AUG-ASSIGN` | CPython `131` · Rust (bootstrap) `131` · `kernel-bmf-run` `131` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_lambda_demo.py` | lambda closures stored in variables/lists and called through `for f in fns` | `PY-BMF-LAMBDA` lift/eval + closure values in list iteration | CPython `216` · Rust (bootstrap) `216` · `kernel-bmf-run` `216` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_string_demo.py` | string literals, concat, and `len(s)` | `PY-BMF-STRING` lift/eval + polymorphic `_plus` + `len` builtin | CPython `45` · Rust (bootstrap) `45` · `kernel-bmf-run` `45` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.py` | utility endpoint arithmetic shape with early-return/helper semantics | Same statement/control-flow bundle as substrate demo | CPython `16185` · Rust (bootstrap) `16185` · `kernel-bmf-run` `16185` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_dict_demo.py` | dict literal, subscript read, subscript assignment, membership, key iteration, `len(d)` | `PY-BMF-DICT`, `PY-BMF-SUB-ASSIGN`, `_get`, `_dict_set`, `_in`, `_iter` | CPython `88` · Rust (bootstrap) `88` · `kernel-bmf-run` `88` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.py` | NodeID distance utility endpoint shape already inside integer/list arithmetic reach | Existing Shape-B math/list/subscript surface | CPython `7` · Rust (bootstrap) `7` · `kernel-bmf-run` `7` |
+| 2026-05-28 | `form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_lattice_stats_demo.py` | substrate lattice stats shape — dict over three integer counts, subscript reads, final sum | Dict native surface + Shape-B math | CPython `1089` · Rust (bootstrap) `1089` · `kernel-bmf-run` `1089` |
 
 **The first walking step:** with the G4 row recorded and G1+G3 now also
 landed, the manifest's lifecycle is no longer a future-tense convention.

@@ -1243,6 +1243,11 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("len", catAccess(), func(_ *Kernel, args []Value) Value {
 		switch args[0].Kind {
 		case VList:
+			if len(args[0].List) > 0 &&
+				args[0].List[0].Kind == VStr &&
+				args[0].List[0].Str == "__dict__" {
+				return Value{Kind: VInt, Int: int64((len(args[0].List) - 1) / 2)}
+			}
 			return Value{Kind: VInt, Int: int64(len(args[0].List))}
 		case VStr:
 			return Value{Kind: VInt, Int: int64(len(args[0].Str))}
@@ -1253,6 +1258,149 @@ func (k *Kernel) registerNatives() {
 	// Re-author in core.fk as needed: (defn nth (xs n) (if (eq n 0) (head xs) (nth (tail xs) (sub n 1))))
 	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
+	})
+	isDictValue := func(v Value) bool {
+		return v.Kind == VList &&
+			len(v.List) > 0 &&
+			v.List[0].Kind == VStr &&
+			v.List[0].Str == "__dict__"
+	}
+	dictKeyEq := func(a, b Value) bool {
+		if a.Kind == VStr && b.Kind == VStr {
+			return a.Str == b.Str
+		}
+		if a.Kind == VInt && b.Kind == VInt {
+			return a.Int == b.Int
+		}
+		return false
+	}
+	k.registerNative("_dict_new", catListNat(), func(_ *Kernel, args []Value) Value {
+		out := make([]Value, 0, len(args)+1)
+		out = append(out, Value{Kind: VStr, Str: "__dict__"})
+		out = append(out, args...)
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_dict_get", catAccess(), func(_ *Kernel, args []Value) Value {
+		d, key := args[0], args[1]
+		if !isDictValue(d) {
+			return Value{Kind: VNull}
+		}
+		for i := 1; i+1 < len(d.List); i += 2 {
+			if dictKeyEq(d.List[i], key) {
+				return d.List[i+1]
+			}
+		}
+		return Value{Kind: VNull}
+	})
+	k.registerNative("_dict_set", catMethod(), func(_ *Kernel, args []Value) Value {
+		d, key, value := args[0], args[1], args[2]
+		if !isDictValue(d) {
+			return d
+		}
+		out := append([]Value{}, d.List...)
+		for i := 1; i+1 < len(out); i += 2 {
+			if dictKeyEq(out[i], key) {
+				out[i+1] = value
+				return Value{Kind: VList, List: out}
+			}
+		}
+		out = append(out, key, value)
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_dict_has", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
+		d, key := args[0], args[1]
+		if !isDictValue(d) {
+			return Value{Kind: VBool, Bool: false}
+		}
+		for i := 1; i+1 < len(d.List); i += 2 {
+			if dictKeyEq(d.List[i], key) {
+				return Value{Kind: VBool, Bool: true}
+			}
+		}
+		return Value{Kind: VBool, Bool: false}
+	})
+	k.registerNative("_dict_keys", catAccess(), func(_ *Kernel, args []Value) Value {
+		d := args[0]
+		if !isDictValue(d) {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		out := make([]Value, 0, (len(d.List)-1)/2)
+		for i := 1; i+1 < len(d.List); i += 2 {
+			out = append(out, d.List[i])
+		}
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_get", catAccess(), func(_ *Kernel, args []Value) Value {
+		v, idx := args[0], args[1]
+		if isDictValue(v) {
+			for i := 1; i+1 < len(v.List); i += 2 {
+				if dictKeyEq(v.List[i], idx) {
+					return v.List[i+1]
+				}
+			}
+			return Value{Kind: VNull}
+		}
+		if v.Kind == VList {
+			i := int(idx.Int)
+			if i < 0 || i >= len(v.List) {
+				return Value{Kind: VNull}
+			}
+			return v.List[i]
+		}
+		if v.Kind == VStr {
+			i := int(idx.Int)
+			if i < 0 || i >= len(v.Str) {
+				return Value{Kind: VStr, Str: ""}
+			}
+			return Value{Kind: VStr, Str: string(v.Str[i])}
+		}
+		return Value{Kind: VNull}
+	})
+	k.registerNative("_iter", catListNat(), func(_ *Kernel, args []Value) Value {
+		v := args[0]
+		if isDictValue(v) {
+			out := make([]Value, 0, (len(v.List)-1)/2)
+			for i := 1; i+1 < len(v.List); i += 2 {
+				out = append(out, v.List[i])
+			}
+			return Value{Kind: VList, List: out}
+		}
+		if v.Kind == VList {
+			return v
+		}
+		if v.Kind == VStr {
+			out := make([]Value, 0, len(v.Str))
+			for i := 0; i < len(v.Str); i++ {
+				out = append(out, Value{Kind: VStr, Str: string(v.Str[i])})
+			}
+			return Value{Kind: VList, List: out}
+		}
+		return Value{Kind: VList, List: []Value{}}
+	})
+	k.registerNative("_in", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
+		needle, hay := args[0], args[1]
+		if isDictValue(hay) {
+			for i := 1; i+1 < len(hay.List); i += 2 {
+				if dictKeyEq(hay.List[i], needle) {
+					return Value{Kind: VBool, Bool: true}
+				}
+			}
+			return Value{Kind: VBool, Bool: false}
+		}
+		if hay.Kind == VList {
+			for _, v := range hay.List {
+				if dictKeyEq(v, needle) ||
+					(v.Kind == VBool && needle.Kind == VBool && v.Bool == needle.Bool) ||
+					(v.Kind == VFloat && needle.Kind == VFloat && v.Float == needle.Float) {
+					return Value{Kind: VBool, Bool: true}
+				}
+			}
+			return Value{Kind: VBool, Bool: false}
+		}
+		if hay.Kind == VStr && needle.Kind == VStr {
+			return Value{Kind: VBool, Bool: strings.Contains(hay.Str, needle.Str)}
+		}
+		return Value{Kind: VBool, Bool: false}
 	})
 	// Common Python builtins applied to lists. Sibling-parity with
 	// Rust + TS kernels. Honest error messages on empty lists.

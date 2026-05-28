@@ -1,0 +1,103 @@
+{
+  "date": "2026-05-28",
+  "thread_branch": "codex/universal-transport-week-review-20260528",
+  "commit_scope": "Release the Form-native Python BMF frontier from 4/19 to 13/19 by moving statement control flow, lambdas, strings, dicts, and common builtins into the lift/eval path while keeping sibling kernels in parity.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-stdlib/python-bmf-eval.fk",
+    "form/form-stdlib/python-bmf-lift.fk",
+    "form/form-stdlib/tests/python-bmf-lift-band.fk",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md",
+    "docs/system_audit/commit_evidence_2026-05-28_kernel_bmf_frontier_13_of_19.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && node --stack_size=262144 --import ./form-kernel-ts/node_modules/tsx/dist/loader.mjs ./form-kernel-ts/src/main.ts form-stdlib/python-bmf-lift.fk",
+      "cd form && node --stack_size=262144 --import ./form-kernel-ts/node_modules/tsx/dist/loader.mjs ./form-kernel-ts/src/main.ts form-stdlib/python-bmf-eval.fk",
+      "cd form/form-kernel-go && gofmt -w main.go && go build -o bin-go .",
+      "cd form/form-kernel-go && go build -o bin-go . && go test ./...",
+      "cd form && ./validate.sh form-stdlib/tests/python-bmf-lift-band.fk",
+      "cd form && ./validate.sh",
+      "cd form/form-kernel-ts/seedbank/python-adapter && PARITY_THIRD_RUNTIME=kernel-bmf ./scripts/parity_suite.sh",
+      "python3 scripts/wellness_check.py | sed -n '/## Bootstrap compost/,/## Substrate surprise/p'"
+    ],
+    "notes": [
+      "Form parser checks for python-bmf-lift.fk and python-bmf-eval.fk both returned 0.",
+      "Go kernel rebuilt and go test ./... passed after adding sibling dict/list/string polymorphic natives already present in Rust and TypeScript.",
+      "Focused band test passed: python-bmf-lift-band.fk -> 150000 across Go, Rust, and TypeScript.",
+      "Full Form sibling-kernel validation passed: 179 ok, 0 divergent.",
+      "kernel-bmf parity suite now reports 13 passing and 6 failing; first open row is python_float_demo.py.",
+      "Wellness reports lifecycle motion proven=9, compost ready=13, released=0, with 17 named bootstrap files and 11,167 LOC still standing."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "Awaiting PR checks after branch push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "No production deploy requested for this Form/kernel bootstrap cleanup."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI remains pending until the branch is pushed and checked."
+  },
+  "idea_ids": [
+    "universal-translator",
+    "form-native-execution",
+    "bootstrap-compost"
+  ],
+  "spec_ids": [
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md",
+    "form/form-stdlib/tests/python-bmf-lift-band.fk"
+  ],
+  "task_ids": [
+    "universal-transport-week-review-20260528",
+    "kernel-bmf-frontier-13-of-19"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "goal-framing"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/python-bmf-lift-band.fk returns 150000 and proves source text through lift/eval for statement if, for, range, builtins, lambdas, strings, and dicts.",
+    "PARITY_THIRD_RUNTIME=kernel-bmf ./scripts/parity_suite.sh reports 13/19 passing with python_float_demo.py as the first open row.",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md records the 2026-05-28 frontier and COMPOST READY rows.",
+    "scripts/wellness_check.py reads the manifest and reports kernel-bmf readiness 13/19."
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-stdlib/python-bmf-eval.fk",
+    "form/form-stdlib/python-bmf-lift.fk",
+    "form/form-stdlib/tests/python-bmf-lift-band.fk",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md"
+  ],
+  "change_intent": "process_only"
+}

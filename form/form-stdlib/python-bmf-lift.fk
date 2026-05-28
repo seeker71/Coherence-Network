@@ -15,6 +15,7 @@
 ; Inside an expression (G3 — precedence climbing over the token list):
 ;
 ;     integer literal             → PY-BMF-INT
+;     string literal              → PY-BMF-STRING
 ;     identifier                  → PY-BMF-IDENT
 ;     identifier (args)           → PY-BMF-CALL
 ;     ( expr )                    → grouped expression
@@ -27,14 +28,16 @@
 ;                                    (1 / 0 / 0 — matches the interpreter's
 ;                                    int-as-bool convention).
 ;     [ a, b, c ]                 → PY-BMF-LIST (interpreter arm exists).
+;     { k: v }                    → PY-BMF-DICT (interpreter arm exists).
 ;     expr [ idx ]                → PY-BMF-SUBSCRIPT (interpreter arm exists).
+;     lambda args: expr           → PY-BMF-LAMBDA (interpreter arm exists).
 ;     while-statement             → PY-BMF-WHILE (interpreter arm exists).
 ;
 ; What does NOT lift yet (honest pending, surfaces on the next breath):
 ;
 ;     class / for / try / with / import / from-import,
-;     dicts / tuples / sets, attribute access,
-;     method calls, lambdas, augmented assignment, multi-target
+;     tuples / sets, attribute access,
+;     method calls, multi-target
 ;     assignment, decorators, comprehensions, f-strings, slices,
 ;     async / yield / global / nonlocal, type annotations.
 ;
@@ -98,6 +101,7 @@
     (defn tok-keyword? (t kw) (tok-is? t "py-keyword" kw))
     (defn tok-name? (t) (str_eq (tok-kind t) "py-name"))
     (defn tok-int? (t) (str_eq (tok-kind t) "py-int"))
+    (defn tok-string? (t) (str_eq (tok-kind t) "py-string"))
 
     ;; ---- expression parser (G3) -------------------------------------
     ;;
@@ -154,6 +158,56 @@
 
     (defn lift-list-elements (tokens) (lift-list-elements-loop tokens (empty)))
 
+    ;; --- dict literal: consume `{ key: value, ... }` ----------------
+    ;;
+    ;; Children are flat key/value recipes: k1 v1 k2 v2 ... . The eval
+    ;; side tags the resulting alist so SUBSCRIPT, FOR, len, and `in`
+    ;; can choose dict semantics without changing the kernel.
+
+    (defn lift-dict-pairs-loop (tokens acc)
+        (if (nil? tokens)
+            (lift-result (reverse acc) tokens)
+            (if (tok-op? (head tokens) "}")
+                (lift-result (reverse acc) (tail tokens))
+                (do
+                    (let key-result (lift-expr tokens))
+                    (let after-key (lift-rest key-result))
+                    (if (and (not (nil? after-key))
+                             (tok-op? (head after-key) ":"))
+                        (do
+                            (let value-result (lift-expr (tail after-key)))
+                            (let next (lift-rest value-result))
+                            (let acc2
+                                (cons (lift-recipe value-result)
+                                      (cons (lift-recipe key-result) acc)))
+                            (if (and (not (nil? next))
+                                     (tok-op? (head next) ","))
+                                (lift-dict-pairs-loop (tail next) acc2)
+                                (lift-dict-pairs-loop next acc2)))
+                        (lift-result (reverse acc) after-key))))))
+
+    (defn lift-dict-pairs (tokens) (lift-dict-pairs-loop tokens (empty)))
+
+    ;; --- lambda expression: consume `lambda a, b: expr` -------------
+
+    (defn lift-lambda-params-loop (tokens acc)
+        (if (nil? tokens)
+            (lift-result (reverse acc) tokens)
+            (do
+                (let t (head tokens))
+                (if (tok-op? t ":")
+                    (lift-result (reverse acc) (tail tokens))
+                    (if (tok-op? t ",")
+                        (lift-lambda-params-loop (tail tokens) acc)
+                        (if (tok-name? t)
+                            (lift-lambda-params-loop
+                                (tail tokens)
+                                (cons (intern_trivial_string (tok-value t)) acc))
+                            (lift-lambda-params-loop (tail tokens) acc)))))))
+
+    (defn lift-lambda-params (tokens)
+        (lift-lambda-params-loop tokens (empty)))
+
     ;; --- subscript postfix: fold `[ idx ]` trailers onto a primary -
     ;;
     ;; After lift-primary parses a base recipe, peek for `[`. If present,
@@ -192,6 +246,11 @@
                 (lift-subscript-tail
                     (intern_node PY-BMF-INT
                         (list (intern_trivial_int (str_to_int (tok-value t)))))
+                    rest)
+            (if (tok-string? t)
+                (lift-subscript-tail
+                    (intern_node PY-BMF-STRING
+                        (list (intern_trivial_string (tok-value t))))
                     rest)
             (if (tok-keyword? t "True")
                 ;; True → PY-BMF-INT(1). Matches the interpreter's
@@ -237,6 +296,21 @@
                     (lift-subscript-tail
                         (intern_node PY-BMF-LIST (lift-recipe elems-result))
                         (lift-rest elems-result)))
+            (if (tok-op? t "{")
+                (do
+                    (let pairs-result (lift-dict-pairs rest))
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-DICT (lift-recipe pairs-result))
+                        (lift-rest pairs-result)))
+            (if (tok-keyword? t "lambda")
+                (do
+                    (let params-result (lift-lambda-params rest))
+                    (let body-result (lift-expr (lift-rest params-result)))
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-LAMBDA
+                            (append (lift-recipe params-result)
+                                    (list (lift-recipe body-result))))
+                        (lift-rest body-result)))
             (if (tok-op? t "(")
                 ;; parenthesised expression: parse inner, consume ")"
                 (do
@@ -251,7 +325,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest))))))))))))
+                        rest)))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
@@ -274,7 +348,8 @@
         (if (str_eq s "<=") 20
         (if (str_eq s ">")  20
         (if (str_eq s ">=") 20
-            (sub 0 1)))))))))))))))
+        (if (str_eq s "in") 20
+            (sub 0 1))))))))))))))))
 
     (defn op-is-compare? (s)
         (or (str_eq s "==")
@@ -282,13 +357,15 @@
         (or (str_eq s "<")
         (or (str_eq s "<=")
         (or (str_eq s ">")
-            (str_eq s ">=")))))))
+        (or (str_eq s ">=")
+            (str_eq s "in"))))))))
 
     (defn tok-binop-prec (tokens)
         (if (nil? tokens) (sub 0 1)
             (do
                 (let t (head tokens))
-                (if (str_eq (tok-kind t) "py-op")
+                (if (or (str_eq (tok-kind t) "py-op")
+                        (str_eq (tok-kind t) "py-keyword"))
                     (op-prec (tok-value t))
                     (sub 0 1)))))
 
@@ -482,6 +559,84 @@
             (intern_node PY-BMF-ASSIGN
                 (list (intern_trivial_string name) value))))
 
+    ;; subscript assignment: `NAME[IDX] = EXPR`.
+
+    (defn lift-sub-assign? (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (and (gt (len tokens) 5)
+                 (and (tok-name? (head tokens))
+                      (and (tok-op? (nth tokens 1) "[")
+                           (do
+                               (let idx-result (lift-expr (drop 2 tokens)))
+                               (let after-idx (lift-rest idx-result))
+                               (let after-close
+                                   (if (and (not (nil? after-idx))
+                                            (tok-op? (head after-idx) "]"))
+                                       (tail after-idx)
+                                       after-idx))
+                               (and (not (nil? after-close))
+                                    (tok-op? (head after-close) "="))))))))
+
+    (defn lift-sub-assign (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let object-name (tok-value (head tokens)))
+            (let idx-result (lift-expr (drop 2 tokens)))
+            (let after-idx (lift-rest idx-result))
+            (let after-close
+                (if (and (not (nil? after-idx))
+                         (tok-op? (head after-idx) "]"))
+                    (tail after-idx)
+                    after-idx))
+            (let value-tokens
+                (if (and (not (nil? after-close))
+                         (tok-op? (head after-close) "="))
+                    (tail after-close)
+                    after-close))
+            (let value (lift-recipe (lift-expr value-tokens)))
+            (intern_node PY-BMF-SUB-ASSIGN
+                (list (intern_trivial_string object-name)
+                      (lift-recipe idx-result)
+                      value))))
+
+    ;; augmented assignment: `NAME += EXPR` / `NAME -= EXPR` / ...
+    ;; Emits the already-walked PY-BMF-AUG-ASSIGN shape with the base op
+    ;; string (`+`, `-`, `*`, `/`, `%`) as the middle child.
+
+    (defn lift-aug-op? (op)
+        (or (str_eq op "+=")
+        (or (str_eq op "-=")
+        (or (str_eq op "*=")
+        (or (str_eq op "/=")
+            (str_eq op "%="))))))
+
+    (defn lift-aug-base-op (op)
+        (if (str_eq op "+=") "+"
+        (if (str_eq op "-=") "-"
+        (if (str_eq op "*=") "*"
+        (if (str_eq op "/=") "/"
+        (if (str_eq op "%=") "%"
+            op))))))
+
+    (defn lift-aug-assign? (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (and (gt (len tokens) 2)
+                 (and (tok-name? (head tokens))
+                      (lift-aug-op? (tok-value (nth tokens 1)))))))
+
+    (defn lift-aug-assign (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let name (tok-value (head tokens)))
+            (let op (lift-aug-base-op (tok-value (nth tokens 1))))
+            (let value (lift-recipe (lift-expr (drop 2 tokens))))
+            (intern_node PY-BMF-AUG-ASSIGN
+                (list (intern_trivial_string name)
+                      (intern_trivial_string op)
+                      value))))
+
     ;; expr-statement: just an expression in statement position.
 
     (defn lift-expr-stmt (statement-tree)
@@ -521,6 +676,43 @@
             (let body-recipes (lift-statements children))
             (intern_node PY-BMF-WHILE (cons cond body-recipes))))
 
+    ;; if-statement: tokens look like `if <cond-tokens> :`. The body is
+    ;; represented as a PY-BMF-MODULE child so the evaluator can distinguish
+    ;; statement-form IF from expression-form ternary IF.
+
+    (defn lift-if-cond-tokens (tokens)
+        (lift-while-strip-colon (tail tokens) (empty)))
+
+    (defn lift-if (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            (let cond-tokens (lift-if-cond-tokens tokens))
+            (let cond (lift-recipe (lift-expr cond-tokens)))
+            (let then-body (intern_node PY-BMF-MODULE (lift-statements children)))
+            (let else-body (intern_node PY-BMF-MODULE (empty)))
+            (intern_node PY-BMF-IF (list cond then-body else-body))))
+
+    ;; for-statement: tokens look like `for NAME in <iter-expr> :`. This first
+    ;; Form-native breath supports list-valued iterables; range/builtin
+    ;; iterators are a later row.
+
+    (defn lift-for-iter-tokens (tokens)
+        (lift-while-strip-colon (drop 3 tokens) (empty)))
+
+    (defn lift-for (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            (let target (tok-value (nth tokens 1)))
+            (let iter-tokens (lift-for-iter-tokens tokens))
+            (let iter-recipe (lift-recipe (lift-expr iter-tokens)))
+            (let body-recipes (lift-statements children))
+            (intern_node PY-BMF-FOR
+                (append
+                    (list (intern_trivial_string target) iter-recipe)
+                    body-recipes))))
+
     ;; lift-statement dispatches on both `kind` (first-token classifier) and
     ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
     ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
@@ -536,12 +728,16 @@
             (let rule (python-statement-tree-cpython-rule statement-tree))
             (if (str_eq kind "def")              (lift-def statement-tree)
             (if (str_eq kind "return")           (lift-return statement-tree)
+            (if (str_eq kind "if")               (lift-if statement-tree)
             (if (str_eq kind "while")            (lift-while statement-tree)
+            (if (str_eq kind "for")              (lift-for statement-tree)
+            (if (lift-sub-assign? statement-tree) (lift-sub-assign statement-tree)
+            (if (lift-aug-assign? statement-tree) (lift-aug-assign statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
