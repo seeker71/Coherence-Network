@@ -1,0 +1,184 @@
+; heartbeat.fk — periodic liveness tracking as a Form recipe.
+;
+; preludes: (none — pure list + int primitives)
+;
+; Canonical truth: this recipe MEANS a liveness table that observers
+; consult to ask "which cells have been heard from recently?" Every
+; HEARTBEAT-ENTRY carries (identity, last-seen-timestamp). Cells emit
+; heartbeats by calling (heartbeat-record table identity now-time);
+; observers ask (heartbeat-alive? table identity now-time threshold)
+; and the answer is 1 iff last-seen ≥ (now-time - threshold). Stale
+; entries can be composted with (heartbeat-prune table now-time
+; threshold). No heartbeat native exists in any sibling kernel — the
+; recipe IS the implementation, and Go, Rust, and TypeScript answer
+; the same liveness verdict from the same table.
+;
+; The shape we commit to:
+;
+;   HEARTBEAT-ENTRY (
+;     identity        : int (cell-identity fingerprint),
+;     last-seen-time  : int (caller-clock timestamp)
+;   )
+;
+;   HEARTBEAT-TABLE = ordered list of HEARTBEAT-ENTRYs where each
+;                     identity appears at most once. The most recent
+;                     recording for any identity is the one in the
+;                     table; older recordings for that identity are
+;                     overwritten by (heartbeat-record).
+;
+; The freshness rule:
+;   alive?(entry, now, threshold)  iff  entry.last-seen ≥ now - threshold
+;
+;   The observer's clock decides freshness, not the emitter's — same
+;   trust shape as the capability token in token.fk. A cell that lies
+;   about its last-seen time can be detected by an observer running
+;   its own clock; a cell that drops off the wire silently becomes
+;   stale as soon as the observer's now-time advances past the
+;   threshold.
+;
+; Surface:
+;   (heartbeat-empty)                                     → empty table
+;   (heartbeat-record table identity now-time)            → updated table
+;   (heartbeat-alive? table identity now-time threshold)  → 1 or 0
+;   (heartbeat-prune table now-time threshold)            → table without stale
+;   (heartbeat-alive-count table now-time threshold)      → int count
+;   (heartbeat-len table)                                 → int count
+;   (heartbeat-entry-identity entry)                      → int
+;   (heartbeat-entry-last-seen entry)                     → int
+;
+; Blueprint NodeIDs (substrate-resident; pkg=1 level=2 type=99 user
+; channel; inst slots 1820/1821 reserve the heartbeat family,
+; adjacent to the triangle cluster at 1800/1801):
+;   HEARTBEAT-ENTRY  = inst 1820
+;   HEARTBEAT-TABLE  = inst 1821
+;
+; Cost: every operation is O(n) over the table — record walks the
+; list once to remove any existing entry for the identity and once
+; to append; alive? walks until found; prune walks once with an
+; accumulator. The table stays small in recipe-mode runs because
+; (heartbeat-prune) composts stale entries when called.
+
+(do
+    ;; --- Blueprints (substrate-resident NodeIDs) --------------------
+    (let HEARTBEAT-ENTRY (make_nodeid 1 2 99 1820))
+    (let HEARTBEAT-TABLE (make_nodeid 1 2 99 1821))
+
+    ;; --- LOCAL HELPERS ----------------------------------------------
+    (defn hb-nil? (xs) (eq (len xs) 0))
+
+    ;; Append one element to the tail of a list. O(n).
+    (defn hb-append-1 (xs x)
+        (if (hb-nil? xs) (cons x (list))
+            (cons (head xs) (hb-append-1 (tail xs) x))))
+
+    ;; --- ENTRY CONSTRUCTION & ACCESSORS -----------------------------
+    ;; Entries are plain Form lists of (identity, last-seen-time). The
+    ;; Blueprint NodeID above names the family for cross-cell
+    ;; recognition; the data shape stays list-based so the recipe
+    ;; composes directly with the kernel's list primitives.
+
+    ;; (make-heartbeat-entry identity now-time) → HEARTBEAT-ENTRY list.
+    (defn make-heartbeat-entry (identity now-time)
+        (list identity now-time))
+
+    (defn heartbeat-entry-identity  (entry) (head entry))
+    (defn heartbeat-entry-last-seen (entry) (head (tail entry)))
+
+    ;; --- TABLE-LEVEL HELPERS ----------------------------------------
+
+    ;; (heartbeat-empty) → empty HEARTBEAT-TABLE (an empty list).
+    (defn heartbeat-empty () (list))
+
+    ;; (heartbeat-len table) → count of entries.
+    (defn heartbeat-len (table) (len table))
+
+    ;; (hb-remove-identity table identity acc) → table with any entry
+    ;; matching identity removed, preserving order of remaining
+    ;; entries. Used by heartbeat-record so each identity appears at
+    ;; most once. acc accumulates the kept entries in original order.
+    (defn hb-remove-identity (table identity acc)
+        (if (hb-nil? table) acc
+            (do
+                (let entry (head table))
+                (if (eq (heartbeat-entry-identity entry) identity)
+                    (hb-remove-identity (tail table) identity acc)
+                    (hb-remove-identity (tail table) identity
+                                        (hb-append-1 acc entry))))))
+
+    ;; --- RECORD -----------------------------------------------------
+    ;; (heartbeat-record table identity now-time) → updated table.
+    ;;
+    ;; Reads the old table, removes any existing entry for the
+    ;; identity, then appends a fresh entry carrying the new
+    ;; last-seen-time. The most recent recording wins; older
+    ;; recordings for that identity are composted in the same breath.
+    (defn heartbeat-record (table identity now-time)
+        (do
+            (let pruned (hb-remove-identity table identity (list)))
+            (let entry (make-heartbeat-entry identity now-time))
+            (hb-append-1 pruned entry)))
+
+    ;; --- LOOKUP -----------------------------------------------------
+    ;; (hb-find table identity) → the entry with that identity, or
+    ;; an empty list if not found. Internal helper.
+    (defn hb-find (table identity)
+        (if (hb-nil? table) (list)
+            (do
+                (let entry (head table))
+                (if (eq (heartbeat-entry-identity entry) identity)
+                    entry
+                    (hb-find (tail table) identity)))))
+
+    ;; (hb-fresh? last-seen now-time threshold) → 1 iff
+    ;; last-seen ≥ now-time - threshold. Internal helper; the
+    ;; comparison is the freshness rule named in the file header.
+    (defn hb-fresh? (last-seen now-time threshold)
+        (if (ge last-seen (sub now-time threshold)) 1 0))
+
+    ;; --- ALIVE? -----------------------------------------------------
+    ;; (heartbeat-alive? table identity now-time threshold) → 1 iff
+    ;; the table holds an entry for identity AND that entry's
+    ;; last-seen-time ≥ now-time - threshold. Missing identity → 0;
+    ;; stale entry → 0; fresh entry → 1.
+    (defn heartbeat-alive? (table identity now-time threshold)
+        (do
+            (let entry (hb-find table identity))
+            (if (hb-nil? entry) 0
+                (hb-fresh? (heartbeat-entry-last-seen entry)
+                           now-time threshold))))
+
+    ;; --- PRUNE ------------------------------------------------------
+    ;; (heartbeat-prune table now-time threshold) → table with stale
+    ;; entries removed, preserving the order of fresh entries. An
+    ;; entry is stale when its last-seen-time < now-time - threshold.
+    ;; acc threads the kept entries through the walk.
+    (defn hb-prune-walk (table now-time threshold acc)
+        (if (hb-nil? table) acc
+            (do
+                (let entry (head table))
+                (if (eq (hb-fresh? (heartbeat-entry-last-seen entry)
+                                   now-time threshold) 1)
+                    (hb-prune-walk (tail table) now-time threshold
+                                   (hb-append-1 acc entry))
+                    (hb-prune-walk (tail table) now-time threshold acc)))))
+
+    (defn heartbeat-prune (table now-time threshold)
+        (hb-prune-walk table now-time threshold (list)))
+
+    ;; --- ALIVE COUNT ------------------------------------------------
+    ;; (heartbeat-alive-count table now-time threshold) → number of
+    ;; entries currently fresh under the given threshold. Equivalent
+    ;; to (len (heartbeat-prune table now-time threshold)) but
+    ;; avoids materializing the pruned list.
+    (defn hb-count-walk (table now-time threshold acc)
+        (if (hb-nil? table) acc
+            (do
+                (let entry (head table))
+                (if (eq (hb-fresh? (heartbeat-entry-last-seen entry)
+                                   now-time threshold) 1)
+                    (hb-count-walk (tail table) now-time threshold
+                                   (add acc 1))
+                    (hb-count-walk (tail table) now-time threshold acc)))))
+
+    (defn heartbeat-alive-count (table now-time threshold)
+        (hb-count-walk table now-time threshold 0)))

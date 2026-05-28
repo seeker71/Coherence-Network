@@ -1,0 +1,126 @@
+; tests/multi-hop-band.fk — sibling-witness band for multi-hop routing.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+;           form-stdlib/symbols.fk
+;
+; The tightest possible band for the routing core: three cells share
+; one registry, A picks the first provider of capability "concepts"
+; (= B, the router), B excludes itself by identity and forwards to C,
+; C responds, B forwards. Verdict counts the load-bearing equalities:
+;
+;   1. registry exposes both providers
+;   2. A's first-pick is the router (registration order)
+;   3. B's self-exclusion leaves exactly one other provider
+;   4. response's status is "ok"
+;   5. items list has length 1
+;   6. recovered symbol-table holds "concepts"
+;   7. "concepts" expands to three names
+;   8. each of the four channel hops persisted one message
+;
+; That's 11 binary attestations; the band returns the sum.
+
+(do
+    (defn band-nil? (xs) (eq (len xs) 0))
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+    (defn band-append (xs ys)
+        (if (band-nil? xs) ys (cons (head xs) (band-append (tail xs) ys))))
+
+    ;; ---------- topology ----------
+    (let registry-path  "/tmp/multi-hop-band-registry.fkb")
+    (let b-channel-path "/tmp/multi-hop-band-b.fkb")
+    (let c-channel-path "/tmp/multi-hop-band-c.fkb")
+    (let b-reply-path   "/tmp/multi-hop-band-b-reply.fkb")
+    (let a-reply-path   "/tmp/multi-hop-band-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create b-channel-path)
+    (channel-create c-channel-path)
+    (channel-create b-reply-path)
+    (channel-create a-reply-path)
+
+    (let b-id 2002)
+    (let c-id 3003)
+
+    ;; B (router) first so A's head picks it.
+    (register-cell registry-path b-id b-channel-path (list "concepts"))
+    (register-cell registry-path c-id c-channel-path (list "concepts"))
+
+    ;; ---------- A asks ----------
+    (let providers (find-by-capability registry-path "concepts"))
+    (let providers-ok (if (eq (len providers) 2) 1 0))
+
+    (let chosen (head providers))
+    (let first-is-router (if (eq (reg-identity chosen) b-id) 1 0))
+
+    (let topic-nid (make_nodeid 1 2 99 8888))
+    (let query (cq-query "concepts" topic-nid (intern_trivial_string "")))
+    (channel-append (reg-channel-path chosen) (channel-message query))
+
+    ;; ---------- B routes ----------
+    (defn other-providers (regs self-id acc)
+        (if (band-nil? regs) acc
+            (if (eq (reg-identity (head regs)) self-id)
+                (other-providers (tail regs) self-id acc)
+                (other-providers (tail regs) self-id
+                    (band-append acc (list (head regs)))))))
+
+    (let b-msgs (channel-read b-channel-path))
+    (let b-query (channel-msg-payload (head b-msgs)))
+    (let others (other-providers providers b-id (list)))
+    (let others-ok (if (eq (len others) 1) 1 0))
+    (let next-hop (head others))
+    (channel-append (reg-channel-path next-hop) (channel-message b-query))
+
+    ;; ---------- C responds ----------
+    (let c-msgs (channel-read c-channel-path))
+    (let c-query (channel-msg-payload (head c-msgs)))
+    (let c-table
+        (symbol-table
+            (list (symbol-bind "concepts"
+                       (intern_node (make_nodeid 1 1 14 0)
+                           (list (intern_trivial_string "trust-over-fear")
+                                 (intern_trivial_string "field-substrate")
+                                 (intern_trivial_string "divergence-doorway")))))))
+    (let c-item (cq-recipe-content c-table))
+    (let c-correlation (node_inst c-query))
+    (let c-response (cq-response c-correlation "ok" (list c-item)))
+    (channel-append b-reply-path (channel-message c-response))
+
+    ;; ---------- B forwards ----------
+    (let b-reply-msgs (channel-read b-reply-path))
+    (let from-c (channel-msg-payload (head b-reply-msgs)))
+    (channel-append a-reply-path (channel-message from-c))
+
+    ;; ---------- A inspects ----------
+    (let a-msgs (channel-read a-reply-path))
+    (let response (channel-msg-payload (head a-msgs)))
+    (let response-children (node_children response))
+    (let status-ok
+        (if (str_eq (node_value (band-nth response-children 1)) "ok") 1 0))
+    (let items (node_children (band-nth response-children 2)))
+    (let items-ok (if (eq (len items) 1) 1 0))
+    (let recovered-table (head (node_children (head items))))
+    (let concepts (symbol-lookup recovered-table "concepts"))
+    (let concepts-ok (symbol-found? concepts))
+    (let concept-count-ok
+        (if (eq (len (node_children concepts)) 3) 1 0))
+
+    ;; Each hop attestation.
+    (let hop1-ok (if (eq (len b-msgs) 1) 1 0))
+    (let hop2-ok (if (eq (len c-msgs) 1) 1 0))
+    (let hop3-ok (if (eq (len b-reply-msgs) 1) 1 0))
+    (let hop4-ok (if (eq (len a-msgs) 1) 1 0))
+
+    ;; Verdict: 11 when the routing core moves cleanly on every kernel.
+    (add providers-ok
+         (add first-is-router
+              (add others-ok
+                   (add status-ok
+                        (add items-ok
+                             (add concepts-ok
+                                  (add concept-count-ok
+                                       (add hop1-ok
+                                            (add hop2-ok
+                                                 (add hop3-ok hop4-ok)))))))))))

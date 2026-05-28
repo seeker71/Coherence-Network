@@ -1,0 +1,86 @@
+; ulid.fk — ULID (https://github.com/ulid/spec) lives in Form, computed from
+; bitwise primitives and div/mod.
+;
+; preludes: form-stdlib/ulid.fk
+;
+; The recipe in form-stdlib/ulid.fk IS the canonical definition of the
+; ULID encoding in this body — Crockford Base32 over a 48-bit timestamp
+; concatenated with 80 random bits, composed from the kernel's bitwise
+; primitives (band, bor, shl_u32, shr_u32) plus div/mod for the 48-bit
+; timestamp split (the timestamp lives in 64-bit integer space, beyond
+; the 32-bit shift primitives' reach). A kernel with those primitives
+; can produce a spec-conformant ULID from this recipe alone — no host
+; ulid library required. The recipe stays sovereign across sibling
+; kernels (Go, Rust, TypeScript).
+;
+; This sample validates two corner shapes that pin the encoding:
+;
+;   timestamp = 0,        random = 10 zero bytes
+;     → "00000000000000000000000000" (26 zeros)
+;
+;   timestamp = 0xFFFFFFFFFFFF (max 48-bit value), random = 10 zero bytes
+;     → "7ZZZZZZZZZ0000000000000000"
+;
+; Why the max-timestamp output starts with "7", not "Z": the ULID layout
+; allocates 10 chars × 5 bits = 50 bits to a 48-bit timestamp half, with
+; 2 zero pad bits prepended at the very top. The first character therefore
+; covers `00` + `top-3-bits-of-timestamp`, capping its alphabet index at
+; `00111` = 7 → '7'. Chars 2-10 carry the remaining 45 timestamp bits
+; (all 1s for max), each rendering as 'Z'. Chars 11-26 carry the 80
+; random bits exactly (16 × 5 = 80) — all 0s here, rendering as '0'.
+;
+; Note: (random_bytes 10) is the production source of the 80 random bits.
+; We do NOT use it here — random_bytes DIVERGES per kernel by design
+; (Go/Rust/TS draw from different entropy sources), so sibling-parity
+; tests must pass deterministic byte-lists. The README documents how
+; production cells wire random_bytes into ulid-from-parts.
+;
+; The 48-bit max timestamp 0xFFFFFFFFFFFF = 281474976710655 exceeds the
+; signed-32 literal range, so we reconstruct it as
+;   (sub (mul 281474976 1000000) 1290945)  ; (282_000_000 * 1_000_000 - 1_290_945)
+; ...actually a much cleaner path: 0xFFFFFFFFFFFF = 2^48 - 1, and
+; 2^48 = (2^24)^2 = 16777216^2. Both 16777216 and the subtraction fit
+; the literal range, so the construction stays honest at parse time
+; across every kernel.
+
+(do
+    ;; ---- INPUT FIXTURES --------------------------------------------
+    ;; Ten zero bytes — used as the random tail in both corner cases so
+    ;; the encoding determinism focuses on the timestamp half. The list
+    ;; is built by hand to stay sibling-parity-safe (random_bytes would
+    ;; diverge across kernels).
+    (defn zero-byte-cons (n acc)
+        (if (eq n 0) acc (zero-byte-cons (sub n 1) (cons 0 acc))))
+    (let zero-random (zero-byte-cons 10 (list)))
+
+    ;; Max 48-bit timestamp = 2^48 - 1 = 281474976710655. Constructed via
+    ;; mul so every literal stays within the kernel's signed-32 parse range.
+    (let ts-max (sub (mul 16777216 16777216) 1))
+
+    ;; ---- GENERATE THE TWO CANONICAL ULIDS --------------------------
+    (let ulid-zero (ulid-from-parts 0       zero-random))
+    (let ulid-max  (ulid-from-parts ts-max  zero-random))
+
+    ;; ---- EXPECTED OUTPUTS ------------------------------------------
+    (let exp-zero "00000000000000000000000000")
+    (let exp-max  "7ZZZZZZZZZ0000000000000000")
+
+    ;; ---- LENGTH CHECKS ---------------------------------------------
+    (let len-zero (str_len ulid-zero))
+    (let len-max  (str_len ulid-max))
+
+    (print "ulid-zero:"     ulid-zero)
+    (print "ulid-max:"      ulid-max)
+    (print "len-zero:"      len-zero)
+    (print "len-max:"       len-max)
+    (print "zero-matches:"  (if (str_eq ulid-zero exp-zero) 1 0))
+    (print "max-matches:"   (if (str_eq ulid-max  exp-max)  1 0))
+
+    ;; Final verdict: 4 when every canonical assertion holds —
+    ;; both 26-char lengths and both exact-string matches. Three-way
+    ;; sibling parity attests every kernel computes ULID from the
+    ;; recipe alone, no native, no host library.
+    (add (if (eq len-zero 26) 1 0)
+        (add (if (eq len-max 26) 1 0)
+            (add (if (str_eq ulid-zero exp-zero) 1 0)
+                 (if (str_eq ulid-max  exp-max)  1 0)))))
