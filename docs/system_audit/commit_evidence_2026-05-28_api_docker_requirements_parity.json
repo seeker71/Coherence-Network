@@ -1,0 +1,85 @@
+{
+  "date": "2026-05-28",
+  "thread_branch": "codex/api-docker-requirements-parity-20260528",
+  "commit_scope": "Restore the API image runtime dependency set by aligning api/requirements.txt with api/pyproject.toml for imports used at app startup.",
+  "files_owned": [
+    "api/requirements.txt",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-05-28_api_docker_requirements_parity.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_api_dockerfile_contract.py -q",
+      "/opt/homebrew/bin/ruff check api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-28_api_docker_requirements_parity.json",
+      "git diff --check"
+    ],
+    "notes": [
+      "The API Docker image installs api/requirements.txt, while CI installs api/pyproject.toml. The Docker requirements were missing PyNaCl and pywebpush even though app.main imports runtime and push services that depend on them.",
+      "Focused requirements parity test passed.",
+      "Ruff passed on the Dockerfile contract test.",
+      "Local Docker daemon is not available in this desktop session, so image-start proof is deferred to Hostinger Auto Deploy."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "Awaiting PR checks after branch push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "Hostinger Auto Deploy run 26582186279 rebuilt the API image successfully with rust:1.86-slim-bookworm, then the API container did not pass public health; the image dependency set is the next likely startup blocker.",
+      "The next deploy must start the API image, expose /api/health, and clear POST /api/substrate/form for @concept(lc-pulse).blueprint."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local dependency parity is proved; CI and live deploy proof remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "task_ids": [
+    "api-docker-requirements-parity-20260528",
+    "substrate-form-access-fallback-20260528"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-signal"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/main.py imports app.services.runtime_service at startup, and runtime_service imports nacl.",
+    "api/app/routers/push.py imports push_subscription_service at startup, and push_subscription_service imports pywebpush.",
+    "api/pyproject.toml already listed PyNaCl>=1.5.0 and pywebpush>=2.0, but api/requirements.txt did not."
+  ],
+  "change_files": [
+    "api/requirements.txt",
+    "api/tests/test_api_dockerfile_contract.py"
+  ],
+  "change_intent": "process_only"
+}
