@@ -19,7 +19,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1 — build the form-kernel-rust native binary
 # -----------------------------------------------------------------------------
-FROM rust:1.85-slim-bookworm AS kernel-builder
+FROM rust:1.86-slim-bookworm AS kernel-builder
 
 WORKDIR /build
 

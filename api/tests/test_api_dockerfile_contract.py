@@ -24,4 +24,4 @@ def test_api_kernel_builder_rust_toolchain_supports_locked_edition2024_crates() 
     assert match is not None
 
     toolchain = (int(match.group("major")), int(match.group("minor")))
-    assert toolchain >= (1, 85)
+    assert toolchain >= (1, 86)
