@@ -952,6 +952,30 @@ def _runtime_value_out(value: Any) -> Any:
     return value
 
 
+def _form_result_from_runtime_value(value: Any) -> FormResultOut:
+    """Render runtime fallback values with the same shape as AST results."""
+    if isinstance(value, NodeID):
+        return FormResultOut(kind="node_id", node_id=NodeIDOut.from_node_id(value))
+    if isinstance(value, NamedCell):
+        return FormResultOut(kind="cell", cell=CellOut.from_cell(value))
+    if isinstance(value, CellView):
+        return FormResultOut(kind="view", view=_cell_view_out(value))
+    if isinstance(value, list):
+        if value and all(isinstance(item, NamedCell) for item in value):
+            return FormResultOut(kind="cells", cells=[CellOut.from_cell(item) for item in value])
+        if value and all(isinstance(item, CellView) for item in value):
+            return FormResultOut(kind="views", views=[_cell_view_out(item) for item in value])
+    return FormResultOut(kind="value", value=_runtime_value_out(value))
+
+
+def _is_access_bootstrap_gap(exc: TypeError) -> bool:
+    text = str(exc)
+    return (
+        "Form: cannot evaluate Access" in text
+        or "Form: cannot evaluate MethodCall" in text
+    )
+
+
 @router.post("/form", response_model=FormResultOut, tags=["substrate"])
 def evaluate_form(req: FormRequest) -> FormResultOut:
     """Evaluate a Form-notation expression against the substrate.
@@ -981,7 +1005,13 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
             if req.mode == "run":
                 value = form_execute_text(session, req.expression)
                 return FormResultOut(kind="value", value=_runtime_value_out(value))
-            result = form_evaluate_text(session, req.expression)
+            try:
+                result = form_evaluate_text(session, req.expression)
+            except TypeError as exc:
+                if not _is_access_bootstrap_gap(exc):
+                    raise
+                value = form_execute_text(session, req.expression)
+                return _form_result_from_runtime_value(value)
         except LookupError as exc:
             # The expression parsed and evaluated cleanly, but a cell or
             # node it referenced isn't in the lattice. 404 is the honest
