@@ -1,0 +1,46 @@
+; channel-query-json.fk — encode a QUERY and a RESPONSE into JSON for
+; a non-Form HTTP service (Slack webhook, Discord bot, generic REST).
+;
+; preludes: form-stdlib/json.fk form-stdlib/channel-query.fk form-stdlib/sha256.fk form-stdlib/channel-query-json.fk
+;
+; The frame:
+;   Form-native cells talk to each other through the channel-query
+;   vocabulary directly — the Recipe shape IS the wire. But a Slack
+;   webhook can't read a Form Recipe; it speaks JSON. This walk shows
+;   a cell encoding its query and response into JSON the foreign
+;   service can consume, while preserving substrate NodeIDs and item
+;   types so the receiver can dispatch on shape.
+;
+; The walk:
+;   1. Construct a QUERY (verb "about", small NodeID address, empty body).
+;   2. Encode to JSON via query-to-json.
+;   3. Compare against the canonical wire string — print 1/0.
+;   4. Construct a RESPONSE with one SUBSTRATE-REF item.
+;   5. Encode to JSON via response-to-json.
+;   6. Compare against the canonical wire string — print 1/0.
+;
+; Verdict: 2 — both encodings match the expected JSON shape.
+
+(do
+    ;; ---------- QUERY ENCODE ----------
+    (let topic (make_nodeid 1 2 99 7))
+    (let q (cq-query "about" topic (intern_trivial_string "")))
+    (let q-json (query-to-json q))
+    (let q-expected
+        "{\"verb\":\"about\",\"address\":{\"pkg\":1,\"level\":2,\"type\":99,\"inst\":7},\"body\":null}")
+    (let q-match (if (str_eq q-json q-expected) 1 0))
+    (print "query-json-match:" q-match)
+
+    ;; ---------- RESPONSE ENCODE ----------
+    ;; One SUBSTRATE-REF item, small NodeID, correlation 1, status "ok".
+    (let ref-nid (make_nodeid 0 0 0 1))
+    (let item (cq-substrate-ref ref-nid))
+    (let r (cq-response 1 "ok" (list item)))
+    (let r-json (response-to-json r))
+    (let r-expected
+        "{\"correlation\":1,\"status\":\"ok\",\"items\":[{\"type\":\"substrate-ref\",\"value\":{\"pkg\":0,\"level\":0,\"type\":0,\"inst\":1}}]}")
+    (let r-match (if (str_eq r-json r-expected) 1 0))
+    (print "response-json-match:" r-match)
+
+    ;; ---------- VERDICT ----------
+    (add q-match r-match))

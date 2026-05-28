@@ -1,0 +1,76 @@
+; ping.fk — the smallest verb on the channel-query vocabulary.
+;
+; Discipline:
+;   "ping" is the most minimal verb a cell can answer. The asker sends
+;   QUERY(verb="ping", address=PING-SELF, body=empty). The responder
+;   echoes RESPONSE(correlation=<query-inst>, status="ok",
+;                   items=[one timestamp item]).
+;
+;   Ping is the heartbeat verb — if a cell can answer ping, the cell
+;   is alive and its channel-query path is wired. Higher verbs build
+;   on the same shape: same QUERY/RESPONSE Blueprints, same correlation
+;   semantics, same wire-optimized item kinds.
+;
+; Kernel-time note:
+;   None of the three sibling kernels currently expose a (now) or
+;   (current_time) native — only file_mtime, which reads a file's
+;   mtime from disk. A "current wall-clock time" primitive that all
+;   three kernels return-the-same-thing-on-the-same-machine is the
+;   missing piece. Until that lands, ping-handler stamps the response
+;   with a hardcoded value (0). The protocol shape is correct; the
+;   freshness signal is parked.
+;
+;   When a time native lands (proposed name: `now` returning unix
+;   seconds as an int), the only change is the single (let stamp 0)
+;   line below — the rest of the shape carries forward.
+;
+; preludes: form-stdlib/channel-query.fk
+
+;; --- Constants ----------------------------------------------------
+
+;; PING-SELF — the well-known "no specific address" NodeID for ping.
+;; A ping isn't asking about anything; it's asking the cell whether
+;; the cell is there. The address slot still exists in QUERY (the
+;; vocabulary doesn't carve a special-case shape just for ping); we
+;; populate it with this sentinel so any cell that can address itself
+;; recognizes "this is a heartbeat, not a content question".
+;; Pkg/level/type match channel-query's user-channel range; inst 1720
+;; sits just past the channel-query Blueprint family (1710..1716).
+(let PING-SELF (make_nodeid 1 2 99 1720))
+
+;; --- Constructors -------------------------------------------------
+
+;; ping-request → QUERY Recipe with verb "ping" and empty body.
+;; The empty body is an intern_trivial_string of "" — the cq-query
+;; constructor expects a body Recipe, and the empty-string trivial
+;; is the cheapest honest "nothing here" we can compose.
+(defn ping-request ()
+    (cq-query "ping" PING-SELF (intern_trivial_string "")))
+
+;; ping-handler query → RESPONSE Recipe with status "ok" and one
+;; item carrying the current process's timestamp.
+;;
+;; The timestamp is wrapped as a RECIPE-CONTENT item whose single
+;; child is a trivial-int. RECIPE-CONTENT is the right item-type:
+;; the value lives entirely in the wire (not a substrate-resident
+;; cell), and the receiver reads it by walking node_children. When
+;; a time native lands, replace the (let stamp 0) line with a call
+;; into that native; nothing else moves.
+(defn ping-handler (query)
+    (do
+        (let correlation (node_inst query))
+        (let stamp 0)                ; FIXME: no (now) native yet — see header
+        (let stamp-node (intern_trivial_int stamp))
+        (let item (cq-recipe-content stamp-node))
+        (cq-response correlation "ok" (list item))))
+
+;; --- Predicates ---------------------------------------------------
+
+;; ping-ok? response → 1 if status field is "ok", 0 otherwise.
+;; RESPONSE children: [correlation-int, status-string, items-list].
+;; node_value on a trivial-string returns the SubstrateString value.
+(defn ping-ok? (response)
+    (do
+        (let children (node_children response))
+        (let status-node (cq-nth children 1))
+        (if (str_eq (node_value status-node) "ok") 1 0)))

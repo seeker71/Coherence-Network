@@ -1,0 +1,168 @@
+; tests/kv-store-band.fk — kv-store cell pattern sibling-witness band.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/cell-registry.fk \
+;           form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+;           form-stdlib/symbols.fk
+;
+; Validates the kv-store cell pattern from sample 40-kv-store:
+;   - K registers with two capabilities and is discoverable by either.
+;   - kv-set queries grow K's table; kv-get queries read it.
+;   - A miss returns status "not-known" (honest absence).
+;   - The queries cross file-backed channels both ways.
+;
+; Band verdict: 7 when every assertion holds across all three kernels.
+;   - 1 ok: K discoverable by capability
+;   - 2 ok: two set responses status "ok"
+;   - 2 ok: two get responses status "ok" with matching values
+;   - 1 ok: miss response status "not-known"
+;   - 1 ok: final table has two bindings
+
+(do
+    (defn kb-nth (xs i)
+        (if (eq i 0) (head xs) (kb-nth (tail xs) (sub i 1))))
+
+    (let registry-path  "/tmp/kv-store-band-registry.fkb")
+    (let k-channel-path "/tmp/kv-store-band-k.fkb")
+    (let a-reply-path   "/tmp/kv-store-band-a-reply.fkb")
+
+    (channel-create registry-path)
+    (channel-create k-channel-path)
+    (channel-create a-reply-path)
+
+    (register-cell registry-path 4101 k-channel-path
+                   (list "kv-set" "kv-get"))
+
+    ;; K's handlers (mirroring the sample's shape).
+    (defn band-handle-set (table query)
+        (do
+            (let body (kb-nth (node_children query) 2))
+            (let body-children (node_children body))
+            (let key   (node_value (kb-nth body-children 0)))
+            (let value (kb-nth body-children 1))
+            (let new-bindings
+                (append (symbol-table-bindings table)
+                        (list (symbol-bind key value))))
+            (list (symbol-table new-bindings)
+                  (cq-response (node_inst query) "ok" (list)))))
+
+    (defn band-handle-get (table query)
+        (do
+            (let key (node_value (kb-nth (node_children query) 2)))
+            (let v (symbol-lookup table key))
+            (if (eq (symbol-found? v) 1)
+                (list table
+                      (cq-response (node_inst query) "ok"
+                          (list (cq-recipe-content v))))
+                (list table
+                      (cq-response (node_inst query) "not-known"
+                          (list))))))
+
+    (let verb-set (intern_trivial_string "kv-set"))
+    (let verb-get (intern_trivial_string "kv-get"))
+
+    (defn band-dispatch (table query)
+        (do
+            (let verb-node (head (node_children query)))
+            (if (node_eq verb-node verb-set)
+                (band-handle-set table query)
+                (band-handle-get table query))))
+
+    (defn band-step (table)
+        (do
+            (let msgs (channel-read k-channel-path))
+            (let last-msg (kb-nth msgs (sub (len msgs) 1)))
+            (let query (channel-msg-payload last-msg))
+            (let result (band-dispatch table query))
+            (channel-append a-reply-path
+                (channel-message (head (tail result))))
+            (head result)))
+
+    ;; K is discoverable through either verb. Use "kv-get" as the
+    ;; probe — both should resolve to the same registration.
+    (let cells-found (find-by-capability registry-path "kv-get"))
+    (let found-ok (if (eq (len cells-found) 1) 1 0))
+    (let k-channel (reg-channel-path (head cells-found)))
+
+    (let topic-nid (make_nodeid 1 2 99 7801))
+
+    ;; --- Step 1: set "k1" → "v1" ----------------------------------
+    (channel-append k-channel
+        (channel-message
+            (cq-query "kv-set" topic-nid
+                (intern_node (make_nodeid 1 1 14 0)
+                    (list (intern_trivial_string "k1")
+                          (intern_trivial_string "v1"))))))
+    (let t1 (band-step (symbol-table (list))))
+    (let r1 (channel-msg-payload
+                (kb-nth (channel-read a-reply-path) 0)))
+    (let set1-ok
+        (if (str_eq (node_value (kb-nth (node_children r1) 1)) "ok") 1 0))
+
+    ;; --- Step 2: set "k2" → "v2" ----------------------------------
+    (channel-append k-channel
+        (channel-message
+            (cq-query "kv-set" topic-nid
+                (intern_node (make_nodeid 1 1 14 0)
+                    (list (intern_trivial_string "k2")
+                          (intern_trivial_string "v2"))))))
+    (let t2 (band-step t1))
+    (let r2 (channel-msg-payload
+                (kb-nth (channel-read a-reply-path) 1)))
+    (let set2-ok
+        (if (str_eq (node_value (kb-nth (node_children r2) 1)) "ok") 1 0))
+
+    ;; --- Step 3: get "k1" → expect "v1" ---------------------------
+    (channel-append k-channel
+        (channel-message
+            (cq-query "kv-get" topic-nid
+                (intern_trivial_string "k1"))))
+    (let t3 (band-step t2))
+    (let r3 (channel-msg-payload
+                (kb-nth (channel-read a-reply-path) 2)))
+    (let r3-status-ok
+        (if (str_eq (node_value (kb-nth (node_children r3) 1)) "ok") 1 0))
+    (let r3-item
+        (head (node_children (kb-nth (node_children r3) 2))))
+    (let r3-value (head (node_children r3-item)))
+    (let r3-value-ok (if (str_eq (node_value r3-value) "v1") 1 0))
+    (let get1-ok (if (and (eq r3-status-ok 1) (eq r3-value-ok 1)) 1 0))
+
+    ;; --- Step 4: get "k2" → expect "v2" ---------------------------
+    (channel-append k-channel
+        (channel-message
+            (cq-query "kv-get" topic-nid
+                (intern_trivial_string "k2"))))
+    (let t4 (band-step t3))
+    (let r4 (channel-msg-payload
+                (kb-nth (channel-read a-reply-path) 3)))
+    (let r4-status-ok
+        (if (str_eq (node_value (kb-nth (node_children r4) 1)) "ok") 1 0))
+    (let r4-item
+        (head (node_children (kb-nth (node_children r4) 2))))
+    (let r4-value (head (node_children r4-item)))
+    (let r4-value-ok (if (str_eq (node_value r4-value) "v2") 1 0))
+    (let get2-ok (if (and (eq r4-status-ok 1) (eq r4-value-ok 1)) 1 0))
+
+    ;; --- Step 5: get "missing" → expect "not-known" --------------
+    (channel-append k-channel
+        (channel-message
+            (cq-query "kv-get" topic-nid
+                (intern_trivial_string "missing"))))
+    (let t5 (band-step t4))
+    (let r5 (channel-msg-payload
+                (kb-nth (channel-read a-reply-path) 4)))
+    (let miss-ok
+        (if (str_eq (node_value (kb-nth (node_children r5) 1))
+                    "not-known")
+            1 0))
+
+    ;; --- Final table size ----------------------------------------
+    (let size-ok (if (eq (len (symbol-table-bindings t5)) 2) 1 0))
+
+    ;; Band verdict: 7 when every assertion holds.
+    (add found-ok
+         (add set1-ok
+              (add set2-ok
+                   (add get1-ok
+                        (add get2-ok
+                             (add miss-ok size-ok)))))))

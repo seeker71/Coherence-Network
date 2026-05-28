@@ -1,0 +1,75 @@
+; hex.fk — Hexadecimal encoding from the Form recipe, sibling-verified.
+;
+; preludes: form-stdlib/hex.fk
+;
+; Hex is the textual envelope of last resort for bytes — the form every
+; SHA-256 digest, Merkle root, ETag, and content-address already wears
+; in this body. Base64 (sample 30) is denser; hex is more readable.
+; Both compose from the same kernel primitives, both stay sovereign.
+;
+; This sample walks four shapes through the Form recipe in
+; form-stdlib/hex.fk:
+;
+;   1. encode-match    — [0 1 15 16 255] → "00010f10ff"
+;                        edge nibbles (0, 15) and a carry-byte (16)
+;                        verified by str_eq.
+;   2. decode-sum      — "deadbeef" → [222 173 190 239]; verify the
+;                        byte-sum (222+173+190+239 = 824).
+;   3. roundtrip-match — encode a small byte-list, decode back,
+;                        check byte-sum survives unchanged.
+;   4. error-detected  — decode "xx" should return the HEX-DECODE-ERROR
+;                        sentinel; value_eq against the sentinel proves
+;                        the caller can distinguish.
+;
+; Three sibling kernels (Go, Rust, TypeScript) agree on every result.
+; No hex native exists; the recipe IS the sole implementation.
+
+(do
+    ;; --- list helpers (local to this sample) -----------------------
+    (defn h-nil? (xs) (eq (len xs) 0))
+
+    ;; Sum a byte-list — small, recursive, head/tail.
+    (defn byte-sum (xs)
+        (if (h-nil? xs) 0
+            (add (head xs) (byte-sum (tail xs)))))
+
+    ;; --- 1. ENCODE: [0 1 15 16 255] → "00010f10ff" -----------------
+    (let in-edge (list 0 1 15 16 255))
+    (let enc-edge (hex-encode in-edge))
+    (let encode-match (if (str_eq enc-edge "00010f10ff") 1 0))
+
+    ;; --- 2. DECODE: "deadbeef" → [222 173 190 239] -----------------
+    ;; The classic test vector. Byte-sum = 222 + 173 + 190 + 239 = 824.
+    (let dec-deadbeef (hex-decode "deadbeef"))
+    (let decode-sum (byte-sum dec-deadbeef))
+
+    ;; --- 3. ROUND-TRIP: decode(encode(bs)) = bs --------------------
+    ;; Use a small byte-list distinct from the encode-match input so
+    ;; the round-trip witness stands on its own evidence.
+    (let in-trip (list 42 200 7 255 0 128))
+    (let trip-back (hex-decode (hex-encode in-trip)))
+    (let roundtrip-match
+        (if (eq (byte-sum trip-back) (byte-sum in-trip)) 1 0))
+
+    ;; --- 4. ERROR-DETECTED: "xx" → sentinel ------------------------
+    ;; "xx" has even length but contains non-hex characters. The recipe
+    ;; returns HEX-DECODE-ERROR, which value_eq surfaces against the
+    ;; same NodeID the caller can construct.
+    (let bad (hex-decode "xx"))
+    (let error-detected
+        (if (value_eq bad (make_nodeid 1 2 99 1770)) 1 0))
+
+    ;; --- print four canonical results ------------------------------
+    (print "encode-match:"     encode-match)
+    (print "decode-sum:"       decode-sum)
+    (print "roundtrip-match:"  roundtrip-match)
+    (print "error-detected:"   error-detected)
+
+    ;; --- VERDICT ---------------------------------------------------
+    ;; Final score is the count of passing checks. The decode-sum check
+    ;; folds into the witness as (eq decode-sum 824).
+    ;;   encode-match + (decode-sum == 824) + roundtrip-match + error-detected
+    ;; Sums to 4 when every kernel produces the correct hex behaviour.
+    (add encode-match
+        (add (if (eq decode-sum 824) 1 0)
+            (add roundtrip-match error-detected))))

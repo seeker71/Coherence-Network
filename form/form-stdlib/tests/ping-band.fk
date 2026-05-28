@@ -1,0 +1,50 @@
+; tests/ping-band.fk — ping verb sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/ping.fk
+;
+; Validates the ping shape against every sibling kernel:
+;
+;   1. ping-request produces a QUERY with verb "ping".
+;   2. ping-handler returns a RESPONSE whose status is "ok".
+;   3. The response's correlation field matches the query's NodeID-inst.
+;   4. ping-ok? returns 1 on the real response.
+;   5. ping-ok? returns 0 on a tampered response (status "error").
+;
+; Band verdict: 5 when every assertion holds across all three kernels.
+
+(do
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+
+    ;; ---------- 1. ping-request is a QUERY with verb "ping" --------
+    (let q (ping-request))
+    (let q-children (node_children q))
+    (let verb-node (band-nth q-children 0))
+    (let verb-ok (if (str_eq (node_value verb-node) "ping") 1 0))
+
+    ;; ---------- 2. ping-handler status == "ok" ----------------------
+    (let r (ping-handler q))
+    (let r-children (node_children r))
+    (let status-node (band-nth r-children 1))
+    (let status-ok (if (str_eq (node_value status-node) "ok") 1 0))
+
+    ;; ---------- 3. Correlation == query's NodeID-inst ---------------
+    (let correlation-node (band-nth r-children 0))
+    (let correlation-value (node_inst correlation-node))
+    (let query-inst (node_inst q))
+    (let correlation-ok
+        (if (eq correlation-value query-inst) 1 0))
+
+    ;; ---------- 4. ping-ok? on real response is 1 -------------------
+    (let predicate-ok (if (eq (ping-ok? r) 1) 1 0))
+
+    ;; ---------- 5. ping-ok? on tampered response is 0 ---------------
+    (let bad-item (cq-recipe-content (intern_trivial_int 0)))
+    (let bad (cq-response query-inst "error" (list bad-item)))
+    (let tampered-ok (if (eq (ping-ok? bad) 0) 1 0))
+
+    ;; Band verdict: 5 when every assertion holds.
+    (add verb-ok
+         (add status-ok
+              (add correlation-ok
+                   (add predicate-ok tampered-ok)))))
