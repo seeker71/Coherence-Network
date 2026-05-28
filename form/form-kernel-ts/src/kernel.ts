@@ -2484,6 +2484,16 @@ export class Kernel {
       };
     });
 
+    // `now_unix_ms` — current wall-clock as a millisecond unix timestamp.
+    // External effect (reads the host clock) so it's catCall. Sibling
+    // parity holds on shape, NOT on value: every kernel returns an int,
+    // every kernel's int is > a recent past epoch — but the exact
+    // milliseconds diverge between invocations. Bands check shape only.
+    this.registerNative("now_unix_ms", catCall(), (_k, _args) => ({
+      kind: "int",
+      int: Date.now(),
+    }));
+
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
     this.registerNative("trace", catUndefined(), (_k, args) => {

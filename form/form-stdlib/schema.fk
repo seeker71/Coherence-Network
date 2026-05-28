@@ -44,7 +44,16 @@
 
 ;; Substrate-canonical LIST category. Same constant the rest of the body
 ;; uses for list-literal recipes (novel-nodes.fk, channel-query.fk).
-(let SCHEMA-LIST-CAT (make_nodeid 1 1 14 0))
+;;
+;; NOTE on detection: this category has level=1 (the TRIVIAL slot), which
+;; means the walker's `node_category` short-circuits and returns the
+;; recipe NodeID itself rather than the stored category. To recognize a
+;; LIST recipe we therefore probe (node_level, node_type) = (1, 14)
+;; directly. The kernel's intern still records the recipe's children
+;; correctly; node_children works as expected.
+(let SCHEMA-LIST-CAT       (make_nodeid 1 1 14 0))
+(let SCHEMA-LIST-CAT-LEVEL 1)
+(let SCHEMA-LIST-CAT-TYPE  14)
 
 ;; Trivial leaf-type constants — see preamble above.
 (let SCHEMA-LEVEL-TRIVIAL 1)
@@ -113,9 +122,21 @@
         (if (node_eq scat SCHEMA-ANY) 1
             (if (node_eq scat SCHEMA-CAT)
                 ;; SCHEMA-CAT: match recipe's category against the
-                ;; cat-nid carried as the schema's only child.
-                (if (node_eq (node_category recipe)
-                             (head (node_children schema))) 1 0)
+                ;; cat-nid carried as the schema's only child. When the
+                ;; target cat-nid uses the substrate's level=1 LIST-style
+                ;; slot (which the walker treats as TRIVIAL),
+                ;; node_category short-circuits to return the recipe
+                ;; itself — so we fall back to matching (level, type)
+                ;; instead. For ordinary level=2 application categories,
+                ;; node_eq on node_category is the principled compare.
+                (do
+                    (let target-cat (head (node_children schema)))
+                    (if (eq (node_level target-cat) SCHEMA-LEVEL-TRIVIAL)
+                        (if (eq (node_level recipe) (node_level target-cat))
+                            (if (eq (node_type recipe) (node_type target-cat))
+                                1 0)
+                            0)
+                        (if (node_eq (node_category recipe) target-cat) 1 0)))
                 (if (node_eq scat SCHEMA-LEAF)
                     ;; SCHEMA-LEAF: recipe must be level-TRIVIAL with the
                     ;; encoded leaf-type. node_value on the schema's child
@@ -127,11 +148,16 @@
                         0)
                     (if (node_eq scat SCHEMA-LIST)
                         ;; SCHEMA-LIST: recipe is a LIST and every child
-                        ;; matches child-schema.
-                        (if (node_eq (node_category recipe) SCHEMA-LIST-CAT)
-                            (schema-children-all?
-                                (node_children recipe)
-                                (head (node_children schema)))
+                        ;; matches child-schema. LIST recipes carry the
+                        ;; (level=1, type=14) shape; node_category can't
+                        ;; be used because level=1 makes the walker
+                        ;; short-circuit category lookup.
+                        (if (eq (node_level recipe) SCHEMA-LIST-CAT-LEVEL)
+                            (if (eq (node_type recipe) SCHEMA-LIST-CAT-TYPE)
+                                (schema-children-all?
+                                    (node_children recipe)
+                                    (head (node_children schema)))
+                                0)
                             0)
                         (if (node_eq scat SCHEMA-TUPLE)
                             ;; SCHEMA-TUPLE: positional + arity match.

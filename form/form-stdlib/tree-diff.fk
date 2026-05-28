@@ -1,0 +1,158 @@
+; tree-diff.fk — structural diff/patch over Form Recipes.
+;
+; preludes: (none — uses only kernel primitives)
+;
+; Two recipes may differ in three structurally-distinguishable ways:
+;   - they're identical (same NodeID by content-addressing)
+;   - they share a category and child-arity, and the difference lives
+;     somewhere inside their children
+;   - they differ at the root (different category, or different arity)
+;
+; A DIFF is itself a Recipe carrying exactly one of three shapes:
+;
+;   (diff-equal)                — trees match at this position.
+;   (diff-replace new-recipe)   — replace whole subtree with new-recipe.
+;   (diff-children child-diffs) — categories match; recurse pairwise.
+;
+; The two primary operations:
+;
+;   (tree-diff a b)  → DIFF Recipe.
+;   (tree-patch a d) → Recipe. Applied to `a` and `(tree-diff a b)`,
+;                       reconstructs `b` byte-for-byte (content-addressed).
+;
+; Plus the empty-diff predicate:
+;
+;   (diff-empty? d) → 1 if d carries no change anywhere, 0 otherwise.
+;
+; Why this is a recipe, not a host diff library: the DIFF is content-
+; addressed, so a diff computed in cell A (Go kernel) and a diff computed
+; in cell B (TypeScript kernel) intern to the same NodeID — they ARE the
+; same diff. The patch is canonical across kernels too; applying the
+; diff in any sibling kernel reconstructs the same target Recipe.
+;
+; Blueprint allocation: 1830-1832 in the user-channel range (pkg=1,
+; level=2, type=99). 1800/1801 belong to triangulate, 1810 to symbols-
+; merge, 1820/1821 to heartbeat; 1830-1832 is the next free decade.
+
+(let DIFF-EQUAL    (make_nodeid 1 2 99 1830))
+(let DIFF-REPLACE  (make_nodeid 1 2 99 1831))
+(let DIFF-CHILDREN (make_nodeid 1 2 99 1832))
+
+;; --- helpers ------------------------------------------------------
+
+(defn td-nil? (xs) (eq (len xs) 0))
+
+;; --- constructors -------------------------------------------------
+
+;; (diff-equal) → DIFF-EQUAL recipe. No children.
+(defn diff-equal ()
+    (intern_node DIFF-EQUAL (list)))
+
+;; (diff-replace new-recipe) → DIFF-REPLACE recipe. One child: the
+;; replacement subtree. Carrying the new subtree inside the diff is
+;; what lets `tree-patch` rebuild `b` from `a` + diff alone.
+(defn diff-replace (new-recipe)
+    (intern_node DIFF-REPLACE (list new-recipe)))
+
+;; (diff-children child-diffs) → DIFF-CHILDREN recipe. Children are
+;; the per-position child diffs, one per child of the original pair.
+(defn diff-children (child-diffs)
+    (intern_node DIFF-CHILDREN child-diffs))
+
+;; --- pairwise descent --------------------------------------------
+
+;; td-pair-diffs — walk two equal-length child lists in parallel,
+;; collecting the per-position diff for each pair. Used by tree-diff
+;; when categories + arities match.
+(defn td-pair-diffs (as bs)
+    (if (td-nil? as)
+        (list)
+        (cons (tree-diff (head as) (head bs))
+              (td-pair-diffs (tail as) (tail bs)))))
+
+;; --- tree-diff ----------------------------------------------------
+
+;; (tree-diff a b) → DIFF Recipe.
+;;
+;; Three arms in order of preference:
+;;   1. node_eq a b   → diff-equal (trees are identical NodeIDs).
+;;   2. same category AND same child-arity → recurse pairwise into
+;;      children, wrap in diff-children.
+;;   3. anything else (different category OR different arity) →
+;;      diff-replace carrying the whole new subtree.
+;;
+;; The category-equal-and-same-arity check uses node_eq on the
+;; categories (so the BML-comparison trap that bare `eq` falls into
+;; on NodeIDs is avoided) and `eq` on the integer arity.
+(defn tree-diff (a b)
+    (if (node_eq a b)
+        (diff-equal)
+        (do
+            (let a-cat (node_category a))
+            (let b-cat (node_category b))
+            (let a-kids (node_children a))
+            (let b-kids (node_children b))
+            (if (node_eq a-cat b-cat)
+                (if (eq (len a-kids) (len b-kids))
+                    (diff-children (td-pair-diffs a-kids b-kids))
+                    (diff-replace b))
+                (diff-replace b)))))
+
+;; --- tree-patch ---------------------------------------------------
+
+;; td-pair-patch — pairwise apply child-diffs against the original
+;; child list. Used by tree-patch when the diff is diff-children.
+(defn td-pair-patch (as ds)
+    (if (td-nil? as)
+        (list)
+        (cons (tree-patch (head as) (head ds))
+              (td-pair-patch (tail as) (tail ds)))))
+
+;; (tree-patch a d) → Recipe.
+;;
+;; Three arms keyed on the diff's category:
+;;   - DIFF-EQUAL    → return a unchanged.
+;;   - DIFF-REPLACE  → return the carried replacement subtree.
+;;   - DIFF-CHILDREN → rebuild a node with the same category as a,
+;;                     children = each original child patched against
+;;                     its positional child-diff.
+;;
+;; Invariant: (tree-patch a (tree-diff a b)) == b for every (a, b),
+;; via content-addressing — the rebuilt NodeID equals b's NodeID
+;; because the same category + same children intern to the same node.
+(defn tree-patch (a d)
+    (do
+        (let dcat (node_category d))
+        (if (node_eq dcat DIFF-EQUAL)
+            a
+            (if (node_eq dcat DIFF-REPLACE)
+                (head (node_children d))
+                (if (node_eq dcat DIFF-CHILDREN)
+                    (intern_node (node_category a)
+                        (td-pair-patch (node_children a)
+                                       (node_children d)))
+                    ;; Unknown diff shape — refuse by returning a.
+                    a)))))
+
+;; --- diff-empty? --------------------------------------------------
+
+;; td-all-empty? — every child diff in the list is empty.
+(defn td-all-empty? (ds)
+    (if (td-nil? ds) 1
+        (if (eq (diff-empty? (head ds)) 1)
+            (td-all-empty? (tail ds))
+            0)))
+
+;; (diff-empty? d) → 1 if d records no change anywhere, 0 otherwise.
+;;
+;;   - DIFF-EQUAL    → 1.
+;;   - DIFF-REPLACE  → 0 (a replace is always a change).
+;;   - DIFF-CHILDREN → 1 iff every child-diff is itself empty.
+(defn diff-empty? (d)
+    (do
+        (let dcat (node_category d))
+        (if (node_eq dcat DIFF-EQUAL) 1
+            (if (node_eq dcat DIFF-REPLACE) 0
+                (if (node_eq dcat DIFF-CHILDREN)
+                    (td-all-empty? (node_children d))
+                    0)))))

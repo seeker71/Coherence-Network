@@ -3109,6 +3109,20 @@ impl Kernel {
         // Output goes to stderr so it doesn't pollute the result on stdout.
         //   (let result (trace (filter even? xs)))
         //   (trace "label" value)   ; with a label prefix
+        // `now_unix_ms` — current wall-clock as a millisecond unix timestamp.
+        // External effect (reads the host clock) so it's cat_call. Sibling
+        // parity holds on shape, NOT on value: every kernel returns an int,
+        // every kernel's int is > a recent past epoch — but the exact
+        // milliseconds diverge between invocations. Bands check shape only.
+        self.register_native("now_unix_ms", cat_call(), |_, _, _| {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let ms = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0);
+            Value::Int(ms)
+        });
+
         // No Form category claimed — `trace` is a debug surface, honest
         // about being outside the structural vocabulary.
         self.register_native("trace", cat_undefined(), |_, _, args| {
