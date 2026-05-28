@@ -1,0 +1,84 @@
+{
+  "date": "2026-05-28",
+  "thread_branch": "codex/substrate-form-rust-builder-186-20260528",
+  "commit_scope": "Raise the API Docker Rust builder from 1.85 to 1.86 after Hostinger proved the locked ICU/idna dependency set requires rustc 1.86.",
+  "files_owned": [
+    "Dockerfile.api",
+    "api/tests/test_api_dockerfile_contract.py",
+    "docs/system_audit/commit_evidence_2026-05-28_api_rust_builder_toolchain_186.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest tests/test_api_dockerfile_contract.py -q",
+      "/opt/homebrew/bin/ruff check api/tests/test_api_dockerfile_contract.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-28_api_rust_builder_toolchain_186.json",
+      "git diff --check"
+    ],
+    "notes": [
+      "Focused Dockerfile contract test now requires rust >= 1.86 and passed.",
+      "Ruff passed on the contract test.",
+      "Local Docker daemon is not available in this desktop session, so image-build proof is deferred to Hostinger Auto Deploy."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "Awaiting PR checks after branch push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "Hostinger Auto Deploy run 26581892442 confirmed the Dockerfile.api change reached the VPS and pulled rust:1.85-slim-bookworm, then failed because icu_* and idna_adapter locked crates require rustc 1.86.",
+      "The next deploy must rebuild the API image with rust:1.86-slim-bookworm and clear POST /api/substrate/form for @concept(lc-pulse).blueprint."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local static contract is proved; CI and live deploy proof remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "task_ids": [
+    "api-rust-builder-toolchain-186-20260528",
+    "substrate-form-access-fallback-20260528"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-signal"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 26581892442 failed at docker compose build api with Cargo error: icu_collections, icu_locale_core, icu_normalizer, icu_properties, icu_provider, and idna_adapter require rustc 1.86.",
+    "The run log shows Dockerfile.api synced to the VPS and Docker resolved rust:1.85-slim-bookworm before failing, proving the previous deploy hotfix reached the build context.",
+    "api/tests/test_api_dockerfile_contract.py pins that the API kernel-builder Rust tag is at least 1.86 when the lockfile contains idna_adapter 1.2.2."
+  ],
+  "change_files": [
+    "Dockerfile.api",
+    "api/tests/test_api_dockerfile_contract.py"
+  ],
+  "change_intent": "process_only"
+}
