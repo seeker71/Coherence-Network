@@ -233,6 +233,13 @@ pub(crate) struct Kernel {
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
     env_natives: HashMap<NameID, EnvAwareNativeEntry>,
+    // jit_aliases: Form-function-name → native-name redirect.
+    // When a function call's name is in this map, the walker substitutes
+    // the aliased name before native lookup. Lets a Form recipe DEFINE
+    // an algorithm as canonical truth; a `register_jit` call makes its
+    // calls dispatch to a kernel-resident optimized native. Removing the
+    // entry falls back to walking the Form recipe.
+    jit_aliases: HashMap<NameID, NameID>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -513,6 +520,7 @@ impl Kernel {
             next_inst: 1,
             natives: HashMap::new(),
             env_natives: HashMap::new(),
+            jit_aliases: HashMap::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -865,6 +873,7 @@ impl Kernel {
             next_inst: self.next_inst,
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
+            jit_aliases: self.jit_aliases.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -2207,6 +2216,54 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // register_jit form-name-str native-name-str → 1 on bind, 0 if
+        // native-name has no registered native (refuse silent miss).
+        // Inserts (form-name → native-name) into k.jit_aliases. After this,
+        // every (form-name ...) call goes through the aliased native instead
+        // of walking the Form definition. Form recipes are canonical truth;
+        // register_jit is the opt-in that promotes a recipe to host-native
+        // execution. Removing the entry restores the Form walk.
+        //
+        // Discipline: the Form recipe MUST exist (or fall back to closure
+        // lookup at call time); the alias is a dispatch hint, not the
+        // definition. A demo: define `(defn my-count xs ...)` in Form, then
+        // `(register_jit "my-count" "len")` makes (my-count xs) dispatch
+        // through native `len`. Same NodeID-attested result; faster path.
+        self.register_native("register_jit", cat_witness(), |k, _, args| {
+            let form_name = args[0].as_str().to_string();
+            let native_name = args[1].as_str().to_string();
+            let native_id = k.intern_string(&native_name).inst;
+            let exists = k.natives.contains_key(&native_id)
+                || k.env_natives.contains_key(&native_id);
+            if !exists {
+                return Value::Int(0);
+            }
+            let form_id = k.intern_string(&form_name).inst;
+            k.jit_aliases.insert(form_id, native_id);
+            Value::Int(1)
+        });
+        // unregister_jit form-name-str → 1 if removed, 0 if no alias was
+        // bound. Restores the Form-recipe walk path for that name.
+        self.register_native("unregister_jit", cat_witness(), |k, _, args| {
+            let form_name = args[0].as_str().to_string();
+            let form_id = k.intern_string(&form_name).inst;
+            if k.jit_aliases.remove(&form_id).is_some() {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
+        // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
+        // for this name, else 0. Lets Form code introspect dispatch routing.
+        self.register_native("jit_aliased?", cat_compare(RCMP_EQ), |k, _, args| {
+            let form_name = args[0].as_str().to_string();
+            let form_id = k.intern_string(&form_name).inst;
+            if k.jit_aliases.contains_key(&form_id) {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
         // Use when source-compile output crosses kernel invocations:
@@ -3068,7 +3125,12 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
             Value::Closure(cl)
         }
         RB_FNCALL => {
-            let name = k.ident_id(kids[0]);
+            let raw_name = k.ident_id(kids[0]);
+            // JIT alias: if a Form function-name is JIT-registered, swap to
+            // the aliased native-name before native lookup. Form recipes are
+            // the canonical truth; `register_jit form-name native-name` opts
+            // calls into a kernel-resident optimized native.
+            let name = k.jit_aliases.get(&raw_name).copied().unwrap_or(raw_name);
             // Env-aware natives first — they need caller env (walk_recipe_here).
             let env_ne_opt = k.env_natives.get(&name).copied();
             if let Some(ne) = env_ne_opt {
@@ -3115,9 +3177,12 @@ fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                     return (ne.func)(k, a, &args);
                 }
             }
+            // Closure lookup uses the ORIGINAL function-name (not the JIT-
+            // aliased one) — the user defined this function and wants to
+            // call THEIR version when no JIT mapping resolved a native.
             let callee = a
-                .lookup(env, name)
-                .unwrap_or_else(|| panic!("unbound function: {}", k.name_str(name)));
+                .lookup(env, raw_name)
+                .unwrap_or_else(|| panic!("unbound function: {}", k.name_str(raw_name)));
             let cl = match callee {
                 Value::Closure(c) => c,
                 _ => panic!("not callable: {}", k.name_str(name)),

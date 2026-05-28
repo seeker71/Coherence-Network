@@ -1,0 +1,77 @@
+; jit-registry.fk — bootstrap host-native performance from Form recipes.
+;
+; Urs's framing:
+;   "have shared binary features in form native recipes that can expand
+;    into native machine code for efficiency, allowing the kernel to
+;    bootstrap from primitives into an efficient, flexibility, sovereign
+;    cell"
+;
+; The mechanism (three natives, three sibling kernels):
+;
+;   (register_jit "form-fn-name" "native-name") → 1 on bind, 0 if miss
+;   (unregister_jit "form-fn-name")             → 1 if removed
+;   (jit_aliased? "form-fn-name")                → 1 if alias is bound
+;
+; When the FNCALL arm fires on a JIT-aliased name, the walker substitutes
+; the aliased native-name before dispatch. The Form recipe is canonical
+; truth (it defines what the function MEANS); the JIT alias is opt-in
+; bootstrap (it makes the call dispatch through a kernel-resident native
+; for performance). Removing the alias restores the Form walk; the
+; recipe was always the truth, the native was always optional.
+;
+; Refusing to bind to a non-existent native is intentional: silent miss
+; would let `(register_jit "x" "no_such_native")` succeed and then every
+; call to x would resolve as if no alias existed. The 0/1 return forces
+; the Form-side to know its bootstrap landed.
+;
+; Sibling parity: every line below produces byte-identical output across
+; Go, Rust, and TypeScript kernels. The dispatch mechanism is part of
+; the substrate, not a per-kernel quirk.
+
+(do
+    ;; Form-canonical definition: my-count walks a list recursively.
+    ;; This is the algorithm the body defines — it MEANS "length of xs".
+    ;; A fresh kernel without any natives could still run this; the
+    ;; recipe is sovereign.
+    (defn my-count (xs)
+        (if (eq (len xs) 0)
+            0
+            (add 1 (my-count (tail xs)))))
+
+    ;; Walk the Form recipe directly. No JIT alias yet — every call
+    ;; recurses through the walker, allocating frames for each element.
+    (let xs (list 10 20 30 40 50))
+    (let from-walk (my-count xs))
+    (print "form-walk:" from-walk)
+
+    ;; Register the JIT alias: my-count now dispatches through native `len`.
+    ;; Same Form symbol, same Form call sites — but the walker swaps the
+    ;; name before native lookup. The recipe is untouched; the dispatch
+    ;; routes differently.
+    (let bound (register_jit "my-count" "len"))
+    (print "registered:" bound)
+
+    ;; Introspect: the body knows its own dispatch routing.
+    (print "aliased?:" (jit_aliased? "my-count"))
+
+    ;; Call my-count again. SAME call. Different path: native `len` fires.
+    ;; Result is identical (5) because the JIT alias is semantically
+    ;; equivalent to the recipe — that's the discipline of the bind.
+    (let from-jit (my-count xs))
+    (print "jit-dispatch:" from-jit)
+
+    ;; Larger input — same identity holds. The JIT alias doesn't change
+    ;; what my-count means, only how it's computed. Sovereign result.
+    (let big (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))
+    (print "jit-big:" (my-count big))
+
+    ;; Unregister: the recipe returns as the dispatch path. The body
+    ;; can opt OUT of host-native execution per name at any time.
+    (unregister_jit "my-count")
+    (print "after-unregister-aliased?:" (jit_aliased? "my-count"))
+    (let from-walk-again (my-count xs))
+    (print "post-unregister:" from-walk-again)
+
+    ;; Refusing to bind to a non-existent native — silent miss is forbidden.
+    (let failed (register_jit "my-count" "no_such_native"))
+    (print "refused-miss:" failed))

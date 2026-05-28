@@ -485,6 +485,13 @@ export class Kernel {
   natives = new Map<NameID, NativeEntry>();
   envNatives = new Map<NameID, EnvAwareNativeEntry>();
 
+  // jitAliases — Form-function-name → native-name redirect. When a
+  // function call's name is in this map, the walker substitutes the
+  // aliased name before native lookup. Form recipes are canonical
+  // truth; `register_jit` opts a call into a kernel-resident optimized
+  // native. Removing the entry restores the Form walk.
+  jitAliases = new Map<NameID, NameID>();
+
   // Optional tracing — undefined for hot-path runs, set by trace
   // subcommand. Sibling-parity with Go/Rust kernels.
   trace?: Trace;
@@ -1619,6 +1626,42 @@ export class Kernel {
       } catch {
         return { kind: "null" };
       }
+    });
+    // register_jit form-name-str native-name-str → 1 on bind, 0 if
+    // native-name has no registered native (refuse silent miss).
+    // Inserts (form-name → native-name) into k.jitAliases. After this,
+    // every (form-name ...) call goes through the aliased native instead
+    // of walking the Form definition. Form recipes are canonical truth;
+    // register_jit is the opt-in that promotes a recipe to host-native
+    // execution. Removing the entry restores the Form walk.
+    this.registerNative("register_jit", catWitness(), (k, args) => {
+      const formName = argStr(args, 0);
+      const nativeName = argStr(args, 1);
+      const nativeID = k.internName(nativeName);
+      if (!k.natives.has(nativeID) && !k.envNatives.has(nativeID)) {
+        return { kind: "int", int: 0 };
+      }
+      const formID = k.internName(formName);
+      k.jitAliases.set(formID, nativeID);
+      return { kind: "int", int: 1 };
+    });
+    // unregister_jit form-name-str → 1 if removed, 0 if no alias was
+    // bound. Restores the Form-recipe walk path for that name.
+    this.registerNative("unregister_jit", catWitness(), (k, args) => {
+      const formName = argStr(args, 0);
+      const formID = k.internName(formName);
+      if (k.jitAliases.has(formID)) {
+        k.jitAliases.delete(formID);
+        return { kind: "int", int: 1 };
+      }
+      return { kind: "int", int: 0 };
+    });
+    // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
+    // for this name, else 0. Lets Form code introspect dispatch routing.
+    this.registerNative("jit_aliased?", catCompareEq(), (k, args) => {
+      const formName = argStr(args, 0);
+      const formID = k.internName(formName);
+      return { kind: "int", int: k.jitAliases.has(formID) ? 1 : 0 };
     });
     // write_form_binary — emit a Recipe to .fkb in the full artifact
     // format (string table + tree). Sibling to read_form_binary.
@@ -3170,9 +3213,16 @@ function walkFnCall(
   }
 
   if (calleeName !== null) {
+    const rawName = calleeName;
+    // JIT alias: if this Form function-name is JIT-registered, swap to
+    // the aliased native-name before native lookup. Form recipes are
+    // canonical truth; `register_jit form-name native-name` opts calls
+    // into a kernel-resident optimized native.
+    const aliased = k.jitAliases.get(rawName);
+    const dispatchName = aliased !== undefined ? aliased : rawName;
     // Env-aware natives first — need the caller's env (walk_recipe_here).
-    const envNe = k.envNatives.get(calleeName);
-    if (envNe !== undefined && frame.lookup(calleeName) === undefined) {
+    const envNe = k.envNatives.get(dispatchName);
+    if (envNe !== undefined && frame.lookup(dispatchName) === undefined) {
       const envArgs: Value[] = [];
       for (let i = 1; i < kids.length; i++) {
         envArgs.push(walk(k, kids[i]!, frame));
@@ -3184,7 +3234,7 @@ function walkFnCall(
       return envNe.fn(k, frame, envArgs);
     }
     // Native dispatch
-    const ne = k.natives.get(calleeName);
+    const ne = k.natives.get(dispatchName);
     if (ne !== undefined) {
       const args: Value[] = [];
       for (let i = 1; i < kids.length; i++) {
@@ -3199,14 +3249,16 @@ function walkFnCall(
       k.trace?.recordNative(k.nameStr(ne.name));
       return ne.fn(k, args);
     }
-    // Closure via frame
-    const v = frame.lookup(calleeName);
+    // Closure via frame — use the ORIGINAL function-name (not the JIT-
+    // aliased one): the user defined this function under rawName and
+    // wants their version when no JIT mapping resolved a native.
+    const v = frame.lookup(rawName);
     if (v === undefined) {
-      throw new Error(`call: unbound ${k.nameStr(calleeName)}`);
+      throw new Error(`call: unbound ${k.nameStr(rawName)}`);
     }
     if (v.kind !== "closure") {
       throw new Error(
-        `call: ${k.nameStr(calleeName)} is not a closure (got ${v.kind})`,
+        `call: ${k.nameStr(rawName)} is not a closure (got ${v.kind})`,
       );
     }
     return invokeClosure(k, v.closure, kids, frame);

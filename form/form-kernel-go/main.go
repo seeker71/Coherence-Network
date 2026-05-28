@@ -405,6 +405,13 @@ type Kernel struct {
 	f64Idx map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
+	// jitAliases: Form-function-name → native-name redirect. When a
+	// function call's name is in this map, the walker substitutes the
+	// aliased name before native lookup. Lets a Form recipe DEFINE an
+	// algorithm as canonical truth; a `register_jit` call makes its
+	// calls dispatch to a kernel-resident optimized native. Removing
+	// the entry falls back to walking the Form recipe.
+	jitAliases map[NameID]NameID
 	// SourceAttr — NodeID → (file_name_id, line, col). Populated by
 	// intern_node_at; read by node_source. The satsang-load-bearing
 	// surface: every cell's state traceable to the source line that
@@ -441,6 +448,7 @@ func NewKernel() *Kernel {
 		f64Idx:     make(map[uint64]uint32),
 		natives:    make(map[NameID]NativeEntry),
 		envNatives: make(map[NameID]EnvAwareNativeEntry),
+		jitAliases: make(map[NameID]NameID),
 	}
 	k.registerNatives()
 	return k
@@ -1411,6 +1419,47 @@ func (k *Kernel) registerNatives() {
 			out[i] = Value{Kind: VInt, Int: int64(by)}
 		}
 		return Value{Kind: VList, List: out}
+	})
+	// register_jit form-name-str native-name-str → 1 on bind, 0 if
+	// native-name has no registered native (refuse silent miss).
+	// Inserts (form-name → native-name) into k.jitAliases. After this,
+	// every (form-name ...) call goes through the aliased native instead
+	// of walking the Form definition. Form recipes are canonical truth;
+	// register_jit is the opt-in that promotes a recipe to host-native
+	// execution. Removing the entry restores the Form walk.
+	k.registerNative("register_jit", catWitness(), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		nativeName := args[1].Str
+		nativeID := k.internName(nativeName)
+		_, hasN := k.natives[nativeID]
+		_, hasE := k.envNatives[nativeID]
+		if !hasN && !hasE {
+			return Value{Kind: VInt, Int: 0}
+		}
+		formID := k.internName(formName)
+		k.jitAliases[formID] = nativeID
+		return Value{Kind: VInt, Int: 1}
+	})
+	// unregister_jit form-name-str → 1 if removed, 0 if no alias was
+	// bound. Restores the Form-recipe walk path for that name.
+	k.registerNative("unregister_jit", catWitness(), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		formID := k.internName(formName)
+		if _, ok := k.jitAliases[formID]; ok {
+			delete(k.jitAliases, formID)
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
+	// for this name, else 0. Lets Form code introspect dispatch routing.
+	k.registerNative("jit_aliased?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		formName := args[0].Str
+		formID := k.internName(formName)
+		if _, ok := k.jitAliases[formID]; ok {
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
 	})
 	// write_form_binary — emit a Recipe to .fkb on disk in the full
 	// artifact format (string table + tree). Sibling to read_form_binary.
@@ -2568,7 +2617,15 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		return Value{Kind: VClosure, Cl: cl}
 
 	case RBasicFnCall:
-		name := k.identID(kids[0])
+		rawName := k.identID(kids[0])
+		// JIT alias: if a Form function-name is JIT-registered, swap to
+		// the aliased native-name before native lookup. Form recipes are
+		// the canonical truth; `register_jit form-name native-name` opts
+		// calls into a kernel-resident optimized native.
+		name := rawName
+		if aliased, ok := k.jitAliases[rawName]; ok {
+			name = aliased
+		}
 		// Env-aware natives first — they need the caller env to splice
 		// pre-built Recipes (walk_recipe_here, etc.). Checked before
 		// plain natives so a name registered both ways prefers env-aware.
@@ -2607,16 +2664,19 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 				return ne.Fn(k, args)
 			}
 		}
-		v, ok := env.Lookup(name)
+		// Closure lookup uses the ORIGINAL function-name (not the JIT-
+		// aliased one) — the user defined this function and wants to
+		// call THEIR version when no JIT mapping resolved a native.
+		v, ok := env.Lookup(rawName)
 		if !ok {
-			panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(name)))
+			panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(rawName)))
 		}
 		if v.Kind != VClosure {
-			panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(name)))
+			panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(rawName)))
 		}
 		cl := v.Cl
 		if len(kids)-1 != len(cl.Params) {
-			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(name), len(cl.Params), len(kids)-1))
+			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
 		}
 		call := NewCallFrame(cl.Env, len(cl.Params))
 		for i, p := range cl.Params {
