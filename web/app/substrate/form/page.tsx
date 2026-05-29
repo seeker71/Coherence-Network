@@ -49,6 +49,14 @@ export default function FormPlaygroundPage() {
             docs/coherence-substrate/form-language.md
           </Link>
         </p>
+
+        <Link
+          href="/substrate/form/space"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/5 px-4 py-2 text-sm text-emerald-200 transition-colors hover:border-emerald-400/60 hover:bg-emerald-500/10"
+        >
+          🜂 Walk the kernel in 3D — Kernel Space
+          <span className="text-emerald-400/60">→</span>
+        </Link>
       </header>
 
       <FormPlayground />

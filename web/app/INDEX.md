@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 159
+**Total files**: 160
 
 | Route | File | Purpose |
 |---|---|---|
@@ -139,6 +139,7 @@
 | `/specs` | [page.tsx](specs/page.tsx) | _no top-of-file purpose_ |
 | `/substrate/[domain]/[name]` | [page.tsx](substrate/[domain]/[name]/page.tsx) | _no top-of-file purpose_ |
 | `/substrate/form` | [page.tsx](substrate/form/page.tsx) | Form-language playground — ask the substrate structural questions |
+| `/substrate/form/space` | [page.tsx](substrate/form/space/page.tsx) | Kernel Space — a walkable 3D rendering of the Form kernel's recipe tree. |
 | `/substrate/ingest` | [page.tsx](substrate/ingest/page.tsx) | Substrate ingest — let a visiting body place markdown content into |
 | `/substrate` | [page.tsx](substrate/page.tsx) | _no top-of-file purpose_ |
 | `/tasks/[task_id]` | [page.tsx](tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |

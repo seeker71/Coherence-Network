@@ -133,6 +133,7 @@
     "/substrate": "web/app/substrate/page.tsx",
     "/substrate/[domain]/[name]": "web/app/substrate/[domain]/[name]/page.tsx",
     "/substrate/form": "web/app/substrate/form/page.tsx",
+    "/substrate/form/space": "web/app/substrate/form/space/page.tsx",
     "/substrate/ingest": "web/app/substrate/ingest/page.tsx",
     "/tasks": "web/app/tasks/page.tsx",
     "/tasks/[task_id]": "web/app/tasks/[task_id]/page.tsx",
