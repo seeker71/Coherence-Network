@@ -343,12 +343,17 @@ The kernel's S-expression reader stays (for emergency use), but Form source file
 **Success:** `?equivalent @memory("User biographical arc")` returns the same equivalence set as `python3 scripts/coh_substrate.py equivalent memory "User biographical arc"`; all sibling kernels agree on the result.
 **Closes:** form-runtime-in-form gaps R1-R3 (registry surfaces, Form-closure registration).
 
-### Breath 5 — Substrate persistence bridge
+### Breath 5 — Substrate persistence bridge *(first cell landed)*
 
-Form code that reads/writes cells in Postgres via kernel I/O primitives (the kernel grows two natives: `substrate_read(cell-ref)` and `substrate_write(cell)` that hit a local socket; the actual DB is talked to via the existing Python service or directly).
+The kernel already persists the content-addressed lattice. `write_form_binary` / `read_form_binary` serialize a Recipe tree to a `.fkb` file and read it back so it re-collapses, by content-addressing, to the same NodeIDs across every sibling kernel. `channel.fk` proved this for message logs and `cell-registry.fk` for an addressing directory; a named-cell store is the same shape — a durable file whose entries are CELL Recipes. So the persistence bridge is a **Form module over the file primitives the kernel already carries**, not a new native against Postgres.
 
-**Lives in:** `form-substrate/persistence.fk`
-**Success:** A Form program reads a memory cell, modifies a field, writes it back; the change is visible to `coh_substrate.py annotate`. All sibling kernels produce identical write payloads.
+The store is the contract; the backend is swappable beneath it. File-backed `.fkb` today; a socket to a daemon or a direct DB binding tomorrow — caller code (`cell-put`, `lookup-cell`) does not change when the backend does. This is the resolution of the three Phase D / Shape 2 candidates named in [`kernels/BOOTSTRAP_COMPOST_MANIFEST.md`](../kernels/BOOTSTRAP_COMPOST_MANIFEST.md): the *contract* is Form-side (candidate 3's spirit), the *first backend* is kernel-native serialization (candidate 1), and a DB binding (candidate 2) can slot in later behind the same store interface.
+
+**Lives in:** [`form-stdlib/persistence.fk`](form-stdlib/persistence.fk) — `cell-put` / `lookup-cell` / `store-cells`, mirroring Python `make_cell` / `lookup_cell`. A CELL Recipe carries `(name, domain, blueprint, ctor)`, with identity `(domain, name)` — the same `UNIQUE(domain, name)` the Python `orm.py` enforces on `substrate_named_cells`. The CTOR is structure-first (frontmatter fields as `(key, value)` pairs), per the CLAUDE.md composition discipline.
+
+**Proven:** [`form-stdlib/tests/persistence-band.fk`](form-stdlib/tests/persistence-band.fk) returns `7` three-way (Go, Rust, TypeScript) via `./validate.sh form-stdlib/tests/persistence-band.fk` — 1 workload, 0 divergent. The band round-trips two cells sharing a name across different domains through a `.fkb` file, proving durable write→read, `(domain, name)` identity, content-addressing, honest absence, and CTOR composition survival in one strange edge.
+
+**Still ahead in this breath:** the `.fkb`↔ORM reconciliation so a Form-written cell is visible to `coh_substrate.py annotate` and vice-versa (one ingest pass each way over the shared store, or the daemon/DB backend behind the same `cell-put`/`lookup-cell` contract). Until then the Form store and the Python store are two backends of one interface, not yet a single shared lattice on disk. That bridge is the gate on composting `orm.py` and the rest of `api/app/services/substrate/*.py`.
 
 ### Breath 6 — Embed in `api/`
 

@@ -1,0 +1,124 @@
+; persistence.fk — Form-native substrate persistence over channel.fk.
+;
+; preludes: form-stdlib/channel.fk
+;
+; The native kernel already persists the content-addressed lattice.
+; write_form_binary and read_form_binary round-trip a Recipe tree to a
+; .fkb file so it re-collapses, by content-addressing, to the same
+; NodeIDs on every sibling kernel. channel.fk proved this for message
+; logs; cell-registry.fk for an addressing directory. A named-cell store
+; is the same shape: a durable file whose entries are CELL Recipes. So
+; the persistence bridge is a Form module over the file primitives the
+; kernel already carries, not a new native against Postgres.
+;
+; This is the Breath 5 resolution from form/kernel-roadmap.md and the
+; Phase D Shape 2 resolution from kernels/BOOTSTRAP_COMPOST_MANIFEST.md.
+; The store is the contract; the backend is swappable beneath it — .fkb
+; today, a socket to a daemon or a direct DB binding later, with no
+; caller change.
+;
+; A CELL Recipe mirrors the Python NamedCell, child by child:
+;   child 0 — name, a trivial-string
+;   child 1 — domain, a trivial-string
+;   child 2 — blueprint, the NodeID itself as a structural ref
+;   child 3 — ctor, a composed Recipe seed
+;
+; Identity is domain plus name — the same UNIQUE domain+name that the
+; Python orm.py enforces on substrate_named_cells. Same name in two
+; domains is two cells; a re-put under one domain+name is last-write-wins.
+;
+; Depends only on channel.fk, which depends only on kernel natives:
+; read_form_binary, write_form_binary, intern_node, node_children, len.
+
+;; --- Blueprint -----------------------------------------------------
+;; CELL-V0 — the one structural marker this module adds. It lives in the
+;; 99-type addressing space beside CHANNEL-V0 1700, CHANNEL-MSG 1701,
+;; REGISTRATION 1720, CAPABILITIES 1721.
+(let CELL-V0 (make_nodeid 1 2 99 1740))
+
+;; --- helpers -------------------------------------------------------
+
+(defn ps-nil? (xs) (eq (len xs) 0))
+(defn ps-nth (xs i)
+    (if (eq i 0) (head xs) (ps-nth (tail xs) (sub i 1))))
+(defn ps-append (xs ys)
+    (if (ps-nil? xs) ys (cons (head xs) (ps-append (tail xs) ys))))
+
+;; --- cell construction ---------------------------------------------
+
+;; make-cell-recipe name domain blueprint ctor -> CELL Recipe.
+;; name and domain are strings; blueprint is a NodeID passed through as
+;; child 2; ctor is a composed Recipe NodeID as child 3. Content-
+;; addressed: the same four arguments always intern to the same CELL
+;; NodeID on every sibling kernel, and that is the dedup.
+(defn make-cell-recipe (name domain blueprint ctor)
+    (intern_node CELL-V0
+        (list (intern_trivial_string name)
+              (intern_trivial_string domain)
+              blueprint
+              ctor)))
+
+;; --- cell accessors ------------------------------------------------
+
+;; cell-name and cell-domain use node_value, not node_inst — node_inst
+;; returns the string-table index, node_value the content. This is the
+;; lesson cell-registry.fk records on reg-channel-path.
+(defn cell-name (c) (node_value (ps-nth (node_children c) 0)))
+(defn cell-domain (c) (node_value (ps-nth (node_children c) 1)))
+;; cell-blueprint -> the NodeID, the structural pointer, returned as-is.
+(defn cell-blueprint (c) (ps-nth (node_children c) 2))
+;; cell-ctor -> the CTOR Recipe NodeID, walkable and introspectable.
+(defn cell-ctor (c) (ps-nth (node_children c) 3))
+
+;; --- store create --------------------------------------------------
+
+;; cell-store-create — start an empty cell store at path. A store IS a
+;; channel; cells are its messages. Overwrites any prior file.
+(defn cell-store-create (path) (channel-create path))
+
+;; --- write -----------------------------------------------------------
+
+;; cell-put path name domain blueprint ctor -> cell count after write.
+;; Appends a CELL message to the store; the cell is now durable on disk.
+;; A re-put under the same domain plus name is last-write-wins — lookup
+;; returns the most recent.
+(defn cell-put (path name domain blueprint ctor)
+    (channel-append path
+        (channel-message (make-cell-recipe name domain blueprint ctor))))
+
+;; --- read all ------------------------------------------------------
+
+(defn ps-msgs-to-cells (msgs acc)
+    (if (ps-nil? msgs) acc
+        (ps-msgs-to-cells (tail msgs)
+            (ps-append acc (list (channel-msg-payload (head msgs)))))))
+
+;; store-cells path -> list of every CELL Recipe in the store, in append
+;; order. The durable lattice read back from disk.
+(defn store-cells (path)
+    (ps-msgs-to-cells (channel-read path) (list)))
+
+;; --- lookup --------------------------------------------------------
+
+;; Fold over the cells keeping the LAST match for domain plus name, so a
+;; re-put resolves to the current shape. Returns a 0-or-1-element list,
+;; the body's idiom for optional, matching find-by-capability.
+(defn ps-scan (cells domain name acc)
+    (if (ps-nil? cells) acc
+        (ps-scan (tail cells) domain name
+            (if (and (str_eq (cell-domain (head cells)) domain)
+                     (str_eq (cell-name (head cells)) name))
+                (list (head cells))
+                acc))))
+
+;; lookup-cell path domain name -> the Form-native equivalent of Python
+;; lookup_cell. Returns a list holding the cell if present, else empty.
+(defn lookup-cell (path domain name)
+    (ps-scan (store-cells path) domain name (list)))
+
+;; cell-found? -> 1 if lookup-cell returned a cell, 0 for honest absence.
+(defn cell-found? (result) (if (eq (len result) 1) 1 0))
+;; cell-of -> unwrap a found lookup result to the CELL Recipe.
+(defn cell-of (result) (head result))
+
+0
