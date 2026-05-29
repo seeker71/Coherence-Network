@@ -85,6 +85,8 @@
     (let exp-index          "CREATE INDEX ix_node_lookup ON substrate_nodes (package, level, type, instance)")
 
     ;; ---- projections ------------------------------------------------------
+    (let SQLITE   (dialect-sqlite))
+    (let POSTGRES (dialect-postgres))
     (let got-sqlite   (create-ddl nodes SQLITE))
     (let got-postgres (create-ddl nodes POSTGRES))
     (let got-domain   (head (migration-ddls nodes-v0 nodes SQLITE)))
