@@ -663,13 +663,15 @@ function LatticeFloor({ texture, z }: { texture: THREE.Texture; z: number }) {
 // focused cell so stepping through cells flies you there.
 // ---------------------------------------------------------------------------
 
+type OrbitLike = { target: THREE.Vector3; object: THREE.Camera; update: () => void };
+
 function OrbitRig({
   focusPos,
   controls,
   spread = 1,
 }: {
   focusPos: readonly [number, number, number] | null;
-  controls: React.RefObject<{ target: THREE.Vector3; update: () => void } | null>;
+  controls: React.RefObject<OrbitLike | null>;
   spread?: number;
 }) {
   const { camera } = useThree();
@@ -747,6 +749,7 @@ function Scene({
   edges,
   lens,
   onTouchCell,
+  controlsRef,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -760,6 +763,7 @@ function Scene({
   edges: Float32Array | null;
   lens: Lens;
   onTouchCell: (id: string) => void;
+  controlsRef: React.RefObject<OrbitLike | null>;
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
@@ -769,9 +773,6 @@ function Scene({
     g.setAttribute("position", new THREE.BufferAttribute(edges, 3));
     return g;
   }, [edges]);
-  const controls = useRef<{ target: THREE.Vector3; update: () => void } | null>(
-    null,
-  );
   const focusPos = focusId ? layout[focusId]?.position ?? null : null;
   const midZ = useMemo(() => {
     const zs = Object.values(layout).map((l) => l.position[2]);
@@ -932,14 +933,14 @@ function Scene({
       {mode === "orbit" ? (
         <>
           <OrbitControls
-            ref={controls as never}
+            ref={controlsRef as never}
             makeDefault
             enableDamping
             dampingFactor={0.08}
           />
           <OrbitRig
             focusPos={focusPos}
-            controls={controls}
+            controls={controlsRef}
             spread={representation === "orb" ? 3.5 : 1}
           />
         </>
@@ -963,6 +964,7 @@ export default function KernelSpace() {
   const [scene, setScene] = useState<"kernel" | "self" | "vision">("kernel");
   const [lensId, setLensId] = useState<LensId>("rooms");
   const [muted, setMuted] = useState(false);
+  const orbitRef = useRef<OrbitLike | null>(null);
   const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [proto, setProto] = useState<ChannelProtocol>("ask");
@@ -1085,6 +1087,28 @@ export default function KernelSpace() {
     const parent = space.parentOf[effectiveRoot] ?? space.root;
     setViewRootId(parent);
     setFocusId(parent);
+  };
+
+  // on-screen camera controls — work the same on a phone, a trackpad, or a mouse
+  const zoomBy = (factor: number) => {
+    const c = orbitRef.current;
+    if (!c) return;
+    const offset = c.object.position.clone().sub(c.target).multiplyScalar(factor);
+    c.object.position.copy(c.target).add(offset);
+    c.update();
+  };
+  const recenter = () => {
+    const c = orbitRef.current;
+    const ps = Object.values(layout).map((l) => l.position);
+    if (!c || ps.length === 0) return;
+    const ctr = ps.reduce(
+      (a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]],
+      [0, 0, 0],
+    ).map((v) => v / ps.length) as [number, number, number];
+    c.target.set(ctr[0], ctr[1], ctr[2]);
+    const d = scene === "vision" ? 48 : 22;
+    c.object.position.set(ctr[0] + d * 0.55, ctr[1] + d * 0.4, ctr[2] + d);
+    c.update();
   };
 
   // visible cells in discovery order — what arrow-stepping cycles through
@@ -1387,7 +1411,7 @@ export default function KernelSpace() {
 
         <p className="mt-auto text-[10px] text-white/35">
           {mode === "orbit"
-            ? "Orbit: drag to look · scroll to zoom · click to focus · double-click (or Enter) to drill · Backspace to surface · ←/→ step cells."
+            ? "Orbit — drag to rotate · pinch or scroll to zoom · two-finger drag to pan · tap/click a cell to fly in · double-tap to enter. Use the ＋ ⟳ － buttons to zoom & recenter. (Desktop: Enter drills, Backspace surfaces, ←/→ step cells.)"
             : "Walk: click canvas to capture mouse · WASD move · Q/E down/up · Esc to release."}
         </p>
       </div>
@@ -1408,8 +1432,35 @@ export default function KernelSpace() {
             edges={edges}
             lens={activeLens}
             onTouchCell={touchReply}
+            controlsRef={orbitRef}
           />
         </Canvas>
+        {/* camera controls — same on touch, trackpad, or mouse */}
+        {mode === "orbit" && (
+          <div className="absolute bottom-3 right-3 flex flex-col gap-1.5">
+            <button
+              onClick={() => zoomBy(0.8)}
+              title="Zoom in"
+              className="h-9 w-9 rounded-lg bg-black/55 text-lg text-white/85 backdrop-blur hover:bg-white/15"
+            >
+              ＋
+            </button>
+            <button
+              onClick={recenter}
+              title="Recenter — frame the whole field"
+              className="h-9 w-9 rounded-lg bg-black/55 text-base text-white/85 backdrop-blur hover:bg-white/15"
+            >
+              ⟳
+            </button>
+            <button
+              onClick={() => zoomBy(1.25)}
+              title="Zoom out"
+              className="h-9 w-9 rounded-lg bg-black/55 text-lg text-white/85 backdrop-blur hover:bg-white/15"
+            >
+              －
+            </button>
+          </div>
+        )}
         {scene !== "vision" && (
           <div className="absolute left-1/2 top-3 flex -translate-x-1/2 flex-wrap justify-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 backdrop-blur">
             {LENSES.map((l) => (
