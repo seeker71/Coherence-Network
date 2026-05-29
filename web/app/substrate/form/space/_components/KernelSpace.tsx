@@ -15,10 +15,12 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Edges,
   Float,
+  GradientTexture,
   Html,
   Line,
   OrbitControls,
   PointerLockControls,
+  Sparkles,
   Stars,
 } from "@react-three/drei";
 import * as THREE from "three";
@@ -833,11 +835,21 @@ function Scene({
   return (
     <>
       <color attach="background" args={[bg]} />
-      <fog attach="fog" args={[bg, 30, lensMode ? 160 : 120]} />
-      <ambientLight intensity={lens.translucent ? 0.6 : 0.35} />
-      <pointLight position={[10, 20, 10]} intensity={1.2} />
-      <pointLight position={[-15, 5, -30]} intensity={0.8} color="#5b7cff" />
-      <Stars radius={120} depth={60} count={3000} factor={4} fade speed={1} />
+      <fog attach="fog" args={[bg, 40, lensMode ? 200 : 140]} />
+      <hemisphereLight args={["#7e8cff", "#140d2a", 0.5]} />
+      <ambientLight intensity={lens.translucent ? 0.5 : 0.3} />
+      <pointLight position={[10, 20, 10]} intensity={1.3} />
+      <pointLight position={[-15, 5, -30]} intensity={0.9} color="#5b7cff" />
+      <pointLight position={[18, -12, 18]} intensity={0.7} color="#ff7a4d" />
+      <Stars radius={140} depth={70} count={4000} factor={4.5} fade speed={1} />
+      <Sparkles count={120} scale={[70, 46, 70]} size={3} speed={0.25} opacity={0.5} color="#a9bcff" />
+      {/* nebula backdrop — a gradient sky behind the field */}
+      <mesh scale={220}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial side={THREE.BackSide} depthWrite={false} fog={false}>
+          <GradientTexture stops={[0, 0.55, 1]} colors={["#241a4d", bg, "#02030a"]} size={256} />
+        </meshBasicMaterial>
+      </mesh>
 
       {!lensMode && <LatticeFloor texture={fbTexture} z={midZ} />}
       {lensMode && lens.ground && (

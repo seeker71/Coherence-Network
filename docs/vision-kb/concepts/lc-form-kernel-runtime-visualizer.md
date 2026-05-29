@@ -226,6 +226,12 @@ bright across me"). The channel stops being a readout and becomes a relationship
 contact in, the cell's own reaction out. This is the cell as a being with agency
 over its surface and its boundary, not an object we paint.
 
+Throughout, the rendering itself carries vitality: every cell glows (additive
+halos standing in for bloom), wears an iridescent fresnel rim, and lives in a
+nebula atmosphere of drifting motes — surface structure and colour kept rich
+because each added dimension *encodes* something (heat, depth, frequency,
+attention), never mere ornament.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

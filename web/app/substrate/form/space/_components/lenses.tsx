@@ -16,7 +16,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html, Line } from "@react-three/drei";
+import { Billboard, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { CellLayout, RGB, SpaceCell } from "@/lib/form-kernel/space";
 
@@ -169,6 +169,46 @@ function toColor(c: RGB): THREE.Color {
   return new THREE.Color(c[0], c[1], c[2]);
 }
 
+// A soft radial sprite, reused as an additive glow halo behind cells — fake
+// bloom without a postprocessing pass. Built once, on the client.
+let _glowTex: THREE.Texture | null = null;
+export function glowTexture(): THREE.Texture | null {
+  if (typeof document === "undefined") return null;
+  if (_glowTex) return _glowTex;
+  const s = 128;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const x = c.getContext("2d")!;
+  const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.38)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, s, s);
+  _glowTex = new THREE.CanvasTexture(c);
+  return _glowTex;
+}
+
+export function Glow({ color, size, opacity = 0.6 }: { color: RGB; size: number; opacity?: number }) {
+  const tex = useMemo(() => glowTexture(), []);
+  if (!tex) return null;
+  return (
+    <Billboard>
+      <mesh>
+        <planeGeometry args={[size, size]} />
+        <meshBasicMaterial
+          map={tex}
+          color={toColor(color)}
+          transparent
+          opacity={opacity}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </Billboard>
+  );
+}
+
 // blueprintKey → stable seed in [0, 2π). Identical blueprint ⇒ identical seed.
 function seedOf(key: string): number {
   let h = 2166136261;
@@ -215,16 +255,38 @@ function useBlueprintMaterial(cell: SpaceCell, lens: Lens): THREE.MeshStandardMa
           "#include <common>",
           `#include <common>
            uniform float uTime; uniform float uSeed;
-           uniform float uDisplace; uniform float uBreathe;`,
+           uniform float uDisplace; uniform float uBreathe;
+           varying vec3 vRimN; varying vec3 vRimV;`,
         )
         .replace(
           "#include <begin_vertex>",
           `#include <begin_vertex>
            float br = 1.0 + uBreathe * 0.18 * sin(uTime * 1.4 + uSeed);
+           // two octaves of relief — coarse facets plus fine grain
            float d = sin(position.x * 3.1 + uSeed)
                    * sin(position.y * 2.7 + uSeed * 1.7)
                    * sin(position.z * 3.4 + uSeed * 2.3);
-           transformed += normalize(normal) * (d * uDisplace * br);`,
+           float d2 = sin(position.x * 7.3 + uSeed * 2.1)
+                    * sin(position.z * 6.1 + uSeed) * 0.4;
+           transformed += normalize(normal) * ((d + d2) * uDisplace * br);
+           vec4 mvp = modelViewMatrix * vec4(transformed, 1.0);
+           vRimN = normalize(normalMatrix * normal);
+           vRimV = normalize(-mvp.xyz);`,
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+           uniform float uTime; uniform float uSeed;
+           varying vec3 vRimN; varying vec3 vRimV;
+           vec3 iri(float t){ return 0.55 + 0.45 * cos(6.28318 * (vec3(1.0) * t + vec3(0.0, 0.33, 0.67))); }`,
+        )
+        .replace(
+          "#include <dithering_fragment>",
+          `#include <dithering_fragment>
+           // iridescent fresnel rim — the living edge-glow
+           float fres = pow(1.0 - max(dot(normalize(vRimN), normalize(vRimV)), 0.0), 3.0);
+           gl_FragColor.rgb += iri(uSeed * 0.16 + fres * 0.5 + uTime * 0.04) * fres * 1.5;`,
         );
     };
     return m;
@@ -249,7 +311,7 @@ function cellGeometry(cell: SpaceCell, lens: Lens): THREE.BufferGeometry {
         ? new THREE.BoxGeometry(r, 0.3, r)
         : new THREE.CylinderGeometry(r, r, 0.35, 6);
     case "membrane":
-      return new THREE.IcosahedronGeometry(r, 3);
+      return new THREE.IcosahedronGeometry(r, 4);
     case "cabinet":
       // maps → tall cabinets, lists → wide shelves, leaves → books
       if (cell.kind === "leaf") return new THREE.BoxGeometry(0.3, r * 1.3, r);
@@ -288,6 +350,8 @@ export function LensCell({
 
   const labelY = lens.cellShape === "cabinet" ? 1.6 : 1.2;
   const showLabel = focused || hover;
+  const r = 0.55 + Math.min(1.4, cell.arity * 0.1);
+  const glows = lens.cellShape === "crystal" || lens.cellShape === "chip" || lens.cellShape === "membrane";
 
   return (
     <group
@@ -295,6 +359,13 @@ export function LensCell({
       position={layout.position as [number, number, number]}
       scale={focused ? 1.35 : 1}
     >
+      {glows && (
+        <Glow
+          color={cell.color}
+          size={r * (focused ? 6 : 4.4)}
+          opacity={0.3 + cell.heat * 0.6 + (focused ? 0.3 : 0)}
+        />
+      )}
       <mesh
         geometry={geometry}
         material={material}
