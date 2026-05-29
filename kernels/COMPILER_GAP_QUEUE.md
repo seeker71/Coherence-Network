@@ -71,16 +71,27 @@ way reports everything `unbound`. That is not a failure of your code.
 
 See [[self_form_kernel_local_toolchain]] (memory) for the full trap.
 
-## Coverage snapshot (2026-05-29, after #2186 — Batch 1 + range + comprehensions)
+## Coverage snapshot (2026-05-29, after #2188 — Batch 1 + range + comprehensions + power)
 
 **Eval arms shipped (17):** AUG-ASSIGN, ASSIGN, CALL, COMP, DEF, DICT, FOR,
 IDENT, IF, INT, LIST, MODULE, RANGE(builtin), RETURN, STRING, SUBSCRIPT, WHILE
 **Lift branches shipped:** AUG-ASSIGN, COMP, DICT, FOR, IF, INT, LIST, MODULE,
 PASS, SUBSCRIPT, WHILE, unary `-`/`not`, boolean `and`/`or`
 (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via dedicated lifters)
-**Band aggregate:** 145000 (19 cells)
-**Batch 2 status:** comprehensions DONE (#2186); f-strings BLOCKED (grammar
-statement-splitter — see below); class / decorators / try-except remain.
+**Band aggregate:** 155000 (20 cells)
+**Batch 2 status:** comprehensions DONE (#2186), power `**` DONE (#2188);
+f-strings BLOCKED (grammar statement-splitter — see below); **class +
+try/except are REQUIRED and must desugar onto the kernel's native BML arms**
+(TRY, EXCEPTION, METHOD, DELEGATE, COMMON exist in the kernel — the
+python-bmf interpreter just doesn't route to them yet); decorators remain.
+
+**Correction (per Urs, 2026-05-29):**
+- `**` shipped as a recursive Form helper (`py-pow`) in #2188 — **must move to
+  a kernel `pow` native** (no recursive path). Follow-up in flight.
+- try/catch and class are **not optional and not "blocked"** — BML (the
+  kernel) already has try/catch and an object system. The work is to desugar
+  PY-BMF-CLASS / PY-BMF-TRY onto the kernel's METHOD/DELEGATE/COMMON and
+  TRY/EXCEPTION arms, not to invent a new subsystem.
 
 **Desugaring wins (no new eval arm):** unary `-x` → MATH-MINUS(0,x);
 `not x` → COMPARE-EQ(x,0); `a and b` → IF(a,b,a); `a or b` → IF(a,a,b).
@@ -184,3 +195,4 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | 2026-05-29 | [#2179](https://github.com/seeker71/Coherence-Network/pull/2179) | boolean `and` / `or` (short-circuit → IF; no eval arm) | 115000 → 125000 |
 | 2026-05-29 | [#2181](https://github.com/seeker71/Coherence-Network/pull/2181) | `range()` builtin → iterable list (eval-side; no lift change) | 125000 → 135000 |
 | 2026-05-29 | [#2186](https://github.com/seeker71/Coherence-Network/pull/2186) | list comprehension `[e for v in it]` → PY-BMF-COMP (Batch 2) | 135000 → 145000 |
+| 2026-05-29 | [#2188](https://github.com/seeker71/Coherence-Network/pull/2188) | power `**` (recursive Form py-pow — TO BE REPLACED by kernel `pow` native) | 145000 → 155000 |
