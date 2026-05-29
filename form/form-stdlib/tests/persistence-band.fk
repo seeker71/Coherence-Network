@@ -1,0 +1,98 @@
+; tests/persistence-band.fk — Form-native substrate persistence band.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/persistence.fk
+;
+; Proves the kernel reads AND writes the content-addressed named-cell
+; lattice with no Python and no new native — the Breath 5 / Phase D
+; resolution. The strange edge chosen to cover the most boundary in the
+; least code: TWO cells sharing a name across DIFFERENT domains, with a
+; structure-first composed CTOR, round-tripped through a .fkb file.
+;
+; That one shape exercises:
+;   - durable write→read of a composed Recipe (persistence itself)
+;   - (domain, name) identity — same name, different domain = different cell
+;     (the UNIQUE(domain, name) the Python orm.py enforces)
+;   - content-addressing — building the same cell twice yields one NodeID
+;   - honest absence — a miss returns no cell, not a fabricated one
+;   - CTOR composition survives the round-trip (structure-first, not flat)
+;
+; Band verdict: 7 when every assertion holds across all three kernels.
+;   - 1: empty store starts with 0 cells
+;   - 1: after two puts, store holds 2 cells (durable on disk)
+;   - 1: lookup (idea, agent-pipeline) is found
+;   - 1: lookup (spec, agent-pipeline) is found AND distinct from the idea cell
+;   - 1: lookup (idea, no-such-idea) is honest absence
+;   - 1: content-addressing — rebuilding the idea cell yields the same NodeID
+;   - 1: the idea cell's composed CTOR round-trips (a field value reads back)
+
+(do
+    (let store-path "/tmp/persistence-band-store.fkb")
+
+    ;; A blueprint is a structural NodeID; we pass real ones through as
+    ;; child 2 (a ref, not a slug). These mirror BID_idea / BID_spec
+    ;; shapes — distinct markers per domain.
+    (let bp-idea (make_nodeid 1 8 4 1))
+    (let bp-spec (make_nodeid 1 8 4 2))
+
+    ;; A CTOR is structure-first: frontmatter fields are (key, value)
+    ;; pairs under a FIELDS node — never a flat blob. (CLAUDE.md
+    ;; structural-composition discipline.)
+    (let FIELDS (make_nodeid 1 2 99 1741))
+    (let FIELD  (make_nodeid 1 2 99 1742))
+    (defn field (k v)
+        (intern_node FIELD
+            (list (intern_trivial_string k)
+                  (intern_trivial_string v))))
+    (defn ctor-idea ()
+        (intern_node FIELDS
+            (list (field "problem" "ideas need a pipeline")
+                  (field "status"  "active"))))
+
+    ;; --- empty store -------------------------------------------------
+    (cell-store-create store-path)
+    (let empty-ok (if (eq (len (store-cells store-path)) 0) 1 0))
+
+    ;; --- two puts: same name, two domains ---------------------------
+    (cell-put store-path "agent-pipeline" "idea" bp-idea (ctor-idea))
+    (cell-put store-path "agent-pipeline" "spec" bp-spec
+              (intern_node FIELDS (list (field "done_when" "tasks flow"))))
+    (let count-ok (if (eq (len (store-cells store-path)) 2) 1 0))
+
+    ;; --- lookup the idea cell ---------------------------------------
+    (let idea-hit (lookup-cell store-path "idea" "agent-pipeline"))
+    (let idea-found-ok (cell-found? idea-hit))
+
+    ;; --- lookup the spec cell — found AND distinct ------------------
+    (let spec-hit (lookup-cell store-path "spec" "agent-pipeline"))
+    (let spec-found (cell-found? spec-hit))
+    (let distinct
+        (if (and (eq idea-found-ok 1) (eq spec-found 1))
+            (if (node_eq (cell-of idea-hit) (cell-of spec-hit)) 0 1)
+            0))
+    (let spec-distinct-ok distinct)
+
+    ;; --- honest absence ---------------------------------------------
+    (let miss (lookup-cell store-path "idea" "no-such-idea"))
+    (let miss-ok (if (eq (cell-found? miss) 0) 1 0))
+
+    ;; --- content-addressing -----------------------------------------
+    ;; Rebuild the idea cell from the same four arguments; it must be the
+    ;; SAME NodeID as the one persisted and read back.
+    (let rebuilt (make-cell-recipe "agent-pipeline" "idea" bp-idea (ctor-idea)))
+    (let ca-ok (if (node_eq rebuilt (cell-of idea-hit)) 1 0))
+
+    ;; --- CTOR round-trips -------------------------------------------
+    ;; Read the persisted idea cell's CTOR, walk to its first field's
+    ;; value, confirm the composed structure survived the .fkb round-trip.
+    (let ctor (cell-ctor (cell-of idea-hit)))
+    (let first-field (head (node_children ctor)))
+    (let first-key (node_value (head (node_children first-field)))) ; "problem"
+    (let ctor-ok (if (str_eq first-key "problem") 1 0))
+
+    ;; --- verdict -----------------------------------------------------
+    (add empty-ok
+         (add count-ok
+              (add idea-found-ok
+                   (add spec-distinct-ok
+                        (add miss-ok
+                             (add ca-ok ctor-ok)))))))

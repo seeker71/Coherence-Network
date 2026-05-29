@@ -175,15 +175,28 @@ Phase A/B/C.
 **Gate per file:** the body has a **Form-native persistence story** — a
 durable store that the kernel writes/reads with the same atomicity guarantee
 `orm.py`'s UNIQUE constraint provides, with sibling-kernel portability
-(Go/Rust/TS can all read/write the same store). Possible shapes:
+(Go/Rust/TS can all read/write the same store).
 
-1. Kernel-native serialization to `.fkb` Form-binary artifacts as the
-   canonical store (closest to the audit's #10 single-binary-distribution
-   breath)
-2. Kernel-native binding to PG/SQLite directly (replaces SQLAlchemy without
-   changing the backend)
-3. A hybrid — kernel-native primitives walk an underlying SQLAlchemy /
-   PG / SQLite layer, but the *contract* is Form-side
+**The story's first cell has landed** (`form-stdlib/persistence.fk`, proven
+three-way 2026-05-29 — see the PROVEN row below). The resolution unifies the
+three shapes that were once a fork: the persistence *contract* is a Form
+module (`cell-put` / `lookup-cell`), and the *backend* is swappable beneath
+it. The kernel already persists the content-addressed lattice via
+`write_form_binary` / `read_form_binary` — no new native against a DB was
+needed. The three shapes become one layered answer, not a choice:
+
+1. **Backend (shipped today):** kernel-native serialization to `.fkb`
+   Form-binary artifacts — the canonical store, closest to the audit's #10
+   single-binary-distribution breath.
+2. **Backend (later, behind the same contract):** binding to PG/SQLite
+   directly, slotting under `cell-put`/`lookup-cell` without changing callers.
+3. **The unifier:** the *contract* is Form-side — which was always shape 3's
+   spirit. Shapes 1 and 2 are two backends of it.
+
+What still gates `orm.py`'s compost: the `.fkb`↔ORM reconciliation so the
+Form store and the Python `substrate_named_cells` are one shared lattice on
+disk (a Form-written cell visible to `coh_substrate.py annotate`), not two
+backends of one interface. That bridge is the rest of Breath 5.
 
 This is a **much bigger arc** than Phase A's parity flip. The audit names it
 as the #10 next breath. The manifest carries the named shape so future
@@ -311,6 +324,7 @@ ritual.
 | 2026-05-27 | [#2113](https://github.com/seeker71/Coherence-Network/pull/2113) | CTOR Shape B for `+ - * /`. The PY-BMF lift now interns `+ - * /` as `RBasic.MATH-12` (NodeIDs `(1, 2, 12, 1..4)`) with positional children — the *same* Blueprint a hand-built `(intern_node MATH-PLUS …)` interns to. **Cross-modal NodeID equality at the math-primitive layer becomes substrate-truth for arithmetic.** New MATH-12 arm in `python-bmf-eval.fk` walks the unified shape; old `PY-BMF-BINOP` arm still services `** // %` (no MATH instances exist for those today). | Cell 10 of `python-bmf-lift-band.fk` builds a hand-built `MATH-PLUS(7, 3)` and a Python-lifted `"7 + 3"`; `node_eq` returns 1 across all three kernels. Aggregate moves 45000 → 55000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
 | 2026-05-27 | [#2119](https://github.com/seeker71/Coherence-Network/pull/2119) | CTOR Shape B extends to comparisons — `== != < <= > >=`. The PY-BMF lift now interns comparisons as `RBasic.COMPARE-13` (NodeIDs `(1, 2, 13, 1..6)`) with positional children. New COMPARE-13 arm in `py-eval` dispatches on `node_inst` to `eq`/`lt`/`le`/`gt`/`ge` natives (Python's 1/0 integer convention preserved). Old `PY-BMF-COMPARE` arm stays for unrecognised ops (defensive) | Cell 11 of `python-bmf-lift-band.fk` proves convergence: hand-built `COMPARE-LT(5, 7)` and Python-lifted `"5 < 7"` `node_eq` to 1 across all three kernels. Aggregate moves 55000 → 65000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
 | 2026-05-27 | [#2122](https://github.com/seeker71/Coherence-Network/pull/2122) | CTOR Shape B extends to `%` (mod) — closes the last arithmetic operator MATH-12 carries today (`inst=5`). Lift dispatcher gains the `%` case before falling back to `PY-BMF-BINOP`; eval MATH-12 arm gains the `(if (eq math-inst 5) (mod lhs rhs))` branch. What's still on `PY-BMF-BINOP` for arithmetic: `**` (power) and `//` (floor-div) — no MATH instances exist for those today; closing them is a separate breath that adds inst=6,7 to `form-ontology.json` + native registration in three kernels | Cell 12 of `python-bmf-lift-band.fk` proves: hand-built `MATH-MOD(10, 3)` and Python-lifted `"10 % 3"` `node_eq` to 1 across all three kernels. Aggregate moves 65000 → 75000 | Go ✓ · Rust ✓ · TypeScript ✓ (136/136 in `./validate.sh`) |
+| 2026-05-29 | `claude/form-native-substrate-persistence` | **Phase D — Breath 5 first cell.** Form-native substrate persistence: the kernel reads AND writes the content-addressed named-cell lattice with no Python and no new native. `form-stdlib/persistence.fk` adds `cell-put` / `lookup-cell` / `store-cells` over `channel.fk`'s `.fkb` file primitives; a CELL Recipe carries `(name, domain, blueprint, ctor)` with `(domain, name)` identity (the same `UNIQUE(domain, name)` Python `orm.py` enforces). Resolves the Phase D three-shape fork: contract is Form-side, backend swappable (`.fkb` today, DB later). What stays open: `.fkb`↔ORM reconciliation so the two stores become one shared lattice on disk | `form-stdlib/tests/persistence-band.fk` returns `7` — round-trips two cells sharing a name across different domains through a `.fkb` file, proving durable write→read, `(domain, name)` identity, content-addressing, honest absence, and composed-CTOR survival in one strange edge | Go ✓ · Rust ✓ · TypeScript ✓ (`./validate.sh form-stdlib/tests/persistence-band.fk`, 1 workload 0 divergent) |
 
 **What G6 closes and what stays open.** G6 was the orchestration gap — the
 pieces existed (Go compiler, Rust walker, Python BMF grammar) with no binary
