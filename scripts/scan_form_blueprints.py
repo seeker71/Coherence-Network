@@ -158,40 +158,61 @@ def best_name(names) -> str:
     return sorted(pool, key=lambda s: (len(s), s))[0]
 
 
+def _ontology_coords() -> set:
+    """Coordinates the kernel owns (form-ontology.json categories/primitives).
+    These resolve through bp already; the registry covers everything else."""
+    data = json.loads(ONTOLOGY.read_text())
+    out = set()
+    for items in (data.get("categories", []), data.get("primitives", [])):
+        for r in items:
+            out.add((1, 2, r["type"], r["inst"]))
+    return out
+
+
 def emit_registry() -> dict:
-    """Generate the type-99 registry from what the code actually declares.
-    Code-derived so it cannot drift from reality the way a hand-edited table
-    does. Captures, per number: canonical name, harvested meaning (from the
-    densest trailing comment), aliases, and the files that define it."""
-    # Both binding forms: `(let NAME (make_nodeid 1 2 99 N))` and the 0-arg
-    # getter `(defn NAME () (make_nodeid 1 2 99 N))`.
+    """Generate the Blueprint registry from what the code actually declares —
+    every coordinate family the stdlib names, not just type-99. Code-derived
+    so it cannot drift from a hand-edited table. Captures, per NodeID: full
+    (pkg, level, type, inst), canonical name, harvested meaning (densest
+    trailing comment), aliases, and defining files. Excludes test-local
+    sentinels and the kernel-owned categories/primitives (those live in
+    form-ontology.json)."""
+    # Both binding forms, at ANY coordinate:
+    #   (let NAME (make_nodeid P L T I))   /   (defn NAME () (make_nodeid P L T I))
     let_re = re.compile(
         r"\(\s*(?:let\s+([A-Za-z0-9?_+*<>=/.-]+)|defn\s+"
         r"([A-Za-z0-9?_+*<>=/.-]+)\s+\(\s*\))\s+\(\s*make_nodeid\s+"
-        r"1\s+2\s+99\s+(\d+)\s*\)[^\n;]*(?:;+\s*(.*))?"
+        r"(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\)[^\n;]*(?:;+\s*(.*))?"
     )
-    num: dict[int, dict] = collections.defaultdict(
+    owned = _ontology_coords()
+    by_key: dict[tuple, dict] = collections.defaultdict(
         lambda: {"names": collections.Counter(),
                  "comments": collections.Counter(),
                  "files": set()})
     for f in sorted(FORM_ROOT.rglob("*.fk")):
         rel = str(f.relative_to(ROOT))
+        if "/tests/" in rel or rel.endswith("-band.fk"):
+            continue  # test-local sentinels name nothing real
         for m in let_re.finditer(f.read_text()):
             name = m.group(1) or m.group(2)
-            n, comment = int(m.group(3)), (m.group(4) or "").strip()
-            num[n]["names"][name] += 1
-            num[n]["files"].add(rel)
+            key = tuple(int(m.group(i)) for i in range(3, 7))
+            comment = (m.group(7) or "").strip()
+            if key in owned:
+                continue
+            by_key[key]["names"][name] += 1
+            by_key[key]["files"].add(rel)
             if comment:
-                num[n]["comments"][comment] += 1
+                by_key[key]["comments"][comment] += 1
     rows = []
-    for n in sorted(num):
-        info = num[n]
+    for key in sorted(by_key):
+        pkg, level, type_, inst = key
+        info = by_key[key]
         canon = best_name(info["names"])
         meaning = (info["comments"].most_common(1)[0][0]
                    if info["comments"] else "")
         aliases = sorted(a for a in info["names"] if a != canon)
         rows.append({
-            "inst": n,
+            "pkg": pkg, "level": level, "type": type_, "inst": inst,
             "name": canon,
             "meaning": meaning,
             "aliases": aliases,
@@ -199,13 +220,15 @@ def emit_registry() -> dict:
             "defined_in": sorted(info["files"]),
         })
     return {
-        "_note": ("Type-99 (user-space) Blueprint registry — the single "
-                  "source of truth for shapes the kernel does not dispatch "
-                  "on. Generated from code by scripts/scan_form_blueprints.py "
-                  "--emit-registry, then curated. NodeID is (1, 2, 99, inst). "
-                  "form-stdlib/form-ontology-loader.fk binds these names so "
-                  ".fk code references a name, never the raw number. To add a "
-                  "shape: add a row here first, then `(bp \"name\")` in code."),
+        "_note": ("Blueprint registry — the single source of truth for every "
+                  "shape the kernel does not dispatch on (kernel-owned "
+                  "categories/primitives live in form-ontology.json). Generated "
+                  "from code by scripts/scan_form_blueprints.py --emit-registry, "
+                  "then curated. Each row carries the full NodeID "
+                  "(pkg, level, type, inst). form-ontology-loader.fk binds these "
+                  "names so .fk code references a name via (bp \"name\"), never "
+                  "the raw number. To add a shape: add a row here, then "
+                  "(bp \"name\") in code."),
         "blueprints": rows,
     }
 
@@ -264,18 +287,21 @@ def main() -> int:
 
     if args.emit_registry:
         generated = emit_registry()
-        # Preserve human-curated meanings/names over harvested defaults.
+        # Preserve human-curated names/meanings over harvested defaults,
+        # keyed by the full NodeID coordinate.
+        def coord(r):
+            return (r.get("pkg", 1), r.get("level", 2), r.get("type", 99), r["inst"])
         if REGISTRY.exists():
-            prior = {r["inst"]: r for r in load_user_blueprints()}
+            prior = {coord(r): r for r in load_user_blueprints()}
             for row in generated["blueprints"]:
-                p = prior.get(row["inst"])
+                p = prior.get(coord(row))
                 if p and p.get("curated"):
                     row["name"] = p.get("name", row["name"])
                     row["meaning"] = p.get("meaning", row["meaning"])
                     row["curated"] = True
         REGISTRY.write_text(json.dumps(generated, indent=2) + "\n")
         print(f"wrote {REGISTRY.relative_to(ROOT)} "
-              f"({len(generated['blueprints'])} type-99 blueprints)")
+              f"({len(generated['blueprints'])} blueprints, all coordinates)")
         return 0
 
     s = scan()
