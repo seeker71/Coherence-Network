@@ -171,14 +171,15 @@
 
     (defn py-dict-pairs (d) (tail d))
 
-    ;; Dict keys arrive as strings in today's surface; the lookup walks
-    ;; pairs with str_eq. Integer-keyed dicts are a later breath.
+    ;; Dict lookup walks pairs with value_eq — polymorphic equality across
+    ;; Value kinds, so integer-keyed and string-keyed dicts both resolve
+    ;; (value_eq is the same native py-dict? already relies on).
     (defn py-dict-lookup-str-loop (pairs key)
         (if (nil? pairs)
             (do
                 (trace "py-dict-lookup: missing key" key)
                 (head (empty)))
-            (if (str_eq (head (head pairs)) key)
+            (if (value_eq (head (head pairs)) key)
                 (head (tail (head pairs)))
                 (py-dict-lookup-str-loop (tail pairs) key))))
 
