@@ -146,6 +146,49 @@
 
     (defn lift-list-elements (tokens) (lift-list-elements-loop tokens (empty)))
 
+    ;; --- list comprehension: `[ elem for var in iter ]` -------------
+    ;;
+    ;; Caller has consumed the open `[`. We lift the element expression
+    ;; first; if the next token is the `for` keyword, this is a
+    ;; comprehension (not a plain list). Token shape after `for`:
+    ;;   for VAR in ITER-tokens... ]
+    ;; VAR is a single py-name; ITER is everything between `in` and the
+    ;; closing `]`. Emits PY-BMF-COMP(elem-recipe, var-name-leaf,
+    ;; iter-recipe) — the eval arm maps elem over the evaluated iter,
+    ;; binding var each step (same env-threading as py-for-loop). Filter
+    ;; clauses (`if cond`) and nested fors are a later breath.
+    ;;
+    ;; lift-comp-iter-tokens — collect tokens from the start until the
+    ;; final `]`, returning (iter-tokens . rest-after-]). Single bracket
+    ;; depth only (the common case); nested `[` in the iterable would need
+    ;; depth tracking, deferred.
+    (defn lift-comp-iter-loop (tokens depth acc)
+        (if (nil? tokens) (lift-result (reverse acc) tokens)
+            (do
+                (let t (head tokens))
+                (if (and (eq depth 0) (tok-op? t "]"))
+                    (lift-result (reverse acc) (tail tokens))
+                    (do
+                        (let d2 (if (tok-op? t "[") (add depth 1)
+                                 (if (tok-op? t "]") (sub depth 1) depth)))
+                        (lift-comp-iter-loop (tail tokens) d2 (cons t acc)))))))
+
+    (defn lift-comprehension (elem-recipe after-elem)
+        ;; after-elem starts at the `for` keyword.
+        (do
+            (let after-for (tail after-elem))          ; drop `for`
+            (let var-name (tok-value (head after-for)))
+            (let after-var (tail after-for))           ; at `in`
+            (let after-in (tail after-var))            ; iter tokens start
+            (let iter-collected (lift-comp-iter-loop after-in 0 (empty)))
+            (let iter-recipe (lift-recipe (lift-expr (lift-recipe iter-collected))))
+            (lift-result
+                (intern_node PY-BMF-COMP
+                    (list elem-recipe
+                          (intern_trivial_string var-name)
+                          iter-recipe))
+                (lift-rest iter-collected))))
+
     ;; --- dict literal: consume `{ k1: v1, k2: v2 }` ----------------
     ;;
     ;; Caller has already consumed the open `{`. Reads `key : value`
@@ -278,15 +321,36 @@
                             (list (intern_trivial_string (tok-value t))))
                         rest))
             (if (tok-op? t "[")
-                ;; list literal: collect comma-separated expressions
-                ;; until `]`. Empty list `[]` lifts to PY-BMF-LIST with
-                ;; no children — the interpreter walks that to an empty
-                ;; Form list naturally.
-                (do
-                    (let elems-result (lift-list-elements rest))
+                ;; `[` opens either a list literal or a comprehension. Empty
+                ;; `[]` is a list. Otherwise lift the first expression and
+                ;; peek: a following `for` keyword means comprehension; a
+                ;; `,` or `]` means a plain list. For the list case we re-lift
+                ;; from `rest` via lift-list-elements (it re-reads the first
+                ;; element) — simpler than threading the already-lifted head,
+                ;; and lift is pure so the duplicate parse is harmless.
+                (if (and (not (nil? rest)) (tok-op? (head rest) "]"))
+                    ;; empty list []
                     (lift-subscript-tail
-                        (intern_node PY-BMF-LIST (lift-recipe elems-result))
-                        (lift-rest elems-result)))
+                        (intern_node PY-BMF-LIST (empty))
+                        (tail rest))
+                    (do
+                        (let first (lift-expr rest))
+                        (let after (lift-rest first))
+                        (if (and (not (nil? after))
+                                 (tok-keyword? (head after) "for"))
+                            ;; comprehension: lift-comprehension returns a
+                            ;; (recipe . rest) result; subscript-tail onto it.
+                            (do
+                                (let comp (lift-comprehension (lift-recipe first) after))
+                                (lift-subscript-tail
+                                    (lift-recipe comp)
+                                    (lift-rest comp)))
+                            ;; plain list literal — re-lift from rest
+                            (do
+                                (let elems-result (lift-list-elements rest))
+                                (lift-subscript-tail
+                                    (intern_node PY-BMF-LIST (lift-recipe elems-result))
+                                    (lift-rest elems-result))))))
             (if (tok-op? t "{")
                 ;; dict literal: collect `key: value` pairs separated by
                 ;; `,` until `}`. Empty dict `{}` lifts to PY-BMF-DICT with
