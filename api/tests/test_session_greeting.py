@@ -41,6 +41,12 @@ def test_detect_agent(env, expected) -> None:
     assert sg.detect_agent(env) == expected
 
 
+def test_detect_agent_explicit_override_wins() -> None:
+    # An agent's own hook (e.g. .grok/hooks/) can declare itself when it leaves
+    # no recognizable env marker. The override beats marker detection.
+    assert sg.detect_agent({"COHERENCE_AGENT": "grok", "CLAUDECODE": "1"}) == "grok"
+
+
 # --- human detection cascade: git → keystore → env --------------------------
 
 
