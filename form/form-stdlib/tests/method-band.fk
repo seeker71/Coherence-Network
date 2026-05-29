@@ -1,0 +1,51 @@
+; tests/method-band.fk — methods on the blueprint (BML/NUMS reference, rung 2b).
+;
+; preludes: form-stdlib/core.fk
+;
+; Methods live on the blueprint/type (NUMS-Go: NamedRecipes on the Blueprint),
+; shared by all records of that type, name-dispatched. method_define registers
+; a closure under (blueprint, name); method_invoke dispatches by the record's
+; blueprint and binds the closure's first param as the receiver (Python `self`
+; convention). This is the keystone that turns a Record into a real object —
+; `obj.method(args)` works, every language's class compiles onto it.
+;
+; Band verdict: 116 when every assertion holds across Go, Rust, TypeScript.
+;   - method reads a field through `self` (get → 10)
+;   - method mutates `self` in place, persists (bump+5 → 15, stays 15)
+;   - method_has true for defined, false for absent
+;   - TWO instances share the blueprint's methods but keep SEPARATE state
+;     (c2 bumps to 101 while c stays 15) — proving methods-on-type + per-
+;     instance data, the core of the object model
+;   - final 15 + 101 = 116
+
+(do
+    (let Counter (make_nodeid 1 2 99 9100))
+
+    ;; method get(self) = self.n
+    (defn counter-get (self) (record_get self "n"))
+    ;; method bump(self, by) = self.n += by; return self.n
+    (defn counter-bump (self by)
+        (do
+            (record_set self "n" (add (record_get self "n") by))
+            (record_get self "n")))
+
+    (method_define Counter "get" counter-get)
+    (method_define Counter "bump" counter-bump)
+
+    ;; instance c starts at 10
+    (let c (record_new Counter "n" 10))
+    (let get-ok (eq (method_invoke c "get") 10))
+    (let bump-ok (eq (method_invoke c "bump" 5) 15))
+    (let persist-ok (eq (method_invoke c "get") 15))
+    (let has-ok (and (method_has c "get") (not (method_has c "nope"))))
+
+    ;; instance c2 shares methods, separate state
+    (let c2 (record_new Counter "n" 100))
+    (method_invoke c2 "bump" 1)
+    (let independence-ok
+        (and (eq (method_invoke c2 "get") 101)
+             (eq (method_invoke c "get") 15)))
+
+    (if (and get-ok (and bump-ok (and persist-ok (and has-ok independence-ok))))
+        (add (method_invoke c "get") (method_invoke c2 "get"))
+        0))

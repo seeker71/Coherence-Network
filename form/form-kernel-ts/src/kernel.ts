@@ -485,6 +485,10 @@ export class Kernel {
   // Form-shape a native expresses, alongside the FNCALL arm.
   natives = new Map<NameID, NativeEntry>();
   envNatives = new Map<NameID, EnvAwareNativeEntry>();
+  // methods — the blueprint method table (BML/NUMS reference: methods live on
+  // the blueprint/type, shared by all instances, name-dispatched). Keyed by
+  // `${nodeKey(blueprint)}:${nameID}` → the method's Closure.
+  methods = new Map<string, Closure>();
 
   // jitAliases — Form-function-name → native-name redirect. When a
   // function call's name is in this map, the walker substitutes the
@@ -1129,6 +1133,65 @@ export class Kernel {
       kind: "bool",
       bool: args[0]!.kind === "record",
     }));
+    // --- methods on the blueprint (BML/NUMS reference, rung 2b) ----------
+    // Methods live on the blueprint/type, shared by all records of that type,
+    // name-dispatched. The keystone that makes a Record a real object.
+    //
+    // method_define — (method_define blueprint "name" closure) → blueprint.
+    this.registerNative("method_define", catMethod(), (k, args) => {
+      const cl = args[2]!;
+      if (cl.kind !== "closure") {
+        throw new Error("method_define: third arg must be a closure");
+      }
+      const bp = argNodeID(args, 0);
+      const key = `${nodeKey(bp)}:${k.internName(argStr(args, 1))}`;
+      k.methods.set(key, cl.closure);
+      return args[0]!;
+    });
+    // method_has — (method_has record-or-blueprint "name") → bool.
+    this.registerNative("method_has", catAccess(), (k, args) => {
+      const a0 = args[0]!;
+      let bp: NodeID;
+      if (a0.kind === "record") bp = a0.record.blueprint;
+      else if (a0.kind === "nodeid") bp = a0.nodeid;
+      else return { kind: "bool", bool: false };
+      const key = `${nodeKey(bp)}:${k.internName(argStr(args, 1))}`;
+      return { kind: "bool", bool: k.methods.has(key) };
+    });
+    // method_invoke — (method_invoke record "name" arg1 ...) → value.
+    // Dispatches by the record's blueprint; the method's FIRST param is the
+    // receiver (Python `self`), remaining params bind to call args.
+    this.registerNative("method_invoke", catMethod(), (k, args) => {
+      const a0 = args[0]!;
+      if (a0.kind !== "record") {
+        throw new Error("method_invoke: first arg must be a record");
+      }
+      const bp = a0.record.blueprint;
+      const key = `${nodeKey(bp)}:${k.internName(argStr(args, 1))}`;
+      const cl = k.methods.get(key);
+      if (!cl) {
+        throw new Error(
+          `method_invoke: no method '${argStr(args, 1)}' on blueprint @${nodeKey(bp)}`,
+        );
+      }
+      const callArgs = args.slice(2);
+      if (cl.params.length === 0) {
+        throw new Error(
+          `method '${argStr(args, 1)}' must declare a receiver param (self)`,
+        );
+      }
+      if (callArgs.length !== cl.params.length - 1) {
+        throw new Error(
+          `method '${argStr(args, 1)}' wants ${cl.params.length - 1} args, got ${callArgs.length}`,
+        );
+      }
+      const callFrame = new Frame(cl.env);
+      callFrame.bind(cl.params[0]!, a0); // receiver
+      for (let i = 0; i < callArgs.length; i++) {
+        callFrame.bind(cl.params[i + 1]!, callArgs[i]!);
+      }
+      return walk(k, cl.body, callFrame);
+    });
     // str_find — JS-level substring search starting at index `from`.
     // (str_find s needle from) → int (index or -1). Whole search in this
     // JS String.indexOf call; no Form callback per byte, no Form recursion.
