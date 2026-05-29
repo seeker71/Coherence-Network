@@ -1,0 +1,62 @@
+; storage-port-file.fk — the file carrier of the storage port.
+;
+; Binds persistence.fk's .fkb cell store to the storage-port interface. Loaded
+; only when the file carrier is selected, so the memory-only path stays free of
+; channel/persistence dependencies. Same four-function carrier record as memory;
+; the call site in storage-port.fk never changes.
+;
+; The store value here is a path string (where the .fkb lives). put writes a
+; CELL in the "kv" domain (key = name, value = trivial-string CTOR); get reads
+; it back via lookup-cell, unwrapping the CTOR to the stored string. The effect
+; lands at the catCall floor (channel append/read) — this proves the port
+; interface is honest over an EFFECTFUL backend, not only the pure memory one.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/storage-port.fk
+;
+(do
+    (defn file-kv-domain () "kv")
+
+    ;; init takes a path and returns it as the store handle. (The port's
+    ;; storage-open calls init with no args, so the file carrier is opened with
+    ;; a path baked into a closure-free wrapper: see file-carrier-at below.)
+    ;; the kv blueprint is a real structural NodeID (a slug as blueprint child
+    ;; breaks the channel write — persistence.fk wants a NodeID ref, not a
+    ;; trivial-string, in child 2).
+    (defn file-kv-blueprint () (make_nodeid 1 8 99 9600))
+
+    (defn file-put (store key value)
+        (do
+            ;; value is a string; intern it as the CTOR (a trivial-string leaf,
+            ;; read back with node_value).
+            (cell-put store key (file-kv-domain)
+                      (file-kv-blueprint)
+                      (intern_trivial_string value))
+            store))
+
+    (defn file-get (store key)
+        (do
+            (let r (lookup-cell store (file-kv-domain) key))
+            (if (eq (cell-found? r) 1)
+                (list (node_value (cell-ctor (cell-of r))))
+                (empty))))
+
+    (defn file-has (store key)
+        (cell-found? (lookup-cell store (file-kv-domain) key)))
+
+    ;; file-carrier-at path — a carrier whose init creates a fresh store at the
+    ;; given path. Because Form has no closures-over-let in carrier records, we
+    ;; expose the path through a nullary init by pairing the carrier with its
+    ;; path at the call site: storage-open-at handles that below.
+    (defn file-init-noop () "")   ; placeholder; real open uses storage-open-at
+    (defn carrier-file ()
+        (mk-carrier "file" file-init-noop file-put file-get file-has))
+
+    ;; storage-open-at carrier path — open a file-backed store at path. For the
+    ;; file carrier this creates the .fkb and returns the path as the handle;
+    ;; for any non-file carrier it ignores the path and uses the normal init.
+    (defn storage-open-at (carrier path)
+        (if (str_eq (carrier-name carrier) "file")
+            (do (cell-store-create path) path)
+            (storage-open carrier)))
+
+    0)

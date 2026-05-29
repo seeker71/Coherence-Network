@@ -1,0 +1,94 @@
+; storage-port.fk — the first Port: one storage interface, swappable carriers.
+;
+; The proof of docs/coherence-substrate/ports-interface-and-structure.md.
+; A Port = a capability-contract (the operation shape) bound to a carrier (the
+; host realization). Storage is the first port; its interface is the
+; content-addressed get-or-insert the substrate already lives on:
+;
+;   put    store key value   → store'         (insert by key, last-write-wins)
+;   get    store key         → (value) | ()   (0-or-1 list = the body's optional)
+;   has?   store key         → 1 | 0
+;
+; A CARRIER is a record of named function-values — one per operation — plus its
+; initial state. Selecting a carrier is choosing which record; invoking pulls
+; the operation (a function value) and calls it with a STATIC head. The kernel
+; needs no port_bind native: first-class function values + the existing
+; effectful catCall natives are sufficient (settled by probe, see the doc).
+;
+; Two carriers prove swap:
+;   - memory : a functional assoc-list threaded as the store value (no effect).
+;   - file   : persistence.fk over .fkb (the catCall floor) — same interface.
+;
+; The relational view (db-schema.fk + emits/sql.fk) is a THIRD carrier+interface
+; over this same port; it lands once the seam is proven on the leanest two.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- the carrier record -----------------------------------------------
+    ;; (init-fn put-fn get-fn has-fn) — four function VALUES. The whole port is
+    ;; these four; a new backend is a new record, never a new call site.
+    (defn mk-carrier (name init put get has) (list "carrier" name init put get has))
+    (defn carrier-name (c) (nth c 1))
+    (defn carrier-init (c) (nth c 2))
+    (defn carrier-put  (c) (nth c 3))
+    (defn carrier-get  (c) (nth c 4))
+    (defn carrier-has  (c) (nth c 5))
+
+    ;; ---- the PORT interface (carrier-agnostic) ----------------------------
+    ;; These three functions are the entire surface a caller sees. They pull the
+    ;; operation (a function value) from the carrier and call it static-head.
+    ;; The call site never names a backend.
+    (defn storage-open (carrier)
+        (do (let f (carrier-init carrier)) (f)))
+    (defn storage-put (carrier store key value)
+        (do (let f (carrier-put carrier)) (f store key value)))
+    (defn storage-get (carrier store key)
+        (do (let f (carrier-get carrier)) (f store key)))
+    (defn storage-has? (carrier store key)
+        (do (let f (carrier-has carrier)) (f store key)))
+
+    ;; optional helpers (shared across carriers — the body's 0-or-1 idiom)
+    (defn storage-found? (result) (if (eq (len result) 1) 1 0))
+    (defn storage-value  (result) (head result))
+
+    ;; ======================================================================
+    ;; CARRIER 1 — memory: a functional assoc-list. Pure, no effect, leanest.
+    ;; store = list of (key value) pairs; put conses a fresh pair (last-write
+    ;; -wins because get scans newest-first).
+    ;; ======================================================================
+    (defn mem-init () (empty))
+    (defn mem-pair (k v) (list k v))
+    (defn mem-pair-key (p) (nth p 0))
+    (defn mem-pair-val (p) (nth p 1))
+    (defn mem-put (store key value) (cons (mem-pair key value) store))
+    (defn mem-scan (store key)
+        (if (nil? store) (empty)
+            (if (str_eq (mem-pair-key (head store)) key)
+                (list (mem-pair-val (head store)))
+                (mem-scan (tail store) key))))
+    (defn mem-get (store key) (mem-scan store key))
+    (defn mem-has (store key) (if (eq (len (mem-scan store key)) 1) 1 0))
+
+    (defn carrier-memory ()
+        (mk-carrier "memory" mem-init mem-put mem-get mem-has))
+
+    ;; ======================================================================
+    ;; CARRIER 2 — file: persistence.fk over .fkb. SAME interface; the store
+    ;; value is a path, the effect lands at the catCall floor (channel append /
+    ;; read). Requires persistence.fk in the prelude when this carrier is used.
+    ;;
+    ;; Mapping the generic (key value) onto the cell store: key = name in the
+    ;; "kv" domain; value = a trivial-string CTOR. lookup-cell returns 0-or-1,
+    ;; already the port's optional. This shows the port interface is honest over
+    ;; an effectful backend, not only the pure one.
+    ;;
+    ;; These functions reference persistence.fk symbols (cell-store-create,
+    ;; cell-put, lookup-cell, cell-found?, cell-of, cell-ctor) — bound when the
+    ;; file carrier is selected with persistence.fk loaded. The memory carrier
+    ;; needs none of them, so a caller using only memory loads only this file.
+    ;; ----------------------------------------------------------------------
+    ;; (file carrier constructor lives in storage-port-file.fk to keep this
+    ;; file dependency-free for the memory-only path; see that file.)
+
+    0)
