@@ -16,8 +16,8 @@
 (do
     ;; --- Blueprints --------------------------------------------------
 
-    (let TRIANGLE-VERTEX   (make_nodeid 1 2 99 1800))
-    (let TRIANGLE-COMPLETE (make_nodeid 1 2 99 1801))
+    (let TRIANGLE-VERTEX   (bp "TRIANGLE-VERTEX"))
+    (let TRIANGLE-COMPLETE (bp "TRIANGLE-COMPLETE"))
 
     ;; --- constructors -----------------------------------------------
 

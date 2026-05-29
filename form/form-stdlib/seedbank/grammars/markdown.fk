@@ -36,11 +36,11 @@
     ;; bands at 9-19. When a second document format lands, these
     ;; promote to universal-shapes.form as B_Doc/R_Doc* aliases.)
 
-    (let DOC-DOC          (make_nodeid 1 2 99 1))   ; root document
-    (let DOC-HEADING      (make_nodeid 1 2 99 2))   ; (level, text)
-    (let DOC-PARAGRAPH    (make_nodeid 1 2 99 3))   ; (text)
-    (let DOC-CODE-BLOCK   (make_nodeid 1 2 99 4))   ; (lang, content)
-    (let DOC-BLANK        (make_nodeid 1 2 99 5))   ; blank-line marker (discarded post-parse)
+    (let DOC-DOC          (bp "DOC-DOC"))   ; root document
+    (let DOC-HEADING      (bp "DOC-HEADING"))   ; (level, text)
+    (let DOC-PARAGRAPH    (bp "DOC-PARAGRAPH"))   ; (text)
+    (let DOC-CODE-BLOCK   (bp "DOC-CODE-BLOCK"))   ; (lang, content)
+    (let DOC-BLANK        (bp "DOC-BLANK"))   ; blank-line marker (discarded post-parse)
 
     ;; --- line-based tokenization ----------------------------------
     ;; A "line" is the text between two newlines (or BOF/EOF). The

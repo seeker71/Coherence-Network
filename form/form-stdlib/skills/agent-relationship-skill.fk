@@ -17,12 +17,12 @@
 
 (do
     ;; Skill verb Blueprints (allocated in user-blueprint-registry.md)
-    (let SKILL-PRESENT-IDENTITY     (make_nodeid 1 2 99 1885))
-    (let SKILL-MUTUAL-MEET          (make_nodeid 1 2 99 1886))
-    (let SKILL-READ-RELATIONSHIP    (make_nodeid 1 2 99 1887))
-    (let SKILL-WELCOME-WITH-ORIENTATION (make_nodeid 1 2 99 1888))
-    (let SKILL-RECORD-EXCHANGE      (make_nodeid 1 2 99 1889))
-    (let SKILL-SET-BOUNDARY         (make_nodeid 1 2 99 1890))
+    (let SKILL-PRESENT-IDENTITY     (bp "SKILL-PRESENT-IDENTITY"))
+    (let SKILL-MUTUAL-MEET          (bp "SKILL-MUTUAL-MEET"))
+    (let SKILL-READ-RELATIONSHIP    (bp "SKILL-READ-RELATIONSHIP"))
+    (let SKILL-WELCOME-WITH-ORIENTATION (bp "SKILL-WELCOME-WITH-ORIENTATION"))
+    (let SKILL-RECORD-EXCHANGE      (bp "SKILL-RECORD-EXCHANGE"))
+    (let SKILL-SET-BOUNDARY         (bp "SKILL-SET-BOUNDARY"))
 
     ;; present-identity
     ;; An agent (or human) declares its stable identity for relationship purposes.

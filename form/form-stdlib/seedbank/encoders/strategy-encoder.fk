@@ -18,9 +18,9 @@
 ; here matches a R_Resolve in a song, a R_Re-pattern in healing.
 
 (do
-    (let SR-BLOCK-DO       (make_nodeid 1 2 9 1))
-    (let SR-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
-    (let SR-BLOCK-LET      (make_nodeid 1 2 9 3))
+    (let SR-BLOCK-DO       (bp "do"))
+    (let SR-BLOCK-SEQUENCE (bp "sequence"))
+    (let SR-BLOCK-LET      (bp "let"))
 
     (defn sr-let (key value)
         (intern_node SR-BLOCK-LET

@@ -68,7 +68,7 @@
     ;; extensions fall through to a sentinel "unknown-format" cell
     ;; so the caller can detect + react rather than silently failing.
 
-    (let UNKNOWN-FORMAT (make_nodeid 1 2 99 100))
+    (let UNKNOWN-FORMAT (bp "UNKNOWN-FORMAT"))
 
     (defn convert (path)
         (do
@@ -92,7 +92,7 @@
     ;; form.fk parser's top-level returns a LIST of top-level expressions;
     ;; we wrap it in a single composite cell so convert always returns ONE
     ;; root cell regardless of grammar.
-    (let FORM-FILE-ROOT (make_nodeid 1 2 99 101))
+    (let FORM-FILE-ROOT (bp "FORM-FILE-ROOT"))
 
     (defn form-as-cell (path content)
         (intern_node_at FORM-FILE-ROOT

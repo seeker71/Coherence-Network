@@ -20,10 +20,10 @@
 ; here as one rule per breath.
 
 (do
-    (let YAML-DOC   (make_nodeid 1 2 99 20))   ; root document = sequence of pairs / list items
-    (let YAML-PAIR  (make_nodeid 1 2 99 21))   ; (key-string, value)
-    (let YAML-ITEM  (make_nodeid 1 2 99 22))   ; list-item value
-    (let YAML-LIST  (make_nodeid 1 2 99 23))   ; (sequence of items)
+    (let YAML-DOC   (bp "YAML-DOC"))   ; root document = sequence of pairs / list items
+    (let YAML-PAIR  (bp "YAML-PAIR"))   ; (key-string, value)
+    (let YAML-ITEM  (bp "YAML-ITEM"))   ; list-item value
+    (let YAML-LIST  (bp "YAML-LIST"))   ; (sequence of items)
 
     ;; --- line helpers (shared shape with markdown.fk) -------------
 

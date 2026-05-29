@@ -34,8 +34,8 @@
 ;   file_size, file_mtime, make_nodeid.
 
 ;; --- Blueprints ----------------------------------------------------
-(let CHANNEL-V0  (make_nodeid 1 2 99 1700))
-(let CHANNEL-MSG (make_nodeid 1 2 99 1701))
+(let CHANNEL-V0  (bp "CHANNEL-V0"))
+(let CHANNEL-MSG (bp "CHANNEL-MSG"))
 
 ;; --- helpers -------------------------------------------------------
 

@@ -33,7 +33,7 @@
     ;; substrate's content-addressing IS the cache of "candidates
     ;; we've already seen."
 
-    (let PARETO-CANDIDATE (make_nodeid 1 2 99 1500))
+    (let PARETO-CANDIDATE (bp "PARETO-CANDIDATE"))
 
     (defn pareto-candidate (compute fidelity-loss)
         (intern_node PARETO-CANDIDATE

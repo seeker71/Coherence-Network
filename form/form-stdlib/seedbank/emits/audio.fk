@@ -10,10 +10,10 @@
 ; subsequent breaths via serialize-recipe + format-specific encoders.
 
 (do
-    (let AU-OBJ  (make_nodeid 1 2 99 10))
-    (let AU-ARR  (make_nodeid 1 2 99 11))
-    (let AU-PAIR (make_nodeid 1 2 99 12))
-    (let AU-NULL (make_nodeid 1 2 99 13))
+    (let AU-OBJ  (bp "AU-OBJ"))
+    (let AU-ARR  (bp "AU-ARR"))
+    (let AU-PAIR (bp "AU-PAIR"))
+    (let AU-NULL (bp "AU-NULL"))
 
     (defn au-cat (xs)
         (if (nil? xs) ""

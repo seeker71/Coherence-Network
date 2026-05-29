@@ -7,10 +7,10 @@
 ; design tokens, for example.
 
 (do
-    (let CSS-OBJ  (make_nodeid 1 2 99 10))
-    (let CSS-ARR  (make_nodeid 1 2 99 11))
-    (let CSS-PAIR (make_nodeid 1 2 99 12))
-    (let CSS-NULL (make_nodeid 1 2 99 13))
+    (let CSS-OBJ  (bp "CSS-OBJ"))
+    (let CSS-ARR  (bp "CSS-ARR"))
+    (let CSS-PAIR (bp "CSS-PAIR"))
+    (let CSS-NULL (bp "CSS-NULL"))
 
     (defn css-decls (xs)
         (if (nil? xs) ""

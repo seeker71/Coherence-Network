@@ -6,10 +6,10 @@
 ; structural whitespace).
 
 (do
-    (let XML-OBJ  (make_nodeid 1 2 99 10))
-    (let XML-ARR  (make_nodeid 1 2 99 11))
-    (let XML-PAIR (make_nodeid 1 2 99 12))
-    (let XML-NULL (make_nodeid 1 2 99 13))
+    (let XML-OBJ  (bp "XML-OBJ"))
+    (let XML-ARR  (bp "XML-ARR"))
+    (let XML-PAIR (bp "XML-PAIR"))
+    (let XML-NULL (bp "XML-NULL"))
 
     (defn xml-cat (xs)
         (if (nil? xs) ""

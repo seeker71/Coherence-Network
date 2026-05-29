@@ -22,10 +22,10 @@
 ; to the line/col where its structure was authored.
 
 ;; --- universal data category NodeIDs ------------------------------
-(let JSON-OBJECT (make_nodeid 1 2 99 10))   ; map: list of (key, value) pairs
-(let JSON-ARRAY  (make_nodeid 1 2 99 11))   ; sequence of values
-(let JSON-PAIR   (make_nodeid 1 2 99 12))   ; (key-string, value)
-(let JSON-NULL   (make_nodeid 1 2 99 13))   ; null literal
+(let JSON-OBJECT (bp "JSON-OBJECT"))   ; map: list of (key, value) pairs
+(let JSON-ARRAY  (bp "JSON-ARRAY"))   ; sequence of values
+(let JSON-PAIR   (bp "JSON-PAIR"))   ; (key-string, value)
+(let JSON-NULL   (bp "JSON-NULL"))   ; null literal
 
 ;; --- text helpers --------------------------------------------------
 

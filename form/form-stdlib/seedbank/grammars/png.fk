@@ -23,8 +23,8 @@
 ; oriented, so we project the byte position into the column axis).
 
 (do
-    (let PNG-FILE  (make_nodeid 1 2 99 90))   ; root file
-    (let PNG-CHUNK (make_nodeid 1 2 99 91))   ; one chunk
+    (let PNG-FILE  (bp "PNG-FILE"))   ; root file
+    (let PNG-CHUNK (bp "PNG-CHUNK"))   ; one chunk
 
     ;; --- byte helpers --------------------------------------------------
     ;;

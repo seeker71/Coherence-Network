@@ -49,9 +49,9 @@
 ;; Inst slots 1740..1742 reserve the verb-router family
 ;; (1730..1732 are symbol-table, 1720..1721 are cell-registry,
 ;;  1710..1716 are channel-query).
-(let HANDLER           (make_nodeid 1 2 99 1740))
-(let HANDLER-TABLE     (make_nodeid 1 2 99 1741))
-(let HANDLER-NOT-FOUND (make_nodeid 1 2 99 1742))
+(let HANDLER           (bp "HANDLER"))
+(let HANDLER-TABLE     (bp "HANDLER-TABLE"))
+(let HANDLER-NOT-FOUND (bp "HANDLER-NOT-FOUND"))
 
 ;; --- helpers ------------------------------------------------------
 

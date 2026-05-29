@@ -34,9 +34,9 @@
 ; level=2, type=99). 1800/1801 belong to triangulate, 1810 to symbols-
 ; merge, 1820/1821 to heartbeat; 1830-1832 is the next free decade.
 
-(let DIFF-EQUAL    (make_nodeid 1 2 99 1830))
-(let DIFF-REPLACE  (make_nodeid 1 2 99 1831))
-(let DIFF-CHILDREN (make_nodeid 1 2 99 1832))
+(let DIFF-EQUAL    (bp "DIFF-EQUAL"))
+(let DIFF-REPLACE  (bp "DIFF-REPLACE"))
+(let DIFF-CHILDREN (bp "DIFF-CHILDREN"))
 
 ;; --- helpers ------------------------------------------------------
 

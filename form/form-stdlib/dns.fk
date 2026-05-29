@@ -75,10 +75,10 @@
 ; (Rust/Go/TS each map to host indexOf), so each scan is the host
 ; substring search — not a Form-recursion per byte.
 
-(let NAME-RECORD      (make_nodeid 1 2 99 1850))
-(let DNS-TABLE        (make_nodeid 1 2 99 1851))
-(let DNS-NOT-FOUND    (make_nodeid 1 2 99 1852))
-(let DNS-PREFIX-MATCH (make_nodeid 1 2 99 1853))
+(let NAME-RECORD      (bp "NAME-RECORD"))
+(let DNS-TABLE        (bp "DNS-TABLE"))
+(let DNS-NOT-FOUND    (bp "DNS-NOT-FOUND"))
+(let DNS-PREFIX-MATCH (bp "DNS-PREFIX-MATCH"))
 
 (do
     ;; --- LOCAL HELPERS ----------------------------------------------

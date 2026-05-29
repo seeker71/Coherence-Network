@@ -18,9 +18,9 @@
 ; is structural, not metaphorical.
 
 (do
-    (let TE-BLOCK-DO       (make_nodeid 1 2 9 1))
-    (let TE-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
-    (let TE-BLOCK-LET      (make_nodeid 1 2 9 3))
+    (let TE-BLOCK-DO       (bp "do"))
+    (let TE-BLOCK-SEQUENCE (bp "sequence"))
+    (let TE-BLOCK-LET      (bp "let"))
 
     (defn te-let (key value)
         (intern_node TE-BLOCK-LET

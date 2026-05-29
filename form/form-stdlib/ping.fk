@@ -36,7 +36,7 @@
 ;; recognizes "this is a heartbeat, not a content question".
 ;; Pkg/level/type match channel-query's user-channel range; inst 1720
 ;; sits just past the channel-query Blueprint family (1710..1716).
-(let PING-SELF (make_nodeid 1 2 99 1720))
+(let PING-SELF (bp "PING-SELF"))
 
 ;; --- Constructors -------------------------------------------------
 

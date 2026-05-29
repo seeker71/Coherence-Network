@@ -8,10 +8,10 @@
 ; viewable surface NOW so the registry pattern is honest end-to-end.
 
 (do
-    (let IMG-OBJ  (make_nodeid 1 2 99 10))
-    (let IMG-ARR  (make_nodeid 1 2 99 11))
-    (let IMG-PAIR (make_nodeid 1 2 99 12))
-    (let IMG-NULL (make_nodeid 1 2 99 13))
+    (let IMG-OBJ  (bp "IMG-OBJ"))
+    (let IMG-ARR  (bp "IMG-ARR"))
+    (let IMG-PAIR (bp "IMG-PAIR"))
+    (let IMG-NULL (bp "IMG-NULL"))
 
     (defn img-cat (xs)
         (if (nil? xs) ""

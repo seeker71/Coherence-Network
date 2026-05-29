@@ -57,6 +57,10 @@ CHANGED_BP=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
 if [ -n "$CHANGED_BP" ]; then
     echo "[substrate] Blueprint registry changed — projecting names into NamedCells:"
     python3 scripts/sync_blueprints_to_substrate.py
+    # Keep the kernel-resident bp tables in lockstep with the registry so the
+    # universal (bp "name") resolver never drifts from its source.
+    echo "[substrate] regenerating kernel bp tables:"
+    python3 scripts/gen_bp_table.py
 fi
 
 # Substrate vocabulary (category.py enums) → substrate NamedCells. When the

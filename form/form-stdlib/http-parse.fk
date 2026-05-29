@@ -48,10 +48,10 @@
 ;; --- Blueprints (substrate-resident NodeIDs) -----------------------
 ;; pkg/level/type chosen in the user-channel range (pkg=1, level=2,
 ;; type=99); inst slots 1750..1759 reserve the http-parse family.
-(let HTTP-REQUEST       (make_nodeid 1 2 99 1750))
-(let HTTP-HEADERS       (make_nodeid 1 2 99 1751))
-(let HTTP-HEADER        (make_nodeid 1 2 99 1752))
-(let HTTP-PARSE-ERROR   (make_nodeid 1 2 99 1753))
+(let HTTP-REQUEST       (bp "HTTP-REQUEST"))
+(let HTTP-HEADERS       (bp "HTTP-HEADERS"))
+(let HTTP-HEADER        (bp "HTTP-HEADER"))
+(let HTTP-PARSE-ERROR   (bp "HTTP-PARSE-ERROR"))
 
 ;; --- Small helpers -------------------------------------------------
 

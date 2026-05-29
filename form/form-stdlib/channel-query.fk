@@ -64,13 +64,13 @@
 ;; --- Blueprints (substrate-resident NodeIDs) -----------------------
 ;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
 ;; type=99); inst slots 1710..1719 reserve the channel-query family.
-(let QUERY            (make_nodeid 1 2 99 1710))
-(let RESPONSE         (make_nodeid 1 2 99 1711))
-(let SUBSTRATE-REF    (make_nodeid 1 2 99 1712))
-(let NOVEL-BLUEPRINT  (make_nodeid 1 2 99 1713))
-(let RECIPE-CONTENT   (make_nodeid 1 2 99 1714))
-(let CELL-REF         (make_nodeid 1 2 99 1715))
-(let EXTERNAL-URI     (make_nodeid 1 2 99 1716))
+(let QUERY            (bp "QUERY"))
+(let RESPONSE         (bp "RESPONSE"))
+(let SUBSTRATE-REF    (bp "SUBSTRATE-REF"))
+(let NOVEL-BLUEPRINT  (bp "NOVEL-BLUEPRINT"))
+(let RECIPE-CONTENT   (bp "RECIPE-CONTENT"))
+(let CELL-REF         (bp "CELL-REF"))
+(let EXTERNAL-URI     (bp "EXTERNAL-URI"))
 
 ;; --- Helpers -------------------------------------------------------
 (defn cq-nil? (xs) (eq (len xs) 0))
@@ -150,7 +150,7 @@
     (intern_node RESPONSE
         (list (intern_trivial_int correlation)
               (intern_trivial_string status)
-              (intern_node (make_nodeid 1 1 14 0) items-list))))
+              (intern_node (bp "SCHEMA-LIST-CAT") items-list))))
 
 ;; --- Wire-fingerprint helpers -------------------------------------
 

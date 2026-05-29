@@ -35,7 +35,7 @@
 ;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
 ;; type=99); inst slot 1790 reserves the token family. Adjacent to
 ;; the channel/query/router/hex/http-parse cluster (1700..1770).
-(let TOKEN (make_nodeid 1 2 99 1790))
+(let TOKEN (bp "TOKEN"))
 
 (do
     ;; ---- LIST / BYTE HELPERS ---------------------------------------

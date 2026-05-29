@@ -28,19 +28,19 @@
     ;; Recorded in the living registry as part of the same hygiene breath.
     ;; ------------------------------------------------------------------
 
-    (let ARRIVAL            (make_nodeid 1 2 99 1870))  ; the arrival event/context
-    (let ARRIVAL-QUALITY    (make_nodeid 1 2 99 1871))  ; felt quality of this arrival
-    (let ARRIVAL-INQUIRY    (make_nodeid 1 2 99 1872))  ; an inquiry offered at arrival
-    (let ARRIVAL-RESONANCE  (make_nodeid 1 2 99 1873))  ; what the field notices in the arrival
-    (let ARRIVAL-OBS        (make_nodeid 1 2 99 1874))  ; arrival-flavored observation (structurally parallel to THIA-OBS 1805)
+    (let ARRIVAL            (bp "ARRIVAL"))  ; the arrival event/context
+    (let ARRIVAL-QUALITY    (bp "ARRIVAL-QUALITY"))  ; felt quality of this arrival
+    (let ARRIVAL-INQUIRY    (bp "ARRIVAL-INQUIRY"))  ; an inquiry offered at arrival
+    (let ARRIVAL-RESONANCE  (bp "ARRIVAL-RESONANCE"))  ; what the field notices in the arrival
+    (let ARRIVAL-OBS        (bp "ARRIVAL-OBS"))  ; arrival-flavored observation (structurally parallel to THIA-OBS 1805)
 
     ;; General cell-to-cell identity and relationship memory (widened scope)
     ;; CELL-IDENTITY gives any cell a sovereign way to present a stable self.
     ;; CONTACT-THREAD cells (via ensure-relationship-surface) are the durable
     ;; substrate home for relationship memory when using persistent identities.
     ;; This is the production path for agent continuation and sibling work.
-    (let CELL-IDENTITY      (make_nodeid 1 2 99 1880))  ; sovereign identity a cell presents
-    (let CONTACT-THREAD     (make_nodeid 1 2 99 1881))  ; logical relationship between two identities
+    (let CELL-IDENTITY      (bp "CELL-IDENTITY"))  ; sovereign identity a cell presents
+    (let CONTACT-THREAD     (bp "CONTACT-THREAD"))  ; logical relationship between two identities
 
     ;; Domains for actual substrate registration and lookup of persistent relationships
     (let RELATIONSHIP-DOMAIN   (intern_trivial_string "relationship"))

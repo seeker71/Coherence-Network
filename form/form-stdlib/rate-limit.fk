@@ -56,7 +56,7 @@
 
 (do
     ;; --- Blueprint (substrate-resident NodeID) ---------------------
-    (let BUCKET (make_nodeid 1 2 99 1840))
+    (let BUCKET (bp "BUCKET"))
 
     ;; --- LOCAL HELPERS ---------------------------------------------
     (defn rl-min2 (a b) (if (lt a b) a b))
