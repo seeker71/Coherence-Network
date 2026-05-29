@@ -132,9 +132,9 @@
     ;;
     ;; A VISUAL node has two children: caption + prompt.
 
-    (let CONCEPT-V1 (make_nodeid 1 2 99 951))
-    (let CONCEPT-VISUALS (make_nodeid 1 2 99 952))
-    (let CONCEPT-VISUAL (make_nodeid 1 2 99 953))
+    (let CONCEPT-V1 (bp "CONCEPT-V1"))
+    (let CONCEPT-VISUALS (bp "CONCEPT-VISUALS"))
+    (let CONCEPT-VISUAL (bp "CONCEPT-VISUAL"))
 
     (defn concept-intern-refs (refs acc)
         (if (eq (len refs) 0) (json-reverse-acc acc)

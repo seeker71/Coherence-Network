@@ -57,10 +57,10 @@
 ;   1912  XPATH-STEP       — parsed step descriptor.
 ;   1913  XPATH-PREDICATE  — parsed predicate descriptor.
 
-(let XPATH-RESULT    (make_nodeid 1 2 99 1910))
-(let XPATH-NOT-FOUND (make_nodeid 1 2 99 1911))
-(let XPATH-STEP      (make_nodeid 1 2 99 1912))
-(let XPATH-PREDICATE (make_nodeid 1 2 99 1913))
+(let XPATH-RESULT    (bp "XPATH-RESULT"))
+(let XPATH-NOT-FOUND (bp "XPATH-NOT-FOUND"))
+(let XPATH-STEP      (bp "XPATH-STEP"))
+(let XPATH-PREDICATE (bp "XPATH-PREDICATE"))
 
 ;; --- list helpers -------------------------------------------------
 (defn xp-nil? (xs) (eq (len xs) 0))

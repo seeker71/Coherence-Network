@@ -17,12 +17,12 @@
 ; lifetimes, macros, attributes, derive, async/await, match expressions.
 
 (do
-    (let RS-FILE        (make_nodeid 1 2 99 60))
-    (let RS-USE         (make_nodeid 1 2 99 61))   ; (path)
-    (let RS-MOD         (make_nodeid 1 2 99 62))   ; (name)
-    (let RS-FN-DECL     (make_nodeid 1 2 99 63))   ; (name, params)
-    (let RS-STRUCT-DECL (make_nodeid 1 2 99 64))   ; (name)
-    (let RS-IMPL-BLOCK  (make_nodeid 1 2 99 65))   ; (name)
+    (let RS-FILE        (bp "RS-FILE"))
+    (let RS-USE         (bp "RS-USE"))   ; (path)
+    (let RS-MOD         (bp "RS-MOD"))   ; (name)
+    (let RS-FN-DECL     (bp "RS-FN-DECL"))   ; (name, params)
+    (let RS-STRUCT-DECL (bp "RS-STRUCT-DECL"))   ; (name)
+    (let RS-IMPL-BLOCK  (bp "RS-IMPL-BLOCK"))   ; (name)
 
     ;; --- shared line helpers (parallel to python.fk / typescript.fk) ---
 

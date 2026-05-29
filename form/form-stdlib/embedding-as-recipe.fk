@@ -25,7 +25,7 @@
     ;; family as CONCEPT-V1 (1, 2, 99, 951): package=BDomain.SUBSTRATE,
     ;; level=Recipe, type=99 (composite-leaf), instance=1100 (embedding).
 
-    (defn EMBEDDING_BLUEPRINT () (make_nodeid 1 2 99 1100))
+    (defn EMBEDDING_BLUEPRINT () (bp "EMBEDDING_BLUEPRINT"))
 
     ;; --- intern a vector as an embedding Recipe --------------------
     ;;

@@ -43,8 +43,8 @@
 
 (do
     ;; ---- SENTINELS ------------------------------------------------
-    (let UUID             (make_nodeid 1 2 99 1870))
-    (let UUID-PARSE-ERROR (make_nodeid 1 2 99 1871))
+    (let UUID             (bp "UUID"))
+    (let UUID-PARSE-ERROR (bp "UUID-PARSE-ERROR"))
 
     ;; ---- LIST UTILITIES -------------------------------------------
     (defn uuid-nil? (xs) (eq (len xs) 0))

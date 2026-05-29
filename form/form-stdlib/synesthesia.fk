@@ -22,11 +22,11 @@
 ;   same-shape?     node_eq on shape-of of both — cross-domain equivalence
 
 ;; Two distinct domain Blueprints — different (pkg, level, type, instance).
-(let AUDIO-TRIAD     (make_nodeid 1 2 99 1200))
-(let IMAGE-TRIANGLE  (make_nodeid 1 2 99 1201))
+(let AUDIO-TRIAD     (bp "AUDIO-TRIAD"))
+(let IMAGE-TRIANGLE  (bp "IMAGE-TRIANGLE"))
 
 ;; One shared SHAPE Blueprint — abstracts a 3-component ratio across domains.
-(let RATIO-3         (make_nodeid 1 2 99 1202))
+(let RATIO-3         (bp "RATIO-3"))
 
 ;; ratio-recipe — content-addressed under RATIO-3. Same (a,b,c) returns the
 ;; same NodeID whether called from the audio or image side. This IS where

@@ -33,15 +33,15 @@
     ;; Substrate Blueprints for the emitted Recipes
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let PYC-MODULE       (make_nodeid 1 2 99 130))
-    (let PYC-IMPORT       (make_nodeid 1 2 99 131))   ; (module, name)
-    (let PYC-FROM-IMPORT  (make_nodeid 1 2 99 132))
-    (let PYC-DEF          (make_nodeid 1 2 99 133))   ; (name)
-    (let PYC-CLASS        (make_nodeid 1 2 99 134))   ; (name)
-    (let PYC-DOCSTRING    (make_nodeid 1 2 99 135))   ; (text)
-    (let PYC-NAME-LIST    (make_nodeid 1 2 99 136))   ; list of name strings
-    (let PYC-DEF-FULL     (make_nodeid 1 2 99 137))   ; (name, params, ret-type)
-    (let PYC-PARAM-LIST   (make_nodeid 1 2 99 138))   ; opaque text for now
+    (let PYC-MODULE       (bp "PYC-MODULE"))
+    (let PYC-IMPORT       (bp "PYC-IMPORT"))   ; (module, name)
+    (let PYC-FROM-IMPORT  (bp "PYC-FROM-IMPORT"))
+    (let PYC-DEF          (bp "PYC-DEF"))   ; (name)
+    (let PYC-CLASS        (bp "PYC-CLASS"))   ; (name)
+    (let PYC-DOCSTRING    (bp "PYC-DOCSTRING"))   ; (text)
+    (let PYC-NAME-LIST    (bp "PYC-NAME-LIST"))   ; list of name strings
+    (let PYC-DEF-FULL     (bp "PYC-DEF-FULL"))   ; (name, params, ret-type)
+    (let PYC-PARAM-LIST   (bp "PYC-PARAM-LIST"))   ; opaque text for now
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Character-class helpers (codepoints)

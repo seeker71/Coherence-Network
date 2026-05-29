@@ -26,6 +26,7 @@ use std::process::Command;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
+mod bp_table;
 mod formats;
 mod inductive;
 mod quotient;
@@ -2698,6 +2699,28 @@ impl Kernel {
                 level: args[1].as_int() as u32,
                 ty: args[2].as_int() as u32,
                 inst: args[3].as_int() as u32,
+            })
+        });
+        // bp — resolve a Blueprint name to its NodeID via the generated
+        // BP_ENTRIES table. Unknown name → undefined node (1,2,0,0).
+        // Sibling parity with form-kernel-go + form-kernel-ts.
+        self.register_native("bp", cat_witness(), |_, _, args| {
+            let name = args[0].as_str();
+            for (entry_name, [pkg, level, ty, inst]) in crate::bp_table::BP_ENTRIES {
+                if *entry_name == name {
+                    return Value::Nid(NodeID {
+                        pkg: *pkg,
+                        level: *level,
+                        ty: *ty,
+                        inst: *inst,
+                    });
+                }
+            }
+            Value::Nid(NodeID {
+                pkg: 1,
+                level: 2,
+                ty: 0,
+                inst: 0,
             })
         });
         self.register_native("intern_trivial_int", cat_witness(), |k, _, args| {

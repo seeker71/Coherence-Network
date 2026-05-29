@@ -7,10 +7,10 @@
 ; gradient can flow through.
 
 (do
-    (let MDL-OBJ  (make_nodeid 1 2 99 10))
-    (let MDL-ARR  (make_nodeid 1 2 99 11))
-    (let MDL-PAIR (make_nodeid 1 2 99 12))
-    (let MDL-NULL (make_nodeid 1 2 99 13))
+    (let MDL-OBJ  (bp "MDL-OBJ"))
+    (let MDL-ARR  (bp "MDL-ARR"))
+    (let MDL-PAIR (bp "MDL-PAIR"))
+    (let MDL-NULL (bp "MDL-NULL"))
 
     (defn mdl-comma-join (xs)
         (if (nil? xs) ""

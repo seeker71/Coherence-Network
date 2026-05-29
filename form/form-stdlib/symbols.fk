@@ -29,9 +29,9 @@
 ;
 ; preludes: (none — uses only kernel primitives)
 
-(let SYMBOL-BIND      (make_nodeid 1 2 99 1730))
-(let SYMBOL-TABLE     (make_nodeid 1 2 99 1731))
-(let SYMBOL-NOT-FOUND (make_nodeid 1 2 99 1732))
+(let SYMBOL-BIND      (bp "SYMBOL-BIND"))
+(let SYMBOL-TABLE     (bp "SYMBOL-TABLE"))
+(let SYMBOL-NOT-FOUND (bp "SYMBOL-NOT-FOUND"))
 
 ;; --- helpers ------------------------------------------------------
 

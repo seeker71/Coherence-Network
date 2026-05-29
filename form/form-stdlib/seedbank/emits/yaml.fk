@@ -12,10 +12,10 @@
 ; categories, this file gains additional templates.
 
 (do
-    (let Y-OBJECT (make_nodeid 1 2 99 10))
-    (let Y-ARRAY  (make_nodeid 1 2 99 11))
-    (let Y-PAIR   (make_nodeid 1 2 99 12))
-    (let Y-NULL   (make_nodeid 1 2 99 13))
+    (let Y-OBJECT (bp "Y-OBJECT"))
+    (let Y-ARRAY  (bp "Y-ARRAY"))
+    (let Y-PAIR   (bp "Y-PAIR"))
+    (let Y-NULL   (bp "Y-NULL"))
 
     (defn yaml-emit-null (_cs) "null")
 

@@ -56,9 +56,9 @@
 ; runs because sessions are added on connect and removed when the
 ; client signs off (a future session-table-drop).
 
-(let SESSION           (make_nodeid 1 2 99 1860))
-(let SESSION-TABLE     (make_nodeid 1 2 99 1861))
-(let SESSION-NOT-FOUND (make_nodeid 1 2 99 1862))
+(let SESSION           (bp "SESSION"))
+(let SESSION-TABLE     (bp "SESSION-TABLE"))
+(let SESSION-NOT-FOUND (bp "SESSION-NOT-FOUND"))
 
 (do
     ;; --- LOCAL HELPERS ----------------------------------------------

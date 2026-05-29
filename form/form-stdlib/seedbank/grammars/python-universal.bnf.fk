@@ -17,17 +17,17 @@
 ;                                                           → walk_recipe
 
 (do
-    (let U-FNDEF     (make_nodeid 1 2 31 1))
-    (let U-FNCALL    (make_nodeid 1 2 32 1))
-    (let U-RETURN    (make_nodeid 1 2 18 1))
-    (let U-ASSIGN    (make_nodeid 1 2 16 1))
-    (let U-MATH-PLUS (make_nodeid 1 2 12 1))
-    (let U-MATH-MINUS (make_nodeid 1 2 12 2))
-    (let U-MATH-MUL  (make_nodeid 1 2 12 3))
-    (let U-MATH-DIV  (make_nodeid 1 2 12 4))
-    (let U-MATH-MOD  (make_nodeid 1 2 12 5))
-    (let U-IDENT     (make_nodeid 1 2 33 1))
-    (let U-SEQ       (make_nodeid 1 2 9 2))
+    (let U-FNDEF     (bp "fndef"))
+    (let U-FNCALL    (bp "fncall"))
+    (let U-RETURN    (bp "U-RETURN"))
+    (let U-ASSIGN    (bp "U-ASSIGN"))
+    (let U-MATH-PLUS (bp "add"))
+    (let U-MATH-MINUS (bp "sub"))
+    (let U-MATH-MUL  (bp "mul"))
+    (let U-MATH-DIV  (bp "div"))
+    (let U-MATH-MOD  (bp "mod"))
+    (let U-IDENT     (bp "ident"))
+    (let U-SEQ       (bp "sequence"))
 
     (defn pu-cap (caps name)
         (if (nil? caps) ""

@@ -31,13 +31,13 @@
     ;; --- universal python-source category NodeIDs -----------------
     ;; Numeric type=99 doc-band, parallel to markdown/json/yaml/form.
 
-    (let PY-MODULE      (make_nodeid 1 2 99 40))   ; root module: sequence of statements
-    (let PY-IMPORT      (make_nodeid 1 2 99 41))   ; (module-name, asname)
-    (let PY-FROM-IMPORT (make_nodeid 1 2 99 42))   ; (module, [names])
-    (let PY-FUNCTION-DEF (make_nodeid 1 2 99 43))  ; (name, params)
-    (let PY-ASSIGN      (make_nodeid 1 2 99 44))   ; (target, value)
-    (let PY-IDENT       (make_nodeid 1 2 99 45))   ; an identifier reference
-    (let PY-NAME-PAIR   (make_nodeid 1 2 99 46))   ; (name, asname) for import lists
+    (let PY-MODULE      (bp "PY-MODULE"))   ; root module: sequence of statements
+    (let PY-IMPORT      (bp "PY-IMPORT"))   ; (module-name, asname)
+    (let PY-FROM-IMPORT (bp "PY-FROM-IMPORT"))   ; (module, [names])
+    (let PY-FUNCTION-DEF (bp "PY-FUNCTION-DEF"))  ; (name, params)
+    (let PY-ASSIGN      (bp "PY-ASSIGN"))   ; (target, value)
+    (let PY-IDENT       (bp "PY-IDENT"))   ; an identifier reference
+    (let PY-NAME-PAIR   (bp "PY-NAME-PAIR"))   ; (name, asname) for import lists
 
     ;; --- line helpers (shared shape with markdown.fk / yaml.fk) ---
 

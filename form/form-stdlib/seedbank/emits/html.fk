@@ -5,14 +5,14 @@
 ; is XML's surface cousin; templates are mostly tag-renames.
 
 (do
-    (let HTML-OBJ  (make_nodeid 1 2 99 10))
-    (let HTML-ARR  (make_nodeid 1 2 99 11))
-    (let HTML-PAIR (make_nodeid 1 2 99 12))
-    (let HTML-NULL (make_nodeid 1 2 99 13))
-    (let HTML-DOC      (make_nodeid 1 2 99 1))
-    (let HTML-HEADING  (make_nodeid 1 2 99 2))
-    (let HTML-PARA     (make_nodeid 1 2 99 3))
-    (let HTML-CODE     (make_nodeid 1 2 99 4))
+    (let HTML-OBJ  (bp "HTML-OBJ"))
+    (let HTML-ARR  (bp "HTML-ARR"))
+    (let HTML-PAIR (bp "HTML-PAIR"))
+    (let HTML-NULL (bp "HTML-NULL"))
+    (let HTML-DOC      (bp "HTML-DOC"))
+    (let HTML-HEADING  (bp "HTML-HEADING"))
+    (let HTML-PARA     (bp "HTML-PARA"))
+    (let HTML-CODE     (bp "HTML-CODE"))
 
     (defn html-cat (xs)
         (if (nil? xs) ""

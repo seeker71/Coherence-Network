@@ -95,7 +95,7 @@
     ;; body whether the loop made progress at the budget the caller
     ;; cares about.
 
-    (let AUTO-EXPERIMENT (make_nodeid 1 2 99 1600))
+    (let AUTO-EXPERIMENT (bp "AUTO-EXPERIMENT"))
 
     ;; pareto-knee returns either a Recipe (with PARETO-CANDIDATE
     ;; children) or the empty list. We can't use (len knee) to

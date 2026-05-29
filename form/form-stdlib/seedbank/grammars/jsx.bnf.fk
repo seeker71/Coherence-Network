@@ -6,8 +6,8 @@
 ; SLASH all tokenized by the outer's config).
 
 (do
-    (let JSX-ELEMENT (make_nodeid 1 2 99 110))
-    (let JSX-TEXT    (make_nodeid 1 2 99 111))
+    (let JSX-ELEMENT (bp "JSX-ELEMENT"))
+    (let JSX-TEXT    (bp "JSX-TEXT"))
 
     (defn jsx-emit-element (caps)
         (intern_node JSX-ELEMENT

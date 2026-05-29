@@ -50,8 +50,8 @@
 
 (do
     ;; --- Blueprints (substrate-resident NodeIDs) --------------------
-    (let AUDIT-ENTRY (make_nodeid 1 2 99 1770))
-    (let AUDIT-LOG   (make_nodeid 1 2 99 1771))
+    (let AUDIT-ENTRY (bp "AUDIT-ENTRY"))
+    (let AUDIT-LOG   (bp "AUDIT-LOG"))
 
     ;; --- LOCAL BYTE / LIST HELPERS ----------------------------------
     ;; sha256.fk already defines nil?, append-1, append-list, nth-rec
