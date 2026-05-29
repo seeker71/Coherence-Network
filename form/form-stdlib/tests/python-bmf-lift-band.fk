@@ -275,8 +275,20 @@ xs[0] + xs[1] + xs[2]
 "))
     (let cell19-score (if (eq cell19-value 63) 10000 0))
 
+    ;; ---- cell 20: power operator ** — CPython:
+    ;;   a = 2 ** 10       → 1024
+    ;;   b = 3 ** 0        → 1     (exp 0 → 1)
+    ;;   c = 2 ** 3 + 5 ** 2 → 8 + 25 = 33  (precedence: ** binds tightest)
+    ;;   a + b + c = 1024 + 1 + 33 = 1058
+    (let cell20-value (py-bmf-run-text "a = 2 ** 10
+b = 3 ** 0
+c = 2 ** 3 + 5 ** 2
+a + b + c
+"))
+    (let cell20-score (if (eq cell20-value 1058) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
-    ;; 18 cells through range = 135000; + 10000 (cell 19 comprehension) = 145000.
+    ;; 19 cells through comprehension = 145000; + 10000 (cell 20 power) = 155000.
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
@@ -284,4 +296,4 @@ xs[0] + xs[1] + xs[2]
                cell10-score cell11-score cell12-score
                cell13-score cell14-score cell15-score
                cell16-score cell17-score cell18-score
-               cell19-score)))
+               cell19-score cell20-score)))
