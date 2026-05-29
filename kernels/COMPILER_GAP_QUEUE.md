@@ -79,11 +79,13 @@ IDENT, IF, INT, LIST, MODULE, RANGE(builtin), RETURN, STRING, SUBSCRIPT, WHILE
 PASS, SUBSCRIPT, WHILE, unary `-`/`not`, boolean `and`/`or`
 (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via dedicated lifters)
 **Band aggregate:** 155000 (20 cells)
-**Batch 2 status:** comprehensions DONE (#2186), power `**` DONE (#2188);
-f-strings BLOCKED (grammar statement-splitter — see below); **class +
-try/except are REQUIRED and must desugar onto the kernel's native BML arms**
-(TRY, EXCEPTION, METHOD, DELEGATE, COMMON exist in the kernel — the
-python-bmf interpreter just doesn't route to them yet); decorators remain.
+**Batch 2 status:** comprehensions DONE (#2186), power `**` DONE (#2188, native
+in #2190); f-strings BLOCKED (grammar statement-splitter — see below); **class
++ try/except are REQUIRED, kernel-native** (the whole Python-BMF compiler is
+Form-on-kernel — no Python runtime). class is reachable now on existing
+METHOD/ACCESS arms; try/catch needs a kernel exception arm added to Go/Rust/TS
+first (form-engine.form declares EXCEPTION/TRY; the native kernels don't have
+them yet). decorators remain. See the dedicated section below.
 
 **Correction (per Urs, 2026-05-29):**
 - `**` shipped as a recursive Form helper (`py-pow`) in #2188 — moved to a
@@ -124,7 +126,7 @@ Ranked by frequency across `api/app/services/substrate/*.py`:
 | **statement-grouping: trailing f-string stmt dropped** | — | **PREREQUISITE for f-strings.** `python-parse-module-tree-object` drops a statement whose first token is a bare `py-fstring`: `a=2; b=3; f"…"` → only 2 statements (the f-string vanishes). Fix lives in `form-stdlib/grammars/python-bmf.fk` statement grouping — it must recognize a leading `py-fstring` token as starting an expression-statement. Once fixed, the f-string lift+eval below drops straight in. |
 | **`class` + `@dataclass`** | `form.py` 50, `category.py` 34 | plain-class eval exists; dataclass + dunders are the real work |
 | **decorators** | `form.py` 50 | lift wraps the decorated def in a call chain |
-| **`try`/`except`** | `form_runtime.py` 12 | needs an exception-stack data shape in eval |
+| **`try`/`except`** | `form_runtime.py` 12 | needs a **kernel-native** exception/unwind arm (Go/Rust/TS) + PY-BMF-TRY/RAISE arms in `python-bmf-eval.fk`. Not Python. See section below. |
 | ~~**comprehensions**~~ | `form_runtime.py` 10 | **DONE #2186** — `[elem for var in iter]` → PY-BMF-COMP; lift peeks for `for` after first elem, eval maps elem over iter binding var per-item. Filter clauses (`if`) + nested fors pending. |
 | **`from … import` as module** | 28 files | needs module-system semantics; ORM calls also need the Form persistence runtime, not SQLAlchemy |
 
@@ -161,42 +163,49 @@ it in after the grammar fix, rather than re-deriving it:
   string, not an int). Format specs (`{x:.2f}`) and `{{`/`}}` escapes are a
   further breath beyond the basic round-trip.
 
-### class + try/catch — REQUIRED (Urs); the precise path via BML
+### class + try/catch — REQUIRED (Urs); the precise path, kernel-native
 
-These are not optional. BML *does* have try/catch and an object system — but
-a survey (2026-05-29) shows **where** that machinery lives, which determines
-the work:
+**Architecture, stated correctly:** the Python-BMF compiler is *Form*, not
+Python. `grammars/python-bmf.fk` (scan), `python-bmf-lift.fk` (lift),
+`python-bmf-eval.fk` (`py-eval`) are `.fk` files the **native kernels**
+(Go/Rust/TS) walk. Source → scan → lift → eval runs entirely on
+`form-kernel-{go,rust,ts}` with **zero Python** (proven: `def f(n): return
+n*n; f(7)+2**5` → 81 through both go and rust binaries, no python process).
+The goal is and stays: **no Python runtime in the path.**
 
-- **Python `form_runtime.py`** — full BML semantics: `RaiseSignal`,
-  `FailSignal`/`StopSignal`, `RaiseExpr`, try/catch. This is the meta-circular
-  reference.
-- **`docs/coherence-substrate/form-engine.form`** — declares the arms:
+`api/app/services/substrate/form_runtime.py` is the **legacy bootstrap**
+(composts at Breath 7) — NOT a reference to port from. The references for
+BML semantics are `form-engine.form` (Form, kernel-walked) and the kernels'
+own native arms.
+
+Where the BML machinery lives (2026-05-29 survey), which sets the work:
+
+- **`docs/coherence-substrate/form-engine.form`** (Form) — declares the arms:
   `@1.2.23.1/.2` EXCEPTION (raise/resume), `@1.2.30.1` TRY_CATCH (today only
-  evaluates the body — `ev(n.children[0])` — the catch wiring is a stub),
+  evaluates the body — `ev(n.children[0])` — catch wiring is a stub),
   METHOD (27), DELEGATE (24), COMMON (26).
 - **The native sibling kernels (Go/Rust/TS)** — have **15 arms** (MATH,
   COMPARE, BLOCK, COND, METHOD, ACCESS, CALL, WITNESS, TRANSMUTE, FNDEF,
-  FNCALL, IDENT, LIST, LOGIC, UNDEFINED). They have **METHOD but NOT TRY,
-  EXCEPTION, DELEGATE, or COMMON**, and no exception-unwinding — a real error
-  (`1/0`) is a hard kernel panic, not a catchable signal.
+  FNCALL, IDENT, LIST, LOGIC, UNDEFINED). METHOD exists; **TRY, EXCEPTION,
+  DELEGATE, COMMON do not**, and there is no exception-unwinding — a real
+  error (`1/0`) is a hard kernel panic, not a catchable signal.
 
-The python-bmf interpreter (`py-eval`) runs *on the native kernel*. So:
+`py-eval` is Form running on the kernel. So:
 
-- **try/catch** needs, in order: (1) a kernel-native exception/unwind
-  mechanism (the deepest piece — 3-language: a catchable error signal +
-  `raise`/`try` arms or a native try-call primitive), then (2) PY-BMF-TRY /
-  PY-BMF-RAISE interpreter arms that route to it. Statement-grouping already
-  emits `try`/`except` as adjacent sibling statements (verified: kind "try"
-  with body-child, kind "except" with handler-child), so the lift can pair
-  them once the runtime exists.
-- **class** needs an object representation in the interpreter: an instance is
-  a record (tagged alist) of attributes; `class C: def m(self):…` lifts to a
-  constructor + lifted `C__m` methods; `obj.method()` resolves via the
-  kernel's METHOD arm (which exists) or an interpreter dispatch over the
-  record's class tag. This is buildable on the *existing* METHOD arm + ACCESS
-  arm without new kernel arms — the bigger surface is dataclass/dunders, but
-  a plain class (`__init__` storing attrs, instance methods reading `self.x`)
-  is reachable now. **Class is the more tractable of the two to start.**
+- **try/catch** needs, in order, all kernel-native (no Python): (1) a
+  kernel exception/unwind mechanism across Go/Rust/TS (a catchable error
+  signal + raise/try arms, mirroring form-engine.form's EXCEPTION/TRY arm
+  numbers), then (2) PY-BMF-TRY / PY-BMF-RAISE arms in `python-bmf-eval.fk`
+  routing to it. The lift is ready — statement-grouping already emits
+  `try`/`except` as adjacent siblings (kind "try" + body-child, kind
+  "except" + handler-child).
+- **class** is reachable now, kernel-native, with **no new kernel arm**: an
+  instance is a Form record (tagged alist) of attributes built in
+  `python-bmf-eval.fk`; `class C: def m(self):…` lifts to a constructor +
+  lifted `C__m` methods; `obj.method()` dispatches via the kernel's existing
+  METHOD/ACCESS arms (or a Form-side dispatch over the record's class tag).
+  Plain class (`__init__` storing attrs, methods reading `self.x`) first;
+  dataclass/dunders follow. **Start with class.**
 
 Order recommendation: **class first** (no new kernel arm needed — METHOD +
 ACCESS + record-as-alist), then the **kernel exception mechanism** as its own
