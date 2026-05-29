@@ -335,7 +335,10 @@
         (if (str_eq s "<=") 20
         (if (str_eq s ">")  20
         (if (str_eq s ">=") 20
-            (sub 0 1)))))))))))))))
+        ;; Boolean ops bind looser than comparison (Python: or < and < cmp).
+        (if (str_eq s "and") 15
+        (if (str_eq s "or")  10
+            (sub 0 1)))))))))))))))))
 
     (defn op-is-compare? (s)
         (or (str_eq s "==")
@@ -349,9 +352,16 @@
         (if (nil? tokens) (sub 0 1)
             (do
                 (let t (head tokens))
+                ;; Binary operators are py-op tokens; the boolean operators
+                ;; `and`/`or` arrive as py-keyword tokens but climb in the
+                ;; same loop, so grant them precedence here too.
                 (if (str_eq (tok-kind t) "py-op")
                     (op-prec (tok-value t))
-                    (sub 0 1)))))
+                (if (and (str_eq (tok-kind t) "py-keyword")
+                         (or (str_eq (tok-value t) "and")
+                             (str_eq (tok-value t) "or")))
+                    (op-prec (tok-value t))
+                    (sub 0 1))))))
 
     ;; --- binop climbing ---------------------------------------------
     ;;
@@ -385,6 +395,15 @@
                     ;; has matching MATH-12 and COMPARE-13 arms that dispatch
                     ;; on inst.
                     (let new-left
+                        ;; Boolean ops short-circuit, so they desugar to
+                        ;; PY-BMF-IF (the IF eval arm only walks the taken
+                        ;; branch) — no new eval arm needed:
+                        ;;   a and b → IF(a, b, a)   (a falsy → a, else b)
+                        ;;   a or  b → IF(a, a, b)   (a truthy → a, else b)
+                        (if (str_eq op "and")
+                            (intern_node PY-BMF-IF (list left rhs-recipe left))
+                        (if (str_eq op "or")
+                            (intern_node PY-BMF-IF (list left left rhs-recipe))
                         (if (str_eq op "==")
                             (intern_node COMPARE-EQ    (list left rhs-recipe))
                         (if (str_eq op "!=")
@@ -415,7 +434,7 @@
                             (intern_node PY-BMF-BINOP
                                 (list left
                                       (intern_trivial_string op)
-                                      rhs-recipe)))))))))))))))
+                                      rhs-recipe)))))))))))))))))
                     (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
 
     ;; --- conditional expression ------------------------------------
