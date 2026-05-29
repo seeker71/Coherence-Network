@@ -186,12 +186,25 @@ sign(5) + sign(0 - 3) + 5
     (let lifted-mod (head (node_children lifted-mod-module)))
     (let cell12-score (if (node_eq handbuilt-mod lifted-mod) 10000 0))
 
+    ;; ---- cell 13: augmented assignment — CPython:
+    ;;   x = 10; x += 5; x -= 2; x *= 3; x  → 39 -------------------------
+
+    (let cell13-value (py-bmf-run-text "x = 10
+x += 5
+x -= 2
+x *= 3
+x
+"))
+    (let cell13-score (if (eq cell13-value 39) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000 = 75000
+    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
+    ;;   + 10000 (cell 13 aug-assign) = 85000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
-               cell10-score cell11-score cell12-score)))
+               cell10-score cell11-score cell12-score
+               cell13-score)))
