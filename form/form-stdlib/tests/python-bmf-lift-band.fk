@@ -233,16 +233,34 @@ y + 8 + z + w
 "))
     (let cell16-score (if (eq cell16-value 4) 10000 0))
 
+    ;; ---- cell 17: boolean and/or — CPython value semantics + precedence:
+    ;;   1 and 7            → 7   (and returns the second when first truthy)
+    ;;   0 or 5             → 5   (or returns second when first falsy)
+    ;;   0 and 9            → 0   (short-circuit: returns first, 9 not eval'd)
+    ;;   2 or 9             → 2   (short-circuit: returns first)
+    ;;   precedence: 1 or 0 and 0  → 1 (and binds tighter: 1 or (0 and 0))
+    ;;   sum: 7 + 5 + 0 + 2 + 1 = 15 ------------------------------------
+
+    (let cell17-value (py-bmf-run-text "a = 1 and 7
+b = 0 or 5
+c = 0 and 9
+d = 2 or 9
+e = 1 or 0 and 0
+a + b + c + d + e
+"))
+    (let cell17-score (if (eq cell17-value 15) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
     ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
     ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict)
-    ;;   + 10000 (cell 15 for-loop) + 10000 (cell 16 unary) = 115000
+    ;;   + 10000 (cell 15 for-loop) + 10000 (cell 16 unary)
+    ;;   + 10000 (cell 17 bool-ops) = 125000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
                cell13-score cell14-score cell15-score
-               cell16-score)))
+               cell16-score cell17-score)))
