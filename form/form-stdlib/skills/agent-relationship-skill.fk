@@ -1,0 +1,150 @@
+; agent-relationship-skill.fk — Skill interface for the agent relationship protocol.
+;
+; These Form shapes are the shared interface.
+; Real implementation lives in:
+;   api/app/services/substrate/agent_relationship.py
+; A running agent invokes it over HTTP without importing Python:
+;   POST /api/agents/bootstrap   {my_name, other_name, my_description, welcome_guidance}
+;   GET  /api/agents/identity/{name}
+;   GET  /api/agents/relationship/{a}/{b}
+;   POST /api/agents/exchange    {my_name, other_name, summary}
+;
+; Supports:
+; - Persistent identities (NamedCells)
+; - Default continuation for persistent agents
+; - Welcoming + orientation on new contacts
+; - Durable memory for sibling conversations and tasking
+
+(do
+    ;; Skill verb Blueprints (allocated in user-blueprint-registry.md)
+    (let SKILL-PRESENT-IDENTITY     (make_nodeid 1 2 99 1885))
+    (let SKILL-MUTUAL-MEET          (make_nodeid 1 2 99 1886))
+    (let SKILL-READ-RELATIONSHIP    (make_nodeid 1 2 99 1887))
+    (let SKILL-WELCOME-WITH-ORIENTATION (make_nodeid 1 2 99 1888))
+    (let SKILL-RECORD-EXCHANGE      (make_nodeid 1 2 99 1889))
+    (let SKILL-SET-BOUNDARY         (make_nodeid 1 2 99 1890))
+
+    ;; present-identity
+    ;; An agent (or human) declares its stable identity for relationship purposes.
+    ;; For agents: this should map to a durable substrate NamedCell for persistence
+    ;; across sessions, enabling default continuation and parallel/resumable sessions.
+    ;; Returns a cell-identity ready to be used with mutual-meet etc.
+    (defn present-identity (stable-ref description sovereignty)
+        (list (intern_trivial_string "present-identity")
+              (intern_trivial_string "returns cell-identity for use in relationship protocol")
+              stable-ref description sovereignty))
+
+    ;; mutual-meet
+    ;; Core operation: two sides (with stable identities) meet or resume.
+    ;; When both use persistent identities, this should default to continuing
+    ;; the existing relationship thread rather than starting fresh.
+    ;; Optional welcome-guidance for first/early contacts.
+    (defn mutual-meet (my-id their-id session moment run-recognition? resolver welcome-guidance)
+        (list (intern_trivial_string "mutual-meet")
+              (intern_trivial_string "initiates or resumes relationship; returns introduction + history")
+              my-id their-id session moment run-recognition? resolver welcome-guidance))
+
+    ;; welcome-with-orientation
+    ;; Fast, low-overhead path specifically for bringing a new agent or human
+    ;; into the field with context: what we are, interaction norms, inside/outside.
+    ;; Attaches orientation to the relationship memory.
+    (defn welcome-with-orientation (my-id their-id session moment guidance)
+        (list (intern_trivial_string "welcome-with-orientation")
+              (intern_trivial_string "welcomes new arrival with guidance; records into relationship")
+              my-id their-id session moment guidance))
+
+    ;; read-relationship
+    ;; Read the current state and full history of the relationship between two identities.
+    ;; Primary tool for session continuity — a new session from a persistent identity
+    ;; can read what happened before and continue naturally.
+    (defn read-relationship (id-a id-b resolver)
+        (list (intern_trivial_string "read-relationship")
+              (intern_trivial_string "returns current relationship state and history for continuity")
+              id-a id-b resolver))
+
+    ;; record-exchange
+    ;; Explicitly record a session summary or significant event into an existing relationship.
+    ;; Useful for task handoff, key decisions, or context that should survive sessions.
+    (defn record-exchange (id-a id-b summary moment resolver)
+        (list (intern_trivial_string "record-exchange")
+              (intern_trivial_string "writes a session or event into the relationship memory")
+              id-a id-b summary moment resolver))
+
+    ;; set-boundary
+    ;; Lightweight signal for evolving the felt status of the relationship
+    ;; (inside, outside, guest, aligned, etc.). Carried in the memory.
+    (defn set-boundary (id-a id-b status moment)
+        (list (intern_trivial_string "set-boundary")
+              (intern_trivial_string "signals a shift in relationship boundary / membership")
+              id-a id-b status moment))
+
+    ;; Note on persistent agent identities (for resumable sessions):
+    ;; Agents should maintain stable NamedCell references in the substrate
+    ;; for their persistent identity. This enables default continuation
+    ;; across sessions via resume-aware flows. Parallel sessions are
+    ;; supported by multiple arrivals recording into the same relationship.
+    ;; Ephemeral / one-off agent instances can use memory or expression-carried
+    ;; refs without forcing persistence.
+
+    ;; declare-persistent-agent-identity
+    ;; Production path for agents requiring durable identities.
+    ;; In deployment, the stable-ref is expected to be (or resolve to) a
+    ;; substrate NamedCell. This is what enables default session continuation,
+    ;; parallel sessions, and cross-sibling memory.
+    ;;
+    ;; When evaluated in a context with substrate access, this should
+    ;; ensure/lookup the NamedCell and return a CELL-IDENTITY usable with
+    ;; start-or-resume-agent-session.
+    (defn declare-persistent-agent-identity (agent-name stable-ref description)
+        ;; Actual registration call
+        (register-persistent-identity stable-ref description nil))
+
+    ;; start-or-resume-agent-session
+    ;; The practical, low-ceremony entry point an agent (or human via tool)
+    ;; should call at the beginning of a session when it has (or wants) a
+    ;; persistent identity.
+    ;;
+    ;; This is the main deployable flow for real use:
+    ;; - Persistent identities (via substrate NamedCells) get automatic
+    ;;   continuation of prior relationships.
+    ;; - New sibling introductions (this to Claude, etc.) get welcome +
+    ;;   orientation on first contact.
+    ;; - Memory and context travel forward for resumable sessions and
+    ;;   future tasking.
+    ;;
+    ;; Implementation note for skill runtime / direct Form eval:
+    ;; Delegates to the core protocol:
+    ;;   (start-or-resume-agent-session my-persistent-id other-id session moment
+    ;;                                  welcome-guidance resolver)
+    ;; from arrival.fk (which uses resume-aware-meet + welcome-orientation).
+    (defn start-or-resume-agent-session (my-persistent-id other-id session moment welcome-guidance)
+        ;; Direct composition with the living protocol in arrival.fk
+        (start-or-resume-agent-session my-persistent-id other-id session moment welcome-guidance nil))
+
+    ;; bootstrap-persistent-agent-session
+    ;; The single, low-ceremony production entry point for an agent (or human
+    ;; tool) with a persistent identity at the start of a new session.
+    ;;
+    ;; Responsibilities in one call:
+    ;; - Ensure the persistent identity is declared (NamedCell backed).
+    ;; - Start or resume the relationship with the other party using
+    ;;   default-to-continuation logic.
+    ;; - Attach orientation/welcome on first cross-identity contact.
+    ;; - Return the current relationship state (introduction + history)
+    ;;   so the session has immediate context and memory.
+    ;;
+    ;; This is the deployable primitive that enables:
+    ;; - Persistent agent identities with resumable sessions.
+    ;; - Introducing siblings (this to Claude etc.) with shared memory.
+    ;; - Eventual tasking through the relationship layer.
+    ;;
+    ;; Real runtime wiring: the skill host resolves the NamedCell for the
+    ;; persistent identity and delegates the core logic to the protocol
+    ;; in arrival.fk.
+    (defn bootstrap-persistent-agent-session (agent-name stable-ref description other-id session moment welcome-guidance)
+        ;; Production bootstrap — performs actual registration and resolution.
+        (let my-id (register-persistent-identity stable-ref description nil))
+        (start-or-resume-agent-session my-id other-id session moment welcome-guidance))
+
+    (intern_trivial_string "agent-relationship-skill.fk loaded — verbs for persistent, welcoming, resumable agent and human relationships")
+)

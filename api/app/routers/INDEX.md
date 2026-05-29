@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 134
+**Total files**: 135
 
 | File | Purpose |
 |---|---|
@@ -21,6 +21,7 @@
 | [agent_monitor_helpers.py](agent_monitor_helpers.py) | Monitor and status-report helpers for agent routes. No routes. |
 | [agent_prompt_ab_routes.py](agent_prompt_ab_routes.py) | Agent prompt A/B ROI stats route. |
 | [agent_question_routes.py](agent_question_routes.py) | Agent question routes — sub-agent questions with SSE answers. |
+| [agent_relationship.py](agent_relationship.py) | Agent relationship API — the runtime invocation surface. |
 | [agent_route_telegram_routes.py](agent_route_telegram_routes.py) | Agent route (routing) and Telegram diagnostics routes. |
 | [agent_run_state_routes.py](agent_run_state_routes.py) | Agent run-state and runner registry routes. |
 | [agent_smart_reap_routes.py](agent_smart_reap_routes.py) | Smart-reap routes: diagnose stuck tasks before marking them timed_out. |
