@@ -265,17 +265,23 @@ total
 "))
     (let cell18-score (if (eq cell18-value 19) 10000 0))
 
+    ;; ---- cell 19: list comprehension — CPython:
+    ;;   xs = [i + 1 for i in [10, 20, 30]]   → [11, 21, 31]
+    ;;   xs[0] + xs[1] + xs[2]                → 63
+    ;; Exercises [elem for var in iter]: maps elem-expr (i+1) over the
+    ;; iterable list, binding the loop var per element, then subscripts.
+    (let cell19-value (py-bmf-run-text "xs = [i + 1 for i in [10, 20, 30]]
+xs[0] + xs[1] + xs[2]
+"))
+    (let cell19-score (if (eq cell19-value 63) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
-    ;; Sum when every cell agrees with CPython + Shape B converges for
-    ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
-    ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
-    ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict)
-    ;;   + 10000 (cell 15 for-loop) + 10000 (cell 16 unary)
-    ;;   + 10000 (cell 17 bool-ops) = 125000
+    ;; 18 cells through range = 135000; + 10000 (cell 19 comprehension) = 145000.
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
                cell13-score cell14-score cell15-score
-               cell16-score cell17-score cell18-score)))
+               cell16-score cell17-score cell18-score
+               cell19-score)))
