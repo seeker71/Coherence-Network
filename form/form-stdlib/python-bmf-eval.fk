@@ -268,6 +268,18 @@
                 (py-eval-body-loop body-stmts
                     (py-env-extend env var (head items))))))
 
+    ;; py-comp-build — evaluate a list comprehension `[elem for var in iter]`.
+    ;; Maps elem-recipe over each item of the already-evaluated iter list,
+    ;; binding var in a child env per item (env is NOT mutated outward — a
+    ;; comprehension's loop var doesn't leak, matching Python 3). Returns a
+    ;; Form list of results in source order.
+    (defn py-comp-build (elem-recipe var items env acc)
+        (if (nil? items) (reverse acc)
+            (py-comp-build elem-recipe var (tail items) env
+                (cons (py-eval elem-recipe
+                          (py-env-extend env var (head items)))
+                      acc))))
+
     (defn py-eval-statement (recipe env)
         (do
             (let cat (node_category recipe))
@@ -456,6 +468,13 @@
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.
                 (py-eval-args kids env)
+            (if (node_eq cat PY-BMF-COMP)
+                ;; COMP children: elem-recipe, var-name-leaf, iter-recipe.
+                ;; Evaluate iter to a list, map elem over it binding var.
+                (py-comp-build (nth kids 0)
+                               (node_value (nth kids 1))
+                               (py-eval (nth kids 2) env)
+                               env (empty))
             (if (node_eq cat PY-BMF-DICT)
                 ;; DICT children: (k1 v1 k2 v2 ...) — 2N recipes. Value
                 ;; is a sentinel-tagged alist so SUBSCRIPT can pick the
@@ -490,7 +509,7 @@
                     ;; category number so the next breath knows which
                     ;; arm to add.
                     (trace "py-eval: unimplemented category" cat)
-                    (head (empty))))))))))))))))))))
+                    (head (empty)))))))))))))))))))))
 
     ;; Surface for callers. py-run takes a module recipe and returns its
     ;; value. py-eval and py-eval-statement are exposed so band-tests
