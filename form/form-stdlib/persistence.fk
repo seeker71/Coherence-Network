@@ -1,53 +1,39 @@
-; persistence.fk — Form-native substrate persistence (OSI L6/L7 over channel.fk).
+; persistence.fk — Form-native substrate persistence over channel.fk.
 ;
 ; preludes: form-stdlib/channel.fk
 ;
-; The destination this file walks toward: the native kernel reads AND
-; writes the same content-addressed lattice the Python substrate keeps,
-; with NO Python in the path and NO new kernel native. Breath 5 of
-; form/kernel-roadmap.md and Phase D / Shape 2 of
-; kernels/BOOTSTRAP_COMPOST_MANIFEST.md named three candidate shapes for
-; this; this module is the resolution — and the smallest one that holds:
+; The native kernel already persists the content-addressed lattice.
+; write_form_binary and read_form_binary round-trip a Recipe tree to a
+; .fkb file so it re-collapses, by content-addressing, to the same
+; NodeIDs on every sibling kernel. channel.fk proved this for message
+; logs; cell-registry.fk for an addressing directory. A named-cell store
+; is the same shape: a durable file whose entries are CELL Recipes. So
+; the persistence bridge is a Form module over the file primitives the
+; kernel already carries, not a new native against Postgres.
 ;
-;   The kernel ALREADY persists the lattice. `write_form_binary` /
-;   `read_form_binary` serialize a Recipe tree to a .fkb file and read it
-;   back so it re-collapses, by content-addressing, to the same NodeIDs.
-;   channel.fk proved this for message logs; cell-registry.fk proved it
-;   for an addressing directory. A NAMED-CELL store is the same shape:
-;   a durable file whose entries are CELL Recipes. So the persistence
-;   bridge is NOT a kernel native against Postgres — it is a Form module
-;   over the file primitives the kernel already carries. The store is the
-;   contract; the backend (file today, socket / DB tomorrow) is swappable
-;   underneath without changing a line of caller code.
+; This is the Breath 5 resolution from form/kernel-roadmap.md and the
+; Phase D Shape 2 resolution from kernels/BOOTSTRAP_COMPOST_MANIFEST.md.
+; The store is the contract; the backend is swappable beneath it — .fkb
+; today, a socket to a daemon or a direct DB binding later, with no
+; caller change.
 ;
-; This mirrors the Python substrate's NamedCell exactly:
+; A CELL Recipe mirrors the Python NamedCell, child by child:
+;   child 0 — name, a trivial-string
+;   child 1 — domain, a trivial-string
+;   child 2 — blueprint, the NodeID itself as a structural ref
+;   child 3 — ctor, a composed Recipe seed
 ;
-;   Python NamedCell           CELL Recipe here
-;   ----------------           ----------------
-;   name                       child 0 — trivial-string
-;   domain                     child 1 — trivial-string
-;   blueprint (NodeID)         child 2 — the blueprint NodeID itself
-;                                        (a structural ref, not a slug)
-;   ctor_recipe                child 3 — a COMPOSED Recipe (structure-
-;                                        first: frontmatter fields are
-;                                        (key,value) pairs, never a flat
-;                                        blob — see CLAUDE.md structural
-;                                        composition discipline)
+; Identity is domain plus name — the same UNIQUE domain+name that the
+; Python orm.py enforces on substrate_named_cells. Same name in two
+; domains is two cells; a re-put under one domain+name is last-write-wins.
 ;
-; Identity is (domain, name) — the same UNIQUE(domain, name) the Python
-; orm.py enforces on substrate_named_cells. Two cells with the same name
-; in different domains are different cells; a re-put under the same
-; (domain, name) is last-write-wins (the cell evolves), exactly the
-; UNREGISTER convention cell-registry.fk uses.
-;
-; Depends only on channel.fk (which depends only on kernel natives:
-; read_form_binary, write_form_binary, intern_node, node_children, len,
-; make_nodeid). No host language in the path.
+; Depends only on channel.fk, which depends only on kernel natives:
+; read_form_binary, write_form_binary, intern_node, node_children, len.
 
 ;; --- Blueprint -----------------------------------------------------
-;; CELL-V0 — the one new structural marker this module introduces.
-;; (Lives in the 99-type addressing space alongside CHANNEL-V0=1700,
-;;  CHANNEL-MSG=1701, REGISTRATION=1720, CAPABILITIES=1721.)
+;; CELL-V0 — the one structural marker this module adds. It lives in the
+;; 99-type addressing space beside CHANNEL-V0 1700, CHANNEL-MSG 1701,
+;; REGISTRATION 1720, CAPABILITIES 1721.
 (let CELL-V0 (make_nodeid 1 2 99 1740))
 
 ;; --- helpers -------------------------------------------------------
@@ -60,13 +46,11 @@
 
 ;; --- cell construction ---------------------------------------------
 
-;; (make-cell-recipe name domain blueprint ctor) → CELL Recipe.
-;;   name      — string
-;;   domain    — string
-;;   blueprint — a NodeID (already a node; passed through as child 2)
-;;   ctor      — a composed Recipe NodeID (child 3)
-;; Content-addressed: the same four arguments always intern to the same
-;; CELL NodeID, on every sibling kernel — that IS the dedup.
+;; make-cell-recipe name domain blueprint ctor -> CELL Recipe.
+;; name and domain are strings; blueprint is a NodeID passed through as
+;; child 2; ctor is a composed Recipe NodeID as child 3. Content-
+;; addressed: the same four arguments always intern to the same CELL
+;; NodeID on every sibling kernel, and that is the dedup.
 (defn make-cell-recipe (name domain blueprint ctor)
     (intern_node CELL-V0
         (list (intern_trivial_string name)
@@ -76,28 +60,28 @@
 
 ;; --- cell accessors ------------------------------------------------
 
-;; cell-name reg → string. node_value, not node_inst — the inst slot is
-;; the string-table index, not the content (cell-registry.fk's lesson).
+;; cell-name and cell-domain use node_value, not node_inst — node_inst
+;; returns the string-table index, node_value the content. This is the
+;; lesson cell-registry.fk records on reg-channel-path.
 (defn cell-name (c) (node_value (ps-nth (node_children c) 0)))
 (defn cell-domain (c) (node_value (ps-nth (node_children c) 1)))
-;; cell-blueprint reg → NodeID (the structural pointer, returned as-is).
+;; cell-blueprint -> the NodeID, the structural pointer, returned as-is.
 (defn cell-blueprint (c) (ps-nth (node_children c) 2))
-;; cell-ctor reg → Recipe NodeID (the CTOR seed, walkable / introspectable).
+;; cell-ctor -> the CTOR Recipe NodeID, walkable and introspectable.
 (defn cell-ctor (c) (ps-nth (node_children c) 3))
 
 ;; --- store create --------------------------------------------------
 
-;; cell-store-create — initialize an empty cell store at `path`. A store
-;; IS a channel; cells are its messages. Overwrites any prior file.
+;; cell-store-create — start an empty cell store at path. A store IS a
+;; channel; cells are its messages. Overwrites any prior file.
 (defn cell-store-create (path) (channel-create path))
 
-;; --- write (intern + persist) --------------------------------------
+;; --- write -----------------------------------------------------------
 
-;; (cell-put path name domain blueprint ctor) → cell count after write.
-;; Appends a CELL message to the store. The cell is now durable on disk
-;; and visible to any kernel (or to coh_substrate.py annotate, once the
-;; .fkb↔ORM bridge lands) reading the same path. Re-putting the same
-;; (domain, name) is last-write-wins — lookup returns the most recent.
+;; cell-put path name domain blueprint ctor -> cell count after write.
+;; Appends a CELL message to the store; the cell is now durable on disk.
+;; A re-put under the same domain plus name is last-write-wins — lookup
+;; returns the most recent.
 (defn cell-put (path name domain blueprint ctor)
     (channel-append path
         (channel-message (make-cell-recipe name domain blueprint ctor))))
@@ -109,17 +93,16 @@
         (ps-msgs-to-cells (tail msgs)
             (ps-append acc (list (channel-msg-payload (head msgs)))))))
 
-;; (store-cells path) → list of every CELL Recipe in the store, in
-;; append order. The durable lattice, read back from disk.
+;; store-cells path -> list of every CELL Recipe in the store, in append
+;; order. The durable lattice read back from disk.
 (defn store-cells (path)
     (ps-msgs-to-cells (channel-read path) (list)))
 
-;; --- lookup (the read primitive) -----------------------------------
+;; --- lookup --------------------------------------------------------
 
-;; Fold over cells keeping the LAST match for (domain, name) — so cell
-;; evolution (re-put) resolves to the current shape, honest-absence
-;; otherwise. Returns a 0-or-1-element list (the body's idiom for
-;; optional, matching find-by-capability in cell-registry.fk).
+;; Fold over the cells keeping the LAST match for domain plus name, so a
+;; re-put resolves to the current shape. Returns a 0-or-1-element list,
+;; the body's idiom for optional, matching find-by-capability.
 (defn ps-scan (cells domain name acc)
     (if (ps-nil? cells) acc
         (ps-scan (tail cells) domain name
@@ -128,14 +111,14 @@
                 (list (head cells))
                 acc))))
 
-;; (lookup-cell path domain name) → (list cell) if present, else (list).
-;; The Form-native equivalent of Python lookup_cell(session, domain, name).
+;; lookup-cell path domain name -> the Form-native equivalent of Python
+;; lookup_cell. Returns a list holding the cell if present, else empty.
 (defn lookup-cell (path domain name)
     (ps-scan (store-cells path) domain name (list)))
 
-;; cell-found? — 1 if lookup-cell returned a cell, 0 for honest absence.
+;; cell-found? -> 1 if lookup-cell returned a cell, 0 for honest absence.
 (defn cell-found? (result) (if (eq (len result) 1) 1 0))
-;; cell-of — unwrap a found lookup result to the CELL Recipe.
+;; cell-of -> unwrap a found lookup result to the CELL Recipe.
 (defn cell-of (result) (head result))
 
 0
