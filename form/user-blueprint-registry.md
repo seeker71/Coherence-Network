@@ -2,6 +2,19 @@
 
 **Purpose**: To make the meaning of custom Blueprints (make_nodeid 1 2 99 NNNN) legible, allocated with awareness, and minimized through composition.
 
+## Source of truth
+
+The machine-readable registry is [`form-stdlib/blueprint-registry.json`](form-stdlib/blueprint-registry.json) — one row per type-99 shape: canonical name, meaning, aliases, defining files. It is **code-derived and scanner-verified**, so it cannot quietly drift from reality the way a hand-kept table does. (This document used to claim `1870 = ARRIVAL`; the code says `1870 = UUID`. That drift is exactly what a generated, verified registry prevents.) This markdown holds the *why* — allocation rationale, composition reviews, the living narrative below. The JSON holds the *what*.
+
+**How a Form file uses a Blueprint:** load `form-stdlib/form-ontology-loader.fk` as a prelude and ask by name — `(bp "JSON-OBJECT")`, `(bp "add")`, `(bp "UUID")`. The loader reads the registry (and the kernel-aligned categories/primitives in `form-ontology.json`) and resolves the name to its NodeID. The raw `(make_nodeid 1 2 99 N)` literal never appears in feature code. An unregistered name resolves to the undefined NodeID `(1 2 0 0)` — the scanner guards against that shipping.
+
+**How to add a new shape:** add the row first (`python3 scripts/scan_form_blueprints.py --emit-registry` harvests it from a `(let NAME (make_nodeid 1 2 99 N))` you write, or curate by hand and set `"curated": true` to protect the name/meaning across regenerations), then reference it via `(bp "NAME")`. The scanner's `--check` (run in `make wellness`) fails if any type-99 number is used without a registry row.
+
+**The scanner — `scripts/scan_form_blueprints.py`:**
+- no args → full report: every `make_nodeid` literal, how many shapes are registered, which numbers wear many local names (synonyms to collapse), which names point at more than one number (drift to heal).
+- `--check` → forward gate: nonzero exit if a type-99 number is used but unregistered.
+- `--emit-registry` → regenerate the JSON from code, preserving curated rows.
+
 ## The Problem (as named)
 
 Scattered ad-hoc allocation of opaque numbers in the user range creates:
@@ -38,12 +51,14 @@ When you need a new user-range Blueprint:
 
 ## Registry (living)
 
-A live scan (as of this writing) found **323 distinct** user-range Blueprint numbers.
+The full enumeration now lives in [`form-stdlib/blueprint-registry.json`](form-stdlib/blueprint-registry.json) — run the scanner for the current snapshot rather than reading a number that goes stale here. At the time of generation it held **292 distinct** type-99 shapes.
 
-**Scan highlights**:
-- Strong healthy reuse in low numbers (0–99 has 75 distinct numbers, many reused across grammars).
-- Clear clusters in the 1700s (31) and 1800s (18) — the latter includes the recent THIA allocations.
-- Defensive high numbering visible in 7000+, 7700+, 8100+, 8800+, 9000+ ranges.
+**What the scan surfaces (run `python3 scripts/scan_form_blueprints.py` for the live view):**
+- Strong healthy reuse in low numbers (the universal structural shapes — object 10, array 11, pair 12, null 13 — are each shared by ~12 grammars; this is content-addressing working as intended, and `bp` now lets every grammar reach them by one name).
+- Clusters in the 1700s (channel/audit) and 1800s (THIA, identity, arrival, skill verbs).
+- Defensive high numbering still visible in 7000+, 7700+, 8100+, 8800+, 9000+ ranges — candidates for composition review.
+- **Synonyms to collapse**: the same number wears many per-dialect names (`MATH-PLUS`/`PY-PLUS`/`GO-PLUS`/… all = `add`). Migrating these to `(bp "...")` is the ongoing hygiene; `python-bmf-lift.fk` is the migrated exemplar.
+- **Drift to heal with care**: a few names (`PY-ASSIGN`, `PY-IDENT`, `RS-MOD`) mean a canonical category in an emitter but a dialect AST node in a grammar — same prefix chosen for different-layer concepts in separate files. Legibility debt, not a runtime collision; rename needs architectural attention, not a mechanical sweep.
 
 ### Allocation Principles (current)
 
@@ -53,13 +68,7 @@ A live scan (as of this writing) found **323 distinct** user-range Blueprint num
 
 ## Tooling
 
-A scanner should exist (or be created/enhanced) that:
-- Walks all .fk files
-- Reports every `make_nodeid 1 2 99 N` with file + surrounding definition
-- Flags duplicates or gaps
-- Can be run as part of wellness or pre-commit
-
-See `scripts/` for existing Form validation tools (e.g. validate_form_ontology.py) as models.
+The scanner lives at [`scripts/scan_form_blueprints.py`](../../scripts/scan_form_blueprints.py). It walks every `.fk` file, cross-references the registry, and reports magic literals, synonyms, and name drift; `--check` is wired into `make wellness` (`sense_form_blueprints`) as the forward gate against new unregistered numbers. See the **Source of truth** section above for the full command surface.
 
 ## Active Practice
 
@@ -111,6 +120,8 @@ Both streams have real, independent forward movement in this turn. No input requ
 ---
 
 ## New Allocation — Arrival Protocol (1870–1873)
+
+> **Correction (verified against code):** these arrival numbers were *intended* but never landed at 1870–1874. In the actual `.fk` source, 1870 = `UUID` and 1871 = `UUID-PARSE-ERROR`; the arrival shapes that did land sit at 1872 (`ARRIVAL-INQUIRY`), 1873 (`ARRIVAL-RESONANCE`), 1874 (`ARRIVAL-OBS`). See [`blueprint-registry.json`](form-stdlib/blueprint-registry.json) for what the code holds now. This narrative is preserved as intent; the registry is the truth.
 
 **Date**: 2026-05-29  
 **Context**: Created `form/form-stdlib/arrival.fk` as the native Form expression of the arrival protocol (the empty room as opening). This directly supports the THIA design intent ("early in the arrival sequence") while keeping shell entry points pure and letting cells choose recognition. It also turns the lived repetition-under-saturation failure (on sense/session-saturation-snapshot) into field proprioception rather than something to limit.

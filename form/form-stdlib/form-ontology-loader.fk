@@ -56,6 +56,70 @@
 (let FORM-CATEGORY-TABLE  (fol-build-rows (json-object-get ONTOLOGY-JSON "categories")))
 (let FORM-PRIMITIVE-TABLE (fol-build-rows (json-object-get ONTOLOGY-JSON "primitives")))
 
+;; --- user-space (type-99) registry → name resolver -----------------
+;;
+;; blueprint-registry.json is the single source of truth for shapes the
+;; kernel does not dispatch on (object/array/pair, dialect AST nodes, the
+;; THIA/arrival/identity blocks, …). It replaces the hundreds of scattered
+;; `(let X (make_nodeid 1 2 99 N))` magic-number redeclarations: a row here
+;; names the shape once; `.fk` code asks for it by name via `(bp "name")`.
+;;
+;; Each row contributes its canonical name AND every historical alias as a
+;; row in FORM-USER-TABLE, so a grammar that still says JSON-OBJECT and one
+;; that says HTML-OBJ both resolve to 99.10 through one number.
+
+(let REGISTRY-JSON
+    (read_with_cache "form-stdlib/blueprint-registry.json"
+                     "form-stdlib/.cache/blueprint-registry.fkb"
+                     parse-json))
+
+;; (name 99 inst) row for the canonical name, then one per alias.
+(defn fol-user-rows-for (bp-obj acc)
+    (do
+        (let inst (json-int-value (json-object-get bp-obj "inst")))
+        (let canon (list (json-string-value (json-object-get bp-obj "name")) 99 inst))
+        (let aliases (json-array-elements (json-object-get bp-obj "aliases")))
+        (fol-user-alias-rows aliases inst (cons canon acc))))
+
+(defn fol-user-alias-rows (aliases inst acc)
+    (if (eq (len aliases) 0) acc
+        (fol-user-alias-rows (tail aliases) inst
+            (cons (list (json-string-value (head aliases)) 99 inst) acc))))
+
+(defn fol-user-rows-loop (bps acc)
+    (if (eq (len bps) 0) acc
+        (fol-user-rows-loop (tail bps) (fol-user-rows-for (head bps) acc))))
+
+(let FORM-USER-TABLE
+    (fol-user-rows-loop
+        (json-array-elements (json-object-get REGISTRY-JSON "blueprints"))
+        (empty)))
+
+;; bp — resolve any registered Blueprint name to its NodeID. Searches the
+;; kernel-aligned tables first (categories, primitives), then the user
+;; registry. A row is (name type inst); registered shapes live at pkg=1,
+;; level=2. An unregistered name returns the undefined NodeID (1 2 0 0) —
+;; the scanner is what guards against that ever shipping.
+(defn fol-row->nodeid (row)
+    (make_nodeid 1 2 (head (tail row)) (head (tail (tail row)))))
+
+(defn fol-lookup3 (a b c name)
+    (do
+        (let ra (fol-table-lookup a name))
+        (if (gt (len ra) 0) ra
+            (do
+                (let rb (fol-table-lookup b name))
+                (if (gt (len rb) 0) rb
+                    (fol-table-lookup c name))))))
+
+(defn bp (name)
+    (do
+        (let row (fol-lookup3 FORM-CATEGORY-TABLE FORM-PRIMITIVE-TABLE
+                              FORM-USER-TABLE name))
+        (if (eq (len row) 0)
+            (make_nodeid 1 2 0 0)
+            (fol-row->nodeid row))))
+
 ;; --- recipe-building helpers ----------------------------------------
 ;;
 ;; The loader builds (let NAME (make_nodeid 1 2 T I)) and (defn NAME ()

@@ -4,139 +4,140 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 132
+**Total files**: 133
 
 | File | Purpose |
 |---|---|
-| [active_recipe_trace_index.py](active_recipe_trace_index.py) | !/usr/bin/env python3 |
-| [add_crosslinks.py](add_crosslinks.py) | !/usr/bin/env python3 |
-| [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | !/usr/bin/env python3 |
-| [agent_status.py](agent_status.py) | !/usr/bin/env python3 |
-| [archive_view_events.py](archive_view_events.py) | !/usr/bin/env python3 |
-| [arrival.py](arrival.py) | !/usr/bin/env python3 |
-| [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | !/usr/bin/env python3 |
-| [audit_external_tools.py](audit_external_tools.py) | !/usr/bin/env python3 |
-| [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | !/usr/bin/env python3 |
-| [awareness_node_daemon.py](awareness_node_daemon.py) | !/usr/bin/env python3 |
-| [backfill_task_workspaces.py](backfill_task_workspaces.py) | !/usr/bin/env python3 |
-| [backfill_traceability.py](backfill_traceability.py) | !/usr/bin/env python3 |
-| [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | !/usr/bin/env python3 |
-| [build_readmes.py](build_readmes.py) | !/usr/bin/env python3 |
-| [cc.py](cc.py) | !/usr/bin/env python3 |
-| [check_dev_auth.py](check_dev_auth.py) | !/usr/bin/env python3 |
-| [check_generated_vision_assets.py](check_generated_vision_assets.py) | !/usr/bin/env python3 |
-| [check_pr_followthrough.py](check_pr_followthrough.py) | !/usr/bin/env python3 |
-| [check_provider_health.py](check_provider_health.py) | !/usr/bin/env python3 |
-| [check_runtime_drift.py](check_runtime_drift.py) | !/usr/bin/env python3 |
-| [check_spec_references.py](check_spec_references.py) | !/usr/bin/env python3 |
-| [check_traceability.py](check_traceability.py) | !/usr/bin/env python3 |
-| [check_web_docker_context.py](check_web_docker_context.py) | !/usr/bin/env python3 |
-| [cluster_watch_history.py](cluster_watch_history.py) | !/usr/bin/env python3 |
-| [coh_substrate.py](coh_substrate.py) | !/usr/bin/env python3 |
-| [coherence_reach.py](coherence_reach.py) | !/usr/bin/env python3 |
+| [active_recipe_trace_index.py](active_recipe_trace_index.py) | Read active recipe traces from the local witness stream. |
+| [add_crosslinks.py](add_crosslinks.py) | Add clickable cross-links to specs INDEX and spec files for GitHub navigation. |
+| [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | Add Task Card and Research Inputs sections to spec files that don't have them. |
+| [agent_status.py](agent_status.py) | Show active work across all coding agents (worktrees + tasks). |
+| [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
+| [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
+| [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | assemblage_shift_recipe_proof.py — the modality round-trip, walking. |
+| [audit_external_tools.py](audit_external_tools.py) | Audit external tooling usage and detect untracked additions. |
+| [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | Audit regenerated vision image candidates before production promotion. |
+| [awareness_node_daemon.py](awareness_node_daemon.py) | Quiet local presence loop for Coherence agents. |
+| [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |
+| [backfill_traceability.py](backfill_traceability.py) | Backfill traceability links: spec→idea, code→spec, PR→spec. |
+| [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
+| [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
+| [cc.py](cc.py) | _no top-of-file purpose_ |
+| [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
+| [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
+| [check_pr_followthrough.py](check_pr_followthrough.py) | Local process gate to avoid abandoning open Codex PRs. |
+| [check_provider_health.py](check_provider_health.py) | Provider health check — verify all CLIs are authenticated and working. |
+| [check_runtime_drift.py](check_runtime_drift.py) | Fail when runtime drift exceeds known allowlist baseline. |
+| [check_spec_references.py](check_spec_references.py) | spec: full-code-traceability |
+| [check_traceability.py](check_traceability.py) | CI gate: check that new/modified specs have idea_id and code files have spec refs. |
+| [check_web_docker_context.py](check_web_docker_context.py) | Catch web/ imports reaching above the Docker build context. |
+| [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
+| [coh_substrate.py](coh_substrate.py) | coh substrate — unified CLI for the coherence-substrate. |
+| [coherence_reach.py](coherence_reach.py) | coherence_reach — measure where an identity is named across the body. |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
-| [connect_ubud_cluster_inspired_by.py](connect_ubud_cluster_inspired_by.py) | !/usr/bin/env python3 |
-| [context_budget.py](context_budget.py) | !/usr/bin/env python3 |
-| [daily_brief.py](daily_brief.py) | !/usr/bin/env python3 |
-| [demo_dual_identity.py](demo_dual_identity.py) | !/usr/bin/env python3 |
-| [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | !/usr/bin/env python3 |
-| [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | !/usr/bin/env python3 |
-| [encounter.py](encounter.py) | !/usr/bin/env python3 |
-| [evaluate_spec_tests.py](evaluate_spec_tests.py) | !/usr/bin/env python3 |
-| [executor_handoff.py](executor_handoff.py) | !/usr/bin/env python3 |
-| [export_graph_to_repo.py](export_graph_to_repo.py) | !/usr/bin/env python3 |
-| [export_lineage.py](export_lineage.py) | !/usr/bin/env python3 |
-| [export_vision_image_prompts.py](export_vision_image_prompts.py) | !/usr/bin/env python3 |
-| [external_proof_demo.py](external_proof_demo.py) | !/usr/bin/env python3 |
-| [federation_peer_poll.py](federation_peer_poll.py) | !/usr/bin/env python3 |
-| [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | !/usr/bin/env python3 |
-| [form_cli.py](form_cli.py) | !/usr/bin/env python3 |
-| [form_native_grammar_contract.py](form_native_grammar_contract.py) | !/usr/bin/env python3 |
-| [framebuffer_viewer.py](framebuffer_viewer.py) | !/usr/bin/env python3 |
+| [connect_ubud_cluster_inspired_by.py](connect_ubud_cluster_inspired_by.py) | Connect Urs's contributor node to the Ubud cluster via inspired-by edges. |
+| [context_budget.py](context_budget.py) | Context-budget helper for large-file-aware code exploration. |
+| [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
+| [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
+| [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | embodiment_practice_recipe_proof.py — practices as recipes of cells. |
+| [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
+| [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
+| [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
+| [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
+| [export_graph_to_repo.py](export_graph_to_repo.py) | Export graph-stored content back into the repo as files. |
+| [export_lineage.py](export_lineage.py) | Export the graph's presence lineage into a durable JSON manifest. |
+| [export_vision_image_prompts.py](export_vision_image_prompts.py) | Export persistent prompt records for Living Collective vision images. |
+| [external_proof_demo.py](external_proof_demo.py) | External proof demo — exercises the Coherence Network public API from outside the repo. |
+| [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
+| [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
+| [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: generate, execute, convert. |
+| [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
-| [generate_curated_translations.py](generate_curated_translations.py) | !/usr/bin/env python3 |
-| [generate_repo_indexes.py](generate_repo_indexes.py) | !/usr/bin/env python3 |
-| [generate_silence_alive_visuals.py](generate_silence_alive_visuals.py) | !/usr/bin/env python3 |
-| [generate_silence_built_visuals.py](generate_silence_built_visuals.py) | !/usr/bin/env python3 |
-| [generate_silence_design_log.py](generate_silence_design_log.py) | !/usr/bin/env python3 |
-| [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | !/usr/bin/env python3 |
-| [generate_visuals.py](generate_visuals.py) | !/usr/bin/env python3 |
-| [generate_work_visuals.py](generate_work_visuals.py) | !/usr/bin/env python3 |
-| [git_artifact_perceptron.py](git_artifact_perceptron.py) | !/usr/bin/env python3 |
-| [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | !/usr/bin/env python3 |
-| [grammar_coverage.py](grammar_coverage.py) | !/usr/bin/env python3 |
-| [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | !/usr/bin/env python3 |
-| [idea_to_task_bridge.py](idea_to_task_bridge.py) | !/usr/bin/env python3 |
-| [import_creations.py](import_creations.py) | !/usr/bin/env python3 |
-| [import_gatherings.py](import_gatherings.py) | !/usr/bin/env python3 |
-| [import_lineage.py](import_lineage.py) | !/usr/bin/env python3 |
-| [influence_teaching_translator.py](influence_teaching_translator.py) | !/usr/bin/env python3 |
-| [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | !/usr/bin/env python3 |
-| [ingest_audible_history.py](ingest_audible_history.py) | !/usr/bin/env python3 |
-| [intern_canonical_words.py](intern_canonical_words.py) | !/usr/bin/env python3 |
-| [intern_modality_blueprints.py](intern_modality_blueprints.py) | !/usr/bin/env python3 |
+| [generate_curated_translations.py](generate_curated_translations.py) | Generate machine-translated locale siblings (de/es/id) for curated |
+| [generate_repo_indexes.py](generate_repo_indexes.py) | Generate INDEX.md files for source-code directories. |
+| [generate_silence_alive_visuals.py](generate_silence_alive_visuals.py) | Generate the alive / growing-over-time views for /silence/built. |
+| [generate_silence_built_visuals.py](generate_silence_built_visuals.py) | Generate the compound-vision images for /silence/built via Pollinations. |
+| [generate_silence_design_log.py](generate_silence_design_log.py) | Generate the design-log iteration: sketch → plan → section → detail → axon → photoreal. |
+| [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | V2 iteration — push harder on the two weakest rounds (plan + aerial). |
+| [generate_visuals.py](generate_visuals.py) | Pre-generate all Pollinations images and save as static assets. |
+| [generate_work_visuals.py](generate_work_visuals.py) | Generate hero images for works (asset nodes with creation_kind). |
+| [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
+| [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
+| [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
+| [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | healing_modality_recipe_proof.py — practitioner-with-receiver as Recipe. |
+| [idea_to_task_bridge.py](idea_to_task_bridge.py) | Idea-to-Task Bridge — automatically generate tasks from open ideas. |
+| [import_creations.py](import_creations.py) | Auto-import creations into the graph from external sources. |
+| [import_gatherings.py](import_gatherings.py) | Import gatherings from event-source URLs onto presence nodes. |
+| [import_lineage.py](import_lineage.py) | Replay a lineage manifest against any target via the public API. |
+| [influence_teaching_translator.py](influence_teaching_translator.py) | Print influence teaching translator shards for a field story. |
+| [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
+| [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
+| [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
+| [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
-| [local_runner.py](local_runner.py) | !/usr/bin/env python3 |
-| [measure_gitnexus_value.py](measure_gitnexus_value.py) | !/usr/bin/env python3 |
-| [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | !/usr/bin/env python3 |
-| [migrate_spec_slugs.py](migrate_spec_slugs.py) | !/usr/bin/env python3 |
-| [morning_coherence_brief.py](morning_coherence_brief.py) | !/usr/bin/env python3 |
-| [opt_out_contributor.py](opt_out_contributor.py) | !/usr/bin/env python3 |
-| [organism_influence_cc.py](organism_influence_cc.py) | !/usr/bin/env python3 |
-| [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | !/usr/bin/env python3 |
-| [poll_task_progress.py](poll_task_progress.py) | !/usr/bin/env python3 |
-| [pr_check_failure_triage.py](pr_check_failure_triage.py) | !/usr/bin/env python3 |
-| [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | !/usr/bin/env python3 |
-| [publish_snapshot.py](publish_snapshot.py) | !/usr/bin/env python3 |
-| [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | !/usr/bin/env python3 |
-| [reclassify_presence_types.py](reclassify_presence_types.py) | !/usr/bin/env python3 |
-| [register_providers.py](register_providers.py) | !/usr/bin/env python3 |
-| [resolve_presences.py](resolve_presences.py) | !/usr/bin/env python3 |
+| [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
+| [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
+| [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
+| [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
+| [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
+| [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
+| [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
+| [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
+| [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
+| [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
+| [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | prose_recipe_roundtrip.py — the bidirectional test, walking. |
+| [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
+| [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
+| [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
+| [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
+| [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
-| [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | !/usr/bin/env python3 |
-| [run_form_practice.py](run_form_practice.py) | !/usr/bin/env python3 |
-| [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | !/usr/bin/env python3 |
-| [scan_code_spec_references.py](scan_code_spec_references.py) | !/usr/bin/env python3 |
+| [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | Run one Claude impl task (pinned spec), wait for terminal state, then write a report. |
+| [run_form_practice.py](run_form_practice.py) | Run any Form practice and record substrate cells plus witness ledger. |
+| [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
+| [scan_code_spec_references.py](scan_code_spec_references.py) | spec: full-code-traceability |
 | [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
 | [scan_dyad_candidates_word.py](scan_dyad_candidates_word.py) | WORD-domain prose-structural dyad-pair scan over Living Collective concepts. |
-| [schedule_attunement.py](schedule_attunement.py) | !/usr/bin/env python3 |
-| [seed_commit_evidence.py](seed_commit_evidence.py) | !/usr/bin/env python3 |
-| [seed_db.py](seed_db.py) | !/usr/bin/env python3 |
-| [seed_schema_to_db.py](seed_schema_to_db.py) | !/usr/bin/env python3 |
-| [sense_external_signals.py](sense_external_signals.py) | !/usr/bin/env python3 |
-| [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | !/usr/bin/env python3 |
-| [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
-| [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
-| [session_greeting.py](session_greeting.py) | !/usr/bin/env python3 |
-| [setup.py](setup.py) | !/usr/bin/env python3 |
-| [song_recipe_proof.py](song_recipe_proof.py) | !/usr/bin/env python3 |
-| [spec_recipe_proof.py](spec_recipe_proof.py) | !/usr/bin/env python3 |
+| [scan_form_blueprints.py](scan_form_blueprints.py) | Scan Form (.fk) sources for `make_nodeid` Blueprint literals and measure |
+| [schedule_attunement.py](schedule_attunement.py) | Re-attune every presence so newly added concepts get picked up. |
+| [seed_commit_evidence.py](seed_commit_evidence.py) | Seed the commit evidence API from local git history. |
+| [seed_db.py](seed_db.py) | Seed data/coherence.db from spec markdown files, commit evidence JSON, and inline idea data. |
+| [seed_schema_to_db.py](seed_schema_to_db.py) | One-time migration: load ontology schema (relationship types + axes) into DB. |
+| [sense_external_signals.py](sense_external_signals.py) | Sense the outer skin of the organism and record what is found. |
+| [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | sense_strategy_efficacy.py — read accumulated strategy_fired traces and |
+| [sense_world.py](sense_world.py) | Sense the world through the new earth lens. |
+| [session_as_framebuffer.py](session_as_framebuffer.py) | Render a Claude session as a memory-as-framebuffer .mfb capture. |
+| [session_greeting.py](session_greeting.py) | Session greeting — recognize the user and the agent at session start. |
+| [setup.py](setup.py) | Coherence Network — Auto-Setup. |
+| [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
+| [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
-| [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | !/usr/bin/env python3 |
-| [substrate_parity_harness.py](substrate_parity_harness.py) | !/usr/bin/env python3 |
-| [substrate_read_hook.py](substrate_read_hook.py) | !/usr/bin/env python3 |
-| [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | !/usr/bin/env python3 |
-| [sync_kb_to_db.py](sync_kb_to_db.py) | !/usr/bin/env python3 |
-| [sync_presence_content.py](sync_presence_content.py) | !/usr/bin/env python3 |
-| [sync_presence_slugs.py](sync_presence_slugs.py) | !/usr/bin/env python3 |
-| [sync_presences_from_render.py](sync_presences_from_render.py) | !/usr/bin/env python3 |
-| [sync_presences_to_db.py](sync_presences_to_db.py) | !/usr/bin/env python3 |
-| [teaching_recipe_proof.py](teaching_recipe_proof.py) | !/usr/bin/env python3 |
-| [trim_view_events.py](trim_view_events.py) | !/usr/bin/env python3 |
-| [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | !/usr/bin/env python3 |
-| [validate_commit_evidence.py](validate_commit_evidence.py) | !/usr/bin/env python3 |
-| [validate_local_api_matrix.py](validate_local_api_matrix.py) | !/usr/bin/env python3 |
-| [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | !/usr/bin/env python3 |
-| [validate_spec_prefix_canonicalization.py](validate_spec_prefix_canonicalization.py) | !/usr/bin/env python3 |
-| [validate_spec_quality.py](validate_spec_quality.py) | !/usr/bin/env python3 |
-| [validate_workflow_references.py](validate_workflow_references.py) | !/usr/bin/env python3 |
-| [verify_hashes.py](verify_hashes.py) | !/usr/bin/env python3 |
+| [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
+| [substrate_parity_harness.py](substrate_parity_harness.py) | substrate_parity_harness.py — read the body in both voices, side by side. |
+| [substrate_read_hook.py](substrate_read_hook.py) | Claude Code PreToolUse hook — surface substrate annotation on file Reads. |
+| [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | Sync cross-references from KB concept files into graph DB edges. |
+| [sync_kb_to_db.py](sync_kb_to_db.py) | Sync KB markdown files -> Graph DB via API. |
+| [sync_presence_content.py](sync_presence_content.py) | Sync structured presence content from JSON files into graph nodes. |
+| [sync_presence_slugs.py](sync_presence_slugs.py) | Sync `/people/{slug}` presence pages back onto contributor nodes. |
+| [sync_presences_from_render.py](sync_presences_from_render.py) | Sync writing-surface presence .md files from the rendering-surface JSON. |
+| [sync_presences_to_db.py](sync_presences_to_db.py) | Sync presence markdown files -> Graph DB via API. |
+| [teaching_recipe_proof.py](teaching_recipe_proof.py) | teaching_recipe_proof.py — teachings compose into Recipes whose |
+| [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
+| [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
+| [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |
+| [validate_local_api_matrix.py](validate_local_api_matrix.py) | Validate local API-backed page contracts and timing against a running API. |
+| [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | _no top-of-file purpose_ |
+| [validate_spec_prefix_canonicalization.py](validate_spec_prefix_canonicalization.py) | Validate canonical mapping for duplicated spec numeric prefixes. |
+| [validate_spec_quality.py](validate_spec_quality.py) | Validate spec quality so implementation does not need manual follow-up gap fixes. |
+| [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
+| [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_kernel_conformance.py](verify_kernel_conformance.py) | Verify substrate kernel conformance vectors against executable runtimes. |
-| [video_recipe_proof.py](video_recipe_proof.py) | !/usr/bin/env python3 |
-| [view_recipe_library.py](view_recipe_library.py) | !/usr/bin/env python3 |
-| [viewport_audit.py](viewport_audit.py) | !/usr/bin/env python3 |
-| [wander.py](wander.py) | !/usr/bin/env python3 |
-| [wellness_check.py](wellness_check.py) | !/usr/bin/env python3 |
+| [video_recipe_proof.py](video_recipe_proof.py) | video_recipe_proof.py — ONE video source carries MANY parallel Recipe |
+| [view_recipe_library.py](view_recipe_library.py) | view_recipe_library.py — read a .recipelib bundle and render any tongue. |
+| [viewport_audit.py](viewport_audit.py) | Audit a list of URLs at desktop (1440x900) and mobile (390x844) widths. |
+| [wander.py](wander.py) | Launch a wandering sense into the field. |
+| [wellness_check.py](wellness_check.py) | Wellness check — a gentle sensing of the body. |
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
-| [worktree_continuity_guard.py](worktree_continuity_guard.py) | !/usr/bin/env python3 |
-| [worktree_pr_guard.py](worktree_pr_guard.py) | !/usr/bin/env python3 |
+| [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
+| [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
