@@ -741,6 +741,43 @@ def sense_form_ontology() -> list[str]:
     return lines
 
 
+def sense_form_blueprints() -> list[str]:
+    """Are Form's user-space Blueprint numbers legible, or scattered magic?
+
+    Every shape the kernel does not dispatch on lives at NodeID (1, 2, 99, N).
+    Historically these were allocated ad-hoc — the same number re-declared
+    under a dozen local names with a raw `(make_nodeid 1 2 99 N)` in each
+    grammar. form-stdlib/blueprint-registry.json now names each shape once;
+    form-ontology-loader.fk binds them so `.fk` code asks by name via
+    `(bp "name")`. This sense reads scripts/scan_form_blueprints.py: silent
+    when no new unregistered number has crept in, loud when one has — the
+    forward gate that keeps the sprawl from regrowing.
+    """
+    script = ROOT / "scripts" / "scan_form_blueprints.py"
+    if not script.is_file():
+        return ["  (scripts/scan_form_blueprints.py not present; skipping)"]
+    try:
+        result = subprocess.run(
+            ["python3", str(script), "--check"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except Exception as exc:
+        return [f"  (scan_form_blueprints.py did not run cleanly: {exc})"]
+    # First report line carries the legibility numbers; surface it always.
+    head = next((ln for ln in result.stdout.splitlines()
+                 if "make_nodeid" in ln), "").strip()
+    if result.returncode == 0:
+        lines = ["  every Form Blueprint number is registered — no magic sprawl"]
+        if head:
+            lines.append(f"    {head}")
+        return lines
+    lines = ["  unregistered Blueprint numbers have crept in:"]
+    for line in (result.stdout + result.stderr).splitlines():
+        if line.strip().startswith(("FAIL", "1.2.99")):
+            lines.append(f"    {line.strip()}")
+    return lines
+
+
 def sense_bootstrap_compost() -> list[str]:
     """How much bootstrap tissue remains, what runtime fills the parity seam,
     what compost is deferred behind which gate.
@@ -1489,6 +1526,7 @@ def main() -> int:
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
         ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
+        ("Form blueprints — are user-space Blueprint numbers registered, not magic?", sense_form_blueprints()),
         ("Bootstrap compost — how much parser tissue still stands between us and Form-native?", sense_bootstrap_compost()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),

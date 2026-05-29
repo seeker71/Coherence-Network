@@ -1,0 +1,3253 @@
+{
+  "_note": "Type-99 (user-space) Blueprint registry \u2014 the single source of truth for shapes the kernel does not dispatch on. Generated from code by scripts/scan_form_blueprints.py --emit-registry, then curated. NodeID is (1, 2, 99, inst). form-stdlib/form-ontology-loader.fk binds these names so .fk code references a name, never the raw number. To add a shape: add a row here first, then `(bp \"name\")` in code.",
+  "blueprints": [
+    {
+      "inst": 1,
+      "name": "DOC-DOC",
+      "meaning": "root document",
+      "aliases": [
+        "HTML-DOC"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/grammars/markdown.fk"
+      ]
+    },
+    {
+      "inst": 2,
+      "name": "DOC-HEADING",
+      "meaning": "(level, text)",
+      "aliases": [
+        "HTML-HEADING"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/grammars/markdown.fk"
+      ]
+    },
+    {
+      "inst": 3,
+      "name": "DOC-PARAGRAPH",
+      "meaning": "(text)",
+      "aliases": [
+        "HTML-PARA"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/grammars/markdown.fk"
+      ]
+    },
+    {
+      "inst": 4,
+      "name": "DOC-CODE-BLOCK",
+      "meaning": "(lang, content)",
+      "aliases": [
+        "HTML-CODE"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/grammars/markdown.fk"
+      ]
+    },
+    {
+      "inst": 5,
+      "name": "DOC-BLANK",
+      "meaning": "blank-line marker (discarded post-parse)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/markdown.fk"
+      ]
+    },
+    {
+      "inst": 7,
+      "name": "topic",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/channel-query-json-band.fk"
+      ]
+    },
+    {
+      "inst": 10,
+      "name": "JSON-OBJECT",
+      "meaning": "map: list of (key, value) pairs",
+      "aliases": [
+        "AU-OBJ",
+        "CSS-OBJ",
+        "E-JSON-OBJECT",
+        "HTML-OBJ",
+        "IMG-OBJ",
+        "JSON-BNF-OBJECT",
+        "MDL-OBJ",
+        "SQL-OBJ",
+        "VID-OBJ",
+        "XML-OBJ",
+        "Y-OBJECT"
+      ],
+      "reuse": 13,
+      "defined_in": [
+        "form/form-stdlib/json.fk",
+        "form/form-stdlib/seedbank/emits/audio.fk",
+        "form/form-stdlib/seedbank/emits/css.fk",
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/emits/image.fk",
+        "form/form-stdlib/seedbank/emits/json.fk",
+        "form/form-stdlib/seedbank/emits/model.fk",
+        "form/form-stdlib/seedbank/emits/sql.fk",
+        "form/form-stdlib/seedbank/emits/video.fk",
+        "form/form-stdlib/seedbank/emits/xml.fk",
+        "form/form-stdlib/seedbank/emits/yaml.fk",
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/json.fk"
+      ]
+    },
+    {
+      "inst": 11,
+      "name": "JSON-ARRAY",
+      "meaning": "sequence of values",
+      "aliases": [
+        "AU-ARR",
+        "CSS-ARR",
+        "E-JSON-ARRAY",
+        "HTML-ARR",
+        "IMG-ARR",
+        "JSON-BNF-ARRAY",
+        "MDL-ARR",
+        "SQL-ARR",
+        "VID-ARR",
+        "XML-ARR",
+        "Y-ARRAY"
+      ],
+      "reuse": 13,
+      "defined_in": [
+        "form/form-stdlib/json.fk",
+        "form/form-stdlib/seedbank/emits/audio.fk",
+        "form/form-stdlib/seedbank/emits/css.fk",
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/emits/image.fk",
+        "form/form-stdlib/seedbank/emits/json.fk",
+        "form/form-stdlib/seedbank/emits/model.fk",
+        "form/form-stdlib/seedbank/emits/sql.fk",
+        "form/form-stdlib/seedbank/emits/video.fk",
+        "form/form-stdlib/seedbank/emits/xml.fk",
+        "form/form-stdlib/seedbank/emits/yaml.fk",
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/json.fk"
+      ]
+    },
+    {
+      "inst": 12,
+      "name": "JSON-PAIR",
+      "meaning": "(key-string, value)",
+      "aliases": [
+        "AU-PAIR",
+        "CSS-PAIR",
+        "E-JSON-PAIR",
+        "HTML-PAIR",
+        "IMG-PAIR",
+        "JSON-BNF-PAIR",
+        "MDL-PAIR",
+        "SQL-PAIR",
+        "VID-PAIR",
+        "XML-PAIR",
+        "Y-PAIR"
+      ],
+      "reuse": 13,
+      "defined_in": [
+        "form/form-stdlib/json.fk",
+        "form/form-stdlib/seedbank/emits/audio.fk",
+        "form/form-stdlib/seedbank/emits/css.fk",
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/emits/image.fk",
+        "form/form-stdlib/seedbank/emits/json.fk",
+        "form/form-stdlib/seedbank/emits/model.fk",
+        "form/form-stdlib/seedbank/emits/sql.fk",
+        "form/form-stdlib/seedbank/emits/video.fk",
+        "form/form-stdlib/seedbank/emits/xml.fk",
+        "form/form-stdlib/seedbank/emits/yaml.fk",
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/json.fk"
+      ]
+    },
+    {
+      "inst": 13,
+      "name": "JSON-NULL",
+      "meaning": "null literal",
+      "aliases": [
+        "AU-NULL",
+        "CSS-NULL",
+        "E-JSON-NULL",
+        "HTML-NULL",
+        "IMG-NULL",
+        "JSON-BNF-NULL",
+        "MDL-NULL",
+        "SQL-NULL",
+        "VID-NULL",
+        "XML-NULL",
+        "Y-NULL"
+      ],
+      "reuse": 13,
+      "defined_in": [
+        "form/form-stdlib/json.fk",
+        "form/form-stdlib/seedbank/emits/audio.fk",
+        "form/form-stdlib/seedbank/emits/css.fk",
+        "form/form-stdlib/seedbank/emits/html.fk",
+        "form/form-stdlib/seedbank/emits/image.fk",
+        "form/form-stdlib/seedbank/emits/json.fk",
+        "form/form-stdlib/seedbank/emits/model.fk",
+        "form/form-stdlib/seedbank/emits/sql.fk",
+        "form/form-stdlib/seedbank/emits/video.fk",
+        "form/form-stdlib/seedbank/emits/xml.fk",
+        "form/form-stdlib/seedbank/emits/yaml.fk",
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/json.fk"
+      ]
+    },
+    {
+      "inst": 20,
+      "name": "YAML-DOC",
+      "meaning": "root document = sequence of pairs / list items",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/yaml.fk"
+      ]
+    },
+    {
+      "inst": 21,
+      "name": "YAML-PAIR",
+      "meaning": "(key-string, value)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/yaml.fk"
+      ]
+    },
+    {
+      "inst": 22,
+      "name": "YAML-ITEM",
+      "meaning": "list-item value",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/yaml.fk"
+      ]
+    },
+    {
+      "inst": 23,
+      "name": "YAML-LIST",
+      "meaning": "(sequence of items)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/yaml.fk"
+      ]
+    },
+    {
+      "inst": 30,
+      "name": "FORM-LIST",
+      "meaning": "an S-expression list",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/form.fk"
+      ]
+    },
+    {
+      "inst": 31,
+      "name": "FORM-IDENT",
+      "meaning": "an identifier atom",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/form.fk"
+      ]
+    },
+    {
+      "inst": 40,
+      "name": "PY-MODULE",
+      "meaning": "root module: sequence of statements",
+      "aliases": [
+        "PY-BNF-MODULE",
+        "PY-EXEC-MODULE"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 41,
+      "name": "PY-IMPORT",
+      "meaning": "(module-name, asname)",
+      "aliases": [
+        "PY-BNF-IMPORT",
+        "PY-EXEC-IMPORT"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 42,
+      "name": "PY-FROM-IMPORT",
+      "meaning": "(module, [names])",
+      "aliases": [
+        "PY-BNF-FROM-IMPORT",
+        "PY-EXEC-FROM-IMPORT"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 43,
+      "name": "PY-FUNCTION-DEF",
+      "meaning": "(name, params)",
+      "aliases": [
+        "PY-BNF-FUNCTION-DEF",
+        "PY-EXEC-FUNCTION-DEF"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 44,
+      "name": "PY-ASSIGN",
+      "meaning": "(target, value)",
+      "aliases": [
+        "PY-BNF-ASSIGN",
+        "PY-EXEC-ASSIGN"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 45,
+      "name": "PY-IDENT",
+      "meaning": "an identifier reference",
+      "aliases": [
+        "PY-BNF-IDENT"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 46,
+      "name": "PY-NAME-PAIR",
+      "meaning": "(name, asname) for import lists",
+      "aliases": [
+        "PY-BNF-NAME-PAIR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python.fk"
+      ]
+    },
+    {
+      "inst": 47,
+      "name": "PY-BNF-BIN-EXPR",
+      "meaning": "",
+      "aliases": [
+        "PY-EXEC-BIN-EXPR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk"
+      ]
+    },
+    {
+      "inst": 48,
+      "name": "PY-BNF-INT-EXPR",
+      "meaning": "",
+      "aliases": [
+        "PY-EXEC-INT-EXPR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk"
+      ]
+    },
+    {
+      "inst": 49,
+      "name": "PY-BNF-STR-EXPR",
+      "meaning": "",
+      "aliases": [
+        "PY-EXEC-STR-EXPR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk"
+      ]
+    },
+    {
+      "inst": 50,
+      "name": "TS-MODULE",
+      "meaning": "",
+      "aliases": [
+        "PY-BNF-IDENT-EXPR",
+        "PY-EXEC-IDENT-EXPR"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 51,
+      "name": "TS-IMPORT",
+      "meaning": "(kind, names, module)",
+      "aliases": [
+        "PY-BNF-PAREN-EXPR",
+        "PY-EXEC-PAREN-EXPR"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-exec.fk",
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 52,
+      "name": "TS-EXPORT",
+      "meaning": "(declaration)",
+      "aliases": [
+        "PY-BNF-CALL"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 53,
+      "name": "PY-BNF-ATTR",
+      "meaning": "(name, params)",
+      "aliases": [
+        "TS-FUNCTION-DECL"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 54,
+      "name": "PY-BNF-IF",
+      "meaning": "(name)",
+      "aliases": [
+        "TS-CLASS-DECL"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 55,
+      "name": "PY-BNF-WHILE",
+      "meaning": "(kind, name, value)",
+      "aliases": [
+        "TS-CONST-DECL"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 56,
+      "name": "TS-IDENT",
+      "meaning": "",
+      "aliases": [
+        "PY-BNF-FOR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.fk"
+      ]
+    },
+    {
+      "inst": 57,
+      "name": "PY-BNF-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python.bnf.fk"
+      ]
+    },
+    {
+      "inst": 59,
+      "name": "TS-BNF-MODULE",
+      "meaning": "",
+      "aliases": [
+        "TS-EXEC-MODULE"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 60,
+      "name": "RS-FILE",
+      "meaning": "",
+      "aliases": [
+        "TS-BNF-IMPORT",
+        "TS-EXEC-IMPORT"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 61,
+      "name": "RS-USE",
+      "meaning": "(path)",
+      "aliases": [
+        "TS-BNF-IMPORT-NS",
+        "TS-EXEC-IMPORT-NS"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 62,
+      "name": "RS-MOD",
+      "meaning": "(name)",
+      "aliases": [
+        "TS-BNF-IMPORT-DEF",
+        "TS-EXEC-IMPORT-DEF"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 63,
+      "name": "RS-FN-DECL",
+      "meaning": "(name, params)",
+      "aliases": [
+        "TS-BNF-EXPORT-CONST",
+        "TS-EXEC-EXPORT-CONST"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 64,
+      "name": "RS-STRUCT-DECL",
+      "meaning": "(name)",
+      "aliases": [
+        "TS-BNF-EXPORT-FN",
+        "TS-EXEC-EXPORT-FN"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 65,
+      "name": "TS-BNF-LET",
+      "meaning": "(name)",
+      "aliases": [
+        "RS-IMPL-BLOCK",
+        "TS-EXEC-LET"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 66,
+      "name": "TS-BNF-CONST",
+      "meaning": "",
+      "aliases": [
+        "TS-EXEC-CONST"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-exec.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 67,
+      "name": "TS-BNF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 68,
+      "name": "TS-BNF-WHILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 69,
+      "name": "TS-BNF-FOR",
+      "meaning": "",
+      "aliases": [
+        "RS-BNF-MODULE",
+        "RS-EXEC-MODULE"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 70,
+      "name": "GO-FILE",
+      "meaning": "",
+      "aliases": [
+        "RS-BNF-USE",
+        "RS-EXEC-USE",
+        "TS-BNF-CALL"
+      ],
+      "reuse": 4,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 71,
+      "name": "GO-PACKAGE",
+      "meaning": "",
+      "aliases": [
+        "RS-BNF-PUB-USE",
+        "RS-EXEC-PUB-USE",
+        "TS-BNF-ATTR"
+      ],
+      "reuse": 4,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript.bnf.fk"
+      ]
+    },
+    {
+      "inst": 72,
+      "name": "GO-IMPORT",
+      "meaning": "",
+      "aliases": [
+        "RS-BNF-MOD",
+        "RS-EXEC-MOD"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 73,
+      "name": "RS-BNF-FN",
+      "meaning": "",
+      "aliases": [
+        "GO-FUNC-DECL",
+        "RS-EXEC-FN"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 74,
+      "name": "GO-TYPE-DECL",
+      "meaning": "",
+      "aliases": [
+        "RS-BNF-STRUCT",
+        "RS-EXEC-STRUCT"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 75,
+      "name": "RS-BNF-LET",
+      "meaning": "",
+      "aliases": [
+        "GO-VAR-DECL",
+        "RS-EXEC-LET"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.fk",
+        "form/form-stdlib/seedbank/grammars/rust-exec.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 76,
+      "name": "RS-BNF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 77,
+      "name": "RS-BNF-WHILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 78,
+      "name": "RS-BNF-FOR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 79,
+      "name": "RS-BNF-MATCH",
+      "meaning": "",
+      "aliases": [
+        "GO-BNF-MODULE",
+        "GO-EXEC-MODULE"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
+      ]
+    },
+    {
+      "inst": 80,
+      "name": "CELL-LINE",
+      "meaning": "one text line",
+      "aliases": [
+        "GO-BNF-PACKAGE",
+        "GO-EXEC-PACKAGE",
+        "RS-BNF-MATCH-ARM"
+      ],
+      "reuse": 4,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk",
+        "form/form-stdlib/seedbank/tests/cell-stream.fk"
+      ]
+    },
+    {
+      "inst": 81,
+      "name": "CELL-CHUNK",
+      "meaning": "one binary chunk",
+      "aliases": [
+        "GO-BNF-IMPORT",
+        "GO-EXEC-IMPORT"
+      ],
+      "reuse": 5,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/tests/cell-drop.fk",
+        "form/form-stdlib/seedbank/tests/cell-stream.fk",
+        "form/form-stdlib/seedbank/tests/walk-stream.fk"
+      ]
+    },
+    {
+      "inst": 82,
+      "name": "CELL-TRANSMUTED",
+      "meaning": "output of transmute",
+      "aliases": [
+        "GO-BNF-FUNC",
+        "GO-EXEC-FUNC"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/tests/cell-stream.fk"
+      ]
+    },
+    {
+      "inst": 83,
+      "name": "GO-BNF-TYPE",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-TYPE"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 84,
+      "name": "GO-BNF-VAR",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-VAR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 85,
+      "name": "GO-BNF-CONST",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-CONST"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 86,
+      "name": "GO-BNF-BLOCK",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 87,
+      "name": "GO-BNF-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 88,
+      "name": "GO-BNF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 89,
+      "name": "GO-BNF-ASSIGN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 90,
+      "name": "PNG-FILE",
+      "meaning": "root file",
+      "aliases": [
+        "GO-BNF-EXPR-STMT"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/png.fk"
+      ]
+    },
+    {
+      "inst": 91,
+      "name": "PNG-CHUNK",
+      "meaning": "one chunk",
+      "aliases": [
+        "GO-BNF-IDENT-EXPR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/png.fk"
+      ]
+    },
+    {
+      "inst": 92,
+      "name": "GO-BNF-INT-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 93,
+      "name": "GO-BNF-STR-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 94,
+      "name": "GO-BNF-STRUCT-TYPE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 95,
+      "name": "GO-BNF-BIN-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 96,
+      "name": "GO-BNF-UNARY-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 97,
+      "name": "GO-BNF-PAREN-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 98,
+      "name": "GO-BNF-PARAM",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 99,
+      "name": "GO-BNF-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 100,
+      "name": "UNKNOWN-FORMAT",
+      "meaning": "",
+      "aliases": [
+        "GO-BNF-SELECTOR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/convert.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 101,
+      "name": "FORM-FILE-ROOT",
+      "meaning": "",
+      "aliases": [
+        "GO-BNF-FOR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/convert.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 102,
+      "name": "GO-BNF-FIELD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 103,
+      "name": "GO-BNF-SHORT-VAR",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-SHORT-VAR"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 104,
+      "name": "GO-BNF-SWITCH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 105,
+      "name": "GO-BNF-CASE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 106,
+      "name": "GO-BNF-COMPOSITE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "inst": 110,
+      "name": "JSX-ELEMENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/jsx.bnf.fk"
+      ]
+    },
+    {
+      "inst": 111,
+      "name": "JSX-TEXT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/jsx.bnf.fk"
+      ]
+    },
+    {
+      "inst": 120,
+      "name": "TSX-LET",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/tsx.bnf.fk"
+      ]
+    },
+    {
+      "inst": 130,
+      "name": "PYC-MODULE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 131,
+      "name": "PYC-IMPORT",
+      "meaning": "(module, name)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 132,
+      "name": "PYC-FROM-IMPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 133,
+      "name": "PYC-DEF",
+      "meaning": "(name)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 134,
+      "name": "PYC-CLASS",
+      "meaning": "(name)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 135,
+      "name": "PYC-DOCSTRING",
+      "meaning": "(text)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 136,
+      "name": "PYC-NAME-LIST",
+      "meaning": "list of name strings",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 137,
+      "name": "PYC-DEF-FULL",
+      "meaning": "(name, params, ret-type)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 138,
+      "name": "PYC-PARAM-LIST",
+      "meaning": "opaque text for now",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-chars.bnf.fk"
+      ]
+    },
+    {
+      "inst": 200,
+      "name": "PY-FULL-MODULE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 201,
+      "name": "PY-FULL-IMPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 202,
+      "name": "PY-FULL-FROM-IMPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 203,
+      "name": "PY-FULL-FUNC-DEF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 204,
+      "name": "PY-FULL-CLASS-DEF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 205,
+      "name": "PY-FULL-ASSIGN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 206,
+      "name": "PY-FULL-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 207,
+      "name": "PY-FULL-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 208,
+      "name": "PY-FULL-WHILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 209,
+      "name": "PY-FULL-FOR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 210,
+      "name": "PY-FULL-TRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 211,
+      "name": "PY-FULL-WITH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 212,
+      "name": "PY-FULL-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 213,
+      "name": "PY-FULL-ATTR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 214,
+      "name": "PY-FULL-SUBSCRIPT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 215,
+      "name": "PY-FULL-BIN-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 216,
+      "name": "PY-FULL-UNARY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 217,
+      "name": "PY-FULL-COND-EXPR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 218,
+      "name": "PY-FULL-LAMBDA",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 219,
+      "name": "PY-FULL-LIST-LIT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 220,
+      "name": "PY-FULL-DICT-LIT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 221,
+      "name": "PY-FULL-SET-LIT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 222,
+      "name": "PY-FULL-TUPLE-LIT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 223,
+      "name": "PY-FULL-LISTCOMP",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 224,
+      "name": "PY-FULL-DICTCOMP",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 225,
+      "name": "PY-FULL-DECORATOR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 226,
+      "name": "PY-FULL-INT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 227,
+      "name": "PY-FULL-STR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 228,
+      "name": "PY-FULL-IDENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 229,
+      "name": "PY-FULL-PAREN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 300,
+      "name": "GOF-PACKAGE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 301,
+      "name": "GOF-IMPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 302,
+      "name": "GOF-CONST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 303,
+      "name": "GOF-VAR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 304,
+      "name": "GOF-TYPE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 305,
+      "name": "GOF-FUNC",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 306,
+      "name": "GOF-METHOD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 307,
+      "name": "GOF-STRUCT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 308,
+      "name": "GOF-INTERFACE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 309,
+      "name": "GOF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 310,
+      "name": "GOF-FOR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 311,
+      "name": "GOF-SWITCH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 312,
+      "name": "GOF-SELECT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 313,
+      "name": "GOF-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 314,
+      "name": "GOF-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 315,
+      "name": "GOF-IDENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 316,
+      "name": "GOF-INT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 317,
+      "name": "GOF-STR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 318,
+      "name": "GOF-BIN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 319,
+      "name": "GOF-COMPOSITE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 400,
+      "name": "TSF-MODULE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 401,
+      "name": "TSF-IMPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 402,
+      "name": "TSF-EXPORT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 403,
+      "name": "TSF-VAR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 404,
+      "name": "TSF-FUNC",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 405,
+      "name": "TSF-CLASS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 406,
+      "name": "TSF-INTERFACE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 407,
+      "name": "TSF-TYPE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 408,
+      "name": "TSF-ENUM",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 409,
+      "name": "TSF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 410,
+      "name": "TSF-FOR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 411,
+      "name": "TSF-WHILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 412,
+      "name": "TSF-TRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 413,
+      "name": "TSF-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 414,
+      "name": "TSF-IDENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 415,
+      "name": "TSF-INT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 416,
+      "name": "TSF-STR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 417,
+      "name": "TSF-ARROW",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 418,
+      "name": "TSF-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/typescript-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 500,
+      "name": "RSF-CRATE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 501,
+      "name": "RSF-USE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 502,
+      "name": "RSF-MOD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 503,
+      "name": "RSF-FN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 504,
+      "name": "RSF-STRUCT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 505,
+      "name": "RSF-ENUM",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 506,
+      "name": "RSF-TRAIT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 507,
+      "name": "RSF-IMPL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 508,
+      "name": "RSF-TYPE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 509,
+      "name": "RSF-CONST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 510,
+      "name": "RSF-STATIC",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 511,
+      "name": "RSF-LET",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 512,
+      "name": "RSF-IF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 513,
+      "name": "RSF-MATCH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 514,
+      "name": "RSF-LOOP",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 515,
+      "name": "RSF-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 516,
+      "name": "RSF-IDENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 517,
+      "name": "RSF-INT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 518,
+      "name": "RSF-STR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 519,
+      "name": "RSF-RETURN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/rust-full.bnf.fk"
+      ]
+    },
+    {
+      "inst": 690,
+      "name": "IMAGE-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/image-bmf.fk"
+      ]
+    },
+    {
+      "inst": 691,
+      "name": "IMAGE-META-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/image-bmf.fk"
+      ]
+    },
+    {
+      "inst": 700,
+      "name": "AUDIO-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/audio-bmf.fk"
+      ]
+    },
+    {
+      "inst": 701,
+      "name": "AUDIO-META-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/audio-bmf.fk"
+      ]
+    },
+    {
+      "inst": 710,
+      "name": "VIDEO-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/video-bmf.fk"
+      ]
+    },
+    {
+      "inst": 711,
+      "name": "VIDEO-META-FILE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/video-bmf.fk"
+      ]
+    },
+    {
+      "inst": 730,
+      "name": "DOCUMENT-CONTAINER",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/document-bmf.fk"
+      ]
+    },
+    {
+      "inst": 760,
+      "name": "NATURAL-BMF-FACT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/natural-bmf.fk"
+      ]
+    },
+    {
+      "inst": 761,
+      "name": "NATURAL-BMF-RELATION",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/natural-bmf.fk"
+      ]
+    },
+    {
+      "inst": 762,
+      "name": "NATURAL-BMF-QUESTION",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/natural-bmf.fk"
+      ]
+    },
+    {
+      "inst": 763,
+      "name": "NATURAL-BMF-MEANING",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/natural-bmf.fk"
+      ]
+    },
+    {
+      "inst": 951,
+      "name": "CONCEPT-V1",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-corpus.fk"
+      ]
+    },
+    {
+      "inst": 952,
+      "name": "CONCEPT-VISUALS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-corpus.fk"
+      ]
+    },
+    {
+      "inst": 953,
+      "name": "CONCEPT-VISUAL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-corpus.fk"
+      ]
+    },
+    {
+      "inst": 1100,
+      "name": "EMBEDDING_BLUEPRINT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/embedding-as-recipe.fk"
+      ]
+    },
+    {
+      "inst": 1200,
+      "name": "AUDIO-TRIAD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/synesthesia.fk"
+      ]
+    },
+    {
+      "inst": 1201,
+      "name": "IMAGE-TRIANGLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/synesthesia.fk"
+      ]
+    },
+    {
+      "inst": 1202,
+      "name": "RATIO-3",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/synesthesia.fk"
+      ]
+    },
+    {
+      "inst": 1300,
+      "name": "RECIPE-A-BLUEPRINT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/codon-band.fk"
+      ]
+    },
+    {
+      "inst": 1301,
+      "name": "RECIPE-B-BLUEPRINT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/codon-band.fk"
+      ]
+    },
+    {
+      "inst": 1400,
+      "name": "MIDI-NOTE-ON",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/midi-bmf.fk"
+      ]
+    },
+    {
+      "inst": 1401,
+      "name": "MIDI-NOTE-OFF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/midi-bmf.fk"
+      ]
+    },
+    {
+      "inst": 1402,
+      "name": "MIDI-TRACK",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/midi-bmf.fk"
+      ]
+    },
+    {
+      "inst": 1403,
+      "name": "MIDI-SONG",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/midi-bmf.fk"
+      ]
+    },
+    {
+      "inst": 1500,
+      "name": "PARETO-CANDIDATE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/pareto.fk"
+      ]
+    },
+    {
+      "inst": 1600,
+      "name": "AUTO-EXPERIMENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/autoresearch-loop.fk"
+      ]
+    },
+    {
+      "inst": 1700,
+      "name": "CHANNEL-V0",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel.fk"
+      ]
+    },
+    {
+      "inst": 1701,
+      "name": "CHANNEL-MSG",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel.fk"
+      ]
+    },
+    {
+      "inst": 1710,
+      "name": "QUERY",
+      "meaning": "",
+      "aliases": [
+        "cell-bp-2-nid"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk",
+        "form/form-stdlib/tests/biography-band.fk"
+      ]
+    },
+    {
+      "inst": 1711,
+      "name": "RESPONSE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1712,
+      "name": "SUBSTRATE-REF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1713,
+      "name": "NOVEL-BLUEPRINT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1714,
+      "name": "RECIPE-CONTENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1715,
+      "name": "CELL-REF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1716,
+      "name": "EXTERNAL-URI",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query.fk"
+      ]
+    },
+    {
+      "inst": 1717,
+      "name": "QUERY-PARSE-ERROR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-query-json.fk"
+      ]
+    },
+    {
+      "inst": 1720,
+      "name": "PING-SELF",
+      "meaning": "",
+      "aliases": [
+        "REGISTRATION"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/cell-registry.fk",
+        "form/form-stdlib/ping.fk"
+      ]
+    },
+    {
+      "inst": 1721,
+      "name": "CAPABILITIES",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/cell-registry.fk"
+      ]
+    },
+    {
+      "inst": 1730,
+      "name": "SYMBOL-BIND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/symbols.fk"
+      ]
+    },
+    {
+      "inst": 1731,
+      "name": "SYMBOL-TABLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/symbols.fk"
+      ]
+    },
+    {
+      "inst": 1732,
+      "name": "SYMBOL-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/symbols.fk"
+      ]
+    },
+    {
+      "inst": 1740,
+      "name": "HANDLER",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/verb-router.fk"
+      ]
+    },
+    {
+      "inst": 1741,
+      "name": "HANDLER-TABLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/verb-router.fk"
+      ]
+    },
+    {
+      "inst": 1742,
+      "name": "HANDLER-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/verb-router.fk"
+      ]
+    },
+    {
+      "inst": 1750,
+      "name": "HTTP-REQUEST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/http-parse.fk"
+      ]
+    },
+    {
+      "inst": 1751,
+      "name": "HTTP-HEADERS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/http-parse.fk"
+      ]
+    },
+    {
+      "inst": 1752,
+      "name": "HTTP-HEADER",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/http-parse.fk"
+      ]
+    },
+    {
+      "inst": 1753,
+      "name": "HTTP-PARSE-ERROR",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/http-parse.fk"
+      ]
+    },
+    {
+      "inst": 1760,
+      "name": "MESSAGE-CAT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/chat-band.fk"
+      ]
+    },
+    {
+      "inst": 1770,
+      "name": "SENTINEL",
+      "meaning": "",
+      "aliases": [
+        "AUDIT-ENTRY",
+        "HEX-DECODE-ERROR"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/audit-log.fk",
+        "form/form-stdlib/hex.fk",
+        "form/form-stdlib/tests/hex-band.fk"
+      ]
+    },
+    {
+      "inst": 1771,
+      "name": "SENTINEL",
+      "meaning": "",
+      "aliases": [
+        "AUDIT-LOG",
+        "URL-DECODE-ERROR"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/audit-log.fk",
+        "form/form-stdlib/tests/url-encode-band.fk",
+        "form/form-stdlib/url-encode.fk"
+      ]
+    },
+    {
+      "inst": 1780,
+      "name": "SCHEMA-CAT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "inst": 1781,
+      "name": "SCHEMA-LEAF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "inst": 1782,
+      "name": "SCHEMA-LIST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "inst": 1783,
+      "name": "SCHEMA-TUPLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "inst": 1784,
+      "name": "SCHEMA-ANY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "inst": 1790,
+      "name": "TOKEN",
+      "meaning": "",
+      "aliases": [
+        "OTHER-CAT"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/tests/schema-band.fk",
+        "form/form-stdlib/token.fk"
+      ]
+    },
+    {
+      "inst": 1800,
+      "name": "TRIANGLE-VERTEX",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/triangulate.fk"
+      ]
+    },
+    {
+      "inst": 1801,
+      "name": "TRIANGLE-COMPLETE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/triangulate.fk"
+      ]
+    },
+    {
+      "inst": 1810,
+      "name": "SYMBOLS-CONFLICT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/symbols-merge.fk"
+      ]
+    },
+    {
+      "inst": 1820,
+      "name": "HEARTBEAT-ENTRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/heartbeat.fk"
+      ]
+    },
+    {
+      "inst": 1821,
+      "name": "HEARTBEAT-TABLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/heartbeat.fk"
+      ]
+    },
+    {
+      "inst": 1830,
+      "name": "BIOGRAPHY",
+      "meaning": "",
+      "aliases": [
+        "DIFF-EQUAL",
+        "cell-bp-1-nid",
+        "cell-locator"
+      ],
+      "reuse": 4,
+      "defined_in": [
+        "form/form-stdlib/tests/biography-band.fk",
+        "form/form-stdlib/tree-diff.fk"
+      ]
+    },
+    {
+      "inst": 1831,
+      "name": "DIFF-REPLACE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tree-diff.fk"
+      ]
+    },
+    {
+      "inst": 1832,
+      "name": "DIFF-CHILDREN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tree-diff.fk"
+      ]
+    },
+    {
+      "inst": 1840,
+      "name": "BUCKET",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/rate-limit.fk"
+      ]
+    },
+    {
+      "inst": 1850,
+      "name": "NAME-RECORD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/dns.fk"
+      ]
+    },
+    {
+      "inst": 1851,
+      "name": "DNS-TABLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/dns.fk"
+      ]
+    },
+    {
+      "inst": 1852,
+      "name": "DNS-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/dns.fk"
+      ]
+    },
+    {
+      "inst": 1853,
+      "name": "DNS-PREFIX-MATCH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/dns.fk"
+      ]
+    },
+    {
+      "inst": 1860,
+      "name": "SESSION",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/session.fk"
+      ]
+    },
+    {
+      "inst": 1861,
+      "name": "SESSION-TABLE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/session.fk"
+      ]
+    },
+    {
+      "inst": 1862,
+      "name": "SESSION-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/session.fk"
+      ]
+    },
+    {
+      "inst": 1870,
+      "name": "UUID",
+      "meaning": "the arrival event/context",
+      "aliases": [
+        "ARRIVAL"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk",
+        "form/form-stdlib/uuid.fk"
+      ]
+    },
+    {
+      "inst": 1871,
+      "name": "SENTINEL",
+      "meaning": "felt quality of this arrival",
+      "aliases": [
+        "ARRIVAL-QUALITY",
+        "UUID-PARSE-ERROR"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk",
+        "form/form-stdlib/tests/uuid-band.fk",
+        "form/form-stdlib/uuid.fk"
+      ]
+    },
+    {
+      "inst": 1872,
+      "name": "ARRIVAL-INQUIRY",
+      "meaning": "an inquiry offered at arrival",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk"
+      ]
+    },
+    {
+      "inst": 1873,
+      "name": "ARRIVAL-RESONANCE",
+      "meaning": "what the field notices in the arrival",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk"
+      ]
+    },
+    {
+      "inst": 1874,
+      "name": "ARRIVAL-OBS",
+      "meaning": "arrival-flavored observation (structurally parallel to THIA-OBS 1805)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk"
+      ]
+    },
+    {
+      "inst": 1880,
+      "name": "CELL-IDENTITY",
+      "meaning": "sovereign identity a cell presents",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk"
+      ]
+    },
+    {
+      "inst": 1881,
+      "name": "CONTACT-THREAD",
+      "meaning": "logical relationship between two identities",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/arrival.fk"
+      ]
+    },
+    {
+      "inst": 1885,
+      "name": "SKILL-PRESENT-IDENTITY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1886,
+      "name": "SKILL-MUTUAL-MEET",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1887,
+      "name": "SKILL-READ-RELATIONSHIP",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1888,
+      "name": "SKILL-WELCOME-WITH-ORIENTATION",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1889,
+      "name": "SKILL-RECORD-EXCHANGE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1890,
+      "name": "SKILL-SET-BOUNDARY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/skills/agent-relationship-skill.fk"
+      ]
+    },
+    {
+      "inst": 1900,
+      "name": "INQUIRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/inquiry.fk"
+      ]
+    },
+    {
+      "inst": 1910,
+      "name": "XPATH-RESULT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/xpath.fk"
+      ]
+    },
+    {
+      "inst": 1911,
+      "name": "XPATH-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/xpath.fk"
+      ]
+    },
+    {
+      "inst": 1912,
+      "name": "XPATH-STEP",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/xpath.fk"
+      ]
+    },
+    {
+      "inst": 1913,
+      "name": "XPATH-PREDICATE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/xpath.fk"
+      ]
+    },
+    {
+      "inst": 1920,
+      "name": "DOC",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/doc-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1921,
+      "name": "SECTION-LIST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/doc-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1922,
+      "name": "SECTION",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/doc-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1923,
+      "name": "DOC-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/doc-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1930,
+      "name": "CONCEPT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1931,
+      "name": "CONCEPT-NOT-FOUND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1932,
+      "name": "CONCEPT-CORPUS-C",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-xpath.fk"
+      ]
+    },
+    {
+      "inst": 1933,
+      "name": "CONCEPT-XREFS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/concept-xpath.fk"
+      ]
+    },
+    {
+      "inst": 7000,
+      "name": "topic-nid",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/channel-query-band.fk"
+      ]
+    },
+    {
+      "inst": 7700,
+      "name": "CAT-PLUS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/tree-diff-band.fk"
+      ]
+    },
+    {
+      "inst": 7701,
+      "name": "CAT-MINUS",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/tree-diff-band.fk"
+      ]
+    },
+    {
+      "inst": 7702,
+      "name": "CAT-N",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/tree-diff-band.fk"
+      ]
+    },
+    {
+      "inst": 7703,
+      "name": "CAT-M",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/tree-diff-band.fk"
+      ]
+    },
+    {
+      "inst": 7801,
+      "name": "topic-nid",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/kv-store-band.fk"
+      ]
+    },
+    {
+      "inst": 8101,
+      "name": "topic-a",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/async-correlation-band.fk"
+      ]
+    },
+    {
+      "inst": 8102,
+      "name": "topic-b",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/async-correlation-band.fk"
+      ]
+    },
+    {
+      "inst": 8103,
+      "name": "topic-c",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/async-correlation-band.fk"
+      ]
+    },
+    {
+      "inst": 8888,
+      "name": "topic-nid",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/multi-hop-band.fk"
+      ]
+    }
+  ]
+}

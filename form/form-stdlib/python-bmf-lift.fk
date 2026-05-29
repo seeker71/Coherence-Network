@@ -48,37 +48,29 @@
 ;                        grammars/python-bmf.fk, python-bmf-eval.fk
 
 (do
-    ;; ---- MATH-12 NodeIDs (CTOR Shape B) ----------------------------
+    ;; ---- MATH / COMPARE NodeIDs (CTOR Shape B) ---------------------
     ;;
-    ;; The canonical RBasic.MATH category — same NodeIDs the kernel's
-    ;; arithmetic primitives carry (see form-ontology.json `primitives`
-    ;; rows for add/sub/mul/div and tests/emit-engine.fk lines 30-33).
-    ;; lift-binop-loop interns `+ - * /` against these — picking up the
-    ;; one Blueprint per shape so a hand-built `(intern_node MATH-PLUS
-    ;; ...)` and a Python-lifted `7 + 3` content-address to the same
-    ;; cell. The other arithmetic ops (** // %) stay on PY-BMF-BINOP
-    ;; until MATH instances ship for them.
-    (let MATH-PLUS     (make_nodeid 1 2 12 1))
-    (let MATH-MINUS    (make_nodeid 1 2 12 2))
-    (let MATH-MULTIPLY (make_nodeid 1 2 12 3))
-    (let MATH-DIVIDE   (make_nodeid 1 2 12 4))
-    (let MATH-MOD      (make_nodeid 1 2 12 5))
+    ;; The canonical RBasic.MATH and RBasic.COMPARE categories — the same
+    ;; NodeIDs the kernel's primitives carry. Resolved by name through
+    ;; `bp` (form-ontology-loader.fk) so the numbers live in ONE place
+    ;; (form-ontology.json), never as magic-number redeclarations here.
+    ;; lift-binop-loop interns `+ - * / == != < <= > >=` against these —
+    ;; picking up the one Blueprint per shape so a hand-built recipe and
+    ;; a Python-lifted `7 + 3` / `5 < 7` content-address to the same cell.
+    ;; The other arithmetic ops (** //) stay on PY-BMF-BINOP until MATH
+    ;; instances ship for them.
+    (let MATH-PLUS     (bp "add"))
+    (let MATH-MINUS    (bp "sub"))
+    (let MATH-MULTIPLY (bp "mul"))
+    (let MATH-DIVIDE   (bp "div"))
+    (let MATH-MOD      (bp "mod"))
 
-    ;; ---- COMPARE-13 NodeIDs (CTOR Shape B for comparisons) ---------
-    ;;
-    ;; The canonical RBasic.COMPARE category — same NodeIDs the kernel's
-    ;; comparison primitives carry (see form-ontology.json `primitives`
-    ;; rows for eq/ne/lt/le/gt/ge at type=13). lift-binop-loop interns
-    ;; `== != < <= > >=` against these — picking up the one Blueprint
-    ;; per shape so a hand-built `(intern_node COMPARE-LT ...)` and a
-    ;; Python-lifted `5 < 7` content-address to the same cell. Unknown
-    ;; compare ops (none today, but defensive) fall back to PY-BMF-COMPARE.
-    (let COMPARE-EQ (make_nodeid 1 2 13 1))
-    (let COMPARE-NE (make_nodeid 1 2 13 2))
-    (let COMPARE-LT (make_nodeid 1 2 13 3))
-    (let COMPARE-LE (make_nodeid 1 2 13 4))
-    (let COMPARE-GT (make_nodeid 1 2 13 5))
-    (let COMPARE-GE (make_nodeid 1 2 13 6))
+    (let COMPARE-EQ (bp "eq"))
+    (let COMPARE-NE (bp "ne"))
+    (let COMPARE-LT (bp "lt"))
+    (let COMPARE-LE (bp "le"))
+    (let COMPARE-GT (bp "gt"))
+    (let COMPARE-GE (bp "ge"))
 
     ;; ---- token accessors -------------------------------------------
     ;;
