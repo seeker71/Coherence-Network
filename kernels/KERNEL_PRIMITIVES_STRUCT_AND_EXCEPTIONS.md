@@ -99,20 +99,26 @@ rung and already matches BML's "caught → keep partial state" semantics.
    form-ontology.json with the form-engine.form instance numbers. One source
    of truth; `bp "raise"` etc. resolve everywhere.
 
-2. **Struct/class primitive (no new control flow — start here).**
-   - Add a `Record` Value variant (Go/Rust/TS): `{ blueprint: NodeID, fields:
-     map<name,Value> }` — mutable identity (Rc/RefCell in Rust, pointer in Go,
-     object in TS).
-   - Executable **METHOD(27)** arm: define (register a method NodeID under a
-     blueprint+name) and invoke (dispatch by reading the blueprint's table,
-     binding `self` to the record).
-   - Field read via **ACCESS(15)** arm; field write via a new STATE-ish set or
-     a `record_set` native (mutates in place — the first genuinely mutable
-     kernel value, which BML requires for `self.x = v`).
-   - Every language's `class`/`struct` compiles onto this. Python `class`:
-     constructor builds a Record with blueprint = the class; methods are
-     NodeIDs in the blueprint table; `obj.m()` is METHOD-invoke; `self.x`
-     is ACCESS; `self.x = v` is record_set.
+2. **Struct/class primitive — Record value + natives. DONE #2195.**
+   - `Record` Value variant shipped in all three kernels: `{ blueprint:
+     NodeID, fields: name→value }`. Rust `Arc<Mutex<Record>>` (Send — the
+     parallel arms cross threads, so Rc<RefCell> from the original sketch
+     would not compile; Arc<Mutex> is the corrected choice), Go `*Record`,
+     TS object ref. Shared mutable identity proven (record-band.fk → 176;
+     aliased mutation shows through — a value-copy would give 119).
+   - Shipped as **natives** (`record_new`, `record_get`, `record_set` —
+     in-place mutation, the kernel's first — `record_has`, `record_blueprint`,
+     `record?`), reachable via FNCALL. NO new walk arm yet: the natives are
+     the minimal core; executable METHOD(27)/ACCESS(15) walk arms are
+     deferred to 2b (only needed if the lift wants category-recipes rather
+     than native calls — the natives already cover class/struct compilation).
+   - **Next (2b): wire Python `class` onto the Record natives in
+     `python-bmf-eval.fk`.** Constructor builds a Record with blueprint = the
+     class NodeID; methods lift to `C__m` closures in the env; `obj.m(args)`
+     dispatches by reading the record's blueprint to find `C__m` and binding
+     `self`=record; `self.x` → `record_get`; `self.x = v` → `record_set`.
+     Statements survive grouping (verified earlier: kind "class", body-child
+     = the `def`). This is Form-side only — no further kernel change.
 
 3. **Catchable signal + try/catch (control-flow rung).**
    - Kernel gains a pending-signal channel (exception Value + active mode).
