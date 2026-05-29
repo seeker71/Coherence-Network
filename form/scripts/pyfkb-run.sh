@@ -74,9 +74,20 @@ for src in "${PRELUDES[@]}"; do
   fi
 done
 
-# Driver: run the target .py through py-bmf-run-file and print its value.
+# Driver: run the target .py through py-bmf-run-text and print its value.
+# We read the file and embed it as a Form string literal (escaping \ and ")
+# rather than py-bmf-run-file, because the file-scan path
+# (python-source-scan-file) currently diverges from the text path — the text
+# path is the proven one the band tests exercise. (Aligning scan-file with
+# scan-text is a separate, tracked fix.)
 DRIVER="$SRCDIR/driver.fk"
-printf '(py-bmf-run-file "%s")\n' "$PY" > "$DRIVER"
+{
+  printf '(py-bmf-run-text "'
+  # escape backslashes and double-quotes; keep real newlines (Form string
+  # literals span lines, as the band tests do)
+  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' "$PY"
+  printf '")\n'
+} > "$DRIVER"
 
 run_kernel() {
   case "$1" in
