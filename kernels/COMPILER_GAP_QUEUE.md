@@ -86,8 +86,8 @@ try/except are REQUIRED and must desugar onto the kernel's native BML arms**
 python-bmf interpreter just doesn't route to them yet); decorators remain.
 
 **Correction (per Urs, 2026-05-29):**
-- `**` shipped as a recursive Form helper (`py-pow`) in #2188 — **must move to
-  a kernel `pow` native** (no recursive path). Follow-up in flight.
+- `**` shipped as a recursive Form helper (`py-pow`) in #2188 — moved to a
+  kernel `pow` native (Go/Rust/TS) in #2190; recursive py-pow removed. DONE.
 - try/catch and class are **not optional and not "blocked"** — BML (the
   kernel) already has try/catch and an object system. The work is to desugar
   PY-BMF-CLASS / PY-BMF-TRY onto the kernel's METHOD/DELEGATE/COMMON and
@@ -161,6 +161,47 @@ it in after the grammar fix, rather than re-deriving it:
   string, not an int). Format specs (`{x:.2f}`) and `{{`/`}}` escapes are a
   further breath beyond the basic round-trip.
 
+### class + try/catch — REQUIRED (Urs); the precise path via BML
+
+These are not optional. BML *does* have try/catch and an object system — but
+a survey (2026-05-29) shows **where** that machinery lives, which determines
+the work:
+
+- **Python `form_runtime.py`** — full BML semantics: `RaiseSignal`,
+  `FailSignal`/`StopSignal`, `RaiseExpr`, try/catch. This is the meta-circular
+  reference.
+- **`docs/coherence-substrate/form-engine.form`** — declares the arms:
+  `@1.2.23.1/.2` EXCEPTION (raise/resume), `@1.2.30.1` TRY_CATCH (today only
+  evaluates the body — `ev(n.children[0])` — the catch wiring is a stub),
+  METHOD (27), DELEGATE (24), COMMON (26).
+- **The native sibling kernels (Go/Rust/TS)** — have **15 arms** (MATH,
+  COMPARE, BLOCK, COND, METHOD, ACCESS, CALL, WITNESS, TRANSMUTE, FNDEF,
+  FNCALL, IDENT, LIST, LOGIC, UNDEFINED). They have **METHOD but NOT TRY,
+  EXCEPTION, DELEGATE, or COMMON**, and no exception-unwinding — a real error
+  (`1/0`) is a hard kernel panic, not a catchable signal.
+
+The python-bmf interpreter (`py-eval`) runs *on the native kernel*. So:
+
+- **try/catch** needs, in order: (1) a kernel-native exception/unwind
+  mechanism (the deepest piece — 3-language: a catchable error signal +
+  `raise`/`try` arms or a native try-call primitive), then (2) PY-BMF-TRY /
+  PY-BMF-RAISE interpreter arms that route to it. Statement-grouping already
+  emits `try`/`except` as adjacent sibling statements (verified: kind "try"
+  with body-child, kind "except" with handler-child), so the lift can pair
+  them once the runtime exists.
+- **class** needs an object representation in the interpreter: an instance is
+  a record (tagged alist) of attributes; `class C: def m(self):…` lifts to a
+  constructor + lifted `C__m` methods; `obj.method()` resolves via the
+  kernel's METHOD arm (which exists) or an interpreter dispatch over the
+  record's class tag. This is buildable on the *existing* METHOD arm + ACCESS
+  arm without new kernel arms — the bigger surface is dataclass/dunders, but
+  a plain class (`__init__` storing attrs, instance methods reading `self.x`)
+  is reachable now. **Class is the more tractable of the two to start.**
+
+Order recommendation: **class first** (no new kernel arm needed — METHOD +
+ACCESS + record-as-alist), then the **kernel exception mechanism** as its own
+arc, then try/catch on top of it.
+
 ### Not a compiler gap — a runtime gap
 
 `kernel.py` (49 ORM hits), `orm.py`, `markdown_frontend.py` (43) call
@@ -195,4 +236,5 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | 2026-05-29 | [#2179](https://github.com/seeker71/Coherence-Network/pull/2179) | boolean `and` / `or` (short-circuit → IF; no eval arm) | 115000 → 125000 |
 | 2026-05-29 | [#2181](https://github.com/seeker71/Coherence-Network/pull/2181) | `range()` builtin → iterable list (eval-side; no lift change) | 125000 → 135000 |
 | 2026-05-29 | [#2186](https://github.com/seeker71/Coherence-Network/pull/2186) | list comprehension `[e for v in it]` → PY-BMF-COMP (Batch 2) | 135000 → 145000 |
-| 2026-05-29 | [#2188](https://github.com/seeker71/Coherence-Network/pull/2188) | power `**` (recursive Form py-pow — TO BE REPLACED by kernel `pow` native) | 145000 → 155000 |
+| 2026-05-29 | [#2188](https://github.com/seeker71/Coherence-Network/pull/2188) | power `**` (recursive Form py-pow — superseded by #2190) | 145000 → 155000 |
+| 2026-05-29 | [#2190](https://github.com/seeker71/Coherence-Network/pull/2190) | `pow` kernel native (Go/Rust/TS); `**` computes natively, py-pow removed | 155000 (native) |
