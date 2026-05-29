@@ -1061,6 +1061,21 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
 	})
+	// pow — integer exponentiation in native code (no Form recursion).
+	// (pow base exp) → base**exp. Negative exponents return 0 (Python's
+	// int**-n is a float; floats on this path are a later breath).
+	k.registerNative("pow", catMethod(), func(_ *Kernel, args []Value) Value {
+		base := args[0].Int
+		exp := args[1].Int
+		if exp < 0 {
+			return Value{Kind: VInt, Int: 0}
+		}
+		result := int64(1)
+		for i := int64(0); i < exp; i++ {
+			result *= base
+		}
+		return Value{Kind: VInt, Int: result}
+	})
 	// str_find — Go-level substring search starting at index `from`.
 	// Signature: (str_find s needle from) → int (index or -1). The whole
 	// search runs in this Go loop (uses strings.Index after slicing); no
