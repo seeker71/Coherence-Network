@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 131
+**Total files**: 132
 
 | File | Purpose |
 |---|---|
@@ -107,6 +107,7 @@
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | !/usr/bin/env python3 |
 | [sense_world.py](sense_world.py) | !/usr/bin/env python3 |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | !/usr/bin/env python3 |
+| [session_greeting.py](session_greeting.py) | !/usr/bin/env python3 |
 | [setup.py](setup.py) | !/usr/bin/env python3 |
 | [song_recipe_proof.py](song_recipe_proof.py) | !/usr/bin/env python3 |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | !/usr/bin/env python3 |
