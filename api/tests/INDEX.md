@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 223
+**Total files**: 224
 
 | File | Purpose |
 |---|---|
@@ -20,6 +20,7 @@
 | [test_agent_pipeline.py](test_agent_pipeline.py) | Tests for the coherence-network-agent-pipeline spec |
 | [test_agent_pipeline_status_diagnostics_api.py](test_agent_pipeline_status_diagnostics_api.py) | Tests for the attention-heuristics-pipeline-status spec |
 | [test_agent_question_sse.py](test_agent_question_sse.py) | _no top-of-file purpose_ |
+| [test_agent_relationship.py](test_agent_relationship.py) | Agent relationship runtime — registration, continuation, durable memory. |
 | [test_agent_runner_tool_failure_telemetry.py](test_agent_runner_tool_failure_telemetry.py) | Tests for tool-failure-awareness spec: runtime telemetry + friction events. |
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |

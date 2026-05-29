@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 130
+**Total files**: 131
 
 | File | Purpose |
 |---|---|
@@ -20,6 +20,7 @@
 | [awareness_node_daemon.py](awareness_node_daemon.py) | !/usr/bin/env python3 |
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | !/usr/bin/env python3 |
 | [backfill_traceability.py](backfill_traceability.py) | !/usr/bin/env python3 |
+| [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | !/usr/bin/env python3 |
 | [build_readmes.py](build_readmes.py) | !/usr/bin/env python3 |
 | [cc.py](cc.py) | !/usr/bin/env python3 |
 | [check_dev_auth.py](check_dev_auth.py) | !/usr/bin/env python3 |
