@@ -59,6 +59,16 @@ if [ -n "$CHANGED_BP" ]; then
     python3 scripts/sync_blueprints_to_substrate.py
 fi
 
+# Substrate vocabulary (category.py enums) → substrate NamedCells. When the
+# type/domain/recipe alphabet shifts, re-project so the DB stays self-describing
+# ("what is type 12" → RBasic.MATH). Code-sourced — no external files needed.
+CHANGED_VOCAB=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
+    'api/app/services/substrate/category.py' 2>/dev/null || true)
+if [ -n "$CHANGED_VOCAB" ]; then
+    echo "[substrate] category vocabulary changed — projecting enum names into NamedCells:"
+    python3 scripts/sync_substrate_vocabulary.py
+fi
+
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
 if [ -z "$CHANGED" ]; then
