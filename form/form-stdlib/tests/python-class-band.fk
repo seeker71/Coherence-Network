@@ -1,0 +1,68 @@
+; tests/python-class-band.fk — Python `class` running on the Form kernel.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/python-bmf-eval.fk form-stdlib/python-bmf-lift.fk
+;
+; Real Python classes compile to kernel records + methods (rung 2b-Python).
+; class → PY-BMF-CLASS (methods built as py-closures keyed on a class record);
+; Counter(10) → construct instance record + run __init__; self.n → record_get;
+; self.n = v → record_set (PY-BMF-ATTR-ASSIGN); c.bump(5) → PY-BMF-METHOD-CALL
+; dispatched through the instance's __class__. No Python runtime — the whole
+; pipeline (scan → lift → eval) walks on the native kernel.
+;
+; Band verdict: 30100 when every cell agrees with CPython across Go, Rust, TS.
+;   cell 1: __init__ + method that reads+mutates self, returns value (→ 15)
+;   cell 2: two instances keep separate state (→ 85)
+;   cell 3: method calling another method on self (→ 30000)
+
+(do
+    ;; ---- cell 1: construct, mutate self, read back — CPython:
+    ;;   c = Counter(10); c.bump(5); c.get()  → 15 ----------------------
+    (let cell1 (py-bmf-run-text "class Counter:
+    def __init__(self, n):
+        self.n = n
+    def bump(self, by):
+        self.n = self.n + by
+        return self.n
+    def get(self):
+        return self.n
+c = Counter(10)
+c.bump(5)
+c.get()
+"))
+    (let cell1-score (if (eq cell1 15) 100 0))
+
+    ;; ---- cell 2: two instances, separate state — CPython:
+    ;;   a = Counter(3); b = Counter(40); a.bump(2); b.bump(40);
+    ;;   a.get() + b.get() = 5 + 80 = 85 -------------------------------
+    (let cell2 (py-bmf-run-text "class Counter:
+    def __init__(self, n):
+        self.n = n
+    def bump(self, by):
+        self.n = self.n + by
+        return self.n
+    def get(self):
+        return self.n
+a = Counter(3)
+b = Counter(40)
+a.bump(2)
+b.bump(40)
+a.get() + b.get()
+"))
+    (let cell2-score (if (eq cell2 85) 1000 0))
+
+    ;; ---- cell 3: a method calling another method on self — CPython:
+    ;;   class Box: __init__ sets v; double(self) returns self.get()*2;
+    ;;   get(self) returns self.v.  Box(15000).double() = 30000 --------
+    (let cell3 (py-bmf-run-text "class Box:
+    def __init__(self, v):
+        self.v = v
+    def get(self):
+        return self.v
+    def double(self):
+        return self.get() + self.get()
+b = Box(15000)
+b.double()
+"))
+    (let cell3-score (if (eq cell3 30000) 30000 0))
+
+    (sum (list cell1-score cell2-score cell3-score)))
