@@ -131,8 +131,10 @@ def scan() -> dict:
     collisions = {n: sorted(v) for n, v in name_to_nums.items() if len(v) > 1}
     # synonyms: a number wearing more than one local name.
     synonyms = {k: sorted(v) for k, v in num_to_names.items() if len(v) > 1}
-    # type-99 numbers used in source but absent from the registry.
-    type99 = {s["key"] for s in sites if s["key"][2] == 99}
+    # type-99 numbers used in PRODUCTION but absent from the registry. Test
+    # files carry local sentinels (7700, 8888, …) that name nothing real and
+    # are deliberately excluded from the registry, so they don't count here.
+    type99 = {s["key"] for s in sites if s["key"][2] == 99 and not s["test"]}
     unregistered_99 = sorted(k for k in type99 if k not in reg)
 
     return {
@@ -287,21 +289,36 @@ def main() -> int:
 
     if args.emit_registry:
         generated = emit_registry()
-        # Preserve human-curated names/meanings over harvested defaults,
-        # keyed by the full NodeID coordinate.
         def coord(r):
             return (r.get("pkg", 1), r.get("level", 2), r.get("type", 99), r["inst"])
+        # Union with the existing registry: once a file migrates its definition
+        # to (bp "name"), the harvest no longer finds a make_nodeid literal for
+        # that coordinate — but bp still has to resolve it, so the entry must
+        # NOT be dropped. Existing entries are durable; the harvest only adds
+        # new shapes and refreshes aliases/files for shapes still written as
+        # literals. Curated names/meanings always win.
+        merged: dict = {}
         if REGISTRY.exists():
-            prior = {coord(r): r for r in load_user_blueprints()}
-            for row in generated["blueprints"]:
-                p = prior.get(coord(row))
-                if p and p.get("curated"):
-                    row["name"] = p.get("name", row["name"])
-                    row["meaning"] = p.get("meaning", row["meaning"])
+            for r in load_user_blueprints():
+                merged[coord(r)] = r
+        for row in generated["blueprints"]:
+            k = coord(row)
+            prior = merged.get(k)
+            if prior:
+                if prior.get("curated"):
+                    row["name"] = prior.get("name", row["name"])
+                    row["meaning"] = prior.get("meaning", row["meaning"])
                     row["curated"] = True
-        REGISTRY.write_text(json.dumps(generated, indent=2) + "\n")
+                # union aliases across harvest + prior so migrated names persist
+                row["aliases"] = sorted(set(row.get("aliases", []))
+                                        | set(prior.get("aliases", []))
+                                        | ({prior["name"]} if prior["name"] != row["name"] else set()))
+            merged[k] = row
+        out = dict(generated)
+        out["blueprints"] = [merged[k] for k in sorted(merged)]
+        REGISTRY.write_text(json.dumps(out, indent=2) + "\n")
         print(f"wrote {REGISTRY.relative_to(ROOT)} "
-              f"({len(generated['blueprints'])} blueprints, all coordinates)")
+              f"({len(out['blueprints'])} blueprints, all coordinates; union-preserving)")
         return 0
 
     s = scan()

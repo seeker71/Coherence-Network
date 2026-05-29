@@ -4,8 +4,8 @@
 ; lifting, and reverse source emission live here as ordinary Form recipes.
 
 (do
-    (let VIDEO-FILE (make_nodeid 1 2 99 710))
-    (let VIDEO-META-FILE (make_nodeid 1 2 99 711))
+    (let VIDEO-FILE (bp "VIDEO-FILE"))
+    (let VIDEO-META-FILE (bp "VIDEO-META-FILE"))
 
     (defn video-src-keyword (value) (bmf-atom "video-keyword" value))
     (defn video-src-int (value) (bmf-atom "video-int" value))
