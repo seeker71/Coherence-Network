@@ -1,0 +1,63 @@
+; tests/storage-port-band.fk — one interface, two carriers, identical behavior.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk
+;
+; Proves the Port abstraction (docs/coherence-substrate/ports-interface-and-
+; structure.md): the SAME sequence of storage-port calls, run through a pure
+; memory carrier AND an effectful .fkb file carrier, yields identical results.
+; The call site (the storage-put/get/has? interface) never names a backend —
+; selecting a carrier is choosing a record of function-values; the effect (or
+; lack of it) lands beneath the contract.
+;
+; Band verdict: 11111 when both carriers agree on every operation.
+;   mem last-write-wins    → 1
+;   mem optional + has?     → 10
+;   file last-write-wins    → 100   (effectful backend, same interface)
+;   file optional + has?    → 1000
+;   carriers AGREE          → 10000 (the swap is behavior-preserving)
+
+(do
+    ;; --- memory carrier: a sequence of port calls ---
+    (let cm (carrier-memory))
+    (let m0 (storage-open cm))
+    (let m1 (storage-put cm m0 "alpha" "one"))
+    (let m2 (storage-put cm m1 "beta" "two"))
+    (let m3 (storage-put cm m2 "alpha" "ONE-UPDATED"))
+    (let mem-alpha (storage-value (storage-get cm m3 "alpha")))
+    (let mem-beta  (storage-value (storage-get cm m3 "beta")))
+    (let mem-has   (storage-has? cm m3 "alpha"))
+    (let mem-miss  (storage-has? cm m3 "zeta"))
+
+    ;; --- file carrier: the IDENTICAL sequence, effectful backend ---
+    (let cf (carrier-file))
+    (let f0 (storage-open-at cf "/tmp/storage-port-band.fkb"))
+    (let f1 (storage-put cf f0 "alpha" "one"))
+    (let f2 (storage-put cf f1 "beta" "two"))
+    (let f3 (storage-put cf f2 "alpha" "ONE-UPDATED"))
+    (let file-alpha (storage-value (storage-get cf f3 "alpha")))
+    (let file-beta  (storage-value (storage-get cf f3 "beta")))
+    (let file-has   (storage-has? cf f3 "alpha"))
+    (let file-miss  (storage-has? cf f3 "zeta"))
+
+    ;; --- the two carriers must agree, operation for operation ---
+    (let mem-ok
+        (if (str_eq mem-alpha "ONE-UPDATED")
+            (if (str_eq mem-beta "two")
+                (if (eq mem-has 1) (if (eq mem-miss 0) 1 0) 0) 0) 0))
+    (let mem-opt-ok
+        (if (eq (storage-found? (storage-get cm m3 "zeta")) 0)
+            (if (eq (storage-found? (storage-get cm m3 "alpha")) 1) 10 0) 0))
+    (let file-ok
+        (if (str_eq file-alpha "ONE-UPDATED")
+            (if (str_eq file-beta "two")
+                (if (eq file-has 1) (if (eq file-miss 0) 100 0) 0) 0) 0))
+    (let file-opt-ok
+        (if (eq (storage-found? (storage-get cf f3 "zeta")) 0)
+            (if (eq (storage-found? (storage-get cf f3 "alpha")) 1) 1000 0) 0))
+    (let agree
+        (if (str_eq mem-alpha file-alpha)
+            (if (str_eq mem-beta file-beta)
+                (if (eq mem-has file-has)
+                    (if (eq mem-miss file-miss) 10000 0) 0) 0) 0))
+
+    (sum (list mem-ok mem-opt-ok file-ok file-opt-ok agree)))

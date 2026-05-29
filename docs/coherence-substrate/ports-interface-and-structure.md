@@ -127,24 +127,42 @@ already in the stack), and a document carrier are other interfaces over the same
 port. This is why "where does SQL go" was the wrong question: SQL is an
 interface+carrier pair plugged into a port the body needs to name first.
 
-## The open fork the architecture must settle (not pre-decided here)
+## The carrier-binding seam — settled on evidence
 
-Where the **carrier-binding seam** lives is left open by design — to be settled
-by the storage-port prototype that follows this doc, not asserted now:
+The fork was "Form-level registry vs new kernel host-binding natives." A direct
+probe of the kernel's dispatch settles it:
 
-- **Form-level registry** (`substrate_dispatch` pattern): carriers register in a
-  Form-side table; the kernel stays minimal; which native realizes a port is a
-  Form lookup. Most aligned with "kernels stay small; domains drop in as data."
-- **Kernel host-binding natives**: a uniform `port_bind` / `port_invoke` seam in
-  each kernel, backed by the existing plugin/libloading/Function machinery. More
-  uniform across siblings, but adds kernel surface for an effectful path that
-  can't be value-diffed three ways.
+- `(f 3 4)` where `f` is a let-bound **function value** → works (returns 7). Form
+  passes functions as first-class values through variables.
+- `((nth ops 1) 3 4)` — a *computed* head position — **does not parse**. Native
+  dispatch requires a static symbol in head position; there is no `apply`.
 
-The prototype's job is to make this choice on evidence: build the storage port
-with memory + file carriers behind one Form interface, and see which seam the
-real vertical slice wants. (The `native_flag` distinction suggests effectful
-carriers are *natively* a kernel-floor concern while *selection among* carriers
-is a Form-level concern — but that's a hypothesis for the build to confirm.)
+So a carrier **cannot** be selected by a data-driven head (`(carrier-op args)`
+where `carrier-op` is looked up at runtime). But it **can** be a function value
+bound to a name and then called:
+
+```form
+(let op (storage-intern-fn carrier))   ; pull the operation (a function value)
+(op store key recipe)                  ; call it — static head, value from data
+```
+
+This is exactly the `substrate_dispatch` pattern (swap `_cosine` for
+`form_native.cosine`), and it means:
+
+**The binding seam lives at the Form level, not in new kernel natives.** A
+carrier is a record of named function-values (its operations); selecting a
+carrier is choosing which record; invoking is let-binding the operation and
+calling it with a static head. The kernel needs *no* `port_bind`/`port_invoke`
+surface — first-class function values + the existing effectful `catCall` natives
+(which each carrier's functions wrap) are sufficient. This keeps the kernels
+small (no effectful path that can't be value-diffed three ways) and puts carrier
+selection where it belongs: in data the Form layer reads.
+
+The `native_flag` floor is respected: the *effect* still happens in a `catCall`
+native (file write, socket send, SQL exec) — the carrier's function value is a
+thin Form wrapper choosing *which* native to reach. Selection is Form-level;
+execution is kernel-floor. The probe confirmed the hypothesis the trinity
+predicted.
 
 ## Why this is the right shape for the platform
 
