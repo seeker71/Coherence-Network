@@ -668,10 +668,12 @@ type OrbitLike = { target: THREE.Vector3; object: THREE.Camera; update: () => vo
 function OrbitRig({
   focusPos,
   controls,
+  flying,
   spread = 1,
 }: {
   focusPos: readonly [number, number, number] | null;
   controls: React.RefObject<OrbitLike | null>;
+  flying: React.RefObject<boolean>;
   spread?: number;
 }) {
   const { camera } = useThree();
@@ -685,14 +687,21 @@ function OrbitRig({
       focusPos[1] + 6 * spread,
       focusPos[2] + 13 * spread,
     );
-  }, [focusPos, spread]);
+    flying.current = true; // begin a fly-to; released on arrival or first user input
+  }, [focusPos, spread, flying]);
+  // Only animate while flying. Once we arrive — or the moment the user grabs the
+  // controls (flying set false by onStart) — we stop and hand the camera back,
+  // so a drag/zoom/pan stays where the user put it instead of snapping back.
   useFrame(() => {
-    if (!focusPos) return;
-    camera.position.lerp(camGoal.current, 0.06);
+    if (!flying.current) return;
+    camera.position.lerp(camGoal.current, 0.08);
     if (controls.current) {
-      controls.current.target.lerp(target.current, 0.08);
+      controls.current.target.lerp(target.current, 0.1);
       controls.current.update();
     }
+    const arrivedCam = camera.position.distanceTo(camGoal.current) < 0.4;
+    const arrivedTgt = !controls.current || controls.current.target.distanceTo(target.current) < 0.4;
+    if (arrivedCam && arrivedTgt) flying.current = false;
   });
   return null;
 }
@@ -750,6 +759,7 @@ function Scene({
   lens,
   onTouchCell,
   controlsRef,
+  flyingRef,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -764,6 +774,7 @@ function Scene({
   lens: Lens;
   onTouchCell: (id: string) => void;
   controlsRef: React.RefObject<OrbitLike | null>;
+  flyingRef: React.RefObject<boolean>;
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
@@ -937,10 +948,14 @@ function Scene({
             makeDefault
             enableDamping
             dampingFactor={0.08}
+            onStart={() => {
+              flyingRef.current = false; // user grabbed the camera — stop auto-flying
+            }}
           />
           <OrbitRig
             focusPos={focusPos}
             controls={controlsRef}
+            flying={flyingRef}
             spread={representation === "orb" ? 3.5 : 1}
           />
         </>
@@ -965,6 +980,7 @@ export default function KernelSpace() {
   const [lensId, setLensId] = useState<LensId>("rooms");
   const [muted, setMuted] = useState(false);
   const orbitRef = useRef<OrbitLike | null>(null);
+  const flyingRef = useRef(false);
   const [channels, setChannels] = useState<Record<string, ChannelMessage[]>>({});
   const [draft, setDraft] = useState("");
   const [proto, setProto] = useState<ChannelProtocol>("ask");
@@ -1093,6 +1109,7 @@ export default function KernelSpace() {
   const zoomBy = (factor: number) => {
     const c = orbitRef.current;
     if (!c) return;
+    flyingRef.current = false; // a manual move overrides any in-progress fly-to
     const offset = c.object.position.clone().sub(c.target).multiplyScalar(factor);
     c.object.position.copy(c.target).add(offset);
     c.update();
@@ -1101,6 +1118,7 @@ export default function KernelSpace() {
     const c = orbitRef.current;
     const ps = Object.values(layout).map((l) => l.position);
     if (!c || ps.length === 0) return;
+    flyingRef.current = false;
     const ctr = ps.reduce(
       (a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]],
       [0, 0, 0],
@@ -1433,6 +1451,7 @@ export default function KernelSpace() {
             lens={activeLens}
             onTouchCell={touchReply}
             controlsRef={orbitRef}
+            flyingRef={flyingRef}
           />
         </Canvas>
         {/* camera controls — same on touch, trackpad, or mouse */}
