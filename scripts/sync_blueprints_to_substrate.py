@@ -21,6 +21,14 @@ Each shape becomes one NamedCell in domain "form-blueprint": its canonical
 name, the NodeID it carries, and the file that defines it. make_cell is
 idempotent on (domain, name), so re-running reconciles rather than duplicates.
 
+Coverage is every shape the stdlib names at any coordinate — not only type-99.
+Beyond the JSON registry it sweeps all non-test .fk files for literal
+make_nodeid bindings, so the package-8 source-compiler shapes (8.45.*,
+FSC-REPO-* / BMF-*-REF) and the form-side ACCESS/WRITE instances (1.2.15.x /
+1.2.16.x) get names too. Paired with sync_substrate_vocabulary.py (the
+category.py type alphabet), no Blueprint coordinate the body uses stays a
+bare number in the DB.
+
 Usage:
     python scripts/sync_blueprints_to_substrate.py            # project all
     python scripts/sync_blueprints_to_substrate.py --dry-run  # show, write nothing
@@ -29,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -38,35 +47,82 @@ ROOT = Path(__file__).resolve().parent.parent
 for _p in (ROOT, ROOT / "api"):
     sys.path.insert(0, str(_p))
 
-ONTOLOGY = ROOT / "form" / "form-stdlib" / "form-ontology.json"
-REGISTRY = ROOT / "form" / "form-stdlib" / "blueprint-registry.json"
+STDLIB = ROOT / "form" / "form-stdlib"
+ONTOLOGY = STDLIB / "form-ontology.json"
+REGISTRY = STDLIB / "blueprint-registry.json"
 DOMAIN = "form-blueprint"
+
+# Per-dialect vocabulary prefixes — a local name carrying one is a synonym for
+# a shared shape, not the canonical name for it (PY-PLUS/GO-PLUS/… all = add).
+DIALECT_PREFIXES = (
+    "PY-", "GO-", "RS-", "TS-", "JS-", "SQL-", "CSS-", "HTML-", "XML-",
+    "YAML-", "Y-", "AU-", "VID-", "IMG-", "MDL-", "E-JSON-", "JSON-BNF-",
+    "CF-", "SE-", "SR-", "TE-", "UE-", "U-", "F-", "MOD-",
+)
+# Both binding forms: `(let NAME (make_nodeid p l t i))` and the 0-arg getter.
+NAMED_NODE_RE = re.compile(
+    r"\(\s*(?:let\s+([A-Za-z0-9?_+*<>=/.-]+)|defn\s+"
+    r"([A-Za-z0-9?_+*<>=/.-]+)\s+\(\s*\))\s+\(\s*make_nodeid\s+"
+    r"(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\)"
+)
+
+
+def _canonical(names: set[str]) -> str:
+    plain = [n for n in names if not n.startswith(DIALECT_PREFIXES)]
+    return sorted(plain or names, key=lambda s: (len(s), s))[0]
+
+
+def harvest_fk() -> dict[tuple, dict]:
+    """Every shape any non-test .fk file names with a literal make_nodeid, at
+    ANY coordinate — not only type-99. Groups per NodeID, picks one canonical
+    name. This is what reaches the package-8 source-compiler shapes (8.45.*)
+    and the form-side ACCESS/WRITE instances (1.2.15.x / 1.2.16.x) that the
+    JSON registry and category.py vocabulary don't carry."""
+    by_node: dict[tuple, dict] = {}
+    for f in sorted(STDLIB.rglob("*.fk")):
+        rel = str(f.relative_to(ROOT))
+        if "/tests/" in rel or rel.endswith("-band.fk"):
+            continue  # test-local sentinels (9.9.9, 1.2.101.*) name nothing real
+        text = f.read_text()
+        for m in NAMED_NODE_RE.finditer(text):
+            name = m.group(1) or m.group(2)
+            key = tuple(int(m.group(i)) for i in range(3, 7))
+            ent = by_node.setdefault(key, {"names": set(), "src": rel})
+            ent["names"].add(name)
+    return by_node
 
 
 def rows() -> list[dict]:
-    """Every named Blueprint shape: (name, pkg, level, type, inst, meaning, src).
+    """Every named Blueprint shape: (name, pkg, level, type, inst, src).
 
-    Kernel-aligned categories/primitives live at pkg=1 level=2; type-99 user
-    shapes carry their inst from the registry. One row per canonical name —
-    aliases stay in the files and resolve through `(bp ...)`; the substrate
-    holds one name per shape, its native individuation."""
+    Three sources, in precedence order so curated names win:
+      1. form-ontology.json categories + primitives (kernel-aligned).
+      2. blueprint-registry.json type-99 user shapes (curated names/meanings).
+      3. a sweep of every other .fk-named shape at any coordinate — the
+         package-8 and ACCESS/WRITE-instance shapes neither file carries.
+    One row per NodeID coordinate; the substrate holds one name per shape."""
     out: list[dict] = []
+    seen: set[tuple] = set()
+
+    def add(name, pkg, level, type_, inst, src):
+        key = (pkg, level, type_, inst)
+        if key in seen:
+            return
+        seen.add(key)
+        out.append({"name": name, "pkg": pkg, "level": level,
+                    "type": type_, "inst": inst, "src": src})
+
     onto = json.loads(ONTOLOGY.read_text())
-    for fam, items in (("category", onto.get("categories", [])),
-                       ("primitive", onto.get("primitives", []))):
+    for items in (onto.get("categories", []), onto.get("primitives", [])):
         for r in items:
-            out.append({"name": r["name"], "pkg": 1, "level": 2,
-                        "type": r["type"], "inst": r["inst"],
-                        "meaning": r.get("note", ""), "src": ONTOLOGY.name,
-                        "family": r.get("family", fam)})
+            add(r["name"], 1, 2, r["type"], r["inst"], ONTOLOGY.name)
     if REGISTRY.exists():
         for r in json.loads(REGISTRY.read_text()).get("blueprints", []):
-            defined = r.get("defined_in") or []
-            out.append({"name": r["name"], "pkg": r.get("pkg", 1),
-                        "level": r.get("level", 2), "type": r.get("type", 99),
-                        "inst": r["inst"], "meaning": r.get("meaning", ""),
-                        "src": defined[0] if defined else REGISTRY.name,
-                        "family": r.get("family", "user")})
+            d = r.get("defined_in") or []
+            add(r["name"], r.get("pkg", 1), r.get("level", 2),
+                r.get("type", 99), r["inst"], d[0] if d else REGISTRY.name)
+    for key, ent in harvest_fk().items():
+        add(_canonical(ent["names"]), *key, ent["src"])
     return out
 
 
