@@ -44,60 +44,67 @@ def test_detect_agent(env, expected) -> None:
 # --- human detection cascade: git → keystore → env --------------------------
 
 
-def test_detect_human_prefers_git() -> None:
-    git = {"user.name": "Urs Muff", "user.email": "urs@Example.COM"}.get
-    human = sg.detect_human({}, git=git)
-    assert human == {
-        "name": "Urs Muff",
-        "email": "urs@example.com",  # normalized
-        "provider": "email",
-        "provider_id": "urs@example.com",
-    }
+def test_detect_human_project_identity_beats_corp_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The machine git config is a corp identity; the project identity must win.
+    monkeypatch.setattr(
+        sg, "config_identity",
+        lambda: {"name": "Urs", "email": "umuff71@gmail.com", "github": "seeker71"},
+    )
+    corp_git = {"user.name": "urs-muff", "user.email": "urs.muff@corp.example"}.get
+    human = sg.detect_human({}, git=corp_git)
+    assert human["name"] == "Urs"
+    assert human["email"] == "umuff71@gmail.com"
+    # github tried before email, so the canonical handle resolves first.
+    assert human["candidates"] == [("github", "seeker71"), ("email", "umuff71@gmail.com")]
 
 
 def test_detect_human_falls_back_to_keystore(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sg, "config_identity", lambda: None)
     monkeypatch.setattr(sg, "keystore_identity", lambda: ("github", "urs-muff"))
     human = sg.detect_human({}, git=lambda k: None)
-    assert human["provider"] == "github"
-    assert human["provider_id"] == "urs-muff"
+    assert human["candidates"] == [("github", "urs-muff")]
 
 
-def test_detect_human_falls_back_to_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_human_falls_back_to_git_then_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sg, "config_identity", lambda: None)
     monkeypatch.setattr(sg, "keystore_identity", lambda: None)
-    human = sg.detect_human({"GIT_AUTHOR_EMAIL": "a@b.io", "GIT_AUTHOR_NAME": "A B"}, git=lambda k: None)
+    git = {"user.name": "A B", "user.email": "a@b.io"}.get
+    human = sg.detect_human({}, git=git)
     assert human["email"] == "a@b.io"
-    assert human["name"] == "A B"
+    assert human["candidates"] == [("email", "a@b.io")]
 
 
 def test_detect_human_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sg, "config_identity", lambda: None)
     monkeypatch.setattr(sg, "keystore_identity", lambda: None)
     assert sg.detect_human({}, git=lambda k: None) is None
 
 
-# --- user resolution: contributor when linked, else email; display = name ----
+# --- user resolution: first linked candidate wins; else email; display = name ----
 
 
-def test_resolve_user_links_contributor(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_resolve_user_tries_candidates_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         sg, "detect_human",
-        lambda env: {"name": "Urs", "email": "u@x.io", "provider": "email", "provider_id": "u@x.io"},
+        lambda env: {"name": "Urs", "email": "umuff71@gmail.com",
+                     "candidates": [("github", "seeker71"), ("email", "umuff71@gmail.com")]},
     )
 
     def http(method, url, headers, body):
-        assert url.endswith("/api/identity/lookup/email/u@x.io")
-        return 200, {"contributor_id": "urs-contrib"}
+        assert url.endswith("/api/identity/lookup/github/seeker71")  # first candidate
+        return 200, {"contributor_id": "seeker71"}
 
     key, display = sg.resolve_user(http, "https://api.test")
-    assert key == "urs-contrib"  # keyed on the resolved contributor
-    assert display == "Urs"      # greeted by the human name
+    assert key == "seeker71"  # resolved contributor from the first linked handle
+    assert display == "Urs"
 
 
 def test_resolve_user_unlinked_keys_on_email(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         sg, "detect_human",
-        lambda env: {"name": "Urs", "email": "u@x.io", "provider": "email", "provider_id": "u@x.io"},
+        lambda env: {"name": "Urs", "email": "u@x.io", "candidates": [("email", "u@x.io")]},
     )
-    # 404 from lookup → not linked → remember by email, still greet by name.
+    # 404 from every lookup → not linked → remember by email, still greet by name.
     key, display = sg.resolve_user(lambda m, u, h, b: (404, None), "https://api.test")
     assert key == "u@x.io"
     assert display == "Urs"
@@ -165,7 +172,7 @@ def test_greeting_lines_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sg.os, "environ", {"AI_AGENT": "grok_4_agent"})
     monkeypatch.setattr(
         sg, "detect_human",
-        lambda env: {"name": "Urs", "email": "u@x.io", "provider": "email", "provider_id": "u@x.io"},
+        lambda env: {"name": "Urs", "email": "u@x.io", "candidates": [("email", "u@x.io")]},
     )
 
     def fake_http(method, url, headers, body):
