@@ -231,6 +231,13 @@
     ;; node, and loop (so `xs[i][j]` chains). This matches Python's
     ;; left-to-right subscript chaining.
 
+    ;; lift-subscript-tail — fold postfix trailers onto a base expression:
+    ;;   base [ idx ]         → PY-BMF-SUBSCRIPT(base, idx)
+    ;;   base . attr          → PY-BMF-ATTR(base, "attr")          (record_get)
+    ;;   base . method ( args ) → PY-BMF-METHOD-CALL(base, "method", args...)
+    ;; Chains left-to-right (a.b.c, xs[i].m(), obj.field[k]). The `.`
+    ;; trailer peeks one token past the name: `(` means a method call, else a
+    ;; plain attribute read.
     (defn lift-subscript-tail (base tokens)
         (if (and (not (nil? tokens))
                  (tok-op? (head tokens) "["))
@@ -244,7 +251,29 @@
                             (list base (lift-recipe idx-result)))
                         (tail after))
                     (lift-result base after)))
-            (lift-result base tokens)))
+        (if (and (not (nil? tokens))
+                 (tok-op? (head tokens) "."))
+            (do
+                (let after-dot (tail tokens))
+                (let attr-name (tok-value (head after-dot)))
+                (let after-name (tail after-dot))
+                (if (and (not (nil? after-name))
+                         (tok-op? (head after-name) "("))
+                    ;; method call: obj.method(args)
+                    (do
+                        (let args-result (lift-args (tail after-name)))
+                        (lift-subscript-tail
+                            (intern_node PY-BMF-METHOD-CALL
+                                (cons base
+                                      (cons (intern_trivial_string attr-name)
+                                            (lift-recipe args-result))))
+                            (lift-rest args-result)))
+                    ;; attribute read: obj.attr
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-ATTR
+                            (list base (intern_trivial_string attr-name)))
+                        after-name)))
+            (lift-result base tokens))))
 
     ;; --- primary expression ----------------------------------------
     ;;
@@ -617,6 +646,12 @@
 
     ;; assignment-statement tokens: `NAME = EXPR...`. The cpython-rule
     ;; classifier already filtered this to "assignment" iff tokens[1]="=".
+    ;;
+    ;; Attribute assignment `obj.attr = expr` (e.g. `self.n = n`) also
+    ;; classifies as kind "expr" / rule "star_expressions" — the lifter
+    ;; catches it (stmt-attr-assign? / lift-attr-assign) before the bare-expr
+    ;; arm and emits PY-BMF-ATTR-ASSIGN(obj-recipe, "attr", value-recipe),
+    ;; which the eval routes to record_set.
 
     (defn lift-assign (statement-tree)
         (do
@@ -625,6 +660,44 @@
             (let value (lift-recipe (lift-expr (drop 2 tokens))))
             (intern_node PY-BMF-ASSIGN
                 (list (intern_trivial_string name) value))))
+
+    ;; stmt-attr-assign? — 1 iff tokens are `NAME . NAME = EXPR...` (object
+    ;; attribute assignment). Distinct from plain `NAME = EXPR` and from a
+    ;; bare expression. We require: name, ".", name, "=" in the first four
+    ;; tokens. (Chained `a.b.c = v` is a later breath; v1 handles one dot.)
+    (defn stmt-attr-assign? (statement-tree)
+        (do
+            (let t (python-statement-tree-tokens statement-tree))
+            (if (lt (len t) 5) 0
+                (if (and (tok-name? (nth t 0))
+                         (and (tok-op? (nth t 1) ".")
+                              (and (tok-name? (nth t 2))
+                                   (tok-op? (nth t 3) "="))))
+                    1 0))))
+
+    (defn lift-attr-assign (statement-tree)
+        (do
+            (let t (python-statement-tree-tokens statement-tree))
+            ;; obj is token 0 (an identifier); attr is token 2; value is drop 4.
+            (let obj (lift-recipe (lift-primary (list (nth t 0)))))
+            (let attr (tok-value (nth t 2)))
+            (let value (lift-recipe (lift-expr (drop 4 t))))
+            (intern_node PY-BMF-ATTR-ASSIGN
+                (list obj (intern_trivial_string attr) value))))
+
+    ;; class-statement: `class NAME :` with method `def`s as children. Lifts
+    ;; to PY-BMF-CLASS(name-leaf, method-def-recipes...). The eval arm builds
+    ;; a class value (methods keyed by name) and binds NAME in the env; calling
+    ;; NAME(args) constructs an instance record and runs __init__.
+    (defn lift-class (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            ;; tokens[0]=class, tokens[1]=name
+            (let name (tok-value (nth tokens 1)))
+            (let method-recipes (lift-statements children))
+            (intern_node PY-BMF-CLASS
+                (cons (intern_trivial_string name) method-recipes))))
 
     ;; expr-statement: just an expression in statement position.
 
@@ -742,12 +815,14 @@
             (if (str_eq kind "return")           (lift-return statement-tree)
             (if (str_eq kind "while")            (lift-while statement-tree)
             (if (str_eq kind "for")              (lift-for statement-tree)
+            (if (str_eq kind "class")            (lift-class statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
+            (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;

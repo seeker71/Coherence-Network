@@ -97,6 +97,68 @@
     (defn py-closure-body   (c) (nth c 3))
     (defn py-closure-env    (c) (nth c 4))
 
+    ;; --- classes / objects (rung 2b-Python, BML/NUMS reference) ----------
+    ;; Runtime representation, built on the kernel's mutable Record value:
+    ;;   class value  = a record on CLASS-BP holding each method as a field
+    ;;                  (name → py-closure) plus "__name__".
+    ;;   instance     = a record on INSTANCE-BP holding data fields plus
+    ;;                  "__class__" → the class record.
+    ;; Methods are py-closures (the eval's own closure shape) whose first
+    ;; param is the receiver (Python `self`). Dispatch reads the instance's
+    ;; "__class__" and looks the method up by name on the class record.
+    (let CLASS-BP (make_nodeid 1 2 99 9500))
+    (let INSTANCE-BP (make_nodeid 1 2 99 9501))
+
+    ;; py-class-build — fold a list of method PY-BMF-DEF recipes into a class
+    ;; record. Each DEF becomes a (method-name → py-closure) field. The class
+    ;; record's blueprint is CLASS-BP. The captured env is the def-site env so
+    ;; methods close over module-level names.
+    (defn py-class-build-loop (defs env rec)
+        (if (nil? defs) rec
+            (do
+                (let d (head defs))
+                (let dk (node_children d))
+                (let n (len dk))
+                (let mname (node_value (head dk)))
+                (let body (py-last dk))
+                (let param-leaves (py-take (tail dk) (sub n 2)))
+                (let pms (py-collect-params-loop param-leaves (len param-leaves) (empty)))
+                (let cl (py-closure mname pms body env))
+                (record_set rec mname cl)
+                (py-class-build-loop (tail defs) env rec))))
+
+    (defn py-class-build (name defs env)
+        (do
+            (let rec (record_new CLASS-BP "__name__" name))
+            (py-class-build-loop defs env rec)))
+
+    (defn py-class? (v) (and (record? v) (node_eq (record_blueprint v) CLASS-BP)))
+    (defn py-instance? (v) (and (record? v) (node_eq (record_blueprint v) INSTANCE-BP)))
+
+    ;; py-instantiate — construct an instance of a class record: a fresh
+    ;; INSTANCE-BP record with "__class__" set, then run __init__ if present
+    ;; (binding self + the call args). Returns the instance.
+    (defn py-call-method (cls instance mname arg-values)
+        ;; Look up the method py-closure on the class, bind self=instance +
+        ;; args, walk the body. The closure's first param is the receiver.
+        (do
+            (let cl (record_get cls mname))
+            (let pms (py-closure-params cl))
+            (let body (py-closure-body cl))
+            ;; bind self (param 0) = instance, then the rest = arg-values
+            (let env0 (py-env-extend (py-closure-env cl) (head pms) instance))
+            (let call-env (py-bind-params (tail pms) arg-values env0))
+            (py-eval body call-env)))
+
+    (defn py-instantiate (cls arg-values)
+        (do
+            (let instance (record_new INSTANCE-BP "__class__" cls))
+            (if (record_has cls "__init__")
+                (do
+                    (py-call-method cls instance "__init__" arg-values)
+                    instance)
+                instance)))
+
     ;; ---- binop dispatch ----------------------------------------------
     ;;
     ;; PY-BMF-BINOP holds three children: left-recipe, op-string-leaf,
@@ -335,8 +397,24 @@
                     (let pms (py-collect-params-loop param-leaves (len param-leaves) (empty)))
                     (let closure (py-closure name pms body env))
                     (py-stmt-result closure (py-env-extend env name closure)))
+            (if (node_eq cat PY-BMF-CLASS)
+                (do
+                    ;; CLASS children: name-leaf, method-DEF-recipes... Build a
+                    ;; class record (methods as fields) and bind NAME in env.
+                    (let cname (node_value (head kids)))
+                    (let cls (py-class-build cname (tail kids) env))
+                    (py-stmt-result cls (py-env-extend env cname cls)))
+            (if (node_eq cat PY-BMF-ATTR-ASSIGN)
+                (do
+                    ;; ATTR-ASSIGN children: obj-recipe, attr-leaf, value-recipe.
+                    ;; obj.attr = value → record_set on the evaluated object.
+                    (let obj (py-eval (nth kids 0) env))
+                    (let attr (node_value (nth kids 1)))
+                    (let value (py-eval (nth kids 2) env))
+                    (record_set obj attr value)
+                    (py-stmt-result value env))
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env))))))))
+                (py-stmt-result (py-eval recipe env) env))))))))))
 
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
@@ -455,16 +533,38 @@
                     (if (str_eq callee-name "range")
                         (py-range arg-values)
                         (do
-                            (let closure (py-env-lookup env callee-name))
-                            (let captured-with-self
-                                (py-env-extend (py-closure-env closure)
-                                               (py-closure-name closure)
-                                               closure))
-                            (let call-env (py-bind-params
-                                            (py-closure-params closure)
-                                            arg-values
-                                            captured-with-self))
-                            (py-eval (py-closure-body closure) call-env))))
+                            (let callee (py-env-lookup env callee-name))
+                            ;; If the callee is a class, construct an instance
+                            ;; (record_new + __init__). Otherwise it's a normal
+                            ;; function closure — bind self-name for recursion.
+                            (if (py-class? callee)
+                                (py-instantiate callee arg-values)
+                                (do
+                                    (let captured-with-self
+                                        (py-env-extend (py-closure-env callee)
+                                                       (py-closure-name callee)
+                                                       callee))
+                                    (let call-env (py-bind-params
+                                                    (py-closure-params callee)
+                                                    arg-values
+                                                    captured-with-self))
+                                    (py-eval (py-closure-body callee) call-env))))))
+            (if (node_eq cat PY-BMF-ATTR)
+                (do
+                    ;; ATTR children: obj-recipe, attr-leaf. obj.attr →
+                    ;; record_get on the evaluated object (data field).
+                    (let obj (py-eval (nth kids 0) env))
+                    (record_get obj (node_value (nth kids 1))))
+            (if (node_eq cat PY-BMF-METHOD-CALL)
+                (do
+                    ;; METHOD-CALL children: obj-recipe, method-name-leaf,
+                    ;; arg-recipes... Resolve the method on the instance's
+                    ;; class and invoke with self=obj.
+                    (let obj (py-eval (nth kids 0) env))
+                    (let mname (node_value (nth kids 1)))
+                    (let arg-values (py-eval-args (tail (tail kids)) env))
+                    (let cls (record_get obj "__class__"))
+                    (py-call-method cls obj mname arg-values))
             (if (node_eq cat PY-BMF-LIST)
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.
@@ -510,7 +610,7 @@
                     ;; category number so the next breath knows which
                     ;; arm to add.
                     (trace "py-eval: unimplemented category" cat)
-                    (head (empty)))))))))))))))))))))
+                    (head (empty)))))))))))))))))))))))
 
     ;; Surface for callers. py-run takes a module recipe and returns its
     ;; value. py-eval and py-eval-statement are exposed so band-tests
