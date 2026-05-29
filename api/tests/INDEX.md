@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 221
+**Total files**: 223
 
 | File | Purpose |
 |---|---|
@@ -23,6 +23,7 @@
 | [test_agent_runner_tool_failure_telemetry.py](test_agent_runner_tool_failure_telemetry.py) | Tests for tool-failure-awareness spec: runtime telemetry + friction events. |
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
+| [test_api_dockerfile_contract.py](test_api_dockerfile_contract.py) | _no top-of-file purpose_ |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
@@ -41,6 +42,7 @@
 | [test_cc_exchange.py](test_cc_exchange.py) | Tests for the CC ↔ External Exchange bridge. |
 | [test_cc_scoring.py](test_cc_scoring.py) | Tests for the coherence-algorithm-spec (specs/coherence-algorithm-spec.md). |
 | [test_check_generated_vision_assets.py](test_check_generated_vision_assets.py) | _no top-of-file purpose_ |
+| [test_check_pr_followthrough.py](test_check_pr_followthrough.py) | _no top-of-file purpose_ |
 | [test_coherence_credit.py](test_coherence_credit.py) | Tests for the cc-economics-and-value-coherence spec |
 | [test_commit_evidence_validator.py](test_commit_evidence_validator.py) | _no top-of-file purpose_ |
 | [test_concept_story_crud.py](test_concept_story_crud.py) | Flow-centric tests for concept story CRUD. |
