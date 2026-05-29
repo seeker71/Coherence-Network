@@ -14,13 +14,17 @@ agent (Claude Code, Codex, Cursor, Gemini, Grok, opencode, …):
 - Agent: read from the environment — the generic `AI_AGENT` signal first, then
   per-agent markers/homes. Adding an agent is one row in KNOWN_AGENTS; an
   untabled agent that still sets AI_AGENT is named from its first segment.
-- Human: a cascade that detects a real name + email from whatever is present —
-  git config (universal), the coherence keystore, the session environment. The
-  human is resolved to a network contributor when their identity is linked
+- Human: a cascade that detects a real name + email from whatever is present.
+  An explicit project identity in config.json wins first — machine git config
+  often carries an unrelated work/corp identity, so it is only a fallback after
+  the project identity and the coherence keystore; the session environment is
+  last. The human resolves to a network contributor when a linked handle maps
   (public GET /api/identity/lookup/{provider}/{provider_id}); otherwise they
-  are still recognized and remembered, keyed by their email and greeted by
-  name. We never fabricate an identity — only surface what the machine already
-  attests.
+  are still remembered, keyed by their email and greeted by name. We never
+  fabricate an identity — only surface what the machine already attests.
+
+  Declare your project identity in ~/.coherence-network/config.json:
+    {"identity": {"name": "...", "email": "you@example.com", "github": "handle"}}
 
 Remembering is on by default. Opt out anytime:
   - set "remember_sessions": false in ~/.coherence-network/config.json, or
@@ -175,43 +179,75 @@ def detect_agent(env: Mapping[str, str]) -> str:
 # ---------------------------------------------------------------------------
 
 
+# Provider handles a config identity may declare, in resolution order.
+_IDENTITY_PROVIDERS = ("github", "gitlab", "google", "twitter", "wallet")
+
+
+def config_identity() -> Optional[Dict[str, Any]]:
+    """The human's explicit project identity, declared in config.json.
+
+    Shape: {"identity": {"name", "email", "github", ...}}. This is the
+    authoritative project identity — it takes precedence over machine git
+    config, which often carries an unrelated work/corp identity.
+    """
+    ident = _read_json(CONFIG_PATH).get("identity")
+    return ident if isinstance(ident, dict) and ident else None
+
+
 def detect_human(
     env: Mapping[str, str], git: GitFn = _git_config_reader
-) -> Optional[Dict[str, Optional[str]]]:
-    """Detect the human as {name, email, provider, provider_id} from any source.
+) -> Optional[Dict[str, Any]]:
+    """Detect the human as {name, email, candidates} from the strongest source.
 
-    Priority: git config (the universal human signal), then the coherence
-    keystore's verified link, then session environment. The first source that
-    yields a usable handle wins; name/email are filled in from git when known.
+    `candidates` is an ordered list of (provider, provider_id) to resolve
+    against the network — the first that maps to a contributor wins.
+
+    Priority:
+      1. explicit project identity in config.json (authoritative — beats git,
+         which on many machines is a separate work/corp identity);
+      2. the coherence keystore's verified link;
+      3. machine git config (the zero-config fallback);
+      4. session environment.
     Returns None only when nothing identifies a human.
     """
     git_name = git("user.name")
-    git_email = git("user.email")
 
-    # 1. git email — the most universal human identifier across machines/agents.
+    # 1. explicit project identity — wins over everything, including git.
+    ident = config_identity()
+    if ident:
+        email = (ident.get("email") or "").lower() or None
+        candidates = [
+            (p, str(ident[p])) for p in _IDENTITY_PROVIDERS if ident.get(p)
+        ]
+        if email:
+            candidates.append(("email", email))
+        if candidates:
+            name = ident.get("name") or (candidates[0][1] if candidates else None)
+            return {"name": name, "email": email, "candidates": candidates}
+
+    # 2. keystore verified link.
+    keyed = keystore_identity()
+    if keyed:
+        provider, provider_id = keyed
+        return {"name": git_name, "email": None, "candidates": [(provider, provider_id)]}
+
+    # 3. machine git config (may be a work/corp identity — fallback only).
+    git_email = git("user.email")
     if git_email:
         return {
             "name": git_name,
             "email": git_email.lower(),
-            "provider": "email",
-            "provider_id": git_email.lower(),
+            "candidates": [("email", git_email.lower())],
         }
 
-    # 2. keystore verified link (may map to a contributor directly).
-    ident = keystore_identity()
-    if ident:
-        provider, provider_id = ident
-        return {"name": git_name, "email": None, "provider": provider, "provider_id": provider_id}
-
-    # 3. environment email/name.
+    # 4. session environment.
     env_email = next((env[k] for k in _EMAIL_ENV if env.get(k)), None)
     if env_email:
         env_name = next((env[k] for k in _NAME_ENV if env.get(k)), None) or git_name
         return {
             "name": env_name,
             "email": env_email.lower(),
-            "provider": "email",
-            "provider_id": env_email.lower(),
+            "candidates": [("email", env_email.lower())],
         }
 
     return None
@@ -266,11 +302,18 @@ def resolve_user(http: HttpFn, base: str) -> Optional[Tuple[str, str]]:
     """
     human = detect_human(os.environ)
     if human:
-        cid = _lookup_contributor(http, base, human["provider"], human["provider_id"])
+        candidates = human.get("candidates") or []
+        for provider, provider_id in candidates:
+            cid = _lookup_contributor(http, base, provider, provider_id)
+            if cid:
+                return cid, (human.get("name") or cid)
+        # No linked contributor — remember by email, else the first handle.
         email = human.get("email")
-        key = cid or email or human["provider_id"]
-        display = human.get("name") or cid or (email.split("@")[0] if email else key)
-        return key, display
+        if email:
+            return email, (human.get("name") or email.split("@")[0])
+        if candidates:
+            provider_id = candidates[0][1]
+            return provider_id, (human.get("name") or provider_id)
 
     # No human signal at all — last resort: a coherence key resolved via /me.
     api_key = load_api_key()
