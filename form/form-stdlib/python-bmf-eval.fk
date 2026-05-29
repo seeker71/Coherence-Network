@@ -105,6 +105,14 @@
     ;; an honest unknown-op panic (head empty) for any op we haven't
     ;; reached yet.
 
+    ;; py-pow — integer exponentiation by repeated multiplication. No kernel
+    ;; `pow` native exists, so `**` computes in Form. Non-negative exponents
+    ;; only (Python's int**negative yields a float — a later breath when the
+    ;; interpreter grows floats on this path).
+    (defn py-pow (base exp acc)
+        (if (le exp 0) acc
+            (py-pow base (sub exp 1) (mul acc base))))
+
     (defn py-binop-apply (op left right)
         (if (str_eq op "+")  (add left right)
         (if (str_eq op "-")  (sub left right)
@@ -112,7 +120,8 @@
         (if (str_eq op "/")  (div left right)
         (if (str_eq op "%")  (mod left right)
         (if (str_eq op "//") (div left right)
-            (do (trace "py-binop: unsupported op" op) (head (empty))))))))))
+        (if (str_eq op "**") (py-pow left right 1)
+            (do (trace "py-binop: unsupported op" op) (head (empty)))))))))))
 
     (defn py-compare-apply (op left right)
         (if (str_eq op "==") (if (eq left right) 1 0)
