@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 224
+**Total files**: 225
 
 | File | Purpose |
 |---|---|
@@ -178,6 +178,7 @@
 | [test_substrate_form_bml_state.py](test_substrate_form_bml_state.py) | BML state-stack + exception-flow primitives in Form. |
 | [test_substrate_form_builders.py](test_substrate_form_builders.py) | Tests for substrate-resident builders (Build/CaptureRef/Const DSL). |
 | [test_substrate_form_builtins.py](test_substrate_form_builtins.py) | Built-in functions in Form runtime — list ops, type coercion, numerics. |
+| [test_substrate_form_check.py](test_substrate_form_check.py) | Static resolution + blueprint-type checking — the third walk over a Form AST. |
 | [test_substrate_form_decompile_round_trip.py](test_substrate_form_decompile_round_trip.py) | Source round-trip fidelity: text → Recipe → text' → Recipe' is identity. |
 | [test_substrate_form_dict_literals.py](test_substrate_form_dict_literals.py) | Dict literals + field access on dicts. |
 | [test_substrate_form_endpoint.py](test_substrate_form_endpoint.py) | Smoke tests for POST /api/substrate/form — the substrate-native query DSL |
