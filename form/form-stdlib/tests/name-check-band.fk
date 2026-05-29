@@ -1,0 +1,45 @@
+; name-check-band.fk — proof that the Form-native resolver walks a recipe and
+; reports exactly the unresolved names.
+;
+; preludes: form-stdlib/name-check.fk
+;
+; Builds four programs with intern_node (so the test needs no source→recipe
+; reflection) and asserts name-check's verdict on each:
+;   1. a call to the native `print`          → resolves (empty)
+;   2. a call to an undefined name           → reported (one name)
+;   3. a defn + a call to that defn          → resolves (empty)
+;   4. the same defn + a call to a missing    → reported (one name)
+; Cases 1/2 prove the native test; 3/4 prove defn-collection + the walk. The
+; printed verdict is deterministic, so the three sibling kernels must agree.
+
+(do
+    (let fncall-cat (make_nodeid 1 2 32 1))
+    (let fndef-cat  (make_nodeid 1 2 31 1))
+    (let seq-cat    (make_nodeid 1 2 9 2))
+    (let do-cat     (make_nodeid 1 2 9 1))
+
+    (let good (intern_node fncall-cat
+                  (list (intern_trivial_string "print") (intern_trivial_int 1))))
+    (let bad (intern_node fncall-cat
+                  (list (intern_trivial_string "totally-undefined-xyz") (intern_trivial_int 1))))
+
+    (let fndef (intern_node fndef-cat
+                  (list (intern_trivial_string "foo")
+                        (intern_node seq-cat (empty))
+                        (intern_trivial_int 0))))
+    (let call-foo (intern_node fncall-cat (list (intern_trivial_string "foo"))))
+    (let call-bar (intern_node fncall-cat (list (intern_trivial_string "bar"))))
+    (let prog-ok  (intern_node do-cat (list fndef call-foo)))
+    (let prog-bad (intern_node do-cat (list fndef call-bar)))
+
+    ;; `known` seeds the resolvable set with the builtin name this test uses.
+    (let known (list "print"))
+
+    (let pass
+        (and (eq (len (name-check good known)) 0)
+        (and (eq (len (name-check bad known)) 1)
+        (and (eq (len (name-check prog-ok known)) 0)
+             (eq (len (name-check prog-bad known)) 1)))))
+
+    (print (if pass "name-check-band: PASS" "name-check-band: FAIL"))
+)

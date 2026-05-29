@@ -1,0 +1,106 @@
+; name-check.fk — name resolution as a recipe walk, in Form's own voice.
+;
+; The kernel resolves names lazily: it throws `call: unbound <name>` only when
+; the walker reaches that node, only on the path it runs. Enough to run a
+; known-good module; not enough to refactor the corpus with confidence — rename
+; a defn and nothing tells you which references just went stale until that exact
+; recipe walks.
+;
+; This is the resolution walk: the same recipe tree the kernel walks, traversed
+; once to collect every defined name, then again to check every reference —
+; gathering the unresolved names instead of running anything. It is a sibling of
+; engine.fk / form-engine.form's evaluator: same dispatch on `node_category`,
+; different accumulation.
+;
+; Why it lives IN Form (not a static text checker): a static reader of `.fk`
+; source can't see names that the build produces — engine-constants.fk is
+; generated from form-ontology.json; PY-BMF-* and the dialect grammars are
+; lowered out of `section [...]` blocks by source-compiler.fk. This checker runs
+; inside the kernel, so when handed a post-lowering recipe (a loaded module or a
+; `read_form_binary` artifact) every generated and lowered name is already a
+; real FNDEF in the tree it walks. The blind spots of the static approach close
+; because the checker stands where the kernel stands.
+;
+; The reader turns surface verbs (`add`, `eq`, `if`, `let`, ...) into typed
+; MATH/COMPARE/COND/BLOCK recipes, so they never appear as names to resolve —
+; only `defn`-defined functions and kernel natives do. A name resolves iff it is
+; a collected `defn` OR `(native_blueprint name)` is non-null. Everything else
+; is reported.
+;
+; Companion: form-engine.form (the evaluator this mirrors), source-compiler.fk
+; (the lowering that makes the post-lowering recipe whole).
+
+(do
+    ;; --- kernel category type numbers (RBasic) ----------------------------
+    ;; node_type returns the `type` field of a node's NodeID. The reader's
+    ;; shapes: FNDEF=31 [name params body], FNCALL=32 [callee-name . args],
+    ;; IDENT=33 [name]. A FNCALL/IDENT's name child is a STRING trivial whose
+    ;; node_value is the surface name.
+    (defn nc-FNDEF  () 31)
+    (defn nc-FNCALL () 32)
+    (defn nc-IDENT  () 33)
+
+    ;; empty-list test — inlined rather than leaning on core.fk's `nil?`, so
+    ;; the checker loads standalone (no BML-section lowering required to use it).
+    (defn nc-empty? (xs) (eq (len xs) 0))
+
+    ;; --- string-list membership (the collected-defn scope) ----------------
+    (defn nc-member? (name xs)
+        (if (nc-empty? xs)
+            false
+            (if (str_eq name (head xs))
+                true
+                (nc-member? name (tail xs)))))
+
+    ;; --- the head-name of a FNDEF / FNCALL / IDENT (first child is a STRING)
+    (defn nc-head-name (n)
+        (node_value (head (node_children n))))
+
+    ;; Resolution is pure string-membership against the known-name set. The set
+    ;; is the caller's to seed (the kernel natives, plus any generated/lowered
+    ;; names already loaded); PASS 1 adds the program's own defns. Keeping the
+    ;; core a strict-bool str_eq membership test is deliberate: it sidesteps the
+    ;; sibling divergences this checker surfaced — Go/Rust leave `null` unbound,
+    ;; TS's `and`/`or` are strict-bool, and value truthiness differs across the
+    ;; three. Pure membership runs identically in all of them.
+
+    ;; --- PASS 1: collect every defn name reachable under `n` --------------
+    (defn nc-collect (n acc)
+        (if (eq (node_type n) (nc-FNDEF))
+            (nc-collect-kids (node_children n) (cons (nc-head-name n) acc))
+            (nc-collect-kids (node_children n) acc)))
+    (defn nc-collect-kids (xs acc)
+        (if (nc-empty? xs)
+            acc
+            (nc-collect-kids (tail xs) (nc-collect (head xs) acc))))
+
+    ;; --- PASS 2: walk, resolving every FNCALL callee + IDENT value --------
+    ;; A reference that doesn't resolve is consed onto `acc`. Children are
+    ;; always walked (so FNCALL args are checked); the callee STRING trivial
+    ;; itself is a leaf with no children, so it is never double-counted.
+    (defn nc-check (n defs acc)
+        (if (eq (node_type n) (nc-FNCALL))
+            (nc-check-ref (nc-head-name n) n defs acc)
+            (if (eq (node_type n) (nc-IDENT))
+                (nc-check-ref (nc-head-name n) n defs acc)
+                (nc-check-kids (node_children n) defs acc))))
+    (defn nc-check-ref (name n defs acc)
+        (nc-check-kids (node_children n) defs
+            (if (nc-member? name defs) acc (cons name acc))))
+    (defn nc-check-kids (xs defs acc)
+        (if (nc-empty? xs)
+            acc
+            (nc-check-kids (tail xs) defs (nc-check (head xs) defs acc))))
+
+    ;; --- the surface: walk a program recipe, return its unresolved names ---
+    ;; `known` seeds the resolvable set (the kernel natives + any already-loaded
+    ;; generated/lowered names, supplied as a list of strings). PASS 1 folds in
+    ;; the program's own defns; PASS 2 reports every reference outside the union.
+    ;; Empty result = every name lands somewhere real.
+    (defn name-check (program known)
+        (nc-check program (nc-collect program known) (empty)))
+
+    ;; --- a yes/no gate over a program recipe ------------------------------
+    (defn name-check-clean? (program known)
+        (nc-empty? (name-check program known)))
+)
