@@ -107,12 +107,46 @@ Ranked by frequency across `api/app/services/substrate/*.py`:
 
 | Construct | Hits in substrate | Notes |
 |---|---|---|
-| **f-strings** | `form_runtime.py` 62, `form.py` 32 | grammar parses; lift + eval (string-build over interpolations) |
+| **f-strings** | `form_runtime.py` 62, `form.py` 32 | **BLOCKED at grammar layer — not lift/eval.** lift+eval are *written and proven* (see below); the real gap is statement-grouping. |
+| **statement-grouping: trailing f-string stmt dropped** | — | **PREREQUISITE for f-strings.** `python-parse-module-tree-object` drops a statement whose first token is a bare `py-fstring`: `a=2; b=3; f"…"` → only 2 statements (the f-string vanishes). Fix lives in `form-stdlib/grammars/python-bmf.fk` statement grouping — it must recognize a leading `py-fstring` token as starting an expression-statement. Once fixed, the f-string lift+eval below drops straight in. |
 | **`class` + `@dataclass`** | `form.py` 50, `category.py` 34 | plain-class eval exists; dataclass + dunders are the real work |
 | **decorators** | `form.py` 50 | lift wraps the decorated def in a call chain |
 | **`try`/`except`** | `form_runtime.py` 12 | needs an exception-stack data shape in eval |
 | **comprehensions** | `form_runtime.py` 10 | desugar to a fold over the iterable |
 | **`from … import` as module** | 28 files | needs module-system semantics; ORM calls also need the Form persistence runtime, not SQLAlchemy |
+
+### Parked: f-string lift+eval (proven, blocked on statement-grouping)
+
+Attempted 2026-05-29 (PR #2184, closed without merge). The lift and eval are
+**correct in isolation** — the only reason f-strings don't round-trip is the
+statement-grouping bug above. Keeping the design here so the next breath drops
+it in after the grammar fix, rather than re-deriving it:
+
+- **Scanner hands a single `py-fstring` token** carrying the raw body (e.g.
+  `v={name}` for `f"v={name}"`) — interpolations are NOT pre-parsed.
+- **Lift** (`python-bmf-lift.fk`): a char-scanner splits the body into
+  alternating segments and emits `PY-BMF-FSTRING`:
+  - literal runs → `PY-BMF-STRING` leaf (via `intern_trivial_string` of the
+    substring)
+  - `{ expr }` → the inner expr lifted via `lift-module-text`, taking its
+    module's first statement recipe.
+  Helpers: `fstr-find-open`/`fstr-find-close` (scan for `{`/`}`),
+  `fstr-segments` (accumulate, skip empty literal runs), `fstr-lift-inner`,
+  `lift-fstring`. Add `py-fstring` + `py-string` branches to `lift-primary`
+  (the plain-`py-string` literal branch is *also* currently missing — a bare
+  string literal doesn't lift today; add it alongside).
+- **Eval** (`python-bmf-eval.fk`): `PY-BMF-FSTRING` arm folds children via
+  `py-fstring-build` — `(str_concat acc (int_to_str (py-eval seg env)))`.
+  `int_to_str` is polymorphic (strings pass through, ints/bool/null render),
+  so no new native is needed.
+- **Verified directly** (bypassing the broken module path): `lift-fstring
+  "x={5}y"` + `py-eval` → `x=5y`; `f"v={a}"`/`f"sum={a+b} end"` lift to cat-99
+  with correct segment children. They fail only because the f-string
+  *statement* never reaches `lift-statement`.
+- **Test shape (for when it unblocks):** band cell — `a=2; b=3;
+  f"sum={a + b} end"` → `"sum=5 end"`, scored via `str_eq` (result is a
+  string, not an int). Format specs (`{x:.2f}`) and `{{`/`}}` escapes are a
+  further breath beyond the basic round-trip.
 
 ### Not a compiler gap — a runtime gap
 
