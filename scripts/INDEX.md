@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 133
+**Total files**: 134
 
 | File | Purpose |
 |---|---|
@@ -116,6 +116,7 @@
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
 | [substrate_parity_harness.py](substrate_parity_harness.py) | substrate_parity_harness.py — read the body in both voices, side by side. |
 | [substrate_read_hook.py](substrate_read_hook.py) | Claude Code PreToolUse hook — surface substrate annotation on file Reads. |
+| [sync_blueprints_to_substrate.py](sync_blueprints_to_substrate.py) | Sync Form Blueprint names -> substrate DB as NamedCells. |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | Sync cross-references from KB concept files into graph DB edges. |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | Sync KB markdown files -> Graph DB via API. |
 | [sync_presence_content.py](sync_presence_content.py) | Sync structured presence content from JSON files into graph nodes. |
