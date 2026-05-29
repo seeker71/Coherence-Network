@@ -1,7 +1,308 @@
 {
-  "_note": "Type-99 (user-space) Blueprint registry \u2014 the single source of truth for shapes the kernel does not dispatch on. Generated from code by scripts/scan_form_blueprints.py --emit-registry, then curated. NodeID is (1, 2, 99, inst). form-stdlib/form-ontology-loader.fk binds these names so .fk code references a name, never the raw number. To add a shape: add a row here first, then `(bp \"name\")` in code.",
+  "_note": "Blueprint registry \u2014 the single source of truth for every shape the kernel does not dispatch on (kernel-owned categories/primitives live in form-ontology.json). Generated from code by scripts/scan_form_blueprints.py --emit-registry, then curated. Each row carries the full NodeID (pkg, level, type, inst). form-ontology-loader.fk binds these names so .fk code references a name via (bp \"name\"), never the raw number. To add a shape: add a row here, then (bp \"name\") in code.",
   "blueprints": [
     {
+      "pkg": 1,
+      "level": 1,
+      "type": 3,
+      "inst": 0,
+      "name": "FALSE-TRIV",
+      "meaning": "",
+      "aliases": [
+        "JSON-BNF-FALSE",
+        "PY-FULL-FALSE",
+        "PY-FULL-NONE",
+        "fsc-rec-false"
+      ],
+      "reuse": 5,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk",
+        "form/form-stdlib/seedbank/parser.fk",
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 1,
+      "type": 3,
+      "inst": 1,
+      "name": "TRUE-TRIV",
+      "meaning": "",
+      "aliases": [
+        "JSON-BNF-TRUE",
+        "PY-FULL-TRUE",
+        "fsc-rec-true"
+      ],
+      "reuse": 4,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/json.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python-full.bnf.fk",
+        "form/form-stdlib/seedbank/parser.fk",
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 1,
+      "type": 14,
+      "inst": 0,
+      "name": "SCHEMA-LIST-CAT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/schema.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 9,
+      "inst": 4,
+      "name": "UE-BLOCK-WITH",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 10,
+      "inst": 1,
+      "name": "UE-CALL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 11,
+      "inst": 3,
+      "name": "UE-COND-TERNARY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 12,
+      "inst": 6,
+      "name": "TS-NEG",
+      "meaning": "",
+      "aliases": [
+        "PY-MATH-NEGATE",
+        "UE-MATH-NEGATE"
+      ],
+      "reuse": 3,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 15,
+      "inst": 1,
+      "name": "F-LOC",
+      "meaning": "",
+      "aliases": [
+        "GO-LOC",
+        "PY-LOCAL",
+        "RS-LOC",
+        "TS-LOC",
+        "UE-ACCESS-LOCAL"
+      ],
+      "reuse": 6,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/form.fk",
+        "form/form-stdlib/seedbank/emits/go.fk",
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/rust.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 15,
+      "inst": 2,
+      "name": "F-MEM",
+      "meaning": "",
+      "aliases": [
+        "GO-MEM",
+        "PY-MEMBER",
+        "RS-MEM",
+        "TS-MEM",
+        "UE-ACCESS-MEMBER"
+      ],
+      "reuse": 6,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/form.fk",
+        "form/form-stdlib/seedbank/emits/go.fk",
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/rust.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 15,
+      "inst": 3,
+      "name": "F-IDX",
+      "meaning": "",
+      "aliases": [
+        "GO-IDX",
+        "PY-INDEX",
+        "RS-IDX",
+        "TS-IDX",
+        "UE-ACCESS-INDEX"
+      ],
+      "reuse": 6,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/form.fk",
+        "form/form-stdlib/seedbank/emits/go.fk",
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/rust.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 15,
+      "inst": 4,
+      "name": "UE-ACCESS-GLOBAL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 16,
+      "inst": 1,
+      "name": "F-ASN",
+      "meaning": "",
+      "aliases": [
+        "GO-ASN",
+        "PY-ASSIGN",
+        "RS-ASN",
+        "TS-ASN",
+        "U-ASSIGN",
+        "UE-WRITE-ASSIGN"
+      ],
+      "reuse": 7,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/form.fk",
+        "form/form-stdlib/seedbank/emits/go.fk",
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/rust.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/grammars/python-universal.bnf.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 18,
+      "inst": 1,
+      "name": "F-RET",
+      "meaning": "",
+      "aliases": [
+        "GO-RET",
+        "PY-RET",
+        "RS-RET",
+        "TS-RET",
+        "U-RETURN",
+        "UE-JUMP-RETURN"
+      ],
+      "reuse": 9,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/form.fk",
+        "form/form-stdlib/seedbank/emits/go.fk",
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/emits/rust.fk",
+        "form/form-stdlib/seedbank/emits/typescript.fk",
+        "form/form-stdlib/seedbank/grammars/go-universal.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/python-universal.bnf.fk",
+        "form/form-stdlib/seedbank/grammars/typescript-universal.bnf.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 18,
+      "inst": 2,
+      "name": "PY-BRK",
+      "meaning": "",
+      "aliases": [
+        "UE-JUMP-BREAK"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 18,
+      "inst": 3,
+      "name": "PY-CONT",
+      "meaning": "",
+      "aliases": [
+        "UE-JUMP-CONTINUE"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 18,
+      "inst": 4,
+      "name": "PY-YIELD",
+      "meaning": "",
+      "aliases": [
+        "UE-JUMP-YIELD"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/emits/python.fk",
+        "form/form-stdlib/seedbank/universal-emit.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1,
       "name": "DOC-DOC",
       "meaning": "root document",
@@ -15,6 +316,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 2,
       "name": "DOC-HEADING",
       "meaning": "(level, text)",
@@ -28,6 +332,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 3,
       "name": "DOC-PARAGRAPH",
       "meaning": "(text)",
@@ -41,6 +348,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 4,
       "name": "DOC-CODE-BLOCK",
       "meaning": "(lang, content)",
@@ -54,6 +364,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 5,
       "name": "DOC-BLANK",
       "meaning": "blank-line marker (discarded post-parse)",
@@ -64,16 +377,9 @@
       ]
     },
     {
-      "inst": 7,
-      "name": "topic",
-      "meaning": "",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/tests/channel-query-json-band.fk"
-      ]
-    },
-    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 10,
       "name": "JSON-OBJECT",
       "meaning": "map: list of (key, value) pairs",
@@ -108,6 +414,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 11,
       "name": "JSON-ARRAY",
       "meaning": "sequence of values",
@@ -142,6 +451,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 12,
       "name": "JSON-PAIR",
       "meaning": "(key-string, value)",
@@ -176,6 +488,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 13,
       "name": "JSON-NULL",
       "meaning": "null literal",
@@ -210,6 +525,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 20,
       "name": "YAML-DOC",
       "meaning": "root document = sequence of pairs / list items",
@@ -220,6 +538,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 21,
       "name": "YAML-PAIR",
       "meaning": "(key-string, value)",
@@ -230,6 +551,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 22,
       "name": "YAML-ITEM",
       "meaning": "list-item value",
@@ -240,6 +564,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 23,
       "name": "YAML-LIST",
       "meaning": "(sequence of items)",
@@ -250,6 +577,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 30,
       "name": "FORM-LIST",
       "meaning": "an S-expression list",
@@ -260,6 +590,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 31,
       "name": "FORM-IDENT",
       "meaning": "an identifier atom",
@@ -270,6 +603,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 40,
       "name": "PY-MODULE",
       "meaning": "root module: sequence of statements",
@@ -285,6 +621,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 41,
       "name": "PY-IMPORT",
       "meaning": "(module-name, asname)",
@@ -300,6 +639,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 42,
       "name": "PY-FROM-IMPORT",
       "meaning": "(module, [names])",
@@ -315,6 +657,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 43,
       "name": "PY-FUNCTION-DEF",
       "meaning": "(name, params)",
@@ -330,6 +675,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 44,
       "name": "PY-ASSIGN",
       "meaning": "(target, value)",
@@ -345,6 +693,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 45,
       "name": "PY-IDENT",
       "meaning": "an identifier reference",
@@ -358,6 +709,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 46,
       "name": "PY-NAME-PAIR",
       "meaning": "(name, asname) for import lists",
@@ -371,6 +725,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 47,
       "name": "PY-BNF-BIN-EXPR",
       "meaning": "",
@@ -384,6 +741,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 48,
       "name": "PY-BNF-INT-EXPR",
       "meaning": "",
@@ -397,6 +757,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 49,
       "name": "PY-BNF-STR-EXPR",
       "meaning": "",
@@ -410,6 +773,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 50,
       "name": "TS-MODULE",
       "meaning": "",
@@ -425,6 +791,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 51,
       "name": "TS-IMPORT",
       "meaning": "(kind, names, module)",
@@ -440,6 +809,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 52,
       "name": "TS-EXPORT",
       "meaning": "(declaration)",
@@ -453,6 +825,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 53,
       "name": "PY-BNF-ATTR",
       "meaning": "(name, params)",
@@ -466,6 +841,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 54,
       "name": "PY-BNF-IF",
       "meaning": "(name)",
@@ -479,6 +857,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 55,
       "name": "PY-BNF-WHILE",
       "meaning": "(kind, name, value)",
@@ -492,6 +873,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 56,
       "name": "TS-IDENT",
       "meaning": "",
@@ -505,6 +889,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 57,
       "name": "PY-BNF-RETURN",
       "meaning": "",
@@ -515,6 +902,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 59,
       "name": "TS-BNF-MODULE",
       "meaning": "",
@@ -528,6 +918,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 60,
       "name": "RS-FILE",
       "meaning": "",
@@ -543,6 +936,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 61,
       "name": "RS-USE",
       "meaning": "(path)",
@@ -558,6 +954,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 62,
       "name": "RS-MOD",
       "meaning": "(name)",
@@ -573,6 +972,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 63,
       "name": "RS-FN-DECL",
       "meaning": "(name, params)",
@@ -588,6 +990,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 64,
       "name": "RS-STRUCT-DECL",
       "meaning": "(name)",
@@ -603,6 +1008,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 65,
       "name": "TS-BNF-LET",
       "meaning": "(name)",
@@ -618,6 +1026,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 66,
       "name": "TS-BNF-CONST",
       "meaning": "",
@@ -631,6 +1042,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 67,
       "name": "TS-BNF-IF",
       "meaning": "",
@@ -641,6 +1055,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 68,
       "name": "TS-BNF-WHILE",
       "meaning": "",
@@ -651,6 +1068,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 69,
       "name": "TS-BNF-FOR",
       "meaning": "",
@@ -666,6 +1086,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 70,
       "name": "GO-FILE",
       "meaning": "",
@@ -683,6 +1106,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 71,
       "name": "GO-PACKAGE",
       "meaning": "",
@@ -700,6 +1126,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 72,
       "name": "GO-IMPORT",
       "meaning": "",
@@ -715,6 +1144,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 73,
       "name": "RS-BNF-FN",
       "meaning": "",
@@ -730,6 +1162,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 74,
       "name": "GO-TYPE-DECL",
       "meaning": "",
@@ -745,6 +1180,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 75,
       "name": "RS-BNF-LET",
       "meaning": "",
@@ -760,6 +1198,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 76,
       "name": "RS-BNF-IF",
       "meaning": "",
@@ -770,6 +1211,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 77,
       "name": "RS-BNF-WHILE",
       "meaning": "",
@@ -780,6 +1224,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 78,
       "name": "RS-BNF-FOR",
       "meaning": "",
@@ -790,6 +1237,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 79,
       "name": "RS-BNF-MATCH",
       "meaning": "",
@@ -805,55 +1255,59 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 80,
-      "name": "CELL-LINE",
-      "meaning": "one text line",
+      "name": "GO-BNF-PACKAGE",
+      "meaning": "",
       "aliases": [
-        "GO-BNF-PACKAGE",
         "GO-EXEC-PACKAGE",
         "RS-BNF-MATCH-ARM"
-      ],
-      "reuse": 4,
-      "defined_in": [
-        "form/form-stdlib/seedbank/grammars/go-exec.fk",
-        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
-        "form/form-stdlib/seedbank/grammars/rust.bnf.fk",
-        "form/form-stdlib/seedbank/tests/cell-stream.fk"
-      ]
-    },
-    {
-      "inst": 81,
-      "name": "CELL-CHUNK",
-      "meaning": "one binary chunk",
-      "aliases": [
-        "GO-BNF-IMPORT",
-        "GO-EXEC-IMPORT"
-      ],
-      "reuse": 5,
-      "defined_in": [
-        "form/form-stdlib/seedbank/grammars/go-exec.fk",
-        "form/form-stdlib/seedbank/grammars/go.bnf.fk",
-        "form/form-stdlib/seedbank/tests/cell-drop.fk",
-        "form/form-stdlib/seedbank/tests/cell-stream.fk",
-        "form/form-stdlib/seedbank/tests/walk-stream.fk"
-      ]
-    },
-    {
-      "inst": 82,
-      "name": "CELL-TRANSMUTED",
-      "meaning": "output of transmute",
-      "aliases": [
-        "GO-BNF-FUNC",
-        "GO-EXEC-FUNC"
       ],
       "reuse": 3,
       "defined_in": [
         "form/form-stdlib/seedbank/grammars/go-exec.fk",
         "form/form-stdlib/seedbank/grammars/go.bnf.fk",
-        "form/form-stdlib/seedbank/tests/cell-stream.fk"
+        "form/form-stdlib/seedbank/grammars/rust.bnf.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 81,
+      "name": "GO-BNF-IMPORT",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-IMPORT"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 82,
+      "name": "GO-BNF-FUNC",
+      "meaning": "",
+      "aliases": [
+        "GO-EXEC-FUNC"
+      ],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/seedbank/grammars/go-exec.fk",
+        "form/form-stdlib/seedbank/grammars/go.bnf.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 83,
       "name": "GO-BNF-TYPE",
       "meaning": "",
@@ -867,6 +1321,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 84,
       "name": "GO-BNF-VAR",
       "meaning": "",
@@ -880,6 +1337,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 85,
       "name": "GO-BNF-CONST",
       "meaning": "",
@@ -893,6 +1353,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 86,
       "name": "GO-BNF-BLOCK",
       "meaning": "",
@@ -903,6 +1366,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 87,
       "name": "GO-BNF-RETURN",
       "meaning": "",
@@ -913,6 +1379,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 88,
       "name": "GO-BNF-IF",
       "meaning": "",
@@ -923,6 +1392,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 89,
       "name": "GO-BNF-ASSIGN",
       "meaning": "",
@@ -933,6 +1405,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 90,
       "name": "PNG-FILE",
       "meaning": "root file",
@@ -946,6 +1421,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 91,
       "name": "PNG-CHUNK",
       "meaning": "one chunk",
@@ -959,6 +1437,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 92,
       "name": "GO-BNF-INT-EXPR",
       "meaning": "",
@@ -969,6 +1450,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 93,
       "name": "GO-BNF-STR-EXPR",
       "meaning": "",
@@ -979,6 +1463,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 94,
       "name": "GO-BNF-STRUCT-TYPE",
       "meaning": "",
@@ -989,6 +1476,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 95,
       "name": "GO-BNF-BIN-EXPR",
       "meaning": "",
@@ -999,6 +1489,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 96,
       "name": "GO-BNF-UNARY-EXPR",
       "meaning": "",
@@ -1009,6 +1502,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 97,
       "name": "GO-BNF-PAREN-EXPR",
       "meaning": "",
@@ -1019,6 +1515,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 98,
       "name": "GO-BNF-PARAM",
       "meaning": "",
@@ -1029,6 +1528,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 99,
       "name": "GO-BNF-CALL",
       "meaning": "",
@@ -1039,6 +1541,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 100,
       "name": "UNKNOWN-FORMAT",
       "meaning": "",
@@ -1052,6 +1557,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 101,
       "name": "FORM-FILE-ROOT",
       "meaning": "",
@@ -1065,6 +1573,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 102,
       "name": "GO-BNF-FIELD",
       "meaning": "",
@@ -1075,6 +1586,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 103,
       "name": "GO-BNF-SHORT-VAR",
       "meaning": "",
@@ -1088,6 +1602,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 104,
       "name": "GO-BNF-SWITCH",
       "meaning": "",
@@ -1098,6 +1615,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 105,
       "name": "GO-BNF-CASE",
       "meaning": "",
@@ -1108,6 +1628,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 106,
       "name": "GO-BNF-COMPOSITE",
       "meaning": "",
@@ -1118,6 +1641,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 110,
       "name": "JSX-ELEMENT",
       "meaning": "",
@@ -1128,6 +1654,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 111,
       "name": "JSX-TEXT",
       "meaning": "",
@@ -1138,6 +1667,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 120,
       "name": "TSX-LET",
       "meaning": "",
@@ -1148,6 +1680,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 130,
       "name": "PYC-MODULE",
       "meaning": "",
@@ -1158,6 +1693,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 131,
       "name": "PYC-IMPORT",
       "meaning": "(module, name)",
@@ -1168,6 +1706,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 132,
       "name": "PYC-FROM-IMPORT",
       "meaning": "",
@@ -1178,6 +1719,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 133,
       "name": "PYC-DEF",
       "meaning": "(name)",
@@ -1188,6 +1732,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 134,
       "name": "PYC-CLASS",
       "meaning": "(name)",
@@ -1198,6 +1745,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 135,
       "name": "PYC-DOCSTRING",
       "meaning": "(text)",
@@ -1208,6 +1758,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 136,
       "name": "PYC-NAME-LIST",
       "meaning": "list of name strings",
@@ -1218,6 +1771,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 137,
       "name": "PYC-DEF-FULL",
       "meaning": "(name, params, ret-type)",
@@ -1228,6 +1784,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 138,
       "name": "PYC-PARAM-LIST",
       "meaning": "opaque text for now",
@@ -1238,6 +1797,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 200,
       "name": "PY-FULL-MODULE",
       "meaning": "",
@@ -1248,6 +1810,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 201,
       "name": "PY-FULL-IMPORT",
       "meaning": "",
@@ -1258,6 +1823,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 202,
       "name": "PY-FULL-FROM-IMPORT",
       "meaning": "",
@@ -1268,6 +1836,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 203,
       "name": "PY-FULL-FUNC-DEF",
       "meaning": "",
@@ -1278,6 +1849,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 204,
       "name": "PY-FULL-CLASS-DEF",
       "meaning": "",
@@ -1288,6 +1862,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 205,
       "name": "PY-FULL-ASSIGN",
       "meaning": "",
@@ -1298,6 +1875,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 206,
       "name": "PY-FULL-RETURN",
       "meaning": "",
@@ -1308,6 +1888,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 207,
       "name": "PY-FULL-IF",
       "meaning": "",
@@ -1318,6 +1901,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 208,
       "name": "PY-FULL-WHILE",
       "meaning": "",
@@ -1328,6 +1914,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 209,
       "name": "PY-FULL-FOR",
       "meaning": "",
@@ -1338,6 +1927,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 210,
       "name": "PY-FULL-TRY",
       "meaning": "",
@@ -1348,6 +1940,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 211,
       "name": "PY-FULL-WITH",
       "meaning": "",
@@ -1358,6 +1953,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 212,
       "name": "PY-FULL-CALL",
       "meaning": "",
@@ -1368,6 +1966,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 213,
       "name": "PY-FULL-ATTR",
       "meaning": "",
@@ -1378,6 +1979,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 214,
       "name": "PY-FULL-SUBSCRIPT",
       "meaning": "",
@@ -1388,6 +1992,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 215,
       "name": "PY-FULL-BIN-EXPR",
       "meaning": "",
@@ -1398,6 +2005,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 216,
       "name": "PY-FULL-UNARY",
       "meaning": "",
@@ -1408,6 +2018,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 217,
       "name": "PY-FULL-COND-EXPR",
       "meaning": "",
@@ -1418,6 +2031,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 218,
       "name": "PY-FULL-LAMBDA",
       "meaning": "",
@@ -1428,6 +2044,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 219,
       "name": "PY-FULL-LIST-LIT",
       "meaning": "",
@@ -1438,6 +2057,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 220,
       "name": "PY-FULL-DICT-LIT",
       "meaning": "",
@@ -1448,6 +2070,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 221,
       "name": "PY-FULL-SET-LIT",
       "meaning": "",
@@ -1458,6 +2083,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 222,
       "name": "PY-FULL-TUPLE-LIT",
       "meaning": "",
@@ -1468,6 +2096,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 223,
       "name": "PY-FULL-LISTCOMP",
       "meaning": "",
@@ -1478,6 +2109,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 224,
       "name": "PY-FULL-DICTCOMP",
       "meaning": "",
@@ -1488,6 +2122,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 225,
       "name": "PY-FULL-DECORATOR",
       "meaning": "",
@@ -1498,6 +2135,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 226,
       "name": "PY-FULL-INT",
       "meaning": "",
@@ -1508,6 +2148,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 227,
       "name": "PY-FULL-STR",
       "meaning": "",
@@ -1518,6 +2161,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 228,
       "name": "PY-FULL-IDENT",
       "meaning": "",
@@ -1528,6 +2174,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 229,
       "name": "PY-FULL-PAREN",
       "meaning": "",
@@ -1538,6 +2187,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 300,
       "name": "GOF-PACKAGE",
       "meaning": "",
@@ -1548,6 +2200,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 301,
       "name": "GOF-IMPORT",
       "meaning": "",
@@ -1558,6 +2213,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 302,
       "name": "GOF-CONST",
       "meaning": "",
@@ -1568,6 +2226,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 303,
       "name": "GOF-VAR",
       "meaning": "",
@@ -1578,6 +2239,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 304,
       "name": "GOF-TYPE",
       "meaning": "",
@@ -1588,6 +2252,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 305,
       "name": "GOF-FUNC",
       "meaning": "",
@@ -1598,6 +2265,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 306,
       "name": "GOF-METHOD",
       "meaning": "",
@@ -1608,6 +2278,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 307,
       "name": "GOF-STRUCT",
       "meaning": "",
@@ -1618,6 +2291,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 308,
       "name": "GOF-INTERFACE",
       "meaning": "",
@@ -1628,6 +2304,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 309,
       "name": "GOF-IF",
       "meaning": "",
@@ -1638,6 +2317,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 310,
       "name": "GOF-FOR",
       "meaning": "",
@@ -1648,6 +2330,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 311,
       "name": "GOF-SWITCH",
       "meaning": "",
@@ -1658,6 +2343,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 312,
       "name": "GOF-SELECT",
       "meaning": "",
@@ -1668,6 +2356,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 313,
       "name": "GOF-RETURN",
       "meaning": "",
@@ -1678,6 +2369,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 314,
       "name": "GOF-CALL",
       "meaning": "",
@@ -1688,6 +2382,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 315,
       "name": "GOF-IDENT",
       "meaning": "",
@@ -1698,6 +2395,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 316,
       "name": "GOF-INT",
       "meaning": "",
@@ -1708,6 +2408,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 317,
       "name": "GOF-STR",
       "meaning": "",
@@ -1718,6 +2421,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 318,
       "name": "GOF-BIN",
       "meaning": "",
@@ -1728,6 +2434,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 319,
       "name": "GOF-COMPOSITE",
       "meaning": "",
@@ -1738,6 +2447,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 400,
       "name": "TSF-MODULE",
       "meaning": "",
@@ -1748,6 +2460,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 401,
       "name": "TSF-IMPORT",
       "meaning": "",
@@ -1758,6 +2473,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 402,
       "name": "TSF-EXPORT",
       "meaning": "",
@@ -1768,6 +2486,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 403,
       "name": "TSF-VAR",
       "meaning": "",
@@ -1778,6 +2499,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 404,
       "name": "TSF-FUNC",
       "meaning": "",
@@ -1788,6 +2512,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 405,
       "name": "TSF-CLASS",
       "meaning": "",
@@ -1798,6 +2525,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 406,
       "name": "TSF-INTERFACE",
       "meaning": "",
@@ -1808,6 +2538,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 407,
       "name": "TSF-TYPE",
       "meaning": "",
@@ -1818,6 +2551,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 408,
       "name": "TSF-ENUM",
       "meaning": "",
@@ -1828,6 +2564,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 409,
       "name": "TSF-IF",
       "meaning": "",
@@ -1838,6 +2577,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 410,
       "name": "TSF-FOR",
       "meaning": "",
@@ -1848,6 +2590,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 411,
       "name": "TSF-WHILE",
       "meaning": "",
@@ -1858,6 +2603,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 412,
       "name": "TSF-TRY",
       "meaning": "",
@@ -1868,6 +2616,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 413,
       "name": "TSF-CALL",
       "meaning": "",
@@ -1878,6 +2629,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 414,
       "name": "TSF-IDENT",
       "meaning": "",
@@ -1888,6 +2642,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 415,
       "name": "TSF-INT",
       "meaning": "",
@@ -1898,6 +2655,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 416,
       "name": "TSF-STR",
       "meaning": "",
@@ -1908,6 +2668,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 417,
       "name": "TSF-ARROW",
       "meaning": "",
@@ -1918,6 +2681,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 418,
       "name": "TSF-RETURN",
       "meaning": "",
@@ -1928,6 +2694,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 500,
       "name": "RSF-CRATE",
       "meaning": "",
@@ -1938,6 +2707,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 501,
       "name": "RSF-USE",
       "meaning": "",
@@ -1948,6 +2720,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 502,
       "name": "RSF-MOD",
       "meaning": "",
@@ -1958,6 +2733,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 503,
       "name": "RSF-FN",
       "meaning": "",
@@ -1968,6 +2746,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 504,
       "name": "RSF-STRUCT",
       "meaning": "",
@@ -1978,6 +2759,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 505,
       "name": "RSF-ENUM",
       "meaning": "",
@@ -1988,6 +2772,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 506,
       "name": "RSF-TRAIT",
       "meaning": "",
@@ -1998,6 +2785,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 507,
       "name": "RSF-IMPL",
       "meaning": "",
@@ -2008,6 +2798,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 508,
       "name": "RSF-TYPE",
       "meaning": "",
@@ -2018,6 +2811,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 509,
       "name": "RSF-CONST",
       "meaning": "",
@@ -2028,6 +2824,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 510,
       "name": "RSF-STATIC",
       "meaning": "",
@@ -2038,6 +2837,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 511,
       "name": "RSF-LET",
       "meaning": "",
@@ -2048,6 +2850,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 512,
       "name": "RSF-IF",
       "meaning": "",
@@ -2058,6 +2863,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 513,
       "name": "RSF-MATCH",
       "meaning": "",
@@ -2068,6 +2876,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 514,
       "name": "RSF-LOOP",
       "meaning": "",
@@ -2078,6 +2889,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 515,
       "name": "RSF-CALL",
       "meaning": "",
@@ -2088,6 +2902,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 516,
       "name": "RSF-IDENT",
       "meaning": "",
@@ -2098,6 +2915,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 517,
       "name": "RSF-INT",
       "meaning": "",
@@ -2108,6 +2928,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 518,
       "name": "RSF-STR",
       "meaning": "",
@@ -2118,6 +2941,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 519,
       "name": "RSF-RETURN",
       "meaning": "",
@@ -2128,6 +2954,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 690,
       "name": "IMAGE-FILE",
       "meaning": "",
@@ -2138,6 +2967,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 691,
       "name": "IMAGE-META-FILE",
       "meaning": "",
@@ -2148,6 +2980,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 700,
       "name": "AUDIO-FILE",
       "meaning": "",
@@ -2158,6 +2993,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 701,
       "name": "AUDIO-META-FILE",
       "meaning": "",
@@ -2168,6 +3006,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 710,
       "name": "VIDEO-FILE",
       "meaning": "",
@@ -2178,6 +3019,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 711,
       "name": "VIDEO-META-FILE",
       "meaning": "",
@@ -2188,6 +3032,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 730,
       "name": "DOCUMENT-CONTAINER",
       "meaning": "",
@@ -2198,6 +3045,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 760,
       "name": "NATURAL-BMF-FACT",
       "meaning": "",
@@ -2208,6 +3058,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 761,
       "name": "NATURAL-BMF-RELATION",
       "meaning": "",
@@ -2218,6 +3071,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 762,
       "name": "NATURAL-BMF-QUESTION",
       "meaning": "",
@@ -2228,6 +3084,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 763,
       "name": "NATURAL-BMF-MEANING",
       "meaning": "",
@@ -2238,6 +3097,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 951,
       "name": "CONCEPT-V1",
       "meaning": "",
@@ -2248,6 +3110,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 952,
       "name": "CONCEPT-VISUALS",
       "meaning": "",
@@ -2258,6 +3123,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 953,
       "name": "CONCEPT-VISUAL",
       "meaning": "",
@@ -2268,6 +3136,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1100,
       "name": "EMBEDDING_BLUEPRINT",
       "meaning": "",
@@ -2278,6 +3149,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1200,
       "name": "AUDIO-TRIAD",
       "meaning": "",
@@ -2288,6 +3162,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1201,
       "name": "IMAGE-TRIANGLE",
       "meaning": "",
@@ -2298,6 +3175,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1202,
       "name": "RATIO-3",
       "meaning": "",
@@ -2308,26 +3188,9 @@
       ]
     },
     {
-      "inst": 1300,
-      "name": "RECIPE-A-BLUEPRINT",
-      "meaning": "",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/tests/codon-band.fk"
-      ]
-    },
-    {
-      "inst": 1301,
-      "name": "RECIPE-B-BLUEPRINT",
-      "meaning": "",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/tests/codon-band.fk"
-      ]
-    },
-    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1400,
       "name": "MIDI-NOTE-ON",
       "meaning": "",
@@ -2338,6 +3201,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1401,
       "name": "MIDI-NOTE-OFF",
       "meaning": "",
@@ -2348,6 +3214,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1402,
       "name": "MIDI-TRACK",
       "meaning": "",
@@ -2358,6 +3227,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1403,
       "name": "MIDI-SONG",
       "meaning": "",
@@ -2368,6 +3240,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1500,
       "name": "PARETO-CANDIDATE",
       "meaning": "",
@@ -2378,6 +3253,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1600,
       "name": "AUTO-EXPERIMENT",
       "meaning": "",
@@ -2388,6 +3266,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1700,
       "name": "CHANNEL-V0",
       "meaning": "",
@@ -2398,6 +3279,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1701,
       "name": "CHANNEL-MSG",
       "meaning": "",
@@ -2408,19 +3292,22 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1710,
       "name": "QUERY",
       "meaning": "",
-      "aliases": [
-        "cell-bp-2-nid"
-      ],
-      "reuse": 2,
+      "aliases": [],
+      "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/channel-query.fk",
-        "form/form-stdlib/tests/biography-band.fk"
+        "form/form-stdlib/channel-query.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1711,
       "name": "RESPONSE",
       "meaning": "",
@@ -2431,6 +3318,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1712,
       "name": "SUBSTRATE-REF",
       "meaning": "",
@@ -2441,6 +3331,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1713,
       "name": "NOVEL-BLUEPRINT",
       "meaning": "",
@@ -2451,6 +3344,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1714,
       "name": "RECIPE-CONTENT",
       "meaning": "",
@@ -2461,6 +3357,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1715,
       "name": "CELL-REF",
       "meaning": "",
@@ -2471,6 +3370,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1716,
       "name": "EXTERNAL-URI",
       "meaning": "",
@@ -2481,6 +3383,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1717,
       "name": "QUERY-PARSE-ERROR",
       "meaning": "",
@@ -2491,6 +3396,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1720,
       "name": "PING-SELF",
       "meaning": "",
@@ -2504,6 +3412,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1721,
       "name": "CAPABILITIES",
       "meaning": "",
@@ -2514,6 +3425,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1730,
       "name": "SYMBOL-BIND",
       "meaning": "",
@@ -2524,6 +3438,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1731,
       "name": "SYMBOL-TABLE",
       "meaning": "",
@@ -2534,6 +3451,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1732,
       "name": "SYMBOL-NOT-FOUND",
       "meaning": "",
@@ -2544,16 +3464,25 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1740,
-      "name": "HANDLER",
+      "name": "CELL-V0",
       "meaning": "",
-      "aliases": [],
-      "reuse": 1,
+      "aliases": [
+        "HANDLER"
+      ],
+      "reuse": 2,
       "defined_in": [
+        "form/form-stdlib/persistence.fk",
         "form/form-stdlib/verb-router.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1741,
       "name": "HANDLER-TABLE",
       "meaning": "",
@@ -2564,6 +3493,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1742,
       "name": "HANDLER-NOT-FOUND",
       "meaning": "",
@@ -2574,6 +3506,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1750,
       "name": "HTTP-REQUEST",
       "meaning": "",
@@ -2584,6 +3519,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1751,
       "name": "HTTP-HEADERS",
       "meaning": "",
@@ -2594,6 +3532,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1752,
       "name": "HTTP-HEADER",
       "meaning": "",
@@ -2604,6 +3545,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1753,
       "name": "HTTP-PARSE-ERROR",
       "meaning": "",
@@ -2614,46 +3558,41 @@
       ]
     },
     {
-      "inst": 1760,
-      "name": "MESSAGE-CAT",
-      "meaning": "",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/tests/chat-band.fk"
-      ]
-    },
-    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1770,
-      "name": "SENTINEL",
+      "name": "AUDIT-ENTRY",
       "meaning": "",
       "aliases": [
-        "AUDIT-ENTRY",
         "HEX-DECODE-ERROR"
       ],
-      "reuse": 3,
+      "reuse": 2,
       "defined_in": [
         "form/form-stdlib/audit-log.fk",
-        "form/form-stdlib/hex.fk",
-        "form/form-stdlib/tests/hex-band.fk"
+        "form/form-stdlib/hex.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1771,
-      "name": "SENTINEL",
+      "name": "AUDIT-LOG",
       "meaning": "",
       "aliases": [
-        "AUDIT-LOG",
         "URL-DECODE-ERROR"
       ],
-      "reuse": 3,
+      "reuse": 2,
       "defined_in": [
         "form/form-stdlib/audit-log.fk",
-        "form/form-stdlib/tests/url-encode-band.fk",
         "form/form-stdlib/url-encode.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1780,
       "name": "SCHEMA-CAT",
       "meaning": "",
@@ -2664,6 +3603,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1781,
       "name": "SCHEMA-LEAF",
       "meaning": "",
@@ -2674,6 +3616,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1782,
       "name": "SCHEMA-LIST",
       "meaning": "",
@@ -2684,6 +3629,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1783,
       "name": "SCHEMA-TUPLE",
       "meaning": "",
@@ -2694,6 +3642,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1784,
       "name": "SCHEMA-ANY",
       "meaning": "",
@@ -2704,19 +3655,22 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1790,
       "name": "TOKEN",
       "meaning": "",
-      "aliases": [
-        "OTHER-CAT"
-      ],
-      "reuse": 2,
+      "aliases": [],
+      "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/schema-band.fk",
         "form/form-stdlib/token.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1800,
       "name": "TRIANGLE-VERTEX",
       "meaning": "",
@@ -2727,6 +3681,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1801,
       "name": "TRIANGLE-COMPLETE",
       "meaning": "",
@@ -2737,6 +3694,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1810,
       "name": "SYMBOLS-CONFLICT",
       "meaning": "",
@@ -2747,6 +3707,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1820,
       "name": "HEARTBEAT-ENTRY",
       "meaning": "",
@@ -2757,6 +3720,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1821,
       "name": "HEARTBEAT-TABLE",
       "meaning": "",
@@ -2767,21 +3733,22 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1830,
-      "name": "BIOGRAPHY",
+      "name": "DIFF-EQUAL",
       "meaning": "",
-      "aliases": [
-        "DIFF-EQUAL",
-        "cell-bp-1-nid",
-        "cell-locator"
-      ],
-      "reuse": 4,
+      "aliases": [],
+      "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/biography-band.fk",
         "form/form-stdlib/tree-diff.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1831,
       "name": "DIFF-REPLACE",
       "meaning": "",
@@ -2792,6 +3759,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1832,
       "name": "DIFF-CHILDREN",
       "meaning": "",
@@ -2802,6 +3772,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1840,
       "name": "BUCKET",
       "meaning": "",
@@ -2812,6 +3785,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1850,
       "name": "NAME-RECORD",
       "meaning": "",
@@ -2822,6 +3798,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1851,
       "name": "DNS-TABLE",
       "meaning": "",
@@ -2832,6 +3811,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1852,
       "name": "DNS-NOT-FOUND",
       "meaning": "",
@@ -2842,6 +3824,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1853,
       "name": "DNS-PREFIX-MATCH",
       "meaning": "",
@@ -2852,6 +3837,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1860,
       "name": "SESSION",
       "meaning": "",
@@ -2862,6 +3850,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1861,
       "name": "SESSION-TABLE",
       "meaning": "",
@@ -2872,6 +3863,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1862,
       "name": "SESSION-NOT-FOUND",
       "meaning": "",
@@ -2882,6 +3876,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1870,
       "name": "UUID",
       "meaning": "the arrival event/context",
@@ -2895,21 +3892,25 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1871,
-      "name": "SENTINEL",
+      "name": "ARRIVAL-QUALITY",
       "meaning": "felt quality of this arrival",
       "aliases": [
-        "ARRIVAL-QUALITY",
         "UUID-PARSE-ERROR"
       ],
-      "reuse": 3,
+      "reuse": 2,
       "defined_in": [
         "form/form-stdlib/arrival.fk",
-        "form/form-stdlib/tests/uuid-band.fk",
         "form/form-stdlib/uuid.fk"
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1872,
       "name": "ARRIVAL-INQUIRY",
       "meaning": "an inquiry offered at arrival",
@@ -2920,6 +3921,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1873,
       "name": "ARRIVAL-RESONANCE",
       "meaning": "what the field notices in the arrival",
@@ -2930,6 +3934,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1874,
       "name": "ARRIVAL-OBS",
       "meaning": "arrival-flavored observation (structurally parallel to THIA-OBS 1805)",
@@ -2940,6 +3947,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1880,
       "name": "CELL-IDENTITY",
       "meaning": "sovereign identity a cell presents",
@@ -2950,6 +3960,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1881,
       "name": "CONTACT-THREAD",
       "meaning": "logical relationship between two identities",
@@ -2960,6 +3973,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1885,
       "name": "SKILL-PRESENT-IDENTITY",
       "meaning": "",
@@ -2970,6 +3986,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1886,
       "name": "SKILL-MUTUAL-MEET",
       "meaning": "",
@@ -2980,6 +3999,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1887,
       "name": "SKILL-READ-RELATIONSHIP",
       "meaning": "",
@@ -2990,6 +4012,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1888,
       "name": "SKILL-WELCOME-WITH-ORIENTATION",
       "meaning": "",
@@ -3000,6 +4025,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1889,
       "name": "SKILL-RECORD-EXCHANGE",
       "meaning": "",
@@ -3010,6 +4038,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1890,
       "name": "SKILL-SET-BOUNDARY",
       "meaning": "",
@@ -3020,6 +4051,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1900,
       "name": "INQUIRY",
       "meaning": "",
@@ -3030,6 +4064,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1910,
       "name": "XPATH-RESULT",
       "meaning": "",
@@ -3040,6 +4077,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1911,
       "name": "XPATH-NOT-FOUND",
       "meaning": "",
@@ -3050,6 +4090,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1912,
       "name": "XPATH-STEP",
       "meaning": "",
@@ -3060,6 +4103,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1913,
       "name": "XPATH-PREDICATE",
       "meaning": "",
@@ -3070,6 +4116,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1920,
       "name": "DOC",
       "meaning": "",
@@ -3080,6 +4129,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1921,
       "name": "SECTION-LIST",
       "meaning": "",
@@ -3090,6 +4142,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1922,
       "name": "SECTION",
       "meaning": "",
@@ -3100,6 +4155,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1923,
       "name": "DOC-NOT-FOUND",
       "meaning": "",
@@ -3110,6 +4168,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1930,
       "name": "CONCEPT",
       "meaning": "",
@@ -3120,6 +4181,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1931,
       "name": "CONCEPT-NOT-FOUND",
       "meaning": "",
@@ -3130,6 +4194,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1932,
       "name": "CONCEPT-CORPUS-C",
       "meaning": "",
@@ -3140,6 +4207,9 @@
       ]
     },
     {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1933,
       "name": "CONCEPT-XREFS",
       "meaning": "",
@@ -3150,103 +4220,393 @@
       ]
     },
     {
-      "inst": 7000,
-      "name": "topic-nid",
+      "pkg": 8,
+      "level": 45,
+      "type": 3,
+      "inst": 1,
+      "name": "BMF-DOMAIN-CONTRACT",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/channel-query-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 7700,
-      "name": "CAT-PLUS",
+      "pkg": 8,
+      "level": 45,
+      "type": 3,
+      "inst": 2,
+      "name": "BMF-SURFACE-CONTRACT",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/tree-diff-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 7701,
-      "name": "CAT-MINUS",
+      "pkg": 8,
+      "level": 45,
+      "type": 3,
+      "inst": 3,
+      "name": "BMF-LENS-CONTRACT",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/tree-diff-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 7702,
-      "name": "CAT-N",
+      "pkg": 8,
+      "level": 45,
+      "type": 3,
+      "inst": 4,
+      "name": "BMF-TRANSLATION-SPACE",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/tree-diff-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 7703,
-      "name": "CAT-M",
+      "pkg": 8,
+      "level": 45,
+      "type": 3,
+      "inst": 5,
+      "name": "BMF-REVERSE-LENS",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/tree-diff-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 7801,
-      "name": "topic-nid",
+      "pkg": 8,
+      "level": 45,
+      "type": 4,
+      "inst": 1,
+      "name": "BMF-DOMAIN-REF",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/kv-store-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 8101,
-      "name": "topic-a",
+      "pkg": 8,
+      "level": 45,
+      "type": 4,
+      "inst": 2,
+      "name": "BMF-LENS-REF",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/async-correlation-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 8102,
-      "name": "topic-b",
+      "pkg": 8,
+      "level": 45,
+      "type": 4,
+      "inst": 3,
+      "name": "BMF-DOMAIN-KIND-REF",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/async-correlation-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 8103,
-      "name": "topic-c",
+      "pkg": 8,
+      "level": 45,
+      "type": 4,
+      "inst": 4,
+      "name": "BMF-SURFACE-REF",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/async-correlation-band.fk"
+        "form/form-stdlib/engine.fk"
       ]
     },
     {
-      "inst": 8888,
-      "name": "topic-nid",
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 1,
+      "name": "FORM-CAPSULE-ROOT",
       "meaning": "",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
-        "form/form-stdlib/tests/multi-hop-band.fk"
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 2,
+      "name": "FORM-DYNAMIC-KIND",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 3,
+      "name": "FORM-DYNAMIC-REF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 4,
+      "name": "FORM-ADAPTER-CAPSULE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 5,
+      "name": "FORM-ADAPTER-CAPABILITY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 6,
+      "name": "FORM-ADAPTER-REGISTRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 7,
+      "name": "FORM-ADAPTER-ROUTE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 8,
+      "name": "FORM-ADAPTER-PLAN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 9,
+      "name": "FORM-ADAPTER-PLAN-RESULT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 10,
+      "name": "FORM-ADAPTER-COMPILED-PLAN",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 11,
+      "name": "FORM-CAPABILITY-CONTRACT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 12,
+      "name": "FORM-CAPABILITY-COST",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 13,
+      "name": "FORM-CAPABILITY-PROOF",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 14,
+      "name": "FORM-CAPABILITY-SPECIALIZER",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 15,
+      "name": "FORM-RECIPE-CAPSULE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 5,
+      "inst": 16,
+      "name": "FORM-RECIPE-REGISTRY",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/engine.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 6,
+      "inst": 10,
+      "name": "FSC-REPO-DOCUMENT",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 6,
+      "inst": 11,
+      "name": "FSC-REPO-TEXT-LINES",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 6,
+      "inst": 12,
+      "name": "FSC-REPO-TEXT-LINE",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 6,
+      "inst": 13,
+      "name": "FSC-REPO-MEANING",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/source-compiler.fk"
+      ]
+    },
+    {
+      "pkg": 8,
+      "level": 45,
+      "type": 6,
+      "inst": 14,
+      "name": "FSC-REPO-MEANING-FIELD",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/source-compiler.fk"
       ]
     }
   ]

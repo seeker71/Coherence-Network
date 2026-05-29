@@ -73,18 +73,26 @@
                      "form-stdlib/.cache/blueprint-registry.fkb"
                      parse-json))
 
-;; (name 99 inst) row for the canonical name, then one per alias.
+;; Each registry row carries the FULL NodeID (pkg, level, type, inst), so bp
+;; resolves shapes at any coordinate — package-8 source-compiler shapes
+;; (8.45.*), the ACCESS/WRITE/JUMP instances (1.2.15.x / 1.2.16.x / 1.2.18.x),
+;; and the type-99 user shapes alike. Each row is `(name pkg level type inst)`;
+;; the canonical name plus every historical alias both land, so JSON-OBJECT and
+;; HTML-OBJ resolve to the same NodeID.
 (defn fol-user-rows-for (bp-obj acc)
     (do
-        (let inst (json-int-value (json-object-get bp-obj "inst")))
-        (let canon (list (json-string-value (json-object-get bp-obj "name")) 99 inst))
+        (let pkg   (json-int-value (json-object-get bp-obj "pkg")))
+        (let level (json-int-value (json-object-get bp-obj "level")))
+        (let type  (json-int-value (json-object-get bp-obj "type")))
+        (let inst  (json-int-value (json-object-get bp-obj "inst")))
+        (let canon (list (json-string-value (json-object-get bp-obj "name")) pkg level type inst))
         (let aliases (json-array-elements (json-object-get bp-obj "aliases")))
-        (fol-user-alias-rows aliases inst (cons canon acc))))
+        (fol-user-alias-rows aliases pkg level type inst (cons canon acc))))
 
-(defn fol-user-alias-rows (aliases inst acc)
+(defn fol-user-alias-rows (aliases pkg level type inst acc)
     (if (eq (len aliases) 0) acc
-        (fol-user-alias-rows (tail aliases) inst
-            (cons (list (json-string-value (head aliases)) 99 inst) acc))))
+        (fol-user-alias-rows (tail aliases) pkg level type inst
+            (cons (list (json-string-value (head aliases)) pkg level type inst) acc))))
 
 (defn fol-user-rows-loop (bps acc)
     (if (eq (len bps) 0) acc
@@ -95,30 +103,39 @@
         (json-array-elements (json-object-get REGISTRY-JSON "blueprints"))
         (empty)))
 
-;; bp — resolve any registered Blueprint name to its NodeID. Searches the
-;; kernel-aligned tables first (categories, primitives), then the user
-;; registry. A row is (name type inst); registered shapes live at pkg=1,
-;; level=2. An unregistered name returns the undefined NodeID (1 2 0 0) —
-;; the scanner is what guards against that ever shipping.
-(defn fol-row->nodeid (row)
-    (make_nodeid 1 2 (head (tail row)) (head (tail (tail row)))))
+;; The kernel-owned tables stay (name type inst) for source-compiler.fk; lift
+;; copies into full 5-tuples (pkg=1, level=2) so bp has one uniform table.
+(defn fol-3to5-loop (rows acc)
+    (if (eq (len rows) 0) acc
+        (do
+            (let r (head rows))
+            (fol-3to5-loop (tail rows)
+                (cons (list (head r) 1 2 (head (tail r)) (head (tail (tail r)))) acc)))))
 
-(defn fol-lookup3 (a b c name)
-    (do
-        (let ra (fol-table-lookup a name))
-        (if (gt (len ra) 0) ra
-            (do
-                (let rb (fol-table-lookup b name))
-                (if (gt (len rb) 0) rb
-                    (fol-table-lookup c name))))))
+(defn fol-append (xs ys)
+    (if (eq (len xs) 0) ys (cons (head xs) (fol-append (tail xs) ys))))
+
+(let FORM-BP-TABLE
+    (fol-append (fol-3to5-loop FORM-CATEGORY-TABLE (empty))
+        (fol-append (fol-3to5-loop FORM-PRIMITIVE-TABLE (empty))
+                    FORM-USER-TABLE)))
+
+;; bp — resolve any registered Blueprint name to its NodeID. One uniform table
+;; of (name pkg level type inst) rows over categories, primitives, and the
+;; registry. An unregistered name returns the undefined NodeID (1 2 0 0) — the
+;; scanner is what guards against that ever shipping.
+(defn fol-row5->nodeid (row)
+    (make_nodeid (head (tail row))
+                 (head (tail (tail row)))
+                 (head (tail (tail (tail row))))
+                 (head (tail (tail (tail (tail row)))))))
 
 (defn bp (name)
     (do
-        (let row (fol-lookup3 FORM-CATEGORY-TABLE FORM-PRIMITIVE-TABLE
-                              FORM-USER-TABLE name))
+        (let row (fol-table-lookup FORM-BP-TABLE name))
         (if (eq (len row) 0)
             (make_nodeid 1 2 0 0)
-            (fol-row->nodeid row))))
+            (fol-row5->nodeid row))))
 
 ;; --- recipe-building helpers ----------------------------------------
 ;;
