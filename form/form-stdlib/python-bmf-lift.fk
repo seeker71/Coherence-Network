@@ -513,6 +513,44 @@
             (let body-recipes (lift-statements children))
             (intern_node PY-BMF-WHILE (cons cond body-recipes))))
 
+    ;; augmented-assignment statement: `NAME <op>= EXPR...`. The scanner
+    ;; classifies these as kind "expr" / rule "star_expressions" (the
+    ;; `+=` token is a single py-op), so the dispatcher must catch them
+    ;; before the bare-expr arm. aug-base-op maps the compound operator
+    ;; to its base op — the same op string py-binop-apply (and the eval
+    ;; AUG-ASSIGN arm) already dispatch on. "" means "not an aug-op".
+
+    (defn aug-base-op (opstr)
+        (if (str_eq opstr "+=")  "+"
+        (if (str_eq opstr "-=")  "-"
+        (if (str_eq opstr "*=")  "*"
+        (if (str_eq opstr "/=")  "/"
+        (if (str_eq opstr "%=")  "%"
+        (if (str_eq opstr "//=") "//"
+            "")))))))
+
+    ;; stmt-aug-op? — 1 iff the statement is `NAME <augop> EXPR`: at least
+    ;; three tokens, first a name, second an aug-assign operator.
+    (defn stmt-aug-op? (statement-tree)
+        (do
+            (let toks (python-statement-tree-tokens statement-tree))
+            (if (lt (len toks) 3) 0
+                (if (tok-name? (head toks))
+                    (if (str_eq (aug-base-op (tok-value (head (tail toks)))) "")
+                        0 1)
+                    0))))
+
+    (defn lift-aug-assign (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let name (tok-value (head tokens)))
+            (let base-op (aug-base-op (tok-value (head (tail tokens)))))
+            (let value (lift-recipe (lift-expr (drop 2 tokens))))
+            (intern_node PY-BMF-AUG-ASSIGN
+                (list (intern_trivial_string name)
+                      (intern_trivial_string base-op)
+                      value))))
+
     ;; lift-statement dispatches on both `kind` (first-token classifier) and
     ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
     ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
@@ -530,10 +568,11 @@
             (if (str_eq kind "return")           (lift-return statement-tree)
             (if (str_eq kind "while")            (lift-while statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
+            (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))
+                    (intern_node PY-BMF-PASS (empty)))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
