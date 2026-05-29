@@ -347,6 +347,16 @@
             (py-range-build 0 (head args) (empty))
             (py-range-build (head args) (head (tail args)) (empty))))
 
+    ;; py-fstring-build — fold the f-string's segment recipes into one
+    ;; string. Each segment (a literal STRING or an interpolation expr) is
+    ;; evaluated, then int_to_str stringifies it (polymorphic: passes
+    ;; strings through, renders ints/bools/null), then str_concat joins.
+    ;; Threads the accumulated string left-to-right in source order.
+    (defn py-fstring-build (segs env acc)
+        (if (nil? segs) acc
+            (py-fstring-build (tail segs) env
+                (str_concat acc (int_to_str (py-eval (head segs) env))))))
+
     (defn py-eval (recipe env)
         (do
             (let cat (node_category recipe))
@@ -357,6 +367,10 @@
                 ;; STRING literal: the trivial-string child's node_value
                 ;; *is* the runtime value. Mirrors the INT shape.
                 (node_value (head kids))
+            (if (node_eq cat PY-BMF-FSTRING)
+                ;; FSTRING: children are literal-STRING and interpolation-expr
+                ;; segment recipes in source order. Stringify+concat each.
+                (py-fstring-build kids env "")
             (if (node_eq cat PY-BMF-IDENT)
                 (py-env-lookup env (node_value (head kids)))
             (if (and (eq (node_pkg cat) 1)

@@ -203,6 +203,65 @@
                     (lift-result base after)))
             (lift-result base tokens)))
 
+    ;; --- f-string lift ----------------------------------------------
+    ;;
+    ;; The scanner hands a py-fstring token its raw body (the text between
+    ;; the quotes, e.g. `v={name}`), NOT a pre-parsed interpolation tree.
+    ;; So the lift splits the body char-by-char into alternating segments:
+    ;;   - literal runs            → PY-BMF-STRING leaf
+    ;;   - `{ expr }` interpolations → the expr lifted via lift-module-text
+    ;;     (its first statement's recipe — the same path the band uses)
+    ;; and emits PY-BMF-FSTRING whose children are those segment recipes in
+    ;; source order. The eval arm stringifies each (int_to_str is
+    ;; polymorphic) and str_concats them. Format specs (`{x:.2f}`) and `{{`
+    ;; escapes are a later breath — today's body is plain `{expr}` runs.
+
+    ;; fstr-find-close — index of the matching `}` at or after i, or the
+    ;; string length if none (the lifter then treats the rest as one expr).
+    (defn fstr-find-close (s i n)
+        (if (ge i n) n
+            (if (str_eq (char_at s i) "}") i
+                (fstr-find-close s (add i 1) n))))
+
+    ;; fstr-find-open — index of the next `{` at or after i, or n if none.
+    (defn fstr-find-open (s i n)
+        (if (ge i n) n
+            (if (str_eq (char_at s i) "{") i
+                (fstr-find-open s (add i 1) n))))
+
+    ;; fstr-segments — walk the body from i, accumulating segment recipes.
+    ;; A literal run [i, open) becomes a PY-BMF-STRING; a `{expr}` becomes
+    ;; the lifted inner expression. Empty literal runs are skipped so a
+    ;; leading/adjacent `{` doesn't emit an empty string.
+    (defn fstr-lift-inner (expr-text)
+        ;; Lift the interpolation expression. lift-module-text wraps it in a
+        ;; PY-BMF-MODULE; its single statement's recipe is the value.
+        (head (node_children (lift-module-text expr-text))))
+
+    (defn fstr-segments (s i n acc)
+        (if (ge i n) (reverse acc)
+            (do
+                (let open (fstr-find-open s i n))
+                ;; literal run [i, open)
+                (let acc1
+                    (if (gt open i)
+                        (cons (intern_node PY-BMF-STRING
+                                  (list (intern_trivial_string (substring s i open))))
+                              acc)
+                        acc))
+                (if (ge open n)
+                    (reverse acc1)
+                    (do
+                        ;; open points at `{`; find the matching `}`
+                        (let close (fstr-find-close s (add open 1) n))
+                        (let expr-text (substring s (add open 1) close))
+                        (let acc2 (cons (fstr-lift-inner expr-text) acc1))
+                        (fstr-segments s (add close 1) n acc2))))))
+
+    (defn lift-fstring (body)
+        (intern_node PY-BMF-FSTRING
+            (fstr-segments body 0 (str_len body) (empty))))
+
     ;; --- primary expression ----------------------------------------
     ;;
     ;; Integers, identifiers, calls, parenthesised expressions, list
@@ -238,6 +297,16 @@
                             (list (lift-recipe operand)
                                   (intern_node PY-BMF-INT (list (intern_trivial_int 0)))))
                         (lift-rest operand)))
+            (if (str_eq (tok-kind t) "py-fstring")
+                ;; f-string: split the raw body into literal + {expr} segments
+                ;; (see lift-fstring above). Subscript trailers fold on after.
+                (lift-subscript-tail (lift-fstring (tok-value t)) rest)
+            (if (str_eq (tok-kind t) "py-string")
+                ;; plain string literal: the token value IS the content.
+                (lift-subscript-tail
+                    (intern_node PY-BMF-STRING
+                        (list (intern_trivial_string (tok-value t))))
+                    rest)
             (if (tok-int? t)
                 (lift-subscript-tail
                     (intern_node PY-BMF-INT
@@ -312,7 +381,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest)))))))))))))))
+                        rest)))))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
