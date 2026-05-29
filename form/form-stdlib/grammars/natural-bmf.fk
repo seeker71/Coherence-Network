@@ -6,10 +6,10 @@
 ; target surface without changing the binary object.
 
 (do
-    (let NATURAL-BMF-FACT     (make_nodeid 1 2 99 760))
-    (let NATURAL-BMF-RELATION (make_nodeid 1 2 99 761))
-    (let NATURAL-BMF-QUESTION (make_nodeid 1 2 99 762))
-    (let NATURAL-BMF-MEANING  (make_nodeid 1 2 99 763))
+    (let NATURAL-BMF-FACT     (bp "NATURAL-BMF-FACT"))
+    (let NATURAL-BMF-RELATION (bp "NATURAL-BMF-RELATION"))
+    (let NATURAL-BMF-QUESTION (bp "NATURAL-BMF-QUESTION"))
+    (let NATURAL-BMF-MEANING  (bp "NATURAL-BMF-MEANING"))
 
     ;; --- source-object helpers --------------------------------------
 

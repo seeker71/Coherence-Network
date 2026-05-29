@@ -4,8 +4,8 @@
 ; and reverse source emission live here as ordinary Form recipes.
 
 (do
-    (let IMAGE-FILE (make_nodeid 1 2 99 690))
-    (let IMAGE-META-FILE (make_nodeid 1 2 99 691))
+    (let IMAGE-FILE (bp "IMAGE-FILE"))
+    (let IMAGE-META-FILE (bp "IMAGE-META-FILE"))
 
     (defn image-src-keyword (value) (bmf-atom "image-keyword" value))
     (defn image-src-name (value) (bmf-atom "image-name" value))

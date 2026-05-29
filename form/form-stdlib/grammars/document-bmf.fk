@@ -4,7 +4,7 @@
 ; compound-document container structure that queries need.
 
 (do
-    (let DOCUMENT-CONTAINER (make_nodeid 1 2 99 730))
+    (let DOCUMENT-CONTAINER (bp "DOCUMENT-CONTAINER"))
 
     (defn document-src-keyword (value) (bmf-atom "document-keyword" value))
     (defn document-src-int (value) (bmf-atom "document-int" value))
