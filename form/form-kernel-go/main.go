@@ -405,6 +405,10 @@ type Kernel struct {
 	f64Idx map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
+	// methods — the blueprint method table (BML/NUMS reference: methods live
+	// on the blueprint/type, shared by all instances, name-dispatched). Keyed
+	// by (blueprint, method-name) → the method's Closure.
+	methods map[methodKey]*Closure
 	// jitAliases: Form-function-name → native-name redirect. When a
 	// function call's name is in this map, the walker substitutes the
 	// aliased name before native lookup. Lets a Form recipe DEFINE an
@@ -456,6 +460,7 @@ func NewKernel() *Kernel {
 		f64Idx:     make(map[uint64]uint32),
 		natives:       make(map[NameID]NativeEntry),
 		envNatives:    make(map[NameID]EnvAwareNativeEntry),
+		methods:       make(map[methodKey]*Closure),
 		jitAliases:    make(map[NameID]NameID),
 		jitCompiledGo: make(map[string]func([]int64) int64),
 	}
@@ -990,6 +995,12 @@ type Closure struct {
 	Env    *Frame
 }
 
+// methodKey — (blueprint, method-name) key for the blueprint method table.
+type methodKey struct {
+	blueprint NodeID
+	name      NameID
+}
+
 // ---------------------------------------------------------------------------
 // Frame — scope primitive
 // ---------------------------------------------------------------------------
@@ -1155,6 +1166,62 @@ func (k *Kernel) registerNatives() {
 	// record? — (record? v) → bool type predicate.
 	k.registerNative("record?", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Kind == VRecord}
+	})
+	// --- methods on the blueprint (BML/NUMS reference, rung 2b) ----------
+	// Methods live on the blueprint/type, shared by all records of that type,
+	// name-dispatched. The keystone that makes a Record a real object.
+	//
+	// method_define — (method_define blueprint "name" closure) → blueprint.
+	k.registerNative("method_define", catMethod(), func(k *Kernel, args []Value) Value {
+		if args[2].Kind != VClosure {
+			panic("method_define: third arg must be a closure")
+		}
+		k.methods[methodKey{args[0].Nid, k.internName(args[1].Str)}] = args[2].Cl
+		return args[0]
+	})
+	// method_has — (method_has record-or-blueprint "name") → bool.
+	k.registerNative("method_has", catAccess(), func(k *Kernel, args []Value) Value {
+		var bp NodeID
+		switch args[0].Kind {
+		case VRecord:
+			bp = args[0].Rec.Blueprint
+		case VNodeID:
+			bp = args[0].Nid
+		default:
+			return Value{Kind: VBool, Bool: false}
+		}
+		_, ok := k.methods[methodKey{bp, k.internName(args[1].Str)}]
+		return Value{Kind: VBool, Bool: ok}
+	})
+	// method_invoke — (method_invoke record "name" arg1 arg2 ...) → value.
+	// Dispatches by the record's blueprint; the method's FIRST param is the
+	// receiver (Python `self` convention), remaining params bind to call args.
+	k.registerNative("method_invoke", catMethod(), func(k *Kernel, args []Value) Value {
+		if args[0].Kind != VRecord {
+			panic("method_invoke: first arg must be a record")
+		}
+		rec := args[0].Rec
+		key := methodKey{rec.Blueprint, k.internName(args[1].Str)}
+		cl, ok := k.methods[key]
+		if !ok {
+			panic(fmt.Sprintf("method_invoke: no method '%s' on blueprint @%d.%d.%d.%d",
+				args[1].Str, rec.Blueprint.Pkg, rec.Blueprint.Level,
+				rec.Blueprint.Type, rec.Blueprint.Inst))
+		}
+		callArgs := args[2:]
+		if len(cl.Params) == 0 {
+			panic(fmt.Sprintf("method '%s' must declare a receiver param (self)", args[1].Str))
+		}
+		if len(callArgs) != len(cl.Params)-1 {
+			panic(fmt.Sprintf("method '%s' wants %d args, got %d",
+				args[1].Str, len(cl.Params)-1, len(callArgs)))
+		}
+		call := NewCallFrame(cl.Env, len(cl.Params))
+		call.Bind(cl.Params[0], args[0]) // receiver
+		for i, p := range cl.Params[1:] {
+			call.Bind(p, callArgs[i])
+		}
+		return k.walk(cl.Body, call)
 	})
 	// str_find — Go-level substring search starting at index `from`.
 	// Signature: (str_find s needle from) → int (index or -1). The whole

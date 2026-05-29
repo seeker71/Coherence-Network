@@ -236,6 +236,12 @@ pub(crate) struct Kernel {
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
     env_natives: HashMap<NameID, EnvAwareNativeEntry>,
+    // methods — the blueprint method table (BML/NUMS reference: methods live
+    // on the blueprint/type, shared by all instances, name-dispatched). Keyed
+    // by (blueprint NodeID, method-name NameID) → the method's Closure. A
+    // record's blueprint tag selects its method set; method_invoke binds
+    // `self` to the receiver record.
+    methods: HashMap<(NodeID, NameID), Arc<Closure>>,
     // jit_aliases: Form-function-name → native-name redirect.
     // When a function call's name is in this map, the walker substitutes
     // the aliased name before native lookup. Lets a Form recipe DEFINE
@@ -533,6 +539,7 @@ impl Kernel {
             next_inst: 1,
             natives: HashMap::new(),
             env_natives: HashMap::new(),
+            methods: HashMap::new(),
             jit_aliases: HashMap::new(),
             jit_compiled: HashMap::new(),
             active_roots: Vec::new(),
@@ -887,6 +894,7 @@ impl Kernel {
             next_inst: self.next_inst,
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
+            methods: self.methods.clone(),
             jit_aliases: self.jit_aliases.clone(),
             // Arc clones — Library handles stay shared across the kernel and
             // its workers; the .so stays mapped for the duration.
@@ -1510,6 +1518,87 @@ impl Kernel {
         // record? — (record? v) → bool. Type predicate so Form code can branch.
         self.register_native("record?", cat_access(), |_, _, args| {
             Value::Bool(matches!(&args[0], Value::Record(_)))
+        });
+        // --- methods on the blueprint (BML/NUMS reference, rung 2b) ---------
+        // Methods live on the blueprint/type, not on instances — shared by all
+        // records of that type, name-dispatched. The keystone that makes a
+        // Record a real object: obj.m(args) works.
+        //
+        // method_define — (method_define blueprint "name" closure) → blueprint.
+        // Registers the closure under (blueprint, name) in the method table.
+        self.register_native("method_define", cat_method(), |k, _, args| {
+            let blueprint = args[0].as_nid();
+            let name = k.intern_string(args[1].as_str()).inst;
+            let cl = match &args[2] {
+                Value::Closure(c) => c.clone(),
+                _ => panic!("method_define: third arg must be a closure"),
+            };
+            k.methods.insert((blueprint, name), cl);
+            args[0].clone()
+        });
+        // method_has — (method_has record-or-blueprint "name") → bool. Accepts
+        // either a record (uses its blueprint) or a blueprint NodeID directly.
+        self.register_native("method_has", cat_access(), |k, _, args| {
+            let blueprint = match &args[0] {
+                Value::Record(r) => r.lock().unwrap().blueprint,
+                Value::Nid(n) => *n,
+                _ => return Value::Bool(false),
+            };
+            let name = k.intern_string(args[1].as_str()).inst;
+            Value::Bool(k.methods.contains_key(&(blueprint, name)))
+        });
+        // method_invoke — (method_invoke record "name" arg1 arg2 ...) → value.
+        // Dispatches by the record's blueprint, binds `self` = record (the
+        // structural+behavioral base; dual-base separation is rung 2d), binds
+        // the method's declared params to the remaining args, walks the body
+        // in a frame extending the method closure's captured env.
+        self.register_native("method_invoke", cat_method(), |k, a, args| {
+            let rec = match &args[0] {
+                Value::Record(r) => r.clone(),
+                _ => panic!("method_invoke: first arg must be a record"),
+            };
+            let blueprint = rec.lock().unwrap().blueprint;
+            let name_id = k.intern_string(args[1].as_str()).inst;
+            let cl = k
+                .methods
+                .get(&(blueprint, name_id))
+                .unwrap_or_else(|| {
+                    panic!(
+                        "method_invoke: no method '{}' on blueprint @{}.{}.{}.{}",
+                        args[1].as_str(),
+                        blueprint.pkg,
+                        blueprint.level,
+                        blueprint.ty,
+                        blueprint.inst
+                    )
+                })
+                .clone();
+            // The method's FIRST param is the receiver (Python `self`
+            // convention); the remaining params bind to the call args
+            // (args[2..]). So a `def get(self)` method is invoked with zero
+            // call args, and the receiver fills param 0.
+            let call_args = &args[2..];
+            if cl.params.is_empty() {
+                panic!(
+                    "method '{}' must declare a receiver param (self)",
+                    args[1].as_str()
+                );
+            }
+            if call_args.len() != cl.params.len() - 1 {
+                panic!(
+                    "method '{}' wants {} args, got {}",
+                    args[1].as_str(),
+                    cl.params.len() - 1,
+                    call_args.len()
+                );
+            }
+            let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+            // param 0 = receiver; params 1.. = the call args in order.
+            a.bind(call_frame, cl.params[0], Value::Record(rec.clone()));
+            for (i, p) in cl.params[1..].iter().enumerate() {
+                a.bind(call_frame, *p, call_args[i].clone());
+            }
+            walk(k, a, cl.body, call_frame)
         });
         // str_find — Rust-level substring search starting at index `from`.
         // (str_find s needle from) → int (index or -1). Whole search in
