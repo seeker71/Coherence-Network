@@ -205,14 +205,28 @@ d[1] + d[3]
 "))
     (let cell14-score (if (eq cell14-value 40) 10000 0))
 
+    ;; ---- cell 15: for-loop over a list — CPython:
+    ;;   total = 0
+    ;;   for i in [10, 20, 30, 40]:
+    ;;       total = total + i
+    ;;   total  → 100 ----------------------------------------------------
+
+    (let cell15-value (py-bmf-run-text "total = 0
+for i in [10, 20, 30, 40]:
+    total = total + i
+total
+"))
+    (let cell15-score (if (eq cell15-value 100) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
     ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
-    ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict) = 95000
+    ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict)
+    ;;   + 10000 (cell 15 for-loop) = 105000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
-               cell13-score cell14-score)))
+               cell13-score cell14-score cell15-score)))
