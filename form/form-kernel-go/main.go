@@ -849,7 +849,43 @@ const (
 	// level via Math.fround, which the Rust+Go kernels don't do because
 	// host-language hardware always promotes to 64-bit in arithmetic.
 	VFloat
+	// VRecord — a mutable struct/object with identity (BML reference, rung 2).
+	// The first mutable Value the kernel carries; required for `self.x = v`.
+	// The Rec pointer gives shared mutable identity — two bindings to the same
+	// record see each other's mutations (object semantics, not value-copy).
+	VRecord
 )
+
+// Record — a mutable struct/object. Blueprint tags its type (class /
+// method-table NodeID); Fields is an ordered name→value map.
+type Record struct {
+	Blueprint NodeID
+	Fields    []recField
+}
+
+type recField struct {
+	name NameID
+	val  Value
+}
+
+func (r *Record) get(name NameID) (Value, bool) {
+	for i := len(r.Fields) - 1; i >= 0; i-- {
+		if r.Fields[i].name == name {
+			return r.Fields[i].val, true
+		}
+	}
+	return Value{Kind: VNull}, false
+}
+
+func (r *Record) set(name NameID, val Value) {
+	for i := range r.Fields {
+		if r.Fields[i].name == name {
+			r.Fields[i].val = val
+			return
+		}
+	}
+	r.Fields = append(r.Fields, recField{name: name, val: val})
+}
 
 // Value — runtime tagged union. List and Closure carry pointers; the rest
 // are inline. Kept as a flat struct so the walker's hot path is allocation-
@@ -863,6 +899,7 @@ type Value struct {
 	List  []Value
 	Cl    *Closure
 	Nid   NodeID
+	Rec   *Record
 }
 
 func (v Value) String() string {
@@ -891,6 +928,10 @@ func (v Value) String() string {
 	case VNodeID:
 		// Canonical substrate notation: @pkg.level.type.instance
 		return fmt.Sprintf("@%d.%d.%d.%d", v.Nid.Pkg, v.Nid.Level, v.Nid.Type, v.Nid.Inst)
+	case VRecord:
+		return fmt.Sprintf("<record @%d.%d.%d.%d #%dfields>",
+			v.Rec.Blueprint.Pkg, v.Rec.Blueprint.Level, v.Rec.Blueprint.Type,
+			v.Rec.Blueprint.Inst, len(v.Rec.Fields))
 	}
 	return "?"
 }
@@ -1075,6 +1116,45 @@ func (k *Kernel) registerNatives() {
 			result *= base
 		}
 		return Value{Kind: VInt, Int: result}
+	})
+	// --- struct/object primitive (BML reference, rung 2) -------------------
+	// A Record is the kernel's first MUTABLE value: a struct/object with
+	// identity. Every language's class/struct compiles onto these natives.
+	// Blueprint NodeID tags the type; fields are a name→value map.
+	//
+	// record_new — (record_new blueprint k1 v1 k2 v2 ...) → Record.
+	k.registerNative("record_new", catMethod(), func(k *Kernel, args []Value) Value {
+		rec := &Record{Blueprint: args[0].Nid}
+		i := 1
+		for i+1 < len(args) {
+			rec.set(k.internName(args[i].Str), args[i+1])
+			i += 2
+		}
+		return Value{Kind: VRecord, Rec: rec}
+	})
+	// record_get — (record_get rec "field") → value, or null if absent.
+	k.registerNative("record_get", catAccess(), func(k *Kernel, args []Value) Value {
+		v, _ := args[0].Rec.get(k.internName(args[1].Str))
+		return v
+	})
+	// record_set — (record_set rec "field" value) → the record (mutated in
+	// place; shared identity means all holders see it). BML's `self.x = v`.
+	k.registerNative("record_set", catMethod(), func(k *Kernel, args []Value) Value {
+		args[0].Rec.set(k.internName(args[1].Str), args[2])
+		return args[0]
+	})
+	// record_has — (record_has rec "field") → bool.
+	k.registerNative("record_has", catAccess(), func(k *Kernel, args []Value) Value {
+		_, ok := args[0].Rec.get(k.internName(args[1].Str))
+		return Value{Kind: VBool, Bool: ok}
+	})
+	// record_blueprint — (record_blueprint rec) → the blueprint NodeID.
+	k.registerNative("record_blueprint", catAccess(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VNodeID, Nid: args[0].Rec.Blueprint}
+	})
+	// record? — (record? v) → bool type predicate.
+	k.registerNative("record?", catAccess(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VBool, Bool: args[0].Kind == VRecord}
 	})
 	// str_find — Go-level substring search starting at index `from`.
 	// Signature: (str_find s needle from) → int (index or -1). The whole

@@ -1,0 +1,54 @@
+; tests/record-band.fk — struct/object kernel primitive (BML reference, rung 2).
+;
+; preludes: form-stdlib/core.fk
+;
+; Records are the kernel's first MUTABLE value — a struct/object with identity.
+; Every language's class/struct compiles onto record_new / record_get /
+; record_set / record_has / record_blueprint / record? (kernel natives, present
+; in all three sibling kernels). The blueprint NodeID tags the record's type.
+;
+; Band verdict: 176 when every assertion holds across Go, Rust, TypeScript.
+;   - field read after construct (10 + 20)
+;   - field update in place (x: 10 → 99)
+;   - shared mutable identity: r2 = r; set via r2 visible via r (y → 77)
+;   - final sum 99 + 77 = 176
+;
+; The strange-minimal edge that covers the most: aliasing + mutation. If
+; records were value-copied (not reference identity), the r2 mutation would
+; not show through r and the sum would be 119, not 176 — so this one cell
+; proves object semantics, not just a field map.
+;
+; Note: and/or take bool operands (the TS kernel enforces this strictly), so
+; every flag below is a comparison/predicate result, combined with and, and
+; only collapsed to the int sum at the very end.
+
+(do
+    (let bp (make_nodeid 1 2 99 9001))
+    (let r (record_new bp "x" 10 "y" 20))
+
+    ;; basic read + has (record_has returns bool; eq returns bool)
+    (let read-ok
+        (and (eq (record_get r "x") 10)
+             (and (eq (record_get r "y") 20)
+                  (and (record_has r "x")
+                       (not (record_has r "z"))))))
+
+    ;; in-place update
+    (record_set r "x" 99)
+    (let update-ok (eq (record_get r "x") 99))
+
+    ;; type predicate
+    (let type-ok (and (record? r) (not (record? 5))))
+
+    ;; shared mutable identity — the load-bearing assertion
+    (let r2 r)
+    (record_set r2 "y" 77)
+    (let identity-ok (eq (record_get r "y") 77))
+
+    ;; blueprint round-trips
+    (let bp-ok (node_eq (record_blueprint r) bp))
+
+    ;; value carry: 99 + 77 = 176 only when all of the above held
+    (if (and read-ok (and update-ok (and type-ok (and identity-ok bp-ok))))
+        (add (record_get r "x") (record_get r "y"))
+        0))
