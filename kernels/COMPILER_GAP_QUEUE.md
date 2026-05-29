@@ -144,4 +144,6 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | 2026-05-29 | [#2168](https://github.com/seeker71/Coherence-Network/pull/2168) | augmented assignment `x += y` (lift; eval pre-existing) | 75000 → 85000 |
 | 2026-05-29 | [#2174](https://github.com/seeker71/Coherence-Network/pull/2174) | dict literal `{k: v}` + int-key lookup (`str_eq` → `value_eq`) | 85000 → 95000 |
 | 2026-05-29 | [#2175](https://github.com/seeker71/Coherence-Network/pull/2175) | for-loop over a list (`lift-for` + `py-for-loop`) | 95000 → 105000 |
-|
+| 2026-05-29 | [#2178](https://github.com/seeker71/Coherence-Network/pull/2178) | unary `-x` / `not x` (desugar; no eval arm) | 105000 → 115000 |
+| 2026-05-29 | [#2179](https://github.com/seeker71/Coherence-Network/pull/2179) | boolean `and` / `or` (short-circuit → IF; no eval arm) | 115000 → 125000 |
+| 2026-05-29 | [#2181](https://github.com/seeker71/Coherence-Network/pull/2181) | `range()` builtin → iterable list (eval-side; no lift change) | 125000 → 135000 |
