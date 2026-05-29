@@ -132,13 +132,23 @@ in BML/NUMS terms:
 2a. **Record value + natives** — DONE (#2195). Structural half: mutable fields,
     shared identity, blueprint tag.
 
-2b. **Methods on the blueprint.** A blueprint NodeID gains an associated
-    method table: `(blueprint, method-name) → recipe/closure NodeID`, stored in
-    the kernel (a `Map<(NodeID,NameID), NodeID>`) or — truer to NUMS — as
-    children of the blueprint recipe. Natives: `method_define(blueprint, name,
-    body)` and `method_invoke(record, name, args...)` which dispatches by the
-    record's blueprint and binds `self`=record. This is what makes a Record a
-    real object. Python `class` compiles here: methods → blueprint table.
+2b. **Methods on the blueprint** — DONE (#2198). Kernel method table
+    `(blueprint NodeID, method NameID) → Closure`; natives `method_define`,
+    `method_invoke` (binds `self`=receiver), `method_has`. Sibling-parity
+    Go/Rust/TS; method-band → 116. This is what makes a Record a real object.
+
+2b-Python. **Python `class` on the Form kernel** — DONE (#2199). Form-side
+    lift+eval, no kernel change. `class` → PY-BMF-CLASS (methods as py-closures
+    on a class record); `C(args)` → construct instance record + run `__init__`;
+    `obj.attr` → record_get (PY-BMF-ATTR); `self.x = v` → record_set
+    (PY-BMF-ATTR-ASSIGN); `obj.m(args)` → PY-BMF-METHOD-CALL dispatched via the
+    instance's `__class__`. python-class-band → 31100 three-way (incl. a method
+    calling another method on self). **Real Python classes run on the native
+    kernels with no Python runtime.** Note: the python-bmf eval uses its own
+    py-closure value, so Python classes use this eval-native class model rather
+    than the kernel method table from 2b — both coexist (2b serves pure-Form /
+    other-language frontends using kernel closures). Still open here:
+    inheritance, dunders beyond `__init__`, classmethod/staticmethod.
 
 2c. **Dual pointer / interface_id (BML decoupling).** Let a record carry a
     *behavioral* blueprint distinct from its *structural* one — `record_view`/
