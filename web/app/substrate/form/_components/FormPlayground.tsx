@@ -1207,10 +1207,16 @@ export function FormPlayground() {
     setError(null);
     setResult(null);
     try {
+      // The API contract for `mode` is `ast | streaming | run`. The UI's
+      // "Intern" mode (internally "evaluate") interns the expression to a
+      // Recipe NodeID — that is the API's `ast`. Translate at the wire boundary
+      // so the two vocabularies can't silently drift into a 422 again (they had:
+      // the button posted "evaluate", which the API rejects).
+      const apiMode = mode === "run" ? "run" : "ast";
       const res = await fetch("/api/substrate/form", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expression, mode }),
+        body: JSON.stringify({ expression, mode: apiMode }),
       });
       const data = await res.json();
       if (!res.ok) {
