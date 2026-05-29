@@ -164,7 +164,15 @@ def _marker_matches(marker: str, env: Mapping[str, str]) -> bool:
 
 
 def detect_agent(env: Mapping[str, str]) -> str:
-    """Name the agent running this session, across all known agents."""
+    """Name the agent running this session, across all known agents.
+
+    An explicit COHERENCE_AGENT override wins — an agent's own hook lives in an
+    agent-specific location (e.g. .grok/hooks/), so it can declare which agent
+    it is when that agent leaves no recognizable environment marker.
+    """
+    override = env.get("COHERENCE_AGENT", "").strip()
+    if override:
+        return override
     for name, markers in KNOWN_AGENTS:
         if any(_marker_matches(m, env) for m in markers):
             return name

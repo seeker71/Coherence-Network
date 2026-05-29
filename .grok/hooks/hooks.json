@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "COHERENCE_AGENT=grok python3 \"$(git rev-parse --show-toplevel)/scripts/session_greeting.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
