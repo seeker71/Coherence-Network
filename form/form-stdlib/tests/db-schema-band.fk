@@ -1,0 +1,99 @@
+; tests/db-schema-band.fk — the substrate's real tables, as Form blueprints.
+;
+; preludes: form-stdlib/core.fk form-stdlib/db-schema.fk
+;
+; Proves the data-contract engine against the ACTUAL substrate schema
+; (api/app/services/substrate/orm.py):
+;   - CREATE TABLE renders correctly for sqlite AND postgres from one blueprint
+;     (dialect as data: only the id PK + str type differ).
+;   - the migration diff REGENERATES orm.py's hand-written _ensure_columns
+;     patches exactly — "ALTER TABLE substrate_nodes ADD COLUMN domain INTEGER
+;     NOT NULL DEFAULT 0" and "...substrate_cells ADD COLUMN access_recipe TEXT"
+;     fall out of (blueprint-without-col → blueprint-with-col), by hand no more.
+;   - CREATE INDEX projects from the blueprint's index list.
+;
+; Band verdict: 11111 when every projection matches.
+;   sqlite-create=1 ; postgres-create=10 ; domain-migration=100 ;
+;   access_recipe-migration=1000 ; index=10000.
+
+(do
+    ;; substrate_nodes — current contract (with domain).
+    (let nodes
+        (mk-table "substrate_nodes"
+            (list
+                (mk-col "id"         "pk"       0 "")
+                (mk-col "package"    "int"      0 "")
+                (mk-col "level"      "int"      0 "")
+                (mk-col "type"       "int"      0 "")
+                (mk-col "instance"   "int"      0 "")
+                (mk-col "serialized" "text"     0 "")
+                (mk-col "domain"     "int"      0 "0")
+                (mk-col "created_at" "datetime" 1 ""))
+            (list (mk-unique "uq_node_id" (list "package" "level" "type" "instance")))
+            (list (mk-index "ix_node_lookup"  (list "package" "level" "type" "instance"))
+                  (mk-index "ix_node_content" (list "package" "level" "domain" "serialized")))))
+
+    ;; substrate_nodes — older contract (before domain shipped).
+    (let nodes-v0
+        (mk-table "substrate_nodes"
+            (list
+                (mk-col "id"         "pk"       0 "")
+                (mk-col "package"    "int"      0 "")
+                (mk-col "level"      "int"      0 "")
+                (mk-col "type"       "int"      0 "")
+                (mk-col "instance"   "int"      0 "")
+                (mk-col "serialized" "text"     0 "")
+                (mk-col "created_at" "datetime" 1 ""))
+            (list (mk-unique "uq_node_id" (list "package" "level" "type" "instance")))
+            (list)))
+
+    ;; substrate_cells — current contract (with access_recipe).
+    (let cells
+        (mk-table "substrate_cells"
+            (list
+                (mk-col "id"            "pk"       0 "")
+                (mk-col "name"          "str"      0 "")
+                (mk-col "domain"        "int"      0 "")
+                (mk-col "blueprint"     "text"     0 "")
+                (mk-col "ctor"          "text"     1 "")
+                (mk-col "access_recipe" "text"     1 "")
+                (mk-col "created_at"    "datetime" 1 ""))
+            (list (mk-unique "uq_cell_name_domain" (list "name" "domain")))
+            (list (mk-index "ix_cell_lookup" (list "name" "domain")))))
+
+    ;; substrate_cells — older contract (before access_recipe shipped).
+    (let cells-v0
+        (mk-table "substrate_cells"
+            (list
+                (mk-col "id"        "pk"       0 "")
+                (mk-col "name"      "str"      0 "")
+                (mk-col "domain"    "int"      0 "")
+                (mk-col "blueprint" "text"     0 "")
+                (mk-col "ctor"      "text"     1 "")
+                (mk-col "created_at" "datetime" 1 ""))
+            (list (mk-unique "uq_cell_name_domain" (list "name" "domain")))
+            (list)))
+
+    ;; ---- expected strings -------------------------------------------------
+    (let exp-sqlite
+        "CREATE TABLE substrate_nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, package INTEGER NOT NULL, level INTEGER NOT NULL, type INTEGER NOT NULL, instance INTEGER NOT NULL, serialized TEXT NOT NULL, domain INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP, CONSTRAINT uq_node_id UNIQUE (package, level, type, instance))")
+    (let exp-postgres
+        "CREATE TABLE substrate_nodes (id SERIAL PRIMARY KEY, package INTEGER NOT NULL, level INTEGER NOT NULL, type INTEGER NOT NULL, instance INTEGER NOT NULL, serialized TEXT NOT NULL, domain INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP, CONSTRAINT uq_node_id UNIQUE (package, level, type, instance))")
+    ;; these two must equal orm.py _ensure_columns verbatim.
+    (let exp-domain-alter   "ALTER TABLE substrate_nodes ADD COLUMN domain INTEGER NOT NULL DEFAULT 0")
+    (let exp-cellcol-alter  "ALTER TABLE substrate_cells ADD COLUMN access_recipe TEXT")
+    (let exp-index          "CREATE INDEX ix_node_lookup ON substrate_nodes (package, level, type, instance)")
+
+    ;; ---- projections ------------------------------------------------------
+    (let got-sqlite   (create-ddl nodes SQLITE))
+    (let got-postgres (create-ddl nodes POSTGRES))
+    (let got-domain   (head (migration-ddls nodes-v0 nodes SQLITE)))
+    (let got-cellcol  (head (migration-ddls cells-v0 cells SQLITE)))
+    (let got-index    (head (index-ddls nodes)))
+
+    (sum (list
+        (if (str_eq got-sqlite   exp-sqlite)       1     0)
+        (if (str_eq got-postgres exp-postgres)     10    0)
+        (if (str_eq got-domain   exp-domain-alter) 100   0)
+        (if (str_eq got-cellcol  exp-cellcol-alter) 1000 0)
+        (if (str_eq got-index    exp-index)        10000 0))))
