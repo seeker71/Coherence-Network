@@ -71,14 +71,19 @@ way reports everything `unbound`. That is not a failure of your code.
 
 See [[self_form_kernel_local_toolchain]] (memory) for the full trap.
 
-## Coverage snapshot (2026-05-29, after #2175)
+## Coverage snapshot (2026-05-29, after #2179 — Batch 1 complete)
 
 **Eval arms shipped (15):** AUG-ASSIGN, ASSIGN, CALL, DEF, DICT, FOR, IDENT,
 IF, INT, LIST, MODULE, RETURN, STRING, SUBSCRIPT, WHILE
 **Lift branches shipped:** AUG-ASSIGN, DICT, FOR, IF, INT, LIST, MODULE,
-PASS, SUBSCRIPT, WHILE (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING
-via dedicated lifters)
-**Band aggregate:** 105000 (15 cells)
+PASS, SUBSCRIPT, WHILE, unary `-`/`not`, boolean `and`/`or`
+(+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via dedicated lifters)
+**Band aggregate:** 125000 (17 cells)
+
+**Desugaring wins (no new eval arm):** unary `-x` → MATH-MINUS(0,x);
+`not x` → COMPARE-EQ(x,0); `a and b` → IF(a,b,a); `a or b` → IF(a,a,b).
+Whenever a construct's semantics reduce to an existing recipe shape, lift
+desugars and eval is untouched — the cheapest kind of breath.
 
 ## The queue
 
@@ -88,9 +93,13 @@ via dedicated lifters)
 |---|---|---|---|
 | **dict literal `{k: v}`** | `PY-BMF-DICT` eval shipped; `lift-primary` branch + value_eq lookup fix | edits `lift-primary` (shared) | **DONE #2174** |
 | `for x in xs:` | folds over a LIST via `py-eval-body-loop` | new `lift-for` + `py-eval-statement` arm | **DONE #2175** (list iterables; `range()` pending) |
-| unary `-x` / `not x` | small `lift-primary` branch + small `py-eval` arm | edits `lift-primary` + `py-eval` | open |
-| boolean `and` / `or` | precedence-climb extension + short-circuit eval arm | edits `lift-binop-loop` + `py-eval` | open |
+| unary `-x` / `not x` | desugars: `-x`→MATH-MINUS(0,x), `not x`→COMPARE-EQ(x,0) — pure lift, no eval arm | edits `lift-primary` | **DONE #2178** |
+| boolean `and` / `or` | desugars to PY-BMF-IF (short-circuit) — pure lift, no eval arm | edits `op-prec` + `tok-binop-prec` + `lift-binop-loop` | **DONE #2179** |
 | `range(n)` as iterable | `range()` builtin must produce a Form list so `for i in range(n)` walks | new `range` native-or-builtin in eval | open (surfaced by #2175; the common substrate loop idiom) |
+
+**Batch 1 is complete** — the cheap (mostly lift-only) tier is done. `range()`
+remains as a small follow-up that unblocks the most common substrate loop
+idiom; it's eval-side (a builtin producing a list) rather than a lift gap.
 
 ### Batch 2 — substrate-critical heavy (constructs the target files use most)
 
@@ -135,3 +144,4 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | 2026-05-29 | [#2168](https://github.com/seeker71/Coherence-Network/pull/2168) | augmented assignment `x += y` (lift; eval pre-existing) | 75000 → 85000 |
 | 2026-05-29 | [#2174](https://github.com/seeker71/Coherence-Network/pull/2174) | dict literal `{k: v}` + int-key lookup (`str_eq` → `value_eq`) | 85000 → 95000 |
 | 2026-05-29 | [#2175](https://github.com/seeker71/Coherence-Network/pull/2175) | for-loop over a list (`lift-for` + `py-for-loop`) | 95000 → 105000 |
+|
