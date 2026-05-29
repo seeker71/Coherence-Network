@@ -1,0 +1,49 @@
+; name-check-visibility-band.fk — module visibility enforced by the resolver.
+;
+; preludes: form-stdlib/name-check.fk
+;
+; Two modules, built with intern_node:
+;   module N exports `n-pub` and hides `_n-priv` (leading `_` = private).
+;   module M references `n-pub` (allowed), `_n-priv` (N's internal — a
+;     visibility violation), and `bogus` (defined nowhere).
+;
+; The resolver, given N's public surface as `visible` and N's privates as
+; `hidden`, must split M's dangling references into exactly one escape
+; (`_n-priv`) and one genuine unknown (`bogus`). The `n-pub` reference resolves
+; and is reported by neither. Deterministic, so the three kernels must agree.
+
+(do
+    (let fncall-cat (make_nodeid 1 2 32 1))
+    (let fndef-cat  (make_nodeid 1 2 31 1))
+    (let seq-cat    (make_nodeid 1 2 9 2))
+    (let do-cat     (make_nodeid 1 2 9 1))
+
+    (defn nv-defn (nm)
+        (intern_node fndef-cat
+            (list (intern_trivial_string nm)
+                  (intern_node seq-cat (empty))
+                  (intern_trivial_int 0))))
+    (defn nv-call (nm)
+        (intern_node fncall-cat (list (intern_trivial_string nm))))
+
+    ;; module N — one public export, one private internal
+    (let module-n (intern_node do-cat
+                      (list (nv-defn "n-pub") (nv-defn "_n-priv"))))
+    ;; module M — references across the boundary
+    (let module-m (intern_node do-cat
+                      (list (nv-call "n-pub") (nv-call "_n-priv") (nv-call "bogus"))))
+
+    (let visible (module-public-names module-n))   ; ⇒ (n-pub)
+    (let hidden  (module-private-names module-n))   ; ⇒ (_n-priv)
+
+    (let escapes  (name-check-escapes  module-m visible hidden))  ; ⇒ (_n-priv)
+    (let unknowns (name-check-unknowns module-m visible hidden))  ; ⇒ (bogus)
+
+    (let pass
+        (and (eq (len visible) 1)
+        (and (eq (len hidden) 1)
+        (and (eq (len escapes) 1)
+             (eq (len unknowns) 1)))))
+
+    (print (if pass "name-check-visibility-band: PASS" "name-check-visibility-band: FAIL"))
+)

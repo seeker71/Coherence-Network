@@ -103,4 +103,66 @@
     ;; --- a yes/no gate over a program recipe ------------------------------
     (defn name-check-clean? (program known)
         (nc-empty? (name-check program known)))
+
+    ;; =====================================================================
+    ;; Module visibility — names as a view over the content-addressed lattice
+    ;; =====================================================================
+    ;;
+    ;; In Go/Python a module is an identity+container boundary. In Form identity
+    ;; is content-addressed — `(add a b)` is one NodeID for everyone — so a
+    ;; module can't contain identities; it is a *visibility view* over the shared
+    ;; lattice. You can hide a NAME, never a structure: a private recipe's NodeID
+    ;; still exists globally, reachable by anyone holding it. Encapsulation here
+    ;; protects coupling ("don't bind my internal names"), not secrecy.
+    ;;
+    ;; Policy (concrete, swappable): a name is PRIVATE iff it begins with `_`,
+    ;; matching the kernel's own `_dict_*` / `_plus` internal grain. Default is
+    ;; public — non-breaking for the existing all-public corpus. The Go-true
+    ;; alternative (private by default, export an explicit set) is the same
+    ;; enforcement below with `module-public-names` swapped for an export list;
+    ;; that flip wants a corpus migration, so it is staged as strict mode.
+
+    (defn nc-private? (name)
+        (str_eq (char_at name 0) "_"))
+
+    ;; --- partition a collected name-list by the visibility policy ---------
+    (defn nc-keep-public (names acc)
+        (if (nc-empty? names)
+            acc
+            (nc-keep-public (tail names)
+                (if (nc-private? (head names)) acc (cons (head names) acc)))))
+    (defn nc-keep-private (names acc)
+        (if (nc-empty? names)
+            acc
+            (nc-keep-private (tail names)
+                (if (nc-private? (head names)) (cons (head names) acc) acc))))
+
+    ;; A module's exported surface / its hidden internals, from its own recipe.
+    (defn module-public-names (module)
+        (nc-keep-public (nc-collect module (empty)) (empty)))
+    (defn module-private-names (module)
+        (nc-keep-private (nc-collect module (empty)) (empty)))
+
+    ;; --- set intersection / difference over string-name lists -------------
+    (defn nc-in-set (names set acc)
+        (if (nc-empty? names)
+            acc
+            (nc-in-set (tail names) set
+                (if (nc-member? (head names) set) (cons (head names) acc) acc))))
+    (defn nc-not-in-set (names set acc)
+        (if (nc-empty? names)
+            acc
+            (nc-not-in-set (tail names) set
+                (if (nc-member? (head names) set) acc (cons (head names) acc)))))
+
+    ;; --- the module-aware verdict -----------------------------------------
+    ;; `visible` = the referencing module's own names ∪ imported modules' PUBLIC
+    ;; names ∪ natives. `hidden` = imported modules' PRIVATE names. A reference
+    ;; outside `visible` that lands in `hidden` is a visibility violation — the
+    ;; name exists, but it's another module's internal; everything else outside
+    ;; `visible` is genuinely undefined.
+    (defn name-check-escapes (program visible hidden)
+        (nc-in-set (name-check program visible) hidden (empty)))
+    (defn name-check-unknowns (program visible hidden)
+        (nc-not-in-set (name-check program visible) hidden (empty)))
 )
