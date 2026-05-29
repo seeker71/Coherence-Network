@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 224
+**Total files**: 225
 
 | File | Purpose |
 |---|---|
@@ -160,6 +160,7 @@
 | [test_runtime_api.py](test_runtime_api.py) | Tests for the canonical-route-registry-and-runtime-mapping spec |
 | [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
+| [test_session_greeting.py](test_session_greeting.py) | Session greeting — the SessionStart recognition of user + agent with memory. |
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
