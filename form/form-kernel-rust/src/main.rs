@@ -970,6 +970,33 @@ pub(crate) enum Value {
     List(Vec<Value>),
     Closure(Arc<Closure>),
     Nid(NodeID),
+    // Record — a mutable struct/object with identity. The first mutable Value
+    // the kernel carries; BML requires it for `self.x = v`. `blueprint` tags
+    // the record's type (its method-table / class NodeID); `fields` is an
+    // ordered name→value map. Arc<Mutex> gives shared mutable identity that is
+    // also Send (Value crosses thread boundaries in the parallel arms), so two
+    // bindings to the same record see each other's mutations — object
+    // semantics, not value-copy semantics.
+    Record(Arc<Mutex<Record>>),
+}
+
+#[derive(Debug)]
+pub(crate) struct Record {
+    blueprint: NodeID,
+    fields: Vec<(NameID, Value)>,
+}
+
+impl Record {
+    fn get(&self, name: NameID) -> Option<Value> {
+        self.fields.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| v.clone())
+    }
+    fn set(&mut self, name: NameID, value: Value) {
+        if let Some(slot) = self.fields.iter_mut().find(|(n, _)| *n == name) {
+            slot.1 = value;
+        } else {
+            self.fields.push((name, value));
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -1067,6 +1094,17 @@ impl Value {
             }
             Value::Closure(c) => format!("<closure #{}>", c.name),
             Value::Nid(n) => format!("@{}.{}.{}.{}", n.pkg, n.level, n.ty, n.inst),
+            Value::Record(r) => {
+                let rec = r.lock().unwrap();
+                format!(
+                    "<record @{}.{}.{}.{} #{}fields>",
+                    rec.blueprint.pkg,
+                    rec.blueprint.level,
+                    rec.blueprint.ty,
+                    rec.blueprint.inst,
+                    rec.fields.len()
+                )
+            }
         }
     }
 
@@ -1411,6 +1449,67 @@ impl Kernel {
             } else {
                 Value::Int(base.pow(exp as u32))
             }
+        });
+        // --- struct/object primitive (BML reference, rung 2) ----------------
+        // A Record is the kernel's first MUTABLE value: a struct/object with
+        // identity. Every language's class/struct compiles onto these four
+        // natives. The blueprint NodeID tags the record's type (its class /
+        // method-table); fields are a name→value map.
+        //
+        // record_new — (record_new blueprint k1 v1 k2 v2 ...) → Record.
+        // The first arg is the blueprint NodeID; the rest are alternating
+        // field-name (string) and value pairs. Field names intern to NameIDs.
+        self.register_native("record_new", cat_method(), |k, _, args| {
+            let blueprint = args[0].as_nid();
+            let mut fields: Vec<(NameID, Value)> = Vec::new();
+            let mut i = 1;
+            while i + 1 < args.len() {
+                let name = k.intern_string(args[i].as_str()).inst;
+                fields.push((name, args[i + 1].clone()));
+                i += 2;
+            }
+            Value::Record(Arc::new(Mutex::new(Record { blueprint, fields })))
+        });
+        // record_get — (record_get rec "field") → value, or null if absent.
+        self.register_native("record_get", cat_access(), |k, _, args| {
+            let name = k.intern_string(args[1].as_str()).inst;
+            match &args[0] {
+                Value::Record(r) => r.lock().unwrap().get(name).unwrap_or(Value::Null),
+                _ => panic!("record_get: not a record: {:?}", args[0]),
+            }
+        });
+        // record_set — (record_set rec "field" value) → the record (mutated
+        // in place; shared identity means all holders see the change). This is
+        // the kernel's first in-place mutation — BML's `self.x = v`.
+        self.register_native("record_set", cat_method(), |k, _, args| {
+            let name = k.intern_string(args[1].as_str()).inst;
+            match &args[0] {
+                Value::Record(r) => {
+                    r.lock().unwrap().set(name, args[2].clone());
+                    args[0].clone()
+                }
+                _ => panic!("record_set: not a record: {:?}", args[0]),
+            }
+        });
+        // record_has — (record_has rec "field") → bool.
+        self.register_native("record_has", cat_access(), |k, _, args| {
+            let name = k.intern_string(args[1].as_str()).inst;
+            match &args[0] {
+                Value::Record(r) => Value::Bool(r.lock().unwrap().get(name).is_some()),
+                _ => Value::Bool(false),
+            }
+        });
+        // record_blueprint — (record_blueprint rec) → the blueprint NodeID
+        // (the record's class/type tag, for method dispatch by the lifter).
+        self.register_native("record_blueprint", cat_access(), |_, _, args| {
+            match &args[0] {
+                Value::Record(r) => Value::Nid(r.lock().unwrap().blueprint),
+                _ => panic!("record_blueprint: not a record: {:?}", args[0]),
+            }
+        });
+        // record? — (record? v) → bool. Type predicate so Form code can branch.
+        self.register_native("record?", cat_access(), |_, _, args| {
+            Value::Bool(matches!(&args[0], Value::Record(_)))
         });
         // str_find — Rust-level substring search starting at index `from`.
         // (str_find s needle from) → int (index or -1). Whole search in

@@ -1004,6 +1004,8 @@ export class Kernel {
         return `@${nodeKey(v.nodeid)}`;
       case "ctor":
         return `${v.ctor_name}(${v.args.map((a) => this.render(a)).join(", ")})`;
+      case "record":
+        return `<record @${nodeKey(v.record.blueprint)} #${v.record.fields.length}fields>`;
     }
   }
 
@@ -1079,6 +1081,54 @@ export class Kernel {
       for (let i = 0; i < exp; i++) result *= base;
       return { kind: "int", int: result };
     });
+    // --- struct/object primitive (BML reference, rung 2) ----------------
+    // A Record is the kernel's first MUTABLE value: a struct/object with
+    // identity. Every language's class/struct compiles onto these natives.
+    // Blueprint NodeID tags the type; fields are a name→value map.
+    //
+    // record_new — (record_new blueprint k1 v1 k2 v2 ...) → record.
+    this.registerNative("record_new", catMethod(), (k, args) => {
+      const rec: Record = { blueprint: argNodeID(args, 0), fields: [] };
+      let i = 1;
+      while (i + 1 < args.length) {
+        recordSet(rec, k.internName(argStr(args, i)), args[i + 1]!);
+        i += 2;
+      }
+      return { kind: "record", record: rec };
+    });
+    // record_get — (record_get rec "field") → value, or null if absent.
+    this.registerNative("record_get", catAccess(), (k, args) => {
+      const r = args[0]!;
+      if (r.kind !== "record") throw new Error("record_get: not a record");
+      const v = recordGet(r.record, k.internName(argStr(args, 1)));
+      return v ?? { kind: "null" };
+    });
+    // record_set — (record_set rec "field" value) → the record (mutated in
+    // place; shared identity means all holders see it). BML's `self.x = v`.
+    this.registerNative("record_set", catMethod(), (k, args) => {
+      const r = args[0]!;
+      if (r.kind !== "record") throw new Error("record_set: not a record");
+      recordSet(r.record, k.internName(argStr(args, 1)), args[2]!);
+      return r;
+    });
+    // record_has — (record_has rec "field") → bool.
+    this.registerNative("record_has", catAccess(), (k, args) => {
+      const r = args[0]!;
+      if (r.kind !== "record") return { kind: "bool", bool: false };
+      const v = recordGet(r.record, k.internName(argStr(args, 1)));
+      return { kind: "bool", bool: v !== undefined };
+    });
+    // record_blueprint — (record_blueprint rec) → the blueprint NodeID.
+    this.registerNative("record_blueprint", catAccess(), (_k, args) => {
+      const r = args[0]!;
+      if (r.kind !== "record") throw new Error("record_blueprint: not a record");
+      return { kind: "nodeid", nodeid: r.record.blueprint };
+    });
+    // record? — (record? v) → bool type predicate.
+    this.registerNative("record?", catAccess(), (_k, args) => ({
+      kind: "bool",
+      bool: args[0]!.kind === "record",
+    }));
     // str_find — JS-level substring search starting at index `from`.
     // (str_find s needle from) → int (index or -1). Whole search in this
     // JS String.indexOf call; no Form callback per byte, no Form recursion.
@@ -2596,6 +2646,8 @@ export class Kernel {
         return `@${nodeKey(v.nodeid)}`;
       case "ctor":
         return `${v.ctor_name}(${v.args.map((a) => this.render(a)).join(", ")})`;
+      case "record":
+        return `<record @${nodeKey(v.record.blueprint)} #${v.record.fields.length}fields>`;
     }
   }
 }
@@ -2684,6 +2736,7 @@ export type Value =
   | { kind: "list"; list: Value[] }
   | { kind: "closure"; closure: Closure }
   | { kind: "nodeid"; nodeid: NodeID }
+  | { kind: "record"; record: Record } // mutable struct/object (BML rung 2)
   | { // #21 — INDUCTIVE-typed value (constructor application result)
       kind: "ctor";
       inductive: NodeID;
@@ -2691,6 +2744,34 @@ export type Value =
       ctor_index: number;
       args: Value[];
     };
+
+// Record — a mutable struct/object with identity (BML reference, rung 2).
+// The first mutable Value the kernel carries; required for `self.x = v`. A
+// JS object reference gives shared mutable identity — two bindings to the same
+// record see each other's mutations (object semantics, not value-copy).
+// blueprint tags the record's type (class / method-table NodeID); fields is
+// an ordered name→value map.
+export interface Record {
+  blueprint: NodeID;
+  fields: { name: NameID; val: Value }[];
+}
+
+export function recordGet(r: Record, name: NameID): Value | undefined {
+  for (let i = r.fields.length - 1; i >= 0; i--) {
+    if (r.fields[i]!.name === name) return r.fields[i]!.val;
+  }
+  return undefined;
+}
+
+export function recordSet(r: Record, name: NameID, val: Value): void {
+  for (const f of r.fields) {
+    if (f.name === name) {
+      f.val = val;
+      return;
+    }
+  }
+  r.fields.push({ name, val });
+}
 
 export interface Closure {
   readonly name: NameID;
