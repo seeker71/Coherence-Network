@@ -1155,6 +1155,32 @@ function starterFromCell(cellRef: string | null): {
   };
 }
 
+// FastAPI error bodies are heterogeneous: `detail` is a plain string for an
+// HTTPException, but an array of `{type, loc, msg, input, ctx}` objects for a
+// 422 validation error. Coerce any shape to a readable string so the error
+// banner never receives a non-primitive React child (React #31).
+function detailToMessage(detail: unknown, status: number): string {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const msg = detail
+      .map((d) => {
+        if (d && typeof d === "object") {
+          const item = d as { loc?: unknown[]; msg?: string };
+          const loc = Array.isArray(item.loc) ? item.loc.join(".") : "";
+          const m = typeof item.msg === "string" ? item.msg : JSON.stringify(d);
+          return loc ? `${loc}: ${m}` : m;
+        }
+        return String(d);
+      })
+      .filter(Boolean)
+      .join("; ");
+    if (msg) return msg;
+  } else if (detail && typeof detail === "object") {
+    return JSON.stringify(detail);
+  }
+  return `Evaluation failed (${status})`;
+}
+
 export function FormPlayground() {
   const searchParams = useSearchParams();
   const cellParam = searchParams.get("cell");
@@ -1220,7 +1246,11 @@ export function FormPlayground() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || `Evaluation failed (${res.status})`);
+        // FastAPI's `detail` is a string for HTTPException but an ARRAY of
+        // `{type, loc, msg, ...}` objects for validation (422). Setting that
+        // array as `error` and rendering it crashed the page with React #31
+        // (objects are not valid as a React child). Always coerce to a string.
+        setError(detailToMessage(data.detail, res.status));
         return;
       }
       setResult(data);
