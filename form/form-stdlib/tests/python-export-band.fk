@@ -1,0 +1,36 @@
+; tests/python-export-band.fk — module-as-library: host a module, call exports.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/python-bmf-eval.fk form-stdlib/python-bmf-lift.fk
+;
+; The contract for API code → Form-native: a substrate module like kernel.py
+; is NOT a script that yields a value — it DEFINES functions the rest of the
+; system imports and calls. py-call-export loads a PY-BMF-MODULE (functions
+; bound in its env) and invokes a named export with args. This is "the API
+; calls intern_node(args)" → "the kernel walks the compiled recipe".
+;
+; Band verdict: 562 when every call returns the right value across Go/Rust/TS.
+;   add3(2,3,4)=9 → 2 ; mul(6,7)=42 → 40 ; mul(2,5)=10 → 20 ; chained=500
+;   (the distinct mul results prove args bind per-call, not a cached value).
+
+(do
+    (let mod (lift-module-text "def add3(a, b, c):
+    return a + b + c
+def mul(a, b):
+    return a * b
+def poly(x):
+    return mul(x, x) + add3(x, x, x)
+0
+"))
+
+    (let r-add3 (py-call-export mod "add3" (list 2 3 4)))      ; 9
+    (let r-mul1 (py-call-export mod "mul" (list 6 7)))          ; 42
+    (let r-mul2 (py-call-export mod "mul" (list 2 5)))          ; 10
+    ;; poly(x) = x*x + 3x ; poly(20) = 400 + 60 = 460
+    (let r-poly (py-call-export mod "poly" (list 20)))          ; 460
+
+    (let add3-ok (if (eq r-add3 9) 2 0))
+    (let mul1-ok (if (eq r-mul1 42) 40 0))
+    (let mul2-ok (if (eq r-mul2 10) 20 0))
+    (let poly-ok (if (eq r-poly 460) 500 0))
+
+    (sum (list add3-ok mul1-ok mul2-ok poly-ok)))
