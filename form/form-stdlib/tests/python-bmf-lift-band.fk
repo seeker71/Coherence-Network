@@ -218,15 +218,31 @@ total
 "))
     (let cell15-score (if (eq cell15-value 100) 10000 0))
 
+    ;; ---- cell 16: unary operators — CPython:
+    ;;   x = 5
+    ;;   y = -x          # → -5   (MATH-MINUS(0, x))
+    ;;   z = not 0       # → 1    (COMPARE-EQ(0, 0))
+    ;;   w = not x       # → 0    (COMPARE-EQ(5, 0))
+    ;;   -x + 8 + z + w  # → -5 + 8 + 1 + 0 = 4 -------------------------
+
+    (let cell16-value (py-bmf-run-text "x = 5
+y = -x
+z = not 0
+w = not x
+y + 8 + z + w
+"))
+    (let cell16-score (if (eq cell16-value 4) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
     ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
     ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict)
-    ;;   + 10000 (cell 15 for-loop) = 105000
+    ;;   + 10000 (cell 15 for-loop) + 10000 (cell 16 unary) = 115000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
-               cell13-score cell14-score cell15-score)))
+               cell13-score cell14-score cell15-score
+               cell16-score)))
