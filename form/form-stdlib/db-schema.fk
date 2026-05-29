@@ -1,0 +1,141 @@
+; db-schema.fk — the data contract as a Form value; DDL + migration as projections.
+;
+; Urs (2026-05-30): "we need to be able to read and write to the DB and have a
+; way to represent the DB tables in form blueprints and a way to update the
+; schema when we need to update the data contract or vice versa ... migrate /
+; manage the tables." This is that engine.
+;
+; The shape (NUMS-Go: cells are part of what the struct IS):
+;   table   = (name, columns, uniques, indexes)   ← the Blueprint of a table
+;   column  = (name, logical-type, nullable, default)
+;   row     = a Record over that blueprint (read/write layer, separate file)
+;
+; ONE engine, DIALECT AS DATA (core-abstraction-first). sqlite and postgres are
+; not parallel code paths — they are two dialect values the same renderer reads.
+; Adding a third dialect is a new (mk-dialect ...) literal, not new code.
+;
+; Projections of a table-blueprint:
+;   create-ddl   table dialect          → CREATE TABLE ...
+;   index-ddls   table                  → [CREATE INDEX ...]
+;   schema-diff  old-cols new-cols       → columns present in new, absent in old
+;   migration-ddls old-table new-table d → [ALTER TABLE ... ADD COLUMN ...]
+;
+; The "vice versa" (live schema → table-blueprint via introspection) and the
+; row read/write layer ride the same value shape; they live in the DB-driver
+; file that executes these strings. This file is pure: it computes SQL, it does
+; not run it — so it is three-way parity-testable like every other engine here.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- column -----------------------------------------------------------
+    ;; logical-type ∈ {"pk" "int" "str" "text" "datetime"}; nullable 1/0;
+    ;; default "" = none, else a literal rendered verbatim ("0", "'x'").
+    (defn mk-col (name type nullable default) (list "col" name type nullable default))
+    (defn col-name (c) (nth c 1))
+    (defn col-type (c) (nth c 2))
+    (defn col-nullable (c) (nth c 3))
+    (defn col-default (c) (nth c 4))
+
+    ;; ---- table ------------------------------------------------------------
+    (defn mk-table (name cols uniques indexes) (list "table" name cols uniques indexes))
+    (defn tbl-name (t) (nth t 1))
+    (defn tbl-cols (t) (nth t 2))
+    (defn tbl-uniques (t) (nth t 3))
+    (defn tbl-indexes (t) (nth t 4))
+
+    (defn mk-unique (cname colnames) (list "unique" cname colnames))
+    (defn uq-name (u) (nth u 1))
+    (defn uq-cols (u) (nth u 2))
+
+    (defn mk-index (iname colnames) (list "index" iname colnames))
+    (defn ix-name (i) (nth i 1))
+    (defn ix-cols (i) (nth i 2))
+
+    ;; ---- dialect (DATA, not code) -----------------------------------------
+    ;; (name, int-type, str-type, text-type, datetime-type, pk-clause)
+    (defn mk-dialect (name int-t str-t text-t dt-t pk-clause)
+        (list "dialect" name int-t str-t text-t dt-t pk-clause))
+    (defn dia-name (d) (nth d 2))
+    (defn dia-pk (d) (nth d 6))
+    (defn dia-type (d logical)
+        (if (str_eq logical "int")      (nth d 2)
+        (if (str_eq logical "str")      (nth d 3)
+        (if (str_eq logical "text")     (nth d 4)
+        (if (str_eq logical "datetime") (nth d 5)
+            logical)))))
+
+    ;; The two dialects the body actually runs (memory: dev/test sqlite,
+    ;; prod postgres). The only real divergence is the autoincrement PK and
+    ;; str's physical type — exactly the two cells that differ below.
+    (let SQLITE   (mk-dialect "sqlite"   "INTEGER" "TEXT"    "TEXT" "TIMESTAMP" "INTEGER PRIMARY KEY AUTOINCREMENT"))
+    (let POSTGRES (mk-dialect "postgres" "INTEGER" "VARCHAR" "TEXT" "TIMESTAMP" "SERIAL PRIMARY KEY"))
+
+    ;; ---- column → DDL fragment --------------------------------------------
+    ;; pk is a whole clause; every other column is  <name> <type> [NOT NULL]
+    ;; [DEFAULT x].
+    (defn col-ddl (c dia)
+        (if (str_eq (col-type c) "pk")
+            (str_concat (col-name c) (str_concat " " (dia-pk dia)))
+            (do
+                (let base (str_concat (col-name c)
+                            (str_concat " " (dia-type dia (col-type c)))))
+                (let with-null
+                    (if (eq (col-nullable c) 0)
+                        (str_concat base " NOT NULL")
+                        base))
+                (if (str_eq (col-default c) "")
+                    with-null
+                    (str_concat with-null
+                        (str_concat " DEFAULT " (col-default c)))))))
+
+    (defn uq-ddl (u)
+        (str_concat "CONSTRAINT "
+            (str_concat (uq-name u)
+                (str_concat " UNIQUE ("
+                    (str_concat (join ", " (uq-cols u)) ")")))))
+
+    ;; ---- table → CREATE TABLE ---------------------------------------------
+    (defn create-ddl (t dia)
+        (do
+            (let col-parts (map (fn (c) (col-ddl c dia)) (tbl-cols t)))
+            (let uq-parts  (map (fn (u) (uq-ddl u))      (tbl-uniques t)))
+            (let parts     (append col-parts uq-parts))
+            (str_concat "CREATE TABLE "
+                (str_concat (tbl-name t)
+                    (str_concat " ("
+                        (str_concat (join ", " parts) ")"))))))
+
+    ;; ---- table → CREATE INDEX (each its own statement) --------------------
+    (defn index-ddl (t i)
+        (str_concat "CREATE INDEX "
+            (str_concat (ix-name i)
+                (str_concat " ON "
+                    (str_concat (tbl-name t)
+                        (str_concat " ("
+                            (str_concat (join ", " (ix-cols i)) ")")))))))
+    (defn index-ddls (t)
+        (map (fn (i) (index-ddl t i)) (tbl-indexes t)))
+
+    ;; ---- migration: blueprint diff → ALTER --------------------------------
+    (defn has-col? (cols name)
+        (if (empty? cols) 0
+            (if (str_eq (col-name (head cols)) name) 1
+                (has-col? (tail cols) name))))
+
+    ;; columns present in new, absent in old — the safe forward migration the
+    ;; body already does by hand in orm.py _ensure_columns.
+    (defn schema-diff (old-cols new-cols)
+        (filter (fn (c) (eq (has-col? old-cols (col-name c)) 0)) new-cols))
+
+    (defn alter-add-ddl (tname c dia)
+        (str_concat "ALTER TABLE "
+            (str_concat tname
+                (str_concat " ADD COLUMN " (col-ddl c dia)))))
+
+    (defn migration-ddls (old-tbl new-tbl dia)
+        (do
+            (let adds (schema-diff (tbl-cols old-tbl) (tbl-cols new-tbl)))
+            (map (fn (c) (alter-add-ddl (tbl-name new-tbl) c dia)) adds)))
+
+    0)
