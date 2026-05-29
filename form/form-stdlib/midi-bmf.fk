@@ -29,10 +29,10 @@
     ;; (composite-leaf), instance unique per node-shape. Instances
     ;; 1400..1403 are MIDI's reserved slice.
 
-    (let MIDI-NOTE-ON  (make_nodeid 1 2 99 1400))
-    (let MIDI-NOTE-OFF (make_nodeid 1 2 99 1401))
-    (let MIDI-TRACK    (make_nodeid 1 2 99 1402))
-    (let MIDI-SONG     (make_nodeid 1 2 99 1403))
+    (let MIDI-NOTE-ON  (bp "MIDI-NOTE-ON"))
+    (let MIDI-NOTE-OFF (bp "MIDI-NOTE-OFF"))
+    (let MIDI-TRACK    (bp "MIDI-TRACK"))
+    (let MIDI-SONG     (bp "MIDI-SONG"))
 
     ;; --- list helpers ----------------------------------------------
     ;;

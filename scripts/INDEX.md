@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 135
+**Total files**: 136
 
 | File | Purpose |
 |---|---|
@@ -54,6 +54,7 @@
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
+| [gen_bp_table.py](gen_bp_table.py) | Generate the kernel-resident bp lookup table for all three Form kernels. |
 | [generate_curated_translations.py](generate_curated_translations.py) | Generate machine-translated locale siblings (de/es/id) for curated |
 | [generate_repo_indexes.py](generate_repo_indexes.py) | Generate INDEX.md files for source-code directories. |
 | [generate_silence_alive_visuals.py](generate_silence_alive_visuals.py) | Generate the alive / growing-over-time views for /silence/built. |

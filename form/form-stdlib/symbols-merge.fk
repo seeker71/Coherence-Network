@@ -20,7 +20,7 @@
 ;
 ; preludes: form-stdlib/symbols.fk
 
-(let SYMBOLS-CONFLICT (make_nodeid 1 2 99 1810))
+(let SYMBOLS-CONFLICT (bp "SYMBOLS-CONFLICT"))
 
 ;; --- helpers ------------------------------------------------------
 

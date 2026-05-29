@@ -15,6 +15,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Keep the kernel-resident bp lookup table in sync with the registry before the
+# staleness check decides whether to rebuild. Writes only on change, so a no-op
+# run leaves mtimes (and the rebuild decision) untouched.
+if command -v python3 >/dev/null 2>&1 && [[ -f ../scripts/gen_bp_table.py ]]; then
+    python3 ../scripts/gen_bp_table.py >/dev/null || true
+fi
+
 GO_DIR="form-kernel-go"
 RS_DIR="form-kernel-rust"
 TS_DIR="form-kernel-ts"
@@ -24,13 +31,13 @@ HOST_STACK_KB="262144"
 
 # --- build compiled sibling kernels if stale -----------------------------
 build_go() {
-    if [[ ! -x "$GO_BIN" || "$GO_DIR/main.go" -nt "$GO_BIN" || "$GO_DIR/numeric_bench.go" -nt "$GO_BIN" ]]; then
+    if [[ ! -x "$GO_BIN" || "$GO_DIR/main.go" -nt "$GO_BIN" || "$GO_DIR/numeric_bench.go" -nt "$GO_BIN" || "$GO_DIR/bp_table.go" -nt "$GO_BIN" ]]; then
         echo "  building go kernel..." >&2
         (cd "$GO_DIR" && go build -o bin-go .)
     fi
 }
 build_rs() {
-    if [[ ! -x "$RS_BIN" || "$RS_DIR/src/main.rs" -nt "$RS_BIN" ]]; then
+    if [[ ! -x "$RS_BIN" || "$RS_DIR/src/main.rs" -nt "$RS_BIN" || "$RS_DIR/src/bp_table.rs" -nt "$RS_BIN" ]]; then
         echo "  building rust kernel..." >&2
         (cd "$RS_DIR" && cargo build --release --quiet)
     fi

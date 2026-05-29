@@ -8,10 +8,10 @@
 ; frame composition in subsequent breaths.
 
 (do
-    (let VID-OBJ  (make_nodeid 1 2 99 10))
-    (let VID-ARR  (make_nodeid 1 2 99 11))
-    (let VID-PAIR (make_nodeid 1 2 99 12))
-    (let VID-NULL (make_nodeid 1 2 99 13))
+    (let VID-OBJ  (bp "VID-OBJ"))
+    (let VID-ARR  (bp "VID-ARR"))
+    (let VID-PAIR (bp "VID-PAIR"))
+    (let VID-NULL (bp "VID-NULL"))
 
     (defn vid-cat (xs)
         (if (nil? xs) ""

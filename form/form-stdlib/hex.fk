@@ -40,7 +40,7 @@
     ;; --- HEX-DECODE-ERROR sentinel -----------------------------------
     ;; Substrate-resident NodeID. pkg=1, level=2, type=99 stays in the
     ;; user-channel range; inst=1770 reserves a slot in the hex family.
-    (let HEX-DECODE-ERROR (make_nodeid 1 2 99 1770))
+    (let HEX-DECODE-ERROR (bp "HEX-DECODE-ERROR"))
 
     ;; The canonical lowercase hex alphabet. Position i in this string
     ;; is the character for 4-bit value i.

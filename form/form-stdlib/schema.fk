@@ -33,14 +33,14 @@
 ; LEVEL_TRIVIAL = 1 in all three kernels.
 ;
 ; The LIST category convention used by schema-list is the substrate-
-; canonical LIST blueprint (make_nodeid 1 1 14 0) — the same shape used
+; canonical LIST blueprint (bp "SCHEMA-LIST-CAT") — the same shape used
 ; by 17-novel-nodes, channel-query.fk, kv-store-band, etc.
 
-(let SCHEMA-CAT   (make_nodeid 1 2 99 1780))
-(let SCHEMA-LEAF  (make_nodeid 1 2 99 1781))
-(let SCHEMA-LIST  (make_nodeid 1 2 99 1782))
-(let SCHEMA-TUPLE (make_nodeid 1 2 99 1783))
-(let SCHEMA-ANY   (make_nodeid 1 2 99 1784))
+(let SCHEMA-CAT   (bp "SCHEMA-CAT"))
+(let SCHEMA-LEAF  (bp "SCHEMA-LEAF"))
+(let SCHEMA-LIST  (bp "SCHEMA-LIST"))
+(let SCHEMA-TUPLE (bp "SCHEMA-TUPLE"))
+(let SCHEMA-ANY   (bp "SCHEMA-ANY"))
 
 ;; Substrate-canonical LIST category. Same constant the rest of the body
 ;; uses for list-literal recipes (novel-nodes.fk, channel-query.fk).
@@ -51,7 +51,7 @@
 ;; LIST recipe we therefore probe (node_level, node_type) = (1, 14)
 ;; directly. The kernel's intern still records the recipe's children
 ;; correctly; node_children works as expected.
-(let SCHEMA-LIST-CAT       (make_nodeid 1 1 14 0))
+(let SCHEMA-LIST-CAT       (bp "SCHEMA-LIST-CAT"))
 (let SCHEMA-LIST-CAT-LEVEL 1)
 (let SCHEMA-LIST-CAT-TYPE  14)
 

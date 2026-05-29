@@ -6,13 +6,13 @@
 ; Subset: func name(params) ret-type { return expr }
 
 (do
-    (let U-FNDEF     (make_nodeid 1 2 31 1))
-    (let U-RETURN    (make_nodeid 1 2 18 1))
-    (let U-MATH-PLUS (make_nodeid 1 2 12 1))
-    (let U-MATH-MINUS (make_nodeid 1 2 12 2))
-    (let U-MATH-MUL  (make_nodeid 1 2 12 3))
-    (let U-IDENT     (make_nodeid 1 2 33 1))
-    (let U-SEQ       (make_nodeid 1 2 9 2))
+    (let U-FNDEF     (bp "fndef"))
+    (let U-RETURN    (bp "U-RETURN"))
+    (let U-MATH-PLUS (bp "add"))
+    (let U-MATH-MINUS (bp "sub"))
+    (let U-MATH-MUL  (bp "mul"))
+    (let U-IDENT     (bp "ident"))
+    (let U-SEQ       (bp "sequence"))
 
     (defn gu-passthrough (caps)
         (if (cap-has? caps "_result") (cap-get caps "_result")

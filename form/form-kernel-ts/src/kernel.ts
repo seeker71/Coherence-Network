@@ -15,6 +15,7 @@
 
 import { closeSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { BP_TABLE } from "./bp_table";
 
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
@@ -1988,6 +1989,14 @@ export class Kernel {
         inst: argInt(args, 3),
       },
     }));
+    // bp — Blueprint name → NodeID, looked up in the generated BP_TABLE.
+    // Unknown name resolves to the undefined node (1,2,0,0).
+    this.registerNative("bp", catWitness(), (_k, args) => {
+      const name = argStr(args, 0);
+      const entry = BP_TABLE[name];
+      const [pkg, level, type, inst] = entry ?? [1, 2, 0, 0];
+      return { kind: "nodeid", nodeid: { pkg, level, type, inst } };
+    });
     this.registerNative("intern_trivial_int", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.internTrivialInt(argInt(args, 0)),

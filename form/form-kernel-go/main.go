@@ -1789,6 +1789,12 @@ func (k *Kernel) registerNatives() {
 			Inst:  uint32(args[3].Int),
 		}}
 	})
+	k.registerNative("bp", catWitness(), func(_ *Kernel, args []Value) Value {
+		if c, ok := bpTable[args[0].Str]; ok {
+			return Value{Kind: VNodeID, Nid: NodeID{Pkg: c[0], Level: c[1], Type: c[2], Inst: c[3]}}
+		}
+		return Value{Kind: VNodeID, Nid: NodeID{Pkg: 1, Level: 2, Type: 0, Inst: 0}}
+	})
 	k.registerNative("intern_trivial_int", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internTrivialInt(args[0].Int)}
 	})

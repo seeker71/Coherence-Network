@@ -89,10 +89,10 @@
 ;   1912  CONCEPT-CORPUS     — corpus wrapper category.
 ;   1913  CONCEPT-XREFS      — cross-refs list wrapper category.
 
-(let CONCEPT           (make_nodeid 1 2 99 1930))
-(let CONCEPT-NOT-FOUND (make_nodeid 1 2 99 1931))
-(let CONCEPT-CORPUS-C  (make_nodeid 1 2 99 1932))
-(let CONCEPT-XREFS     (make_nodeid 1 2 99 1933))
+(let CONCEPT           (bp "CONCEPT"))
+(let CONCEPT-NOT-FOUND (bp "CONCEPT-NOT-FOUND"))
+(let CONCEPT-CORPUS-C  (bp "CONCEPT-CORPUS-C"))
+(let CONCEPT-XREFS     (bp "CONCEPT-XREFS"))
 
 ;; Trivial leaf type constants — kernels agree on these:
 ;;   TrivInt = 1, TrivString = 2. Used by concept-has-parent? to

@@ -25,60 +25,60 @@
     ;; Matches api/app/services/substrate/category.py constants exactly.
 
     ;; RBasic.MATH (12) + RMath sub-arms
-    (let UE-MATH-PLUS     (make_nodeid 1 2 12 1))
-    (let UE-MATH-MINUS    (make_nodeid 1 2 12 2))
-    (let UE-MATH-MULTIPLY (make_nodeid 1 2 12 3))
-    (let UE-MATH-DIVIDE   (make_nodeid 1 2 12 4))
-    (let UE-MATH-MODULO   (make_nodeid 1 2 12 5))
-    (let UE-MATH-NEGATE   (make_nodeid 1 2 12 6))
+    (let UE-MATH-PLUS     (bp "add"))
+    (let UE-MATH-MINUS    (bp "sub"))
+    (let UE-MATH-MULTIPLY (bp "mul"))
+    (let UE-MATH-DIVIDE   (bp "div"))
+    (let UE-MATH-MODULO   (bp "mod"))
+    (let UE-MATH-NEGATE   (bp "UE-MATH-NEGATE"))
 
     ;; RBasic.COMPARE (13) + RCompare sub-arms
-    (let UE-COMPARE-EQUAL         (make_nodeid 1 2 13 1))
-    (let UE-COMPARE-NOT-EQUAL     (make_nodeid 1 2 13 2))
-    (let UE-COMPARE-LESS          (make_nodeid 1 2 13 3))
-    (let UE-COMPARE-LESS-EQUAL    (make_nodeid 1 2 13 4))
-    (let UE-COMPARE-GREATER       (make_nodeid 1 2 13 5))
-    (let UE-COMPARE-GREATER-EQUAL (make_nodeid 1 2 13 6))
+    (let UE-COMPARE-EQUAL         (bp "eq"))
+    (let UE-COMPARE-NOT-EQUAL     (bp "ne"))
+    (let UE-COMPARE-LESS          (bp "lt"))
+    (let UE-COMPARE-LESS-EQUAL    (bp "le"))
+    (let UE-COMPARE-GREATER       (bp "gt"))
+    (let UE-COMPARE-GREATER-EQUAL (bp "ge"))
 
     ;; RBasic.LOGIC (14) + RLogic sub-arms
-    (let UE-LOGIC-AND (make_nodeid 1 2 14 1))
-    (let UE-LOGIC-OR  (make_nodeid 1 2 14 2))
-    (let UE-LOGIC-NOT (make_nodeid 1 2 14 3))
+    (let UE-LOGIC-AND (bp "and"))
+    (let UE-LOGIC-OR  (bp "or"))
+    (let UE-LOGIC-NOT (bp "not"))
 
     ;; RBasic.COND (11) + RCond sub-arms
-    (let UE-COND-IF-THEN      (make_nodeid 1 2 11 1))
-    (let UE-COND-IF-THEN-ELSE (make_nodeid 1 2 11 2))
-    (let UE-COND-TERNARY      (make_nodeid 1 2 11 3))
+    (let UE-COND-IF-THEN      (bp "if-then"))
+    (let UE-COND-IF-THEN-ELSE (bp "if"))
+    (let UE-COND-TERNARY      (bp "UE-COND-TERNARY"))
 
     ;; RBasic.BLOCK (9) + RBlock sub-arms
-    (let UE-BLOCK-DO       (make_nodeid 1 2 9 1))
-    (let UE-BLOCK-SEQUENCE (make_nodeid 1 2 9 2))
-    (let UE-BLOCK-LET      (make_nodeid 1 2 9 3))
-    (let UE-BLOCK-WITH     (make_nodeid 1 2 9 4))
+    (let UE-BLOCK-DO       (bp "do"))
+    (let UE-BLOCK-SEQUENCE (bp "sequence"))
+    (let UE-BLOCK-LET      (bp "let"))
+    (let UE-BLOCK-WITH     (bp "UE-BLOCK-WITH"))
 
     ;; RBasic.JUMP (18) + RJump sub-arms
-    (let UE-JUMP-RETURN   (make_nodeid 1 2 18 1))
-    (let UE-JUMP-BREAK    (make_nodeid 1 2 18 2))
-    (let UE-JUMP-CONTINUE (make_nodeid 1 2 18 3))
-    (let UE-JUMP-YIELD    (make_nodeid 1 2 18 4))
+    (let UE-JUMP-RETURN   (bp "UE-JUMP-RETURN"))
+    (let UE-JUMP-BREAK    (bp "UE-JUMP-BREAK"))
+    (let UE-JUMP-CONTINUE (bp "UE-JUMP-CONTINUE"))
+    (let UE-JUMP-YIELD    (bp "UE-JUMP-YIELD"))
 
     ;; RBasic.CALL (10) — function declaration AND invocation; op slot
     ;; in the children distinguishes (first child is op marker)
-    (let UE-CALL (make_nodeid 1 2 10 1))
+    (let UE-CALL (bp "UE-CALL"))
 
     ;; RBasic.ACCESS (15) — name access, member, subscript, global
-    (let UE-ACCESS-LOCAL  (make_nodeid 1 2 15 1))
-    (let UE-ACCESS-MEMBER (make_nodeid 1 2 15 2))
-    (let UE-ACCESS-INDEX  (make_nodeid 1 2 15 3))
-    (let UE-ACCESS-GLOBAL (make_nodeid 1 2 15 4))
+    (let UE-ACCESS-LOCAL  (bp "UE-ACCESS-LOCAL"))
+    (let UE-ACCESS-MEMBER (bp "UE-ACCESS-MEMBER"))
+    (let UE-ACCESS-INDEX  (bp "UE-ACCESS-INDEX"))
+    (let UE-ACCESS-GLOBAL (bp "UE-ACCESS-GLOBAL"))
 
     ;; RBasic.WRITE (16) — assignment
-    (let UE-WRITE-ASSIGN (make_nodeid 1 2 16 1))
+    (let UE-WRITE-ASSIGN (bp "UE-WRITE-ASSIGN"))
 
     ;; Identifier/literal markers used by parser.fk
-    (let UE-IDENT-CAT (make_nodeid 1 2 33 1))
-    (let UE-FNDEF-CAT (make_nodeid 1 2 31 1))
-    (let UE-FNCALL-CAT (make_nodeid 1 2 32 1))
+    (let UE-IDENT-CAT (bp "ident"))
+    (let UE-FNDEF-CAT (bp "fndef"))
+    (let UE-FNCALL-CAT (bp "fncall"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Universal Recipe constructors (the action-fn vocabulary)
@@ -95,7 +95,7 @@
         (intern_trivial_string s))
 
     (defn emit-bool (s)
-        (if (str_eq s "true") (make_nodeid 1 1 3 1) (make_nodeid 1 1 3 0)))
+        (if (str_eq s "true") (bp "TRUE-TRIV") (bp "FALSE-TRIV")))
 
     (defn emit-ident (name)
         (intern_node UE-IDENT-CAT (list (intern_trivial_string name))))

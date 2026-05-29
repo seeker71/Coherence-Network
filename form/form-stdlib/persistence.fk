@@ -34,7 +34,7 @@
 ;; CELL-V0 — the one structural marker this module adds. It lives in the
 ;; 99-type addressing space beside CHANNEL-V0 1700, CHANNEL-MSG 1701,
 ;; REGISTRATION 1720, CAPABILITIES 1721.
-(let CELL-V0 (make_nodeid 1 2 99 1740))
+(let CELL-V0 (bp "CELL-V0"))
 
 ;; --- helpers -------------------------------------------------------
 

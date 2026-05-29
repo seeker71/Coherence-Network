@@ -15,12 +15,12 @@
 ; body parsing, interface defs, channel ops, goroutines, struct literals.
 
 (do
-    (let GO-FILE        (make_nodeid 1 2 99 70))
-    (let GO-PACKAGE     (make_nodeid 1 2 99 71))
-    (let GO-IMPORT      (make_nodeid 1 2 99 72))
-    (let GO-FUNC-DECL   (make_nodeid 1 2 99 73))
-    (let GO-TYPE-DECL   (make_nodeid 1 2 99 74))
-    (let GO-VAR-DECL    (make_nodeid 1 2 99 75))
+    (let GO-FILE        (bp "GO-FILE"))
+    (let GO-PACKAGE     (bp "GO-PACKAGE"))
+    (let GO-IMPORT      (bp "GO-IMPORT"))
+    (let GO-FUNC-DECL   (bp "GO-FUNC-DECL"))
+    (let GO-TYPE-DECL   (bp "GO-TYPE-DECL"))
+    (let GO-VAR-DECL    (bp "GO-VAR-DECL"))
 
     ;; --- shared line helpers --------------------------------------
 

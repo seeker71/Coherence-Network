@@ -43,18 +43,18 @@
     ;; ──────────────────────────────────────────────────────────────────
     ;; Mirrors grammars/python.fk's NodeID assignments. Doc-band type=99.
 
-    (let PY-BNF-MODULE       (make_nodeid 1 2 99 40))
-    (let PY-BNF-IMPORT       (make_nodeid 1 2 99 41))
-    (let PY-BNF-FROM-IMPORT  (make_nodeid 1 2 99 42))
-    (let PY-BNF-FUNCTION-DEF (make_nodeid 1 2 99 43))
-    (let PY-BNF-ASSIGN       (make_nodeid 1 2 99 44))
-    (let PY-BNF-IDENT        (make_nodeid 1 2 99 45))
-    (let PY-BNF-NAME-PAIR    (make_nodeid 1 2 99 46))
-    (let PY-BNF-BIN-EXPR     (make_nodeid 1 2 99 47))
-    (let PY-BNF-INT-EXPR     (make_nodeid 1 2 99 48))
-    (let PY-BNF-STR-EXPR     (make_nodeid 1 2 99 49))
-    (let PY-BNF-IDENT-EXPR   (make_nodeid 1 2 99 50))
-    (let PY-BNF-PAREN-EXPR   (make_nodeid 1 2 99 51))
+    (let PY-BNF-MODULE       (bp "PY-BNF-MODULE"))
+    (let PY-BNF-IMPORT       (bp "PY-BNF-IMPORT"))
+    (let PY-BNF-FROM-IMPORT  (bp "PY-BNF-FROM-IMPORT"))
+    (let PY-BNF-FUNCTION-DEF (bp "PY-BNF-FUNCTION-DEF"))
+    (let PY-BNF-ASSIGN       (bp "PY-BNF-ASSIGN"))
+    (let PY-BNF-IDENT        (bp "PY-BNF-IDENT"))
+    (let PY-BNF-NAME-PAIR    (bp "PY-BNF-NAME-PAIR"))
+    (let PY-BNF-BIN-EXPR     (bp "PY-BNF-BIN-EXPR"))
+    (let PY-BNF-INT-EXPR     (bp "PY-BNF-INT-EXPR"))
+    (let PY-BNF-STR-EXPR     (bp "PY-BNF-STR-EXPR"))
+    (let PY-BNF-IDENT-EXPR   (bp "PY-BNF-IDENT-EXPR"))
+    (let PY-BNF-PAREN-EXPR   (bp "PY-BNF-PAREN-EXPR"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 2 — emitter library
@@ -156,16 +156,16 @@
 
     ;; Universal Blueprints — kernel walk_recipe evaluates these natively
     ;; (no per-language evaluator needed; the form runtime IS the executor).
-    (let PY-UNIV-MATH-PLUS   (make_nodeid 1 2 12 1))
-    (let PY-UNIV-MATH-MINUS  (make_nodeid 1 2 12 2))
-    (let PY-UNIV-MATH-MUL    (make_nodeid 1 2 12 3))
-    (let PY-UNIV-MATH-DIV    (make_nodeid 1 2 12 4))
-    (let PY-UNIV-CMP-EQ      (make_nodeid 1 2 13 1))
-    (let PY-UNIV-CMP-NEQ     (make_nodeid 1 2 13 2))
-    (let PY-UNIV-CMP-LT      (make_nodeid 1 2 13 3))
-    (let PY-UNIV-CMP-LE      (make_nodeid 1 2 13 4))
-    (let PY-UNIV-CMP-GT      (make_nodeid 1 2 13 5))
-    (let PY-UNIV-CMP-GE      (make_nodeid 1 2 13 6))
+    (let PY-UNIV-MATH-PLUS   (bp "add"))
+    (let PY-UNIV-MATH-MINUS  (bp "sub"))
+    (let PY-UNIV-MATH-MUL    (bp "mul"))
+    (let PY-UNIV-MATH-DIV    (bp "div"))
+    (let PY-UNIV-CMP-EQ      (bp "eq"))
+    (let PY-UNIV-CMP-NEQ     (bp "ne"))
+    (let PY-UNIV-CMP-LT      (bp "lt"))
+    (let PY-UNIV-CMP-LE      (bp "le"))
+    (let PY-UNIV-CMP-GT      (bp "gt"))
+    (let PY-UNIV-CMP-GE      (bp "ge"))
 
     (defn py-bnf-op-to-blueprint (op)
         (if (str_eq op "+") PY-UNIV-MATH-PLUS
@@ -244,12 +244,12 @@
     ;; Expanded Python emitters: call, attribute, if/while/for/return
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let PY-BNF-CALL    (make_nodeid 1 2 99 52))
-    (let PY-BNF-ATTR    (make_nodeid 1 2 99 53))
-    (let PY-BNF-IF      (make_nodeid 1 2 99 54))
-    (let PY-BNF-WHILE   (make_nodeid 1 2 99 55))
-    (let PY-BNF-FOR     (make_nodeid 1 2 99 56))
-    (let PY-BNF-RETURN  (make_nodeid 1 2 99 57))
+    (let PY-BNF-CALL    (bp "PY-BNF-CALL"))
+    (let PY-BNF-ATTR    (bp "PY-BNF-ATTR"))
+    (let PY-BNF-IF      (bp "PY-BNF-IF"))
+    (let PY-BNF-WHILE   (bp "PY-BNF-WHILE"))
+    (let PY-BNF-FOR     (bp "PY-BNF-FOR"))
+    (let PY-BNF-RETURN  (bp "PY-BNF-RETURN"))
 
     (defn py-bnf-emit-call (caps)
         (intern_node PY-BNF-CALL

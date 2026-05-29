@@ -75,10 +75,10 @@
 ;                            miss, and by section-paragraph-at when
 ;                            the index is out of range.
 
-(let DOC           (make_nodeid 1 2 99 1920))
-(let SECTION-LIST  (make_nodeid 1 2 99 1921))
-(let SECTION       (make_nodeid 1 2 99 1922))
-(let DOC-NOT-FOUND (make_nodeid 1 2 99 1923))
+(let DOC           (bp "DOC"))
+(let SECTION-LIST  (bp "SECTION-LIST"))
+(let SECTION       (bp "SECTION"))
+(let DOC-NOT-FOUND (bp "DOC-NOT-FOUND"))
 
 (do
     ;; --- LOCAL HELPERS ---------------------------------------------

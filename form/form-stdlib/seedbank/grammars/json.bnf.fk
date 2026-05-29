@@ -35,12 +35,12 @@
     ;; Mirrors grammars/json.fk's NodeID assignments. Doc-band type=99
     ;; until promoted to universal-shapes.form's container Blueprints.
 
-    (let JSON-BNF-OBJECT (make_nodeid 1 2 99 10))
-    (let JSON-BNF-ARRAY  (make_nodeid 1 2 99 11))
-    (let JSON-BNF-PAIR   (make_nodeid 1 2 99 12))
-    (let JSON-BNF-NULL   (make_nodeid 1 2 99 13))
-    (let JSON-BNF-TRUE   (make_nodeid 1 1 3 1))
-    (let JSON-BNF-FALSE  (make_nodeid 1 1 3 0))
+    (let JSON-BNF-OBJECT (bp "JSON-BNF-OBJECT"))
+    (let JSON-BNF-ARRAY  (bp "JSON-BNF-ARRAY"))
+    (let JSON-BNF-PAIR   (bp "JSON-BNF-PAIR"))
+    (let JSON-BNF-NULL   (bp "JSON-BNF-NULL"))
+    (let JSON-BNF-TRUE   (bp "JSON-BNF-TRUE"))
+    (let JSON-BNF-FALSE  (bp "JSON-BNF-FALSE"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 2 — emitter library (referenced by name in the BNF rules)

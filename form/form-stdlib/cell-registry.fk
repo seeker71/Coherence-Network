@@ -30,8 +30,8 @@
 ; expose `about` for different topics still has one query path: query
 ; the registry for cells handling `about`, then route to each.
 
-(let REGISTRATION (make_nodeid 1 2 99 1720))
-(let CAPABILITIES (make_nodeid 1 2 99 1721))
+(let REGISTRATION (bp "REGISTRATION"))
+(let CAPABILITIES (bp "CAPABILITIES"))
 
 ;; --- helpers ------------------------------------------------------
 

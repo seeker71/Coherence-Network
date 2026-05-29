@@ -21,13 +21,13 @@
 ; destructuring patterns.
 
 (do
-    (let TS-MODULE       (make_nodeid 1 2 99 50))
-    (let TS-IMPORT       (make_nodeid 1 2 99 51))   ; (kind, names, module)
-    (let TS-EXPORT       (make_nodeid 1 2 99 52))   ; (declaration)
-    (let TS-FUNCTION-DECL (make_nodeid 1 2 99 53))  ; (name, params)
-    (let TS-CLASS-DECL   (make_nodeid 1 2 99 54))   ; (name)
-    (let TS-CONST-DECL   (make_nodeid 1 2 99 55))   ; (kind, name, value)
-    (let TS-IDENT        (make_nodeid 1 2 99 56))
+    (let TS-MODULE       (bp "TS-MODULE"))
+    (let TS-IMPORT       (bp "TS-IMPORT"))   ; (kind, names, module)
+    (let TS-EXPORT       (bp "TS-EXPORT"))   ; (declaration)
+    (let TS-FUNCTION-DECL (bp "TS-FUNCTION-DECL"))  ; (name, params)
+    (let TS-CLASS-DECL   (bp "TS-CLASS-DECL"))   ; (name)
+    (let TS-CONST-DECL   (bp "TS-CONST-DECL"))   ; (kind, name, value)
+    (let TS-IDENT        (bp "TS-IDENT"))
 
     ;; --- shared line helpers --------------------------------------
 

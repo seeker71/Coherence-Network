@@ -157,7 +157,7 @@
 ;; encoder handles. Bodies that carried structure round-trip through
 ;; the Form-native wire, not through this bridge (see schema notes).
 
-(let QUERY-PARSE-ERROR (make_nodeid 1 2 99 1717))
+(let QUERY-PARSE-ERROR (bp "QUERY-PARSE-ERROR"))
 
 (defn cqj-nid-from-json-obj (obj)
     (make_nodeid (node_value (json-object-get obj "pkg"))

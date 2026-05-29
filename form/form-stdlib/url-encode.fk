@@ -64,7 +64,7 @@
     ;; Substrate-resident NodeID. pkg=1, level=2, type=99 stays in the
     ;; user-channel range; inst=1771 reserves a slot in the URL family
     ;; (HEX-DECODE-ERROR sits at 1770, one breath earlier in the body).
-    (let URL-DECODE-ERROR (make_nodeid 1 2 99 1771))
+    (let URL-DECODE-ERROR (bp "URL-DECODE-ERROR"))
 
     ;; --- list utility ----------------------------------------------
     (defn url-nil? (xs) (eq (len xs) 0))

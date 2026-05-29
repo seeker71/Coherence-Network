@@ -18,7 +18,7 @@
 ; Prelude requirement: none (uses only kernel natives).
 
 (do
-    (let INQUIRY (make_nodeid 1 2 99 1900))
+    (let INQUIRY (bp "INQUIRY"))
 
     (defn inquiry (subject question)
         (intern_node INQUIRY

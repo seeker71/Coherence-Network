@@ -1,14 +1,14 @@
 ; grammars/typescript-exec.fk — TypeScript EXECUTE walker
 
 (do
-    (let TS-EXEC-MODULE     (make_nodeid 1 2 99 59))
-    (let TS-EXEC-IMPORT     (make_nodeid 1 2 99 60))
-    (let TS-EXEC-IMPORT-NS  (make_nodeid 1 2 99 61))
-    (let TS-EXEC-IMPORT-DEF (make_nodeid 1 2 99 62))
-    (let TS-EXEC-EXPORT-CONST (make_nodeid 1 2 99 63))
-    (let TS-EXEC-EXPORT-FN  (make_nodeid 1 2 99 64))
-    (let TS-EXEC-LET        (make_nodeid 1 2 99 65))
-    (let TS-EXEC-CONST      (make_nodeid 1 2 99 66))
+    (let TS-EXEC-MODULE     (bp "TS-EXEC-MODULE"))
+    (let TS-EXEC-IMPORT     (bp "TS-EXEC-IMPORT"))
+    (let TS-EXEC-IMPORT-NS  (bp "TS-EXEC-IMPORT-NS"))
+    (let TS-EXEC-IMPORT-DEF (bp "TS-EXEC-IMPORT-DEF"))
+    (let TS-EXEC-EXPORT-CONST (bp "TS-EXEC-EXPORT-CONST"))
+    (let TS-EXEC-EXPORT-FN  (bp "TS-EXEC-EXPORT-FN"))
+    (let TS-EXEC-LET        (bp "TS-EXEC-LET"))
+    (let TS-EXEC-CONST      (bp "TS-EXEC-CONST"))
 
     (defn ts-exec-is? (n c) (node_eq (node_category n) c))
     (defn ts-exec-bind (env n v) (cons (list n v) env))

@@ -152,10 +152,10 @@
     ;; These names are ordinary Form recipes so grammars, emitters, and tests
     ;; can share one vocabulary without teaching the kernel about languages,
     ;; media types, or context conventions.
-    (let BMF-DOMAIN-REF (make_nodeid 8 45 4 1))
-    (let BMF-LENS-REF (make_nodeid 8 45 4 2))
-    (let BMF-DOMAIN-KIND-REF (make_nodeid 8 45 4 3))
-    (let BMF-SURFACE-REF (make_nodeid 8 45 4 4))
+    (let BMF-DOMAIN-REF (bp "BMF-DOMAIN-REF"))
+    (let BMF-LENS-REF (bp "BMF-LENS-REF"))
+    (let BMF-DOMAIN-KIND-REF (bp "BMF-DOMAIN-KIND-REF"))
+    (let BMF-SURFACE-REF (bp "BMF-SURFACE-REF"))
 
     (defn bmf-domain-ref (index)
         (intern_node BMF-DOMAIN-REF (list (intern_trivial_int index))))
@@ -319,7 +319,7 @@
     ;; Reverse lenses are sidecar emit/parse tables. They let one binary
     ;; object choose a domain lens at the edge without giving names or
     ;; target-language policy to the binary object itself.
-    (let BMF-REVERSE-LENS (make_nodeid 8 45 3 5))
+    (let BMF-REVERSE-LENS (bp "BMF-REVERSE-LENS"))
 
     (defn bmf-reverse-lens-node-from (domain lens)
         (intern_node BMF-REVERSE-LENS (list domain lens)))
@@ -354,10 +354,10 @@
     ;; A translator is not a bag of target functions. It is a space of
     ;; domains, surfaces, and contracts. Executable parse/emit recipes attach
     ;; to contracts after the surface has been selected by context.
-    (let BMF-DOMAIN-CONTRACT (make_nodeid 8 45 3 1))
-    (let BMF-SURFACE-CONTRACT (make_nodeid 8 45 3 2))
-    (let BMF-LENS-CONTRACT (make_nodeid 8 45 3 3))
-    (let BMF-TRANSLATION-SPACE (make_nodeid 8 45 3 4))
+    (let BMF-DOMAIN-CONTRACT (bp "BMF-DOMAIN-CONTRACT"))
+    (let BMF-SURFACE-CONTRACT (bp "BMF-SURFACE-CONTRACT"))
+    (let BMF-LENS-CONTRACT (bp "BMF-LENS-CONTRACT"))
+    (let BMF-TRANSLATION-SPACE (bp "BMF-TRANSLATION-SPACE"))
 
     (defn bmf-contract-field (node index)
         (nth (node_children node) index))
@@ -528,22 +528,22 @@
     ;; Adapter capsules mint local identities under their own root. Unknown
     ;; languages, media surfaces, codecs, encoders, decoders, compressors, and
     ;; other transforms enter as Form nodes rather than engine vocabulary.
-    (let FORM-CAPSULE-ROOT (make_nodeid 8 45 5 1))
-    (let FORM-DYNAMIC-KIND (make_nodeid 8 45 5 2))
-    (let FORM-DYNAMIC-REF (make_nodeid 8 45 5 3))
-    (let FORM-ADAPTER-CAPSULE (make_nodeid 8 45 5 4))
-    (let FORM-ADAPTER-CAPABILITY (make_nodeid 8 45 5 5))
-    (let FORM-ADAPTER-REGISTRY (make_nodeid 8 45 5 6))
-    (let FORM-ADAPTER-ROUTE (make_nodeid 8 45 5 7))
-    (let FORM-ADAPTER-PLAN (make_nodeid 8 45 5 8))
-    (let FORM-ADAPTER-PLAN-RESULT (make_nodeid 8 45 5 9))
-    (let FORM-ADAPTER-COMPILED-PLAN (make_nodeid 8 45 5 10))
-    (let FORM-CAPABILITY-CONTRACT (make_nodeid 8 45 5 11))
-    (let FORM-CAPABILITY-COST (make_nodeid 8 45 5 12))
-    (let FORM-CAPABILITY-PROOF (make_nodeid 8 45 5 13))
-    (let FORM-CAPABILITY-SPECIALIZER (make_nodeid 8 45 5 14))
-    (let FORM-RECIPE-CAPSULE (make_nodeid 8 45 5 15))
-    (let FORM-RECIPE-REGISTRY (make_nodeid 8 45 5 16))
+    (let FORM-CAPSULE-ROOT (bp "FORM-CAPSULE-ROOT"))
+    (let FORM-DYNAMIC-KIND (bp "FORM-DYNAMIC-KIND"))
+    (let FORM-DYNAMIC-REF (bp "FORM-DYNAMIC-REF"))
+    (let FORM-ADAPTER-CAPSULE (bp "FORM-ADAPTER-CAPSULE"))
+    (let FORM-ADAPTER-CAPABILITY (bp "FORM-ADAPTER-CAPABILITY"))
+    (let FORM-ADAPTER-REGISTRY (bp "FORM-ADAPTER-REGISTRY"))
+    (let FORM-ADAPTER-ROUTE (bp "FORM-ADAPTER-ROUTE"))
+    (let FORM-ADAPTER-PLAN (bp "FORM-ADAPTER-PLAN"))
+    (let FORM-ADAPTER-PLAN-RESULT (bp "FORM-ADAPTER-PLAN-RESULT"))
+    (let FORM-ADAPTER-COMPILED-PLAN (bp "FORM-ADAPTER-COMPILED-PLAN"))
+    (let FORM-CAPABILITY-CONTRACT (bp "FORM-CAPABILITY-CONTRACT"))
+    (let FORM-CAPABILITY-COST (bp "FORM-CAPABILITY-COST"))
+    (let FORM-CAPABILITY-PROOF (bp "FORM-CAPABILITY-PROOF"))
+    (let FORM-CAPABILITY-SPECIALIZER (bp "FORM-CAPABILITY-SPECIALIZER"))
+    (let FORM-RECIPE-CAPSULE (bp "FORM-RECIPE-CAPSULE"))
+    (let FORM-RECIPE-REGISTRY (bp "FORM-RECIPE-REGISTRY"))
 
     (defn form-capsule-root (package level type instance)
         (intern_node
