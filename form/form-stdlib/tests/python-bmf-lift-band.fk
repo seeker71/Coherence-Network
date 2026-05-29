@@ -197,14 +197,22 @@ x
 "))
     (let cell13-score (if (eq cell13-value 39) 10000 0))
 
+    ;; ---- cell 14: dict literal + subscript — CPython:
+    ;;   d = {1: 10, 2: 20, 3: 30}; d[1] + d[3]  → 40 -------------------
+
+    (let cell14-value (py-bmf-run-text "d = {1: 10, 2: 20, 3: 30}
+d[1] + d[3]
+"))
+    (let cell14-score (if (eq cell14-value 40) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
     ;;   1000+2000+3000+4000+5000+6000+7000+8000+9000+10000+10000+10000
-    ;;   + 10000 (cell 13 aug-assign) = 85000
+    ;;   + 10000 (cell 13 aug-assign) + 10000 (cell 14 dict) = 95000
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
-               cell13-score)))
+               cell13-score cell14-score)))

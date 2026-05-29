@@ -146,6 +146,41 @@
 
     (defn lift-list-elements (tokens) (lift-list-elements-loop tokens (empty)))
 
+    ;; --- dict literal: consume `{ k1: v1, k2: v2 }` ----------------
+    ;;
+    ;; Caller has already consumed the open `{`. Reads `key : value`
+    ;; pairs separated by `,` until `}`. Returns (flat-kv-list . rest),
+    ;; where flat-kv-list is (k1 v1 k2 v2 ...) — the exact 2N-children
+    ;; shape PY-BMF-DICT's eval arm reads (even=key, odd=value). Mirrors
+    ;; lift-list-elements but with a `:` between key and value and `}`
+    ;; as the closer.
+
+    (defn lift-dict-pairs-loop (tokens acc)
+        (if (nil? tokens)
+            (lift-result (reverse acc) tokens)
+            (if (tok-op? (head tokens) "}")
+                (lift-result (reverse acc) (tail tokens))
+                (do
+                    (let key-result (lift-expr tokens))
+                    (let after-key (lift-rest key-result))
+                    ;; require `:` between key and value
+                    (let after-colon
+                        (if (and (not (nil? after-key))
+                                 (tok-op? (head after-key) ":"))
+                            (tail after-key)
+                            after-key))
+                    (let val-result (lift-expr after-colon))
+                    (let next (lift-rest val-result))
+                    ;; push value then key so reverse yields k,v order
+                    (let acc2 (cons (lift-recipe val-result)
+                                    (cons (lift-recipe key-result) acc)))
+                    (if (and (not (nil? next))
+                             (tok-op? (head next) ","))
+                        (lift-dict-pairs-loop (tail next) acc2)
+                        (lift-dict-pairs-loop next acc2))))))
+
+    (defn lift-dict-pairs (tokens) (lift-dict-pairs-loop tokens (empty)))
+
     ;; --- subscript postfix: fold `[ idx ]` trailers onto a primary -
     ;;
     ;; After lift-primary parses a base recipe, peek for `[`. If present,
@@ -229,6 +264,17 @@
                     (lift-subscript-tail
                         (intern_node PY-BMF-LIST (lift-recipe elems-result))
                         (lift-rest elems-result)))
+            (if (tok-op? t "{")
+                ;; dict literal: collect `key: value` pairs separated by
+                ;; `,` until `}`. Empty dict `{}` lifts to PY-BMF-DICT with
+                ;; no children — the interpreter walks that to an empty
+                ;; sentinel-tagged alist. (Set literals `{a, b}` are a
+                ;; later breath; today `{` always means dict.)
+                (do
+                    (let pairs-result (lift-dict-pairs rest))
+                    (lift-subscript-tail
+                        (intern_node PY-BMF-DICT (lift-recipe pairs-result))
+                        (lift-rest pairs-result)))
             (if (tok-op? t "(")
                 ;; parenthesised expression: parse inner, consume ")"
                 (do
@@ -243,7 +289,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest))))))))))))
+                        rest)))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
