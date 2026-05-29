@@ -108,7 +108,7 @@
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | sense_strategy_efficacy.py — read accumulated strategy_fired traces and |
 | [sense_world.py](sense_world.py) | Sense the world through the new earth lens. |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | Render a Claude session as a memory-as-framebuffer .mfb capture. |
-| [session_greeting.py](session_greeting.py) | Session greeting — detect the agent and the user, greet with memory. |
+| [session_greeting.py](session_greeting.py) | Session greeting — detect the agent and the human, greet with memory. |
 | [setup.py](setup.py) | Coherence Network — Auto-Setup. |
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
