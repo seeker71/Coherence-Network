@@ -78,7 +78,7 @@ IF, INT, LIST, MODULE, RETURN, STRING, SUBSCRIPT, WHILE
 **Lift branches shipped:** AUG-ASSIGN, DICT, FOR, IF, INT, LIST, MODULE,
 PASS, SUBSCRIPT, WHILE, unary `-`/`not`, boolean `and`/`or`
 (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via dedicated lifters)
-**Band aggregate:** 125000 (17 cells)
+**Band aggregate:** 135000 (18 cells)
 
 **Desugaring wins (no new eval arm):** unary `-x` → MATH-MINUS(0,x);
 `not x` → COMPARE-EQ(x,0); `a and b` → IF(a,b,a); `a or b` → IF(a,a,b).
@@ -95,7 +95,7 @@ desugars and eval is untouched — the cheapest kind of breath.
 | `for x in xs:` | folds over a LIST via `py-eval-body-loop` | new `lift-for` + `py-eval-statement` arm | **DONE #2175** (list iterables; `range()` pending) |
 | unary `-x` / `not x` | desugars: `-x`→MATH-MINUS(0,x), `not x`→COMPARE-EQ(x,0) — pure lift, no eval arm | edits `lift-primary` | **DONE #2178** |
 | boolean `and` / `or` | desugars to PY-BMF-IF (short-circuit) — pure lift, no eval arm | edits `op-prec` + `tok-binop-prec` + `lift-binop-loop` | **DONE #2179** |
-| `range(n)` as iterable | `range()` builtin must produce a Form list so `for i in range(n)` walks | new `range` native-or-builtin in eval | open (surfaced by #2175; the common substrate loop idiom) |
+| `range(n)` as iterable | `range()` builtin produces a Form list so `for i in range(n)` walks | eval-side CALL intercept (`py-range`) | **DONE #2181** (range(stop) + range(start,stop); step pending) |
 
 **Batch 1 is complete** — the cheap (mostly lift-only) tier is done. `range()`
 remains as a small follow-up that unblocks the most common substrate loop
