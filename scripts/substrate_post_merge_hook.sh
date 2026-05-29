@@ -47,6 +47,18 @@ CHANGED_CODE=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
     'docs/coherence-substrate/*.form' \
     'experiments/form-stdlib/**/*.fk' 2>/dev/null || true)
 
+# Form Blueprint registry → substrate NamedCells. The offline kernels read the
+# JSON files; the substrate needs the names projected in so it can answer
+# "what is 1.2.99.10 called". Runs whenever either authored file changed —
+# independent of the markdown/code ingestion below.
+CHANGED_BP=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
+    'form/form-stdlib/form-ontology.json' \
+    'form/form-stdlib/blueprint-registry.json' 2>/dev/null || true)
+if [ -n "$CHANGED_BP" ]; then
+    echo "[substrate] Blueprint registry changed — projecting names into NamedCells:"
+    python3 scripts/sync_blueprints_to_substrate.py
+fi
+
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
 if [ -z "$CHANGED" ]; then
