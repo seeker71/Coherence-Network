@@ -215,6 +215,29 @@
         (do
             (let t (head tokens))
             (let rest (tail tokens))
+            ;; Unary operators desugar to existing binary recipes, so no new
+            ;; eval arm is needed — the MATH-12 / COMPARE-13 arms already walk
+            ;; them. `-operand` → MATH-MINUS(0, operand); `not operand` →
+            ;; COMPARE-EQ(operand, 0) (Python int-truthiness: not x is x == 0).
+            ;; The operand is parsed with lift-primary so chains (`not not x`,
+            ;; `-x[i]`) and tight binding work; precedence-climbing in
+            ;; lift-binop-loop then continues from the resulting recipe.
+            (if (tok-op? t "-")
+                (do
+                    (let operand (lift-primary rest))
+                    (lift-result
+                        (intern_node MATH-MINUS
+                            (list (intern_node PY-BMF-INT (list (intern_trivial_int 0)))
+                                  (lift-recipe operand)))
+                        (lift-rest operand)))
+            (if (tok-keyword? t "not")
+                (do
+                    (let operand (lift-primary rest))
+                    (lift-result
+                        (intern_node COMPARE-EQ
+                            (list (lift-recipe operand)
+                                  (intern_node PY-BMF-INT (list (intern_trivial_int 0)))))
+                        (lift-rest operand)))
             (if (tok-int? t)
                 (lift-subscript-tail
                     (intern_node PY-BMF-INT
@@ -289,7 +312,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest)))))))))))))
+                        rest)))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
