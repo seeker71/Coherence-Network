@@ -95,6 +95,9 @@ def extract_purpose(path: Path) -> str:
             line = raw.strip()
             if not line:
                 continue
+            # A shebang is not the purpose — the docstring after it is.
+            if line.startswith("#!"):
+                continue
             if line.startswith('"""') or line.startswith("'''"):
                 quote = line[:3]
                 # Same-line: """one-liner."""
