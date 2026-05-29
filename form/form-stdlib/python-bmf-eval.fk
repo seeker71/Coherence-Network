@@ -619,6 +619,47 @@
     (defn py-run (module-recipe)
         (py-eval module-recipe (py-env-empty)))
 
+    ;; --- module-as-library: host a module, then call an export -----------
+    ;; A substrate file like kernel.py is NOT a script — it defines functions
+    ;; (intern_node, lookup_cell, ...) the rest of the system calls. So the
+    ;; Form-native contract for API code is "load the module, then invoke an
+    ;; export with args", not "run and take the last value".
+    ;;
+    ;; py-module-env — evaluate a PY-BMF-MODULE's statements, threading env,
+    ;; and return the FINAL env (with all defs/classes bound) instead of the
+    ;; last value. The bridge FormNativeStore drives.
+    (defn py-module-env-loop (statements env)
+        (if (nil? statements) env
+            (do
+                (let r (py-eval-statement (head statements) env))
+                (py-module-env-loop (tail statements) (py-stmt-env r)))))
+
+    (defn py-module-env (module-recipe)
+        ;; module-recipe is PY-BMF-MODULE; its children are the statements.
+        (py-module-env-loop (node_children module-recipe) (py-env-empty)))
+
+    ;; py-call-export — load a module recipe, look up a top-level function by
+    ;; name in its env, and call it with arg-values (a Form list). Mirrors the
+    ;; PY-BMF-CALL closure path: bind the self-name for recursion, bind params,
+    ;; walk the body. This is "the API calls a substrate op" → "the kernel
+    ;; walks the compiled recipe".
+    (defn py-call-export (module-recipe fn-name arg-values)
+        (do
+            (let env (py-module-env module-recipe))
+            (let callee (py-env-lookup env fn-name))
+            (if (py-class? callee)
+                (py-instantiate callee arg-values)
+                (do
+                    (let captured-with-self
+                        (py-env-extend (py-closure-env callee)
+                                       (py-closure-name callee)
+                                       callee))
+                    (let call-env (py-bind-params
+                                    (py-closure-params callee)
+                                    arg-values
+                                    captured-with-self))
+                    (py-eval (py-closure-body callee) call-env)))))
+
     ;; sentinel return so the file evaluates to 0 when loaded as a
     ;; prelude — by convention every form-stdlib file lands on a small
     ;; integer to keep validate.sh's diff cheap.
