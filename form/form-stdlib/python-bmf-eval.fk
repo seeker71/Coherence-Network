@@ -334,6 +334,19 @@
                     (py-stmt-env r)
                     (py-stmt-value r)))))
 
+    ;; range() builtin — produces a Form list so `for i in range(...)` (the
+    ;; most common substrate loop idiom) walks. Built as a plain Form list,
+    ;; the same shape PY-BMF-LIST eval returns, so the FOR arm iterates it
+    ;; with no special-casing. Supports range(stop) and range(start, stop);
+    ;; step is a later breath.
+    (defn py-range-build (i stop acc)
+        (if (ge i stop) (reverse acc)
+            (py-range-build (add i 1) stop (cons i acc))))
+    (defn py-range (args)
+        (if (eq (len args) 1)
+            (py-range-build 0 (head args) (empty))
+            (py-range-build (head args) (head (tail args)) (empty))))
+
     (defn py-eval (recipe env)
         (do
             (let cat (node_category recipe))
@@ -423,17 +436,22 @@
                     ;; the function itself. Mutual recursion is a later
                     ;; breath — this carries single-function self-ref.
                     (let callee-name (node_value (head kids)))
-                    (let closure (py-env-lookup env callee-name))
                     (let arg-values (py-eval-args (tail kids) env))
-                    (let captured-with-self
-                        (py-env-extend (py-closure-env closure)
-                                       (py-closure-name closure)
-                                       closure))
-                    (let call-env (py-bind-params
-                                    (py-closure-params closure)
-                                    arg-values
-                                    captured-with-self))
-                    (py-eval (py-closure-body closure) call-env))
+                    ;; range() is a builtin, not a closure — intercept before
+                    ;; the env lookup and return its Form list directly.
+                    (if (str_eq callee-name "range")
+                        (py-range arg-values)
+                        (do
+                            (let closure (py-env-lookup env callee-name))
+                            (let captured-with-self
+                                (py-env-extend (py-closure-env closure)
+                                               (py-closure-name closure)
+                                               closure))
+                            (let call-env (py-bind-params
+                                            (py-closure-params closure)
+                                            arg-values
+                                            captured-with-self))
+                            (py-eval (py-closure-body closure) call-env))))
             (if (node_eq cat PY-BMF-LIST)
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.
