@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────
+# name-resolution-as-recipe.form — the third walk, in Form's voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# A Form expression is walked three ways. The recipe-walk turns it into a
+# content-addressed NodeID (`_to_recipe_node_id`). The value-walk runs it to a
+# value (`form_runtime.execute`). This file names the third walk: the
+# resolution-walk, which turns the same AST into a set of diagnostics — every
+# name that does not resolve, every blueprint that is not known, every call whose
+# arity does not match — gathered in one pass, before anything runs.
+#
+# The three walks are peers. Each is a projection of the same dispatch over the
+# same tree; they differ only in what they accumulate as they descend. The
+# recipe-walk accumulates NodeIDs. The value-walk accumulates values. The
+# resolution-walk accumulates diagnostics, and infers a blueprint for each node
+# so the next node up can be checked against it.
+#
+# Why a third walk earns its place: the first two resolve names lazily — they
+# raise on the first unresolved name, only when that node is reached, only at
+# run time. That is enough to run a known-good expression. It is not enough to
+# rename a cell and see, in one read, everything the rename broke. The
+# resolution-walk is what makes a refactor legible before it runs.
+#
+# Bootstrap: api/app/services/substrate/form_check.py (Python). Canonical shape:
+# this file — same relationship kernel.py holds to substrate-kernel.form.
+#
+# Companion teaching: lc-edges-as-vitality (a rename is an edge moving; the
+# checker is the body sensing which edges still land), form-engine.form (the
+# meta-circular walk this is a sibling of).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — three namespaces, the three a refactor moves through
+# ─────────────────────────────────────────────────────────────────────
+#
+# A name in Form resolves through exactly one of three namespaces. The walk
+# asks each in turn; an unresolved name belongs to none of them.
+
+# BLUEPRINTS — `~Integer`, `~Memory` (the trivial table) and bare `@memory`
+# (a domain's blueprint). A blueprint reference resolves iff its name is a key
+# of the known-blueprint table. The table is the body's type vocabulary; a
+# name outside it is a type that does not exist.
+defn blueprint_known(name) = trivial_ref_exists(name);            # GAP-B1: trivial-table membership predicate
+
+# RECIPES — named callables. A `defn` binds a closure into the lexical scope;
+# the built-ins close the rest. A call resolves iff the name is bound in scope
+# OR is a built-in; and if it is a bound closure of known arity, the call's
+# argument count must match.
+defn recipe_known(scope, name) = or(scope_has(scope, name), builtin_fn_exists(name));
+
+# GLOBAL CELLS — `@domain(name)`. A cell reference resolves iff the substrate
+# carries a NamedCell at that (domain, name). This is the one namespace that
+# lives in the lattice, not in a static table — so it resolves against the
+# ingested body, and is honestly skipped when the lattice is empty.
+defn cell_known(domain, name) = is_some(lookup_cell(domain, name));   # GAP-B2: lookup_cell as a Form host-intrinsic
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the walk, as a fold over the AST that carries a scope
+# ─────────────────────────────────────────────────────────────────────
+#
+# The scope is the same lexical frame the value-walk threads — `let`, `defn`
+# params, `for` var, the `with` subject — but it carries inferred blueprints
+# where the runtime frame carries values. A node resolves its own references
+# against the scope it is handed, then hands its children the scope they see.
+
+# An identifier resolves against scope, then built-ins. Neither → a diagnostic.
+defn check_identifier(scope, name) =
+    if scope_has(scope, name) then ok
+    else if builtin_ident_exists(name) then ok
+    else diagnostic("unresolved-name", name);
+
+# A call resolves the callable, then checks arity when the arity is known.
+defn check_call(scope, name, argc) =
+    match scope_arity(scope, name) {
+        -1 => if builtin_fn_exists(name) then ok else diagnostic("unresolved-function", name),
+        _  => if scope_arity(scope, name) == argc then ok
+              else diagnostic("arity-mismatch", name)
+    };
+
+# A `set` is a reference, not a binder — its target must already be bound.
+defn check_set(scope, name) =
+    if scope_has(scope, name) then ok else diagnostic("set-unbound", name);
+
+# `.self` is bound only inside a `with` (or a catch / method body). The scope
+# carries that as a flag the walk reads — structure, not a name.
+defn check_self(scope) =
+    if scope_in_with(scope) then ok else diagnostic("self-outside-with", ".self");
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — the calibration that keeps the walk trusted
+# ─────────────────────────────────────────────────────────────────────
+#
+# A checker that cries wolf is a checker nobody runs. So the severities split
+# by certainty:
+#
+#   • Name / scope / operator / cell resolution → ERROR. These are exact: a
+#     name either resolves or it does not.
+#   • Blueprint / type mismatch → WARNING, and only when a value is DEFINITELY
+#     the wrong shape. In a dynamically-typed substrate most expressions infer
+#     to `unknown`, which unifies with everything and is never flagged.
+#
+# The overloaded operators are the sharpest test of this discipline. `+` is
+# numeric add, string concat, AND list concat — so `+` is never a type error.
+# Only the strictly-numeric operators (`- * / %`) can mismatch, and only when
+# an operand is definitely a string / bool / cell.
+defn plus_is_overloaded() = true;        # the body refuses to flag `"a" + "b"`
+
+# `unknown` is the top of the lattice — the honest answer when the walk cannot
+# know. A cell-field access, a method dispatch, a built-in whose result shape
+# is not certain: all infer `unknown`, and nothing downstream is wrongly flagged.
+defn infer_unknown_is_safe() = true;
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — the surface
+# ─────────────────────────────────────────────────────────────────────
+#
+#   coh substrate check "<expression>"      — resolve an expression, exit 1 on error
+#   coh substrate check --file <path>        — resolve a single-form source
+#
+# The diagnostics carry a stable kebab-case `code` so tooling can filter, the
+# human sentence, and a compact rendering of the offending node so a reader can
+# grep the source for it. The exit code composes into CI and pre-commit gates:
+# a green check means every name in the expression lands somewhere real.
+#
+# The GAP-BN markers above name the host-intrinsic predicates the Python
+# bootstrap already provides (`form_check.py`) and that a Form-native checker
+# would reach for once the lattice exposes them as Form surfaces. Asymmetry is
+# signal, not failure — each gap is one surface away from the walk being
+# expressible end-to-end in the tongue it describes.

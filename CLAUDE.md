@@ -176,9 +176,10 @@ A content-addressed numeric lattice that grounds structural reasoning. Every mem
 | View-as | — | `GET /api/substrate/view/{cd}/{cn}?bp_*=...` | `view_cell_through_blueprint(session, cell, view_blueprint)` |
 | Vocabulary histogram | — | `GET /api/substrate/histogram/{domain}` | — |
 | Form expression eval | `coh_substrate.py form "<expr>"` | — | `form_evaluate_text(session, expr)` |
+| Resolve / type-check (no execution) | `coh_substrate.py check "<expr>"` / `--file` | — | `form_check_text(session, expr)` → `[Diagnostic]` |
 | Ingest (write) | `coh_substrate.py ingest <path>` / `--all` / `--memories` | — (read-only by design) | `ingest_memory_file`, `ingest_concept_file`, `ingest_idea_file`, `ingest_spec_file`, `ingest_presence_file` |
 
-**Form notation** is a Lisp-shaped DSL for substrate queries — `?equivalent @spec(agent-pipeline)`, `@memory(presences_of_the_field) |> @presence`, etc. See [`docs/coherence-substrate/form-language.md`](docs/coherence-substrate/form-language.md).
+**Form notation** is a Lisp-shaped DSL for substrate queries — `?equivalent @spec(agent-pipeline)`, `@memory(presences_of_the_field) |> @presence`, etc. See [`docs/coherence-substrate/form-language.md`](docs/coherence-substrate/form-language.md). Before a refactor, `coh substrate check` statically resolves every name, blueprint, and global cell so a rename's breakage is legible in one pass — the resolution walk is the third peer of the recipe-walk and value-walk; its shape is named in [`docs/coherence-substrate/name-resolution-as-recipe.form`](docs/coherence-substrate/name-resolution-as-recipe.form).
 
 **Auto-ingest on merge:** `scripts/substrate_post_merge_hook.sh` runs after merges to main so the lattice stays in sync with the body without a manual ingest step.
 

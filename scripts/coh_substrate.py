@@ -13,6 +13,7 @@ Usage:
     coh_substrate.py annotate <path>                    # substrate context for a file
     coh_substrate.py form "<expression>"                # evaluate (intern as recipe / return substrate answer)
     coh_substrate.py run "<expression>"                 # execute (run the recipe, return its value)
+    coh_substrate.py check "<expression>"               # static name + blueprint resolution (no execution); --file <path>
 
 For detail on Form syntax see docs/coherence-substrate/form-language.md.
 For agent grounding patterns see docs/coherence-substrate/agents-using-substrate.md.
@@ -925,6 +926,61 @@ def cmd_form(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check(args: argparse.Namespace) -> int:
+    """Statically resolve names + blueprints across a Form expression or
+    `.form` file — the refactor-with-confidence surface.
+
+    Unlike `form`/`run`, this never executes: it walks the parsed AST,
+    resolves every name against the live substrate (global cells), the
+    blueprint table (`~Trivial`, `@domain`), and the runtime's built-in and
+    operator registries, then reports EVERY unresolved name / arity mismatch /
+    blueprint problem in one pass. Exit 1 when any error-severity diagnostic is
+    found, so it composes into CI and pre-commit gates.
+    """
+    from app.services.substrate.form_check import (
+        ERROR,
+        check_text,
+        format_report,
+        has_errors,
+    )
+
+    if args.file:
+        path = Path(args.file)
+        if not path.exists() or path.is_dir():
+            print(f"check: not a file: {path}", file=sys.stderr)
+            return 2
+        code = path.read_text()
+        label = str(path)
+    elif args.expression:
+        code = args.expression
+        label = "<expression>"
+    else:
+        print("check: pass an expression or --file <path>", file=sys.stderr)
+        return 2
+
+    with session_scope() as session:
+        diags = check_text(session, code)
+
+    if args.json:
+        print(json.dumps({
+            "target": label,
+            "diagnostics": [
+                {
+                    "severity": d.severity,
+                    "code": d.code,
+                    "message": d.message,
+                    "snippet": d.snippet,
+                }
+                for d in diags
+            ],
+            "errors": sum(1 for d in diags if d.severity == ERROR),
+        }, indent=2))
+    else:
+        print(f"check: {label}")
+        print(format_report(diags))
+    return 1 if has_errors(diags) else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="Machine-readable JSON output")
@@ -990,6 +1046,25 @@ def main(argv: list[str] | None = None) -> int:
         help="Execute a Form expression — run the recipe, return its value",
     )
     p_run.add_argument("expression")
+
+    p_check = sub.add_parser(
+        "check",
+        help=(
+            "Statically resolve names + blueprints (no execution): report every "
+            "unresolved name, cell, blueprint, operator, and arity mismatch in "
+            "one pass. Exit 1 on errors. Refactor with confidence."
+        ),
+    )
+    p_check.add_argument(
+        "expression",
+        nargs="?",
+        help="A Form expression to check (or use --file).",
+    )
+    p_check.add_argument(
+        "--file",
+        default=None,
+        help="Path to a single-form .form/.fk source to check instead of an inline expression.",
+    )
 
     p_exec = sub.add_parser(
         "execute",
@@ -1141,6 +1216,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_form(args)
     if args.cmd == "run":
         return cmd_run(args)
+    if args.cmd == "check":
+        return cmd_check(args)
     if args.cmd == "execute":
         return cmd_execute_dispatch(args)
     if args.cmd == "discover":

@@ -58,6 +58,11 @@ from app.services.substrate.form_runtime import (
     execute as form_execute,
     form_execute_text,
 )
+from app.services.substrate.form_check import (
+    Diagnostic as FormDiagnostic,
+    check_ast as form_check_ast,
+    check_text as form_check_text,
+)
 from app.services.substrate.grammar import (
     BID_grammar,
     FormRule,
@@ -297,6 +302,9 @@ __all__ = [
     "form_evaluate_text",
     "form_execute",
     "form_execute_text",
+    "form_check_text",
+    "form_check_ast",
+    "FormDiagnostic",
     "FormFrame",
     "form_parse",
     "form_serialize_cell",
