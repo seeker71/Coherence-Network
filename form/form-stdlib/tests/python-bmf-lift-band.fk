@@ -250,6 +250,21 @@ a + b + c + d + e
 "))
     (let cell17-score (if (eq cell17-value 15) 10000 0))
 
+    ;; ---- cell 18: range() in for-loops — CPython:
+    ;;   total = 0
+    ;;   for i in range(5):        total += i   # 0+1+2+3+4 = 10
+    ;;   for j in range(2, 5):     total += j   # 2+3+4     = 9
+    ;;   total → 19 -----------------------------------------------------
+
+    (let cell18-value (py-bmf-run-text "total = 0
+for i in range(5):
+    total = total + i
+for j in range(2, 5):
+    total = total + j
+total
+"))
+    (let cell18-score (if (eq cell18-value 19) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
     ;; Sum when every cell agrees with CPython + Shape B converges for
     ;; arithmetic (cell 10), comparison (cell 11), and mod (cell 12):
@@ -263,4 +278,4 @@ a + b + c + d + e
                cell7-score cell8-score cell9-score
                cell10-score cell11-score cell12-score
                cell13-score cell14-score cell15-score
-               cell16-score cell17-score)))
+               cell16-score cell17-score cell18-score)))
