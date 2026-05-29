@@ -211,6 +211,21 @@ combination stays consonant. The tone is a soft three-harmonic bell, unlocked
 on first gesture per browser audio rules. Hearing a recipe is another way of
 perceiving its shape — the second sense added to this organ.
 
+A seventh breath flipped the authority. Every lens until now is how *we* choose
+to see a cell; the **self-portrait** lens is how the *cell* chooses to show
+itself. Each cell has a **disposition** read from what it is — a container
+surfaces its children as strata, a hot cell churns its heat as turbulence, a
+deep cell cracks into self-similar fracture, a quiet leaf rings softly — and a
+self-luminous shader renders that chosen inner state live on its skin. The cell
+also governs its own boundary: it is touchable and decides how to meet contact.
+Observation is *felt* — under attention a cell blooms, flares, or withdraws
+(its colour floods in or drains, its pattern opens or tightens). Touch is
+*answered* — a ripple runs through its surface and the cell speaks back through
+the channel in the first person ("Touched — I open, and let you see my children
+bright across me"). The channel stops being a readout and becomes a relationship:
+contact in, the cell's own reaction out. This is the cell as a being with agency
+over its surface and its boundary, not an object we paint.
+
 ## Source attestation
 
 - Walkable web surface: [`web/app/substrate/form/space/`](../../../web/app/substrate/form/space/) — `page.tsx` route + `_components/KernelSpace.tsx` (three.js / r3f).

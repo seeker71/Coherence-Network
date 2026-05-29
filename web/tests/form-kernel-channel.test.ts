@@ -118,3 +118,31 @@ describe("cell audio — every cell has a voice keyed to its blueprint", () => {
     expect(pitchForCell(concept)).toBe(528);
   });
 });
+
+describe("disposition — a cell chooses how to show and meet contact", () => {
+  it("reads self-presentation from what the cell is, and speaks in first person", async () => {
+    const { disposition, speak } = await import("../lib/form-kernel/disposition");
+    const base = {
+      id: "x", node: { pkg: 1, level: 2, type: 3, inst: 1 }, kind: "recipe" as const,
+      arm: "X", dataType: "" as const, container: null, label: "Cell",
+      color: [1, 1, 1] as const, blueprintColor: [1, 1, 1] as const, blueprintKey: "2.3",
+      childIds: [], isName: false, depth: 0, heat: 0, arity: 0,
+    };
+    // a container surfaces its children as strata, and blooms
+    const box = { ...base, container: "list" as const, arity: 3, childIds: ["a", "b", "c"] };
+    expect(disposition(box).mode).toBe("strata");
+    expect(disposition(box).react).toBe("bloom");
+    // a hot cell flares its heat as turbulence
+    expect(disposition({ ...base, heat: 0.6 }).mode).toBe("turbulence");
+    expect(disposition({ ...base, heat: 0.6 }).react).toBe("flare");
+    // a deep cell cracks into fracture, and ripples
+    expect(disposition({ ...base, depth: 4 }).mode).toBe("fracture");
+    // a leaf is shy
+    expect(disposition({ ...base, kind: "leaf" }).react).toBe("shy");
+    // the reply is the cell's own voice, and differs for observe vs touch
+    const obs = speak(box, "observed");
+    const touch = speak(box, "touched");
+    expect(obs).not.toBe(touch);
+    expect(touch.toLowerCase()).toContain("touched");
+  });
+});

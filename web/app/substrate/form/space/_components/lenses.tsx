@@ -26,7 +26,8 @@ export type LensId =
   | "circuit"
   | "organism"
   | "library"
-  | "terrain";
+  | "terrain"
+  | "portrait";
 
 export interface Lens {
   id: LensId;
@@ -34,7 +35,7 @@ export interface Lens {
   glyph: string;
   blurb: string;
   bg: string;
-  cellShape: "room" | "crystal" | "chip" | "membrane" | "cabinet";
+  cellShape: "room" | "crystal" | "chip" | "membrane" | "cabinet" | "self";
   edge: "beam" | "wire" | "vessel" | "road" | "none";
   displace: number; // blueprint-shader surface displacement amount
   translucent: boolean;
@@ -141,6 +142,22 @@ export const LENSES: Lens[] = [
     emissive: 0.5,
     breathe: 0.4,
     ground: true,
+  },
+  {
+    id: "portrait",
+    name: "Self-portrait",
+    glyph: "❂",
+    blurb: "The cell chooses an inner state to surface, and decides how to react to being seen and touched.",
+    bg: "#04060e",
+    cellShape: "self",
+    edge: "vessel",
+    displace: 0,
+    translucent: false,
+    metalness: 0,
+    roughness: 0.5,
+    emissive: 1,
+    breathe: 0,
+    ground: false,
   },
 ];
 

@@ -27,6 +27,7 @@ import {
   layoutSpace,
   type CellLayout,
   type KernelSpace as KernelSpaceData,
+  type RGB,
   type SpaceCell,
 } from "@/lib/form-kernel/space";
 import {
@@ -51,6 +52,8 @@ import {
   type Lens,
   type LensId,
 } from "./lenses";
+import { SelfCell } from "./SelfCell";
+import { speak } from "@/lib/form-kernel/disposition";
 import {
   appendMessage,
   dedupCount,
@@ -741,6 +744,7 @@ function Scene({
   representation,
   edges,
   lens,
+  onTouchCell,
 }: {
   space: KernelSpaceData;
   layout: Record<string, CellLayout>;
@@ -753,6 +757,7 @@ function Scene({
   representation: "room" | "orb";
   edges: Float32Array | null;
   lens: Lens;
+  onTouchCell: (id: string) => void;
 }) {
   const fbTexture = useFramebufferTexture(space.framebuffer);
   const normalMap = useMemo(() => makeNoiseNormalMap(), []);
@@ -870,7 +875,19 @@ function Scene({
 
         {Object.values(space.cells).map((cell) =>
           layout[cell.id] ? (
-            lensMode ? (
+            lensMode && lens.id === "portrait" ? (
+              <SelfCell
+                key={cell.id}
+                cell={cell}
+                layout={layout[cell.id]!}
+                focused={cell.id === focusId}
+                childColors={cell.childIds
+                  .map((cid) => space.cells[cid]?.color)
+                  .filter((c): c is RGB => Boolean(c))}
+                onSelect={setFocusId}
+                onTouch={onTouchCell}
+              />
+            ) : lensMode ? (
               <LensCell
                 key={cell.id}
                 cell={cell}
@@ -1042,6 +1059,15 @@ export default function KernelSpace() {
     if (!space.cells[id]) return;
     setViewRootId(id);
     setFocusId(id);
+  };
+  // a touched cell answers in its own voice — its reply lands in its channel
+  const touchReply = (id: string) => {
+    const cell = space.cells[id];
+    if (!cell) return;
+    setChannels((prev) => ({
+      ...prev,
+      [id]: appendMessage(prev[id] ?? [], "recipe", speak(cell, "touched"), cell.label),
+    }));
   };
   const surface = () => {
     const parent = space.parentOf[effectiveRoot] ?? space.root;
@@ -1369,6 +1395,7 @@ export default function KernelSpace() {
             representation={representation}
             edges={edges}
             lens={activeLens}
+            onTouchCell={touchReply}
           />
         </Canvas>
         {scene !== "vision" && (
