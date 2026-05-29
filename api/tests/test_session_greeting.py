@@ -48,14 +48,14 @@ def test_detect_human_project_identity_beats_corp_git(monkeypatch: pytest.Monkey
     # The machine git config is a corp identity; the project identity must win.
     monkeypatch.setattr(
         sg, "config_identity",
-        lambda: {"name": "Urs", "email": "umuff71@gmail.com", "github": "seeker71"},
+        lambda: {"name": "Urs", "email": "person@example.com", "github": "octocat"},
     )
     corp_git = {"user.name": "urs-muff", "user.email": "urs.muff@corp.example"}.get
     human = sg.detect_human({}, git=corp_git)
     assert human["name"] == "Urs"
-    assert human["email"] == "umuff71@gmail.com"
+    assert human["email"] == "person@example.com"
     # github tried before email, so the canonical handle resolves first.
-    assert human["candidates"] == [("github", "seeker71"), ("email", "umuff71@gmail.com")]
+    assert human["candidates"] == [("github", "octocat"), ("email", "person@example.com")]
 
 
 def test_detect_human_falls_back_to_keystore(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -86,16 +86,16 @@ def test_detect_human_none(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_resolve_user_tries_candidates_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         sg, "detect_human",
-        lambda env: {"name": "Urs", "email": "umuff71@gmail.com",
-                     "candidates": [("github", "seeker71"), ("email", "umuff71@gmail.com")]},
+        lambda env: {"name": "Urs", "email": "person@example.com",
+                     "candidates": [("github", "octocat"), ("email", "person@example.com")]},
     )
 
     def http(method, url, headers, body):
-        assert url.endswith("/api/identity/lookup/github/seeker71")  # first candidate
-        return 200, {"contributor_id": "seeker71"}
+        assert url.endswith("/api/identity/lookup/github/octocat")  # first candidate
+        return 200, {"contributor_id": "octocat"}
 
     key, display = sg.resolve_user(http, "https://api.test")
-    assert key == "seeker71"  # resolved contributor from the first linked handle
+    assert key == "octocat"  # resolved contributor from the first linked handle
     assert display == "Urs"
 
 
