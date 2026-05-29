@@ -1400,6 +1400,18 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
+        // pow — integer exponentiation in native code (no Form recursion).
+        // (pow base exp) → base**exp. Negative exponents return 0 (Python's
+        // int**-n is a float; floats on this path are a later breath).
+        self.register_native("pow", cat_method(), |_, _, args| {
+            let base = args[0].as_int();
+            let exp = args[1].as_int();
+            if exp < 0 {
+                Value::Int(0)
+            } else {
+                Value::Int(base.pow(exp as u32))
+            }
+        });
         // str_find — Rust-level substring search starting at index `from`.
         // (str_find s needle from) → int (index or -1). Whole search in
         // this Rust loop; no Form callback per byte, no Form recursion.
