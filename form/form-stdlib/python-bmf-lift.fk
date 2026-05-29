@@ -559,6 +559,28 @@
             (let body-recipes (lift-statements children))
             (intern_node PY-BMF-WHILE (cons cond body-recipes))))
 
+    ;; for-statement: tokens look like `for NAME in <iterable-tokens> :`.
+    ;; The iterable expression sits between the `in` keyword and the
+    ;; trailing `:`. Body children lift the same way while's do. The
+    ;; PY-BMF-FOR recipe's children are (var-name-leaf, iterable-recipe,
+    ;; body-stmt-recipes...) — the eval arm reads child 0 as the loop var,
+    ;; child 1 as the iterable, the rest as the body. lift-while-strip-colon
+    ;; is reused to drop the trailing `:`.
+
+    (defn lift-for (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            ;; tokens: for NAME in EXPR... :  → var is token 1, the
+            ;; iterable is everything after `in` (token 2), minus `:`.
+            (let var-name (tok-value (head (tail tokens))))
+            (let iter-tokens (lift-while-strip-colon (drop 3 tokens) (empty)))
+            (let iterable (lift-recipe (lift-expr iter-tokens)))
+            (let body-recipes (lift-statements children))
+            (intern_node PY-BMF-FOR
+                (cons (intern_trivial_string var-name)
+                      (cons iterable body-recipes)))))
+
     ;; augmented-assignment statement: `NAME <op>= EXPR...`. The scanner
     ;; classifies these as kind "expr" / rule "star_expressions" (the
     ;; `+=` token is a single py-op), so the dispatcher must catch them
@@ -613,12 +635,13 @@
             (if (str_eq kind "def")              (lift-def statement-tree)
             (if (str_eq kind "return")           (lift-return statement-tree)
             (if (str_eq kind "while")            (lift-while statement-tree)
+            (if (str_eq kind "for")              (lift-for statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty)))))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;

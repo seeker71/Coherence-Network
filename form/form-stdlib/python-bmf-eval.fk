@@ -255,6 +255,19 @@
                 body-stmts
                 (py-eval-body-loop body-stmts env))))
 
+    ;; py-for-loop — iterate `items` (a Form list), binding `var` to each
+    ;; element and threading env through the body each pass. Mirrors
+    ;; py-while-loop's env-threading so a for-body can mutate via
+    ;; ASSIGN / AUG-ASSIGN and the mutations persist across iterations.
+    (defn py-for-loop (var items body-stmts env)
+        (if (nil? items) env
+            (py-for-loop
+                var
+                (tail items)
+                body-stmts
+                (py-eval-body-loop body-stmts
+                    (py-env-extend env var (head items))))))
+
     (defn py-eval-statement (recipe env)
         (do
             (let cat (node_category recipe))
@@ -286,6 +299,19 @@
                     (let body-stmts (tail kids))
                     (let final-env (py-while-loop cond-recipe body-stmts env))
                     (py-stmt-result 0 final-env))
+            (if (node_eq cat PY-BMF-FOR)
+                (do
+                    ;; FOR children: var-name-leaf, iterable-recipe,
+                    ;; body-stmt-recipes... Evaluate the iterable to a Form
+                    ;; list, bind var to each element, thread env through the
+                    ;; body. Returns 0 (Python None). Iterables today are
+                    ;; lists (PY-BMF-LIST / range-as-list); dict/string
+                    ;; iteration is a later breath.
+                    (let var (node_value (head kids)))
+                    (let items (py-eval (head (tail kids)) env))
+                    (let body-stmts (tail (tail kids)))
+                    (let final-env (py-for-loop var items body-stmts env))
+                    (py-stmt-result 0 final-env))
             (if (node_eq cat PY-BMF-DEF)
                 (do
                     ;; DEF children: name-leaf, param-leaves..., body-recipe.
@@ -297,7 +323,7 @@
                     (let closure (py-closure name pms body env))
                     (py-stmt-result closure (py-env-extend env name closure)))
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env)))))))
+                (py-stmt-result (py-eval recipe env) env))))))))
 
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
