@@ -1068,6 +1068,17 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    // pow — integer exponentiation in native code (no Form recursion).
+    // (pow base exp) → base**exp. Negative exponents return 0 (Python's
+    // int**-n is a float; floats on this path are a later breath).
+    this.registerNative("pow", catMethod(), (_k, args) => {
+      const base = argInt(args, 0);
+      const exp = argInt(args, 1);
+      if (exp < 0) return { kind: "int", int: 0 };
+      let result = 1;
+      for (let i = 0; i < exp; i++) result *= base;
+      return { kind: "int", int: result };
+    });
     // str_find — JS-level substring search starting at index `from`.
     // (str_find s needle from) → int (index or -1). Whole search in this
     // JS String.indexOf call; no Form callback per byte, no Form recursion.
