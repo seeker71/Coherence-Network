@@ -71,14 +71,16 @@ way reports everything `unbound`. That is not a failure of your code.
 
 See [[self_form_kernel_local_toolchain]] (memory) for the full trap.
 
-## Coverage snapshot (2026-05-29, after #2179 — Batch 1 complete)
+## Coverage snapshot (2026-05-29, after #2186 — Batch 1 + range + comprehensions)
 
-**Eval arms shipped (15):** AUG-ASSIGN, ASSIGN, CALL, DEF, DICT, FOR, IDENT,
-IF, INT, LIST, MODULE, RETURN, STRING, SUBSCRIPT, WHILE
-**Lift branches shipped:** AUG-ASSIGN, DICT, FOR, IF, INT, LIST, MODULE,
+**Eval arms shipped (17):** AUG-ASSIGN, ASSIGN, CALL, COMP, DEF, DICT, FOR,
+IDENT, IF, INT, LIST, MODULE, RANGE(builtin), RETURN, STRING, SUBSCRIPT, WHILE
+**Lift branches shipped:** AUG-ASSIGN, COMP, DICT, FOR, IF, INT, LIST, MODULE,
 PASS, SUBSCRIPT, WHILE, unary `-`/`not`, boolean `and`/`or`
 (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via dedicated lifters)
-**Band aggregate:** 135000 (18 cells)
+**Band aggregate:** 145000 (19 cells)
+**Batch 2 status:** comprehensions DONE (#2186); f-strings BLOCKED (grammar
+statement-splitter — see below); class / decorators / try-except remain.
 
 **Desugaring wins (no new eval arm):** unary `-x` → MATH-MINUS(0,x);
 `not x` → COMPARE-EQ(x,0); `a and b` → IF(a,b,a); `a or b` → IF(a,a,b).
@@ -112,7 +114,7 @@ Ranked by frequency across `api/app/services/substrate/*.py`:
 | **`class` + `@dataclass`** | `form.py` 50, `category.py` 34 | plain-class eval exists; dataclass + dunders are the real work |
 | **decorators** | `form.py` 50 | lift wraps the decorated def in a call chain |
 | **`try`/`except`** | `form_runtime.py` 12 | needs an exception-stack data shape in eval |
-| **comprehensions** | `form_runtime.py` 10 | desugar to a fold over the iterable |
+| ~~**comprehensions**~~ | `form_runtime.py` 10 | **DONE #2186** — `[elem for var in iter]` → PY-BMF-COMP; lift peeks for `for` after first elem, eval maps elem over iter binding var per-item. Filter clauses (`if`) + nested fors pending. |
 | **`from … import` as module** | 28 files | needs module-system semantics; ORM calls also need the Form persistence runtime, not SQLAlchemy |
 
 ### Parked: f-string lift+eval (proven, blocked on statement-grouping)
@@ -181,3 +183,4 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | 2026-05-29 | [#2178](https://github.com/seeker71/Coherence-Network/pull/2178) | unary `-x` / `not x` (desugar; no eval arm) | 105000 → 115000 |
 | 2026-05-29 | [#2179](https://github.com/seeker71/Coherence-Network/pull/2179) | boolean `and` / `or` (short-circuit → IF; no eval arm) | 115000 → 125000 |
 | 2026-05-29 | [#2181](https://github.com/seeker71/Coherence-Network/pull/2181) | `range()` builtin → iterable list (eval-side; no lift change) | 125000 → 135000 |
+| 2026-05-29 | [#2186](https://github.com/seeker71/Coherence-Network/pull/2186) | list comprehension `[e for v in it]` → PY-BMF-COMP (Batch 2) | 135000 → 145000 |
