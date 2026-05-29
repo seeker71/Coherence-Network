@@ -71,24 +71,26 @@ way reports everything `unbound`. That is not a failure of your code.
 
 See [[self_form_kernel_local_toolchain]] (memory) for the full trap.
 
-## Coverage snapshot (2026-05-29, after #2168)
+## Coverage snapshot (2026-05-29, after #2175)
 
-**Eval arms shipped (14):** AUG-ASSIGN, ASSIGN, CALL, DEF, DICT, IDENT, IF,
-INT, LIST, MODULE, RETURN, STRING, SUBSCRIPT, WHILE
-**Lift branches shipped:** AUG-ASSIGN, IF, INT, LIST, MODULE, PASS,
-SUBSCRIPT, WHILE (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING via
-dedicated lifters)
+**Eval arms shipped (15):** AUG-ASSIGN, ASSIGN, CALL, DEF, DICT, FOR, IDENT,
+IF, INT, LIST, MODULE, RETURN, STRING, SUBSCRIPT, WHILE
+**Lift branches shipped:** AUG-ASSIGN, DICT, FOR, IF, INT, LIST, MODULE,
+PASS, SUBSCRIPT, WHILE (+ ASSIGN/RETURN/DEF/CALL/BINOP/COMPARE/IDENT/STRING
+via dedicated lifters)
+**Band aggregate:** 105000 (15 cells)
 
 ## The queue
 
 ### Batch 1 — cheap (lift-only; eval already shipped or trivial). Do first.
 
-| Construct | Why cheap | Independence |
-|---|---|---|
-| **dict literal `{k: v}`** | `PY-BMF-DICT` **eval already shipped**; only `lift-primary` branch missing — exact aug-assign situation | edits `lift-primary` (shared) |
-| `for x in xs:` | reuses `py-eval-body-loop`; iterator over LIST | new `lift-for` + `py-eval-statement` arm — disjoint helpers |
-| unary `-x` / `not x` | small `lift-primary` branch + small `py-eval` arm | edits `lift-primary` + `py-eval` |
-| boolean `and` / `or` | precedence-climb extension + short-circuit eval arm | edits `lift-binop-loop` + `py-eval` |
+| Construct | Why cheap | Independence | Status |
+|---|---|---|---|
+| **dict literal `{k: v}`** | `PY-BMF-DICT` eval shipped; `lift-primary` branch + value_eq lookup fix | edits `lift-primary` (shared) | **DONE #2174** |
+| `for x in xs:` | folds over a LIST via `py-eval-body-loop` | new `lift-for` + `py-eval-statement` arm | **DONE #2175** (list iterables; `range()` pending) |
+| unary `-x` / `not x` | small `lift-primary` branch + small `py-eval` arm | edits `lift-primary` + `py-eval` | open |
+| boolean `and` / `or` | precedence-climb extension + short-circuit eval arm | edits `lift-binop-loop` + `py-eval` | open |
+| `range(n)` as iterable | `range()` builtin must produce a Form list so `for i in range(n)` walks | new `range` native-or-builtin in eval | open (surfaced by #2175; the common substrate loop idiom) |
 
 ### Batch 2 — substrate-critical heavy (constructs the target files use most)
 
@@ -131,3 +133,5 @@ merges honest — a dropped construct subtracts its unique value from the sum.
 | Date | PR | Construct | Aggregate |
 |---|---|---|---|
 | 2026-05-29 | [#2168](https://github.com/seeker71/Coherence-Network/pull/2168) | augmented assignment `x += y` (lift; eval pre-existing) | 75000 → 85000 |
+| 2026-05-29 | [#2174](https://github.com/seeker71/Coherence-Network/pull/2174) | dict literal `{k: v}` + int-key lookup (`str_eq` → `value_eq`) | 85000 → 95000 |
+| 2026-05-29 | [#2175](https://github.com/seeker71/Coherence-Network/pull/2175) | for-loop over a list (`lift-for` + `py-for-loop`) | 95000 → 105000 |
