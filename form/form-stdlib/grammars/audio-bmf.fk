@@ -4,8 +4,8 @@
 ; lifting, and reverse source emission live here as ordinary Form recipes.
 
 (do
-    (let AUDIO-FILE (make_nodeid 1 2 99 700))
-    (let AUDIO-META-FILE (make_nodeid 1 2 99 701))
+    (let AUDIO-FILE (bp "AUDIO-FILE"))
+    (let AUDIO-META-FILE (bp "AUDIO-META-FILE"))
 
     (defn audio-src-keyword (value) (bmf-atom "audio-keyword" value))
     (defn audio-src-int (value) (bmf-atom "audio-int" value))
