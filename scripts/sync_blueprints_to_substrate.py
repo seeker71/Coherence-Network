@@ -33,7 +33,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "api"))
+# Make `app` importable in both layouts: dev (package at <repo>/api/app) and
+# the prod api container (package at /app/app, with this script at /app/scripts).
+for _p in (ROOT, ROOT / "api"):
+    sys.path.insert(0, str(_p))
 
 ONTOLOGY = ROOT / "form" / "form-stdlib" / "form-ontology.json"
 REGISTRY = ROOT / "form" / "form-stdlib" / "blueprint-registry.json"
