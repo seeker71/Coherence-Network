@@ -25,9 +25,21 @@
 ; file that executes these strings. This file is pure: it computes SQL, it does
 ; not run it — so it is three-way parity-testable like every other engine here.
 ;
+; Kernel idiom note: the kernel has no inline lambda and no built-in `join` —
+; functions are passed by name (arity-1) or threaded by explicit recursion, and
+; string-joining is a named helper. This file uses only real primitives:
+; str_concat, str_eq, cons/head/tail/empty, nil?, nth.
+;
 ; preludes: form-stdlib/core.fk
 ;
 (do
+    ;; ---- string join (no built-in; named helper, sep-first) ---------------
+    (defn db-join (sep xs)
+        (if (nil? xs) ""
+            (if (nil? (tail xs)) (head xs)
+                (str_concat (head xs)
+                    (str_concat sep (db-join sep (tail xs)))))))
+
     ;; ---- column -----------------------------------------------------------
     ;; logical-type ∈ {"pk" "int" "str" "text" "datetime"}; nullable 1/0;
     ;; default "" = none, else a literal rendered verbatim ("0", "'x'").
@@ -56,7 +68,7 @@
     ;; (name, int-type, str-type, text-type, datetime-type, pk-clause)
     (defn mk-dialect (name int-t str-t text-t dt-t pk-clause)
         (list "dialect" name int-t str-t text-t dt-t pk-clause))
-    (defn dia-name (d) (nth d 2))
+    (defn dia-name (d) (nth d 1))
     (defn dia-pk (d) (nth d 6))
     (defn dia-type (d logical)
         (if (str_eq logical "int")      (nth d 2)
@@ -68,8 +80,10 @@
     ;; The two dialects the body actually runs (memory: dev/test sqlite,
     ;; prod postgres). The only real divergence is the autoincrement PK and
     ;; str's physical type — exactly the two cells that differ below.
-    (let SQLITE   (mk-dialect "sqlite"   "INTEGER" "TEXT"    "TEXT" "TIMESTAMP" "INTEGER PRIMARY KEY AUTOINCREMENT"))
-    (let POSTGRES (mk-dialect "postgres" "INTEGER" "VARCHAR" "TEXT" "TIMESTAMP" "SERIAL PRIMARY KEY"))
+    (defn dialect-sqlite ()
+        (mk-dialect "sqlite"   "INTEGER" "TEXT"    "TEXT" "TIMESTAMP" "INTEGER PRIMARY KEY AUTOINCREMENT"))
+    (defn dialect-postgres ()
+        (mk-dialect "postgres" "INTEGER" "VARCHAR" "TEXT" "TIMESTAMP" "SERIAL PRIMARY KEY"))
 
     ;; ---- column → DDL fragment --------------------------------------------
     ;; pk is a whole clause; every other column is  <name> <type> [NOT NULL]
@@ -89,53 +103,75 @@
                     (str_concat with-null
                         (str_concat " DEFAULT " (col-default c)))))))
 
+    ;; threaded recursion (no lambda): render each column with the dialect.
+    (defn col-ddls-loop (cols dia)
+        (if (nil? cols) (empty)
+            (cons (col-ddl (head cols) dia)
+                  (col-ddls-loop (tail cols) dia))))
+
     (defn uq-ddl (u)
         (str_concat "CONSTRAINT "
             (str_concat (uq-name u)
                 (str_concat " UNIQUE ("
-                    (str_concat (join ", " (uq-cols u)) ")")))))
+                    (str_concat (db-join ", " (uq-cols u)) ")")))))
+
+    (defn uq-ddls-loop (us)
+        (if (nil? us) (empty)
+            (cons (uq-ddl (head us)) (uq-ddls-loop (tail us)))))
 
     ;; ---- table → CREATE TABLE ---------------------------------------------
     (defn create-ddl (t dia)
         (do
-            (let col-parts (map (fn (c) (col-ddl c dia)) (tbl-cols t)))
-            (let uq-parts  (map (fn (u) (uq-ddl u))      (tbl-uniques t)))
+            (let col-parts (col-ddls-loop (tbl-cols t) dia))
+            (let uq-parts  (uq-ddls-loop (tbl-uniques t)))
             (let parts     (append col-parts uq-parts))
             (str_concat "CREATE TABLE "
                 (str_concat (tbl-name t)
                     (str_concat " ("
-                        (str_concat (join ", " parts) ")"))))))
+                        (str_concat (db-join ", " parts) ")"))))))
 
     ;; ---- table → CREATE INDEX (each its own statement) --------------------
-    (defn index-ddl (t i)
+    (defn index-ddl (tname i)
         (str_concat "CREATE INDEX "
             (str_concat (ix-name i)
                 (str_concat " ON "
-                    (str_concat (tbl-name t)
+                    (str_concat tname
                         (str_concat " ("
-                            (str_concat (join ", " (ix-cols i)) ")")))))))
+                            (str_concat (db-join ", " (ix-cols i)) ")")))))))
+    (defn index-ddls-loop (tname is)
+        (if (nil? is) (empty)
+            (cons (index-ddl tname (head is))
+                  (index-ddls-loop tname (tail is)))))
     (defn index-ddls (t)
-        (map (fn (i) (index-ddl t i)) (tbl-indexes t)))
+        (index-ddls-loop (tbl-name t) (tbl-indexes t)))
 
     ;; ---- migration: blueprint diff → ALTER --------------------------------
     (defn has-col? (cols name)
-        (if (empty? cols) 0
+        (if (nil? cols) 0
             (if (str_eq (col-name (head cols)) name) 1
                 (has-col? (tail cols) name))))
 
     ;; columns present in new, absent in old — the safe forward migration the
-    ;; body already does by hand in orm.py _ensure_columns.
+    ;; body already does by hand in orm.py.
     (defn schema-diff (old-cols new-cols)
-        (filter (fn (c) (eq (has-col? old-cols (col-name c)) 0)) new-cols))
+        (if (nil? new-cols) (empty)
+            (if (eq (has-col? old-cols (col-name (head new-cols))) 0)
+                (cons (head new-cols) (schema-diff old-cols (tail new-cols)))
+                (schema-diff old-cols (tail new-cols)))))
 
     (defn alter-add-ddl (tname c dia)
         (str_concat "ALTER TABLE "
             (str_concat tname
                 (str_concat " ADD COLUMN " (col-ddl c dia)))))
 
+    (defn migration-loop (tname cols dia)
+        (if (nil? cols) (empty)
+            (cons (alter-add-ddl tname (head cols) dia)
+                  (migration-loop tname (tail cols) dia))))
+
     (defn migration-ddls (old-tbl new-tbl dia)
-        (do
-            (let adds (schema-diff (tbl-cols old-tbl) (tbl-cols new-tbl)))
-            (map (fn (c) (alter-add-ddl (tbl-name new-tbl) c dia)) adds)))
+        (migration-loop (tbl-name new-tbl)
+                        (schema-diff (tbl-cols old-tbl) (tbl-cols new-tbl))
+                        dia))
 
     0)
