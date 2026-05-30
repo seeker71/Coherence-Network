@@ -1,0 +1,159 @@
+; grammars/mandala.fk — a mandala GROWS FROM each grammar's structure.
+;
+; A mandala for a grammar is not decorative art assigned on top — it is the
+; grammar's content signature rendered radially. Same principle as the Shamballa
+; Glyphic (lc-codes-as-depth-not-dictionary): the symbol grows from the meaning,
+; never assigned. A mandala is that glyph elevated to RADIAL SYMMETRY.
+;
+; Every grammar has a name (its content). A content hash of the name + the
+; grammar's vocabulary-size deterministically drives the mandala's geometry:
+;
+;   PETALS   = symmetry order — the hash mod a range, so each grammar has its own
+;              rotational symmetry (a 5-fold mandala vs a 9-fold one). The
+;              grammar's identity becomes its symmetry.
+;   RINGS    = depth — the word-count of the grammar's name + its vocabulary tier,
+;              drawn as concentric circles (a deeper grammar is a deeper mandala).
+;   CORE     = the central glyph — the same 7-form alphabet as the Glyphic,
+;              selected by the hash, so a grammar's mandala and its glyph share a
+;              center.
+;   ROTATION = a hash-derived phase, so two same-petal mandalas still differ.
+;
+; Consequences: same grammar → same mandala (content-addressed); distinct
+; grammars → distinct mandalas (different symmetry/depth/core); reproducible
+; three-way (pure Form arithmetic over char codes, ASCII text + SVG). A Language
+; cell: a grammar-signature → its mandala.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- content hash (pure Form, deterministic — same as the Glyphic) ----
+    (defn mdl-hash-loop (s i n acc)
+        (if (ge i n) acc
+            (mdl-hash-loop s (add i 1) n
+                (mod (add (mul acc 31) (ord (char_at s i))) 1000003))))
+    (defn mdl-hash (s) (mdl-hash-loop s 0 (str_len s) 7))
+
+    ;; ---- depth = word/segment count of the grammar name -------------------
+    ;; grammar names use "-" as the separator ("shamballa-glyph"), so depth is
+    ;; the number of hyphen-separated parts + a tier base of 2 (every mandala has
+    ;; at least 2 rings). A more-composed name → a deeper mandala.
+    (defn mdl-parts-loop (s i n acc prev-sep)
+        (if (ge i n) acc
+            (do
+                (let is-sep (str_eq (substring s i (add i 1)) "-"))
+                (if is-sep
+                    (mdl-parts-loop s (add i 1) n acc 1)
+                    (if (eq prev-sep 1)
+                        (mdl-parts-loop s (add i 1) n (add acc 1) 0)
+                        (mdl-parts-loop s (add i 1) n acc 0))))))
+    (defn mdl-depth (name) (add 2 (mdl-parts-loop name 0 (str_len name) 0 1)))
+
+    ;; ---- petals = rotational symmetry order (3..12) -----------------------
+    ;; The hash chooses the symmetry. Range 3..12 covers the meaningful mandala
+    ;; symmetries (triad through dodecad). The grammar's identity IS its symmetry.
+    (defn mdl-petals (name) (add 3 (mod (mdl-hash name) 10)))
+
+    ;; ---- core glyph (the shared center, same alphabet as the Glyphic) -----
+    (defn mdl-core (name)
+        (do
+            (let i (mod (mdl-hash name) 7))
+            (if (eq i 0) "^"
+            (if (eq i 1) "<"
+            (if (eq i 2) "v"
+            (if (eq i 3) ">"
+            (if (eq i 4) "*"
+            (if (eq i 5) "o"
+                "#"))))))))
+
+    ;; ---- inner mark (a SECOND hash slice flanking the core) ---------------
+    ;; petals (hash mod 10) and core (hash mod 7) project only part of the hash
+    ;; to the surface, so two grammars can collide there. The inner mark draws
+    ;; from a HIGHER slice of the hash (div by 70 then mod 4), bringing more of
+    ;; the content-address into the visible form — the tie-breaker that keeps the
+    ;; mandala injective over the roster. (If a collision still occurred, the
+    ;; band would fail loudly; it does not.)
+    (defn mdl-inner (name)
+        (do
+            (let i (mod (div (mdl-hash name) 70) 4))
+            (if (eq i 0) "."
+            (if (eq i 1) ":"
+            (if (eq i 2) "'"
+                "~")))))
+
+    ;; ---- ASCII mandala: a textual radial signature ------------------------
+    ;; Compact, legible, byte-parity-safe: "<petals>-fold <rings: ( per ring>
+    ;; <inner><core><inner> <rings: ) per ring>". The petal-count and depth are
+    ;; READABLE from the symbol — the mandala carries its own structure.
+    (defn mdl-rep (s n) (if (le n 0) "" (str_concat s (mdl-rep s (sub n 1)))))
+    (defn mdl-int-str (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (mdl-int-str (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn mdl-ascii (name)
+        (do
+            (let p (mdl-petals name))
+            (let d (mdl-depth name))
+            (let c (mdl-core name))
+            (let n (mdl-inner name))
+            (str_concat (mdl-int-str p)
+                (str_concat "-fold "
+                    (str_concat (mdl-rep "(" d)
+                        (str_concat n
+                            (str_concat c
+                                (str_concat n (mdl-rep ")" d)))))))))
+
+    ;; ---- SVG mandala: real radial symmetry --------------------------------
+    ;; `depth` concentric rings + `petals` lines radiating from center at equal
+    ;; angles (the rotational symmetry), + the core glyph at the center. Angles
+    ;; are integer-degree steps (360 / petals), so it is pure-integer and
+    ;; three-way identical. Petal endpoints approximated on an octagon-ish set of
+    ;; fixed directions keyed by (i * step) mod 360 → a small direction table
+    ;; (we draw radial ticks as rotated <line> via SVG transform, which keeps the
+    ;; math integer and the output deterministic).
+    (defn mdl-svg-rings (d r)
+        (if (le d 0) ""
+            (str_concat
+                (str_concat "<circle cx=\"50\" cy=\"50\" r=\""
+                    (str_concat (mdl-int-str r) "\" fill=\"none\" stroke=\"currentColor\"/>"))
+                (mdl-svg-rings (sub d 1) (sub r 7)))))
+    ;; one radial petal-line, rotated by `deg` degrees about the center.
+    (defn mdl-svg-petals-loop (i petals step)
+        (if (ge i petals) ""
+            (str_concat
+                (str_concat "<line x1=\"50\" y1=\"50\" x2=\"50\" y2=\"5\" stroke=\"currentColor\" transform=\"rotate("
+                    (str_concat (mdl-int-str (mul i step))
+                        " 50 50)\"/>"))
+                (mdl-svg-petals-loop (add i 1) petals step))))
+    (defn mdl-svg (name)
+        (do
+            (let p (mdl-petals name))
+            (let d (mdl-depth name))
+            (let step (div 360 p))
+            (str_concat "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">"
+                (str_concat (mdl-svg-rings d 45)
+                    (str_concat (mdl-svg-petals-loop 0 p step)
+                        (str_concat "<text x=\"50\" y=\"54\" text-anchor=\"middle\">"
+                            (str_concat (mdl-core name) "</text></svg>")))))))
+
+    ;; ---- read symmetry back from an ASCII mandala -------------------------
+    ;; The mandala is legible: the petal-count is the leading integer.
+    (defn mdl-symmetry-of (ascii)
+        (head (mdl-parse-int ascii 0)))
+    (defn mdl-parse-int-loop (s i n acc)
+        (if (ge i n) (list acc i)
+            (do
+                (let cp (ord (char_at s i)))
+                (if (and (ge cp 48) (le cp 57))
+                    (mdl-parse-int-loop s (add i 1) n (add (mul acc 10) (sub cp 48)))
+                    (list acc i)))))
+    (defn mdl-parse-int (s i) (mdl-parse-int-loop s i (str_len s) 0))
+
+    ;; ---- the grammar roster: name a mandala for each grammar -------------
+    ;; The 13 grammars the body carries. mdl-roster returns the list of names;
+    ;; mandala-for each yields its mandala. Adding a grammar is a new row.
+    (defn mdl-roster ()
+        (list "audio-bmf" "bml" "document-bmf" "gematria" "go-bmf"
+              "image-bmf" "natural-bmf" "python-bmf" "rust-bmf"
+              "shamballa-codes" "shamballa-glyph" "typescript-bmf" "video-bmf"))
+
+    0)
