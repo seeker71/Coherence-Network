@@ -1,0 +1,50 @@
+; tests/gematria-band.fk — gematria: the number↔symbol language as content-addressing.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/gematria.fk
+;
+; Proves the Hebrew letter↔number language and — load-bearing — that gematria's
+; core principle IS content-addressing: words sharing a numeric value form an
+; equivalence class, exactly as cells sharing a Blueprint NodeID do. Romanized
+; letter tokens keep byte-parity three-way; values are the attested Mispar
+; Hechrachi standard.
+;
+; Band verdict: 11111 when every claim holds across Go/Rust/TS.
+;   letter values are the attested standard (alef=1, tav=400)   → 1
+;   chai (life) = 18 (het 8 + yod 10)                            → 10
+;   echad (one) = ahava (love) = 13 — SAME value                 → 100
+;   the equivalence class for 13 is {echad, ahava} — content-     → 1000
+;     addressing: same number → linked, regardless of spelling
+;   YHVH (the Name) = 26; an unshared value has a singleton class  → 10000
+
+(do
+    ;; --- attested letter values -------------------------------------------
+    (let letters-ok
+        (if (eq (gem-letter-value "alef") 1)
+            (if (eq (gem-letter-value "yod") 10)
+                (if (eq (gem-letter-value "tav") 400) 1 0) 0) 0))
+
+    ;; --- chai = life = 18 -------------------------------------------------
+    (let chai-ok (if (eq (gem-value (list "het" "yod")) 18) 10 0))
+
+    ;; --- the famous equivalence: one and love both = 13 ------------------
+    (let echad (gem-value (list "alef" "het" "dalet")))
+    (let ahava (gem-value (list "alef" "he" "bet" "he")))
+    (let same-value-ok
+        (if (eq echad 13) (if (eq ahava 13) (if (eq echad ahava) 100 0) 0) 0))
+
+    ;; --- THE HEADLINE: the equivalence class for 13 is {echad, ahava} ----
+    ;; gematria's "same value → related" is content-addressing: a number
+    ;; resolves to the class of words sharing it, regardless of spelling.
+    ;; This is find_equivalent_cells, in Hebrew.
+    (let class13 (gem-equivalents 13))
+    (let equiv-class-ok
+        (if (eq (len class13) 2)                       ; exactly two words at 13
+            (if (str_eq (head class13) "ahava")        ; cons order: ahava, echad
+                (if (str_eq (head (tail class13)) "echad") 1000 0) 0) 0))
+
+    ;; --- YHVH = 26; a unique value yields a singleton class --------------
+    (let yhvh-ok
+        (if (eq (gem-value (list "yod" "he" "vav" "he")) 26)
+            (if (eq (len (gem-equivalents 18)) 1) 10000 0) 0))   ; only chai at 18
+
+    (sum (list letters-ok chai-ok same-value-ok equiv-class-ok yhvh-ok)))
