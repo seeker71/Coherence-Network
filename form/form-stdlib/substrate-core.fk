@@ -1,0 +1,95 @@
+; substrate-core.fk — the substrate's core, Form-native AND durable.
+;
+; The crux of docs/coherence-substrate/services-on-form-plan.md: route the native
+; kernel's content-addressed interning through the storage port, so the substrate
+; core (intern + named cells + equivalence) runs Form-native on ANY carrier
+; (memory / segmented-file / Postgres) — no SQLAlchemy, no kernel.py.
+;
+; The native intern_node already content-addresses in memory (same shape → same
+; NodeID). This module makes that identity DURABLE: it renders the interned
+; NodeID to a stable key and persists the cell through storage-port, so the
+; identity survives a restart and is shared across processes via the carrier.
+;
+; The ~100-line Python kernel.py core (intern_node + serialize_tree + make_cell +
+; find_equivalent_cells) becomes these thin Form functions over the port:
+;   sc-key       node            → a stable string key (the 4-tuple rendered)
+;   sc-intern    carrier store node     → persist node, return its NodeID
+;   sc-make-cell carrier store name domain blueprint ctor → durable NamedCell
+;   sc-lookup    carrier store name domain               → (cell) | ()
+;   sc-equivalent? a b            → 1 if two nodes share a Blueprint NodeID
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+(do
+    ;; ---- render a NodeID to a stable content key --------------------------
+    ;; The 4-tuple (pkg, level, type, inst) IS the content address — the native
+    ;; intern_node already collapsed same-shape nodes to the same tuple. So the
+    ;; rendered tuple is the durable key. (decimal ints, dot-separated.)
+    (defn sc-int-str (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (sc-int-str (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn sc-key (node)
+        (str_concat (sc-int-str (node_pkg node))
+            (str_concat "." (str_concat (sc-int-str (node_level node))
+                (str_concat "." (str_concat (sc-int-str (node_type node))
+                    (str_concat "." (sc-int-str (node_inst node)))))))))
+
+    ;; ---- intern: native content-address, then persist --------------------
+    ;; The node is already interned (the caller built it with intern_node). This
+    ;; durably records its existence under its content key. Returns the STORE
+    ;; (carriers are functional — the memory carrier conses, so the new store
+    ;; must be threaded). Idempotent: interning the same shape twice writes the
+    ;; same key (last-write-wins), so the durable store dedups as the lattice does.
+    (defn sc-intern (carrier store node)
+        (storage-put carrier store (sc-key node) (sc-key node)))
+
+    ;; sc-interned? — is this node's shape durably recorded?
+    (defn sc-interned? (carrier store node)
+        (storage-has? carrier store (sc-key node)))
+
+    ;; ---- named cells: name+domain → a cell, durably ----------------------
+    ;; A NamedCell is (name, domain, blueprint, ctor). We key it by domain+name
+    ;; (the UNIQUE(domain,name) the substrate enforces) and store the blueprint
+    ;; key + ctor key as the value, so lookup reconstructs the binding. The
+    ;; blueprint and ctor nodes are themselves interned through the port first,
+    ;; so the whole cell is durably grounded.
+    (defn sc-cell-key (name domain)
+        (str_concat domain (str_concat "/" name)))
+    ;; value encodes "blueprint-key ctor-key"
+    (defn sc-cell-value (blueprint ctor)
+        (str_concat (sc-key blueprint) (str_concat " " (sc-key ctor))))
+
+    (defn sc-make-cell (carrier store name domain blueprint ctor)
+        (do
+            (let s1 (sc-intern carrier store blueprint))    ; ground the blueprint
+            (let s2 (sc-intern carrier s1 ctor))            ; ground the ctor
+            (storage-put carrier s2
+                (sc-cell-key name domain)
+                (sc-cell-value blueprint ctor))))
+
+    ;; sc-lookup — (cell-value) | () for a (name, domain). The cell-value is the
+    ;; "blueprint-key ctor-key" string; callers split it to recover the binding.
+    (defn sc-lookup (carrier store name domain)
+        (storage-get carrier store (sc-cell-key name domain)))
+    (defn sc-found? (result) (if (eq (len result) 1) 1 0))
+    (defn sc-cell-of (result) (head result))
+
+    ;; recover the blueprint key from a looked-up cell value ("bpkey ctorkey").
+    (defn sc-parse-bp-key (cell-value)
+        (sc-first-token cell-value))
+    (defn sc-first-token-loop (s i n)
+        (if (ge i n) i
+            (if (str_eq (substring s i (add i 1)) " ") i
+                (sc-first-token-loop s (add i 1) n))))
+    (defn sc-first-token (s)
+        (substring s 0 (sc-first-token-loop s 0 (str_len s))))
+
+    ;; ---- equivalence: same Blueprint NodeID = structurally equivalent ----
+    ;; The substrate's headline: two entities of the same shape share a Blueprint
+    ;; NodeID automatically, regardless of domain. This is just node_eq on the
+    ;; interned nodes — content-addressing makes cross-domain equivalence free.
+    (defn sc-equivalent? (node-a node-b)
+        (if (node_eq node-a node-b) 1 0))
+
+    0)
