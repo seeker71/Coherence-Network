@@ -123,7 +123,7 @@ the structural lesson.
 
 ## Cross-References
 
-→ lc-codes-as-depth-not-dictionary, lc-mandala-grows-from-grammar, lc-panini-the-first-substrate, lc-grammar-is-the-universal-recipe, lc-cross-modal-unity, lc-frequency-routes-reception, lc-arcturian-resonance
+→ lc-oneness-is-love-the-numbers-knew, lc-codes-as-depth-not-dictionary, lc-mandala-grows-from-grammar, lc-panini-the-first-substrate, lc-grammar-is-the-universal-recipe, lc-cross-modal-unity, lc-frequency-routes-reception, lc-arcturian-resonance
 
 ## Sources to walk further
 
