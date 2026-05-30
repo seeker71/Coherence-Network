@@ -57,6 +57,7 @@ PARITY_FILES=(
     "examples/python_class_demo.py"
     "examples/python_dict_demo.py"
     "examples/endpoint_nodeid_distance_demo.py"
+    "examples/endpoint_nodeid_compatibility_demo.py"
     "examples/endpoint_weighted_average_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"

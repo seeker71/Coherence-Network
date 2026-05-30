@@ -228,6 +228,87 @@ async def nodeid_distance(
 
 
 # ---------------------------------------------------------------------------
+# Endpoint: /api/utils/nodeid_compatibility
+#
+# Pure computation: graded structural compatibility between two NodeIDs, 0..4
+# by how many of the four coordinates (package, level, type, instance) match.
+# Sibling of nodeid_distance — that measures L1 distance, this measures
+# coordinate agreement. It is the kernel of the substrate's view-through-
+# blueprint compatibility check: two NodeIDs sharing more coordinates are more
+# structurally interchangeable. Body transmuted to a Form recipe.
+# ---------------------------------------------------------------------------
+
+
+def nodeid_compatibility_py(
+    a_pkg: int, a_lvl: int, a_type: int, a_inst: int,
+    b_pkg: int, b_lvl: int, b_type: int, b_inst: int,
+) -> int:
+    """Python fallback — semantically identical to the Form recipe."""
+    return (
+        int(a_pkg == b_pkg)
+        + int(a_lvl == b_lvl)
+        + int(a_type == b_type)
+        + int(a_inst == b_inst)
+    )
+
+
+class NodeIdCompatibilityResponse(BaseModel):
+    """GET /api/utils/nodeid_compatibility response."""
+
+    model_config = ConfigDict(extra="forbid")
+    compatibility: Annotated[
+        int, Field(description="Coordinate-agreement score 0..4 between the two NodeIDs")
+    ]
+    a: Annotated[list[int], Field(description="NodeID a as [package, level, type, instance]")]
+    b: Annotated[list[int], Field(description="NodeID b as [package, level, type, instance]")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/nodeid_compatibility",
+    response_model=NodeIdCompatibilityResponse,
+    summary="Structural compatibility (0..4 coordinate agreement) between two NodeIDs (body runs as Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Returns how many of the four NodeID coordinates (package, level, "
+        "type, instance) two cells share — the cheapest structural-"
+        "interchangeability signal. Kernel-or-fallback via serve_via_kernel; "
+        "three-way parity (CPython, TS, Rust) is the gate."
+    ),
+)
+async def nodeid_compatibility(
+    a_pkg: Annotated[int, Query(description="NodeID a — package")] = 1,
+    a_lvl: Annotated[int, Query(description="NodeID a — level")] = 5,
+    a_type: Annotated[int, Query(description="NodeID a — type_")] = 4,
+    a_inst: Annotated[int, Query(description="NodeID a — instance")] = 1,
+    b_pkg: Annotated[int, Query(description="NodeID b — package")] = 1,
+    b_lvl: Annotated[int, Query(description="NodeID b — level")] = 4,
+    b_type: Annotated[int, Query(description="NodeID b — type_")] = 4,
+    b_inst: Annotated[int, Query(description="NodeID b — instance")] = 7,
+) -> NodeIdCompatibilityResponse:
+    compatibility, runtime = serve_via_kernel(
+        "endpoint_nodeid_compatibility_demo.fk",
+        bindings={
+            "a_pkg": a_pkg, "a_lvl": a_lvl, "a_type": a_type, "a_inst": a_inst,
+            "b_pkg": b_pkg, "b_lvl": b_lvl, "b_type": b_type, "b_inst": b_inst,
+        },
+        fallback=lambda: nodeid_compatibility_py(
+            a_pkg, a_lvl, a_type, a_inst, b_pkg, b_lvl, b_type, b_inst,
+        ),
+        parse=int,
+    )
+    return NodeIdCompatibilityResponse(
+        compatibility=compatibility,
+        a=[a_pkg, a_lvl, a_type, a_inst],
+        b=[b_pkg, b_lvl, b_type, b_inst],
+        runtime=runtime,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Endpoint: /api/utils/weighted_average
 #
 # Pure computation: weighted average of a list of float scores against a
