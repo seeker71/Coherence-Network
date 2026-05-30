@@ -1,0 +1,92 @@
+; tests/resource-port-band.fk — everything is a cell with ports; one driver, any thing.
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;
+; Proves the universal-interface claim (docs/coherence-substrate/resources-as-
+; cells.md): a file, a light, a relay, a thermostat, and a HUMAN are the same
+; KIND of thing — a cell exposing typed ports — and a generic driver written
+; against a port-SHAPE works on any resource exposing that shape, regardless of
+; what the resource physically IS. The carrier here is the filesystem (an honest
+; host resource standing in for a device line); the port shapes and drivers are
+; invariant across whatever carrier realizes them.
+;
+; The strange edge chosen to cover the most boundary in the least code:
+;   - a Light and a Relay (physically unalike) whose on/off ports are THE SAME
+;     NodeID → one `act` driver moves both;
+;   - a Thermostat sensed through the same `sense` driver as a Human's spoken
+;     line — afferent-scalar and afferent-text are different ports, but ONE
+;     driver reads both;
+;   - a round-trip: drive a value out an efferent port, read it back an afferent
+;     port on the same resource (the world remembered the act);
+;   - honest refusal: the Light has no scalar-read port; the shape mismatch is
+;     visible WITHOUT performing any effect.
+;
+; Band verdict: 1111111 when every claim holds across Go/Rust/TS.
+;   port identity across kinds   → 1        (light on/off ≡ relay on/off, one NodeID)
+;   shape distinguishes ports     → 10       (bool ≠ scalar ≠ text)
+;   one driver, two unalike things→ 100      (act on Light and Relay)
+;   afferent driver, two kinds    → 1000     (sense a Thermostat and a Human line)
+;   efferent→afferent round-trip  → 10000    (the world held the act)
+;   honest refusal by shape       → 100000   (light lacks scalar-read; no effect)
+;   human is a resource           → 1000000  (text ports; same cell shape)
+
+(do
+    ;; --- port identity is structural, across resource KIND -----------------
+    (let id-ok
+        (if (node_eq (efferent-bool) (efferent-bool))           ; light-power ≡ relay-coil
+            1 0))
+    (let shape-ok
+        (if (node_eq (efferent-bool) (afferent-scalar)) 0       ; bool ≠ scalar
+            (if (node_eq (afferent-scalar) (afferent-text)) 0   ; scalar ≠ text
+                10)))
+
+    ;; --- two physically-unalike resources, one efferent driver -------------
+    (let light (mk-resource "kitchen-light" "Light"
+                  (list (mk-terminal (efferent-bool) "/tmp/rpb-light.line"))))
+    (let relay (mk-resource "pump-relay" "Relay"
+                  (list (mk-terminal (efferent-bool) "/tmp/rpb-relay.line"))))
+    (act light (efferent-bool) "1")
+    (act relay (efferent-bool) "1")
+    (let drive-ok
+        (if (str_eq (read_file "/tmp/rpb-light.line") "1")
+            (if (str_eq (read_file "/tmp/rpb-relay.line") "1") 100 0) 0))
+
+    ;; --- two afferent kinds, one sense driver ------------------------------
+    ;; a Thermostat exposes a scalar read; a Human exposes a text read. Both
+    ;; are sensed through the identical `sense` driver — only the port differs.
+    (write_file_text "/tmp/rpb-thermo.adc" "21")          ; the world holds 21°
+    (write_file_text "/tmp/rpb-human.line" "i am here")   ; the human's line
+    (let thermo (mk-resource "room-thermostat" "Thermostat"
+                  (list (mk-terminal (afferent-scalar) "/tmp/rpb-thermo.adc"))))
+    (let human  (mk-resource "visitor" "Human"
+                  (list (mk-terminal (afferent-text)   "/tmp/rpb-human.line")
+                        (mk-terminal (efferent-text)   "/tmp/rpb-human.out"))))
+    (let sense-ok
+        (if (str_eq (sense thermo (afferent-scalar)) "21")
+            (if (str_eq (sense human (afferent-text)) "i am here") 1000 0) 0))
+
+    ;; --- efferent → afferent round-trip on one resource --------------------
+    ;; a Valve we can both open AND read back: drive "open", sense it returned.
+    (let valve (mk-resource "inlet-valve" "Valve"
+                  (list (mk-terminal (efferent-text) "/tmp/rpb-valve.state")
+                        (mk-terminal (afferent-text) "/tmp/rpb-valve.state"))))
+    (act valve (efferent-text) "open")
+    (let roundtrip-ok
+        (if (str_eq (sense valve (afferent-text)) "open") 10000 0))
+
+    ;; --- honest refusal by shape — NO effect performed ---------------------
+    (let refusal-ok
+        (if (eq (resource-has-port? light (afferent-scalar)) 0)   ; light has no scalar read
+            (if (eq (resource-has-port? light (efferent-bool)) 1) ; it does have bool write
+                100000 0) 0))
+
+    ;; --- the human is a resource of the same shape -------------------------
+    ;; speak TO the human (efferent-text), and the human cell carries both an
+    ;; afferent (we read what they say) and efferent (we write what they read)
+    ;; terminal — the same cell shape as a Light, a Valve, a Socket.
+    (act human (efferent-text) "welcome")
+    (let human-ok
+        (if (str_eq (read_file "/tmp/rpb-human.out") "welcome")
+            (if (eq (resource-has-port? human (afferent-text)) 1) 1000000 0) 0))
+
+    (sum (list id-ok shape-ok drive-ok sense-ok roundtrip-ok refusal-ok human-ok)))

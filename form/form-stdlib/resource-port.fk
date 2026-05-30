@@ -1,0 +1,110 @@
+; resource-port.fk — the universal interface model: everything is a cell with ports.
+;
+; The claim (docs/coherence-substrate/resources-as-cells.md): every way ANYTHING
+; interfaces with a computer or a human reduces to two operations in numeric
+; space — AFFERENT transduction (world → number, "sense") and EFFERENT
+; transduction (number → world, "act") — over TYPED PORTS whose type is a
+; content-addressed Blueprint. A file, a socket, a screen, a keyboard, a light,
+; a thermostat, a room, a human: each is a CELL exposing ports.
+;
+; The load-bearing consequence: a port is content-addressed by
+; (direction, value-shape). So a light's on/off port and a relay's on/off port
+; are THE SAME NodeID — physically nothing alike, structurally one interface.
+; One driver written against that port-shape works on both. Substitutability for
+; hardware and humans falls out of structure, exactly as it does for data.
+;
+; This file is the vocabulary; the CARRIER (which host native actually moves the
+; bytes — GPIO, socket, framebuffer, stdin) is swappable beneath a port, per
+; docs/coherence-substrate/ports-interface-and-structure.md. Here the carrier is
+; the filesystem (a real host resource, honest stand-in for a device line); the
+; port shape and the drivers are invariant across whatever carrier realizes them.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- value-shapes: the TYPE of what flows through a port ---------------
+    ;; Each is a marker Blueprint NodeID. The SAME shape everywhere — a Bool is
+    ;; a Bool whether it drives a light, a relay, a feature flag, or a GPIO pin.
+    (defn shape-bool ()   (make_nodeid 1 9 50 1))   ; on/off, true/false, 1/0
+    (defn shape-scalar () (make_nodeid 1 9 50 2))   ; a number (temp, level, position)
+    (defn shape-bytes ()  (make_nodeid 1 9 50 3))   ; an opaque byte run (file, socket)
+    (defn shape-text ()   (make_nodeid 1 9 50 4))   ; a line of language (human, log)
+    (defn shape-pixel ()  (make_nodeid 1 9 50 5))   ; a framebuffer cell (screen)
+    (defn shape-key ()    (make_nodeid 1 9 50 6))   ; a key/pointer event (keyboard, mouse)
+
+    ;; ---- direction: the two universal transductions -----------------------
+    (defn afferent () 0)   ; world → cell  (sense / perceive / read / input)
+    (defn efferent () 1)   ; cell → world  (act / express / write / output)
+
+    ;; ---- a PORT is content-addressed by (direction, value-shape) -----------
+    ;; Two ports with the same direction + shape ARE one port (one NodeID),
+    ;; regardless of which resource exposes them. This identity IS
+    ;; substitutability.
+    (defn PORT-SHAPE () (make_nodeid 1 9 51 1))
+    (defn port (direction value-shape)
+        (intern_node (PORT-SHAPE)
+            (list (intern_trivial_int direction) value-shape)))
+    (defn port-direction (p) (node_value (head (node_children p))))
+    (defn port-value-shape (p) (head (tail (node_children p))))
+
+    ;; convenience port constructors — every device's ports name themselves
+    ;; from this shared vocabulary.
+    (defn efferent-bool ()   (port (efferent) (shape-bool)))    ; light, relay, valve, GPIO-out
+    (defn afferent-bool ()   (port (afferent) (shape-bool)))    ; switch, button, GPIO-in
+    (defn afferent-scalar () (port (afferent) (shape-scalar)))  ; thermometer, ADC, dial
+    (defn efferent-scalar () (port (efferent) (shape-scalar)))  ; setpoint, motor speed, DAC
+    (defn afferent-bytes ()  (port (afferent) (shape-bytes)))   ; file-read, socket-recv, mic
+    (defn efferent-bytes ()  (port (efferent) (shape-bytes)))   ; file-write, socket-send, speaker
+    (defn afferent-text ()   (port (afferent) (shape-text)))    ; stdin, human-speaks
+    (defn efferent-text ()   (port (efferent) (shape-text)))    ; stdout, human-reads
+    (defn afferent-key ()    (port (afferent) (shape-key)))     ; keyboard, mouse
+    (defn efferent-pixel ()  (port (efferent) (shape-pixel)))   ; screen
+
+    ;; ---- a TERMINAL binds a port to a carrier handle ----------------------
+    ;; The port says WHAT interface; the handle says WHERE the carrier reaches
+    ;; it (a path here; a socket fd, a GPIO line, a framebuffer offset in prod).
+    (defn mk-terminal (port handle) (list port handle))
+    (defn term-port (t) (nth t 0))
+    (defn term-handle (t) (nth t 1))
+
+    ;; ---- a RESOURCE is a cell: (name, kind-blueprint, terminals) ----------
+    ;; kind is what the thing IS (Light, Relay, Thermostat, Screen, Human);
+    ;; terminals are how it INTERFACES. Two resources of different kind that
+    ;; share a terminal's port shape are substitutable through that port.
+    (defn mk-resource (name kind terminals) (list "resource" name kind terminals))
+    (defn res-name (r) (nth r 1))
+    (defn res-kind (r) (nth r 2))
+    (defn res-terminals (r) (nth r 3))
+
+    (defn find-terminal (terms port)
+        (if (nil? terms) (empty)
+            (if (node_eq (term-port (head terms)) port)
+                (list (head terms))
+                (find-terminal (tail terms) port))))
+
+    ;; resource-has-port? — does this thing expose this interface at all? The
+    ;; basis of honest refusal: you cannot drive a bool into a scalar-only
+    ;; sensor; the shape mismatch is visible before any effect.
+    (defn resource-has-port? (r port)
+        (if (eq (len (find-terminal (res-terminals r) port)) 1) 1 0))
+
+    ;; ---- the GENERIC drivers — invariant across resource KIND -------------
+    ;; act:  number → world. Drive an efferent port with a value. Works on a
+    ;;       light, a relay, a valve, a screen — anything exposing the port.
+    ;; sense: world → number. Read an afferent port. Works on a thermometer, a
+    ;;       switch, a socket, a microphone — anything exposing the port.
+    ;; Values travel as their wire form (text/bytes); the port's value-shape
+    ;; says how to interpret. The carrier here is the filesystem; swap it for a
+    ;; device native and these drivers do not change.
+    (defn act (r port value)
+        (do
+            (let t (find-terminal (res-terminals r) port))
+            (write_file_text (term-handle (head t)) value)
+            (term-handle (head t))))
+
+    (defn sense (r port)
+        (do
+            (let t (find-terminal (res-terminals r) port))
+            (read_file (term-handle (head t)))))
+
+    0)
