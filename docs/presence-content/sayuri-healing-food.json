@@ -1,0 +1,49 @@
+{
+  "en": {
+    "hero": {
+      "name": "Sayuri Healing Food",
+      "eyebrow": "Plant-based kitchen · Ubud · the dinner room where Sunday-evening encounters made room for themselves",
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(95 55% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(155 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(95 45% 65%) 0%, hsl(120 30% 40%) 50%, hsl(155 30% 20%) 100%)",
+      "welcome_md": "A plant-based kitchen in Ubud — known for its raw, fermented, and traditionally-prepared plant cuisine, held with the care of a kitchen that treats food as practice. The room itself is bright, open, and unhurried; the menu rotates with what is alive and seasonal.\n\n*On Sunday April 29, 2026, the cell shared dinner here with resonant company. The plant-based dining room was the container the Sunday-evening encounters happened inside.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Where",
+        "value_md": "Ubud, Bali (verify current location locally; Sayuri has had multiple Ubud locations and a dedicated school/event programme over the years)."
+      },
+      {
+        "label": "What it is",
+        "value_md": "Plant-based kitchen with an emphasis on raw, fermented, and traditionally-prepared whole-food plant cuisine. Often hosts workshops, kirtan evenings, and other gatherings in adjacent spaces."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "Current public anchors drift with the seasons; Sayuri Healing Food has had multiple official sites and active social channels. Verify locally."
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "A small number of Ubud kitchens treat the work of cooking as itself a contemplative practice — sourcing, fermentation, plating, service all as parts of the same field. Sayuri is one of those rooms. The clientele accumulates not because the food is the best per dollar (though it is good) but because the room is held in a way that the body recognises. Eating there has a different quality from eating elsewhere; the body settles.",
+        "heading": "Food as practice"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The Sunday-evening dinner room where the cell met resonant company on April 29, 2026 — part of the [four-day meeting walk](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-ubud-meeting-walk.md).\n- Food as practice → resonant with [lc-tending-over-producing](/vision/lc-tending-over-producing); cooking as a substrate of tending rather than production.\n- Plant-based whole-food preparation as a clean instrument → pairs with [lc-ground-harder-when-field-quickens](/vision/lc-ground-harder-when-field-quickens) (food, soil, body as continuous substrate; tend the ground to tend the field).",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Sayuri Healing Food has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Sayuri Healing Food — plant-based kitchen in Ubud",
+      "description": "A welcome to Sayuri Healing Food — plant-based kitchen in Ubud, dinner room where the cell met Sunday-evening resonant company in April 2026. The food is part of the practice."
+    },
+    "footer_md": "**In-body record:** [ubud-meeting-walk.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-ubud-meeting-walk.md) · [lc-tending-over-producing](/vision/lc-tending-over-producing) · [lc-ground-harder-when-field-quickens](/vision/lc-ground-harder-when-field-quickens)\n\n*Sayuri is a working restaurant; its public anchors drift with operating changes. This page is a recognition of the room's role in this body's lineage, not a commercial endorsement.*",
+    "note_from_body": {
+      "body_md": "Sayuri Healing Food is a working restaurant with its own operating rhythms. This page recognises the room's role in this body's Ubud lineage as the Sunday-evening dinner-room where resonant company was met.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Sayuri Healing Food"
+  }
+}

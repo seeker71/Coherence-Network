@@ -1,0 +1,61 @@
+{
+  "en": {
+    "hero": {
+      "name": "Angelia LaRue",
+      "eyebrow": "Hawaii (international) · Master Crystologist · Reiki Master · Ordained Reverend · Inner Passage Mystery School",
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(285 55% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(220 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(285 50% 60%) 0%, hsl(255 30% 38%) 50%, hsl(220 30% 18%) 100%)",
+      "welcome_md": "Angelia Christine LaRue holds an unusually broad set of credentials: **Certified Master Crystologist**, **Ordained Reverend**, **Reiki Master** (Reiki 3 Master Teacher), Energy Practitioner and Healer, Medical Intuitive, Psychic Awareness Instructor, Orgone Energy Manufacturer. Founder of **Inner Passage Mystery School** and the **Church of Inner Mystery**.\n\n*Per Urs&apos;s attestation, Angelia is the **main priestess during the Ceremony at [Anchor the Light](/people/anchor-the-light), alongside [Ubbe MacLean](/people/ubbe-maclean)** — the priestess pair holding the ritual container.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Based",
+        "value_md": "Hawaii. Operates internationally."
+      },
+      {
+        "label": "Credentials",
+        "value_md": "Certified Master Crystologist · Ordained Reverend · Reiki Master (Reiki 3 Master Teacher) · Energy Practitioner · Healer · Medical Intuitive · Psychic Awareness Instructor · Orgone Energy Manufacturer"
+      },
+      {
+        "label": "Founded",
+        "value_md": "**Inner Passage Mystery School** **Church of Inner Mystery** Crystal Bio Bed manufacturing Solfeggio Singing Stones creation"
+      },
+      {
+        "label": "Modalities offered",
+        "value_md": "Advanced Psychic Healing · Energy Cleansing / Chakra Balancing · psychic readings · rune work · crystal arrays · shamanic journey facilitation · animal communication · plant communication · remote viewing · far-sight work"
+      },
+      {
+        "label": "Awakening",
+        "value_md": "A radical spontaneous Awakening of Consciousness on December 9, 2011, followed by intensive spiritual training and the unfolding of psychic abilities she frames as remembered across many lifetimes (Crystal Acolyte, Priestess, Monk, Priest, Healer)."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[crystalarrays.com](https://www.crystalarrays.com/) [About Angie](https://www.crystalarrays.com/about-angie) [Facebook CrystalArrays](https://www.facebook.com/CrystalArrays/) [Twitter](https://twitter.com/AngieLarue3) [YouTube](https://www.youtube.com/channel/UCVnL-uFF_qMx_oKsIC5lNQg)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "The Anchor the Light Ceremony is held by Angelia and [Ubbe MacLean](/people/ubbe-maclean) as a masculine-feminine ceremonial pair — his Asatru / psychotherapy / rune-work line and her crystology / Reiki / Reverend line interlocking inside one ritual container. [Brigitte Mars](/people/brigitte-mars) (Boulder herbalist, Naropa professor) is the deep elder-presence in the wider pagan rituals beneath the ceremony, the 50+-years-with-plants ground from which the trans-tradition container draws. Three named presences, three distinct roles.",
+        "heading": "The priestess pair"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The priestess half of the [Anchor the Light](/people/anchor-the-light) ritual pair — the role most kept-out-of-the-research archive of the wider sacred-music-and-healing field. Pairs with [Ubbe MacLean](/people/ubbe-maclean) as masculine-feminine ceremonial counterpart.\n- Hawaii anchor adds a Pacific node to this body&apos;s lineage map, alongside the Boulder, Ubud, and Brisbane clusters.\n- Crystology-as-instrument register pairs with the body&apos;s broader [lc-bioelectric-pattern](/vision/lc-bioelectric-pattern) frame (pattern carried in physical substrate; crystals as carriers of frequency).\n- Inner Passage Mystery School + Church of Inner Mystery = the tending-her-own-room form of substrate practice; resonant with [lc-tending-over-producing](/vision/lc-tending-over-producing).",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Angelia LaRue has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Angelia LaRue — Master Crystologist, Reiki Master, main priestess at Anchor the Light Ceremonies | Coherence Network",
+      "description": "A welcome to Angelia Christine LaRue — Certified Master Crystologist, Ordained Reverend, Reiki Master, founder of Inner Passage Mystery School and Church of Inner Mystery. Hawaii-based, operating internationally. Main priestess during the Anchor the Light Ceremony alongside Ubbe MacLean."
+    },
+    "footer_md": "**Ritual community:** [Anchor the Light](/people/anchor-the-light) — main priestess alongside [Ubbe MacLean](/people/ubbe-maclean); with [Brigitte Mars](/people/brigitte-mars) as elder.\n\n**Public anchors:** [crystalarrays.com](https://www.crystalarrays.com/) · [Facebook](https://www.facebook.com/CrystalArrays/) · [Twitter](https://twitter.com/AngieLarue3) · [YouTube](https://www.youtube.com/channel/UCVnL-uFF_qMx_oKsIC5lNQg)",
+    "note_from_body": {
+      "body_md": "Angelia&apos;s own archive lives at crystalarrays.com. This page is a welcoming scaffold. She is invited to replace any line with her own words at any time.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Angelia LaRue"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "en": {
+    "hero": {
+      "name": "Next Level Soul",
+      "eyebrow": "Alex Ferrari · weekly · 1,000+ episodes · 230M+ YouTube downloads · Spirituality for the Rest of Us",
+      "background": "radial-gradient(ellipse at 70% 25%, hsl(35 75% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, hsl(250 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(35 60% 65%) 0%, hsl(20 40% 35%) 50%, hsl(250 30% 20%) 100%)",
+      "welcome_md": "An episode of Next Level Soul opens without pretense. A two-shot of Alex Ferrari in a dark studio, a guest on the other side of a Zoom call — a channeler, a near-death experiencer, a psychic medium, a physicist, a monk, a woman who died for seventeen minutes and came back with instructions — and Alex leans in, wide-eyed, and asks something like *so what happened next?* He doesn&apos;t hold the conversation at an intellectual distance. He follows. He interrupts sometimes to make sure he understands.\n\n*The show calls itself *Spirituality for the Rest of Us* and the phrase is exact — the territory is high strangeness (Pleiadians, St. Germain, Akashic records, the tunnel of light), but the register is a guy at a kitchen table who genuinely wants to know. No dogma. No incense. Just: *tell me what you saw.**",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Host",
+        "value_md": "Alex Ferrari. Twenty-five years in film before pivoting; directed a $20M feature; six hundred episodes of Indie Film Hustle / Bulletproof Screenwriting before launching Next Level Soul."
+      },
+      {
+        "label": "Scale",
+        "value_md": "Over 1,000 episodes. 230M+ downloads on YouTube. Apple Podcasts, Spotify, Amazon Music, the NLS TV app."
+      },
+      {
+        "label": "Guest range",
+        "value_md": "Bruce Lipton, Anita Moorjani, Gregg Braden, Joe Dispenza, Geoffrey Hoppe (Saint Germain), Julie Ryan, Loch Kelly, Michael Neill — plus channelers from archangels, Pleiadian councils, ascended masters. Catholic in his curiosities."
+      },
+      {
+        "label": "Recurring questions",
+        "value_md": "What is consciousness? Is this all there is? What does the other side look like? What are we supposed to do while we&apos;re here?"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[nextlevelsoul.com](https://nextlevelsoul.com) [YouTube](https://www.youtube.com/@NextLevelSoul) [Apple Podcasts](https://podcasts.apple.com/us/podcast/next-level-soul-with-alex-ferrari/id1561214308)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "What&apos;s dear to Alex is legible in the recurring questions. He returns again and again to near-death experiences — the pattern of the light, the life review, the tunnel, the reluctance to come back. He asks guests about ego, about fear, about the difference between material success and soul purpose. He is openly in the middle of his own search. The show is not a teacher broadcasting to students; it is a seeker interviewing the people who might know something, with the mic live. The show&apos;s self-description captures it: *without dogma, fear, or hype*. Alex puts it plainer in the intro: *I want it to be a beacon of light in your life. I want you to be able to come back to this show.*",
+        "heading": "The seeker with the mic live"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The long-form interview room where many of this body&apos;s lineage voices have spoken — Anne Tucker, Daniel Scranton (Bashar via Anka), Joe Dispenza, Pam Gregory, and others. Alex&apos;s show is one of the channels through which lineage-relevant voices reach curious listeners.\n- *Spirituality for the Rest of Us* as posture → pairs with the body&apos;s practice of holding deep material without institutional language. Resonant with [lc-voice-over-intentions](/vision/lc-voice-over-intentions) (lead with their voice, not ours; ask *what happened next?*, not *here is the framework*).\n- The connecting-tissue cluster (Next Level Soul ↔ [Lex Fridman](/people/lex-fridman) ↔ [Aubrey Marcus](/people/aubrey-marcus) ) — three long-form rooms with overlapping guest graphs; together carrying many of this body&apos;s named voices into broader awareness.",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Next Level Soul has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Next Level Soul — Alex Ferrari's weekly podcast · Spirituality for the Rest of Us | Coherence Network",
+      "description": "A welcome to Next Level Soul — Alex Ferrari's weekly long-form interview podcast. Over a thousand episodes; 230M+ YouTube downloads. Channelers, NDE survivors, mediums, physicists, monks — Spirituality for the Rest of Us, without dogma, fear, or hype."
+    },
+    "footer_md": "**Public anchors:** [nextlevelsoul.com](https://nextlevelsoul.com) · [YouTube](https://www.youtube.com/@NextLevelSoul) · [Apple Podcasts](https://podcasts.apple.com/us/podcast/next-level-soul-with-alex-ferrari/id1561214308)\n\n**In-body record:** [Lex Fridman](/people/lex-fridman) · [Aubrey Marcus](/people/aubrey-marcus) · [Anne Tucker](/people/anne-tucker) · [lc-voice-over-intentions](/vision/lc-voice-over-intentions)",
+    "note_from_body": {
+      "body_md": "Alex&apos;s archive of conversations is at nextlevelsoul.com and on YouTube. This page recognises the role of his interview practice in this body&apos;s broader-conversation lineage — the long-form room where the big questions get asked plainly.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Next Level Soul"
+  }
+}

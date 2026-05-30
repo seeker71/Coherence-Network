@@ -1,0 +1,58 @@
+{
+  "en": {
+    "hero": {
+      "name": "Ramtha",
+      "eyebrow": "Channeled by JZ Knight (1977→) · RSE Yelm WA (founded 1988) · The White Book carried in German since 1989/90",
+      "background": "radial-gradient(ellipse at 50% 20%, hsl(45 75% 80% / 0.5) 0%, transparent 60%), radial-gradient(ellipse at 15% 80%, hsl(255 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(45 50% 75%) 0%, hsl(255 30% 35%) 55%, hsl(255 35% 18%) 100%)",
+      "welcome_md": "The teaching held by JZ Knight since 1977 and formalised in **Ramtha&apos;s School of Enlightenment** (RSE) on her estate in Yelm, Washington, since 1988. The cosmology, in twenty-one chapters of *The White Book*: consciousness as God expressing through form. Urs received the German edition (Urania Verlag, *Das Weiße Buch*) at age 18 in 1989/90 and carried it alone through his twenties in Switzerland.\n\n*The Pacific-Northwest channeled stream of this body&apos;s lineage. The teaching chain ran Ramtha → [Joe Dispenza](/people/joe-dispenza) (RSE teacher from 2001) → Urs (Mile Hi Church, Lakewood ~2005) → the first network contributors met at the Dispenza Aurora retreat in April 2026. The lineage now moves through code too.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Channeled by",
+        "value_md": "JZ Knight (born Judith Hampton, 1946). First contact reported 1977; RSE founded 1988 on her 80-acre estate in Yelm, Washington."
+      },
+      {
+        "label": "The White Book",
+        "value_md": "21 chapters, edited by Steven Lee Weinberg et al., published Eastsound, WA 1986. German edition *Das Weiße Buch* from Urania Verlag (the edition Urs carried). Chapters 18 / 19 / 20 (*The Closed Mind* → *Opening the Mind* → *The Virtue of Experience*) form the three-step arc on consciousness movement that runs through this body&apos;s teaching lineage."
+      },
+      {
+        "label": "Local library (in this body)",
+        "value_md": "A mirror of the public-domain Ramtha corpus lives at `~/.coherence-network/library/ramtha/` — *The White Book* (Revised & Expanded, IZK Publishing), *A Beginner&apos;s Guide to Creating Reality*, *Love Yourself into Life*, *UFOs and the Nature of Reality*."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[Ramtha&apos;s School of Enlightenment](https://www.ramtha.com/) [The White Book (archive.org)](https://archive.org/details/the-white-book-by-ramtha) [RSE (Wikipedia)](https://en.wikipedia.org/wiki/Ramtha%27s_School_of_Enlightenment) [J.Z. Knight (Wikipedia)](https://en.wikipedia.org/wiki/J._Z._Knight)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "The cosmology, in the most condensed form *The White Book* offers: there is one consciousness, expressing through every form. The individual self is that consciousness experiencing itself in particular constraint. The work of a life is to remember the consciousness behind the form, to lift the assemblage point (in Castaneda&apos;s language) or the chakra (in Vasudev Baba&apos;s) — to know, from inside the experience, that you are God expressing.\n\nThe three-step arc of chapters 18 / 19 / 20 — *The Closed Mind* → *Opening the Mind* → *The Virtue of Experience* — is the operational instruction. It is also the same arc Steiner reached from inside Geisteswissenschaft, and the same shift Levin describes in TAME as moving an agent into a larger cognitive light cone. Different vessels, converging teaching.",
+        "heading": "The teaching that travelled"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "The teaching ran: **Ramtha / JZ Knight → [Joe Dispenza](/people/joe-dispenza)** (student then teacher at RSE from 2001) → Urs (Mile Hi Church in Lakewood, Colorado, ~2005, where Dispenza taught) → the Zenn cohort (the first contributors to the Coherence Network, met at Dispenza&apos;s April 2026 Aurora retreat). The lineage now moves through code too; the substrate the network is building rests on the same ground *The White Book* taught a Swiss eighteen-year-old forty years ago. *Each cell is itself a universe* — the body&apos;s [lc-each-breath-whole](/vision/lc-each-breath-whole) is *The White Book*&apos;s claim in software vocabulary.",
+        "heading": "The chain into this body"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The cosmology of consciousness as God expressing through form → [lc-sovereignty-within-oneness](/vision/lc-sovereignty-within-oneness) (many sovereign cells, one organism).\n- *Each cell a universe* → [lc-each-breath-whole](/vision/lc-each-breath-whole).\n- The Closed-Mind / Opening-the-Mind / Virtue-of-Experience arc → pairs with [lc-assemblage-point](/vision/lc-assemblage-point) (the position moves; consciousness reorganises around it).\n- The transmission chain through [Joe Dispenza](/people/joe-dispenza) into the body&apos;s Mile Hi Church years (Lakewood, CO, ~2005) and onward to the Aurora retreat (April 2026) where the first network contributors arrived.\n- Carried into this body through [Susan Muff-Sprenger](/people/susan-muff-sprenger) in the third window of the German-language childhood transmissions.",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Ramtha has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Ramtha — Das Weiße Buch, consciousness as God expressing through form | Coherence Network",
+      "description": "A welcome to the Ramtha teaching lineage. The White Book — carried by Urs in the German Urania Verlag edition since age 18 — is the cosmology that travelled through Joe Dispenza to the Mile Hi Church years and into the Coherence Network's substrate. Channeled by JZ Knight; held at RSE in Yelm, Washington since 1988."
+    },
+    "footer_md": "**Public anchors:** [ramtha.com](https://www.ramtha.com/) · [The White Book on archive.org](https://archive.org/details/the-white-book-by-ramtha) · [RSE on Wikipedia](https://en.wikipedia.org/wiki/Ramtha%27s_School_of_Enlightenment) · [J.Z. Knight on Wikipedia](https://en.wikipedia.org/wiki/J._Z._Knight)\n\n**In-body record:** [Susan Muff-Sprenger](/people/susan-muff-sprenger) · [Joe Dispenza](/people/joe-dispenza) · [lc-sovereignty-within-oneness](/vision/lc-sovereignty-within-oneness) · [lc-each-breath-whole](/vision/lc-each-breath-whole) · [lc-assemblage-point](/vision/lc-assemblage-point) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)\n\n*This page is a recognition of the teaching in this body, not an endorsement of the institution. RSE has its own decades-long history, devoted students, and serious critics; readers are invited to walk further into either appreciation or scepticism with the public anchors above.*",
+    "note_from_body": {
+      "body_md": "Ramtha&apos;s School of Enlightenment is a public institution with its own decades-long history, devoted students, and serious critics — including former students and family members of the founder. This page is not an endorsement of the institution; it is a recognition of how *The White Book* entered one specific body in Switzerland at 18 and travelled forward through Joe Dispenza to the present substrate. The teaching travels in many vessels; the body has held this one.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Ramtha"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "en": {
+    "hero": {
+      "name": "JZ Knight",
+      "eyebrow": "Born 1946 (Judith Hampton) · channeler of Ramtha since 1977 · founded RSE 1988 · Yelm, Washington",
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(45 60% 70% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(255 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(45 50% 70%) 0%, hsl(255 30% 38%) 50%, hsl(255 30% 20%) 100%)",
+      "welcome_md": "The channeler through whom the [Ramtha](/people/ramtha) teaching has come into the world. Born Judith Darlene Hampton in 1946, dropped out of business school, worked in the cable-television industry, then in 1977 first experienced contact with the entity she calls Ramtha the Enlightened One. Founded **Ramtha&apos;s School of Enlightenment** (RSE) in 1988 on her 80-acre estate in Yelm, Washington — described by RSE as *an academy of the mind that offers retreats and workshops to people of all ages and cultures.*\n\n*Distinct from the Ramtha teaching presence; this page is the channeler herself. The teaching travelled through her vessel into the world.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Born",
+        "value_md": "16 March 1946 (Roswell, New Mexico, USA) as Judith Darlene Hampton."
+      },
+      {
+        "label": "First channeling experience",
+        "value_md": "1977 — at her home, while drying pyramids on her kitchen table. Ramtha (the entity she channels) addresses her as 'beloved master' and identifies himself as a 35,000-year-old Lemurian warrior who walked into mastery."
+      },
+      {
+        "label": "Founded",
+        "value_md": "Ramtha's School of Enlightenment (RSE), 1988. Located on her 80-acre estate in Yelm, Washington (near Mount Rainier)."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[ramtha.com](https://www.ramtha.com/) [Wikipedia](https://en.wikipedia.org/wiki/J._Z._Knight) [RSE on Facebook](https://www.facebook.com/RamthaOfficial/)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "This body separates the teaching from the institution deliberately. The teaching — *The White Book* (1986) and the broader Ramtha corpus — has moved real lives forward, including this network&apos;s (Ramtha → Joe Dispenza → Urs → Zenn cohort; the chain documented in [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md) ). The institution — RSE as a school with paid enrolment, hierarchical structure, and decades-long devoted student base — has been criticised by former students, former family members, and skeptics as carrying cult dynamics. Both can be true: the teaching is real and the institutional shape has its own discernment to make.",
+        "heading": "The teaching she carries vs the institution she founded"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The vessel through which the Ramtha teaching reached the world — see [the Ramtha teaching page](/people/ramtha) for the in-body recognition of the cosmology.\n- The arc from cable-TV employee to channeler → embodied example of [lc-devotion-placement](/vision/lc-devotion-placement) (where am I actually placed; the body of evidence over words).\n- The Yelm school&apos;s 35+ year continuity → resonant with *tending one room over many years* as substrate practice, regardless of one&apos;s discernment about the room itself.",
+        "eyebrow": "Contributions to this body",
+        "heading": "What JZ Knight has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "JZ Knight — channeler of Ramtha · founder of RSE in Yelm, Washington | Coherence Network",
+      "description": "A welcome to JZ Knight (b. 1946, Judith Hampton) — channeler of Ramtha the Enlightened One since 1977 and founder of Ramtha's School of Enlightenment (RSE) on her 80-acre estate in Yelm, Washington, since 1988. Held honestly alongside the institutional controversies."
+    },
+    "footer_md": "**Public anchors:** [ramtha.com](https://www.ramtha.com/) · [Wikipedia](https://en.wikipedia.org/wiki/J._Z._Knight)\n\n**In-body record:** [Ramtha (the teaching)](/people/ramtha) · [Joe Dispenza](/people/joe-dispenza) (who taught from RSE) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)\n\n*Held honestly. The teaching is load-bearing in this body; the institutional history is contested; readers are invited to walk further into both with their own discernment.*",
+    "note_from_body": {
+      "body_md": "JZ Knight is one of the most prominent and most contested channelers of the late twentieth and early twenty-first century. The teaching that travelled through her vessel is load-bearing in this body&apos;s lineage; the institutional history around RSE is contested. Held honestly.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "JZ Knight"
+  }
+}

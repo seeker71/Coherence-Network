@@ -1,0 +1,57 @@
+{
+  "en": {
+    "hero": {
+      "name": "Ubbe MacLean",
+      "eyebrow": "Asatru · psychotherapist · life-enhancement coach · reiki master · rune-healing author · priestess pair (with Angelia LaRue) at Anchor the Light",
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(45 60% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(220 30% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(40 50% 60%) 0%, hsl(155 30% 35%) 50%, hsl(220 30% 18%) 100%)",
+      "welcome_md": "Ubbe holds an unusually wide-banded vocabulary: practitioner of **Asatru** (the Norse heathen path), clinically trained **psychotherapist**, educator, life-enhancement coach, **reiki master**, and author of the rune-healing guidebook *Healing From the Tree: Using Runes for Emotional, Physical & Soul Healing*. Each surface is its own lineage; together they make the field he holds at [Anchor the Light](/people/anchor-the-light), where he and [Angelia LaRue](/people/angelia-larue) hold the Ceremony as the priestess pair, with [Brigitte Mars](/people/brigitte-mars) as the elder presence in the wider pagan rituals.\n\n*The cross-walk between clinical psychotherapy and Asatru rune-work is rare — most carriers of either tradition stay inside it. Ubbe holds both lineages with their own integrity.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Practices held",
+        "value_md": "Asatru (Norse heathen path) · clinical psychotherapy · reiki (master) · runes (healing modality, author of Healing From the Tree) · life-enhancement coaching"
+      },
+      {
+        "label": "Where the work lives",
+        "value_md": "[Anchor the Light](/people/anchor-the-light) — the living spiritual path; the Ceremony is held by Ubbe and [Angelia LaRue](/people/angelia-larue) as priestess pair, with [Brigitte Mars](/people/brigitte-mars) as elder presence in the pagan rituals; wider community draws on runologist Freya Aswynn"
+      },
+      {
+        "label": "Personal offerings",
+        "value_md": "Life Enhancement Coaching · Mindfulness-Based Stress Reduction · Couples & Relationship Coaching · Reiki · Equine Healing Sessions · Personal Clearings · Rune Reading · Fitness Training"
+      },
+      {
+        "label": "Book",
+        "value_md": "*Healing From the Tree: Using Runes for Emotional, Physical & Soul Healing* — working manual threading runes with herbal and emotional healing register. [More](https://anchorthelight.org/healing-from-the-tree-using-runes-for-emotional-physical-soul-healing/)"
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[anchorthelight.org](https://anchorthelight.org/) [Instagram @ubbemaclean](https://www.instagram.com/ubbemaclean/) [Facebook (@anchorthelight9)](https://www.facebook.com/anchorthelight9) [Media appearances](https://anchorthelight.org/media-appearances-resources/)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "The Anchor the Light frame describes itself as *a living spiritual path rooted in direct encounter with the Divine through music, movement, and embodied awareness*. The invitation: *Enter the Ritual. Become the Experience.* Monthly wellness retreats weave Qi Gong, mindfulness meditation, acupuncture, sound bathing, biofeedback, Reiki, energy healing, forest bathing, plant medicines, life-enhancement skill building, fully organic meals, visionary art, and dance into one container. The community-side of the work shows up in pagan ritual gatherings, monthly retreats, and free guided meditations on the Anchor the Light YouTube channel.",
+        "heading": "The plural-lineage frame"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- A working example of the *plural-lineage tender* — clinically-credentialled psychotherapy held inside an Asatru and Reiki frame, all rendered as one consistent practice rather than as parallel costumes. Pairs with [lc-voice-over-intentions](/vision/lc-voice-over-intentions) (each lineage keeps its voice; no forced reconciliation).\n- The shape resonates with [Vasudev Baba](/people/vasudev-baba) (bhakti kirtan crossing into Buddhist silence at Brahma Vihara) and [Ilena Young](/people/ilena-young) (Australian regional development bridged into Indonesian wellness) — three cells whose contemporary work synthesises across traditions that the broader culture keeps separate.\n- *Direct encounter with the Divine through music, movement, and embodied awareness* is a felt-ground sibling of [Gabrielle Roth](/people/gabrielle-roth) &apos;s wave-map teaching at the body level.\n- Rune-work as a healing modality joins the body&apos;s broader [lc-bioelectric-pattern](/vision/lc-bioelectric-pattern) frame (pattern as load-bearing) from the symbolic-language side.",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Ubbe MacLean has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Ubbe MacLean — Asatru, psychotherapist, reiki master, rune-healer at Anchor the Light | Coherence Network",
+      "description": "A welcome to Ubbe MacLean — practitioner of Asatru, clinically trained psychotherapist, life-enhancement coach, reiki master, author of Healing From the Tree: Using Runes for Emotional, Physical & Soul Healing. Holds the Anchor the Light Ceremony as priestess pair with Angelia LaRue; Brigitte Mars is the elder presence in the wider pagan rituals."
+    },
+    "footer_md": "**Where the work lives:** [Anchor the Light](/people/anchor-the-light) — Ceremony held with [Angelia LaRue](/people/angelia-larue) as priestess pair; [Brigitte Mars](/people/brigitte-mars) as elder presence; wider community draws on runologist Freya Aswynn.\n\n**Public anchors:** [anchorthelight.org](https://anchorthelight.org/) · [Instagram](https://www.instagram.com/ubbemaclean/) · [Facebook](https://www.facebook.com/anchorthelight9) · [Healing from the Tree (book)](https://anchorthelight.org/healing-from-the-tree-using-runes-for-emotional-physical-soul-healing/)",
+    "note_from_body": {
+      "body_md": "This page was first deleted as auto-harvest noise during a graph-dedup pass — Ubbe MacLean looked like a placeholder without lineage research. Urs named the real ground and the page returns substantively, now grounded in the anchorthelight.org public record. Ubbe is invited to replace any line with his own words.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Ubbe MacLean"
+  }
+}
