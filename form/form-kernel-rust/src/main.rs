@@ -2791,6 +2791,69 @@ impl Kernel {
             }
         });
 
+        // --- Filesystem CRUD natives — real directories + files --------
+        // Sibling parity across Go/Rust/TS. Predicates return 1/0;
+        // mutations return 0 on success, -1 on error; fs_list returns a
+        // List of name-strings or Null on error.
+        self.register_native("fs_exists", cat_call(), |_, _, args| {
+            if fs::metadata(args[0].as_str()).is_ok() {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
+        self.register_native("fs_is_dir", cat_call(), |_, _, args| {
+            match fs::metadata(args[0].as_str()) {
+                Ok(meta) if meta.is_dir() => Value::Int(1),
+                _ => Value::Int(0),
+            }
+        });
+        self.register_native("fs_mkdir", cat_call(), |_, _, args| {
+            match fs::create_dir_all(args[0].as_str()) {
+                Ok(_) => Value::Int(0),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("fs_rmdir", cat_call(), |_, _, args| {
+            match fs::metadata(args[0].as_str()) {
+                Ok(meta) if meta.is_dir() => match fs::remove_dir_all(args[0].as_str()) {
+                    Ok(_) => Value::Int(0),
+                    Err(_) => Value::Int(-1),
+                },
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("fs_remove", cat_call(), |_, _, args| {
+            match fs::metadata(args[0].as_str()) {
+                Ok(meta) if !meta.is_dir() => match fs::remove_file(args[0].as_str()) {
+                    Ok(_) => Value::Int(0),
+                    Err(_) => Value::Int(-1),
+                },
+                _ => Value::Int(-1),
+            }
+        });
+        self.register_native("fs_rename", cat_call(), |_, _, args| {
+            match fs::rename(args[0].as_str(), args[1].as_str()) {
+                Ok(_) => Value::Int(0),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("fs_list", cat_call(), |_, _, args| {
+            match fs::read_dir(args[0].as_str()) {
+                Ok(rd) => {
+                    // sort by name for cross-kernel parity (Go's os.ReadDir
+                    // is name-sorted; Rust/Node are OS-arbitrary).
+                    let mut names: Vec<String> = rd
+                        .flatten()
+                        .map(|e| e.file_name().to_string_lossy().to_string())
+                        .collect();
+                    names.sort();
+                    Value::List(names.into_iter().map(Value::Str).collect())
+                }
+                Err(_) => Value::Null,
+            }
+        });
+
         // --- Socket natives — L1 physical layer for inter-cell IO ------
         // Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success,
         // -1 error). Connection table is a module-level OnceLock<Mutex>.
