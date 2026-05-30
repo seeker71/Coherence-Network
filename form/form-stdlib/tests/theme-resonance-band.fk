@@ -50,12 +50,15 @@
             (if (str_eq (head class13) "ahava")
                 (if (str_eq (head (tail class13)) "echad") 1000 0) 0) 0))
 
-    ;; --- the equivalence class for 207 = {or, raz} ----------------------
+    ;; --- the equivalence class for 207 = {raz, or} ----------------------
+    ;; gem-equivalents conses while scanning, so it returns later-seeded-first:
+    ;; "or" is seeded before "raz", so the class reads {raz, or}. The class
+    ;; membership is the point (both share 207); the order is the engine's.
     (let class207 (gem-equivalents 207))
     (let class207-ok
         (if (eq (len class207) 2)
-            (if (str_eq (head class207) "or")
-                (if (str_eq (head (tail class207)) "raz") 10000 0) 0) 0))
+            (if (str_eq (head class207) "raz")
+                (if (str_eq (head (tail class207)) "or") 10000 0) 0) 0))
 
     ;; --- separation is real: life, fuller-life, and wholeness are DISTINCT
     ;; gifts, not collapsed into one. chai (18) ≠ chayim (68) ≠ shalom (376).
