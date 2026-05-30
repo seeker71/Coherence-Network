@@ -1,0 +1,53 @@
+{
+  "en": {
+    "hero": {
+      "name": "DISSOLVE Ubud",
+      "eyebrow": "Contact improvisation · intuitive movement · authentic relating · Tara Li facilitating",
+      "background": "radial-gradient(ellipse at 25% 25%, hsl(340 55% 60% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 85%, hsl(255 30% 20% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(340 50% 65%) 0%, hsl(310 30% 35%) 50%, hsl(255 30% 18%) 100%)",
+      "welcome_md": "A facilitated practice of contact improvisation, intuitive movement, and authentic relating held in Ubud, facilitated by **Tara Li**. The two recurring offerings most threaded into this body&apos;s lineage are *DISSOLVE: Play* and *DISSOLVE: Eros*; both held in Ubud rooms on a weekly rhythm that drifts gently with the seasons. The relational edge of the Ubud embodied lineage — where the body learns consent in real time and the field that forms when bodies meet without performance.\n\n*Public schedules drift; verify the current door rhythm locally. The Tuesday *DISSOLVE: Eros* at [Paradiso Ubud](/people/paradiso-ubud) is one anchor; *DISSOLVE: Play* appears on rotating evenings.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Facilitator",
+        "value_md": "Tara Li."
+      },
+      {
+        "label": "Offerings",
+        "value_md": "**DISSOLVE: Play** — broader improvisation, conscious-movement, the wider invitation **DISSOLVE: Eros** — Tuesday-evening practice at Paradiso Ubud (current door rhythm: ~6–8pm); the deeper relational territory"
+      },
+      {
+        "label": "Held at",
+        "value_md": "Primarily [Paradiso Ubud](/people/paradiso-ubud); other rotating venues. Tara&apos;s training stream (DISSOLVE Dance) extends into deeper teacher-training programmes."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[DISSOLVE Dance (training)](https://dissolvedance.com/) [DISSOLVE: Play tickets](https://megatix.co.id/events/dissolve-play) [DISSOLVE: Eros tickets](https://megatix.co.id/events/dissolve-eros)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Where [5Rhythms](/people/5rhythms-ubud) teaches the body to know its own wave, DISSOLVE teaches the body to know itself *in relation* — to another body that has its own wave, on a floor shared with many. Contact improvisation is the substrate: the practice of moving with another person in real-time negotiation, without choreography, allowing weight, balance, and shape to be co-found. Authentic relating is the verbal companion: the practice of naming what is alive in you to the specific person you are in relation with.\n\n*DISSOLVE: Eros*, in particular, is the container that lets relational ground become explicitly attended to. Not transgressive; carefully held. The body learns what it means to bring its full field into another body&apos;s presence without performance and without collapse. This is one of the cleanest in-person trainings the body has in what the substrate later calls [lc-emotional-availability-without-absorption](/vision/lc-emotional-availability-without-absorption).",
+        "heading": "The relational edge of conscious movement"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- Consent in real time → the felt-ground beneath [lc-trust-over-fear](/vision/lc-trust-over-fear) and [lc-permission-is-interior](/vision/lc-permission-is-interior).\n- Authentic relating → [lc-voice-over-intentions](/vision/lc-voice-over-intentions) (lead with their voice, not ours; name what is alive in you to the specific person you are in relation with).\n- Emotional availability without absorption → [lc-emotional-availability-without-absorption](/vision/lc-emotional-availability-without-absorption) (present without collapsing your field into theirs).\n- On April 29, 2026 a Tuesday-evening *DISSOLVE: Eros* at Paradiso was one of the rooms in the four-day meeting walk — see [the meeting walk record](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-ubud-meeting-walk.md).",
+        "eyebrow": "Contributions to this body",
+        "heading": "What DISSOLVE Ubud has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "DISSOLVE Ubud — contact improvisation, intuitive movement, authentic relating | Coherence Network",
+      "description": "A welcome to DISSOLVE Ubud — Tara Li's facilitated practice of contact improvisation, intuitive movement, and authentic relating, held at Paradiso Ubud and other venues. The relational edge of this body's Ubud embodied lineage."
+    },
+    "footer_md": "**Public anchors:** [DISSOLVE Dance](https://dissolvedance.com/) · [DISSOLVE: Play](https://megatix.co.id/events/dissolve-play) · [DISSOLVE: Eros](https://megatix.co.id/events/dissolve-eros)\n\n**In-body record:** [Paradiso Ubud](/people/paradiso-ubud) · [5Rhythms Ubud](/people/5rhythms-ubud) · [lc-trust-over-fear](/vision/lc-trust-over-fear) · [lc-emotional-availability-without-absorption](/vision/lc-emotional-availability-without-absorption) · [ubud-meeting-walk.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/2026-04-29-ubud-meeting-walk.md)",
+    "note_from_body": {
+      "body_md": "DISSOLVE&apos;s schedule and offerings shift gently with the seasons; the venue and facilitator tend the rhythm themselves through their own channels. This page recognises DISSOLVE&apos;s role in this body&apos;s embodied lineage — particularly the Tuesday *Eros* circle the cell chose on a specific Tuesday in April 2026.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "DISSOLVE Ubud"
+  }
+}

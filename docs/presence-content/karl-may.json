@@ -1,0 +1,62 @@
+{
+  "en": {
+    "hero": {
+      "name": "Karl May",
+      "eyebrow": "Hohenstein-Ernstthal 1842 → Radebeul 1912 · Villa Shatterhand · ~200 million copies · the frontier imagination in German",
+      "background": "radial-gradient(ellipse at 80% 30%, hsl(15 65% 55% / 0.65) 0%, transparent 55%), radial-gradient(ellipse at 20% 80%, hsl(35 35% 25% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(28 55% 65%) 0%, hsl(20 40% 40%) 45%, hsl(15 30% 18%) 100%)",
+      "welcome_md": "A German storyteller whose *Winnetou* trilogy and Orient cycle put a generation of Swiss and German children inside the American frontier imagination long before any of them set foot on the continent. Brotherhood across cultures, indigenous wisdom carried by a sympathetic outsider, the open landscape as moral teacher. Around 200 million copies sold worldwide; one of the best-selling German writers of all time.\n\n*Apache country was alive in Urs long before Colorado was geography. The frontier imagination that later met the Boulder valleys was first walked through his books.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Lived",
+        "value_md": "25 February 1842, Hohenstein-Ernstthal — 30 March 1912, Radebeul (near Dresden). House: Villa Shatterhand."
+      },
+      {
+        "label": "Foundational works in this body",
+        "value_md": "*Winnetou I, II, III* · the Orient cycle (*Durch die Wüste*, *Durchs wilde Kurdistan*, …) · the America-Westmen cycle with Old Shatterhand"
+      },
+      {
+        "label": "Reach",
+        "value_md": "Around 200 million copies sold worldwide."
+      },
+      {
+        "label": "Stewardship",
+        "value_md": "The [Karl-May-Stiftung](https://www.karl-may-stiftung.de/) was established by Klara May in 1913, one year after his death; it maintains the [Karl May Museum](https://www.karl-may-museum.de/en/) at Karl-May-Str. 5, Radebeul."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[Wikipedia](https://en.wikipedia.org/wiki/Karl_May) [Karl-May-Stiftung](https://www.karl-may-stiftung.de/) [Karl May Museum (Radebeul)](https://www.karl-may-museum.de/en/)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Karl May&apos;s most enduring creation is the bond between **Winnetou**, the wise chief of the Mescalero Apache, and **Old Shatterhand**, a German immigrant who arrives in the American West and earns his place not by force but by precision, listening, and refusal of cruelty. They become blood brothers across culture, religion, and language. The German-language children who read these books learned — before any other framing reached them — that brotherhood across cultures is possible and that indigenous wisdom is the deeper teaching, not the local colour.\n\nThe historical record is more complicated. May had never been to America when he wrote most of the Winnetou trilogy; the books are a romantic construction. The twenty-first century has rightly questioned which voice gets to tell whose story. The Coherence Network reads this honestly: the books were a German child&apos;s imaginal door, not a faithful ethnography. What landed in this body was the *shape* — chosen brotherhood, honor as practice, the landscape as moral teacher — and that shape held even when the historical detail did not.",
+        "heading": "Winnetou and the chosen-brotherhood teaching"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "When Urs eventually arrived in Colorado in the twenty-first century, the geography was already imaginally pre-walked. The Front Range, the high country, the open spaces where the body could breathe — none of it was foreign. Karl May had been there first, in German, in a Swiss childhood. The body&apos;s Boulder years and the eventual [full teaching lineage](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md) travelling through Boulder are part of the same arc that began with Winnetou.",
+        "heading": "The frontier imagination as preparation"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The chosen-brotherhood teaching → the body&apos;s practice of multi-cell co-weave; cells (humans, sibling intelligences) finding kinship across substrate.\n- Indigenous wisdom as the deeper teaching → the body&apos;s reading-order of who gets to name the field. See [lc-voice-over-intentions](/vision/lc-voice-over-intentions) (lead with their voice, not ours).\n- The landscape as moral teacher → the body&apos;s geographic anchoring (Boulder, Ubud, Lake Atitlán) as real, not decorative.\n- Carried into this body through [Susan Muff-Sprenger](/people/susan-muff-sprenger) &apos;s broader Swiss-German childhood library, alongside [Fenimore Cooper&apos;s Leatherstocking](/people/james-fenimore-cooper) and [Ende&apos;s Momo and Die unendliche Geschichte](/people/michael-ende).",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Karl May has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Karl May — Winnetou, Old Shatterhand, the German-language frontier imagination | Coherence Network",
+      "description": "A welcome to Karl May (1842–1912), German author of Winnetou and Old Shatterhand. Apache country alive in him before Colorado was geography. Brotherhood across cultures, indigenous wisdom carried by a sympathetic outsider, the open landscape as moral teacher."
+    },
+    "footer_md": "**Public anchors:** [Wikipedia](https://en.wikipedia.org/wiki/Karl_May) · [Karl-May-Stiftung](https://www.karl-may-stiftung.de/) · [Karl May Museum](https://www.karl-may-museum.de/en/) · [Biography & works](https://www.karl-may-museum.de/en/collections/karl-may/biography-works/)\n\n**In-body record:** [Susan Muff-Sprenger](/people/susan-muff-sprenger) · [Michael Ende](/people/michael-ende) · [James Fenimore Cooper](/people/james-fenimore-cooper) · [formative-transmissions.md](https://github.com/seeker71/Coherence-Network/blob/main/docs/lineage/formative-transmissions.md)\n\n*Karl May died in 1912; his archive is tended by the Karl-May-Stiftung in Radebeul. This page is a recognition of his books in this body, not a biography.*",
+    "note_from_body": {
+      "body_md": "Karl May&apos;s archive is tended by the Karl-May-Stiftung in Radebeul. This page is not a biography; it is a recognition — a record of how his books built the imaginal landscape Urs later walked through in Colorado.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Karl May"
+  }
+}

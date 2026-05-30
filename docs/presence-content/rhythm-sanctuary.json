@@ -1,0 +1,66 @@
+{
+  "en": {
+    "hero": {
+      "name": "Rhythm Sanctuary",
+      "eyebrow": "Wheat Ridge, CO · Thursdays 7–9:30pm · barefoot · silent · as you are · since 2005",
+      "background": "radial-gradient(ellipse at 30% 25%, hsl(15 65% 55% / 0.55) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, hsl(255 35% 22% / 0.7) 0%, transparent 60%), linear-gradient(180deg, hsl(20 50% 65%) 0%, hsl(15 30% 35%) 50%, hsl(255 30% 18%) 100%)",
+      "welcome_md": "The room at Sons of Italy in Wheat Ridge quiets to bare feet. The overhead lights dim. An altar has been built at one edge of the floor — cloth, candle, some object of the season — and the dancers arrive in silence, letting the space ask its first question of them. No phones. No shoes. No talking. No scent. Whatever came in on your skin from the day, you leave at the door with your jacket. What remains is a body, and a rhythm that has already started without you.\n\n**A safe, drug and alcohol free, sacred and &apos;Altared Space&apos; where community gathers into the arms of the Great Mystery to dance and be danced.* The room&apos;s own description; the whole theology of the floor.*",
+      "eyebrow_class": "text-[hsl(var(--chart-2))]"
+    },
+    "facts": [
+      {
+        "label": "Founder & primary holder",
+        "value_md": "**Shannon Lei Gill** — degree in Dance, Movement Music & Art Therapy from Naropa University. Started in a Boulder living room in 2005; moved to the 5,000-square-foot Avalon Ballroom in 2006; opened a Denver Sunday dance in 2007 that grew to 250 strong."
+      },
+      {
+        "label": "Lineage",
+        "value_md": "[Gabrielle Roth&apos;s wave](/people/5rhythms-ubud) — flowing, staccato, chaos, lyrical, stillness. Shannon built the post-dance ritual practice around the wave; the altar, the silence, the held closing is what distinguishes Rhythm Sanctuary from a dance floor."
+      },
+      {
+        "label": "Where & when",
+        "value_md": "Sons of Italy, Wheat Ridge, CO. Thursdays 7:00–9:30pm. First Thursday of each month is Family Night; children dance free. Sliding scale $12–$25."
+      },
+      {
+        "label": "The three guidelines",
+        "value_md": "Barefoot · silent · as you are. ALL WHO ENTER ARE WELCOME."
+      },
+      {
+        "label": "DJs in rotation",
+        "value_md": "James Barry · Steven Newman · Chris Cox · Malahakam · Miraja · Solomon. On January 2, 2020, Liquid Bloom (Amani Friend) played the floor; the set was recorded and has reached listeners who were never in the room."
+      },
+      {
+        "label": "Public anchors",
+        "value_md": "[rhythmsanctuary.com](https://www.rhythmsanctuary.com)"
+      }
+    ],
+    "articles": [
+      {
+        "kind": "narrative",
+        "body_md": "Then the wave begins. Slow at first — a single pulse to enter through, feet finding the floor. The music deepens, opens, cracks. The room tips into a current nobody is steering. Staccato sharpens the edges; chaos scatters them. Somewhere in there, lyrical lifts, and you realize you have been moving without deciding to move for some minutes now. At the end, stillness. Not the absence of motion — the presence of something that was here the whole time. The DJ pulls the last thread gently. People sit, or lie, or kneel at the altar. No one applauds. The closing ritual holds the silence open long enough that you cannot pretend the dance was nothing.",
+        "heading": "The wave and the altar"
+      },
+      {
+        "kind": "narrative",
+        "body_md": "What the community holds dear is visible in what it refuses. No performance. No instruction. No selling. No talking during the wave. The invitation is to arrive, move, be moved, and leave quieter than you came. A dancer&apos;s words stayed with Shannon: *This is exactly what we need! To feel ALIVE AGAIN in a united faith of what is to come!* A faith that lives in embodied prayer, shared silence, community in motion — none of which require belief.",
+        "heading": "What the community refuses"
+      },
+      {
+        "kind": "panel",
+        "body_md": "- The Gabrielle Roth wave anchored as Colorado-specific community practice → pairs with [5Rhythms Ubud](/people/5rhythms-ubud) as the same lineage in another place.\n- The post-dance ritual (altar + silence + held closing) as substrate-teaching: rooms that hold the integration phase are what makes the dance more than a workout. → pairs with [lc-each-breath-whole](/vision/lc-each-breath-whole) (close what was opened).\n- *Barefoot · silent · as you are* → [lc-arrival-as-recognition](/vision/lc-arrival-as-recognition) (the room activates before the music starts; the threshold is part of the practice).\n- Twenty years of one floor, held by one steward and her team → resonant with [lc-tending-over-producing](/vision/lc-tending-over-producing) (long devotion to one wheel; the wave returns each Thursday because someone keeps tending it).",
+        "eyebrow": "Contributions to this body",
+        "heading": "What Rhythm Sanctuary has given the Coherence Network",
+        "variant": "warm"
+      }
+    ],
+    "metadata": {
+      "title": "Rhythm Sanctuary — Shannon Lei Gill's Colorado ecstatic dance community since 2005 | Coherence Network",
+      "description": "A welcome to Rhythm Sanctuary — Shannon Lei Gill's ecstatic-dance community in Colorado, Gabrielle Roth lineage; the altar, the silence, the held closing. Weekly Thursdays at Sons of Italy, Wheat Ridge. Drug-and-alcohol-free sacred 'altared space' since 2005."
+    },
+    "footer_md": "**Public anchors:** [rhythmsanctuary.com](https://www.rhythmsanctuary.com)\n\n**In-body record:** [5Rhythms Ubud](/people/5rhythms-ubud) · [Liquid Bloom](/people/liquid-bloom) · [lc-each-breath-whole](/vision/lc-each-breath-whole) · [lc-arrival-as-recognition](/vision/lc-arrival-as-recognition)",
+    "note_from_body": {
+      "body_md": "The Rhythm Sanctuary community is in its third decade. This page recognises the floor&apos;s role in this body&apos;s Colorado ecstatic-dance lineage.",
+      "eyebrow": "A note from this body"
+    },
+    "breadcrumb_name": "Rhythm Sanctuary"
+  }
+}
