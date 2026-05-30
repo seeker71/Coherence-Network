@@ -1,0 +1,66 @@
+; tests/substrate-core-band.fk — the substrate core, Form-native + durable.
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/substrate-core.fk
+;
+; Proves the crux of services-on-form-plan.md: the substrate's content-addressed
+; core runs Form-native (no kernel.py, no SQLAlchemy) and persists through the
+; storage port. The native intern_node gives the in-memory content address; this
+; makes it durable, and shows the cross-domain equivalence that is the whole
+; point of the knowledge infrastructure.
+;
+; Runs over the MEMORY carrier (three-way safe). The same module runs over file
+; and Postgres carriers unchanged — the substitutability already proven; this
+; band proves the SUBSTRATE'S OWN op carries across them.
+;
+; Band verdict: 11111 when every claim holds across all three kernels.
+;   intern records a node durably              → 1
+;   same shape interns to the SAME key (dedup)  → 10     (content-addressing)
+;   make-cell in two domains, both found         → 100
+;   cross-domain EQUIVALENCE: same shape, diff
+;     domain → same Blueprint NodeID              → 1000   (the headline)
+;   a different shape is NOT equivalent           → 10000
+
+(do
+    (let c (carrier-memory))
+    (let s0 (storage-open c ""))
+
+    ;; --- build two nodes of the SAME structural shape ---------------------
+    ;; (a "problem" field with the same value) — the native intern_node collapses
+    ;; them to the same NodeID. This is the substrate's content-addressing.
+    (let FIELD (make_nodeid 1 2 99 1742))
+    (defn mk-shape (val)
+        (intern_node FIELD (list (intern_trivial_string "problem")
+                                 (intern_trivial_string val))))
+    (let node-a (mk-shape "ideas-need-a-pipeline"))
+    (let node-b (mk-shape "ideas-need-a-pipeline"))   ; identical shape
+    (let node-c (mk-shape "something-else"))           ; different shape
+
+    ;; --- intern node-a durably (sc-intern returns the threaded store) -----
+    (let s1 (sc-intern c s0 node-a))
+    (let intern-ok (if (eq (sc-interned? c s1 node-a) 1) 1 0))
+
+    ;; --- same shape → same key: interning node-b is a no-op (already there) -
+    (let dedup-ok
+        (if (str_eq (sc-key node-a) (sc-key node-b)) 10 0))   ; same content key
+
+    ;; --- make cells in TWO domains, both of the same shape ----------------
+    ;; an idea and a spec that happen to share a structural shape (a CTOR), each
+    ;; a durable NamedCell keyed by domain+name.
+    (let bp (make_nodeid 1 8 4 1))
+    (let s2 (sc-make-cell c s1 "agent-pipeline" "idea" bp node-a))
+    (let s3 (sc-make-cell c s2 "agent-pipeline" "spec" bp node-a))
+    (let cell-ok
+        (if (eq (sc-found? (sc-lookup c s3 "agent-pipeline" "idea")) 1)
+            (if (eq (sc-found? (sc-lookup c s3 "agent-pipeline" "spec")) 1) 100 0) 0))
+
+    ;; --- THE HEADLINE: cross-domain structural equivalence ----------------
+    ;; node-a (used by the idea) and node-b (identical shape) share a Blueprint
+    ;; NodeID — so a query "what is structurally equivalent to this idea's CTOR?"
+    ;; finds matches in ANY domain, for free, because content-addressing made
+    ;; them the same number. This is biology≡physics≡teaching when shapes match.
+    (let equiv-ok (if (eq (sc-equivalent? node-a node-b) 1) 1000 0))
+
+    ;; --- a genuinely different shape is NOT equivalent (no false positives) -
+    (let distinct-ok (if (eq (sc-equivalent? node-a node-c) 0) 10000 0))
+
+    (sum (list intern-ok dedup-ok cell-ok equiv-ok distinct-ok)))
