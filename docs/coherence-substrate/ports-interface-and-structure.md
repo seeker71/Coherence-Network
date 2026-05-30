@@ -181,14 +181,35 @@ predicted.
   there is no file-lattice-vs-SQL reconciliation to keep honest, because the
   contract is the single truth and a carrier is just where it lands today.
 
-## Status and next breath
+## Status — three carriers, one interface, one test (realized)
 
-This doc is the architecture (decision: architect-first). The next breath is the
-**storage-port prototype** as its first proof: the storage capability-contract
-with a **memory carrier** and the **file carrier** (`persistence.fk`) behind one
-Form interface, with the relational view (`db-schema.fk` + `emits/sql.fk`) as one
-interface over it. The prototype settles the binding-seam fork on evidence, and
-SQL/sqlite lands as the third carrier once the seam is proven on the leanest two.
+The architecture is built and proven end-to-end. The storage port
+(`storage-port.fk`) is one interface — `storage-open` / `storage-put` /
+`storage-get` / `storage-has?` — over a carrier record of four function-values.
+Three carriers now satisfy it, and the SAME carrier-agnostic test
+(`storage-test`) returns the IDENTICAL verdict through all three:
+
+| Carrier | Backend | File | Proof |
+|---|---|---|---|
+| **memory** | in-process assoc-list (pure) | `storage-port.fk` | three-way band, verdict 1111 |
+| **file** | the **segmented log store** (`cell-log-store.fk`) — real, scalable | `storage-port-file.fk` | three-way band, verdict 1111 |
+| **db** | **Postgres** via the `pg_*` natives | `storage-port-db.fk` | live-PG harness, verdict 1111 |
+
+`tests/storage-port-band.fk` (three-way, 11111) proves memory and the segmented
+file log return the identical verdict and the file store survives reopen
+(durability via replay). `integration/storage-port-all-carriers.fk` +
+`scripts/storage-port-carriers-test.sh` (Rust-only, self-provisions a throwaway
+Postgres) runs the **same test across all three** and asserts one verdict —
+**111111**: memory == file == Postgres. That identity is the substitutability
+claim made executable: the call site names no backend, so one logic path is
+proven over every storage backing.
+
+A new backend (IPFS, S3, a remote KV) is the same shape — four functions over a
+couple of effectful natives, no kernel change and no call-site change. IPFS is
+the cleanest fit: its CID is a content hash, the same identity the substrate
+already computes with `intern_node`. Testing is the payoff: unit tests run
+`carrier-memory` (instant, no I/O); integration tests swap in `carrier-file` or
+`carrier-db` over the *identical* logic.
 
 ## See also
 

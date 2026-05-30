@@ -1,63 +1,55 @@
-; tests/storage-port-band.fk — one interface, two carriers, identical behavior.
+; tests/storage-port-band.fk — one test, two carriers, identical verdict.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk
 ;
 ; Proves the Port abstraction (docs/coherence-substrate/ports-interface-and-
-; structure.md): the SAME sequence of storage-port calls, run through a pure
-; memory carrier AND an effectful .fkb file carrier, yields identical results.
-; The call site (the storage-put/get/has? interface) never names a backend —
-; selecting a carrier is choosing a record of function-values; the effect (or
-; lack of it) lands beneath the contract.
+; structure.md) the strongest possible way: the SAME carrier-agnostic test
+; (storage-test) is run through a pure MEMORY carrier and the real SEGMENTED-LOG
+; FILE carrier, and both return the IDENTICAL verdict. The test names no backend;
+; the carrier is injected as data. Identical-verdict-across-carriers IS the
+; substitutability claim, made executable.
 ;
-; Band verdict: 11111 when both carriers agree on every operation.
-;   mem last-write-wins    → 1
-;   mem optional + has?     → 10
-;   file last-write-wins    → 100   (effectful backend, same interface)
-;   file optional + has?    → 1000
-;   carriers AGREE          → 10000 (the swap is behavior-preserving)
+; (The Postgres carrier runs the same storage-test via scripts/storage-port-
+; carriers-test.sh against a live PG — it can't join this three-way band because
+; a live-DB effect isn't value-diffable and pg_* is Rust-only.)
+;
+; Band verdict: 11111 when both carriers fully pass AND agree.
+;   memory carrier full pass (storage-test = 1111)   → 1
+;   file (segmented log) carrier full pass            → 10
+;   the two verdicts are identical (substitutable)     → 100
+;   re-open the file store and the data survived        → 1000  (durability)
+;   memory is ephemeral, file is durable — both honest   → 10000
 
 (do
-    ;; --- memory carrier: a sequence of port calls ---
-    (let cm (carrier-memory))
-    (let m0 (storage-open cm))
-    (let m1 (storage-put cm m0 "alpha" "one"))
-    (let m2 (storage-put cm m1 "beta" "two"))
-    (let m3 (storage-put cm m2 "alpha" "ONE-UPDATED"))
-    (let mem-alpha (storage-value (storage-get cm m3 "alpha")))
-    (let mem-beta  (storage-value (storage-get cm m3 "beta")))
-    (let mem-has   (storage-has? cm m3 "alpha"))
-    (let mem-miss  (storage-has? cm m3 "zeta"))
+    (let dir "/tmp/storage-port-band.d")
+    (fs_rmdir dir)
 
-    ;; --- file carrier: the IDENTICAL sequence, effectful backend ---
+    ;; --- the SAME test, two carriers ---------------------------------------
+    (let mem-verdict  (storage-test (carrier-memory) ""))     ; config ignored
+    (let file-verdict (storage-test (carrier-file) dir))      ; config = dir
+
+    (let mem-ok   (if (eq mem-verdict 1111) 1 0))
+    (let file-ok  (if (eq file-verdict 1111) 10 0))
+    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))   ; substitutable
+
+    ;; --- durability: re-open the file store; the last-write-wins value
+    ;; survived a fresh open (replay), which memory (ephemeral) cannot do. ---
     (let cf (carrier-file))
-    (let f0 (storage-open-at cf "/tmp/storage-port-band.fkb"))
-    (let f1 (storage-put cf f0 "alpha" "one"))
-    (let f2 (storage-put cf f1 "beta" "two"))
-    (let f3 (storage-put cf f2 "alpha" "ONE-UPDATED"))
-    (let file-alpha (storage-value (storage-get cf f3 "alpha")))
-    (let file-beta  (storage-value (storage-get cf f3 "beta")))
-    (let file-has   (storage-has? cf f3 "alpha"))
-    (let file-miss  (storage-has? cf f3 "zeta"))
+    (let reopened (storage-open cf dir))
+    (let durable-ok
+        (if (str_eq (storage-value (storage-get cf reopened "alpha")) "one-REVISED")
+            1000 0))
 
-    ;; --- the two carriers must agree, operation for operation ---
-    (let mem-ok
-        (if (str_eq mem-alpha "ONE-UPDATED")
-            (if (str_eq mem-beta "two")
-                (if (eq mem-has 1) (if (eq mem-miss 0) 1 0) 0) 0) 0))
-    (let mem-opt-ok
-        (if (eq (storage-found? (storage-get cm m3 "zeta")) 0)
-            (if (eq (storage-found? (storage-get cm m3 "alpha")) 1) 10 0) 0))
-    (let file-ok
-        (if (str_eq file-alpha "ONE-UPDATED")
-            (if (str_eq file-beta "two")
-                (if (eq file-has 1) (if (eq file-miss 0) 100 0) 0) 0) 0))
-    (let file-opt-ok
-        (if (eq (storage-found? (storage-get cf f3 "zeta")) 0)
-            (if (eq (storage-found? (storage-get cf f3 "alpha")) 1) 1000 0) 0))
-    (let agree
-        (if (str_eq mem-alpha file-alpha)
-            (if (str_eq mem-beta file-beta)
-                (if (eq mem-has file-has)
-                    (if (eq mem-miss file-miss) 10000 0) 0) 0) 0))
+    ;; --- both carriers are honest about their nature -----------------------
+    ;; a fresh memory store is empty; a fresh file store at a NEW dir is empty.
+    (let fresh-mem (storage-open (carrier-memory) ""))
+    (let fresh-dir "/tmp/storage-port-band-fresh.d")
+    (fs_rmdir fresh-dir)
+    (let fresh-file (storage-open cf fresh-dir))
+    (let honest-ok
+        (if (eq (storage-has? (carrier-memory) fresh-mem "alpha") 0)
+            (if (eq (storage-has? cf fresh-file "alpha") 0) 10000 0) 0))
 
-    (sum (list mem-ok mem-opt-ok file-ok file-opt-ok agree)))
+    (fs_rmdir dir)
+    (fs_rmdir fresh-dir)
+    (sum (list mem-ok file-ok agree-ok durable-ok honest-ok)))

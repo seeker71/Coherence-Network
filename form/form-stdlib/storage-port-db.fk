@@ -1,0 +1,70 @@
+; storage-port-db.fk — the Postgres carrier of the storage port.
+;
+; Binds the pg_* natives (the DB carrier floor) to the storage-port interface —
+; the PRODUCTION backend. Same four functions as memory and file; the call site
+; never changes. Rust-only (pg_* lives in the Rust kernel), so programs using
+; this carrier run on form-kernel-rust, exactly like the socket shim is TS-only.
+;
+; The store handle is a connection handle (an int from pg_connect). The key/value
+; table is a minimal kv table the carrier ensures on open:
+;   CREATE TABLE IF NOT EXISTS port_kv (k TEXT PRIMARY KEY, v TEXT)
+; put is an UPSERT (INSERT ... ON CONFLICT (k) DO UPDATE) — last-write-wins, the
+; same content-addressed get-or-insert gate the substrate's intern_node uses.
+; get is a SELECT; has is a COUNT. Reads use pg_query's tab/newline encoding.
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+(do
+    ;; ---- SQL string-escaping (single-quote doubling) ----------------------
+    ;; A value may contain a quote; double it so the literal is safe. Keys here
+    ;; are substrate slugs (no quotes), but escape both for honesty.
+    (defn db-esc-loop (s i n acc)
+        (if (ge i n) acc
+            (do
+                (let c (substring s i (add i 1)))
+                (db-esc-loop s (add i 1) n
+                    (str_concat acc (if (str_eq c "'") "''" c))))))
+    (defn db-esc (s) (db-esc-loop s 0 (str_len s) ""))
+    (defn db-quote (s) (str_concat "'" (str_concat (db-esc s) "'")))
+
+    ;; ---- open: connect, ensure the kv table, return the connection handle --
+    (defn db-init (config)            ; config = a libpq DSN string
+        (do
+            (let conn (pg_connect config))
+            (pg_exec conn "CREATE TABLE IF NOT EXISTS port_kv (k TEXT PRIMARY KEY, v TEXT)")
+            conn))
+
+    ;; ---- put: UPSERT (last-write-wins) ------------------------------------
+    (defn db-put (conn key value)
+        (do
+            (pg_exec conn
+                (str_concat "INSERT INTO port_kv (k,v) VALUES ("
+                    (str_concat (db-quote key)
+                        (str_concat ", "
+                            (str_concat (db-quote value)
+                                (str_concat ") ON CONFLICT (k) DO UPDATE SET v = "
+                                    (str_concat (db-quote value) "")))))))
+            conn))
+
+    ;; ---- get: SELECT → 0-or-1 optional ------------------------------------
+    ;; pg_query returns the value string for a hit, "" for no rows. We can't
+    ;; distinguish "" (no row) from a genuinely empty stored value by the result
+    ;; alone, so get checks existence via has first.
+    (defn db-get (conn key)
+        (if (eq (db-has conn key) 1)
+            (list (pg_query conn
+                (str_concat "SELECT v FROM port_kv WHERE k = "
+                    (str_concat (db-quote key) ""))))
+            (empty)))
+
+    ;; ---- has?: COUNT ------------------------------------------------------
+    (defn db-has (conn key)
+        (if (str_eq (pg_query conn
+                      (str_concat "SELECT count(*) FROM port_kv WHERE k = "
+                          (str_concat (db-quote key) ""))) "1")
+            1 0))
+
+    (defn carrier-db ()
+        (mk-carrier "postgres" db-init db-put db-get db-has))
+
+    0)

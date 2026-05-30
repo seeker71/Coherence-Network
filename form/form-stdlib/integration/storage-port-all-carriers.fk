@@ -1,0 +1,41 @@
+; integration/storage-port-all-carriers.fk — ONE test, THREE backends, one verdict.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/storage-port-db.fk
+;
+; The executable substitutability proof across ALL carriers including live
+; Postgres. Run ONLY on the Rust kernel (the pg_* carrier floor), driven by
+; scripts/storage-port-carriers-test.sh which self-provisions a throwaway PG and
+; injects the DSN. The SAME storage-test runs through memory, the segmented file
+; log, AND Postgres; all three must return the identical verdict (1111). That
+; identity is the whole claim: the call site names no backend, so one logic path
+; is proven over every storage backing — the pattern any new backend (IPFS, S3,
+; a KV store) drops into unchanged.
+;
+; Verdict: 111111 when all three carriers pass AND agree.
+;   memory full pass        → 1
+;   file (log) full pass     → 10
+;   db (Postgres) full pass   → 100
+;   memory == file            → 1000
+;   file == db                 → 10000   (the cross-backend identity)
+;   db == memory                → 100000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+    (let dir "/tmp/storage-port-all.d")
+    (fs_rmdir dir)
+    ;; fresh kv table so the db verdict is from this run only.
+    (pg_exec (pg_connect DSN) "DROP TABLE IF EXISTS port_kv")
+
+    (let mem-v  (storage-test (carrier-memory) ""))
+    (let file-v (storage-test (carrier-file) dir))
+    (let db-v   (storage-test (carrier-db) DSN))
+
+    (let mem-ok  (if (eq mem-v 1111) 1 0))
+    (let file-ok (if (eq file-v 1111) 10 0))
+    (let db-ok   (if (eq db-v 1111) 100 0))
+    (let mf-ok   (if (eq mem-v file-v) 1000 0))
+    (let fd-ok   (if (eq file-v db-v) 10000 0))
+    (let dm-ok   (if (eq db-v mem-v) 100000 0))
+
+    (fs_rmdir dir)
+    (sum (list mem-ok file-ok db-ok mf-ok fd-ok dm-ok)))
