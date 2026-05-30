@@ -1,52 +1,54 @@
-; cell-log-store.fk — a log-structured cell store that SCALES.
+; cell-log-store.fk — a SEGMENTED log-structured cell store that scales.
 ;
 ; The Bitcask shape (docs/coherence-substrate/cell-store-architecture.md): an
-; append-only log of records + an in-memory keydir (key → value offset+length).
-; This replaces the file-per-cell store that did not scale — a directory of
-; millions of files is the git loose-object anti-pattern (that store has been
-; composted). Here the store is ONE bounded log file (segmented when it grows);
-; cell count has no effect on file count, and every read is a single
-; offset-seek.
+; append-only log of records + an in-memory keydir, with the log split into
+; bounded SEGMENTS so no single file grows without limit. This replaces the
+; file-per-cell store that did not scale — a directory of millions of tiny files
+; is the git loose-object anti-pattern (composted). Here a store is a directory
+; of a HANDFUL of bounded segment files; cell count never multiplies file count,
+; and every read is a single offset-seek into one segment.
 ;
-; Record layout in the log (each appended atomically via file_append_bytes):
+;   <dir>/
+;     seg-000000.log     ← append-only segment (rolls to seg-000001 at the
+;     seg-000001.log        size threshold — bounded, never unbounded)
+;     seg-000002.log     ← the ACTIVE segment receives new appends
+;
+; Record layout per segment (appended atomically via file_append_bytes):
 ;   <tomb><SP><klen><SP><vlen><SP><key><value>\n
-;     tomb  — "0" live record, "1" tombstone (delete)
-;     klen  — decimal key length in bytes
-;     vlen  — decimal value length in bytes
-;     key   — the cell key (domain + name, caller-composed; ASCII-safe)
-;     value — the cell's serialized bytes, written RAW (may contain any byte)
-; The header is fixed-shape ASCII the reader parses; the value is sliced by the
-; keydir's recorded (offset, length), so value bytes are never parsed.
+; keydir (in-memory kernel record): key → "<seg> <offset> <length>" of the live
+; value, or the tombstone sentinel "T". last-write-wins; reads always hit newest.
 ;
-; keydir (an in-memory record / hash): key → "<offset> <length>" of the live
-; value, or absent / tombstoned. last-write-wins because a later append's offset
-; overwrites the keydir entry; reads always hit the newest.
-;
-; Scale: writes are O(1) sequential appends; reads are O(1) keydir-lookup +
-; one read_file_slice; the file count stays at one (plus compacted siblings),
-; not one-per-cell. Crash-safe: replay parses headers and truncates a torn tail.
+; Scale: writes are O(1) appends to the active segment; reads are O(1)
+; keydir-lookup + one read_file_slice into the named segment; segment COUNT stays
+; bounded (≈ total-bytes / segment-size). Crash-safe: replay parses headers and
+; stops at a torn tail. Compaction rewrites the live set into a fresh seg-000000.
 ;
 ; preludes: form-stdlib/core.fk
 ;
 (do
     ;; ---- small helpers ----------------------------------------------------
-    ;; list append (core has no append in the sexpr dialect; local recursion).
     (defn cls-app (xs ys)
         (if (nil? xs) ys (cons (head xs) (cls-app (tail xs) ys))))
-    ;; string → byte list (ASCII/byte values via ord of each char).
     (defn cls-str-bytes-loop (s i n acc)
         (if (eq i n) acc
             (cls-str-bytes-loop s (add i 1) n
                 (cls-app acc (list (ord (char_at s i)))))))
     (defn cls-str-bytes (s) (cls-str-bytes-loop s 0 (str_len s) (empty)))
 
-    ;; decimal int → string (for length headers). Handles 0 and positives.
+    ;; decimal int → string.
     (defn cls-int-str (n)
         (if (lt n 10) (substring "0123456789" n (add n 1))
             (str_concat (cls-int-str (div n 10))
                         (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    ;; zero-padded 6-digit segment id, for sortable filenames.
+    (defn cls-pad6 (n)
+        (do
+            (let s (cls-int-str n))
+            (cls-pad-loop s)))
+    (defn cls-pad-loop (s)
+        (if (ge (str_len s) 6) s (cls-pad-loop (str_concat "0" s))))
 
-    ;; parse a decimal run from string s starting at i; returns (value next-i).
+    ;; parse a decimal run from s at i → (value next-i).
     (defn cls-parse-int-loop (s i n acc)
         (if (ge i n) (list acc i)
             (do
@@ -56,138 +58,161 @@
                     (list acc i)))))
     (defn cls-parse-int (s i) (cls-parse-int-loop s i (str_len s) 0))
 
-    ;; ---- keydir helpers ---------------------------------------------------
-    ;; A live keydir entry encodes "<offset> <length>". A tombstone is the
-    ;; sentinel string "T" (cls-int-str cannot render negatives, and a tomb
-    ;; needs no offset/length — get treats it as absent).
-    (defn cls-entry (offset length)
-        (str_concat (cls-int-str offset) (str_concat " " (cls-int-str length))))
+    ;; ---- segment threshold (bytes). Small here so the band rolls segments;
+    ;; production picks e.g. 64 MB. A store keeps it in the handle.
+    (defn cls-default-seg-bytes () 256)
+
+    ;; ---- keydir entry: "<seg> <offset> <length>", or "T" tombstone --------
+    (defn cls-entry (seg offset length)
+        (str_concat (cls-int-str seg) (str_concat " "
+            (str_concat (cls-int-str offset) (str_concat " " (cls-int-str length))))))
     (defn cls-tomb-entry () "T")
     (defn cls-tomb? (e) (str_eq e "T"))
-    (defn cls-entry-offset (e) (head (cls-parse-int e 0)))
+    (defn cls-entry-seg (e) (head (cls-parse-int e 0)))
+    (defn cls-entry-offset (e)
+        (do (let a1 (head (tail (cls-parse-int e 0))))
+            (head (cls-parse-int e (add a1 1)))))
     (defn cls-entry-length (e)
-        (do (let after (head (tail (cls-parse-int e 0))))
-            (head (cls-parse-int e (add after 1)))))
+        (do (let a1 (head (tail (cls-parse-int e 0))))
+            (let a2 (head (tail (cls-parse-int e (add a1 1)))))
+            (head (cls-parse-int e (add a2 1)))))
 
-    ;; ---- store handle -----------------------------------------------------
-    ;; A store is (path, keydir-record). The keydir is a kernel record: key→entry
-    ;; string. We keep the live-set in memory and the durable truth in the log.
-    (defn cls-store (path keydir) (list path keydir))
-    (defn cls-path (st) (nth st 0))
-    (defn cls-keydir (st) (nth st 1))
+    ;; ---- store handle: (dir, active-seg, seg-bytes, keydir) ---------------
+    (defn cls-store (dir active seg-bytes keydir) (list dir active seg-bytes keydir))
+    (defn cls-dir (st) (nth st 0))
+    (defn cls-active (st) (nth st 1))
+    (defn cls-seg-bytes (st) (nth st 2))
+    (defn cls-keydir (st) (nth st 3))
+    (defn cls-seg-path (dir seg)
+        (str_concat dir (str_concat "/seg-" (str_concat (cls-pad6 seg) ".log"))))
 
-    ;; ---- header build/parse ----------------------------------------------
-    ;; header = "<tomb> <klen> <vlen> " then key then value then "\n".
+    ;; ---- header ----------------------------------------------------------
     (defn cls-header (tomb klen vlen key)
         (str_concat tomb (str_concat " "
             (str_concat (cls-int-str klen) (str_concat " "
                 (str_concat (cls-int-str vlen) (str_concat " " key)))))))
 
-    ;; ---- put: append a live record, update keydir -------------------------
-    ;; value is a string of raw value bytes (caller serializes the cell, e.g.
-    ;; via recipe_to_bytes → byte-string). Returns the store (keydir mutated).
+    ;; ---- put: append to the active segment, rolling if it is full ---------
+    ;; Returns a NEW store handle (active-seg may have advanced). The keydir is
+    ;; mutated in place (shared record identity), so callers can keep the old
+    ;; handle for reads, but should thread the returned one to see new appends.
     (defn cls-put (st key value)
         (do
-            (let klen (str_len key))
-            (let vlen (str_len value))
-            (let hdr (cls-header "0" klen vlen key))   ; "0 klen vlen key"
-            ;; size BEFORE this append = start of the record; value starts at
-            ;; record-start + header-len + 1 (the space already in header) ...
-            ;; simpler: compute value offset as pre-size + (len(hdr)).
-            (let pre (file_size (cls-path st)))
+            (let seg (cls-active st))
+            (let segpath (cls-seg-path (cls-dir st) seg))
+            (let pre (file_size segpath))
             (let pre0 (if (lt pre 0) 0 pre))
-            (let line (str_concat hdr value))
-            ;; append header+value+newline
-            (file_append_bytes (cls-path st)
-                (cls-app (cls-str-bytes line) (list 10)))
-            ;; value offset = record start + header length; length = vlen.
-            (let voff (add pre0 (str_len hdr)))
-            (record_set (cls-keydir st) key (cls-entry voff vlen))
-            st))
+            ;; roll to a fresh segment if the active one is at/over threshold.
+            (if (ge pre0 (cls-seg-bytes st))
+                (cls-put (cls-store (cls-dir st) (add seg 1) (cls-seg-bytes st)
+                                    (cls-keydir st)) key value)
+                (do
+                    (let klen (str_len key))
+                    (let vlen (str_len value))
+                    (let hdr (cls-header "0" klen vlen key))
+                    (let line (str_concat hdr value))
+                    (file_append_bytes segpath (cls-app (cls-str-bytes line) (list 10)))
+                    (let voff (add pre0 (str_len hdr)))
+                    (record_set (cls-keydir st) key (cls-entry seg voff vlen))
+                    st))))
 
-    ;; ---- get: keydir lookup → slice read ----------------------------------
-    ;; Returns a 0-or-1 list (optional). Tombstoned/absent → empty.
+    ;; ---- get: keydir → read_file_slice into the named segment -------------
     (defn cls-get (st key)
         (if (record_has (cls-keydir st) key)
             (do
                 (let e (record_get (cls-keydir st) key))
-                (if (cls-tomb? e) (empty)              ; tombstone
-                    (list (read_file_slice (cls-path st)
+                (if (cls-tomb? e) (empty)
+                    (list (read_file_slice
+                              (cls-seg-path (cls-dir st) (cls-entry-seg e))
                               (cls-entry-offset e) (cls-entry-length e)))))
             (empty)))
-
     (defn cls-found? (result) (if (eq (len result) 1) 1 0))
     (defn cls-value (result) (head result))
 
-    ;; ---- delete: append a tombstone, drop from keydir ---------------------
+    ;; ---- delete: tombstone record in the active segment -------------------
     (defn cls-delete (st key)
         (do
+            (let seg (cls-active st))
+            (let segpath (cls-seg-path (cls-dir st) seg))
             (let klen (str_len key))
-            (let hdr (cls-header "1" klen 0 key))      ; tombstone, vlen 0
-            (file_append_bytes (cls-path st)
-                (cls-app (cls-str-bytes hdr) (list 10)))
-            (record_set (cls-keydir st) key (cls-tomb-entry))  ; -1 len = tomb
+            (let hdr (cls-header "1" klen 0 key))
+            (file_append_bytes segpath (cls-app (cls-str-bytes hdr) (list 10)))
+            (record_set (cls-keydir st) key (cls-tomb-entry))
             st))
 
     ;; ---- open / replay ----------------------------------------------------
-    ;; Rebuild the keydir by replaying the log oldest→newest. A torn final
-    ;; record (header parse runs off the end) stops replay — crash safety.
-    ;; Reads the whole log once at open; subsequent ops are O(1).
-    (defn cls-replay-loop (text pos n kd path)
+    ;; Replay one segment's text into the keydir; seg is its id (for entries).
+    (defn cls-replay-seg (text pos n kd seg)
         (if (ge pos n) kd
             (do
-                ;; parse header: tomb at pos, then " klen vlen key"
-                (let tomb (char_at text pos))
                 (let p1 (add pos 2))                   ; skip "<tomb> "
-                (let kr (cls-parse-int text p1))       ; klen
+                (let kr (cls-parse-int text p1))
                 (let klen (head kr))
-                (let p2 (add (head (tail kr)) 1))      ; skip space
-                (let vr (cls-parse-int text p2))       ; vlen
+                (let p2 (add (head (tail kr)) 1))
+                (let vr (cls-parse-int text p2))
                 (let vlen (head vr))
-                (let p3 (add (head (tail vr)) 1))      ; skip space → key start
+                (let p3 (add (head (tail vr)) 1))
                 (let key (substring text p3 (add p3 klen)))
-                (let voff (add p3 klen))               ; value start
-                (let next (add (add voff vlen) 1))     ; +1 for newline
+                (let voff (add p3 klen))
+                (let next (add (add voff vlen) 1))
                 (if (gt next n) kd                     ; torn tail → stop
                     (do
                         (if (str_eq (substring text pos (add pos 1)) "1")
-                            (record_set kd key (cls-tomb-entry))      ; tombstone
-                            (record_set kd key (cls-entry voff vlen))) ; live
-                        (cls-replay-loop text next n kd path))))))
+                            (record_set kd key (cls-tomb-entry))
+                            (record_set kd key (cls-entry seg voff vlen)))
+                        (cls-replay-seg text next n kd seg))))))
 
-    (defn cls-open (path)
+    ;; replay every existing segment 0,1,2,... until one is missing; returns the
+    ;; highest segment id seen (the active one to continue appending to).
+    (defn cls-replay-all (dir kd seg)
         (do
-            (let kd (record_new (make_nodeid 1 9 60 1)))
-            (if (eq (fs_exists path) 1)
+            (let p (cls-seg-path dir seg))
+            (if (eq (fs_exists p) 1)
                 (do
-                    (let text (read_file path))
-                    (cls-replay-loop text 0 (str_len text) kd path))
-                kd)
-            (cls-store path kd)))
+                    (let text (read_file p))
+                    (cls-replay-seg text 0 (str_len text) kd seg)
+                    (cls-replay-all dir kd (add seg 1)))
+                (if (eq seg 0) 0 (sub seg 1)))))       ; last existing seg
 
-    ;; ---- compaction -------------------------------------------------------
-    ;; Rewrite only the live records (newest per key, no tombstones) into a
-    ;; fresh log, then swap it in. Bounds total size to ~live-set, reclaiming
-    ;; space from superseded writes and tombstones. Returns a fresh store over
-    ;; the compacted log.
+    (defn cls-open-with (dir seg-bytes)
+        (do
+            (fs_mkdir dir)
+            (let kd (record_new (make_nodeid 1 9 60 1)))
+            (let active (cls-replay-all dir kd 0))
+            (cls-store dir active seg-bytes kd)))
+    (defn cls-open (dir) (cls-open-with dir (cls-default-seg-bytes)))
+
+    ;; ---- total bytes across all segments (for compaction accounting) ------
+    (defn cls-total-loop (dir seg acc)
+        (do
+            (let p (cls-seg-path dir seg))
+            (if (eq (fs_exists p) 1)
+                (cls-total-loop dir (add seg 1) (add acc (file_size p)))
+                acc)))
+    (defn cls-total-bytes (st) (cls-total-loop (cls-dir st) 0 0))
+
+    ;; ---- compaction: live records → a fresh seg-000000, drop the rest -----
     (defn cls-compact-keys-loop (st keys new-st)
         (if (nil? keys) new-st
             (do
                 (let k (head keys))
                 (let v (cls-get st k))
-                (if (eq (cls-found? v) 1)
-                    (cls-put new-st k (cls-value v))
-                    new-st)
-                (cls-compact-keys-loop st (tail keys) new-st))))
+                (let nst (if (eq (cls-found? v) 1) (cls-put new-st k (cls-value v)) new-st))
+                (cls-compact-keys-loop st (tail keys) nst))))
+    ;; remove every segment file in the old store (0..active).
+    (defn cls-rm-segs (dir seg)
+        (if (lt seg 0) 0
+            (do (fs_remove (cls-seg-path dir seg)) (cls-rm-segs dir (sub seg 1)))))
     (defn cls-compact (st)
         (do
-            (let tmp (str_concat (cls-path st) ".compact"))
-            (fs_remove tmp)
-            (let new-st (cls-store tmp (record_new (make_nodeid 1 9 60 1))))
-            (cls-compact-keys-loop st (record_keys (cls-keydir st)) new-st)
-            ;; swap: replace the live log with the compacted one
-            (fs_remove (cls-path st))
-            (fs_rename tmp (cls-path st))
-            (cls-open (cls-path st))))
+            (let tmp (str_concat (cls-dir st) ".compact"))
+            (fs_rmdir tmp)
+            (let new-st (cls-open-with tmp (cls-seg-bytes st)))
+            (let filled (cls-compact-keys-loop st (record_keys (cls-keydir st)) new-st))
+            ;; swap: drop old dir, move compacted into place, reopen.
+            (cls-rm-segs (cls-dir st) (cls-active st))
+            (fs_rmdir (cls-dir st))
+            (fs_rename tmp (cls-dir st))
+            (cls-open-with (cls-dir st) (cls-seg-bytes st))))
 
     0)

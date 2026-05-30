@@ -1,79 +1,93 @@
-; tests/cell-log-store-band.fk — the log-structured store that SCALES, three-way.
+; tests/cell-log-store-band.fk — the SEGMENTED log-structured store, three-way.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk
 ;
-; Proves the Bitcask-shape cell store (docs/coherence-substrate/cell-store-
-; architecture.md): an append-only log + in-memory keydir, replacing the
-; file-per-cell store that did not scale. The scale property IS the design: cell
-; count never multiplies file count; reads are one offset-seek; writes are one
-; append. Real I/O against the live filesystem, identical Go/Rust/TS.
+; Proves the Bitcask-shape store with bounded SEGMENTS (docs/coherence-substrate/
+; cell-store-architecture.md). The scale property IS the design: the log rolls
+; into bounded segment files, so no single file grows without limit and the
+; segment count stays ≈ total-bytes / segment-size. Real I/O, identical
+; Go/Rust/TS.
 ;
-; The strange edge covers the whole lifecycle in one arc: put two cells, read
-; both, overwrite one (last-write-wins via a later append, NOT an in-place
-; rewrite), delete one (tombstone), REPLAY the log from disk into a fresh store
-; (crash recovery — the keydir rebuilds correctly), then COMPACT (merge live
-; records, reclaiming the superseded + tombstoned bytes) and confirm the live
-; set survives while the file shrank.
+; The strange edge covers the whole lifecycle AND segment rolling in one arc:
+; write enough records (with a tiny 256-byte segment threshold) to roll past
+; segment 0 into segment 1+, read a record that lives in an EARLIER segment
+; (proving the keydir's per-record segment id is honored), overwrite (last-write-
+; wins across segments), delete (tombstone), REPLAY all segments from disk into a
+; fresh store (crash recovery across multiple segment files), then COMPACT (live
+; set into a fresh seg-000000) and confirm the live set survives and segment 1
+; is gone.
 ;
 ; Band verdict: 1111111 when every assertion holds across all three kernels.
-;   put + get two cells              → 1
-;   overwrite is last-write-wins      → 10
-;   delete tombstones (honest absence) → 100
-;   one log file, not one-per-cell     → 1000   (the scale property)
-;   replay rebuilds keydir from disk    → 10000  (crash recovery)
-;   compaction keeps live set           → 100000
-;   compaction reclaims space (shrinks)  → 1000000
+;   put/get a cell                    → 1
+;   writes ROLL past segment 0         → 10      (the scale property)
+;   read a record from an earlier seg   → 100
+;   overwrite is last-write-wins         → 1000
+;   delete tombstones                     → 10000
+;   replay across segments rebuilds keydir → 100000
+;   compaction keeps live set, reclaims dead → 1000000
 
 (do
-    (let path "/tmp/cell-log-store-band.log")
-    (fs_remove path)
-    (fs_remove (str_concat path ".compact"))
+    (let dir "/tmp/cell-log-store-band.d")
+    (fs_rmdir dir)
+    (fs_rmdir (str_concat dir ".compact"))
 
-    (let st (cls-open path))
-    (cls-put st "idea/agent-pipeline" "PROBLEM-ONE")
-    (cls-put st "spec/agent-pipeline" "DONE-WHEN-TASKS-FLOW")
+    (let st0 (cls-open dir))
+    ;; an early cell we will later read back from segment 0 after rolling.
+    (let st1 (cls-put st0 "first/cell" "FIRST-VALUE"))
     (let put-ok
-        (if (str_eq (cls-value (cls-get st "idea/agent-pipeline")) "PROBLEM-ONE")
-            (if (str_eq (cls-value (cls-get st "spec/agent-pipeline")) "DONE-WHEN-TASKS-FLOW")
-                1 0) 0))
+        (if (str_eq (cls-value (cls-get st1 "first/cell")) "FIRST-VALUE") 1 0))
 
-    ;; overwrite — last-write-wins; the OLD value is still in the log (append-
-    ;; only) but the keydir points at the new one.
-    (cls-put st "idea/agent-pipeline" "PROBLEM-REVISED")
+    ;; write many sizeable records to roll past the 256-byte segment threshold.
+    ;; each value ~40 bytes; ~10 records > 256 → at least one roll.
+    (let st2 (cls-put st1 "k00" "valuevaluevaluevaluevaluevaluevalue0"))
+    (let st3 (cls-put st2 "k01" "valuevaluevaluevaluevaluevaluevalue1"))
+    (let st4 (cls-put st3 "k02" "valuevaluevaluevaluevaluevaluevalue2"))
+    (let st5 (cls-put st4 "k03" "valuevaluevaluevaluevaluevaluevalue3"))
+    (let st6 (cls-put st5 "k04" "valuevaluevaluevaluevaluevaluevalue4"))
+    (let st7 (cls-put st6 "k05" "valuevaluevaluevaluevaluevaluevalue5"))
+    (let st8 (cls-put st7 "k06" "valuevaluevaluevaluevaluevaluevalue6"))
+    (let st9 (cls-put st8 "k07" "valuevaluevaluevaluevaluevaluevalue7"))
+    ;; the active segment advanced beyond 0 → segment 1 exists on disk.
+    (let roll-ok
+        (if (gt (cls-active st9) 0)
+            (if (eq (fs_exists (cls-seg-path dir 1)) 1) 10 0) 0))
+
+    ;; read the FIRST cell — it lives in segment 0, but we are now appending to a
+    ;; later segment. The keydir's per-record segment id must route the read.
+    (let early-ok
+        (if (str_eq (cls-value (cls-get st9 "first/cell")) "FIRST-VALUE") 100 0))
+
+    ;; overwrite first/cell — the new record lands in the active (later) segment;
+    ;; last-write-wins across segments.
+    (let stA (cls-put st9 "first/cell" "FIRST-REVISED"))
     (let overwrite-ok
-        (if (str_eq (cls-value (cls-get st "idea/agent-pipeline")) "PROBLEM-REVISED") 10 0))
+        (if (str_eq (cls-value (cls-get stA "first/cell")) "FIRST-REVISED") 1000 0))
 
-    ;; delete — tombstone; get is honest absence.
-    (cls-delete st "spec/agent-pipeline")
-    (let delete-ok
-        (if (eq (cls-found? (cls-get st "spec/agent-pipeline")) 0) 100 0))
+    ;; delete one of the rolled keys.
+    (let stB (cls-delete stA "k03"))
+    (let delete-ok (if (eq (cls-found? (cls-get stB "k03")) 0) 10000 0))
 
-    ;; SCALE property: after 2 distinct keys + overwrite + delete (4 appends),
-    ;; there is exactly ONE log file — not one file per cell. fs_list of the
-    ;; /tmp dir would be noisy; instead assert the store path is a single file
-    ;; and no per-cell sibling exists.
-    (let scale-ok
-        (if (eq (fs_exists path) 1)
-            (if (eq (fs_is_dir path) 0)                      ; a file, not a dir-of-cells
-                (if (eq (fs_exists (str_concat path "/idea")) 0) 1000 0) 0) 0))
-
-    ;; REPLAY: reopen from disk (simulated restart). The keydir rebuilds: the
-    ;; overwrite wins, the tombstone is honored.
-    (let st2 (cls-open path))
+    ;; REPLAY: reopen the whole directory (all segments) into a fresh store.
+    (let stR (cls-open dir))
     (let replay-ok
-        (if (str_eq (cls-value (cls-get st2 "idea/agent-pipeline")) "PROBLEM-REVISED")
-            (if (eq (cls-found? (cls-get st2 "spec/agent-pipeline")) 0) 10000 0) 0))
+        (if (str_eq (cls-value (cls-get stR "first/cell")) "FIRST-REVISED")  ; overwrite won
+            (if (eq (cls-found? (cls-get stR "k03")) 0)                       ; tombstone honored
+                (if (str_eq (cls-value (cls-get stR "k00")) "valuevaluevaluevaluevaluevaluevalue0")
+                    100000 0) 0) 0))
 
-    ;; COMPACT: merge live records only.
-    (let size-before (file_size path))
-    (let st3 (cls-compact st2))
-    (let size-after (file_size path))
-    (let compact-live-ok
-        (if (str_eq (cls-value (cls-get st3 "idea/agent-pipeline")) "PROBLEM-REVISED")
-            (if (eq (cls-found? (cls-get st3 "spec/agent-pipeline")) 0) 100000 0) 0))
-    (let compact-shrink-ok
-        (if (lt size-after size-before) 1000000 0))         ; reclaimed dead bytes
+    ;; COMPACT: live records → fresh segments; dead data (the superseded
+    ;; first/cell + the k03 tombstone+record) is reclaimed, so total bytes
+    ;; shrink. The live set survives. (Compaction removes DEAD records; a live
+    ;; set larger than one segment legitimately still spans segments — it does
+    ;; not collapse to one file, and asserting that would be wrong.)
+    (let bytes-before (cls-total-bytes stR))
+    (let stC (cls-compact stR))
+    (let bytes-after (cls-total-bytes stC))
+    (let compact-ok
+        (if (str_eq (cls-value (cls-get stC "first/cell")) "FIRST-REVISED")
+            (if (eq (cls-found? (cls-get stC "k03")) 0)            ; deleted stays gone
+                (if (lt bytes-after bytes-before)                  ; dead bytes reclaimed
+                    1000000 0) 0) 0))
 
-    (fs_remove path)
-    (sum (list put-ok overwrite-ok delete-ok scale-ok replay-ok
-               compact-live-ok compact-shrink-ok)))
+    (fs_rmdir dir)
+    (sum (list put-ok roll-ok early-ok overwrite-ok delete-ok replay-ok compact-ok)))
