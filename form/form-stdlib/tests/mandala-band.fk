@@ -1,0 +1,65 @@
+; tests/mandala-band.fk — a mandala grows from each grammar's structure.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/mandala.fk
+;
+; Proves the mandala for each grammar is DERIVED from the grammar's structure,
+; not assigned: deterministic (same grammar → same mandala), legible (the
+; symmetry is recoverable from the mandala), structural (depth = the name's
+; segment-count + 2), and distinct across the roster. All assertions run INSIDE
+; the kernel — the verdict is one number, no display-parsing.
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS.
+;   deterministic: same grammar → same mandala            → 1
+;   symmetry recoverable from the ascii mandala            → 10
+;   depth = name segments + 2 (a 2-part name → 4)           → 100
+;   distinct grammars → distinct mandalas (roster scan)      → 1000
+;   single-word grammars share a depth (bml depth = gematria) → 10000
+;   SVG renders one radial line per petal                      → 100000
+
+(do
+    ;; count occurrences (for the SVG petal-line check).
+    (defn cocc-loop (s needle from acc)
+        (do (let hit (str_find s needle from))
+            (if (lt hit 0) acc (cocc-loop s needle (add hit 1) (add acc 1)))))
+    (defn cocc (s needle) (cocc-loop s needle 0 0))
+
+    ;; distinct-scan: each name's mandala differs from all LATER names'.
+    (defn distinct-rest (a rest)
+        (if (nil? rest) 1
+            (if (str_eq a (mdl-ascii (head rest))) 0
+                (distinct-rest a (tail rest)))))
+    (defn distinct-all (names)
+        (if (nil? names) 1
+            (if (eq (distinct-rest (mdl-ascii (head names)) (tail names)) 0) 0
+                (distinct-all (tail names)))))
+
+    ;; --- deterministic: same grammar → same mandala ----------------------
+    (let det-ok
+        (if (str_eq (mdl-ascii "gematria") (mdl-ascii "gematria")) 1 0))
+
+    ;; --- symmetry recoverable: leading integer = the petal count ---------
+    (let m (mdl-ascii "shamballa-glyph"))
+    (let sym-ok
+        (if (eq (mdl-symmetry-of m) (mdl-petals "shamballa-glyph")) 10 0))
+
+    ;; --- depth = segments + 2: "audio-bmf" (2 parts) → 4 -----------------
+    (let depth-ok
+        (if (eq (mdl-depth "audio-bmf") 4)
+            (if (eq (mdl-depth "shamballa-codes") 4) 100 0) 0))
+
+    ;; --- distinct grammars → distinct mandalas (whole roster) ------------
+    ;; (note: the seeded roster may share an ascii by coincidence of hash+core;
+    ;; the band asserts the roster AS SEEDED is collision-free — if a future
+    ;; grammar collides, this fails loudly and the rendering gains a tie-breaker.)
+    (let distinct-ok (if (eq (distinct-all (mdl-roster)) 1) 1000 0))
+
+    ;; --- single-word grammars share a depth (no hyphen → 1 part → depth 3) -
+    (let single-ok
+        (if (eq (mdl-depth "bml") (mdl-depth "gematria")) 10000 0))
+
+    ;; --- SVG: one radial <line per petal ---------------------------------
+    (let svg (mdl-svg "python-bmf"))
+    (let svg-ok
+        (if (eq (cocc svg "<line") (mdl-petals "python-bmf")) 100000 0))
+
+    (sum (list det-ok sym-ok depth-ok distinct-ok single-ok svg-ok)))
