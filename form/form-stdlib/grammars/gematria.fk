@@ -77,7 +77,12 @@
             (gem-entry (list "alef" "he" "bet" "he") "ahava" "love")           ; 13
             (gem-entry (list "alef" "mem") "em" "mother")                      ; 41
             (gem-entry (list "alef" "bet") "av" "father")                      ; 3
-            (gem-entry (list "yod" "he" "vav" "he") "YHVH" "the Name")))       ; 26
+            (gem-entry (list "yod" "he" "vav" "he") "YHVH" "the Name")         ; 26
+            ;; theme-words for the life/oneness exploration — all attested.
+            (gem-entry (list "het" "yod" "yod" "mem") "chayim" "life (plural)") ; 68
+            (gem-entry (list "shin" "lamed" "vav" "mem") "shalom" "peace, wholeness") ; 376
+            (gem-entry (list "alef" "vav" "resh") "or" "light")                ; 207
+            (gem-entry (list "resh" "zayin") "raz" "mystery, secret")))        ; 207
 
     ;; ---- value → equivalence class: words sharing a gematria value --------
     ;; THIS is the content-addressing: given a number, return every seeded word

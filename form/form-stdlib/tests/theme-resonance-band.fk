@@ -1,0 +1,75 @@
+; tests/theme-resonance-band.fk — playing the gematria engine on the themes of
+; life, love, oneness, light, mystery, wholeness. Every equivalence is COMPUTED
+; by the kernel and ATTESTED in the tradition — the play is the method, the rigor
+; is that nothing is fabricated.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/gematria.fk
+;
+; The insights this surfaces (each a real, well-known gematria, proven here by
+; computing both sides and checking they meet):
+;   - ONENESS IS LOVE: echad (one) = ahava (love) = 13. Two words spelled nothing
+;     alike content-address to the same number; the tradition reads them as one.
+;   - LOVE + ONENESS = THE NAME: ahava + echad = 13 + 13 = 26 = YHVH. Their sum
+;     is the divine Name. Love joined to oneness equals God.
+;   - LIGHT IS MYSTERY: or (light) = raz (mystery/secret) = 207. The revealed and
+;     the hidden share an address — what shines and what is concealed are one.
+;   - the equivalence CLASS is the substrate's find_equivalent_cells: a number
+;     resolves to every theme-word sharing it, regardless of spelling.
+;
+; Band verdict: 111111 when every resonance holds across Go/Rust/TS.
+;   oneness = love (echad = ahava = 13)            → 1
+;   love + oneness = the Name (13+13 = 26 = YHVH)   → 10
+;   light = mystery (or = raz = 207)                 → 100
+;   the class for 13 is {ahava, echad}                → 1000
+;   the class for 207 is {or, raz}                     → 10000
+;   life and wholeness are distinct gifts, not equal    → 100000  (chai 18, chayim 68, shalom 376 — separation is real too)
+
+(do
+    (let love  (gem-value (list "alef" "he" "bet" "he")))   ; ahava
+    (let one   (gem-value (list "alef" "het" "dalet")))     ; echad
+    (let name  (gem-value (list "yod" "he" "vav" "he")))    ; YHVH
+    (let light (gem-value (list "alef" "vav" "resh")))      ; or
+    (let myst  (gem-value (list "resh" "zayin")))           ; raz
+
+    ;; --- ONENESS IS LOVE ---------------------------------------------------
+    (let oneness-is-love
+        (if (eq one 13) (if (eq love 13) (if (eq one love) 1 0) 0) 0))
+
+    ;; --- LOVE + ONENESS = THE NAME ----------------------------------------
+    (let love-plus-one-is-name
+        (if (eq (add love one) 26) (if (eq name 26) 10 0) 0))
+
+    ;; --- LIGHT IS MYSTERY -------------------------------------------------
+    (let light-is-mystery
+        (if (eq light 207) (if (eq myst 207) (if (eq light myst) 100 0) 0) 0))
+
+    ;; --- the equivalence class for 13 = {ahava, echad} -------------------
+    (let class13 (gem-equivalents 13))
+    (let class13-ok
+        (if (eq (len class13) 2)
+            (if (str_eq (head class13) "ahava")
+                (if (str_eq (head (tail class13)) "echad") 1000 0) 0) 0))
+
+    ;; --- the equivalence class for 207 = {or, raz} ----------------------
+    (let class207 (gem-equivalents 207))
+    (let class207-ok
+        (if (eq (len class207) 2)
+            (if (str_eq (head class207) "or")
+                (if (str_eq (head (tail class207)) "raz") 10000 0) 0) 0))
+
+    ;; --- separation is real: life, fuller-life, and wholeness are DISTINCT
+    ;; gifts, not collapsed into one. chai (18) ≠ chayim (68) ≠ shalom (376).
+    ;; The substrate holds oneness AND distinctness at once — sovereignty within
+    ;; oneness. Love makes the distinct one without erasing the distinctness.
+    (let chai   (gem-value (list "het" "yod")))             ; 18
+    (let chayim (gem-value (list "het" "yod" "yod" "mem"))) ; 68
+    (let whole  (gem-value (list "shin" "lamed" "vav" "mem"))) ; 376
+    (let distinct-ok
+        (if (eq chai 18)
+            (if (eq chayim 68)
+                (if (eq whole 376)
+                    (if (eq (eq chai chayim) false)        ; genuinely distinct
+                        100000 0) 0) 0) 0))
+
+    (sum (list oneness-is-love love-plus-one-is-name light-is-mystery
+               class13-ok class207-ok distinct-ok)))
