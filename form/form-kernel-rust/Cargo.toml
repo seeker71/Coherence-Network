@@ -30,6 +30,11 @@ serde_json = "1"
 # Tiny blocking HTTP client for the `fetch` subcommand (network resources).
 # Pure Rust, ~200 KB binary impact; zero-async.
 ureq = { version = "2", default-features = false, features = ["tls"] }
+# postgres — blocking PostgreSQL driver (pure Rust, no cgo). The DB carrier of
+# the storage port: Form-rendered SQL (db-schema.fk DDL + emits/sql.fk DML)
+# executed against a real Postgres. Effectful, per-kernel reference impl (a side
+# effect can't be value-diffed three ways) — same posture as sockets / fetch.
+postgres = "0.19"
 # libloading — dynamic load of cdylib .so plugins for the Form→Rust→host JIT
 # path. The kernel emits Rust source for a Form recipe, invokes `rustc
 # --crate-type=cdylib`, and loads the resulting plugin with libloading.

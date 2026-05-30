@@ -73,6 +73,86 @@ fn socket_drop(h: i64) -> bool {
     t.handles.remove(&h).is_some()
 }
 
+// --- Postgres natives — the DB carrier of the storage port --------------
+// Form-rendered SQL executed against a real Postgres. Handles are monotone
+// i64s; the kernel never reveals the postgres::Client to Form, only the
+// handle. -1 = error. Effectful, per-kernel reference impl — the SQL strings
+// are already three-way verified by db-schema.fk + emits/sql.fk; only
+// execution lives here. See docs/coherence-substrate/cell-store-architecture.md
+// (the DB is the production carrier; the FS log store is dev/test).
+struct PgTable {
+    handles: HashMap<i64, Arc<Mutex<postgres::Client>>>,
+    next: i64,
+}
+
+fn pg_table() -> &'static Mutex<PgTable> {
+    static T: OnceLock<Mutex<PgTable>> = OnceLock::new();
+    T.get_or_init(|| {
+        Mutex::new(PgTable {
+            handles: HashMap::new(),
+            next: 0,
+        })
+    })
+}
+
+fn pg_register(c: postgres::Client) -> i64 {
+    let mut t = pg_table().lock().unwrap();
+    t.next += 1;
+    let h = t.next;
+    t.handles.insert(h, Arc::new(Mutex::new(c)));
+    h
+}
+
+fn pg_lookup(h: i64) -> Option<Arc<Mutex<postgres::Client>>> {
+    let t = pg_table().lock().unwrap();
+    t.handles.get(&h).cloned()
+}
+
+fn pg_drop(h: i64) -> bool {
+    let mut t = pg_table().lock().unwrap();
+    t.handles.remove(&h).is_some()
+}
+
+// Render one column of a postgres row to a string, by its SQL type. Covers the
+// substrate's portable column set (text/varchar, the integer family, bool).
+// NULL → "". Unknown types → "?". try_get keeps a type mismatch from panicking.
+fn pg_cell_to_string(row: &postgres::Row, ci: usize) -> String {
+    let ty = row.columns()[ci].type_().name().to_string();
+    match ty.as_str() {
+        "text" | "varchar" | "bpchar" | "name" => {
+            row.try_get::<usize, Option<String>>(ci)
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+        }
+        "int8" => row
+            .try_get::<usize, Option<i64>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        "int4" => row
+            .try_get::<usize, Option<i32>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        "int2" => row
+            .try_get::<usize, Option<i16>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        "bool" => row
+            .try_get::<usize, Option<bool>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| if v { "t".to_string() } else { "f".to_string() })
+            .unwrap_or_default(),
+        _ => "?".to_string(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
 // ---------------------------------------------------------------------------
@@ -2975,6 +3055,74 @@ impl Kernel {
                 return Value::Int(-1);
             }
             if socket_drop(h) {
+                Value::Int(0)
+            } else {
+                Value::Int(-1)
+            }
+        });
+
+        // --- Postgres natives — the DB carrier of the storage port ------
+        // (pg_connect dsn)        → handle | -1
+        // (pg_exec handle sql)    → rows-affected | -1   (DDL / INSERT / UPDATE)
+        // (pg_query handle sql)   → result-string | "ERR" (tab-separated cols,
+        //                            newline-separated rows; "" = zero rows)
+        // (pg_close handle)       → 0 | -1
+        // DSN is libpq form: "host=127.0.0.1 port=5432 user=u dbname=d ...".
+        self.register_native("pg_connect", cat_call(), |_, _, args| {
+            let dsn = args[0].as_str().to_string();
+            match postgres::Client::connect(&dsn, postgres::NoTls) {
+                Ok(c) => Value::Int(pg_register(c)),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("pg_exec", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let sql = args[1].as_str().to_string();
+            let client = match pg_lookup(h) {
+                Some(c) => c,
+                None => return Value::Int(-1),
+            };
+            let mut g = client.lock().unwrap();
+            match g.execute(&sql, &[]) {
+                Ok(n) => Value::Int(n as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        self.register_native("pg_query", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let sql = args[1].as_str().to_string();
+            let client = match pg_lookup(h) {
+                Some(c) => c,
+                None => return Value::Str("ERR".to_string()),
+            };
+            let mut g = client.lock().unwrap();
+            let rows = match g.query(&sql, &[]) {
+                Ok(r) => r,
+                Err(_) => return Value::Str("ERR".to_string()),
+            };
+            // Encode rows as tab-separated columns, newline-separated rows.
+            // Columns are rendered to text via their SQL type (text/int8/bool
+            // cover the substrate's portable column set). NULL → empty string.
+            let mut out = String::new();
+            for (ri, row) in rows.iter().enumerate() {
+                if ri > 0 {
+                    out.push('\n');
+                }
+                for ci in 0..row.len() {
+                    if ci > 0 {
+                        out.push('\t');
+                    }
+                    out.push_str(&pg_cell_to_string(row, ci));
+                }
+            }
+            Value::Str(out)
+        });
+        self.register_native("pg_close", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            if h < 0 {
+                return Value::Int(-1);
+            }
+            if pg_drop(h) {
                 Value::Int(0)
             } else {
                 Value::Int(-1)

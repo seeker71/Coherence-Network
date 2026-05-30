@@ -1,0 +1,73 @@
+; tests/pg-carrier-integration.fk — REAL Postgres carrier of the storage port.
+;
+; preludes: form-stdlib/core.fk form-stdlib/db-schema.fk
+;
+; NOT a three-way value band — it executes against a LIVE Postgres and is run
+; ONLY on the Rust kernel (the DB carrier's reference impl, like the socket shim
+; was for TS). Driven by scripts/pg-carrier-test.sh, which stands up a throwaway
+; Postgres, passes the DSN in via the PG_DSN trivial below (the harness rewrites
+; it), runs this on form-kernel-rust, and asserts the verdict.
+;
+; Proves the whole DB carrier end-to-end, not just raw SQL:
+;   - db-schema.fk renders the substrate table DDL for the postgres dialect
+;     (the STRUCTURE half — already three-way verified by db-schema-band);
+;   - pg_exec runs that DDL against the real DB (the CARRIER — Rust-only);
+;   - content-addressed get-or-insert (the intern_node pattern): a second
+;     "insert" of the same key does NOT duplicate — last-write-wins via the
+;     UNIQUE(domain,name) the schema declares;
+;   - pg_query reads the rows back.
+;
+; The DSN is injected by the harness replacing the PG_DSN string literal below.
+; Verdict: 111111 when every step holds against live Postgres.
+;   connect                       → 1
+;   render + run substrate DDL     → 10
+;   insert two distinct cells       → 100
+;   content-addressed: dup is no-op  → 1000   (UNIQUE(domain,name) holds)
+;   query reads both back            → 10000
+;   close                            → 100000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+
+    (let conn (pg_connect DSN))
+    (let connect-ok (if (ge conn 0) 1 0))
+
+    ;; --- render the substrate cells table via db-schema.fk, run it ---------
+    (let cells
+        (mk-table "substrate_cells"
+            (list
+                (mk-col "id"        "pk"   0 "")
+                (mk-col "name"      "str"  0 "")
+                (mk-col "domain"    "str"  0 "")
+                (mk-col "blueprint" "text" 0 "")
+                (mk-col "ctor"      "text" 1 ""))
+            (list (mk-unique "uq_cell_name_domain" (list "name" "domain")))
+            (list)))
+    (pg_exec conn "DROP TABLE IF EXISTS substrate_cells")
+    (let ddl (create-ddl cells (dialect-postgres)))
+    (let ddl-rc (pg_exec conn ddl))
+    ;; pg_exec returns 0 rows-affected for DDL (CREATE TABLE) — success is >= 0.
+    (let ddl-ok (if (ge ddl-rc 0) 10 0))
+
+    ;; --- insert two distinct cells -----------------------------------------
+    (pg_exec conn "INSERT INTO substrate_cells (name,domain,blueprint,ctor) VALUES ('agent-pipeline','idea','@1.8.4.1','problem')")
+    (pg_exec conn "INSERT INTO substrate_cells (name,domain,blueprint,ctor) VALUES ('agent-pipeline','spec','@1.8.4.2','done-when')")
+    (let after-two (pg_query conn "SELECT count(*) FROM substrate_cells"))
+    (let insert-ok (if (str_eq after-two "2") 100 0))
+
+    ;; --- content-addressed get-or-insert: a duplicate (domain,name) is a
+    ;; no-op via ON CONFLICT (the UNIQUE the schema declares). The intern_node
+    ;; gate, in SQL: insert only if the shape is new. ----------------------
+    (pg_exec conn "INSERT INTO substrate_cells (name,domain,blueprint,ctor) VALUES ('agent-pipeline','idea','@1.8.4.1','problem') ON CONFLICT (name,domain) DO NOTHING")
+    (let after-dup (pg_query conn "SELECT count(*) FROM substrate_cells"))
+    (let dedup-ok (if (str_eq after-dup "2") 1000 0))   ; still 2, not 3
+
+    ;; --- read both back -----------------------------------------------------
+    (let rows (pg_query conn "SELECT domain, name FROM substrate_cells ORDER BY domain"))
+    ;; "idea\tagent-pipeline\nspec\tagent-pipeline"
+    (let query-ok (if (str_eq rows "idea	agent-pipeline
+spec	agent-pipeline") 10000 0))
+
+    (let close-ok (if (eq (pg_close conn) 0) 100000 0))
+
+    (sum (list connect-ok ddl-ok insert-ok dedup-ok query-ok close-ok)))
