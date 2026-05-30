@@ -13,7 +13,19 @@
 // Aligned with api/app/services/substrate/category.py and the Go/Rust
 // kernels. Cross-kernel NodeID agreement is the conformance contract.
 
-import { closeSync, openSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  renameSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { execFileSync } from "node:child_process";
 import { BP_TABLE } from "./bp_table";
 
@@ -2020,6 +2032,71 @@ export class Kernel {
         if (fd !== undefined) closeSync(fd);
       }
     });
+
+    // --- Filesystem CRUD natives — real directories + files ----------
+    // Sibling parity across Go/Rust/TS. Predicates return 1/0; mutations
+    // return 0 on success, -1 on error; fs_list returns a name-string list
+    // (sorted for cross-kernel parity) or null on error.
+    this.registerNative("fs_exists", catCall(), (_k, args) => {
+      try {
+        statSync(argStr(args, 0));
+        return { kind: "int", int: 1 };
+      } catch {
+        return { kind: "int", int: 0 };
+      }
+    });
+    this.registerNative("fs_is_dir", catCall(), (_k, args) => {
+      try {
+        return { kind: "int", int: statSync(argStr(args, 0)).isDirectory() ? 1 : 0 };
+      } catch {
+        return { kind: "int", int: 0 };
+      }
+    });
+    this.registerNative("fs_mkdir", catCall(), (_k, args) => {
+      try {
+        mkdirSync(argStr(args, 0), { recursive: true });
+        return { kind: "int", int: 0 };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    this.registerNative("fs_rmdir", catCall(), (_k, args) => {
+      try {
+        if (!statSync(argStr(args, 0)).isDirectory()) return { kind: "int", int: -1 };
+        rmSync(argStr(args, 0), { recursive: true, force: true });
+        return { kind: "int", int: 0 };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    this.registerNative("fs_remove", catCall(), (_k, args) => {
+      try {
+        if (statSync(argStr(args, 0)).isDirectory()) return { kind: "int", int: -1 };
+        unlinkSync(argStr(args, 0));
+        return { kind: "int", int: 0 };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    this.registerNative("fs_rename", catCall(), (_k, args) => {
+      try {
+        renameSync(argStr(args, 0), argStr(args, 1));
+        return { kind: "int", int: 0 };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    this.registerNative("fs_list", catCall(), (_k, args) => {
+      try {
+        // sort by name for cross-kernel parity (Go's os.ReadDir is
+        // name-sorted; Rust/Node are OS-arbitrary).
+        const names = readdirSync(argStr(args, 0)).sort();
+        return { kind: "list", list: names.map((n) => ({ kind: "str", str: n }) as Value) };
+      } catch {
+        return { kind: "null" };
+      }
+    });
+
     // write_file_bytes — sibling of read_file_bytes; writes a byte list.
     // Sibling-parity with form-kernel-go + form-kernel-rust. Values out of
     // 0..255 truncate per Go's `byte(v.Int)` and Rust's `as u8`.
