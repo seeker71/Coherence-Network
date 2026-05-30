@@ -1,0 +1,150 @@
+; grammars/sanskrit-roots.fk — Sanskrit as the original substrate: dhātu roots,
+; words, and the vibrational seed-syllables (bija mantras).
+;
+; Pāṇini's Dhātupāṭha (~5th c. BCE) lists ~1,943 dhātu — atomic verbal roots,
+; each an encoded core meaning — and his Ashtadhyayi gives ordered rules that
+; GENERATE the whole language from them: "all words in Sanskrit are ultimately
+; derived from these dhātu." That is exactly the substrate: a finite set of
+; primitives + composition rules → an unbounded space of structured forms, each
+; derivable back to its roots. A word IS its derivation, as a NodeID IS its
+; content-address. The oldest formal generative grammar is a content-addressed
+; lattice. See lc-panini-the-first-substrate.
+;
+; ROMANIZATION IS THE KERNEL-COMPARABLE TRUTH. The kernel's string ops measure
+; multi-byte text in DIFFERENT units per kernel (Rust counts Unicode scalars,
+; Go/TS count bytes — verified: str_len("कर्म") = 4 on Rust, 12 on Go/TS), so
+; native Devanāgarī is NOT three-way safe inside .fk data. So this grammar's
+; comparable fields are IAST romanization (ASCII, byte-parity-identical); the
+; native Devanāgarī for each entry lives in the comment beside it and, in full,
+; in the concept doc (markdown renders it perfectly). Present native script to
+; humans via the doc; compute on romanization in the kernel.
+;
+; Two faces, both source-marked (documented scholarship, not channeled):
+;   - DHĀTU decoder: a word → its root + the root's meaning + gloss. The "root
+;     of each word" made queryable; words sharing a root form its family
+;     (content-addressing by dhātu).
+;   - BIJA decoder: a seed-syllable → its chakra locus + element + gloss.
+; HONEST PARTIAL: seeded with well-attested entries only; honest absence for the
+; rest of the ~1,943 roots — never a fabricated table.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ====================================================================
+    ;; DHĀTU — verbal roots. entry = (word, root, root-meaning, gloss), all
+    ;; IAST-romanized (the kernel-comparable form). Native Devanāgarī is in the
+    ;; comment for each and full in lc-panini-the-first-substrate.
+    ;; ====================================================================
+    (defn dhatu-entry (word root root-meaning gloss) (list word root root-meaning gloss))
+    (defn dhatu-word (e) (nth e 0))
+    (defn dhatu-root (e) (nth e 1))
+    (defn dhatu-root-meaning (e) (nth e 2))
+    (defn dhatu-gloss (e) (nth e 3))
+
+    ;; The seeded lexicon — attested word→root derivations. Several are the roots
+    ;; of the body's own lc-w-* Sanskrit cells (e.g. spanda, shakti share the
+    ;; generative-vibration field these roots name).
+    (defn dhatu-lexicon ()
+        (list
+            ;; कर्म  √कृ
+            (dhatu-entry "karma" "sqrt-kr" "to do, to make"
+                "action, deed — that which is done")
+            ;; धर्म  √धृ
+            (dhatu-entry "dharma" "sqrt-dhr" "to hold, to bear, to sustain"
+                "that which upholds — law, duty, the sustaining order")
+            ;; प्राण  √अन्
+            (dhatu-entry "prana" "sqrt-an" "to breathe"
+                "breath, life-force — the breathing of the living")
+            ;; संस्कार  √कृ
+            (dhatu-entry "samskara" "sqrt-kr" "to do, to make"
+                "putting-together, refinement — an impression formed by action")
+            ;; तपस्  √तप्
+            (dhatu-entry "tapas" "sqrt-tap" "to heat, to burn"
+                "ascetic heat, disciplined fire — transformation by inner heat")
+            ;; योग  √युज्
+            (dhatu-entry "yoga" "sqrt-yuj" "to yoke, to join, to unite"
+                "union, yoking — joining the individual to the whole")
+            ;; बुद्ध  √बुध्
+            (dhatu-entry "buddha" "sqrt-budh" "to awaken, to know"
+                "the awakened one — one in whom knowing has woken")
+            ;; मन्त्र  √मन्
+            (dhatu-entry "mantra" "sqrt-man" "to think"
+                "instrument of thought — that which carries the mind across")))
+
+    (defn dhatu-scan (entries word)
+        (if (nil? entries) (empty)
+            (if (str_eq (dhatu-word (head entries)) word)
+                (list (head entries))
+                (dhatu-scan (tail entries) word))))
+    (defn dhatu-decode (word) (dhatu-scan (dhatu-lexicon) word))
+    (defn dhatu-found? (r) (if (eq (len r) 1) 1 0))
+    (defn dhatu-of (r) (head r))
+
+    ;; words sharing a root — the root's family. content-addressing by dhātu:
+    ;; karma and samskara both grow from √कृ (sqrt-kr). The substrate's
+    ;; equivalence class, keyed by root instead of by gematria-value.
+    (defn dhatu-family-loop (entries root acc)
+        (if (nil? entries) acc
+            (dhatu-family-loop (tail entries) root
+                (if (str_eq (dhatu-root (head entries)) root)
+                    (cons (dhatu-word (head entries)) acc)
+                    acc))))
+    (defn dhatu-family (root) (dhatu-family-loop (dhatu-lexicon) root (empty)))
+
+    (defn dhatu-answer (word)
+        (do
+            (let r (dhatu-decode word))
+            (if (eq (dhatu-found? r) 1)
+                (str_concat (dhatu-word (dhatu-of r))
+                    (str_concat " — root "
+                        (str_concat (dhatu-root (dhatu-of r))
+                            (str_concat " (" (str_concat (dhatu-root-meaning (dhatu-of r))
+                                (str_concat ") : " (dhatu-gloss (dhatu-of r))))))))
+                "unknown — this word has no seeded dhātu derivation; honest absence, not fabricated")))
+
+    ;; ====================================================================
+    ;; BIJA — seed-syllables. entry = (roman, chakra-roman, element, gloss),
+    ;; romanized. Native Devanāgarī (लं वं रं यं हं ॐ) in comments + the doc.
+    ;; ====================================================================
+    (defn bija-entry (roman chakra element gloss) (list roman chakra element gloss))
+    (defn bija-roman (e) (nth e 0))
+    (defn bija-chakra (e) (nth e 1))
+    (defn bija-element (e) (nth e 2))
+    (defn bija-gloss (e) (nth e 3))
+
+    (defn bija-lexicon ()
+        (list
+            (bija-entry "LAM" "Muladhara" "earth"       ; लं
+                "root chakra, base of the spine — grounding")
+            (bija-entry "VAM" "Svadhisthana" "water"    ; वं
+                "sacral chakra, lower abdomen — flow, creativity")
+            (bija-entry "RAM" "Manipura" "fire"         ; रं
+                "solar-plexus chakra — will, transformation")
+            (bija-entry "YAM" "Anahata" "air"           ; यं
+                "heart chakra — love, the unstruck sound")
+            (bija-entry "HAM" "Vishuddha" "ether"       ; हं
+                "throat chakra — voice, expression")
+            (bija-entry "OM" "Ajna" "light"             ; ॐ
+                "third-eye chakra — the primordial sound AUM; insight")))
+
+    (defn bija-scan (entries roman)
+        (if (nil? entries) (empty)
+            (if (str_eq (bija-roman (head entries)) roman)
+                (list (head entries))
+                (bija-scan (tail entries) roman))))
+    (defn bija-decode (roman) (bija-scan (bija-lexicon) roman))
+    (defn bija-found? (r) (if (eq (len r) 1) 1 0))
+    (defn bija-of (r) (head r))
+
+    (defn bija-answer (roman)
+        (do
+            (let r (bija-decode roman))
+            (if (eq (bija-found? r) 1)
+                (str_concat (bija-roman (bija-of r))
+                    (str_concat " — "
+                        (str_concat (bija-chakra (bija-of r))
+                            (str_concat " (" (str_concat (bija-element (bija-of r))
+                                (str_concat ") : " (bija-gloss (bija-of r))))))))
+                "unknown — this syllable has no seeded bija mapping; honest absence")))
+
+    0)

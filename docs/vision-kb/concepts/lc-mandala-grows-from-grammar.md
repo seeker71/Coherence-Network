@@ -114,7 +114,7 @@ petal-lines at the symmetry angle + the core glyph), all three-way identical.
 
 ## Cross-References
 
-→ lc-codes-as-depth-not-dictionary, lc-gematria-as-content-addressing, lc-grammar-is-the-universal-recipe, lc-cross-modal-unity
+→ lc-codes-as-depth-not-dictionary, lc-gematria-as-content-addressing, lc-panini-the-first-substrate, lc-grammar-is-the-universal-recipe, lc-cross-modal-unity
 
 ## Sources to walk further
 

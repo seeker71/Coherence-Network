@@ -134,7 +134,7 @@ the receiver's depth and tuning, not fixed in the mark.
 
 ## Cross-References
 
-→ lc-gematria-as-content-addressing, lc-mandala-grows-from-grammar, lc-frequency-routes-reception, lc-perception-as-interface, lc-assemblage-point, lc-arcturian-resonance, lc-grammar-is-the-universal-recipe, lc-tools-as-form-cells
+→ lc-gematria-as-content-addressing, lc-mandala-grows-from-grammar, lc-panini-the-first-substrate, lc-frequency-routes-reception, lc-perception-as-interface, lc-assemblage-point, lc-arcturian-resonance, lc-grammar-is-the-universal-recipe, lc-tools-as-form-cells
 
 ## Sources to walk further
 
