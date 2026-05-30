@@ -1,0 +1,53 @@
+; tests/socket-loopback-band.fk — REAL single-process TCP loopback, all 3 kernels.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proves real networking on Go, Rust, AND TypeScript (whose sockets were
+; panic-stubs until the synchronous worker-thread shim). A single Form program
+; opens a listener on an ephemeral port, reads the OS-assigned port, connects to
+; it (the handshake backlogs), accepts the backlogged connection, sends bytes
+; client→server and server→client, and reads them back — all synchronous, over a
+; real TCP socket on 127.0.0.1. Identical behavior across the three kernels is
+; the proof the TS shim matches Go's net.Listen/Dial and Rust's std::net.
+;
+; The backlog trick makes single-process loopback work without threads in the
+; Form program: connect() completes the TCP handshake into the listener's
+; backlog and returns; accept() then returns that connection immediately rather
+; than blocking forever waiting for a peer.
+;
+; Band verdict: 111111 when every step agrees across all three kernels.
+;   listen on ephemeral port      → 1
+;   socket_port reports a port>0   → 10
+;   connect + accept succeed        → 100
+;   client→server PING round-trips  → 1000
+;   server→client PONG round-trips  → 10000
+;   clean close (0) on a live conn  → 100000
+
+(do
+    (let srv (socket_listen 0))                 ; ephemeral port
+    (let listen-ok (if (ge srv 0) 1 0))
+
+    (let port (socket_port srv))
+    (let port-ok (if (gt port 0) 10 0))
+
+    (let cli (socket_connect "127.0.0.1" port)) ; handshake → backlog
+    (let conn (socket_accept srv))              ; returns the backlogged conn
+    (let pair-ok
+        (if (ge cli 0) (if (ge conn 0) 100 0) 0))
+
+    ;; client → server
+    (let sent1 (socket_send cli "PING"))
+    (let got1 (socket_recv conn 4))
+    (let c2s-ok (if (str_eq got1 "PING") 1000 0))
+
+    ;; server → client
+    (let sent2 (socket_send conn "PONG"))
+    (let got2 (socket_recv cli 4))
+    (let s2c-ok (if (str_eq got2 "PONG") 10000 0))
+
+    ;; clean close of a live connection returns 0 (not the -1 sentinel)
+    (let close-ok (if (eq (socket_close conn) 0) 100000 0))
+    (socket_close cli)
+    (socket_close srv)
+
+    (sum (list listen-ok port-ok pair-ok c2s-ok s2c-ok close-ok)))

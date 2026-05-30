@@ -1940,6 +1940,21 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: socketRegister(ln)}
 	})
+	// (socket_port listener-handle) → bound TCP port | -1. Lets a listener
+	// opened on port 0 (ephemeral) report the OS-assigned port — the basis
+	// of single-process loopback (listen 0 → port → connect → accept).
+	k.registerNative("socket_port", catCall(), func(_ *Kernel, args []Value) Value {
+		v := socketLookup(args[0].Int)
+		ln, ok := v.(net.Listener)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		ta, ok := ln.Addr().(*net.TCPAddr)
+		if !ok {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: int64(ta.Port)}
+	})
 	k.registerNative("socket_accept", catCall(), func(_ *Kernel, args []Value) Value {
 		v := socketLookup(args[0].Int)
 		ln, ok := v.(net.Listener)

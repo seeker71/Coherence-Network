@@ -27,6 +27,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { Worker } from "node:worker_threads";
 import { BP_TABLE } from "./bp_table";
 
 // ---------------------------------------------------------------------------
@@ -458,6 +459,88 @@ export function catCompareEq(): NodeID {
 }
 export function catUndefined(): NodeID {
   return { pkg: 1, level: Level.BASIC, type: RBasic.UNDEFINED, inst: 0 };
+}
+
+// --- Synchronous TCP shim — real sockets on the TS kernel ----------------
+// Node's event loop cannot do blocking accept/recv on the main thread. The
+// documented shim: a worker thread owns the sockets and does async net IO;
+// the main thread blocks on Atomics.wait against a SharedArrayBuffer until
+// the worker signals completion, then reads the result. This gives the TS
+// kernel the same synchronous (socket_listen/port/connect/accept/send/recv/
+// close) surface as Go/Rust — real loopback, sibling parity. The worker is
+// spawned lazily on first socket use, so non-socket programs never pay it.
+// Verified end-to-end under the real `tsx` runner before shipping.
+let _sockWorker: Worker | undefined;
+let _sockCtrl: Int32Array | undefined; // [0]=ready-flag, [1]=int result
+let _sockData: Buffer | undefined; // shared payload bytes for recv
+
+const SOCKET_WORKER_SRC = `
+import { parentPort, workerData } from "node:worker_threads";
+import net from "node:net";
+const ctrl = new Int32Array(workerData.ctrl);
+const dataBuf = Buffer.from(workerData.data);
+const handles = new Map(); let nextId = 1;
+function done(r){ Atomics.store(ctrl,1,r); Atomics.store(ctrl,0,1); Atomics.notify(ctrl,0); }
+parentPort.on("message", async (m) => { try {
+  if(m.op==="listen"){ const id=nextId++; const srv=net.createServer(); const rec={kind:"listener",obj:srv,backlog:[]};
+    srv.on("connection",s=>{s.pause();rec.backlog.push(s);});
+    await new Promise((res,rej)=>{srv.once("error",rej);srv.listen(m.port,"127.0.0.1",res);});
+    rec.port=srv.address().port; handles.set(id,rec); done(id);
+  } else if(m.op==="port"){ const r=handles.get(m.h); done(r&&r.kind==="listener"?r.port:-1);
+  } else if(m.op==="connect"){ const id=nextId++; const s=net.connect(m.port,m.host);
+    await new Promise((res,rej)=>{s.once("connect",res);s.once("error",rej);});
+    const rec={kind:"conn",obj:s,rbuf:Buffer.alloc(0),closed:false}; handles.set(id,rec);
+    s.on("data",d=>{rec.rbuf=Buffer.concat([rec.rbuf,d]);}); s.on("close",()=>{rec.closed=true;}); done(id);
+  } else if(m.op==="accept"){ const lr=handles.get(m.h); if(!lr||lr.kind!=="listener")return done(-1);
+    while(lr.backlog.length===0) await new Promise(r=>setTimeout(r,1));
+    const s=lr.backlog.shift(); const id=nextId++; const rec={kind:"conn",obj:s,rbuf:Buffer.alloc(0),closed:false};
+    handles.set(id,rec); s.on("data",d=>{rec.rbuf=Buffer.concat([rec.rbuf,d]);}); s.on("close",()=>{rec.closed=true;}); s.resume(); done(id);
+  } else if(m.op==="send"){ const r=handles.get(m.h); if(!r||r.kind!=="conn")return done(-1);
+    const b=Buffer.from(m.text,"utf8"); r.obj.write(b); done(b.length);
+  } else if(m.op==="recv"){ const r=handles.get(m.h); if(!r||r.kind!=="conn")return done(0);
+    while(r.rbuf.length===0&&!r.closed) await new Promise(res=>setTimeout(res,1));
+    const take=Math.min(m.max,r.rbuf.length); const out=r.rbuf.subarray(0,take); r.rbuf=r.rbuf.subarray(take);
+    out.copy(dataBuf,0); done(take);
+  } else if(m.op==="close"){ const r=handles.get(m.h); if(!r)return done(-1); try{r.obj.destroy();}catch{} handles.delete(m.h); done(0);
+  } else done(-1);
+} catch(e){ done(-1); } });
+`;
+
+function ensureSocketWorker(): void {
+  if (_sockWorker) return;
+  const ctrlSab = new SharedArrayBuffer(8);
+  const dataSab = new SharedArrayBuffer(65536);
+  _sockCtrl = new Int32Array(ctrlSab);
+  _sockData = Buffer.from(dataSab);
+  _sockWorker = new Worker(SOCKET_WORKER_SRC, {
+    eval: true,
+    workerData: { ctrl: ctrlSab, data: dataSab },
+  });
+  _sockWorker.unref(); // don't keep the process alive for the worker
+}
+
+// socketCall — post an op to the worker and block until it signals, returning
+// the worker's int result. recv payloads land in _sockData (read by caller).
+function socketCall(op: Record<string, unknown>): number {
+  ensureSocketWorker();
+  const ctrl = _sockCtrl!;
+  Atomics.store(ctrl, 0, 0);
+  _sockWorker!.postMessage(op);
+  Atomics.wait(ctrl, 0, 0);
+  return Atomics.load(ctrl, 1);
+}
+
+// shutdownSocketWorker — terminate the socket worker so the process can exit.
+// The worker holds net handles that keep Node's event loop alive even when
+// unref'd; the host (main.ts) calls this after execution completes. No-op if
+// the worker was never spawned (non-socket programs).
+export function shutdownSocketWorker(): void {
+  if (_sockWorker) {
+    void _sockWorker.terminate();
+    _sockWorker = undefined;
+    _sockCtrl = undefined;
+    _sockData = undefined;
+  }
 }
 
 export class Kernel {
@@ -2127,57 +2210,47 @@ export class Kernel {
     });
 
     // --- Socket natives — L1 physical layer for inter-cell IO ---------
-    // Sibling parity with form-kernel-go + form-kernel-rust at the API
-    // surface. TS scope limit: socket_listen / socket_accept / socket_recv
-    // are panic-stubs because Node's event-loop architecture cannot do
-    // blocking accept/read without a worker-thread + SharedArrayBuffer
-    // shim — that work is deferred to a later breath. socket_close is
-    // safe on -1 (sibling-parity no-op returning -1), so the band can
-    // witness API existence without crossing into the panic-stub region.
-    // TODO: implement TS sockets when we have a blocking shim
-    //       (Atomics.wait + worker_threads sync read).
-    this.registerNative("socket_listen", catCall(), (_k, _args) => {
-      throw new Error(
-        "socket_listen: TS kernel has no blocking-accept shim yet — " +
-          "sibling-loud-divergent panic-stub; use Go or Rust kernel for " +
-          "server-side socket work this breath.",
-      );
+    // Sibling parity with form-kernel-go + form-kernel-rust: REAL TCP. The
+    // synchronous worker-thread shim (see socketCall above) gives the TS
+    // kernel blocking listen/accept/connect/send/recv/close identical in
+    // surface and behavior to the Go (net.Listen/Dial) and Rust (std::net)
+    // kernels. Handle = int (≥0 success, -1 error); socket_recv returns the
+    // received string ("" on close/error). The worker spawns lazily on first
+    // socket use, so non-socket programs pay nothing.
+    this.registerNative("socket_listen", catCall(), (_k, args) => ({
+      kind: "int",
+      int: socketCall({ op: "listen", port: argInt(args, 0) }),
+    }));
+    // (socket_port listener-handle) → bound TCP port | -1 — sibling of the
+    // Go/Rust native; reports an ephemeral (port 0) listener's OS-assigned
+    // port for single-process loopback.
+    this.registerNative("socket_port", catCall(), (_k, args) => ({
+      kind: "int",
+      int: socketCall({ op: "port", h: argInt(args, 0) }),
+    }));
+    this.registerNative("socket_accept", catCall(), (_k, args) => ({
+      kind: "int",
+      int: socketCall({ op: "accept", h: argInt(args, 0) }),
+    }));
+    this.registerNative("socket_connect", catCall(), (_k, args) => ({
+      kind: "int",
+      int: socketCall({ op: "connect", host: argStr(args, 0), port: argInt(args, 1) }),
+    }));
+    this.registerNative("socket_send", catCall(), (_k, args) => ({
+      kind: "int",
+      int: socketCall({ op: "send", h: argInt(args, 0), text: argStr(args, 1) }),
+    }));
+    this.registerNative("socket_recv", catCall(), (_k, args) => {
+      const max = argInt(args, 1);
+      if (max <= 0) return { kind: "str", str: "" };
+      const n = socketCall({ op: "recv", h: argInt(args, 0), max });
+      if (n <= 0) return { kind: "str", str: "" };
+      return { kind: "str", str: _sockData!.subarray(0, n).toString("utf8") };
     });
-    this.registerNative("socket_accept", catCall(), (_k, _args) => {
-      throw new Error(
-        "socket_accept: TS kernel has no blocking-accept shim yet — " +
-          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
-      );
-    });
-    this.registerNative("socket_connect", catCall(), (_k, _args) => {
-      throw new Error(
-        "socket_connect: TS kernel has no blocking-IO shim yet — " +
-          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
-      );
-    });
-    this.registerNative("socket_send", catCall(), (_k, _args) => {
-      throw new Error(
-        "socket_send: TS kernel has no blocking-IO shim yet — " +
-          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
-      );
-    });
-    this.registerNative("socket_recv", catCall(), (_k, _args) => {
-      throw new Error(
-        "socket_recv: TS kernel has no blocking-IO shim yet — " +
-          "sibling-loud-divergent panic-stub; use Go or Rust kernel.",
-      );
-    });
-    // socket_close — the one socket native that has a sibling-safe
-    // sentinel branch on all three kernels: a -1 handle returns -1
-    // without touching the (nonexistent) TS connection table. Used by
-    // tests/socket-band.fk to witness that the API surface EXISTS on
-    // all three kernels even when the implementation diverges.
     this.registerNative("socket_close", catCall(), (_k, args) => {
       const h = argInt(args, 0);
       if (h < 0) return { kind: "int", int: -1 };
-      // No connection table in TS — handles > 0 are necessarily stale
-      // (we never returned one), so -1 is the honest response.
-      return { kind: "int", int: -1 };
+      return { kind: "int", int: socketCall({ op: "close", h }) };
     });
 
     // Substrate write surface — all attributed as WITNESS.

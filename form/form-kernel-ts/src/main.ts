@@ -8,7 +8,15 @@
 //   tsx src/main.ts path/to/file.fk
 
 import { readFile, writeFile } from "node:fs/promises";
-import { deserializeRecipeArtifact, Frame, Kernel, serializeRecipeArtifact, Trace, walk } from "./kernel.ts";
+import {
+  deserializeRecipeArtifact,
+  Frame,
+  Kernel,
+  serializeRecipeArtifact,
+  shutdownSocketWorker,
+  Trace,
+  walk,
+} from "./kernel.ts";
 import { readAll, readForm } from "./reader.ts";
 import { runBench } from "./bench.ts";
 import { compileNode } from "./compiler.ts";
@@ -156,8 +164,15 @@ async function runTrace(args: string[]): Promise<void> {
   console.log(JSON.stringify(report, null, 2));
 }
 
-main().catch((err: unknown) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error(`form-kernel-ts: ${msg}`);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    // Terminate the socket worker (if any) so the process exits promptly;
+    // its net handles otherwise keep Node's event loop alive.
+    shutdownSocketWorker();
+  })
+  .catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`form-kernel-ts: ${msg}`);
+    shutdownSocketWorker();
+    process.exit(1);
+  });

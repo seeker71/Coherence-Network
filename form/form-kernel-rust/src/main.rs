@@ -2870,6 +2870,23 @@ impl Kernel {
                 Err(_) => Value::Int(-1),
             }
         });
+        // (socket_port listener-handle) → bound TCP port | -1. Reports the
+        // OS-assigned port of an ephemeral (port 0) listener — the basis of
+        // single-process loopback.
+        self.register_native("socket_port", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let s = match socket_lookup(h) {
+                Some(s) => s,
+                None => return Value::Int(-1),
+            };
+            match &*s {
+                SocketKind::Listener(ln) => match ln.local_addr() {
+                    Ok(addr) => Value::Int(addr.port() as i64),
+                    Err(_) => Value::Int(-1),
+                },
+                _ => Value::Int(-1),
+            }
+        });
         self.register_native("socket_accept", cat_call(), |_, _, args| {
             let h = args[0].as_int();
             let s = match socket_lookup(h) {
