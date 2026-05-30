@@ -1519,6 +1519,22 @@ impl Kernel {
         self.register_native("record?", cat_access(), |_, _, args| {
             Value::Bool(matches!(&args[0], Value::Record(_)))
         });
+        // record_keys — (record_keys rec) → list of field-name strings, in
+        // insertion order. Lets Form enumerate a record used as a hash map
+        // (e.g. cell-log-store.fk's keydir for compaction).
+        self.register_native("record_keys", cat_access(), |k, _, args| match &args[0] {
+            Value::Record(r) => {
+                let names: Vec<NameID> =
+                    r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
+                Value::List(
+                    names
+                        .into_iter()
+                        .map(|n| Value::Str(k.strs[n as usize].clone()))
+                        .collect(),
+                )
+            }
+            _ => Value::List(Vec::new()),
+        });
         // --- methods on the blueprint (BML/NUMS reference, rung 2b) ---------
         // Methods live on the blueprint/type, not on instances — shared by all
         // records of that type, name-dispatched. The keystone that makes a
@@ -3171,6 +3187,28 @@ impl Kernel {
             };
             match fs::write(&path, &bytes) {
                 Ok(_) => Value::Int(bytes.len() as i64),
+                Err(_) => Value::Int(-1),
+            }
+        });
+        // file_append_bytes path bytes-list → new-file-size | -1. Atomic
+        // O_APPEND write — the missing primitive for a log-structured store.
+        // Unlike write_file_bytes (which truncates), this appends at end-of-
+        // file and returns the new total size. Creates the file if absent.
+        self.register_native("file_append_bytes", cat_call(), |_, _, args| {
+            let path = args[0].as_str().to_string();
+            let bytes: Vec<u8> = match &args[1] {
+                Value::List(xs) => xs.iter().map(|v| v.as_int() as u8).collect(),
+                _ => return Value::Int(-1),
+            };
+            let mut f = match fs::OpenOptions::new().append(true).create(true).open(&path) {
+                Ok(f) => f,
+                Err(_) => return Value::Int(-1),
+            };
+            if f.write_all(&bytes).is_err() {
+                return Value::Int(-1);
+            }
+            match f.metadata() {
+                Ok(meta) => Value::Int(meta.len() as i64),
                 Err(_) => Value::Int(-1),
             }
         });

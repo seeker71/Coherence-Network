@@ -1,0 +1,51 @@
+; tests/file-append-band.fk — the O_APPEND primitive, real, three-way.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proves file_append_bytes: atomic append at end-of-file (not truncate), with
+; the returned size and offset-reads via read_file_slice forming the read/write
+; pair a log-structured store needs (docs/coherence-substrate/cell-store-
+; architecture.md). Real I/O against the live filesystem, identical Go/Rust/TS.
+;
+; The strange edge: three appends of different lengths, where each record is
+; read back by its byte offset+length AFTER all appends — proving the log holds
+; every record at a stable position and append never rewrites earlier bytes.
+;
+; Band verdict: 11111 when every assertion holds across all three kernels.
+;   first append returns its length        → 1
+;   second append grows the file (size sums) → 10
+;   third append grows further               → 100
+;   offset-read record 1 (slice)             → 1000
+;   offset-read record 3 after all writes     → 10000
+
+(do
+    (let path "/tmp/file-append-band.log")
+    (fs_remove path)                          ; clean slate (ignore if absent)
+
+    ;; bytes for "AA" (65,65), "BBB" (66x3), "CCCC" (67x4)
+    (let rec1 (list 65 65))
+    (let rec2 (list 66 66 66))
+    (let rec3 (list 67 67 67 67))
+
+    (let size1 (file_append_bytes path rec1))   ; file now 2 bytes
+    (let a1-ok (if (eq size1 2) 1 0))
+
+    (let size2 (file_append_bytes path rec2))   ; file now 5 bytes
+    (let a2-ok (if (eq size2 5) 10 0))
+
+    (let size3 (file_append_bytes path rec3))   ; file now 9 bytes
+    (let a3-ok (if (eq size3 9) 100 0))
+
+    ;; total size check via the independent file_size native
+    (let total-ok (if (eq (file_size path) 9) 1 0))   ; folded into reads below
+
+    ;; read record 1 by offset [0,2) and record 3 by offset [5,4) — AFTER all
+    ;; appends, proving earlier records stayed put.
+    (let r1 (read_file_slice path 0 2))         ; "AA"
+    (let read1-ok (if (str_eq r1 "AA") (if (eq total-ok 1) 1000 0) 0))
+
+    (let r3 (read_file_slice path 5 4))         ; "CCCC"
+    (let read3-ok (if (str_eq r3 "CCCC") 10000 0))
+
+    (fs_remove path)
+    (sum (list a1-ok a2-ok a3-ok read1-ok read3-ok)))
