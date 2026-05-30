@@ -1,0 +1,58 @@
+; tests/sanskrit-roots-band.fk — dhātu roots + bija mantras, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/sanskrit-roots.fk
+;
+; Proves both faces of the Sanskrit grammar and — load-bearing — that derivation-
+; by-root is content-addressing: words sharing a dhātu form its family, exactly
+; as words sharing a gematria value or cells sharing a Blueprint do. Romanized
+; (IAST) is the kernel-comparable form (native Devanāgarī is not three-way safe —
+; Rust counts Unicode scalars, Go/TS bytes; the native script lives in the doc).
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS.
+;   a word decodes to its dhātu root + meaning              → 1
+;   the gloss carries the derived sense                      → 10
+;   ROOT FAMILY: karma + samskara both from √kṛ (sqrt-kr)     → 100   (content-addressing by root)
+;   an unattested word → honest absence (not fabricated)       → 1000
+;   bija: a seed-syllable → its chakra + element                → 10000
+;   an unattested syllable → honest absence                      → 100000
+
+(do
+    ;; --- dhātu: karma → √kṛ, "to do" -------------------------------------
+    (let r (dhatu-decode "karma"))
+    (let decode-ok
+        (if (eq (dhatu-found? r) 1)
+            (if (str_eq (dhatu-root (dhatu-of r)) "sqrt-kr")
+                (if (ge (str_find (dhatu-root-meaning (dhatu-of r)) "to do" 0) 0) 1 0) 0) 0))
+
+    ;; --- the gloss carries the derived sense -----------------------------
+    (let gloss-ok
+        (if (ge (str_find (dhatu-gloss (dhatu-of r)) "that which is done" 0) 0) 10 0))
+
+    ;; --- ROOT FAMILY: karma and samskara share √कृ (sqrt-kr) -------------
+    ;; the content-addressing claim, in Sanskrit: same root → one family,
+    ;; regardless of how the words look on the surface.
+    (let fam (dhatu-family "sqrt-kr"))
+    (let family-ok
+        (if (eq (len fam) 2)                            ; exactly two seeded words from √kṛ
+            (if (str_eq (head fam) "samskara")          ; cons order: samskara, karma
+                (if (str_eq (head (tail fam)) "karma") 100 0) 0) 0))
+
+    ;; --- honest absence for an unattested word ---------------------------
+    (let miss (dhatu-decode "guru"))
+    (let absence-ok
+        (if (eq (dhatu-found? miss) 0)
+            (if (ge (str_find (dhatu-answer "guru") "honest absence" 0) 0) 1000 0) 0))
+
+    ;; --- bija: RAM → Manipura, fire --------------------------------------
+    (let b (bija-decode "RAM"))
+    (let bija-ok
+        (if (eq (bija-found? b) 1)
+            (if (str_eq (bija-chakra (bija-of b)) "Manipura")
+                (if (str_eq (bija-element (bija-of b)) "fire") 10000 0) 0) 0))
+
+    ;; --- bija honest absence ---------------------------------------------
+    (let bmiss (bija-decode "ZZZ"))
+    (let bija-absence-ok
+        (if (eq (bija-found? bmiss) 0) 100000 0))
+
+    (sum (list decode-ok gloss-ok family-ok absence-ok bija-ok bija-absence-ok)))
