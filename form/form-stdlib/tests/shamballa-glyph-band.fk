@@ -1,0 +1,61 @@
+; tests/shamballa-glyph-band.fk — Shamballa Glyphic, symbols that grow from meaning.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-glyph.fk
+;
+; Proves the new language's symbols are DERIVED from meaning, not assigned:
+;   - same meaning → same symbol (content-addressed by construction);
+;   - DEPTH is visible AND recoverable (the name's word-count = the ring count);
+;   - distinct meanings → distinct symbols (no collision on the seeded codes);
+;   - the symbol is reproducible three-way (pure Form, ASCII).
+;
+; Band verdict: 11111 when every claim holds across Go/Rust/TS.
+;   same meaning → same glyph                          → 1
+;   depth recoverable from the glyph (= word-count)     → 10
+;   a 6-part name is deeper than a 5-part name           → 100
+;   distinct meanings → distinct glyphs                   → 1000
+;   SVG renders depth rings (one <circle> per depth)       → 10000
+
+(do
+    ;; count occurrences of a needle in a string (for the SVG circle check).
+    (defn count-occ-loop (s needle from n acc)
+        (do
+            (let hit (str_find s needle from))
+            (if (lt hit 0) acc
+                (count-occ-loop s needle (add hit 1) n (add acc 1)))))
+    (defn count-occ (s needle) (count-occ-loop s needle 0 (str_len s) 0))
+
+    ;; the four publicly-attested Shamballa code meanings (name, function).
+    (let n1 "Mer Ka Fa Ka Lish Ma")   (let f1 "Activate dormant DNA")
+    (let n2 "Atlantean Dai Ko Myo")    (let f2 "Master Power Symbol")
+    (let n3 "Ho Ka O iLi iLi")         (let f3 "Increase regal energy")
+
+    (let g1  (glyph-of-meaning n1 f1))
+    (let g1b (glyph-of-meaning n1 f1))   ; same meaning again
+    (let g2  (glyph-of-meaning n2 f2))
+    (let g3  (glyph-of-meaning n3 f3))
+
+    ;; --- same meaning → same symbol (content-addressed) -------------------
+    (let same-ok (if (str_eq g1 g1b) 1 0))
+
+    ;; --- depth recoverable: glyph's leading rings = the name's word-count -
+    ;; "Mer Ka Fa Ka Lish Ma" = 6 words → 6 rings.
+    (let depth-ok
+        (if (eq (glyph-depth g1) 6)
+            (if (eq (glyph-depth g1) (glyph-depth-of-name n1)) 10 0) 0))
+
+    ;; --- a 6-part name is deeper (wider symbol) than a 5-part name --------
+    ;; n1 (6 words) deeper than n3 "Ho Ka O iLi iLi" (5 words).
+    (let deeper-ok
+        (if (gt (glyph-depth g1) (glyph-depth g3)) 100 0))
+
+    ;; --- distinct meanings → distinct symbols ----------------------------
+    (let distinct-ok
+        (if (str_eq g1 g2) 0
+            (if (str_eq g1 g3) 0
+                (if (str_eq g2 g3) 0 1000))))
+
+    ;; --- SVG renders one ring per depth ----------------------------------
+    (let svg (glyph-svg-of-meaning n1 f1))
+    (let svg-ok (if (eq (count-occ svg "<circle") 6) 10000 0))
+
+    (sum (list same-ok depth-ok deeper-ok distinct-ok svg-ok)))
