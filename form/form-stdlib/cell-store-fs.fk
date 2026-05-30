@@ -1,0 +1,107 @@
+; cell-store-fs.fk — a REAL directory-backed substrate cell store.
+;
+; The production-shaped file backend: a store is an actual DIRECTORY TREE, one
+; real file per cell at  <root>/<domain>/<name>.fkb , with full per-cell CRUD.
+; This is the substrate store as a live filesystem — not a single flat append
+; log (persistence.fk's channel) but a directory the OS itself indexes:
+;
+;   <root>/
+;     idea/
+;       agent-pipeline.fkb        ← one cell, one file (a CELL Recipe)
+;     spec/
+;       agent-pipeline.fkb        ← same name, different domain, different file
+;     concept/
+;       lc-trust-over-fear.fkb
+;
+; Why this over the flat channel: real per-cell operations. cell-put writes ONE
+; file (no whole-store rewrite); cell-delete removes ONE file; list-domain reads
+; a real directory; cell-get reads a single file. Identity is (domain, name) —
+; the same UNIQUE(domain, name) the Python orm.py enforces — realized as a real
+; path. last-write-wins is the filesystem overwriting the file.
+;
+; Built on the fs_* CRUD natives (fs_mkdir/fs_list/fs_remove/fs_exists/fs_is_dir)
+; and the kernel's write_form_binary / read_form_binary. Same CELL Recipe shape
+; as persistence.fk (name, domain, blueprint, ctor) so cells round-trip between
+; the flat and directory backends — the store is the contract, the layout is the
+; carrier (docs/coherence-substrate/ports-interface-and-structure.md).
+;
+; preludes: form-stdlib/core.fk form-stdlib/persistence.fk
+;
+(do
+    ;; ---- path layout ------------------------------------------------------
+    ;; A cell lives at <root>/<domain>/<name>.fkb. Names are used verbatim as
+    ;; filenames; callers keep them filesystem-safe (the substrate's slugs
+    ;; already are: kebab-case, no slashes).
+    (defn cs-domain-dir (root domain) (str_concat root (str_concat "/" domain)))
+    (defn cs-cell-path (root domain name)
+        (str_concat (cs-domain-dir root domain)
+            (str_concat "/" (str_concat name ".fkb"))))
+
+    ;; strip the trailing ".fkb" from a listed filename → the cell name.
+    ;; (len ".fkb") = 4; substring [0, len-4).
+    (defn cs-strip-ext (filename)
+        (substring filename 0 (sub (str_len filename) 4)))
+
+    ;; ---- store create -----------------------------------------------------
+    ;; A store is just its root directory. Domain subdirs are made on demand.
+    (defn cell-store-fs-create (root) (fs_mkdir root))
+
+    ;; ---- write one cell ---------------------------------------------------
+    ;; Writes a single CELL Recipe to its own file. Makes the domain dir if
+    ;; absent. Overwrites = last-write-wins. Returns 0 on success, -1 on error.
+    (defn cell-fs-put (root name domain blueprint ctor)
+        (do
+            (fs_mkdir (cs-domain-dir root domain))
+            (write_form_binary
+                (cs-cell-path root domain name)
+                (make-cell-recipe name domain blueprint ctor))
+            0))
+
+    ;; ---- read one cell ----------------------------------------------------
+    ;; Returns a 0-or-1-element list (the body's optional). Honest absence when
+    ;; the file does not exist — no fabricated cell.
+    (defn cell-fs-get (root domain name)
+        (if (eq (fs_exists (cs-cell-path root domain name)) 1)
+            (list (read_form_binary (cs-cell-path root domain name)))
+            (empty)))
+
+    (defn cell-fs-found? (result) (if (eq (len result) 1) 1 0))
+    (defn cell-fs-of (result) (head result))
+
+    ;; ---- delete one cell --------------------------------------------------
+    ;; Real per-cell removal. Returns 0 on success, -1 if absent/error.
+    (defn cell-fs-delete (root domain name)
+        (fs_remove (cs-cell-path root domain name)))
+
+    ;; ---- enumerate a domain ----------------------------------------------
+    ;; list-domain root domain → list of cell NAMES in that domain (real
+    ;; directory read, name-sorted by fs_list). Empty list if the domain dir
+    ;; does not exist.
+    (defn cs-names-loop (filenames acc)
+        (if (nil? filenames) acc
+            (cs-names-loop (tail filenames)
+                (ps-append acc (list (cs-strip-ext (head filenames)))))))
+    (defn cell-fs-list-domain (root domain)
+        (do
+            (let dir (cs-domain-dir root domain))
+            (if (eq (fs_exists dir) 1)
+                (cs-names-loop (fs_list dir) (empty))
+                (empty))))
+
+    ;; ---- enumerate domains ------------------------------------------------
+    ;; list-domains root → the domain names present (the subdirectories).
+    (defn cell-fs-list-domains (root)
+        (if (eq (fs_exists root) 1)
+            (fs_list root)
+            (empty)))
+
+    ;; ---- read every cell in a domain (get-all) ---------------------------
+    ;; Threads list-domain through cell-fs-get, returning the CELL Recipes.
+    (defn cs-getall-loop (root domain names acc)
+        (if (nil? names) acc
+            (cs-getall-loop root domain (tail names)
+                (ps-append acc (cell-fs-get root domain (head names))))))
+    (defn cell-fs-domain-cells (root domain)
+        (cs-getall-loop root domain (cell-fs-list-domain root domain) (empty)))
+
+    0)
