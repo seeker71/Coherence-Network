@@ -1163,6 +1163,17 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("record_blueprint", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: args[0].Rec.Blueprint}
 	})
+	// record_keys — (record_keys rec) → list of field-name strings, in
+	// insertion order. Lets Form enumerate a record used as a hash map (e.g.
+	// the keydir of cell-log-store.fk for compaction).
+	k.registerNative("record_keys", catAccess(), func(k *Kernel, args []Value) Value {
+		fields := args[0].Rec.Fields
+		out := make([]Value, len(fields))
+		for i, f := range fields {
+			out[i] = Value{Kind: VStr, Str: k.strs[f.name]}
+		}
+		return Value{Kind: VList, List: out}
+	})
 	// record? — (record? v) → bool type predicate.
 	k.registerNative("record?", catAccess(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VBool, Bool: args[0].Kind == VRecord}
@@ -2226,6 +2237,32 @@ func (k *Kernel) registerNatives() {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: int64(len(bytes))}
+	})
+	// file_append_bytes path bytes-list → new-file-size | -1. Atomic O_APPEND
+	// write — the missing primitive for a log-structured store. Unlike
+	// write_file_bytes (which truncates), this seeks to end-of-file under the
+	// kernel's append lock so concurrent appends do not clobber, then returns
+	// the new total file size. Creates the file if absent. Foundation for
+	// cell-log-store.fk (the Bitcask-shape store) — see
+	// docs/coherence-substrate/cell-store-architecture.md.
+	k.registerNative("file_append_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		bytes := make([]byte, len(args[1].List))
+		for i, v := range args[1].List {
+			bytes[i] = byte(v.Int)
+		}
+		f, err := os.OpenFile(args[0].Str, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		defer f.Close()
+		if _, err := f.Write(bytes); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		info, err := f.Stat()
+		if err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: info.Size()}
 	})
 	// write_file_text — host text output. Keeps text compilers from
 	// materializing byte lists while byte codecs still use write_file_bytes.

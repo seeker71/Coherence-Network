@@ -14,6 +14,7 @@
 // kernels. Cross-kernel NodeID agreement is the conformance contract.
 
 import {
+  appendFileSync,
   closeSync,
   mkdirSync,
   openSync,
@@ -1228,6 +1229,17 @@ export class Kernel {
       kind: "bool",
       bool: args[0]!.kind === "record",
     }));
+    // record_keys — (record_keys rec) → list of field-name strings, in
+    // insertion order. Lets Form enumerate a record used as a hash map
+    // (e.g. cell-log-store.fk's keydir for compaction).
+    this.registerNative("record_keys", catAccess(), (k, args) => {
+      const r = args[0]!;
+      if (r.kind !== "record") return { kind: "list", list: [] };
+      return {
+        kind: "list",
+        list: r.record.fields.map((f) => ({ kind: "str", str: k.strs[f.name]! }) as Value),
+      };
+    });
     // --- methods on the blueprint (BML/NUMS reference, rung 2b) ----------
     // Methods live on the blueprint/type, shared by all records of that type,
     // name-dispatched. The keystone that makes a Record a real object.
@@ -2193,6 +2205,24 @@ export class Kernel {
         }
         writeFileSync(path, buf);
         return { kind: "int", int: buf.length };
+      } catch {
+        return { kind: "int", int: -1 };
+      }
+    });
+    // file_append_bytes path bytes-list → new-file-size | -1. Atomic append
+    // (O_APPEND) — the missing primitive for a log-structured store. Unlike
+    // write_file_bytes (truncates), this appends at end-of-file and returns
+    // the new total size. Creates the file if absent.
+    this.registerNative("file_append_bytes", catCall(), (_k, args) => {
+      try {
+        const path = argStr(args, 0);
+        const list = argList(args, 1);
+        const buf = Buffer.alloc(list.length);
+        for (let i = 0; i < list.length; i++) {
+          buf[i] = argInt(list, i) & 0xff;
+        }
+        appendFileSync(path, buf);
+        return { kind: "int", int: statSync(path).size };
       } catch {
         return { kind: "int", int: -1 };
       }
