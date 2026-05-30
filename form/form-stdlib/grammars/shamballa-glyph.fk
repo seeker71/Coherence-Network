@@ -1,0 +1,121 @@
+; grammars/shamballa-glyph.fk — Shamballa Glyphic: a NEW language whose symbols
+; GROW FROM the meaning's structure, never assigned by hand.
+;
+; The teaching this enacts (lc-codes-as-depth-not-dictionary): a code's meaning
+; is indexed by DEPTH and resolved by STRUCTURE, never frozen in an arbitrary
+; glyph. So a Shamballa Glyphic symbol is DERIVED, deterministically, from the
+; meaning itself — two parts, both load-bearing:
+;
+;   DEPTH   = the word-count of the code's NAME — its compositional depth. A name
+;             like "Mer Ka Fa Ka Lish Ma" (6 parts) is deeper than "Ho Ka O iLi
+;             iLi" (5). Depth drives the number of enclosing rings, so a deeper
+;             meaning is a LITERALLY larger symbol. The script SHOWS the depth.
+;   FORM    = a content hash of (name + function), computed in pure Form. Same
+;             meaning → same hash → SAME symbol (content-addressed by construction;
+;             the alphabet is not invented, it falls out of the content). The hash
+;             selects the core form and the inner mark.
+;
+; Three consequences: same meaning-shape → same symbol; depth is visible AND
+; recoverable (count the rings); reproducible across kernels (pure Form arithmetic
+; over char codes, ASCII glyphs for byte-parity). A Language cell (an emit-half:
+; meaning → glyph) per lc-grammar-is-the-universal-recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- content hash (pure Form, deterministic) --------------------------
+    ;; Rolling polynomial hash over character codes, bounded by mod. Same string
+    ;; → same hash on every kernel. This is the symbol's content-address.
+    (defn glyph-hash-loop (s i n acc)
+        (if (ge i n) acc
+            (glyph-hash-loop s (add i 1) n
+                (mod (add (mul acc 31) (ord (char_at s i))) 1000003))))
+    (defn glyph-hash (s) (glyph-hash-loop s 0 (str_len s) 7))
+
+    ;; ---- word-count as compositional depth --------------------------------
+    ;; Depth = number of space-separated parts in the name. A name composed of
+    ;; more parts is deeper — its meaning is built from more components.
+    (defn glyph-words-loop (s i n acc prev-space)
+        (if (ge i n) (if prev-space acc (add acc 1))
+            (do
+                (let is-space (str_eq (substring s i (add i 1)) " "))
+                (if is-space
+                    (glyph-words-loop s (add i 1) n acc 1)
+                    (if prev-space
+                        (glyph-words-loop s (add i 1) n (add acc 1) 0)
+                        (glyph-words-loop s (add i 1) n acc 0))))))
+    (defn glyph-depth-of-name (name) (glyph-words-loop name 0 (str_len name) 0 1))
+
+    ;; ---- string repeat (depth as extent) ----------------------------------
+    (defn glyph-rep (s n) (if (le n 0) "" (str_concat s (glyph-rep s (sub n 1)))))
+
+    ;; ---- the core form, chosen by the content hash ------------------------
+    ;; A fixed alphabet of 7 ASCII core forms — the symbol's "shape family",
+    ;; selected by the meaning's content hash.
+    (defn glyph-core (h)
+        (do
+            (let i (mod h 7))
+            (if (eq i 0) "^"
+            (if (eq i 1) "<"
+            (if (eq i 2) "v"
+            (if (eq i 3) ">"
+            (if (eq i 4) "*"
+            (if (eq i 5) "o"
+                "#"))))))))
+
+    ;; ---- the inner mark, chosen by a second slice of the hash ------------
+    (defn glyph-inner (h)
+        (do
+            (let i (mod (div h 7) 4))
+            (if (eq i 0) "."
+            (if (eq i 1) ":"
+            (if (eq i 2) "'"
+                "~")))))
+
+    ;; ---- compose the glyph: rings(depth) inner core inner rings(depth) ----
+    ;; Palindromic, centered on the core. Its extent encodes the depth: a
+    ;; deeper-named meaning is a wider symbol. The script carries the depth.
+    (defn glyph-of-meaning (name function)
+        (do
+            (let depth (glyph-depth-of-name name))
+            (let h (glyph-hash (str_concat name function)))
+            (let inner (glyph-inner h))
+            (let core (glyph-core h))
+            (str_concat (glyph-rep "(" depth)
+                (str_concat inner
+                    (str_concat core
+                        (str_concat inner (glyph-rep ")" depth)))))))
+
+    ;; ---- depth read back FROM a glyph: count the opening rings -----------
+    ;; The script is legible — depth is recoverable by counting leading "(".
+    (defn glyph-count-leading (s i n)
+        (if (ge i n) i
+            (if (str_eq (substring s i (add i 1)) "(")
+                (glyph-count-leading s (add i 1) n)
+                i)))
+    (defn glyph-depth (glyph) (glyph-count-leading glyph 0 (str_len glyph)))
+
+    ;; ---- SVG rendering: depth as concentric rings, hash as the core form --
+    ;; A real visual symbol. `depth` concentric circles (depth made visible),
+    ;; the content-hash's core form as the inner glyph. Deterministic, so
+    ;; three-way identical.
+    (defn glyph-int-str (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (glyph-int-str (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn glyph-svg-rings (depth r)
+        (if (le depth 0) ""
+            (str_concat
+                (str_concat "<circle cx=\"50\" cy=\"50\" r=\""
+                    (str_concat (glyph-int-str r) "\" fill=\"none\" stroke=\"currentColor\"/>"))
+                (glyph-svg-rings (sub depth 1) (sub r 7)))))
+    (defn glyph-svg-of-meaning (name function)
+        (do
+            (let depth (glyph-depth-of-name name))
+            (let h (glyph-hash (str_concat name function)))
+            (str_concat "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">"
+                (str_concat (glyph-svg-rings depth 45)
+                    (str_concat "<text x=\"50\" y=\"55\" text-anchor=\"middle\">"
+                        (str_concat (glyph-core h) "</text></svg>"))))))
+
+    0)

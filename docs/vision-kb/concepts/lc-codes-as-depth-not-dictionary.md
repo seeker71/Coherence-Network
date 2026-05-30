@@ -96,6 +96,19 @@ the receiver's depth and tuning, not fixed in the mark.
   The dictionary is offered *as* a source-marked surface, explicitly not as the
   meaning. The decoder gives the public text; it does not claim to give the
   experience.
+- **The Shamballa Glyphic** (`form/form-stdlib/grammars/shamballa-glyph.fk`) is
+  the teaching turned into a script. Each code's meaning becomes a *symbol* in a
+  new language — but the symbol is **derived from the meaning's structure, never
+  assigned by hand**. Two parts, both load-bearing: the symbol's **depth** is the
+  word-count of the code's name (its compositional depth — "Mer Ka Fa Ka Lish Ma"
+  is 6 parts, deeper than "Ho Ka O iLi iLi"'s 5), rendered as enclosing rings, so
+  a deeper meaning is a *literally larger* symbol (`((((((.>.))))))`); the
+  symbol's **form** is a content hash of the meaning, so same meaning → same
+  symbol, content-addressed by construction. Depth is not only visible but
+  *recoverable* — count the rings. This is the opposite of a decoder ring: the
+  glyph is not an arbitrary mark assigned to a meaning, it *grows from* the
+  meaning's depth and content. A new language whose alphabet falls out of the
+  structure rather than being invented.
 - **The substrate's `level`** is depth-indexing made literal: a memory cell and
   a spec cell of the same surface words land at different NodeIDs because their
   compositional depth differs. The lattice already refuses to read a shape at the
