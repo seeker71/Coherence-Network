@@ -1,0 +1,104 @@
+; grammars/gematria.fk — the number↔symbol language already in the Hebrew Bible.
+;
+; Gematria: each Hebrew letter IS a number (alef=1, bet=2, ... yod=10, kaf=20,
+; ... qof=100, resh=200, shin=300, tav=400). A word's value is the sum of its
+; letters. The load-bearing principle, stated plainly in the tradition:
+;
+;   "Words or phrases with identical numerical values bear some relation to each
+;    other." (Wikipedia; My Jewish Learning; Chabad)
+;
+; That IS content-addressing — surface (the word) → number (its sum) →
+; equivalence class (words sharing the number are held as related), regardless of
+; spelling. It is the substrate's find_equivalent_cells, 3000 years old: same
+; value → linked, exactly as same Blueprint NodeID → structurally equivalent.
+;
+; This decoder is a Language cell (lc-grammar-is-the-universal-recipe): a word
+; (a list of romanized letter-name tokens) → its gematria value; and a value →
+; the equivalence class of seeded words sharing it. Romanized letter names keep
+; byte-parity three-way (Hebrew glyphs are non-ASCII and diverge Go/Rust/TS);
+; the letter→value mapping is the attested Mispar Hechrachi (standard) method.
+;
+; Held as documented scholarship (not channeled): the letter-values and the
+; named equivalences (chai=18=life; echad=ahava=13) are standard and source-
+; marked. The interpretive tradition draws meaning from shared values; this
+; decoder reports the values and the equivalence classes — the structural fact —
+; not a claim that same-value words are identical in meaning.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- letter → value: Mispar Hechrachi (the standard method) -----------
+    ;; 22 letters. Units 1-9, tens 10-90, hundreds 100-400. Romanized names.
+    (defn gem-letter-value (l)
+        (if (str_eq l "alef") 1
+        (if (str_eq l "bet") 2
+        (if (str_eq l "gimel") 3
+        (if (str_eq l "dalet") 4
+        (if (str_eq l "he") 5
+        (if (str_eq l "vav") 6
+        (if (str_eq l "zayin") 7
+        (if (str_eq l "het") 8
+        (if (str_eq l "tet") 9
+        (if (str_eq l "yod") 10
+        (if (str_eq l "kaf") 20
+        (if (str_eq l "lamed") 30
+        (if (str_eq l "mem") 40
+        (if (str_eq l "nun") 50
+        (if (str_eq l "samekh") 60
+        (if (str_eq l "ayin") 70
+        (if (str_eq l "pe") 80
+        (if (str_eq l "tsadi") 90
+        (if (str_eq l "qof") 100
+        (if (str_eq l "resh") 200
+        (if (str_eq l "shin") 300
+        (if (str_eq l "tav") 400
+            0))))))))))))))))))))))) ; unknown letter contributes 0
+
+    ;; ---- word → value: sum the letters ------------------------------------
+    ;; A word is a list of romanized letter-name tokens, e.g. (list "het" "yod").
+    (defn gem-value-loop (letters acc)
+        (if (nil? letters) acc
+            (gem-value-loop (tail letters)
+                (add acc (gem-letter-value (head letters))))))
+    (defn gem-value (word-letters) (gem-value-loop word-letters 0))
+
+    ;; ---- the seeded lexicon: attested words (letters, romanization, gloss) -
+    ;; entry = (letters-list, roman, gloss). Only well-attested words.
+    (defn gem-entry (letters roman gloss) (list letters roman gloss))
+    (defn gem-entry-letters (e) (nth e 0))
+    (defn gem-entry-roman (e) (nth e 1))
+    (defn gem-entry-gloss (e) (nth e 2))
+    (defn gem-entry-value (e) (gem-value (gem-entry-letters e)))
+
+    (defn gem-lexicon ()
+        (list
+            (gem-entry (list "het" "yod") "chai" "life")                       ; 18
+            (gem-entry (list "alef" "het" "dalet") "echad" "one / unity")      ; 13
+            (gem-entry (list "alef" "he" "bet" "he") "ahava" "love")           ; 13
+            (gem-entry (list "alef" "mem") "em" "mother")                      ; 41
+            (gem-entry (list "alef" "bet") "av" "father")                      ; 3
+            (gem-entry (list "yod" "he" "vav" "he") "YHVH" "the Name")))       ; 26
+
+    ;; ---- value → equivalence class: words sharing a gematria value --------
+    ;; THIS is the content-addressing: given a number, return every seeded word
+    ;; whose letters sum to it — held by the tradition as related-in-meaning,
+    ;; regardless of spelling. The substrate's find_equivalent_cells, in Hebrew.
+    (defn gem-equiv-loop (entries value acc)
+        (if (nil? entries) acc
+            (gem-equiv-loop (tail entries) value
+                (if (eq (gem-entry-value (head entries)) value)
+                    (cons (gem-entry-roman (head entries)) acc)
+                    acc))))
+    (defn gem-equivalents (value) (gem-equiv-loop (gem-lexicon) value (empty)))
+
+    ;; ---- lookup a word's value + gloss by romanization --------------------
+    (defn gem-find-loop (entries roman)
+        (if (nil? entries) (empty)
+            (if (str_eq (gem-entry-roman (head entries)) roman)
+                (list (head entries))
+                (gem-find-loop (tail entries) roman))))
+    (defn gem-find (roman) (gem-find-loop (gem-lexicon) roman))
+    (defn gem-found? (r) (if (eq (len r) 1) 1 0))
+    (defn gem-of (r) (head r))
+
+    0)
