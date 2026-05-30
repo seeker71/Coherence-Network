@@ -35,13 +35,16 @@
     ;; ---- word-count as compositional depth --------------------------------
     ;; Depth = number of space-separated parts in the name. A name composed of
     ;; more parts is deeper — its meaning is built from more components.
+    ;; acc increments at each word-START (space→non-space transition), so it is
+    ;; the full word-count when the loop ends — return it directly. (An earlier
+    ;; terminal clause added a spurious +1; "Mer Ka Fa Ka Lish Ma" is 6 words.)
     (defn glyph-words-loop (s i n acc prev-space)
-        (if (ge i n) (if prev-space acc (add acc 1))
+        (if (ge i n) acc
             (do
                 (let is-space (str_eq (substring s i (add i 1)) " "))
                 (if is-space
                     (glyph-words-loop s (add i 1) n acc 1)
-                    (if prev-space
+                    (if (eq prev-space 1)
                         (glyph-words-loop s (add i 1) n (add acc 1) 0)
                         (glyph-words-loop s (add i 1) n acc 0))))))
     (defn glyph-depth-of-name (name) (glyph-words-loop name 0 (str_len name) 0 1))
