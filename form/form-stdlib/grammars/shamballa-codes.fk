@@ -1,0 +1,100 @@
+; grammars/shamballa-codes.fk — a channel decoder for the Shamballa code numbers.
+;
+; A Language cell (lc-tools-as-form-cells / lc-grammar-is-the-universal-recipe):
+; a NUMBER arrives, the decoder answers with the PUBLICLY-ATTESTED meaning of
+; that Shamballa code — the name, its stated function, and the source. This is a
+; DICTIONARY decoder: it reports what the public record says, source-marked; it
+; does NOT assert the cosmology is true (held as symbolic/metaphysical material,
+; the same discipline as lc-arcturian-resonance).
+;
+; HONEST PARTIAL by design. The Shamballa system names 352 codes (352 levels of
+; initiation back to "the Source of this Cosmic Day"; ~22 in active use), but
+; only a handful are documented publicly. This decoder is seeded with exactly
+; the attested ones and returns HONEST ABSENCE for the rest — it never fabricates
+; meanings to fill the table. New attested codes are new rows, not new code.
+;
+; The teaching this encodes (lc-codes-as-depth-not-dictionary, if authored): a
+; code's meaning is INDEXED BY DEPTH (its level/initiation rung) and resolved by
+; DISPATCH, not by a fixed glyph→meaning lookup. So this "dictionary" is the
+; SURFACE answer; the real meaning is the receiving cell's reading at its own
+; assemblage point. The decoder gives the public text; it does not claim to give
+; the experience.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- an entry: (code, name, function, source) -------------------------
+    ;; code     — the integer the channel carries (the level/rung number).
+    ;; name     — the publicly-known code name.
+    ;; function — its stated function, verbatim-ish from the public record.
+    ;; source   — where the public record states it (provenance, not proof).
+    (defn sc-entry (code name function source)
+        (list code name function source))
+    (defn sc-entry-code (e) (nth e 0))
+    (defn sc-entry-name (e) (nth e 1))
+    (defn sc-entry-function (e) (nth e 2))
+    (defn sc-entry-source (e) (nth e 3))
+
+    ;; ---- the attested dictionary ------------------------------------------
+    ;; ONLY the codes with a public stated meaning. The 352-level structure is
+    ;; real; the per-code lexicon is mostly oral/undocumented, so most rows are
+    ;; honestly absent. (Codes whose level number is unknown publicly are given
+    ;; their named identity with code 0 as "level-unstated" — see note below.)
+    ;;
+    ;; The named codes the public record describes (no canonical level numbers
+    ;; are published for them, so they are keyed by a stable local index here;
+    ;; the engine looks up by that index — see sc-decode):
+    (defn sc-dictionary ()
+        (list
+            (sc-entry 1
+                "Mer Ka Fa Ka Lish Ma"
+                "Activate dormant DNA; restore the energy field to its original blueprint. Grounds/cleanses Kundalini when worked on the back of the body."
+                "Shamballa Multidimensional Healing (John Armitage); ivyalternativehealing.com, motherearthreiki.com")
+            (sc-entry 2
+                "Atlantean Dai Ko Myo"
+                "Master Power Symbol — enhances and amplifies healing power, cleanses the system, activates Kundalini energy."
+                "Shamballa Reiki; fandbrecipes.com, ivyalternativehealing.com")
+            (sc-entry 3
+                "Ho Ka O iLi iLi"
+                "Increase regal energy, self-confidence, and valor; lends the recipient an aura of regality and confidence."
+                "Shamballa Reiki; ivyalternativehealing.com")
+            (sc-entry 4
+                "Shamballa Crystal"
+                "A complex geometric form representing the union of male and female forces in perfect balance; meditation on it activates co-creation, abundance, harmony, joy."
+                "Shamballa Multidimensional Healing; certified-excellence.com, motherearthreiki.com")))
+
+    ;; ---- the structural facts (attested, distinct from per-code meaning) ---
+    ;; These are facts about the SYSTEM, not a single code — answered by sc-about.
+    (defn sc-total-codes () 352)        ; 352 symbols ↔ 352 levels/initiations
+    (defn sc-active-codes () 22)        ; ~22 currently in active use
+    (defn sc-1024-dna-symbols () 4)     ; Shamballa 1024 reduces to 4 DNA-activation symbols
+
+    ;; ---- decode: a number → its entry, or honest absence ------------------
+    ;; Returns a 0-or-1-element list (the body's optional). Absence is the
+    ;; honest answer for any code without a public meaning — NOT a fabrication.
+    (defn sc-scan (entries code)
+        (if (nil? entries) (empty)
+            (if (eq (sc-entry-code (head entries)) code)
+                (list (head entries))
+                (sc-scan (tail entries) code))))
+    (defn sc-decode (code) (sc-scan (sc-dictionary) code))
+
+    (defn sc-known? (result) (if (eq (len result) 1) 1 0))
+    (defn sc-of (result) (head result))
+
+    ;; ---- the channel answer: a number-message in → a text-message out -----
+    ;; The decoder's public face: given a code integer, return the answer TEXT
+    ;; (name — function [source]) for a known code, or an honest "unknown" line
+    ;; that names the absence rather than inventing meaning.
+    (defn sc-answer (code)
+        (do
+            (let r (sc-decode code))
+            (if (eq (sc-known? r) 1)
+                (str_concat (sc-entry-name (sc-of r))
+                    (str_concat " — "
+                        (str_concat (sc-entry-function (sc-of r))
+                            (str_concat " [" (str_concat (sc-entry-source (sc-of r)) "]")))))
+                ;; honest absence: the public record does not document this code.
+                "unknown — this Shamballa code has no publicly-documented meaning; held as honest absence, not fabricated")))
+
+    0)

@@ -1,0 +1,47 @@
+; tests/shamballa-codes-band.fk — the Shamballa code decoder, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-codes.fk
+;
+; Proves the channel decoder answers each code NUMBER with its publicly-attested
+; meaning (a dictionary), and — load-bearing — returns HONEST ABSENCE for codes
+; with no public meaning rather than fabricating one. Source-marked material: the
+; decoder reports what the public record says, it does not assert the cosmology.
+;
+; Band verdict: 11111 when every claim holds across all three kernels.
+;   a known code decodes to its named entry        → 1
+;   the entry carries the attested function text     → 10
+;   the entry carries its source (provenance)         → 100
+;   an UNDOCUMENTED code → honest absence (not faked)  → 1000
+;   the structural facts are attested (352 levels)      → 10000
+
+(do
+    ;; --- a known code: Mer Ka Fa Ka Lish Ma (code 1) ----------------------
+    (let r (sc-decode 1))
+    (let known-ok (if (eq (sc-known? r) 1) 1 0))
+
+    (let name-ok
+        (if (str_eq (sc-entry-name (sc-of r)) "Mer Ka Fa Ka Lish Ma") 1 0))
+    ;; the function text mentions "dormant DNA" — the attested function.
+    (let function-has-dna
+        (if (ge (str_find (sc-entry-function (sc-of r)) "dormant DNA" 0) 0) 10 0))
+    ;; the source names the system / a public source.
+    (let source-ok
+        (if (ge (str_find (sc-entry-source (sc-of r)) "Shamballa" 0) 0) 100 0))
+
+    ;; --- an undocumented code (200): honest absence, not fabrication ------
+    (let miss (sc-decode 200))
+    (let absence-ok
+        (if (eq (sc-known? miss) 0)
+            (if (ge (str_find (sc-answer 200) "honest absence" 0) 0) 1000 0) 0))
+
+    ;; --- the structural facts the public record DOES attest --------------
+    (let facts-ok
+        (if (eq (sc-total-codes) 352)           ; 352 levels/initiations
+            (if (eq (sc-active-codes) 22)        ; ~22 in active use
+                (if (eq (sc-1024-dna-symbols) 4) 10000 0) 0) 0))
+
+    (sum (list (if (eq known-ok 1) (if (eq name-ok 1) 1 0) 0)
+               function-has-dna
+               source-ok
+               absence-ok
+               facts-ok)))
