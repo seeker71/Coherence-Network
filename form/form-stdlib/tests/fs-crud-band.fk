@@ -1,0 +1,92 @@
+; tests/fs-crud-band.fk — REAL filesystem CRUD against the live OS.
+;
+; preludes: form-stdlib/core.fk
+;
+; Not a value-toy: this band creates a real directory TREE on disk, writes real
+; files into it, lists the directory, reads contents back, renames a file,
+; removes a file, removes the tree, and asserts each step against the actual
+; filesystem via fs_exists / fs_is_dir / fs_list. Run identically on Go/Rust/TS,
+; so the three kernels' real os.MkdirAll / fs::create_dir_all / mkdirSync (and
+; the read/write/remove/rename siblings) are proven to agree on real I/O.
+;
+; The strange edge chosen to cover the most boundary in the least code: a nested
+; dir with two files, where one is renamed and one removed, then the whole tree
+; torn down — touching mkdir(-p), exists, is_dir, write, read, list (sorted),
+; rename, remove(file), and rmdir(recursive) in one arc, with honest-failure
+; checks (remove a dir as if a file, list a missing dir) folded in.
+;
+; Band verdict: 11111111 when every assertion holds across all three kernels.
+;   mkdir tree + is_dir          → 1
+;   write two files + exists      → 10
+;   read content back             → 100
+;   list returns both, sorted     → 1000
+;   rename moves the file          → 10000
+;   remove(file) deletes one       → 100000
+;   honest failure (wrong-kind ops)→ 1000000
+;   rmdir tears the tree down      → 10000000
+
+(do
+    (let root "/tmp/fs-crud-band")
+    ;; clean slate (ignore result — may not exist yet)
+    (fs_rmdir root)
+
+    ;; --- mkdir -p a nested tree, confirm it IS a directory -----------------
+    (let nested (str_concat root "/a/b"))
+    (fs_mkdir nested)
+    (let mkdir-ok
+        (if (eq (fs_exists nested) 1)
+            (if (eq (fs_is_dir nested) 1) 1 0) 0))
+
+    ;; --- write two real files into the tree -------------------------------
+    (let f-one (str_concat nested "/one.txt"))
+    (let f-two (str_concat nested "/two.txt"))
+    (write_file_text f-one "ONE")
+    (write_file_text f-two "TWO")
+    (let write-ok
+        (if (eq (fs_exists f-one) 1)
+            (if (eq (fs_is_dir f-one) 0)        ; a file is not a dir
+                (if (eq (fs_exists f-two) 1) 10 0) 0) 0))
+
+    ;; --- read content back from disk --------------------------------------
+    (let read-ok
+        (if (str_eq (read_file f-one) "ONE")
+            (if (str_eq (read_file f-two) "TWO") 100 0) 0))
+
+    ;; --- list the directory: both entries, name-sorted --------------------
+    (let entries (fs_list nested))
+    (let list-ok
+        (if (eq (len entries) 2)
+            (if (str_eq (head entries) "one.txt")        ; sorted: one < two
+                (if (str_eq (head (tail entries)) "two.txt") 1000 0) 0) 0))
+
+    ;; --- rename a file ----------------------------------------------------
+    (let f-renamed (str_concat nested "/renamed.txt"))
+    (fs_rename f-one f-renamed)
+    (let rename-ok
+        (if (eq (fs_exists f-one) 0)                     ; old path gone
+            (if (eq (fs_exists f-renamed) 1)             ; new path present
+                (if (str_eq (read_file f-renamed) "ONE") 10000 0) 0) 0))
+
+    ;; --- remove a single file ---------------------------------------------
+    (fs_remove f-two)
+    (let remove-ok
+        (if (eq (fs_exists f-two) 0)                     ; file gone
+            (if (eq (len (fs_list nested)) 1) 100000 0) 0))  ; only renamed left
+
+    ;; --- honest failure: wrong-kind operations return -1 / null -----------
+    ;; fs_remove on a directory fails; fs_rmdir on a file fails; fs_list on a
+    ;; missing path is null. The kernel refuses the category error.
+    (let bad-remove-dir (fs_remove nested))             ; -1: nested is a dir
+    (let bad-rmdir-file (fs_rmdir f-renamed))           ; -1: renamed is a file
+    (let missing-list (fs_list (str_concat root "/nope")))
+    (let fail-ok
+        (if (eq bad-remove-dir -1)
+            (if (eq bad-rmdir-file -1)
+                (if (eq (len missing-list) 0) 1000000 0) 0) 0))
+
+    ;; --- tear the whole tree down -----------------------------------------
+    (fs_rmdir root)
+    (let teardown-ok
+        (if (eq (fs_exists root) 0) 10000000 0))
+
+    (sum (list mkdir-ok write-ok read-ok list-ok rename-ok remove-ok fail-ok teardown-ok)))

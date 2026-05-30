@@ -1852,6 +1852,77 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VStr, Str: string(buf[:n])}
 	})
 
+	// --- Filesystem CRUD natives — real directories + files ------------
+	// Sibling parity across Go/Rust/TS. Paths are strings. Convention:
+	// predicates return 1/0; mutations return 0 on success, -1 on error;
+	// fs_list returns a VList of name-strings (entries of a directory),
+	// or VNull on error. These compose into a real directory tree with
+	// file CRUD, the foundation under the file carrier and the substrate
+	// file store.
+	// (fs_exists path)        → 1 | 0
+	// (fs_is_dir path)        → 1 | 0
+	// (fs_mkdir path)         → 0 | -1   (mkdir -p; existing dir is success)
+	// (fs_rmdir path)         → 0 | -1   (recursive remove of a directory)
+	// (fs_remove path)        → 0 | -1   (remove a single file)
+	// (fs_rename old new)     → 0 | -1
+	// (fs_list path)          → VList of entry-name strings | VNull
+	k.registerNative("fs_exists", catCall(), func(_ *Kernel, args []Value) Value {
+		if _, err := os.Stat(args[0].Str); err != nil {
+			return Value{Kind: VInt, Int: 0}
+		}
+		return Value{Kind: VInt, Int: 1}
+	})
+	k.registerNative("fs_is_dir", catCall(), func(_ *Kernel, args []Value) Value {
+		info, err := os.Stat(args[0].Str)
+		if err != nil || !info.IsDir() {
+			return Value{Kind: VInt, Int: 0}
+		}
+		return Value{Kind: VInt, Int: 1}
+	})
+	k.registerNative("fs_mkdir", catCall(), func(_ *Kernel, args []Value) Value {
+		if err := os.MkdirAll(args[0].Str, 0755); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	k.registerNative("fs_rmdir", catCall(), func(_ *Kernel, args []Value) Value {
+		info, err := os.Stat(args[0].Str)
+		if err != nil || !info.IsDir() {
+			return Value{Kind: VInt, Int: -1}
+		}
+		if err := os.RemoveAll(args[0].Str); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	k.registerNative("fs_remove", catCall(), func(_ *Kernel, args []Value) Value {
+		info, err := os.Stat(args[0].Str)
+		if err != nil || info.IsDir() {
+			return Value{Kind: VInt, Int: -1}
+		}
+		if err := os.Remove(args[0].Str); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	k.registerNative("fs_rename", catCall(), func(_ *Kernel, args []Value) Value {
+		if err := os.Rename(args[0].Str, args[1].Str); err != nil {
+			return Value{Kind: VInt, Int: -1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	k.registerNative("fs_list", catCall(), func(_ *Kernel, args []Value) Value {
+		entries, err := os.ReadDir(args[0].Str)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		out := make([]Value, len(entries))
+		for i, e := range entries {
+			out[i] = Value{Kind: VStr, Str: e.Name()}
+		}
+		return Value{Kind: VList, List: out}
+	})
+
 	// --- Socket natives — L1 physical layer for inter-cell IO ----------
 	// Sibling parity across Go/Rust/TS. Handle = int (≥ 0 success, -1
 	// error). The connection table is package-level (socketHandles).
