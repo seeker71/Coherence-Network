@@ -344,7 +344,7 @@ its own focused PR):
 - `PY-BMF-LIST` + list-literal lift + `PY-BMF-SUBSCRIPT` for `xs[i]`
 - `PY-BMF-DICT` + dict-literal lift + key access
 - `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`
-- `PY-BMF-FOR` + iterator protocol on lists / ranges
+- `PY-BMF-FOR` + iterator protocol on lists / ranges — **landed**: `lift-for` + the PY-BMF-FOR eval arm carry `for i in range(...)`; `python_range_demo.py` reached COMPOST READY 2026-05-31. Iterator-over-list shapes still ride the same arm as they ripen.
 - `PY-BMF-LAMBDA` + closure capture in expressions
 - `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment
 
@@ -376,6 +376,7 @@ removable.
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.py` | mixed recursion — fact, fib, ackermann, is_prime + is_prime_helper, count_primes + count_primes_helper. Exercises `True`/`False` keyword lift, multi-level right-associative ternary chains (`a if p else b if q else c`), pure-recursive function composition `count_primes(30) + fact(8) + fib(15) + ackermann(2, 3)` | `python-bmf-lift.fk` (True/False keyword arms + lift-cond-tail right-assoc fix) | CPython `40949` · Rust (bootstrap) `40949` · `kernel-bmf-run` `40949` |
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_assign_demo.py` | assignment + list literal + subscript — `def add(a, b): return a+b; result = add(10, 20); xs = [1,2,3,4,5]; total = xs[0]+xs[1]+xs[2]+xs[3]+xs[4]; result + total` | `python-bmf-lift.fk` (PY-BMF-LIST list-literal arm + PY-BMF-SUBSCRIPT postfix arm) | CPython `45` · Rust (bootstrap) `45` · `kernel-bmf-run` `45` |
 | 2026-05-27 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_imperative_demo.py` | while-loop accumulators — `def sum_to(n): total=0; i=1; while i<=n: total=total+i; i=i+1; return total` and a parallel `fact_loop`; result `sum_to(100) + fact_loop(8)`. Drives the WHILE statement-lift, multi-statement def-body wrapping, env threading through loop-body assignments | `python-bmf-lift.fk` (lift-while statement arm + always-wrap-MODULE def-body) | CPython `45370` · Rust (bootstrap) `45370` · `kernel-bmf-run` `45370` |
+| 2026-05-31 | `form/form-kernel-ts/seedbank/python-adapter/examples/python_range_demo.py` | for-over-range accumulator — `def sq(n): return n*n; def sum_squares_plus_self(limit): total=0; for i in range(limit): total = total + sq(i) + i; return total; sum_squares_plus_self(50)`. Drives the FOR statement-lift over a `range(...)` iterator with a nested function call inside the loop body and env threading through the accumulator | `python-bmf-lift.fk` (`lift-for` PY-BMF-FOR statement arm) + `python-bmf-eval.fk` (PY-BMF-FOR interpreter arm + `range` builtin) | CPython `41650` · Rust (bootstrap) `41650` · `kernel-bmf-run` `41650` |
 
 **The first walking step:** with the G4 row recorded and G1+G3 now also
 landed, the manifest's lifecycle is no longer a future-tense convention.
