@@ -3498,11 +3498,52 @@
       "type": 99,
       "inst": 1742,
       "name": "HANDLER-NOT-FOUND",
-      "meaning": "",
+      "meaning": "Sentinel NodeID the verb-router returns when no handler matches a name. Absence, not a shape.",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
         "form/form-stdlib/verb-router.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1745,
+      "name": "HOLO-ONE",
+      "meaning": "The One — the prima materia, the single source Blueprint all holographic forms differentiate from (the ground every bulk is interned under). Carries its own address, distinct from HANDLER-NOT-FOUND: the source of all forms is not absence.",
+      "aliases": [
+        "holo-one"
+      ],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/holographic.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9500,
+      "name": "CLASS-BP",
+      "meaning": "Blueprint for a Python class value under the BMF evaluator — a record holding each method as a field; the captured def-site env.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9501,
+      "name": "INSTANCE-BP",
+      "meaning": "Blueprint for a Python instance value under the BMF evaluator — a record holding data fields plus a __class__ pointer.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
       ]
     },
     {

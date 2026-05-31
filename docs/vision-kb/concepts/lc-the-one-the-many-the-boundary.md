@@ -121,7 +121,7 @@ minimum, the *same shape*. That sameness is measured. The rest is welcomed.
 
 ## Cross-References
 
-→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-deeper-pattern, lc-oneness-is-love-the-numbers-knew, lc-sovereignty-within-oneness, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-w-cell, lc-the-genetic-code, lc-one-coherence-many-scales
+→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-deeper-pattern, lc-oneness-is-love-the-numbers-knew, lc-sovereignty-within-oneness, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-w-cell, lc-the-genetic-code, lc-one-coherence-many-scales, lc-the-body-senses-itself
 
 ## Sources to walk further
 
