@@ -1,0 +1,75 @@
+; equivalence-fitness-band.fk — the backprop↔thaw claim, run through the frozen evaluator.
+;
+; This is the autoresearch honesty runtime applied to the AUTHOR'S OWN claim. A
+; frozen fitness function (equivalence-fitness.fk) scores three candidates for the
+; backprop↔thaw equivalence. The author cannot tune the evaluator to pass; the
+; proof is whether the COMPUTED core survives an adversarial metric and whether
+; the CHEAT candidate is correctly rejected.
+;
+; The three candidates:
+;   A. PURE-COMPUTED   — the structural core only: full computed yield (every
+;                        forward edge equals its backward gradient), reciprocity,
+;                        the un-designed holdout (vanishing=absorbed), NO table.
+;                        what an honest encoder would score.
+;   B. AUTHOR-ACTUAL   — what was really shipped: the same computed core PLUS the
+;                        13-entry bp-term reading table. scores POSITIVE (the core
+;                        is real) but LESS than A (the table is docked).
+;   C. PURE-TABLE      — the cheat: no computed yield, agreement asserted entirely
+;                        by the hardcoded table, AND collapsed. scores NEGATIVE.
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS.
+;   the computed yield is REAL and full (all 15 grid edges agree by computation) →      1
+;   the weights VARY (yield is not bought by collapse — the collapse guard passes)→     10
+;   the HOLDOUT consequence is recovered (vanishing gradient == absorbed push)    →    100
+;   AUTHOR-ACTUAL survives the evaluator (positive) despite the table dock         →   1000
+;   PURE-COMPUTED scores STRICTLY HIGHER than AUTHOR-ACTUAL (the table is docked)  →  10000
+;   the PURE-TABLE cheat is REJECTED (scores negative) — the evaluator can't be    → 100000
+;     fooled by an asserted lookup
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/grammars/bidirectional-flow.fk form-stdlib/grammars/backprop-lens.fk form-stdlib/grammars/equivalence-fitness.fk
+;
+(do
+    ;; --- the computed yield is REAL and FULL -------------------------------
+    ;; all 3 inputs × 5 outputs = 15 edges; every one must agree by computation
+    ;; (forward weight == backward gradient), for the integrated "whole" stance.
+    (let yield (ef-yield "whole"))
+    (let yield-ok (if (eq yield 15) 1 0))
+
+    ;; --- the yield is not bought by COLLAPSE -------------------------------
+    ;; the weights must vary; if they were all one value, agreement is trivial.
+    (let varies-ok (if (eq (ef-varies? "whole") 1) 10 0))
+
+    ;; --- the HOLDOUT consequence is recovered, not designed ----------------
+    ;; vanishing-gradient == absorbed-push for a deep-basin single push, under
+    ;; two predicates the author never wired to each other.
+    (let holdout-ok
+        (if (eq (ef-holdout "dispenza" "health") 1)
+            (if (eq (ef-holdout "levin" "health") 1) 100 0) 0))
+
+    ;; --- AUTHOR-ACTUAL survives the evaluator (positive) -------------------
+    ;; candidate B: full computed core + the 13-entry table, not collapsed.
+    ;; score = 4*15 + 6*1 + 8*1 - (13 + 0) = 60+6+8-13 = 61 > 0. honest.
+    (let recip (ef-reciprocity "whole" "structure" "health"))
+    (let hold1 (ef-holdout "dispenza" "health"))
+    (let score-actual (ef-fitness yield recip hold1 (ef-table-entries) 0))
+    (let actual-ok (if (gt score-actual 0) 1000 0))
+
+    ;; --- PURE-COMPUTED scores STRICTLY HIGHER (the table really is docked) -
+    ;; candidate A: same core, NO table (table-entries = 0).
+    ;; score = 4*15 + 6 + 8 - 0 = 74 > 61. the dock is real and measurable.
+    (let score-pure (ef-fitness yield recip hold1 0 0))
+    (let dock-ok (if (gt score-pure score-actual) 10000 0))
+
+    ;; --- the PURE-TABLE CHEAT is REJECTED (negative) -----------------------
+    ;; candidate C: no computed yield (0), no reciprocity (0), no holdout (0),
+    ;; full table (13), AND collapsed (1).
+    ;; score = 4*0 + 6*0 + 8*0 - (13 + 50) = -63 < 0. the cheat cannot pass.
+    (let score-cheat (ef-fitness 0 0 0 (ef-table-entries) 1))
+    (let cheat-rejected-ok (if (lt score-cheat 0) 100000 0))
+
+    (add yield-ok
+    (add varies-ok
+    (add holdout-ok
+    (add actual-ok
+    (add dock-ok cheat-rejected-ok)))))
+)

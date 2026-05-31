@@ -212,7 +212,7 @@ for honest search* that any open question can borrow.
 → lc-universal-translator-via-keys, lc-form-perceptron,
 lc-act-without-penalty, lc-edges-as-vitality, lc-trust-over-fear,
 lc-recipe-branching-sense, lc-each-breath-whole,
-lc-grammar-is-the-universal-recipe
+lc-grammar-is-the-universal-recipe, lc-the-claim-survives-its-own-evaluator
 
 ## Sources to walk further
 

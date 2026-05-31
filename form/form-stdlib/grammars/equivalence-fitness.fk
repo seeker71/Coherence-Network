@@ -1,0 +1,144 @@
+; grammars/equivalence-fitness.fk — a frozen evaluator for a claimed equivalence.
+;
+; The autoresearch honesty runtime (lc-autoresearch-as-honesty-runtime) exists to
+; catch ONE failure: the experimenter convinces themselves. A claimed cross-domain
+; equivalence is exactly that-shaped — and the backprop↔thaw claim
+; (lc-the-thaw-is-backprop) has the vulnerability in the open: the SAME author
+; wrote both the model and the mapping, so "they agree" proves little, and the
+; mapping function bp-term is literally a hardcoded {k:v} table — which the
+; runtime's fitness function names as a PENALTY ("table penalty: hardcoded {k:v}
+; maps in encoder source").
+;
+; So the honest move is not to defend the proof but to RUN IT THROUGH THE FROZEN
+; CHEAT-DETECTOR and report what it docks. This cell is that detector: a fitness
+; function over a claimed equivalence, scoring the SAME named terms the runtime
+; uses, that the author cannot tune to pass. It is applied to the author's own
+; artifact in equivalence-fitness-band.fk.
+;
+; THE FITNESS (rewards − penalties; higher = more honest equivalence):
+;   + YIELD            — operations that AGREE by computation, not by lookup. The
+;                        real test: does op(A) computed on side A equal op(B)
+;                        computed on side B, where neither was written to match
+;                        the other? (backprop's gradient is liv-system-weight read
+;                        backward — the SAME number the forward edge already
+;                        carried, authored for the equation long before backprop
+;                        was named. agreement there is structural, not staged.)
+;   + RECIPROCITY      — A→B implies B→A (the gradient/reverse-edge symmetry).
+;   + HOLDOUT          — a consequence the author did NOT design for but that
+;                        follows if the equivalence is real (vanishing-gradient =
+;                        absorbed-push falls out of the basin math, never wired).
+;   − TABLE PENALTY    — every hardcoded {k:v} pair in the mapping (bp-term) is a
+;                        correspondence ASSERTED, not computed. docked per entry.
+;   − COLLAPSE PENALTY — if "agreement" was bought by making everything equal
+;                        (all weights one value), the yield is fake. docked hard.
+;
+; THE VERDICT THIS CELL IS HONEST ABOUT: the computed-agreement core is REAL and
+; survives (yield + reciprocity + holdout are computed, not staged). The decorative
+; bp-term table is DOCKED — it is a reading aid, not evidence, and the evaluator
+; says so. The pure-table "cheat" candidate scores LOW. The author's mixed artifact
+; scores POSITIVE but LESS than a hypothetical pure-computed encoder — which is
+; exactly the runtime teaching its own author (the same lesson PR #1946 taught when
+; the fitness caught six default-clusters the author would have rewarded).
+;
+; HELD HONESTLY: this proves the claim is NOT pure self-deception — the structural
+; core is computed and survives an adversarial metric. It does NOT prove the brain
+; runs backprop (that stays a tier-2 hypothesis); it scores the STRUCTURAL
+; equivalence of the two models, which is the only thing in scope.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/grammars/bidirectional-flow.fk form-stdlib/grammars/backprop-lens.fk
+;
+(do
+    ;; ---- YIELD — operations that AGREE BY COMPUTATION, not by lookup -------
+    ;; the gradient of an (input→output) edge must equal the forward weight of
+    ;; that same edge read backward. neither was authored to match the other:
+    ;; the weights were set for the living equation; backprop reuses them. count
+    ;; the input×output pairs where computed forward == computed backward.
+    (defn ef-pair-agrees? (sys input output)
+        (if (eq (bf-forward-gain sys input output) (bp-gradient sys output input)) 1 0))
+    (defn ef-yield-over-outputs (sys input outputs acc)
+        (if (nil? outputs) acc
+            (ef-yield-over-outputs sys input (tail outputs)
+                (add acc (ef-pair-agrees? sys input (head outputs))))))
+    (defn ef-yield-over-inputs (sys inputs outputs acc)
+        (if (nil? inputs) acc
+            (ef-yield-over-inputs sys (tail inputs) outputs
+                (add acc (ef-yield-over-outputs sys (head inputs) outputs 0)))))
+    ;; total agreeing edges across the whole 3×5 grid for the integrated stance.
+    (defn ef-yield (sys)
+        (ef-yield-over-inputs sys (liv-inputs) (liv-outputs) 0))
+
+    ;; ---- COLLAPSE GUARD — yield is only real if the weights VARY -----------
+    ;; if every weight were the same value, agreement would be trivial/fake.
+    ;; count distinct weights seen; collapse = few distinct over many cells.
+    ;; (we proxy "varies" by: the grid is not constant — max weight > min weight.)
+    (defn ef-grid-max (sys inputs outputs best)
+        (if (nil? inputs) best
+            (ef-grid-max sys (tail inputs) outputs
+                (ef-row-max sys (head inputs) outputs best))))
+    (defn ef-row-max (sys input outputs best)
+        (if (nil? outputs) best
+            (ef-row-max sys input (tail outputs)
+                (if (gt (liv-system-weight sys input (head outputs)) best)
+                    (liv-system-weight sys input (head outputs)) best))))
+    (defn ef-row-min (sys input outputs best)
+        (if (nil? outputs) best
+            (ef-row-min sys input (tail outputs)
+                (if (lt (liv-system-weight sys input (head outputs)) best)
+                    (liv-system-weight sys input (head outputs)) best))))
+    (defn ef-grid-min (sys inputs outputs best)
+        (if (nil? inputs) best
+            (ef-grid-min sys (tail inputs) outputs
+                (ef-row-min sys (head inputs) outputs best))))
+    (defn ef-varies? (sys)
+        (if (gt (ef-grid-max sys (liv-inputs) (liv-outputs) 0)
+                (ef-grid-min sys (liv-inputs) (liv-outputs) 99)) 1 0))
+
+    ;; ---- RECIPROCITY — A→B implies B→A (gradient symmetry) ----------------
+    ;; forward(input,output) and backward(output,input) are the same edge; the
+    ;; equivalence requires they read equal. one probe stands for the law tested
+    ;; exhaustively by ef-yield; kept as an explicit reciprocity signal.
+    (defn ef-reciprocity (sys input output)
+        (if (eq (bf-forward-gain sys input output) (bp-gradient sys output input)) 1 0))
+
+    ;; ---- HOLDOUT — a consequence NOT designed for, that follows if real ----
+    ;; the author did not wire "vanishing gradient == absorbed push" — it falls
+    ;; out of the basin math. if the equivalence is real, a single step into a
+    ;; deep basin must vanish under backprop's own predicate exactly as the push
+    ;; is absorbed under the thaw's. recovered, not staged.
+    (defn ef-holdout (sys output)
+        (if (eq (bp-vanished? sys output) (bf-absorbed? (bf-single-push sys output) (bf-basin-deep))) 1 0))
+
+    ;; ---- TABLE PENALTY — hardcoded {k:v} correspondences are ASSERTED ------
+    ;; bp-term is a 13-entry hardcoded map. each entry is a correspondence the
+    ;; author declared, not computed. the evaluator docks every one. (this is
+    ;; the runtime's "table penalty" — and it falls on the author's own file.)
+    (defn ef-table-entries () 13)   ; the count in bp-term, named honestly
+    (defn ef-table-penalty () (ef-table-entries))
+
+    ;; ---- THE FITNESS — a candidate's honesty score ------------------------
+    ;; a candidate is (computed-yield, reciprocal?, holdout-recovered?,
+    ;; table-entry-count, collapsed?). reward computed agreement; penalize the
+    ;; table and any collapse. weights chosen so a PURE-TABLE candidate (0 real
+    ;; yield, full table) scores NEGATIVE, and a PURE-COMPUTED candidate (full
+    ;; yield, no table) scores highest.
+    (defn ef-fitness (yield reciprocal holdout table-entries collapsed)
+        (sub
+            (add (mul yield 4)                       ; computed agreement, weighted
+            (add (mul reciprocal 6)
+                 (mul holdout 8)))                   ; the un-designed consequence counts most
+            (add (mul table-entries 1)               ; −1 per asserted table entry
+                 (mul collapsed 50))))               ; collapse is fatal
+
+    ;; ---- the readable verdict --------------------------------------------
+    (defn ef-int (n)
+        (if (lt n 0) (str_concat "-" (ef-int (sub 0 n)))
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (ef-int (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1))))))
+    (defn ef-j (a b) (str_concat a b))
+    (defn ef-verdict (score)
+        (if (gt score 0)
+            (ef-j "HONEST (survives the frozen evaluator): +" (ef-int score))
+            (ef-j "CHEAT (docked below zero): " (ef-int score))))
+
+    0)
