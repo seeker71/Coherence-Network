@@ -1,1 +1,0 @@
-(do (defn greet (name) (_plus "hello, " name)) (defn banner_length (name decoration) (do (let msg (_plus (greet name) decoration)) (len msg))) (let a (banner_length "world" "!")) (let b (banner_length "substrate" "!!!")) (let c (banner_length "kernel" "")) (_plus (_plus a b) c))
