@@ -309,6 +309,71 @@
                     env
                     (cons (list k v) acc)))))
 
+    ;; ---- module imports: math, the kernel-native namespace --------------
+    ;;
+    ;; The Python adapter (lang-python.ts) rewrites `math.sqrt(x)` →
+    ;; `(math_sqrt x)` at parse time. The Form-native bridge reaches the same
+    ;; kernel natives one level deeper: `import math` binds the name `math` to
+    ;; a module-marker; `from math import sqrt` binds `sqrt` to a native-fn
+    ;; marker (or, for a constant like `pi`, to its resolved value). The
+    ;; ATTR / METHOD-CALL / CALL arms see those markers and dispatch to the
+    ;; kernel natives the rust/go/ts siblings already expose (math_sqrt,
+    ;; math_floor, math_ceil, math_pi, math_pow). No kernel change — the
+    ;; natives are callable from Form exactly like add / _plus / record_get.
+    ;;
+    ;; Two sentinel-tagged markers, mirroring py-dict's shape:
+    ;;   (list "py-module"    name)    — a bound module (today: "math")
+    ;;   (list "py-native-fn" member)  — a from-imported callable member
+
+    (defn py-module-tag () "py-module")
+    (defn py-native-fn-tag () "py-native-fn")
+
+    (defn py-module? (v)
+        (and (not (nil? v))
+             (value_eq (head v) (py-module-tag))))
+
+    (defn py-native-fn? (v)
+        (and (not (nil? v))
+             (value_eq (head v) (py-native-fn-tag))))
+    (defn py-native-fn-member (v) (head (tail v)))
+
+    ;; py-math-const? — 1 iff the member is a value attribute (no call needed).
+    ;; math.pi is the only constant in the tight kernel-resident set; sqrt /
+    ;; floor / ceil / pow are functions. A `from math import pi` resolves the
+    ;; constant at import time; a `from math import sqrt` binds a callable.
+    (defn py-math-const? (member)
+        (if (str_eq member "pi") 1 0))
+
+    ;; py-math-resolve — dispatch one math member to its kernel native over the
+    ;; evaluated args. The single resolution table: `math.<member>(...)`
+    ;; (METHOD-CALL), bare `<member>(...)` from a from-import (CALL), and the
+    ;; constant accessors `math.pi` / `pi` (ATTR / import-time) all route here.
+    ;; pi ignores args; the function members read positionally. Matches the
+    ;; adapter's KERNEL_MODULES.math list one-for-one.
+    (defn py-math-resolve (member args)
+        (if (str_eq member "sqrt")  (math_sqrt (head args))
+        (if (str_eq member "floor") (math_floor (head args))
+        (if (str_eq member "ceil")  (math_ceil (head args))
+        (if (str_eq member "pi")    (math_pi)
+        (if (str_eq member "pow")   (math_pow (head args) (head (tail args)))
+            (do
+                (trace "py-math-resolve: unknown member" member)
+                (head (empty)))))))))
+
+    ;; py-bind-from-import-loop — bind each `from math import ...` member into
+    ;; env. A constant (pi) resolves to its value now; a function (sqrt) binds
+    ;; a native-fn marker the CALL arm dispatches. Threads env, returns it.
+    (defn py-bind-from-import-loop (members env)
+        (if (nil? members) env
+            (do
+                (let m (node_value (head members)))
+                (let binding
+                    (if (eq (py-math-const? m) 1)
+                        (py-math-resolve m (empty))
+                        (list (py-native-fn-tag) m)))
+                (py-bind-from-import-loop (tail members)
+                    (py-env-extend env m binding)))))
+
     (defn py-bind-params-loop (pms args env)
         (if (nil? pms) env
             (py-bind-params-loop
@@ -738,9 +803,14 @@
                         (py-builtin callee-name arg-values)
                         (do
                             (let callee (py-env-lookup env callee-name))
-                            ;; If the callee is a class, construct an instance
-                            ;; (record_new + __init__). Otherwise it's a normal
-                            ;; function closure — bind self-name for recursion.
+                            ;; A from-imported native (`from math import sqrt`)
+                            ;; binds callee to a native-fn marker — dispatch to
+                            ;; the kernel native directly. Else if the callee is
+                            ;; a class, construct an instance (record_new +
+                            ;; __init__). Otherwise it's a normal function
+                            ;; closure — bind self-name for recursion.
+                            (if (py-native-fn? callee)
+                                (py-math-resolve (py-native-fn-member callee) arg-values)
                             (if (py-class? callee)
                                 (py-instantiate callee arg-values)
                                 (do
@@ -752,23 +822,32 @@
                                                     (py-closure-params callee)
                                                     arg-values
                                                     captured-with-self))
-                                    (py-eval (py-closure-body callee) call-env)))))))
+                                    (py-eval (py-closure-body callee) call-env))))))))
             (if (node_eq cat PY-BMF-ATTR)
                 (do
-                    ;; ATTR children: obj-recipe, attr-leaf. obj.attr →
-                    ;; record_get on the evaluated object (data field).
+                    ;; ATTR children: obj-recipe, attr-leaf. When obj is an
+                    ;; imported module (`math`), the attr is a module member —
+                    ;; `math.pi` resolves to the kernel native. Otherwise obj.attr
+                    ;; is a record field → record_get on the evaluated object.
                     (let obj (py-eval (nth kids 0) env))
-                    (record_get obj (node_value (nth kids 1))))
+                    (if (py-module? obj)
+                        (py-math-resolve (node_value (nth kids 1)) (empty))
+                        (record_get obj (node_value (nth kids 1)))))
             (if (node_eq cat PY-BMF-METHOD-CALL)
                 (do
                     ;; METHOD-CALL children: obj-recipe, method-name-leaf,
-                    ;; arg-recipes... Resolve the method on the instance's
-                    ;; class and invoke with self=obj.
+                    ;; arg-recipes... When obj is an imported module (`math`),
+                    ;; the call is a module member — `math.sqrt(2.25)` dispatches
+                    ;; to the kernel native. Otherwise resolve the method on the
+                    ;; instance's class and invoke with self=obj.
                     (let obj (py-eval (nth kids 0) env))
                     (let mname (node_value (nth kids 1)))
                     (let arg-values (py-eval-args (tail (tail kids)) env))
-                    (let cls (record_get obj "__class__"))
-                    (py-call-method cls obj mname arg-values))
+                    (if (py-module? obj)
+                        (py-math-resolve mname arg-values)
+                        (do
+                            (let cls (record_get obj "__class__"))
+                            (py-call-method cls obj mname arg-values))))
             (if (node_eq cat PY-BMF-LIST)
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.
