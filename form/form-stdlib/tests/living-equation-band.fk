@@ -1,0 +1,92 @@
+; living-equation-band.fk — the influence model is structural and canon-relative.
+;
+; Proves three-way (Go/Rust/TS) the load-bearing facts of the living equation
+;   structure + choices + beliefs → health + vitality + flexibility +
+;                                   sovereignty + harmony :
+;
+; the left side maps bijectively onto the trinity; belief systems DIVERGE on the
+; primary lever for the same output (the recipe of change is canon-set); so
+; ATTRIBUTION is canon-relative — the same observed change credits a different
+; input in a different system; the INTEGRATED stance alone varies its recipe by
+; output (a single-lever system always returns its one lever); the attribution
+; CLASS grows with the integrated stance; and the integrated total exceeds every
+; single-lever total (aligned levers compound — the laser/coherence claim).
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   trinity bijection: structure→blueprint, choices→recipe, beliefs→base, distinct →      1
+;   the primary lever differs by stance (health: levin/dispenza/castaneda →3 levers) →    10
+;   attribution is canon-relative (levin≠dispenza and levin≠castaneda on health)    →   100
+;   integrated is output-responsive; a single-lever stance is not                    →  1000
+;   the attribution class is larger for the integrated stance than a single lever    → 10000
+;   integrated total exceeds every single-lever total (aligned levers compound)      → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk
+;
+(do
+    ;; --- the left side IS the trinity, three distinct terms -----------------
+    (let trinity-ok
+        (if (str_eq (liv-trinity "structure") "blueprint")
+            (if (str_eq (liv-trinity "choices") "recipe")
+                (if (str_eq (liv-trinity "beliefs") "base")
+                    ;; pairwise distinct — no two inputs collapse to one term
+                    (if (not (str_eq (liv-trinity "structure") (liv-trinity "choices")))
+                        (if (not (str_eq (liv-trinity "choices") (liv-trinity "beliefs"))) 1 0)
+                        0) 0) 0) 0))
+
+    ;; --- the recipe of change for ONE output differs by belief system ------
+    ;; health: Levin (structure-first) → structure; Dispenza (choices-first) →
+    ;; choices; Castaneda (beliefs-first) → beliefs. Three lineages, one output,
+    ;; three different prescribed levers. The canon sets the recipe.
+    (let lever-levin (liv-recipe-of-change "levin" "health"))
+    (let lever-dispenza (liv-recipe-of-change "dispenza" "health"))
+    (let lever-castaneda (liv-recipe-of-change "castaneda" "health"))
+    (let diverge-ok
+        (if (str_eq lever-levin "structure")
+            (if (str_eq lever-dispenza "choices")
+                (if (str_eq lever-castaneda "beliefs") 10 0) 0) 0))
+
+    ;; --- ATTRIBUTION is canon-relative -------------------------------------
+    ;; the same observed change (health moved) credits a different input in a
+    ;; different system. lc-canon-as-sovereignty-surface, computed.
+    (let attr-ok
+        (if (eq (liv-attribution-diverges? "levin" "dispenza" "health") 1)
+            (if (eq (liv-attribution-diverges? "levin" "castaneda" "health") 1) 100 0) 0))
+
+    ;; --- the INTEGRATED stance varies its recipe by output; single-lever not -
+    ;; whole: health→structure, vitality→choices, sovereignty→beliefs (3 levers,
+    ;; output-responsive). levin: health→structure AND sovereignty→structure
+    ;; (one lever, output-blind — the canon predetermines the prescription).
+    (let whole-h (liv-recipe-of-change "whole" "health"))
+    (let whole-v (liv-recipe-of-change "whole" "vitality"))
+    (let whole-s (liv-recipe-of-change "whole" "sovereignty"))
+    (let responsive-ok
+        (if (str_eq whole-h "structure")
+            (if (str_eq whole-v "choices")
+                (if (str_eq whole-s "beliefs")
+                    ;; and the single-lever system is output-blind
+                    (if (str_eq (liv-recipe-of-change "levin" "health")
+                                (liv-recipe-of-change "levin" "sovereignty")) 1000 0)
+                    0) 0) 0))
+
+    ;; --- the attribution CLASS is larger for the integrated stance ---------
+    ;; at threshold 5 on health: whole credits all three inputs; levin only one.
+    (let whole-class (liv-attribution-class "whole" "health" 5))
+    (let levin-class (liv-attribution-class "levin" "health" 5))
+    (let class-ok
+        (if (eq (len whole-class) 3)
+            (if (eq (len levin-class) 1) 10000 0) 0))
+
+    ;; --- aligned levers COMPOUND: integrated total exceeds every single one -
+    ;; the laser/coherence claim (lc-vitality, lc-one-coherence-many-scales):
+    ;; using all three levers at once beats any single-lever stance's total.
+    (let total-whole (liv-total "whole" "health"))
+    (let compound-ok
+        (if (gt total-whole (liv-total "levin" "health"))
+            (if (gt total-whole (liv-total "dispenza" "health"))
+                (if (gt total-whole (liv-total "castaneda" "health")) 100000 0) 0) 0))
+
+    (add trinity-ok
+    (add diverge-ok
+    (add attr-ok
+    (add responsive-ok
+    (add class-ok compound-ok))))))

@@ -535,7 +535,7 @@ into a living, pulsing, creative, self-healing organism.
 
 ## Cross-References
 
-→ lc-wholeness, lc-deeper-pattern, lc-bioelectric-pattern, lc-organs-of-the-body, lc-perception-as-interface, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-sacred-imagination, lc-nervous-system, lc-one-coherence-many-scales
+→ lc-wholeness, lc-deeper-pattern, lc-bioelectric-pattern, lc-organs-of-the-body, lc-perception-as-interface, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-sacred-imagination, lc-nervous-system, lc-one-coherence-many-scales, lc-the-living-equation
 
 ---
 
