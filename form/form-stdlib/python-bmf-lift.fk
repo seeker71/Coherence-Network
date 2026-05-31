@@ -90,6 +90,7 @@
     (defn tok-keyword? (t kw) (tok-is? t "py-keyword" kw))
     (defn tok-name? (t) (str_eq (tok-kind t) "py-name"))
     (defn tok-int? (t) (str_eq (tok-kind t) "py-int"))
+    (defn tok-string? (t) (str_eq (tok-kind t) "py-string"))
 
     ;; ---- expression parser (G3) -------------------------------------
     ;;
@@ -315,6 +316,14 @@
                     (intern_node PY-BMF-INT
                         (list (intern_trivial_int (str_to_int (tok-value t)))))
                     rest)
+            (if (tok-string? t)
+                ;; STRING literal: intern the raw token text as a trivial-string
+                ;; leaf under PY-BMF-STRING. Mirrors the py-int arm exactly; the
+                ;; eval side's PY-BMF-STRING arm returns the leaf's node_value.
+                (lift-subscript-tail
+                    (intern_node PY-BMF-STRING
+                        (list (intern_trivial_string (tok-value t))))
+                    rest)
             (if (tok-keyword? t "True")
                 ;; True → PY-BMF-INT(1). Matches the interpreter's
                 ;; int-as-bool convention (compare/if treat 1 as true).
@@ -405,7 +414,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest)))))))))))))))
+                        rest))))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
