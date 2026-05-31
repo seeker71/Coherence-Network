@@ -200,9 +200,18 @@
     ;; The pair is encoded as (list value env) — head is value, head-tail
     ;; is env. py-stmt-value and py-stmt-env read the two slots.
 
-    (defn py-stmt-result (value env) (list value env))
+    ;; A statement result is a three-slot list (value env returned). The
+    ;; third slot is the return-signal: 1 iff this statement (or a block
+    ;; nested inside it) executed a `return`, so the body-loop / module-loop
+    ;; / function-CALL walker must short-circuit and yield `value` as the
+    ;; function's result. 0 means control falls through to the next
+    ;; statement, threading `env`. py-stmt-result is the no-return
+    ;; constructor (the common case); py-stmt-return tags a returning result.
+    (defn py-stmt-result (value env) (list value env 0))
+    (defn py-stmt-return (value env) (list value env 1))
     (defn py-stmt-value (r) (head r))
     (defn py-stmt-env (r) (head (tail r)))
+    (defn py-stmt-returned (r) (head (tail (tail r))))
 
     (defn py-eval-args-loop (recipes env acc)
         (if (nil? recipes)
@@ -344,32 +353,51 @@
     ;; Form runtime resolves forward references at call-time, so the
     ;; ordering below works.
 
+    ;; py-eval-body-loop — walk a statement list, threading env, and STOP
+    ;; the moment a statement carries the return-signal. It returns a full
+    ;; statement-result (value env returned): on a return it propagates that
+    ;; statement's result verbatim (returned=1, value = the returned value);
+    ;; on natural exhaustion it yields (0 env 0) — no return, env threaded.
+    ;; Every block arm (IF-STMT / FOR / WHILE) and the function-body walker
+    ;; reads `returned` off this result to decide whether to short-circuit.
     (defn py-eval-body-loop (stmts env)
-        (if (nil? stmts) env
+        (if (nil? stmts) (py-stmt-result 0 env)
             (do
                 (let r (py-eval-statement (head stmts) env))
-                (py-eval-body-loop (tail stmts) (py-stmt-env r)))))
+                (if (eq (py-stmt-returned r) 1)
+                    r
+                    (py-eval-body-loop (tail stmts) (py-stmt-env r))))))
 
+    ;; py-while-loop returns a statement-result (value env returned). When the
+    ;; condition falls to 0 the loop ends with no return: (0 env 0). Each
+    ;; iteration runs the body through py-eval-body-loop; if that body executed
+    ;; a `return`, the result carries returned=1 and the loop short-circuits,
+    ;; propagating the returned value out of the enclosing function.
     (defn py-while-loop (cond-recipe body-stmts env)
         (if (eq (py-eval cond-recipe env) 0)
-            env
-            (py-while-loop
-                cond-recipe
-                body-stmts
-                (py-eval-body-loop body-stmts env))))
+            (py-stmt-result 0 env)
+            (do
+                (let r (py-eval-body-loop body-stmts env))
+                (if (eq (py-stmt-returned r) 1)
+                    r
+                    (py-while-loop cond-recipe body-stmts (py-stmt-env r))))))
 
     ;; py-for-loop — iterate `items` (a Form list), binding `var` to each
     ;; element and threading env through the body each pass. Mirrors
     ;; py-while-loop's env-threading so a for-body can mutate via
     ;; ASSIGN / AUG-ASSIGN and the mutations persist across iterations.
+    ;; py-for-loop returns a statement-result (value env returned). The
+    ;; iterable exhausting ends the loop with no return: (0 env 0). Each pass
+    ;; binds var and runs the body through py-eval-body-loop; a `return` inside
+    ;; the body short-circuits, propagating the returned value out.
     (defn py-for-loop (var items body-stmts env)
-        (if (nil? items) env
-            (py-for-loop
-                var
-                (tail items)
-                body-stmts
-                (py-eval-body-loop body-stmts
-                    (py-env-extend env var (head items))))))
+        (if (nil? items) (py-stmt-result 0 env)
+            (do
+                (let r (py-eval-body-loop body-stmts
+                            (py-env-extend env var (head items))))
+                (if (eq (py-stmt-returned r) 1)
+                    r
+                    (py-for-loop var (tail items) body-stmts (py-stmt-env r))))))
 
     ;; py-comp-build — evaluate a list comprehension `[elem for var in iter]`.
     ;; Maps elem-recipe over each item of the already-evaluated iter list,
@@ -412,8 +440,11 @@
                     ;; itself returns 0 (Python None analogue).
                     (let cond-recipe (head kids))
                     (let body-stmts (tail kids))
-                    (let final-env (py-while-loop cond-recipe body-stmts env))
-                    (py-stmt-result 0 final-env))
+                    ;; py-while-loop now yields a full statement-result so a
+                    ;; `return` inside the loop body propagates out. When the
+                    ;; loop ran to completion with no return, returned=0 and
+                    ;; the statement result is the loop's (0 env 0) verbatim.
+                    (py-while-loop cond-recipe body-stmts env))
             (if (node_eq cat PY-BMF-IF-STMT)
                 (do
                     ;; IF-STMT children: cond-recipe, body-stmt-recipes...
@@ -428,11 +459,17 @@
                     ;; `elif` clauses are a later breath.
                     (let cond (py-eval (head kids) env))
                     (let body-stmts (tail kids))
-                    (let final-env
-                        (if (eq cond 0)
-                            env
-                            (py-eval-body-loop body-stmts env)))
-                    (py-stmt-result 0 final-env))
+                    ;; When falsy, the block is skipped — no return, env
+                    ;; unchanged. When truthy, py-eval-body-loop yields a full
+                    ;; statement-result: if the body executed a `return` it
+                    ;; carries returned=1 and the returned value, which
+                    ;; propagates out of the enclosing function; otherwise it
+                    ;; carries the env threaded through the block with
+                    ;; returned=0. Propagate it verbatim — this is what closes
+                    ;; the return-short-circuit gap.
+                    (if (eq cond 0)
+                        (py-stmt-result 0 env)
+                        (py-eval-body-loop body-stmts env)))
             (if (node_eq cat PY-BMF-FOR)
                 (do
                     ;; FOR children: var-name-leaf, iterable-recipe,
@@ -445,8 +482,10 @@
                     (let raw (py-eval (head (tail kids)) env))
                     (let items (if (py-dict? raw) (py-dict-keys raw) raw))
                     (let body-stmts (tail (tail kids)))
-                    (let final-env (py-for-loop var items body-stmts env))
-                    (py-stmt-result 0 final-env))
+                    ;; py-for-loop yields a full statement-result so a `return`
+                    ;; inside the loop body propagates out; completion with no
+                    ;; return yields (0 env 0) verbatim.
+                    (py-for-loop var items body-stmts env))
             (if (node_eq cat PY-BMF-DEF)
                 (do
                     ;; DEF children: name-leaf, param-leaves..., body-recipe.
@@ -486,17 +525,36 @@
                     (let value (py-eval (nth kids 2) env))
                     (let new-dict (py-dict-set dict idx value))
                     (py-stmt-result value (py-env-extend env name new-dict)))
+            (if (node_eq cat PY-BMF-RETURN)
+                ;; RETURN statement: evaluate the inner expression and tag the
+                ;; result as a return so the body-loop / module-loop / loop
+                ;; arms short-circuit and yield this value as the function's
+                ;; result. (py-eval on the RETURN recipe walks (head kids) —
+                ;; the returned expression — to its value.) Env is unchanged;
+                ;; a `return` ends the function, so nothing downstream reads it.
+                (py-stmt-return (py-eval recipe env) env)
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env))))))))))))
+                (py-stmt-result (py-eval recipe env) env)))))))))))))
 
+    ;; py-eval-module-loop drives a statement sequence to its value. It serves
+    ;; two roles: the top-level module (last-statement value semantics) AND a
+    ;; function body (a PY-BMF-MODULE walked by py-eval's MODULE arm). For the
+    ;; function-body role it must honor the return-signal: when a statement
+    ;; carries returned=1 (a `return` at body top level, or a `return` inside
+    ;; an if/for/while block that propagated up through py-eval-body-loop and
+    ;; the loop arms), stop and yield that returned value immediately. With no
+    ;; return it preserves last-value semantics, so top-level modules are
+    ;; unaffected.
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
             (do
                 (let r (py-eval-statement (head statements) env))
-                (py-eval-module-loop
-                    (tail statements)
-                    (py-stmt-env r)
-                    (py-stmt-value r)))))
+                (if (eq (py-stmt-returned r) 1)
+                    (py-stmt-value r)
+                    (py-eval-module-loop
+                        (tail statements)
+                        (py-stmt-env r)
+                        (py-stmt-value r))))))
 
     ;; range() builtin — produces a Form list so `for i in range(...)` (the
     ;; most common substrate loop idiom) walks. Built as a plain Form list,
