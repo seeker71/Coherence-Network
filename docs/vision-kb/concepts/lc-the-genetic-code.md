@@ -32,8 +32,6 @@ geometry:
 > mean Alanine. That is content-addressing, written in the cell: surface (codon)
 > → address (amino acid) → equivalence class (every codon that codes it).
 
-![The double helix as living language](visuals:a luminous DNA double helix rendered as a content-addressed lattice, each base-pair glowing in phosphorescent green and bioluminescent cyan, codons resolving into amino-acid forms along the strand, the two strands implying each other as mirror complements, deep indigo background with golden light threading the sequence, sacred geometry, organic and alive, the oldest written language of life)
-
 ## The genetic code is the substrate's own move, four billion years early
 
 Gematria binds words by numeric value. Pāṇini binds words by generative root.
