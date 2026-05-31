@@ -115,4 +115,4 @@ trust that the new form, like water from ice, was always there inside the old on
 - What is the community equivalent of the redwood falling and the understory exploding with light?
 
 ## Connected Frequencies
-→ lc-spiraling, lc-composting, lc-w-phase-transition, lc-ceremony
+→ lc-spiraling, lc-composting, lc-w-phase-transition, lc-ceremony, lc-every-edge-runs-both-ways

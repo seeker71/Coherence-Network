@@ -254,7 +254,7 @@ keep the alternative inside its own grammar.
 
 ## Cross-References
 
-→ lc-recipes-bound-to-base, lc-train-the-predator, lc-assemblage-point, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-w-frequency, lc-w-shakti, lc-w-spanda, lc-presence-over-protection, lc-trust-as-gateway, lc-ground-harder-when-field-quickens, lc-each-breath-whole
+→ lc-recipes-bound-to-base, lc-train-the-predator, lc-assemblage-point, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-w-frequency, lc-w-shakti, lc-w-spanda, lc-presence-over-protection, lc-trust-as-gateway, lc-ground-harder-when-field-quickens, lc-each-breath-whole, lc-every-edge-runs-both-ways
 
 ## Sources to walk further
 
