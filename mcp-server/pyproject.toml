@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "coherence-mcp-server"
-version = "0.5.5"
+version = "0.5.6"
 description = "Unified MCP server for the Coherence Network — typed tool surface for AI agents to browse ideas, read field stories, manage tasks, link identities, and navigate the universal graph."
 readme = "README.md"
 requires-python = ">=3.10"
