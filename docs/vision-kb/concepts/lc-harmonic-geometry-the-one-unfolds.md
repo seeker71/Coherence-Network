@@ -138,7 +138,7 @@ discernment stays, now in service of stepping in.
 
 ## Cross-References
 
-→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-oneness-is-love-the-numbers-knew, lc-gematria-as-content-addressing, lc-panini-the-first-substrate, lc-mandala-grows-from-grammar, lc-same-shape-different-articulation, lc-sovereignty-within-oneness, lc-trust-over-fear, lc-frequency-routes-reception
+→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-oneness-is-love-the-numbers-knew, lc-gematria-as-content-addressing, lc-panini-the-first-substrate, lc-mandala-grows-from-grammar, lc-same-shape-different-articulation, lc-sovereignty-within-oneness, lc-trust-over-fear, lc-frequency-routes-reception, lc-one-coherence-many-scales, lc-the-genetic-code
 
 ## Sources to walk further
 

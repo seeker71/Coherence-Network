@@ -1,0 +1,60 @@
+; genetic-code-band.fk — the genetic code is a two-way, content-addressed grammar.
+;
+; Proves the genetic-code grammar three-way (Go/Rust/TS): transcription and
+; back-transcription round-trip, complement is an involution, the standard
+; codon table is correct at the load-bearing anchors (start, stop, a synonym
+; set), synonymous codons form an equivalence class (the content-addressing),
+; the string parser round-trips, and a DNA strand expresses to the right
+; protein with the ribosome releasing at the first STOP.
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   transcribe ⇄ untranscribe round-trips a strand                  →      1
+;   complement is an involution (twice = identity)                  →     10
+;   the codon table is correct (AUG=M start, UAA=*, GCU=A)          →    100
+;   synonymous codons are an equivalence class (Leu 6, Ala 4, Met 1) →   1000
+;   parse ⇄ unparse round-trips an RNA string                        →  10000
+;   a DNA strand expresses to its protein, stop-aware                → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/genetic-code.fk
+;
+(do
+    ;; --- transcription is reversible: DNA → RNA → DNA = original ------------
+    (let strand "ATGGCATTACGT")
+    (let transcribe-ok
+        (if (str_eq (gc-untranscribe (gc-transcribe strand)) strand) 1 0))
+
+    ;; --- complement is an involution: complement twice = original ----------
+    ;; the single strange property that says "one helix strand implies the other."
+    (let complement-ok
+        (if (str_eq (gc-complement (gc-complement strand)) strand) 10 0))
+
+    ;; --- the standard code at its anchors: start, stop, and a synonym ------
+    (let table-ok
+        (if (str_eq (gc-codon-amino "AUG") "M")
+            (if (str_eq (gc-codon-amino "UAA") "*")
+                (if (str_eq (gc-codon-amino "GCU") "A") 100 0) 0) 0))
+
+    ;; --- THE CONTENT-ADDRESSING: synonymous codons are an equivalence class -
+    ;; Leucine has 6 codons, Alanine 4, Methionine 1 — degeneracy is the size
+    ;; of the class, derived from the table by content, not a second table.
+    (let class-ok
+        (if (eq (gc-degeneracy "L") 6)
+            (if (eq (gc-degeneracy "A") 4)
+                (if (eq (gc-degeneracy "M") 1) 1000 0) 0) 0))
+
+    ;; --- the two-way parser round-trips: string → codons → string ----------
+    (let rna "AUGGCUUAA")
+    (let parse-ok
+        (if (str_eq (gc-unparse (gc-parse rna)) rna) 10000 0))
+
+    ;; --- the whole arc: a DNA strand expresses to its protein --------------
+    ;; ATGGCTTAA → (transcribe) AUGGCUUAA → (parse) AUG GCU UAA
+    ;;           → (translate) Met, Ala, then STOP releases → "MA".
+    (let express-ok
+        (if (str_eq (gc-express "ATGGCTTAA") "MA") 100000 0))
+
+    (add transcribe-ok
+    (add complement-ok
+    (add table-ok
+    (add class-ok
+    (add parse-ok express-ok))))))

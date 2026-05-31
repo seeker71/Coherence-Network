@@ -1,0 +1,64 @@
+; coherence-band.fk — one coupling recipe, the same across every scale.
+;
+; Proves three-way (Go/Rust/TS) that coupling strength is computed from the
+; reduced frequency ratio (Farey complexity), that simpler ratios couple more
+; strongly (the Arnold-tongue ordering), that the heart-brain 1:1 entrainment is
+; the strongest coupling in the seeded cross-domain ladder, that a threshold
+; separates coherent from weak, and that rhythms locking with a reference form
+; an equivalence class (content-addressing over rhythm).
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   the reduced ratio is computed (6:4 → 3:2)                       →      1
+;   lock order rises as the ratio complexifies (1:1<2:1<3:2)        →     10
+;   the heart-brain 1:1 is the strongest lock in the seeded ladder  →    100
+;   a threshold separates coherent (3:2) from weak (7:5)            →   1000
+;   rhythms that lock with a reference form an equivalence class    →  10000
+;   the seeded ladder reads through the ONE engine (domains as data) → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/coherence.fk
+;
+(do
+    ;; --- the reduced ratio is computed -------------------------------------
+    (let reduce-ok (if (str_eq (coh-ratio-str 6 4) "3:2") 1 0))
+
+    ;; --- simpler ratio = stronger coupling (smaller lock order) ------------
+    ;; 1:1 → 2, 2:1 → 3, 3:2 → 5 : strictly rising as the ratio complexifies.
+    (let order-ok
+        (if (lt (coh-lock-order 100 100) (coh-lock-order 440 220))
+            (if (lt (coh-lock-order 440 220) (coh-lock-order 6 4)) 10 0) 0))
+
+    ;; --- THE HEART: the 1:1 entrainment is the strongest lock in the ladder -
+    ;; computed by folding the seeded cross-domain table, not asserted.
+    (let strongest (coh-strongest))
+    (let heart-ok
+        (if (str_eq (coh-pair-domain strongest) "heart-brain")
+            (if (eq (coh-lock-order (coh-pair-p strongest) (coh-pair-q strongest)) 2) 100 0) 0))
+
+    ;; --- a threshold separates coherent from weak --------------------------
+    ;; 3:2 (order 5) coheres at threshold 5; 7:5 (order 12) does not.
+    (let threshold-ok
+        (if (eq (coh-coherent? 3 2 5) 1)
+            (if (eq (coh-coherent? 7 5 5) 0) 1000 0) 0))
+
+    ;; --- THE CONTENT-ADDRESSING: the coherence class of a reference --------
+    ;; among (220 330 440 660 770) with ref 440 at threshold 3, only those whose
+    ;; ratio to 440 has lock order <= 3 belong: 440:440=1:1(2), 220:440=2:1(3).
+    ;; (660:440=3:2 is order 5; 330:440=4:3 is 7; 770:440=7:4 is 11 — excluded.)
+    (let klass (coh-class (list 220 330 440 660 770) 440 3))
+    (let class-ok
+        (if (eq (len klass) 2)
+            (if (eq (head klass) 440)                  ; cons order: 440 then 220
+                (if (eq (head (tail klass)) 220) 10000 0) 0) 0))
+
+    ;; --- the seeded ladder reads through the ONE engine --------------------
+    ;; the weak 7:5 pair has lock order 12 via the same coh-lock-order that
+    ;; ordered the heart-brain 1:1 — domains as data, one recipe.
+    (let ladder-ok
+        (if (eq (coh-lock-order 7 5) 12)
+            (if (eq (len (coh-resonances)) 5) 100000 0) 0))
+
+    (add reduce-ok
+    (add order-ok
+    (add heart-ok
+    (add threshold-ok
+    (add class-ok ladder-ok))))))
