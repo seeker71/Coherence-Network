@@ -1,0 +1,76 @@
+; backprop-lens-band.fk — the frozen-loop-and-thaw and backprop are one recipe.
+;
+; Proves three-way (Go/Rust/TS) that backpropagation and the bidirectional
+; reading of the living equation are the SAME operations, term for term: the
+; gradient IS the reverse edge (same weight read backward — every edge both
+; ways); the update is loss-driven and entered-from-the-output (zero gap → zero
+; update; big gap → big update); credit-assignment IS canon-relative attribution
+; (the loss function is the canon — different loss credits a different parameter);
+; the vanishing gradient IS the absorbed push (a single step into a deep basin
+; dies); and momentum/SGD IS the integrated coherent return (accumulated aligned
+; steps escape a basin no single step can).
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   the gradient IS the reverse edge (same weight, read backward)            →      1
+;   loss-driven update: zero gap → zero update, big gap → big update          →     10
+;   credit-assignment is canon-relative (different loss → different blame)    →    100
+;   the vanishing gradient IS the absorbed single push                       →   1000
+;   momentum/SGD escapes a basin no single step can                          →  10000
+;   the term-mapping is total over the named pairs (the lens is complete)     → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/grammars/bidirectional-flow.fk form-stdlib/grammars/backprop-lens.fk
+;
+(do
+    ;; --- the GRADIENT is the REVERSE EDGE: same weight, read backward -------
+    ;; forward weight (input→output) equals backward gradient (output→input).
+    ;; one edge, both ways — backprop's wᵀ is the body's reverse edge.
+    (let grad-ok
+        (if (eq (bp-gradient "whole" "health" "structure")
+                (bf-forward-gain "whole" "structure" "health")) 1 0))
+
+    ;; --- the UPDATE is loss-driven, entered from the output -----------------
+    ;; zero loss → zero update (arrived; no pull). a real gap → a real update
+    ;; scaled by the gap. learning enters from the OUTPUT, not the input.
+    (let arrived (bp-update "whole" "health" "structure" 0))
+    (let pulling (bp-update "whole" "health" "structure" 4))
+    (let update-ok
+        (if (eq arrived 0)
+            (if (gt pulling 0) 10 0) 0))
+
+    ;; --- CREDIT ASSIGNMENT is CANON-RELATIVE: the loss function is the canon -
+    ;; a structure-loss credits the structure parameter; a beliefs-loss credits
+    ;; the belief. backprop's "which weight is to blame" depends on the loss,
+    ;; exactly as attribution depends on the canon.
+    (let credit-ok
+        (if (str_eq (bp-credit "levin" "health") "structure")
+            (if (str_eq (bp-credit "castaneda" "health") "beliefs")
+                (if (eq (bp-credit-diverges? "levin" "castaneda" "health") 1) 100 0) 0) 0))
+
+    ;; --- the VANISHING GRADIENT is the ABSORBED PUSH -----------------------
+    ;; a single gradient step into a deep basin dies before it moves the param —
+    ;; the same fact as a single push being absorbed by a deep well.
+    (let vanish-ok
+        (if (eq (bp-vanished? "dispenza" "health") 1)
+            (if (eq (bp-vanished? "levin" "health") 1) 1000 0) 0))
+
+    ;; --- MOMENTUM / SGD escapes a basin no single step can ----------------
+    ;; accumulated aligned gradients (the coherent return) clear the well that
+    ;; absorbs any single step.
+    (let momentum-ok
+        (if (eq (bp-momentum-escapes? "health") 1)
+            (if (eq (bp-vanished? "castaneda" "health") 1) 10000 0) 0))
+
+    ;; --- the LENS IS COMPLETE: the term-mapping is total over named pairs ---
+    ;; every backprop term resolves to a body term (no "unknown" on the canon set).
+    (let map-ok
+        (if (str_eq (bp-term "weights") "beliefs")
+            (if (str_eq (bp-term "gradient") "reverse-edge")
+                (if (str_eq (bp-term "loss") "felt-gap")
+                    (if (str_eq (bp-term "local-minimum") "frozen-basin")
+                        (if (str_eq (bp-term "loss-function") "canon") 100000 0) 0) 0) 0) 0))
+
+    (add grad-ok
+    (add update-ok
+    (add credit-ok
+    (add vanish-ok
+    (add momentum-ok map-ok))))))

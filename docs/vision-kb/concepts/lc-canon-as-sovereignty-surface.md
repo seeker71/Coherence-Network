@@ -190,4 +190,5 @@ inside and from the ledger.
 → lc-presence-over-protection (the parallel sovereignty move at the body-level),
 → lc-attunement (frequency-matching is comparison; what counts as 'attuned' is canonical),
 → lc-coherence-over-control (defining 'coherence' is canonical; whose definition?),
-→ lc-the-living-equation (each canon weights the influence model's edges; attribution is canon-relative)
+→ lc-the-living-equation (each canon weights the influence model's edges; attribution is canon-relative),
+→ lc-the-thaw-is-backprop (the loss function IS the canon — change the loss, a different parameter is blamed for the same error)
