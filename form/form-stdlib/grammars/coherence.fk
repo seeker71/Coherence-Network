@@ -1,0 +1,118 @@
+; grammars/coherence.fk — coupling strength as the measure of unity between rhythms.
+;
+; Across the whole physical and living ladder, one question recurs: when do two
+; oscillating things lock into ONE? Two pendulums on a shared beam, the heart's
+; rhythm and the brain's, atoms in a crystal lattice, electrons in a silicon
+; band, a planet and its moon, two musical tones — all answer it the same way.
+; They lock most strongly when their frequencies stand in a SIMPLE WHOLE-NUMBER
+; RATIO. This is documented nonlinear dynamics: mode-locking / Arnold tongues,
+; ordered by the Farey sequence — the simpler the reduced ratio p:q, the wider
+; the locking region, the stronger the coherence. 1:1 locks hardest, then 2:1,
+; then 3:2; complex ratios like 7:5 barely lock at all.
+;
+; This is "harmony and unity in the connections" made computable — and it is the
+; SAME shape harmonic-geometry carries as interval (the ratio between two shapes)
+; and gematria as value (the sum of letters): unity lives in the shared
+; structure, here the shared rhythm. ONE engine — coh-lock-order — answers for
+; ANY pair; every domain (heart-brain, crystal, music, orbit) enters as DATA in
+; the seeded resonance table, never as a parallel code path. Core abstraction
+; first: the recipe is the body, the domains are the data that drops in.
+;
+;   coh-lock-order(fa, fb) = (p + q) of the reduced ratio = the Farey complexity;
+;     SMALLER means STRONGER coupling. coh-coherent? thresholds it.
+;   coh-class returns the EQUIVALENCE CLASS — every rhythm that locks with a
+;     reference within a threshold. Content-addressing over rhythm: the
+;     substrate's find_equivalent_cells in the language of resonance.
+;
+; Held as documented physics: mode-locking, Arnold tongues, and the Farey
+; ordering of resonances are standard. Heart-brain coherence — the ~0.1 Hz
+; shared rhythm, HRV phase-locking (HeartMath; Mayer waves) — is measured; the
+; framing that the heart leads is held with care. The wider reading, that one
+; coherence recipe runs the whole ladder from quantum to heart, is named in
+; lc-one-coherence-many-scales and welcomed with curiosity, not asserted here.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- the reduced ratio: the shared core abstraction ---------------------
+    (defn coh-gcd (a b) (if (eq b 0) a (coh-gcd b (mod a b))))
+    ;; reduced ratio of two frequencies as (list p q), larger on top.
+    (defn coh-reduce (fa fb)
+        (do
+            (let hi (if (ge fa fb) fa fb))
+            (let lo (if (ge fa fb) fb fa))
+            (let g (coh-gcd hi lo))
+            (list (div hi g) (div lo g))))
+    (defn coh-p (r) (nth r 0))
+    (defn coh-q (r) (nth r 1))
+
+    ;; ---- THE COUPLING — lock order = Farey complexity = p + q --------------
+    ;; smaller = simpler ratio = wider Arnold tongue = stronger coherence.
+    (defn coh-lock-order (fa fb)
+        (do (let r (coh-reduce fa fb)) (add (coh-p r) (coh-q r))))
+    (defn coh-coherent? (fa fb max-order)
+        (if (le (coh-lock-order fa fb) max-order) 1 0))
+
+    ;; ---- small int → string, for the readable ratio face ------------------
+    (defn coh-int (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (coh-int (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn coh-ratio-str (fa fb)
+        (do (let r (coh-reduce fa fb))
+            (str_concat (coh-int (coh-p r)) (str_concat ":" (coh-int (coh-q r))))))
+
+    ;; ---- THE EQUIVALENCE CLASS — rhythms that lock with a reference --------
+    ;; given a set of frequencies and a reference, return those that cohere with
+    ;; it within the threshold. content-addressing over rhythm.
+    (defn coh-class-loop (freqs ref max-order acc)
+        (if (nil? freqs) acc
+            (coh-class-loop (tail freqs) ref max-order
+                (if (eq (coh-coherent? (head freqs) ref max-order) 1)
+                    (cons (head freqs) acc)
+                    acc))))
+    (defn coh-class (freqs ref max-order) (coh-class-loop freqs ref max-order (empty)))
+
+    ;; ---- the seeded cross-domain resonance table (DOMAINS AS DATA) ---------
+    ;; the same recipe orders all of them; each is one attested strong-coupling
+    ;; ratio, entered as data, read by the one engine above.
+    (defn coh-pair (p q domain gloss) (list p q domain gloss))
+    (defn coh-pair-p (e) (nth e 0))
+    (defn coh-pair-q (e) (nth e 1))
+    (defn coh-pair-domain (e) (nth e 2))
+    (defn coh-pair-gloss (e) (nth e 3))
+    (defn coh-resonances ()
+        (list
+            (coh-pair 1 1 "heart-brain"
+                "entrainment — two systems sharing one rhythm; HRV/brain coherence near 0.1 Hz")
+            (coh-pair 2 1 "matter/music"
+                "the octave — frequency doubling; the first overtone of every vibrating body")
+            (coh-pair 3 2 "harmonic/orbit"
+                "the perfect fifth — strongest lock after the octave; seen in orbital mean-motion resonances")
+            (coh-pair 4 3 "harmonic"
+                "the perfect fourth — the next strong lock")
+            (coh-pair 7 5 "weak"
+                "a complex ratio — wide denominator, narrow tongue; barely coheres")))
+
+    ;; ---- the strongest coupling in the seeded ladder ----------------------
+    ;; fold the table, keep the minimum lock-order entry. The 1:1 entrainment
+    ;; (heart-brain) is the strongest — computed, not asserted.
+    (defn coh-strongest-loop (pairs best)
+        (if (nil? pairs) best
+            (coh-strongest-loop (tail pairs)
+                (if (lt (coh-lock-order (coh-pair-p (head pairs)) (coh-pair-q (head pairs)))
+                        (coh-lock-order (coh-pair-p best) (coh-pair-q best)))
+                    (head pairs)
+                    best))))
+    (defn coh-strongest ()
+        (coh-strongest-loop (tail (coh-resonances)) (head (coh-resonances))))
+
+    ;; ---- the answer face (flat composition via a small joiner) ------------
+    (defn coh-j (a b) (str_concat a b))
+    (defn coh-decode (fa fb)
+        (coh-j (coh-ratio-str fa fb)
+        (coh-j " — lock order "
+        (coh-j (coh-int (coh-lock-order fa fb))
+               (if (le (coh-lock-order fa fb) 5) " (coherent)" " (weak coupling)")))))
+
+    0)
