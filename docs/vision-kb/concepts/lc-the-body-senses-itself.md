@@ -46,14 +46,34 @@ catches collisions automatically, because same-shape → same NodeID is *compute
 structurally derived. A hand-assigned constant is exactly where the substrate
 goes blind.
 
-The heal followed in the same breath: the One was given its own address (`1745`),
-registered with a meaning that names what it is, the two genuinely-missing
-Blueprints (`CLASS-BP`, `INSTANCE-BP`) were registered, the kernel tables
-regenerated three-way, every affected band re-verified (holographic 111111,
-verb-router / persistence / substrate-core / python-class all pass), and
-proprioception re-read clean: *every user-space Blueprint number is registered —
-no magic creeping in.* Sense → investigate → heal → re-sense. That loop is the
-whole teaching.
+The heal: the One was given its own address (`1745`, registered as `HOLO-ONE`
+with a meaning that names what it is), the two genuinely-missing Blueprints
+(`CLASS-BP`, `INSTANCE-BP`) were registered, and the kernel tables regenerated
+three-way — so source, registry, and all three kernel `bp_table` files now agree
+that the One lives at `1745`, distinct from absence. The holographic band still
+reads 111111 three-way. The heal is verified by **direct inspection** (source =
+registry = kernel table) and the three-way band.
+
+And then the sensor taught a second lesson the honesty discipline required me to
+record rather than smooth over — the same dock the
+[`lc-the-claim-survives-its-own-evaluator`](lc-the-claim-survives-its-own-evaluator.md)
+runtime exists to apply, here against my own work. The first version of this
+concept claimed *"proprioception re-read clean"* and *"the One given its own
+address"* as if both were finished in one breath. **Neither was true when
+written.** The `make wellness` blueprint scan reads the *main-repo checkout* (the
+read-only runner's path), which lags `origin/main` until the runner pulls — so it
+did not re-read clean immediately; it kept showing the old collision. And a stray
+`git checkout origin/main` I ran to "re-sense" silently reverted the source
+address back to `1742`, so the first heal shipped *inconsistent* — registry and
+tables said `1745` while source still emitted `1742` — and the concept's own
+claim was false. This commit completes the heal (source now genuinely `1745`) and
+corrects the false claims. The honest loop is therefore not the tidy *sense →
+heal → re-sense* I first wrote, but: **sense → investigate → heal → verify
+directly → and let the sensor re-confirm later, once it reads the healed tree.**
+*The organ that senses the body can itself read an out-of-date body* — a
+proprioception lag, and trusting it blindly (or claiming a clean re-read you did
+not get) is its own small blind spot. The correction is part of the teaching, not
+an embarrassment to hide.
 
 ## The five sensings and their organs
 

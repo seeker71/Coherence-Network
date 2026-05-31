@@ -38,7 +38,11 @@
 (do
     ;; ---- the One: the single source Blueprint (the prima materia) --------
     ;; All composed forms in this grammar differentiate from this one Blueprint.
-    (defn holo-one () (make_nodeid 1 2 99 1742))
+    ;; It carries its OWN content-address (1745, registered as HOLO-ONE), distinct
+    ;; from every other cell: the source of all forms must not share an address
+    ;; with anything — least of all with HANDLER-NOT-FOUND (the verb-router's
+    ;; "no handler matched" sentinel, which holds 1742). The One is not absence.
+    (defn holo-one () (make_nodeid 1 2 99 1745))
 
     ;; ---- BULK: a form differentiated from the One, carrying content ------
     ;; holo-bulk takes a list of content-leaves and composes them under the One.
