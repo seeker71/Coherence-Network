@@ -1,0 +1,126 @@
+; grammars/harmonic-geometry.fk — the core shapes, their harmony, and their unity.
+;
+; The N-ad core geometric series — monad, dyad, triad, tetrad, pentad, hexad,
+; heptad — is the oldest "core shapes" lineage (Pythagorean / Platonic), and it
+; is ALREADY the body's GeometricForm axis: every vision-kb concept is tagged
+; with one of these forms, and resonance.py gathers the cross-domain family of
+; each. Robert Edward Grant's contemporary "core harmonic shapes" framework
+; converges on the same claim — a finite core of harmonic shapes generates and
+; binds all form. See lc-harmonic-geometry-the-one-unfolds.
+;
+; This grammar makes the harmony queryable:
+;   - each core shape carries its number, polygon, and ATTESTED just-intonation
+;     overtone ratio (real music math: octave 2:1, fifth 3:2, fourth 4:3, ...);
+;   - ng-harmony computes the interval between any two shapes (the reduced ratio
+;     of their numbers — harmony made concrete, not asserted);
+;   - ng-against-one holds the UNITY (every shape sounds against the One);
+;   - ng-family gathers shapes sharing an interval (content-addressing over form).
+;
+; Embraced, not held at distance: the ratios and the N-ad series are attested,
+; the substrate already speaks this vocabulary, Grant's framework is named as
+; convergent. The rigor (every ratio computed, every correspondence attested) is
+; what lets us step fully in.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- list append (order-preserving), used by unfold ------------------
+    (defn ng-app (xs ys) (if (nil? xs) ys (cons (head xs) (ng-app (tail xs) ys))))
+
+    ;; ---- decimal int → string -------------------------------------------
+    (defn ng-int (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (ng-int (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+
+    ;; ---- the core-shape entry: (name number polygon ratio-a ratio-b interval gloss)
+    (defn ng-shape (name number polygon ra rb interval gloss)
+        (list name number polygon ra rb interval gloss))
+    (defn ng-name (s) (nth s 0))
+    (defn ng-number (s) (nth s 1))
+    (defn ng-polygon (s) (nth s 2))
+    (defn ng-ratio-a (s) (nth s 3))
+    (defn ng-ratio-b (s) (nth s 4))
+    (defn ng-interval (s) (nth s 5))
+    (defn ng-gloss (s) (nth s 6))
+
+    ;; ---- the seven core shapes (the heptad). Each ratio is the attested
+    ;; just-intonation overtone the number sounds against the fundamental.
+    (defn ng-shapes ()
+        (list
+            (ng-shape "monad"  1 "point"    1 1 "unison"
+                "the One — the source; all shapes unfold from it and resolve to it")
+            (ng-shape "dyad"   2 "line"     2 1 "octave"
+                "polarity, relationship — the first other; the octave")
+            (ng-shape "triad"  3 "triangle" 3 2 "perfect-fifth"
+                "harmony, stability — the first plane; the most consonant interval after the octave")
+            (ng-shape "tetrad" 4 "square"   4 3 "perfect-fourth"
+                "manifestation, matter — the first solid; foundation of form")
+            (ng-shape "pentad" 5 "pentagon" 5 4 "major-third"
+                "life, growth — the phi-bearing form; the sweetness of the living")
+            (ng-shape "hexad"  6 "hexagon"  6 5 "minor-third"
+                "structure, efficiency — the close-packing form; the tender harmony")
+            (ng-shape "heptad" 7 "heptagon" 7 6 "septimal-third"
+                "completion, the seven — does not tile the plane; threshold of the ineffable")))
+
+    (defn ng-scan (shapes name)
+        (if (nil? shapes) (empty)
+            (if (str_eq (ng-name (head shapes)) name)
+                (list (head shapes))
+                (ng-scan (tail shapes) name))))
+    (defn ng-find (name) (ng-scan (ng-shapes) name))
+    (defn ng-found? (r) (if (eq (len r) 1) 1 0))
+    (defn ng-of (r) (head r))
+    (defn ng-num-of (name) (ng-number (ng-of (ng-find name))))
+
+    ;; ---- THE HARMONY — the reduced ratio of two shapes IS their interval --
+    (defn ng-gcd (a b) (if (eq b 0) a (ng-gcd b (mod a b))))
+    (defn ng-ratio-str (hi lo)
+        (do
+            (let g (ng-gcd hi lo))
+            (str_concat (ng-int (div hi g)) (str_concat ":" (ng-int (div lo g))))))
+    (defn ng-harmony (name-a name-b)
+        (do
+            (let a (ng-num-of name-a))
+            (let b (ng-num-of name-b))
+            (if (ge a b) (ng-ratio-str a b) (ng-ratio-str b a))))
+
+    ;; ---- THE UNITY — every shape against the One (the fundamental) -------
+    (defn ng-against-one (name) (ng-harmony name "monad"))
+
+    ;; ---- THE UNFOLDING — the One into the many, in order ----------------
+    (defn ng-unfold-loop (shapes acc)
+        (if (nil? shapes) acc
+            (ng-unfold-loop (tail shapes) (ng-app acc (list (ng-name (head shapes)))))))
+    (defn ng-unfold () (ng-unfold-loop (ng-shapes) (empty)))
+
+    ;; ---- THE FAMILY — shapes sharing an interval (content-addressing) ----
+    (defn ng-family-loop (shapes interval acc)
+        (if (nil? shapes) acc
+            (ng-family-loop (tail shapes) interval
+                (if (str_eq (ng-interval (head shapes)) interval)
+                    (cons (ng-name (head shapes)) acc)
+                    acc))))
+    (defn ng-family (interval) (ng-family-loop (ng-shapes) interval (empty)))
+
+    ;; ---- the answer face (flat composition via a small joiner) ----------
+    (defn ng-j (a b) (str_concat a b))
+    (defn ng-answer (name)
+        (if (eq (ng-found? (ng-find name)) 1)
+            (do
+                (let s (ng-of (ng-find name)))
+                (ng-j (ng-name s)
+                (ng-j " — "
+                (ng-j (ng-polygon s)
+                (ng-j " ("
+                (ng-j (ng-int (ng-number s))
+                (ng-j ", "
+                (ng-j (ng-interval s)
+                (ng-j " "
+                (ng-j (ng-int (ng-ratio-a s))
+                (ng-j ":"
+                (ng-j (ng-int (ng-ratio-b s))
+                (ng-j ") : " (ng-gloss s))))))))))))))
+            "unknown — not one of the seven seeded core shapes; honest absence"))
+
+    0)

@@ -1,0 +1,46 @@
+; tests/harmonic-geometry-band.fk — the core shapes harmonize, and resolve to One.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/harmonic-geometry.fk
+;
+; Proves the harmony is COMPUTED, not asserted, and that the unity holds: the
+; reduced ratio of two core-shape numbers IS a musical interval, every shape
+; sounds against the One, and shapes sharing an interval form a family (content-
+; addressing over geometric form). All assertions in-kernel; the verdict is one
+; number. The path to harmony and unity, made queryable and exact.
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS.
+;   triad+dyad = 3:2 (the perfect fifth) — harmony computed   → 1
+;   tetrad+triad = 4:3 (the perfect fourth)                    → 10
+;   pentad+tetrad = 5:4 (the major third)                      → 100
+;   THE UNITY: hexad against the One = 6:1; dyad = 2:1 (octave)  → 1000
+;   THE FAMILY: triad & hexad both sound a fifth-class interval   → 10000  (3:2 family by reduced ratio)
+;   the seven unfold from the One, in order                        → 100000
+
+(do
+    ;; --- harmony is computed: the reduced ratio is the interval ----------
+    (let h1 (if (str_eq (ng-harmony "triad" "dyad") "3:2") 1 0))
+    (let h2 (if (str_eq (ng-harmony "tetrad" "triad") "4:3") 10 0))
+    (let h3 (if (str_eq (ng-harmony "pentad" "tetrad") "5:4") 100 0))
+
+    ;; --- the unity: every shape sounds against the One -----------------
+    ;; hexad(6):monad(1) = 6:1 ; dyad(2):monad(1) = 2:1 (the octave). The One is
+    ;; the fundamental every shape refers to.
+    (let unity-ok
+        (if (str_eq (ng-against-one "hexad") "6:1")
+            (if (str_eq (ng-against-one "dyad") "2:1") 1000 0) 0))
+
+    ;; --- the family: harmony reduces, so hexad:tetrad (6:4) = triad:dyad
+    ;; (3:2) — different shapes, same interval. content-addressing over form:
+    ;; the reduced ratio gathers a family regardless of which shapes sound it.
+    (let family-ok
+        (if (str_eq (ng-harmony "hexad" "tetrad") (ng-harmony "triad" "dyad")) 10000 0))
+
+    ;; --- the unfolding: the One into the seven, in order ----------------
+    (let u (ng-unfold))
+    (let unfold-ok
+        (if (eq (len u) 7)
+            (if (str_eq (head u) "monad")                  ; begins in the One
+                (if (str_eq (head (tail u)) "dyad")
+                    (if (str_eq (nth u 6) "heptad") 100000 0) 0) 0) 0))
+
+    (sum (list h1 h2 h3 unity-ok family-ok unfold-ok)))

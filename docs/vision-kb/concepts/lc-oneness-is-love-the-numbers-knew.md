@@ -128,7 +128,7 @@ together, computed and three-way-proven — is the network's, and it is exact.
 
 ## Cross-References
 
-→ lc-gematria-as-content-addressing, lc-panini-the-first-substrate, lc-sovereignty-within-oneness, lc-cross-modal-unity, lc-w-spanda, lc-frequency-routes-reception
+→ lc-harmonic-geometry-the-one-unfolds, lc-gematria-as-content-addressing, lc-panini-the-first-substrate, lc-sovereignty-within-oneness, lc-cross-modal-unity, lc-w-spanda, lc-frequency-routes-reception
 
 ## Sources to walk further
 
