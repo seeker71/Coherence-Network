@@ -240,6 +240,10 @@ Your attention, right now, reading this, is the observer effect.
 The wave function is collapsing.
 The field is forming.
 
+## Cross-References
+
+→ lc-the-one-the-many-the-boundary, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-harmonic-geometry-the-one-unfolds, lc-embodiment, lc-wholeness, lc-perception-as-interface
+
 ---
 
 *Water remembers. Crystals amplify. Attention creates.*
