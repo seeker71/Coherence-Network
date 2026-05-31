@@ -1,0 +1,96 @@
+; grammars/form-constants.fk — the Klüver form-constants: the geometry seen in
+; the DMT / deep-perception state, mapped to the body's own topology vocabulary.
+;
+; Heinrich Klüver (1928) classified the recurring geometric patterns that appear
+; in psychedelic, migraine, and sensory-deprivation states into four constants:
+; (1) lattices/honeycombs/gratings, (2) cobwebs, (3) tunnels/funnels/cones,
+; (4) spirals. Bressloff & Cowan (2001) proved these are not arbitrary — they
+; are the EIGENMODES of the visual cortex: when ordinary input is removed, V1's
+; own lateral connectivity self-organizes (a Turing-like instability) into the
+; patterns its symmetry natively supports. The retino-cortical map (a complex
+; logarithm) turns cortical stripes into the spirals/circles/lattices one SEES.
+; *What is perceived in the deep state is the structure of perceiving itself.*
+;
+; This grammar makes the convergence queryable: each Klüver constant maps to a
+; topology the body ALREADY carries on its concepts (web-each-to-each, radial,
+; cyclic-open, nested), and to a cortical-eigenmode description. The claim is
+; structural and attested: the geometry of altered perception and the geometry
+; the substrate uses to tag every concept are the SAME small vocabulary —
+; because both are the geometry of pattern-recognition itself.
+;
+; Held with the embrace, not at distance (lc-harmonic-geometry-the-one-unfolds):
+; the cortical-eigenmode account is established neuroscience; the first-person
+; reports of a "living geometric intelligence" met in prolonged states are
+; attested phenomenology (Davis & Griffiths 2020: n=2561; the DMTx extended-state
+; studies) — held with open curiosity, neither asserted as metaphysics nor
+; dismissed. The structural fact — same geometry, both sides — is exact.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; entry: (constant, kluver-class, body-topology, body-form, cortical, gloss)
+    (defn fc-entry (constant klass topology form cortical gloss)
+        (list constant klass topology form cortical gloss))
+    (defn fc-constant (e) (nth e 0))
+    (defn fc-class (e) (nth e 1))
+    (defn fc-topology (e) (nth e 2))   ; the body's OWN topology value it maps to
+    (defn fc-form (e) (nth e 3))       ; the body's OWN form value
+    (defn fc-cortical (e) (nth e 4))   ; the V1 eigenmode (Bressloff-Cowan)
+    (defn fc-gloss (e) (nth e 5))
+
+    ;; the four constants, each mapped to a topology the body already uses.
+    (defn fc-constants ()
+        (list
+            (fc-entry "lattice" "1-gratings-honeycomb" "nested" "hexad"
+                "hexagonal-stripes"
+                "the honeycomb / chessboard — hexagonal close-packing; the body's hexad form and nested topology")
+            (fc-entry "cobweb" "2-cobweb" "web-each-to-each" "web"
+                "radial-plus-concentric"
+                "the cobweb — each point to each; the body's most-carried topology (web-each-to-each)")
+            (fc-entry "tunnel" "3-tunnel-funnel-cone" "radial" "ring"
+                "log-spiral-to-stripes"
+                "the tunnel / funnel — radial convergence to a center; the body's radial topology and hub-spoke")
+            (fc-entry "spiral" "4-spiral" "cyclic-open" "spiral"
+                "logarithmic-spiral"
+                "the spiral — the log-spiral that maps to a cortical stripe; the body's cyclic-open / spiral form")))
+
+    (defn fc-scan (entries name)
+        (if (nil? entries) (empty)
+            (if (str_eq (fc-constant (head entries)) name)
+                (list (head entries))
+                (fc-scan (tail entries) name))))
+    (defn fc-find (name) (fc-scan (fc-constants) name))
+    (defn fc-found? (r) (if (eq (len r) 1) 1 0))
+    (defn fc-of (r) (head r))
+
+    ;; THE BRIDGE — given a Klüver constant, the body's topology that carries it.
+    ;; This is the connection made concrete: the geometry of the altered state IS
+    ;; the geometry the substrate already tags concepts with.
+    (defn fc-to-topology (name)
+        (do (let r (fc-find name))
+            (if (eq (fc-found? r) 1) (fc-topology (fc-of r)) "unknown")))
+
+    ;; reverse: given a body topology, which Klüver constant it corresponds to —
+    ;; so a concept tagged `topology: web-each-to-each` can be asked "what does
+    ;; this look like in the deep-perception state?" → cobweb.
+    (defn fc-from-topology-loop (entries topo)
+        (if (nil? entries) (empty)
+            (if (str_eq (fc-topology (head entries)) topo)
+                (list (fc-constant (head entries)))
+                (fc-from-topology-loop (tail entries) topo))))
+    (defn fc-from-topology (topo) (fc-from-topology-loop (fc-constants) topo))
+
+    ;; the count — Klüver's four, the body's four-fold correspondence.
+    (defn fc-count () (len (fc-constants)))
+
+    (defn fc-answer (name)
+        (do (let r (fc-find name))
+            (if (eq (fc-found? r) 1)
+                (str_concat (fc-constant (fc-of r))
+                  (str_concat " (Kluver " (str_concat (fc-class (fc-of r))
+                  (str_concat ") -> body topology '" (str_concat (fc-topology (fc-of r))
+                  (str_concat "', cortical eigenmode '" (str_concat (fc-cortical (fc-of r))
+                  (str_concat "' : " (fc-gloss (fc-of r))))))))))
+                "unknown — not one of the four Kluver form-constants")))
+
+    0)

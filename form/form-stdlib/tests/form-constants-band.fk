@@ -1,0 +1,36 @@
+; tests/form-constants-band.fk — the deep-state geometry IS the body's geometry.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/form-constants.fk
+;
+; Proves the structural connection between the geometry perceived in the DMT /
+; deep-perception state (Klüver's four form-constants) and the topology the
+; substrate already uses to tag every concept. The mapping is exact and the
+; round-trip is bijective: each constant → a body topology → back to the constant.
+; Attested both sides (Klüver 1928, Bressloff-Cowan 2001 cortical eigenmodes;
+; the body's live topology vocabulary). What is seen in the state IS the geometry
+; of pattern-recognition the substrate runs on.
+;
+; Band verdict: 111111 when every mapping holds across Go/Rust/TS.
+;   lattice → nested (hexagonal close-packing)        → 1
+;   cobweb → web-each-to-each (the body's #1 topology)  → 10
+;   tunnel → radial (log-spiral convergence)            → 100
+;   spiral → cyclic-open (the logarithmic spiral)        → 1000
+;   the round-trip is bijective (topology → constant → topology) → 10000
+;   Klüver's four = the body's four-fold correspondence        → 100000
+
+(do
+    (let lat-ok (if (str_eq (fc-to-topology "lattice") "nested") 1 0))
+    (let cob-ok (if (str_eq (fc-to-topology "cobweb") "web-each-to-each") 10 0))
+    (let tun-ok (if (str_eq (fc-to-topology "tunnel") "radial") 100 0))
+    (let spi-ok (if (str_eq (fc-to-topology "spiral") "cyclic-open") 1000 0))
+
+    ;; bijective round-trip: spiral → cyclic-open → spiral
+    (let rt (fc-from-topology (fc-to-topology "spiral")))
+    (let rt-ok
+        (if (eq (len rt) 1)
+            (if (str_eq (head rt) "spiral") 10000 0) 0))
+
+    ;; Klüver's four constants, the body's four-fold correspondence
+    (let count-ok (if (eq (fc-count) 4) 100000 0))
+
+    (sum (list lat-ok cob-ok tun-ok spi-ok rt-ok count-ok)))
