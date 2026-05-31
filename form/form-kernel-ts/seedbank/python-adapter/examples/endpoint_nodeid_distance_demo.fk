@@ -1,0 +1,20 @@
+(do
+    ;; nodeid_distance — Manhattan distance between two substrate NodeIDs.
+    ;; The API serves this through serve_via_kernel with a Python fallback;
+    ;; this recipe is the source file the endpoint loads before fallback can run.
+    (defn abs1 (n) (if (lt n 0) (sub 0 n) n))
+    (defn manhattan (a_pkg a_lvl a_type a_inst b_pkg b_lvl b_type b_inst)
+        (_plus
+            (_plus (abs1 (sub a_pkg b_pkg)) (abs1 (sub a_lvl b_lvl)))
+            (_plus (abs1 (sub a_type b_type)) (abs1 (sub a_inst b_inst)))))
+    ;; input bindings — serve_via_kernel rewrites these (let ...) forms with the
+    ;; request's query params; the trailing call is the result.
+    (let a_pkg 1)
+    (let a_lvl 5)
+    (let a_type 4)
+    (let a_inst 1)
+    (let b_pkg 1)
+    (let b_lvl 4)
+    (let b_type 4)
+    (let b_inst 7)
+    (manhattan a_pkg a_lvl a_type a_inst b_pkg b_lvl b_type b_inst))

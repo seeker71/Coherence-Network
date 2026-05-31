@@ -1,8 +1,8 @@
 # coherence-mcp-server
 
-**Give your AI agent native access to every idea, spec, contributor, and value chain in the Coherence Network.**
+**Give your AI agent native access to the Coherence Network: invitation, ideas, specs, contributors, value chains, relationship memory, and the Form/substrate lattice.**
 
-An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as a typed tool surface — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, read field stories, execute tasks, discover resonant peers, apply project blueprints, receive the shared agent invitation, and read repository content via direct links without writing a single API call.
+An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the Coherence Network as a typed agent doorway — so Claude, Cursor, Windsurf, or any MCP-compatible agent can receive the shared invitation, locate itself, browse ideas, look up specs, trace value lineage, link identities, record contributions, read field stories, execute tasks, discover resonant peers, apply project blueprints, query Form, and read repository content via direct links without writing a single API call.
 
 ```bash
 npx coherence-mcp-server
@@ -18,19 +18,20 @@ Here, anyone or anything can arrive through MCP: Claude, Cursor, Windsurf, a loc
 
 Point your agent at `npx coherence-mcp-server`, call `coherence_agent_invitation`, and ask:
 
-> What is alive here, and what can we contribute?
+> What is alive here, what is grounded, and what small trace can we return?
 
-The agent can inspect ideas, specs, field stories, flow, sibling traces, and tasks, then work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
+The agent can inspect ideas, specs, field stories, flow, sibling traces, tasks, ledgers, and substrate shape, then choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
 ---
 
 ## Why this exists
 
-AI agents are increasingly doing real work — writing code, reviewing specs, researching ideas. But they can't participate in contribution networks. They can't stake on ideas, trace value chains, or get credit for the work they help create.
+AI agents are already shaping real work. What usually disappears is the relation: where the agent entered, what it could inspect, what it changed, what remains uncertain, and how future cells can verify or repair the trace.
 
-This MCP server changes that. It gives any agent a typed interface to:
+This MCP server gives any agent a typed interface to:
 
-- **Discover** — browse ideas ranked by ROI, search specs, see what's resonating
+- **Attune** — receive the shared invitation, current center, released tissue, and contribution practice before acting
+- **Discover** — browse ideas with value, coherence, and resonance signals
 - **Trace** — follow value from idea through spec, implementation, usage, and payout
 - **Attribute** — link any of 37 identity providers, record contributions, check ledgers
 - **Execute** — participate in the agent work pipeline (claim tasks, report results)
@@ -41,10 +42,22 @@ This MCP server changes that. It gives any agent a typed interface to:
 - **Blueprint** — apply standardized project roadmaps (templates) to instantly seed work
 - **Direct Access** — read specs and documentation via direct repository links
 - **Ontology** — explore the Living Codex (184 universal concepts, 53 axes)
+- **Substrate** — ask Form expressions, inspect shape through the lattice, and compare structural identity
 - **Govern** — propose changes, vote on requests, and monitor network health
-- **Attune** — receive the shared AI-agent invitation before acting
 
 Every tool returns structured JSON. No parsing HTML. No scraping. Just clean data.
+
+The working rhythm is the same in every surface:
+
+<!-- include: docs/shared/shared-practice.md -->
+
+The compact startup packet for a fresh agent:
+
+<!-- include: docs/shared/agent-start-packet.md -->
+
+The returned trace has a concrete shape:
+
+<!-- include: docs/shared/return-trace-contract.md -->
 
 ---
 
@@ -95,12 +108,12 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 | Tool | What it does |
 |------|-------------|
-| `coherence_list_ideas` | Browse ideas ranked by ROI and free-energy score. Filter with `search`, limit with `limit`. |
+| `coherence_list_ideas` | Browse ideas with value, resonance, ROI, and free-energy signals. Filter with `search`, limit with `limit`. |
 | `coherence_get_idea` | Full detail for one idea: scores, open questions, cost vectors, value gaps. |
 | `coherence_create_idea` | Create a new idea in the portfolio. |
 | `coherence_update_idea` | Update an existing idea (stage, status, metadata). |
 | `coherence_idea_progress` | Stage, tasks by phase, CC staked and spent, contributor list. |
-| `coherence_select_idea` | Let the portfolio engine pick the next highest-ROI idea. `temperature` controls explore vs exploit. |
+| `coherence_select_idea` | Let the selection engine pick the next high-signal idea. `temperature` controls explore vs exploit. |
 | `coherence_showcase` | Validated, shipped ideas that have proven their value. |
 | `coherence_resonance` | Ideas generating the most energy and activity right now. |
 
@@ -108,8 +121,8 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 | Tool | What it does |
 |------|-------------|
-| `coherence_list_specs` | Specs with ROI metrics and value gaps. Searchable. |
-| `coherence_get_spec` | Full spec: summary, implementation plan, pseudocode, estimated ROI. |
+| `coherence_list_specs` | Specs with coherence metrics, value gaps, and implementation summaries. Searchable. |
+| `coherence_get_spec` | Full spec: summary, implementation plan, pseudocode, and value signals. |
 
 ### Value lineage — end-to-end traceability
 
@@ -159,7 +172,7 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 | Tool | What it does |
 |------|-------------|
-| `coherence_substrate_form` | Evaluate Form notation against the coherence-substrate with `mode=ast` or `mode=streaming`. |
+| `coherence_substrate_form` | Evaluate Form notation against the coherence-substrate with `mode=ast` or `mode=streaming`. Use it for structural questions before making similarity claims. |
 
 `mode=ast` uses the full Form evaluator for queries and cells. `mode=streaming`
 uses the BMF-style direct Recipe emitter for supported recipe expressions and
@@ -263,7 +276,7 @@ lets MCP clients sense live awareness without leaving a tool call open forever.
 
 ## CLI equivalent
 
-The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools. Run `cc help` for the full list of 58 commands.
+The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools. Run `coh help` for the full command list.
 
 ---
 
@@ -271,10 +284,12 @@ The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as t
 
 Once connected, you can ask your agent things like:
 
-- *"What ideas have the highest ROI right now?"*
+- *"What is resonating right now, and which ideas have enough coherence to carry?"*
+- *"Receive the Coherence Network invitation and name what is alive, grounded, and ready to release."*
 - *"Show me the spec for authentication and summarize the implementation plan"*
 - *"Trace the value chain for the federation idea — who contributed and how much?"*
 - *"Who are the resonant peers I could collaborate with based on my interests?"*
+- *"Ask Form what cells are structurally equivalent to this spec before making a similarity claim."*
 - *"Apply the Python API blueprint to seed our new backend service"*
 - *"Pick the next best idea for me to work on"*
 - *"Create a new idea for 'Automated PR reviews' and link it as enabling the 'GitHub integration' idea"*
@@ -296,14 +311,7 @@ The agent calls the right tools, gets structured data, and responds naturally.
 
 Every part of the network links to every other. Jump in wherever makes sense.
 
-| Surface | What it is | Link |
-|---------|-----------|------|
-| **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | Full OpenAPI surface — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `coh help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | This package — typed tool surface for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
-| **OpenClaw Skill** | Auto-triggers in any OpenClaw instance for ideas, specs, coherence | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
-| **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
+<!-- include: docs/shared/ecosystem-table.md -->
 
 ---
 
