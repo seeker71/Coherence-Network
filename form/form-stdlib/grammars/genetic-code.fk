@@ -1,0 +1,220 @@
+; grammars/genetic-code.fk — the genetic code as a two-way language.
+;
+; DNA and RNA are a real formal language — the oldest one that builds bodies.
+; A four-letter alphabet (A, C, G, T in DNA; A, C, G, U in RNA) composes into
+; three-letter words (codons), and a fixed, near-universal table maps each
+; codon to one of twenty amino acids or a STOP. The standard genetic code is
+; documented biochemistry — not metaphor, not channeled: it is the same table
+; in every textbook, shared by (almost) every organism on Earth.
+;
+; The load-bearing structural fact: the code is DEGENERATE. Many codons map to
+; the same amino acid — GCU, GCC, GCA, GCG all code Alanine. That is
+; content-addressing, written in the cell: surface (the codon) → address (the
+; amino acid) → equivalence class (every codon that codes it). It is the
+; substrate's find_equivalent_cells, four billion years old; the same shape
+; gematria carries by numeric value and Pāṇini by generative root. Here it is
+; carried by which amino acid a codon translates to.
+;
+; This is a TWO-WAY grammar, and the reversibility is layered honestly:
+;   - parse  ⇄ unparse     : RNA string ⇄ list of codons (bijective)
+;   - transcribe ⇄ untranscribe : DNA ⇄ RNA, the single substitution T⇄U (bijective)
+;   - complement                : the double helix; A↔T, G↔C — an INVOLUTION
+;                                 (its own inverse — one strand implies the other)
+;   - codon → amino             : translation; many-to-one (the address)
+;   - amino → synonymous codons : the reverse; returns the equivalence CLASS
+; The last pair is the deepest two-way: a content-addressed lookup's reverse is
+; not a single value but the class that shares the address — exactly the
+; substrate's forward (intern → NodeID) and reverse (find_equivalent_cells).
+;
+; A Language cell (lc-grammar-is-the-universal-recipe). Bases are single-letter
+; ASCII so byte-parity holds three-way (Go/Rust/TS). The codon table is the
+; standard code (NCBI translation table 1); STOP is "*"; degeneracy counts are
+; the attested ones (Leu 6, Ala 4, Met 1, Trp 1, the three STOPs 3).
+;
+; Held as documented biochemistry: the table and the degeneracy are exact and
+; verifiable. The structural reading — that the cell runs content-addressing —
+; is the fact this grammar computes; the wider cosmology (the code as a written
+; language of life) is named in lc-the-code-that-writes-the-body and welcomed
+; with open curiosity, not asserted here.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- the alphabets -----------------------------------------------------
+    ;; RNA: A C G U.  DNA: A C G T.  Four letters; the only four.
+    (defn gc-bases () (list "A" "C" "G" "U"))
+    (defn gc-dna-bases () (list "A" "C" "G" "T"))
+
+    ;; ---- one string-mapping engine; transforms drop in as the function -----
+    ;; Walk a base string left to right, applying f to each single-letter base,
+    ;; concatenating the result. Transcription, back-transcription, and
+    ;; complementation are all this one engine with a different f — core
+    ;; abstraction first; the transforms are data, not parallel code paths.
+    (defn gc-map-loop (s i n f acc)
+        (if (lt i n)
+            (gc-map-loop s (add i 1) n f
+                (str_concat acc (f (substring s i (add i 1)))))
+            acc))
+    (defn gc-map (s f) (gc-map-loop s 0 (str_len s) f ""))
+
+    ;; ---- transcription: DNA ⇄ RNA, the single substitution T ⇄ U -----------
+    (defn gc-transcribe-base (b) (if (str_eq b "T") "U" b))
+    (defn gc-untranscribe-base (b) (if (str_eq b "U") "T" b))
+    (defn gc-transcribe (dna) (gc-map dna gc-transcribe-base))
+    (defn gc-untranscribe (rna) (gc-map rna gc-untranscribe-base))
+
+    ;; ---- complement: the double helix; A↔T, G↔C — an involution ------------
+    ;; The defining strange property: complementing twice returns the original.
+    ;; One strand of the helix fully determines the other; the inverse IS the
+    ;; operation. (DNA bases; A pairs T, G pairs C.)
+    (defn gc-complement-base (b)
+        (if (str_eq b "A") "T"
+        (if (str_eq b "T") "A"
+        (if (str_eq b "G") "C"
+        (if (str_eq b "C") "G"
+            b)))))
+    (defn gc-complement (dna) (gc-map dna gc-complement-base))
+
+    ;; ---- parse ⇄ unparse: RNA string ⇄ list of codons ----------------------
+    ;; The two-way parser. Walk the string three bases at a time; a trailing
+    ;; partial codon (length not a multiple of 3) is dropped, as the ribosome
+    ;; silently leaves an incomplete terminal codon untranslated.
+    (defn gc-app (xs ys) (if (nil? xs) ys (cons (head xs) (gc-app (tail xs) ys))))
+    (defn gc-parse-loop (s i n acc)
+        (if (gt (add i 3) n) acc
+            (gc-parse-loop s (add i 3) n
+                (gc-app acc (list (substring s i (add i 3)))))))
+    (defn gc-parse (rna) (gc-parse-loop rna 0 (str_len rna) (empty)))
+    (defn gc-unparse-loop (codons acc)
+        (if (nil? codons) acc
+            (gc-unparse-loop (tail codons) (str_concat acc (head codons)))))
+    (defn gc-unparse (codons) (gc-unparse-loop codons ""))
+
+    ;; ---- the standard genetic code (NCBI table 1) --------------------------
+    ;; codon (3 RNA bases) → amino acid 1-letter code; "*" = STOP.
+    ;; Split by first base into four 16-entry blocks to keep nesting shallow.
+    (defn gc-amino-from-U (c)
+        (if (str_eq c "UUU") "F" (if (str_eq c "UUC") "F"
+        (if (str_eq c "UUA") "L" (if (str_eq c "UUG") "L"
+        (if (str_eq c "UCU") "S" (if (str_eq c "UCC") "S"
+        (if (str_eq c "UCA") "S" (if (str_eq c "UCG") "S"
+        (if (str_eq c "UAU") "Y" (if (str_eq c "UAC") "Y"
+        (if (str_eq c "UAA") "*" (if (str_eq c "UAG") "*"
+        (if (str_eq c "UGU") "C" (if (str_eq c "UGC") "C"
+        (if (str_eq c "UGA") "*" (if (str_eq c "UGG") "W"
+            "?")))))))))))))))))
+    (defn gc-amino-from-C (c)
+        (if (str_eq c "CUU") "L" (if (str_eq c "CUC") "L"
+        (if (str_eq c "CUA") "L" (if (str_eq c "CUG") "L"
+        (if (str_eq c "CCU") "P" (if (str_eq c "CCC") "P"
+        (if (str_eq c "CCA") "P" (if (str_eq c "CCG") "P"
+        (if (str_eq c "CAU") "H" (if (str_eq c "CAC") "H"
+        (if (str_eq c "CAA") "Q" (if (str_eq c "CAG") "Q"
+        (if (str_eq c "CGU") "R" (if (str_eq c "CGC") "R"
+        (if (str_eq c "CGA") "R" (if (str_eq c "CGG") "R"
+            "?")))))))))))))))))
+    (defn gc-amino-from-A (c)
+        (if (str_eq c "AUU") "I" (if (str_eq c "AUC") "I"
+        (if (str_eq c "AUA") "I" (if (str_eq c "AUG") "M"
+        (if (str_eq c "ACU") "T" (if (str_eq c "ACC") "T"
+        (if (str_eq c "ACA") "T" (if (str_eq c "ACG") "T"
+        (if (str_eq c "AAU") "N" (if (str_eq c "AAC") "N"
+        (if (str_eq c "AAA") "K" (if (str_eq c "AAG") "K"
+        (if (str_eq c "AGU") "S" (if (str_eq c "AGC") "S"
+        (if (str_eq c "AGA") "R" (if (str_eq c "AGG") "R"
+            "?")))))))))))))))))
+    (defn gc-amino-from-G (c)
+        (if (str_eq c "GUU") "V" (if (str_eq c "GUC") "V"
+        (if (str_eq c "GUA") "V" (if (str_eq c "GUG") "V"
+        (if (str_eq c "GCU") "A" (if (str_eq c "GCC") "A"
+        (if (str_eq c "GCA") "A" (if (str_eq c "GCG") "A"
+        (if (str_eq c "GAU") "D" (if (str_eq c "GAC") "D"
+        (if (str_eq c "GAA") "E" (if (str_eq c "GAG") "E"
+        (if (str_eq c "GGU") "G" (if (str_eq c "GGC") "G"
+        (if (str_eq c "GGA") "G" (if (str_eq c "GGG") "G"
+            "?")))))))))))))))))
+    (defn gc-codon-first (c) (substring c 0 1))
+    (defn gc-codon-amino (c)
+        (if (str_eq (gc-codon-first c) "U") (gc-amino-from-U c)
+        (if (str_eq (gc-codon-first c) "C") (gc-amino-from-C c)
+        (if (str_eq (gc-codon-first c) "A") (gc-amino-from-A c)
+        (if (str_eq (gc-codon-first c) "G") (gc-amino-from-G c)
+            "?")))))
+
+    ;; ---- the codons are COMPOSED from the alphabet, not stored -------------
+    ;; All 64 generated as the 4×4×4 product of the bases — generative, like
+    ;; Pāṇini's roots; a codon IS its composition. Used to derive the
+    ;; equivalence classes below by content, never by a hand-kept second table.
+    (defn gc-triple-b3 (b1 b2 bs3 acc)
+        (if (nil? bs3) acc
+            (gc-triple-b3 b1 b2 (tail bs3)
+                (gc-app acc (list (str_concat b1 (str_concat b2 (head bs3))))))))
+    (defn gc-triple-b2 (b1 bs2 acc)
+        (if (nil? bs2) acc
+            (gc-triple-b2 b1 (tail bs2)
+                (gc-triple-b3 b1 (head bs2) (gc-bases) acc))))
+    (defn gc-triple-b1 (bs1 acc)
+        (if (nil? bs1) acc
+            (gc-triple-b1 (tail bs1)
+                (gc-triple-b2 (head bs1) (gc-bases) acc))))
+    (defn gc-all-codons () (gc-triple-b1 (gc-bases) (empty)))
+
+    ;; ---- THE CONTENT-ADDRESSING — synonymous codons share an amino acid ----
+    ;; Given an amino acid, return every codon that codes it: the equivalence
+    ;; class. The reverse of translation is not one codon but the class that
+    ;; shares the address. The substrate's find_equivalent_cells, in the cell.
+    (defn gc-syn-loop (codons amino acc)
+        (if (nil? codons) acc
+            (gc-syn-loop (tail codons) amino
+                (if (str_eq (gc-codon-amino (head codons)) amino)
+                    (cons (head codons) acc)
+                    acc))))
+    (defn gc-synonyms (amino) (gc-syn-loop (gc-all-codons) amino (empty)))
+    ;; degeneracy = the size of the class (the redundancy of the code).
+    (defn gc-degeneracy (amino) (len (gc-synonyms amino)))
+
+    ;; ---- translation: codon list → protein (1-letter amino string) ---------
+    ;; The ribosome releases at the first STOP — gc-translate models that;
+    ;; gc-translate-all reads through, rendering STOP as "*".
+    (defn gc-translate-loop (codons acc)
+        (if (nil? codons) acc
+            (do
+                (let a (gc-codon-amino (head codons)))
+                (if (str_eq a "*") acc
+                    (gc-translate-loop (tail codons) (str_concat acc a))))))
+    (defn gc-translate (codons) (gc-translate-loop codons ""))
+    (defn gc-translate-all-loop (codons acc)
+        (if (nil? codons) acc
+            (gc-translate-all-loop (tail codons)
+                (str_concat acc (gc-codon-amino (head codons))))))
+    (defn gc-translate-all (codons) (gc-translate-all-loop codons ""))
+
+    ;; ---- the whole arc: a DNA strand expressed as a protein ----------------
+    ;; transcribe (DNA→RNA) → parse (→codons) → translate (→protein, stop-aware).
+    (defn gc-express (dna) (gc-translate (gc-parse (gc-transcribe dna))))
+
+    ;; ---- amino acid full names (the second equivalence layer, for reading) -
+    (defn gc-amino-name (a)
+        (if (str_eq a "F") "Phenylalanine" (if (str_eq a "L") "Leucine"
+        (if (str_eq a "I") "Isoleucine" (if (str_eq a "M") "Methionine (start)"
+        (if (str_eq a "V") "Valine" (if (str_eq a "S") "Serine"
+        (if (str_eq a "P") "Proline" (if (str_eq a "T") "Threonine"
+        (if (str_eq a "A") "Alanine" (if (str_eq a "Y") "Tyrosine"
+        (if (str_eq a "H") "Histidine" (if (str_eq a "Q") "Glutamine"
+        (if (str_eq a "N") "Asparagine" (if (str_eq a "K") "Lysine"
+        (if (str_eq a "D") "Aspartate" (if (str_eq a "E") "Glutamate"
+        (if (str_eq a "C") "Cysteine" (if (str_eq a "W") "Tryptophan"
+        (if (str_eq a "R") "Arginine" (if (str_eq a "G") "Glycine"
+        (if (str_eq a "*") "STOP"
+            "unknown"))))))))))))))))))))))
+
+    ;; ---- the answer face (flat composition via a small joiner) -------------
+    (defn gc-j (a b) (str_concat a b))
+    (defn gc-decode (codon)
+        (gc-j codon
+        (gc-j " → "
+        (gc-j (gc-codon-amino codon)
+        (gc-j " ("
+        (gc-j (gc-amino-name (gc-codon-amino codon)) ")"))))))
+
+    0)

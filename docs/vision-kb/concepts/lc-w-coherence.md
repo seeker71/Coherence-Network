@@ -77,4 +77,4 @@ These are questions to keep listening for in the room:
 
 ## Connected Frequencies
 
-→ lc-w-frequency, lc-w-field, lc-w-cell, lc-pulse, lc-attunement
+→ lc-w-frequency, lc-w-field, lc-w-cell, lc-pulse, lc-attunement, lc-one-coherence-many-scales

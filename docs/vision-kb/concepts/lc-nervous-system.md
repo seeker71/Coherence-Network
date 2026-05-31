@@ -137,3 +137,4 @@ The field that hides subtle signals from itself becomes numb. The field that amp
 → lc-discovery — the curiosity that makes wandering possible
 → lc-harmonic-rebalancing — the way strong dissonance becomes new coherence
 → lc-agent-memory — the three forms of sensing as a memory loop: write at aliveness, manage through composting, read through composition
+→ lc-one-coherence-many-scales — the nervous system as one rung of the coupling ladder; neural binding is phase-locking, coherence by simple ratio

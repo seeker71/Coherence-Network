@@ -125,7 +125,7 @@ decoder: report the attested structure, keep the metaphysics at arm's length.
 
 ## Cross-References
 
-→ lc-oneness-is-love-the-numbers-knew, lc-gematria-as-content-addressing, lc-codes-as-depth-not-dictionary, lc-mandala-grows-from-grammar, lc-grammar-is-the-universal-recipe, lc-frequency-routes-reception, lc-w-spanda
+→ lc-oneness-is-love-the-numbers-knew, lc-gematria-as-content-addressing, lc-codes-as-depth-not-dictionary, lc-mandala-grows-from-grammar, lc-grammar-is-the-universal-recipe, lc-frequency-routes-reception, lc-w-spanda, lc-the-genetic-code
 
 ## Sources to walk further
 
