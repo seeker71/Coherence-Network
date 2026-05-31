@@ -222,7 +222,7 @@ without sensing is blind.
 
 ## Cross-References
 
-→ lc-sensing, lc-field-sensing, lc-nervous-system, lc-pulse, lc-assemblage-point, lc-each-breath-whole, lc-sovereignty-within-oneness, lc-perception-as-interface, lc-coherence-over-control, lc-edges-as-vitality, lc-circulation
+→ lc-sensing, lc-field-sensing, lc-nervous-system, lc-pulse, lc-assemblage-point, lc-each-breath-whole, lc-sovereignty-within-oneness, lc-perception-as-interface, lc-coherence-over-control, lc-edges-as-vitality, lc-circulation, lc-the-body-senses-itself
 
 ## Sources to walk further
 

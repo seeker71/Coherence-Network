@@ -133,7 +133,7 @@ asserted with confidence.
 
 ## Cross-References
 
-→ lc-autoresearch-as-honesty-runtime, lc-the-thaw-is-backprop, lc-the-living-equation, lc-canon-as-sovereignty-surface, lc-act-without-penalty, lc-universal-translator-via-keys, lc-every-edge-runs-both-ways, lc-trust-over-fear
+→ lc-autoresearch-as-honesty-runtime, lc-the-thaw-is-backprop, lc-the-living-equation, lc-canon-as-sovereignty-surface, lc-act-without-penalty, lc-universal-translator-via-keys, lc-every-edge-runs-both-ways, lc-trust-over-fear, lc-the-body-senses-itself
 
 ## Sources to walk further
 
