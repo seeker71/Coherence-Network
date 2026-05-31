@@ -184,7 +184,8 @@
         (if (str_eq op "<=") (if (le left right) 1 0)
         (if (str_eq op ">")  (if (gt left right) 1 0)
         (if (str_eq op ">=") (if (ge left right) 1 0)
-            (do (trace "py-compare: unsupported op" op) (head (empty))))))))))
+        (if (str_eq op "in") (py-member? left right)
+            (do (trace "py-compare: unsupported op" op) (head (empty)))))))))))
 
     ;; ---- the interpreter --------------------------------------------
     ;;
@@ -245,6 +246,45 @@
             (if (value_eq (head (head pairs)) key)
                 (head (tail (head pairs)))
                 (py-dict-lookup-str-loop (tail pairs) key))))
+
+    ;; py-dict-keys — the keys of a dict in insertion order, as a Form list.
+    ;; Used by FOR (Python iterates a dict over its keys) and could serve
+    ;; `.keys()` when method-calls reach dicts.
+    (defn py-dict-keys-loop (pairs acc)
+        (if (nil? pairs) (reverse acc)
+            (py-dict-keys-loop (tail pairs) (cons (head (head pairs)) acc))))
+    (defn py-dict-keys (d) (py-dict-keys-loop (py-dict-pairs d) (empty)))
+
+    ;; py-member? — Python `x in coll`. A dict tests key membership (matching
+    ;; `key in d`); a plain list tests element membership. value_eq is the
+    ;; same polymorphic equality dict lookup uses, so string and int members
+    ;; both resolve. Returns 1/0 (Python's bool-as-int convention).
+    (defn py-member-loop (x xs)
+        (if (nil? xs) 0
+            (if (value_eq (head xs) x) 1
+                (py-member-loop x (tail xs)))))
+    (defn py-member? (x coll)
+        (if (py-dict? coll)
+            (py-member-loop x (py-dict-keys coll))
+            (py-member-loop x coll)))
+
+    ;; py-dict-set — return a NEW dict with (key → val) set. Dicts are
+    ;; immutable Form values, so subscript-assign threads a fresh dict
+    ;; through the env rather than mutating in place. An existing key keeps
+    ;; its position (value replaced); a new key appends at the end —
+    ;; matching CPython's insertion-order semantics. value_eq keys, the
+    ;; same equality py-dict-lookup uses.
+    (defn py-dict-set-loop (pairs key val acc found)
+        (if (nil? pairs)
+            (if (eq found 1) (reverse acc)
+                (reverse (cons (list key val) acc)))
+            (if (value_eq (head (head pairs)) key)
+                (py-dict-set-loop (tail pairs) key val
+                    (cons (list key val) acc) 1)
+                (py-dict-set-loop (tail pairs) key val
+                    (cons (head pairs) acc) found))))
+    (defn py-dict-set (d key val)
+        (cons (py-dict-tag) (py-dict-set-loop (py-dict-pairs d) key val (empty) 0)))
 
     ;; pairs-of-children: walk a flat (k1 v1 k2 v2 ...) child stream and
     ;; eval each into a (key-value value-value) pair. Encoding: DICT
@@ -379,11 +419,12 @@
                     ;; FOR children: var-name-leaf, iterable-recipe,
                     ;; body-stmt-recipes... Evaluate the iterable to a Form
                     ;; list, bind var to each element, thread env through the
-                    ;; body. Returns 0 (Python None). Iterables today are
-                    ;; lists (PY-BMF-LIST / range-as-list); dict/string
-                    ;; iteration is a later breath.
+                    ;; body. Returns 0 (Python None). A py-dict iterable yields
+                    ;; its keys (Python's `for k in d`); lists / range-as-list
+                    ;; iterate their elements directly.
                     (let var (node_value (head kids)))
-                    (let items (py-eval (head (tail kids)) env))
+                    (let raw (py-eval (head (tail kids)) env))
+                    (let items (if (py-dict? raw) (py-dict-keys raw) raw))
                     (let body-stmts (tail (tail kids)))
                     (let final-env (py-for-loop var items body-stmts env))
                     (py-stmt-result 0 final-env))
@@ -413,8 +454,21 @@
                     (let value (py-eval (nth kids 2) env))
                     (record_set obj attr value)
                     (py-stmt-result value env))
+            (if (node_eq cat PY-BMF-SUB-ASSIGN)
+                (do
+                    ;; SUB-ASSIGN children: object-name-leaf, index-recipe,
+                    ;; value-recipe (NAME[index] = value). Look the dict up by
+                    ;; name, set the (index value) pair, and rebind NAME to the
+                    ;; NEW dict — dicts are immutable Form values, so this
+                    ;; threads a fresh dict through the env exactly like ASSIGN.
+                    (let name (node_value (nth kids 0)))
+                    (let dict (py-env-lookup env name))
+                    (let idx (py-eval (nth kids 1) env))
+                    (let value (py-eval (nth kids 2) env))
+                    (let new-dict (py-dict-set dict idx value))
+                    (py-stmt-result value (py-env-extend env name new-dict)))
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env))))))))))
+                (py-stmt-result (py-eval recipe env) env)))))))))))
 
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
@@ -473,7 +527,13 @@
         (if (str_eq name "sum") (py-sum-loop (head args) 0)
         (if (str_eq name "min") (py-min-loop (tail (head args)) (head (head args)))
         (if (str_eq name "max") (py-max-loop (tail (head args)) (head (head args)))
-        (if (str_eq name "len") (len (head args))
+        (if (str_eq name "len")
+            ;; A py-dict is a sentinel-tagged Form list, so the kernel `len`
+            ;; native would miscount it — read its pair count instead. Strings
+            ;; and plain lists go straight to the Str/List-aware native.
+            (if (py-dict? (head args))
+                (len (py-dict-pairs (head args)))
+                (len (head args)))
         (if (str_eq name "abs")
             (if (lt (head args) 0) (sub 0 (head args)) (head args))
             (do (trace "py-builtin: unknown" name) (head (empty)))))))))
