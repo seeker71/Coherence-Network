@@ -1564,6 +1564,18 @@ export class Kernel {
         }
         return { kind: "null" };
       }
+      // String key on an untagged list → record-field read. A Python class
+      // instance is a flat alist (list "__class__" "Counter" "n" 3 …).
+      // Mirrors the Rust _get (Value::List, Value::Str) arm: walk pairs from
+      // slot 0, match the string key, return the following value; an absent
+      // field throws (Rust panics) rather than falling into the index path.
+      if (v.kind === "list" && idx.kind === "str") {
+        for (let i = 0; i + 1 < v.list.length; i += 2) {
+          const kk = v.list[i]!;
+          if (kk.kind === "str" && kk.str === idx.str) return v.list[i + 1]!;
+        }
+        throw new Error(`_get: no field '${idx.str}' on record`);
+      }
       if (v.kind === "list") {
         const i = idx.kind === "int" ? idx.int : 0;
         if (i < 0 || i >= v.list.length) return { kind: "null" };
