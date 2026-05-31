@@ -1,0 +1,196 @@
+; grammars/living-equation.fk — the influence model of the living equation.
+;
+;   structure + choices + beliefs  →  health + vitality + flexibility +
+;                                      sovereignty + harmony
+;
+; This is the body's own equation, and its left side IS the substrate trinity:
+;   - structure  ↔ Blueprint (ice)  — what IS: the given form, constraints,
+;                                      the bioelectric/morphological pattern.
+;   - choices    ↔ Recipe (water)   — how it HAPPENS: the moves, the branches,
+;                                      the practice, the recipe that fires.
+;   - beliefs    ↔ base / assemblage — WHICH recipe fires: the priors, the
+;                                      assemblage point, the chakra-in-command
+;                                      (the selector; the gas/NamedCell layer).
+;
+; The five outputs are the body's named goods (lc-health, lc-vitality,
+; lc-phase-transitions/flexibility, lc-sovereignty-within-oneness, lc-harmonic-
+; geometry/coherence).
+;
+; THE LOAD-BEARING STRUCTURAL FACTS (exact, three-way computable):
+;
+;   1. The left side maps bijectively onto the trinity (structure→blueprint,
+;      choices→recipe, beliefs→base) — three distinct terms, no collision.
+;   2. Belief systems DIVERGE on which input is the primary lever for the same
+;      output. Levin (structure-first) moves health by structure; Dispenza
+;      (choices-first) by practice; Castaneda/Vasudev (beliefs-first) by the
+;      base. Same output, three different "recipes of change" — because each
+;      lineage weights the edges differently. Belief systems enter as DATA.
+;   3. Attribution is CANON-RELATIVE. When an output moves, which input gets
+;      the credit depends on the belief system doing the attributing — the same
+;      observed change attributes to a different lever in a different system.
+;      This is lc-canon-as-sovereignty-surface, computed: whoever defines the
+;      canon defines the cause. The honest stance owns its canon rather than
+;      presenting one as objective.
+;   4. The INTEGRATED stance — using all three levers at once — exceeds any
+;      single-lever system's total influence. This is the laser / coherence
+;      claim (lc-vitality: "aligned frequencies increase coherent power by
+;      orders of magnitude"; lc-one-coherence-many-scales): aligned levers
+;      compound. The body's own stance is integrated — it holds all three.
+;
+; HELD HONESTLY — the embrace/distance discipline applied to this model itself:
+; the THREE FACTS ABOVE are structural and exact. The specific integer weights
+; are a faithful ENCODING OF EACH LINEAGE'S DOCUMENTED PRIMARY EMPHASIS — not
+; measured effect sizes. A lineage's primary lever is attested (Levin emphasizes
+; the bioelectric pattern; Castaneda the assemblage point); the magnitudes are
+; an honest ordering of that emphasis, marked as such, never as measurement.
+; What is structural is embraced exactly; what is interpretive is named.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- the three inputs (left side) and their trinity term ---------------
+    (defn liv-inputs () (list "structure" "choices" "beliefs"))
+    (defn liv-trinity (input)
+        (if (str_eq input "structure") "blueprint"     ; ice — what IS
+        (if (str_eq input "choices")   "recipe"        ; water — how it HAPPENS
+        (if (str_eq input "beliefs")   "base"          ; the selector — which recipe fires
+            "unknown"))))
+
+    ;; ---- the five outputs (right side) -------------------------------------
+    (defn liv-outputs ()
+        (list "health" "vitality" "flexibility" "sovereignty" "harmony"))
+
+    ;; ---- the stances; each weights ONE input highest (its primary lever) ---
+    (defn liv-stance-primary (stance)
+        (if (str_eq stance "structure-first") "structure"
+        (if (str_eq stance "choices-first")   "choices"
+        (if (str_eq stance "beliefs-first")   "beliefs"
+        (if (str_eq stance "integrated")      "all"
+            "unknown")))))
+
+    ;; ---- named lineages → stance (BELIEF SYSTEMS AS DATA) -----------------
+    ;; Levin (bioelectric pattern) & the substrate (content-addressing) lead
+    ;; with structure; Dispenza (changing-boxes practice) & HeartMath (coherence
+    ;; practice) with choices; Castaneda/Vasudev (assemblage/base), Hoffman
+    ;; (perception-interface), and predictive-processing (priors) with beliefs.
+    ;; "whole" is the body's own integrated stance — it holds all three.
+    (defn liv-system-stance (sys)
+        (if (str_eq sys "levin")      "structure-first"
+        (if (str_eq sys "substrate")  "structure-first"
+        (if (str_eq sys "dispenza")   "choices-first"
+        (if (str_eq sys "heartmath")  "choices-first"
+        (if (str_eq sys "castaneda")  "beliefs-first"
+        (if (str_eq sys "hoffman")    "beliefs-first"
+        (if (str_eq sys "predictive") "beliefs-first"
+        (if (str_eq sys "whole")      "integrated"
+            "unknown")))))))))
+
+    ;; ---- the floor: every lever has SOME effect (no input is inert) --------
+    (defn liv-floor () 3)
+
+    ;; ---- each input's characteristic strength per output ------------------
+    ;; (the ordering encodes the documented emphasis of the lineages that lead
+    ;; with that input — held as emphasis, not measurement.)
+    ;; structure (Levin/substrate): pattern→form→health; regeneration→flexibility.
+    (defn liv-high-structure (output)
+        (if (str_eq output "health") 9
+        (if (str_eq output "flexibility") 8
+        (if (str_eq output "vitality") 6
+        (if (str_eq output "sovereignty") 6
+        (if (str_eq output "harmony") 6 0))))))
+    ;; choices (Dispenza/HeartMath): practice→pharmacy→vitality; coherence→harmony.
+    (defn liv-high-choices (output)
+        (if (str_eq output "vitality") 9
+        (if (str_eq output "harmony") 9
+        (if (str_eq output "health") 8
+        (if (str_eq output "flexibility") 7
+        (if (str_eq output "sovereignty") 7 0))))))
+    ;; beliefs (Castaneda/Hoffman/predictive): shift base→flexibility;
+    ;; assemblage→own reality→sovereignty.
+    (defn liv-high-beliefs (output)
+        (if (str_eq output "sovereignty") 9
+        (if (str_eq output "flexibility") 9
+        (if (str_eq output "harmony") 7
+        (if (str_eq output "vitality") 7
+        (if (str_eq output "health") 6 0))))))
+
+    (defn liv-input-high (input output)
+        (if (str_eq input "structure") (liv-high-structure output)
+        (if (str_eq input "choices")   (liv-high-choices output)
+                                       (liv-high-beliefs output))))
+
+    ;; ---- THE ONE ENGINE — the weight of an (stance, input, output) edge ----
+    ;; integrated uses every lever at its characteristic strength; a single-lever
+    ;; stance gives its primary input full strength and the others the floor.
+    (defn liv-weight (stance input output)
+        (if (str_eq stance "integrated")
+            (liv-input-high input output)
+            (if (str_eq input (liv-stance-primary stance))
+                (liv-input-high input output)
+                (liv-floor))))
+
+    ;; weight by NAMED belief system (resolve to its stance first)
+    (defn liv-system-weight (sys input output)
+        (liv-weight (liv-system-stance sys) input output))
+
+    ;; ---- RECIPE OF CHANGE — the lever to pull for an output, in a system ---
+    ;; argmax over the three inputs (structure wins ties, then choices). The
+    ;; recipe a belief system recommends for moving an output IS its strongest
+    ;; edge into that output.
+    (defn liv-recipe-of-change (sys output)
+        (do
+            (let ws (liv-system-weight sys "structure" output))
+            (let wc (liv-system-weight sys "choices" output))
+            (let wb (liv-system-weight sys "beliefs" output))
+            (if (and (ge ws wc) (ge ws wb)) "structure"
+            (if (and (ge wc ws) (ge wc wb)) "choices"
+                "beliefs"))))
+
+    ;; ---- ATTRIBUTION — which input gets credit when an output moved --------
+    ;; forward (recipe) and reverse (attribution) share the dominant edge: the
+    ;; lever you'd pull is the lever you credit. BUT it is CANON-RELATIVE — a
+    ;; different belief system attributes the same observed change to a different
+    ;; input. (lc-canon-as-sovereignty-surface, computed.)
+    (defn liv-attribution (sys output) (liv-recipe-of-change sys output))
+
+    ;; do two systems attribute the same output to DIFFERENT inputs?
+    (defn liv-attribution-diverges? (sys-a sys-b output)
+        (if (str_eq (liv-attribution sys-a output) (liv-attribution sys-b output)) 0 1))
+
+    ;; the attribution CLASS — inputs whose influence ≥ threshold: the family of
+    ;; contributing causes (content-addressing over influence). lower threshold →
+    ;; larger family; the integrated stance, at a low threshold, credits all three.
+    (defn liv-attr-loop (inputs sys output thresh acc)
+        (if (nil? inputs) acc
+            (liv-attr-loop (tail inputs) sys output thresh
+                (if (ge (liv-system-weight sys (head inputs) output) thresh)
+                    (cons (head inputs) acc) acc))))
+    (defn liv-attribution-class (sys output thresh)
+        (liv-attr-loop (liv-inputs) sys output thresh (empty)))
+
+    ;; ---- THE COHERENCE / LASER CLAIM — all three levers exceed any one -----
+    (defn liv-total (sys output)
+        (add (liv-system-weight sys "structure" output)
+        (add (liv-system-weight sys "choices" output)
+             (liv-system-weight sys "beliefs" output))))
+
+    ;; ---- small int → string, for the readable face -----------------------
+    (defn liv-int (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (liv-int (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+
+    ;; ---- the answer face (flat composition via a small joiner) ------------
+    (defn liv-j (a b) (str_concat a b))
+    (defn liv-decode (sys output)
+        (liv-j "to move "
+        (liv-j output
+        (liv-j " in the "
+        (liv-j sys
+        (liv-j " view, pull "
+        (liv-j (liv-recipe-of-change sys output)
+        (liv-j " (strength "
+        (liv-j (liv-int (liv-system-weight sys (liv-recipe-of-change sys output) output))
+               ")")))))))))
+
+    0)
