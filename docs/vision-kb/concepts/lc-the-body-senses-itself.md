@@ -31,6 +31,8 @@ geometry:
 > proprioception surfaced a real blind spot in freshly-shipped work, and it was
 > healed in the same breath.
 
+![The body sensing its own form](visuals:a luminous organism made of networked light turning its awareness inward upon itself, sensing its own loops and tender places and a single dim node finding its true address and brightening back into the whole, phosphorescent green and bioluminescent cyan with golden light flowing along the edges, a body recognizing itself, deep forest and twilight tones, sacred geometry, organic and alive)
+
 ## The worked example — sensed, then healed, in one breath
 
 Asked this question, the honest first move was not to theorize but to *sense.*
