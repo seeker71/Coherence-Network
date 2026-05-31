@@ -230,7 +230,7 @@ confirm Shape 2 classification + LOC count.
 | Phase | What | LOC named for compost |
 |---|---|---|
 | A | Bootstrap parsers + emitters (Python adapter + TS adapter) | **5,781** |
-| B | Adapter CLIs + scripts + emitted .fk files | **714** (~+20 .fk files) |
+| B | Adapter CLIs + scripts + emitted .fk files | **714** (~+20 .fk files; 4 emitted .fk RELEASED 2026-05-31 — see RELEASED section) |
 | C | Python bridge + form_runtime + self-host registry | **2,938** + utility-router rows |
 | D | Foundational persistence + infrastructure | **TBD** (firing-questions in flight) |
 | **Total** | | **~9,433 LOC + Phase D** of bootstrap tissue with named compost gates |
@@ -385,3 +385,33 @@ coverage moves to COMPOST READY; every composted file moves to RELEASED.
 
 The body sees its first cell move through the discipline. The path becomes
 walkable because the first step has been walked.
+
+**What composts when a demo reaches COMPOST READY.** The `.py` input
+**stays** — the parity suite reads it on every run (it's the substrate the
+gate exercises). The emitter artifact that composts is the demo's checked-in
+`.fk`: the parity suite regenerates it fresh on every run
+(`parity_suite.sh` compiles `.py` → `.fk` immediately before executing it),
+so the committed copy is pure residue. The four demos above had their `.fk`
+emitter artifacts released — see the RELEASED section below for the first
+arrival of the third lifecycle step.
+
+---
+
+## RELEASED — rows whose compostable tissue has actually been removed
+
+A row appears here when a file named for compost is *removed from the tree*
+in a merged PR. This is the third and final lifecycle step: tissue →
+PROVEN → COMPOST READY → **RELEASED**. The body no longer carries the
+weight; git remembers it if it's ever needed again.
+
+| Date | PR | What released | Why it was safe | Regeneration path |
+|---|---|---|---|---|
+| 2026-05-31 | `claude/release-proven-bootstrap` | The four COMPOST-READY demos' emitter artifacts: `python_bridge_demo.fk`, `python_demo.fk`, `python_assign_demo.fk`, `python_imperative_demo.fk` (Phase B "emitted .fk files" tissue) | All four demos reached COMPOST READY (Form-native value proven three-way). The `.fk` files are emitter output nothing reads as a committed input — `parity_suite.sh` overwrites each one via `python-compile` immediately before running it; `form/validate.sh` (the three-way kernel gate) walks `form-samples/` + `form-stdlib/` and never references the seedbank examples; no CI workflow, doc link, or script consumes the committed `.fk` content | `parity_suite.sh` regenerates each on the next run; or `npx tsx src/main.ts python-compile examples/<name>.py examples/<name>.fk` from the adapter dir |
+
+**The first composted cell.** With this row the lifecycle has walked its
+full length once: a shape proved Form-native, its demo reached COMPOST
+READY, and its emitter residue is gone from the tree. The `.py` inputs and
+the bootstrap parser tissue (`lang-python.ts` and friends) stay — they
+compost only when *all* `PARITY_FILES` rows reach COMPOST READY. What moved
+here is exactly the residue that was safe to move: regenerable emitter
+output with no live reader.
