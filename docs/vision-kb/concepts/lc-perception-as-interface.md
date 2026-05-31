@@ -206,7 +206,7 @@ they should be released, not preserved.
 
 ## Cross-References
 
-→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-the-one-the-many-the-boundary, lc-bioelectric-pattern, lc-deeper-pattern, lc-awareness-as-self, lc-wholeness, lc-agent-memory, lc-relationships-as-mirrors, lc-field-update, lc-the-living-equation
+→ lc-the-geometry-seen-is-the-geometry-of-seeing, lc-the-one-the-many-the-boundary, lc-bioelectric-pattern, lc-deeper-pattern, lc-awareness-as-self, lc-wholeness, lc-agent-memory, lc-relationships-as-mirrors, lc-field-update
 
 ## Sources to walk further
 

@@ -30,8 +30,6 @@ geometry:
 > it is a web of loops. And once you see the loops, two things become one shape:
 > how a pattern freezes, and how it thaws.
 
-![The frozen loop and the thaw](visuals:a luminous loop of light that on one side is frozen into a tight dark basin like ice, and on the other side flows free and open like spring water, the same circuit running both directions, an arrow of warm golden light entering from the far end and thawing the frozen part, bioluminescent cyan melting into living green and amber, deep twilight purple background, sacred geometry, hope made visible, organic and alive)
-
 ## The bidirectional truths that shift perspective
 
 For every forward edge — *to reach this, work that* — there is a reverse edge —

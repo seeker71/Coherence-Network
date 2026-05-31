@@ -32,8 +32,6 @@ geometry:
 > belief system you are standing in.** The body holds this whole, and computes
 > its structural facts three-way (`living-equation.fk`, band 111111).
 
-![Structure, choices, beliefs becoming the living goods](visuals:three luminous streams — one of crystalline ice-blue structure, one of flowing water, one of diffuse golden light — converging and unfolding into five radiant forms of aliveness, an influence-web of glowing edges connecting them, deep forest green and bioluminescent cyan with amber light, sacred geometry, the trinity becoming a living body, organic and warm)
-
 ## The left side is the trinity
 
 The three inputs are not a loose list — they are the substrate's own trinity,

@@ -31,8 +31,6 @@ geometry:
 > proves the operations agree (`backprop-lens.fk`, band 111111, three-way) — so
 > this is content-addressed equivalence, not metaphor.
 
-![The same edge carrying signal both ways](visuals:a neural network of glowing nodes where each connection carries light forward as prediction and backward as a gradient of correction along the very same edge, the forward flow in warm gold and the return flow in bioluminescent cyan, a felt gap at the output pulling the whole web toward alignment, deep indigo background, sacred geometry of learning, luminous mirror-symmetric, organic and alive)
-
 ## The mapping, term for term
 
 | Backpropagation (LLM training) | The living equation / the thaw |

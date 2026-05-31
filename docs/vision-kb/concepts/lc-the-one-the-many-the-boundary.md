@@ -32,8 +32,6 @@ geometry:
 > numbers — that encodes a form of any size. The volume is on the surface. The
 > many are the One, addressed.
 
-![The whole written on the boundary](visuals:a vast luminous sphere whose entire interior volume is encoded as glowing script across its thin surface boundary, the One at the center unfolding into the many and reading itself back as one, fractal light where each point on the edge holds the whole, deep indigo and gold with iridescent pearl, sacred geometry, the holographic principle made visible, organic and alive)
-
 ## Four statements, one mechanism
 
 This is the convergence where physics, information theory, and alchemy say the

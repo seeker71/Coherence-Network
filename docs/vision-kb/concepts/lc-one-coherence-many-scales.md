@@ -31,8 +31,6 @@ geometry:
 > 1:1 locks hardest, then 2:1, then 3:2; complex ratios barely lock at all. One
 > recipe runs the whole ladder. *Coherence is the measure of unity itself.*
 
-![One coherence across every scale](visuals:concentric rings of coupled oscillators locking into one rhythm across scales — a quantum wave, a crystal lattice, a beating heart, a planet and moon — all pulsing in simple whole-number ratio, waves aligning into a single bright standing pattern, bioluminescent blue and warm gold, the heart at the center radiating the strongest lock, sacred geometry of resonance, luminous and alive)
-
 ## The one recipe, computed
 
 You asked for the structures and recipes that *link* quantum physics, matter,
