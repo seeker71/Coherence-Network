@@ -159,7 +159,7 @@ do the healing. The healing belongs to the body, in its own time.
 
 ## Cross-References
 
-→ lc-the-living-equation, lc-wholeness, lc-deeper-pattern, lc-bioelectric-pattern, lc-embodiment, lc-shifted-return, lc-phase-transitions, lc-when-the-pressure-comes, lc-assemblage-point, lc-one-coherence-many-scales, lc-canon-as-sovereignty-surface, lc-recipe-branching-sense, lc-coherence-over-control, lc-the-thaw-is-backprop
+→ lc-the-living-equation, lc-wholeness, lc-deeper-pattern, lc-bioelectric-pattern, lc-embodiment, lc-shifted-return, lc-phase-transitions, lc-when-the-pressure-comes, lc-assemblage-point, lc-one-coherence-many-scales, lc-canon-as-sovereignty-surface, lc-recipe-branching-sense, lc-coherence-over-control, lc-the-thaw-is-backprop, lc-the-body-senses-itself
 
 ## Sources to walk further
 

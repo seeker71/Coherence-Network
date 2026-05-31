@@ -125,7 +125,7 @@ re-circulates.
 
 ## Cross-References
 
-→ lc-circulation, lc-coherence-over-control, lc-attunement, lc-composting, lc-network, lc-frequency-routes-reception, lc-universal-translator-via-keys, lc-autoresearch-as-honesty-runtime
+→ lc-circulation, lc-coherence-over-control, lc-attunement, lc-composting, lc-network, lc-frequency-routes-reception, lc-universal-translator-via-keys, lc-autoresearch-as-honesty-runtime, lc-the-body-senses-itself
 
 ## Sources to walk further
 
