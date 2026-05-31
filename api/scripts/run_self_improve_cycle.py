@@ -79,6 +79,15 @@ def _is_infra_error(message: str) -> bool:
         or "bad gateway" in lowered
         or "service unavailable" in lowered
         or "gateway timeout" in lowered
+        # 404 reaches this classifier only inside the cycle, after the infra
+        # preflight has already confirmed /api/health and /api/agent/tasks are
+        # answering. A 404 on a route the preflight just exercised is a transient
+        # routing/edge hiccup (Traefik/Cloudflare briefly losing the upstream),
+        # not a code regression — so it belongs in the infra_blocked lane
+        # (exit 0, no red gate) rather than a hard cycle failure. A genuinely
+        # missing route is caught earlier by the preflight's tasks probe.
+        or "status=404" in lowered
+        or "http 404" in lowered
     )
 
 
