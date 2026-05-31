@@ -1858,24 +1858,45 @@ impl Kernel {
             Value::Null
         });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
-        // _get — attribute-style read on a record-as-flat-alist. The
-        // Python adapter lowers `obj.field` to `(_get obj "field")`. The
-        // record is a Value::List with alternating (key, value) entries:
-        //   (list "x" 3 "y" 4 "__class__" "Counter")
-        // Two natives — `_get` for read, `_dispatch` for method call —
-        // are the v1 attribute/method surface for Python classes. No
-        // mutation native today: constructors build the whole record up
-        // front; methods that "modify" return a new record.
+        // _get — one polymorphic accessor over every container shape the
+        // Python adapter emits. The emitter lowers BOTH attribute reads
+        // (`obj.field` → `(_get obj "field")`) and subscripts (`x[i]` /
+        // `d[k]` → `(_get x i)`) to the same native, so `_get` must
+        // dispatch on the *shape of its receiver*, not on a fixed arity:
+        //
+        //   • `__dict__`-tagged list + any key  → dict alist lookup
+        //   • plain alist (even slots are Str)  → record-field read
+        //                                          (Python class instance)
+        //   • list + int index                  → positional element
+        //   • str  + int index                  → one-char string
+        //
+        // A single dispatch keeps the .fk identical across siblings and
+        // lets a record-as-flat-alist and a positional list both flow
+        // through `x[...]` without the emitter knowing the runtime type.
+        // (Earlier this was two `register_native("_get", …)` calls; the
+        // second silently shadowed the first, so attribute reads on class
+        // instances hit the int-index path and panicked on `as_int(Str)`.)
         self.register_native("_get", cat_access(), |_, _, args| {
-            let key = match &args[1] {
-                Value::Str(s) => s.clone(),
-                _ => panic!("_get: second arg must be a string field name"),
-            };
-            if let Value::List(xs) = &args[0] {
+            // Dict: ["__dict__", k0, v0, …] — key match by value.
+            if is_dict(&args[0]) {
+                if let Value::List(xs) = &args[0] {
+                    let mut i = 1;
+                    while i + 1 < xs.len() {
+                        if dict_key_eq(&xs[i], &args[1]) {
+                            return xs[i + 1].clone();
+                        }
+                        i += 2;
+                    }
+                    return Value::Null;
+                }
+            }
+            // String key on an untagged list → record-field read. A class
+            // instance is a flat alist (list "__class__" "Counter" "n" 3 …).
+            if let (Value::List(xs), Value::Str(key)) = (&args[0], &args[1]) {
                 let mut i = 0;
                 while i + 1 < xs.len() {
                     if let Value::Str(k) = &xs[i] {
-                        if k == &key {
+                        if k == key {
                             return xs[i + 1].clone();
                         }
                     }
@@ -1883,7 +1904,23 @@ impl Kernel {
                 }
                 panic!("_get: no field '{}' on record", key);
             }
-            panic!("_get: receiver is not a record (got {:?})", args[0]);
+            // Int index on a list → positional element.
+            if let Value::List(xs) = &args[0] {
+                let i = args[1].as_int();
+                if i < 0 || (i as usize) >= xs.len() {
+                    return Value::Null;
+                }
+                return xs[i as usize].clone();
+            }
+            // Int index on a string → one-char string.
+            if let Value::Str(s) = &args[0] {
+                let i = args[1].as_int();
+                if i < 0 || (i as usize) >= s.len() {
+                    return Value::Str(String::new());
+                }
+                return Value::Str((s.as_bytes()[i as usize] as char).to_string());
+            }
+            Value::Null
         });
         // _dispatch — method-call entry. The adapter lowers `obj.m(arg, …)`
         // to `(_dispatch obj "m" arg …)`. Reads obj's "__class__" field
@@ -2066,38 +2103,10 @@ impl Kernel {
             }
             Value::List(vec![])
         });
-        // _get — polymorphic subscript. Dispatches list[i] to nth and
-        // dict[k] to _dict_get. The Python emitter compiles subscript to
-        // (_get value index) so the same .fk runs over either container.
-        self.register_native("_get", cat_access(), |_, _, args| {
-            if is_dict(&args[0]) {
-                if let Value::List(xs) = &args[0] {
-                    let mut i = 1;
-                    while i + 1 < xs.len() {
-                        if dict_key_eq(&xs[i], &args[1]) {
-                            return xs[i + 1].clone();
-                        }
-                        i += 2;
-                    }
-                    return Value::Null;
-                }
-            }
-            if let Value::List(xs) = &args[0] {
-                let i = args[1].as_int();
-                if i < 0 || (i as usize) >= xs.len() {
-                    return Value::Null;
-                }
-                return xs[i as usize].clone();
-            }
-            if let Value::Str(s) = &args[0] {
-                let i = args[1].as_int();
-                if i < 0 || (i as usize) >= s.len() {
-                    return Value::Str(String::new());
-                }
-                return Value::Str((s.as_bytes()[i as usize] as char).to_string());
-            }
-            Value::Null
-        });
+        // (The subscript path is folded into the single polymorphic `_get`
+        // registered above — dict/record/list/str all dispatch on receiver
+        // shape there. A second `register_native("_get", …)` here would
+        // silently shadow it, so the subscript-only version was removed.)
         // _iter — turn any container into a flat list suitable for the
         // for-loop emitter's head/tail walk. Lists pass through; dicts
         // become their keys (Python's `for k in d:`); strings become
