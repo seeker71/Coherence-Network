@@ -2060,6 +2060,16 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("intern_trivial_string", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internString(args[0].Str)}
 	})
+	// intern_trivial_float — content-address an IEEE-754 f64 into the overflow
+	// table and return its trivial NodeID. The string argument is the float's
+	// source text (e.g. "0.5"); a parse failure lands on +0.0 so the witness is
+	// total like str_to_int. Sibling of intern_trivial_int / intern_trivial_string;
+	// exposes the existing internTrivialFloat64 to Form code so the python-bmf
+	// float-literal lift can build a PY-BMF-FLOAT leaf.
+	k.registerNative("intern_trivial_float", catWitness(), func(k *Kernel, args []Value) Value {
+		f, _ := strconv.ParseFloat(args[0].Str, 64)
+		return Value{Kind: VNodeID, Nid: k.internTrivialFloat64(f)}
+	})
 	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
 		cat := args[0].Nid
 		kids := make([]NodeID, len(args[1].List))

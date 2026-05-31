@@ -576,6 +576,15 @@
                 ;; STRING literal: the trivial-string child's node_value
                 ;; *is* the runtime value. Mirrors the INT shape.
                 (node_value (head kids))
+            (if (node_eq cat PY-BMF-FLOAT)
+                ;; FLOAT literal: the trivial-float child's node_value is an
+                ;; IEEE-754 f64 Value (the kernel decodes TRIV_FLOAT64 back to
+                ;; Value::Float). Mirrors INT/STRING — the leaf carries the
+                ;; value, this arm hands it back. Float arithmetic flows through
+                ;; the MATH-12 arm (its _plus / sub / mul / div natives promote
+                ;; int↔float in the kernel); float comparison flows through
+                ;; COMPARE-13 (lt/le/gt/ge/eq are float-aware via as_float).
+                (node_value (head kids))
             (if (node_eq cat PY-BMF-IDENT)
                 (py-env-lookup env (node_value (head kids)))
             (if (and (eq (node_pkg cat) 1)
@@ -747,7 +756,7 @@
                     ;; category number so the next breath knows which
                     ;; arm to add.
                     (trace "py-eval: unimplemented category" cat)
-                    (head (empty)))))))))))))))))))))))
+                    (head (empty))))))))))))))))))))))))
 
     ;; Surface for callers. py-run takes a module recipe and returns its
     ;; value. py-eval and py-eval-statement are exposed so band-tests

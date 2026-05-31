@@ -90,6 +90,7 @@
     (defn tok-keyword? (t kw) (tok-is? t "py-keyword" kw))
     (defn tok-name? (t) (str_eq (tok-kind t) "py-name"))
     (defn tok-int? (t) (str_eq (tok-kind t) "py-int"))
+    (defn tok-float? (t) (str_eq (tok-kind t) "py-float"))
     (defn tok-string? (t) (str_eq (tok-kind t) "py-string"))
 
     ;; ---- expression parser (G3) -------------------------------------
@@ -336,6 +337,19 @@
                     (intern_node PY-BMF-INT
                         (list (intern_trivial_int (str_to_int (tok-value t)))))
                     rest)
+            (if (tok-float? t)
+                ;; FLOAT literal: intern the token's "N.M" text as an IEEE-754
+                ;; f64 trivial leaf under PY-BMF-FLOAT. Mirrors the py-int arm
+                ;; exactly — intern_trivial_float parses the slice the scanner
+                ;; produced and content-addresses it into the kernel's f64 table
+                ;; (the same TRIV_FLOAT64 the rust/go/ts kernels carry). The eval
+                ;; PY-BMF-FLOAT arm returns the leaf's node_value; arithmetic
+                ;; flows through the MATH-12 arm whose _plus / sub / mul / div
+                ;; natives promote int↔float, so no kernel arithmetic change.
+                (lift-subscript-tail
+                    (intern_node PY-BMF-FLOAT
+                        (list (intern_trivial_float (tok-value t))))
+                    rest)
             (if (tok-string? t)
                 ;; STRING literal: intern the raw token text as a trivial-string
                 ;; leaf under PY-BMF-STRING. Mirrors the py-int arm exactly; the
@@ -451,7 +465,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest)))))))))))))))))
+                        rest))))))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;

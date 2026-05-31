@@ -200,12 +200,40 @@
                         (fsc-source-cursor-advance cursor))
                     (list (python-source-cursor-slice start-cursor cursor) cursor)))))
 
+    ;; A float literal is an integer digit-run, a single ".", and a
+    ;; fractional digit-run (e.g. 0.5, 2.25, 1.0). The scanner reads the
+    ;; whole-number part first; if the very next char is "." AND the char
+    ;; after it is a digit, it is a float — consume the "." and the
+    ;; fractional digits and emit a "py-float" source object carrying the
+    ;; full "N.M" slice. Otherwise (no dot, or a dot not followed by a
+    ;; digit — attribute access "obj.field", or the "2." of "2.method()")
+    ;; the token stays "py-int" and the "." is left for the op scanner so
+    ;; the existing ATTR / method-call shapes are untouched. Exponents
+    ;; (1e9) and leading-dot floats (.5) are a later breath — every demo
+    ;; today uses the N.M shape.
     (defn python-source-scan-int (start)
         (do
             (let read (python-source-scan-int-loop start start))
-            (fsc-scan-result
-                (fsc-source-object "py-int" (nth read 0) start (nth read 1))
-                (nth read 1))))
+            (let after-int (nth read 1))
+            (if (and (not (fsc-source-cursor-end? after-int))
+                     (str_eq (fsc-source-cursor-char after-int) "."))
+                (do
+                    (let after-dot (fsc-source-cursor-advance after-int))
+                    (if (and (not (fsc-source-cursor-end? after-dot))
+                             (fsc-digit? (fsc-source-cursor-char after-dot)))
+                        (do
+                            (let frac (python-source-scan-int-loop after-dot after-dot))
+                            (let end (nth frac 1))
+                            (fsc-scan-result
+                                (fsc-source-object "py-float"
+                                    (python-source-cursor-slice start end) start end)
+                                end))
+                        (fsc-scan-result
+                            (fsc-source-object "py-int" (nth read 0) start after-int)
+                            after-int)))
+                (fsc-scan-result
+                    (fsc-source-object "py-int" (nth read 0) start after-int)
+                    after-int))))
 
     (defn python-source-scan-next (cursor)
         (do

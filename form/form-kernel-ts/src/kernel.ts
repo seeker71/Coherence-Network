@@ -2309,6 +2309,16 @@ export class Kernel {
       kind: "nodeid",
       nodeid: k.internString(argStr(args, 0)),
     }));
+    // intern_trivial_float — content-address an IEEE-754 f64 into the overflow
+    // table and return its trivial NodeID. The string argument is the float's
+    // source text (e.g. "0.5"); a parse failure lands on +0.0 so the witness is
+    // total like str_to_int. Sibling of intern_trivial_int / intern_trivial_string;
+    // exposes the existing internTrivialFloat64 to Form code so the python-bmf
+    // float-literal lift can build a PY-BMF-FLOAT leaf.
+    this.registerNative("intern_trivial_float", catWitness(), (k, args) => ({
+      kind: "nodeid",
+      nodeid: k.internTrivialFloat64(Number(argStr(args, 0)) || 0),
+    }));
     this.registerNative("intern_node", catWitness(), (k, args) => {
       const cat = argNodeID(args, 0);
       const kids = argList(args, 1).map((v) => {

@@ -3174,6 +3174,18 @@ impl Kernel {
             let s = args[0].as_str().to_string();
             Value::Nid(k.intern_string(&s))
         });
+        // intern_trivial_float — content-address an IEEE-754 f64 into the
+        // overflow table and return its trivial NodeID. The string argument is
+        // the float's source text (e.g. "0.5"); a parse failure lands on +0.0
+        // so the witness is total like str_to_int's unwrap_or(0). Sibling of
+        // intern_trivial_int / intern_trivial_string: the interning primitive
+        // (intern_trivial_float64) already existed for the .fk-source reader;
+        // this exposes it to Form code so the python-bmf float-literal lift can
+        // build a PY-BMF-FLOAT leaf the walker reads back as Value::Float.
+        self.register_native("intern_trivial_float", cat_witness(), |k, _, args| {
+            let f: f64 = args[0].as_str().parse().unwrap_or(0.0);
+            Value::Nid(k.intern_trivial_float64(f))
+        });
         self.register_native("intern_node", cat_witness(), |k, _, args| {
             // args[0]: category as Nid; args[1]: children as List of Nids
             let cat = args[0].as_nid();
