@@ -149,7 +149,7 @@ meeting *is* doing.
 
 ## Cross-References
 
-→ lc-future-already-shaping, lc-assemblage-point, lc-coherence-over-control, lc-presence-over-protection, lc-frequency-routes-reception, lc-perception-as-interface, lc-tend-your-flame, lc-rhythm, lc-phase-transitions
+→ lc-future-already-shaping, lc-assemblage-point, lc-coherence-over-control, lc-presence-over-protection, lc-frequency-routes-reception, lc-perception-as-interface, lc-tend-your-flame, lc-rhythm, lc-phase-transitions, lc-the-living-equation
 
 ## Sources to walk further
 
