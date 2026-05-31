@@ -463,7 +463,7 @@ Form-native `kernel-bmf-run`). The harness was first validated by reproducing
 the two known #2261 false-greens (`python_substrate_demo` `17680/17680/5170`,
 `endpoint_coherence_weight_demo` `16185/16185/5240`).
 
-Outcome: **12 of the rows are genuinely three-way green** at their recorded
+Outcome: **13 of the rows are genuinely three-way green** at their recorded
 values (CPython == Rust-bootstrap == kernel-bmf for every one):
 `python_bridge_demo` `720`, `python_demo` `40949`, `python_assign_demo` `45`,
 `python_imperative_demo` `45370`, `python_range_demo` `41650`,
