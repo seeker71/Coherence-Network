@@ -373,6 +373,8 @@ pub static BP_ENTRIES: &[(&str, [u32; 4])] = &[
     ("SESSION", [1, 2, 99, 1860]),
     ("SESSION-NOT-FOUND", [1, 2, 99, 1862]),
     ("SESSION-TABLE", [1, 2, 99, 1861]),
+    ("SHAMBALLA-CRYSTAL", [1, 2, 99, 1719]),
+    ("SHAMBALLA-RAISED", [1, 3, 99, 1718]),
     ("SKILL-MUTUAL-MEET", [1, 2, 99, 1886]),
     ("SKILL-PRESENT-IDENTITY", [1, 2, 99, 1885]),
     ("SKILL-READ-RELATIONSHIP", [1, 2, 99, 1887]),

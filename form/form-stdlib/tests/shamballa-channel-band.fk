@@ -1,0 +1,90 @@
+; tests/shamballa-channel-band.fk — the Shamballa channel SPEAKS and RUNS, three-way.
+;
+; preludes: form-stdlib/grammars/shamballa-codes.fk form-stdlib/channel.fk form-stdlib/shamballa-channel.fk
+;
+; The decoder proves the SURFACE (a code → its attested text). This band proves
+; the layer above it — the dispatch lc-codes-as-depth-not-dictionary insists the
+; meaning lives in: each code RUNS as a real substrate operation over a cell, and
+; the channel both speaks and runs. Each function dispatches on the cell's
+; structure, so the same code over a different cell gives a different answer.
+;
+; Band verdict: 11111111 when every claim holds across all three kernels.
+;   speak still answers the surface (code 1 → its name)            → 1
+;   restore-to-blueprint recovers the cell's Blueprint              → 10
+;   content-addressing: same-shape cells restore node-equal,
+;     a different shape does not (the substrate headline)            → 100
+;   amplify returns exactly the same-Blueprint cells from a field    → 1000
+;   raise lifts the cell one compositional level (regal elevation)    → 10000
+;   unite composes a balanced dyad, content-addressed (co-creation)    → 100000
+;   the channel RECEIVES a code over transport: speaks AND runs         → 1000000
+;   an unbound code → honest absence (speaks "unknown", does not run)     → 10000000
+
+(do
+    ;; --- build cells: interned nodes under a Blueprint --------------------
+    ;; A "cell" is an interned node; node_category recovers its Blueprint,
+    ;; node_children its composition, node_level its blueprint's declared level.
+    ;; Two distinct test Blueprints at level 2 — below SHAMBALLA-RAISED (level 3),
+    ;; so `raise` strictly lifts the level. (Tests use make_nodeid literals.)
+    (let BP-A (make_nodeid 1 2 88 1))
+    (let BP-B (make_nodeid 1 2 88 2))
+    (defn mk-cell (blueprint val)
+        (intern_node blueprint (list (intern_trivial_string val))))
+    (let cell-a1 (mk-cell BP-A "alpha"))     ; Blueprint A
+    (let cell-a2 (mk-cell BP-A "beta"))      ; Blueprint A, different content
+    (let cell-b1 (mk-cell BP-B "alpha"))     ; Blueprint B
+
+    ;; --- 1. SPEAK: the surface still answers -----------------------------
+    (let speak-ok
+        (if (ge (str_find (shamballa-channel-speak 1) "Mer Ka Fa Ka Lish Ma" 0) 0) 1 0))
+
+    ;; --- 2. restore-to-blueprint recovers the original Blueprint ---------
+    (let r1 (shamballa-channel-run 1 cell-a1 (empty)))
+    (let restore-ok (if (node_eq r1 BP-A) 10 0))
+
+    ;; --- 3. content-addressing: same shape → node-equal restore ----------
+    ;; cell-a1 and cell-a2 share Blueprint A → restore to node-equal blueprints;
+    ;; cell-b1 (Blueprint B) does not. The substrate's equivalence headline.
+    (let r-a2 (shamballa-channel-run 1 cell-a2 (empty)))
+    (let r-b1 (shamballa-channel-run 1 cell-b1 (empty)))
+    (let ca-ok
+        (if (node_eq r1 r-a2)
+            (if (node_eq r1 r-b1) 0 100) 0))
+
+    ;; --- 4. amplify: the same-Blueprint cells in a field ----------------
+    ;; field of three (two Blueprint A, one Blueprint B). Amplifying cell-a1
+    ;; broadcasts its shape → the two A-cells survive, the B-cell is cleansed.
+    (let field (list cell-a1 cell-a2 cell-b1))
+    (let amp (shamballa-channel-run 2 cell-a1 field))
+    (let amp-ok (if (eq (len amp) 2) 1000 0))
+
+    ;; --- 5. raise: one compositional level higher (regal elevation) -----
+    (let raised (shamballa-channel-run 3 cell-a1 (empty)))
+    (let raise-ok (if (gt (node_level raised) (node_level cell-a1)) 10000 0))
+
+    ;; --- 6. unite: a balanced dyad, content-addressed (co-creation) -----
+    ;; both forces present as children; the same pair always interns equal.
+    (let crystal (shamballa-channel-run 4 cell-a1 cell-b1))
+    (let crystal-again (shamballa-channel-run 4 cell-a1 cell-b1))
+    (let unite-ok
+        (if (eq (len (node_children crystal)) 2)
+            (if (node_eq crystal crystal-again) 100000 0) 0))
+
+    ;; --- 7. the channel RECEIVES a code over transport: speak AND run ----
+    ;; a code-1 message arrives; receive returns (text, restored-blueprint).
+    (let msg (shamballa-code-message 1))
+    (let received (shamballa-channel-receive msg cell-a1 (empty)))
+    (let recv-spoke
+        (ge (str_find (nth received 0) "Mer Ka Fa Ka Lish Ma" 0) 0))
+    (let recv-ran (node_eq (nth received 1) BP-A))
+    (let receive-ok (if recv-spoke (if recv-ran 1000000 0) 0))
+
+    ;; --- 8. an unbound code: honest absence (speaks, does not run) -------
+    ;; code 7 is real numerically but the channel binds no function to it.
+    (let absent-runs (shamballa-channel-runs? 7))      ; 0 — does not run
+    (let absent-run  (shamballa-channel-run 7 cell-a1 (empty)))  ; () — absence
+    (let absence-ok
+        (if (eq absent-runs 0)
+            (if (eq (len absent-run) 0) 10000000 0) 0))
+
+    (sum (list speak-ok restore-ok ca-ok amp-ok raise-ok
+               unite-ok receive-ok absence-ok)))

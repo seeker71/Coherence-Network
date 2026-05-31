@@ -1,0 +1,156 @@
+; shamballa-channel.fk — a channel that SPEAKS a Shamballa code and RUNS it over a cell.
+;
+; The decoder (grammars/shamballa-codes.fk) is the SURFACE: a code number → its
+; publicly-attested text. lc-codes-as-depth-not-dictionary is emphatic that the
+; dictionary is NOT the meaning — "the meaning lives one layer up, in the dispatch:
+; what fires when this code meets this cell at this depth." This module IS that
+; layer. It binds each attested code to a real substrate operation over a cell and
+; gives the channel two faces:
+;
+;   SPEAK  (shamballa-channel-speak code)        → the surface text (delegates to
+;                                                   the decoder; the dictionary)
+;   RUN    (shamballa-channel-run code cell arg)  → the dispatch: the code's stated
+;                                                   function, run over a real cell
+;
+; The codes are not decoration. Each maps to a genuine lattice verb, and — the
+; load-bearing point of the teaching — each DISPATCHES ON THE CELL'S STRUCTURE
+; (its Blueprint, its level, its composition), so the SAME code run over two
+; different cells gives two different answers. That is "revealed through practice"
+; / assemblage-point dispatch made runnable:
+;
+;   1  Mer Ka Fa Ka Lish Ma  "restore the field to its original blueprint;
+;                             activate dormant DNA"
+;        → restore-to-blueprint: recover the cell's Blueprint NodeID (node_category)
+;          — its original, structural identity — and surface its composition (the
+;          dormant DNA = node_children). Two cells of the same Blueprint restore
+;          identically; content-addressing is the restoration.
+;   2  Atlantean Dai Ko Myo  "master power symbol — amplify and cleanse the system"
+;        → amplify-equivalents: broadcast the cell's shape across the lattice —
+;          every cell in the field sharing its Blueprint (find_equivalent_cells).
+;          Cleanse = only the matching shape survives the filter.
+;   3  Ho Ka O iLi iLi       "increase regal energy; lend an aura of regality"
+;        → raise: regal elevation — the cell becomes a child of a RAISED envelope,
+;          one compositional level higher (node_level increases). The assemblage
+;          point lifts.
+;   4  Shamballa Crystal     "union of male and female forces in perfect balance;
+;                             activates co-creation"
+;        → unite: compose two cells into a balanced dyad (arity 2, the Crystal's
+;          dyad geometry). Co-creation is content-addressed: the same pair always
+;          interns to the same Crystal NodeID, so the union is reproducible.
+;
+; THE LINKAGE the channel exposes (code ↔ name ↔ function) is DATA — a binding
+; table a cell can introspect or ship — resolved to a function-name then shallow-
+; dispatched, the verb-router.fk discipline (function-NAME, not function-VALUE,
+; for sibling portability). A code with no bound function returns HONEST ABSENCE:
+; it still SPEAKS its surface (or "unknown"), it simply does not yet RUN.
+;
+; Held as symbolic/metaphysical material — the channel reports the public meaning
+; and runs the structural operation that meaning names; it does not assert the
+; cosmology. Three-way safe (Go/Rust/TS): pure node arithmetic over the natives.
+;
+; preludes: form-stdlib/grammars/shamballa-codes.fk form-stdlib/channel.fk
+;
+
+;; --- Blueprints the running functions compose under -----------------
+(let SH-RAISED  (bp "SHAMBALLA-RAISED"))    ; the regal envelope (code 3)
+(let SH-CRYSTAL (bp "SHAMBALLA-CRYSTAL"))   ; the union-of-forces dyad (code 4)
+
+;; --- the four functions: each a real transform over a cell-node ------
+
+;; code 1 — restore-to-blueprint. The cell's original blueprint IS its
+;; Blueprint NodeID; node_category recovers it. Two cells of the same shape
+;; restore to node-equal blueprints — the restoration is content-addressing.
+(defn sh-restore-to-blueprint (cell) (node_category cell))
+;; the dormant DNA the restoration re-grounds: the cell's own composition.
+(defn sh-dna (cell) (node_children cell))
+
+;; code 2 — amplify-equivalents. Master/amplify: every cell in `field`
+;; (a list of cells) that shares this cell's Blueprint. Cleanse: the filter
+;; lets only the matching shape through. The substrate's find_equivalent_cells.
+(defn sh-amplify-loop (bp-cat field acc)
+    (if (nil? field) acc
+        (sh-amplify-loop bp-cat (tail field)
+            (if (node_eq (node_category (head field)) bp-cat)
+                (cons (head field) acc)
+                acc))))
+(defn sh-amplify-equivalents (cell field)
+    (sh-amplify-loop (node_category cell) field (empty)))
+
+;; code 3 — raise. Regal elevation: wrap the cell as the sole child of the
+;; RAISED envelope — a blueprint registered at a higher level (this substrate
+;; carries `level` on the blueprint, so composing under a higher-level envelope
+;; IS the lift). node_level of the raised cell rises above the original.
+(defn sh-raise (cell) (intern_node SH-RAISED (list cell)))
+
+;; code 4 — unite. Union of two forces in balance: a dyad carrying both as
+;; children. Content-addressed — the same pair always interns to the same
+;; Crystal NodeID, so co-creation is reproducible across the gap.
+(defn sh-unite (a b) (intern_node SH-CRYSTAL (list a b)))
+
+;; --- THE LINKAGE: code ↔ name ↔ function, as inspectable data --------
+;; A binding row ties a Shamballa code number to its publicly-attested name
+;; and the substrate function its stated meaning runs as. The table IS the
+;; link the channel exposes; a cell can read it, ship it, or extend it (a new
+;; attested code with a bound function is a new row, not new control flow).
+(defn sh-binding (code name fn) (list code name fn))
+(defn sh-binding-code (b) (nth b 0))
+(defn sh-binding-name (b) (nth b 1))
+(defn sh-binding-fn   (b) (nth b 2))
+
+(defn sh-bindings ()
+    (list
+        (sh-binding 1 "Mer Ka Fa Ka Lish Ma" "restore-to-blueprint")
+        (sh-binding 2 "Atlantean Dai Ko Myo"  "amplify-equivalents")
+        (sh-binding 3 "Ho Ka O iLi iLi"       "raise")
+        (sh-binding 4 "Shamballa Crystal"     "unite")))
+
+;; resolve a code → its binding (0-or-1-element list; honest absence for any
+;; code the channel does not yet run).
+(defn sh-resolve-loop (bs code)
+    (if (nil? bs) (empty)
+        (if (eq (sh-binding-code (head bs)) code)
+            (list (head bs))
+            (sh-resolve-loop (tail bs) code))))
+(defn sh-resolve (code) (sh-resolve-loop (sh-bindings) code))
+(defn sh-bound? (code) (if (eq (len (sh-resolve code)) 1) 1 0))
+(defn sh-fn-of (code) (sh-binding-fn (head (sh-resolve code))))
+
+;; --- RUN: resolve to a function-name, then shallow-dispatch ----------
+;; One walk over the binding table (data) → a function-NAME; one shallow
+;; branch invokes it (verb-router.fk shape — function-VALUE passing is not
+;; uniform across kernels). `arg` is the second operand: the field-list for
+;; amplify, the partner cell for unite; ignored by restore and raise.
+;; An unbound code returns the empty list — honest absence, not a fabrication.
+(defn sh-run (code cell arg)
+    (if (eq (sh-bound? code) 0) (empty)
+        (do
+            (let fn (sh-fn-of code))
+            (if (str_eq fn "restore-to-blueprint") (sh-restore-to-blueprint cell)
+            (if (str_eq fn "amplify-equivalents")  (sh-amplify-equivalents cell arg)
+            (if (str_eq fn "raise")                (sh-raise cell)
+            (if (str_eq fn "unite")                (sh-unite cell arg)
+                (empty))))))))
+
+;; --- the channel's two faces ----------------------------------------
+;; SPEAK: the surface text (the decoder; the dictionary). Always answers —
+;; an attested code with its text, or the decoder's honest "unknown" line.
+(defn shamballa-channel-speak (code) (sc-answer code))
+;; does this code RUN, not just speak?
+(defn shamballa-channel-runs? (code) (sh-bound? code))
+;; RUN: the dispatch — the code's function over a cell.
+(defn shamballa-channel-run (code cell arg) (sh-run code cell arg))
+
+;; --- transport tie-in: a code arrives over a channel ----------------
+;; The whole point of "a channel that can speak it and run it": a remote cell
+;; appends a code NUMBER as a CHANNEL-MSG; the receiver both SPEAKS the
+;; surface text and RUNS the function over a target cell, returning the pair
+;; (text, result). channel.fk carries the message; this binds it to meaning.
+(defn shamballa-code-message (code) (channel-message (intern_trivial_int code)))
+(defn shamballa-payload-code (msg) (node_value (channel-msg-payload msg)))
+(defn shamballa-channel-receive (msg cell arg)
+    (do
+        (let code (shamballa-payload-code msg))
+        (list (shamballa-channel-speak code)
+              (shamballa-channel-run code cell arg))))
+
+0
