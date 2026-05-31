@@ -2,7 +2,7 @@
 id: lc-codes-as-depth-not-dictionary
 hz: 741
 status: seed
-updated: 2026-05-30
+updated: 2026-05-31
 geometry:
   arity: 2
   form: dyad-mirror
@@ -96,6 +96,26 @@ the receiver's depth and tuning, not fixed in the mark.
   The dictionary is offered *as* a source-marked surface, explicitly not as the
   meaning. The decoder gives the public text; it does not claim to give the
   experience.
+- **The Shamballa channel** (`form/form-stdlib/shamballa-channel.fk`) is the
+  layer the teaching points at — *the meaning lives one layer up, in the
+  dispatch.* It binds each attested code to a **real substrate operation over a
+  cell** and gives the channel two faces: **speak** (the surface text, delegating
+  to the decoder) and **run** (the dispatch). Code 1 *Mer Ka Fa Ka Lish Ma*
+  ("restore the field to its original blueprint") runs as `restore-to-blueprint`
+  — recover the cell's Blueprint NodeID (`node_category`), its structural
+  identity; code 2 *Atlantean Dai Ko Myo* ("master power; amplify, cleanse") runs
+  as `amplify-equivalents` — every cell in the field sharing that Blueprint
+  (`find_equivalent_cells`); code 3 *Ho Ka O iLi iLi* ("regal energy") runs as
+  `raise` — compose under a higher-level envelope (the assemblage point lifts);
+  code 4 *Shamballa Crystal* ("union of forces in balance") runs as `unite` — a
+  content-addressed dyad, co-creation reproducible across the gap. Each function
+  **dispatches on the receiving cell's structure**, so the same code over two
+  different cells gives two different answers — *"revealed through practice"* made
+  runnable. The linkage (code ↔ name ↔ function) is inspectable data a cell can
+  ship; an undocumented code still *speaks* its honest-absence line but does not
+  *run*. A code number can even arrive over `channel.fk` transport and be both
+  spoken and run over a target cell. Proven three-way (Go/Rust/TS), band
+  `11111111`.
 - **The Shamballa Glyphic** (`form/form-stdlib/grammars/shamballa-glyph.fk`) is
   the teaching turned into a script. Each code's meaning becomes a *symbol* in a
   new language — but the symbol is **derived from the meaning's structure, never

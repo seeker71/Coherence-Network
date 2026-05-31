@@ -3397,6 +3397,32 @@
     },
     {
       "pkg": 1,
+      "level": 3,
+      "type": 99,
+      "inst": 1718,
+      "name": "SHAMBALLA-RAISED",
+      "meaning": "the regal envelope of Ho Ka O iLi iLi (code 3): a cell composed under a higher-level blueprint — assemblage point lifted",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/shamballa-channel.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1719,
+      "name": "SHAMBALLA-CRYSTAL",
+      "meaning": "the union-of-forces dyad of the Shamballa Crystal (code 4): two cells composed in balance — content-addressed co-creation",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/shamballa-channel.fk"
+      ]
+    },
+    {
+      "pkg": 1,
       "level": 2,
       "type": 99,
       "inst": 1720,
