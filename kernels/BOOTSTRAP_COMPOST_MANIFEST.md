@@ -365,6 +365,27 @@ Closing it is a control-flow breath (return-signal threaded through
 walker) with its own three-way proof — not a one-line patch. When that lands,
 these two demos can be re-measured and re-promoted on their true value.
 
+**Open contract — third false-green removed (2026-06-01, integrity sweep).**
+A full re-measurement of every COMPOST READY row (each demo in its own
+`mktemp -d`, no `/tmp/*.fk` or `examples/*.fk` bleed) surfaced a *third*
+false-green that had survived the #2261 pass:
+
+| Demo | CPython | Rust bootstrap | `kernel-bmf-run` (Form-native) |
+|---|---|---|---|
+| `python_import_demo.py` | `20.853981633974485` | `20.853981633974485` | `record_get: not a record: Null` (errors, no value) |
+
+CPython and the Rust bootstrap path agree at `20.853981633974485`; the
+Form-native `kernel-bmf-run` path **does not produce a value at all** — it
+aborts with `record_get: not a record: Null`. The math-module attribute
+bindings (`math.sqrt`, `math.pi`, `math.floor`, `math.pow`) the demo
+exercises are resolved by the bootstrap (TS) parser into kernel-native
+calls, but the Form-native lift/eval path has no `import` / module-attribute
+arm, so `math.sqrt(...)` lifts as attribute-access on an unbound name and the
+eval does `record_get` on `Null`. COMPOST READY certifies the Form-native
+value; there is none, so the row was green-by-error and is **removed**.
+Re-promotion waits on a Form-native `import` + module-attribute breath
+(`PY-BMF-IMPORT` / module-namespace binding), with its own three-way proof.
+
 **Open contract for the next PROVEN rows:** the surface beyond the 9 arms
 needs both a lift dispatch branch in `python-bmf-lift.fk` and a matching
 interpreter arm in `python-bmf-eval.fk`. Order of incoming breaths (each is
@@ -421,8 +442,6 @@ removable.
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_lattice_stats_demo.py | lattice-stats integer reduction — functions reducing fixed scalar inputs to a single aggregate through arithmetic + comparison composition, no list iteration over a variable; `1089`. **No new bridge code** — arithmetic + comparison + CALL arms already shipped; reachability proven by isolated sequential measurement | `python-bmf-lift.fk` + `python-bmf-eval.fk` (MATH-12 + COMPARE-13 + PY-BMF-CALL prior arms; no lift/eval/kernel change) | CPython `1089` · Rust (bootstrap) `1089` · `kernel-bmf-run` `1089` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_float_demo.py | float literals + mixed int/float arithmetic + float comparison + float division — `lerp`, `coherence_score` (weighted average), `is_above`; `2 + 0.5`, `0.5*0.25 + 1.0*0.75`, `score - midpoint`, `(score + delta) / 2.0`; `4.875`. The gap was at the **source scanner**: it only emitted `py-int`, so `0.5` tokenized as `py-int 0` · `py-op .` · `py-int 5`; the lift read the `.` as attribute access (PY-BMF-ATTR) and eval did `record_get` on `Int(0)` — the `record_get: not a record: Int(...)` signature. The kernels already carried `Value::Float`, `intern_trivial_float64`, float-promoting `_plus`/`sub`/`mul`/`div`, float-aware compare, and `format_float_python`, but **no float-interning native was exposed to Form code**, so the lift could not build a float leaf. Closed by exposing `intern_trivial_float` (str→f64 NodeID, sibling of `intern_trivial_int`/`intern_trivial_string`) in all three kernels over the existing internal `intern_trivial_float64`, then a float-literal path through scanner + lift + eval | rust `form-kernel-rust/src/main.rs` + go `form-kernel-go/main.go` + ts `form-kernel-ts/src/kernel.ts` (`intern_trivial_float` native, ~3 lines each over the pre-existing interning primitive) · `form-stdlib/grammars/python-bmf.fk` (`python-source-scan-int` consumes `N.M` → `py-float`; a dot not followed by a digit stays `py-int`, so ATTR / method-call / subscript are untouched) · `python-bmf-lift.fk` (`tok-float?` + PY-BMF-FLOAT arm in `lift-primary`, mirroring py-int) · `python-bmf-eval.fk` (PY-BMF-FLOAT arm returns the leaf `node_value`; arithmetic rides MATH-12, comparison COMPARE-13). The `PY-BMF-FLOAT` ontology category already existed (python.bmf inst 564) | CPython `4.875` · Rust (bootstrap) `4.875` · `kernel-bmf-run` `4.875` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.py | the body of `/api/utils/weighted_average` as pure Python — `dot` and `sum_floats` while-loop accumulators over float lists, then `numerator / denominator`; frozen input `[0.5, 0.75, 1.0]` / `[0.25, 0.25, 0.5]`; `0.8125`. Drives float list literals, float `*`/`+` accumulation in a while-body, and float division — all on the float-literal arm; the while-loop + subscript + len shapes were already shipped | scanner `py-float` + `python-bmf-lift.fk` PY-BMF-FLOAT arm + `python-bmf-eval.fk` PY-BMF-FLOAT arm + `intern_trivial_float` native in all three kernels (shared with python_float_demo); WHILE / SUBSCRIPT / len arms are prior | CPython `0.8125` · Rust (bootstrap) `0.8125` · `kernel-bmf-run` `0.8125` |
-| 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_import_demo.py | `import math` + `from math import sqrt, pi` end-to-end with floats — `math.sqrt(2.25)`, `sqrt(0.25)`, `2.0 * math.pi`, `pi / 2.0`, `math.floor(3.7)`, `math.pow(2.0, 3.0)`; `20.853981633974485`. The math-module attribute/name bindings and floor/pow/pi/sqrt natives already worked; the only gap was float-literal lift (the `2.0` / `0.25` / `3.7` operands) — closed by the same scanner + lift + eval + `intern_trivial_float` native as python_float_demo | scanner `py-float` + `python-bmf-lift.fk` PY-BMF-FLOAT arm + `python-bmf-eval.fk` PY-BMF-FLOAT arm + `intern_trivial_float` native (shared with python_float_demo) | CPython `20.853981633974485` · Rust (bootstrap) `20.853981633974485` · `kernel-bmf-run` `20.853981633974485` |
-| 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.py | the body of `/api/utils/weighted_average` as pure Python — `dot` and `sum_floats` while-loop accumulators over float lists, then `numerator / denominator`; frozen input `[0.5, 0.75, 1.0]` / `[0.25, 0.25, 0.5]`; `0.8125`. Drives float list literals, float `*`/`+` accumulation in a while-body, and float division — all on the float-literal arm; the while-loop + subscript + len shapes were already shipped | scanner `py-float` + `python-bmf-lift.fk` PY-BMF-FLOAT arm + `python-bmf-eval.fk` PY-BMF-FLOAT arm + `intern_trivial_float` native (shared with python_float_demo); WHILE / SUBSCRIPT / len arms are prior | CPython `0.8125` · Rust (bootstrap) `0.8125` · `kernel-bmf-run` `0.8125` |
 
 **The first walking step:** with the G4 row recorded and G1+G3 now also
 landed, the manifest's lifecycle is no longer a future-tense convention.
@@ -432,6 +451,33 @@ coverage moves to COMPOST READY; every composted file moves to RELEASED.
 
 The body sees its first cell move through the discipline. The path becomes
 walkable because the first step has been walked.
+
+**Integrity sweep (2026-06-01) — every COMPOST READY row re-measured in
+isolation.** After #2261 removed two false-greens, the *whole* COMPOST READY
+set was re-verified: each demo measured in its **own `mktemp -d`** (its `.py`
+copied in, `python-compile` → `.fk` + `form-kernel-rust` run there,
+`kernel-bmf-run` using its own internal work-dir) so no `/tmp/*.fk` or
+`examples/*.fk` bleed between runs. Extractions reproduced the suite's exact
+method (CPython `ast`-eval of the final `Expr`, Rust-bootstrap `.fk`,
+Form-native `kernel-bmf-run`). The harness was first validated by reproducing
+the two known #2261 false-greens (`python_substrate_demo` `17680/17680/5170`,
+`endpoint_coherence_weight_demo` `16185/16185/5240`).
+
+Outcome: **12 of the rows are genuinely three-way green** at their recorded
+values (CPython == Rust-bootstrap == kernel-bmf for every one):
+`python_bridge_demo` `720`, `python_demo` `40949`, `python_assign_demo` `45`,
+`python_imperative_demo` `45370`, `python_range_demo` `41650`,
+`python_builtins_demo` `131`, `python_string_demo` `45`,
+`python_lambda_demo` `216`, `python_dict_demo` `88`,
+`endpoint_nodeid_distance_demo` `7`, `endpoint_lattice_stats_demo` `1089`,
+`python_float_demo` `4.875`, `endpoint_weighted_average_demo` `0.8125`. One
+**false-green** was found and removed — `python_import_demo` (`kernel-bmf-run`
+errors `record_get: not a record: Null`; see the third-false-green note
+above). One **duplicate** `endpoint_weighted_average_demo` row (a byte-twin of
+the canonical row) was composted as ledger sediment — its value was correct,
+it was just listed twice. The table now lists each green demo once and every
+green is attested under isolation; the ledger is true at the count it honestly
+reaches.
 
 **What composts when a demo reaches COMPOST READY.** The `.py` input
 **stays** — the parity suite reads it on every run (it's the substrate the
