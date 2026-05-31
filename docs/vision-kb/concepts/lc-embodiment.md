@@ -533,6 +533,10 @@ Not the food forest. Not the cob buildings. The BODY. The breath. The
 internal pharmacy. The collective practice that turns individual cells
 into a living, pulsing, creative, self-healing organism.
 
+## Cross-References
+
+→ lc-wholeness, lc-deeper-pattern, lc-bioelectric-pattern, lc-organs-of-the-body, lc-perception-as-interface, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-sacred-imagination, lc-nervous-system
+
 ---
 
 *The vision doesn't manifest through thinking.*

@@ -76,4 +76,4 @@ These are questions to keep close to the membrane:
 
 ## Connected Frequencies
 
-→ lc-w-field, lc-w-coherence, lc-w-frequency, lc-pulse, lc-health
+→ lc-w-field, lc-w-coherence, lc-w-frequency, lc-pulse, lc-health, lc-the-one-the-many-the-boundary

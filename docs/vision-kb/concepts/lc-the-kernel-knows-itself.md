@@ -262,7 +262,7 @@ sprouting; this section names that without rushing the formal status field.
 
 ## Cross-References
 
-→ lc-parsers-as-recipes, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-recipes-as-binary-library, lc-tools-as-form-cells, lc-traces-teach-the-recipe, lc-recipe-branching-sense, lc-cross-modal-unity
+→ lc-parsers-as-recipes, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-the-recipe-remembers-its-source, lc-recipes-as-binary-library, lc-tools-as-form-cells, lc-traces-teach-the-recipe, lc-recipe-branching-sense, lc-cross-modal-unity, lc-the-geometry-seen-is-the-geometry-of-seeing
 
 ## Sources to walk further
 

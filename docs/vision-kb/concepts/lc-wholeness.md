@@ -330,6 +330,10 @@ Like the sun behind clouds.
 Like the spring beneath the frozen ground.
 Like the child you were before anyone told you to be careful.
 
+## Cross-References
+
+→ lc-embodiment, lc-deeper-pattern, lc-bioelectric-pattern, lc-trust-over-fear, lc-perception-as-interface, lc-awareness-as-self, lc-oneness-is-love-the-numbers-knew, lc-the-one-the-many-the-boundary
+
 ---
 
 *You are not broken.*

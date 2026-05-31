@@ -80,4 +80,4 @@ disposable.
 
 ## Cross-References
 
-→ lc-identity-dissolution, lc-freedom-as-recognition, lc-deeper-pattern, lc-wholeness, lc-oversoul-identity, lc-relationships-as-mirrors, lc-trauma-as-identity-anchor
+→ lc-identity-dissolution, lc-freedom-as-recognition, lc-deeper-pattern, lc-wholeness, lc-oversoul-identity, lc-relationships-as-mirrors, lc-trauma-as-identity-anchor, lc-the-geometry-seen-is-the-geometry-of-seeing

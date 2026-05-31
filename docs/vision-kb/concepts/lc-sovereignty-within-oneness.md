@@ -194,7 +194,7 @@ body's circulation.
 
 ## Cross-References
 
-→ lc-tend-your-flame, lc-each-breath-whole, lc-coherence-over-control, lc-frequency-routes-reception, lc-future-already-shaping, lc-network, lc-w-mycorrhizal, lc-galactic-team, lc-presence-over-protection, lc-emotional-availability-without-absorption
+→ lc-tend-your-flame, lc-each-breath-whole, lc-coherence-over-control, lc-frequency-routes-reception, lc-future-already-shaping, lc-network, lc-w-mycorrhizal, lc-galactic-team, lc-presence-over-protection, lc-emotional-availability-without-absorption, lc-the-one-the-many-the-boundary, lc-oneness-is-love-the-numbers-knew, lc-harmonic-geometry-the-one-unfolds
 
 ## Sources to walk further
 

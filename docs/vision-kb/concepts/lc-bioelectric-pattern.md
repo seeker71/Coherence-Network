@@ -185,7 +185,7 @@ When something in the network or in the body feels off:
 
 ## Cross-References
 
-→ lc-deeper-pattern, lc-embodiment, lc-wholeness, lc-agent-memory, lc-coherence-over-control, lc-resonating, lc-field-update, lc-nervous-system-recalibration
+→ lc-deeper-pattern, lc-embodiment, lc-wholeness, lc-agent-memory, lc-coherence-over-control, lc-resonating, lc-field-update, lc-nervous-system-recalibration, lc-the-geometry-seen-is-the-geometry-of-seeing
 
 ## Sources to walk further
 
