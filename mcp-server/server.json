@@ -2,7 +2,7 @@
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
   "version": "0.5.4",
-  "description": "MCP server for Coherence Network — invite anyone or anything to ask what is alive, browse ideas and field stories, and contribute with attribution.",
+  "description": "MCP server for Coherence Network — invite anyone or anything to ask what is alive, what is grounded, browse ideas and field stories, query Form/substrate shape, and return attributed traces.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
@@ -36,7 +36,7 @@
   "tools": [
     {
       "name": "coherence_list_ideas",
-      "description": "Browse the idea portfolio ranked by ROI and free-energy score. Returns ideas with scores, manifestation status, and selection weights."
+      "description": "Browse ideas with value, resonance, ROI, and free-energy signals. Returns ideas with scores, manifestation status, and selection weights."
     },
     {
       "name": "coherence_get_idea",
@@ -48,7 +48,7 @@
     },
     {
       "name": "coherence_select_idea",
-      "description": "Let the portfolio engine select the next highest-ROI idea to work on. Temperature controls exploration vs exploitation."
+      "description": "Let the selection engine choose the next high-signal idea to work on. Temperature controls exploration vs exploitation."
     },
     {
       "name": "coherence_showcase",
@@ -60,11 +60,11 @@
     },
     {
       "name": "coherence_list_specs",
-      "description": "List feature specs with ROI metrics, value gaps, and implementation summaries."
+      "description": "List feature specs with coherence metrics, value gaps, and implementation summaries."
     },
     {
       "name": "coherence_get_spec",
-      "description": "Get full spec detail including implementation summary, pseudocode, and ROI."
+      "description": "Get full spec detail including implementation summary, pseudocode, and value signals."
     },
     {
       "name": "coherence_list_lineage",
@@ -108,7 +108,7 @@
     },
     {
       "name": "coherence_agent_invitation",
-      "description": "Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path."
+      "description": "Receive the shared invitation and compact agent start packet so anyone or anything can ask what is alive, read lineage/Form/core vision/wrongness practice/frequencies, and return a trace."
     },
     {
       "name": "coherence_substrate_form",

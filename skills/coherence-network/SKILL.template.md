@@ -100,6 +100,10 @@ Both approaches hit the same API. Use whichever fits your context.
 
 <!-- include: docs/shared/lifecycle-diagram.md -->
 
+## Agent start packet
+
+<!-- include: docs/shared/agent-start-packet.md -->
+
 ## Ideas — the portfolio engine
 
 Ideas are the atomic unit. Each is scored, ranked, and trackable through its entire lifecycle.

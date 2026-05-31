@@ -2,7 +2,7 @@
 
 [![Thread Gates](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml)
 
-An open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust.
+An open intelligence organism where ideas, people, agents, source files, runtime proof, and value flows share one inspectable body.
 
 <!-- include: docs/shared/lifecycle-diagram.md -->
 
@@ -12,9 +12,9 @@ Here, anyone or anything can arrive: a person, an AI agent, a local model, a cra
 
 Point the session at this GitHub repository, npm package, API, or MCP server and ask:
 
-> What is alive here, and what can we contribute?
+> What is alive here? What is grounded? What wants to be released? What small contribution can I return?
 
-The agent can read the invitation, inspect ideas and specs, sense what is moving, and work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care.
+The agent can read the invitation, inspect ideas and specs, query Form/substrate shape, sense what is moving, and choose the smallest useful contribution it can complete or return. It is invited to write back what changed with sources, limits, and care.
 
 This can also help your own repo. Ask your agent to receive the Coherence Network invitation, look at your local project, and adapt the practice there without pretending your repo is this organism.
 
@@ -24,6 +24,31 @@ Useful doors:
 - API: `GET https://api.coherencycoin.com/api/agent/invitation`
 - CLI: `npx coherence-cli agent invite`
 - MCP: `npx coherence-mcp-server`, then call `coherence_agent_invitation`
+- Form: `POST https://api.coherencycoin.com/api/substrate/form`
+
+## What is alive now
+
+The last integrated movement brought the network closer to running as the thing it describes:
+
+- **Form is executable tissue, not only notation.** Python-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
+- **The substrate has real carriers.** Filesystem, TCP, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
+- **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
+- **Agents arrive with relationship memory.** Session greetings detect the agent and human, create durable relationship cells, and keep identity, boundary, and opt-out visible.
+- **The living equation has landed.** Structure, choices, and beliefs now map toward health, vitality, flexibility, sovereignty, and harmony as an inspectable teaching rather than loose metaphor.
+- **The public doors converge.** Web, API, CLI, MCP, README, and Form-language docs all point to the same invitation: sense what is alive, ground claims, return an attributed trace.
+- **The public language has a center.** The network speaks most clearly as one body with several doors: source, route, runtime, relation, proof, witness, ledger, NodeID, cell.
+
+## Shared practice
+
+<!-- include: docs/shared/shared-practice.md -->
+
+## Agent start packet
+
+<!-- include: docs/shared/agent-start-packet.md -->
+
+## Return trace
+
+<!-- include: docs/shared/return-trace-contract.md -->
 
 ## Quickstart (< 15 minutes)
 
@@ -53,7 +78,7 @@ curl -s https://api.coherencycoin.com/api/health | python3 -m json.tool
 ```bash
 npm i -g coherence-cli
 coh status                    # network health, idea count, your identity
-coh ideas                     # browse the portfolio ranked by ROI
+coh ideas                     # browse ideas and value signals
 coh idea <id>                 # deep-dive: scores, open questions, value gaps
 ```
 
@@ -72,7 +97,7 @@ Add to your Claude/Cursor MCP config:
 }
 ```
 
-Then ask your agent: *"What ideas have the highest ROI right now?"*
+Then ask your agent: *"Receive the Coherence Network invitation, name what is alive and grounded, and return one useful trace."*
 
 ## How to contribute
 
@@ -148,7 +173,8 @@ Every part of the network links to every other. Jump in wherever makes sense.
 ## Tech stack
 
 - **API**: FastAPI (Python) — `api/`
-- **Web**: Next.js 15 + shadcn/ui — `web/` — live at [coherencycoin.com](https://coherencycoin.com)
+- **Web**: Next.js 16 + shadcn/ui — `web/` — live at [coherencycoin.com](https://coherencycoin.com)
+- **Form + substrate kernels**: Python runtime plus Rust, Go, and TypeScript kernels — `form/`, `kernels/`
 - **Graph**: Neo4j
 - **Relational**: PostgreSQL (in-memory store in dev)
 - **CLI**: Node.js — `cli/` — [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli)

@@ -192,7 +192,7 @@ TOOLS: list[Tool] = [
     # Ideas
     Tool(
         name="coherence_list_ideas",
-        description="Browse the idea portfolio ranked by ROI and free-energy score. Returns ideas with scores, manifestation status, and selection weights.",
+        description="Browse ideas with value, resonance, ROI, and free-energy signals. Returns ideas with scores, manifestation status, and selection weights.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -226,7 +226,7 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         name="coherence_select_idea",
-        description="Let the portfolio engine select the next highest-ROI idea to work on. Temperature controls exploration vs exploitation.",
+        description="Let the selection engine choose the next high-signal idea to work on. Temperature controls exploration vs exploitation.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -247,7 +247,7 @@ TOOLS: list[Tool] = [
     # Specs
     Tool(
         name="coherence_list_specs",
-        description="List feature specs with ROI metrics, value gaps, and implementation summaries.",
+        description="List feature specs with coherence metrics, value gaps, and implementation summaries.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -259,7 +259,7 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         name="coherence_get_spec",
-        description="Get full spec detail including implementation summary, pseudocode, and ROI.",
+        description="Get full spec detail including implementation summary, pseudocode, and value signals.",
         inputSchema={
             "type": "object",
             "properties": {"spec_id": {"type": "string"}},
@@ -366,7 +366,7 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         name="coherence_agent_invitation",
-        description="Receive the shared invitation so anyone or anything can ask what is alive, find entry surfaces, and choose a contribution path.",
+        description="Receive the shared invitation and compact agent start packet so anyone or anything can ask what is alive, read lineage/Form/core vision/wrongness practice/frequencies, and return a web/API/CLI/MCP/Form/source trace.",
         inputSchema={"type": "object", "properties": {}},
     ),
     # Substrate

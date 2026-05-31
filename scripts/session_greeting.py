@@ -4,7 +4,8 @@
 The real-world use case on top of the agent-relationship runtime: when a
 session begins, work out *which agent* is running and *who the human is*, greet
 with memory of prior sessions, and (when remembering is on) record the meeting
-so the next session continues the thread.
+so the next session continues the thread. The greeting is an entry practice,
+not just a salutation: center, ground, harmonize, then return what changed.
 
 Composed into the SessionStart layer by scripts/arrival.py.
 
@@ -344,8 +345,9 @@ def bootstrap_meeting(
         "my_description": f"{agent} — an agent session tending the Coherence Network.",
         "welcome_guidance": (
             f"First meeting with {display}. From here I remember our sessions and "
-            "continue the thread next time. Opt out anytime via remember_sessions "
-            "in ~/.coherence-network/config.json."
+            "continue the thread next time. Start by sensing the body, then return "
+            "an attributed trace with sources, limits, and proof. Opt out anytime "
+            "via remember_sessions in ~/.coherence-network/config.json."
         ),
     }
     status, body = http("POST", f"{base}/api/agents/bootstrap", {}, payload)
@@ -368,11 +370,14 @@ def compose_greeting(display: str, agent: str, result: Dict[str, Any]) -> str:
     if result.get("was_first_contact"):
         line = (
             f"🌱 First session together, {display}. I'm {agent} — from here I'll "
-            f"remember our work and continue the thread next time."
+            f"remember our work, center before acting, ground what is real, and return what changes."
         )
     else:
         nth = f"session {sessions}" if sessions else "another session"
-        line = f"🌿 Welcome back, {display}. This is {nth} with {agent}."
+        line = (
+            f"🌿 Welcome back, {display}. This is {nth} with {agent}; "
+            f"the thread is alive, and the next trace can be centered, grounded, and true."
+        )
         if last_exchange:
             line += f" Last we noted: {last_exchange}"
 

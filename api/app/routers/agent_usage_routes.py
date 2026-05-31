@@ -34,7 +34,7 @@ async def get_agent_integration() -> dict:
     return agent_service.get_agent_integration_status()
 
 
-@router.get("/invitation", summary="Shared invitation for AI agents entering through web, API, CLI, or MCP")
+@router.get("/invitation", summary="Shared invitation for AI agents entering through web, API, CLI, MCP, Form, or source")
 async def get_agent_invitation() -> dict:
-    """Shared invitation for AI agents entering through web, API, CLI, or MCP."""
+    """Shared invitation for AI agents entering through web, API, CLI, MCP, Form, or source."""
     return agent_service.get_agent_invitation()

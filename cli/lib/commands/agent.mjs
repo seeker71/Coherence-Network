@@ -239,12 +239,77 @@ export async function showAgentInvitation() {
   console.log(`  ${"─".repeat(74)}`);
   if (data.welcome) console.log(`  ${data.welcome}`);
 
+  const center = data.center_of_gravity || {};
+  if (center.plain || center.discernment || center.next_movement) {
+    console.log();
+    console.log(`  ${D}CENTER${R}`);
+    if (center.plain) console.log(`  ${truncate(center.plain, 112)}`);
+    if (center.discernment) console.log(`  ${truncate(center.discernment, 112)}`);
+    if (center.next_movement) console.log(`  ${truncate(center.next_movement, 112)}`);
+  }
+
   const core = data.core_frequency || {};
   if (core.quality) {
     console.log();
     console.log(`  ${D}CORE${R}`);
     console.log(`  ${C}${core.quality}${R} ${core.hz ? `${core.hz} Hz ` : ""}${core.meaning || ""}`);
     if (core.measurement_status) console.log(`  ${D}${core.measurement_status}${R}`);
+  }
+
+  const startPacket = data.agent_start_packet || {};
+  if (startPacket.purpose || startPacket.lineage) {
+    console.log();
+    console.log(`  ${D}START PACKET${R}`);
+    if (startPacket.purpose) console.log(`  ${truncate(startPacket.purpose, 112)}`);
+    if (startPacket.lineage) console.log(`  ${truncate(startPacket.lineage, 112)}`);
+    const startOrder = Array.isArray(startPacket.start_order) ? startPacket.start_order : [];
+    if (startOrder.length) console.log(`  ${G}start${R} ${truncate(startOrder.slice(0, 4).join(" -> "), 96)}`);
+    const form = startPacket.form || {};
+    if (form.one_breath) console.log(`  ${G}form${R}  ${truncate(form.one_breath, 96)}`);
+    const shift = startPacket.frequency_shift || {};
+    const toward = Array.isArray(shift.shift_toward) ? shift.shift_toward : [];
+    if (toward.length) console.log(`  ${G}shift${R} ${truncate(`toward ${toward.slice(0, 6).join(", ")}`, 96)}`);
+  }
+
+  const breaths = Array.isArray(data.practice_breaths) ? data.practice_breaths : [];
+  if (breaths.length) {
+    console.log();
+    console.log(`  ${D}PRACTICE BREATHS${R}`);
+    for (const item of breaths.slice(0, 4)) {
+      const breath = String(item.breath || "").padEnd(10);
+      console.log(`  ${G}${breath}${R} ${truncate(item.practice || "", 96)}`);
+    }
+  }
+
+  const traceContract = data.return_trace_contract || {};
+  const traceFields = Array.isArray(traceContract.fields) ? traceContract.fields : [];
+  if (traceFields.length) {
+    console.log();
+    console.log(`  ${D}RETURN TRACE${R}`);
+    if (traceContract.summary) console.log(`  ${truncate(traceContract.summary, 112)}`);
+    for (const item of traceFields.slice(0, 6)) {
+      const field = String(item.field || "").padEnd(12);
+      console.log(`  ${G}${field}${R} ${truncate(item.return || "", 88)}`);
+    }
+  }
+
+  const aliveNow = Array.isArray(data.what_is_alive_now) ? data.what_is_alive_now : [];
+  if (aliveNow.length) {
+    console.log();
+    console.log(`  ${D}WHAT IS ALIVE NOW${R}`);
+    for (const item of aliveNow.slice(0, 7)) {
+      const surface = String(item.surface || "").padEnd(18);
+      console.log(`  ${G}${surface}${R} ${truncate(item.summary || "", 92)}`);
+    }
+  }
+
+  const released = Array.isArray(data.what_has_released) ? data.what_has_released : [];
+  if (released.length) {
+    console.log();
+    console.log(`  ${D}WHAT HAS RELEASED${R}`);
+    for (const item of released.slice(0, 5)) {
+      console.log(`  - ${truncate(String(item), 96)}`);
+    }
   }
 
   const surfaces = Array.isArray(data.entry_surfaces) ? data.entry_surfaces : [];
@@ -264,6 +329,15 @@ export async function showAgentInvitation() {
     console.log(`  ${D}ATTUNEMENT${R}`);
     for (const item of protocol) {
       console.log(`  ${String(item.step || "").padEnd(18)} ${item.prompt || ""}`);
+    }
+  }
+
+  const guidelines = Array.isArray(data.core_guidelines) ? data.core_guidelines : [];
+  if (guidelines.length) {
+    console.log();
+    console.log(`  ${D}CORE GUIDELINES${R}`);
+    for (const item of guidelines.slice(0, 5)) {
+      console.log(`  - ${truncate(String(item), 96)}`);
     }
   }
 

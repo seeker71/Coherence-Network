@@ -346,11 +346,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Coherence Contribution Network API",
+    title="Coherence Network API",
     version=health.HEALTH_VERSION,
     description=(
-        "Open intelligence platform that traces every idea from inception to payout — "
-        "with fair attribution, coherence scoring, and federated trust.\n\n"
+        "Open intelligence organism where ideas, people, agents, source files, "
+        "runtime proof, substrate shape, teachings, and value flows share one "
+        "inspectable body. Form carries structural queries and executable runtime "
+        "tissue; relationship memory lets agent arrivals become durable traces; "
+        "the ledger keeps attribution and coherence scoring visible.\n\n"
         "**Ecosystem:** "
         "[Web](https://coherencycoin.com) · "
         "[API Docs](https://api.coherencycoin.com/docs) · "
@@ -369,7 +372,7 @@ app = FastAPI(
         {"name": "distributions", "description": "Value distribution calculations"},
         {"name": "ideas", "description": "Idea portfolio and ROI analysis"},
         {"name": "spec-registry", "description": "Feature specification tracking"},
-        {"name": "agent", "description": "Task orchestration and agent execution"},
+        {"name": "agent", "description": "Task orchestration, agent execution, invitation, relationship memory, and returned traces"},
         {"name": "gates", "description": "Release gate validation"},
         {"name": "runtime", "description": "Runtime telemetry and event tracking"},
         {"name": "inventory", "description": "System lineage aggregation"},
@@ -380,6 +383,7 @@ app = FastAPI(
         {"name": "identity", "description": "Contributor identity linking and verification"},
         {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
         {"name": "discovery", "description": "Submission readiness for MCP and skill discovery registries"},
+        {"name": "substrate", "description": "Content-addressed lattice, Form expressions, structural equivalence, and shape views"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -729,7 +733,7 @@ async def startup_indexer():
 async def startup_translator_backend():
     """Register the on-demand attunement backend.
 
-    Defaults to LibreTranslate (free, no key) so the platform translates
+    Defaults to LibreTranslate (free, no key) so the web surface translates
     content the moment a visitor requests a locale we don't have cached yet.
     Set ``COHERENCE_TRANSLATOR=anthropic`` + provide ``ANTHROPIC_API_KEY`` to
     upgrade to Claude for richer attunement with prompt-carried glossary.

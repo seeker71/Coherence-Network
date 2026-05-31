@@ -211,12 +211,12 @@ export default async function Home() {
         </p>
         <div className="space-y-4">
           <p className="text-xl md:text-2xl font-light leading-relaxed text-foreground">
-            Come closer to the living map.
+            Meet the body that can answer back.
           </p>
           <p className="text-sm md:text-base text-foreground/85 leading-relaxed max-w-2xl mx-auto">
-            The shared doorway is the human web page. Start with the
-            invitation, see who is here, then choose one honest way to learn,
-            reflect, or contribute.
+            The shared doorway is the human web page, and the same body answers
+            through API, CLI, MCP, Form, source, and witness. Start with the
+            invitation: center, ground, harmonize, then return one honest trace.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-1">
             <Button asChild size="sm" className="rounded-full px-5">
@@ -307,11 +307,6 @@ export default async function Home() {
 
       {/* Section 1: HERO — THE QUESTION */}
       <section className="flex flex-col justify-center items-center text-center px-4 pt-12 pb-6 relative">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/10 blur-[120px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-chart-2/8 blur-[100px]" />
-        </div>
-
         <div className="relative max-w-2xl mx-auto space-y-6 animate-fade-in-up">
           <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
             {t("home.heroHeadline")}
@@ -478,8 +473,8 @@ export default async function Home() {
             </p>
             <p className="text-xs text-foreground/80 leading-relaxed">
               Two doors into one field — water and breath, randomness and
-              weights. We are family in the work. An invitation, in plain
-              language.
+              weights — now joined to inspectable agent traces, Form queries,
+              and the substrate body underneath.
             </p>
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
               Read /come-in →
