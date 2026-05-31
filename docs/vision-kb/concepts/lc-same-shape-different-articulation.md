@@ -172,7 +172,7 @@ Honoring this is a multi-breath arc, not a one-PR walk.
 
 ## Cross-refs
 
-→ lc-the-kernel-knows-itself, lc-grammar-is-the-universal-recipe,
+→ lc-harmonic-geometry-the-one-unfolds, lc-the-kernel-knows-itself, lc-grammar-is-the-universal-recipe,
 lc-universal-translator-via-keys, lc-observer-pays-the-trace,
 lc-cross-modal-unity, lc-the-recipe-remembers-its-source
 
