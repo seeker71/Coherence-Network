@@ -818,6 +818,25 @@
                 (cons (intern_trivial_string var-name)
                       (cons iterable body-recipes)))))
 
+    ;; if-statement: tokens look like `if <cond-tokens> :`. The header has
+    ;; the same shape as while (leading keyword + trailing `:`), so the
+    ;; condition is lifted with the same colon-stripping helper. Body
+    ;; children lift as statements. Emits PY-BMF-IF-STMT(cond, body-stmts...)
+    ;; — the eval arm reads child 0 as the condition, the rest as the body,
+    ;; threading env through the body when the condition is truthy. This is
+    ;; the statement-level conditional, distinct from the PY-BMF-IF ternary
+    ;; expression (`x if c else y`). `elif` / `else` clauses are a later
+    ;; breath (the accumulator-loop demos this opens use bare `if cond: body`).
+
+    (defn lift-if-statement (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let children (python-statement-tree-children statement-tree))
+            (let cond-tokens (lift-while-cond-tokens tokens))
+            (let cond (lift-recipe (lift-expr cond-tokens)))
+            (let body-recipes (lift-statements children))
+            (intern_node PY-BMF-IF-STMT (cons cond body-recipes))))
+
     ;; augmented-assignment statement: `NAME <op>= EXPR...`. The scanner
     ;; classifies these as kind "expr" / rule "star_expressions" (the
     ;; `+=` token is a single py-op), so the dispatcher must catch them
@@ -944,6 +963,7 @@
             (if (str_eq kind "return")           (lift-return statement-tree)
             (if (str_eq kind "while")            (lift-while statement-tree)
             (if (str_eq kind "for")              (lift-for statement-tree)
+            (if (str_eq kind "if")               (lift-if-statement statement-tree)
             (if (str_eq kind "class")            (lift-class statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
@@ -952,7 +972,7 @@
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty)))))))))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;

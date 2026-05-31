@@ -414,6 +414,25 @@
                     (let body-stmts (tail kids))
                     (let final-env (py-while-loop cond-recipe body-stmts env))
                     (py-stmt-result 0 final-env))
+            (if (node_eq cat PY-BMF-IF-STMT)
+                (do
+                    ;; IF-STMT children: cond-recipe, body-stmt-recipes...
+                    ;; Evaluate the condition once; when truthy (non-zero —
+                    ;; the int-bool convention the COMPARE arm and py-while
+                    ;; already use) run the body, threading env through each
+                    ;; statement so the body can mutate via ASSIGN /
+                    ;; AUG-ASSIGN and the binding persists past the block.
+                    ;; When falsy, env passes through unchanged. The statement
+                    ;; returns 0 (Python None). Distinct from the PY-BMF-IF
+                    ;; ternary expression py-eval walks for a value. `else` /
+                    ;; `elif` clauses are a later breath.
+                    (let cond (py-eval (head kids) env))
+                    (let body-stmts (tail kids))
+                    (let final-env
+                        (if (eq cond 0)
+                            env
+                            (py-eval-body-loop body-stmts env)))
+                    (py-stmt-result 0 final-env))
             (if (node_eq cat PY-BMF-FOR)
                 (do
                     ;; FOR children: var-name-leaf, iterable-recipe,
@@ -468,7 +487,7 @@
                     (let new-dict (py-dict-set dict idx value))
                     (py-stmt-result value (py-env-extend env name new-dict)))
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env)))))))))))
+                (py-stmt-result (py-eval recipe env) env))))))))))))
 
     (defn py-eval-module-loop (statements env last-value)
         (if (nil? statements) last-value
