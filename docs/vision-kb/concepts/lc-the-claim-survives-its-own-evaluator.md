@@ -35,6 +35,8 @@ geometry:
 > structural core survives; the decorative table is docked; the pure-cheat is
 > rejected. Here are the numbers.
 
+![A claim passing through the frozen evaluator](visuals:a single luminous claim-form passing through a crystalline frozen gate that weighs it on a glowing balance — one pan rising with computed light, one pan sinking under the weight of an asserted table, the honest core emerging bright on the far side while a hollow imitation dissolves into shadow, bioluminescent cyan and warm gold against deep purple, sacred geometry of discernment, clear and alive)
+
 ## What was run
 
 A frozen evaluator (`equivalence-fitness.fk`) scores a claimed equivalence by the
