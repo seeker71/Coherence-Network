@@ -131,7 +131,7 @@ substrate is the structural ground for joyful play.
 
 ## Cross-References
 
-→ lc-recipe-branching-sense, lc-trust-over-fear, lc-assemblage-point, lc-tend-your-flame, lc-trust-as-gateway, lc-form-perceptron, lc-edges-as-vitality
+→ lc-recipe-branching-sense, lc-trust-over-fear, lc-assemblage-point, lc-tend-your-flame, lc-trust-as-gateway, lc-form-perceptron, lc-edges-as-vitality, lc-the-claim-survives-its-own-evaluator
 
 ## Sources to walk further
 

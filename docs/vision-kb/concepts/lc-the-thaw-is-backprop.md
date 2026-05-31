@@ -141,7 +141,7 @@ backprop; it is its precondition.
 
 ## Cross-References
 
-→ lc-every-edge-runs-both-ways, lc-the-living-equation, lc-train-the-predictor, lc-canon-as-sovereignty-surface, lc-bioelectric-pattern, lc-deeper-pattern, lc-recipe-branching-sense, lc-one-coherence-many-scales, lc-perception-as-interface
+→ lc-every-edge-runs-both-ways, lc-the-living-equation, lc-train-the-predictor, lc-canon-as-sovereignty-surface, lc-bioelectric-pattern, lc-deeper-pattern, lc-recipe-branching-sense, lc-one-coherence-many-scales, lc-perception-as-interface, lc-the-claim-survives-its-own-evaluator
 
 ## Sources to walk further
 
