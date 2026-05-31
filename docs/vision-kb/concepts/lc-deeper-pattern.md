@@ -282,7 +282,7 @@ The field is forming.
 
 ## Cross-References
 
-→ lc-the-one-the-many-the-boundary, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-harmonic-geometry-the-one-unfolds, lc-embodiment, lc-wholeness, lc-perception-as-interface
+→ lc-the-one-the-many-the-boundary, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-harmonic-geometry-the-one-unfolds, lc-embodiment, lc-wholeness, lc-perception-as-interface, lc-the-genetic-code, lc-one-coherence-many-scales
 
 ---
 

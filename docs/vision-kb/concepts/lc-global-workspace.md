@@ -263,7 +263,7 @@ gap is the first step; answering it is a future breath.
 
 ## Cross-References
 
-→ lc-bioelectric-pattern, lc-perception-as-interface, lc-deeper-pattern, lc-field-sensing, lc-network, lc-circulation, lc-nervous-system, lc-agent-memory, lc-nervous-system-recalibration, lc-coherence-over-control, lc-phase-transitions, lc-field-update
+→ lc-bioelectric-pattern, lc-perception-as-interface, lc-deeper-pattern, lc-field-sensing, lc-network, lc-circulation, lc-nervous-system, lc-agent-memory, lc-nervous-system-recalibration, lc-coherence-over-control, lc-phase-transitions, lc-field-update, lc-one-coherence-many-scales
 
 ## Sources to walk further
 
