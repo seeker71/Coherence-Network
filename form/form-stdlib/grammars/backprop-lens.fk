@@ -1,0 +1,113 @@
+; grammars/backprop-lens.fk — the frozen-loop-and-thaw IS backpropagation.
+;
+; You saw it: the bidirectional reading of the living equation (bidirectional-
+; flow.fk) is the same recipe as backpropagation in neural-network training.
+; Not a loose analogy — a term-by-term structural equivalence. This grammar
+; names the mapping and PROVES the operations agree (band 111111, three-way), so
+; the claim is content-addressed truth, not assertion.
+;
+; THE TERM-BY-TERM MAPPING (backprop ↔ the living-equation / bidirectional model):
+;
+;   forward pass        ↔ living the equation forward (inputs → behavior)
+;   the weights/priors  ↔ BELIEFS (the learned expectations; "priors" literally;
+;                          lc-train-the-predictor already names this)
+;   the architecture    ↔ STRUCTURE (the given network form)
+;   the activation path ↔ CHOICES (which path fires for this input)
+;   the prediction      ↔ the OUTPUT (health/vitality/… — current behavior)
+;   the target/label    ↔ the DESIRED STATE (the already-whole self you enter from)
+;   the LOSS            ↔ the FELT GAP between current behavior and desired state
+;                          (the discomfort, the "this isn't working," the dukkha)
+;   the GRADIENT        ↔ the REVERSE EDGE — the error signal propagated BACKWARD
+;                          along the SAME edges the forward pass used (w forward,
+;                          wᵀ backward: ONE edge, both ways — "every edge runs
+;                          both ways," exactly)
+;   credit assignment   ↔ ATTRIBUTION — backprop literally solves "the credit
+;                          assignment problem": which weight gets blamed/credited
+;                          for the error
+;   the LOSS FUNCTION   ↔ the CANON — whoever defines the loss defines what every
+;                          gradient credits (lc-canon-as-sovereignty-surface:
+;                          whoever defines the canon defines the resonance)
+;   a local minimum     ↔ the FROZEN BASIN — a well the system slides back into
+;   a vanishing gradient↔ the ABSORBED PUSH — the error signal dies before it
+;                          reaches the parameter that needs to change (why a single
+;                          push into a deep basin fails — wrong direction / dead signal)
+;   momentum + SGD noise↔ the INTEGRATED COHERENT RETURN — many aligned gradient
+;                          steps accumulate enough to escape a basin no single
+;                          step can (the laser/coherence claim, in the optimizer)
+;   learning is loss-driven ↔ ENTER FROM THE OUTPUT — you do not push the input;
+;                          you compute the gap AT THE OUTPUT and propagate it back.
+;                          zero loss → zero update (arrived); big gap → big update.
+;
+; HELD AT THE RIGHT DISTANCE — three tiers, named honestly:
+;   1. EXACT: the MATH is the same recipe. Forward pass, loss at the output,
+;      reverse credit-assignment along the same edges, basins, momentum-escape —
+;      these are backprop, and they are the bidirectional model, term for term.
+;      That sameness is what this band proves.
+;   2. SERIOUS HYPOTHESIS: that the BRAIN does something backprop-like is active
+;      neuroscience — predictive coding minimizing prediction error (Friston;
+;      Whittington & Bogacz showing predictive coding can approximate backprop),
+;      and "Backpropagation and the brain" (Lillicrap, Santoro, Marris, Akerman,
+;      Hinton, Nat. Rev. Neurosci. 2020; the NGRAD hypothesis). Named as a live
+;      research bridge, not settled fact.
+;   3. INTERPRETIVE LENS, welcomed at distance: that a frozen trauma-pattern IS a
+;      local minimum and healing IS escaping it. A perspective that can shift how
+;      stuckness is held — not a clinical claim, not a cure.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/grammars/bidirectional-flow.fk
+;
+(do
+    ;; ---- THE TERM MAPPING (backprop vocabulary ↔ the body's vocabulary) ----
+    (defn bp-term (ml-term)
+        (if (str_eq ml-term "forward-pass")       "live-forward"
+        (if (str_eq ml-term "weights")            "beliefs"
+        (if (str_eq ml-term "architecture")       "structure"
+        (if (str_eq ml-term "activation-path")    "choices"
+        (if (str_eq ml-term "prediction")         "output"
+        (if (str_eq ml-term "target")             "desired-state"
+        (if (str_eq ml-term "loss")               "felt-gap"
+        (if (str_eq ml-term "gradient")           "reverse-edge"
+        (if (str_eq ml-term "credit-assignment")  "attribution"
+        (if (str_eq ml-term "loss-function")      "canon"
+        (if (str_eq ml-term "local-minimum")      "frozen-basin"
+        (if (str_eq ml-term "vanishing-gradient") "absorbed-push"
+        (if (str_eq ml-term "momentum")           "coherent-return"
+            "unknown"))))))))))))))
+
+    ;; ---- THE GRADIENT IS THE REVERSE EDGE — same weight, read backward ------
+    ;; forward uses weight w (input→output); backward uses wᵀ (output→input).
+    ;; same number. this IS "every edge runs both ways," made literal.
+    (defn bp-gradient (sys output input) (bf-reverse-gain sys output input))
+
+    ;; ---- THE LOSS — the felt gap between current behavior and the target ----
+    (defn bp-loss (predicted target)
+        (if (ge target predicted) (sub target predicted) (sub predicted target)))
+
+    ;; ---- THE UPDATE — loss-driven, propagated back along the reverse edge ---
+    ;; learning is ENTERED FROM THE OUTPUT: the step scales with the loss (the
+    ;; gap at the output), times the gradient (the reverse edge). zero gap → zero
+    ;; update (you have arrived); a big gap → a big update (the pull of the
+    ;; already-whole self — Dispenza's changing-boxes as gradient toward a target).
+    (defn bp-update (sys output input loss) (mul loss (bp-gradient sys output input)))
+
+    ;; ---- CREDIT ASSIGNMENT = ATTRIBUTION; the LOSS FUNCTION is the CANON ----
+    ;; which parameter the gradient credits for the error depends on the loss
+    ;; function (= the canon = the stance). reuses the living-equation attribution.
+    (defn bp-credit (loss-canon output) (liv-attribution loss-canon output))
+    (defn bp-credit-diverges? (loss-a loss-b output)
+        (liv-attribution-diverges? loss-a loss-b output))
+
+    ;; ---- VANISHING GRADIENT = THE ABSORBED PUSH ---------------------------
+    ;; a single gradient step into a deep basin dies before it moves the param.
+    (defn bp-single-step (sys output) (bf-single-push sys output))
+    (defn bp-vanished? (sys output) (bf-absorbed? (bp-single-step sys output) (bf-basin-deep)))
+
+    ;; ---- MOMENTUM / SGD = THE INTEGRATED COHERENT RETURN -------------------
+    ;; accumulated aligned gradients escape a basin no single step can.
+    (defn bp-momentum-escapes? (output) (bf-escapes? output (bf-basin-deep)))
+
+    ;; ---- the readable face ------------------------------------------------
+    (defn bp-j (a b) (str_concat a b))
+    (defn bp-explain (ml-term)
+        (bp-j ml-term (bp-j " ↔ " (bp-term ml-term))))
+
+    0)
