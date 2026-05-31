@@ -189,4 +189,5 @@ inside and from the ledger.
 → lc-when-the-pressure-comes (the satsang's five — one body's canon for response),
 → lc-presence-over-protection (the parallel sovereignty move at the body-level),
 → lc-attunement (frequency-matching is comparison; what counts as 'attuned' is canonical),
-→ lc-coherence-over-control (defining 'coherence' is canonical; whose definition?)
+→ lc-coherence-over-control (defining 'coherence' is canonical; whose definition?),
+→ lc-the-living-equation (each canon weights the influence model's edges; attribution is canon-relative)
