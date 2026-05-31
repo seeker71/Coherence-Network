@@ -345,7 +345,7 @@ its own focused PR):
 - `PY-BMF-DICT` + dict-literal lift + key access
 - `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`
 - `PY-BMF-FOR` + iterator protocol on lists / ranges — **landed**: `lift-for` + the PY-BMF-FOR eval arm carry `for i in range(...)`; `python_range_demo.py` reached COMPOST READY 2026-05-31. Iterator-over-list shapes still ride the same arm as they ripen.
-- `PY-BMF-LAMBDA` + closure capture in expressions
+- `PY-BMF-LAMBDA` + closure capture in expressions — **landed**: `lift-lambda` + the PY-BMF-LAMBDA eval arm (closure built, walked by PY-BMF-CALL) carry single-expression lambdas assigned, passed as arguments, and used in arithmetic; `python_lambda_demo.py` reached COMPOST READY 2026-05-31 (arms shipped in #2185; this row records the demo closing three-way with them).
 - `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment
 
 Each PROVEN row brings one more `PARITY_FILES` demo green under
