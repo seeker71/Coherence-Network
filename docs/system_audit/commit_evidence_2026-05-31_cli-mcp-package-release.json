@@ -1,0 +1,103 @@
+{
+  "date": "2026-05-31",
+  "thread_branch": "codex/cli-mcp-release-20260531",
+  "commit_scope": "Prepare the CLI and MCP public package surfaces for the merged agent-start packet release by bumping package versions, aligning MCP registry metadata, and refreshing MCP package-lock security drift.",
+  "files_owned": [
+    "cli/package.json",
+    "cli/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/coherence_mcp_server/__init__.py",
+    "mcp-server/server.json",
+    "docs/system_audit/commit_evidence_2026-05-31_cli-mcp-package-release.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "npm view coherence-cli version dist-tags time --json",
+      "npm view coherence-mcp-server version dist-tags time --json",
+      "npm whoami",
+      "npm version patch --no-git-tag-version (cli)",
+      "npm version patch --no-git-tag-version (mcp-server)",
+      "node --check cli/bin/coh.mjs && node --check cli/lib/commands/agent.mjs && node --check cli/lib/commands/update.mjs && node --check mcp-server/index.mjs",
+      "python3 -m json.tool mcp-server/server.json >/dev/null && python3 -m py_compile mcp-server/coherence_mcp_server/__init__.py mcp-server/coherence_mcp_server/__main__.py mcp-server/coherence_mcp_server/server.py",
+      "npm ci (cli)",
+      "npm ci (mcp-server)",
+      "npm audit --omit=dev --json (cli)",
+      "npm audit fix (mcp-server)",
+      "npm audit --omit=dev --json (mcp-server)",
+      "npm pack --dry-run --json (cli)",
+      "npm pack --dry-run --json (mcp-server)",
+      "npm publish --dry-run --access public (cli)",
+      "npm publish --dry-run --access public (mcp-server)",
+      "COHERENCE_API_URL=https://api.coherencycoin.com node cli/bin/coh.mjs agent invite > /tmp/coh-agent-invite.txt && rg -n \"START PACKET|PRACTICE BREATHS|RETURN TRACE|form\\s+Form is the substrate-native\" /tmp/coh-agent-invite.txt",
+      "node - <<'NODE' npm version availability check for coherence-cli@0.13.4 and coherence-mcp-server@0.5.6 NODE"
+    ],
+    "summary": "Source package metadata is ready for coherence-cli@0.13.4 and coherence-mcp-server@0.5.6. CLI and MCP syntax/metadata checks pass; package dry-run publishes pass; npm audits are clean after MCP lock refresh; local CLI agent invite displays START PACKET, PRACTICE BREATHS, and RETURN TRACE from the live API. npm registry publish remains blocked because this environment is not authenticated."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring for the package-version release commit."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "npm publish is pending; local `npm whoami` returned E401 Unauthorized, and npm shows coherence-cli latest=0.13.3 / coherence-mcp-server latest=0.5.5 with next versions unpublished."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Source package release metadata and dry-run proof are complete; actual npm publication needs an authenticated npm session or token."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "public-surface-agent-start-packet"
+  ],
+  "task_ids": [
+    "codex-cli-mcp-release-20260531"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cli/package.json",
+    "cli/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/server.json"
+  ],
+  "change_files": [
+    "cli/package.json",
+    "cli/package-lock.json",
+    "mcp-server/package.json",
+    "mcp-server/package-lock.json",
+    "mcp-server/pyproject.toml",
+    "mcp-server/coherence_mcp_server/__init__.py",
+    "mcp-server/server.json"
+  ],
+  "change_intent": "process_only"
+}

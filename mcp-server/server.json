@@ -1,7 +1,7 @@
 {
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
-  "version": "0.5.4",
+  "version": "0.5.6",
   "description": "MCP server for Coherence Network — invite anyone or anything to ask what is alive, what is grounded, browse ideas and field stories, query Form/substrate shape, and return attributed traces.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
@@ -30,7 +30,7 @@
     {
       "registry": "npm",
       "name": "coherence-mcp-server",
-      "version": "0.5.4"
+      "version": "0.5.6"
     }
   ],
   "tools": [

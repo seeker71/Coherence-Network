@@ -1,6 +1,6 @@
 {
   "name": "coherence-mcp-server",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "Unified MCP server for Coherence Network — invite agents to ask what is alive, what is grounded, query Form/substrate shape, and return attributed traces.",
   "type": "module",
   "bin": {
