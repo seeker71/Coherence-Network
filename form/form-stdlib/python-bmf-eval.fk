@@ -512,7 +512,12 @@
                     (let lhs-val (py-eval (nth kids 0) env))
                     (let rhs-val (py-eval (nth kids 1) env))
                     (let math-inst (node_inst cat))
-                    (if (eq math-inst 1) (add lhs-val rhs-val)
+                    ;; plus routes to the kernel's polymorphic `_plus` native
+                    ;; (present in rust/go/ts siblings) so Python's overloaded
+                    ;; `+` does numeric add AND string concat from one arm.
+                    ;; int+int is identical to `add`; str+str / str+int / float
+                    ;; promotion all dispatch inside the native.
+                    (if (eq math-inst 1) (_plus lhs-val rhs-val)
                     (if (eq math-inst 2) (sub lhs-val rhs-val)
                     (if (eq math-inst 3) (mul lhs-val rhs-val)
                     (if (eq math-inst 4) (div lhs-val rhs-val)
