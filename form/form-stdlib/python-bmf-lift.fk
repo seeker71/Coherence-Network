@@ -778,6 +778,41 @@
             (let tokens (python-statement-tree-tokens statement-tree))
             (lift-recipe (lift-expr tokens))))
 
+    ;; import-statement tokens: `import NAME [as ALIAS]`. Token 1 is the module
+    ;; name; `import math as m` carries `as` at 2 and the alias at 3. Emits
+    ;; PY-BMF-IMPORT(alias-leaf): the eval arm binds the alias to a module-marker.
+    (defn lift-import (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let modname (tok-value (nth tokens 1)))
+            (let alias
+                (if (and (gt (len tokens) 3)
+                         (tok-keyword? (nth tokens 2) "as"))
+                    (tok-value (nth tokens 3))
+                    modname))
+            (intern_node PY-BMF-IMPORT
+                (list (intern_trivial_string alias)))))
+
+    ;; from-import tokens: `from MODULE import NAME, NAME, ...`. Token 1 the
+    ;; module, tokens 3+ the member names (commas skipped). Emits
+    ;; PY-BMF-FROM-IMPORT(module-leaf, member-leaves...).
+    (defn lift-from-import-members (tokens acc)
+        (if (nil? tokens) (reverse acc)
+            (do
+                (let t (head tokens))
+                (if (tok-name? t)
+                    (lift-from-import-members (tail tokens)
+                        (cons (intern_trivial_string (tok-value t)) acc))
+                    (lift-from-import-members (tail tokens) acc)))))
+
+    (defn lift-from-import (statement-tree)
+        (do
+            (let tokens (python-statement-tree-tokens statement-tree))
+            (let modname (tok-value (nth tokens 1)))
+            (let members (lift-from-import-members (drop 3 tokens) (empty)))
+            (intern_node PY-BMF-FROM-IMPORT
+                (cons (intern_trivial_string modname) members))))
+
     ;; while-statement: tokens look like `while <cond-tokens> :`. Drop the
     ;; leading `while` keyword and the trailing `:`, lift the middle as a
     ;; condition expression. Body children are lifted as statements and
@@ -979,6 +1014,8 @@
             (if (str_eq kind "for")              (lift-for statement-tree)
             (if (str_eq kind "if")               (lift-if-statement statement-tree)
             (if (str_eq kind "class")            (lift-class statement-tree)
+            (if (str_eq kind "import")           (lift-import statement-tree)
+            (if (str_eq kind "from")             (lift-from-import statement-tree)
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
@@ -986,7 +1023,7 @@
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))))))))
+                    (intern_node PY-BMF-PASS (empty))))))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
