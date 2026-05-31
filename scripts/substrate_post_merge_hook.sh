@@ -45,7 +45,7 @@ CHANGED_CODE=$(git diff --name-only --diff-filter=AM "$RANGE" -- \
     'api/app/routers/*.py' \
     'api/app/services/*.py' \
     'docs/coherence-substrate/*.form' \
-    'experiments/form-stdlib/**/*.fk' 2>/dev/null || true)
+    'form/form-stdlib/**/*.fk' 2>/dev/null || true)
 
 # Form Blueprint registry → substrate NamedCells. The offline kernels read the
 # JSON files; the substrate needs the names projected in so it can answer
