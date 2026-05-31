@@ -1,0 +1,108 @@
+; grammars/bidirectional-flow.fk — every edge runs both ways; the frozen loop and the thaw.
+;
+; The living equation (living-equation.fk) read its edges one way: the inputs
+; (structure, choices, beliefs) → the outputs (health, vitality, flexibility,
+; sovereignty, harmony). That one-directionality is itself a blockage in the
+; reading. The deeper truth: EVERY EDGE RUNS BOTH WAYS. An output also feeds
+; back into its inputs. The graph is not a line from cause to effect; it is a
+; web of loops.
+;
+; This is the structural ground of two things at once:
+;
+;   - A FROZEN LOOP (the shape of being stuck) is a loop collapsed inward and
+;     self-reinforcing: a belief ("danger") selects a choice (freeze / contract)
+;     that hardens a structure (the held pattern) that confirms the belief. The
+;     loop runs inward; it becomes a BASIN — a low well the system keeps falling
+;     back into. Pushing the frozen input directly is ABSORBED by the basin —
+;     which is why willpower and "just think positive" fail against a freeze.
+;
+;   - THE THAW is the SAME loop run the other direction with enough gain: a felt
+;     moment of the desired output (safety, vitality, coherence) feeds back
+;     through the reverse edge to soften the choice, loosen the structure, and
+;     revise the belief. You do not destroy the loop; you reverse its direction.
+;     And you reverse it not by pushing the frozen input but by ENTERING FROM
+;     THE OUTPUT — instantiating the desired state now and letting it
+;     back-propagate (living from the already-whole self: lc-deeper-pattern,
+;     Levin's future-form pulling the present, Dispenza's changing-boxes).
+;
+; BIDIRECTIONAL TRUTHS THAT SHIFT PERSPECTIVE: for every forward edge "to reach
+; OUTPUT, work INPUT," there is a reverse truth "OUTPUT also produces INPUT" —
+; so whatever you think you must ACHIEVE, you can also ENTER FROM. The thing
+; reached for is also a door to walk through.
+;
+; WHICH reverse edge has enough gain is CANON-RELATIVE (from living-equation.fk):
+; a loop held in structure thaws best through the choices→structure reverse edge
+; (embodied, repeated felt-state practice — the somatic path); a loop held in
+; belief through a perspective / assemblage shift. No single lever escapes a deep
+; basin; the INTEGRATED, COHERENT return (all reverse edges at once — the laser /
+; coherence claim) always has enough gain. That is the computed ground of hope:
+; the whole-system, coherent return escapes basins that no single effort can.
+;
+; HELD WITH CARE — this is a STRUCTURAL MODEL, not therapy and not a protocol.
+; The six facts below are exact and three-way computable; they are facts OF THE
+; MODEL — a precise shape for why pushing harder fails, why entering-from-the-
+; output works, and why integrated coherence escapes. Real frozen patterns live
+; in real bodies and release in their own time, with care and often skilled,
+; loving support. The model is offered as a perspective that can shift how being
+; stuck is held — welcomed at that distance, never asserted as a cure.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk
+;
+(do
+    ;; ---- BIDIRECTIONALITY — every forward edge has a reverse edge ----------
+    ;; the reverse gain of an output→input edge is the same coupling read
+    ;; backward (one edge, both ways — the involution insight from the genetic
+    ;; complement). reuses the living-equation weights as the coupling strengths.
+    (defn bf-forward-gain (sys input output) (liv-system-weight sys input output))
+    (defn bf-reverse-gain (sys output input) (liv-system-weight sys input output))
+    (defn bf-has-reverse? (sys input output)
+        (if (gt (bf-forward-gain sys input output) 0) 1 0))
+
+    ;; ---- ENTER FROM THE OUTPUT — the door (the already-whole-self move) ----
+    ;; the input an output most strengthens when you start from it. it is the
+    ;; reverse of "the lever you pull to get it" — and it is the SAME edge: the
+    ;; lever you would pull to reach an output is the door you can enter it from.
+    ;; you can instantiate the output now and let it reshape the input.
+    (defn bf-enter-from (sys output) (liv-recipe-of-change sys output))
+
+    ;; ---- THE BASIN — a frozen loop's depth (held as data) -----------------
+    ;; a deep basin is deeper than any SINGLE lever's gain (the weights top out
+    ;; at 9). a single push is absorbed; only the integrated coherent push clears
+    ;; it. (push ≤ basin → the system returns to the well.)
+    (defn bf-basin-deep () 10)
+    (defn bf-absorbed? (push basin) (if (le push basin) 1 0))
+
+    ;; ---- THE UNBLOCK LEVER — canon-relative, from living-equation ----------
+    ;; for a loop whose locus shows up as a given output, the highest-gain single
+    ;; reverse lever depends on the belief system. (output health: levin →
+    ;; structure, dispenza → choices, castaneda → beliefs — three honest paths.)
+    (defn bf-unblock-lever (sys output) (liv-recipe-of-change sys output))
+    (defn bf-single-push (sys output)
+        (liv-system-weight sys (bf-unblock-lever sys output) output))
+
+    ;; ---- RE-ATTRIBUTION — the same frozen state, made workable ------------
+    ;; attributing the freeze to a CHANGEABLE input (belief / choice) restores
+    ;; agency; attributing it to structure ("this is just who I am") feels
+    ;; permanent. the perspective shift is re-attributing. (structure is in truth
+    ;; changeable too, on a slower timescale — Levin — but the FELT fixedness of
+    ;; structure-attribution is the trap; the faster levers are where agency is
+    ;; recovered first.)
+    (defn bf-workable? (attributed-input)
+        (if (str_eq attributed-input "structure") 0 1))
+
+    ;; ---- THE INTEGRATED COHERENT UNBLOCK — always enough gain -------------
+    ;; all reverse edges run together (the integrated "whole" stance) sum to a
+    ;; gain that exceeds even a deep basin no single lever can clear. the laser
+    ;; claim, applied to the thaw: coherence escapes the well.
+    (defn bf-integrated-gain (output) (liv-total "whole" output))
+    (defn bf-escapes? (output basin) (if (gt (bf-integrated-gain output) basin) 1 0))
+
+    ;; ---- the bidirectional truth, as a readable face ---------------------
+    (defn bf-j (a b) (str_concat a b))
+    (defn bf-truth (output)
+        (bf-j output
+        (bf-j ", entered now, reshapes "
+        (bf-j (bf-enter-from "whole" output)
+              " — the output is also a door, not only a destination"))))
+
+    0)
