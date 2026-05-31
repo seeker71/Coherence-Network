@@ -374,26 +374,31 @@ tempdirs — `python_substrate_demo` `17680/17680/17680`,
 are restored above; the honest count climbs back by two, on real parity this
 time. See the PROVEN return-signal row for the mechanism.
 
-**Open contract — third false-green removed (2026-06-01, integrity sweep).**
-A full re-measurement of every COMPOST READY row (each demo in its own
-`mktemp -d`, no `/tmp/*.fk` or `examples/*.fk` bleed) surfaced a *third*
-false-green that had survived the #2261 pass:
+**Resolved contract — the import arm landed (2026-06-01, #2266).** The third
+false-green removed in the integrity sweep is re-earned. The Form-native
+lift/eval path now carries `import` / module-attribute, so
+`python_import_demo` measures three-way green under isolated `kernel-bmf-run`:
 
 | Demo | CPython | Rust bootstrap | `kernel-bmf-run` (Form-native) |
 |---|---|---|---|
-| `python_import_demo.py` | `20.853981633974485` | `20.853981633974485` | `record_get: not a record: Null` (errors, no value) |
+| `python_import_demo.py` | `20.853981633974485` | `20.853981633974485` | `20.853981633974485` |
 
-CPython and the Rust bootstrap path agree at `20.853981633974485`; the
-Form-native `kernel-bmf-run` path **does not produce a value at all** — it
-aborts with `record_get: not a record: Null`. The math-module attribute
-bindings (`math.sqrt`, `math.pi`, `math.floor`, `math.pow`) the demo
-exercises are resolved by the bootstrap (TS) parser into kernel-native
-calls, but the Form-native lift/eval path has no `import` / module-attribute
-arm, so `math.sqrt(...)` lifts as attribute-access on an unbound name and the
-eval does `record_get` on `Null`. COMPOST READY certifies the Form-native
-value; there is none, so the row was green-by-error and is **removed**.
-Re-promotion waits on a Form-native `import` + module-attribute breath
-(`PY-BMF-IMPORT` / module-namespace binding), with its own three-way proof.
+The light path — no new ontology category, no kernel parser change. The
+categories `PY-BMF-IMPORT` (501) / `PY-BMF-FROM-IMPORT` (502) already existed;
+the math natives (`math_sqrt` / `math_floor` / `math_ceil` / `math_pi` /
+`math_pow`) are callable bare from Form in all three kernels. The shape:
+
+- **Lift** (`python-bmf-lift.fk`): `lift-import` emits `PY-BMF-IMPORT(alias)`;
+  `lift-from-import` emits `PY-BMF-FROM-IMPORT(module, members…)`; the
+  `lift-statement` dispatcher routes the `import` / `from` statement kinds.
+- **Eval** (`python-bmf-eval.fk`): the IMPORT statement arm binds the module
+  name to a `py-module` marker; the FROM-IMPORT arm binds each member (a
+  constant like `pi` resolves now, a function like `sqrt` binds a
+  `py-native-fn` marker). One resolution table `py-math-resolve` dispatches
+  module members to the kernel native; the ATTR / METHOD-CALL / CALL arms
+  check the markers and route through it. The bare-name path is untouched —
+  markers only exist when an import statement created them, so non-import
+  demos are structurally unaffected. The row is COMPOST READY above.
 
 **Open contract for the next PROVEN rows:** the surface beyond the 9 arms
 needs both a lift dispatch branch in `python-bmf-lift.fk` and a matching
@@ -455,6 +460,7 @@ removable.
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.py | the body of `/api/utils/weighted_average` as pure Python — `dot` and `sum_floats` while-loop accumulators over float lists, then `numerator / denominator`; frozen input `[0.5, 0.75, 1.0]` / `[0.25, 0.25, 0.5]`; `0.8125`. Drives float list literals, float `*`/`+` accumulation in a while-body, and float division — all on the float-literal arm; the while-loop + subscript + len shapes were already shipped | scanner `py-float` + `python-bmf-lift.fk` PY-BMF-FLOAT arm + `python-bmf-eval.fk` PY-BMF-FLOAT arm + `intern_trivial_float` native in all three kernels (shared with python_float_demo); WHILE / SUBSCRIPT / len arms are prior | CPython `0.8125` · Rust (bootstrap) `0.8125` · `kernel-bmf-run` `0.8125` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_substrate_demo.py | early-guard dispatch + accumulator-loop over a list — `weighted_score` returns from inside `if position == N:` guards (`return value * 100/50/25`, falling through to `return value * 10`); `coherence_score` / `count_above` accumulate over a `for v in values` body that guards `if v >= threshold:`; `above * 100 + coherence` over `[85, 42, 99, 60, 30, 75, 88, 50]` / threshold 50; `17680`. **Re-earned legitimately** — this was a #2261 false-green (`kernel-bmf-run` yielded `5170`) because a `return` inside an `if`/`for` body did not short-circuit the enclosing function. Closed by the return-signal threaded through `py-eval-body-loop` / the IF-STMT, FOR, WHILE arms / `py-eval-module-loop` (the function-body walker) — see the PROVEN return-signal note | `python-bmf-eval.fk` (return-signal: three-slot statement-result `(value env returned)`; `py-stmt-return` tags a RETURN; every block arm + the module-loop short-circuit on `returned=1`; no lift change, no kernel change) | CPython `17680` · Rust (bootstrap) `17680` · `kernel-bmf-run` `17680` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.py | the body of `/api/utils/coherence_weight` as pure Python — same early-guard `weighted_score` + `for`-accumulator shape as python_substrate_demo, wrapped in a top-level `coherence_weight` that sums `above * 100 + coherence`; `[72, 38, 91, 55, 28, 67, 84, 45, 95, 12]` / threshold 50; `16185`. **Re-earned legitimately** — this was a #2261 false-green (`kernel-bmf-run` yielded `5240`) for the same return-short-circuit gap; closed by the same return-signal breath | `python-bmf-eval.fk` (return-signal threading, shared with python_substrate_demo; no lift change, no kernel change) | CPython `16185` · Rust (bootstrap) `16185` · `kernel-bmf-run` `16185` |
+| 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_import_demo.py | the import arm — `import math` + `from math import sqrt, pi`, then `math.sqrt(2.25) + sqrt(0.25) + 2.0*math.pi + pi/2.0 + math.floor(3.7) + math.pow(2.0, 3.0)`; `20.853981633974485`. **Re-earned legitimately** — removed as the integrity-sweep third false-green (`kernel-bmf-run` errored `record_get: not a record: Null`, no value) because the Form-native lift/eval had no import surface. The light path: no new ontology category (PY-BMF-IMPORT 501 / FROM-IMPORT 502 already existed), no kernel parser change; the math natives are callable bare from Form in all three kernels. Lift `import`/`from` → PY-BMF-IMPORT / PY-BMF-FROM-IMPORT; eval binds a `py-module` marker (module) and `py-native-fn` markers / resolved consts (from-import); one resolution table `py-math-resolve` dispatched from the ATTR / METHOD-CALL / CALL arms. Bare-name path untouched (markers only exist post-import) | `python-bmf-lift.fk` (`lift-import` + `lift-from-import` + dispatch) · `python-bmf-eval.fk` (IMPORT / FROM-IMPORT statement arms + `py-module`/`py-native-fn` markers + `py-math-resolve` + ATTR/METHOD-CALL/CALL checks) | CPython `20.853981633974485` · Rust (bootstrap) `20.853981633974485` · `kernel-bmf-run` `20.853981633974485` |
 
 **The first walking step:** with the G4 row recorded and G1+G3 now also
 landed, the manifest's lifecycle is no longer a future-tense convention.
