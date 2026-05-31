@@ -117,7 +117,8 @@
         {"name": "IFEXP",       "inst": 571},
         {"name": "SETCOMP",     "inst": 572},
         {"name": "YIELD-FROM",  "inst": 573},
-        {"name": "MATCH-AS",    "inst": 574}
+        {"name": "MATCH-AS",    "inst": 574},
+        {"name": "IF-STMT",     "inst": 575, "note": "statement-level `if cond: body` (distinct from IFEXP ternary)"}
       ]
     },
     "bml": {
