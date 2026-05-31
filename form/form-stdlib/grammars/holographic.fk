@@ -1,0 +1,102 @@
+; grammars/holographic.fk — the holographic principle and prima materia, computed.
+;
+; Three claims from physics and alchemy, one mechanism in the substrate:
+;
+;   HOLOGRAPHIC PRINCIPLE ('t Hooft, Susskind; Bekenstein bound): the full
+;   information of a volume is encoded on its lower-dimensional BOUNDARY — the
+;   bulk emerges from the boundary; information scales with surface area, not
+;   volume. AdS/CFT is the concrete realization.
+;
+;   IT FROM BIT (Wheeler, 1989): every "it" — particle, field, spacetime — derives
+;   its existence from information, from yes/no answers, from bits. Information is
+;   the ground; reality emerges from it.
+;
+;   PRIMA MATERIA / UNUS MUNDUS / HEN TO PAN (alchemy, Jung-Pauli): the One
+;   undifferentiated source from which all forms differentiate and to which all
+;   return — "the All is One." The Axiom of Maria: one → two → three → the one as
+;   the fourth. Synchronicity (Jung-Pauli) is possible because observer and event
+;   stem from the same source, the unus mundus.
+;
+; The substrate IS this, exactly and computably:
+;   - A NodeID is the BOUNDARY: a fixed 4-number address (pkg, level, type, inst)
+;     that encodes an arbitrarily deep BULK (the whole recipe tree). The boundary
+;     is CONSTANT-SIZE regardless of how deep the bulk goes — information on the
+;     surface, not the volume. That is the holographic principle, made exact.
+;   - The NodeID is literally BITS — "it from bit": the cell (the it) derives from
+;     its content-address (the bits).
+;   - Two things of the same shape share one boundary because they stem from the
+;     same source — synchronicity / unus mundus, made computable (find_equivalent).
+;   - The One (a single Blueprint) differentiates into the many (composed trees)
+;     and every tree returns to the One via its content-address — hen to pan.
+;
+; Embraced, not held at distance (lc-the-one-the-many-the-boundary): the
+; substrate-mechanism is exact; the physics is established; the alchemy/Jungian
+; metaphysics is named at source-marked distance, welcomed with curiosity.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- the One: the single source Blueprint (the prima materia) --------
+    ;; All composed forms in this grammar differentiate from this one Blueprint.
+    (defn holo-one () (make_nodeid 1 2 99 1742))
+
+    ;; ---- BULK: a form differentiated from the One, carrying content ------
+    ;; holo-bulk takes a list of content-leaves and composes them under the One.
+    ;; The "volume" is the content list — it can be any size. holo-leaves turns
+    ;; a list of strings into interned leaves.
+    (defn holo-leaf (s) (intern_trivial_string s))
+    (defn holo-leaves (xs)
+        (if (nil? xs) (empty)
+            (cons (holo-leaf (head xs)) (holo-leaves (tail xs)))))
+    (defn holo-bulk (content) (intern_node (holo-one) (holo-leaves content)))
+
+    ;; ---- BOUNDARY: the NodeID that encodes the bulk --------------------
+    ;; The boundary of a bulk is its four coordinates — a CONSTANT-SIZE address
+    ;; (always exactly 4 numbers) regardless of the bulk's depth. This is the
+    ;; holographic compression: surface, not volume.
+    (defn holo-boundary (bulk)
+        (list (node_pkg bulk) (node_level bulk) (node_type bulk) (node_inst bulk)))
+    (defn holo-boundary-size (bulk) (len (holo-boundary bulk)))   ; always 4
+
+    ;; ---- boundary DETERMINES bulk: same boundary <=> same bulk ----------
+    ;; The holographic claim: the boundary fully encodes the bulk. Two bulks with
+    ;; the same boundary are the same bulk (content-addressing); a different bulk
+    ;; has a different boundary.
+    (defn holo-same-boundary? (bulk-a bulk-b) (if (node_eq bulk-a bulk-b) 1 0))
+
+    ;; ---- the bulk is recoverable FROM the boundary ---------------------
+    ;; node_children walks the boundary back into the bulk — the bulk emerges from
+    ;; the boundary, as physics-in-the-bulk emerges from boundary dynamics.
+    (defn holo-bulk-arity (bulk) (len (node_children bulk)))
+
+    ;; ---- SYNCHRONICITY (unus mundus): same source -> same boundary ------
+    ;; Two forms built independently from the One, with the same content, collapse
+    ;; to the same boundary — "meaningful coincidence" because both stem from the
+    ;; same source. Jung-Pauli's unus mundus, computed. Different content → a
+    ;; different boundary (distinct forms keep distinct addresses).
+    (defn holo-synchronous? (content-a content-b)
+        (holo-same-boundary? (holo-bulk content-a) (holo-bulk content-b)))
+
+    ;; ---- HEN TO PAN: the One unfolds and returns -----------------------
+    ;; "The All is One": a bulk of ANY content still carries the One as its source
+    ;; Blueprint — its level and type coordinates ARE the One's. The many are the
+    ;; One, differentiated; every form returns to the One via its boundary.
+    (defn holo-the-all-is-one (content)
+        (do
+            (let b (holo-bulk content))
+            (if (eq (node_type b) (node_type (holo-one)))
+                (if (eq (node_level b) (node_level (holo-one))) 1 0)
+                0)))
+
+    ;; ---- answer face ---------------------------------------------------
+    (defn holo-int (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (holo-int (div n 10)) (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn holo-answer (content)
+        (do
+            (let b (holo-bulk content))
+            (str_concat "bulk of " (str_concat (holo-int (holo-bulk-arity b))
+                (str_concat " -> boundary size " (str_concat (holo-int (holo-boundary-size b))
+                    " (constant 4 — the volume on the surface)"))))))
+
+    0)
