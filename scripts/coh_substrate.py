@@ -26,7 +26,15 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "api"))
+# The `app` package lives at api/app in the repo, but the api CONTAINER flattens
+# api/ onto its root (Dockerfile.api: WORKDIR /app, COPY api/ ./), so there the
+# package root is REPO_ROOT itself (/app/app), not REPO_ROOT/api. Insert whichever
+# candidate actually holds the package so the same script runs in both layouts —
+# this is why the in-container deploy ingest failed with "No module named 'app'".
+for _candidate in (REPO_ROOT / "api", REPO_ROOT):
+    if (_candidate / "app").is_dir():
+        sys.path.insert(0, str(_candidate))
+        break
 
 from app.services.substrate import (  # noqa: E402
     annotate_path,
