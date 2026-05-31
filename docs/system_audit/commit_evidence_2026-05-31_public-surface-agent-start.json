@@ -1,0 +1,183 @@
+{
+  "date": "2026-05-31",
+  "thread_branch": "codex/public-surface-20260531",
+  "commit_scope": "Harmonize the public agent doorway and add a compact startup packet for lineage, Form, scope, wrongness practice, frequency shift, and return traces across web, API, CLI, MCP, docs, and session arrival.",
+  "files_owned": [
+    "AGENT.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "MANIFEST.md",
+    "README.md",
+    "README.template.md",
+    "api/app/main.py",
+    "api/app/routers/agent_usage_routes.py",
+    "api/app/services/agent_invitation.py",
+    "api/app/services/agent_invitation_core.py",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_invitation_surfaces.py",
+    "api/app/services/agent_start_packet.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.md",
+    "cli/README.template.md",
+    "cli/lib/commands/agent.mjs",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/shared/coherence-scoring.md",
+    "docs/shared/ecosystem-table.md",
+    "docs/shared/five-pillars.md",
+    "docs/shared/lifecycle-diagram.md",
+    "docs/shared/return-trace-contract.md",
+    "docs/shared/shared-practice.md",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/package.json",
+    "mcp-server/server.json",
+    "scripts/arrival.py",
+    "scripts/session_greeting.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "web/app/come-in/page.tsx",
+    "web/app/page.tsx",
+    "web/messages/en.json",
+    "docs/system_audit/commit_evidence_2026-05-31_public-surface-agent-start.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 -m pytest tests/test_agent_invitation.py tests/test_session_greeting.py -q",
+      "python3 -m pytest tests/test_utils_nodeid_distance.py -q",
+      "python3 scripts/build_readmes.py --check",
+      "node --check cli/lib/commands/agent.mjs && node --check mcp-server/index.mjs",
+      "python3 -m json.tool mcp-server/server.json >/dev/null && python3 -m json.tool web/messages/en.json >/dev/null",
+      "cd web && npm run build",
+      "curl -sS --max-time 10 https://api.coherencycoin.com/api/substrate/form -H 'Content-Type: application/json' -d '{\"expression\":\"?equivalent @spec(agent-pipeline)\"}' | python3 -m json.tool",
+      "Playwright viewport smoke for / and /come-in at desktop and mobile",
+      "make wellness",
+      "git diff --check",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused API/session tests pass; the nodeid distance endpoint now has its expected Form recipe and focused CI-failing tests pass; generated README surfaces are current; CLI/MCP JavaScript syntax and JSON surfaces validate; Next.js production build passes with existing warnings; public Form smoke returns JSON with a clear lookup error; desktop/mobile browser smoke shows / and /come-in markers visible with no horizontal overflow; wellness reports known standing tightness only; maintainability is at baseline and the full local PR guard reports ready_for_push=True."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub check monitoring."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Pending merge to main and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A fresh agent can enter through web, API, CLI, MCP, source, or session arrival and receive a compact, public-safe orientation for lineage, Form usage, scope gating, wrongness recovery, frequency shift, and return trace shape.",
+    "public_endpoints": [
+      "GET /api/agent/invitation",
+      "GET https://coherencycoin.com/come-in",
+      "POST https://api.coherencycoin.com/api/substrate/form"
+    ],
+    "test_flows": [
+      "API ASGI flow: GET /api/agent/invitation exposes agent_start_packet, practice_breaths, return_trace_contract, lineage, and public surface routing.",
+      "CLI source flow: coh agent invite prints START PACKET, PRACTICE BREATHS, RETURN TRACE, and existing invitation sections.",
+      "MCP metadata flow: coherence_agent_invitation describes the compact start packet and returns the shared API payload.",
+      "Web viewport flow: /come-in exposes Agent start packet and What the trace carries cards on desktop and mobile with no horizontal overflow.",
+      "Public Form smoke flow: production Form endpoint returns machine-readable JSON for the packet's smoke expression."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation, rebase, stale-PR followthrough, and local PR guard are clear; push, PR, CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "public-surface-agent-start-packet"
+  ],
+  "task_ids": [
+    "codex-public-surface-20260531"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/shared/agent-start-packet.md",
+    "api/app/services/agent_invitation.py",
+    "api/app/services/agent_invitation_core.py",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_invitation_surfaces.py",
+    "api/app/services/agent_start_packet.py",
+    "api/app/services/agent_service.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk",
+    "cli/lib/commands/agent.mjs",
+    "mcp-server/coherence_mcp_server/server.py",
+    "web/app/come-in/page.tsx",
+    "api/tests/test_agent_invitation.py"
+  ],
+  "change_files": [
+    "AGENT.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "MANIFEST.md",
+    "README.md",
+    "README.template.md",
+    "api/app/main.py",
+    "api/app/routers/agent_usage_routes.py",
+    "api/app/services/agent_invitation.py",
+    "api/app/services/agent_invitation_core.py",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_invitation_surfaces.py",
+    "api/app/services/agent_start_packet.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_invitation.py",
+    "cli/README.md",
+    "cli/README.template.md",
+    "cli/lib/commands/agent.mjs",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/shared/coherence-scoring.md",
+    "docs/shared/ecosystem-table.md",
+    "docs/shared/five-pillars.md",
+    "docs/shared/lifecycle-diagram.md",
+    "docs/shared/return-trace-contract.md",
+    "docs/shared/shared-practice.md",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk",
+    "mcp-server/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/coherence_mcp_server/server.py",
+    "mcp-server/package.json",
+    "mcp-server/server.json",
+    "scripts/arrival.py",
+    "scripts/session_greeting.py",
+    "skills/coherence-network/SKILL.md",
+    "skills/coherence-network/SKILL.template.md",
+    "web/app/come-in/page.tsx",
+    "web/app/page.tsx",
+    "web/messages/en.json"
+  ],
+  "change_intent": "runtime_feature"
+}

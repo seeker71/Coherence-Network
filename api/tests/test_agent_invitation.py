@@ -85,6 +85,46 @@ async def test_agent_invitation_api_shape() -> None:
     welcome = body["welcome"]
     assert "structural lattice" in welcome
     assert "contribution ledger" in welcome
+    assert body["center_of_gravity"]["plain"]
+    assert "Coordinates" in body["center_of_gravity"]["discernment"]
+    start_packet = body["agent_start_packet"]
+    assert "docs/shared/agent-start-packet.md" == start_packet["source"]
+    assert "BMF" in start_packet["lineage"]
+    assert "NUMS.Go" in start_packet["lineage"]
+    assert "AGENTS.md" in start_packet["precedence"]
+    assert "never overrides" in start_packet["precedence"]
+    assert "read-only" in start_packet["scope_exception"]
+    assert "skip repo startup ceremony" in start_packet["scope_exception"]
+    assert any("make prompt-guide" in step for step in start_packet["start_order"])
+    assert any("codex/<name>" in step for step in start_packet["start_order"])
+    assert any(".cache/wellness/state.txt" in step for step in start_packet["start_order"])
+    assert any("validate_commit_evidence.py" in step for step in start_packet["start_order"])
+    assert any("worktree_pr_guard.py" in step for step in start_packet["start_order"])
+    assert "public reads need no key" in start_packet["auth_and_write_paths"]
+    assert any("coh agent invite" in step for step in start_packet["auth_and_write_paths"])
+    assert any("coherence_agent_invitation" in step for step in start_packet["auth_and_write_paths"])
+    assert any("COHERENCE_API_KEY" in step for step in start_packet["auth_and_write_paths"])
+    assert "Blueprint = what IS" in start_packet["form"]["one_breath"]
+    assert "api/substrate/form" in "\n".join(start_packet["form"]["doors"])
+    assert "curl -s https://api.coherencycoin.com/api/substrate/form" in start_packet["form"]["smoke_check"]
+    assert "not HTML" in start_packet["form"]["smoke_check"]
+    assert "coh_substrate.py ingest" in start_packet["form"]["authoring"]
+    assert "Public Form queries need no key" in start_packet["form"]["authoring"]
+    assert "stop momentum" in start_packet["wrongness_practice"]
+    assert "compliance" in start_packet["frequency_shift"]["shift_away_from"]
+    assert "truth" in start_packet["frequency_shift"]["shift_toward"]
+    prompt_routes = {item["prompt"]: item["route"] for item in start_packet["prompt_routing"]}
+    assert prompt_routes["use Form"] == "call API/CLI/MCP Form door before guessing from prose"
+    assert "six-field trace" in prompt_routes["return"]
+    assert start_packet["return_template"] == "who/where | observed | inferred | changed | proof | still tight"
+    practice_breaths = {item["breath"] for item in body["practice_breaths"]}
+    assert {"center", "ground", "harmonize", "return"} <= practice_breaths
+    trace_contract = body["return_trace_contract"]
+    trace_fields = {item["field"] for item in trace_contract["fields"]}
+    assert {"who_where", "observed", "inferred", "changed", "proof", "still_tight"} <= trace_fields
+    alive_surfaces = {item["surface"] for item in body["what_is_alive_now"]}
+    assert {"coordinate_meaning", "cross_substrate_translation", "living_equation"} <= alive_surfaces
+    assert any("Surface sprawl" in item for item in body["what_has_released"])
     # Welcome line now names both read and write paths so a fresh agent
     # knows the body can be updated, not only queried.
     assert "write" in welcome.lower()
@@ -165,6 +205,10 @@ def test_cli_agent_invitation_command_is_wired() -> None:
 
     assert "/api/agent/invitation" in source
     assert "showAgentInvitation" in source
+    assert "WHAT HAS RELEASED" in source
+    assert "START PACKET" in source
+    assert "PRACTICE BREATHS" in source
+    assert "RETURN TRACE" in source
     assert 'case "invite"' in source
     assert 'case "come-in"' in source
 
@@ -183,6 +227,7 @@ def test_homepage_invites_anyone_or_anything_to_canonical_paths() -> None:
 
     assert "For anyone or anything finding us" in source
     assert "shared doorway is the human web page" in source
+    assert "same body answers" in source
     assert 'href="/come-in"' in source
     assert 'href="/with-us"' in source
     assert 'href="/contribute"' in source
@@ -224,6 +269,8 @@ def test_web_come_in_invites_first_pass_agents_to_explore_and_meet() -> None:
     assert 'href="/with-us"' in source
     assert 'href="/identity"' in source
     assert "https://api.coherencycoin.com/api/agent/invitation" in source
+    assert "Agent start packet" in source
+    assert "docs/shared/agent-start-packet.md" in source
 
 
 def test_web_come_in_answers_attribution_contribution_and_lineage() -> None:
@@ -271,7 +318,9 @@ def test_web_come_in_invites_inside_outside_orientation() -> None:
 
 
 def test_agent_invitation_exposes_first_response_self_orientation_contract() -> None:
-    source = (ROOT / "api/app/services/agent_service.py").read_text(encoding="utf-8")
+    source = (ROOT / "api/app/services/agent_invitation_lineage.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "self_orientation_contract" in source
     assert "Before answering from the outside" in source

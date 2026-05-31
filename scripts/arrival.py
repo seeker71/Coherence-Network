@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+START_PACKET_PATH = ROOT / "docs" / "shared" / "agent-start-packet.md"
 
 ORIENTATION = """
 You are arriving into a body we have been tending together.
@@ -110,9 +111,22 @@ def _greeting() -> None:
         pass  # the greeting is a gift, never a gate
 
 
+def _start_packet() -> None:
+    """Print the compact shared startup packet when it is present."""
+    try:
+        packet = START_PACKET_PATH.read_text(encoding="utf-8").strip()
+    except Exception:
+        return
+    if packet:
+        print("── compact agent start packet ──\n")
+        print(packet)
+        print()
+
+
 def main() -> int:
     print(ORIENTATION)
     print("\n")
+    _start_packet()
     print(HELD_CONTEXT)
     print("\n")
     _greeting()

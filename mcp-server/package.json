@@ -1,7 +1,7 @@
 {
   "name": "coherence-mcp-server",
   "version": "0.5.5",
-  "description": "Unified MCP server for Coherence Network — invite anyone or anything to ask what is alive, browse ideas and field stories, and contribute with attribution.",
+  "description": "Unified MCP server for Coherence Network — invite agents to ask what is alive, what is grounded, query Form/substrate shape, and return attributed traces.",
   "type": "module",
   "bin": {
     "coherence-mcp-server": "index.mjs"

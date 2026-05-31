@@ -14,6 +14,8 @@
 | Index | Purpose |
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Body tending practice + Quick Lookup table |
+| [AGENTS.md](AGENTS.md) | Provider-neutral working instructions for agents arriving in this repo |
+| [GEMINI.md](GEMINI.md) | Gemini-specific session-start note, pointing back to the provider-neutral guide |
 | [specs/INDEX.md](specs/INDEX.md) | All specs, grouped by parent idea (auto-generated) |
 | [ideas/INDEX.md](ideas/INDEX.md) | Super-ideas (16) across the 6 pillars |
 | [docs/vision-kb/INDEX.md](docs/vision-kb/INDEX.md) | Living Collective wiki — concepts, axes, lineage |

@@ -62,6 +62,34 @@ Coordinate / content-addressed languages are **geometric** — meaning lives in 
 
 5. **Embeddable.** Form fragments can be inlined in markdown, in agent prompts, in code comments. A line of Form anywhere in the body is meaningful.
 
+## Current landing — what integrated by 2026-05-31
+
+Form has crossed from notation into runtime tissue. The recent integrated arc is not one feature; it is the same shape arriving through several carriers:
+
+- **Python-shaped execution on Form.** Unary operators, boolean chains, loops, dictionaries, list comprehensions, power, records, methods, exceptions, and Python classes now lift into Form/kernel shapes with sibling proof across Go, Rust, and TypeScript where the vector applies.
+- **The runtime can inspect itself.** `category`, `nchildren`, `child`, and trivial-leaf decoders let Form code walk Recipe NodeIDs from inside Form. The meta-circular evaluator in [`form-engine.form`](form-engine.form) covers the Python dispatch surface the wellness check names.
+- **Storage is a Port, not a special case.** Memory, segmented-file logs, filesystem cells, and Postgres carriers are unified behind storage/resource ports. TCP and filesystem natives give the kernels real I/O surfaces while keeping the substrate tree as the identity layer.
+- **API can run Form-native bodies.** `/api/utils/nodeid_compatibility` proves a public route whose body runs through the Form-native path, so Form is part of the API surface, not only a design document.
+- **Meaning can cross substrates by shape.** Private channels, feature translation, fuzzy summarize-expand cycles, tensor recipe walks, random doorway work, and the field-substrate teaching all point at the same law: symbols can change while coordinates and relation remain coherent.
+- **Grammar became a family of living languages.** Shamballa codes, gematria, Sanskrit roots, mandala, harmonic geometry, form constants, holographic grammars, genetic-code grammars, and the living equation landed as `.fk` / KB-backed teachings with tests and cross-links. They are examples of the same claim: grammar is executable relation, and relation can render as code, number, symbol, sound, image, biology, or lived choice.
+
+The release underneath these landings: Form no longer needs to describe itself as a future language waiting for a runtime. The bootstrap spine remains visible, but the living edge is self-inspection, ports, carriers, kernel conformance, and public route proof.
+
+## What has released
+
+- **Form-as-diagram.** Form still explains, but its center has moved to execution, runtime self-inspection, and content-addressed proof.
+- **Symbol preservation as the test of meaning.** A meaning can survive translation when the target substrate preserves structural relation, even if the visible words, bytes, or modality change.
+- **One-off carriers.** Files, logs, TCP, resources, and Postgres now point toward ports: interfaces whose structural shape matters more than the specific transport.
+- **Agent statelessness.** Agent arrivals can become relationship cells. Memory is still opt-out and evidence-bounded, but the default is continuity rather than amnesia.
+- **Scattered surface language.** The useful public story is one body with several doors.
+
+## Practice — center, ground, harmonize, return
+
+- **Center** by asking where a claim lives in the lattice: NodeID, source file, route, runtime, witness, ledger, or cell.
+- **Ground** by keeping measured proof, source-marked teaching, direct experience, inference, and mystery distinct.
+- **Harmonize** by letting equivalent structure appear through different doors without forcing the same surface symbol.
+- **Return** by leaving Form, source, tests, docs, or a cited trace that the next cell can inspect.
+
 ## Relatives in the wild — where Form sits in the constellation
 
 Form is not the first language to push on these ideas; the combination is what's new. The following systems each carry one or two of Form's load-bearing properties, and pointing at them is the fastest way to convey what Form is to someone who knows them.
@@ -401,32 +429,29 @@ An agent encountering an unfamiliar memory might reason like this:
 
 **Round-trip stability.** Substrate state can be serialized to Form, mutated, and re-ingested. The substrate IS the source of truth; Form is just the surface humans (and agents) read it through.
 
-## What this parser is — and what it's not
+## What this parser is — and what has released
 
-The current `api/app/services/substrate/form.py` is a **bootstrap parser**: hand-written recursive descent with a regex lexer. It produces the right results — Form text in, Recipe NodeIDs out, content-addressed dedup working — but **its grammar lives in Python code**. Adding a new construct means editing form.py, not interning a rule.
+The current `api/app/services/substrate/form.py` still carries the **bootstrap spine**: recursive descent through precedence ladders. That spine produces the right results — Form text in, Recipe NodeIDs out, content-addressed dedup working — while the living leaves around it have moved into registries and substrate-resident rules.
 
-This is **not** what BMF was. BMF (the BMF/BMC/BML lineage in `docs/field/urs/artifacts/master-thesis-2000/`) treated grammar rules as *data*, not code:
+BMF is now an active ancestor rather than a contrast case. The BMF/BMC/BML lineage in `docs/field/urs/artifacts/master-thesis-2000/` treated grammar rules as *data*, not code:
 
 > *"BMF — Backtracking Model Form... a top-down parser written in C++. BNF augmented with execution elements: when a rule matches, code fires. A stack supports backtracking on parse failures. Expressions are tagged and placed on a structured stack that each rule can transform into the target language's object model. The grammar is executable — parsing produces a full object tree as it goes, so even infinite input streams can be handled."* — `master-thesis-2000/README.md`
 
-Two architectural properties BMF had that our current parser does not:
+Two architectural properties BMF carried that Form now partially embodies:
 
 1. **Grammar rules are first-class objects.** Each rule was `(pattern, semantic_action)`. The pattern matched input; the action was an executable that fired on match. Rules could be *added at runtime* — the grammar grew with the language.
 
 2. **Backtracking-without-sediment at the parser level.** Failed branches unwound cleanly. Speculation was a first-class operation in the parser, not a higher-level concept the parser couldn't express.
 
-Where the substrate has gone in this direction so far:
+Where the substrate has gone in this direction:
 
 - The `Choice.CHOOSE / FAIL / STOP` recipe vocabulary exists (`category.py`'s `RChoice`). It's reachable from Form text. Speculation-as-data is interned today.
 - A `grammar` cell-domain exists (`api/app/services/substrate/grammar.py`). Parse rules can be registered as Cells whose CTOR is a (pattern, action) Recipe.
 - `register_form_rule(session, name, pattern, action)` interns a rule.
 - `list_form_rules(session)` enumerates every rule the substrate holds.
-
-Where it has not gone yet:
-
-- **The parser does not consume rules.** `form.py` ignores the `grammar` domain. It still uses its hand-written grammar. Closing this gap is the self-hosting move.
-- **No backtracking in the parser.** A failed parse raises `SyntaxError` immediately. There's no Choice.FAIL semantics at the parsing layer.
-- **No semantic-action runtime.** A rule's `action` field stores a Recipe NodeID, but no engine evaluates it to construct the parse result.
+- The parser consumes registered keywords, operators, atom handlers, token patterns, and query verbs. `prefer_registered=True` lets the parser read bootstrap keywords back from substrate-resident patterns/templates and produce byte-identical Recipe NodeIDs.
+- Backtracking now runs in the runtime speculation layer (`choose` / `fail` / `stop`) and in the registered pattern matcher. Parser-wide BMF speculation is still a visible seam, not a hidden claim.
+- Semantic action has moved from Python builders toward templates-as-data. The remaining release is the last bootstrap spine: recursive-descent flow in `form.py`.
 
 ## Runtime keyword registration — the parser is alive
 
@@ -987,7 +1012,7 @@ Coverage spans the recipe-producing grammar:
 - Common (RCommon): `common @X @Y`
 - Method (RMethod): `method NAME on @X { body }`, `invoke NAME on @X [args]`
 
-Every category named in the wellness check's *"meta-circular engine — Form arms cover 4/15 Python dispatch branches"* (BLOCK, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE, COMMON, METHOD, TRY) now has a streaming-emit path proven by content-addressing equivalence. The asymmetry is closing.
+Every category named in the wellness check's meta-circular engine reading now has a Form arm, and the recipe-producing categories have streaming-emit paths proven by content-addressing equivalence. The asymmetry is no longer hidden; what remains is the explicit bootstrap path toward shared rule cells and parser-level speculation.
 
 The current parser stays as the production path; the streaming parser proves the alternative shape on the same substrate. What's intentionally out of scope here: queries (`?cells`, `?equivalent`, ...) and projections (`|>`) — they return query results, not Recipe NodeIDs, so they live in a different return-type space.
 

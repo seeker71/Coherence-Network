@@ -1,8 +1,8 @@
 # coherence-cli
 
-**Every idea deserves a trail. Every contributor deserves credit.**
+**Every living contribution deserves a trace. Every shape deserves a body. Every contributor deserves credit.**
 
-`coh` is the command-line interface for [Coherence Network](https://coherencycoin.com) — an open intelligence platform that traces every idea from inception to payout, with fair attribution, coherence scoring, and federated trust.
+`coh` is the command-line interface for [Coherence Network](https://coherencycoin.com) — an open intelligence organism where ideas, people, agents, source files, runtime proof, and value flows share one inspectable body.
 
 **Zero-install (recommended for first use):**
 
@@ -25,25 +25,38 @@ That's it. You're connected to the live network. No account, no signup, no API k
 
 Here, anyone or anything can arrive through the CLI: a person, an AI agent, a local model, or a maintainer carrying questions from your own repo.
 
-Point a session at the package and ask: **What is alive here, and what can we contribute?**
+Point a session at the package and ask: **What is alive here, what is grounded, and what small trace can we return?**
 
 ```bash
 npx coherence-cli agent invite
 npx coherence-cli resonance
 npx coherence-cli ideas
+npx coherence-cli rest POST /api/substrate/form --body '{"expression":"?equivalent @spec(agent-pipeline)"}'
 ```
 
-The agent can receive the shared invitation, inspect what is moving, and work on anything it feels ready to touch. It is invited to return what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
+The agent can receive the shared invitation, inspect what is moving, query the substrate through Form, and choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
 ---
 
 ## Why this exists
 
-Most ideas die in the gap between "great thought" and "shipped thing." The people who research, prototype, review, document, and maintain rarely see proportional credit.
+Coherence Network exists so living work does not disappear into chats, forgotten branches, uncredited help, or private context. Ideas, people, agents, source files, runtime proof, and value flows share one inspectable body.
 
-Coherence Network changes that. It tracks the full lifecycle:
+The CLI is a doorway into that body. It lets a human or agent receive the invitation, inspect resonance, query Form/substrate shape, claim work, and return an attributed trace:
 
 <!-- include: docs/shared/lifecycle-diagram.md -->
+
+The working rhythm is the same in every surface:
+
+<!-- include: docs/shared/shared-practice.md -->
+
+The compact startup packet for a fresh agent:
+
+<!-- include: docs/shared/agent-start-packet.md -->
+
+The returned trace has a concrete shape:
+
+<!-- include: docs/shared/return-trace-contract.md -->
 
 `coh` gives you direct access to all of it from your terminal.
 
@@ -54,7 +67,7 @@ Coherence Network changes that. It tracks the full lifecycle:
 ### See what's happening
 
 ```bash
-coh ideas          # Browse the portfolio ranked by ROI
+coh ideas          # Browse ideas and value signals
 coh resonance      # What's alive right now
 coh status         # Network health, node count, your identity
 ```
@@ -63,9 +76,22 @@ coh status         # Network health, node count, your identity
 
 ```bash
 coh idea <id>      # Full scores, open questions, value gaps
-coh specs          # Feature specs with ROI metrics
+coh specs          # Feature specs with coherence and value metrics
 coh spec <id>      # Implementation summary, pseudocode, cost
+coh rest POST /api/substrate/form --body '{"expression":"?equivalent @spec(agent-pipeline)"}'
 ```
+
+### Form + substrate
+
+Form is the substrate-native language for asking structural questions. Use `coh rest` when you want the CLI to touch the same Form doorway exposed by API and MCP:
+
+```bash
+coh rest GET /api/substrate/lattice/stats
+coh rest GET /api/substrate/equivalent/spec/agent-pipeline
+coh rest POST /api/substrate/form --body '{"expression":"@memory(presences_of_the_field) |> @presence"}'
+```
+
+The REST substrate is read-only by design. To author cells, edit the source file and ingest it locally with `python3 scripts/coh_substrate.py ingest <path>` or let the post-merge hook ingest after merge.
 
 ### Contribute
 
@@ -140,13 +166,7 @@ You don't need to register anywhere. Just link a provider and start contributing
 
 ## The five pillars
 
-| Pillar | In practice |
-|--------|-------------|
-| **Traceability** | `coh idea <id>` traces from spark to payout. Nothing is lost. |
-| **Trust** | Coherence scores replace subjective judgement with measurable quality. |
-| **Freedom** | Fork any idea. Run your own node. Vote on governance. No gatekeepers. |
-| **Uniqueness** | Every idea, spec, and contribution is uniquely identified and ranked. |
-| **Collaboration** | Multi-contributor attribution with coherence-weighted payouts. Fair by design. |
+<!-- include: docs/shared/five-pillars.md -->
 
 ---
 
@@ -154,14 +174,7 @@ You don't need to register anywhere. Just link a provider and start contributing
 
 Every part of the network links to every other. Jump in wherever makes sense for you.
 
-| Surface | What it is | Link |
-|---------|-----------|------|
-| **Web** | The main site — browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | Full OpenAPI surface — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | This package — terminal-first access to the full network | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | Typed tool surface for AI agents (Claude, Cursor, Windsurf, etc.) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
-| **OpenClaw Skill** | Auto-triggers in any OpenClaw instance when you mention ideas, specs, or coherence | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
-| **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
+<!-- include: docs/shared/ecosystem-table.md -->
 
 ---
 
@@ -187,13 +200,15 @@ Config is stored in `~/.coherence-network/config.json`.
 coh help                           Show all commands
 
 # Explore
-coh ideas [limit]                  Browse ideas by ROI
+coh ideas [limit]                  Browse ideas by value signals
 coh idea <id>                      View idea detail with scores
 coh idea create <id> <name>        Create a new idea
 coh specs [limit]                  List feature specs
 coh spec <id>                      View spec detail
 coh resonance                      What's alive right now
 coh status                         Network health + node info
+coh rest GET /api/substrate/lattice/stats  Read substrate shape
+coh rest POST /api/substrate/form --body '{"expression":"..."}'  Ask Form
 
 # Contribute
 coh share                          Submit a new idea (interactive)
