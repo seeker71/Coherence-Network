@@ -276,11 +276,31 @@
                         after-name)))
             (lift-result base tokens))))
 
+    ;; lift-lambda-params — collect lambda parameter name-leaves up to the
+    ;; ":" separator, returning (param-leaves . tokens-after-colon) in the
+    ;; lift-result shape (lift-recipe = the leaf list, lift-rest = the body
+    ;; tokens). Commas between params are skipped; the ":" is consumed.
+    ;; Mirrors lift-def-params-loop but stops at the colon rather than a
+    ;; close-paren, carrying the remaining tokens forward for the body.
+    (defn lift-lambda-params (tokens acc)
+        (if (nil? tokens) (lift-result (reverse acc) tokens)
+            (do
+                (let t (head tokens))
+                (if (tok-op? t ":")
+                    (lift-result (reverse acc) (tail tokens))
+                (if (tok-op? t ",")
+                    (lift-lambda-params (tail tokens) acc)
+                (if (tok-name? t)
+                    (lift-lambda-params (tail tokens)
+                        (cons (intern_trivial_string (tok-value t)) acc))
+                    (lift-lambda-params (tail tokens) acc)))))))
+
     ;; --- primary expression ----------------------------------------
     ;;
     ;; Integers, identifiers, calls, parenthesised expressions, list
-    ;; literals, True/False/None keyword literals. Subscript trailers
-    ;; (xs[i]) are folded on after the base via lift-subscript-tail.
+    ;; literals, True/False/None keyword literals, lambda expressions.
+    ;; Subscript trailers (xs[i]) are folded on after the base via
+    ;; lift-subscript-tail.
 
     (defn lift-primary (tokens)
         (if (nil? tokens)
@@ -324,6 +344,23 @@
                     (intern_node PY-BMF-STRING
                         (list (intern_trivial_string (tok-value t))))
                     rest)
+            (if (tok-keyword? t "lambda")
+                ;; lambda PARAMS : BODY → PY-BMF-LAMBDA(param-leaves..., body).
+                ;; Collect params up to the colon, then lift the body as a full
+                ;; expression — it runs to the end of the enclosing expression;
+                ;; a comma, closing bracket, closing paren, or end-of-tokens
+                ;; stops lift-expr. The eval
+                ;; PY-BMF-LAMBDA arm builds the anonymous closure; the body
+                ;; closes over the def-site env. No subscript-tail — a lambda
+                ;; literal isn't indexed in the surface these demos carry.
+                (do
+                    (let params-result (lift-lambda-params rest (empty)))
+                    (let body-result (lift-expr (lift-rest params-result)))
+                    (lift-result
+                        (intern_node PY-BMF-LAMBDA
+                            (append (lift-recipe params-result)
+                                    (list (lift-recipe body-result))))
+                        (lift-rest body-result)))
             (if (tok-keyword? t "True")
                 ;; True → PY-BMF-INT(1). Matches the interpreter's
                 ;; int-as-bool convention (compare/if treat 1 as true).
@@ -414,7 +451,7 @@
                            (list (tok-kind t) (tok-value t)))
                     (lift-result
                         (intern_node PY-BMF-PASS (empty))
-                        rest))))))))))))))))
+                        rest)))))))))))))))))
 
     ;; --- operator precedence ---------------------------------------
     ;;
@@ -461,8 +498,12 @@
                     (op-prec (tok-value t))
                 (if (and (str_eq (tok-kind t) "py-keyword")
                          (or (str_eq (tok-value t) "and")
-                             (str_eq (tok-value t) "or")))
-                    (op-prec (tok-value t))
+                         (or (str_eq (tok-value t) "or")
+                             (str_eq (tok-value t) "in"))))
+                    ;; `in` is a membership comparison — bind at comparison
+                    ;; level (20). (The `in` inside a `for` is stripped by
+                    ;; lift-for before this loop ever sees it.)
+                    (if (str_eq (tok-value t) "in") 20 (op-prec (tok-value t)))
                     (sub 0 1))))))
 
     ;; --- binop climbing ---------------------------------------------
@@ -518,6 +559,14 @@
                             (intern_node COMPARE-GT    (list left rhs-recipe))
                         (if (str_eq op ">=")
                             (intern_node COMPARE-GE    (list left rhs-recipe))
+                        (if (str_eq op "in")
+                            ;; membership: PY-BMF-COMPARE with op "in". The
+                            ;; eval py-compare-apply "in" arm tests dict-key /
+                            ;; list-element membership via py-member?.
+                            (intern_node PY-BMF-COMPARE
+                                (list left
+                                      (intern_trivial_string "in")
+                                      rhs-recipe))
                         (if (op-is-compare? op)
                             (intern_node PY-BMF-COMPARE
                                 (list left
@@ -536,7 +585,7 @@
                             (intern_node PY-BMF-BINOP
                                 (list left
                                       (intern_trivial_string op)
-                                      rhs-recipe)))))))))))))))))
+                                      rhs-recipe))))))))))))))))))
                     (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
 
     ;; --- conditional expression ------------------------------------
@@ -807,6 +856,77 @@
                       (intern_trivial_string base-op)
                       value))))
 
+    ;; subscript-assign statement: `NAME [ INDEX ] = VALUE`. The cpython
+    ;; classifier leaves this as kind "expr" — tokens[1] is "[" not "=" —
+    ;; so the dispatcher catches it explicitly before the bare-expr arm and
+    ;; emits PY-BMF-SUB-ASSIGN(name-leaf, index-recipe, value-recipe), the
+    ;; same shape the grammar path's pybmf-emit-subscript-assign uses. The
+    ;; eval routes it to py-dict-set + env-rebind. The index bracket may nest
+    ;; (NAME[a[b]] = v), so the scans track depth to find the outer "]".
+
+    ;; stmt-subscript-assign? — 1 iff tokens are NAME "[" ... "]" "=" VALUE.
+    ;; Scans from just after the opening "[" at depth 1; when the matching
+    ;; "]" closes depth to 1 again, the next token must be "=".
+    (defn subscript-assign-scan (toks depth)
+        (if (nil? toks) 0
+            (do
+                (let t (head toks))
+                (if (tok-op? t "[")
+                    (subscript-assign-scan (tail toks) (add depth 1))
+                (if (tok-op? t "]")
+                    (if (eq depth 1)
+                        (if (and (not (nil? (tail toks)))
+                                 (tok-op? (head (tail toks)) "="))
+                            1 0)
+                        (subscript-assign-scan (tail toks) (sub depth 1)))
+                    (subscript-assign-scan (tail toks) depth))))))
+
+    (defn stmt-subscript-assign? (statement-tree)
+        (do
+            (let toks (python-statement-tree-tokens statement-tree))
+            (if (lt (len toks) 5) 0
+                (if (and (tok-name? (head toks))
+                         (tok-op? (nth toks 1) "["))
+                    (subscript-assign-scan (drop 2 toks) 1)
+                    0))))
+
+    ;; index tokens between the outer "[" and its matching "]".
+    (defn subscript-assign-index (toks depth acc)
+        (if (nil? toks) (reverse acc)
+            (do
+                (let t (head toks))
+                (if (tok-op? t "[")
+                    (subscript-assign-index (tail toks) (add depth 1) (cons t acc))
+                (if (tok-op? t "]")
+                    (if (eq depth 1)
+                        (reverse acc)
+                        (subscript-assign-index (tail toks) (sub depth 1) (cons t acc)))
+                    (subscript-assign-index (tail toks) depth (cons t acc)))))))
+
+    ;; value tokens after the outer "]" and the "=".
+    (defn subscript-assign-after (toks depth)
+        (if (nil? toks) toks
+            (do
+                (let t (head toks))
+                (if (tok-op? t "[")
+                    (subscript-assign-after (tail toks) (add depth 1))
+                (if (tok-op? t "]")
+                    (if (eq depth 1)
+                        (tail (tail toks))
+                        (subscript-assign-after (tail toks) (sub depth 1)))
+                    (subscript-assign-after (tail toks) depth))))))
+
+    (defn lift-subscript-assign (statement-tree)
+        (do
+            (let toks (python-statement-tree-tokens statement-tree))
+            (let name (tok-value (head toks)))
+            (let idx (lift-recipe
+                         (lift-expr (subscript-assign-index (drop 2 toks) 1 (empty)))))
+            (let value (lift-recipe
+                           (lift-expr (subscript-assign-after (drop 2 toks) 1))))
+            (intern_node PY-BMF-SUB-ASSIGN
+                (list (intern_trivial_string name) idx value))))
+
     ;; lift-statement dispatches on both `kind` (first-token classifier) and
     ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
     ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
@@ -828,10 +948,11 @@
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
+            (if (eq (stmt-subscript-assign? statement-tree) 1) (lift-subscript-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))))))
+                    (intern_node PY-BMF-PASS (empty)))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
