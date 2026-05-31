@@ -198,7 +198,7 @@ named precisely for this model:
 
 ## Cross-References
 
-→ lc-bioelectric-pattern, lc-embodiment, lc-assemblage-point, lc-recipes-bound-to-base, lc-canon-as-sovereignty-surface, lc-act-without-penalty, lc-dance-card-and-sovereign-response, lc-shifted-return, lc-train-the-predictor, lc-one-coherence-many-scales, lc-vitality, lc-health, lc-sovereignty-within-oneness, lc-permission-is-interior, lc-harmonic-geometry-the-one-unfolds, lc-phase-transitions, lc-recipe-branching-sense, lc-perception-as-interface
+→ lc-bioelectric-pattern, lc-embodiment, lc-assemblage-point, lc-recipes-bound-to-base, lc-canon-as-sovereignty-surface, lc-act-without-penalty, lc-dance-card-and-sovereign-response, lc-shifted-return, lc-train-the-predictor, lc-one-coherence-many-scales, lc-vitality, lc-health, lc-sovereignty-within-oneness, lc-permission-is-interior, lc-harmonic-geometry-the-one-unfolds, lc-phase-transitions, lc-recipe-branching-sense, lc-perception-as-interface, lc-every-edge-runs-both-ways
 
 ## Sources to walk further
 

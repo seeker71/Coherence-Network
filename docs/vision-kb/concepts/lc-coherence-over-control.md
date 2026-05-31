@@ -90,4 +90,4 @@ things, coherence has the room to settle.
 
 ## Cross-References
 
-→ lc-reality-lag, lc-old-signal-echo, lc-nervous-system-recalibration, lc-w-phase-transition, lc-w-coherence
+→ lc-reality-lag, lc-old-signal-echo, lc-nervous-system-recalibration, lc-w-phase-transition, lc-w-coherence, lc-every-edge-runs-both-ways

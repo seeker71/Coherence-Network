@@ -1,0 +1,74 @@
+; bidirectional-flow-band.fk — every edge runs both ways; the frozen loop thaws.
+;
+; Proves three-way (Go/Rust/TS) the load-bearing facts of the bidirectional
+; reading of the living equation: every forward edge has a reverse edge (the
+; graph is a web of loops, not a one-way line); you can ENTER FROM THE OUTPUT
+; (the reverse door has real gain — the already-whole-self move); a single push
+; into a deep basin is ABSORBED (why pushing harder against a freeze fails); the
+; unblock lever is CANON-RELATIVE (the same locus thaws by a different lever in
+; a different belief system); RE-ATTRIBUTION makes the same frozen state workable
+; (attributing to a changeable input restores agency); and the INTEGRATED
+; COHERENT return escapes a basin no single lever can — the computed ground of
+; hope.
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   bidirectionality: every forward edge has a reverse edge                  →      1
+;   enter-from-the-output: the reverse door has real gain (> floor)          →     10
+;   the frozen loop: a single push ≤ a deep basin is absorbed                →    100
+;   the unblock lever is canon-relative (levin/dispenza/castaneda differ)    →   1000
+;   re-attribution: changeable-input attribution is workable, structure not  →  10000
+;   integrated coherence escapes a basin no single lever can                 → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/grammars/bidirectional-flow.fk
+;
+(do
+    ;; --- BIDIRECTIONALITY: every forward edge has a reverse edge ------------
+    ;; structure→health has health→structure; beliefs→sovereignty has its
+    ;; reverse. the graph is a cycle, not a line.
+    (let bidir-ok
+        (if (eq (bf-has-reverse? "whole" "structure" "health") 1)
+            (if (eq (bf-has-reverse? "whole" "beliefs" "sovereignty") 1) 1 0) 0))
+
+    ;; --- ENTER FROM THE OUTPUT: the reverse door has REAL gain -------------
+    ;; entering from health reshapes structure with full gain (9), not the
+    ;; nominal floor — the already-whole-self move is a real edge, not a wish.
+    (let door-ok
+        (if (gt (bf-reverse-gain "whole" "health" "structure") (liv-floor)) 10 0))
+
+    ;; --- THE FROZEN LOOP: a single push into a deep basin is absorbed ------
+    ;; the best single lever (≤ 9) cannot clear a deep basin (10); the system
+    ;; returns to the well. this is why willpower / positive-thinking fail
+    ;; against a real freeze — the push is absorbed, not wrong.
+    (let absorbed-ok
+        (if (eq (bf-absorbed? (bf-single-push "dispenza" "health") (bf-basin-deep)) 1) 100 0))
+
+    ;; --- CANON-RELATIVE UNBLOCK: same locus, different lever per system ----
+    ;; a loop surfacing as health thaws by structure in Levin's view, choices in
+    ;; Dispenza's, beliefs in Castaneda's — three honest doors, not one truth.
+    (let canon-ok
+        (if (str_eq (bf-unblock-lever "levin" "health") "structure")
+            (if (str_eq (bf-unblock-lever "dispenza" "health") "choices")
+                (if (str_eq (bf-unblock-lever "castaneda" "health") "beliefs") 1000 0) 0) 0))
+
+    ;; --- RE-ATTRIBUTION: the same frozen state made workable ---------------
+    ;; attributing the freeze to a changeable input (belief / choice) restores
+    ;; agency; attributing it to structure feels permanent. the shift flips 0→1.
+    (let reattr-ok
+        (if (eq (bf-workable? "structure") 0)
+            (if (eq (bf-workable? "beliefs") 1)
+                (if (eq (bf-workable? "choices") 1) 10000 0) 0) 0))
+
+    ;; --- THE INTEGRATED COHERENT UNBLOCK escapes a basin no single can ----
+    ;; integrated gain (all reverse edges, coherent) > deep basin, AND every
+    ;; single lever ≤ basin. the computed ground of hope: the whole-system,
+    ;; coherent return clears what no single effort could.
+    (let escape-ok
+        (if (eq (bf-escapes? "health" (bf-basin-deep)) 1)
+            (if (eq (bf-absorbed? (bf-single-push "levin" "health") (bf-basin-deep)) 1)
+                (if (eq (bf-absorbed? (bf-single-push "castaneda" "health") (bf-basin-deep)) 1) 100000 0) 0) 0))
+
+    (add bidir-ok
+    (add door-ok
+    (add absorbed-ok
+    (add canon-ok
+    (add reattr-ok escape-ok))))))
