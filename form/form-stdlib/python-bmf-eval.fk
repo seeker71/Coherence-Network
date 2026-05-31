@@ -438,6 +438,55 @@
             (py-range-build 0 (head args) (empty))
             (py-range-build (head args) (head (tail args)) (empty))))
 
+    ;; ---- reducing builtins: sum / min / max / len / abs ----------------
+    ;;
+    ;; Like range, these are intercepted in the CALL arm before the env
+    ;; lookup — they're kernel-level reductions, not user closures. Each
+    ;; takes the already-evaluated Form arg-list (py-eval-args result):
+    ;;   sum/min/max/len  receive one argument, an iterable Form list
+    ;;   abs              receives one scalar
+    ;; They lean only on the int natives the MATH arm already uses
+    ;; (add/sub/lt/gt) plus list walking (head/tail/nil?/len), so no
+    ;; kernel change is needed. String/float arguments are a later breath
+    ;; (they need an is_str predicate the kernel doesn't expose yet).
+
+    (defn py-sum-loop (xs acc)
+        (if (nil? xs) acc
+            (py-sum-loop (tail xs) (add acc (head xs)))))
+
+    (defn py-min-loop (xs best)
+        (if (nil? xs) best
+            (py-min-loop (tail xs)
+                (if (lt (head xs) best) (head xs) best))))
+
+    (defn py-max-loop (xs best)
+        (if (nil? xs) best
+            (py-max-loop (tail xs)
+                (if (gt (head xs) best) (head xs) best))))
+
+    ;; py-builtin — dispatch one builtin by name over the evaluated args.
+    ;; sum starts from 0 (Python's sum([]) is 0); min/max seed from the
+    ;; first element (Python raises on the empty sequence — that error path
+    ;; is a later breath, every demo passes a non-empty list). len reads
+    ;; the Form list length. abs negates a negative scalar.
+    (defn py-builtin (name args)
+        (if (str_eq name "sum") (py-sum-loop (head args) 0)
+        (if (str_eq name "min") (py-min-loop (tail (head args)) (head (head args)))
+        (if (str_eq name "max") (py-max-loop (tail (head args)) (head (head args)))
+        (if (str_eq name "len") (len (head args))
+        (if (str_eq name "abs")
+            (if (lt (head args) 0) (sub 0 (head args)) (head args))
+            (do (trace "py-builtin: unknown" name) (head (empty)))))))))
+
+    ;; py-builtin? — 1 iff name is one of the reducing builtins above.
+    (defn py-builtin? (name)
+        (if (str_eq name "sum") 1
+        (if (str_eq name "min") 1
+        (if (str_eq name "max") 1
+        (if (str_eq name "len") 1
+        (if (str_eq name "abs") 1
+            0))))))
+
     (defn py-eval (recipe env)
         (do
             (let cat (node_category recipe))
@@ -532,6 +581,10 @@
                     ;; the env lookup and return its Form list directly.
                     (if (str_eq callee-name "range")
                         (py-range arg-values)
+                    ;; sum/min/max/len/abs are reducing builtins — same
+                    ;; intercept-before-lookup shape as range.
+                    (if (eq (py-builtin? callee-name) 1)
+                        (py-builtin callee-name arg-values)
                         (do
                             (let callee (py-env-lookup env callee-name))
                             ;; If the callee is a class, construct an instance
@@ -548,7 +601,7 @@
                                                     (py-closure-params callee)
                                                     arg-values
                                                     captured-with-self))
-                                    (py-eval (py-closure-body callee) call-env))))))
+                                    (py-eval (py-closure-body callee) call-env)))))))
             (if (node_eq cat PY-BMF-ATTR)
                 (do
                     ;; ATTR children: obj-recipe, attr-leaf. obj.attr →
