@@ -91,7 +91,7 @@ if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
   fi
   if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
     echo "prompt-entry-guide: sibling worktree continuity risk detected."
-    echo "Dirty siblings are guidance; detached or unpushed-ahead siblings can strand history."
+    echo "Dirty or stale sibling branches are guidance; detached or recent unpushed-ahead siblings can strand history."
     echo "Continue from that worktree, attach/push it, or merge/cherry-pick its branch before starting new work."
     echo "Temporary bypass while tending continuity awareness: PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
     exit 1
