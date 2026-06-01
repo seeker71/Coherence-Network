@@ -139,6 +139,7 @@ function valueToString(v: Value): string {
     case "ctor":
       return `${v.ctor_name}(…)`;
   }
+  return "<value>";
 }
 
 interface Result {

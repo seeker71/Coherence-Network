@@ -119,12 +119,11 @@ fn pg_drop(h: i64) -> bool {
 fn pg_cell_to_string(row: &postgres::Row, ci: usize) -> String {
     let ty = row.columns()[ci].type_().name().to_string();
     match ty.as_str() {
-        "text" | "varchar" | "bpchar" | "name" => {
-            row.try_get::<usize, Option<String>>(ci)
-                .ok()
-                .flatten()
-                .unwrap_or_default()
-        }
+        "text" | "varchar" | "bpchar" | "name" => row
+            .try_get::<usize, Option<String>>(ci)
+            .ok()
+            .flatten()
+            .unwrap_or_default(),
         "int8" => row
             .try_get::<usize, Option<i64>>(ci)
             .ok()
@@ -188,6 +187,51 @@ const RB_FNDEF: u32 = 31;
 const RB_FNCALL: u32 = 32;
 const RB_IDENT: u32 = 33;
 const RB_LIST: u32 = 34;
+const RB_FIELD: u32 = 88;
+const RB_CARRIER: u32 = 89;
+const RB_TOPOLOGY: u32 = 90;
+const RB_FIBER: u32 = 91;
+const RB_REGION: u32 = 92;
+const RB_BOUNDARY: u32 = 93;
+const RB_NEIGHBORHOOD: u32 = 94;
+const RB_MATCH_FIELD: u32 = 95;
+const RB_DELTA: u32 = 96;
+const RB_RESOLVE: u32 = 97;
+const RB_COMMIT: u32 = 98;
+const RB_STEP: u32 = 99;
+const RB_LIFT: u32 = 100;
+const RB_SAMPLE: u32 = 101;
+const RB_OBSERVE: u32 = 102;
+const RB_INTERVENE: u32 = 103;
+const RB_RESIDUAL: u32 = 104;
+const RB_RECEIPT: u32 = 105;
+const RB_COST: u32 = 106;
+const RB_CONSENT: u32 = 107;
+const RB_EVIDENCE: u32 = 108;
+#[allow(dead_code)]
+const RB_FIELD_PRIMITIVES: [u32; 21] = [
+    RB_FIELD,
+    RB_CARRIER,
+    RB_TOPOLOGY,
+    RB_FIBER,
+    RB_REGION,
+    RB_BOUNDARY,
+    RB_NEIGHBORHOOD,
+    RB_MATCH_FIELD,
+    RB_DELTA,
+    RB_RESOLVE,
+    RB_COMMIT,
+    RB_STEP,
+    RB_LIFT,
+    RB_SAMPLE,
+    RB_OBSERVE,
+    RB_INTERVENE,
+    RB_RESIDUAL,
+    RB_RECEIPT,
+    RB_COST,
+    RB_CONSENT,
+    RB_EVIDENCE,
+];
 
 pub(crate) const TRIV_INT: u32 = 1;
 pub(crate) const TRIV_STRING: u32 = 2;
@@ -410,6 +454,27 @@ impl Trace {
             RB_ACCESS => "ACCESS",
             RB_METHOD => "METHOD",
             RB_TRANSMUTE => "TRANSMUTE",
+            RB_FIELD => "FIELD",
+            RB_CARRIER => "CARRIER",
+            RB_TOPOLOGY => "TOPOLOGY",
+            RB_FIBER => "FIBER",
+            RB_REGION => "REGION",
+            RB_BOUNDARY => "BOUNDARY",
+            RB_NEIGHBORHOOD => "NEIGHBORHOOD",
+            RB_MATCH_FIELD => "MATCH_FIELD",
+            RB_DELTA => "DELTA",
+            RB_RESOLVE => "RESOLVE",
+            RB_COMMIT => "COMMIT",
+            RB_STEP => "STEP",
+            RB_LIFT => "LIFT",
+            RB_SAMPLE => "SAMPLE",
+            RB_OBSERVE => "OBSERVE",
+            RB_INTERVENE => "INTERVENE",
+            RB_RESIDUAL => "RESIDUAL",
+            RB_RECEIPT => "RECEIPT",
+            RB_COST => "COST",
+            RB_CONSENT => "CONSENT",
+            RB_EVIDENCE => "EVIDENCE",
             _ => "OTHER",
         }
     }
@@ -1076,7 +1141,11 @@ pub(crate) struct Record {
 
 impl Record {
     fn get(&self, name: NameID) -> Option<Value> {
-        self.fields.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| v.clone())
+        self.fields
+            .iter()
+            .rev()
+            .find(|(n, _)| *n == name)
+            .map(|(_, v)| v.clone())
     }
     fn set(&mut self, name: NameID, value: Value) {
         if let Some(slot) = self.fields.iter_mut().find(|(n, _)| *n == name) {
@@ -1261,7 +1330,11 @@ fn format_float_python(f: f64) -> String {
         return "nan".to_string();
     }
     if f.is_infinite() {
-        return if f > 0.0 { "inf".to_string() } else { "-inf".to_string() };
+        return if f > 0.0 {
+            "inf".to_string()
+        } else {
+            "-inf".to_string()
+        };
     }
     // Rust's `{}` produces "1", "1.5", "0.125", "5e-10" etc. Add a trailing
     // ".0" iff the rendered form has neither a "." nor an exponent — that
@@ -1441,6 +1514,64 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
     )
 }
 
+fn native_field_node(
+    k: &mut Kernel,
+    args: &[Value],
+    ty: u32,
+    inst: u32,
+    native_name: &str,
+) -> Value {
+    let kids: Vec<NodeID> = match &args[0] {
+        Value::List(xs) => xs.iter().map(|v| v.as_nid()).collect(),
+        _ => panic!("{}: expected one list of NodeIDs", native_name),
+    };
+    Value::Nid(k.intern(
+        NodeID {
+            pkg: 1,
+            level: LEVEL_BASIC,
+            ty,
+            inst,
+        },
+        kids,
+    ))
+}
+
+macro_rules! native_field_constructor {
+    ($fn_name:ident, $rb_ty:ident, $inst:expr, $native_name:literal) => {
+        fn $fn_name(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value {
+            native_field_node(k, args, $rb_ty, $inst, $native_name)
+        }
+    };
+}
+
+native_field_constructor!(native_field_blueprint, RB_FIELD, 1, "field_blueprint");
+native_field_constructor!(native_field_cell, RB_FIELD, 2, "field_cell");
+native_field_constructor!(native_field_carrier, RB_CARRIER, 1, "field_carrier");
+native_field_constructor!(native_field_topology, RB_TOPOLOGY, 1, "field_topology");
+native_field_constructor!(native_field_fiber, RB_FIBER, 1, "field_fiber");
+native_field_constructor!(native_field_region, RB_REGION, 1, "field_region");
+native_field_constructor!(native_field_boundary, RB_BOUNDARY, 1, "field_boundary");
+native_field_constructor!(
+    native_field_neighborhood,
+    RB_NEIGHBORHOOD,
+    1,
+    "field_neighborhood"
+);
+native_field_constructor!(native_field_match, RB_MATCH_FIELD, 1, "field_match");
+native_field_constructor!(native_field_delta, RB_DELTA, 1, "field_delta");
+native_field_constructor!(native_field_resolve, RB_RESOLVE, 1, "field_resolve");
+native_field_constructor!(native_field_commit, RB_COMMIT, 1, "field_commit");
+native_field_constructor!(native_field_step, RB_STEP, 1, "field_step");
+native_field_constructor!(native_field_lift, RB_LIFT, 1, "field_lift");
+native_field_constructor!(native_field_sample, RB_SAMPLE, 1, "field_sample");
+native_field_constructor!(native_field_observe, RB_OBSERVE, 1, "field_observe");
+native_field_constructor!(native_field_intervene, RB_INTERVENE, 1, "field_intervene");
+native_field_constructor!(native_field_residual, RB_RESIDUAL, 1, "field_residual");
+native_field_constructor!(native_field_receipt, RB_RECEIPT, 1, "field_receipt");
+native_field_constructor!(native_field_cost, RB_COST, 1, "field_cost");
+native_field_constructor!(native_field_consent, RB_CONSENT, 1, "field_consent");
+native_field_constructor!(native_field_evidence, RB_EVIDENCE, 1, "field_evidence");
+
 // ---------------------------------------------------------------------------
 // Frame — scope primitive
 // ---------------------------------------------------------------------------
@@ -1604,8 +1735,7 @@ impl Kernel {
         // (e.g. cell-log-store.fk's keydir for compaction).
         self.register_native("record_keys", cat_access(), |k, _, args| match &args[0] {
             Value::Record(r) => {
-                let names: Vec<NameID> =
-                    r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
+                let names: Vec<NameID> = r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
                 Value::List(
                     names
                         .into_iter()
@@ -1725,12 +1855,40 @@ impl Kernel {
             let n = bytes.len();
             let mut end = from.min(n);
             match class {
-                0 => while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') { end += 1; },
-                1 => while end < n && bytes[end].is_ascii_digit() { end += 1; },
-                2 => while end < n && bytes[end].is_ascii_alphabetic() { end += 1; },
-                3 => while end < n && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_' || bytes[end] == b'-') { end += 1; },
-                4 => while end < n && bytes[end] != b'"' && bytes[end] != b'\\' { end += 1; },
-                5 => while end < n && bytes[end] != b'\n' { end += 1; },
+                0 => {
+                    while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') {
+                        end += 1;
+                    }
+                }
+                1 => {
+                    while end < n && bytes[end].is_ascii_digit() {
+                        end += 1;
+                    }
+                }
+                2 => {
+                    while end < n && bytes[end].is_ascii_alphabetic() {
+                        end += 1;
+                    }
+                }
+                3 => {
+                    while end < n
+                        && (bytes[end].is_ascii_alphanumeric()
+                            || bytes[end] == b'_'
+                            || bytes[end] == b'-')
+                    {
+                        end += 1;
+                    }
+                }
+                4 => {
+                    while end < n && bytes[end] != b'"' && bytes[end] != b'\\' {
+                        end += 1;
+                    }
+                }
+                5 => {
+                    while end < n && bytes[end] != b'\n' {
+                        end += 1;
+                    }
+                }
                 _ => panic!("scan_run: unknown class_code {} (valid: 0-5)", class),
             }
             Value::Int(end as i64)
@@ -1756,7 +1914,11 @@ impl Kernel {
             for byte in s.as_bytes().to_vec() {
                 let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
                 a.bind(call_frame, cl.params[0], acc);
-                a.bind(call_frame, cl.params[1], Value::Str((byte as char).to_string()));
+                a.bind(
+                    call_frame,
+                    cl.params[1],
+                    Value::Str((byte as char).to_string()),
+                );
                 acc = walk(k, a, cl.body, call_frame);
             }
             acc
@@ -2670,8 +2832,8 @@ impl Kernel {
             let form_name = args[0].as_str().to_string();
             let native_name = args[1].as_str().to_string();
             let native_id = k.intern_string(&native_name).inst;
-            let exists = k.natives.contains_key(&native_id)
-                || k.env_natives.contains_key(&native_id);
+            let exists =
+                k.natives.contains_key(&native_id) || k.env_natives.contains_key(&native_id);
             if !exists {
                 return Value::Int(0);
             }
@@ -2796,17 +2958,15 @@ impl Kernel {
         // sum_bytes_list(list) — sum all integer elements. Used for fast
         // verification that two cells' large byte-lists agree without
         // materializing them through the Form recursion. O(n) compiled.
-        self.register_native("sum_bytes_list", cat_call(), |_, _, args| {
-            match &args[0] {
-                Value::List(xs) => {
-                    let mut s: i64 = 0;
-                    for v in xs {
-                        s = s.wrapping_add(v.as_int());
-                    }
-                    Value::Int(s)
+        self.register_native("sum_bytes_list", cat_call(), |_, _, args| match &args[0] {
+            Value::List(xs) => {
+                let mut s: i64 = 0;
+                for v in xs {
+                    s = s.wrapping_add(v.as_int());
                 }
-                _ => Value::Int(0),
+                Value::Int(s)
             }
+            _ => Value::Int(0),
         });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
@@ -2821,14 +2981,14 @@ impl Kernel {
                 Err(_) => Value::Int(-1),
             }
         });
-        self.register_native("read_form_binary", cat_call(), |k, _, args| {
-            match fs::read(args[0].as_str()) {
-                Ok(bytes) => match deserialize_artifact(k, &bytes) {
-                    Ok(root) => Value::Nid(root),
-                    Err(_) => Value::Null,
-                },
+        self.register_native("read_form_binary", cat_call(), |k, _, args| match fs::read(
+            args[0].as_str(),
+        ) {
+            Ok(bytes) => match deserialize_artifact(k, &bytes) {
+                Ok(root) => Value::Nid(root),
                 Err(_) => Value::Null,
-            }
+            },
+            Err(_) => Value::Null,
         });
         self.register_native("write_form_binary", cat_call(), |k, _, args| {
             let bytes = serialize_artifact(k, args[1].as_nid());
@@ -2913,12 +3073,14 @@ impl Kernel {
                 _ => Value::Int(0),
             }
         });
-        self.register_native("fs_mkdir", cat_call(), |_, _, args| {
-            match fs::create_dir_all(args[0].as_str()) {
+        self.register_native(
+            "fs_mkdir",
+            cat_call(),
+            |_, _, args| match fs::create_dir_all(args[0].as_str()) {
                 Ok(_) => Value::Int(0),
                 Err(_) => Value::Int(-1),
-            }
-        });
+            },
+        );
         self.register_native("fs_rmdir", cat_call(), |_, _, args| {
             match fs::metadata(args[0].as_str()) {
                 Ok(meta) if meta.is_dir() => match fs::remove_dir_all(args[0].as_str()) {
@@ -3209,6 +3371,116 @@ impl Kernel {
             };
             Value::Nid(k.intern(cat, kids))
         });
+        self.register_native(
+            "field_blueprint",
+            cat_field_primitive(RB_FIELD),
+            native_field_blueprint,
+        );
+        self.register_native(
+            "field_cell",
+            cat_field_primitive(RB_FIELD),
+            native_field_cell,
+        );
+        self.register_native(
+            "field_carrier",
+            cat_field_primitive(RB_CARRIER),
+            native_field_carrier,
+        );
+        self.register_native(
+            "field_topology",
+            cat_field_primitive(RB_TOPOLOGY),
+            native_field_topology,
+        );
+        self.register_native(
+            "field_fiber",
+            cat_field_primitive(RB_FIBER),
+            native_field_fiber,
+        );
+        self.register_native(
+            "field_region",
+            cat_field_primitive(RB_REGION),
+            native_field_region,
+        );
+        self.register_native(
+            "field_boundary",
+            cat_field_primitive(RB_BOUNDARY),
+            native_field_boundary,
+        );
+        self.register_native(
+            "field_neighborhood",
+            cat_field_primitive(RB_NEIGHBORHOOD),
+            native_field_neighborhood,
+        );
+        self.register_native(
+            "field_match",
+            cat_field_primitive(RB_MATCH_FIELD),
+            native_field_match,
+        );
+        self.register_native(
+            "field_delta",
+            cat_field_primitive(RB_DELTA),
+            native_field_delta,
+        );
+        self.register_native(
+            "field_resolve",
+            cat_field_primitive(RB_RESOLVE),
+            native_field_resolve,
+        );
+        self.register_native(
+            "field_commit",
+            cat_field_primitive(RB_COMMIT),
+            native_field_commit,
+        );
+        self.register_native(
+            "field_step",
+            cat_field_primitive(RB_STEP),
+            native_field_step,
+        );
+        self.register_native(
+            "field_lift",
+            cat_field_primitive(RB_LIFT),
+            native_field_lift,
+        );
+        self.register_native(
+            "field_sample",
+            cat_field_primitive(RB_SAMPLE),
+            native_field_sample,
+        );
+        self.register_native(
+            "field_observe",
+            cat_field_primitive(RB_OBSERVE),
+            native_field_observe,
+        );
+        self.register_native(
+            "field_intervene",
+            cat_field_primitive(RB_INTERVENE),
+            native_field_intervene,
+        );
+        self.register_native(
+            "field_residual",
+            cat_field_primitive(RB_RESIDUAL),
+            native_field_residual,
+        );
+        self.register_native(
+            "field_receipt",
+            cat_field_primitive(RB_RECEIPT),
+            native_field_receipt,
+        );
+        self.register_native(
+            "field_cost",
+            cat_field_primitive(RB_COST),
+            native_field_cost,
+        );
+        self.register_native(
+            "field_consent",
+            cat_field_primitive(RB_CONSENT),
+            native_field_consent,
+        );
+        self.register_native(
+            "field_evidence",
+            cat_field_primitive(RB_EVIDENCE),
+            native_field_evidence,
+        );
         self.register_native("substrate_mark", cat_witness(), |k, _, _| {
             Value::List(k.substrate_mark())
         });
@@ -3838,7 +4110,13 @@ impl<'a> EmitScope<'a> {
         self.uid += 1;
         let sanitized: String = hint
             .chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
         format!("v_{}_{}", sanitized, self.uid)
     }
@@ -3848,13 +4126,24 @@ impl<'a> EmitScope<'a> {
 fn sanitize_rust_ident(s: &str) -> String {
     let cleaned: String = s
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     if cleaned.is_empty() {
         return "fn_".to_string();
     }
     // Rust keywords / leading-digit guard.
-    if cleaned.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+    if cleaned
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit())
+        .unwrap_or(false)
+    {
         format!("f_{}", cleaned)
     } else {
         format!("fn_{}", cleaned)
@@ -3902,9 +4191,8 @@ fn collect_siblings(
             let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
             let arity = params.len();
             let fbody = kids[2];
-            out.entry(name).or_insert_with(|| {
-                (sanitize_rust_ident(k.name_str(name)), arity, fbody)
-            });
+            out.entry(name)
+                .or_insert_with(|| (sanitize_rust_ident(k.name_str(name)), arity, fbody));
         }
         for c in kids {
             visit.push(c);
@@ -3993,29 +4281,27 @@ fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<Emitted
             let b = emit_expr(k, kids[1], scope)?.into_i64();
             Some(EmittedExpr::Bool(format!("(({}) {} ({}))", a, op, b)))
         }
-        RB_LOGIC => {
-            match cat.inst {
-                RLOG_NOT => {
-                    if kids.len() != 1 {
-                        return None;
-                    }
-                    let a = emit_expr(k, kids[0], scope)?.into_bool();
-                    Some(EmittedExpr::Bool(format!("(!({}))", a)))
+        RB_LOGIC => match cat.inst {
+            RLOG_NOT => {
+                if kids.len() != 1 {
+                    return None;
                 }
-                RLOG_AND | RLOG_OR => {
-                    let op = if cat.inst == RLOG_AND { "&&" } else { "||" };
-                    let mut parts: Vec<String> = Vec::new();
-                    for c in &kids {
-                        parts.push(emit_expr(k, *c, scope)?.into_bool());
-                    }
-                    Some(EmittedExpr::Bool(format!(
-                        "({})",
-                        parts.join(&format!(" {} ", op))
-                    )))
-                }
-                _ => None,
+                let a = emit_expr(k, kids[0], scope)?.into_bool();
+                Some(EmittedExpr::Bool(format!("(!({}))", a)))
             }
-        }
+            RLOG_AND | RLOG_OR => {
+                let op = if cat.inst == RLOG_AND { "&&" } else { "||" };
+                let mut parts: Vec<String> = Vec::new();
+                for c in &kids {
+                    parts.push(emit_expr(k, *c, scope)?.into_bool());
+                }
+                Some(EmittedExpr::Bool(format!(
+                    "({})",
+                    parts.join(&format!(" {} ", op))
+                )))
+            }
+            _ => None,
+        },
         RB_COND => {
             match cat.inst {
                 RCOND_IF => {
@@ -4093,7 +4379,8 @@ fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<Emitted
                         let cat_c = k.category(*c);
                         if cat_c.ty == RB_BLOCK && cat_c.inst == RBLK_LET {
                             let kc = k.children(*c);
-                            if kc.len() < 2 || kc[0].level != LEVEL_TRIVIAL
+                            if kc.len() < 2
+                                || kc[0].level != LEVEL_TRIVIAL
                                 || kc[0].ty != TRIV_STRING
                             {
                                 return None;
@@ -4184,8 +4471,13 @@ fn emit_rust_source(
     target_params: &[NameID],
     target_body: NodeID,
 ) -> Option<String> {
-    let siblings_full =
-        collect_siblings(k, target_body, target_name, target_params.len(), target_body);
+    let siblings_full = collect_siblings(
+        k,
+        target_body,
+        target_name,
+        target_params.len(),
+        target_body,
+    );
     // Strip body NodeIDs for the scope (the scope just needs name → (rust_name, arity)).
     let siblings: HashMap<NameID, (String, usize)> = siblings_full
         .iter()
@@ -4421,8 +4713,7 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
                 f(i64s[0], i64s[1], i64s[2])
             }
             4 => {
-                let f: unsafe extern "C" fn(i64, i64, i64, i64) -> i64 =
-                    std::mem::transmute(p);
+                let f: unsafe extern "C" fn(i64, i64, i64, i64) -> i64 = std::mem::transmute(p);
                 f(i64s[0], i64s[1], i64s[2], i64s[3])
             }
             5 => {
@@ -4438,7 +4729,9 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
             7 => {
                 let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64) -> i64 =
                     std::mem::transmute(p);
-                f(i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6])
+                f(
+                    i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6],
+                )
             }
             8 => {
                 let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64, i64) -> i64 =
@@ -4820,9 +5113,8 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 // The dot must be followed by a digit so `(.foo bar)` and
                 // bare integers stay legible. Sibling-parity: TS reader
                 // recognises the same shape.
-                let is_float = i + 1 < bytes.len()
-                    && bytes[i] == b'.'
-                    && bytes[i + 1].is_ascii_digit();
+                let is_float =
+                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
                 if is_float {
                     i += 1; // consume '.'
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
@@ -4860,9 +5152,8 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                let is_float = i + 1 < bytes.len()
-                    && bytes[i] == b'.'
-                    && bytes[i + 1].is_ascii_digit();
+                let is_float =
+                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
                 if is_float {
                     i += 1;
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
@@ -5240,6 +5531,14 @@ fn cat_transmute() -> NodeID {
         pkg: 1,
         level: LEVEL_BASIC,
         ty: RB_TRANSMUTE,
+        inst: 1,
+    }
+}
+fn cat_field_primitive(ty: u32) -> NodeID {
+    NodeID {
+        pkg: 1,
+        level: LEVEL_BASIC,
+        ty,
         inst: 1,
     }
 }

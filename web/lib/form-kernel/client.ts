@@ -8,6 +8,7 @@ import {
   type NodeID,
 } from "./vendor/kernel.ts";
 import { readAll } from "./vendor/reader.ts";
+import { FIELD_MODEL_FORM_DEMO_SOURCE } from "./field-model-form";
 
 export type LocalFormRun = {
   source: string;
@@ -71,6 +72,11 @@ export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
   (let n (make_nodeid 1 5 4 1))
   (if (node_eq n (make_nodeid 1 5 4 1)) 1 0))`,
     note: "Creates NodeIDs in local memory and asks the kernel to compare them structurally.",
+  },
+  {
+    label: "Field Model Form proof",
+    source: FIELD_MODEL_FORM_DEMO_SOURCE,
+    note: "Runs a 93-point FMF proof over every primitive constructor, seven domain grammars, lineage lenses, quantum rain, observer receipts, and residuals.",
   },
 ];
 
