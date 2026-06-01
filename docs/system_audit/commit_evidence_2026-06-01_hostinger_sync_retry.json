@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/hostinger-sync-retry-20260601",
+  "commit_scope": "Retry Hostinger deploy script sync operations so transient SSH/SCP timeouts do not block production verification after keyscan fallback succeeds.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_sync_retry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_sync_retry.json"
+    ],
+    "notes": "Manual Hostinger deploy run 26764349849 reached Configure SSH but failed in Sync tracked deploy script to VPS after the first scp timed out connecting to 187.77.152.42:22. This patch retries each scp/ssh sync command with explicit ConnectTimeout and ServerAlive settings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A transient timeout during Hostinger sync should be retried up to five times before the deploy is marked failed.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "reference_failures": [
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26764349849"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy reaches Sync tracked deploy script to VPS and retries scp/ssh failures instead of failing after a single timeout.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This deploy reliability fix still needs PR checks, merge, Hostinger deploy, and public verification before moving to the next BML parity slice."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "production-deploy-proof"
+  ],
+  "task_ids": [
+    "hostinger-sync-retry-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "embodiment-contract"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/hostinger-auto-deploy.yml sync step now wraps scp and ssh calls in retry_remote.",
+    "Manual deploy run 26764349849 failed before this patch on a single scp connection timeout."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_sync_retry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
