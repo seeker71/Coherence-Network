@@ -1,0 +1,64 @@
+; tests/bml-thesis-rule-operator-cast-binding-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the typed local cast binding in original container-Rule.bml:
+; Rule hOther = (Rule) hObj;
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let operator-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "operator=="))
+    (let operator-body (bml-method-body operator-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9280))
+    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let rule-instance (record_new RuleBP "bmlClass" "Rule" "Name" "left"))
+    (let other-rule (record_new RuleBP "bmlClass" "Rule" "Name" "right"))
+    (let call-env (record_new CallEnvBP "hObj" other-rule))
+    (let direct-result
+        (bml-body-source-exec-typed-cast-assignments
+            operator-body
+            rule-instance
+            call-env))
+    (let direct-bound (record_get call-env "hOther"))
+
+    (let sequence-env (record_new CallEnvBP "hObj" other-rule))
+    (let sequence-result
+        (bml-body-source-exec
+            operator-body
+            rule-instance
+            sequence-env))
+    (let sequence-bound (record_get sequence-env "hOther"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-name operator-method) "operator==" 2)
+            (bool-score (bml-body-source-contains? operator-body "hOther") 4)
+            (bool-score (bml-body-source-contains? operator-body "hObj") 8)
+            (int-score
+                (bml-body-source-typed-cast-assignment-count operator-body)
+                1
+                16)
+            (bool-score (record_has call-env "hOther") 32)
+            (str-score (record_get direct-bound "bmlClass") "Rule" 64)
+            (str-score (record_get direct-bound "Name") "right" 128)
+            (bool-score (record_has sequence-env "hOther") 256)
+            (str-score (record_get sequence-bound "bmlClass") "Rule" 512)
+            (str-score (record_get sequence-bound "Name") "right" 1024)
+            (bool-score (record? sequence-result) 2048))))
