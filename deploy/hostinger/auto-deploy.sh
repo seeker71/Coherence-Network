@@ -15,6 +15,16 @@ log() {
   printf '%s — %s\n' "$(timestamp)" "$*" | tee -a "$LOG_FILE"
 }
 
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${seconds}s" "$@"
+  else
+    "$@"
+  fi
+}
+
 require_file() {
   local path="$1"
   if [[ ! -e "$path" ]]; then
@@ -473,7 +483,8 @@ run_substrate_ingest() {
   if [[ -z "$from" || "$from" == "$to" ]]; then
     log "substrate: SHAs unknown or equal — running --all --structured"
     set +e
-    docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
+    run_with_timeout "${SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS:-600}" \
+      docker compose exec -T api sh -lc 'cd /app && python3 scripts/coh_substrate.py ingest --all --structured' \
       2>&1 | tee -a "$LOG_FILE"
     local rc=$?
     set -e
@@ -505,7 +516,8 @@ run_substrate_ingest() {
   local rc=0
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest '/app/$path' --structured" \
+    run_with_timeout "${SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS:-120}" \
+      docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest '/app/$path' --structured" \
       2>&1 | tee -a "$LOG_FILE"
     local file_rc=$?
     if [[ "$file_rc" -ne 0 ]]; then

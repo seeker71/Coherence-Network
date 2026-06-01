@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/hostinger-substrate-ingest-timeout-20260601",
+  "commit_scope": "Bound Hostinger substrate ingest during deploy so production rollout cannot hang after containers are healthy.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_substrate_ingest_timeout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_substrate_ingest_timeout.json"
+    ],
+    "notes": "Hostinger Auto Deploy run 26759987498 reached healthy rebuilt containers, then timed out after 35m at substrate changed-file ingest. The deploy script now wraps per-file ingest with SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS defaulting to 120s and --all ingest with SUBSTRATE_INGEST_ALL_TIMEOUT_SECONDS defaulting to 600s. Ingest remains non-blocking."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and Hostinger deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A slow or stuck substrate ingest logs a timeout/failure for that ingest item and deployment continues to public verification instead of exhausting the whole roll-forward step.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "Hostinger Auto Deploy runs after merge and reaches public verification.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The ingest timeout fix is local only until PR, merge, deploy, and public verification complete."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "deploy-followthrough"
+  ],
+  "task_ids": [
+    "hostinger-substrate-ingest-timeout-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "embodiment-contract"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 26759987498 timed out after containers were healthy at substrate: ingesting 4 changed files.",
+    "deploy/hostinger/auto-deploy.sh now wraps substrate ingest commands with run_with_timeout.",
+    "Substrate ingest already logs non-blocking failures and deployment continues."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_substrate_ingest_timeout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
