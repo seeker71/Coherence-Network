@@ -94,3 +94,57 @@ def test_external_proof_auth_failure_has_distinct_exit_code() -> None:
         assert exc.code == module.AUTH_FAILED_EXIT
     else:
         raise AssertionError("expected auth failure to exit distinctly")
+
+
+def test_external_proof_rollout_404_page_is_transient() -> None:
+    module = _load_external_proof_module()
+
+    class Response:
+        ok = False
+        status_code = 404
+        text = "404 page not found"
+
+    class Requests:
+        class exceptions:
+            RequestException = Exception
+
+        @staticmethod
+        def request(*args, **kwargs):
+            return Response()
+
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=False)
+    runner.requests = Requests()
+
+    try:
+        runner._call("POST", "/api/ideas/idea-123/stage", {"stage": "specced"})
+    except SystemExit as exc:
+        assert exc.code == module.TRANSIENT_FAILED_EXIT
+    else:
+        raise AssertionError("expected rollout 404 page to exit as transient")
+
+
+def test_external_proof_json_404_remains_failure() -> None:
+    module = _load_external_proof_module()
+
+    class Response:
+        ok = False
+        status_code = 404
+        text = '{"detail":"idea not found"}'
+
+    class Requests:
+        class exceptions:
+            RequestException = Exception
+
+        @staticmethod
+        def request(*args, **kwargs):
+            return Response()
+
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=False)
+    runner.requests = Requests()
+
+    try:
+        runner._call("POST", "/api/ideas/missing/stage", {"stage": "specced"})
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        raise AssertionError("expected JSON API 404 to remain a real failure")
