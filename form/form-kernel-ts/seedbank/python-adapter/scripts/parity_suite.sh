@@ -126,6 +126,21 @@ PARITY_FILES=(
     # kernel-side. Frozen sample → [4.75, 6.75, 2.25, 0.75, 6.75, 7.75], all
     # NON-integer floats so no value crosses the print boundary.
     "examples/endpoint_grounded_cost_demo.py"
+    # The VALUE / REALIZATION / CONFIDENCE REDUCTION of compute_idea_metrics —
+    # the second and final numeric slice, falling now that max-of-signals, the
+    # guarded ratio, and the count→level arithmetic are all expressible. From
+    # host-derived scalars it computes computed_actual_value = max(lineage,
+    # usage_revenue, spec_actual_value), computed_estimated_cost = max(spec_est,
+    # lineage_est), value_realization_pct = min(value/potential, 1.0) guarded by
+    # potential>0, has_runtime_data/has_commits = min(1.0, count/N) guarded by
+    # count>0, and computed_confidence = clamp(weighted-sum, 0.05, 0.95) with
+    # weights 0.30/0.25/0.25/0.10/0.10. The boolean-presence levels
+    # (has_specs_with_data, has_lineage, has_friction — any(...)-over-records /
+    # len>0 ladders) and the collection filtering stay host-side BY DESIGN.
+    # Frozen sample → [12.5, 6.75, 0.625, 0.815], all NON-integer floats so no
+    # value crosses the print boundary. With the cost slice this completes
+    # compute_idea_metrics' COMPUTATION kernel-native.
+    "examples/endpoint_grounded_value_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

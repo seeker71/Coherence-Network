@@ -1,0 +1,112 @@
+; grounded-value-reduction-band.fk — three-way sibling parity for the
+; VALUE / REALIZATION / CONFIDENCE REDUCTION of
+; grounded_idea_metrics_service.compute_idea_metrics.
+;
+; The grounded-COST band proved the per-record arithmetic fold with a clamp.
+; This band proves the SECOND and FINAL numeric slice of compute_idea_metrics:
+; a MAX-OF-SIGNALS, a GUARDED RATIO WITH A MIN-CLAMP, a COUNT→LEVEL threshold
+; (min(1.0, count/N) with a zero-guard), a five-term WEIGHTED SUM, and a final
+; TWO-SIDED [0.05, 0.95] clamp. Exactly the reduction compute_idea_metrics runs
+; over the host-derived scalars for one already-filtered idea:
+;   computed_actual_value   = max(lineage_measured_value, usage_revenue,
+;                                 spec_actual_value_sum)
+;   computed_estimated_cost = max(spec_estimated_cost_sum, lineage_estimated_cost)
+;   value_realization_pct   = min(value/potential, 1.0) if potential>0 else 0.0
+;   has_runtime_data        = min(1.0, event_count/10.0) if event_count>0 else 0.0
+;   has_commits             = min(1.0, commit_count/5.0) if commit_count>0 else 0.0
+;   computed_confidence     = clamp(
+;       has_specs*0.30 + has_runtime*0.25 + has_lineage*0.25
+;       + has_commits*0.10 + has_friction*0.10, 0.05, 0.95)
+;
+; The weights are read from the source: _WEIGHT_SPECS=0.30, _WEIGHT_RUNTIME=0.25,
+; _WEIGHT_LINEAGE=0.25, _WEIGHT_COMMITS=0.10, _WEIGHT_FRICTION=0.10. The
+; realization ceiling is min(_, 1.0) and the guard is potential>0; the
+; confidence clamp is max(0.05, min(0.95, sum)) — never fully certain, never
+; zero. All verbatim from grounded_idea_metrics_service.compute_idea_metrics.
+;
+; THE HONEST SEAM. compute_idea_metrics derives three families of fact:
+;   (a) the NUMERIC REDUCTIONS above — what this band proves three-way.
+;   (b) the BOOLEAN/PRESENCE LEVELS has_specs_with_data / has_lineage /
+;       has_friction — each an any(...)-over-records boolean-OR fold or a len>0
+;       presence ladder; the host resolves these to a float level and the kernel
+;       folds the resolved level. Booleans-over-collections is the
+;       filtering-adjacent capability held host-side BY DESIGN.
+;   (c) the FILTERING of the six collections by idea_id — cheap host-side
+;       collection-narrowing the host already does.
+; The kernel keeps the most NUMERIC computation; the host keeps the
+; booleans-over-records and the filtering.
+;
+; Every check is scored through `eq` into an integer aggregate, so NO float
+; crosses the print boundary named in float-natives-band.fk §print — the
+; arithmetic is bit-identical, and the band stays three-way clean.
+;
+; The aggregate score is 1 per passing check; full pass = 16.
+
+(do
+    ;; ── min2 / max2: the comparison-branches behind max-of-signals + clamps ──
+    (defn min2 (a b) (if (gt a b) b a))
+    (defn max2 (a b) (if (gt a b) a b))
+
+    ;; ── max3: the strongest-signal selection for computed_actual_value ──
+    (defn max3 (a b c) (max2 (max2 a b) c))
+
+    ;; ── realization: the guarded ratio with the min(_, 1.0) ceiling ──
+    (defn realization (value potential)
+        (if (gt potential 0) (min2 (div value potential) 1.0) 0.0))
+
+    ;; ── count_level: min(1.0, count/n) with a zero-guard (has_runtime/has_commits) ──
+    (defn count_level (count n)
+        (if (gt count 0) (min2 1.0 (div count n)) 0.0))
+
+    ;; ── confidence: the five-term weighted sum + the [0.05, 0.95] two-sided clamp ──
+    (defn confidence (has_specs has_runtime has_lineage has_commits has_friction)
+        (max2 0.05 (min2 0.95
+            (add (add (add (add (mul has_specs 0.30) (mul has_runtime 0.25))
+                           (mul has_lineage 0.25)) (mul has_commits 0.10))
+                 (mul has_friction 0.10)))))
+
+    ;; ── 1. computed_actual_value: each of the three candidates winning ──
+    ;; lineage wins: max(12.5, 0.007, 4.25) = 12.5
+    (let s1 (if (eq (max3 12.5 0.007 4.25) 12.5) 1 0))
+    ;; usage_revenue wins: max(1.5, 8.75, 4.25) = 8.75
+    (let s2 (if (eq (max3 1.5 8.75 4.25) 8.75) 1 0))
+    ;; spec_actual_value_sum wins: max(1.5, 0.007, 9.25) = 9.25
+    (let s3 (if (eq (max3 1.5 0.007 9.25) 9.25) 1 0))
+
+    ;; ── 2. computed_estimated_cost: max of the two cost candidates ──
+    (let s4 (if (eq (max2 6.75 5.5) 6.75) 1 0))   ; spec_est wins
+    (let s5 (if (eq (max2 3.25 7.5) 7.5) 1 0))    ; lineage_est wins
+
+    ;; ── 3. value_realization_pct: the guard + the min(_, 1.0) ceiling ──
+    ;; potential=0 → 0.0 (the guard branch, NOT a division)
+    (let s6 (if (eq (realization 12.5 0.0) 0.0) 1 0))
+    ;; normal ratio inside [0,1): min(12.5/20.0, 1.0) = 0.625
+    (let s7 (if (eq (realization 12.5 20.0) 0.625) 1 0))
+    ;; ratio > 1 saturates at the 1.0 ceiling: min(30.0/20.0, 1.0) = 1.0
+    (let s8 (if (eq (realization 30.0 20.0) 1.0) 1 0))
+
+    ;; ── 4. has_runtime_data: count→level with the zero-guard + the 1.0 ceiling ──
+    (let s9  (if (eq (count_level 0 10.0) 0.0) 1 0))   ; count=0 → 0.0
+    (let s10 (if (eq (count_level 7 10.0) 0.7) 1 0))   ; min(1.0, 7/10) = 0.7
+    (let s11 (if (eq (count_level 15 10.0) 1.0) 1 0))  ; min(1.0, 15/10) → ceiling 1.0
+
+    ;; ── 5. has_commits: count→level on the /5.0 threshold ──
+    (let s12 (if (eq (count_level 0 5.0) 0.0) 1 0))    ; count=0 → 0.0
+    (let s13 (if (eq (count_level 3 5.0) 0.6) 1 0))    ; min(1.0, 3/5) = 0.6
+    (let s14 (if (eq (count_level 8 5.0) 1.0) 1 0))    ; min(1.0, 8/5) → ceiling 1.0
+
+    ;; ── 6. computed_confidence: the weighted sum + BOTH clamp bounds ──
+    ;; all signals present → raw 0.30+0.25+0.25+0.10+0.10 = 1.0 → ceiling 0.95
+    (let s15a (if (eq (confidence 1.0 1.0 1.0 1.0 1.0) 0.95) 1 0))
+    ;; all signals absent → raw 0.0 → floor 0.05
+    (let s15b (if (eq (confidence 0.0 0.0 0.0 0.0 0.0) 0.05) 1 0))
+    (let s15 (if (eq (add s15a s15b) 2) 1 0))
+    ;; mid values inside the band, no clamp:
+    ;; 1.0*0.30 + 0.7*0.25 + 1.0*0.25 + 0.6*0.10 + 0.3*0.10
+    ;; = 0.30 + 0.175 + 0.25 + 0.06 + 0.03 = 0.815
+    (let s16 (if (eq (confidence 1.0 0.7 1.0 0.6 0.3) 0.815) 1 0))
+
+    ;; ── Aggregate — int + int through MATH (no float in result). Full pass = 16.
+    (add s1 (add s2 (add s3 (add s4 (add s5 (add s6 (add s7 (add s8
+    (add s9 (add s10 (add s11 (add s12 (add s13 (add s14 (add s15 s16)))))))))))))))
+)
