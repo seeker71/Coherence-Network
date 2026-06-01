@@ -36,8 +36,14 @@ What is proven today:
   TypeScript kernels so larger `.bml` files do not overflow the Form-level
   recursive scanner before BMF rules run.
 - The original companion `container-Rule.bml` and `BMF-grammar.bml` files now
-  scan and parse as whole source files into package/import/class shell
-  components. Their class bodies remain explicit shell gaps.
+  scan and parse as whole source files. `BMF-grammar.bml` still lands as a
+  class shell while its grammar body lowering remains an explicit gap.
+- The original companion `container-Rule.bml` file now parses real class
+  bodies for `RuleProcess` and `Rule`, including sections, fields,
+  constructors, method signatures, parameters, properties, initialized fields,
+  and source body tokens. Its method bodies are represented as source-bearing
+  components; full statement/expression semantic lowering for those bodies is
+  still a gap.
 - A BML class/interface/inheritance component model covers structural bases,
   delegated bases, inherited interfaces, default interface methods, section
   property inheritance, class/static flags, member lookup, access checks, and
@@ -108,7 +114,7 @@ is not complete rule-for-rule.
 | Exceptions | `backtracking-model-languages.txt:760-762` | native-executed for int throw/catch proof slice | Arbitrary object exception typing/catch matching remains a gap. |
 | BML syntax blocks and multi-syntax streams | `backtracking-model-languages.txt:1012-1014`; `bml-search-algorithms.txt:239-246` | native-executed for source-section sidecars; gap for object syntax dispatch | `source-compiler-runtime.fk` and `source-compiler-multi-dialect-band.fk` prove section sidecars; parsing arbitrary objects by syntax name remains a gap. |
 | Object runtime definitions, dispatch, casting, instantiators | `sgb-bml-objects.txt:569-655`, `:778-791` | component-proven only for selected lookup helpers | Full instance/interface/method definitions, indexed dispatch, arbitrary interface casts, unique/singleton instantiators, and detached interfaces remain gaps. |
-| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` and `BMF-grammar.bml` now parse as whole source files into class shells; full member/body lowering remains a gap. |
+| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` now parses real sections, fields, constructors, method signatures, parameters, properties, field initializers, and body source tokens. `BMF-grammar.bml` still parses as a class shell; full grammar-body lowering remains a gap. |
 | Focused `.bml` file-to-native execution | `bml-thesis-forward-backward-demo.bml` | native-executed | `bml-thesis-file-execution-proof.fk` scans a real `.bml` file, parses `state-int` plus `try-throw-return`, lowers to BMA, runs DO/UNDO, and verifies restored state. |
 | Focused companion-shaped `.bml` declarations | `BMF-grammar.bml`, `container-Rule.bml`, `primitive-Cut.bml` slices | component/native-proven | `bml-thesis-companion-file-proof.fk` scans `bml-thesis-companion-declarations.bml`, parses package/import/interface/class/section/field/string const/two-base/Main method shapes, builds the class model, and runs `Main` through BMA. |
 
@@ -130,11 +136,11 @@ source subset:
 - `primitive-Cut.bml` calls `System.Cut( hContext.Argument( 0 ))`; the source
   file now parses directly and lowers that call shape to native BMA `cut`.
   General method-call runtime dispatch remains a gap.
-- `container-Rule.bml` uses private sections and fields; the focused companion
-  proof covers that section/field shape in the synthetic declaration fixture,
-  and the companion shell proof now accepts the real file as a whole source
-  shell. Constructors, fields from the real body, and `self(...)` chaining are
-  still gaps.
+- `container-Rule.bml` uses private/public sections, initialized fields,
+  constructor overloads, `self(...)` chaining, operator methods, and large
+  method bodies. `bml-thesis-companion-members-source-proof.fk` now proves the
+  real file parses those member surfaces into BML components. Executable
+  lowering for the complex statement/expression bodies remains a gap.
 
 ## Exit Criteria For The FULL Claim
 
@@ -174,6 +180,7 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cac
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-includes-source-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-primitive-cut-source-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-shell-source-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-members-source-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk
 ```
