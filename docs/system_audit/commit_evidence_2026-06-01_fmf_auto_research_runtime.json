@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/fmf-auto-research-20260601",
+  "commit_scope": "Make auto research first-class in Field Model Form with Form-native BML source, source/binary sibling-kernel proof, public marker registration, and spec/source-map coverage.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/field-model-form.form",
+    "docs/system_audit/commit_evidence_2026-06-01_fmf_auto_research_runtime.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/INDEX.md",
+    "form/form-stdlib/field-auto-research.fk",
+    "form/form-stdlib/tests/field-auto-research-band.fk",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/field-model-form.ts",
+    "web/tests/form-kernel-client.test.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "The auto-research BML proof returns 127 from source and binary artifacts across Go, Rust, and TypeScript kernels. The proof compiles a DNA/RNA research question plus NCBI source locator, source body, evidence cells, FMF field-step receipt, residual, and residual-to-question continuation into the existing FMF runtime. The compact data surface is fmar-dna-motif-research-io()."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending rebase, worktree guard, push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public deployment verification for /substrate/form carrying field-auto-research-bml-proof:127."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Auto research is no longer only a process idea. It is a Form-native field recipe whose input cells execute through FMF and return traceable evidence, receipt, residual, compact data IO, and next-question output cells.",
+    "public_endpoints": [
+      "https://coherencycoin.com/substrate/form",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk -> 127",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk -> 127",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form-native auto-research proof passes; CI and public deploy verification are pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "fmf-auto-research-runtime-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "auto-research integration requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk -> 127",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk -> 127",
+    "cd web && npm test -- form-kernel-client.test.ts -> 1 file, 3 tests passed",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md -> passed"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/field-model-form.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/INDEX.md",
+    "form/form-stdlib/field-auto-research.fk",
+    "form/form-stdlib/tests/field-auto-research-band.fk",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/field-model-form.ts",
+    "web/tests/form-kernel-client.test.ts"
+  ],
+  "change_intent": "runtime_feature"
+}
