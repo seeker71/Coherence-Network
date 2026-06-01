@@ -1,0 +1,87 @@
+; tests/bmf-component-runtime-exec-band.fk - BMF component rules execute over source
+;
+; preludes: form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+;
+; Proves the shared comp-bmf Rule/Branch/Sequence/Repeat/Tag/RuleCall/
+; Primitive/CharRange/CharChain model can run through the native character
+; matcher. The first branch consumes and fails, then the second branch starts
+; from the original stream and succeeds. A sibling Cut proof shows committed
+; failure prevents trying the second branch.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (let letter-rule
+        (comp-bmf-rule
+            "letter"
+            (empty)
+            (comp-bmf-char-range "a" "z")
+            (empty)))
+
+    (let fail-first
+        (comp-bmf-sequence
+            (list
+                (comp-bmf-char-chain "abc")
+                (comp-bmf-primitive "Fail" (empty)))))
+
+    (let cut-fail-first
+        (comp-bmf-sequence
+            (list
+                (comp-bmf-char-chain "abc")
+                (comp-bmf-primitive "Cut" (empty))
+                (comp-bmf-primitive "Fail" (empty)))))
+
+    (let word-body
+        (comp-bmf-sequence
+            (list
+                (comp-bmf-tag
+                    "letters"
+                    (comp-bmf-repeat
+                        (comp-bmf-rule-call "letter" (empty))
+                        1
+                        3))
+                (comp-bmf-char-chain "!"))))
+
+    (let start-rule
+        (comp-bmf-rule
+            "start"
+            (empty)
+            (comp-bmf-branch (list fail-first word-body))
+            (empty)))
+
+    (let cut-start-rule
+        (comp-bmf-rule
+            "start"
+            (empty)
+            (comp-bmf-branch (list cut-fail-first word-body))
+            (empty)))
+
+    (let rules (list letter-rule start-rule))
+    (let cut-rules (list letter-rule cut-start-rule))
+
+    (let match (comp-bmf-runtime-match rules "start" "abc!"))
+    (let result (ccap-get (cmatch-caps match) "_result"))
+    (let parsed (comp-bmf-runtime-parse rules "start" "abc!"))
+    (let cut-match (comp-bmf-runtime-match cut-rules "start" "abc!"))
+    (let min-fail (comp-bmf-runtime-match rules "start" "!"))
+    (let rulecall-match (comp-bmf-runtime-match rules "letter" "q"))
+
+    (sum
+        (list
+            (bool-score (cmatch? match) 1)
+            (str-score (ccap-get result "letters") "abc" 2)
+            (int-score (cs-index (cmatch-rest match)) 4 4)
+            (str-score (ccap-get parsed "letters") "abc" 8)
+            (bool-score (cfail? cut-match) 16)
+            (bool-score (cfail? min-fail) 32)
+            (bool-score (cmatch? rulecall-match) 64)
+            (int-score (cs-index (cmatch-rest rulecall-match)) 1 128)
+            (str-score (cs-text (cmatch-rest match)) "abc!" 256)
+            (int-score (str_len (ccap-get result "letters")) 3 512))))
