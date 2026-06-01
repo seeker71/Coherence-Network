@@ -29,6 +29,17 @@ green demo count cannot give.
 > p50, sub-200µs p99, faster than serve on all four endpoints (~4.5–4.9× on the
 > integer ones)**. The warm in-process kernel is no longer a prediction; it is a
 > measured profile. See "The inline PyO3 carrier" below.
+>
+> **The per-request parse is gone (2026-06-01).** The inline carrier still
+> re-parsed the `.fk` source on every call inside `compile_and_run`. The named
+> next step — a `load_route + run(handle, bindings)` PyO3 pair — is now **built
+> and measured**: a warm `Preloader` parses each endpoint recipe **once** and
+> per request walks only the pre-parsed body with the inputs bound in a fresh
+> child frame (no tokenize, no read, no `defn`-rebind). Dropping the parse cuts
+> p50 a further **2.6–14×** vs inline-with-parse (a stable **~62µs** mean drop),
+> landing the integer endpoints at **3–5µs p50, sub-10µs p99**. Value-parity
+> holds 4/4. This is the floor a synchronous in-process kernel reaches for these
+> recipes. See "The route-preload carrier" below.
 
 ## What's eligible for the flip, and what stays CPython
 
@@ -247,17 +258,86 @@ inject + a C boundary crossing + a full recipe walk. Judge on the **absolute**:
 **sub-100µs p99 for the integer endpoints, sub-200µs for the list/float ones** —
 negligible against FastAPI routing + Pydantic + the network, which dwarf it.
 
-**Honest limit of these inline numbers.** The inline path still re-parses the
-`.fk` source per request inside `compile_and_run` — it removes the *spawn* and
-the *loopback*, not the per-request parse. For these tiny recipes the parse is a
-small fraction of the sub-100µs envelope, but a fully warm carrier would hold the
-*pre-parsed recipe root* and re-walk only with fresh bindings (the same shape
-`cli_serve` already uses internally with its loaded `routes` list). Exposing a
-`load_route(name, src) → handle` + `run(handle, bindings) → value` pair on the
-PyO3 module — reusing the kernel's existing `read_root_from_source` + `walk` with
-a fresh child frame — is the named next refinement; the current
-`compile_and_run` surface already proves the spawn-and-loopback removal, which
-was the whole readiness gap.
+**Honest limit of these inline numbers — now closed.** The inline path above
+still re-parses the `.fk` source per request inside `compile_and_run` — it
+removes the *spawn* and the *loopback*, not the per-request parse. For these tiny
+recipes the parse is a small fraction of the sub-100µs envelope, but a fully warm
+carrier holds the *pre-parsed recipe root* and re-walks only with fresh bindings
+(the same shape `cli_serve` uses internally with its loaded `routes` list). That
+`load_route + run(handle, bindings)` pair is **now built and measured** — the
+next section. The `compile_and_run` numbers above stay the honest baseline the
+preload path is measured against.
+
+## The route-preload carrier — the parse dropped, built and measured
+
+The inline `compile_and_run` re-tokenizes and re-reads the **whole** recipe on
+every call (`run_source` → `read_root_from_source` → `tokenize_sexp` +
+`read_sexp`), then re-walks every `defn` to re-bind its closure before the
+trailing call. For a fixed-shape endpoint whose only per-request change is the
+input values, that parse + `defn`-rebind is pure overhead paid each request.
+
+**What was built (2026-06-01).** A `Preloader` `#[pyclass]` on the PyO3 module
+([`form/form-kernel-rust/src/lib.rs`](../form/form-kernel-rust/src/lib.rs)) holds
+a long-lived `Kernel + Arena + root_env` — mirroring `cli_serve`'s pattern. Two
+methods:
+
+- `load_route(setup_src, body_src) → handle` — walks `setup_src` (the recipe's
+  `defn`s) **once** into the root frame so its closures bind a single time, then
+  parses `body_src` (the trailing call) into a held `NodeID`. Returns an opaque
+  handle (an index into the `Preloader`'s route `Vec`). Reuses the kernel's
+  existing `read_root_from_source` + `walk` — no reimplemented parser.
+- `run(handle, bindings) → value` — converts the bindings dict to kernel
+  `Value`s, binds them into a **fresh child frame** of the root, and walks the
+  pre-parsed body `NodeID`. No tokenize, no read, no `defn`-rebind. Converts the
+  result through the **same `value_to_py`** the inline path uses, so value-parity
+  is exact.
+
+ONE mechanism, routes as DATA: every endpoint is a `(setup, body)` pair indexed
+by handle; no endpoint is special-cased. The Python bridge owns the recipe text,
+so the split (which `(let …)` forms carry per-request inputs vs the `defn`/const
+setup) lives in `form_kernel_bridge.split_recipe`, keeping the Rust side
+recipe-agnostic. The minimal main.rs change was **visibility only** — `Arena`
+(+ `new`/`new_frame`/`new_frame_with_capacity`/`bind`/`lookup`), `walk`, and
+`read_root_from_source` became `pub(crate)` so lib.rs can hold the warm kernel;
+no evaluator logic changed. `serve_via_kernel` takes the preload path first when
+the `Preloader` is available; it reports `runtime == "inline"` (preload is a
+sub-mode of the inline carrier, not a new carrier class) and falls through to
+inline-with-parse if a recipe doesn't split/parse cleanly.
+
+**Measured (2026-06-01, this worktree, release build, `--inline --preload
+--iters 2000`, reproduced across two runs):**
+
+| Endpoint | Value parity | **Inline-with-parse p50** | **Preload p50** | Preload p95 / p99 | Parse drop | Speedup |
+|----------|:---:|---:|---:|---:|---:|---:|
+| `coherence_weight` | ✓ 16185 | 0.1263 ms | **0.0475 ms** | 0.058 / 0.086 ms | **−78.7µs** | **2.66×** |
+| `nodeid_distance` | ✓ 7 | 0.0511 ms | **0.0037 ms** | 0.0047 / 0.0078 ms | **−47.4µs** | **13.93×** |
+| `nodeid_compatibility` | ✓ 2 | 0.0544 ms | **0.0043 ms** | 0.0055 / 0.0063 ms | **−50.1µs** | **12.56×** |
+| `weighted_average` | ✓ 0.8125 | 0.0902 ms | **0.0174 ms** | 0.0212 / 0.0292 ms | **−72.8µs** | **5.19×** |
+
+**The parse was a real, stable cost — and it's gone.** Dropping the per-request
+parse cuts p50 by a **fixed ~47–79µs** (mean **62µs**), reproducible to within
+~1µs across runs. The two integer NodeID endpoints — whose recipes are tiny, so
+the parse dominated — drop **~13–14×**, landing at **3–4µs p50, sub-10µs p99**.
+The list/float endpoints carry a larger recipe walk, so the parse is a smaller
+fraction; they still drop **2.7–5.2×** (the same absolute ~73–79µs saved),
+landing at **17–48µs p50, sub-90µs p99**. The walk itself is now the entire
+per-request cost — there is nothing left to remove inside the kernel for these
+recipes.
+
+**Value parity holds exactly** — 16185 / 7 / 2 / 0.8125, types preserved (ints
+stay `int`, 0.8125 a `float`), via the same `value_to_py` the inline path uses.
+The bridge's `serve_via_kernel` returns these through the preload path while
+reporting `runtime == "inline"`, so the live response contract is unchanged.
+
+**Honest limit.** `load_route` is called once per `(recipe, binding-name-set)`
+at first request and cached; that first call pays the split + parse (a one-time
+cost, not per-request). The preload handle map is process-local — a fresh worker
+re-preloads on its first request (sub-millisecond, paid once). Input marshalling
+is now **fully typed end-to-end**: Python hands the kernel `int`/`float`/`list`
+values directly through `py_to_value`, so unlike the serve path there is **no
+frozen-sample gap** — all four endpoints, including the list/float ones, run
+their **real per-request inputs**. That closes the serve mode's named
+list/float-marshalling gap for the inline carrier.
 
 ## JIT — what `register_jit` and `jit_compile` actually do today
 
@@ -307,18 +387,20 @@ for the *operator* subset and the named extension for the rest.**
 
 Two models, stated separately so the correction is legible:
 
-| Endpoint | PATH A (per-req fork+exec — WRONG model) | Persistent serve (HTTP loopback) | **Inline PyO3 (production carrier)** |
-|----------|------------------------------------------|----------------------------------|--------------------------------------|
-| `coherence_weight` | NOT-YET — +5 ms/req spawn | 0.176 ms p50, 0.190 ms p99 | **0.128 ms p50, 0.190 ms p99 — READY** |
-| `nodeid_distance` | NOT-YET — spawn-bound | 0.244 ms p50, 0.288 ms p99 | **0.050 ms p50, 0.078 ms p99 — READY** |
-| `nodeid_compatibility` | NOT-YET — spawn-bound | 0.241 ms p50, 0.278 ms p99 | **0.054 ms p50, 0.085 ms p99 — READY** |
-| `weighted_average` | NOT-YET — spawn-bound | 0.107 ms p50, 0.192 ms p99 | **0.092 ms p50, 0.139 ms p99 — READY** |
+| Endpoint | PATH A (fork+exec — WRONG model) | Persistent serve (HTTP loopback) | Inline PyO3 (parse each call) | **Route-preload (parse dropped)** |
+|----------|----------------------------------|----------------------------------|-------------------------------|-----------------------------------|
+| `coherence_weight` | NOT-YET — +5 ms/req spawn | 0.176 ms p50 | 0.128 ms p50, 0.190 p99 | **0.048 ms p50, 0.086 p99 — READY** |
+| `nodeid_distance` | NOT-YET — spawn-bound | 0.244 ms p50 | 0.050 ms p50, 0.078 p99 | **0.004 ms p50, 0.008 p99 — READY** |
+| `nodeid_compatibility` | NOT-YET — spawn-bound | 0.241 ms p50 | 0.054 ms p50, 0.085 p99 | **0.004 ms p50, 0.006 p99 — READY** |
+| `weighted_average` | NOT-YET — spawn-bound | 0.107 ms p50 | 0.092 ms p50, 0.139 p99 | **0.017 ms p50, 0.029 p99 — READY** |
 
-The three-way profile: per-request **fork+exec** (~5 ms, the wrong model) →
+The four-point profile: per-request **fork+exec** (~5 ms, the wrong model) →
 **persistent serve** (~0.1–0.24 ms, sub-ms but HTTP/1.0-loopback-bound) →
-**inline PyO3** (~0.05–0.13 ms, the loopback gone). Each step removes a
-transport cost the previous paid; inline is the floor a synchronous in-process
-kernel can reach for these recipes.
+**inline PyO3, parse each call** (~0.05–0.13 ms, the loopback gone) →
+**route-preload** (~0.004–0.048 ms, the parse gone). Each step removes a cost the
+previous paid: spawn → loopback → per-request parse. Route-preload is the floor a
+synchronous in-process kernel reaches for these recipes — what remains per
+request is only the recipe walk itself.
 
 "READY" here means: correct (4/4 value parity inline, types preserved), stable
 percentiles, and a **sub-100µs-to-sub-200µs absolute envelope with no spawn and
@@ -361,10 +443,12 @@ now exists as a built PyO3 extension with a measured profile, not a prediction.
    `cd form/form-kernel-rust && maturin build --release` (or `develop` into the
    image's venv) so `form_kernel_rust` imports in production. Then the live
    `active_runtime()` reports `inline` and `/api/health` shows the hot path.
-   *Refinement:* the current `compile_and_run` surface re-parses the `.fk` per
-   request — expose a `load_route + run(handle, bindings)` pair on the PyO3
-   module (reusing `read_root_from_source` + `walk` with a fresh child frame, the
-   shape `cli_serve` already uses) to drop the per-request parse too.
+   *Refinement — done (2026-06-01):* the per-request parse is dropped. The
+   `Preloader` `load_route + run(handle, bindings)` PyO3 pair parses each recipe
+   once and walks only the pre-parsed body per request, cutting p50 a further
+   2.6–14× (mean ~62µs drop). See "The route-preload carrier". The deploy-image
+   build is the same `maturin develop --release`; it picks up the `Preloader`
+   class automatically — no extra build step.
 2. **Marshal real inputs over the channel.** The two list/float endpoints
    currently compute a frozen sample under serve because the string-only query
    alist plus the missing `split` / `str_to_float` natives can't carry a list.
@@ -394,8 +478,10 @@ now exists as a built PyO3 extension with a measured profile, not a prediction.
 ```bash
 python3 scripts/kernel_readiness_harness.py                          # PATH A, 50 iters
 python3 scripts/kernel_readiness_harness.py --persistent             # + the warm serve path (apples-to-apples)
-python3 scripts/kernel_readiness_harness.py --inline                 # + the warm in-process PyO3 path (production carrier)
-python3 scripts/kernel_readiness_harness.py --inline --persistent    # the full three-way profile
+python3 scripts/kernel_readiness_harness.py --inline                 # + the warm in-process PyO3 path (parse each call)
+python3 scripts/kernel_readiness_harness.py --inline --preload       # + route-preload (parse dropped); names the per-call parse drop
+python3 scripts/kernel_readiness_harness.py --inline --persistent    # the spawn → loopback → inline profile
+python3 scripts/kernel_readiness_harness.py --inline --persistent --preload  # the full four-point profile
 python3 scripts/kernel_readiness_harness.py --persistent --jit       # + serve+jit mode and the JIT demonstrator
 python3 scripts/kernel_readiness_harness.py --iters 1000 --inline    # load replay, inline
 python3 scripts/kernel_readiness_harness.py --path-b                 # include PATH B
