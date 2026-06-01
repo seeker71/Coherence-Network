@@ -4,7 +4,7 @@
 ; capsules. Runtime selection uses surfaces and capability nodes; grammar
 ; execution uses bmf-dialect data carried by the capsule/request.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk
 
 section [form.action] {
     def proof_ok(capability) = 1;
@@ -52,6 +52,8 @@ section [form.action] {
     let video_form_surface = form-dynamic-ref(runtime_root, kind_surface, 16);
     let document_source_surface = form-dynamic-ref(runtime_root, kind_surface, 17);
     let document_form_surface = form-dynamic-ref(runtime_root, kind_surface, 18);
+    let bml_source_surface = form-dynamic-ref(runtime_root, kind_surface, 19);
+    let bml_form_surface = form-dynamic-ref(runtime_root, kind_surface, 20);
 
     let py_capsule = bmf-runtime-dialect-capsule(form-capsule-root(112, 1, 9, 1), python-bmf-dialect, py_source_surface, py_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
     let ts_capsule = bmf-runtime-dialect-capsule(form-capsule-root(113, 1, 9, 1), typescript-bmf-dialect, ts_source_surface, ts_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
@@ -62,6 +64,7 @@ section [form.action] {
     let audio_capsule = bmf-runtime-dialect-capsule(form-capsule-root(118, 1, 9, 1), audio-bmf-dialect, audio_source_surface, audio_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
     let video_capsule = bmf-runtime-dialect-capsule(form-capsule-root(119, 1, 9, 1), video-bmf-dialect, video_source_surface, video_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
     let document_capsule = bmf-runtime-dialect-capsule(form-capsule-root(120, 1, 9, 1), document-bmf-dialect, document_source_surface, document_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
+    let bml_capsule = bmf-runtime-dialect-capsule(form-capsule-root(121, 1, 9, 1), bml-bmf-dialect, bml_source_surface, bml_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
 
     let registry0 = form-recipe-registry-empty();
     let registry1 = form-recipe-registry-add-capsule(registry0, py_capsule);
@@ -72,7 +75,8 @@ section [form.action] {
     let registry6 = form-recipe-registry-add-capsule(registry5, image_capsule);
     let registry7 = form-recipe-registry-add-capsule(registry6, audio_capsule);
     let registry8 = form-recipe-registry-add-capsule(registry7, video_capsule);
-    let registry = form-recipe-registry-add-capsule(registry8, document_capsule);
+    let registry9 = form-recipe-registry-add-capsule(registry8, document_capsule);
+    let registry = form-recipe-registry-add-capsule(registry9, bml_capsule);
     let ctx = bmf-symbol-context(role_runtime, lens_runtime, empty);
 
     let py_result = form-recipe-registry-run-flex(registry, py_source_surface, py_form_surface, parse_req("py", python-bmf-dialect, "assign-int", list(py-name("count"), py-op("="), py-int("13"))), "py", ctx, 2, empty);
@@ -84,16 +88,19 @@ section [form.action] {
     let audio_result = form-recipe-registry-run-flex(registry, audio_source_surface, audio_form_surface, parse_req("audio", audio-bmf-dialect, "flac", list(audio-src-keyword("flac"), audio-src-int("96000"), audio-src-keyword("hz"), audio-src-int("2"), audio-src-keyword("channels"), audio-src-int("24"), audio-src-keyword("bits"))), "audio", ctx, 2, empty);
     let video_result = form-recipe-registry-run-flex(registry, video_source_surface, video_form_surface, parse_req("video", video-bmf-dialect, "webm-duration", list(video-src-keyword("webm"), video-src-int("1280"), video-src-keyword("x"), video-src-int("720"), video-src-keyword("fps"), video-src-int("60"), video-src-keyword("duration"), video-src-int("654321"), video-src-keyword("ms"))), "video", ctx, 2, empty);
     let document_result = form-recipe-registry-run-flex(registry, document_source_surface, document_form_surface, parse_req("document", document-bmf-dialect, "cfbf", list(document-src-keyword("cfbf"), document-src-keyword("sector"), document-src-int("9"), document-src-keyword("mini"), document-src-int("6"), document-src-keyword("fat"), document-src-int("2"), document-src-keyword("dir"), document-src-int("1"))), "document", ctx, 2, empty);
+    let bml_result = form-recipe-registry-run-flex(registry, bml_source_surface, bml_form_surface, parse_req("bml", bml-bmf-dialect, "return-int", list(bml-src-keyword("return"), bml-src-int("13"), bml-src-op(";"))), "bml", ctx, 2, empty);
 
     let py_reverse = form-recipe-registry-run-flex(registry, py_form_surface, py_source_surface, emit_req("py", python-bmf-dialect, "assign-int", parsed_object(py_result)), "py", ctx, 2, empty);
     let image_reverse = form-recipe-registry-run-flex(registry, image_form_surface, image_source_surface, emit_req("image", image-bmf-dialect, "svg-viewbox", parsed_object(image_result)), "image", ctx, 2, empty);
+    let bml_reverse = form-recipe-registry-run-flex(registry, bml_form_surface, bml_source_surface, emit_req("bml", bml-bmf-dialect, "return-int", parsed_object(bml_result)), "bml", ctx, 2, empty);
     let py_reverse_source = form-adapter-plan-result-value(py_reverse);
     let image_reverse_source = form-adapter-plan-result-value(image_reverse);
+    let bml_reverse_source = form-adapter-plan-result-value(bml_reverse);
 
-    let registry_score = sum(list(int_score(len(form-recipe-registry-capsules(registry)), 9, 100), int_score(len(form-recipe-registry-capabilities(registry)), 18, 200), int_score(len(form-recipe-registry-contracts(registry)), 18, 300), int_score(len(form-recipe-registry-proofs(registry)), 18, 400)));
-    let language_score = sum(list(str_score(parsed_kind(py_result), "assign-int", 500), str_score(node_value(node_child(parsed_node(py_result), 0)), "count", 600), int_score(node_value(node_child(parsed_node(py_result), 1)), 13, 700), str_score(parsed_kind(ts_result), "export-const", 800), str_score(node_value(node_child(parsed_node(ts_result), 0)), "answer", 900), str_score(parsed_kind(go_result), "var-int", 1000), str_score(parsed_kind(rust_result), "fn0", 1100), str_score(node_value(node_child(parsed_node(rust_result), 0)), "main", 1200)));
+    let registry_score = sum(list(int_score(len(form-recipe-registry-capsules(registry)), 10, 100), int_score(len(form-recipe-registry-capabilities(registry)), 20, 200), int_score(len(form-recipe-registry-contracts(registry)), 20, 300), int_score(len(form-recipe-registry-proofs(registry)), 20, 400)));
+    let language_score = sum(list(str_score(parsed_kind(py_result), "assign-int", 500), str_score(node_value(node_child(parsed_node(py_result), 0)), "count", 600), int_score(node_value(node_child(parsed_node(py_result), 1)), 13, 700), str_score(parsed_kind(ts_result), "export-const", 800), str_score(node_value(node_child(parsed_node(ts_result), 0)), "answer", 900), str_score(parsed_kind(go_result), "var-int", 1000), str_score(parsed_kind(rust_result), "fn0", 1100), str_score(node_value(node_child(parsed_node(rust_result), 0)), "main", 1200), str_score(parsed_kind(bml_result), "return-int", 2200), int_score(node_value(node_child(node_child(parsed_node(bml_result), 0), 0)), 13, 2300)));
     let media_score = sum(list(str_score(parsed_kind(natural_result), "fact-is", 1300), str_score(parsed_kind(image_result), "svg-viewbox", 1400), str_score(parsed_kind(audio_result), "flac", 1500), str_score(parsed_kind(video_result), "webm-duration", 1600), str_score(parsed_kind(document_result), "cfbf", 1700)));
-    let reverse_score = sum(list(int_score(len(py_reverse_source), 3, 1800), str_score(bmf-object-value(nth(py_reverse_source, 0)), "count", 1900), int_score(len(image_reverse_source), 6, 2000), str_score(bmf-object-value(nth(image_reverse_source, 4)), "viewBox", 2100)));
+    let reverse_score = sum(list(int_score(len(py_reverse_source), 3, 1800), str_score(bmf-object-value(nth(py_reverse_source, 0)), "count", 1900), int_score(len(image_reverse_source), 6, 2000), str_score(bmf-object-value(nth(image_reverse_source, 4)), "viewBox", 2100), int_score(len(bml_reverse_source), 3, 2400), str_score(bmf-object-value(nth(bml_reverse_source, 0)), "return", 2500), str_score(bmf-object-value(nth(bml_reverse_source, 2)), ";", 2600)));
 
     sum(list(registry_score, language_score, media_score, reverse_score));
 }
