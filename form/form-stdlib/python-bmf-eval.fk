@@ -139,14 +139,26 @@
     ;; INSTANCE-BP record with "__class__" set, then run __init__ if present
     ;; (binding self + the call args). Returns the instance.
     (defn py-call-method (cls instance mname arg-values)
-        ;; Look up the method py-closure on the class, bind self=instance +
-        ;; args, walk the body. The closure's first param is the receiver.
+        ;; Resolve the method through the ONE walk (py-resolve-owner), so a
+        ;; method inherited from a base class dispatches without the immediate
+        ;; class defining it — `d.signature()` finds Animal.signature when Dog
+        ;; doesn't override it. Then bind self (param 0) = instance, bind the
+        ;; rest = arg-values, and bind `super` to a proxy carrying (self,
+        ;; owner's __base__): inside the running method, super() resolves from
+        ;; the base of the class that DEFINED this method, with the same self.
+        ;; Single inheritance: one base; MRO is a later breath.
         (do
-            (let cl (record_get cls mname))
+            (let owner (py-resolve-owner cls mname))
+            (let cl (record_get owner mname))
             (let pms (py-closure-params cl))
             (let body (py-closure-body cl))
-            ;; bind self (param 0) = instance, then the rest = arg-values
-            (let env0 (py-env-extend (py-closure-env cl) (head pms) instance))
+            (let super-start
+                (if (record_has owner "__base__")
+                    (record_get owner "__base__")
+                    owner))
+            (let env-super (py-env-extend (py-closure-env cl)
+                               "super" (py-super-proxy instance super-start)))
+            (let env0 (py-env-extend env-super (head pms) instance))
             (let call-env (py-bind-params (tail pms) arg-values env0))
             (py-eval body call-env)))
 
@@ -548,11 +560,24 @@
                     (py-stmt-result closure (py-env-extend env name closure)))
             (if (node_eq cat PY-BMF-CLASS)
                 (do
-                    ;; CLASS children: name-leaf, method-DEF-recipes... Build a
-                    ;; class record (methods as fields) and bind NAME in env.
+                    ;; CLASS children: name-leaf, [base-ref], method-DEF-recipes...
+                    ;; lift emits a PY-BMF-IDENT base-ref as kids[1] for a
+                    ;; subclass (`class Dog(Animal):`); a plain class has a DEF
+                    ;; (or nothing) there. Detect the base-ref by its IDENT
+                    ;; category, env-resolve it to the actual base class record
+                    ;; (a cell-ref, not a slug), and thread it onto the subclass
+                    ;; as "__base__" so dispatch and super walk the chain.
                     (let cname (node_value (head kids)))
-                    (let cls (py-class-build cname (tail kids) env))
-                    (py-stmt-result cls (py-env-extend env cname cls)))
+                    (if (and (gt (len kids) 1)
+                             (node_eq (node_category (nth kids 1)) PY-BMF-IDENT))
+                        (do
+                            (let base-cls (py-eval (nth kids 1) env))
+                            (let cls (py-class-build cname (tail (tail kids)) env))
+                            (record_set cls "__base__" base-cls)
+                            (py-stmt-result cls (py-env-extend env cname cls)))
+                        (do
+                            (let cls (py-class-build cname (tail kids) env))
+                            (py-stmt-result cls (py-env-extend env cname cls)))))
             (if (node_eq cat PY-BMF-ATTR-ASSIGN)
                 (do
                     ;; ATTR-ASSIGN children: obj-recipe, attr-leaf, value-recipe.
@@ -807,6 +832,12 @@
                     ;; intercept-before-lookup shape as range.
                     (if (eq (py-builtin? callee-name) 1)
                         (py-builtin callee-name arg-values)
+                    ;; zero-arg super() — hand back the proxy py-call-method
+                    ;; bound into this method's env under "super". The proxy
+                    ;; carries (self, start-class); the METHOD-CALL arm uses it
+                    ;; to resolve super().M() from the base chain.
+                    (if (str_eq callee-name "super")
+                        (py-env-lookup env "super")
                         (do
                             (let callee (py-env-lookup env callee-name))
                             ;; A from-imported native (`from math import sqrt`)
@@ -847,9 +878,18 @@
                     (let arg-values (py-eval-args (tail (tail kids)) env))
                     (if (py-module? obj)
                         (py-math-resolve mname arg-values)
+                    ;; super().M(args): obj is a super-proxy. Resolve M from the
+                    ;; proxy's start-class (base of the defining class) with the
+                    ;; ORIGINAL self — the SAME py-call-method walk, just a
+                    ;; different start class. super().__init__(...) chains the
+                    ;; base constructor against the already-built instance.
+                    (if (py-super? obj)
+                        (py-call-method (record_get obj "__start_class__")
+                                        (record_get obj "__self__")
+                                        mname arg-values)
                         (do
                             (let cls (record_get obj "__class__"))
-                            (py-call-method cls obj mname arg-values))))
+                            (py-call-method cls obj mname arg-values)))))
             (if (node_eq cat PY-BMF-LIST)
                 ;; LIST children: element-recipes. Value is a Form list
                 ;; of evaluated elements, in source order.

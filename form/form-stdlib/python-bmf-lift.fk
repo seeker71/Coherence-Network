@@ -757,19 +757,37 @@
             (intern_node PY-BMF-ATTR-ASSIGN
                 (list obj (intern_trivial_string attr) value))))
 
-    ;; class-statement: `class NAME :` with method `def`s as children. Lifts
-    ;; to PY-BMF-CLASS(name-leaf, method-def-recipes...). The eval arm builds
-    ;; a class value (methods keyed by name) and binds NAME in the env; calling
-    ;; NAME(args) constructs an instance record and runs __init__.
+    ;; class-statement. Two header shapes:
+    ;;   `class NAME :`            → PY-BMF-CLASS(name-leaf, method-defs...)
+    ;;   `class NAME ( BASE ) :`   → PY-BMF-CLASS(name-leaf, base-ref, method-defs...)
+    ;; The base is emitted as a PY-BMF-IDENT referencing the base CLASS cell —
+    ;; structure-first, so the eval arm env-resolves it to the actual base class
+    ;; record (a cell-ref, not a slug) and threads it onto the subclass as
+    ;; "__base__". The eval arm distinguishes the two shapes by testing whether
+    ;; kids[1] is an IDENT (a base-ref) or a DEF (a method) — single-inheritance
+    ;; today; the MRO list is a later breath.
+    ;;
+    ;; tokens[0]=class, tokens[1]=name. When tokens[2]="(", the base name is
+    ;; tokens[3] (`class Dog ( Animal ) :`).
     (defn lift-class (statement-tree)
         (do
             (let tokens (python-statement-tree-tokens statement-tree))
             (let children (python-statement-tree-children statement-tree))
-            ;; tokens[0]=class, tokens[1]=name
             (let name (tok-value (nth tokens 1)))
             (let method-recipes (lift-statements children))
-            (intern_node PY-BMF-CLASS
-                (cons (intern_trivial_string name) method-recipes))))
+            (if (and (gt (len tokens) 3)
+                     (str_eq (tok-value (nth tokens 2)) "("))
+                ;; subclass: base-ref (PY-BMF-IDENT for the base name) sits
+                ;; between the name leaf and the method defs.
+                (intern_node PY-BMF-CLASS
+                    (cons (intern_trivial_string name)
+                          (cons (intern_node PY-BMF-IDENT
+                                    (list (intern_trivial_string
+                                              (tok-value (nth tokens 3)))))
+                                method-recipes)))
+                ;; no base: original shape, unchanged.
+                (intern_node PY-BMF-CLASS
+                    (cons (intern_trivial_string name) method-recipes)))))
 
     ;; expr-statement: just an expression in statement position.
 
