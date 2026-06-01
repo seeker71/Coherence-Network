@@ -1763,6 +1763,12 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("math_pow", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VFloat, Float: math.Pow(args[0].asFloat(), args[1].asFloat())}
 	})
+	k.registerNative("math_log", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VFloat, Float: math.Log(args[0].asFloat())}
+	})
+	k.registerNative("math_exp", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VFloat, Float: math.Exp(args[0].asFloat())}
+	})
 
 	// ── Float construction + introspection — sibling-parity with the
 	// TS kernel's make_float32/make_float64 + f32/f64 transmute casts.

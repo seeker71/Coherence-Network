@@ -1888,6 +1888,12 @@ export class Kernel {
         float: Math.pow(argFloat(args, 0), argFloat(args, 1)),
       };
     });
+    this.registerNative("math_log", catMethod(), (_k, args) => {
+      return { kind: "f64", float: Math.log(argFloat(args, 0)) };
+    });
+    this.registerNative("math_exp", catMethod(), (_k, args) => {
+      return { kind: "f64", float: Math.exp(argFloat(args, 0)) };
+    });
     // ── Python `typing` module — opaque sentinels ───────────────────
     // Every typing import (List, Optional, Dict, Tuple, Any, Callable,
     // Union, Iterable, Iterator, Mapping, Sequence, Set, FrozenSet) binds

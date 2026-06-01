@@ -2963,6 +2963,12 @@ impl Kernel {
         self.register_native("math_pow", cat_method(), |_, _, args| {
             Value::Float(args[0].as_float().powf(args[1].as_float()))
         });
+        self.register_native("math_log", cat_method(), |_, _, args| {
+            Value::Float(args[0].as_float().ln())
+        });
+        self.register_native("math_exp", cat_method(), |_, _, args| {
+            Value::Float(args[0].as_float().exp())
+        });
         // ── Python `typing` module — opaque sentinels ─────────────────
         // Every typing import (List, Optional, Dict, Tuple, Any, Callable,
         // Union, Iterable, Iterator, Mapping, Sequence, Set, FrozenSet)

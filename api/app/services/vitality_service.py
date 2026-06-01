@@ -37,22 +37,59 @@ def _simpson_diversity(counts: list[int]) -> float:
     return 1.0 - sum((c / total) ** 2 for c in counts)
 
 
-def _breath_balance(gas: int, water: int, ice: int) -> float:
-    """Score [0.0, 1.0] for how balanced the three phase states are.
+def _breath_balance_py(gas: int, water: int, ice: int) -> float:
+    """Python fallback — value-identical to endpoint_breath_balance_demo.fk.
 
-    Perfect balance (equal thirds) = 1.0. All in one phase = 0.0.
-    Uses normalized entropy: H / H_max.
+    Normalized Shannon entropy H / H_max over the three phase proportions,
+    H_max = ln(3). Perfect balance (equal thirds) ≈ 1.0; a single phase
+    yields H = 0 → -0.0 (the recipe's single trailing negation matches
+    CPython's `-sum(...)` to the bit, including the -0.0 sign).
+
+    The operation order mirrors the Form recipe exactly so the kernel path
+    and this fallback agree to the last ULP:
+      • accumulate the (non-positive) p*ln(p) terms for p > 0, negate ONCE
+      • the p > 0 guard is the log-of-zero guard — ln(0) is never evaluated
+      • total + 0.0 forces IEEE-754 true division (the kernel's int `div`)
     """
     import math
 
     total = gas + water + ice
-    if total == 0:
+    if total <= 0:
         return 0.0
-    proportions = [gas / total, water / total, ice / total]
-    # Shannon entropy
-    h = -sum(p * math.log(p) for p in proportions if p > 0)
-    h_max = math.log(3)  # max entropy for 3 categories
-    return h / h_max if h_max > 0 else 0.0
+    total_f = total + 0.0
+    p_gas = gas / total_f
+    p_water = water / total_f
+    p_ice = ice / total_f
+    acc = 0.0
+    if p_gas > 0.0:
+        acc = acc + p_gas * math.log(p_gas)
+    if p_water > 0.0:
+        acc = acc + p_water * math.log(p_water)
+    if p_ice > 0.0:
+        acc = acc + p_ice * math.log(p_ice)
+    h = -1.0 * acc
+    h_max = math.log(3.0)
+    return h / h_max
+
+
+def _breath_balance(gas: int, water: int, ice: int) -> float:
+    """Score [0.0, 1.0] for how balanced the three phase states are.
+
+    Perfect balance (equal thirds) ≈ 1.0. All in one phase = -0.0 (zero).
+    Normalized Shannon entropy H / H_max, served by the Form recipe
+    endpoint_breath_balance_demo.fk when the kernel is present, falling
+    back to _breath_balance_py (value-identical) when it is not. The first
+    kernel-served route to use a transcendental native (math_log → ln).
+    """
+    from app.services.form_kernel_bridge import serve_via_kernel
+
+    balance, _runtime = serve_via_kernel(
+        "endpoint_breath_balance_demo.fk",
+        bindings={"gas": gas, "water": water, "ice": ice},
+        fallback=lambda: _breath_balance_py(gas, water, ice),
+        parse=float,
+    )
+    return balance
 
 
 def compute_vitality(workspace_id: str = "coherence-network") -> dict[str, Any]:

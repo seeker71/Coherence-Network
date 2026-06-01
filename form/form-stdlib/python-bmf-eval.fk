@@ -356,7 +356,8 @@
     ;; binds "sqrt" to a py-native-fn marker (or, for a constant like pi, to its
     ;; resolved value). The ATTR / METHOD-CALL / CALL arms see those markers and
     ;; dispatch to the kernel natives (math_sqrt / math_floor / math_ceil /
-    ;; math_pi / math_pow), callable from Form exactly like add / _plus.
+    ;; math_pi / math_pow / math_log / math_exp), callable from Form exactly
+    ;; like add / _plus.
 
     (defn py-module-tag () "py-module")
     (defn py-native-fn-tag () "py-native-fn")
@@ -384,9 +385,11 @@
         (if (str_eq member "ceil")  (math_ceil (head args))
         (if (str_eq member "pi")    (math_pi)
         (if (str_eq member "pow")   (math_pow (head args) (head (tail args)))
+        (if (str_eq member "log")   (math_log (head args))
+        (if (str_eq member "exp")   (math_exp (head args))
             (do
                 (trace "py-math-resolve: unknown member" member)
-                (head (empty)))))))))
+                (head (empty)))))))))))
 
     ;; py-bind-from-import-loop — bind each `from math import ...` member: a
     ;; constant (pi) resolves now; a function (sqrt) binds a native-fn marker.
