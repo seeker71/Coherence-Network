@@ -1,0 +1,9 @@
+; tests/field-model-form-runtime-conflict-band.fk - focused BML FMF conflict proof.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk
+
+(do
+    (let field (fmfrt-lift-sequence "ATG"))
+    (let observer (fmfrt-observer "bml-conflict-proof" "all-compatible"))
+    (let conflict (fmfrt-intervene field observer (list (fmfrt-delta "set-site" 0 "symbol" "A") (fmfrt-delta "set-site" 0 "symbol" "T"))))
+    (if (eq (len (fmfrt-residual-conflicts (fmfrt-result-residual conflict))) 1) 1 0))
