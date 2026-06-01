@@ -87,6 +87,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     FORM_KERNEL_RUST_BIN=/app/bin/form-kernel-rust \
+    FORM_RECIPE_DIR=/app/form/form-kernel-ts/seedbank/python-adapter/examples \
     PORT=8000
 
 WORKDIR /app
@@ -142,6 +143,21 @@ COPY scripts/ ./scripts/
 # support lands here, so production must carry these files instead of treating
 # them as inert repository content.
 COPY form/form-stdlib/ ./form/form-stdlib/
+
+# Transmuted-endpoint recipes. api/app/services/form_kernel_bridge.py resolves
+# `load_recipe("endpoint_*_demo.fk")` against
+# <repo-root>/form/form-kernel-ts/seedbank/python-adapter/examples/ — which,
+# with api/ flattened onto /app, is /app/form/form-kernel-ts/seedbank/
+# python-adapter/examples/. Without these `.fk` on disk, load_recipe raises
+# FileNotFoundError and the four utils endpoints degrade to python-fallback
+# (correct values, but NOT kernel-served). Baking the four committed recipes in
+# lets the warm PyO3 kernel actually serve them. Only the four the live API
+# loads are copied — the other regenerable demo `.fk` stay out of the image.
+COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.fk \
+     ./form/form-kernel-ts/seedbank/python-adapter/examples/
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script
 # re-syncs these on each deploy, but baking them in lets the image boot

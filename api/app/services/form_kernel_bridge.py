@@ -266,7 +266,16 @@ def run_with_fallback(
 
 
 # Repo-root-relative path to the seedbank examples directory.
-_SEEDBANK_EXAMPLES = (
+#
+# In a source checkout, api/app/services/form_kernel_bridge.py sits four levels
+# below the repo root, so four `.parent` hops land on the root and the seedbank
+# tree resolves directly. In the deploy image, Dockerfile.api flattens `api/`
+# onto /app (COPY api/ ./), so the bridge lives at /app/app/services/... and the
+# same four hops reach `/` — a DIFFERENT place than the source layout. To make
+# the recipe home explicit and image-independent, FORM_RECIPE_DIR overrides the
+# computed path; Dockerfile.api sets it to where it copies the committed `.fk`.
+_RECIPE_DIR_ENV = "FORM_RECIPE_DIR"
+_SEEDBANK_EXAMPLES_DEFAULT = (
     Path(__file__).resolve().parent.parent.parent.parent
     / "form"
     / "form-kernel-ts"
@@ -277,8 +286,15 @@ _SEEDBANK_EXAMPLES = (
 
 
 def seedbank_examples_dir() -> Path:
-    """Return the absolute path to the python-adapter examples directory."""
-    return _SEEDBANK_EXAMPLES
+    """Return the absolute path to the python-adapter examples directory.
+
+    Honors ``FORM_RECIPE_DIR`` when set (the deploy image points it at the
+    baked-in recipe directory); otherwise computes the source-checkout default.
+    """
+    override = os.environ.get(_RECIPE_DIR_ENV)
+    if override:
+        return Path(override)
+    return _SEEDBANK_EXAMPLES_DEFAULT
 
 
 def load_recipe(recipe_path: str | Path) -> str:
@@ -290,7 +306,7 @@ def load_recipe(recipe_path: str | Path) -> str:
     """
     p = Path(recipe_path)
     if not p.is_absolute():
-        p = _SEEDBANK_EXAMPLES / p
+        p = seedbank_examples_dir() / p
     return p.read_text(encoding="utf-8")
 
 
@@ -462,7 +478,7 @@ def _recipe_key(recipe_path: str | Path, binding_names: set[str]) -> str:
     """Stable key for the preload handle map: absolute path + sorted names."""
     p = Path(recipe_path)
     if not p.is_absolute():
-        p = _SEEDBANK_EXAMPLES / p
+        p = seedbank_examples_dir() / p
     return f"{p}::{','.join(sorted(binding_names))}"
 
 
