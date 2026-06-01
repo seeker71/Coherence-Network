@@ -633,6 +633,112 @@ async def marginal_cc_return(
 
 
 # ---------------------------------------------------------------------------
+# Endpoint: /api/utils/idea_marginal_from_record
+#
+# The FIRST kernel-served route to exercise STRUCTURE ACCESS — a recipe that
+# receives a structured object (the idea, marshalled as a kernel Record from a
+# Python dict / model) and pulls named fields out of it, rather than receiving
+# the inputs pre-flattened into separate scalar bindings. Same arithmetic as
+# marginal_cc_return; the new capability is the field extraction.
+#
+# How the structure travels into the recipe: the bindings carry one ``idea``
+# dict. form_kernel_bridge marshals it to a kernel Record — ``_fk_literal``
+# renders ``(record_new <blueprint> "field" value ...)`` on the subprocess path,
+# and lib.rs ``py_to_value`` builds a ``Value::Record`` on the inline path. The
+# recipe reads each field via the ``_get`` native (the python-bmf SUBSCRIPT
+# lowering), which now reads Record fields. This is the gate the
+# API_KERNEL_READINESS doc names as blocking ~60% of remaining candidates;
+# homogeneous-dict field access is the clean subset built here. (Heterogeneous
+# object-OR-dict polymorphism — _safe_float reading .field from a model OR
+# ["field"] from a dict across mixed collections — stays CPython; named in the
+# doc's structure-access section.)
+# ---------------------------------------------------------------------------
+
+
+class IdeaMarginalFromRecordResponse(BaseModel):
+    """GET /api/utils/idea_marginal_from_record response."""
+
+    model_config = ConfigDict(extra="forbid")
+    marginal_return: Annotated[
+        float,
+        Field(description="(value_gap * conf^2) / (remaining_cost + rr*0.5), read from a record"),
+    ]
+    idea: Annotated[
+        dict,
+        Field(description="The structured idea object the recipe read its fields from, echoed back"),
+    ]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+def _marginal_from_idea_py(idea: dict) -> float:
+    """Python fallback — value-identical to endpoint_idea_marginal_from_record_demo.fk.
+
+    Reads the six fields from the structured object and computes the Method-B
+    marginal CC return, round(_, 6). The recipe's operation order mirrors this
+    so kernel and fallback agree.
+    """
+    pv = idea["potential_value"]
+    av = idea["actual_value"]
+    conf = idea["confidence"]
+    ec = idea["estimated_cost"]
+    ac = idea["actual_cost"]
+    rr = idea["resistance_risk"]
+    value_gap = pv - av
+    if value_gap < 0.0:
+        value_gap = 0.0
+    remaining_cost = ec - ac
+    if remaining_cost < 0.1:
+        remaining_cost = 0.1
+    return round((value_gap * conf * conf) / (remaining_cost + rr * 0.5), 6)
+
+
+@router.get(
+    "/idea_marginal_from_record",
+    response_model=IdeaMarginalFromRecordResponse,
+    summary="Method-B marginal CC return read from a structured record (structure-access route)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the "
+        "FIRST to exercise structure access. The six inputs arrive as fields of "
+        "one structured object (the idea), marshalled into a kernel Record from "
+        "a Python dict, and the recipe reads them by name via the kernel's field "
+        "accessor. Same arithmetic as marginal_cc_return; the new capability is "
+        "field extraction from a record binding. Kernel-or-fallback via "
+        "serve_via_kernel; CPython==Rust value-parity is the gate."
+    ),
+)
+async def idea_marginal_from_record(
+    pv: Annotated[float, Query(description="potential_value in CC")] = 8.0,
+    av: Annotated[float, Query(description="actual_value in CC")] = 3.0,
+    conf: Annotated[float, Query(description="confidence in [0.0, 1.0]")] = 0.8,
+    ec: Annotated[float, Query(description="estimated_cost in CC")] = 4.0,
+    ac: Annotated[float, Query(description="actual_cost in CC")] = 1.0,
+    rr: Annotated[float, Query(description="resistance_risk in CC")] = 2.0,
+) -> IdeaMarginalFromRecordResponse:
+    idea = {
+        "potential_value": pv,
+        "actual_value": av,
+        "confidence": conf,
+        "estimated_cost": ec,
+        "actual_cost": ac,
+        "resistance_risk": rr,
+    }
+    marginal_return, runtime = serve_via_kernel(
+        "endpoint_idea_marginal_from_record_demo.fk",
+        bindings={"idea": idea},
+        fallback=lambda: _marginal_from_idea_py(idea),
+        parse=float,
+    )
+    return IdeaMarginalFromRecordResponse(
+        marginal_return=marginal_return,
+        idea=idea,
+        runtime=runtime,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Endpoint: /api/utils/breath_balance
 #
 # Pure computation: normalized Shannon entropy H / H_max over three phase
@@ -691,6 +797,73 @@ async def breath_balance(
     )
     return BreathBalanceResponse(
         balance=balance,
+        gas=gas,
+        water=water,
+        ice=ice,
+        runtime=runtime,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/shannon_entropy
+#
+# Pure computation: normalized Shannon entropy H / H_max over three phase
+# counts (gas / water / ice), H_max = ln(3), rounded to 4 places. The body
+# of breath_service._shannon_entropy_normalized. Distinct from breath_balance:
+# the per-term accumulator SUBTRACTS (so a single nonzero phase yields +0.0,
+# not breath_balance's trailing-negation -0.0), the result is wrapped in
+# round(_, 4), and the empty guard is `total == 0`. Folds two natives into one
+# recipe — math.log (ln, breath_balance's unlock) and round_ndigits (PR #2320,
+# cost_vector's unlock). The p>0 guard is the log-of-zero guard.
+# ---------------------------------------------------------------------------
+
+
+class ShannonEntropyResponse(BaseModel):
+    """GET /api/utils/shannon_entropy response."""
+
+    model_config = ConfigDict(extra="forbid")
+    entropy: Annotated[
+        float, Field(description="Normalized Shannon entropy H/H_max in [0.0, 1.0], round(_, 4)")
+    ]
+    gas: Annotated[int, Field(description="Input gas-phase count, echoed back")]
+    water: Annotated[int, Field(description="Input water-phase count, echoed back")]
+    ice: Annotated[int, Field(description="Input ice-phase count, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/shannon_entropy",
+    response_model=ShannonEntropyResponse,
+    summary="Normalized Shannon entropy over three phase counts (Form recipe, ln + round natives)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Returns normalized Shannon entropy H / H_max over three phase counts "
+        "(gas/water/ice), H_max = ln(3), rounded to 4 places — 1.0 for equal "
+        "thirds, 0.0 when only one phase is present. The body of "
+        "breath_service._shannon_entropy_normalized. Folds two natives into one "
+        "recipe (math.log → ln, round_ndigits → CPython-exact round). The p>0 "
+        "guard is the log-of-zero guard. Kernel-or-fallback via serve_via_kernel; "
+        "CPython==Rust value-parity is the gate."
+    ),
+)
+async def shannon_entropy(
+    gas: Annotated[int, Query(ge=0, description="Gas-phase count")] = 1,
+    water: Annotated[int, Query(ge=0, description="Water-phase count")] = 1,
+    ice: Annotated[int, Query(ge=0, description="Ice-phase count")] = 1,
+) -> ShannonEntropyResponse:
+    from app.services.breath_service import _shannon_entropy_normalized
+
+    entropy, runtime = serve_via_kernel(
+        "endpoint_shannon_entropy_demo.fk",
+        bindings={"gas": gas, "water": water, "ice": ice},
+        fallback=lambda: _shannon_entropy_normalized(gas, water, ice),
+        parse=float,
+    )
+    return ShannonEntropyResponse(
+        entropy=entropy,
         gas=gas,
         water=water,
         ice=ice,

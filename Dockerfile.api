@@ -165,6 +165,8 @@ COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_wei
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_cost_vector_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_value_vector_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_roi_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_shannon_entropy_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_marginal_from_record_demo.fk \
      ./form/form-kernel-ts/seedbank/python-adapter/examples/
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script

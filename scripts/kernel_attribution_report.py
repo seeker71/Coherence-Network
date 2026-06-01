@@ -110,6 +110,18 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "expected_result": "0.9999999999999998",
     },
     {
+        # Normalized Shannon entropy over three phase counts — the body of
+        # breath_service._shannon_entropy_normalized. Folds two natives into
+        # one recipe: math_log (ln, breath_balance's unlock) and round_ndigits
+        # (CPython-exact round, cost_vector's unlock). Distinct from
+        # breath_balance: subtractive accumulator (+0.0 single-phase, not -0.0)
+        # and a round(_, 4) wrapper. shannon_entropy(1,1,1) — equal thirds, H =
+        # ln(3) = H_max, round(1.0, 4) = 1.0.
+        "route": "/api/utils/shannon_entropy",
+        "recipe": "endpoint_shannon_entropy_demo.fk",
+        "expected_result": "1.0",
+    },
+    {
         # First LIST-returning kernel-served route. The result is a list of
         # softmax weights; the trace renders it as the list display string, so
         # the parity anchor is that string verbatim. scores [1,2,3] @ temp 1.0
@@ -152,6 +164,20 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "route": "/api/utils/grounded_roi",
         "recipe": "endpoint_grounded_roi_demo.fk",
         "expected_result": "[48.0, 25.333, 0.5278]",
+    },
+    {
+        # First STRUCTURE-ACCESS route — the marginal-CC core reading its six
+        # inputs from one structured object (a kernel Record marshalled from a
+        # Python dict) instead of six scalar bindings. The recipe pulls each
+        # field via the `_get` native (python-bmf SUBSCRIPT lowering), now able
+        # to read Record fields. Frozen idea {pv 8, av 3, conf 0.8, ec 4, ac 1,
+        # rr 2} → value_gap 5.0, remaining_cost 3.0, round((5*0.64)/(3+1), 6) =
+        # 0.8. The capability the API_KERNEL_READINESS doc names as the gate
+        # behind ~60% of remaining candidates; homogeneous-dict access is the
+        # clean subset proven here.
+        "route": "/api/utils/idea_marginal_from_record",
+        "recipe": "endpoint_idea_marginal_from_record_demo.fk",
+        "expected_result": "0.8",
     },
 ]
 

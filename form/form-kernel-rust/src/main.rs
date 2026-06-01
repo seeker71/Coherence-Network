@@ -809,6 +809,22 @@ impl Kernel {
         }
     }
 
+    /// Build a Record value from a blueprint and (field-name, value) pairs.
+    ///
+    /// The structure-access marshalling seam: the PyO3 bridge lowers a Python
+    /// dict (or a model via model_dump()) onto a kernel Record so a transmuted
+    /// recipe can read named fields via `record_get`. Field names intern to
+    /// NameIDs here exactly as the `record_new` native does (main.rs ~2051), so
+    /// a record marshalled from Python and one built by `record_new` in Form
+    /// are the same shape — `record_get`/`record_has` read both identically.
+    pub(crate) fn make_record(&mut self, blueprint: NodeID, pairs: Vec<(String, Value)>) -> Value {
+        let fields: Vec<(NameID, Value)> = pairs
+            .into_iter()
+            .map(|(name, value)| (self.intern_string(&name).inst, value))
+            .collect();
+        Value::Record(Arc::new(Mutex::new(Record { blueprint, fields })))
+    }
+
     fn substrate_mark(&self) -> Vec<Value> {
         vec![
             Value::Int(self.next_inst as i64),
@@ -2425,7 +2441,16 @@ impl Kernel {
         // (Earlier this was two `register_native("_get", …)` calls; the
         // second silently shadowed the first, so attribute reads on class
         // instances hit the int-index path and panicked on `as_int(Str)`.)
-        self.register_native("_get", cat_access(), |_, _, args| {
+        self.register_native("_get", cat_access(), |k, _, args| {
+            // Record: a marshalled structured input (the structure-access
+            // capability) or a record built by record_new. A string key reads
+            // the named field; record_get returns Null for an absent field
+            // (Python `obj[k]` would KeyError, but the transmuted recipes read
+            // fields they know exist, and Null is the honest "absent" surface).
+            if let (Value::Record(r), Value::Str(key)) = (&args[0], &args[1]) {
+                let name = k.intern_string(key).inst;
+                return r.lock().unwrap().get(name).unwrap_or(Value::Null);
+            }
             // Dict: ["__dict__", k0, v0, …] — key match by value.
             if is_dict(&args[0]) {
                 if let Value::List(xs) = &args[0] {

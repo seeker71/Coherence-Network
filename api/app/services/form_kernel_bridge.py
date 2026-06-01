@@ -310,13 +310,24 @@ def load_recipe(recipe_path: str | Path) -> str:
     return p.read_text(encoding="utf-8")
 
 
+# Conventional blueprint NodeID for a record marshalled from a Python dict /
+# model — the structured-input tag. Matches lib.rs STRUCTURED_INPUT_BLUEPRINT so
+# a record injected as this literal on the subprocess path and one marshalled
+# inline (py_to_value's dict arm) share the same blueprint. The recipe reads
+# fields by name (record_get), not by blueprint, so the value only needs to be
+# stable and consistent across the two carriers.
+_STRUCTURED_INPUT_BLUEPRINT = "(make_nodeid 1 5 4 1)"
+
+
 def _fk_literal(value: Any) -> str:
     """Render a Python value as an .fk literal.
 
-    Supported: int, float, bool, str, list of supported. Strings get
-    Lisp-style double-quote escaping. Lists become (list ...) forms.
-    Anything else raises TypeError — the kernel's value model is small
-    and deliberate.
+    Supported: int, float, bool, str, list of supported, and dict — the
+    structure-access marshalling: a dict (string keys → supported values, e.g.
+    a model via ``model_dump()``) becomes a ``(record_new <blueprint> "k" v ...)``
+    form a transmuted recipe reads via ``record_get``. Strings get Lisp-style
+    double-quote escaping; lists become ``(list ...)`` forms. Anything else
+    raises TypeError — the kernel's value model is small and deliberate.
     """
     if isinstance(value, bool):
         # bool before int — Python bool is an int subclass.
@@ -334,6 +345,23 @@ def _fk_literal(value: Any) -> str:
         # Lisp string literal — escape backslash and double-quote.
         escaped = value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
+    if isinstance(value, dict):
+        # Structure-access: a dict marshals to a kernel Record. Keys are field
+        # names (strings); values are any supported literal. The recipe reads
+        # fields by name via record_get — the same shape py_to_value's dict arm
+        # builds inline, so the subprocess and inline carriers agree.
+        if not value:
+            return f"(record_new {_STRUCTURED_INPUT_BLUEPRINT})"
+        parts = []
+        for k, v in value.items():
+            if not isinstance(k, str):
+                raise TypeError(
+                    f"_fk_literal: record field name must be a string, got "
+                    f"{type(k).__name__}"
+                )
+            escaped_key = k.replace("\\", "\\\\").replace('"', '\\"')
+            parts.append(f'"{escaped_key}" {_fk_literal(v)}')
+        return f"(record_new {_STRUCTURED_INPUT_BLUEPRINT} " + " ".join(parts) + ")"
     if isinstance(value, (list, tuple)):
         if not value:
             return "(list)"

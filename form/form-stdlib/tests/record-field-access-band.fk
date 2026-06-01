@@ -1,0 +1,91 @@
+; record-field-access-band.fk — three-way sibling parity for STRUCTURE ACCESS:
+; reading a named field out of a record passed as structured data.
+;
+; This is the structure/field-extraction capability the API_KERNEL_READINESS
+; doc names as the gate behind the ~60% of remaining transmutation candidates
+; that receive a structured object (a Pydantic model or a dict) and extract
+; numeric fields — compute_idea_metrics, the collective-health summaries, the
+; marginal-CC core when it takes the whole idea. The kernel already carries the
+; primitives in all three siblings (record_new / record_get / record_has,
+; make_nodeid); this band is the three-way proof that field extraction reads
+; identically across Go, Rust, and TypeScript.
+;
+; Why record_new (not _dict_get): record_new/record_get/record_has ship in ALL
+; THREE kernels, while _dict_get is Rust+TS only (Go has no _dict_*). So the
+; portable structure-access primitive is the Record — a (blueprint, field-map)
+; the bridge marshals a Python dict/model into, and the recipe reads via
+; record_get. The bridge's dict→record marshalling (form_kernel_bridge.py
+; _fk_literal + lib.rs py_to_value) lowers a Python dict onto exactly this shape.
+;
+; The float-arithmetic discipline of the sibling bands holds here too: bare
+; add/sub/mul on floats hits the documented polymorphic-float-arithmetic
+; divergence (float-natives-band.fk §"deferred"), so this band reads float
+; fields and SCORES them through eq / lt / gt comparisons and round_ndigits —
+; no bare float arithmetic ever crosses into the integer aggregate. A real
+; transmuted endpoint runs the field-read on the production Rust carrier where
+; float arithmetic is value-exact (Rust==Go==CPython); this band proves the
+; READ itself is three-way, which is the capability the gate names.
+;
+; The aggregate score is 1 per passing check; full pass = 16.
+
+(do
+    ;; A record standing in for an Idea / health-summary the bridge marshals
+    ;; from a Python dict: blueprint NodeID + alternating "field" value pairs.
+    ;; The blueprint is the conventional structured-input tag (Memory-domain
+    ;; @1.5.4.1); the value-bearing fields are what the recipe reads.
+    (let obj (record_new (make_nodeid 1 5 4 1)
+                "potential_value" 8.0
+                "actual_value"    3.0
+                "confidence"      0.8
+                "estimated_cost"  4.0
+                "actual_cost"     1.0
+                "resistance_risk" 2.0
+                "count"           7))
+
+    ;; ── 1. record_get reads each field back at its value ──────────────
+    (let s1 (if (eq (record_get obj "potential_value") 8.0) 1 0))
+    (let s2 (if (eq (record_get obj "confidence") 0.8) 1 0))
+    (let s3 (if (eq (record_get obj "count") 7) 1 0))            ; int field
+
+    ;; ── 2. Comparisons across two extracted float fields ──────────────
+    ;; pv 8.0 > av 3.0; ec 4.0 > ac 1.0 — the value_gap / remaining_cost
+    ;; orderings the marginal-CC core depends on, read straight from fields.
+    (let s4 (if (gt (record_get obj "potential_value")
+                    (record_get obj "actual_value")) 1 0))
+    (let s5 (if (gt (record_get obj "estimated_cost")
+                    (record_get obj "actual_cost")) 1 0))
+    (let s6 (if (lt (record_get obj "actual_cost")
+                    (record_get obj "resistance_risk")) 1 0))
+
+    ;; ── 3. A read float field round-trips through round_ndigits ───────
+    ;; (the cost/value-vector unlock composed with field extraction).
+    (let s7  (if (eq (round_ndigits (record_get obj "confidence") 4) 0.8) 1 0))
+    (let s8  (if (eq (round_ndigits (record_get obj "potential_value") 2) 8.0) 1 0))
+
+    ;; ── 4. record_has — present vs absent field ───────────────────────
+    (let s9  (if (record_has obj "potential_value") 1 0))
+    (let s10 (if (record_has obj "estimated_cost") 1 0))
+    (let s11 (if (record_has obj "missing_field") 0 1))
+
+    ;; ── 5. record? type predicate ─────────────────────────────────────
+    (let s12 (if (record? obj) 1 0))
+    (let s13 (if (record? 42) 0 1))
+
+    ;; ── 6. record_keys enumerates the field names (map-as-record view) ─
+    ;; The keydir pattern: a record used as a hash map reports its keys in
+    ;; insertion order. Seven fields were interned, so the key list has 7.
+    (let s14 (if (eq (len (record_keys obj)) 7) 1 0))
+
+    ;; ── 7. A field read feeds a comparison against an int threshold ───
+    ;; cross-width compare (float field vs int literal), the fuzzy-score-
+    ;; vs-count pattern the float band documents.
+    (let s15 (if (gt (record_get obj "potential_value") 5) 1 0))   ; 8.0 > 5
+    (let s16 (if (lt (record_get obj "confidence") 1) 1 0))        ; 0.8 < 1
+
+    ;; ── Aggregate — int + int through MATH (no float in result) ───────
+    ;; Every sub-score is 1 or 0; the sum flows through the integer path in
+    ;; every kernel and prints as a plain integer. Full pass = 16.
+    (add s1 (add s2 (add s3 (add s4 (add s5
+    (add s6 (add s7 (add s8 (add s9 (add s10
+    (add s11 (add s12 (add s13 (add s14 (add s15 s16)))))))))))))))
+)
