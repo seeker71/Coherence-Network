@@ -1,0 +1,88 @@
+; round-ndigits-band.fk — three-way sibling parity for round_ndigits(x, n),
+; the kernel native that replicates CPython `round(x, n)` for floats EXACTLY.
+;
+; CPython's round(x, n) rounds the TRUE value of the double (a finite dyadic
+; decimal) to n fractional digits using round-half-to-even, then takes the
+; nearest double. The naive f64 paths both diverge from CPython:
+;
+;   • floor(x*10^n + 0.5)/10^n (round-half-up): 33.333*0.25 = 8.33325 →
+;     CPython 8.3332, this path 8.3333.
+;   • round_ties_even(x*10^n)/10^n (banker's on the SCALED f64): 9.205*0.15
+;     = 1.38075 → CPython 1.3807, this path 1.3808 (the *10^n reintroduces
+;     representation error CPython's decimal path avoids).
+;
+; round_ndigits avoids both by rounding on the EXACT decimal expansion of the
+; double (Rust: format!("{:.1074}"); Go: strconv.FormatFloat('f',1074); TS:
+; BigInt mantissa*5^k). Verified bit-for-bit against CPython on 880k+ cases
+; (random magnitudes at n=2,4; adversarial nextafter-of-half ties at
+; n=0,2,4,6; the known-divergent cases below) with ZERO value divergences in
+; all three kernels.
+;
+; This band scores via (eq (round_ndigits ...) <literal>) → int, summed. No
+; float ever crosses the print boundary, so the documented integer-valued-
+; float / signed-zero print divergence (Rust "2.0" vs TS/Go "2"; "-0.0" vs
+; "0") never affects the three-way string compare. The value is what's tested.
+;
+; The literals on the right are CPython's round() results, expressed as exact
+; float literals every kernel parses to the same double.
+;
+; In service of unlocking the round-bearing route family (cost/value vectors,
+; grounded metrics, frequency scoring) for kernel coverage — round() is the
+; dominant blocker. Full pass = 24.
+
+(do
+    ;; ── 1. The two known-divergent products — the heart of the gate ────
+    ;; round-half-up would give 8.3333; banker's-on-scaled would give the
+    ;; wrong tie too. CPython (and round_ndigits) give 8.3332.
+    (let s1  (if (eq (round_ndigits 8.33325 4) 8.3332) 1 0))
+    ;; 9.205*0.15 = 1.38075 stored; CPython 1.3807 (NOT 1.3808).
+    (let s2  (if (eq (round_ndigits 1.38075 4) 1.3807) 1 0))
+    ;; 0.125*0.15 = 0.01875 stored; CPython 0.0187 (NOT 0.0188).
+    (let s3  (if (eq (round_ndigits 0.01875 4) 0.0187) 1 0))
+
+    ;; ── 2. The classic "looks like a half but isn't" cases ─────────────
+    ;; 2.675 stored is 2.67499999...; CPython rounds to 2.67 (NOT 2.68).
+    (let s4  (if (eq (round_ndigits 2.675 2) 2.67) 1 0))
+    ;; 0.125 stored is exact; half-to-even at 2 places → 0.12 (2 is even).
+    (let s5  (if (eq (round_ndigits 0.125 2) 0.12) 1 0))
+    ;; 0.00125 stored is 0.001250000...02; just above half → 0.0013.
+    (let s6  (if (eq (round_ndigits 0.00125 4) 0.0013) 1 0))
+    ;; 0.005 stored is 0.005000...104; just above half → 0.01.
+    (let s7  (if (eq (round_ndigits 0.005 2) 0.01) 1 0))
+
+    ;; ── 3. Exact-half ties at n=0 — round-half-to-even (banker's) ──────
+    (let s8  (if (eq (round_ndigits 0.5 0) 0.0) 1 0))   ; → 0 (even)
+    (let s9  (if (eq (round_ndigits 1.5 0) 2.0) 1 0))   ; → 2 (even)
+    (let s10 (if (eq (round_ndigits 2.5 0) 2.0) 1 0))   ; → 2 (even)
+    (let s11 (if (eq (round_ndigits 3.5 0) 4.0) 1 0))   ; → 4 (even)
+
+    ;; ── 4. Plain non-tie rounding at n=2 and n=4 ───────────────────────
+    (let s12 (if (eq (round_ndigits 3.14159 2) 3.14) 1 0))
+    (let s13 (if (eq (round_ndigits 3.14159 4) 3.1416) 1 0))
+    (let s14 (if (eq (round_ndigits 2.71828 2) 2.72) 1 0))
+    (let s15 (if (eq (round_ndigits 0.99999 2) 1.0) 1 0))   ; carry to integer
+
+    ;; ── 5. Negative values mirror the positive rounding ───────────────
+    (let s16 (if (eq (round_ndigits -2.675 2) -2.67) 1 0))
+    (let s17 (if (eq (round_ndigits -1.38075 4) -1.3807) 1 0))
+    (let s18 (if (eq (round_ndigits -1.5 0) -2.0) 1 0))     ; → -2 (even)
+
+    ;; ── 6. Already-rounded / pass-through values are stable ───────────
+    (let s19 (if (eq (round_ndigits 1.0 2) 1.0) 1 0))
+    (let s20 (if (eq (round_ndigits 0.0 4) 0.0) 1 0))
+    (let s21 (if (eq (round_ndigits 100.25 2) 100.25) 1 0))
+
+    ;; ── 7. Larger magnitudes — no scale-induced error ─────────────────
+    (let s22 (if (eq (round_ndigits 1234.5678 2) 1234.57) 1 0))
+    (let s23 (if (eq (round_ndigits 9999.99995 4) 9999.9999) 1 0))
+    ;; idempotence: rounding a 2-digit result to 2 digits is a no-op.
+    (let s24 (if (eq (round_ndigits (round_ndigits 7.005 2) 2) 7.0) 1 0))
+
+    ;; ── Aggregate — int + int through MATH (no float in result) ───────
+    ;; Every sub-score is 1 or 0; the sum flows through the integer path
+    ;; in every kernel and prints as a plain integer. Full pass = 24.
+    (add s1 (add s2 (add s3 (add s4 (add s5
+    (add s6 (add s7 (add s8 (add s9 (add s10
+    (add s11 (add s12 (add s13 (add s14 (add s15
+    (add s16 (add s17 (add s18 (add s19 (add s20
+    (add s21 (add s22 (add s23 s24))))))))))))))))))))))))

@@ -837,7 +837,19 @@
                 (len (head args)))
         (if (str_eq name "abs")
             (if (lt (head args) 0) (sub 0 (head args)) (head args))
-            (do (trace "py-builtin: unknown" name) (head (empty)))))))))
+        (if (str_eq name "round")
+            ;; round(x, n) — CPython's round() for floats, EXACTLY, via the
+            ;; round_ndigits kernel native (rounds the exact decimal value
+            ;; half-to-even at n places). The substrate's round-bearing routes
+            ;; (cost/value vectors, grounded metrics, frequency scoring) all
+            ;; pass the 2-arg form round(x, 4)/round(x, 2). The 1-arg form
+            ;; round(x) returns an int in CPython; here it lowers to
+            ;; round_ndigits(x, 0) (a float-valued whole) — a documented
+            ;; boundary, unused by the round-bearing routes this unlocks.
+            (if (nil? (tail args))
+                (round_ndigits (head args) 0)
+                (round_ndigits (head args) (head (tail args))))
+            (do (trace "py-builtin: unknown" name) (head (empty))))))))))
 
     ;; py-builtin? — 1 iff name is one of the reducing builtins above.
     (defn py-builtin? (name)
@@ -846,7 +858,8 @@
         (if (str_eq name "max") 1
         (if (str_eq name "len") 1
         (if (str_eq name "abs") 1
-            0))))))
+        (if (str_eq name "round") 1
+            0)))))))
 
     (defn py-eval (recipe env)
         (do
