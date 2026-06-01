@@ -163,12 +163,26 @@ leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
   still carries surprise would lose real information — the body compresses
   only what it has *learned* is predictable, which is why the cell's
   internal learning gates it.
-- **Partially built, mostly named.** Today the edge-event recorder
-  ([`lc-the-trace-is-the-memory`](lc-the-trace-is-the-memory.md)) persists
-  per-run without the energy gate. The surprise-gated retention, the
-  per-category learned policy, and the dimension-reducing compression
-  recipes are the named next builds — grounded on the embodiment projection
-  that already measures `|projection|`.
+- **The surprise gate is REAL.** The offline edge-event recorder
+  ([`lc-the-trace-is-the-memory`](lc-the-trace-is-the-memory.md),
+  `scripts/kernel_attribution_report.py --record`) now persists per category
+  ONLY the surprising tail: it resolves a relative threshold from the per-
+  category projections (default `mean` — the above-average-surprise tail; also
+  `median`, `fixed:<T>`, `topk:<K>`) and writes a category's edge-events IFF
+  its projection is ABOVE that threshold. The embodied center stays in RAM
+  only. On the live 19-route surface the center `_plus @1.2.27.1` (projection
+  ≈ 1.64) is NOT persisted while the two far categories (≈ 8.64, ≈ 10.36)
+  are — a 33% reduction vs the everything-recorder, and the split is printed
+  so the body sees what it keeps and what it lets go. The gate is one
+  comparison `is_surprising(projection, threshold)` over the categories-as-
+  DATA, grounded entirely on the projection that already exists. (Off the hot
+  path: this is the OFFLINE attribution recorder, never the live
+  `serve_via_kernel` request path, which remains a separate decision.)
+- **Still named, not yet built.** The per-category *learned* retention policy
+  (the cell learning its own threshold over time, rather than a per-run
+  relative cutoff) and the dimension-reducing compression recipe (N→N−1,
+  folding away a redundant axis) remain the named next builds — grounded on
+  the same projection the gate now reads.
 
 ## Cross-References
 
@@ -185,7 +199,9 @@ leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
   trace as edge-event memory, embodiment as `|projection| → 0`. This concept
   names *why* the projection-to-zero matters for memory: zero surprise means
   safe to keep in RAM / compress / forget; the energy is in the surprising
-  tail. It corrects the naive recorder toward energy-gated persistence.
+  tail. The recorder there is now energy-gated by THIS concept's surprise
+  gate — `--record` persists only the surprising tail, keeping the embodied
+  center in RAM only.
 - **[lc-the-thaw-is-backprop](lc-the-thaw-is-backprop.md)** — surprise as
   the gradient signal worth keeping. The events worth persisting are the
   ones that carry gradient — the surprising, model-changing ones.
