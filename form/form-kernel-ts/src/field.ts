@@ -1,10 +1,8 @@
 // field.ts — Field Model Form (FMF) vertical slice.
 //
 // FMF generalizes BMF from a linear character stream to typed fields of
-// cells. The execution contract is logical simultaneity on a bounded engine:
-// freeze one snapshot, match rules against that snapshot, price and choose
-// candidates, emit candidate deltas, resolve conflicts, commit atomically,
-// and record a transparent receipt plus residual.
+// cells. This TypeScript module is a host adapter for the canonical BML
+// runtime in form/form-stdlib/field-model-form-runtime.fk.
 
 import {
   Kernel,

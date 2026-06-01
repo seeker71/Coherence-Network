@@ -27,5 +27,6 @@ describe("browser-facing Form kernel", () => {
     expect(LOCAL_FIELD_RUNTIME_PROOF.score).toBe(4);
     expect(LOCAL_FIELD_RUNTIME_PROOF.checks).toContain("intervene-reverseReceipt");
     expect(LOCAL_FORM_PROOF_MARKERS).toContain(LOCAL_FIELD_RUNTIME_PROOF.marker);
+    expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-model-form-bml-runtime-proof:63");
   });
 });

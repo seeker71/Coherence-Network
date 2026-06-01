@@ -9,6 +9,10 @@ source:
     symbols: [fmf-proof-score, fmf-quantum-rain-proof, fmf-hoffman-proof, fmf-bioelectric-proof, fmf-grant-proof, fmf-wolfram-proof]
   - file: form/form-stdlib/tests/field-model-form-band.fk
     symbols: [field-model-form-band]
+  - file: form/form-stdlib/field-model-form-runtime.fk
+    symbols: [fmfrt-public-runtime-proof-score, fmfrt-field-step, fmfrt-intervene, fmfrt-reverse-receipt, fmfrt-lift-sequence, fmfrt-project-sequence]
+  - file: form/form-stdlib/tests/field-model-form-runtime-band.fk
+    symbols: [field-model-form-runtime-band]
   - file: form/form-kernel-ts/src/kernel.ts
     symbols: [RBasic.FIELD, RBasic.DELTA, RBasic.RECEIPT, RBasic.RESIDUAL]
   - file: form/form-kernel-ts/src/field.ts
@@ -24,10 +28,12 @@ source:
 requirements:
   - "FMF defines FieldBlueprint, FieldRecipe, and FieldCell as a field lift of Blueprint, Recipe, and Cell."
   - "FMF execution uses logical simultaneity: snapshot, match, choose, delta, resolve, commit, receipt, residual."
-  - "FMF has executable proof for all FMF primitive constructors across sibling kernels plus TypeScript and browser TypeScript bidirectional lift/project and intervention/reverse proofs."
+  - "FMF has executable proof for all FMF primitive constructors across sibling kernels plus a canonical BML-authored runtime proof and TypeScript/browser adapter proofs."
 done_when:
   - "cd form/form-kernel-ts && npx tsx src/field.test.ts passes"
   - "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk returns 93"
+  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
+  - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
   - "cd web && npm test -- form-kernel-field-runtime.test.ts passes"
   - "cd form/form-kernel-ts && npm run check passes"
   - "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md passes"
@@ -55,7 +61,7 @@ Field Model Form extends the Form substrate from stream execution into field exe
 - [x] **R7**: The Go, Rust, TypeScript, and browser TypeScript kernels expose native constructors for every FMF RBasic slot: `field_blueprint`, `field_cell`, `field_carrier`, `field_topology`, `field_fiber`, `field_region`, `field_boundary`, `field_neighborhood`, `field_match`, `field_delta`, `field_resolve`, `field_commit`, `field_step`, `field_lift`, `field_sample`, `field_observe`, `field_intervene`, `field_residual`, `field_receipt`, `field_cost`, `field_consent`, and `field_evidence`.
 - [x] **R8**: Donald Hoffman, Michael Levin, Robert Edward Grant, and Stephen Wolfram are represented as evidence-labeled FMF lenses with explicit claim boundaries and executable proof functions.
 - [x] **R9**: `/substrate/form` includes a public local-kernel playground example that runs the FMF proof and returns `93`.
-- [x] **R10**: The spec states the validation boundary explicitly: all sibling kernels validate primitive construction; full forward/reverse field-step semantics are implemented and validated in TypeScript and browser TypeScript first, not yet in Go/Rust kernels.
+- [x] **R10**: The canonical forward/reverse field-step runtime is authored in Form-native BML and validated across sibling kernels from source and binary artifacts; TypeScript and browser TypeScript remain host adapters/public mirrors.
 - [x] **R11**: Each requested domain proves the same 11-line contract: carrier algebra, match primitive, recipe primitive, units/dimensions, scheduling, conflict/confluence, scale bridge, evidence, observer identity, residuals, and participation semantics.
 
 ## Research Inputs
@@ -112,6 +118,11 @@ FieldRule:
 - `form/form-kernel-ts/src/field.test.ts` — cross-domain proof.
 - `form/form-stdlib/field-model-form.fk` — cross-kernel FMF proof library.
 - `form/form-stdlib/tests/field-model-form-band.fk` — sibling-kernel FMF band proof.
+- `form/form-stdlib/field-model-form-runtime.fk` — canonical BML-authored FMF runtime: fieldStep, intervention, reverse receipt, lift/project, conflict residuals, and observer-costed rule choice.
+- `form/form-stdlib/tests/field-model-form-runtime-band.fk` — sibling-kernel BML runtime band proof returning `63`.
+- `form/form-stdlib/tests/field-model-form-runtime-lift-band.fk` — focused lift/project proof.
+- `form/form-stdlib/tests/field-model-form-runtime-intervene-band.fk` — focused intervention proof.
+- `form/form-stdlib/tests/field-model-form-runtime-conflict-band.fk` — focused conflict residual proof.
 - `web/lib/form-kernel/field-model-form.ts` — public playground proof source.
 - `web/lib/form-kernel/field-runtime.ts` — browser-local executable FMF field-step runtime.
 - `web/lib/form-kernel/client.ts` — curated local-kernel example registry.
@@ -122,6 +133,8 @@ FieldRule:
 
 - `cd form/form-kernel-ts && npx tsx src/field.test.ts`
 - `cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
+- `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
 - `cd web && npm test -- form-kernel-field-runtime.test.ts`
 - `cd form/form-kernel-ts && npm run check`
 - `python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md`
@@ -134,11 +147,13 @@ cd form/form-kernel-ts && npm install
 cd form/form-kernel-ts && npm run check
 cd form/form-kernel-ts && npx tsx src/field.test.ts
 cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
+cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
 cd web && npm test -- form-kernel-field-runtime.test.ts
 python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md
 ```
 
-Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `field-model-form-browser-runtime-proof:4`, `sequence-lift-project-fieldStep`, `fmf-proof-score`, and `field_blueprint`.
+Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `field-model-form-bml-runtime-proof:63`, `field-model-form-browser-runtime-proof:4`, `sequence-lift-project-fieldStep`, `fmf-proof-score`, and `field_blueprint`.
 
 ## Validation Matrix
 
@@ -147,21 +162,20 @@ Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`
 | FMF RBasic slot reservation | yes | yes | yes | yes | source constants + trace names |
 | FMF native node constructors | yes | yes | yes | yes | `field-model-form-band.fk` constructs every FMF category |
 | Domain/lens structural proof | yes | yes | yes | yes | band returns `93`; browser example returns `93` |
-| Full `fieldStep()` forward execution | no | no | yes | yes | `form/form-kernel-ts/src/field.test.ts`; `web/tests/form-kernel-field-runtime.test.ts` |
-| Receipt-backed reverse/intervention | no | no | yes | yes | `intervene()` + `reverseReceipt()` tests |
+| Form-native BML `fieldStep()` forward execution | yes | yes | yes | mirror | `field-model-form-runtime-band.fk` returns `63` from source and binary artifacts |
+| Receipt-backed reverse/intervention | yes | yes | yes | yes | BML `fmfrt-intervene()`/`fmfrt-reverse-receipt()`; TS/browser adapter tests |
+| Browser host adapter runtime | n/a | n/a | n/a | yes | `web/tests/form-kernel-field-runtime.test.ts` |
 | Scientific-grade simulators | no | no | no | no | out of scope |
 
 ## Out of Scope
 
-- Full parser syntax for authoring FMF rules directly as `.fk` source.
-- Full forward/reverse FMF runtime semantics in Go or Rust.
 - Production biological, chemical, or physical simulation accuracy.
 - External data fetch during kernel execution.
 
 ## Gaps
 
-- **G1**: FMF rules are executable through the TypeScript field module; a future breath can add direct `.fk` syntax and reader support.
-- **G2**: Go, Rust, TypeScript, and browser TypeScript now share every FMF primitive constructor; the richer forward/reverse field-step executor is implemented in TypeScript and browser TypeScript first. Go/Rust still need a native runtime value layer before claiming generic field-step execution. The Python category reserves the FMF conflict-resolution slot as `FIELD_RESOLVE = 97` because `RBasic.RESOLVE = 5` already names identity lookup.
+- **G1**: FMF rules are executable through canonical BML functions and TypeScript/browser adapters; a future breath can add a dedicated `.fmf` surface syntax that lowers into `field-model-form-runtime.fk`.
+- **G2**: Go, Rust, TypeScript, and browser TypeScript now share every FMF primitive constructor; Go/Rust/TypeScript execute the same BML runtime proof through Form, while the browser adapter mirrors the runtime without the BML source compiler in the client bundle. The Python category reserves the FMF conflict-resolution slot as `FIELD_RESOLVE = 97` because `RBasic.RESOLVE = 5` already names identity lookup.
 - **G3**: Domain and lineage examples prove structural execution, reversible receipts, and observer residuals; scientific-grade simulation requires per-domain validation work.
 
 - Follow-up task: `field-model-form-native-reader`

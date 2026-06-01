@@ -1,0 +1,13 @@
+; tests/field-model-form-runtime-band.fk - BML-authored FMF runtime proof.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk
+;
+; Band verdict: 63 when Form-native BML executes:
+;   1  sequence lift/project round trip
+;   2  field_step returns a FieldCell result shape
+;   4  two sequence-window rules emit trace deltas
+;   8  observer intervention mutates a site
+;   16 reverse receipt restores the original sequence
+;   32 conflicting writes surface in residuals
+
+(fmfrt-public-runtime-proof-score)
