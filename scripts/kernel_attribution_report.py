@@ -142,6 +142,17 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_value_vector_demo.fk",
         "expected_result": "[4.6025, 2.7615, 1.841, 0.0, 9.205]",
     },
+    {
+        # Grounded-ROI scalar trio of idea_scoring._with_score — folds the
+        # max-as-comparison, the round_ndigits native (PR #2320), and a
+        # guarded division (the `if remaining_cost_cc > 0 else 0.0` ternary)
+        # into one recipe. Frozen input estimated_cost 60 / actual_cost 12 /
+        # potential_value 33.333 / actual_value 8 → remaining_cost_cc 48.0,
+        # value_gap_cc 25.333, roi_cc round(25.333/48.0, 4) = 0.5278.
+        "route": "/api/utils/grounded_roi",
+        "recipe": "endpoint_grounded_roi_demo.fk",
+        "expected_result": "[48.0, 25.333, 0.5278]",
+    },
 ]
 
 _EXAMPLES_DIR = (
