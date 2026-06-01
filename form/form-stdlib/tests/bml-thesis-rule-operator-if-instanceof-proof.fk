@@ -1,0 +1,77 @@
+; tests/bml-thesis-rule-operator-if-instanceof-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the first conditional in original container-Rule.bml operator==:
+; if ( !hObj instanceof Rule ) return false;
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let operator-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "operator=="))
+    (let operator-body (bml-method-body operator-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9270))
+    (let OtherBP (make_nodeid 1 2 99 9271))
+    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let rule-instance (record_new RuleBP "bmlClass" "Rule"))
+    (let other-object (record_new OtherBP "bmlClass" "Other"))
+    (let other-env (record_new CallEnvBP "hObj" other-object))
+    (let rule-env (record_new CallEnvBP "hObj" rule-instance))
+
+    (let direct-result
+        (bml-body-source-exec-if-not-instanceof-return-false
+            operator-body
+            rule-instance
+            other-env))
+    (let sequence-result
+        (bml-body-source-exec
+            operator-body
+            rule-instance
+            other-env))
+    (let positive-result
+        (bml-body-source-exec-if-not-instanceof-return-false
+            operator-body
+            rule-instance
+            rule-env))
+
+    (defn rule-eq-dispatch (self hObj)
+        (bml-body-source-exec
+            operator-body
+            self
+            (record_new CallEnvBP "hObj" hObj)))
+
+    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (let method-result (method_invoke rule-instance "operator==" other-object))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-name operator-method) "operator==" 2)
+            (str-score (bml-method-return operator-method) "bool" 4)
+            (bool-score (bml-body-source-contains? operator-body "instanceof") 8)
+            (bool-score (bml-body-source-contains? operator-body "false") 16)
+            (int-score
+                (bml-body-source-if-not-instanceof-return-false-count operator-body)
+                1
+                32)
+            (bool-score (bml-body-source-instanceof? rule-instance "Rule") 64)
+            (bool-score (not (bml-body-source-instanceof? other-object "Rule")) 128)
+            (bool-score (not direct-result) 256)
+            (bool-score (not sequence-result) 512)
+            (bool-score (record? positive-result) 1024)
+            (bool-score (not method-result) 2048))))
