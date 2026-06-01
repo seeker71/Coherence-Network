@@ -797,6 +797,179 @@ async def softmax_weights(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/cost_vector
+#
+# Pure computation: decompose an idea's estimated_cost into CC resource
+# types — compute (60%), infrastructure (15%), human_attention (25%),
+# opportunity (0), external (0) — each rounded to 4 places, plus the
+# rounded total. Shares its body with idea_scoring._build_cost_vector (the
+# fallback). The recipe returns a LIST of the six components in struct
+# order; this route assembles the named CostVector from the positional
+# list (same list-returning shape as softmax_weights).
+#
+# This is the FIRST kernel-served route to use the round_ndigits native
+# (PR #2320): the adapter lowers Python's two-arg round(x, 4) to
+# round_ndigits, which replicates CPython's round() for floats EXACTLY
+# (half-to-even at n places). The prior round-half-up shim diverged from
+# CPython on 71,860 of 4M cost/value components; round_ndigits diverges
+# 0/4M. The decimal cases that exposed the divergence — e.g.
+# estimated_cost=33.333 → ec*0.25=8.33325 → 8.3332 (NOT 8.3333) — now
+# match the bit across CPython, the Form-native walker, and form-kernel-rust.
+# ---------------------------------------------------------------------------
+
+
+def _build_cost_vector_components_py(estimated_cost: float) -> list[float]:
+    """Python fallback — the six cost components in struct order.
+
+    Mirrors idea_scoring._build_cost_vector's arithmetic exactly:
+    compute 60% / infrastructure 15% / human_attention 25% / opportunity 0 /
+    external 0, total — each round(_, 4).
+    """
+    return [
+        round(estimated_cost * 0.60, 4),
+        round(estimated_cost * 0.15, 4),
+        round(estimated_cost * 0.25, 4),
+        0.0,
+        0.0,
+        round(estimated_cost, 4),
+    ]
+
+
+class CostVectorResponse(BaseModel):
+    """GET /api/utils/cost_vector response — the named CC cost breakdown."""
+
+    model_config = ConfigDict(extra="forbid")
+    compute_cc: Annotated[float, Field(description="LLM token processing cost = round(ec*0.60, 4)")]
+    infrastructure_cc: Annotated[float, Field(description="Server/runtime cost = round(ec*0.15, 4)")]
+    human_attention_cc: Annotated[float, Field(description="Human review/decision cost = round(ec*0.25, 4)")]
+    opportunity_cc: Annotated[float, Field(description="Delay/blocking cost (reserved — 0.0)")]
+    external_cc: Annotated[float, Field(description="Hard currency outflow (reserved — 0.0)")]
+    total_cc: Annotated[float, Field(description="Total cost = round(ec, 4)")]
+    estimated_cost: Annotated[float, Field(description="Input estimated_cost, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/cost_vector",
+    response_model=CostVectorResponse,
+    summary="CC cost-vector decomposition (first round_ndigits Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Decomposes estimated_cost into CC resource types — compute (60%), "
+        "infrastructure (15%), human_attention (25%), opportunity (0), "
+        "external (0) — each round(_, 4), plus the rounded total. Same body "
+        "as idea_scoring._build_cost_vector. This is the FIRST kernel-served "
+        "route to use the round_ndigits native (CPython-exact round(x, 4), "
+        "PR #2320): the decimal cases the old round-half-up shim got wrong "
+        "(e.g. ec=33.333 → human_attention 8.3332, not 8.3333) now match the "
+        "bit across all runtimes. Kernel-or-fallback via serve_via_kernel; "
+        "CPython==Rust per-component value-parity is the gate."
+    ),
+)
+async def cost_vector(
+    estimated_cost: Annotated[float, Query(ge=0.0, description="Estimated cost in CC")] = 33.333,
+) -> CostVectorResponse:
+    components, runtime = serve_via_kernel(
+        "endpoint_cost_vector_demo.fk",
+        bindings={"estimated_cost": estimated_cost},
+        fallback=lambda: _build_cost_vector_components_py(estimated_cost),
+        parse=_coerce_float_list,
+    )
+    return CostVectorResponse(
+        compute_cc=components[0],
+        infrastructure_cc=components[1],
+        human_attention_cc=components[2],
+        opportunity_cc=components[3],
+        external_cc=components[4],
+        total_cc=components[5],
+        estimated_cost=estimated_cost,
+        runtime=runtime,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/value_vector
+#
+# Pure computation: decompose an idea's potential_value into CC value types
+# — adoption (50%), lineage (30%), friction_avoided (20%), revenue (0) —
+# each rounded to 4 places, plus the rounded total. Shares its body with
+# idea_scoring._build_value_vector (the fallback). Sibling of cost_vector,
+# same round_ndigits unlock; the recipe returns a LIST of the five
+# components in struct order and this route assembles the named ValueVector.
+# ---------------------------------------------------------------------------
+
+
+def _build_value_vector_components_py(potential_value: float) -> list[float]:
+    """Python fallback — the five value components in struct order.
+
+    Mirrors idea_scoring._build_value_vector's arithmetic exactly:
+    adoption 50% / lineage 30% / friction_avoided 20% / revenue 0, total —
+    each round(_, 4).
+    """
+    return [
+        round(potential_value * 0.50, 4),
+        round(potential_value * 0.30, 4),
+        round(potential_value * 0.20, 4),
+        0.0,
+        round(potential_value, 4),
+    ]
+
+
+class ValueVectorResponse(BaseModel):
+    """GET /api/utils/value_vector response — the named CC value breakdown."""
+
+    model_config = ConfigDict(extra="forbid")
+    adoption_cc: Annotated[float, Field(description="Value from usage/adoption = round(pv*0.50, 4)")]
+    lineage_cc: Annotated[float, Field(description="Value from lineage pipeline = round(pv*0.30, 4)")]
+    friction_avoided_cc: Annotated[float, Field(description="Value from unblocking work = round(pv*0.20, 4)")]
+    revenue_cc: Annotated[float, Field(description="External revenue converted to CC (reserved — 0.0)")]
+    total_cc: Annotated[float, Field(description="Total value = round(pv, 4)")]
+    potential_value: Annotated[float, Field(description="Input potential_value, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/value_vector",
+    response_model=ValueVectorResponse,
+    summary="CC value-vector decomposition (round_ndigits Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Decomposes potential_value into CC value types — adoption (50%), "
+        "lineage (30%), friction_avoided (20%), revenue (0) — each "
+        "round(_, 4), plus the rounded total. Same body as "
+        "idea_scoring._build_value_vector. Sibling of cost_vector; the "
+        "round_ndigits native (CPython-exact round(x, 4), PR #2320) makes "
+        "every component match CPython to the bit. Kernel-or-fallback via "
+        "serve_via_kernel; CPython==Rust per-component value-parity is the gate."
+    ),
+)
+async def value_vector(
+    potential_value: Annotated[float, Query(ge=0.0, description="Potential value in CC")] = 9.205,
+) -> ValueVectorResponse:
+    components, runtime = serve_via_kernel(
+        "endpoint_value_vector_demo.fk",
+        bindings={"potential_value": potential_value},
+        fallback=lambda: _build_value_vector_components_py(potential_value),
+        parse=_coerce_float_list,
+    )
+    return ValueVectorResponse(
+        adoption_cc=components[0],
+        lineage_cc=components[1],
+        friction_avoided_cc=components[2],
+        revenue_cc=components[3],
+        total_cc=components[4],
+        potential_value=potential_value,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",
