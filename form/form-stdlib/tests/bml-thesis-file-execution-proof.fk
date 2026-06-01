@@ -1,0 +1,42 @@
+; tests/bml-thesis-file-execution-proof.fk - real .bml file to native DO/UNDO proof
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+
+(do
+    (defn score-bool (value bit)
+        (if value bit 0))
+
+    (defn score-int (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn score-str (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-forward-backward-demo.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-executable path))
+    (let program (bml-source-file-compile-executable path))
+    (let result (bma-run-forward-backward program))
+    (let forward-state (bma-forward-backward-forward-state result))
+    (let restored-state (bma-forward-backward-restored-state result))
+    (let trace (bma-forward-backward-trace result))
+
+    (sum
+        (list
+            (score-int (len source-objects) 18 1)
+            (score-str (bmf-object-kind (head source-objects)) "bml-keyword" 2)
+            (score-str (bmf-object-value (head source-objects)) "save" 4)
+            (score-bool (bml-source-exec-parse-ok? parsed) 8)
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0 16)
+            (score-int (len (bml-source-exec-parse-rules parsed)) 2 32)
+            (score-str (head (bml-source-exec-parse-rules parsed)) "state-int" 64)
+            (score-str (nth (bml-source-exec-parse-rules parsed) 1) "try-throw-return" 128)
+            (score-int (len (comp-program-ops program)) 4 256)
+            (score-int (bma-trace-count-mode trace "DO") 4 512)
+            (score-int (bma-trace-count-mode trace "UNDO") 4 1024)
+            (score-int (bma-trace-count-op trace "save") 2 2048)
+            (score-int (bma-trace-count-op trace "try") 2 4096)
+            (score-int (comp-vm-pop-value forward-state) 7 8192)
+            (score-str (comp-vm-mode forward-state) "return" 16384)
+            (score-int (len (comp-vm-stack restored-state)) 0 32768)
+            (score-str (comp-vm-mode restored-state) "run" 65536))))
