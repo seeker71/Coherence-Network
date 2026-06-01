@@ -26,6 +26,7 @@ import os
 import pytest
 
 from app.services.form_kernel_bridge import (
+    _as_field_dict,
     _fk_literal,
     kernel_available,
     serve_via_kernel,
@@ -69,6 +70,179 @@ class TestFkLiteralRecord:
     def test_non_string_key_rejected(self):
         with pytest.raises(TypeError):
             _fk_literal({1: 2.0})
+
+
+class TestModelToRecordNormalization:
+    """A model / object normalizes to a record at the marshal boundary.
+
+    The object-OR-dict polymorphism the blocked functions carry
+    (``_safe_float(obj, f)`` reads ``obj.f`` from a model OR ``obj[f]`` from a
+    dict) is DISSOLVED here: every structured value normalizes to a dict before
+    it marshals to a Record, so the recipe only ever sees Records.
+    """
+
+    def test_pydantic_model_normalizes_to_field_dict(self):
+        from pydantic import BaseModel
+
+        class Spec(BaseModel):
+            event_count: int
+            actual_value: float
+
+        d = _as_field_dict(Spec(event_count=3, actual_value=1.5))
+        assert d == {"event_count": 3, "actual_value": 1.5}
+
+    def test_plain_object_normalizes_to_field_dict(self):
+        class Plain:
+            def __init__(self, ec: int, av: float) -> None:
+                self.event_count = ec
+                self.actual_value = av
+
+        d = _as_field_dict(Plain(7, 2.0))
+        assert d == {"event_count": 7, "actual_value": 2.0}
+
+    def test_scalar_has_no_field_view(self):
+        assert _as_field_dict(5) is None
+        assert _as_field_dict("text") is None
+        assert _as_field_dict([1, 2]) is None
+
+    def test_model_renders_as_record_new(self):
+        from pydantic import BaseModel
+
+        class Spec(BaseModel):
+            event_count: int
+            actual_value: float
+
+        lit = _fk_literal(Spec(event_count=3, actual_value=1.5))
+        assert lit.startswith("(record_new (make_nodeid 1 5 4 1) ")
+        assert '"event_count" 3' in lit
+        assert '"actual_value" 1.5' in lit
+
+
+class TestListOfRecordMarshalling:
+    """A list[dict|model] marshals to a kernel list-of-records.
+
+    The bridge's recursive marshal: scalar→value, dict/model→record, list→list
+    of marshalled. A reduction recipe folds over the resulting list-of-records;
+    this is gate #1 ("list-of-record reduction") in API_KERNEL_READINESS.
+    """
+
+    def test_list_of_dicts_renders_as_list_of_records(self):
+        specs = [
+            {"event_count": 3, "actual_value": 1.5},
+            {"event_count": 0, "actual_value": 0.0},
+        ]
+        lit = _fk_literal(specs)
+        assert lit.startswith("(list (record_new ")
+        assert lit.count("record_new") == 2
+        assert '"event_count" 3' in lit
+        assert '"event_count" 0' in lit
+
+    def test_list_of_models_marshals_identically_to_dicts(self):
+        from pydantic import BaseModel
+
+        class Spec(BaseModel):
+            event_count: int
+            actual_value: float
+
+        specs_dicts = [{"event_count": 3, "actual_value": 1.5}]
+        specs_models = [Spec(event_count=3, actual_value=1.5)]
+        assert _fk_literal(specs_models) == _fk_literal(specs_dicts)
+
+    def test_empty_list_renders_as_empty_list_literal(self):
+        assert _fk_literal([]) == "(list)"
+
+
+def _grounding_summary_py(specs: list[dict]) -> list[int]:
+    """The four integer grounding signals — value-identical to the recipe."""
+    spec_count = len(specs)
+    total_event_count = sum(int(s.get("event_count", 0) or 0) for s in specs)
+    specs_with_value_count = sum(
+        1 for s in specs if (s.get("actual_value", 0) or 0) > 0
+    )
+    max_event_count = 0
+    for s in specs:
+        ec = int(s.get("event_count", 0) or 0)
+        if ec > max_event_count:
+            max_event_count = ec
+    return [spec_count, total_event_count, specs_with_value_count, max_event_count]
+
+
+def _coerce_int_list(value: object) -> list[int]:
+    if isinstance(value, (list, tuple)):
+        return [int(v) for v in value]
+    s = str(value).strip().strip("[]() ")
+    if not s:
+        return []
+    sep = "," if "," in s else None
+    parts = s.split(sep) if sep else s.split()
+    return [int(float(p.strip().rstrip(","))) for p in parts if p.strip().rstrip(",")]
+
+
+class TestListOfRecordReductionEndToEnd:
+    """A list[record] binding flows into a recipe that folds a field and returns a list."""
+
+    @pytest.mark.skipif(
+        not kernel_available() and not os.environ.get("FORM_KERNEL_RUST_BIN"),
+        reason="form-kernel-rust binary not available; list-of-record reduction needs the kernel",
+    )
+    @pytest.mark.parametrize(
+        "specs,expected",
+        [
+            ([], [0, 0, 0, 0]),
+            ([{"event_count": 5, "actual_value": 3.0}], [1, 5, 1, 5]),
+            (
+                [
+                    {"event_count": 3, "actual_value": 1.5},
+                    {"event_count": 0, "actual_value": 0.0},
+                    {"event_count": 7, "actual_value": 2.25},
+                ],
+                [3, 10, 2, 7],
+            ),
+            (
+                [
+                    {"event_count": 0, "actual_value": 0.0},
+                    {"event_count": 0, "actual_value": 0.0},
+                ],
+                [2, 0, 0, 0],
+            ),
+        ],
+    )
+    def test_list_of_records_reduction_matches_python(self, specs, expected):
+        """list[dict] -> list-of-records binding -> recipe folds fields -> list == python."""
+        value, runtime = serve_via_kernel(
+            "endpoint_idea_grounding_summary_demo.fk",
+            bindings={"specs": specs},
+            fallback=lambda: _grounding_summary_py(specs),
+            parse=_coerce_int_list,
+        )
+        assert runtime in ("inline", "subprocess")
+        assert value == expected
+        assert value == _grounding_summary_py(specs)
+
+    @pytest.mark.skipif(
+        not kernel_available() and not os.environ.get("FORM_KERNEL_RUST_BIN"),
+        reason="form-kernel-rust binary not available; list-of-model reduction needs the kernel",
+    )
+    def test_list_of_models_reduction_matches_dicts(self):
+        """A list of Pydantic models reduces to the same result as a list of dicts."""
+        from pydantic import BaseModel
+
+        class Spec(BaseModel):
+            event_count: int
+            actual_value: float
+
+        models = [
+            Spec(event_count=3, actual_value=1.5),
+            Spec(event_count=7, actual_value=2.25),
+        ]
+        value, runtime = serve_via_kernel(
+            "endpoint_idea_grounding_summary_demo.fk",
+            bindings={"specs": models},
+            fallback=lambda: _grounding_summary_py([m.model_dump() for m in models]),
+            parse=_coerce_int_list,
+        )
+        assert runtime in ("inline", "subprocess")
+        assert value == [2, 10, 2, 7]
 
 
 class TestStructureAccessEndToEnd:
