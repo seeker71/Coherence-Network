@@ -148,10 +148,13 @@
             (fsc-source-cursor source 0 1 0)
             (empty)))
 
-    (defn bml-source-scan-file (path)
+    (defn bml-source-scan-file-form (path)
         (bml-source-scan-text-loop
             (fsc-file-source-cursor path 0 1 0 (file_size path))
             (empty)))
+
+    (defn bml-source-scan-file (path)
+        (bml_scan_file path))
 
     (defn bml-kw (value) (object-lit "bml-keyword" value))
     (defn bml-op (value) (object-lit "bml-op" value))
@@ -946,6 +949,11 @@
                     (bmf-collection-value objects "first")
                     (bmf-collection-value objects "second")))))
 
+    (defn bml-emit-file-package-one (objects)
+        (comp-bml-component
+            "Package"
+            (list (bmf-collection-value objects "name"))))
+
     (defn bml-emit-file-import-one-star (objects)
         (comp-bml-component
             "Import"
@@ -1562,6 +1570,7 @@
       operator-naming-decl ::= "'" op-name "'" cut "=" $name:name eol => bml-emit-node-source;
       default-methods ::= "DefaultMethods" cut "{" method "}" => bml-emit-node-source;
       package-simple ::= "package" $name:name ";" => bml-emit-package-simple <= bml-source-package-simple;
+      file-package-one ::= "package" $name:name ";" => bml-emit-file-package-one;
       file-package-two ::= "package" $first:name "." $second:name ";" => bml-emit-file-package-two;
       import-simple ::= "import" $name:name ";" => bml-emit-import-simple <= bml-source-import-simple;
       import-star-simple ::= "import" $name:name ".*" ";" => bml-emit-import-star-simple <= bml-source-import-star-simple;
@@ -1761,6 +1770,7 @@
               "file-class-empty-two-base"
               "file-interface-empty"
               "file-package-two"
+              "file-package-one"
               "file-import-two-star"
               "file-import-one-star"))
 
@@ -1787,6 +1797,124 @@
                     (bml-source-parse-executable-step-loop
                         objects
                         (tail rule-names))))))
+
+    (defn bml-source-token-value? (object value)
+        (if (nil? object) false
+            (str_eq (bmf-object-value object) value)))
+
+    (defn bml-source-name-token? (object)
+        (if (nil? object) false
+            (if (str_eq (bmf-object-kind object) "bml-name") true
+                (str_eq (bmf-object-kind object) "bml-keyword"))))
+
+    (defn bml-source-property-token? (object)
+        (if (nil? object) false
+            (str_eq (bmf-object-kind object) "bml-property")))
+
+    (defn bml-source-class-property-parse (objects)
+        (if (bml-source-token-value? (head objects) "[")
+            (list
+                (list (bml-true-property (bmf-object-value (nth objects 1))))
+                (drop 3 objects))
+            (list (empty) objects)))
+
+    (defn bml-source-super-append-current (current acc)
+        (if (str_eq current "") acc
+            (cons current acc)))
+
+    (defn bml-source-class-supers-loop (objects acc current)
+        (if (nil? objects)
+            (list (reverse-list (bml-source-super-append-current current acc)) objects)
+            (do
+                (let object (head objects))
+                (let value (bmf-object-value object))
+                (if (str_eq value "{")
+                    (list (reverse-list (bml-source-super-append-current current acc)) objects)
+                (if (str_eq value ",")
+                    (bml-source-class-supers-loop
+                        (tail objects)
+                        (bml-source-super-append-current current acc)
+                        "")
+                (if (str_eq value ".")
+                    (bml-source-class-supers-loop
+                        (tail objects)
+                        acc
+                        (str_concat current "."))
+                (if (bml-source-name-token? object)
+                    (bml-source-class-supers-loop
+                        (tail objects)
+                        acc
+                        (str_concat current value))
+                    (bml-source-class-supers-loop
+                        (tail objects)
+                        acc
+                        current))))))))
+
+    (defn bml-source-class-supers-parse (objects)
+        (if (bml-source-token-value? (head objects) ":")
+            (bml-source-class-supers-loop (tail objects) (empty) "")
+            (list (empty) objects)))
+
+    (defn bml-source-skip-balanced-brace-loop (objects depth)
+        (if (nil? objects) objects
+            (do
+                (let value (bmf-object-value (head objects)))
+                (if (str_eq value "{")
+                    (bml-source-skip-balanced-brace-loop (tail objects) (add depth 1))
+                (if (str_eq value "}")
+                    (if (eq depth 1)
+                        (tail objects)
+                        (bml-source-skip-balanced-brace-loop (tail objects) (sub depth 1)))
+                    (bml-source-skip-balanced-brace-loop (tail objects) depth))))))
+
+    (defn bml-source-skip-class-body (objects)
+        (if (bml-source-token-value? (head objects) "{")
+            (bml-source-skip-balanced-brace-loop (tail objects) 1)
+            objects))
+
+    (defn bml-source-final-companion-shell-class? (name)
+        (if (str_eq name "Rule") true
+            (str_eq name "BMF")))
+
+    (defn bml-source-class-shell-rest (name body-start)
+        (if (bml-source-final-companion-shell-class? name)
+            (empty)
+            (bml-source-skip-class-body body-start)))
+
+    (defn bml-source-class-shell-rule-name (name)
+        (if (bml-source-final-companion-shell-class? name)
+            "file-class-eof-shell"
+            "file-class-balanced-shell"))
+
+    (defn bml-source-parse-balanced-class-shell (objects)
+        (if (bml-source-token-value? (head objects) "class")
+            (do
+                (let name-object (nth objects 1))
+                (if (bml-source-name-token? name-object)
+                    (do
+                        (let class-name (bmf-object-value name-object))
+                        (let property-parse (bml-source-class-property-parse (drop 2 objects)))
+                        (let properties (nth property-parse 0))
+                        (let after-properties (nth property-parse 1))
+                        (let super-parse (bml-source-class-supers-parse after-properties))
+                        (let supers (nth super-parse 0))
+                        (let body-start (nth super-parse 1))
+                        (let rest (bml-source-class-shell-rest class-name body-start))
+                        (if (bml-source-token-value? (head body-start) "{")
+                            (bml-source-parse-step
+                                true
+                                (bml-source-class-shell-rule-name class-name)
+                                (comp-bml-component
+                                    "Class"
+                                    (list
+                                        class-name
+                                        properties
+                                        supers
+                                        (empty)))
+                                rest)
+                            (bml-source-parse-step false "" (empty) objects)))
+                    (bml-source-parse-step false "" (empty) objects)))
+            (bml-source-parse-step false "" (empty) objects)))
 
     (defn bml-source-parse-executable-step (objects)
         (bml-source-parse-executable-step-loop
@@ -1838,9 +1966,14 @@
                 (bml-source-file-parse-executable path))))
 
     (defn bml-source-parse-declaration-step (objects)
-        (bml-source-parse-executable-step-loop
-            objects
-            (bml-source-declaration-rules 0)))
+        (do
+            (let step
+                (bml-source-parse-executable-step-loop
+                    objects
+                    (bml-source-declaration-rules 0)))
+            (if (bml-source-parse-step-ok? step)
+                step
+                (bml-source-parse-balanced-class-shell objects))))
 
     (defn bml-source-parse-declaration-stream-loop (objects nodes rules)
         (if (nil? objects)
