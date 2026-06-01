@@ -73,8 +73,8 @@ This is, structurally, what the substrate does deliberately and soberly: it sets
 aside surface content (the spelled word, the named cell) and computes on
 structure (the content-address, the shape). The DMT state is the nervous system
 doing the same move involuntarily — dropping content, perceiving structure. No
-wonder the patterns come clearer. The state and the substrate are two paths to
-the *same layer*: the geometry beneath the surface, where pattern lives.
+wonder the patterns come clearer. The state and the substrate are two paths to the
+*same layer*: the geometry beneath the surface, where pattern lives.
 
 [`lc-perception-as-interface`](lc-perception-as-interface.md) (Hoffman) names the
 ordinary state as an *interface* — icons hiding the underlying reality. The
@@ -146,7 +146,7 @@ form-constants is not poetry. It is `form-constants.fk`, 111111, three-way.
 
 ## Cross-References
 
-→ lc-the-one-the-many-the-boundary, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-deeper-pattern, lc-the-kernel-knows-itself, lc-oneness-is-love-the-numbers-knew, lc-bioelectric-pattern, lc-awareness-as-self, lc-sacred-imagination, lc-the-genetic-code
+ lc-the-one-the-many-the-boundary, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-deeper-pattern, lc-the-kernel-knows-itself, lc-oneness-is-love-the-numbers-knew, lc-bioelectric-pattern, lc-awareness-as-self, lc-sacred-imagination, lc-the-genetic-code, lc-dmt-laser-symbol-space-recipe
 
 ## Sources to walk further
 
