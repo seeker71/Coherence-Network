@@ -1513,6 +1513,217 @@ async def idea_grounded_cost_sum(
     )
 
 
+# ---------------------------------------------------------------------------
+# grounded_cost — the GROUNDED-COST REDUCTION of compute_idea_metrics.
+#
+# The richest deferred slice of grounded_idea_metrics_service.compute_idea_metrics,
+# falling now that the float-field fold (idea_grounded_cost_sum), per-record
+# arithmetic, and structure-access are all banked. compute_idea_metrics takes
+# SIX pre-fetched collections, FILTERS each by idea_id, and computes many
+# outputs. The HONEST DECOMPOSITION: filtering is cheap host-side
+# collection-narrowing (a separate capability the host already does via
+# _filter_by_idea_id / _filter_commits_by_idea); the NUMERIC REDUCTION over the
+# already-relevant records is the kernel computation. This route serves that
+# reduction. Given the already-filtered records for one idea it folds:
+#   spec_actual_cost_sum    = sum(s["actual_cost"]    for s in specs)
+#   spec_estimated_cost_sum = sum(s["estimated_cost"] for s in specs)
+#   runtime_cost            = the single runtime_cost_estimate (None→0.0 host-side)
+#   commit_cost_sum         = sum(clamp(0.10 + files*0.15 + lines*0.002, 0.05, 10.0)
+#                                 for c in commits)   — _estimate_commit_cost_sum EXACTLY
+#   lineage_estimated_cost  = sum(l["estimated_cost"] for l in links)
+#   computed_actual_cost    = spec_actual_cost_sum + runtime_cost + commit_cost_sum
+# The seam: the filtering/fetching and six-collection join are host
+# orchestration; the cost reduction is the kernel computation. The function's
+# "deep gate" was never a missing kernel capability — it is host orchestration
+# AROUND now-kernel-served reductions.
+#
+# Surface: GET with parallel-array query params (the established list-route
+# shape). spec_actual_costs / spec_estimated_costs are parallel per-spec arrays;
+# commit_change_files / commit_lines_added are parallel per-commit arrays;
+# lineage_estimated_costs is the per-link array; runtime_cost is the scalar the
+# host already resolved (None→0.0). A real call site hands the route
+# already-filtered dicts/models; the parallel arrays keep the GET surface simple
+# while exercising the real list-of-record marshalling. The bridge marshals each
+# reconstructed record list to a kernel list-of-records; the recipe folds.
+# ---------------------------------------------------------------------------
+
+
+def _grounded_cost_py(
+    specs: list[dict],
+    commits: list[dict],
+    links: list[dict],
+    runtime_cost: float,
+) -> list[float]:
+    """Python fallback — value-identical to endpoint_grounded_cost_demo.fk.
+
+    Mirrors grounded_idea_metrics_service.compute_idea_metrics' cost reduction
+    and _estimate_commit_cost_sum's clamp EXACTLY. Seeds float accumulators so
+    every fold step walks (float, float), matching the recipe's 0.0 seeds.
+    """
+    spec_actual_cost_sum = 0.0
+    for s in specs:
+        spec_actual_cost_sum = spec_actual_cost_sum + float(s.get("actual_cost", 0.0) or 0.0)
+    spec_estimated_cost_sum = 0.0
+    for s in specs:
+        spec_estimated_cost_sum = spec_estimated_cost_sum + float(s.get("estimated_cost", 0.0) or 0.0)
+    commit_cost_sum = 0.0
+    for c in commits:
+        files = max(0, int(c.get("change_files", 0) or 0))
+        lines = max(0, int(c.get("lines_added", 0) or 0))
+        cost = 0.10 + files * 0.15 + lines * 0.002
+        cost = max(0.05, min(10.0, cost))
+        commit_cost_sum = commit_cost_sum + cost
+    lineage_estimated_cost = 0.0
+    for l in links:
+        lineage_estimated_cost = lineage_estimated_cost + float(l.get("estimated_cost", 0.0) or 0.0)
+    computed_actual_cost = spec_actual_cost_sum + runtime_cost + commit_cost_sum
+    return [
+        spec_actual_cost_sum,
+        spec_estimated_cost_sum,
+        runtime_cost,
+        commit_cost_sum,
+        lineage_estimated_cost,
+        computed_actual_cost,
+    ]
+
+
+class GroundedCostResponse(BaseModel):
+    """GET /api/utils/grounded_cost response — the grounded-cost reduction outputs."""
+
+    model_config = ConfigDict(extra="forbid")
+    spec_actual_cost_sum: Annotated[
+        float, Field(description="Summed actual_cost across the specs = sum(s['actual_cost'])")
+    ]
+    spec_estimated_cost_sum: Annotated[
+        float, Field(description="Summed estimated_cost across the specs = sum(s['estimated_cost'])")
+    ]
+    runtime_cost: Annotated[
+        float, Field(description="The idea's runtime_cost_estimate (None resolved to 0.0 host-side)")
+    ]
+    commit_cost_sum: Annotated[
+        float,
+        Field(
+            description="Summed per-commit clamped cost = "
+            "sum(max(0.05, min(10.0, 0.10 + files*0.15 + lines*0.002)))"
+        ),
+    ]
+    lineage_estimated_cost: Annotated[
+        float, Field(description="Summed estimated_cost across the lineage links = sum(l['estimated_cost'])")
+    ]
+    computed_actual_cost: Annotated[
+        float,
+        Field(description="spec_actual_cost_sum + runtime_cost + commit_cost_sum"),
+    ]
+    spec_count_in: Annotated[int, Field(description="Number of input spec records, echoed back")]
+    commit_count_in: Annotated[int, Field(description="Number of input commit records, echoed back")]
+    lineage_count_in: Annotated[int, Field(description="Number of input lineage records, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/grounded_cost",
+    response_model=GroundedCostResponse,
+    summary="The grounded-cost reduction of compute_idea_metrics, folded over already-filtered records",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the "
+        "GROUNDED-COST REDUCTION of grounded_idea_metrics_service."
+        "compute_idea_metrics, the richest deferred slice now falling. Given one "
+        "idea's ALREADY-FILTERED records it folds: spec_actual_cost_sum, "
+        "spec_estimated_cost_sum, the commit_cost_sum "
+        "(sum(max(0.05, min(10.0, 0.10 + files*0.15 + lines*0.002)) per commit) "
+        "— _estimate_commit_cost_sum EXACTLY, clamp included), "
+        "lineage_estimated_cost, and composes computed_actual_cost = "
+        "spec_actual_cost_sum + runtime_cost + commit_cost_sum. The honest seam: "
+        "FILTERING the six collections by idea_id is cheap host-side "
+        "collection-narrowing (the host already does it) — the kernel runs the "
+        "numeric reduction. The bridge marshals each reconstructed record list to "
+        "a kernel list-of-records and the recipe folds via the head/tail fold "
+        "with float accumulators and a min2/max2 clamp. Kernel-or-fallback via "
+        "serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate."
+    ),
+)
+async def grounded_cost(
+    spec_actual_costs: Annotated[
+        str,
+        Query(description="Comma-separated per-spec actual_cost floats — e.g. '3.5,1.25'"),
+    ] = "3.5,1.25",
+    spec_estimated_costs: Annotated[
+        str,
+        Query(description="Comma-separated per-spec estimated_cost floats — e.g. '4.25,2.5'"),
+    ] = "4.25,2.5",
+    commit_change_files: Annotated[
+        str,
+        Query(description="Comma-separated per-commit change_files ints — e.g. '3'"),
+    ] = "3",
+    commit_lines_added: Annotated[
+        str,
+        Query(description="Comma-separated per-commit lines_added ints — e.g. '100'"),
+    ] = "100",
+    lineage_estimated_costs: Annotated[
+        str,
+        Query(description="Comma-separated per-link estimated_cost floats — e.g. '5.25,1.5'"),
+    ] = "5.25,1.5",
+    runtime_cost: Annotated[
+        float,
+        Query(description="The idea's runtime_cost_estimate, already None→0.0 resolved host-side"),
+    ] = 2.25,
+) -> GroundedCostResponse:
+    # Reconstruct the already-filtered record lists from the parallel query
+    # arrays. A real call site hands the route already-fetched dicts/models for
+    # one idea; the parallel arrays keep the GET surface simple while exercising
+    # the real list-of-record marshalling and the cost fold.
+    sac_list = [float(x) for x in spec_actual_costs.split(",") if x.strip()]
+    sec_list = [float(x) for x in spec_estimated_costs.split(",") if x.strip()]
+    if len(sac_list) != len(sec_list):
+        raise HTTPException(
+            status_code=422,
+            detail="spec_actual_costs and spec_estimated_costs must have the same length",
+        )
+    cf_list = [int(float(x)) for x in commit_change_files.split(",") if x.strip()]
+    la_list = [int(float(x)) for x in commit_lines_added.split(",") if x.strip()]
+    if len(cf_list) != len(la_list):
+        raise HTTPException(
+            status_code=422,
+            detail="commit_change_files and commit_lines_added must have the same length",
+        )
+    lec_list = [float(x) for x in lineage_estimated_costs.split(",") if x.strip()]
+    specs = [
+        {"actual_cost": ac, "estimated_cost": ec}
+        for ac, ec in zip(sac_list, sec_list)
+    ]
+    commits = [
+        {"change_files": cf, "lines_added": la}
+        for cf, la in zip(cf_list, la_list)
+    ]
+    links = [{"estimated_cost": ec} for ec in lec_list]
+    outputs, kernel_runtime = serve_via_kernel(
+        "endpoint_grounded_cost_demo.fk",
+        bindings={
+            "specs": specs,
+            "commits": commits,
+            "links": links,
+            "runtime_cost": runtime_cost,
+        },
+        fallback=lambda: _grounded_cost_py(specs, commits, links, runtime_cost),
+        parse=_coerce_float_list,
+    )
+    return GroundedCostResponse(
+        spec_actual_cost_sum=outputs[0],
+        spec_estimated_cost_sum=outputs[1],
+        runtime_cost=outputs[2],
+        commit_cost_sum=outputs[3],
+        lineage_estimated_cost=outputs[4],
+        computed_actual_cost=outputs[5],
+        spec_count_in=len(specs),
+        commit_count_in=len(commits),
+        lineage_count_in=len(links),
+        runtime=kernel_runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

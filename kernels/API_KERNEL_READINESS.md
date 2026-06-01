@@ -567,27 +567,31 @@ capability builds**, not a candidate hunt.
 | Homogeneous structure access | dict→`Value::Record` marshalling + `_get` Record arm | routes reading numeric fields from ONE dict/model (marginal-from-record) |
 | Model→dict→record normalization | `_as_field_dict` (bridge) + `py_to_value` model arm (inline) | the object-OR-dict polymorphism DISSOLVED at the marshal boundary — a `list[model]` marshals identically to `list[dict]`; the recipe only ever sees Records |
 | List-of-record reduction | recursive list→list-of-records marshal + head/tail fold + `record_get` per element | routes that SUM/COUNT/MAX an integer field across a collection (idea grounding signals; the integer reductions in compute_idea_metrics' confidence/coverage) |
+| Per-record arithmetic fold + clamp | `record_get` on int fields + int*float promotion + `min2`/`max2` comparison-branch clamp, folded across a list | routes that reduce a per-record FORMULA across a collection (the commit-cost estimate; the WHOLE grounded-cost reduction of compute_idea_metrics) |
 
 **Gates ahead (each blocks a named family; build in leverage order):**
 
-1. **Six-collection heterogeneous join** — the *remainder* of
-   `compute_idea_metrics` after the structure-access, list-of-record, AND
-   float-field-fold unlocks. The **float-field fold** that previously sat here
-   is now BANKED: TS's `add`/`_plus` gained float arms (the bare-width MATH arm
-   promotes to f64 at runtime, `_plus` carries Float+Float / Int+Float /
-   Float+Int), so `spec_actual_cost_sum = sum(s.actual_cost for s in specs)`
-   folds value-exact across CPython == Rust == TS — proven three-way in
-   `list-of-record-reduction-band.fk` (the float-fold checks) and served live at
-   `/api/utils/idea_grounded_cost_sum`. What remains deep is the **six-collection
-   heterogeneous join** — `compute_idea_metrics` filters and reduces over SIX
-   pre-fetched collections (specs, runtime, lineage links, valuations map,
-   commits, friction) with a `.get(...)` on a map and cross-collection
-   `max`/`min`/`any`. The object-OR-dict polymorphism is dissolved at the
-   bridge, so each collection marshals cleanly; what remains is the
-   **multi-collection orchestration** (filter-by-idea-id per collection, the
-   valuations-map lookup, the cross-collection reductions) — host-side join
-   work, not a single kernel capability. Lower leverage now that the
-   structure-access, list-of-record, and float-fold unlocks all landed.
+1. **Host-side collection orchestration (filtering + join), NOT a kernel
+   capability** — what is *left* of `compute_idea_metrics` after the
+   structure-access, list-of-record, float-field-fold, AND now the
+   **grounded-cost reduction** unlocks. The grounded-cost reduction — the
+   *richest* deferred slice — is now BANKED and served: the per-record commit
+   formula (with the EXACT clamp `max(0.05, min(10.0, 0.10 + files*0.15 +
+   lines*0.002))`), the spec/lineage float folds, and the
+   `computed_actual_cost = spec_actual_cost_sum + runtime_cost + commit_cost_sum`
+   composition all run kernel-side, proven three-way in
+   `grounded-cost-reduction-band.fk` and served live at `/api/utils/grounded_cost`.
+   What remains is **NOT a kernel capability at all** — it is host-side
+   **filtering and orchestration**: `compute_idea_metrics` narrows SIX pre-fetched
+   collections by idea_id (`_filter_by_idea_id` / `_filter_commits_by_idea`),
+   does a `.get(...)` on a valuations map, and wires the per-collection
+   reductions together. Filtering is cheap collection-narrowing, a *separate
+   capability* from numeric computation, and the host already does it before the
+   reduction. The reframe is exact: the "deep gate" was never a missing kernel
+   capability — it is host orchestration AROUND now-kernel-served reductions, so
+   `compute_idea_metrics` is transmutable PER-SLICE (each reduction kernel-side,
+   the filtering/join host-side) rather than waiting on one large unlock. Lowest
+   leverage remaining — the computation has fallen; only the host plumbing stays.
 2. **String-family operations** — `split`, `strip`, `in` (substring), `lower`,
    regex. Blocks the text/semantic-scoring family (`frequency_scoring`,
    `concept_auto_tagger`, keyword extraction). A self-contained string-native
@@ -711,21 +715,44 @@ Python-style `5.0` on Rust but JS-style `5` on Go + TS — a PRINT-layer
 divergence, not a value divergence; the band + route land on non-integer sums
 (5.25, 3.75) so it never crosses the boundary.
 
-**Deferred — the six-collection join.**
-`compute_idea_metrics` *as a whole* still stays CPython, but the boundary is now
-much sharper — only one piece remains deep: the
-**six-collection heterogeneous join** — the function filters by idea_id across
-SIX collections, does a `.get(...)` on a valuations map, and reduces
-`max`/`min`/`any` ACROSS collections. The object-OR-dict polymorphism that used
-to be the blocker is gone (every collection now marshals cleanly); what remains
-is **multi-collection host-side orchestration** (per-collection filter, the map
-lookup, cross-collection reductions), not a single kernel capability. So
-`compute_idea_metrics` stays CPython until that join is decomposed into
-per-collection kernel reductions wired by the host — but **each per-collection
-reduction is now individually transmutable, integer OR float** (the grounding
-summary route is the first integer reduction, the grounded-cost-sum route the
-first float reduction), so the function can be transmuted piece by piece
-rather than waiting on one large capability.
+**Banked — the grounded-cost reduction (the richest slice, three-way proven,
+live).** The whole COST computation of `compute_idea_metrics` now runs
+kernel-side. It folds together every banked piece — the spec/lineage float-field
+folds, a single-record read (runtime_cost, with the host's None→0.0 guard), and a
+**per-record arithmetic fold with a clamp**: the commit-cost estimate
+`sum(max(0.05, min(10.0, 0.10 + files*0.15 + lines*0.002)) for c in commits)`,
+matching `_estimate_commit_cost_sum` EXACTLY (clamp included). The clamp is
+expressed as `min2`/`max2` comparison-branches (the same three-way-portable shape
+`grounded_roi`'s `max2` proves), and files/lines are read as int fields and
+promoted against float constants (int*float→float, banked by the float-add fix).
+The recipe composes `computed_actual_cost = spec_actual_cost_sum + runtime_cost +
+commit_cost_sum` and returns all six outputs. Proof:
+`form-stdlib/tests/grounded-cost-reduction-band.fk` (three-way green: Go == Rust
+== TS, full score 14 — the float folds, the clamp at both bounds, the per-commit
+fold, the composition, and the all-empty→all-zeros guarantee);
+`endpoint_grounded_cost_demo.{py,fk}` earns four-way parity through
+`parity_suite.sh` (CPython == Rust == TS → `[4.75, 6.75, 2.25, 0.75, 6.75,
+7.75]`, all NON-integer floats so no value crosses the print boundary) and serves
+live at `/api/utils/grounded_cost`; the attribution view anchors the same list.
+This is the *richest* deferred slice falling — the per-record FORMULA fold, not
+just a single-field sum.
+
+**Deferred — host-side filtering + orchestration (NOT a kernel computation).**
+`compute_idea_metrics` *as a whole* still runs in the host, but only because the
+remaining piece is **host work, not a missing kernel capability**: the function
+narrows SIX pre-fetched collections by idea_id (`_filter_by_idea_id` /
+`_filter_commits_by_idea`), does a `.get(...)` on a valuations map, and wires the
+per-collection reductions together. Filtering is cheap collection-narrowing — a
+*separate capability* from the numeric reduction, and the host already does it
+before the reduction runs. With the grounded-cost reduction banked, the boundary
+is exact: **the computation has fallen kernel-side; what stays host-side is the
+filtering/fetching/join orchestration AROUND the now-kernel-served reductions.**
+So `compute_idea_metrics` is **transmutable PER-SLICE** — the grounded-cost
+reduction (`/api/utils/grounded_cost`), the integer grounding signals
+(`/api/utils/idea_grounding_summary`), and the float-field sums
+(`/api/utils/idea_grounded_cost_sum`) each run kernel-side; the host filters and
+joins. The "deep gate" was never one large kernel capability — it was host
+orchestration around reductions that now fall piece by piece.
 
 The wellness probe and the attribution view are the two instruments that make
 the incremental transmutation **safe and legible**: the probe says *the surface
