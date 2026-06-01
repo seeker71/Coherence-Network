@@ -24,13 +24,12 @@
 #   PARITY_THIRD_RUNTIME=kernel-bmf  (the destination)
 #     Form-native: source bytes → BMF source objects → rules in
 #     form-stdlib/grammars/python-bmf.fk → Form recipe → native walker.
-#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01, 19 of the 20
-#     PARITY_FILES pass three-way under isolated tempdirs; the lone gate is
-#     python_typing_compose_demo (errors `_plus: unsupported operand types`
-#     on `red.base + blue.base` — two direct attribute reads on a
-#     multi-attribute instance combined; the Form-native eval's record/attr
-#     storage doesn't carry the second attr as an int). The default flips to
-#     kernel-bmf only when that demo closes three-way.
+#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01, all 20
+#     PARITY_FILES pass three-way under isolated tempdirs (verified from
+#     freshly rebuilt kernels — see kernels/BOOTSTRAP_COMPOST_MANIFEST.md).
+#     The kernel-bmf pipeline now matches CPython on every demo; flipping
+#     the default to kernel-bmf (and composting the Phase-A ts-eval tissue)
+#     is the next directional breath.
 #
 # Add new files to PARITY_FILES below as they're ripened.
 # Run from form/form-kernel-ts/.
@@ -38,9 +37,9 @@
 set -euo pipefail
 
 # Third-runtime selector — see header for the migration story.
-# Stays ts-eval until ALL 20 PARITY_FILES pass kernel-bmf three-way under
-# isolated tempdirs. As of 2026-06-01: 19/20 pass; python_typing_compose_demo
-# is the open gate (multi-attribute-instance direct-attr-read composition).
+# All 20 PARITY_FILES now pass kernel-bmf three-way under isolated tempdirs
+# (2026-06-01). The default stays ts-eval until the flip is taken as its own
+# directional breath; kernel-bmf is ready underneath whenever it is.
 PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-ts-eval}"
 
 PARITY_FILES=(
