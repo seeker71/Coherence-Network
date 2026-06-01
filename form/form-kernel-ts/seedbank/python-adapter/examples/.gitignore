@@ -37,3 +37,4 @@
 !endpoint_idea_marginal_from_record_demo.fk
 !endpoint_idea_grounding_summary_demo.fk
 !endpoint_idea_grounded_cost_sum_demo.fk
+!endpoint_grounded_cost_demo.fk

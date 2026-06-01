@@ -115,6 +115,17 @@ PARITY_FILES=(
     # so this adapter path is Rust+TS like the integer route; the kernel-level
     # three-way is proven over record_new in list-of-record-reduction-band.fk.)
     "examples/endpoint_idea_grounded_cost_sum_demo.py"
+    # The GROUNDED-COST REDUCTION of compute_idea_metrics — the richest deferred
+    # slice, falling now that the float-field fold, per-record arithmetic, and
+    # structure-access are all banked. Folds spec_actual_cost_sum,
+    # spec_estimated_cost_sum, commit_cost_sum (per-commit clamp
+    # max(0.05,min(10.0,0.10+files*0.15+lines*0.002))), lineage_estimated_cost,
+    # and composes computed_actual_cost = spec_actual_cost_sum + runtime_cost +
+    # commit_cost_sum. Filtering the six collections stays host-side (cheap
+    # collection-narrowing, a separate capability); the reduction runs
+    # kernel-side. Frozen sample → [4.75, 6.75, 2.25, 0.75, 6.75, 7.75], all
+    # NON-integer floats so no value crosses the print boundary.
+    "examples/endpoint_grounded_cost_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

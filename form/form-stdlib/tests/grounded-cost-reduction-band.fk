@@ -1,0 +1,142 @@
+; grounded-cost-reduction-band.fk — three-way sibling parity for the
+; GROUNDED-COST REDUCTION of grounded_idea_metrics_service.compute_idea_metrics.
+;
+; The list-of-record-reduction band proved folding a FLOAT field across a list
+; of records; the record-field-access band proved reading ONE record's fields.
+; This band proves the NEXT shape the richest deferred function needs: a
+; PER-RECORD ARITHMETIC FOLD WITH A CLAMP — the commit-cost estimate —
+; composed with the plain float-field folds and a final additive composition.
+; Exactly the reduction compute_idea_metrics runs over its already-filtered
+; per-idea collections:
+;   spec_actual_cost_sum    = sum(s["actual_cost"]    for s in specs)
+;   spec_estimated_cost_sum = sum(s["estimated_cost"] for s in specs)
+;   commit_cost_sum         = sum(clamp(BASE+files*PER_FILE+lines*PER_LINE) for c in commits)
+;   lineage_estimated_cost  = sum(l["estimated_cost"] for l in links)
+;   computed_actual_cost    = spec_actual_cost_sum + runtime_cost + commit_cost_sum
+; FILTERING the six collections by idea_id is cheap host-side
+; collection-narrowing — a separate capability, not a kernel computation — and
+; the host already does it. The reduction is what this band proves three-way.
+;
+; The commit formula matches _estimate_commit_cost_sum EXACTLY, including the
+; per-commit clamp: BASE_COST=0.10, PER_FILE=0.15, PER_LINE=0.002,
+; MIN_COST=0.05, MAX_COST=10.0;
+;   cost = max(MIN_COST, min(MAX_COST, BASE + files*PER_FILE + lines*PER_LINE)).
+; The clamp is expressed as min2/max2 comparison-branches — the same
+; three-way-portable shape grounded-roi's `max2` proves. files/lines are read
+; as INT fields and multiplied by a FLOAT constant (int*float→float promotion,
+; banked by the float-add sibling-parity fix).
+;
+; The portable iteration primitive is HEAD/TAIL recursion over a `list` of
+; records — `head`, `tail`, `len`, `record_get`, `record_new`, `make_nodeid`
+; all ship in ALL THREE kernels (the python-adapter's `_dict_*`/`_get`/`_iter`
+; lowering is Rust+TS only; the Record + head/tail fold is the three-way shape).
+; A real transmuted route hands the recipe a list of records the bridge
+; marshals from a Python list[dict|model]; this band proves the FOLD + CLAMP +
+; COMPOSITION are three-way.
+;
+; Every check is scored through `eq` into an integer aggregate, so NO float
+; crosses the print boundary named in float-natives-band.fk §print — the
+; arithmetic is bit-identical, and the band stays three-way clean.
+;
+; The aggregate score is 1 per passing check; full pass = 14.
+
+(do
+    ;; ── min2 / max2: the clamp's comparison-branches (three-way portable) ──
+    (defn min2 (a b) (if (gt a b) b a))
+    (defn max2 (a b) (if (gt a b) a b))
+
+    ;; ── sum_field_f: fold a FLOAT field across a list, float accumulator ──
+    (defn sum_field_f (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_field_f (tail xs) field (add acc (record_get (head xs) field)))))
+
+    ;; ── commit_cost: the per-record arithmetic with the EXACT clamp ──
+    ;; base = 0.10 + files*0.15 + lines*0.002; cost = max(0.05, min(10.0, base)).
+    (defn commit_cost (c)
+        (max2 0.05
+            (min2 10.0
+                (add (add 0.10 (mul (record_get c "change_files") 0.15))
+                     (mul (record_get c "lines_added") 0.002)))))
+
+    ;; ── sum_commit_cost: fold commit_cost across the commit list ──
+    (defn sum_commit_cost (commits acc)
+        (if (eq (len commits) 0)
+            acc
+            (sum_commit_cost (tail commits) (add acc (commit_cost (head commits))))))
+
+    ;; ── 1. Float-field fold: spec_actual_cost_sum / spec_estimated_cost_sum ──
+    (let specs (list
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 3.5 "estimated_cost" 4.25)
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 1.25 "estimated_cost" 2.5)))
+    (let spec_actual_cost_sum (sum_field_f specs "actual_cost" 0.0))     ; 3.5+1.25 = 4.75
+    (let s1 (if (eq spec_actual_cost_sum 4.75) 1 0))
+    (let spec_estimated_cost_sum (sum_field_f specs "estimated_cost" 0.0)) ; 4.25+2.5 = 6.75
+    (let s2 (if (eq spec_estimated_cost_sum 6.75) 1 0))
+
+    ;; ── 2. The commit clamp formula on ONE record (the unclamped case) ──
+    ;; 0.10 + 3*0.15 + 100*0.002 = 0.10+0.45+0.2 = 0.75, inside [0.05, 10.0].
+    (let c1 (record_new (make_nodeid 1 5 4 1) "change_files" 3 "lines_added" 100))
+    (let s3 (if (eq (commit_cost c1) 0.75) 1 0))
+
+    ;; ── 3. Clamp LOWER bound: zero files/lines → base 0.10, but MIN is 0.05 ──
+    ;; 0.10 is already above 0.05, so an all-zero commit costs the 0.10 base.
+    (let c_zero (record_new (make_nodeid 1 5 4 1) "change_files" 0 "lines_added" 0))
+    (let s4 (if (eq (commit_cost c_zero) 0.10) 1 0))
+
+    ;; ── 4. Clamp UPPER bound: a huge commit saturates at MAX_COST = 10.0 ──
+    ;; 0.10 + 100*0.15 + 5000*0.002 = 0.10+15.0+10.0 = 25.1, clamped to 10.0.
+    (let c_big (record_new (make_nodeid 1 5 4 1) "change_files" 100 "lines_added" 5000))
+    (let s5 (if (eq (commit_cost c_big) 10.0) 1 0))
+
+    ;; ── 5. commit_cost_sum: fold the clamp across a commit list ──
+    ;; [c1=0.75, c_zero=0.10] → 0.85 (both inside bounds).
+    (let commits (list c1 c_zero))
+    (let commit_cost_sum (sum_commit_cost commits 0.0))
+    (let s6 (if (eq commit_cost_sum 0.85) 1 0))
+    ;; Empty commit list → identity accumulator 0.0.
+    (let s7 (if (eq (sum_commit_cost (list) 0.0) 0.0) 1 0))
+    ;; A list that includes the saturating commit folds with the clamp applied
+    ;; per-element: [c1=0.75, c_big=10.0] → 10.75.
+    (let commits_sat (list c1 c_big))
+    (let s8 (if (eq (sum_commit_cost commits_sat 0.0) 10.75) 1 0))
+
+    ;; ── 6. lineage_estimated_cost: another plain float-field fold ──
+    (let links (list
+        (record_new (make_nodeid 1 5 4 1) "estimated_cost" 5.25)
+        (record_new (make_nodeid 1 5 4 1) "estimated_cost" 1.5)))
+    (let lineage_estimated_cost (sum_field_f links "estimated_cost" 0.0)) ; 5.25+1.5 = 6.75
+    (let s9 (if (eq lineage_estimated_cost 6.75) 1 0))
+    ;; Empty links → 0.0 (the empty-collection-all-zeros guarantee).
+    (let s10 (if (eq (sum_field_f (list) "estimated_cost" 0.0) 0.0) 1 0))
+
+    ;; ── 7. computed_actual_cost composition ──
+    ;; spec_actual_cost_sum + runtime_cost + commit_cost_sum, with the SAME
+    ;; commit list the endpoint folds (just c1 = 0.75) and runtime_cost 2.25:
+    ;; 4.75 + 2.25 + 0.75 = 7.75.
+    (let runtime_cost 2.25)
+    (let endpoint_commit_sum (sum_commit_cost (list c1) 0.0))            ; 0.75
+    (let computed_actual_cost
+        (add (add spec_actual_cost_sum runtime_cost) endpoint_commit_sum))
+    (let s11 (if (eq computed_actual_cost 7.75) 1 0))
+    ;; runtime_cost passes through untouched (the host's None→0.0 guard means
+    ;; the kernel only ever sees a float; the float identity is exact).
+    (let s12 (if (eq runtime_cost 2.25) 1 0))
+
+    ;; ── 8. The all-empty case → every aggregate is 0.0 ──
+    ;; (empty specs / commits / links, runtime_cost 0.0 → computed 0.0).
+    (let empty_spec_cost (sum_field_f (list) "actual_cost" 0.0))
+    (let empty_commit_cost (sum_commit_cost (list) 0.0))
+    (let empty_computed (add (add empty_spec_cost 0.0) empty_commit_cost))
+    (let s13 (if (eq empty_computed 0.0) 1 0))
+
+    ;; ── 9. int*float promotion inside the clamp is value-exact ──
+    ;; A single-file commit: 0.10 + 1*0.15 + 0*0.002 = 0.25.
+    (let c_one (record_new (make_nodeid 1 5 4 1) "change_files" 1 "lines_added" 0))
+    (let s14 (if (eq (commit_cost c_one) 0.25) 1 0))
+
+    ;; ── Aggregate — int + int through MATH (no float in result). Full pass = 14.
+    (add s1 (add s2 (add s3 (add s4 (add s5
+    (add s6 (add s7 (add s8 (add s9 (add s10
+    (add s11 (add s12 (add s13 s14)))))))))))))
+)
