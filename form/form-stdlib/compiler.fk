@@ -146,6 +146,82 @@
     (defn comp-bmf-call-args (call)
         (nth call 2))
 
+    ;; --- BMF component runtime ---------------------------------------
+    ;; Executes the component model above through grammar-chars.fk's
+    ;; character-stream matcher. This is the first shared runtime path for
+    ;; Rule/Branch/Sequence/Repeat/Tag/RuleCall/Primitive/CharRange/CharChain
+    ;; objects instead of dialect-specific rule shims.
+
+    (defn comp-bmf-kind (item)
+        (head item))
+
+    (defn comp-bmf-runtime-emit-caps (caps)
+        caps)
+
+    (defn comp-bmf-items-to-char-patterns (items)
+        (if (nil? items) (empty)
+            (cons (comp-bmf-to-char-pattern (head items))
+                  (comp-bmf-items-to-char-patterns (tail items)))))
+
+    (defn comp-bmf-primitive-to-char-pattern (name)
+        (if (str_eq name "Nil") (list "nil")
+        (if (str_eq name "Fail") (list "fail")
+        (if (str_eq name "Cut") (list "cut")
+        (if (str_eq name "EndOfFile") (list "eof")
+        (if (str_eq name "EndOfLine") (list "eol")
+            (list "fail")))))))
+
+    (defn comp-bmf-to-char-pattern (item)
+        (do
+            (let kind (comp-bmf-kind item))
+            (if (str_eq kind "comp-bmf-char-chain")
+                (list "string" (nth item 1))
+            (if (str_eq kind "comp-bmf-char-range")
+                (list "char-range" (ord (nth item 1)) (ord (nth item 2)))
+            (if (str_eq kind "comp-bmf-sequence")
+                (cons "sequence" (comp-bmf-items-to-char-patterns (nth item 1)))
+            (if (str_eq kind "comp-bmf-branch")
+                (cons "choice" (comp-bmf-items-to-char-patterns (nth item 1)))
+            (if (str_eq kind "comp-bmf-repeat")
+                (list "multi-match"
+                      (comp-bmf-to-char-pattern (nth item 1))
+                      (nth item 2)
+                      (nth item 3))
+            (if (str_eq kind "comp-bmf-tag")
+                (if (str_eq (nth item 1) "")
+                    (comp-bmf-to-char-pattern (nth item 2))
+                    (list "capture"
+                          (nth item 1)
+                          (comp-bmf-to-char-pattern (nth item 2))))
+            (if (str_eq kind "comp-bmf-rule-call")
+                (list "rule" (nth item 1))
+            (if (str_eq kind "comp-bmf-primitive")
+                (comp-bmf-primitive-to-char-pattern (nth item 1))
+                (list "fail")))))))))))
+
+    (defn comp-bmf-rule-to-char-rule (rule)
+        (list (nth rule 1)
+              (comp-bmf-to-char-pattern (nth rule 3))
+              comp-bmf-runtime-emit-caps))
+
+    (defn comp-bmf-rules-to-char-rules (rules)
+        (if (nil? rules) (empty)
+            (cons (comp-bmf-rule-to-char-rule (head rules))
+                  (comp-bmf-rules-to-char-rules (tail rules)))))
+
+    (defn comp-bmf-runtime-match (rules start-name source)
+        (cm-match-pattern
+            (list "rule" start-name)
+            (mk-cstream source)
+            (comp-bmf-rules-to-char-rules rules)))
+
+    (defn comp-bmf-runtime-parse (rules start-name source)
+        (do
+            (let m (comp-bmf-runtime-match rules start-name source))
+            (if (cmatch? m)
+                (ccap-get (cmatch-caps m) "_result")
+                (empty))))
+
     ;; --- BMF syntax written as a BMF second --------------------------
 
     (defn bmf-src-name (value) (bmf-atom "bmf-name" value))
