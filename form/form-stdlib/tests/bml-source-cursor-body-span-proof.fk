@@ -1,0 +1,58 @@
+; tests/bml-source-cursor-body-span-proof.fk - BML body-source token cursor/span proof
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves real thesis BMF method bodies are represented with BodySource token
+; values plus token-span metadata. This keeps BML/BMF body preservation in the
+; BML grammar layer rather than adding new kernel-native BML/BMF semantics.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn body-span-score (body bit)
+        (bool-score (bml-token-span? (bml-body-source-span body)) bit))
+
+    (defn body-span-length-score (body bit)
+        (int-score
+            (bml-token-span-length (bml-body-source-span body))
+            (len (bml-body-source-values body))
+            bit))
+
+    (defn body-span-values-score (body value bit)
+        (bool-score
+            (bml-string-list-contains?
+                (bml-token-span-values (bml-body-source-span body))
+                value)
+            bit))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let bmf-methods (bml-class-own-methods bmf-class))
+    (let compile-method (bml-find-method bmf-methods "Compile"))
+    (let handle-args-method (bml-find-method bmf-methods "HandleArgs"))
+    (let compile-body (bml-method-body compile-method))
+    (let handle-args-body (bml-method-body handle-args-method))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 2)
+            (str-score (bml-class-name bmf-class) "BMF" 4)
+            (body-span-score compile-body 8)
+            (body-span-length-score compile-body 16)
+            (bool-score (gt (bml-token-span-length (bml-body-source-span compile-body)) 0) 32)
+            (body-span-values-score compile-body "ParseStream" 64)
+            (body-span-values-score compile-body "Invoke" 128)
+            (body-span-score handle-args-body 256)
+            (body-span-length-score handle-args-body 512)
+            (body-span-values-score handle-args-body "PrintCommandLineHelp" 1024)
+            (body-span-values-score handle-args-body "Compile" 2048))))
