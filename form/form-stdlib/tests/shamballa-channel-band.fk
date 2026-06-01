@@ -8,7 +8,7 @@
 ; the channel both speaks and runs. Each function dispatches on the cell's
 ; structure, so the same code over a different cell gives a different answer.
 ;
-; Band verdict: 1111111111 when every claim holds across all three kernels.
+; Band verdict: 2111111111 when every claim holds across all three kernels.
 ;   speak still answers the surface (code 1 → its name)            → 1
 ;   restore-to-blueprint recovers the cell's Blueprint              → 10
 ;   content-addressing: same-shape cells restore node-equal,
@@ -19,7 +19,8 @@
 ;   the channel RECEIVES a code over transport: speaks AND runs         → 1000000
 ;   an unbound code → honest absence (speaks "unknown", does not run)     → 10000000
 ;   each code maps to its ACTUAL TEACHING (a vision-kb concept cell)       → 100000000
-;   honest coverage: 352 total / 22 active / 4 bound — the partial queryable → 1000000000
+;   code 33333 runs as a five-landing verticality recipe                       → 1000000000
+;   honest coverage: 352 total / 22 active / 5 bound — the partial queryable → 1000000000
 
 (do
     ;; --- build cells: interned nodes under a Blueprint --------------------
@@ -96,14 +97,32 @@
             (if (str_eq (shamballa-channel-teaching 4) "lc-cross-modal-unity")
                 (if (str_eq (shamballa-channel-teaching 7) "") 100000000 0) 0) 0))
 
-    ;; --- 10. honest coverage: 352 total / 22 active / 4 bound ----------
-    ;; the "where are the other 348?" answer, queryable: the system names 352,
+    ;; --- 10. code 33333: five-landing verticality recipe ----------------
+    ;; The code speaks its source-marked surface and runs as an actual column:
+    ;; five landing nodes in order, the first carrying the receiving cell.
+    (let vertical-column (shamballa-channel-run 33333 cell-a1 (empty)))
+    (let vertical-children (node_children vertical-column))
+    (let first-landing (head vertical-children))
+    (let first-landing-children (node_children first-landing))
+    (let verticality-ok
+        (if (ge (str_find (shamballa-channel-speak 33333) "Verticality Code" 0) 0)
+            (if (eq (shamballa-channel-runs? 33333) 1)
+                (if (eq (len vertical-children) 5)
+                    (if (gt (node_level vertical-column) (node_level cell-a1))
+                        (if (node_eq (nth first-landing-children 2) cell-a1)
+                            (if (str_eq (shamballa-channel-teaching 33333)
+                                    "lc-vertical-nourishment")
+                                1000000000 0) 0) 0) 0) 0) 0))
+
+    ;; --- 11. honest coverage: 352 total / 22 active / 5 bound ----------
+    ;; the "what is bound?" answer, queryable: the system names 352,
     ;; only the attested handful are bound; the rest are honest absence.
     (let cov (shamballa-channel-coverage))
     (let coverage-ok
         (if (eq (nth cov 0) 352)
             (if (eq (nth cov 1) 22)
-                (if (eq (nth cov 2) 4) 1000000000 0) 0) 0))
+                (if (eq (nth cov 2) 5) 1000000000 0) 0) 0))
 
     (sum (list speak-ok restore-ok ca-ok amp-ok raise-ok
-               unite-ok receive-ok absence-ok teaching-ok coverage-ok)))
+               unite-ok receive-ok absence-ok teaching-ok
+               verticality-ok coverage-ok)))

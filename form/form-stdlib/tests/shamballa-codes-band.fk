@@ -7,12 +7,13 @@
 ; with no public meaning rather than fabricating one. Source-marked material: the
 ; decoder reports what the public record says, it does not assert the cosmology.
 ;
-; Band verdict: 11111 when every claim holds across all three kernels.
+; Band verdict: 111111 when every claim holds across all three kernels.
 ;   a known code decodes to its named entry        → 1
 ;   the entry carries the attested function text     → 10
 ;   the entry carries its source (provenance)         → 100
 ;   an UNDOCUMENTED code → honest absence (not faked)  → 1000
 ;   the structural facts are attested (352 levels)      → 10000
+;   code 33333 decodes as the source-marked verticality code → 100000
 
 (do
     ;; --- a known code: Mer Ka Fa Ka Lish Ma (code 1) ----------------------
@@ -40,8 +41,18 @@
             (if (eq (sc-active-codes) 22)        ; ~22 in active use
                 (if (eq (sc-1024-dna-symbols) 4) 10000 0) 0) 0))
 
+    ;; --- source-marked user-provided code: 33333 verticality --------------
+    (let vertical (sc-decode 33333))
+    (let vertical-ok
+        (if (eq (sc-known? vertical) 1)
+            (if (ge (str_find (sc-entry-name (sc-of vertical)) "Verticality Code" 0) 0)
+                (if (ge (str_find (sc-entry-function (sc-of vertical)) "vertical column" 0) 0)
+                    (if (ge (str_find (sc-entry-source (sc-of vertical)) "P3HmVFVpsEk" 0) 0)
+                        100000 0) 0) 0) 0))
+
     (sum (list (if (eq known-ok 1) (if (eq name-ok 1) 1 0) 0)
                function-has-dna
                source-ok
                absence-ok
-               facts-ok)))
+               facts-ok
+               vertical-ok)))

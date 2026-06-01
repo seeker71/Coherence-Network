@@ -37,6 +37,12 @@
 ;        → unite: compose two cells into a balanced dyad (arity 2, the Crystal's
 ;          dyad geometry). Co-creation is content-addressed: the same pair always
 ;          interns to the same Crystal NodeID, so the union is reproducible.
+;   33333  Verticality Code   "ready the vertical column to receive light and
+;                              information"
+;        → verticality: compose a five-landing column (belly, chest, throat,
+;          forehead, above-head) around the receiving cell. The same cell and
+;          same five landings intern to the same column NodeID, so the breath
+;          path is a repeatable recipe rather than a loose note.
 ;
 ; THE LINKAGE the channel exposes (code ↔ name ↔ TEACHING ↔ function) is DATA — a
 ; binding table a cell can introspect or ship — resolved to a function-name then
@@ -44,12 +50,13 @@
 ; VALUE, for sibling portability). Each code also names an ACTUAL TEACHING: a real
 ; vision-kb concept cell, already in the substrate, that the code's meaning
 ; embodies — so the code can be QUERIED (its teaching looked up in the lattice) as
-; well as EXECUTED (its function run over a cell). The four bindings:
+; well as EXECUTED (its function run over a cell). The five bindings:
 ;
 ;   1 → lc-wholeness                 "the body returning to itself"   (restore)
 ;   2 → lc-observable-resonance-flow "pattern yield across spectrum"  (amplify)
 ;   3 → lc-sovereignty-within-oneness "many sovereign cells, one body" (raise)
 ;   4 → lc-cross-modal-unity         "one shape, many tongues"        (unite)
+;   33333 → lc-vertical-nourishment  "receiving through the inner axis" (verticality)
 ;
 ; A code with no bound function returns HONEST ABSENCE: it still SPEAKS its surface
 ; (or "unknown"), it simply does not yet RUN.
@@ -64,8 +71,10 @@
 ;; --- Blueprints the running functions compose under -----------------
 (let SH-RAISED  (bp "SHAMBALLA-RAISED"))    ; the regal envelope (code 3)
 (let SH-CRYSTAL (bp "SHAMBALLA-CRYSTAL"))   ; the union-of-forces dyad (code 4)
+(let SH-VERTICAL-LANDING (bp "SHAMBALLA-VERTICAL-LANDING")) ; one point in code 33333
+(let SH-VERTICAL-COLUMN  (bp "SHAMBALLA-VERTICAL-COLUMN"))  ; the full five-point column
 
-;; --- the four functions: each a real transform over a cell-node ------
+;; --- the five functions: each a real transform over a cell-node ------
 
 ;; code 1 — restore-to-blueprint. The cell's original blueprint IS its
 ;; Blueprint NodeID; node_category recovers it. Two cells of the same shape
@@ -97,6 +106,22 @@
 ;; Crystal NodeID, so co-creation is reproducible across the gap.
 (defn sh-unite (a b) (intern_node SH-CRYSTAL (list a b)))
 
+;; code 33333 — verticality. Five threes become five landing points through
+;; the body's vertical column. Each landing carries (index, locus, receiving
+;; cell); the column holds all five in order, so the practice has a runnable
+;; recipe shape and a stable content-address.
+(defn sh-vertical-landing (idx locus cell)
+    (intern_node SH-VERTICAL-LANDING
+        (list (intern_trivial_int idx) (intern_trivial_string locus) cell)))
+(defn sh-verticality (cell)
+    (intern_node SH-VERTICAL-COLUMN
+        (list
+            (sh-vertical-landing 1 "belly" cell)
+            (sh-vertical-landing 2 "center-chest" cell)
+            (sh-vertical-landing 3 "throat" cell)
+            (sh-vertical-landing 4 "forehead" cell)
+            (sh-vertical-landing 5 "above-head" cell))))
+
 ;; --- THE LINKAGE: code ↔ name ↔ teaching ↔ function, inspectable data --
 ;; A binding row ties a Shamballa code to its publicly-attested name, the ACTUAL
 ;; TEACHING (a vision-kb concept cell in the substrate) its meaning embodies, and
@@ -114,7 +139,8 @@
         (sh-binding 1 "Mer Ka Fa Ka Lish Ma" "lc-wholeness"                  "restore-to-blueprint")
         (sh-binding 2 "Atlantean Dai Ko Myo"  "lc-observable-resonance-flow"  "amplify-equivalents")
         (sh-binding 3 "Ho Ka O iLi iLi"       "lc-sovereignty-within-oneness" "raise")
-        (sh-binding 4 "Shamballa Crystal"     "lc-cross-modal-unity"          "unite")))
+        (sh-binding 4 "Shamballa Crystal"     "lc-cross-modal-unity"          "unite")
+        (sh-binding 33333 "Verticality Code 33333" "lc-vertical-nourishment"  "verticality")))
 
 ;; resolve a code → its binding (0-or-1-element list; honest absence for any
 ;; code the channel does not yet run).
@@ -143,7 +169,8 @@
             (if (str_eq fn "amplify-equivalents")  (sh-amplify-equivalents cell arg)
             (if (str_eq fn "raise")                (sh-raise cell)
             (if (str_eq fn "unite")                (sh-unite cell arg)
-                (empty))))))))
+            (if (str_eq fn "verticality")          (sh-verticality cell)
+                (empty)))))))))
 
 ;; --- the channel's two faces ----------------------------------------
 ;; SPEAK: the surface text (the decoder; the dictionary). Always answers —
@@ -159,12 +186,13 @@
 (defn shamballa-channel-teaching (code)
     (if (eq (sh-bound? code) 0) "" (sh-teaching-of code)))
 
-;; COVERAGE: the honest accounting — where are the other 348? The Shamballa
+;; COVERAGE: the honest accounting — what is bound, and what remains absent.
+;; The Shamballa
 ;; system names 352 codes (352 levels of initiation back to the Source of this
 ;; Cosmic Day), ~22 in active use; but only a handful are publicly documented
 ;; with a name + stated function. The channel binds a function + teaching to
 ;; exactly those attested codes and returns honest absence for the rest — it
-;; never fabricates the undocumented 348. Reports (total, active, bound) so the
+;; never fabricates undocumented rows. Reports (total, active, bound) so the
 ;; partial is queryable, never hidden. A newly-attested code is a new binding
 ;; row, not new control flow.
 (defn shamballa-channel-bound-count () (len (sh-bindings)))

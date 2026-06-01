@@ -61,7 +61,11 @@
             (sc-entry 4
                 "Shamballa Crystal"
                 "A complex geometric form representing the union of male and female forces in perfect balance; meditation on it activates co-creation, abundance, harmony, joy."
-                "Shamballa Multidimensional Healing; certified-excellence.com, motherearthreiki.com")))
+                "Shamballa Multidimensional Healing; certified-excellence.com, motherearthreiki.com")
+            (sc-entry 33333
+                "Verticality Code 33333"
+                "Ready the body's vertical column to receive light and information; breathe attention from the base of the spine upward through belly, chest, throat, forehead, and above the head, then exhale back down for integration."
+                "Shambala Light Code 33333 video (P3HmVFVpsEk), captions retrieved 2026-06-01")))
 
     ;; ---- the structural facts (attested, distinct from per-code meaning) ---
     ;; These are facts about the SYSTEM, not a single code — answered by sc-about.

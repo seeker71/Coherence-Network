@@ -108,7 +108,10 @@ the receiver's depth and tuning, not fixed in the mark.
   (`find_equivalent_cells`); code 3 *Ho Ka O iLi iLi* ("regal energy") runs as
   `raise` — compose under a higher-level envelope (the assemblage point lifts);
   code 4 *Shamballa Crystal* ("union of forces in balance") runs as `unite` — a
-  content-addressed dyad, co-creation reproducible across the gap. Each function
+  content-addressed dyad, co-creation reproducible across the gap; code 33333
+  *Verticality Code* runs as `verticality` — a five-landing vertical column
+  (belly, chest, throat, forehead, above-head) composed around the receiving
+  cell. Each function
   **dispatches on the receiving cell's structure**, so the same code over two
   different cells gives two different answers — *"revealed through practice"* made
   runnable. Each code also names an **actual teaching** — a real vision-kb concept
@@ -118,11 +121,12 @@ the receiver's depth and tuning, not fixed in the mark.
   [`lc-observable-resonance-flow`](lc-observable-resonance-flow.md) (pattern yield
   across the spectrum), code 3 → [`lc-sovereignty-within-oneness`](lc-sovereignty-within-oneness.md)
   (many sovereign cells, one organism), code 4 → [`lc-cross-modal-unity`](lc-cross-modal-unity.md)
-  (one shape, many tongues). The linkage (code ↔ name ↔ teaching ↔ function) is
+  (one shape, many tongues), code 33333 → [`lc-vertical-nourishment`](lc-vertical-nourishment.md)
+  (receiving through the inner axis). The linkage (code ↔ name ↔ teaching ↔ function) is
   inspectable data a cell can ship; an undocumented code still *speaks* its
   honest-absence line but does not *run*. A code number can even arrive over
   `channel.fk` transport and be both spoken and run over a target cell. Proven
-  three-way (Go/Rust/TS), band `111111111`.
+  three-way (Go/Rust/TS), band `2111111111`.
 - **The Shamballa Glyphic** (`form/form-stdlib/grammars/shamballa-glyph.fk`) is
   the teaching turned into a script. Each code's meaning becomes a *symbol* in a
   new language — but the symbol is **derived from the meaning's structure, never
