@@ -168,6 +168,8 @@
     (auto-research-runtime "form/form-stdlib/field-auto-research.fk")
     (auto-research-proof "form/form-stdlib/tests/field-auto-research-band.fk")
     (auto-research-expected-result 127)
+    (auto-research-perturbation-proof "form/form-stdlib/tests/field-auto-research-perturbation-band.fk")
+    (auto-research-perturbation-expected-result 255)
     (browser-local-playground-proof "web/lib/form-kernel/field-model-form.ts")
     (browser-runtime-proof "web/tests/form-kernel-field-runtime.test.ts")
     (public-deploy-proof "scripts/verify_web_api_deploy.sh")
@@ -193,6 +195,22 @@
       (result "two FMF receipt traces")
       (residual "missing-experimental-validation")
       (next-question "Does the motif pattern have biological function in this observed context?"))))
+
+  (observation-to-perturbation-loop
+    (shape observe contrast intervene observe-again reverse-receipt sharpen-question)
+    (runtime "form/form-stdlib/field-auto-research.fk")
+    (proof "field-auto-research-perturbation-proof:255")
+    (example
+      (source "NCBI:NM_000518.5:HBB-demo-prefix")
+      (before-sequence "ATGGTGCATCTGACTCCTGAGGAGAAGTCT")
+      (intervention "set-site index=19 symbol=T")
+      (after-sequence "ATGGTGCATCTGACTCCTGTGGAGAAGTCT")
+      (reverse-receipt "restores before-sequence")
+      (before-gag-count 2)
+      (after-gag-count 1)
+      (evidence observed observed hypothesis)
+      (residual "function-validation-after-perturbation")
+      (next-question "Does the GAG to GTG perturbation change protein sequence, folding, expression, or disease relevance?")))
 
   (end-to-end-domain-contract
     (per-domain-score 11)

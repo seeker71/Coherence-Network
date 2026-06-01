@@ -29,5 +29,6 @@ describe("browser-facing Form kernel", () => {
     expect(LOCAL_FORM_PROOF_MARKERS).toContain(LOCAL_FIELD_RUNTIME_PROOF.marker);
     expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-model-form-bml-runtime-proof:63");
     expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-auto-research-bml-proof:127");
+    expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-auto-research-perturbation-proof:255");
   });
 });
