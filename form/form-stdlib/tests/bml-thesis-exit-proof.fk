@@ -1,0 +1,170 @@
+; tests/bml-thesis-exit-proof.fk - thesis BML/BMF support and BMA undo proof
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    ;; BMF primitive manifest from BMF-includes.bml and RegisterPrimitives().
+    (let manifest-score
+        (add (int-score (bml-thesis-bmf-primitive-count 0) 7 1)
+             (int-score (bml-thesis-bmf-primitive-rule-count 0) 7 2)))
+
+    (let nil-match (apply-bml-bmf-rule "bmf-nil" (list (bml-src-keyword "Nil"))))
+    (let fail-prim-match (apply-bml-bmf-rule "bmf-fail" (list (bml-src-keyword "Fail"))))
+    (let eof-match (apply-bml-bmf-rule "bmf-end-of-file" (list (bml-src-keyword "EndOfFile"))))
+    (let eol-match (apply-bml-bmf-rule "bmf-end-of-line" (list (bml-src-keyword "EndOfLine"))))
+    (let cut-prim-match (apply-bml-bmf-rule "bmf-cut-primitive" (list (bml-src-keyword "Cut"))))
+    (let multi-match (apply-bml-bmf-rule "bmf-multi-match" (list (bml-src-keyword "MultiMatch"))))
+    (let primitive-base-match (apply-bml-bmf-rule "bmf-primitive-base" (list (bml-src-keyword "Primitive"))))
+    (let primitive-parse-score
+        (add (bool-score (match? nil-match) 4)
+        (add (bool-score (match? fail-prim-match) 8)
+        (add (bool-score (match? eof-match) 16)
+        (add (bool-score (match? eol-match) 32)
+        (add (bool-score (match? cut-prim-match) 64)
+        (add (bool-score (match? multi-match) 128)
+             (bool-score (match? primitive-base-match) 256))))))))
+
+    ;; Thesis spellings and current alias both lower to the same CHOOSE AST.
+    (let choice-match
+        (apply-bml-bmf-rule "choice-fail-int"
+            (list (bml-src-keyword "choice") (bml-src-op "{")
+                  (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-op ",") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "8")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let choose-match
+        (apply-bml-bmf-rule "choose-fail-int"
+            (list (bml-src-keyword "choose") (bml-src-op "{")
+                  (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-op ",") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "9")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let choice-score
+        (add (bma-run-value (bml-compile-program (result-value choice-match)))
+             (bma-run-value (bml-compile-program (result-value choose-match)))))
+
+    ;; Control primitives exposed as BML statements.
+    (let fail-match
+        (apply-bml-bmf-rule "fail-simple"
+            (list (bml-src-keyword "fail") (bml-src-op ";"))))
+    (let fail-state (bma-run-program (bml-compile-program (result-value fail-match))))
+
+    (let cut-match
+        (apply-bml-bmf-rule "cut-simple"
+            (list (bml-src-keyword "cut") (bml-src-op ";"))))
+    (let cut-state (bma-run-program (bml-compile-program (result-value cut-match))))
+
+    (let mark-match
+        (apply-bml-bmf-rule "mark-simple"
+            (list (bml-src-keyword "mark") (bml-src-op ";"))))
+    (let mark-state (bma-run-program (bml-compile-program (result-value mark-match))))
+    (let control-score
+        (add (mode-score fail-state "fail" 512)
+        (add (mode-score cut-state "cut" 1024)
+             (int-score (len (comp-vm-snapshots mark-state)) 1 2048))))
+
+    ;; Section forms from the reference: anonymous, multi-property, named,
+    ;; named multi-property, and library-valued.
+    (let section-public
+        (apply-bml-bmf-rule "section-header"
+            (list (bml-src-keyword "section") (bml-src-op "[")
+                  (bml-src-prop "public") (bml-src-op "]"))))
+    (let section-class-public
+        (apply-bml-bmf-rule "section-comma-header"
+            (list (bml-src-keyword "section") (bml-src-op "[")
+                  (bml-src-prop "class") (bml-src-op ",")
+                  (bml-src-prop "public") (bml-src-op "]"))))
+    (let section-named
+        (apply-bml-bmf-rule "section-named-header"
+            (list (bml-src-keyword "section") (bml-src-name "Insertion")
+                  (bml-src-op "[") (bml-src-prop "public") (bml-src-op "]"))))
+    (let section-named-comma
+        (apply-bml-bmf-rule "section-named-comma-header"
+            (list (bml-src-keyword "section") (bml-src-name "Insertion")
+                  (bml-src-op "[") (bml-src-prop "public") (bml-src-op ",")
+                  (bml-src-prop "abstract") (bml-src-op "]"))))
+    (let section-library
+        (apply-bml-bmf-rule "section-library-header"
+            (list (bml-src-keyword "section") (bml-src-op "[")
+                  (bml-src-keyword "library") (bml-src-op "=")
+                  (bml-src-string "MYLIBRARY.DLL") (bml-src-op "]"))))
+    (let section-score
+        (add (bool-score (match? section-public) 4096)
+        (add (bool-score (match? section-class-public) 8192)
+        (add (bool-score (match? section-named) 16384)
+        (add (bool-score (match? section-named-comma) 32768)
+             (bool-score (match? section-library) 65536))))))
+
+    ;; BMF object model and syntax section rule remain present.
+    (let reference-score
+        (add (int-score (len (nth bml-bmf-reference-model 4)) 10 131072)
+             (bool-score (not (nil? (bml-bmf-find-rule "syntax-section" bml-bmf-rules))) 262144)))
+
+    ;; Forward/backward exit proof: run BMA forward, then replay the trace
+    ;; backward. The restored state is the empty initial VM state; the trace
+    ;; carries explicit DO and UNDO entries.
+    (let trace-node
+        (bml-ast-block
+            (list (bml-ast-save 0)
+                  (bml-ast-int 4)
+                  (bml-ast-restore 0)
+                  (bml-ast-return
+                      (bml-ast-add (bml-ast-int 2) (bml-ast-int 5))))))
+    (let trace-program (bml-compile-program trace-node))
+    (let trace-result (bma-run-forward-backward trace-program))
+    (let trace (bma-forward-backward-trace trace-result))
+    (let forward-state (bma-forward-backward-forward-state trace-result))
+    (let restored-state (bma-forward-backward-restored-state trace-result))
+    (let trace-score
+        (add (int-score (bma-trace-count-mode trace "DO") 7 524288)
+        (add (int-score (bma-trace-count-mode trace "UNDO") 7 1048576)
+        (add (int-score (comp-vm-pop-value forward-state) 7 2097152)
+        (add (mode-score forward-state "return" 4194304)
+        (add (int-score (len (comp-vm-stack restored-state)) 0 8388608)
+             (mode-score restored-state "run" 16777216)))))))
+
+    ;; Backtracking state proof: failed branch mutation is not retained.
+    (let branch-node
+        (bml-ast-choose
+            (list
+                (bml-ast-block (list (bml-ast-int 1) (bml-ast-fail 0)))
+                (bml-ast-block (list (bml-ast-return (bml-ast-int 7)))))))
+    (let branch-state (bma-run-program (bml-compile-program branch-node)))
+    (let branch-score
+        (add (int-score (len (comp-vm-stack branch-state)) 1 33554432)
+             (int-score (comp-vm-pop-value branch-state) 7 67108864)))
+
+    ;; Angelic assembler control names represented at BMA level.
+    (let raise-state (bma-exec-op (bma-raise 0) (comp-vm-empty 0)))
+    (let resume-state (bma-exec-op (bma-resume 0) raise-state))
+    (let nostate-state
+        (bma-exec-op (bma-nostate 0) (comp-vm-push (comp-vm-empty 0) 3)))
+    (let assembler-score
+        (add (mode-score raise-state "raise" 134217728)
+        (add (mode-score resume-state "run" 268435456)
+             (int-score (comp-vm-pop-value nostate-state) 3 536870912))))
+
+    (add manifest-score
+    (add primitive-parse-score
+    (add choice-score
+    (add control-score
+    (add section-score
+    (add reference-score
+    (add trace-score
+    (add branch-score assembler-score))))))))
+)

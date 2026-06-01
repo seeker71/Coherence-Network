@@ -15,9 +15,10 @@
 ;   (list "eol")                — newline or EOF
 ;   (list "not" pattern)        — negative lookahead (BMF NOT)
 ;   (list "peek" pattern)       — positive lookahead, no consumption
+;   (list "multi-match" p lo hi)— BMF MultiMatch, bounded repetition
 ;
 ; The structural primitives (sequence, choice, star, opt, capture,
-; tag, cut, stop, nil, rule) all work the same way — they compose
+; tag, cut, stop/fail, nil, rule) all work the same way — they compose
 ; character-level matches. Cut + Stop disambiguate exactly the way
 ; BMF intended: at the point the rule decides, not at lex time.
 ;
@@ -208,7 +209,18 @@
             (if (str_eq tag "peek")       (cm-peek p stream rules)
             (if (str_eq tag "cut")        (cm-cut stream)
             (if (str_eq tag "stop")       (cmk-fail "stop")
+            (if (str_eq tag "fail")       (cmk-fail "fail")
             (if (str_eq tag "nil")        (cmk-match (ccap-empty 0) stream)
+            (if (str_eq tag "multi-match")
+                (cm-match-multi-match (head (tail p))
+                                      (head (tail (tail p)))
+                                      (head (tail (tail (tail p))))
+                                      stream rules (empty) 0)
+            (if (str_eq tag "multimatch")
+                (cm-match-multi-match (head (tail p))
+                                      (head (tail (tail p)))
+                                      (head (tail (tail (tail p))))
+                                      stream rules (empty) 0)
             (if (str_eq tag "sequence")
                 (cm-match-sequence (tail p) stream rules (ccap-empty 0))
             (if (str_eq tag "choice")
@@ -222,7 +234,7 @@
                 (cm-match-opt (head (tail p)) stream rules)
             (if (str_eq tag "rule")
                 (cm-match-rule (head (tail p)) stream rules)
-                (cmk-fail (str_concat "unknown char-pattern: " tag)))))))))))))))))))))
+                (cmk-fail (str_concat "unknown char-pattern: " tag))))))))))))))))))))))))
 
     (defn cm-match-sequence (children stream rules acc-caps)
         (if (nil? children) (cmk-match acc-caps stream)
@@ -265,6 +277,25 @@
                 (cmk-match (ccap-set (ccap-empty 0) "items" collected) stream)
                 (cm-match-star child (cmatch-rest m) rules
                                 (cons (cmatch-caps m) collected))))))
+
+    (defn cm-match-multi-match (child min-count max-count stream rules collected count)
+        (if (ge count max-count)
+            (cmk-match (ccap-set (ccap-empty 0) "items" collected) stream)
+            (do
+                (let m (cm-match-pattern child stream rules))
+                (if (cfail-cut? m) m
+                (if (cfail? m)
+                    (if (ge count min-count)
+                        (cmk-match (ccap-set (ccap-empty 0) "items" collected) stream)
+                        (cmk-fail "multi-match minimum not reached"))
+                    (if (eq (cs-index (cmatch-rest m)) (cs-index stream))
+                        (if (ge count min-count)
+                            (cmk-match (ccap-set (ccap-empty 0) "items" collected) stream)
+                            (cmk-fail "multi-match made no progress"))
+                        (cm-match-multi-match child min-count max-count
+                                              (cmatch-rest m) rules
+                                              (cons (cmatch-caps m) collected)
+                                              (add count 1))))))))
 
     (defn cm-match-opt (child stream rules)
         (do

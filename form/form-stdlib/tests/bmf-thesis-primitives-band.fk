@@ -1,0 +1,82 @@
+; tests/bmf-thesis-primitives-band.fk - BMF thesis primitive manifest
+;
+; preludes: form-stdlib/grammar-chars.fk
+;
+; Proves the primitive set registered by the 2000 BMF reference:
+; Nil, Fail, EndOfFile, EndOfLine, Cut, and MultiMatch.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn emit-1 (_caps) (intern_trivial_int 1))
+    (let rules-nil
+        (list
+            (list "start"
+                  (list "sequence"
+                        (list "nil")
+                        (list "string" "ok")
+                        (list "eof"))
+                  emit-1)))
+    (let probe-nil (walk_recipe (cm-parse "ok" rules-nil "start")))
+
+    (defn emit-2 (_caps) (intern_trivial_int 2))
+    (let rules-fail
+        (list
+            (list "start"
+                  (list "choice"
+                        (list "sequence" (list "string" "x") (list "fail"))
+                        (list "sequence" (list "string" "x") (list "eof")))
+                  emit-2)))
+    (let probe-fail (walk_recipe (cm-parse "x" rules-fail "start")))
+
+    (defn emit-3 (_caps) (intern_trivial_int 3))
+    (let rules-eof
+        (list
+            (list "start"
+                  (list "sequence" (list "string" "a") (list "eof"))
+                  emit-3)))
+    (let probe-eof (walk_recipe (cm-parse "a" rules-eof "start")))
+
+    (defn emit-4 (_caps) (intern_trivial_int 4))
+    (let rules-eol
+        (list
+            (list "start"
+                  (list "sequence"
+                        (list "string" "a")
+                        (list "eol")
+                        (list "string" "b")
+                        (list "eof"))
+                  emit-4)))
+    (let probe-eol (walk_recipe (cm-parse "a\nb" rules-eol "start")))
+
+    (let cut-match
+        (cm-match-pattern
+            (list "choice"
+                  (list "sequence" (list "string" "a") (list "cut") (list "fail"))
+                  (list "sequence" (list "string" "a") (list "eof")))
+            (mk-cstream "a")
+            (empty)))
+    (let probe-cut (bool-score (cfail? cut-match) 5))
+
+    (defn emit-letters (caps)
+        (intern_trivial_string (ccap-get caps "letters")))
+    (let alpha (list "char-range" 97 122))
+    (let rules-multi
+        (list
+            (list "start"
+                  (list "sequence"
+                        (list "capture" "letters"
+                              (list "multi-match" alpha 2 3))
+                        (list "string" "!")
+                        (list "eof"))
+                  emit-letters)))
+    (let probe-multi
+        (str_len (node_value (cm-parse "abc!" rules-multi "start"))))
+
+    (add probe-nil
+    (add probe-fail
+    (add probe-eof
+    (add probe-eol
+    (add probe-cut probe-multi)))))
+)
