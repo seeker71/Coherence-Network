@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/fmf-cross-kernel-step-20260601",
+  "commit_scope": "Add browser-local Field Model Form forward/reverse runtime proof while keeping Go/Rust claims bounded to structural constructors.",
+  "files_owned": [
+    "web/lib/form-kernel/field-runtime.ts",
+    "web/tests/form-kernel-field-runtime.test.ts",
+    "specs/field-model-form-v0.md",
+    "docs/coherence-substrate/field-model-form.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validator.py",
+    "docs/system_audit/commit_evidence_2026-06-01_fmf_browser_field_runtime.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-field-runtime.test.ts",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "cd web && npm run build",
+      "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+      "cd form/form-kernel-ts && npx tsx src/field.test.ts",
+      "cd form/form-kernel-ts && npm install",
+      "cd form/form-kernel-ts && npm run check",
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_commit_evidence_validator.py"
+    ],
+    "notes": "Browser TypeScript now has executable FMF fieldStep, intervention, reverseReceipt, lift/project, conflict residual, and unit-carrying field-law tests. The shared cross-kernel Form proof still returns 93."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The public web kernel bundle has a browser-local FMF runtime available for tested forward/reverse field execution, beyond constructor-only FMF primitives.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "cd web && npm run build",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Browser forward/reverse FMF execution is proven; Go and Rust still need native runtime value layers before claiming generic fieldStep execution."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "fmf-browser-field-runtime-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/form-kernel/field-runtime.ts binds FMF execution primitives to the browser-vendored Form kernel.",
+    "web/tests/form-kernel-field-runtime.test.ts proves DNA sequence lift/project, forward rule execution, observer intervention, reverse receipt, conflict residuals, and Ohm-law field execution.",
+    "specs/field-model-form-v0.md and docs/coherence-substrate/field-model-form.form mark browser TypeScript forward/reverse runtime as validated while preserving the Go/Rust gap.",
+    "scripts/validate_commit_evidence.py now treats web/lib runtime modules as runtime evidence, covered by api/tests/test_commit_evidence_validator.py."
+  ],
+  "change_files": [
+    "web/lib/form-kernel/field-runtime.ts",
+    "web/tests/form-kernel-field-runtime.test.ts",
+    "specs/field-model-form-v0.md",
+    "docs/coherence-substrate/field-model-form.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validator.py",
+    "docs/system_audit/commit_evidence_2026-06-01_fmf_browser_field_runtime.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

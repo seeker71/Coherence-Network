@@ -158,11 +158,12 @@
       (python-category-note "slot 97 is named FIELD_RESOLVE because RBasic.RESOLVE already names identity lookup at slot 5")
       (native-node-constructor go rust typescript browser-typescript)
       (cross-kernel-form-proof "constructs all FMF RBasic node categories")
-      (forward-reverse-field-step typescript-only)
-      (cross-kernel-forward-reverse not-yet))
+      (forward-reverse-field-step typescript browser-typescript)
+      (cross-kernel-forward-reverse go-rust-not-yet))
     (shared-proof "form/form-stdlib/tests/field-model-form-band.fk")
     (browser-local-playground-proof "web/lib/form-kernel/field-model-form.ts")
-    (public-deploy-proof pending)
+    (browser-runtime-proof "web/tests/form-kernel-field-runtime.test.ts")
+    (public-deploy-proof "scripts/verify_web_api_deploy.sh")
     (expected-result 93))
 
   (end-to-end-domain-contract
