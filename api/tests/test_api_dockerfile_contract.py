@@ -19,6 +19,10 @@ _ENDPOINT_RECIPES = (
     "endpoint_nodeid_distance_demo.fk",
     "endpoint_nodeid_compatibility_demo.fk",
     "endpoint_weighted_average_demo.fk",
+    "endpoint_simpson_diversity_demo.fk",
+    "endpoint_idea_score_demo.fk",
+    "endpoint_marginal_cc_return_demo.fk",
+    "endpoint_breath_balance_demo.fk",
 )
 _RECIPE_DIR_REL = "form/form-kernel-ts/seedbank/python-adapter/examples"
 

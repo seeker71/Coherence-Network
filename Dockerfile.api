@@ -160,6 +160,7 @@ COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_wei
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_simpson_diversity_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_marginal_cc_return_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_breath_balance_demo.fk \
      ./form/form-kernel-ts/seedbank/python-adapter/examples/
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script

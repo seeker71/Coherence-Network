@@ -30,7 +30,7 @@ native resolves each native name to its Form-category Blueprint NodeID
 
 Honest coverage statement (printed, not buried)
 -----------------------------------------------
-The activity view is over the **kernel-served routes today** — the four
+The activity view is over the **kernel-served routes today** — the
 transmuted endpoints' computational cores. The trace gives **arm + native-
 Blueprint attribution**, which is real and complete for what runs. Full
 per-route Recipe/Cell-level activity across ALL routes requires more routes
@@ -58,7 +58,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# The kernel-served recipes today: the four transmuted-endpoint computational
+# The kernel-served recipes today: the transmuted-endpoint computational
 # cores. Each is the committed `.fk` whose body the live endpoint runs. Routes
 # as DATA — adding a transmuted route here widens the activity view by one row,
 # no code change. The expected_result is the documented value-parity anchor
@@ -99,6 +99,15 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "route": "/api/utils/marginal_cc_return",
         "recipe": "endpoint_marginal_cc_return_demo.fk",
         "expected_result": "0.8",
+    },
+    {
+        # First kernel-served route to use a transcendental native (ln).
+        # breath_balance(1,1,1) — perfectly balanced thirds; H = ln(3) =
+        # H_max, so the normalized entropy is 1.0 up to the last ULP of the
+        # ln(1/3)*3 vs ln(3) round-off (CPython and Rust agree to the bit).
+        "route": "/api/utils/breath_balance",
+        "recipe": "endpoint_breath_balance_demo.fk",
+        "expected_result": "0.9999999999999998",
     },
 ]
 
@@ -246,7 +255,7 @@ def aggregate() -> dict:
 _REGISTERED_NATIVES_SAMPLE = {
     # arithmetic / list ops the endpoint recipes DO use
     "_plus", "abs", "_get", "_iter", "head", "tail", "len", "nth",
-    # natives registered but NOT exercised by the four pure-compute recipes —
+    # natives registered but NOT exercised by the pure-compute recipes —
     # they wait for routes that do I/O, structure, or witness work.
     "native_blueprint", "trace", "fetch", "print", "str", "concat",
     "map", "filter", "fold", "range", "str_to_int", "str_to_float",
@@ -353,7 +362,7 @@ def render(report: dict, top: int | None) -> str:
     out.append("## Coverage — what this view sees, and the path to full coverage")
     out.append("")
     out.append(
-        "  Today the view covers the kernel-served routes: the four transmuted-"
+        "  Today the view covers the kernel-served routes: the transmuted-"
     )
     out.append(
         "  endpoint computational cores. The attribution is real and complete"
