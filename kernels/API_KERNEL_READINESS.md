@@ -569,6 +569,7 @@ capability builds**, not a candidate hunt.
 | List-of-record reduction | recursive list→list-of-records marshal + head/tail fold + `record_get` per element | routes that SUM/COUNT/MAX an integer field across a collection (idea grounding signals; the integer reductions in compute_idea_metrics' confidence/coverage) |
 | Per-record arithmetic fold + clamp | `record_get` on int fields + int*float promotion + `min2`/`max2` comparison-branch clamp, folded across a list | routes that reduce a per-record FORMULA across a collection (the commit-cost estimate; the WHOLE grounded-cost reduction of compute_idea_metrics) |
 | Max-of-signals + guarded ratio + count→level + two-sided clamp | nested `max2`; `div` under an `if denom>0 else 0.0` guard with a `min2` ceiling; `min(1.0, count/N)` under a zero-guard; a weighted sum clamped `max(0.05, min(0.95, _))` | scalar scoring routes that pick the strongest signal, guard a ratio, threshold a raw count, and clamp a weighted coverage sum (the value/realization/confidence reduction of compute_idea_metrics — its SECOND and FINAL numeric slice) |
+| String-membership scoring | `str_find` native (three-way value-identical for ASCII — `string-membership-band.fk → 9`) folded `str_find(text, kw, 0) >= 0` over already-tokenized keyword lists + float-seeded hit counters for CPython-faithful `/` | text-scoring routes that count keyword overlap both directions and combine a weighted score (`concept_auto_tagger._score_concept` at `/api/utils/concept_match_score`; the same membership shape `frequency_scoring` / keyword-overlap routes need). The host tokenizes (regex), the kernel scores. |
 
 **Gates ahead (each blocks a named family; build in leverage order):**
 
@@ -598,10 +599,30 @@ capability builds**, not a candidate hunt.
    + by-design host orchestration. Lowest leverage remaining — the computation has
    fallen; only the host plumbing (filter, join, boolean-presence derivation)
    stays.
-2. **String-family operations** — `split`, `strip`, `in` (substring), `lower`,
-   regex. Blocks the text/semantic-scoring family (`frequency_scoring`,
-   `concept_auto_tagger`, keyword extraction). A self-contained string-native
-   arc, parallel to the numeric one already walked.
+2. **String-family operations — the computational half is now BANKED; the
+   residual is REGEX TOKENIZATION (host-side preprocessing).** The honest split,
+   proven by `concept_auto_tagger._score_concept` falling to
+   `/api/utils/concept_match_score`:
+   - **String-MEMBERSHIP / SCORING — BANKED.** `kw in text` is exactly
+     `str_find(text, kw, 0) >= 0`, and `str_find` ships three-way value-identical
+     for ASCII (Rust/Go/TS, `string-membership-band.fk → 9`). The bidirectional
+     keyword-overlap fold + the weighted combine
+     `round(min(0.5*forward + 0.3*reverse + name_bonus, 1.0), 4)` runs kernel-side
+     over already-tokenized keyword lists (the route marshals `list[str]` + `str`
+     bindings; the recipe folds membership with `str_find`). Hit counters seed
+     `0.0` so `forward_hits / len(keywords)` is float division (CPython-faithful).
+     This opens the text-scoring family's COMPUTATIONAL half — the same membership
+     shape `frequency_scoring` and other keyword-overlap routes score with.
+   - **REGEX TOKENIZATION — host-side preprocessing, the genuine residual.**
+     `_extract_keywords` runs `re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())` +
+     stopword filtering + dedup, and the score body assembles `concept_text` /
+     `idea_text` (lowercased concatenation + `" ".join`). This is text-SHAPING,
+     not a kernel computation; it stays host-side BY DESIGN (the route calls
+     `_extract_keywords` before the recipe runs). Pulling regex into the kernel —
+     a `split` / `strip` / `lower` / regex-engine arc — is a genuine deferred
+     capability *if ever wanted in-kernel*, but it is preprocessing, not the
+     score. The honest seam: **host tokenizes (regex), kernel scores
+     (str_find membership fold).**
 3. **Exact-decimal arithmetic** — a `Decimal`-faithful path distinct from f64
    (the `round_ndigits` lesson generalized: f64 scaling diverges from exact
    decimal). Blocks settlement/value-distribution routes that use `Decimal`.
@@ -816,6 +837,39 @@ derivation AROUND the now-kernel-served reductions.** So `compute_idea_metrics` 
 joins, and derives the booleans-over-records. The "deep gate" was never one large
 kernel capability — honest per-slice decomposition has dissolved it entirely into
 kernel-served reductions + by-design host orchestration.
+
+### The text-scoring family opens — string-MEMBERSHIP scoring (the SECOND family)
+
+`concept_auto_tagger._score_concept` falls to `/api/utils/concept_match_score`,
+opening the COMPUTATIONAL half of the text-scoring family the way the numeric
+families opened before it. The honest decomposition exactly mirrors how
+`compute_idea_metrics` was split:
+
+- **Host tokenizes (REGEX, text preprocessing).** `_extract_keywords` runs
+  `re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())` + stopword filter + dedup, and
+  the route assembles `concept_text` (lowercased name + description + keywords),
+  `idea_text` (`" ".join(keywords)`), and lowercases the concept's keywords + name.
+  This is text-SHAPING — a genuine deferred capability *if ever wanted in-kernel*,
+  but it is preprocessing, NOT the score. It stays host-side by design.
+- **Kernel scores (str_find MEMBERSHIP fold).** Given the already-tokenized keyword
+  lists + assembled strings, the recipe folds `kw in text` as
+  `str_find(text, kw, 0) >= 0` both directions and computes
+  `round(min(0.5*forward + 0.3*reverse + name_bonus, 1.0), 4)` — `_score_concept`'s
+  body, weights/bonus/ceiling verbatim from source. Hit counters seed `0.0` so
+  `forward_hits / len(keywords)` is float division (CPython-faithful). `str_find`
+  is three-way value-identical for ASCII (`string-membership-band.fk → 9`,
+  Go included); the recipe fold is Rust+TS value-exact == CPython (Go carries no
+  `_iter`, the same recipe situation `idea_grounded_cost_sum` / `grounded_cost`
+  ship under). Proven exact on representative + edge inputs (frozen sample 0.825;
+  all-forward 0.5; partial 0.7; empty-keywords host-guarded to 0.0).
+
+**The win is the seam, not its closure: string-MEMBERSHIP scoring is BANKED
+(`str_find` fold) — REGEX TOKENIZATION stays host-side as text-preprocessing.**
+The third runtime (kernel-bmf) resolves `str_find` via a one-line `py-builtin`
+passthrough so the interpreter is value-identical to the compile path on the
+text-scoring routes. This is the same arc the numeric gates walked: name the seam
+precisely, prove the native three-way, and the family's computational half becomes
+a batch of clean parity-gated transmutations.
 
 The wellness probe and the attribution view are the two instruments that make
 the incremental transmutation **safe and legible**: the probe says *the surface

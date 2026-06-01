@@ -39,3 +39,4 @@
 !endpoint_idea_grounded_cost_sum_demo.fk
 !endpoint_grounded_cost_demo.fk
 !endpoint_grounded_value_demo.fk
+!endpoint_concept_match_score_demo.fk
