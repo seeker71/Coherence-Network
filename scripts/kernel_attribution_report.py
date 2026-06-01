@@ -402,12 +402,19 @@ def aggregate() -> dict:
             "blueprint": native_blueprint(name),
         }
 
+    inert = _inert_natives(set(native_counts))
     return {
         "per_recipe": per_recipe,
         "arms": dict(arm_counts),
         "functions": dict(fn_counts),
         "natives": natives_with_bp,
-        "inert_natives": _inert_natives(set(native_counts)),
+        "inert_natives": inert,
+        # Embodiment projection (lc-the-trace-is-the-memory, move 3): the fired
+        # Blueprint NodeIDs projected toward the activity-weighted center;
+        # |projection| -> 0 = the body's lived structural center. The inert
+        # block carries the undefined-projection class.
+        "embodiment": embodiment_projection(natives_with_bp),
+        "embodiment_inert": embodiment_inert(natives_with_bp, inert),
         "reached": reached,
         "eligible": len(KERNEL_SERVED_RECIPES),
     }
@@ -443,6 +450,178 @@ def _inert_natives(fired: set[str]) -> list[str]:
     return sorted(_REGISTERED_NATIVES_SAMPLE - fired)
 
 
+# ---------------------------------------------------------------------------
+# Embodiment projection — lc-the-trace-is-the-memory, move (3).
+#
+# The concept: categories genuinely embodied — co-fired by real execution —
+# develop a shared value-equivalence whose scalar projection approaches zero;
+# inert categories (registered, never fired) stay far / undefined. This is the
+# working instrument over the CURRENT attribution snapshot. It reuses the
+# body's OWN structural distance — the Manhattan distance over the NodeID
+# 4-tuple (pkg, level, type, instance) that /api/utils/nodeid_distance
+# computes (see endpoint_nodeid_distance_demo.py / utils.nodeid_distance_py) —
+# rather than inventing a new metric. Core-abstraction-first: ONE projection
+# mechanism over the fired Blueprint NodeIDs as DATA.
+#
+# Honest scope (printed, not buried): this projects over the per-Blueprint
+# fire counts the report already aggregates — a snapshot, not yet the
+# persisted edge-event memory the concept names as the larger next build.
+# What it measures is real: structural distance from the activity-weighted
+# center of what actually fires. What it is NOT: a record that accumulates
+# across runs (each run recomputes the snapshot), nor a value-equivalence
+# learned from co-firing history (that needs the edge-event ledger).
+# ---------------------------------------------------------------------------
+
+
+def _parse_nodeid(nid: str | None) -> tuple[int, int, int, int] | None:
+    """Parse a Blueprint NodeID string '@pkg.level.type.inst' to a 4-tuple."""
+    if not nid or not nid.startswith("@"):
+        return None
+    parts = nid[1:].split(".")
+    if len(parts) != 4:
+        return None
+    try:
+        return (int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]))
+    except ValueError:
+        return None
+
+
+def _nodeid_distance(
+    a: tuple[float, float, float, float], b: tuple[float, float, float, float]
+) -> float:
+    """Manhattan distance over the NodeID 4-tuple — the body's own metric.
+
+    Identical shape to utils.nodeid_distance_py / endpoint_nodeid_distance_demo:
+    sum of absolute differences across (pkg, level, type, instance). Floats are
+    allowed because the embodied center is an activity-weighted centroid (a
+    mean position), not a discrete lattice node.
+    """
+    return sum(abs(a[i] - b[i]) for i in range(4))
+
+
+def embodiment_projection(natives: dict) -> dict:
+    """Project each fired Blueprint NodeID category toward the embodied center.
+
+    Input: the ``natives`` map from ``aggregate()`` — {native_name -> {count,
+    blueprint}}. Natives sharing a Blueprint NodeID ARE one category
+    (content-addressing: same structure, same query key), so the projection's
+    primary unit is the distinct fired NodeID, with its member natives and
+    total fire-count.
+
+    The embodied center is the **activity-weighted centroid** of the fired
+    NodeID 4-tuples — each NodeID weighted by its total fire-count. It is the
+    "center of mass of what fires": the structural position the bulk of live
+    execution clusters around. The projection of a category is its Manhattan
+    NodeID-distance from that centroid (the body's own nodeid_distance shape).
+
+    The honest property the concept demands holds: ``|projection| -> 0`` for
+    the categories structurally closest to the activity center, which are the
+    ones the highest-fire natives belong to; categories farther in NodeID
+    space project larger. Inert categories are handled separately by
+    ``embodiment_inert`` — zero edge-events means projection **undefined**, a
+    distinct class, never ranked near zero by coordinate accident.
+
+    Returns:
+      - center:    [pkg, level, type, inst] activity-weighted centroid (floats)
+      - total_fires: total fire-count across all fired NodeIDs (the weight sum)
+      - categories: [{blueprint, nodeid, fires, share, projection, natives}]
+                    sorted by projection ascending (most-embodied first).
+    """
+    # Collapse natives -> distinct fired Blueprint NodeIDs (the categories).
+    by_node: dict[str, dict] = {}
+    for name, info in natives.items():
+        bp = info.get("blueprint")
+        tup = _parse_nodeid(bp)
+        if tup is None:
+            # A fired native whose NodeID won't resolve has no structural
+            # position — it can't be projected. Honest: skip from the geometric
+            # projection (it still appears in the hot-natives section).
+            continue
+        slot = by_node.setdefault(
+            bp, {"nodeid": tup, "fires": 0, "natives": []}
+        )
+        slot["fires"] += int(info.get("count", 0))
+        slot["natives"].append(name)
+
+    if not by_node:
+        return {"center": None, "total_fires": 0, "categories": []}
+
+    total = sum(s["fires"] for s in by_node.values()) or 1
+    center = tuple(
+        sum(s["nodeid"][i] * s["fires"] for s in by_node.values()) / total
+        for i in range(4)
+    )
+
+    categories: list[dict] = []
+    for bp, s in by_node.items():
+        categories.append(
+            {
+                "blueprint": bp,
+                "nodeid": list(s["nodeid"]),
+                "fires": s["fires"],
+                "share": round(s["fires"] / total, 4),
+                "projection": round(_nodeid_distance(s["nodeid"], center), 4),
+                "natives": sorted(s["natives"]),
+            }
+        )
+    # Most-embodied first: smallest |projection|, ties broken by more fires.
+    categories.sort(key=lambda c: (c["projection"], -c["fires"]))
+
+    return {
+        "center": [round(c, 4) for c in center],
+        "total_fires": total,
+        "categories": categories,
+    }
+
+
+def embodiment_inert(natives: dict, inert_names: list[str]) -> dict:
+    """The inert class — registered natives that never fired.
+
+    The concept's "no edge-events -> projection undefined" partition: these are
+    not ranked near zero, they are far-by-definition. Where a NodeID resolves,
+    we report its structural distance from the embodied center FOR CONTEXT (so
+    an operator can see how far out the never-fired tissue sits), but the
+    projection itself stays ``None`` — undefined — because zero activity means
+    the category has not converged toward anything. Where no NodeID resolves,
+    the native carries no structural position at all: the purest "why are you
+    here, never involved?" candidate.
+
+    Needs the projection's center, so the caller passes the fired ``natives``
+    to recompute it (cheap; keeps this function pure over its inputs).
+    """
+    proj = embodiment_projection(natives)
+    center = proj["center"]
+    rows: list[dict] = []
+    for name in inert_names:
+        bp = native_blueprint(name)
+        if bp == "null":  # the kernel's sentinel for an uncatalogued native
+            bp = None
+        tup = _parse_nodeid(bp)
+        dist = (
+            round(_nodeid_distance(tup, tuple(center)), 4)
+            if (tup is not None and center is not None)
+            else None
+        )
+        rows.append(
+            {
+                "native": name,
+                "blueprint": bp,
+                "nodeid": list(tup) if tup else None,
+                "projection": None,  # undefined: zero edge-events
+                "structural_distance": dist,  # context only, not the projection
+            }
+        )
+    # Resolvable ones first (sorted by structural distance), unresolvable last.
+    rows.sort(
+        key=lambda r: (
+            r["structural_distance"] is None,
+            r["structural_distance"] if r["structural_distance"] is not None else 0.0,
+            r["native"],
+        )
+    )
+    return {"center": center, "inert": rows}
+
+
 def _ranked(counts: dict, top: int | None) -> list[tuple]:
     items = sorted(counts.items(), key=lambda kv: (-_count_of(kv[1]), kv[0]))
     return items[:top] if top else items
@@ -450,6 +629,11 @@ def _ranked(counts: dict, top: int | None) -> list[tuple]:
 
 def _count_of(value) -> int:
     return value["count"] if isinstance(value, dict) else int(value)
+
+
+def _ranked_categories(categories: list[dict], top: int | None) -> list[dict]:
+    """Embodiment categories are pre-sorted by projection; apply --top only."""
+    return categories[:top] if top else categories
 
 
 def render(report: dict, top: int | None) -> str:
@@ -504,6 +688,78 @@ def render(report: dict, top: int | None) -> str:
     for name, info in _ranked(report["natives"], top):
         bp = info.get("blueprint") or "?"
         out.append(f"  {info['count']:>6}  {name:<16} {bp}")
+    out.append("")
+
+    # Embodiment projection — lc-the-trace-is-the-memory, move (3).
+    emb = report.get("embodiment") or {}
+    out.append("## Embodiment projection (|projection| → 0 = the body's lived center)")
+    out.append("")
+    if emb.get("categories"):
+        center = emb["center"]
+        center_str = ".".join(f"{c:g}" for c in center)
+        out.append(
+            f"  Embodied center (activity-weighted NodeID centroid of {emb['total_fires']} "
+            f"fires): @{center_str}"
+        )
+        out.append(
+            "  Each fired Blueprint NodeID category projected to its Manhattan"
+        )
+        out.append(
+            "  distance from that center (the body's own nodeid_distance metric)."
+        )
+        out.append(
+            "  Smaller = nearer the structural center of what actually fires."
+        )
+        out.append("")
+        out.append("    proj  fires  share  Blueprint    natives")
+        for c in _ranked_categories(emb["categories"], top):
+            members = ", ".join(c["natives"])
+            out.append(
+                f"    {c['projection']:>6.3f}  {c['fires']:>4}  {c['share']:>5.3f}  "
+                f"{c['blueprint']:<11}  {members}"
+            )
+        out.append("")
+        # The inert / undefined-projection class.
+        inert_block = report.get("embodiment_inert") or {}
+        inert_rows = inert_block.get("inert") or []
+        out.append(
+            "  Inert categories — never fired, projection UNDEFINED (no edge-events):"
+        )
+        out.append(
+            "  the 'why are you here, not involved?' class. structural-dist is"
+        )
+        out.append(
+            "  context only (how far the never-fired tissue sits), NOT a projection."
+        )
+        out.append("")
+        for r in inert_rows:
+            bp = r["blueprint"] or "(no NodeID — no structural position)"
+            sd = r["structural_distance"]
+            sd_str = f"struct-dist {sd:>6.3f}" if sd is not None else "struct-dist     —"
+            out.append(f"    undefined  {sd_str}  {bp:<11}  {r['native']}")
+    else:
+        out.append(
+            "  (no fired Blueprint NodeIDs resolved — projection unavailable)"
+        )
+    out.append("")
+    out.append(
+        "  Honest scope: this projects over the CURRENT attribution snapshot"
+    )
+    out.append(
+        "  (per-Blueprint fire counts recomputed this run), not yet the"
+    )
+    out.append(
+        "  persisted edge-event memory the concept names. It measures structural"
+    )
+    out.append(
+        "  distance from the activity-weighted center of what fires — real, but"
+    )
+    out.append(
+        "  a snapshot. The edge-event ledger (accumulating across runs, learning"
+    )
+    out.append(
+        "  value-equivalence from co-firing history) is the named next build."
+    )
     out.append("")
 
     # Inert — the 'why here, not involved?' candidates.
