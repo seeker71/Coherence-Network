@@ -1,7 +1,8 @@
 // Browser-local Field Model Form runtime.
 //
-// This mirrors the executable FMF slice in form/form-kernel-ts/src/field.ts
-// while binding to the browser-vendored kernel used by /substrate/form.
+// This mirrors the canonical BML runtime in
+// form/form-stdlib/field-model-form-runtime.fk while binding to the
+// browser-vendored kernel used by /substrate/form.
 
 import {
   Kernel,

@@ -1,0 +1,172 @@
+; field-model-form-runtime.fk - BML-authored executable Field Model Form runtime.
+;
+; preludes: form-stdlib/core.fk
+;
+; The canonical FMF runtime lives here in Form-native BML. Host-language
+; kernels execute this file through the shared Form recipe walker; TypeScript
+; and browser code are adapters and public mirrors, not the source of truth.
+
+section [form.bml] {
+    def fmfrt-bool-score(ok, bit) = if ok then bit else 0;
+    def fmfrt-pair(key, value) = list("pair", key, value);
+    def fmfrt-pair-key(pair) = nth(pair, 1);
+    def fmfrt-pair-value(pair) = nth(pair, 2);
+    def fmfrt-fiber-get(fiber, key, fallback) = if nil?(fiber) then fallback else if str_eq(fmfrt-pair-key(head(fiber)), key) then fmfrt-pair-value(head(fiber)) else fmfrt-fiber-get(tail(fiber), key, fallback);
+    def fmfrt-fiber-set(fiber, key, value) = if nil?(fiber) then list(fmfrt-pair(key, value)) else if str_eq(fmfrt-pair-key(head(fiber)), key) then cons(fmfrt-pair(key, value), tail(fiber)) else cons(head(fiber), fmfrt-fiber-set(tail(fiber), key, value));
+
+    def fmfrt-blueprint(name, carrier, topology, fiber-schema, units, boundary) = list("FieldBlueprint", name, carrier, topology, fiber-schema, units, boundary);
+    def fmfrt-blueprint-name(blueprint) = nth(blueprint, 1);
+    def fmfrt-blueprint-carrier(blueprint) = nth(blueprint, 2);
+    def fmfrt-site(id, fiber) = list("site", id, fiber);
+    def fmfrt-site-id(site) = nth(site, 1);
+    def fmfrt-site-fiber(site) = nth(site, 2);
+    def fmfrt-site-get(site, key, fallback) = fmfrt-fiber-get(fmfrt-site-fiber(site), key, fallback);
+    def fmfrt-site-set(site, key, value) = fmfrt-site(fmfrt-site-id(site), fmfrt-fiber-set(fmfrt-site-fiber(site), key, value));
+    def fmfrt-edge(from-id, to-id, kind, fiber) = list("edge", from-id, to-id, kind, fiber);
+    def fmfrt-edge-from(edge) = nth(edge, 1);
+    def fmfrt-edge-to(edge) = nth(edge, 2);
+    def fmfrt-edge-kind(edge) = nth(edge, 3);
+    def fmfrt-edge-fiber(edge) = nth(edge, 4);
+    def fmfrt-edge-set(edge, key, value) = fmfrt-edge(fmfrt-edge-from(edge), fmfrt-edge-to(edge), fmfrt-edge-kind(edge), fmfrt-fiber-set(fmfrt-edge-fiber(edge), key, value));
+    def fmfrt-field(name, blueprint, sites, edges, traces, time) = list("FieldCell", name, blueprint, sites, edges, traces, time);
+    def fmfrt-field-name(field) = nth(field, 1);
+    def fmfrt-field-blueprint(field) = nth(field, 2);
+    def fmfrt-field-sites(field) = nth(field, 3);
+    def fmfrt-field-edges(field) = nth(field, 4);
+    def fmfrt-field-traces(field) = nth(field, 5);
+    def fmfrt-field-time(field) = nth(field, 6);
+    def fmfrt-field-with-state(field, sites, edges, traces, time) = fmfrt-field(fmfrt-field-name(field), fmfrt-field-blueprint(field), sites, edges, traces, time);
+
+    def fmfrt-cost(attention, compute, disturbance, risk) = list("cost", attention, compute, disturbance, risk);
+    def fmfrt-cost-attention(cost) = nth(cost, 1);
+    def fmfrt-cost-compute(cost) = nth(cost, 2);
+    def fmfrt-cost-disturbance(cost) = nth(cost, 3);
+    def fmfrt-cost-risk(cost) = nth(cost, 4);
+    def fmfrt-cost-score(cost) = add(mul(fmfrt-cost-disturbance(cost), 1000), add(mul(fmfrt-cost-risk(cost), 100), add(mul(fmfrt-cost-attention(cost), 10), fmfrt-cost-compute(cost))));
+    def fmfrt-match(bindings, cost) = list("match", bindings, cost);
+    def fmfrt-match-bindings(match) = nth(match, 1);
+    def fmfrt-match-cost(match) = nth(match, 2);
+    def fmfrt-rule(name, evidence, consent, cost, matcher, forwarder, config) = list("rule", name, evidence, consent, cost, matcher, forwarder, config);
+    def fmfrt-rule-name(rule) = nth(rule, 1);
+    def fmfrt-rule-evidence(rule) = nth(rule, 2);
+    def fmfrt-rule-consent(rule) = nth(rule, 3);
+    def fmfrt-rule-cost(rule) = nth(rule, 4);
+    def fmfrt-rule-matcher(rule) = nth(rule, 5);
+    def fmfrt-rule-forwarder(rule) = nth(rule, 6);
+    def fmfrt-rule-config(rule) = nth(rule, 7);
+    def fmfrt-delta(op, target, key, value) = list("delta", op, target, key, value);
+    def fmfrt-delta-op(delta) = nth(delta, 1);
+    def fmfrt-delta-target(delta) = nth(delta, 2);
+    def fmfrt-delta-key(delta) = nth(delta, 3);
+    def fmfrt-delta-value(delta) = nth(delta, 4);
+    def fmfrt-trace(rule, kind, bindings, data) = list("trace", rule, kind, bindings, data);
+    def fmfrt-candidate(rule, match) = list("candidate", rule, match, fmfrt-match-cost(match));
+    def fmfrt-candidate-rule(candidate) = nth(candidate, 1);
+    def fmfrt-candidate-match(candidate) = nth(candidate, 2);
+    def fmfrt-candidate-cost(candidate) = nth(candidate, 3);
+    def fmfrt-observer(name, policy) = list("observer", name, policy);
+    def fmfrt-observer-name(observer) = nth(observer, 1);
+    def fmfrt-observer-policy(observer) = nth(observer, 2);
+    def fmfrt-receipt(observer, candidates, selected, applied, conflicts) = list("receipt", observer, candidates, selected, applied, conflicts);
+    def fmfrt-receipt-applied(receipt) = nth(receipt, 4);
+    def fmfrt-receipt-conflicts(receipt) = nth(receipt, 5);
+    def fmfrt-residual(budget-exhausted, skipped, conflicts) = list("residual", budget-exhausted, skipped, conflicts);
+    def fmfrt-residual-conflicts(residual) = nth(residual, 3);
+    def fmfrt-step-result(field, receipt, residual) = list("step-result", field, receipt, residual);
+    def fmfrt-result-field(result) = nth(result, 1);
+    def fmfrt-result-receipt(result) = nth(result, 2);
+    def fmfrt-result-residual(result) = nth(result, 3);
+
+    def fmfrt-find-site(sites, id) = if nil?(sites) then empty else if eq(fmfrt-site-id(head(sites)), id) then head(sites) else fmfrt-find-site(tail(sites), id);
+    def fmfrt-set-site(sites, id, key, value) = if nil?(sites) then empty else if eq(fmfrt-site-id(head(sites)), id) then cons(fmfrt-site-set(head(sites), key, value), tail(sites)) else cons(head(sites), fmfrt-set-site(tail(sites), id, key, value));
+    def fmfrt-inc-site(sites, id, key, amount) {
+        let site = fmfrt-find-site(sites, id);
+        fmfrt-set-site(sites, id, key, add(fmfrt-site-get(site, key, 0), amount));
+    }
+    def fmfrt-set-edge(edges, index, key, value) = if nil?(edges) then empty else if eq(index, 0) then cons(fmfrt-edge-set(head(edges), key, value), tail(edges)) else cons(head(edges), fmfrt-set-edge(tail(edges), sub(index, 1), key, value));
+    def fmfrt-write-target(delta) = list(fmfrt-delta-op(delta), fmfrt-delta-target(delta), fmfrt-delta-key(delta));
+    def fmfrt-same-target?(a, b) = and(str_eq(nth(a, 0), nth(b, 0)), and(eq(nth(a, 1), nth(b, 1)), str_eq(nth(a, 2), nth(b, 2))));
+    def fmfrt-seen-target?(writes, target) = if nil?(writes) then false else if fmfrt-same-target?(fmfrt-pair-key(head(writes)), target) then true else fmfrt-seen-target?(tail(writes), target);
+    def fmfrt-apply-delta-state(state, delta) {
+        let sites = nth(state, 0);
+        let edges = nth(state, 1);
+        let traces = nth(state, 2);
+        if str_eq(fmfrt-delta-op(delta), "trace") then list(sites, edges, cons(fmfrt-delta-value(delta), traces)) else if str_eq(fmfrt-delta-op(delta), "set-site") then list(fmfrt-set-site(sites, fmfrt-delta-target(delta), fmfrt-delta-key(delta), fmfrt-delta-value(delta)), edges, traces) else if str_eq(fmfrt-delta-op(delta), "inc-site") then list(fmfrt-inc-site(sites, fmfrt-delta-target(delta), fmfrt-delta-key(delta), fmfrt-delta-value(delta)), edges, traces) else if str_eq(fmfrt-delta-op(delta), "set-edge") then list(sites, fmfrt-set-edge(edges, fmfrt-delta-target(delta), fmfrt-delta-key(delta), fmfrt-delta-value(delta)), traces) else list(sites, edges, traces);
+    }
+    def fmfrt-apply-deltas-loop(state, deltas, writes, applied, conflicts) = if nil?(deltas) then list(state, reverse(applied), reverse(conflicts)) else if str_eq(fmfrt-delta-op(head(deltas)), "trace") then fmfrt-apply-deltas-loop(fmfrt-apply-delta-state(state, head(deltas)), tail(deltas), writes, cons(head(deltas), applied), conflicts) else if fmfrt-seen-target?(writes, fmfrt-write-target(head(deltas))) then fmfrt-apply-deltas-loop(state, tail(deltas), writes, applied, cons(fmfrt-write-target(head(deltas)), conflicts)) else fmfrt-apply-deltas-loop(fmfrt-apply-delta-state(state, head(deltas)), tail(deltas), cons(fmfrt-pair(fmfrt-write-target(head(deltas)), fmfrt-delta-value(head(deltas))), writes), cons(head(deltas), applied), conflicts);
+    def fmfrt-apply-deltas(field, deltas) {
+        let state = list(fmfrt-field-sites(field), fmfrt-field-edges(field), fmfrt-field-traces(field));
+        let applied = fmfrt-apply-deltas-loop(state, deltas, empty, empty, empty);
+        let next-state = nth(applied, 0);
+        let next-field = fmfrt-field-with-state(field, nth(next-state, 0), nth(next-state, 1), reverse(nth(next-state, 2)), add(fmfrt-field-time(field), 1));
+        list(next-field, nth(applied, 1), nth(applied, 2));
+    }
+
+    def fmfrt-collect-matches-for-rule(rule, matches) = if nil?(matches) then empty else cons(fmfrt-candidate(rule, head(matches)), fmfrt-collect-matches-for-rule(rule, tail(matches)));
+    def fmfrt-collect-candidates-rule(rule, rest, field) {
+        let matcher = fmfrt-rule-matcher(rule);
+        append(fmfrt-collect-matches-for-rule(rule, matcher(rule, field)), fmfrt-collect-candidates(rest, field));
+    }
+    def fmfrt-collect-candidates(rules, field) = if nil?(rules) then empty else fmfrt-collect-candidates-rule(head(rules), tail(rules), field);
+    def fmfrt-least-candidate-loop(candidates, best) = if nil?(candidates) then best else if lt(fmfrt-cost-score(fmfrt-candidate-cost(head(candidates))), fmfrt-cost-score(fmfrt-candidate-cost(best))) then fmfrt-least-candidate-loop(tail(candidates), head(candidates)) else fmfrt-least-candidate-loop(tail(candidates), best);
+    def fmfrt-select-candidates(candidates, observer) = if nil?(candidates) then empty else if str_eq(fmfrt-observer-policy(observer), "least-disturbance") then list(fmfrt-least-candidate-loop(tail(candidates), head(candidates))) else candidates;
+    def fmfrt-candidate-deltas(candidate, field) {
+        let rule = fmfrt-candidate-rule(candidate);
+        let forwarder = fmfrt-rule-forwarder(rule);
+        forwarder(rule, fmfrt-candidate-match(candidate), field);
+    }
+    def fmfrt-collect-deltas(selected, field) = if nil?(selected) then empty else append(fmfrt-candidate-deltas(head(selected), field), fmfrt-collect-deltas(tail(selected), field));
+    def fmfrt-field-step(field, rules, observer) {
+        let candidates = fmfrt-collect-candidates(rules, field);
+        let selected = fmfrt-select-candidates(candidates, observer);
+        let deltas = fmfrt-collect-deltas(selected, field);
+        let applied = fmfrt-apply-deltas(field, deltas);
+        let receipt = fmfrt-receipt(observer, candidates, selected, nth(applied, 1), nth(applied, 2));
+        let residual = fmfrt-residual(false, 0, nth(applied, 2));
+        fmfrt-step-result(nth(applied, 0), receipt, residual);
+    }
+    def fmfrt-intervene(field, observer, deltas) {
+        let applied = fmfrt-apply-deltas(field, deltas);
+        let receipt = fmfrt-receipt(observer, empty, empty, nth(applied, 1), nth(applied, 2));
+        let residual = fmfrt-residual(false, 0, nth(applied, 2));
+        fmfrt-step-result(nth(applied, 0), receipt, residual);
+    }
+    def fmfrt-reverse-delta(field, delta) = if str_eq(fmfrt-delta-op(delta), "set-site") then fmfrt-delta("set-site", fmfrt-delta-target(delta), fmfrt-delta-key(delta), fmfrt-site-get(fmfrt-find-site(fmfrt-field-sites(field), fmfrt-delta-target(delta)), fmfrt-delta-key(delta), "")) else if str_eq(fmfrt-delta-op(delta), "inc-site") then fmfrt-delta("inc-site", fmfrt-delta-target(delta), fmfrt-delta-key(delta), sub(0, fmfrt-delta-value(delta))) else delta;
+    def fmfrt-reverse-deltas-loop(field, applied, acc) = if nil?(applied) then acc else fmfrt-reverse-deltas-loop(field, tail(applied), cons(fmfrt-reverse-delta(field, head(applied)), acc));
+    def fmfrt-reverse-receipt(original-field, result) {
+        let receipt = fmfrt-result-receipt(result);
+        fmfrt-intervene(fmfrt-result-field(result), fmfrt-observer("reverse-receipt", "all-compatible"), fmfrt-reverse-deltas-loop(original-field, fmfrt-receipt-applied(receipt), empty));
+    }
+
+    def fmfrt-lift-sequence-more(text, index, sites, edges) {
+        let site = fmfrt-site(index, list(fmfrt-pair("index", index), fmfrt-pair("symbol", substring(text, index, add(index, 1)))));
+        let next-edges = if eq(index, 0) then edges else cons(fmfrt-edge(sub(index, 1), index, "next", empty), edges);
+        fmfrt-lift-sequence-loop(text, add(index, 1), cons(site, sites), next-edges);
+    }
+    def fmfrt-lift-sequence-loop(text, index, sites, edges) = if ge(index, str_len(text)) then fmfrt-field("sequence-field", fmfrt-blueprint("sequence", "sequence", "next-previous", empty, empty, "start-end"), reverse(sites), reverse(edges), empty, 0) else fmfrt-lift-sequence-more(text, index, sites, edges);
+    def fmfrt-lift-sequence(text) = fmfrt-lift-sequence-loop(text, 0, empty, empty);
+    def fmfrt-project-sequence-sites(sites, acc) = if nil?(sites) then acc else fmfrt-project-sequence-sites(tail(sites), str_concat(acc, fmfrt-site-get(head(sites), "symbol", "")));
+    def fmfrt-project-sequence(field) = fmfrt-project-sequence-sites(fmfrt-field-sites(field), "");
+    def fmfrt-count-motif-loop(text, motif, index, acc) = if gt(index, sub(str_len(text), str_len(motif))) then acc else fmfrt-count-motif-loop(text, motif, add(index, 1), if str_eq(substring(text, index, add(index, str_len(motif))), motif) then add(acc, 1) else acc);
+    def fmfrt-count-motif(text, motif) = fmfrt-count-motif-loop(text, motif, 0, 0);
+    def fmfrt-sequence-window-matcher(rule, field) {
+        let motif = fmfrt-rule-config(rule);
+        let count = fmfrt-count-motif(fmfrt-project-sequence(field), motif);
+        if eq(count, 0) then empty else list(fmfrt-match(list(fmfrt-pair("motif", motif), fmfrt-pair("count", count)), fmfrt-rule-cost(rule)));
+    }
+    def fmfrt-trace-forwarder(rule, match, field) = list(fmfrt-delta("trace", 0, "", fmfrt-trace(fmfrt-rule-name(rule), "match", fmfrt-match-bindings(match), empty)));
+    def fmfrt-sequence-window-rule(name, motif) = fmfrt-rule(name, "observed", "observe", fmfrt-cost(1, str_len(motif), 0, 0), fmfrt-sequence-window-matcher, fmfrt-trace-forwarder, motif);
+    def fmfrt-public-runtime-proof-score() {
+        let dna = "ATGGTGCATCTGACTCCTGAGGAGAAGTCT";
+        let field = fmfrt-lift-sequence(dna);
+        let projected = fmfrt-project-sequence(field);
+        let observer = fmfrt-observer("bml-fmf-runtime-proof", "all-compatible");
+        let step = fmfrt-field-step(field, list(fmfrt-sequence-window-rule("start-codon", "ATG"), fmfrt-sequence-window-rule("glutamate-codon", "GAG")), observer);
+        let changed = fmfrt-intervene(field, observer, list(fmfrt-delta("set-site", 19, "symbol", "T")));
+        let reversed = fmfrt-reverse-receipt(field, changed);
+        let conflict = fmfrt-intervene(field, observer, list(fmfrt-delta("set-site", 0, "symbol", "A"), fmfrt-delta("set-site", 0, "symbol", "T")));
+        sum(list(fmfrt-bool-score(str_eq(projected, dna), 1), fmfrt-bool-score(eq(len(fmfrt-result-field(step)), 7), 2), fmfrt-bool-score(eq(len(fmfrt-receipt-applied(fmfrt-result-receipt(step))), 2), 4), fmfrt-bool-score(str_eq(fmfrt-project-sequence(fmfrt-result-field(changed)), "ATGGTGCATCTGACTCCTGTGGAGAAGTCT"), 8), fmfrt-bool-score(str_eq(fmfrt-project-sequence(fmfrt-result-field(reversed)), dna), 16), fmfrt-bool-score(eq(len(fmfrt-residual-conflicts(fmfrt-result-residual(conflict))), 1), 32)));
+    }
+
+    0;
+}
