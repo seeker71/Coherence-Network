@@ -2301,7 +2301,57 @@
                     (tail after-properties))
                 (bml-source-parse-step false "" (empty) objects)))))
 
-    (defn bml-source-parse-method-after-name (return-type method-name objects)
+    (defn bml-source-parse-const (objects)
+        (if (bml-source-token-value? (head objects) "const")
+            (do
+                (let type-parse (bml-source-parse-type (tail objects)))
+                (let const-type (nth type-parse 0))
+                (let after-type (nth type-parse 1))
+                (let name-object (head after-type))
+                (if (bml-source-name-token? name-object)
+                    (do
+                        (let const-name (bmf-object-value name-object))
+                        (let properties-parse
+                            (bml-source-properties-parse (tail after-type)))
+                        (let properties (nth properties-parse 0))
+                        (let after-properties (nth properties-parse 1))
+                        (if (bml-source-token-value? (head after-properties) "=")
+                            (do
+                                (let value-parse
+                                    (bml-source-collect-until-semicolon-loop
+                                        (tail after-properties)
+                                        (empty)))
+                                (bml-source-parse-step
+                                    true
+                                    "file-class-const"
+                                    (comp-bml-component
+                                        "Const"
+                                        (list
+                                            const-type
+                                            const-name
+                                            properties
+                                            (head
+                                                (bml-source-token-values
+                                                    (nth value-parse 0)))))
+                                    (nth value-parse 1)))
+                        (if (bml-source-token-value? (head after-properties) ";")
+                            (bml-source-parse-step
+                                true
+                                "file-class-const"
+                                (comp-bml-component
+                                    "Const"
+                                    (list const-type const-name properties ""))
+                                (tail after-properties))
+                            (bml-source-parse-step false "" (empty) objects))))
+                    (bml-source-parse-step false "" (empty) objects)))
+            (bml-source-parse-step false "" (empty) objects)))
+
+    (defn bml-source-large-method-body-source? (class-name method-name)
+        (if (str_eq class-name "BMF")
+            (not (str_eq method-name "Main"))
+            false))
+
+    (defn bml-source-parse-method-after-name (class-name return-type method-name objects)
         (if (bml-source-token-value? (head objects) "(")
             (do
                 (let parameter-parse (bml-source-collect-balanced-paren objects))
@@ -2313,8 +2363,14 @@
                 (let after-properties (nth properties-parse 1))
                 (if (bml-source-token-value? (head after-properties) "{")
                     (do
+                        (let large-body
+                            (bml-source-large-method-body-source? class-name method-name))
                         (let body-parse
-                            (bml-source-collect-balanced-brace after-properties))
+                            (if large-body
+                                (list
+                                    (empty)
+                                    (bml-source-skip-class-body after-properties))
+                                (bml-source-collect-balanced-brace after-properties)))
                         (bml-source-parse-step
                             true
                             "file-class-method"
@@ -2341,6 +2397,7 @@
                 (do
                     (let op-token (nth after-type 1))
                     (bml-source-parse-method-after-name
+                        class-name
                         member-type
                         (str_concat "operator" (bmf-object-value op-token))
                         (drop 2 after-type)))
@@ -2350,6 +2407,7 @@
                     (let after-name (tail after-type))
                     (if (bml-source-token-value? (head after-name) "(")
                         (bml-source-parse-method-after-name
+                            class-name
                             member-type
                             member-name
                             after-name)
@@ -2421,12 +2479,14 @@
             (bml-source-parse-step false "" (empty) objects)
             (if (bml-source-token-value? (head objects) "section")
                 (bml-source-parse-section class-name objects)
-            (do
-                (let constructor-step
-                    (bml-source-parse-constructor class-name objects))
-                (if (bml-source-parse-step-ok? constructor-step)
-                    constructor-step
-                    (bml-source-parse-typed-member class-name objects))))))
+            (if (bml-source-token-value? (head objects) "const")
+                (bml-source-parse-const objects)
+                (do
+                    (let constructor-step
+                        (bml-source-parse-constructor class-name objects))
+                    (if (bml-source-parse-step-ok? constructor-step)
+                        constructor-step
+                        (bml-source-parse-typed-member class-name objects)))))))
 
     (defn bml-source-parse-class-members-loop (class-name objects acc)
         (if (nil? objects)
@@ -2471,7 +2531,8 @@
 
     (defn bml-source-class-body-enabled? (name)
         (if (str_eq name "RuleProcess") true
-            (str_eq name "Rule")))
+            (if (str_eq name "Rule") true
+                (str_eq name "BMF"))))
 
     (defn bml-source-direct-class-parser? (objects)
         (if (bml-source-token-value? (head objects) "class")

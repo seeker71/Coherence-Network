@@ -1,0 +1,77 @@
+; tests/bml-thesis-bmf-grammar-body-source-proof.fk - real BMF-grammar.bml body model
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that the original thesis companion BMF-grammar.bml file no longer
+; lands as an empty class shell. Its BMF class body is parsed into native BML
+; model components: const, class/public fields, constructor, Main, and
+; additional method signatures.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn field-score (field expected bit)
+        (if (nil? field) 0
+            (str-score (bml-field-name field) expected bit)))
+
+    (defn method-score (method expected bit)
+        (if (nil? method) 0
+            (str-score (bml-method-return method) expected bit)))
+
+    (defn constant-value-score (constant expected bit)
+        (if (nil? constant) 0
+            (str-score (bml-const-value constant) expected bit)))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let bmf-constants (bml-class-own-constants bmf-class))
+    (let bmf-fields (bml-class-own-fields bmf-class))
+    (let bmf-methods (bml-class-own-methods bmf-class))
+    (let constructors (bml-class-own-constructors bmf-class))
+    (let default-syntax
+        (bml-find-const bmf-constants "DefaultBMFSyntax"))
+    (let default-config
+        (bml-find-field bmf-fields "m_strDefaultConfigFile"))
+    (let debug-field
+        (bml-find-field bmf-fields "m_bDebug"))
+    (let verbose-field
+        (bml-find-field bmf-fields "m_iVerbose"))
+    (let default-config-props
+        (bml-class-member-effective-properties bmf-class "Field" "m_strDefaultConfigFile"))
+    (let main-method (bml-find-method bmf-methods "Main"))
+    (let start-result-stack
+        (bml-find-method bmf-methods "StartResultStack"))
+    (let compile-method (bml-find-method bmf-methods "Compile"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 2)
+            (int-score (len (bml-source-exec-parse-rules parsed)) 3 4)
+            (str-score (nth (bml-source-exec-parse-rules parsed) 2) "file-class-body" 8)
+            (str-score (bml-class-name bmf-class) "BMF" 16)
+            (bool-score (bml-properties-has? (bml-class-properties bmf-class) "public") 32)
+            (str-score (bml-class-structural-base-name bmf-class) "Application" 64)
+            (bool-score (gt (len (bml-class-body bmf-class)) 0) 128)
+            (constant-value-score default-syntax "BMF.library.BMF" 256)
+            (field-score default-config "m_strDefaultConfigFile" 512)
+            (field-score debug-field "m_bDebug" 1024)
+            (field-score verbose-field "m_iVerbose" 2048)
+            (bool-score (bml-properties-has? default-config-props "class") 4096)
+            (bool-score (bml-properties-has? default-config-props "public") 8192)
+            (int-score (len constructors) 1 16384)
+            (method-score main-method "void" 32768)
+            (int-score (len (bml-method-parameters main-method)) 1 65536)
+            (bool-score (bml-body-source-contains? (bml-method-body main-method) "HandleArgs") 131072)
+            (method-score start-result-stack "void" 262144)
+            (method-score compile-method "bool" 524288)))
+)
