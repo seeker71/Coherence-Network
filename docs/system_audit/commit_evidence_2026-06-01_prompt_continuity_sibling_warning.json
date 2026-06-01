@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/prompt-continuity-sibling-warning-20260601",
+  "commit_scope": "Downgrade old unpushed-ahead sibling worktrees to prompt-entry guidance while keeping recent unpushed-ahead and detached sibling worktrees blocking.",
+  "files_owned": [
+    "scripts/worktree_continuity_guard.py",
+    "scripts/prompt_entry_gate.sh",
+    "api/tests/test_worktree_continuity_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-01_prompt_continuity_sibling_warning.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile scripts/worktree_continuity_guard.py",
+      "python3 -m pytest api/tests/test_worktree_continuity_guard.py -v",
+      "python3 -m ruff check scripts/worktree_continuity_guard.py api/tests/test_worktree_continuity_guard.py",
+      "python3 scripts/worktree_continuity_guard.py --fail-on-blocking-risk",
+      "make prompt-guide"
+    ],
+    "notes": [
+      "The initial worktree-local command `cd api && .venv/bin/pytest tests/test_worktree_continuity_guard.py -v` failed before running tests because this new worktree has no api/.venv: `zsh:1: no such file or directory: .venv/bin/pytest`.",
+      "The focused pytest rerun used the available Python runner from the same worktree and passed 7 tests.",
+      "Live continuity output reported risk_count=49 and blocking_risk_count=0 while preserving stale_ahead_without_upstream and dirty_integration_candidate guidance rows.",
+      "make prompt-guide completed without PROMPT_GATE_SKIP_CONTINUITY in this worktree."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No runtime endpoint behavior changed by this prompt-entry process change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local proof passes; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "repository-health"
+  ],
+  "spec_ids": [
+    "repository-workflow-health"
+  ],
+  "task_ids": [
+    "prompt-continuity-sibling-warning-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "workflow policy"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_worktree_continuity_guard.py: fresh ahead-without-upstream stays blocking",
+    "api/tests/test_worktree_continuity_guard.py: stale ahead-without-upstream is guidance",
+    "scripts/worktree_continuity_guard.py --fail-on-blocking-risk: blocking_risk_count=0",
+    "make prompt-guide: completed without PROMPT_GATE_SKIP_CONTINUITY"
+  ],
+  "change_files": [
+    "api/tests/test_worktree_continuity_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-01_prompt_continuity_sibling_warning.json",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_continuity_guard.py"
+  ],
+  "change_intent": "process_only"
+}

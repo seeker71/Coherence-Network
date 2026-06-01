@@ -39,6 +39,81 @@ def test_dirty_only_risk_is_guidance_not_blocking() -> None:
     assert mod._is_blocking_risk(["dirty_integration_candidate"]) is False
     assert mod._is_blocking_risk(["dirty_integration_candidate", "detached_head"]) is True
     assert mod._is_blocking_risk(["ahead_without_upstream"]) is True
+    assert mod._is_blocking_risk(["stale_ahead_without_upstream"]) is False
+
+
+def test_fresh_ahead_without_upstream_stays_blocking(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module()
+    repo_root = tmp_path / "repo"
+    current = repo_root / "current"
+    sibling = repo_root / "sibling"
+    current.mkdir(parents=True)
+    sibling.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        mod,
+        "_parse_worktrees",
+        lambda _repo_root: [
+            {"worktree": str(current), "branch": "refs/heads/codex/current"},
+            {"worktree": str(sibling), "branch": "refs/heads/codex/fresh-local"},
+        ],
+    )
+    monkeypatch.setattr(
+        mod,
+        "_branch_name",
+        lambda _wt_path, branch_ref: branch_ref.replace("refs/heads/", "", 1),
+    )
+    monkeypatch.setattr(mod, "_status_paths", lambda _wt_path: [])
+    monkeypatch.setattr(mod, "_ahead_behind_vs_main", lambda wt_path: (1, 0) if wt_path == sibling else (0, 0))
+    monkeypatch.setattr(mod, "_upstream_exists", lambda wt_path: wt_path == current)
+    monkeypatch.setattr(mod, "_patch_equivalent_to_main", lambda _wt_path: False)
+    monkeypatch.setattr(mod, "_newest_ahead_commit_age_hours", lambda _wt_path, _now_epoch: 2.0)
+
+    risks = mod.collect_risks(repo_root, current)
+
+    assert len(risks) == 1
+    assert risks[0].risks == ["ahead_without_upstream"]
+    assert risks[0].newest_ahead_commit_age_hours == 2.0
+    assert mod._is_blocking_risk(risks[0].risks) is True
+
+
+def test_stale_ahead_without_upstream_is_guidance_not_blocking(monkeypatch, tmp_path: Path) -> None:
+    mod = _load_module()
+    repo_root = tmp_path / "repo"
+    current = repo_root / "current"
+    sibling = repo_root / "sibling"
+    current.mkdir(parents=True)
+    sibling.mkdir(parents=True)
+
+    monkeypatch.setattr(
+        mod,
+        "_parse_worktrees",
+        lambda _repo_root: [
+            {"worktree": str(current), "branch": "refs/heads/codex/current"},
+            {"worktree": str(sibling), "branch": "refs/heads/codex/old-local"},
+        ],
+    )
+    monkeypatch.setattr(
+        mod,
+        "_branch_name",
+        lambda _wt_path, branch_ref: branch_ref.replace("refs/heads/", "", 1),
+    )
+    monkeypatch.setattr(mod, "_status_paths", lambda _wt_path: [])
+    monkeypatch.setattr(mod, "_ahead_behind_vs_main", lambda wt_path: (3, 20) if wt_path == sibling else (0, 0))
+    monkeypatch.setattr(mod, "_upstream_exists", lambda wt_path: wt_path == current)
+    monkeypatch.setattr(mod, "_patch_equivalent_to_main", lambda _wt_path: False)
+    monkeypatch.setattr(
+        mod,
+        "_newest_ahead_commit_age_hours",
+        lambda _wt_path, _now_epoch: mod.STALE_AHEAD_WITHOUT_UPSTREAM_WARNING_AGE_HOURS,
+    )
+
+    risks = mod.collect_risks(repo_root, current)
+
+    assert len(risks) == 1
+    assert risks[0].risks == ["stale_ahead_without_upstream"]
+    assert risks[0].newest_ahead_commit_age_hours == mod.STALE_AHEAD_WITHOUT_UPSTREAM_WARNING_AGE_HOURS
+    assert mod._is_blocking_risk(risks[0].risks) is False
 
 
 def test_patch_equivalent_ahead_worktree_is_guidance_not_blocking(monkeypatch, tmp_path: Path) -> None:

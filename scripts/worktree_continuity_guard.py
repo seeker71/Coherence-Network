@@ -12,6 +12,7 @@ import argparse
 import fnmatch
 import json
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,6 +26,7 @@ class WorktreeRisk:
     ahead_of_main: int
     behind_main: int
     has_upstream: bool
+    newest_ahead_commit_age_hours: float | None
     patch_equivalent_to_main: bool
     risks: list[str]
 
@@ -33,6 +35,8 @@ BLOCKING_RISK_LABELS = {
     "detached_head",
     "ahead_without_upstream",
 }
+
+STALE_AHEAD_WITHOUT_UPSTREAM_WARNING_AGE_HOURS = 48.0
 
 SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (
     "api/data/*.db",
@@ -188,8 +192,30 @@ def _patch_equivalent_to_main(worktree_path: Path) -> bool:
     return bool(rows) and all(row.startswith("-") for row in rows)
 
 
+def _newest_ahead_commit_age_hours(worktree_path: Path, now_epoch: float) -> float | None:
+    proc = _run_git(["log", "-1", "--format=%ct", "HEAD", "--not", "origin/main"], worktree_path)
+    if proc.returncode != 0:
+        return None
+    raw_epoch = proc.stdout.strip()
+    if not raw_epoch:
+        return None
+    try:
+        commit_epoch = int(raw_epoch)
+    except ValueError:
+        return None
+    return max(0.0, (now_epoch - commit_epoch) / 3600)
+
+
+def _is_stale_ahead_without_upstream(age_hours: float | None) -> bool:
+    return (
+        age_hours is not None
+        and age_hours >= STALE_AHEAD_WITHOUT_UPSTREAM_WARNING_AGE_HOURS
+    )
+
+
 def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
     risks: list[WorktreeRisk] = []
+    now_epoch = time.time()
     for row in _parse_worktrees(repo_root):
         wt_path = Path(str(row.get("worktree", "")).strip()).resolve()
         if not wt_path.exists():
@@ -206,6 +232,11 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
         ahead, behind = _ahead_behind_vs_main(wt_path)
         has_upstream = _upstream_exists(wt_path)
         patch_equivalent = ahead > 0 and _patch_equivalent_to_main(wt_path)
+        ahead_age_hours = (
+            _newest_ahead_commit_age_hours(wt_path, now_epoch)
+            if ahead > 0 and not has_upstream
+            else None
+        )
         risk_labels: list[str] = []
         if detached:
             risk_labels.append("detached_head")
@@ -214,7 +245,10 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
         if patch_equivalent:
             risk_labels.append("integrated_patch_equivalent")
         elif ahead > 0 and not has_upstream:
-            risk_labels.append("ahead_without_upstream")
+            if _is_stale_ahead_without_upstream(ahead_age_hours):
+                risk_labels.append("stale_ahead_without_upstream")
+            else:
+                risk_labels.append("ahead_without_upstream")
         if risk_labels:
             risks.append(
                 WorktreeRisk(
@@ -225,6 +259,7 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
                     ahead_of_main=ahead,
                     behind_main=behind,
                     has_upstream=has_upstream,
+                    newest_ahead_commit_age_hours=ahead_age_hours,
                     patch_equivalent_to_main=patch_equivalent,
                     risks=risk_labels,
                 )
@@ -261,6 +296,7 @@ def main() -> int:
                 "ahead_of_main": item.ahead_of_main,
                 "behind_main": item.behind_main,
                 "has_upstream": item.has_upstream,
+                "newest_ahead_commit_age_hours": item.newest_ahead_commit_age_hours,
                 "patch_equivalent_to_main": item.patch_equivalent_to_main,
                 "risks": item.risks,
                 "blocking": _is_blocking_risk(item.risks),
@@ -279,11 +315,13 @@ def main() -> int:
         for item in payload["risks"]:
             labels = ",".join(item["risks"])
             severity = "blocking" if item["blocking"] else "guidance"
+            age = item["newest_ahead_commit_age_hours"]
+            age_text = f" ahead_age={age:.1f}h" if isinstance(age, (int, float)) else ""
             print(
                 " - "
                 f"{item['path']} branch={item['branch']} "
                 f"ahead={item['ahead_of_main']} behind={item['behind_main']} "
-                f"upstream={'yes' if item['has_upstream'] else 'no'} "
+                f"upstream={'yes' if item['has_upstream'] else 'no'}{age_text} "
                 f"severity={severity} risks={labels}"
             )
 
