@@ -698,6 +698,105 @@ async def breath_balance(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/softmax_weights
+#
+# Pure computation: softmax over a list of float scores → a list of
+# probability weights summing to 1.0. This is the FIRST list-returning
+# kernel-served route — every prior route returns a scalar. It proves the
+# value-walk carries list construction end to end: the recipe builds the
+# result list via the append-accumulator idiom (form-stdlib's METHOD-CALL
+# accumulator arm / the adapter's `_list_append` lowering) and the result
+# round-trips through value_to_py's List arm as a real Python list. Shares
+# its body with idea_scoring._softmax_weights (the fallback). Uses the
+# math.exp transcendental native (math_exp), like breath_balance's ln.
+# This opens the whole class of list-returning routes — distributions,
+# vectors, normalized weights.
+# ---------------------------------------------------------------------------
+
+
+def _coerce_float_list(value: object) -> list[float]:
+    """Coerce a kernel/fallback result into a list[float].
+
+    The inline path hands back a real Python list (value_to_py's List arm);
+    the subprocess path hands back the kernel's display string, e.g.
+    ``[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]``; the
+    python-fallback hands back the list directly. One coercion serves all
+    three carriers so the route reads ``runtime`` honestly regardless of path.
+    """
+    if isinstance(value, (list, tuple)):
+        return [float(v) for v in value]
+    s = str(value).strip()
+    if s in ("", "[]", "(list)"):
+        return []
+    s = s.strip("[]() ")
+    if not s:
+        return []
+    # Comma- or space-separated floats; `(list a b c)` collapses to space-sep.
+    sep = "," if "," in s else None
+    parts = s.split(sep) if sep else s.split()
+    return [float(p.strip().rstrip(",")) for p in parts if p.strip().rstrip(",")]
+
+
+class SoftmaxWeightsResponse(BaseModel):
+    """GET /api/utils/softmax_weights response."""
+
+    model_config = ConfigDict(extra="forbid")
+    weights: Annotated[
+        list[float],
+        Field(description="Softmax probability weights, same length as scores, summing to 1.0"),
+    ]
+    scores: Annotated[list[float], Field(description="Input scores, echoed back")]
+    temperature: Annotated[float, Field(description="Exploration temperature, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/softmax_weights",
+    response_model=SoftmaxWeightsResponse,
+    summary="Softmax probability weights over float scores (first LIST-returning Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Returns softmax(scores / temperature) — a list of probability "
+        "weights summing to 1.0. temperature controls exploration: 0.0 is "
+        "deterministic (all weight on the max), 1.0 is true softmax, >1.0 "
+        "flattens the distribution. The same shape idea selection uses to "
+        "sample the backlog. This is the FIRST kernel-served route to return "
+        "a LIST — the value-walk carries list construction end to end. "
+        "Kernel-or-fallback via serve_via_kernel; CPython==Rust element-wise "
+        "value-parity is the gate."
+    ),
+)
+async def softmax_weights(
+    scores: Annotated[
+        str,
+        Query(description="Comma-separated floats — e.g. '1.0,2.0,3.0'"),
+    ] = "1.0,2.0,3.0",
+    temperature: Annotated[
+        float,
+        Query(ge=0.0, description="Exploration temperature (0.0 = deterministic)"),
+    ] = 1.0,
+) -> SoftmaxWeightsResponse:
+    from app.services.idea_scoring import _softmax_weights
+
+    parsed = _parse_floats(scores, "scores")
+    weights, runtime = serve_via_kernel(
+        "endpoint_softmax_weights_demo.fk",
+        bindings={"scores": parsed, "temperature": temperature},
+        fallback=lambda: _softmax_weights(parsed, temperature),
+        parse=_coerce_float_list,
+    )
+    return SoftmaxWeightsResponse(
+        weights=weights,
+        scores=parsed,
+        temperature=temperature,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

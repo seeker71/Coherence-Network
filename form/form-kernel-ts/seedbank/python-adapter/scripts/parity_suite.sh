@@ -66,6 +66,10 @@ PARITY_FILES=(
     "examples/endpoint_idea_score_demo.py"
     "examples/endpoint_marginal_cc_return_demo.py"
     "examples/endpoint_breath_balance_demo.py"
+    # First LIST-RETURNING kernel-served route — softmax weights. Proves the
+    # value-walk carries list construction (append-accumulator → value_to_py
+    # List arm) end to end, three-way on the frozen [1,2,3]@1.0 input.
+    "examples/endpoint_softmax_weights_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"
