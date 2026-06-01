@@ -1,11 +1,11 @@
-; tests/bml-thesis-companion-shell-source-proof.fk - large companion file shells
+; tests/bml-thesis-companion-shell-source-proof.fk - large companion files
 ;
 ; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
 ;
 ; Proves that larger original companion .bml files can be scanned by the
-; native sibling kernels and accepted as whole source files. Class bodies are
-; intentionally shell components here; full body semantic lowering remains a
-; separate proof gate.
+; native sibling kernels and accepted as whole source files. container-Rule.bml
+; now carries parsed class body components; BMF-grammar.bml remains an explicit
+; class shell until its grammar body lowering lands.
 
 (do
     (defn bool-score (b bit)
@@ -44,8 +44,8 @@
             (int-score (len (bml-model-classes container-model)) 2 16)
             (str-score (bml-class-structural-base-name rule-process-class) "Process" 32)
             (bool-score (bml-properties-has? (bml-class-properties rule-class) "public") 64)
-            (int-score (len (bml-class-body rule-process-class)) 0 128)
-            (int-score (len (bml-class-body rule-class)) 0 256)
+            (int-score (len (bml-class-own-methods rule-process-class)) 1 128)
+            (int-score (len (bml-class-body rule-class)) 4 256)
             (bool-score (gt (len bmf-source) 0) 512)
             (bool-score (bml-source-exec-parse-ok? bmf-parsed) 1024)
             (int-score (len (bml-source-exec-parse-rest bmf-parsed)) 0 2048)

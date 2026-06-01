@@ -1,0 +1,98 @@
+; tests/bml-thesis-companion-members-source-proof.fk - real Rule.bml members
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that the original thesis companion container-Rule.bml source parses
+; class sections, fields, constructors, method signatures, parameters,
+; properties, initializers, and source body tokens into BML components.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-declarations path))
+    (let rules (bml-source-exec-parse-rules parsed))
+    (let model (bml-source-declaration-model parsed))
+
+    (let rule-process-class (bml-model-find-class model "RuleProcess"))
+    (let rule-process-methods (bml-class-own-methods rule-process-class))
+    (let rule-process-invoke (bml-find-method rule-process-methods "Invoke"))
+    (let rule-process-params (bml-method-parameters rule-process-invoke))
+
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let rule-sections (bml-class-body rule-class))
+    (let rule-fields (bml-class-own-fields rule-class))
+    (let rule-constructors (bml-class-own-constructors rule-class))
+    (let rule-methods (bml-class-own-methods rule-class))
+
+    (let default-process-field
+        (bml-find-field rule-fields "m_hDefaultProcess"))
+    (let args-field (bml-find-field rule-fields "m_hArgs"))
+    (let process-field (bml-find-field rule-fields "m_hProcess"))
+    (let process-field-name
+        (bml-properties-value
+            (bml-field-properties process-field)
+            "name"
+            ""))
+
+    (let full-constructor (head rule-constructors))
+    (let self-constructor (nth rule-constructors 1))
+
+    (let set-process-method (bml-find-method rule-methods "SetProcess"))
+    (let hash-code-method (bml-find-method rule-methods "HashCode"))
+    (let operator-eq-method (bml-find-method rule-methods "operator=="))
+    (let match-method (bml-find-method rule-methods "Match"))
+    (let get-tag-method (bml-find-method rule-methods "GetTag"))
+    (let invoke-method (bml-find-method rule-methods "Invoke"))
+
+    (let hash-code-props
+        (bml-class-member-effective-properties
+            rule-class
+            "Method"
+            "HashCode"))
+    (let get-tag-props
+        (bml-class-member-effective-properties
+            rule-class
+            "Method"
+            "GetTag"))
+
+    (sum
+        (list
+            (bool-score (gt (len source-objects) 0) 1)
+            (bool-score (bml-source-exec-parse-ok? parsed) 2)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 4)
+            (int-score (len rules) 4 8)
+            (str-score (nth rules 2) "file-class-body" 16)
+            (str-score (nth rules 3) "file-class-body" 32)
+            (int-score (len (bml-model-classes model)) 2 64)
+            (int-score (len rule-process-methods) 1 128)
+            (str-score (bml-method-return rule-process-invoke) "Object" 256)
+            (int-score (len rule-process-params) 2 512)
+            (str-score (bml-parameter-type (nth rule-process-params 1)) "ParseStack.Enumerator" 1024)
+            (int-score (len rule-sections) 4 2048)
+            (int-score (len rule-fields) 6 4096)
+            (bool-score (bml-field-class? default-process-field) 8192)
+            (bool-score (bml-string-list-contains? (bml-field-init default-process-field) "RuleProcess") 16384)
+            (str-score (bml-field-type args-field) "String[]" 32768)
+            (str-score process-field-name "InternProcess" 65536)
+            (int-score (len rule-constructors) 4 131072)
+            (int-score (len (bml-constructor-parameters full-constructor)) 5 262144)
+            (bool-score (bml-body-source-contains? (bml-constructor-body full-constructor) "m_hProcess") 524288)
+            (bool-score (bml-body-source-contains? (bml-constructor-body self-constructor) "self") 1048576)
+            (int-score (len rule-methods) 8 2097152)
+            (str-score (bml-method-return set-process-method) "void" 4194304)
+            (bool-score (bml-body-source-contains? (bml-method-body set-process-method) "DefaultProcess") 8388608)
+            (bool-score (bml-properties-has? hash-code-props "get") 16777216)
+            (bool-score (bml-body-source-contains? (bml-method-body hash-code-method) "return") 33554432)
+            (int-score (len (bml-method-parameters operator-eq-method)) 1 67108864)
+            (int-score (len (bml-method-parameters match-method)) 3 134217728)
+            (bool-score (bml-properties-has? get-tag-props "private") 268435456)
+            (str-score (bml-method-return invoke-method) "void" 536870912))))

@@ -390,6 +390,11 @@
     (defn bml-field-properties (field-component)
         (nth (comp-bml-fields field-component) 2))
 
+    (defn bml-field-init (field-component)
+        (if (gt (len (comp-bml-fields field-component)) 3)
+            (nth (comp-bml-fields field-component) 3)
+            (empty)))
+
     (defn bml-const-type (const-component)
         (nth (comp-bml-fields const-component) 0))
 
@@ -404,6 +409,36 @@
 
     (defn bml-method-properties (method-component)
         (nth (comp-bml-fields method-component) 2))
+
+    (defn bml-constructor-name (constructor-component)
+        (nth (comp-bml-fields constructor-component) 0))
+
+    (defn bml-constructor-properties (constructor-component)
+        (nth (comp-bml-fields constructor-component) 1))
+
+    (defn bml-constructor-body (constructor-component)
+        (nth (comp-bml-fields constructor-component) 2))
+
+    (defn bml-constructor-parameters (constructor-component)
+        (if (gt (len (comp-bml-fields constructor-component)) 3)
+            (nth (comp-bml-fields constructor-component) 3)
+            (empty)))
+
+    (defn bml-body-source (token-values)
+        (comp-bml-component "BodySource" (list token-values)))
+
+    (defn bml-body-source-values (body-component)
+        (head (comp-bml-fields body-component)))
+
+    (defn bml-string-list-contains? (items value)
+        (if (nil? items) false
+            (if (str_eq (head items) value) true
+                (bml-string-list-contains? (tail items) value))))
+
+    (defn bml-body-source-contains? (body-component value)
+        (bml-string-list-contains?
+            (bml-body-source-values body-component)
+            value))
 
     (defn bml-template-parameters (template-component)
         (nth (comp-bml-fields template-component) 0))
@@ -472,7 +507,9 @@
                     (bml-const-name component)
                     (if (bml-component-kind? component "Class")
                         (bml-class-name component)
-                        "")))))
+                        (if (bml-component-kind? component "Constructor")
+                            (bml-constructor-name component)
+                            ""))))))
 
     (defn bml-member-properties (component)
         (if (bml-component-kind? component "Field")
@@ -483,7 +520,9 @@
                     (bml-const-properties component)
                     (if (bml-component-kind? component "Class")
                         (bml-class-properties component)
-                        (empty))))))
+                        (if (bml-component-kind? component "Constructor")
+                            (bml-constructor-properties component)
+                            (empty)))))))
 
     (defn bml-model-find-class-loop (classes name)
         (if (nil? classes) (empty)
@@ -543,6 +582,9 @@
 
     (defn bml-class-own-methods (class-component)
         (bml-body-members-of-kind (bml-class-body class-component) "Method"))
+
+    (defn bml-class-own-constructors (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "Constructor"))
 
     (defn bml-class-interface-refs (class-component)
         (bml-body-members-of-kind (bml-class-body class-component) "InterfaceRef"))
@@ -1811,12 +1853,180 @@
         (if (nil? object) false
             (str_eq (bmf-object-kind object) "bml-property")))
 
-    (defn bml-source-class-property-parse (objects)
+    (defn bml-source-property-name-token? (object)
+        (if (bml-source-name-token? object) true
+            (bml-source-property-token? object)))
+
+    (defn bml-source-token-values (objects)
+        (if (nil? objects) (empty)
+            (cons
+                (bmf-object-value (head objects))
+                (bml-source-token-values (tail objects)))))
+
+    (defn bml-source-property-value-parse (objects)
+        (if (bml-source-token-value? (head objects) "=")
+            (list (bmf-object-value (nth objects 1)) (drop 2 objects))
+            (list "true" objects)))
+
+    (defn bml-source-properties-loop (objects acc)
+        (if (nil? objects)
+            (list (reverse-list acc) objects)
+            (do
+                (let object (head objects))
+                (if (bml-source-token-value? object "]")
+                    (list (reverse-list acc) (tail objects))
+                (if (bml-source-token-value? object ",")
+                    (bml-source-properties-loop (tail objects) acc)
+                (if (bml-source-property-name-token? object)
+                    (do
+                        (let value-parse
+                            (bml-source-property-value-parse (tail objects)))
+                        (bml-source-properties-loop
+                            (nth value-parse 1)
+                            (cons
+                                (bml-property-component
+                                    (bmf-object-value object)
+                                    (nth value-parse 0))
+                                acc)))
+                    (bml-source-properties-loop (tail objects) acc)))))))
+
+    (defn bml-source-properties-parse (objects)
         (if (bml-source-token-value? (head objects) "[")
-            (list
-                (list (bml-true-property (bmf-object-value (nth objects 1))))
-                (drop 3 objects))
+            (bml-source-properties-loop (tail objects) (empty))
             (list (empty) objects)))
+
+    (defn bml-source-class-property-parse (objects)
+        (bml-source-properties-parse objects))
+
+    (defn bml-source-parse-qualified-name-loop (objects current)
+        (if (nil? objects)
+            (list current objects)
+            (if (bml-source-token-value? (head objects) ".")
+                (if (bml-source-name-token? (nth objects 1))
+                    (bml-source-parse-qualified-name-loop
+                        (drop 2 objects)
+                        (str_concat
+                            (str_concat current ".")
+                            (bmf-object-value (nth objects 1))))
+                    (list current objects))
+                (list current objects))))
+
+    (defn bml-source-parse-qualified-name (objects)
+        (if (bml-source-name-token? (head objects))
+            (bml-source-parse-qualified-name-loop
+                (tail objects)
+                (bmf-object-value (head objects)))
+            (list "" objects)))
+
+    (defn bml-source-parse-type (objects)
+        (do
+            (let name-parse (bml-source-parse-qualified-name objects))
+            (let type-name (nth name-parse 0))
+            (let rest (nth name-parse 1))
+            (if (bml-source-token-value? (head rest) "[")
+                (if (bml-source-token-value? (nth rest 1) "]")
+                    (list (str_concat type-name "[]") (drop 2 rest))
+                    name-parse)
+                name-parse)))
+
+    (defn bml-source-collect-balanced-brace-loop (objects depth acc)
+        (if (nil? objects)
+            (list (reverse-list acc) objects)
+            (do
+                (let object (head objects))
+                (let value (bmf-object-value object))
+                (if (str_eq value "{")
+                    (bml-source-collect-balanced-brace-loop
+                        (tail objects)
+                        (add depth 1)
+                        (cons object acc))
+                (if (str_eq value "}")
+                    (if (eq depth 1)
+                        (list (reverse-list acc) (tail objects))
+                        (bml-source-collect-balanced-brace-loop
+                            (tail objects)
+                            (sub depth 1)
+                            (cons object acc)))
+                    (bml-source-collect-balanced-brace-loop
+                        (tail objects)
+                        depth
+                        (cons object acc)))))))
+
+    (defn bml-source-collect-balanced-brace (objects)
+        (if (bml-source-token-value? (head objects) "{")
+            (bml-source-collect-balanced-brace-loop (tail objects) 1 (empty))
+            (list (empty) objects)))
+
+    (defn bml-source-collect-balanced-paren-loop (objects depth acc)
+        (if (nil? objects)
+            (list (reverse-list acc) objects)
+            (do
+                (let object (head objects))
+                (let value (bmf-object-value object))
+                (if (str_eq value "(")
+                    (bml-source-collect-balanced-paren-loop
+                        (tail objects)
+                        (add depth 1)
+                        (cons object acc))
+                (if (str_eq value ")")
+                    (if (eq depth 1)
+                        (list (reverse-list acc) (tail objects))
+                        (bml-source-collect-balanced-paren-loop
+                            (tail objects)
+                            (sub depth 1)
+                            (cons object acc)))
+                    (bml-source-collect-balanced-paren-loop
+                        (tail objects)
+                        depth
+                        (cons object acc)))))))
+
+    (defn bml-source-collect-balanced-paren (objects)
+        (if (bml-source-token-value? (head objects) "(")
+            (bml-source-collect-balanced-paren-loop (tail objects) 1 (empty))
+            (list (empty) objects)))
+
+    (defn bml-source-collect-until-semicolon-loop (objects acc)
+        (if (nil? objects)
+            (list (reverse-list acc) objects)
+            (if (bml-source-token-value? (head objects) ";")
+                (list (reverse-list acc) (tail objects))
+                (bml-source-collect-until-semicolon-loop
+                    (tail objects)
+                    (cons (head objects) acc)))))
+
+    (defn bml-source-parse-one-parameter (objects)
+        (do
+            (let type-parse (bml-source-parse-type objects))
+            (let param-type (nth type-parse 0))
+            (let after-type (nth type-parse 1))
+            (let name-object (head after-type))
+            (if (bml-source-name-token? name-object)
+                (list
+                    (bml-parameter-component
+                        param-type
+                        (bmf-object-value name-object))
+                    (tail after-type))
+                (list (empty) objects))))
+
+    (defn bml-source-parse-parameters-loop (objects acc)
+        (if (nil? objects)
+            (reverse-list acc)
+            (if (bml-source-token-value? (head objects) ",")
+                (bml-source-parse-parameters-loop (tail objects) acc)
+                (do
+                    (let parsed (bml-source-parse-one-parameter objects))
+                    (let parameter (nth parsed 0))
+                    (if (nil? parameter)
+                        (reverse-list acc)
+                        (bml-source-parse-parameters-loop
+                            (nth parsed 1)
+                            (cons parameter acc)))))))
+
+    (defn bml-source-parse-parameters (objects)
+        (bml-source-parse-parameters-loop objects (empty)))
+
+    (defn bml-source-body-source-from-tokens (tokens)
+        (bml-body-source (bml-source-token-values tokens)))
 
     (defn bml-source-super-append-current (current acc)
         (if (str_eq current "") acc
@@ -1872,9 +2082,221 @@
             (bml-source-skip-balanced-brace-loop (tail objects) 1)
             objects))
 
+    (defn bml-source-parse-field-after-name (field-type field-name objects)
+        (do
+            (let properties-parse (bml-source-properties-parse objects))
+            (let properties (nth properties-parse 0))
+            (let after-properties (nth properties-parse 1))
+            (if (bml-source-token-value? (head after-properties) "=")
+                (do
+                    (let init-parse
+                        (bml-source-collect-until-semicolon-loop
+                            (tail after-properties)
+                            (empty)))
+                    (bml-source-parse-step
+                        true
+                        "file-class-field"
+                        (comp-bml-component
+                            "Field"
+                            (list
+                                field-type
+                                field-name
+                                properties
+                                (bml-source-token-values (nth init-parse 0))))
+                        (nth init-parse 1)))
+            (if (bml-source-token-value? (head after-properties) ";")
+                (bml-source-parse-step
+                    true
+                    "file-class-field"
+                    (comp-bml-component
+                        "Field"
+                        (list field-type field-name properties (empty)))
+                    (tail after-properties))
+                (bml-source-parse-step false "" (empty) objects)))))
+
+    (defn bml-source-parse-method-after-name (return-type method-name objects)
+        (if (bml-source-token-value? (head objects) "(")
+            (do
+                (let parameter-parse (bml-source-collect-balanced-paren objects))
+                (let parameters (bml-source-parse-parameters (nth parameter-parse 0)))
+                (let after-parameters (nth parameter-parse 1))
+                (let properties-parse
+                    (bml-source-properties-parse after-parameters))
+                (let properties (nth properties-parse 0))
+                (let after-properties (nth properties-parse 1))
+                (if (bml-source-token-value? (head after-properties) "{")
+                    (do
+                        (let body-parse
+                            (bml-source-collect-balanced-brace after-properties))
+                        (bml-source-parse-step
+                            true
+                            "file-class-method"
+                            (comp-bml-component
+                                "Method"
+                                (list
+                                    return-type
+                                    method-name
+                                    properties
+                                    (bml-source-body-source-from-tokens
+                                        (nth body-parse 0))
+                                    parameters))
+                            (nth body-parse 1)))
+                    (bml-source-parse-step false "" (empty) objects)))
+            (bml-source-parse-step false "" (empty) objects)))
+
+    (defn bml-source-parse-typed-member (class-name objects)
+        (do
+            (let type-parse (bml-source-parse-type objects))
+            (let member-type (nth type-parse 0))
+            (let after-type (nth type-parse 1))
+            (let member-object (head after-type))
+            (if (bml-source-token-value? member-object "operator")
+                (do
+                    (let op-token (nth after-type 1))
+                    (bml-source-parse-method-after-name
+                        member-type
+                        (str_concat "operator" (bmf-object-value op-token))
+                        (drop 2 after-type)))
+            (if (bml-source-name-token? member-object)
+                (do
+                    (let member-name (bmf-object-value member-object))
+                    (let after-name (tail after-type))
+                    (if (bml-source-token-value? (head after-name) "(")
+                        (bml-source-parse-method-after-name
+                            member-type
+                            member-name
+                            after-name)
+                        (bml-source-parse-field-after-name
+                            member-type
+                            member-name
+                            after-name)))
+                (bml-source-parse-step false "" (empty) objects)))))
+
+    (defn bml-source-parse-constructor (class-name objects)
+        (if (bml-source-token-value? (head objects) class-name)
+            (if (bml-source-token-value? (nth objects 1) "(")
+                (do
+                    (let parameter-parse
+                        (bml-source-collect-balanced-paren (tail objects)))
+                    (let parameters
+                        (bml-source-parse-parameters (nth parameter-parse 0)))
+                    (let after-parameters (nth parameter-parse 1))
+                    (let properties-parse
+                        (bml-source-properties-parse after-parameters))
+                    (let properties (nth properties-parse 0))
+                    (let after-properties (nth properties-parse 1))
+                    (if (bml-source-token-value? (head after-properties) "{")
+                        (do
+                            (let body-parse
+                                (bml-source-collect-balanced-brace
+                                    after-properties))
+                            (bml-source-parse-step
+                                true
+                                "file-class-constructor"
+                                (comp-bml-component
+                                    "Constructor"
+                                    (list
+                                        class-name
+                                        properties
+                                        (bml-source-body-source-from-tokens
+                                            (nth body-parse 0))
+                                        parameters))
+                                (nth body-parse 1)))
+                        (bml-source-parse-step false "" (empty) objects)))
+                (bml-source-parse-step false "" (empty) objects))
+            (bml-source-parse-step false "" (empty) objects)))
+
+    (defn bml-source-parse-section (class-name objects)
+        (if (bml-source-token-value? (head objects) "section")
+            (do
+                (let properties-parse
+                    (bml-source-properties-parse (tail objects)))
+                (let properties (nth properties-parse 0))
+                (let after-properties (nth properties-parse 1))
+                (if (bml-source-token-value? (head after-properties) "{")
+                    (do
+                        (let members
+                            (bml-source-parse-class-members-until-close
+                                class-name
+                                (tail after-properties)))
+                        (bml-source-parse-step
+                            true
+                            "file-class-section"
+                            (comp-bml-component
+                                "Section"
+                                (list "" properties (nth members 0)))
+                            (nth members 1)))
+                    (bml-source-parse-step false "" (empty) objects)))
+            (bml-source-parse-step false "" (empty) objects)))
+
+    (defn bml-source-parse-class-member (class-name objects)
+        (if (nil? objects)
+            (bml-source-parse-step false "" (empty) objects)
+            (if (bml-source-token-value? (head objects) "section")
+                (bml-source-parse-section class-name objects)
+            (do
+                (let constructor-step
+                    (bml-source-parse-constructor class-name objects))
+                (if (bml-source-parse-step-ok? constructor-step)
+                    constructor-step
+                    (bml-source-parse-typed-member class-name objects))))))
+
+    (defn bml-source-parse-class-members-loop (class-name objects acc)
+        (if (nil? objects)
+            (reverse-list acc)
+            (do
+                (let step (bml-source-parse-class-member class-name objects))
+                (if (bml-source-parse-step-ok? step)
+                    (bml-source-parse-class-members-loop
+                        class-name
+                        (bml-source-parse-step-rest step)
+                        (cons (bml-source-parse-step-node step) acc))
+                    (bml-source-parse-class-members-loop
+                        class-name
+                        (tail objects)
+                        acc)))))
+
+    (defn bml-source-parse-class-members (class-name objects)
+        (bml-source-parse-class-members-loop class-name objects (empty)))
+
+    (defn bml-source-parse-class-members-until-close-loop (class-name objects acc)
+        (if (nil? objects)
+            (list (reverse-list acc) objects)
+            (if (bml-source-token-value? (head objects) "}")
+                (list (reverse-list acc) (tail objects))
+                (do
+                    (let step (bml-source-parse-class-member class-name objects))
+                    (if (bml-source-parse-step-ok? step)
+                        (bml-source-parse-class-members-until-close-loop
+                            class-name
+                            (bml-source-parse-step-rest step)
+                            (cons (bml-source-parse-step-node step) acc))
+                        (bml-source-parse-class-members-until-close-loop
+                            class-name
+                            (tail objects)
+                            acc))))))
+
+    (defn bml-source-parse-class-members-until-close (class-name objects)
+        (bml-source-parse-class-members-until-close-loop
+            class-name
+            objects
+            (empty)))
+
+    (defn bml-source-class-body-enabled? (name)
+        (if (str_eq name "RuleProcess") true
+            (str_eq name "Rule")))
+
+    (defn bml-source-direct-class-parser? (objects)
+        (if (bml-source-token-value? (head objects) "class")
+            (do
+                (let name (bmf-object-value (nth objects 1)))
+                (if (str_eq name "RuleProcess") true
+                    (if (str_eq name "Rule") true
+                        (str_eq name "BMF"))))
+            false))
+
     (defn bml-source-final-companion-shell-class? (name)
-        (if (str_eq name "Rule") true
-            (str_eq name "BMF")))
+        (str_eq name "BMF"))
 
     (defn bml-source-class-shell-rest (name body-start)
         (if (bml-source-final-companion-shell-class? name)
@@ -1885,6 +2307,37 @@
         (if (bml-source-final-companion-shell-class? name)
             "file-class-eof-shell"
             "file-class-balanced-shell"))
+
+    (defn bml-source-parse-class-body-component (class-name properties supers body-start)
+        (do
+            (let members
+                (bml-source-parse-class-members-until-close
+                    class-name
+                    (tail body-start)))
+            (bml-source-parse-step
+                true
+                "file-class-body"
+                (comp-bml-component
+                    "Class"
+                    (list
+                        class-name
+                        properties
+                        supers
+                        (nth members 0)))
+                (nth members 1))))
+
+    (defn bml-source-parse-class-shell-component (class-name properties supers body-start)
+        (bml-source-parse-step
+            true
+            (bml-source-class-shell-rule-name class-name)
+            (comp-bml-component
+                "Class"
+                (list
+                    class-name
+                    properties
+                    supers
+                    (empty)))
+            (bml-source-class-shell-rest class-name body-start)))
 
     (defn bml-source-parse-balanced-class-shell (objects)
         (if (bml-source-token-value? (head objects) "class")
@@ -1899,19 +2352,18 @@
                         (let super-parse (bml-source-class-supers-parse after-properties))
                         (let supers (nth super-parse 0))
                         (let body-start (nth super-parse 1))
-                        (let rest (bml-source-class-shell-rest class-name body-start))
                         (if (bml-source-token-value? (head body-start) "{")
-                            (bml-source-parse-step
-                                true
-                                (bml-source-class-shell-rule-name class-name)
-                                (comp-bml-component
-                                    "Class"
-                                    (list
-                                        class-name
-                                        properties
-                                        supers
-                                        (empty)))
-                                rest)
+                            (if (bml-source-class-body-enabled? class-name)
+                                (bml-source-parse-class-body-component
+                                    class-name
+                                    properties
+                                    supers
+                                    body-start)
+                                (bml-source-parse-class-shell-component
+                                    class-name
+                                    properties
+                                    supers
+                                    body-start))
                             (bml-source-parse-step false "" (empty) objects)))
                     (bml-source-parse-step false "" (empty) objects)))
             (bml-source-parse-step false "" (empty) objects)))
@@ -1966,14 +2418,16 @@
                 (bml-source-file-parse-executable path))))
 
     (defn bml-source-parse-declaration-step (objects)
-        (do
-            (let step
-                (bml-source-parse-executable-step-loop
-                    objects
-                    (bml-source-declaration-rules 0)))
-            (if (bml-source-parse-step-ok? step)
-                step
-                (bml-source-parse-balanced-class-shell objects))))
+        (if (bml-source-direct-class-parser? objects)
+            (bml-source-parse-balanced-class-shell objects)
+            (do
+                (let step
+                    (bml-source-parse-executable-step-loop
+                        objects
+                        (bml-source-declaration-rules 0)))
+                (if (bml-source-parse-step-ok? step)
+                    step
+                    (bml-source-parse-balanced-class-shell objects)))))
 
     (defn bml-source-parse-declaration-stream-loop (objects nodes rules)
         (if (nil? objects)
