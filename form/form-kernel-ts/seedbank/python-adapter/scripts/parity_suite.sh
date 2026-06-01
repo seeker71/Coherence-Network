@@ -16,20 +16,21 @@
 # Rust kernel) is the current gate. PARITY_THIRD_RUNTIME chooses which
 # third runtime fills the seam:
 #
-#   PARITY_THIRD_RUNTIME=kernel-bmf  (default — the destination)
+#   PARITY_THIRD_RUNTIME=ts-eval     (default)
+#     Today's TS bootstrap: parse via lang-python.ts, walk via evalPython.
+#     The path that is named for compost in
+#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md — Phase A.
+#
+#   PARITY_THIRD_RUNTIME=kernel-bmf  (the destination)
 #     Form-native: source bytes → BMF source objects → rules in
 #     form-stdlib/grammars/python-bmf.fk → Form recipe → native walker.
-#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01 all 20
-#     PARITY_FILES pass three-way (CPython == Rust-bootstrap == kernel-bmf)
-#     under isolated tempdirs, corroborated by ./validate.sh's python-bmf
-#     bands — so this is now the default. The ts-eval path is residue per
-#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md Phase A.
-#
-#   PARITY_THIRD_RUNTIME=ts-eval     (the bootstrap — explicit opt-out)
-#     The TS bootstrap: parse via lang-python.ts, walk via evalPython.
-#     The path that is named for compost in
-#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md — Phase A. Select it explicitly
-#     to walk the old path; it no longer fills the seam by default.
+#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01, 19 of the 20
+#     PARITY_FILES pass three-way under isolated tempdirs; the lone gate is
+#     python_typing_compose_demo (errors `_plus: unsupported operand types`
+#     on `red.base + blue.base` — two direct attribute reads on a
+#     multi-attribute instance combined; the Form-native eval's record/attr
+#     storage doesn't carry the second attr as an int). The default flips to
+#     kernel-bmf only when that demo closes three-way.
 #
 # Add new files to PARITY_FILES below as they're ripened.
 # Run from form/form-kernel-ts/.
@@ -37,12 +38,10 @@
 set -euo pipefail
 
 # Third-runtime selector — see header for the migration story.
-# Default flipped ts-eval → kernel-bmf 2026-06-01: all 20 PARITY_FILES pass
-# the Form-native walker three-way (CPython == Rust-bootstrap == kernel-bmf),
-# measured under isolated tempdirs and corroborated by ./validate.sh's
-# python-bmf bands. The bootstrap (ts-eval) is now the explicit opt-out,
-# not the default — set PARITY_THIRD_RUNTIME=ts-eval to walk the old path.
-PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-kernel-bmf}"
+# Stays ts-eval until ALL 20 PARITY_FILES pass kernel-bmf three-way under
+# isolated tempdirs. As of 2026-06-01: 19/20 pass; python_typing_compose_demo
+# is the open gate (multi-attribute-instance direct-attr-read composition).
+PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-ts-eval}"
 
 PARITY_FILES=(
     # First row that passes under PARITY_THIRD_RUNTIME=kernel-bmf — covers
