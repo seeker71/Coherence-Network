@@ -76,6 +76,13 @@
         ;; body list onto a (cond . body) child stream.
         (intern_node PY-BMF-WHILE (cons cond body-stmts)))
 
+    (defn mk-py-if-stmt (cond body-stmts)
+        ;; IF-STMT children: cond-recipe, body-stmt-recipes... — same
+        ;; (cond . body) child stream as WHILE. Distinct from PY-BMF-IF,
+        ;; the ternary *expression* (cond/then/else) py-if builds: this is
+        ;; the statement-level `if cond:` whose body can `return`.
+        (intern_node PY-BMF-IF-STMT (cons cond body-stmts)))
+
     (defn mk-leaf-str (s) (intern_trivial_string s))
 
     (defn mk-py-lambda (pms body)
@@ -311,13 +318,49 @@
     (let cell12-value (py-run cell12))                         ; 35
     (let cell12-score (if (eq cell12-value 35) 12000 0))
 
+    ;; ---- cell 13: return inside a statement-level `if` short-circuits.
+    ;; The strange-minimal early-guard the substrate demos lean on, run on
+    ;; BOTH its paths in one expression so a single cell pins the whole
+    ;; boundary:
+    ;;   def g(p):
+    ;;       if p == 0:
+    ;;           return 100
+    ;;       return 10
+    ;;   g(0) + g(5)
+    ;; CPython: 100 + 10 = 110. If a `return` inside `if cond:` failed to
+    ;; short-circuit the enclosing function (the pre-#2264 gap), g(0) would
+    ;; fall through to `return 10` and the sum would collapse to 20 — so
+    ;; this cell reads exactly the return-signal the IF-STMT arm threads
+    ;; through py-eval-body-loop / py-eval-module-loop. The guard-hit path
+    ;; (p==0 → return short-circuits) and the guard-miss path (if skipped →
+    ;; fallthrough return) are both exercised. A multi-statement body is a
+    ;; PY-BMF-MODULE the DEF closure walks via the MODULE arm's module-loop.
+    (let g-body
+        (py-module
+            (list
+                (mk-py-if-stmt
+                    (py-compare (py-ident "p") "==" (py-int-lit 0))
+                    (list (py-return (py-int-lit 100))))
+                (py-return (py-int-lit 10)))))
+    (let cell13
+        (py-module
+            (list
+                (py-def "g" (list "p") g-body)
+                (py-binop
+                    (py-call "g" (list (py-int-lit 0)))
+                    "+"
+                    (py-call "g" (list (py-int-lit 5)))))))
+    (let cell13-value (py-run cell13))                         ; 110
+    (let cell13-score (if (eq cell13-value 110) 13000 0))
+
     ;; ---- aggregate ---------------------------------------------------
     ;; Cell-N awards N*1000 when its value matches CPython. Total when
-    ;; every cell agrees: (1+2+3+4+5+6+7+8+9+10+11+12)*1000 = 78000.
+    ;; every cell agrees: (1+2+...+13)*1000 = 91000.
     ;; Any single cell failing leaves the aggregate sensitive to which
-    ;; arm broke — a cell-9 failure shows up as 78000-9000=69000.
+    ;; arm broke — a cell-9 failure shows up as 91000-9000=82000, a
+    ;; cell-13 (return-short-circuit) regression as 91000-13000=78000.
 
     (sum (list cell1-score cell2-score cell3-score cell4-score
                cell5-score cell6-score cell7-score
                cell8-score cell9-score cell10-score
-               cell11-score cell12-score)))
+               cell11-score cell12-score cell13-score)))
