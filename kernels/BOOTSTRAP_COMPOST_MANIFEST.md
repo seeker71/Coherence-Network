@@ -13,10 +13,13 @@ The discipline is **discipline + readiness**: every bootstrap file is named here
 with the gate that must be green before it composts, and the parity suite
 already carries a runtime selector that switches the third runtime atomically
 (see `seedbank/python-adapter/scripts/parity_suite.sh` `PARITY_THIRD_RUNTIME`).
-As of 2026-06-01, 19 of the 20 `PARITY_FILES` prove three-way green under the
-Form-native walker (isolated-tempdir measurement). The default stays `ts-eval`
-until the last demo (`python_typing_compose_demo`) closes; the flip is one line
-when it does. The named Phase-A files compost only once all 20 are green.
+As of 2026-06-01, **all 20** of the `PARITY_FILES` prove three-way green under
+the Form-native walker (isolated-tempdir measurement, freshly rebuilt Go + Rust
+kernels). The last demo (`python_typing_compose_demo`) closed when the
+annotated-parameter lift bug was fixed (see the dated row below). The flip of
+`PARITY_THIRD_RUNTIME` ts-eval → kernel-bmf is now **unblocked**, but it is a
+separate reviewable breath — the default stays `ts-eval` until that flip lands
+on its own. The named Phase-A files compost only once the flip is taken.
 
 This is the readiness map. The compost is downstream of green gates.
 
@@ -250,20 +253,14 @@ confirm Shape 2 classification + LOC count.
   reads `.py` via `form-stdlib/grammars/python-bmf.fk`, lifts to PY-BMF-*
   recipes (`python-bmf-lift.fk`), and walks them through the Form-native
   interpreter (`python-bmf-eval.fk`) on the Rust kernel. As of 2026-06-01,
-  **19 of the 20 `PARITY_FILES` pass three-way** under it (CPython ==
+  **all 20 `PARITY_FILES` pass three-way** under it (CPython ==
   Rust-bootstrap == kernel-bmf) when measured in isolated tempdirs.
 
 **The flip is one line** (the `${PARITY_THIRD_RUNTIME:-...}` fallback in
 `parity_suite.sh`), fully reversible, and changes no CI gate — no workflow runs
-the parity suite; the `form/**` gates run only `bash validate.sh`. It stays
-gated on `ts-eval` until the **last demo closes**: `python_typing_compose_demo`
-errors `_plus: unsupported operand types` under `kernel-bmf-run` — two direct
-attribute reads on a multi-attribute instance combined (`red.base + blue.base`),
-where the Form-native eval's record/attr storage does not carry the second
-attribute as an int. Minimal repro: a class storing `self.base`/`self.weight`
-in `__init__`, then `r = B(3, 4); r.base + r.weight` (single-attribute
-instances, or attr-read composed with a method call, pass). When that arm in
-`python-bmf-eval.fk` lands three-way, all 20 are green and the default flips;
+the parity suite; the `form/**` gates run only `bash validate.sh`. With all 20
+demos green the flip is **unblocked**; it is held for its own reviewable PR
+rather than ridden in on the fix that closed the last demo. When it is taken,
 the Phase-A Python-adapter bootstrap files (`lang-python.ts` and friends) become
 residue, compostable in a sibling PR.
 
@@ -473,6 +470,7 @@ removable.
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_substrate_demo.py | early-guard dispatch + accumulator-loop over a list — `weighted_score` returns from inside `if position == N:` guards (`return value * 100/50/25`, falling through to `return value * 10`); `coherence_score` / `count_above` accumulate over a `for v in values` body that guards `if v >= threshold:`; `above * 100 + coherence` over `[85, 42, 99, 60, 30, 75, 88, 50]` / threshold 50; `17680`. **Re-earned legitimately** — this was a #2261 false-green (`kernel-bmf-run` yielded `5170`) because a `return` inside an `if`/`for` body did not short-circuit the enclosing function. Closed by the return-signal threaded through `py-eval-body-loop` / the IF-STMT, FOR, WHILE arms / `py-eval-module-loop` (the function-body walker) — see the PROVEN return-signal note | `python-bmf-eval.fk` (return-signal: three-slot statement-result `(value env returned)`; `py-stmt-return` tags a RETURN; every block arm + the module-loop short-circuit on `returned=1`; no lift change, no kernel change) | CPython `17680` · Rust (bootstrap) `17680` · `kernel-bmf-run` `17680` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.py | the body of `/api/utils/coherence_weight` as pure Python — same early-guard `weighted_score` + `for`-accumulator shape as python_substrate_demo, wrapped in a top-level `coherence_weight` that sums `above * 100 + coherence`; `[72, 38, 91, 55, 28, 67, 84, 45, 95, 12]` / threshold 50; `16185`. **Re-earned legitimately** — this was a #2261 false-green (`kernel-bmf-run` yielded `5240`) for the same return-short-circuit gap; closed by the same return-signal breath | `python-bmf-eval.fk` (return-signal threading, shared with python_substrate_demo; no lift change, no kernel change) | CPython `16185` · Rust (bootstrap) `16185` · `kernel-bmf-run` `16185` |
 | 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_import_demo.py | the import arm — `import math` + `from math import sqrt, pi`, then `math.sqrt(2.25) + sqrt(0.25) + 2.0*math.pi + pi/2.0 + math.floor(3.7) + math.pow(2.0, 3.0)`; `20.853981633974485`. **Re-earned legitimately** — removed as the integrity-sweep third false-green (`kernel-bmf-run` errored `record_get: not a record: Null`, no value) because the Form-native lift/eval had no import surface. The light path: no new ontology category (PY-BMF-IMPORT 501 / FROM-IMPORT 502 already existed), no kernel parser change; the math natives are callable bare from Form in all three kernels. Lift `import`/`from` → PY-BMF-IMPORT / PY-BMF-FROM-IMPORT; eval binds a `py-module` marker (module) and `py-native-fn` markers / resolved consts (from-import); one resolution table `py-math-resolve` dispatched from the ATTR / METHOD-CALL / CALL arms. Bare-name path untouched (markers only exist post-import) | `python-bmf-lift.fk` (`lift-import` + `lift-from-import` + dispatch) · `python-bmf-eval.fk` (IMPORT / FROM-IMPORT statement arms + `py-module`/`py-native-fn` markers + `py-math-resolve` + ATTR/METHOD-CALL/CALL checks) | CPython `20.853981633974485` · Rust (bootstrap) `20.853981633974485` · `kernel-bmf-run` `20.853981633974485` |
+| 2026-06-01 | form/form-kernel-ts/seedbank/python-adapter/examples/python_typing_compose_demo.py | the **last demo** — typed `__init__` params composing typing imports + classes + annotated assignment; `241`. The gate was NOT `_plus`/attr-read (as #2276 guessed): bisecting the live demo, the flip-point is **typed constructor parameters**. `def __init__(self, label: str, base: int, weight: int)` then `Bucket("red",3,4)` mis-bound — `red.base` returned `4` (weight), `red.weight` `null`. `python_class_demo` (176) computes the same `a.x + a.y + b.z` attr-read shape and passes *because its `__init__` params are untyped*; typing_compose is the only demo with annotated ctor params, so it alone tripped the gate. Root cause: `lift-def-params-loop` collected every name token between `(`/`)` as a param, so `base : int` yielded params `base` AND `int`, shifting all later positional bindings by one per annotation. Fixed by skipping the annotation after a `name :` (`lift-def-skip-annotation`, with a `[`-depth counter so a comma inside `Dict[str,int]` isn't read as a param separator). One underlying cause, not special-cased; no kernel change, no eval change | `python-bmf-lift.fk` (`lift-def-skip-annotation` + the `name :` branch in `lift-def-params-loop`) | CPython `241` · Rust (bootstrap) `241` · `kernel-bmf-run` `241` |
 
 **The first walking step:** with the G4 row recorded and G1+G3 now also
 landed, the manifest's lifecycle is no longer a future-tense convention.
@@ -519,14 +517,15 @@ through the change (the return-signal touches the shared body-eval paths, so
 every one was re-spot-checked under isolation and none regressed). The ledger
 now stands at 15 genuinely three-way green demos.
 
-**19/20 green — false-green caught and corrected (2026-06-01,
-`claude/parity-bmf-fix`).** A prior pass (PR #2275, since corrected) flipped the
-default to `kernel-bmf` on a claim of 20/20. Re-measurement under isolated
-tempdirs against freshly rebuilt Go + Rust kernels (main `d248767e`) showed the
-claim false: **19 of the 20 demos are genuinely three-way green; one diverges.**
-The flip was reverted and the count restored to honest.
+**20/20 green — last demo closed (2026-06-01, `claude/typing-compose-bmf`).**
+A prior pass (PR #2275, reverted by #2276) flipped the default to `kernel-bmf`
+on a false 20/20 claim; #2276 restored honest 19/20 and named the remaining
+gate. This pass closes the gate for real: `python_typing_compose_demo` now runs
+three-way green (CPython `241` == Rust-bootstrap `241` == `kernel-bmf` `241`),
+measured via `pyfkb-run.sh --kernel rust` in isolated tempdirs against freshly
+rebuilt Go + Rust kernels (main `4c7f2245`).
 
-| Demo | Three-way value | Demo | Three-way value |
+| Demo | kernel-bmf | Demo | kernel-bmf |
 |---|---|---|---|
 | `python_bridge_demo` | `720` | `python_class_demo` | `176` |
 | `python_demo` | `40949` | `python_dict_demo` | `88` |
@@ -537,44 +536,40 @@ The flip was reverted and the count restored to honest.
 | `python_builtins_demo` | `131` | `endpoint_lattice_stats_demo` | `1089` |
 | `python_lambda_demo` | `216` | `python_string_demo` | `45` |
 | `python_import_demo` | `20.853981633974485` | `python_float_demo` | `4.875` |
-| `endpoint_coherence_weight_demo` | `16185` | — | — |
+| `endpoint_coherence_weight_demo` | `16185` | `python_typing_compose_demo` | `241` |
 
-The 19 above are confirmed three-way green (CPython == Rust-bootstrap ==
-kernel-bmf), each at its true distinct value, with adversarial novel-expression
-checks proving `kernel-bmf-run` computes Form-native rather than echoing CPython.
+All 20 confirmed three-way green, each at its true distinct value.
 `./validate.sh` corroborates: 209 OK / 1 divergent (the pre-existing untracked
-`seeded-bytes-recipe-band.fk`, excepted), with `python-bmf-arithmetic-band`,
-`python-bmf-eval-band`, `python-bmf-lift-band`, and `python-class-band` all ok.
+`seeded-bytes-recipe-band.fk`, excepted), with `python-bmf-typeann-band`,
+`python-bmf-attr-band`, `python-bmf-eval-band`, `python-bmf-lift-band`, and
+`python-class-band` all ok.
 
-**The lone divergent demo — `python_typing_compose_demo`.** CPython `241` ==
-Rust-bootstrap `241`, but `kernel-bmf-run` **errors** (`_plus: unsupported
-operand types`, no value). The earlier "four-way incl kernel-bmf" claim
-(commit #2272) does not hold under isolated measurement — it was a `/tmp/*.fk`
-bleed false-green of the same shape as the #2261 incident above. The gate is
-*not* the type annotations (bare `header: str`, `Optional[int]` returns,
-`List[Bucket]` params all pass in isolation) and *not* annotated-assignment.
-It is **multi-attribute-instance direct-attr-read composition**: a class whose
-`__init__` stores two attributes, then two direct attribute reads combined.
-Minimal repro (each in its own tempdir):
+**The contradiction the prior pass left open, resolved.** #2276 named the gate
+as "multi-attribute-instance direct-attr-read composition" (`r.base + r.weight`)
+— but `python_class_demo` (176) computes exactly that shape (`c.n + c.step +
+p.lo + p.hi`) and *passes*. So that could not be the real distinction. Bisecting
+the live demo to the minimal flip-point: the trigger is **typed `__init__`
+parameters**. `def __init__(self, label: str, base: int, weight: int)` then
+`Bucket("red", 3, 4)` mis-binds — `red.label` correct, `red.base` returns `4`
+(weight's value), `red.weight` returns `null`. python_class's `__init__` takes
+*untyped* params, which is why it never tripped the gate; typing_compose is the
+only demo with annotated constructor params. The `_plus`/`as_int: Null` errors
+were the downstream symptom of a `null` operand from this mis-binding.
 
-```
-class B:
-    def __init__(self, base, weight):
-        self.base = base
-        self.weight = weight
-r = B(3, 4)
-r.base + r.weight        # CPython 7; kernel-bmf errors _plus: unsupported operand types
-```
-
-Single-attribute instances pass, and attr-read composed with a *method* call
-passes (`r.score() + r.base` → ok) — so the gap is specifically two direct
-attribute reads off a multi-attribute record in `python-bmf-eval.fk`'s
-record/attr storage (the second attr does not resolve to its int value). The
-demo hits it via `red.base + blue.base + green.base`. Closing that eval arm
-three-way is the remaining compost work; the default flips to `kernel-bmf` only
-then. Until then `ts-eval` stays the default, and the Phase-A
-Python-adapter bootstrap tissue (`lang-python.ts` and friends) is **not yet
-residue** — it composts only when all 20 are green.
+**Root cause + fix.** `lift-def-params-loop` in `python-bmf-lift.fk` walks the
+`def NAME ( ... )` tokens and collects *every name token* as a parameter. For a
+typed param `base: int` the tokens are `base : int` — the loop collected `base`
+(correct) **and** `int` (the type-name, wrongly) as parameters, shifting all
+subsequent positional bindings by one per annotation. Fix: when a param name is
+followed by `:`, drop the annotation tokens up to the next top-level `,`/`)`
+(via `lift-def-skip-annotation`, with a `[`-depth counter so a comma inside
+`Dict[str, int]` is not mistaken for a param separator). This is the one
+underlying cause — not special-cased to typing_compose; every typed-parameter
+def in the body now lifts to the correct param list. With it, all 20 demos are
+green and the `PARITY_THIRD_RUNTIME` flip to `kernel-bmf` is **unblocked** — but
+that flip is its own reviewable breath, not ridden in here. Until it lands,
+`ts-eval` stays the default and the Phase-A Python-adapter bootstrap tissue
+(`lang-python.ts` and friends) is **not yet** residue.
 
 **What composts when a demo reaches COMPOST READY.** The `.py` input
 **stays** — the parity suite reads it on every run (it's the substrate the

@@ -682,6 +682,27 @@
     ;; def-statement tokens: `def NAME ( PARAM, PARAM, ... ) :`
     ;; Walk to extract name + param-names; ignore the trailing ":".
 
+    ;; lift-def-skip-annotation — after a param name is followed by ":",
+    ;; the annotation (`int`, `Optional[int]`, `List[Bucket]`, ...) spans
+    ;; arbitrary tokens until the param boundary. A type-name inside the
+    ;; annotation is NOT a parameter, so we drop tokens until the next
+    ;; top-level "," or ")", returning the remaining tokens starting AT
+    ;; that boundary so the caller's loop resumes correctly. The "[" depth
+    ;; counter keeps a comma inside a subscript (`Dict[str, int]`) from
+    ;; being mistaken for a param separator.
+    (defn lift-def-skip-annotation (tokens depth)
+        (if (nil? tokens) tokens
+            (do
+                (let t (head tokens))
+                (if (tok-op? t "[")
+                    (lift-def-skip-annotation (tail tokens) (add depth 1))
+                    (if (tok-op? t "]")
+                        (lift-def-skip-annotation (tail tokens) (sub depth 1))
+                        (if (and (eq depth 0)
+                                 (or (tok-op? t ",") (tok-op? t ")")))
+                            tokens
+                            (lift-def-skip-annotation (tail tokens) depth)))))))
+
     (defn lift-def-params-loop (tokens acc)
         (if (nil? tokens) (reverse acc)
             (do
@@ -690,8 +711,17 @@
                     (if (tok-op? t ",")
                         (lift-def-params-loop (tail tokens) acc)
                         (if (tok-name? t)
-                            (lift-def-params-loop (tail tokens)
-                                (cons (intern_trivial_string (tok-value t)) acc))
+                            (do
+                                (let rest (tail tokens))
+                                ;; A param name followed by ":" is annotated —
+                                ;; collect the name, drop the annotation so its
+                                ;; type-names aren't read as further params.
+                                (if (and (not (nil? rest)) (tok-op? (head rest) ":"))
+                                    (lift-def-params-loop
+                                        (lift-def-skip-annotation (tail rest) 0)
+                                        (cons (intern_trivial_string (tok-value t)) acc))
+                                    (lift-def-params-loop rest
+                                        (cons (intern_trivial_string (tok-value t)) acc))))
                             (lift-def-params-loop (tail tokens) acc)))))))
 
     (defn lift-def (statement-tree)
