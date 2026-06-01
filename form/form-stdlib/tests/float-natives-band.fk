@@ -16,17 +16,23 @@
 ;   • IEEE corner values: ±Inf, subnormals, very-small / very-large
 ;   • Content-addressing: same float value interns to the same NodeID
 ;
-; What's deferred to a future breath (documented divergence):
+; Polymorphic float ADDITION is now three-way (closed prior gap):
 ;
-;   • Polymorphic arithmetic via `add`/`sub`/`mul`/`div` on float
-;     operands. Rust + Go's MATH walker arm promotes runtime; TS's MATH
-;     walker requires explicit width-encoded inst (addf/+./etc.). The
-;     test avoids these so the band stays three-way green; the
-;     follow-up is harmonizing the three readers around one shape.
+;   • `add`/`+` and the `_plus` native on float operands. The bare-width
+;     MATH walker arm now promotes to f64 at runtime when any operand is a
+;     float (matching Rust + Go), and `_plus` gained Float+Float / Int+Float
+;     / Float+Int arms. So summing a float field across a collection is
+;     sibling-portable — proven in list-of-record-reduction-band.fk. (The
+;     width-encoded float ops addf/+./etc. remain available for explicit
+;     typed-f64 folds; the bare ops now promote dynamically.)
+;
+; What still diverges (documented, named precisely):
 ;
 ;   • Printing format for integer-valued floats. Rust renders Python-
-;     style (`2.0`), TS+Go render JS-style (`2`). The band scores
-;     integers only — no float ever crosses the print boundary.
+;     style (`2.0`), TS+Go render JS-style (`2`). This is a PRINT-layer
+;     divergence, not a value divergence — the arithmetic is bit-identical.
+;     The band scores integers (or non-integer floats) only — no integer-
+;     valued float ever crosses the print boundary.
 ;
 ;   • Binary artifact mode (--binary). Every kernel serializes FLOAT64
 ;     trivials with its private overflow-table index in the leaf's

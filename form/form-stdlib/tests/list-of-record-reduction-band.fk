@@ -22,17 +22,27 @@
 ; a `(record_new ...)` literal; lib.rs `py_to_value` marshals each inline) —
 ; this band proves the FOLD ITSELF is three-way.
 ;
-; THE FLOAT BOUNDARY, named honestly. TS's `add`/`_plus` are i32-only (the
-; documented polymorphic-float-arithmetic divergence — float-natives-band.fk
-; §"deferred"). So a three-way band CANNOT sum a FLOAT field: that path is
-; value-exact on the production Rust carrier (Rust==Go==CPython) but TS rejects
-; it. This band therefore folds INTEGER fields (event_count, a count) and
-; SCORES float fields through comparisons (gt / lt), never summing a float into
-; the aggregate. The integer-field fold + float-field-predicate is precisely
-; the three-way-clean subset of list-of-record reduction; the float-field SUM
-; (spec_actual_cost_sum) stays a Rust-carrier capability, named in the ledger.
+; THE FLOAT BOUNDARY — now three-way. TS's `add`/`_plus` carried an i32-only
+; float-addition gap (float operands threw `math.i32: expected int-like` on the
+; MATH walker arm, and `_plus: unsupported operand types` on the native). That
+; gap is CLOSED: TS's `_plus` gained the Float+Float / Int+Float / Float+Int
+; arms, and TS's bare-width MATH arm now promotes to f64 at runtime when any
+; operand walks to a float — mirroring the Rust + Go walkers exactly. So a
+; three-way band CAN now SUM a FLOAT field: `sum(s["actual_cost"] for s in xs)`
+; folds bit-identically across Rust == Go == TS == CPython. This band folds
+; INTEGER fields, SCORES float fields through comparisons, AND now SUMS a float
+; field into a float aggregate (the capability the ledger named as Rust-carrier-
+; only is now sibling-portable).
 ;
-; The aggregate score is 1 per passing check; full pass = 16.
+; ONE residual float-PRINT divergence remains, named precisely: an INTEGER-
+; VALUED float result (e.g. 2.0+3.0 = 5.0) renders Python-style `5.0` on Rust
+; but JS-style `5` on Go + TS. This is a print-layer divergence, NOT a value
+; divergence — the arithmetic is bit-identical. The float-sum checks below
+; therefore land on NON-integer values (5.25, 0.75) that all three format
+; identically, or score via comparison; no integer-valued float crosses the
+; print boundary. (Same documented class as float-natives-band.fk §print.)
+;
+; The aggregate score is 1 per passing check; full pass = 22.
 
 (do
     ;; A list of records standing in for one idea's pre-fetched specs — each a
@@ -71,6 +81,16 @@
                 (max_field (tail xs) field (record_get (head xs) field))
                 (max_field (tail xs) field acc))))
 
+    ;; ── sum_field_f: fold a FLOAT field via head/tail; seed a FLOAT acc ──
+    ;; Identical recursion shape to sum_field; the only difference is the
+    ;; field carries floats and the acc starts at 0.0, so every `add` walks
+    ;; (float, float). The capability the prior wave deferred to a Rust-only
+    ;; carrier — now three-way through the runtime-promoting MATH arm.
+    (defn sum_field_f (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_field_f (tail xs) field (add acc (record_get (head xs) field)))))
+
     ;; ── 1. Field-sum across the list ──────────────────────────────────
     (let total_events (sum_field specs "event_count" 0))     ; 3 + 0 + 7 = 10
     (let s1 (if (eq total_events 10) 1 0))
@@ -101,9 +121,10 @@
     (let s10 (if (str_eq (record_get (head specs) "idea_id") "a") 1 0))
     (let s11 (if (str_eq (record_get (head (tail specs)) "idea_id") "b") 1 0))
 
-    ;; ── 7. A FLOAT field is READ and SCORED by comparison (never summed) ─
-    ;; The three-way-clean way to touch a float field: compare it, don't fold
-    ;; it. (Folding a float hits TS's i32-only add — the named boundary.)
+    ;; ── 7. A FLOAT field is READ, SCORED by comparison, AND now SUMMED ───
+    ;; Comparison was always three-way clean; the SUM is the newly-opened
+    ;; capability — folding a float field through `add` now promotes to f64
+    ;; on every kernel.
     (let specs_f (list
         (record_new (make_nodeid 1 5 4 1) "actual_cost" 3.5)
         (record_new (make_nodeid 1 5 4 1) "actual_cost" 1.25)))
@@ -117,10 +138,39 @@
     (let s15 (if (eq (sum_field single "event_count" 0) 9) 1 0))
     (let s16 (if (eq (max_field single "event_count" 0) 9) 1 0))
 
+    ;; ── 9. FLOAT-FIELD SUM across the list — the newly-opened capability ──
+    ;; sum(s["actual_cost"] for s in specs_f): fold a float field, seeded with
+    ;; a float accumulator so every step is (float + float). The result is a
+    ;; NON-integer float (5.25), which all three kernels format identically —
+    ;; scoring it through `eq` (a COMPARE.EQ, value-exact) keeps the band
+    ;; three-way clean past the integer-valued-float print boundary.
+    (let specs_cost (list
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 3.5)
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 1.25)
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 0.5)))
+    (let cost_sum (sum_field_f specs_cost "actual_cost" 0.0))   ; 3.5+1.25+0.5 = 5.25
+    (let s17 (if (eq cost_sum 5.25) 1 0))
+    ;; Empty-list float fold returns the float identity accumulator.
+    (let s18 (if (eq (sum_field_f (list) "actual_cost" 0.0) 0.0) 1 0))
+    ;; Single-element float fold returns that element's value.
+    (let one_cost (list (record_new (make_nodeid 1 5 4 1) "actual_cost" 0.75)))
+    (let s19 (if (eq (sum_field_f one_cost "actual_cost" 0.0) 0.75) 1 0))
+
+    ;; ── 10. Bare float addition through both `add` and `_plus` ───────────
+    ;; The two surfaces of the fix: `add` (the MATH walker arm) and `_plus`
+    ;; (the polymorphic native). Both now promote (float, float)→float and
+    ;; mixed (int, float)→float on every kernel. Scored via COMPARE.EQ on
+    ;; non-integer results so no float crosses the print boundary.
+    (let s20 (if (eq (add 0.5 0.25) 0.75) 1 0))         ; add: float+float
+    (let s21 (if (eq (_plus 0.5 0.25) 0.75) 1 0))       ; _plus: float+float
+    (let s22 (if (eq (add 1 0.25) 1.25) 1 0))           ; add: int+float promotion
+
     ;; ── Aggregate — int + int through MATH (no float in result) ───────
     ;; Every sub-score is 1 or 0; the sum flows through the integer path in
-    ;; every kernel and prints as a plain integer. Full pass = 16.
+    ;; every kernel and prints as a plain integer. Full pass = 22.
     (add s1 (add s2 (add s3 (add s4 (add s5
     (add s6 (add s7 (add s8 (add s9 (add s10
-    (add s11 (add s12 (add s13 (add s14 (add s15 s16)))))))))))))))
+    (add s11 (add s12 (add s13 (add s14 (add s15
+    (add s16 (add s17 (add s18 (add s19 (add s20
+    (add s21 s22)))))))))))))))))))))
 )

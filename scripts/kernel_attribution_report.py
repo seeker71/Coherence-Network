@@ -195,6 +195,20 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_idea_grounding_summary_demo.fk",
         "expected_result": "[3, 10, 2, 7]",
     },
+    {
+        # FLOAT-FIELD list-of-record reduction — the capability the integer
+        # grounding-summary route named as deferred. Receives one idea's specs
+        # as a LIST of records and FOLDS two FLOAT grounding sums across it:
+        # spec_actual_cost_sum, spec_actual_value_sum. This was blocked by TS's
+        # i32-only add/_plus; the float-add sibling-parity fix opened it, so the
+        # float-field fold is value-exact across CPython / Rust / TS. The
+        # accumulator seeds at 0.0 so every add walks (float, float). Frozen
+        # specs [{ac 3.5, av 1.5}, {ac 1.25, av 0.0}, {ac 0.5, av 2.25}] →
+        # [5.25, 3.75].
+        "route": "/api/utils/idea_grounded_cost_sum",
+        "recipe": "endpoint_idea_grounded_cost_sum_demo.fk",
+        "expected_result": "[5.25, 3.75]",
+    },
 ]
 
 _EXAMPLES_DIR = (
