@@ -103,6 +103,8 @@ cd ..
 
 Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1–2× native for many workloads. This is not the headline. The headline is that the same recipe in any of the three kernels produces the same NodeID for every intermediate state — the substrate is what you measure, not the host. Hot-path benchmarks are honest about that trade.
 
+**Serving the API from the kernel** is a distinct, measured question — see [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md). The recipe *executes* in ~0.15 ms (competitive); the readiness gap for the transmuted `/api/utils/*` endpoints is the per-request **process spawn** (~5 ms via subprocess), not compute. The evidence (value parity ✓ on all four, p50/p95/p99 under replay, the spawn-vs-compute split) says the flip needs a **persistent/inline (PyO3) kernel**, not a per-call shell-out. Run it: `python3 scripts/kernel_readiness_harness.py`.
+
 ## What's possible now that other frameworks struggle with
 
 - **Identity that crosses languages.** Two recipes written in Rust and TypeScript that mean the same thing get the same NodeID. No serialization, no schema, no version negotiation. The lattice IS the protocol.
