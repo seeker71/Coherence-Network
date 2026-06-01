@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 228
+**Total files**: 229
 
 | File | Purpose |
 |---|---|
@@ -229,6 +229,7 @@
 | [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
 | [test_utils_nodeid_compatibility.py](test_utils_nodeid_compatibility.py) | Tests for /api/utils/nodeid_compatibility — transmuted under the habit pattern. |
 | [test_utils_nodeid_distance.py](test_utils_nodeid_distance.py) | Tests for /api/utils/nodeid_distance — transmuted under the habit pattern. |
+| [test_utils_softmax_weights.py](test_utils_softmax_weights.py) | Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |
 | [test_verification.py](test_verification.py) | Flow-centric tests for the public verification framework. |

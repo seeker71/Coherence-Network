@@ -506,6 +506,83 @@
                           (py-env-extend env var (head items)))
                       acc))))
 
+    ;; --- list methods: name.append(x) and the accumulator pattern --------
+    ;; Python lists mutate in place; the kernel's Form list is an immutable
+    ;; value. The bridge is the accumulator idiom — `result = []` then
+    ;; `result.append(v)` each iteration, with the NAME `result` holding the
+    ;; growing list. We model that at the value level: `result.append(x)`
+    ;; rebinds `result` in env to the EXTENDED list (old ++ [x]) via core's
+    ;; functional `append`. No in-place mutation; the name carries the value.
+    ;;
+    ;; py-list-method? — is `mname` a list method we lower at statement level?
+    ;; A dispatch *table* (append now; extend / insert / pop as later data),
+    ;; not a softmax special-case. New methods drop in as a new str_eq clause.
+    (defn py-list-method? (mname)
+        (if (str_eq mname "append") 1 0))
+
+    ;; py-list-method-apply — produce the NEW list value for `oldlist.mname(args)`.
+    ;;   append(x) → oldlist ++ [x]   (core `append` concatenates two lists)
+    ;; args is the already-evaluated Form list of call arguments.
+    (defn py-list-method-apply (oldlist mname args)
+        (if (str_eq mname "append")
+            (append oldlist (list (head args)))
+            ;; Unknown list method reaching here is a lowering bug; trace the
+            ;; name so the next breath knows which clause to add, and leave the
+            ;; list unchanged rather than corrupting the accumulator.
+            (do (trace "py-list-method-apply: unimplemented list method" mname)
+                oldlist)))
+
+    ;; py-ident-name — recover the identifier string from a PY-BMF-IDENT node.
+    ;; The name lives in the IDENT's trivial-string CHILD; node_value on the
+    ;; IDENT node itself would read a composite and fail. Mirrors how the
+    ;; PY-BMF-IDENT eval arm reads `(node_value (head kids))` of the IDENT.
+    (defn py-ident-name (ident-node)
+        (node_value (head (node_children ident-node))))
+
+    ;; py-list-accum-stmt? — does this statement recipe match the accumulator
+    ;; shape `NAME.method(args)` where NAME is a bound LIST and method is a
+    ;; list method? Returns 1 iff the receiver is a PY-BMF-IDENT bound to a
+    ;; Form list (not a class instance / dict / module) and the method is in
+    ;; the list-method table. This is what routes a list `.append` away from
+    ;; the class-method dispatch the METHOD-CALL expression arm assumes.
+    ;; The method-name leaf (kids[1]) IS a trivial-string, so node_value reads
+    ;; it directly; the receiver (kids[0]) is an IDENT node, so py-ident-name
+    ;; reaches its child for the name before the env lookup.
+    (defn py-list-accum-stmt? (kids env)
+        (if (node_eq (node_category (head kids)) PY-BMF-IDENT)
+            (if (eq (py-list-method? (node_value (nth kids 1))) 1)
+                (do
+                    (let recv (py-env-lookup env (py-ident-name (head kids))))
+                    ;; A Form list is a plain list value; exclude the tagged
+                    ;; record shapes (dict / module / native-fn / closure) that
+                    ;; also evaluate to lists. py-list-value? guards those.
+                    (if (eq (py-list-value? recv) 1) 1 0))
+                0)
+            0))
+
+    ;; py-list-value? — 1 iff `v` is a plain Form list usable as a Python list,
+    ;; excluding records (class instances / super-proxies) and the sentinel-
+    ;; tagged list shapes the interpreter overloads (py-dict, py-module,
+    ;; py-native-fn, py-closure). Empty list is a valid Python list (the
+    ;; `result = []` accumulator seed), so nil counts. record? is checked first
+    ;; so head/nil? never read a record as if it were a list.
+    (defn py-list-value? (v)
+        (if (record? v) 0
+        (if (nil? v) 1
+            (if (py-dict? v) 0
+            (if (py-module? v) 0
+            (if (py-native-fn? v) 0
+                (if (eq (py-sentinel-tagged? v) 1) 0 1)))))))
+
+    ;; py-sentinel-tagged? — 1 iff the head of a non-empty list is a string
+    ;; sentinel the interpreter uses to overload lists (py-closure today; the
+    ;; super-proxy and dict/module/native carry record/tag shapes the callers
+    ;; already exclude). value_eq is polymorphic and false-on-kind-mismatch, so
+    ;; a list with an int / float head (a real Python list) safely returns 0
+    ;; without a str_eq panic — the same guard py-dict? / py-module? rely on.
+    (defn py-sentinel-tagged? (v)
+        (if (value_eq (head v) "py-closure") 1 0))
+
     (defn py-eval-statement (recipe env)
         (do
             (let cat (node_category recipe))
@@ -654,6 +731,24 @@
                     ;; function as a native-fn marker). Module name is head child.
                     (py-stmt-result 0
                         (py-bind-from-import-loop (tail kids) env)))
+            (if (and (node_eq cat PY-BMF-METHOD-CALL)
+                     (eq (py-list-accum-stmt? kids env) 1))
+                (do
+                    ;; List accumulator: `NAME.append(x)` where NAME is bound to
+                    ;; a Form list. Python mutates the list in place and returns
+                    ;; None; we model the same observable effect by rebinding
+                    ;; NAME to the EXTENDED list (old ++ [x]) in env — so the
+                    ;; growing list persists across loop iterations exactly like
+                    ;; Python's in-place append. The statement value is 0 (None).
+                    ;; This routes a LIST receiver away from the METHOD-CALL
+                    ;; expression arm's class-method dispatch (record_get
+                    ;; "__class__"), which a plain list has no field for.
+                    (let name (py-ident-name (head kids)))
+                    (let mname (node_value (nth kids 1)))
+                    (let oldlist (py-env-lookup env name))
+                    (let args (py-eval-args (tail (tail kids)) env))
+                    (let newlist (py-list-method-apply oldlist mname args))
+                    (py-stmt-result 0 (py-env-extend env name newlist)))
             (if (node_eq cat PY-BMF-PASS)
                 ;; No-op statement — `pass`, or a bare type annotation
                 ;; (`header: str`) that binds nothing at runtime. Returns 0
@@ -663,7 +758,7 @@
                 ;; here, not in the default expression arm below.
                 (py-stmt-result 0 env)
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env))))))))))))))))
+                (py-stmt-result (py-eval recipe env) env)))))))))))))))))
 
     ;; py-eval-module-loop drives a statement sequence to its value. It serves
     ;; two roles: the top-level module (last-statement value semantics) AND a
