@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-form-deploy-20260601",
+  "commit_scope": "Make Form stdlib and BML grammar changes participate in Hostinger production deployment instead of being treated as static-only repository content.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "Dockerfile.api",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-06-01_form_stdlib_deploy_path.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-file-proof.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_form_stdlib_deploy_path.json"
+    ],
+    "notes": "Shell syntax checks passed, the Hostinger form deploy path guard passed, focused BML companion proof passed with 33554431, and commit evidence validation passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and Hostinger deploy proof with production SHA parity."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A main push that changes form/form-stdlib, including BML grammar/proof files, triggers Hostinger deploy, routes the change to the API service, carries form/form-stdlib into /app/form/form-stdlib, and no longer treats form/* as static-only.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://coherencycoin.com/api/health-proxy"
+    ],
+    "test_flows": [
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -sS https://api.coherencycoin.com/api/health | jq .deployed_sha"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Deploy-path repair is implemented locally; CI, merge, and production SHA parity are pending."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "form-stdlib-deploy-path-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "The previous BML merge reached main but production health still reported the earlier SHA because deploy/hostinger/auto-deploy.sh classified form/* as static-only and skipped rebuild.",
+    ".github/workflows/hostinger-auto-deploy.yml now triggers on form/form-stdlib/** changes.",
+    "Dockerfile.api now carries form/form-stdlib into the API image at /app/form/form-stdlib.",
+    "deploy/hostinger/auto-deploy.sh no longer allows form/* in the static-only fast path.",
+    "deploy/hostinger/auto-deploy.sh routes form/form-stdlib/* changes to the api service and syncs form/form-stdlib into the running API container.",
+    "scripts/test_hostinger_deploy_form_paths.sh locks this path so the same deployment miss does not repeat silently."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "Dockerfile.api",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-06-01_form_stdlib_deploy_path.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
