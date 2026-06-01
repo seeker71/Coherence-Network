@@ -617,41 +617,58 @@
                 false)
             false))
 
-    (defn bml-body-source-implicit-call1-count-loop (values count)
+    (defn bml-body-source-implicit-call1-count-loop (values previous count)
         (if (nil? values) count
             (if (bml-body-source-implicit-call1-at? values)
-                (bml-body-source-implicit-call1-count-loop
-                    (drop 5 values)
-                    (add count 1))
+                (if (str_eq previous ".")
+                    (bml-body-source-implicit-call1-count-loop
+                        (tail values)
+                        (head values)
+                        count)
+                    (bml-body-source-implicit-call1-count-loop
+                        (drop 5 values)
+                        ";"
+                        (add count 1)))
                 (bml-body-source-implicit-call1-count-loop
                     (tail values)
+                    (head values)
                     count))))
 
     (defn bml-body-source-implicit-call1-count (body-component)
         (bml-body-source-implicit-call1-count-loop
             (bml-body-source-values body-component)
+            ""
             0))
 
-    (defn bml-body-source-exec-implicit-call1-loop (values self env)
+    (defn bml-body-source-exec-implicit-call1-loop (values previous self env)
         (if (nil? values) self
             (if (bml-body-source-implicit-call1-at? values)
-                (do
-                    (method_invoke
-                        self
-                        (head values)
-                        (bml-body-source-arg-value env (nth values 2)))
+                (if (str_eq previous ".")
                     (bml-body-source-exec-implicit-call1-loop
-                        (drop 5 values)
+                        (tail values)
+                        (head values)
                         self
-                        env))
+                        env)
+                    (do
+                        (method_invoke
+                            self
+                            (head values)
+                            (bml-body-source-arg-value env (nth values 2)))
+                        (bml-body-source-exec-implicit-call1-loop
+                            (drop 5 values)
+                            ";"
+                            self
+                            env)))
                 (bml-body-source-exec-implicit-call1-loop
                     (tail values)
+                    (head values)
                     self
                     env))))
 
     (defn bml-body-source-exec-implicit-call1 (body-component self env)
         (bml-body-source-exec-implicit-call1-loop
             (bml-body-source-values body-component)
+            ""
             self
             env))
 
@@ -703,6 +720,66 @@
             self
             env))
 
+    (defn bml-body-source-constructor-blueprint (type-name)
+        (if (str_eq type-name "ParseStack")
+            (make_nodeid 1 2 99 9241)
+            (make_nodeid 1 2 99 9240)))
+
+    (defn bml-body-source-construct0 (type-name)
+        (record_new
+            (bml-body-source-constructor-blueprint type-name)
+            "bmlClass"
+            type-name))
+
+    (defn bml-body-source-constructor-assignment-at? (values)
+        (if (gt (len values) 5)
+            (if (str_eq (nth values 1) "=")
+                (if (str_eq (nth values 3) "(")
+                    (if (str_eq (nth values 4) ")")
+                        (str_eq (nth values 5) ";")
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-constructor-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-constructor-assignment-at? values)
+                (bml-body-source-constructor-assignment-count-loop
+                    (drop 6 values)
+                    (add count 1))
+                (bml-body-source-constructor-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-constructor-assignment-count (body-component)
+        (bml-body-source-constructor-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-constructor-assignments-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-constructor-assignment-at? values)
+                (do
+                    (record_set
+                        self
+                        (head values)
+                        (bml-body-source-construct0 (nth values 2)))
+                    (bml-body-source-exec-constructor-assignments-loop
+                        (drop 6 values)
+                        self
+                        env))
+                (bml-body-source-exec-constructor-assignments-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-constructor-assignments (body-component self env)
+        (bml-body-source-exec-constructor-assignments-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-exec (body-component self env)
         (if (bml-body-source-return-member-add? body-component)
             (bml-body-source-exec-return body-component self env)
@@ -710,7 +787,9 @@
                 (bml-body-source-exec-implicit-call1 body-component self env)
                 (if (gt (bml-body-source-receiver-call0-count body-component) 0)
                     (bml-body-source-exec-receiver-call0 body-component self env)
-                    (bml-body-source-exec-assignments body-component self env)))))
+                    (if (gt (bml-body-source-constructor-assignment-count body-component) 0)
+                        (bml-body-source-exec-constructor-assignments body-component self env)
+                        (bml-body-source-exec-assignments body-component self env))))))
 
     (defn bml-constructor-env-blueprint (_x)
         (make_nodeid 1 2 99 9202))
