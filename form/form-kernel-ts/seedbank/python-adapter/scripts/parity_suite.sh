@@ -78,6 +78,11 @@ PARITY_FILES=(
     # round() unlock.
     "examples/endpoint_cost_vector_demo.py"
     "examples/endpoint_value_vector_demo.py"
+    # Grounded-ROI scalar core of idea_scoring._with_score — folds the
+    # max-as-comparison, round_ndigits, and a guarded division (the
+    # `if remaining_cost_cc > 0 else 0.0` ternary) into one recipe. Returns
+    # [remaining_cost_cc, value_gap_cc, roi_cc].
+    "examples/endpoint_grounded_roi_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

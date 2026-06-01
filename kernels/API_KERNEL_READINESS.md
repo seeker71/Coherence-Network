@@ -568,6 +568,34 @@ What **requires more transmuted routes** before it is real:
   reads/writes) needs the I/O-carrier routes (substrate ports) transmuted, a
   separate arc from the pure-compute flip.
 
+### A precise gate the round() unlock does NOT clear — `grounded_idea_metrics`
+
+`api/app/services/grounded_idea_metrics_service.py::compute_idea_metrics`
+*looks* round-unblocked — its return dict is wall-to-wall `round(_, 4)`, the same
+shape the `round_ndigits` native (PR #2320) just made CPython-exact for
+`cost_vector` / `value_vector` / `grounded_roi`. **It is not eligible.** The
+arithmetic is trivial; the **bulk** of the function is heterogeneous
+structure-walking, not numeric computation:
+
+- `_filter_by_idea_id(...)` filters Python **lists** of pre-fetched objects;
+- `_safe_float(obj, "field")` does **polymorphic attribute-or-dict extraction**
+  — the same call reads `obj.field` from a model instance *or* `obj["field"]`
+  from a dict, across six different pre-fetched collections;
+- `.get(...)` on a valuations **map**, plus `max` / `min` / `any` over the
+  filtered sets.
+
+The gate it sits behind is **polymorphic structure/field extraction from
+heterogeneous object-or-dict collections**, a *different* capability than
+`round` — one the kernel does not carry today. The Form recipe value-walk
+carries scalars, lists, and (via `round_ndigits`) CPython-exact rounding; it
+does **not** carry "reach into an arbitrary Python object *or* dict and pull a
+named field, polymorphically, then marshal six such collections." Transmuting
+`grounded_idea_metrics` would mean forcing that data-marshalling through a
+recipe it has no honest shape for. So it stays CPython until the
+structure/field-access capability is built and earns its own three-way parity
+proof — **the round() unlock is necessary but not sufficient for this route, and
+its round-heavy return dict must not be misread as round-only eligibility.**
+
 The wellness probe and the attribution view are the two instruments that make
 the incremental transmutation **safe and legible**: the probe says *the surface
 is healthy as it grows*, the activity view says *here is what's alive and what's
