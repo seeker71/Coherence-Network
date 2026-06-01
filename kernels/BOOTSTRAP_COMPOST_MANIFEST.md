@@ -16,10 +16,14 @@ already carries a runtime selector that switches the third runtime atomically
 As of 2026-06-01, **all 20** of the `PARITY_FILES` prove three-way green under
 the Form-native walker (isolated-tempdir measurement, freshly rebuilt Go + Rust
 kernels). The last demo (`python_typing_compose_demo`) closed when the
-annotated-parameter lift bug was fixed (see the dated row below). The flip of
-`PARITY_THIRD_RUNTIME` ts-eval → kernel-bmf is now **unblocked**, but it is a
-separate reviewable breath — the default stays `ts-eval` until that flip lands
-on its own. The named Phase-A files compost only once the flip is taken.
+annotated-parameter lift bug was fixed (see the dated row below). **The flip is
+taken (2026-06-01):** `PARITY_THIRD_RUNTIME` now defaults to `kernel-bmf` — the
+Form-native walker is the canonical Python runtime; `ts-eval` remains available
+via an explicit `PARITY_THIRD_RUNTIME=ts-eval`. With the flip taken, the named
+Phase-A Python-adapter files (`lang-python.ts` and siblings) become
+**COMPOST-ELIGIBLE** — the gate that held them ("default until Form-native
+compiles every PARITY_FILES demo") is now met. They are not yet composted;
+that is the next breath, after the flip proves stable.
 
 This is the readiness map. The compost is downstream of green gates.
 
@@ -57,15 +61,17 @@ gate that earns the right to remove the Rust kernel from the bootstrap role
 
 ## Phase A — Bootstrap parsers + emitters
 
-These ship the *current* third runtime (`ts-eval`). They compost when the
-Form-native parser (Form rules over BMF source objects from
-`form-stdlib/grammars/python-bmf.fk` and `typescript-bmf.fk`) proves three-way
-parity per file.
+These shipped the legacy third runtime (`ts-eval`). With the flip taken
+(2026-06-01) the Form-native walker is the default third runtime and every
+`PARITY_FILES` demo proves three-way green under it — so the Python-adapter
+files below are now **COMPOST-ELIGIBLE**. They compost in a sibling PR once the
+flip proves stable; this manifest records them as residue, not yet removed.
 
-**Gate per file:** `PARITY_THIRD_RUNTIME=kernel-bmf
-scripts/parity_suite.sh` reports green on the file. The TS bootstrap is no
-longer the third runtime — the Form-native walker is. When every file in
-`PARITY_FILES` has been promoted, the bootstrap parser files are residue.
+**Gate per file (now met for the Python adapter):**
+`PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh` reports green on every
+file — and it is now the default selector. The TS bootstrap is no longer the
+third runtime; the Form-native walker is. With every file in `PARITY_FILES`
+green, the Python-adapter bootstrap parser files are residue.
 
 ### Python adapter
 
@@ -77,7 +83,12 @@ longer the third runtime — the Form-native walker is. When every file in
 | `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` | 342 | TS-side parser/eval unit tests | Form-side rule tests under `form-stdlib/tests/python-grammar-*.fk` (one per shipped construct) |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts` | 358 | TS-side convergence unit tests | Form-side equivalence tests asserting NodeID identity for cross-language structural twins |
 
-**Subtotal Phase A — Python adapter: 4245 LOC**
+**Subtotal Phase A — Python adapter: 4245 LOC** — **COMPOST-ELIGIBLE
+(2026-06-01).** The flip to `kernel-bmf` is taken; all 20 `PARITY_FILES` prove
+three-way green under the Form-native walker, so `lang-python.ts` and its
+Phase-A siblings (`lang-python-fk.ts`, `ctor-convergence.ts`, and the two
+`*.test.ts` files) are residue. Not yet removed — composted in a sibling PR
+once the flip proves stable.
 
 ### TypeScript adapter
 
@@ -247,22 +258,23 @@ confirm Shape 2 classification + LOC count.
 `form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` carries
 `PARITY_THIRD_RUNTIME` (env-var):
 
-- `ts-eval` (**default**) — the TS bootstrap evaluator (`lang-python.ts` →
-  `evalPython`). Backwards-compatible; every existing gate runs unchanged.
-- `kernel-bmf` (the destination) — invokes `kernel-bmf-run <source.py>`, which
-  reads `.py` via `form-stdlib/grammars/python-bmf.fk`, lifts to PY-BMF-*
-  recipes (`python-bmf-lift.fk`), and walks them through the Form-native
-  interpreter (`python-bmf-eval.fk`) on the Rust kernel. As of 2026-06-01,
-  **all 20 `PARITY_FILES` pass three-way** under it (CPython ==
-  Rust-bootstrap == kernel-bmf) when measured in isolated tempdirs.
+- `kernel-bmf` (**default — the flip is taken, 2026-06-01**) — invokes
+  `kernel-bmf-run <source.py>`, which reads `.py` via
+  `form-stdlib/grammars/python-bmf.fk`, lifts to PY-BMF-* recipes
+  (`python-bmf-lift.fk`), and walks them through the Form-native interpreter
+  (`python-bmf-eval.fk`) on the Rust kernel. **All 20 `PARITY_FILES` pass
+  three-way** under it (CPython == Rust-bootstrap == kernel-bmf) when measured
+  in isolated tempdirs. This is now the canonical Python runtime.
+- `ts-eval` (legacy bootstrap, still available) — the TS bootstrap evaluator
+  (`lang-python.ts` → `evalPython`). Selectable via an explicit
+  `PARITY_THIRD_RUNTIME=ts-eval` for as long as the Phase-A tissue lives.
 
-**The flip is one line** (the `${PARITY_THIRD_RUNTIME:-...}` fallback in
+**The flip was one line** (the `${PARITY_THIRD_RUNTIME:-...}` fallback in
 `parity_suite.sh`), fully reversible, and changes no CI gate — no workflow runs
-the parity suite; the `form/**` gates run only `bash validate.sh`. With all 20
-demos green the flip is **unblocked**; it is held for its own reviewable PR
-rather than ridden in on the fix that closed the last demo. When it is taken,
-the Phase-A Python-adapter bootstrap files (`lang-python.ts` and friends) become
-residue, compostable in a sibling PR.
+the parity suite; the `form/**` gates run only `bash validate.sh`. With the flip
+taken, the Phase-A Python-adapter bootstrap files (`lang-python.ts` and friends)
+are **COMPOST-ELIGIBLE** — residue, compostable in a sibling PR once the flip
+proves stable.
 
 The same selector shape can extend to the TS adapter parity gate
 (`PARITY_THIRD_RUNTIME` over `ts-eval` vs `kernel-bmf-ts`).
@@ -275,8 +287,9 @@ The same selector shape can extend to the TS adapter parity gate
   parity.
 - It does not claim files compost that aren't named here. New bootstrap tissue
   shipped after 2026-05-26 gets a manifest row when added.
-- It does not change the gate's default behavior. `PARITY_THIRD_RUNTIME=ts-eval`
-  stays default; today's parity suite runs unchanged.
+- It does not delete the legacy path on flip. `PARITY_THIRD_RUNTIME=kernel-bmf`
+  is now the default, but `PARITY_THIRD_RUNTIME=ts-eval` still runs the TS
+  bootstrap unchanged for as long as the Phase-A tissue lives.
 
 ---
 
@@ -570,10 +583,18 @@ followed by `:`, drop the annotation tokens up to the next top-level `,`/`)`
 `Dict[str, int]` is not mistaken for a param separator). This is the one
 underlying cause — not special-cased to typing_compose; every typed-parameter
 def in the body now lifts to the correct param list. With it, all 20 demos are
-green and the `PARITY_THIRD_RUNTIME` flip to `kernel-bmf` is **unblocked** — but
-that flip is its own reviewable breath, not ridden in here. Until it lands,
-`ts-eval` stays the default and the Phase-A Python-adapter bootstrap tissue
-(`lang-python.ts` and friends) is **not yet** residue.
+green and the `PARITY_THIRD_RUNTIME` flip to `kernel-bmf` was unblocked.
+
+**The flip is taken (2026-06-01, `claude/take-the-flip`).** With all 20 demos
+green, `parity_suite.sh` now defaults `PARITY_THIRD_RUNTIME` to `kernel-bmf` —
+the Form-native walker is the canonical Python runtime. Independently
+re-verified before the flip: freshly rebuilt Go + Rust kernels off main, the
+official `scripts/parity_suite.sh` run end-to-end under the new default reports
+**20 passing, 0 failing, exit 0**, exercising all 20 `PARITY_FILES` (no
+truncation). `ts-eval` remains available via an explicit
+`PARITY_THIRD_RUNTIME=ts-eval`. With the flip taken, the Phase-A Python-adapter
+bootstrap tissue (`lang-python.ts` and friends) is **COMPOST-ELIGIBLE** —
+residue, compostable in a sibling PR once the flip proves stable.
 
 **What composts when a demo reaches COMPOST READY.** The `.py` input
 **stays** — the parity suite reads it on every run (it's the substrate the
