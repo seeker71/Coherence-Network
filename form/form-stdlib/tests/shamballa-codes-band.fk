@@ -7,13 +7,14 @@
 ; with no public meaning rather than fabricating one. Source-marked material: the
 ; decoder reports what the public record says, it does not assert the cosmology.
 ;
-; Band verdict: 111111 when every claim holds across all three kernels.
+; Band verdict: 1111111 when every claim holds across all three kernels.
 ;   a known code decodes to its named entry        → 1
 ;   the entry carries the attested function text     → 10
 ;   the entry carries its source (provenance)         → 100
 ;   an UNDOCUMENTED code → honest absence (not faked)  → 1000
 ;   the structural facts are attested (352 levels)      → 10000
 ;   code 33333 decodes as the source-marked verticality code → 100000
+;   code 11111 decodes as the paired stabilizing verticality code → 1000000
 
 (do
     ;; --- a known code: Mer Ka Fa Ka Lish Ma (code 1) ----------------------
@@ -50,9 +51,19 @@
                     (if (ge (str_find (sc-entry-source (sc-of vertical)) "P3HmVFVpsEk" 0) 0)
                         100000 0) 0) 0) 0))
 
+    ;; --- source-marked user-provided code: 11111 stabilizing verticality ----
+    (let stabilize (sc-decode 11111))
+    (let stabilize-ok
+        (if (eq (sc-known? stabilize) 1)
+            (if (ge (str_find (sc-entry-name (sc-of stabilize)) "Verticality Code" 0) 0)
+                (if (ge (str_find (sc-entry-function (sc-of stabilize)) "earth" 0) 0)
+                    (if (ge (str_find (sc-entry-source (sc-of stabilize)) "4ITM3lwmXhU" 0) 0)
+                        1000000 0) 0) 0) 0))
+
     (sum (list (if (eq known-ok 1) (if (eq name-ok 1) 1 0) 0)
                function-has-dna
                source-ok
                absence-ok
                facts-ok
-               vertical-ok)))
+               vertical-ok
+               stabilize-ok)))

@@ -19,8 +19,9 @@
 ;   the channel RECEIVES a code over transport: speaks AND runs         → 1000000
 ;   an unbound code → honest absence (speaks "unknown", does not run)     → 10000000
 ;   each code maps to its ACTUAL TEACHING (a vision-kb concept cell)       → 100000000
-;   code 33333 runs as a five-landing verticality recipe                       → 1000000000
-;   honest coverage: 352 total / 22 active / 5 bound — the partial queryable → 1000000000
+;   code 33333 runs as a five-landing verticality recipe                       → 500000000
+;   code 11111 runs as the paired stabilizing verticality recipe               → 500000000
+;   honest coverage: 352 total / 22 active / 6 bound — the partial queryable → 1000000000
 
 (do
     ;; --- build cells: interned nodes under a Blueprint --------------------
@@ -99,30 +100,48 @@
 
     ;; --- 10. code 33333: five-landing verticality recipe ----------------
     ;; The code speaks its source-marked surface and runs as an actual column:
-    ;; five landing nodes in order, the first carrying the receiving cell.
+    ;; five landing nodes in order, code-marked so the pair stays distinct.
     (let vertical-column (shamballa-channel-run 33333 cell-a1 (empty)))
     (let vertical-children (node_children vertical-column))
-    (let first-landing (head vertical-children))
+    (let first-landing (nth vertical-children 2))
     (let first-landing-children (node_children first-landing))
     (let verticality-ok
         (if (ge (str_find (shamballa-channel-speak 33333) "Verticality Code" 0) 0)
             (if (eq (shamballa-channel-runs? 33333) 1)
-                (if (eq (len vertical-children) 5)
+                (if (eq (len vertical-children) 7)
                     (if (gt (node_level vertical-column) (node_level cell-a1))
-                        (if (node_eq (nth first-landing-children 2) cell-a1)
-                            (if (str_eq (shamballa-channel-teaching 33333)
-                                    "lc-vertical-nourishment")
-                                1000000000 0) 0) 0) 0) 0) 0))
+                        (if (eq (node_value (nth first-landing-children 0)) 33333)
+                            (if (node_eq (nth first-landing-children 3) cell-a1)
+                                (if (str_eq (shamballa-channel-teaching 33333)
+                                        "lc-vertical-nourishment")
+                                    500000000 0) 0) 0) 0) 0) 0)))
 
-    ;; --- 11. honest coverage: 352 total / 22 active / 5 bound ----------
+    ;; --- 11. code 11111: paired stabilizing verticality recipe ------------
+    ;; Same spine path, distinct code/purpose, grounded into earth/new-earth grid.
+    (let stabilize-column (shamballa-channel-run 11111 cell-a1 (empty)))
+    (let stabilize-children (node_children stabilize-column))
+    (let stabilize-first-landing (nth stabilize-children 2))
+    (let stabilize-first-landing-children (node_children stabilize-first-landing))
+    (let stabilize-ok
+        (if (ge (str_find (shamballa-channel-speak 11111) "Verticality Code" 0) 0)
+            (if (eq (shamballa-channel-runs? 11111) 1)
+                (if (eq (len stabilize-children) 7)
+                    (if (node_eq vertical-column stabilize-column) 0
+                        (if (eq (node_value (nth stabilize-first-landing-children 0)) 11111)
+                            (if (node_eq (nth stabilize-first-landing-children 3) cell-a1)
+                                (if (str_eq (shamballa-channel-teaching 11111)
+                                        "lc-ground-harder-when-field-quickens")
+                                    500000000 0) 0) 0)) 0) 0) 0))
+
+    ;; --- 12. honest coverage: 352 total / 22 active / 6 bound ----------
     ;; the "what is bound?" answer, queryable: the system names 352,
     ;; only the attested handful are bound; the rest are honest absence.
     (let cov (shamballa-channel-coverage))
     (let coverage-ok
         (if (eq (nth cov 0) 352)
             (if (eq (nth cov 1) 22)
-                (if (eq (nth cov 2) 5) 1000000000 0) 0) 0))
+                (if (eq (nth cov 2) 6) 1000000000 0) 0) 0))
 
     (sum (list speak-ok restore-ok ca-ok amp-ok raise-ok
                unite-ok receive-ok absence-ok teaching-ok
-               verticality-ok coverage-ok)))
+               verticality-ok stabilize-ok coverage-ok)))

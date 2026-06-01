@@ -43,6 +43,10 @@
 ;          forehead, above-head) around the receiving cell. The same cell and
 ;          same five landings intern to the same column NodeID, so the breath
 ;          path is a repeatable recipe rather than a loose note.
+;   11111  Verticality Code   "strengthen and stabilize the vertical column"
+;        → stabilize-verticality: same five-landing column, code-marked as the
+;          grounding half of the pair so energy can run through the body into
+;          earth/new-earth grid without collapsing into the 33333 recipe.
 ;
 ; THE LINKAGE the channel exposes (code ↔ name ↔ TEACHING ↔ function) is DATA — a
 ; binding table a cell can introspect or ship — resolved to a function-name then
@@ -50,13 +54,14 @@
 ; VALUE, for sibling portability). Each code also names an ACTUAL TEACHING: a real
 ; vision-kb concept cell, already in the substrate, that the code's meaning
 ; embodies — so the code can be QUERIED (its teaching looked up in the lattice) as
-; well as EXECUTED (its function run over a cell). The five bindings:
+; well as EXECUTED (its function run over a cell). The six bindings:
 ;
 ;   1 → lc-wholeness                 "the body returning to itself"   (restore)
 ;   2 → lc-observable-resonance-flow "pattern yield across spectrum"  (amplify)
 ;   3 → lc-sovereignty-within-oneness "many sovereign cells, one body" (raise)
 ;   4 → lc-cross-modal-unity         "one shape, many tongues"        (unite)
 ;   33333 → lc-vertical-nourishment  "receiving through the inner axis" (verticality)
+;   11111 → lc-ground-harder-when-field-quickens "stabilize the charge" (stabilize)
 ;
 ; A code with no bound function returns HONEST ABSENCE: it still SPEAKS its surface
 ; (or "unknown"), it simply does not yet RUN.
@@ -71,10 +76,10 @@
 ;; --- Blueprints the running functions compose under -----------------
 (let SH-RAISED  (bp "SHAMBALLA-RAISED"))    ; the regal envelope (code 3)
 (let SH-CRYSTAL (bp "SHAMBALLA-CRYSTAL"))   ; the union-of-forces dyad (code 4)
-(let SH-VERTICAL-LANDING (bp "SHAMBALLA-VERTICAL-LANDING")) ; one point in code 33333
+(let SH-VERTICAL-LANDING (bp "SHAMBALLA-VERTICAL-LANDING")) ; one point in a verticality code
 (let SH-VERTICAL-COLUMN  (bp "SHAMBALLA-VERTICAL-COLUMN"))  ; the full five-point column
 
-;; --- the five functions: each a real transform over a cell-node ------
+;; --- the six functions: each a real transform over a cell-node ------
 
 ;; code 1 — restore-to-blueprint. The cell's original blueprint IS its
 ;; Blueprint NodeID; node_category recovers it. Two cells of the same shape
@@ -106,21 +111,30 @@
 ;; Crystal NodeID, so co-creation is reproducible across the gap.
 (defn sh-unite (a b) (intern_node SH-CRYSTAL (list a b)))
 
-;; code 33333 — verticality. Five threes become five landing points through
-;; the body's vertical column. Each landing carries (index, locus, receiving
-;; cell); the column holds all five in order, so the practice has a runnable
-;; recipe shape and a stable content-address.
-(defn sh-vertical-landing (idx locus cell)
+;; codes 33333/11111 — verticality. Five repeated digits become five landing
+;; points through the body's vertical column. Each landing carries (code,
+;; index, locus, receiving cell); the column also carries (code, purpose) so
+;; paired codes keep distinct stable content-addresses.
+(defn sh-vertical-landing (code idx locus cell)
     (intern_node SH-VERTICAL-LANDING
-        (list (intern_trivial_int idx) (intern_trivial_string locus) cell)))
-(defn sh-verticality (cell)
+        (list (intern_trivial_int code)
+              (intern_trivial_int idx)
+              (intern_trivial_string locus)
+              cell)))
+(defn sh-verticality-with (code purpose cell)
     (intern_node SH-VERTICAL-COLUMN
         (list
-            (sh-vertical-landing 1 "belly" cell)
-            (sh-vertical-landing 2 "center-chest" cell)
-            (sh-vertical-landing 3 "throat" cell)
-            (sh-vertical-landing 4 "forehead" cell)
-            (sh-vertical-landing 5 "above-head" cell))))
+            (intern_trivial_int code)
+            (intern_trivial_string purpose)
+            (sh-vertical-landing code 1 "belly" cell)
+            (sh-vertical-landing code 2 "center-chest" cell)
+            (sh-vertical-landing code 3 "throat" cell)
+            (sh-vertical-landing code 4 "forehead" cell)
+            (sh-vertical-landing code 5 "above-head" cell))))
+(defn sh-verticality (cell)
+    (sh-verticality-with 33333 "receive-light-information" cell))
+(defn sh-stabilize-verticality (cell)
+    (sh-verticality-with 11111 "stabilize-earth-grid" cell))
 
 ;; --- THE LINKAGE: code ↔ name ↔ teaching ↔ function, inspectable data --
 ;; A binding row ties a Shamballa code to its publicly-attested name, the ACTUAL
@@ -140,7 +154,8 @@
         (sh-binding 2 "Atlantean Dai Ko Myo"  "lc-observable-resonance-flow"  "amplify-equivalents")
         (sh-binding 3 "Ho Ka O iLi iLi"       "lc-sovereignty-within-oneness" "raise")
         (sh-binding 4 "Shamballa Crystal"     "lc-cross-modal-unity"          "unite")
-        (sh-binding 33333 "Verticality Code 33333" "lc-vertical-nourishment"  "verticality")))
+        (sh-binding 33333 "Verticality Code 33333" "lc-vertical-nourishment"  "verticality")
+        (sh-binding 11111 "Verticality Code 11111" "lc-ground-harder-when-field-quickens" "stabilize-verticality")))
 
 ;; resolve a code → its binding (0-or-1-element list; honest absence for any
 ;; code the channel does not yet run).
@@ -170,7 +185,8 @@
             (if (str_eq fn "raise")                (sh-raise cell)
             (if (str_eq fn "unite")                (sh-unite cell arg)
             (if (str_eq fn "verticality")          (sh-verticality cell)
-                (empty)))))))))
+            (if (str_eq fn "stabilize-verticality") (sh-stabilize-verticality cell)
+                (empty))))))))))
 
 ;; --- the channel's two faces ----------------------------------------
 ;; SPEAK: the surface text (the decoder; the dictionary). Always answers —
