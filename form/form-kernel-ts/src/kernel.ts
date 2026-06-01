@@ -1227,6 +1227,9 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    this.registerNative("bml_scan_file", catCall(), (_k, args) =>
+      bmlNativeScanText(readFileSync(argStr(args, 0), "utf8")),
+    );
     // pow — integer exponentiation in native code (no Form recursion).
     // (pow base exp) → base**exp. Negative exponents return 0 (Python's
     // int**-n is a float; floats on this path are a later breath).
@@ -3138,6 +3141,144 @@ export type Value =
 export interface Record {
   blueprint: NodeID;
   fields: { name: NameID; val: Value }[];
+}
+
+const BML_NATIVE_KEYWORDS = new Set([
+  "package", "import", "class", "interface", "template", "section",
+  "syntax", "const", "enum", "operator", "for", "while", "loop",
+  "switch", "select", "case", "default", "if", "else", "if_fail",
+  "while_success", "return", "break", "continue", "try", "catch",
+  "throw", "fail", "cut", "mark", "save", "restore", "discard",
+  "choice", "choose", "asm", "instanceof", "library", "naming",
+  "conventions", "DefaultMethods", "Nil", "Fail", "EndOfFile",
+  "EndOfLine", "Cut", "MultiMatch", "Primitive",
+]);
+
+const BML_NATIVE_PROPERTIES = new Set([
+  "public", "private", "protected", "abstract", "static", "final",
+  "default", "delegate", "shared", "get", "put", "strict", "relaxed",
+  "deferred", "native", "exception", "explicit", "extern", "library",
+  "name", "guid", "operator", "coercion", "reassign", "array",
+  "exclusive", "in", "out", "inout", "assign", "inline", "hidden",
+  "singleton", "unique", "struct", "noobject", "dynamic", "alias",
+  "outer", "nostate",
+]);
+
+const BML_NATIVE_OPS = [
+  "<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>",
+  ">>", "<<", "++", "--", "==", "!=", ">=", "<=", ":=", "*=", "/=",
+  "%=", "+=", "-=", "&=", "|=", "^=", "&&", "||", "..", "#(",
+  "{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/",
+  "%", "=", "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
+];
+
+function bmlNativeAtom(kind: string, value: string): Value {
+  return {
+    kind: "list",
+    list: [
+      { kind: "str", str: "cell" },
+      { kind: "str", str: kind },
+      { kind: "str", str: value },
+      { kind: "list", list: [] },
+      { kind: "null" },
+    ],
+  };
+}
+
+function bmlNativeNameKind(value: string): string {
+  if (BML_NATIVE_KEYWORDS.has(value)) return "bml-keyword";
+  if (BML_NATIVE_PROPERTIES.has(value)) return "bml-property";
+  return "bml-name";
+}
+
+function bmlNativeNameStart(code: number): boolean {
+  return (code >= 97 && code <= 122) || (code >= 65 && code <= 90) || code === 95;
+}
+
+function bmlNativeNameChar(code: number): boolean {
+  return bmlNativeNameStart(code) || (code >= 48 && code <= 57);
+}
+
+function bmlNativeScanQuoted(src: string, i: number, quote: string): [string, number] {
+  let j = i + 1;
+  let out = "";
+  while (j < src.length) {
+    const c = src[j]!;
+    if (c === "\\" && j + 1 < src.length) {
+      out += src[j + 1]!;
+      j += 2;
+      continue;
+    }
+    if (c === quote) return [out, j + 1];
+    out += c;
+    j++;
+  }
+  return [out, j];
+}
+
+function bmlNativeScanText(src: string): Value {
+  const out: Value[] = [];
+  let i = 0;
+  while (i < src.length) {
+    const c = src.charCodeAt(i);
+    if (c === 32 || c === 9 || c === 10 || c === 13) {
+      i++;
+      continue;
+    }
+    if (src.startsWith("//", i)) {
+      i += 2;
+      while (i < src.length && src.charCodeAt(i) !== 10) i++;
+      continue;
+    }
+    if (src.startsWith("/*", i)) {
+      const end = src.indexOf("*/", i + 2);
+      if (end < 0) break;
+      i = end + 2;
+      continue;
+    }
+    if (src[i] === "\"") {
+      const [value, next] = bmlNativeScanQuoted(src, i, "\"");
+      out.push(bmlNativeAtom("bml-string", value));
+      i = next;
+      continue;
+    }
+    if (src[i] === "'") {
+      const [value, next] = bmlNativeScanQuoted(src, i, "'");
+      out.push(bmlNativeAtom("bml-string", value));
+      i = next;
+      continue;
+    }
+    if (c >= 48 && c <= 57) {
+      let j = i + 1;
+      while (j < src.length) {
+        const code = src.charCodeAt(j);
+        if (code < 48 || code > 57) break;
+        j++;
+      }
+      out.push(bmlNativeAtom("bml-int", src.slice(i, j)));
+      i = j;
+      continue;
+    }
+    if (bmlNativeNameStart(c)) {
+      let j = i + 1;
+      while (j < src.length && bmlNativeNameChar(src.charCodeAt(j))) j++;
+      const value = src.slice(i, j);
+      out.push(bmlNativeAtom(bmlNativeNameKind(value), value));
+      i = j;
+      continue;
+    }
+    let matched = "";
+    for (const op of BML_NATIVE_OPS) {
+      if (src.startsWith(op, i)) {
+        matched = op;
+        break;
+      }
+    }
+    if (matched === "") matched = src[i] ?? "";
+    out.push(bmlNativeAtom("bml-op", matched));
+    i += matched.length || 1;
+  }
+  return { kind: "list", list: out };
 }
 
 export function recordGet(r: Record, name: NameID): Value | undefined {

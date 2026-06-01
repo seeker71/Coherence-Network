@@ -632,7 +632,11 @@ impl Arena {
     // by the FNCALL hot path where the exact arg count is known. Saves
     // Vec capacity reallocations during arg-binding for recursive workloads
     // (fib at 1973 calls × 1 arg = 1973 reallocations avoided).
-    pub(crate) fn new_frame_with_capacity(&mut self, parent: Option<FrameId>, cap: usize) -> FrameId {
+    pub(crate) fn new_frame_with_capacity(
+        &mut self,
+        parent: Option<FrameId>,
+        cap: usize,
+    ) -> FrameId {
         let id = self.frames.len() as FrameId;
         self.frames.push(Frame {
             parent,
@@ -1320,6 +1324,239 @@ impl Value {
     }
 }
 
+fn bml_native_str(value: &str) -> Value {
+    Value::Str(value.to_string())
+}
+
+fn bml_native_empty_list() -> Value {
+    Value::List(vec![])
+}
+
+fn bml_native_atom(kind: &str, value: &str) -> Value {
+    Value::List(vec![
+        bml_native_str("cell"),
+        bml_native_str(kind),
+        bml_native_str(value),
+        bml_native_empty_list(),
+        Value::Null,
+    ])
+}
+
+fn bml_native_keyword(value: &str) -> bool {
+    matches!(
+        value,
+        "package"
+            | "import"
+            | "class"
+            | "interface"
+            | "template"
+            | "section"
+            | "syntax"
+            | "const"
+            | "enum"
+            | "operator"
+            | "for"
+            | "while"
+            | "loop"
+            | "switch"
+            | "select"
+            | "case"
+            | "default"
+            | "if"
+            | "else"
+            | "if_fail"
+            | "while_success"
+            | "return"
+            | "break"
+            | "continue"
+            | "try"
+            | "catch"
+            | "throw"
+            | "fail"
+            | "cut"
+            | "mark"
+            | "save"
+            | "restore"
+            | "discard"
+            | "choice"
+            | "choose"
+            | "asm"
+            | "instanceof"
+            | "library"
+            | "naming"
+            | "conventions"
+            | "DefaultMethods"
+            | "Nil"
+            | "Fail"
+            | "EndOfFile"
+            | "EndOfLine"
+            | "Cut"
+            | "MultiMatch"
+            | "Primitive"
+    )
+}
+
+fn bml_native_property(value: &str) -> bool {
+    matches!(
+        value,
+        "public"
+            | "private"
+            | "protected"
+            | "abstract"
+            | "static"
+            | "final"
+            | "default"
+            | "delegate"
+            | "shared"
+            | "get"
+            | "put"
+            | "strict"
+            | "relaxed"
+            | "deferred"
+            | "native"
+            | "exception"
+            | "explicit"
+            | "extern"
+            | "library"
+            | "name"
+            | "guid"
+            | "operator"
+            | "coercion"
+            | "reassign"
+            | "array"
+            | "exclusive"
+            | "in"
+            | "out"
+            | "inout"
+            | "assign"
+            | "inline"
+            | "hidden"
+            | "singleton"
+            | "unique"
+            | "struct"
+            | "noobject"
+            | "dynamic"
+            | "alias"
+            | "outer"
+            | "nostate"
+    )
+}
+
+fn bml_native_name_kind(value: &str) -> &'static str {
+    if bml_native_keyword(value) {
+        "bml-keyword"
+    } else if bml_native_property(value) {
+        "bml-property"
+    } else {
+        "bml-name"
+    }
+}
+
+fn bml_native_name_start(b: u8) -> bool {
+    b.is_ascii_alphabetic() || b == b'_'
+}
+
+fn bml_native_name_char(b: u8) -> bool {
+    bml_native_name_start(b) || b.is_ascii_digit()
+}
+
+fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
+    let bytes = src.as_bytes();
+    let mut j = i + 1;
+    let mut out = String::new();
+    while j < bytes.len() {
+        let c = bytes[j];
+        if c == b'\\' && j + 1 < bytes.len() {
+            out.push(bytes[j + 1] as char);
+            j += 2;
+            continue;
+        }
+        if c == quote {
+            return (out, j + 1);
+        }
+        out.push(c as char);
+        j += 1;
+    }
+    (out, j)
+}
+
+fn bml_native_scan_text(src: &str) -> Value {
+    let bytes = src.as_bytes();
+    let ops = [
+        "<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>", ">>", "<<", "++", "--",
+        "==", "!=", ">=", "<=", ":=", "*=", "/=", "%=", "+=", "-=", "&=", "|=", "^=", "&&", "||",
+        "..", "#(", "{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/", "%", "=",
+        "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
+    ];
+    let mut out: Vec<Value> = vec![];
+    let mut i = 0usize;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if matches!(c, b' ' | b'\t' | b'\n' | b'\r') {
+            i += 1;
+            continue;
+        }
+        if i + 1 < bytes.len() && &src[i..i + 2] == "//" {
+            i += 2;
+            while i < bytes.len() && bytes[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+        if i + 1 < bytes.len() && &src[i..i + 2] == "/*" {
+            if let Some(end) = src[i + 2..].find("*/") {
+                i = i + 2 + end + 2;
+                continue;
+            }
+            break;
+        }
+        if c == b'"' {
+            let (value, next) = bml_native_scan_quoted(src, i, b'"');
+            out.push(bml_native_atom("bml-string", &value));
+            i = next;
+            continue;
+        }
+        if c == b'\'' {
+            let (value, next) = bml_native_scan_quoted(src, i, b'\'');
+            out.push(bml_native_atom("bml-string", &value));
+            i = next;
+            continue;
+        }
+        if c.is_ascii_digit() {
+            let mut j = i + 1;
+            while j < bytes.len() && bytes[j].is_ascii_digit() {
+                j += 1;
+            }
+            out.push(bml_native_atom("bml-int", &src[i..j]));
+            i = j;
+            continue;
+        }
+        if bml_native_name_start(c) {
+            let mut j = i + 1;
+            while j < bytes.len() && bml_native_name_char(bytes[j]) {
+                j += 1;
+            }
+            let value = &src[i..j];
+            out.push(bml_native_atom(bml_native_name_kind(value), value));
+            i = j;
+            continue;
+        }
+        let mut matched = "";
+        for op in ops {
+            if src[i..].starts_with(op) {
+                matched = op;
+                break;
+            }
+        }
+        if matched.is_empty() {
+            matched = &src[i..i + 1];
+        }
+        out.push(bml_native_atom("bml-op", matched));
+        i += matched.len();
+    }
+    Value::List(out)
+}
+
 // format_float_python — render an f64 the way CPython's `print(float)`
 // renders it. Rust's default `{}` format drops the trailing zero for
 // integer-valued floats (`1.0` → `"1"`); CPython keeps it (`"1.0"`).
@@ -1656,6 +1893,11 @@ impl Kernel {
             let mut s = args[0].as_str().to_string();
             s.push_str(args[1].as_str());
             Value::Str(s)
+        });
+        self.register_native("bml_scan_file", cat_call(), |_, _, args| {
+            let body = fs::read_to_string(args[0].as_str())
+                .unwrap_or_else(|e| panic!("bml_scan_file: {}", e));
+            bml_native_scan_text(&body)
         });
         // pow — integer exponentiation in native code (no Form recursion).
         // (pow base exp) → base**exp. Negative exponents return 0 (Python's
