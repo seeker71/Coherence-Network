@@ -1,0 +1,75 @@
+; tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves a zero-argument constructor assignment parsed from the original
+; thesis companion BMF-grammar.bml executes in BodySource:
+; m_hResult = ParseStack();
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let start-method
+        (bml-find-method
+            (bml-class-own-methods bmf-class)
+            "StartResultStack"))
+    (let start-body (bml-method-body start-method))
+
+    (let BmfBP (make_nodeid 1 2 99 9242))
+    (let OldBP (make_nodeid 1 2 99 9243))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new EnvBP))
+    (let old-result (record_new OldBP "bmlClass" "OldResult"))
+    (let bmf-instance
+        (record_new
+            BmfBP
+            "m_hResult"
+            old-result))
+
+    (let direct-result
+        (bml-body-source-exec-constructor-assignments
+            start-body
+            bmf-instance
+            env))
+    (let direct-new-result (record_get direct-result "m_hResult"))
+
+    (let second-instance
+        (record_new
+            BmfBP
+            "m_hResult"
+            old-result))
+    (bml-body-source-exec start-body second-instance env)
+    (let second-new-result (record_get second-instance "m_hResult"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-return start-method) "void" 2)
+            (str-score (bml-method-name start-method) "StartResultStack" 4)
+            (bool-score (bml-body-source-contains? start-body "m_hResult") 8)
+            (bool-score (bml-body-source-contains? start-body "ParseStack") 16)
+            (int-score (bml-body-source-constructor-assignment-count start-body) 1 32)
+            (str-score (record_get old-result "bmlClass") "OldResult" 64)
+            (str-score (record_get direct-new-result "bmlClass") "ParseStack" 128)
+            (bool-score
+                (node_eq
+                    (record_blueprint direct-new-result)
+                    (bml-body-source-constructor-blueprint "ParseStack"))
+                256)
+            (str-score (record_get second-new-result "bmlClass") "ParseStack" 512)
+            (bool-score
+                (node_eq
+                    (record_blueprint second-new-result)
+                    (bml-body-source-constructor-blueprint "ParseStack"))
+                1024))))
