@@ -209,6 +209,27 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_idea_grounded_cost_sum_demo.fk",
         "expected_result": "[5.25, 3.75]",
     },
+    {
+        # The GROUNDED-COST REDUCTION of compute_idea_metrics — the richest
+        # deferred slice, falling now that the float-field fold, per-record
+        # arithmetic, and structure-access are banked. Given one idea's
+        # ALREADY-FILTERED records it folds spec_actual_cost_sum,
+        # spec_estimated_cost_sum, commit_cost_sum (per-commit clamp
+        # max(0.05, min(10.0, 0.10+files*0.15+lines*0.002)) — _estimate_commit_cost_sum
+        # EXACTLY), lineage_estimated_cost, and composes computed_actual_cost =
+        # spec_actual_cost_sum + runtime_cost + commit_cost_sum. The honest seam:
+        # FILTERING the six collections by idea_id is cheap host-side
+        # collection-narrowing (the host already does it); the reduction is the
+        # kernel computation. compute_idea_metrics' "deep gate" was never a
+        # missing kernel capability — it is host orchestration AROUND now-kernel-
+        # served reductions. Frozen sample (specs [{ac 3.5, ec 4.25}, {ac 1.25,
+        # ec 2.5}], commit {files 3, lines 100}, links [{ec 5.25}, {ec 1.5}],
+        # runtime_cost 2.25) → [4.75, 6.75, 2.25, 0.75, 6.75, 7.75], all
+        # NON-integer floats so no value crosses the print boundary.
+        "route": "/api/utils/grounded_cost",
+        "recipe": "endpoint_grounded_cost_demo.fk",
+        "expected_result": "[4.75, 6.75, 2.25, 0.75, 6.75, 7.75]",
+    },
 ]
 
 _EXAMPLES_DIR = (
