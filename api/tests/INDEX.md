@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 237
+**Total files**: 238
 
 | File | Purpose |
 |---|---|
@@ -228,6 +228,7 @@
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_utils_breath_balance.py](test_utils_breath_balance.py) | Tests for /api/utils/breath_balance — the first kernel-served route to use a transcendental native (ln). |
 | [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
+| [test_utils_concept_match_score.py](test_utils_concept_match_score.py) | Tests for /api/utils/concept_match_score — the string-MEMBERSHIP scoring half |
 | [test_utils_cost_value_vector.py](test_utils_cost_value_vector.py) | Tests for /api/utils/cost_vector and /api/utils/value_vector. |
 | [test_utils_grounded_cost.py](test_utils_grounded_cost.py) | Tests for /api/utils/grounded_cost — the grounded-cost reduction of compute_idea_metrics. |
 | [test_utils_grounded_value.py](test_utils_grounded_value.py) | Tests for /api/utils/grounded_value — the value/realization/confidence reduction of compute_idea_metrics. |

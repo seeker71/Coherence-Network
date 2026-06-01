@@ -141,6 +141,21 @@ PARITY_FILES=(
     # value crosses the print boundary. With the cost slice this completes
     # compute_idea_metrics' COMPUTATION kernel-native.
     "examples/endpoint_grounded_value_demo.py"
+    # STRING-MEMBERSHIP SCORING — the computational half of concept_auto_tagger.
+    # _score_concept. The FIRST kernel-served route to fold STRING MEMBERSHIP
+    # (`kw in text` lowered to `str_find(text, kw, 0) >= 0`) rather than an int
+    # or float field. The host tokenizes (regex _extract_keywords, lowercasing,
+    # the " ".join assembly — text preprocessing); the kernel scores the
+    # already-tokenized keyword lists: bidirectional str_find membership folds +
+    # the weighted combine round(min(0.5*fwd + 0.3*rev + name_bonus, 1.0), 4)
+    # (weights/bonus/ceiling verbatim from _score_concept). Hit counters seed 0.0
+    # so forward_hits/len(keywords) is float division (matches CPython's /). The
+    # str_find native is three-way value-identical for ASCII (string-natives-band.fk);
+    # the recipe's `for needle in needles` fold lowers to the adapter's _iter
+    # head/tail fold (Rust+TS — Go carries no _iter, the same situation
+    # idea_grounded_cost_sum ships under). Frozen sample → 0.825, a non-integer
+    # float that prints identically across kernels.
+    "examples/endpoint_concept_match_score_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"
@@ -237,7 +252,19 @@ tree = ast.parse(src)
 if tree.body and isinstance(tree.body[-1], ast.Expr):
     last = tree.body[-1]
     body = tree.body[:-1]
-    namespace = {}
+    # Seed the CPython namespace with the kernel's STRING natives so a demo can
+    # call them by the same bare name the kernel resolves (the CPython-side
+    # counterpart of the kernel's register_native). Each shim is the EXACT
+    # semantics of the kernel native it mirrors — str_find is byte/codeunit
+    # str.find(needle, from); str_len/str_concat/str_eq round out the family.
+    # A demo that calls str_find (the string-membership scoring routes) runs
+    # value-identically across CPython and both kernel paths.
+    namespace = {
+        'str_find': lambda s, needle, frm: s.find(needle, frm),
+        'str_len': lambda s: len(s),
+        'str_concat': lambda a, b: a + b,
+        'str_eq': lambda a, b: a == b,
+    }
     if body:
         exec(compile(ast.Module(body=body, type_ignores=[]), '$f', 'exec'), namespace)
     print(eval(compile(ast.Expression(body=last.value), '$f', 'eval'), namespace))
