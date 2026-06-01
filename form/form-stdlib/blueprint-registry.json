@@ -3576,6 +3576,24 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 9202,
+      "name": "BML-CTOR-ENV",
+      "meaning": "Blueprint for a BML constructor's environment record — the record a constructor body executes against, holding its named fields (hSyntax, strName, hArgs, …). Returned by bml-constructor-env-blueprint in grammars/bml.fk.",
+      "aliases": [
+        "EnvBP",
+        "bml-constructor-env-blueprint"
+      ],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk",
+        "form/form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 9500,
       "name": "CLASS-BP",
       "meaning": "Blueprint for a Python class value under the BMF evaluator — a record holding each method as a field; the captured def-site env.",
