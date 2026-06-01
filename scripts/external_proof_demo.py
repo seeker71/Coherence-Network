@@ -129,6 +129,18 @@ class ProofRunner:
                     file=sys.stderr,
                 )
                 raise SystemExit(AUTH_FAILED_EXIT)
+            if response.status_code == 404 and "page not found" in response.text.lower():
+                print(
+                    "[TRANSIENT] HTTP 404 page not found — rollout gateway served "
+                    "a non-API 404, not a FastAPI route response. Workflow will "
+                    "treat as advisory.",
+                    file=sys.stderr,
+                )
+                print(
+                    f"[FAIL] HTTP {response.status_code} — {response.text[:500]}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(TRANSIENT_FAILED_EXIT)
             if response.status_code in (502, 503, 504):
                 print(
                     f"[TRANSIENT] HTTP {response.status_code} — gateway/upstream blip, "
