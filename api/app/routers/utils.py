@@ -632,6 +632,72 @@ async def marginal_cc_return(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/breath_balance
+#
+# Pure computation: normalized Shannon entropy H / H_max over three phase
+# counts (gas / water / ice), H_max = ln(3). The substrate's breath-rhythm
+# balance signal — 1.0 for equal thirds, -0.0 (zero) for a single phase.
+# Shares its body with vitality_service._breath_balance_py (the fallback);
+# the Form recipe is its kernel-served twin. This is the first kernel-served
+# route to use a transcendental native — math.log lowers to math_log (ln).
+# The p > 0 guard is the log-of-zero guard (ln(0) is never evaluated); the
+# single trailing negation matches CPython's `-sum(...)` to the bit,
+# including the -0.0 sign on a single-phase distribution.
+# ---------------------------------------------------------------------------
+
+
+class BreathBalanceResponse(BaseModel):
+    """GET /api/utils/breath_balance response."""
+
+    model_config = ConfigDict(extra="forbid")
+    balance: Annotated[float, Field(description="Normalized entropy H/H_max in [0.0, 1.0]")]
+    gas: Annotated[int, Field(description="Input gas-phase count, echoed back")]
+    water: Annotated[int, Field(description="Input water-phase count, echoed back")]
+    ice: Annotated[int, Field(description="Input ice-phase count, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/breath_balance",
+    response_model=BreathBalanceResponse,
+    summary="Normalized phase-balance entropy (body runs as Form recipe with ln native)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Returns normalized Shannon entropy H / H_max over three phase "
+        "counts (gas/water/ice), H_max = ln(3) — 1.0 for perfectly balanced "
+        "thirds, approaching 0.0 as the distribution collapses into one "
+        "phase. The same shape vitality_service uses for breath rhythm. "
+        "First kernel-served route to use a transcendental native (ln); the "
+        "p>0 guard is the log-of-zero guard. Kernel-or-fallback via "
+        "serve_via_kernel; CPython==Rust value-parity is the gate."
+    ),
+)
+async def breath_balance(
+    gas: Annotated[int, Query(ge=0, description="Gas-phase count")] = 1,
+    water: Annotated[int, Query(ge=0, description="Water-phase count")] = 1,
+    ice: Annotated[int, Query(ge=0, description="Ice-phase count")] = 1,
+) -> BreathBalanceResponse:
+    from app.services.vitality_service import _breath_balance_py
+
+    balance, runtime = serve_via_kernel(
+        "endpoint_breath_balance_demo.fk",
+        bindings={"gas": gas, "water": water, "ice": ice},
+        fallback=lambda: _breath_balance_py(gas, water, ice),
+        parse=float,
+    )
+    return BreathBalanceResponse(
+        balance=balance,
+        gas=gas,
+        water=water,
+        ice=ice,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

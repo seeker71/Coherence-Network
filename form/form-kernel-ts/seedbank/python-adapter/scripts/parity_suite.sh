@@ -65,6 +65,7 @@ PARITY_FILES=(
     "examples/endpoint_simpson_diversity_demo.py"
     "examples/endpoint_idea_score_demo.py"
     "examples/endpoint_marginal_cc_return_demo.py"
+    "examples/endpoint_breath_balance_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

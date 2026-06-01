@@ -194,6 +194,8 @@ const KERNEL_MODULES: Record<string, Record<string, string>> = {
     floor: "math_floor",
     ceil: "math_ceil",
     pow: "math_pow",
+    log: "math_log",
+    exp: "math_exp",
   },
   // `typing` — type-hint surface. Every member binds to the same opaque
   // sentinel native (`typing_opaque`) that returns a stable marker string.

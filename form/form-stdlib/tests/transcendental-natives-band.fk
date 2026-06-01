@@ -1,0 +1,105 @@
+; transcendental-natives-band.fk — three-way sibling parity for the
+; natural-log / exponential natives (math_log, math_exp).
+;
+; Companion to float-natives-band.fk. The kernels carry float64 trivials
+; in distinct shapes (Rust TRIV tag 5, TS/Go tag 7) but the .fk surface
+; sees one float. This band exercises math_log (ln) and math_exp across
+; Go, Rust, and TypeScript through paths that produce identical
+; integer-aggregate output — no float ever crosses the print boundary, so
+; per-kernel float formatting never enters the score.
+;
+; What's tested through three-way agreement:
+;
+;   • math_log on exact-result inputs: ln(1) = 0
+;   • math_exp on exact-result inputs: exp(0) = 1
+;   • Round-trip identity: log(exp(x)) ≈ x, exp(log(x)) ≈ x
+;   • Irrational results via tolerance bands: ln(e)≈1, exp(1)≈e, ln(2)
+;
+; Honesty on transcendentals: different host languages compile ln/exp to
+; different libm implementations, so 1-ULP divergence is possible on
+; irrational results. Every non-exact check is a tolerance band whose
+; width comfortably exceeds 1 ULP; the exact checks (ln(1), exp(0)) are
+; bit-exact in IEEE 754 across all three. No raw float prints.
+;
+; The aggregate score is 1 per passing check; full pass = 16.
+;
+; In service of unlocking the entropy / softmax / normalization family of
+; routes for kernel-native serving (Shannon entropy needs ln, softmax
+; needs exp). See vitality_service._breath_balance and
+; idea_scoring._softmax_weights.
+
+(do
+    ;; e and ln(2) as high-precision literals for the bands below.
+    (let e   2.71828182845904523536)
+    (let ln2 0.69314718055994530942)
+
+    ;; ── 1. Exact results — bit-exact in IEEE 754 everywhere ────────
+    ;; ln(1) = 0.0 exactly; exp(0) = 1.0 exactly. These cross no
+    ;; tolerance — every conformant libm returns the exact value.
+    (let s1 (if (eq (math_log 1.0) 0.0) 1 0))
+    (let s2 (if (eq (math_exp 0.0) 1.0) 1 0))
+
+    ;; ── 2. ln(e) ≈ 1 — tolerance band ─────────────────────────────
+    (let lne (math_log e))
+    (let s3  (if (lt lne 1.0000001) (if (gt lne 0.9999999) 1 0) 0))
+
+    ;; ── 3. exp(1) ≈ e — tolerance band ─────────────────────────────
+    (let exp1 (math_exp 1.0))
+    (let s4   (if (lt exp1 2.7182819) (if (gt exp1 2.7182817) 1 0) 0))
+
+    ;; ── 4. ln(2) — tolerance band against the known constant ───────
+    (let log2 (math_log 2.0))
+    (let s5   (if (lt log2 0.6931472) (if (gt log2 0.6931471) 1 0) 0))
+
+    ;; ── 5. exp of a negative arg — exp(-1) ≈ 1/e ≈ 0.3678794 ────────
+    (let expn1 (math_exp -1.0))
+    (let s6    (if (lt expn1 0.3678795) (if (gt expn1 0.3678793) 1 0) 0))
+
+    ;; ── 6. Round-trip: log(exp(x)) ≈ x for x = 2.5 ─────────────────
+    (let rt1 (math_log (math_exp 2.5)))
+    (let s7  (if (lt rt1 2.5000001) (if (gt rt1 2.4999999) 1 0) 0))
+
+    ;; ── 7. Round-trip: exp(log(x)) ≈ x for x = 7.0 ─────────────────
+    (let rt2 (math_exp (math_log 7.0)))
+    (let s8  (if (lt rt2 7.0000001) (if (gt rt2 6.9999999) 1 0) 0))
+
+    ;; ── 8. ln is monotone increasing: ln(3) > ln(2) ───────────────
+    (let s9 (if (gt (math_log 3.0) (math_log 2.0)) 1 0))
+
+    ;; ── 9. exp is monotone increasing: exp(2) > exp(1) ────────────
+    (let s10 (if (gt (math_exp 2.0) (math_exp 1.0)) 1 0))
+
+    ;; ── 10. exp(ln(2)) ≈ 2 — composes the two natives ─────────────
+    (let comp (math_exp ln2))
+    (let s11  (if (lt comp 2.0000001) (if (gt comp 1.9999999) 1 0) 0))
+
+    ;; ── 11. ln(e^2) ≈ 2 — exp result fed back through log ─────────
+    (let e2 (math_log (math_exp 2.0)))
+    (let s12 (if (lt e2 2.0000001) (if (gt e2 1.9999999) 1 0) 0))
+
+    ;; ── 12. exp accepts int arg (Int → f64 coercion) ──────────────
+    ;; The adapter passes evaluated values; math_exp must coerce an Int
+    ;; literal to f64 just like math_sqrt does. exp(0) via int = 1.0.
+    (let s13 (if (eq (math_exp 0) 1.0) 1 0))
+
+    ;; ── 13. log accepts int arg (Int → f64 coercion) ──────────────
+    (let s14 (if (eq (math_log 1) 0.0) 1 0))
+
+    ;; ── 14. ln(6) ≈ 1.7917595 — independent transcendental check ──
+    ;; (The log addition law ln(2)+ln(3)=ln(6) holds, but adding two
+    ;; floats hits the deferred polymorphic-float-arithmetic divergence
+    ;; the float band documents; we check ln(6) directly instead.)
+    (let log6 (math_log 6.0))
+    (let s15 (if (lt log6 1.7917596) (if (gt log6 1.7917594) 1 0) 0))
+
+    ;; ── 15. exp(0.5) ≈ sqrt(e) ≈ 1.6487213 — half-power ───────────
+    (let half (math_exp 0.5))
+    (let s16  (if (lt half 1.6487213) (if (gt half 1.6487212) 1 0) 0))
+
+    ;; ── Aggregate — int + int through MATH (no float in result) ───
+    ;; Every sub-score is 1 or 0; the sum flows through the I32 path
+    ;; in every kernel and prints as a plain integer. Full pass = 16.
+    (add s1 (add s2 (add s3 (add s4 (add s5
+    (add s6 (add s7 (add s8 (add s9 (add s10
+    (add s11 (add s12 (add s13 (add s14 (add s15 s16)))))))))))))))
+)
