@@ -1,0 +1,95 @@
+; field-auto-research.fk - Form-native auto-research over Field Model Form.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk
+;
+; Auto research is modeled as a transparent field loop:
+; question -> source cells -> evidence cells -> FMF execution -> answer -> residual questions.
+
+section [form.bml] {
+    def fmar-source(id, kind, locator, title, body, trust, observed-at) = list("ResearchSourceCell", id, kind, locator, title, body, trust, observed-at);
+    def fmar-source-id(source) = nth(source, 1);
+    def fmar-source-kind(source) = nth(source, 2);
+    def fmar-source-locator(source) = nth(source, 3);
+    def fmar-source-title(source) = nth(source, 4);
+    def fmar-source-body(source) = nth(source, 5);
+    def fmar-source-trust(source) = nth(source, 6);
+    def fmar-source-observed-at(source) = nth(source, 7);
+
+    def fmar-question(id, text, domain, observer, budget) = list("ResearchQuestion", id, text, domain, observer, budget);
+    def fmar-question-id(question) = nth(question, 1);
+    def fmar-question-text(question) = nth(question, 2);
+    def fmar-question-domain(question) = nth(question, 3);
+    def fmar-question-observer(question) = nth(question, 4);
+    def fmar-question-budget(question) = nth(question, 5);
+
+    def fmar-evidence(claim, status, confidence, source-id, residual) = list("ResearchEvidenceCell", claim, status, confidence, source-id, residual);
+    def fmar-evidence-claim(evidence) = nth(evidence, 1);
+    def fmar-evidence-status(evidence) = nth(evidence, 2);
+    def fmar-evidence-confidence(evidence) = nth(evidence, 3);
+    def fmar-evidence-source-id(evidence) = nth(evidence, 4);
+    def fmar-evidence-residual(evidence) = nth(evidence, 5);
+
+    def fmar-residual(kind, message, cost, missing) = list("ResearchResidual", kind, message, cost, missing);
+    def fmar-residual-kind(residual) = nth(residual, 1);
+    def fmar-residual-message(residual) = nth(residual, 2);
+    def fmar-residual-cost(residual) = nth(residual, 3);
+    def fmar-residual-missing(residual) = nth(residual, 4);
+
+    def fmar-recipe(name, carrier, match-primitive, recipe-primitive, evidence-status, rule-set) = list("ResearchRecipe", name, carrier, match-primitive, recipe-primitive, evidence-status, rule-set);
+    def fmar-recipe-name(recipe) = nth(recipe, 1);
+    def fmar-recipe-carrier(recipe) = nth(recipe, 2);
+    def fmar-recipe-match-primitive(recipe) = nth(recipe, 3);
+    def fmar-recipe-recipe-primitive(recipe) = nth(recipe, 4);
+    def fmar-recipe-evidence-status(recipe) = nth(recipe, 5);
+    def fmar-recipe-rules(recipe) = nth(recipe, 6);
+
+    def fmar-answer(question, sources, recipe, field-result, evidence, residuals, next-questions) = list("ResearchAnswer", question, sources, recipe, field-result, evidence, residuals, next-questions);
+    def fmar-answer-question(answer) = nth(answer, 1);
+    def fmar-answer-sources(answer) = nth(answer, 2);
+    def fmar-answer-recipe(answer) = nth(answer, 3);
+    def fmar-answer-field-result(answer) = nth(answer, 4);
+    def fmar-answer-evidence(answer) = nth(answer, 5);
+    def fmar-answer-residuals(answer) = nth(answer, 6);
+    def fmar-answer-next-questions(answer) = nth(answer, 7);
+
+    def fmar-residual-to-question(residual) = fmar-question(str_concat("research-gap:", fmar-residual-kind(residual)), fmar-residual-message(residual), "research-gap", "auto-research", fmar-residual-cost(residual));
+
+    def fmar-dna-source() = fmar-source("NCBI:NM_000518.5:HBB-demo-prefix", "database-record", "https://www.ncbi.nlm.nih.gov/nuccore/NM_000518.5", "HBB CDS motif demo prefix", "ATGGTGCATCTGACTCCTGAGGAGAAGTCT", 95, "2026-06-01");
+    def fmar-dna-question() = fmar-question("dna-motif-hbb-prefix", "Does the HBB prefix contain start-codon and glutamate-codon motifs?", "DNA/RNA sequence-field", "auto-research", 7);
+    def fmar-dna-observer() = fmfrt-observer("auto-research", "all-compatible");
+    def fmar-dna-rules() = list(fmfrt-sequence-window-rule("start-codon", "ATG"), fmfrt-sequence-window-rule("glutamate-codon", "GAG"));
+    def fmar-dna-recipe() = fmar-recipe("dna-motif-field-research", "sequence-field", "motif", "observe-trace", "observed", fmar-dna-rules());
+
+    def fmar-dna-evidence(source) = list(fmar-evidence("start-codon motif ATG observed by field grammar", "observed", 90, fmar-source-id(source), "sequence-only observation"), fmar-evidence("glutamate codon motif GAG observed by field grammar", "observed", 90, fmar-source-id(source), "sequence-only observation"));
+    def fmar-dna-residual() = fmar-residual("missing-experimental-validation", "Does the motif pattern have biological function in this observed context?", 3, "wet-lab/context");
+
+    def fmar-run-dna-motif-research() {
+        let source = fmar-dna-source();
+        let question = fmar-dna-question();
+        let recipe = fmar-dna-recipe();
+        let field = fmfrt-lift-sequence(fmar-source-body(source));
+        let step = fmfrt-field-step(field, fmar-recipe-rules(recipe), fmar-dna-observer());
+        let residual = fmar-dna-residual();
+        fmar-answer(question, list(source), recipe, step, fmar-dna-evidence(source), list(residual), list(fmar-residual-to-question(residual)));
+    }
+
+    def fmar-dna-motif-research-io() {
+        let answer = fmar-run-dna-motif-research();
+        let source = head(fmar-answer-sources(answer));
+        let step = fmar-answer-field-result(answer);
+        let residual = head(fmar-answer-residuals(answer));
+        let next = head(fmar-answer-next-questions(answer));
+        list("ResearchIO", fmar-question-text(fmar-answer-question(answer)), fmar-source-id(source), fmar-source-body(source), fmfrt-project-sequence(fmfrt-result-field(step)), len(fmfrt-receipt-applied(fmfrt-result-receipt(step))), len(fmar-answer-evidence(answer)), fmar-residual-kind(residual), fmar-question-text(next));
+    }
+
+    def fmar-public-auto-research-proof-score() {
+        let source = fmar-dna-source();
+        let answer = fmar-run-dna-motif-research();
+        let step = fmar-answer-field-result(answer);
+        let receipt = fmfrt-result-receipt(step);
+        let next = head(fmar-answer-next-questions(answer));
+        sum(list(fmfrt-bool-score(str_eq(fmar-source-locator(source), "https://www.ncbi.nlm.nih.gov/nuccore/NM_000518.5"), 1), fmfrt-bool-score(str_eq(fmfrt-project-sequence(fmfrt-result-field(step)), fmar-source-body(source)), 2), fmfrt-bool-score(eq(len(fmfrt-receipt-applied(receipt)), 2), 4), fmfrt-bool-score(eq(len(fmar-answer-evidence(answer)), 2), 8), fmfrt-bool-score(eq(len(fmfrt-residual-conflicts(fmfrt-result-residual(step))), 0), 16), fmfrt-bool-score(str_eq(fmar-question-domain(next), "research-gap"), 32), fmfrt-bool-score(eq(len(fmar-answer-next-questions(answer)), 1), 64)));
+    }
+
+    0;
+}

@@ -13,6 +13,10 @@ source:
     symbols: [fmfrt-public-runtime-proof-score, fmfrt-field-step, fmfrt-intervene, fmfrt-reverse-receipt, fmfrt-lift-sequence, fmfrt-project-sequence]
   - file: form/form-stdlib/tests/field-model-form-runtime-band.fk
     symbols: [field-model-form-runtime-band]
+  - file: form/form-stdlib/field-auto-research.fk
+    symbols: [fmar-public-auto-research-proof-score, fmar-run-dna-motif-research, fmar-dna-motif-research-io, fmar-residual-to-question]
+  - file: form/form-stdlib/tests/field-auto-research-band.fk
+    symbols: [field-auto-research-band]
   - file: form/form-kernel-ts/src/kernel.ts
     symbols: [RBasic.FIELD, RBasic.DELTA, RBasic.RECEIPT, RBasic.RESIDUAL]
   - file: form/form-kernel-ts/src/field.ts
@@ -29,11 +33,14 @@ requirements:
   - "FMF defines FieldBlueprint, FieldRecipe, and FieldCell as a field lift of Blueprint, Recipe, and Cell."
   - "FMF execution uses logical simultaneity: snapshot, match, choose, delta, resolve, commit, receipt, residual."
   - "FMF has executable proof for all FMF primitive constructors across sibling kernels plus a canonical BML-authored runtime proof and TypeScript/browser adapter proofs."
+  - "Auto research compiles questions, sources, evidence, residuals, and next questions into FMF field execution with transparent receipts."
 done_when:
   - "cd form/form-kernel-ts && npx tsx src/field.test.ts passes"
   - "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk returns 93"
   - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
   - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk returns 63"
+  - "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
+  - "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk returns 127"
   - "cd web && npm test -- form-kernel-field-runtime.test.ts passes"
   - "cd form/form-kernel-ts && npm run check passes"
   - "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md passes"
@@ -63,6 +70,7 @@ Field Model Form extends the Form substrate from stream execution into field exe
 - [x] **R9**: `/substrate/form` includes a public local-kernel playground example that runs the FMF proof and returns `93`.
 - [x] **R10**: The canonical forward/reverse field-step runtime is authored in Form-native BML and validated across sibling kernels from source and binary artifacts; TypeScript and browser TypeScript remain host adapters/public mirrors.
 - [x] **R11**: Each requested domain proves the same 11-line contract: carrier algebra, match primitive, recipe primitive, units/dimensions, scheduling, conflict/confluence, scale bridge, evidence, observer identity, residuals, and participation semantics.
+- [x] **R12**: Auto research is authored in Form-native BML as a field recipe that compiles `ResearchQuestion`, `ResearchSourceCell`, `ResearchEvidenceCell`, `ResearchResidual`, and next-question cells into FMF execution with source/binary proof score `127`.
 
 ## Research Inputs
 
@@ -123,6 +131,8 @@ FieldRule:
 - `form/form-stdlib/tests/field-model-form-runtime-lift-band.fk` — focused lift/project proof.
 - `form/form-stdlib/tests/field-model-form-runtime-intervene-band.fk` — focused intervention proof.
 - `form/form-stdlib/tests/field-model-form-runtime-conflict-band.fk` — focused conflict residual proof.
+- `form/form-stdlib/field-auto-research.fk` — Form-native auto-research layer over FMF: question, source, evidence, residual, answer, and residual-to-question execution.
+- `form/form-stdlib/tests/field-auto-research-band.fk` — sibling-kernel auto-research proof returning `127`.
 - `web/lib/form-kernel/field-model-form.ts` — public playground proof source.
 - `web/lib/form-kernel/field-runtime.ts` — browser-local executable FMF field-step runtime.
 - `web/lib/form-kernel/client.ts` — curated local-kernel example registry.
@@ -135,6 +145,8 @@ FieldRule:
 - `cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
 - `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk`
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
+- `cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk`
 - `cd web && npm test -- form-kernel-field-runtime.test.ts`
 - `cd form/form-kernel-ts && npm run check`
 - `python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md`
@@ -149,11 +161,13 @@ cd form/form-kernel-ts && npx tsx src/field.test.ts
 cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
 cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
+cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk
 cd web && npm test -- form-kernel-field-runtime.test.ts
 python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md
 ```
 
-Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `field-model-form-bml-runtime-proof:63`, `field-model-form-browser-runtime-proof:4`, `sequence-lift-project-fieldStep`, `fmf-proof-score`, and `field_blueprint`.
+Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `field-model-form-bml-runtime-proof:63`, `field-auto-research-bml-proof:127`, `field-model-form-browser-runtime-proof:4`, `sequence-lift-project-fieldStep`, `fmf-proof-score`, and `field_blueprint`.
 
 ## Validation Matrix
 
@@ -163,6 +177,7 @@ Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`
 | FMF native node constructors | yes | yes | yes | yes | `field-model-form-band.fk` constructs every FMF category |
 | Domain/lens structural proof | yes | yes | yes | yes | band returns `93`; browser example returns `93` |
 | Form-native BML `fieldStep()` forward execution | yes | yes | yes | mirror | `field-model-form-runtime-band.fk` returns `63` from source and binary artifacts |
+| Form-native auto research to field execution | yes | yes | yes | public marker | `field-auto-research-band.fk` returns `127` from source and binary artifacts |
 | Receipt-backed reverse/intervention | yes | yes | yes | yes | BML `fmfrt-intervene()`/`fmfrt-reverse-receipt()`; TS/browser adapter tests |
 | Browser host adapter runtime | n/a | n/a | n/a | yes | `web/tests/form-kernel-field-runtime.test.ts` |
 | Scientific-grade simulators | no | no | no | no | out of scope |
