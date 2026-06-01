@@ -58,7 +58,38 @@ LET_RE = re.compile(
     r"([A-Za-z0-9?_+*<>=/.-]+)\s+\(\s*\))\s+\(\s*make_nodeid\s+"
     r"(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\)"
 )
+# A by-name Blueprint reference: (bp "NAME"). The kernel resolves NAME against
+# the generated bp table; an unregistered NAME used to fall back silently to a
+# shared {1,2,0,0} NodeID, so distinct names collided invisibly. The kernels now
+# fail loud; this scanner finds such names BEFORE they ship.
+BP_REF_RE = re.compile(r'\(\s*bp\s+"([^"]+)"\s*\)')
 Key = tuple  # (pkg, level, type, inst)
+
+
+def registered_names(reg: dict) -> set:
+    """Every name the kernel's bp table will resolve — canonical + aliases of
+    each registered shape (categories, primitives, user blueprints)."""
+    names: set = set()
+    for entry in reg.values():
+        names.add(entry["canonical"])
+        names.update(entry.get("aliases", []))
+    return names
+
+
+def scan_bp_refs(reg: dict) -> dict[str, list[str]]:
+    """Map each (bp "NAME") whose NAME is NOT registered → the files using it.
+    Form comments start with ';'; strip them so prose like `(bp "name")` in a
+    doc-comment is not mistaken for a real reference."""
+    known = registered_names(reg)
+    unreg: dict[str, list[str]] = collections.defaultdict(list)
+    for f in sorted(FORM_ROOT.rglob("*.fk")):
+        rel = str(f.relative_to(ROOT))
+        for line in f.read_text(errors="ignore").splitlines():
+            code = line.split(";", 1)[0]
+            for m in BP_REF_RE.finditer(code):
+                if m.group(1) not in known:
+                    unreg[m.group(1)].append(rel)
+    return {n: sorted(set(fs)) for n, fs in unreg.items()}
 
 
 def load_registry() -> dict[Key, dict]:
@@ -137,6 +168,10 @@ def scan() -> dict:
     type99 = {s["key"] for s in sites if s["key"][2] == 99 and not s["test"]}
     unregistered_99 = sorted(k for k in type99 if k not in reg)
 
+    # (bp "NAME") references whose NAME is not registered — the silent-collision
+    # class the kernels now reject at runtime, caught here before they ship.
+    unregistered_bp_names = scan_bp_refs(reg)
+
     return {
         "reg": reg,
         "sites": sites,
@@ -145,6 +180,7 @@ def scan() -> dict:
         "collisions": collisions,
         "synonyms": synonyms,
         "unregistered_99": unregistered_99,
+        "unregistered_bp_names": unregistered_bp_names,
     }
 
 
@@ -275,17 +311,132 @@ def report(s: dict) -> None:
             print(f"   {fmt_key(k)}{hint}")
         print()
 
+    if s.get("unregistered_bp_names"):
+        print(f'⚠  (bp "NAME") references with NO registry row '
+              f"({len(s['unregistered_bp_names'])}) — the kernels fail loud on "
+              f"these; register each before shipping:")
+        for name, files in sorted(s["unregistered_bp_names"].items()):
+            print(f"   {name}: {files}")
+            print(f"     → python3 scripts/scan_form_blueprints.py register {name}")
+        print()
+
+
+def _regen_bp_tables() -> None:
+    """Regenerate the three kernel bp tables from the registry. The registry is
+    the source of truth; without this the kernels would not see a new/removed
+    name. Best-effort — prints a clear note if the generator is unavailable."""
+    import subprocess
+    gen = ROOT / "scripts" / "gen_bp_table.py"
+    if not gen.exists():
+        print(f"  (note: {gen.relative_to(ROOT)} not found — regenerate bp "
+              f"tables manually before running the kernels)")
+        return
+    subprocess.run([sys.executable, str(gen)], check=True)
+
+
+def _next_free_inst(blueprints: list[dict], type_: int) -> int:
+    """First free instance number across the whole type-N NodeID space — the
+    body treats type-99 insts as one sequence regardless of level/pkg, so a
+    new shape must not collide with ANY existing type-N inst."""
+    used = {b["inst"] for b in blueprints if b.get("type", 99) == type_}
+    i = 1
+    while i in used:
+        i += 1
+    return i
+
+
+def register_name(name: str, *, level: int = 2, type_: int = 99, pkg: int = 1,
+                  meaning: str = "", defined_in: str | None = None,
+                  inst: int | None = None) -> int:
+    """Add a blueprint row for NAME and regenerate the kernel bp tables.
+    Allocates the next free inst, OR honors an explicit `inst` (used to migrate
+    an existing make_nodeid literal to a name at its current coordinate, so the
+    NodeID is preserved). Idempotent: an already-registered name is untouched."""
+    data = json.loads(REGISTRY.read_text())
+    bps = data["blueprints"]
+    for b in bps:
+        if b["name"] == name or name in b.get("aliases", []):
+            print(f"already registered: {name} → "
+                  f"{b.get('pkg',1)}.{b.get('level',2)}.{b.get('type',99)}.{b['inst']}")
+            return 0
+    if inst is None:
+        inst = _next_free_inst(bps, type_)
+    elif any(b.get("pkg", 1) == pkg and b.get("level", 2) == level
+             and b.get("type", 99) == type_ and b["inst"] == inst for b in bps):
+        print(f"coordinate {pkg}.{level}.{type_}.{inst} already taken — "
+              f"omit --inst to auto-allocate", file=sys.stderr)
+        return 1
+    row = {
+        "pkg": pkg, "level": level, "type": type_, "inst": inst,
+        "name": name, "meaning": meaning, "aliases": [], "reuse": 1,
+        "defined_in": [defined_in] if defined_in else [],
+        "curated": True,
+    }
+    bps.append(row)
+    bps.sort(key=lambda b: (b.get("pkg", 1), b.get("level", 2),
+                            b.get("type", 99), b["inst"]))
+    REGISTRY.write_text(json.dumps(data, indent=2) + "\n")
+    print(f"registered: {name} → {pkg}.{level}.{type_}.{inst}")
+    _regen_bp_tables()
+    return 0
+
+
+def unregister_name(name: str) -> int:
+    """Remove the blueprint row whose canonical name is NAME and regenerate the
+    kernel bp tables. (Aliases are not removable on their own — edit the row.)"""
+    data = json.loads(REGISTRY.read_text())
+    bps = data["blueprints"]
+    kept = [b for b in bps if b["name"] != name]
+    if len(kept) == len(bps):
+        print(f"not registered (nothing to remove): {name}", file=sys.stderr)
+        return 1
+    removed = [b for b in bps if b["name"] == name]
+    data["blueprints"] = kept
+    REGISTRY.write_text(json.dumps(data, indent=2) + "\n")
+    for b in removed:
+        print(f"unregistered: {name} (was "
+              f"{b.get('pkg',1)}.{b.get('level',2)}.{b.get('type',99)}.{b['inst']})")
+    _regen_bp_tables()
+    return 0
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
-                    help="exit nonzero if name drift exists (CI/wellness)")
+                    help="exit nonzero if name drift OR an unregistered "
+                         "(bp \"name\") reference exists (CI/wellness)")
     ap.add_argument("--json", action="store_true",
                     help="emit machine-readable scan result")
     ap.add_argument("--emit-registry", action="store_true",
                     help="(re)generate form-stdlib/blueprint-registry.json "
                          "from code, preserving curated meanings")
+    # register / unregister a single name (the mechanism the kernels point at).
+    ap.add_argument("register", nargs="?", choices=["register", "unregister"],
+                    help=argparse.SUPPRESS)
+    ap.add_argument("name", nargs="?", help=argparse.SUPPRESS)
+    ap.add_argument("--level", type=int, default=2,
+                    help="compositional level for register (default 2)")
+    ap.add_argument("--type", type=int, default=99, dest="type_",
+                    help="NodeID type for register (default 99, user-space)")
+    ap.add_argument("--meaning", default="",
+                    help="human-readable meaning for the registered shape")
+    ap.add_argument("--defined-in", default=None,
+                    help="path of the .fk file that uses this name")
+    ap.add_argument("--inst", type=int, default=None,
+                    help="explicit instance number (migrate an existing literal "
+                         "at its current coordinate); default auto-allocates")
     args = ap.parse_args()
+
+    if args.register == "register":
+        if not args.name:
+            ap.error("register requires a NAME")
+        return register_name(args.name, level=args.level, type_=args.type_,
+                             meaning=args.meaning, defined_in=args.defined_in,
+                             inst=args.inst)
+    if args.register == "unregister":
+        if not args.name:
+            ap.error("unregister requires a NAME")
+        return unregister_name(args.name)
 
     if args.emit_registry:
         generated = emit_registry()
@@ -336,6 +487,7 @@ def main() -> int:
         report(s)
 
     if args.check:
+        failed = False
         # Forward-looking gate: no new type-99 number may ship without a
         # registry row. This is what keeps the magic-number sprawl from
         # growing — the ongoing hygiene the registry doc commits to. Run
@@ -346,6 +498,18 @@ def main() -> int:
                   f"{[fmt_key(k) for k in s['unregistered_99']]}\n"
                   f"      Add a row (run --emit-registry) before shipping a "
                   f"new Blueprint number.", file=sys.stderr)
+            failed = True
+        # The silent-collision gate: every (bp "name") must resolve. The kernels
+        # now fail loud at runtime; this fails the build first, with the fix.
+        if s.get("unregistered_bp_names"):
+            names = sorted(s["unregistered_bp_names"])
+            print(f'FAIL: {len(names)} (bp "name") reference(s) with no registry '
+                  f"row — the kernels will fail loud on these: {names}\n"
+                  f"      Register each: "
+                  f"python3 scripts/scan_form_blueprints.py register <NAME>",
+                  file=sys.stderr)
+            failed = True
+        if failed:
             return 1
     return 0
 

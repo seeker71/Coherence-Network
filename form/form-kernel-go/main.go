@@ -2052,7 +2052,15 @@ func (k *Kernel) registerNatives() {
 		if c, ok := bpTable[args[0].Str]; ok {
 			return Value{Kind: VNodeID, Nid: NodeID{Pkg: c[0], Level: c[1], Type: c[2], Inst: c[3]}}
 		}
-		return Value{Kind: VNodeID, Nid: NodeID{Pkg: 1, Level: 2, Type: 0, Inst: 0}}
+		// Fail loud — never invent a NodeID for an unknown name. The old silent
+		// fallback to {1,2,0,0} collapsed EVERY unregistered name onto one
+		// NodeID, so distinct blueprints collided invisibly (the bug that bit
+		// the Shamballa channel twice). The substrate's promise is that identity
+		// is bounded by what is registered; an unregistered name is a missing
+		// registration, not a valid shape. Sibling parity: Rust panics, TS throws.
+		panic(fmt.Sprintf("bp: unregistered blueprint name %q — register it: "+
+			"python3 scripts/scan_form_blueprints.py register %s (bp tables then regenerate). "+
+			"The substrate never invents a NodeID for an unknown name.", args[0].Str, args[0].Str))
 	})
 	k.registerNative("intern_trivial_int", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internTrivialInt(args[0].Int)}

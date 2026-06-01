@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 239
+**Total files**: 244
 
 | File | Purpose |
 |---|---|
@@ -20,6 +20,10 @@
 | [agent_execution_retry.py](agent_execution_retry.py) | Retry bookkeeping helpers for agent task execution. |
 | [agent_execution_service.py](agent_execution_service.py) | Server-side execution for agent tasks. |
 | [agent_execution_task_flow.py](agent_execution_task_flow.py) | Agent execution orchestration helpers. |
+| [agent_invitation.py](agent_invitation.py) | Builder for the public agent invitation payload. |
+| [agent_invitation_core.py](agent_invitation_core.py) | Core invitation content for agents entering Coherence Network. |
+| [agent_invitation_lineage.py](agent_invitation_lineage.py) | Lineage, identity, and principle content for the agent invitation. |
+| [agent_invitation_surfaces.py](agent_invitation_surfaces.py) | Public entry and contribution surface content for the agent invitation. |
 | [agent_monitor_guidance_service.py](agent_monitor_guidance_service.py) | Guidance text helpers for agent monitor issues. |
 | [agent_question_service.py](agent_question_service.py) | Agent question channel — in-memory queue and SSE event log. |
 | [agent_routing_service.py](agent_routing_service.py) | Deterministic agent routing and provider classification utilities. |
@@ -36,6 +40,7 @@
 | [agent_service_store.py](agent_service_store.py) | Agent task store: in-memory store, persistence, serialization. |
 | [agent_service_task_derive.py](agent_service_task_derive.py) | Agent task state derivation: phase, graph state, failure diagnostics. |
 | [agent_service_usage_visibility.py](agent_service_usage_visibility.py) | Agent usage, visibility, and orchestration guidance summaries. |
+| [agent_start_packet.py](agent_start_packet.py) | Compact startup packet for fresh agents entering Coherence Network. |
 | [agent_task_continuation_service.py](agent_task_continuation_service.py) | Post-execution task continuation helpers. |
 | [agent_task_store_service.py](agent_task_store_service.py) | Persistent store for agent tasks with shared DB support. |
 | [anonymous_meeting_trace_service.py](anonymous_meeting_trace_service.py) | Anonymous meeting traces. |

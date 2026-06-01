@@ -6,15 +6,22 @@
 
 The machine-readable registry is [`form-stdlib/blueprint-registry.json`](form-stdlib/blueprint-registry.json) — one row per type-99 shape: canonical name, meaning, aliases, defining files. It is **code-derived and scanner-verified**, so it cannot quietly drift from reality the way a hand-kept table does. (This document used to claim `1870 = ARRIVAL`; the code says `1870 = UUID`. That drift is exactly what a generated, verified registry prevents.) This markdown holds the *why* — allocation rationale, composition reviews, the living narrative below. The JSON holds the *what*.
 
-**How a Form file uses a Blueprint:** load `form-stdlib/form-ontology-loader.fk` as a prelude and ask by name — `(bp "JSON-OBJECT")`, `(bp "add")`, `(bp "UUID")`. The loader reads the registry (and the kernel-aligned categories/primitives in `form-ontology.json`) and resolves the name to its NodeID. The raw `(make_nodeid 1 2 99 N)` literal never appears in feature code. An unregistered name resolves to the undefined NodeID `(1 2 0 0)` — the scanner guards against that shipping.
+**How a Form file uses a Blueprint:** load `form-stdlib/form-ontology-loader.fk` as a prelude and ask by name — `(bp "JSON-OBJECT")`, `(bp "add")`, `(bp "UUID")`. The loader reads the registry (and the kernel-aligned categories/primitives in `form-ontology.json`) and resolves the name to its NodeID. The raw `(make_nodeid 1 2 99 N)` literal never appears in feature code. **An unregistered name now fails loud** — the kernels (Go/Rust/TS) raise rather than resolve, because the old silent fallback to `(1 2 0 0)` collapsed *every* unknown name onto one NodeID, so distinct blueprints collided invisibly (the bug that bit the Shamballa channel twice). Identity is bounded by what is registered; an unknown name is a missing registration, not a valid shape. The scanner catches it before runtime; the kernel catches it at runtime.
 
-**How to add a new shape:** add the row first (`python3 scripts/scan_form_blueprints.py --emit-registry` harvests it from a `(let NAME (make_nodeid 1 2 99 N))` you write, or curate by hand and set `"curated": true` to protect the name/meaning across regenerations), then reference it via `(bp "NAME")`. The scanner's `--check` (run in `make wellness`) fails if any type-99 number is used without a registry row.
+**How to register / unregister a name:** one command, which also regenerates the three kernel bp tables —
+```bash
+python3 scripts/scan_form_blueprints.py register MY-SHAPE              # allocate a free inst, add the row
+python3 scripts/scan_form_blueprints.py register MY-SHAPE --inst 9502  # migrate an existing literal at its coordinate
+python3 scripts/scan_form_blueprints.py unregister MY-SHAPE            # remove the row
+```
+`--level` / `--type` / `--meaning` / `--defined-in` tune the row. (The older `--emit-registry` still harvests every `(let NAME (make_nodeid …))` literal at once, preserving curated rows.) Then reference it via `(bp "MY-SHAPE")`. The scanner's `--check` (run in `make wellness`) fails if any type-99 number — *or any `(bp "NAME")` reference* — has no registry row.
 
 **Why the file *and* the substrate:** the Form kernels (Go/Rust/TS) are standalone offline engines with no DB access, so the authored source of truth must be a file `(bp ...)` can read at load time. The substrate is the body's *query* surface — `substrate_named_cells(name, domain, blueprint_node_id)` is exactly a Blueprint-registry row. So this follows the same two-layer pattern as the KB: author in the file, **project into the DB** via `python3 scripts/sync_blueprints_to_substrate.py` (domain `form-blueprint`; wired into `substrate_post_merge_hook.sh`). After the sync, `lookup_cell(session, "form-blueprint", "JSON-OBJECT")` → `1.2.99.10`, and a Blueprint name can surface alongside the cells that share its shape. The file stays authoritative; the DB is the reflection, not a second place to author.
 
 **The scanner — `scripts/scan_form_blueprints.py`:**
-- no args → full report: every `make_nodeid` literal, how many shapes are registered, which numbers wear many local names (synonyms to collapse), which names point at more than one number (drift to heal).
-- `--check` → forward gate: nonzero exit if a type-99 number is used but unregistered.
+- no args → full report: every `make_nodeid` literal, how many shapes are registered, which numbers wear many local names (synonyms to collapse), which names point at more than one number (drift to heal), and any `(bp "NAME")` reference with no registry row.
+- `--check` → forward gate: nonzero exit if a type-99 number *or a `(bp "NAME")` reference* is used but unregistered.
+- `register NAME` / `unregister NAME` → add/remove one row and regenerate the kernel bp tables (`--inst` to honor an existing coordinate).
 - `--emit-registry` → regenerate the JSON from code, preserving curated rows.
 
 ## The Problem (as named)
