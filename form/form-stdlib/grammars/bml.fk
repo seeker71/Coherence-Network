@@ -485,6 +485,148 @@
             self
             env))
 
+    (defn bml-constructor-env-blueprint (_x)
+        (make_nodeid 1 2 99 9202))
+
+    (defn bml-body-source-self-call? (body-component)
+        (do
+            (let values (bml-body-source-values body-component))
+            (if (gt (len values) 1)
+                (if (str_eq (head values) "self")
+                    (str_eq (nth values 1) "(")
+                    false)
+                false)))
+
+    (defn bml-body-source-self-args-append-current (current acc)
+        (if (str_eq current "") acc
+            (cons current acc)))
+
+    (defn bml-body-source-self-args-loop (values depth current acc)
+        (if (nil? values)
+            (reverse-list
+                (bml-body-source-self-args-append-current current acc))
+            (do
+                (let value (head values))
+                (if (eq depth 0)
+                    (if (str_eq value ")")
+                        (reverse-list
+                            (bml-body-source-self-args-append-current
+                                current
+                                acc))
+                    (if (str_eq value ",")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            0
+                            ""
+                            (bml-body-source-self-args-append-current
+                                current
+                                acc))
+                    (if (str_eq value "(")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            1
+                            current
+                            acc)
+                    (if (str_eq value "<")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            1
+                            current
+                            acc)
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            0
+                            (if (str_eq current "") value current)
+                            acc)))))
+                    (if (str_eq value ")")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            (sub depth 1)
+                            current
+                            acc)
+                    (if (str_eq value ">")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            (sub depth 1)
+                            current
+                            acc)
+                    (if (str_eq value "(")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            (add depth 1)
+                            current
+                            acc)
+                    (if (str_eq value "<")
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            (add depth 1)
+                            current
+                            acc)
+                        (bml-body-source-self-args-loop
+                            (tail values)
+                            depth
+                            current
+                            acc)))))))))
+
+    (defn bml-body-source-self-args (body-component)
+        (if (bml-body-source-self-call? body-component)
+            (bml-body-source-self-args-loop
+                (drop 2 (bml-body-source-values body-component))
+                0
+                ""
+                (empty))
+            (empty)))
+
+    (defn bml-find-constructor-by-param-count (constructors param-count)
+        (if (nil? constructors) (empty)
+            (if (eq (len (bml-constructor-parameters (head constructors))) param-count)
+                (head constructors)
+                (bml-find-constructor-by-param-count
+                    (tail constructors)
+                    param-count))))
+
+    (defn bml-body-source-arg-value (env arg-name)
+        (if (str_eq arg-name "null") (empty)
+            (if (str_eq arg-name "Array") (empty)
+                (record_get env arg-name))))
+
+    (defn bml-constructor-bind-args-loop (parameters arg-names source-env target-env)
+        (if (nil? parameters) target-env
+            (do
+                (record_set
+                    target-env
+                    (bml-parameter-name (head parameters))
+                    (bml-body-source-arg-value source-env (head arg-names)))
+                (bml-constructor-bind-args-loop
+                    (tail parameters)
+                    (tail arg-names)
+                    source-env
+                    target-env))))
+
+    (defn bml-constructor-bind-args (constructor arg-names source-env)
+        (bml-constructor-bind-args-loop
+            (bml-constructor-parameters constructor)
+            arg-names
+            source-env
+            (record_new (bml-constructor-env-blueprint 0))))
+
+    (defn bml-exec-constructor (constructors constructor self env)
+        (do
+            (let body (bml-constructor-body constructor))
+            (if (gt (bml-body-source-assignment-count body) 0)
+                (bml-body-source-exec-assignments body self env)
+            (if (bml-body-source-self-call? body)
+                (do
+                    (let arg-names (bml-body-source-self-args body))
+                    (let target
+                        (bml-find-constructor-by-param-count
+                            constructors
+                            (len arg-names)))
+                    (let target-env
+                        (bml-constructor-bind-args target arg-names env))
+                    (bml-exec-constructor constructors target self target-env))
+                self))))
+
     (defn bml-template-parameters (template-component)
         (nth (comp-bml-fields template-component) 0))
 

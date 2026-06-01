@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-self-constructor-20260601",
+  "commit_scope": "Execute self(...) constructor chaining parsed from original container-Rule.bml into native Form record state.",
+  "files_owned": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_self_constructor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk"
+    ],
+    "notes": "New real-source Rule self-constructor proof passes at 131071 and the prior Rule body execution proof remains 4095 across Go/Rust/TypeScript kernels."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The self(...) constructor bodies parsed from original container-Rule.bml now forward into the full constructor, bind actual arguments into the target constructor environment, and mutate native records.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "self(...) constructor chaining is proven from real source; general method dispatch, rich expression/control-flow lowering, inheritance constructor behavior, and BMF-grammar.bml body lowering remain open parity gaps."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "bml-self-constructor-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/grammars/bml.fk adds self(...) detection, top-level argument extraction, constructor lookup by arity, argument binding, and recursive constructor execution over parsed BodySource tokens.",
+    "form/form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk reads original container-Rule.bml, executes two self(...) constructor overloads, and verifies native record state after forwarding into the full constructor.",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md records self-constructor chaining as proven while keeping general constructor inheritance, method dispatch, and complex body lowering as explicit gaps."
+  ],
+  "change_files": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_self_constructor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
