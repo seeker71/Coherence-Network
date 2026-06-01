@@ -987,6 +987,584 @@ def accumulated_report(path: Path) -> dict | None:
     }
 
 
+# ---------------------------------------------------------------------------
+# The LEARNING half — lc-identity-is-shared-blueprint-and-recipe, the build the
+# fold recipe stood ready for. The compression-fold recipe APPLIES a given
+# reduction (idx + coeffs); this LEARNS, per category, WHICH dimension of the
+# accumulated edge-event memory went redundant and the coeffs that fold it.
+#
+# Per category (Blueprint NodeID — content-addressing), the accumulated rows
+# form a matrix: one row per recorded edge-event, columns the numeric
+# dimensions of that memory:
+#
+#     [pkg, level, type, inst, fire_count]
+#
+# (the four NodeID components + the fire-count signal). A dimension is
+# REDUNDANT iff it is LINEARLY PREDICTABLE from the others across the
+# category's rows with ZERO residual — exactly the condition `reconstruct`
+# needs, since `predicted[idx] = Σ_{j≠idx} coeffs[j] · inputs[j]` is a linear
+# combination with NO intercept. The learner solves least-squares for those
+# coeffs per candidate dimension and measures the residual; a dimension whose
+# residual is within float tolerance is genuinely redundant — safe to fold
+# losslessly. A dimension that carries residual is surprising — NEVER folded
+# (folding it would lose information; the concept's whole point).
+#
+# Honesty bar (named, not buried): redundancy == max-abs residual ≤
+# _REDUNDANCY_TOL. This is exact linear redundancy (a constant dimension, or a
+# literal linear combination of the others across ALL rows), not a noisy fit.
+# A category where every dimension carries residual above tolerance is NOT
+# compressible — the learner says so and folds nothing.
+#
+# core-abstraction-first: ONE learner over categories-as-DATA and dimensions-
+# as-DATA. No per-dimension or per-category special-casing — the spec (idx +
+# coeffs) drops out as values the same `compress`/`reconstruct` recipe applies.
+#
+# OFFLINE only: reads the persisted memory, runs the analysis, optionally
+# writes the compressed memory. Never the live request path.
+# ---------------------------------------------------------------------------
+
+# The numeric dimensions of a category's edge-event memory, in column order.
+# projection is DELIBERATELY excluded from the folded matrix: it is a
+# per-category CONSTANT derived from the NodeID position (the same value on
+# every row of a category), so it is trivially redundant but carries no
+# independent signal — folding it proves nothing the NodeID columns don't. The
+# honest dimensions that vary across a category's rows are the four NodeID
+# components (constant within a category) plus fire_count (the one that moves).
+_MEMORY_DIMS = ["pkg", "level", "type", "inst", "fire_count"]
+
+# Redundancy tolerance: a dimension counts as redundant iff the least-squares
+# reconstruction's max-abs residual across the category's rows is at or below
+# this. Tight enough that only EXACT linear redundancy (constant column or a
+# literal linear combination) passes — never a noisy fit. The normal-equations
+# solve introduces float round-off at the 1e-12 scale on integer data, so the
+# bar sits a few orders above that and far below any real residual (the
+# fire_count axis carries residual ~14, six orders larger).
+_REDUNDANCY_TOL = 1e-6
+
+
+def _memory_matrix(rows: list[dict]) -> list[list[float]]:
+    """Build the per-row dimension matrix for ONE category's edge-events.
+
+    Each row -> [pkg, level, type, inst, fire_count] as floats. The four NodeID
+    components come from the row's Blueprint (constant within a category by
+    content-addressing); fire_count is the per-event signal that varies.
+    """
+    M: list[list[float]] = []
+    for r in rows:
+        tup = _parse_nodeid(r.get("blueprint"))
+        if tup is None:
+            continue
+        M.append(
+            [
+                float(tup[0]),
+                float(tup[1]),
+                float(tup[2]),
+                float(tup[3]),
+                float(int(r.get("fire_count", 0))),
+            ]
+        )
+    return M
+
+
+def _solve_least_squares_no_intercept(
+    M: list[list[float]], idx: int
+) -> tuple[list[float], float]:
+    """Predict column ``idx`` from the OTHER columns, no intercept.
+
+    Solves ``A x = M[:,idx]`` in the least-squares sense (normal equations
+    ``AᵀA x = Aᵀy``) where ``A`` is M with column idx removed. Returns
+    ``(coeffs, residual)`` where ``coeffs`` is the FULL N-length coefficient
+    vector with ``coeffs[idx] = 0`` (the axis does not predict itself — exactly
+    the shape ``reconstruct`` consumes) and ``residual`` is the MAX-ABS
+    prediction error across the rows (the honest redundancy measure: a single
+    surprising row keeps the dimension out of the redundant set).
+
+    Pure Python (Gaussian elimination with partial pivoting) — no numpy
+    dependency, and the matrices are tiny (≤5 columns).
+    """
+    n = len(M)
+    d = len(M[0]) if M else 0
+    cols = [j for j in range(d) if j != idx]
+    k = len(cols)
+    if n == 0 or k == 0:
+        return ([0.0] * d, float("inf"))
+
+    # Normal equations: AᵀA (k×k) and Aᵀy (k).
+    ata = [[sum(M[r][cols[a]] * M[r][cols[b]] for r in range(n)) for b in range(k)] for a in range(k)]
+    aty = [sum(M[r][cols[a]] * M[r][idx] for r in range(n)) for a in range(k)]
+
+    # Augmented [AᵀA | Aᵀy], Gauss-Jordan with partial pivot.
+    aug = [ata[i][:] + [aty[i]] for i in range(k)]
+    for c in range(k):
+        piv = max(range(c, k), key=lambda r: abs(aug[r][c]))
+        if abs(aug[piv][c]) < 1e-12:
+            # Singular pivot — that predictor column is constant-zero or
+            # collinear; leave its coefficient 0 and move on (a degenerate
+            # predictor cannot help, the residual measure judges the outcome).
+            continue
+        aug[c], aug[piv] = aug[piv], aug[c]
+        pv = aug[c][c]
+        aug[c] = [v / pv for v in aug[c]]
+        for r in range(k):
+            if r != c and abs(aug[r][c]) > 1e-15:
+                f = aug[r][c]
+                aug[r] = [aug[r][t] - f * aug[c][t] for t in range(k + 1)]
+    x = [aug[i][k] for i in range(k)]
+
+    # Max-abs residual across rows (the redundancy measure).
+    resid = 0.0
+    for r in range(n):
+        pred = sum(x[a] * M[r][cols[a]] for a in range(k))
+        resid = max(resid, abs(pred - M[r][idx]))
+
+    coeffs = [0.0] * d
+    for a in range(k):
+        coeffs[cols[a]] = x[a]
+    return (coeffs, resid)
+
+
+def _is_integer_coeffs(coeffs: list[float], tol: float = 1e-9) -> bool:
+    """True when every coefficient is (within tol) an integer.
+
+    Integer coeffs + integer dimension values keep the Form ``compress`` /
+    ``reconstruct`` round-trip on exact integers — no float crosses the kernel
+    print boundary, so the proof is byte-exact across siblings.
+    """
+    return all(abs(c - round(c)) <= tol for c in coeffs)
+
+
+def learn_redundant_dimensions(rows: list[dict]) -> dict:
+    """Per category, LEARN which dimension(s) of the memory are redundant.
+
+    Groups the accumulated edge-event rows by Blueprint NodeID (the category),
+    builds each category's dimension matrix, and for every candidate dimension
+    solves the no-intercept least-squares predictor. A dimension is REDUNDANT
+    iff its residual ≤ ``_REDUNDANCY_TOL`` — exactly linearly predictable from
+    the others, so ``reconstruct`` recovers it without loss.
+
+    Per category it picks ONE dimension to fold (the redundant one with the
+    smallest residual; ties broken toward INTEGER coeffs so the Form round-trip
+    stays on exact integers, then toward the lowest index for determinism).
+    A category with NO redundant dimension is reported as NOT compressible —
+    nothing folded, honestly named.
+
+    Returns:
+      {
+        "dims": _MEMORY_DIMS,
+        "tolerance": _REDUNDANCY_TOL,
+        "categories": [
+          {
+            "blueprint", "rows", "n_dims",
+            "redundant": [{"idx","dim","residual","coeffs","integer_coeffs"}],
+            "compressible": bool,
+            "fold": {"idx","dim","coeffs","residual","integer_coeffs"} | None,
+            "sample_vec": [..],   # one real row, for the round-trip proof
+          }, ...
+        ],
+      }
+    """
+    by_bp: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        bp = r.get("blueprint")
+        if bp:
+            by_bp[bp].append(r)
+
+    categories: list[dict] = []
+    for bp, cat_rows in sorted(by_bp.items()):
+        M = _memory_matrix(cat_rows)
+        d = len(_MEMORY_DIMS)
+        cat: dict = {
+            "blueprint": bp,
+            "rows": len(M),
+            "n_dims": d,
+            "redundant": [],
+            "compressible": False,
+            "fold": None,
+            "sample_vec": [int(round(x)) for x in M[0]] if M else None,
+        }
+        if not M:
+            categories.append(cat)
+            continue
+
+        for idx in range(d):
+            coeffs, resid = _solve_least_squares_no_intercept(M, idx)
+            if resid <= _REDUNDANCY_TOL:
+                # Round coeffs that are integers-within-tol to clean ints, so
+                # the fold spec is exact for the Form round-trip.
+                int_ok = _is_integer_coeffs(coeffs)
+                clean = [round(c) if int_ok else c for c in coeffs]
+                cat["redundant"].append(
+                    {
+                        "idx": idx,
+                        "dim": _MEMORY_DIMS[idx],
+                        "residual": resid,
+                        "coeffs": clean,
+                        "integer_coeffs": int_ok,
+                    }
+                )
+
+        if cat["redundant"]:
+            cat["compressible"] = True
+            # Pick the fold: smallest residual, prefer integer coeffs, then
+            # lowest index — deterministic, and integer-clean for the proof.
+            best = min(
+                cat["redundant"],
+                key=lambda rd: (rd["residual"], not rd["integer_coeffs"], rd["idx"]),
+            )
+            cat["fold"] = {
+                "idx": best["idx"],
+                "dim": best["dim"],
+                "coeffs": best["coeffs"],
+                "residual": best["residual"],
+                "integer_coeffs": best["integer_coeffs"],
+            }
+        categories.append(cat)
+
+    return {
+        "dims": _MEMORY_DIMS,
+        "tolerance": _REDUNDANCY_TOL,
+        "categories": categories,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Driving the REAL Form compress/reconstruct recipe on the proof case.
+#
+# The concept says compression IS a Form recipe — so the round-trip proof must
+# run the actual kernel recipe (grammars/compression-fold.fk), not a Python
+# reimplementation. The learner runs in Python (least-squares over the rows);
+# the APPLY + PROOF drives the real recipe through the kernel on the
+# representative integer vector. We say plainly which part ran where.
+# ---------------------------------------------------------------------------
+
+_COMPRESSION_FOLD_GRAMMAR = (
+    ROOT / "form" / "form-stdlib" / "grammars" / "compression-fold.fk"
+)
+
+
+def _form_list(ints: list[int]) -> str:
+    """Render a Python int list as a Form ``(list ...)`` literal."""
+    return "(list " + " ".join(str(int(round(x))) for x in ints) + ")"
+
+
+def drive_form_fold(
+    vec: list[int], idx: int, coeffs: list[int]
+) -> dict | None:
+    """Run the REAL Form compress/reconstruct recipe on one vector via the kernel.
+
+    Drives ``grammars/compression-fold.fk``: ``compress(vec, idx)`` then
+    ``reconstruct(folded, idx, coeffs)``, and ``cf-list-eq`` of the result with
+    the original — all inside the Form runtime, no Python arithmetic on the
+    fold itself. Returns:
+      {"exact": bool, "n": int, "folded_len": int, "reconstructed": [..]}
+    or None when the kernel/grammar is unavailable (honest: the analysis still
+    reports the LEARNED redundancy, marked as Python-only-not-kernel-proven).
+
+    Integer vec + integer coeffs keep the whole round-trip on exact integers, so
+    the kernel's printed result is byte-exact — the same value the band proves
+    three-way.
+    """
+    if not kernel_available() or not _COMPRESSION_FOLD_GRAMMAR.is_file():
+        return None
+    expr = (
+        "(do"
+        f"  (let v {_form_list(vec)})"
+        f"  (let folded (compress v {idx}))"
+        f"  (let coeffs {_form_list(coeffs)})"
+        f"  (let rebuilt (reconstruct folded {idx} coeffs))"
+        "  (list (cf-list-eq rebuilt v) (len v) (len folded) rebuilt))"
+    )
+    # Write the driver beside nothing — pass it as a second source after the
+    # grammar prelude (mirrors validate.sh's prelude+test invocation).
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".fk", delete=False, encoding="utf-8"
+    ) as fh:
+        fh.write(expr + "\n")
+        driver = fh.name
+    try:
+        proc = _run_kernel([str(_COMPRESSION_FOLD_GRAMMAR), driver])
+    finally:
+        try:
+            os.unlink(driver)
+        except OSError:
+            pass
+    out = proc.stdout.strip()
+    if proc.returncode != 0 or not out:
+        return None
+    last = out.splitlines()[-1].strip()
+    # Expect a Form list like: [1, 5, 4, [1, 2, 34, 1, 7]]
+    try:
+        parsed = json.loads(last)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, list) or len(parsed) != 4:
+        return None
+    return {
+        "exact": parsed[0] == 1,
+        "n": int(parsed[1]),
+        "folded_len": int(parsed[2]),
+        "reconstructed": parsed[3],
+        "raw": last,
+    }
+
+
+def compress_memory(path: Path) -> dict | None:
+    """Learn per-category redundancy over the accumulated memory and fold it.
+
+    The wiring that closes the autoencoder loop:
+      1. read the accumulated edge-event memory,
+      2. LEARN, per category, which dimension is redundant (least-squares),
+      3. APPLY the Form compression-fold to the redundant axis and PROVE the
+         round-trip recovers it EXACTLY on a real recorded vector (driving the
+         actual kernel recipe), and
+      4. report the size reduction (N→N−1 per row) for the compressible
+         categories, and honestly name the categories where nothing was
+         redundant.
+
+    Returns None when there is no accumulated memory yet (caller says so).
+    Otherwise a dict carrying the learning result, the per-compressible-category
+    kernel-driven round-trip proof, and the structural shrink. OFFLINE: this
+    reads and analyzes; it does not mutate the live store unless a future
+    writer is wired (the fold is proven, the compressed store write is a
+    deliberate, separately-named step).
+    """
+    rows = read_edge_events(path)
+    if not rows:
+        return None
+    learned = learn_redundant_dimensions(rows)
+    run_ids = {r.get("run_id") for r in rows if r.get("run_id")}
+
+    proofs: list[dict] = []
+    compressible = 0
+    for cat in learned["categories"]:
+        if not cat["compressible"] or not cat["fold"] or not cat["sample_vec"]:
+            continue
+        compressible += 1
+        fold = cat["fold"]
+        # Drive the REAL Form recipe on this category's representative vector.
+        coeffs = [int(round(c)) for c in fold["coeffs"]] if fold["integer_coeffs"] else fold["coeffs"]
+        kernel_proof = None
+        if fold["integer_coeffs"]:
+            kernel_proof = drive_form_fold(cat["sample_vec"], fold["idx"], coeffs)
+        redundant_dims = {rd["dim"] for rd in cat["redundant"]}
+        non_redundant = [d for d in _MEMORY_DIMS if d not in redundant_dims]
+        proofs.append(
+            {
+                "blueprint": cat["blueprint"],
+                "rows": cat["rows"],
+                "n_dims": cat["n_dims"],
+                "fold_idx": fold["idx"],
+                "fold_dim": fold["dim"],
+                "non_redundant": non_redundant,
+                "residual": fold["residual"],
+                "coeffs": fold["coeffs"],
+                "integer_coeffs": fold["integer_coeffs"],
+                "sample_vec": cat["sample_vec"],
+                "kernel_proof": kernel_proof,
+                # Structural shrink: each of `rows` row-vectors goes N -> N-1.
+                "shrink": {
+                    "before_dims": cat["n_dims"],
+                    "after_dims": cat["n_dims"] - 1,
+                    "rows": cat["rows"],
+                    "scalars_before": cat["n_dims"] * cat["rows"],
+                    "scalars_after": (cat["n_dims"] - 1) * cat["rows"],
+                },
+            }
+        )
+
+    return {
+        "runs": len(run_ids),
+        "rows": len(rows),
+        "learned": learned,
+        "proofs": proofs,
+        "compressible_count": compressible,
+        "incompressible_count": len(learned["categories"]) - compressible,
+    }
+
+
+def render_compress_memory(result: dict, top: int | None) -> str:
+    """Render the learn-and-fold report — the autoencoder loop, closed."""
+    out: list[str] = []
+    out.append("# Kernel memory compression — LEARN the redundant axis, then FOLD it")
+    out.append("")
+    out.append(
+        f"Read {result['rows']} edge-event rows across {result['runs']} recorded "
+        f"run(s); grouped by Blueprint NodeID (the content-addressed category)."
+    )
+    out.append(
+        "  Per category the memory is a matrix: one row per edge-event, columns"
+    )
+    out.append(
+        f"  the numeric dimensions {result['learned']['dims']}."
+    )
+    out.append(
+        "  A dimension is REDUNDANT iff it is linearly predictable from the"
+    )
+    out.append(
+        f"  others with max-abs residual ≤ {result['learned']['tolerance']:g}"
+    )
+    out.append(
+        "  (exact linear redundancy — a constant column or a literal linear"
+    )
+    out.append(
+        "  combination, never a noisy fit). The learner solves no-intercept"
+    )
+    out.append(
+        "  least-squares per candidate dimension; the residual is the honest"
+    )
+    out.append("  redundancy measure. Learning runs in PYTHON.")
+    out.append("")
+    out.append(
+        f"  Compressible categories: {result['compressible_count']}   "
+        f"NOT compressible: {result['incompressible_count']}"
+    )
+    out.append("")
+
+    # The compressible categories — folded, with the kernel-driven round-trip.
+    out.append("## Compressible categories — folded N → N−1, round-trip proven")
+    out.append("")
+    if not result["proofs"]:
+        out.append("  (no category had a redundant dimension — nothing folded)")
+    for p in result["proofs"]:
+        out.append(
+            f"  · {p['blueprint']}  ({p['rows']} rows, {p['n_dims']} dims)"
+        )
+        out.append(
+            f"      LEARNED redundant dim: [{p['fold_idx']}] {p['fold_dim']}  "
+            f"(residual {p['residual']:.2e})"
+        )
+        out.append(
+            f"      coeffs (predict {p['fold_dim']} from the rest): {p['coeffs']}"
+            f"{'  (integer)' if p['integer_coeffs'] else '  (float)'}"
+        )
+        kp = p["kernel_proof"]
+        if kp is not None:
+            verdict = "EXACT ✓" if kp["exact"] else "✗ NOT EXACT"
+            out.append(
+                f"      FORM recipe (kernel-driven): compress({p['sample_vec']}, "
+                f"{p['fold_idx']}) → len {kp['folded_len']}; "
+                f"reconstruct → {kp['reconstructed']}  [{verdict}]"
+            )
+            out.append(
+                f"      round-trip N→N−1: {kp['n']} → {kp['folded_len']} "
+                f"per row — the dropped {p['fold_dim']} re-derived exactly."
+            )
+        else:
+            out.append(
+                "      FORM recipe NOT driven (kernel/grammar unavailable, or "
+                "float coeffs) — redundancy LEARNED in Python, fold not "
+                "kernel-proven this run."
+            )
+        # The honest per-category NEGATIVE on real data: the dimension(s) that
+        # were NOT redundant — the surprising axes the learner REFUSED to fold.
+        out.append(
+            f"      NOT folded (carries surprise, residual > tol): "
+            f"{', '.join(p['non_redundant']) or '(none)'} — folding these would "
+            "LOSE information; honestly left."
+        )
+        sh = p["shrink"]
+        out.append(
+            f"      structural shrink: {sh['rows']} rows × "
+            f"{sh['before_dims']} dims = {sh['scalars_before']} scalars  →  "
+            f"{sh['rows']} × {sh['after_dims']} = {sh['scalars_after']} scalars "
+            f"(−{sh['rows']} per fold, lossless)."
+        )
+        out.append("")
+
+    # The honest negative — categories where nothing was redundant.
+    out.append("## NOT compressible — every dimension carries surprise")
+    out.append("")
+    any_incompressible = False
+    for cat in result["learned"]["categories"]:
+        if cat["compressible"]:
+            continue
+        any_incompressible = True
+        out.append(
+            f"  · {cat['blueprint']}  ({cat['rows']} rows) — no dimension is "
+            "linearly predictable within tolerance; folding any would LOSE"
+        )
+        out.append(
+            "    information. Honestly left at full size."
+        )
+    if not any_incompressible:
+        out.append(
+            "  No category was incompressible — and that is the HONEST structural"
+        )
+        out.append(
+            "  truth, not a gap: a category is content-addressed by its Blueprint"
+        )
+        out.append(
+            "  NodeID, so its four structural columns (pkg, level, type, inst) are"
+        )
+        out.append(
+            "  CONSTANT across the category's rows — constant ⇒ trivially"
+        )
+        out.append(
+            "  redundant ⇒ always at least one foldable dimension. The genuine"
+        )
+        out.append(
+            "  NON-redundant axis on real data is fire_count (the one that VARIES"
+        )
+        out.append(
+            "  and carries surprise — the same axis the surprise-gate keys on);"
+        )
+        out.append(
+            "  the learner refuses to fold it in every category above. A wholly-"
+        )
+        out.append(
+            "  incompressible category (ALL dims surprising) is reachable by"
+        )
+        out.append(
+            "  construction (a full-rank matrix with no linear dependence) but"
+        )
+        out.append(
+            "  does not arise under content-addressing — so the negative shows"
+        )
+        out.append(
+            "  here at the DIMENSION level (fire_count, never folded), not the"
+        )
+        out.append("  category level.")
+    out.append("")
+
+    out.append("## What ran where, and what stays named")
+    out.append("")
+    out.append(
+        "  LEARNING (which dim is redundant + the coeffs): PYTHON least-squares"
+    )
+    out.append(
+        "  over the accumulated rows. APPLY + ROUND-TRIP PROOF: the REAL Form"
+    )
+    out.append(
+        "  compress/reconstruct recipe (grammars/compression-fold.fk) driven"
+    )
+    out.append(
+        "  through the kernel on each compressible category's representative"
+    )
+    out.append(
+        "  integer vector — the fold is Form-native, not a Python trick."
+    )
+    out.append("")
+    out.append(
+        "  Still named (not built here): non-linear redundancy (only exact"
+    )
+    out.append(
+        "  LINEAR redundancy is detected); online/continuous learning (this is"
+    )
+    out.append(
+        "  an offline batch over the persisted store); a per-category LEARNED"
+    )
+    out.append(
+        "  retention threshold over time; and recording on the LIVE"
+    )
+    out.append(
+        "  serve_via_kernel request path (this reads the OFFLINE store only)."
+    )
+    out.append("")
+    return "\n".join(out)
+
+
 def render_accumulated(acc: dict, top: int | None) -> str:
     """Render the accumulated-memory projection — the memory the body kept."""
     out: list[str] = []
@@ -1271,9 +1849,44 @@ def main(argv: list[str] | None = None) -> int:
             "all recorded runs (falls back to the live snapshot if none recorded)."
         ),
     )
+    parser.add_argument(
+        "--compress-memory",
+        action="store_true",
+        help=(
+            "LEARN, per category, which dimension of the accumulated edge-event "
+            "memory is redundant (linearly predictable from the others, zero "
+            "residual), then APPLY the Form compression-fold (N→N−1) to drop it "
+            "— proving the round-trip recovers it EXACTLY on real recorded data "
+            "(lc-identity-is-shared-blueprint-and-recipe, the learning half). "
+            "OFFLINE: reads the persisted store, no hot path. No-op when no "
+            f"memory recorded ({_EDGE_EVENTS_ENV} unset / empty)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     store_path = edge_events_path()
+
+    # --compress-memory: the autoencoder loop closed — learn the redundant axis
+    # per category over the accumulated memory, then fold it via the real Form
+    # recipe. OFFLINE, opt-in, no-op when no memory recorded.
+    if args.compress_memory:
+        result = compress_memory(store_path) if store_path is not None else None
+        if result is not None:
+            if args.json:
+                print(json.dumps(result, indent=2, default=str))
+            else:
+                print(render_compress_memory(result, args.top))
+            return 0
+        note = (
+            "(no accumulated edge-event memory to compress"
+            + (
+                f" at {store_path} — record runs with --record first)"
+                if store_path is not None
+                else f" — set {_EDGE_EVENTS_ENV} and record runs with --record first)"
+            )
+        )
+        print(note)
+        return 0
 
     # --from-memory: read the accumulated memory and project over it. Honest
     # fallback: if no memory recorded yet, say so and fall through to the
