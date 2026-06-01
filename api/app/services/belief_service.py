@@ -184,13 +184,25 @@ def _score_worldview_alignment(
     return max(0.0, min(1.0, score)), matched_axes
 
 
-def _score_tag_match(profile: BeliefProfile, idea_tags: List[str]) -> float:
-    contributor_tags = set(profile.interest_tags)
+def score_tag_match_lists(contributor_tags: List[str], idea_tags: List[str]) -> float:
+    """Pure tag-resonance core: set-intersection size over contributor-tag count.
+
+    The computational half of `_score_tag_match`, extracted so it can be served
+    by the Form kernel (endpoint_tag_match_score_demo.fk) and reused as the
+    `/api/utils/tag_match_score` fallback without a BeliefProfile. The host
+    dedups both lists (`set()`); the empty-guard returns 0.5; the ratio is
+    clamped to [0.0, 1.0]. Denominator is the deduped contributor-tag count.
+    """
+    contributor_set = set(contributor_tags)
     idea_tag_set = set(idea_tags)
-    if not contributor_tags or not idea_tag_set:
+    if not contributor_set or not idea_tag_set:
         return 0.5
-    matched = contributor_tags & idea_tag_set
-    return max(0.0, min(1.0, len(matched) / len(contributor_tags)))
+    matched = contributor_set & idea_tag_set
+    return max(0.0, min(1.0, len(matched) / len(contributor_set)))
+
+
+def _score_tag_match(profile: BeliefProfile, idea_tags: List[str]) -> float:
+    return score_tag_match_lists(list(profile.interest_tags), idea_tags)
 
 
 def compute_resonance(contributor_id: str, idea_id: str) -> ResonanceResult:
