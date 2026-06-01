@@ -570,22 +570,24 @@ capability builds**, not a candidate hunt.
 
 **Gates ahead (each blocks a named family; build in leverage order):**
 
-1. **Heterogeneous-collection join + float-field fold** — the *remainder* of
-   `compute_idea_metrics` after the two unlocks above. Two named pieces stay
-   deep: (a) the **float-field fold** (`spec_actual_cost_sum = sum(s.actual_cost
-   for s in specs)`) is value-exact on the production Rust carrier
-   (Rust==Go==CPython) but TS's `add`/`_plus` are i32-only — the documented
-   polymorphic-float-arithmetic divergence — so a float SUM cannot cross a
-   three-way band (the integer fold + float-field PREDICATE is the three-way
-   subset that's banked); (b) the **six-collection heterogeneous join** —
-   `compute_idea_metrics` filters and reduces over SIX pre-fetched collections
-   (specs, runtime, lineage links, valuations map, commits, friction) with a
-   `.get(...)` on a map and cross-collection `max`/`min`/`any`. The object-OR-
-   dict polymorphism is now dissolved at the bridge, so each collection
-   marshals cleanly; what remains is the **multi-collection orchestration**
-   (filter-by-idea-id per collection, the valuations-map lookup, the
-   cross-collection reductions) — host-side join work, not a single kernel
-   capability. Lower leverage now that the two structure-access unlocks landed.
+1. **Six-collection heterogeneous join** — the *remainder* of
+   `compute_idea_metrics` after the structure-access, list-of-record, AND
+   float-field-fold unlocks. The **float-field fold** that previously sat here
+   is now BANKED: TS's `add`/`_plus` gained float arms (the bare-width MATH arm
+   promotes to f64 at runtime, `_plus` carries Float+Float / Int+Float /
+   Float+Int), so `spec_actual_cost_sum = sum(s.actual_cost for s in specs)`
+   folds value-exact across CPython == Rust == TS — proven three-way in
+   `list-of-record-reduction-band.fk` (the float-fold checks) and served live at
+   `/api/utils/idea_grounded_cost_sum`. What remains deep is the **six-collection
+   heterogeneous join** — `compute_idea_metrics` filters and reduces over SIX
+   pre-fetched collections (specs, runtime, lineage links, valuations map,
+   commits, friction) with a `.get(...)` on a map and cross-collection
+   `max`/`min`/`any`. The object-OR-dict polymorphism is dissolved at the
+   bridge, so each collection marshals cleanly; what remains is the
+   **multi-collection orchestration** (filter-by-idea-id per collection, the
+   valuations-map lookup, the cross-collection reductions) — host-side join
+   work, not a single kernel capability. Lower leverage now that the
+   structure-access, list-of-record, and float-fold unlocks all landed.
 2. **String-family operations** — `split`, `strip`, `in` (substring), `lower`,
    regex. Blocks the text/semantic-scoring family (`frequency_scoring`,
    `concept_auto_tagger`, keyword extraction). A self-contained string-native
@@ -685,9 +687,9 @@ via `record_get`. On top of that, the bridge's recursive marshal already carried
 `list→list-of-marshalled`, so a `list[dict|model]` becomes a kernel
 list-of-records, and a recipe FOLDS a field across it via the portable head/tail
 recursion. Proof: `form-stdlib/tests/list-of-record-reduction-band.fk` (three-way
-green: Go == Rust == TS, full score 16 — sum/count/max over an integer field +
-float-field predicate); `endpoint_idea_grounding_summary_demo.{py,fk}` earns
-three-way parity through `parity_suite.sh` (CPython == Rust == kernel-bmf → `[3,
+green: Go == Rust == TS, full score 22 — sum/count/max over an integer field,
+float-field predicate, AND float-field SUM); `endpoint_idea_grounding_summary_demo.{py,fk}`
+earns three-way parity through `parity_suite.sh` (CPython == Rust == kernel-bmf → `[3,
 10, 2, 7]`) and serves live at `/api/utils/idea_grounding_summary`; the bridge
 marshalling (model normalization + list-of-record + end-to-end reduction) is
 covered by `test_form_kernel_bridge_structure_access.py`. This unlocks the family
@@ -695,14 +697,23 @@ of routes that reduce an INTEGER field across a collection — the idea groundin
 signals (spec_count, total_event_count, specs_with_value_count, max_event_count),
 the integer parts of compute_idea_metrics' confidence/coverage.
 
-**Deferred — the float-field fold + six-collection join.**
+**Banked — the float-field fold (three-way proven, live).** The float SUM that
+sat in the deferred column is now portable: TS's `add`/`_plus` gained float arms
+(the bare-width MATH walker arm promotes to f64 at runtime when any operand is a
+float, and `_plus` carries Float+Float / Int+Float / Float+Int), mirroring the
+Rust + Go walkers exactly. So `spec_actual_cost_sum = sum(s["actual_cost"] for s
+in specs)` folds value-exact across CPython == Rust == TS. Proof:
+`list-of-record-reduction-band.fk` float-fold checks (three-way green) +
+`endpoint_idea_grounded_cost_sum_demo.{py,fk}` (CPython == Rust == TS → `[5.25,
+3.75]`), serving live at `/api/utils/idea_grounded_cost_sum`. ONE residual
+divergence is named precisely: an INTEGER-VALUED float result (e.g. 5.0) prints
+Python-style `5.0` on Rust but JS-style `5` on Go + TS — a PRINT-layer
+divergence, not a value divergence; the band + route land on non-integer sums
+(5.25, 3.75) so it never crosses the boundary.
+
+**Deferred — the six-collection join.**
 `compute_idea_metrics` *as a whole* still stays CPython, but the boundary is now
-much sharper. Two pieces remain deep: (a) the **float-field fold** —
-`spec_actual_cost_sum = sum(_safe_float(s, "actual_cost") for s in specs)` is
-value-exact on the production Rust carrier (Rust==Go==CPython) but TS's
-`add`/`_plus` are i32-only (the documented polymorphic-float-arithmetic
-divergence), so a float SUM cannot cross a three-way band — the banded subset
-folds integer fields and SCORES float fields by comparison; (b) the
+much sharper — only one piece remains deep: the
 **six-collection heterogeneous join** — the function filters by idea_id across
 SIX collections, does a `.get(...)` on a valuations map, and reduces
 `max`/`min`/`any` ACROSS collections. The object-OR-dict polymorphism that used
@@ -710,9 +721,10 @@ to be the blocker is gone (every collection now marshals cleanly); what remains
 is **multi-collection host-side orchestration** (per-collection filter, the map
 lookup, cross-collection reductions), not a single kernel capability. So
 `compute_idea_metrics` stays CPython until that join is decomposed into
-per-collection kernel reductions wired by the host — but **each integer
-per-collection reduction is now individually transmutable** (the grounding
-summary route is the first), so the function can be transmuted piece by piece
+per-collection kernel reductions wired by the host — but **each per-collection
+reduction is now individually transmutable, integer OR float** (the grounding
+summary route is the first integer reduction, the grounded-cost-sum route the
+first float reduction), so the function can be transmuted piece by piece
 rather than waiting on one large capability.
 
 The wellness probe and the attribution view are the two instruments that make
