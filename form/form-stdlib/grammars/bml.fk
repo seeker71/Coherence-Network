@@ -37,6 +37,35 @@
               "conventions" "DefaultMethods" "Nil" "Fail" "EndOfFile"
               "EndOfLine" "Cut" "MultiMatch" "Primitive"))
 
+    (defn bml-source-properties (_x)
+        (list "public" "private" "protected" "abstract" "static" "final"
+              "default" "delegate" "shared" "get" "put" "strict" "relaxed"
+              "deferred" "native" "exception" "explicit" "extern" "library"
+              "name" "guid" "operator" "coercion" "reassign" "array"
+              "exclusive" "in" "out" "inout" "assign" "inline" "hidden"
+              "singleton" "unique" "struct" "noobject" "dynamic" "alias"
+              "outer" "nostate"))
+
+    (defn bml-source-name-kind (value)
+        (if (fsc-string-list-contains? (bml-source-keywords 0) value)
+            "bml-keyword"
+            (if (fsc-string-list-contains? (bml-source-properties 0) value)
+                "bml-property"
+                "bml-name")))
+
+    (defn bml-source-scan-name-token (start)
+        (do
+            (let read (fsc-source-scan-name-loop start start))
+            (let value (nth read 0))
+            (let end (nth read 1))
+            (fsc-scan-result
+                (fsc-source-object
+                    (bml-source-name-kind value)
+                    value
+                    start
+                    end)
+                end)))
+
     (defn bml-source-ops (_x)
         (list "<<prim" ".*" "::=" "=>" "<=" ">>>=" ">>=" "<<=" ">>>"
               ">>" "<<" "++" "--" "==" "!=" ">=" "<=" ":=" "*=" "/="
@@ -98,11 +127,7 @@
             (if (fsc-digit? ch)
                 (fsc-source-scan-int start "bml-int")
             (if (fsc-source-name-start-char? ch)
-                (fsc-source-scan-name
-                    start
-                    (bml-source-keywords 0)
-                    "bml-keyword"
-                    "bml-name")
+                (bml-source-scan-name-token start)
                 (fsc-source-scan-op
                     start
                     "bml-op"
@@ -246,6 +271,15 @@
 
     (defn bml-interface-ref-component (name)
         (comp-bml-component "InterfaceRef" (list name)))
+
+    (defn bml-components-of-kind (items kind)
+        (if (nil? items) (empty)
+            (do
+                (let item (head items))
+                (let rest (bml-components-of-kind (tail items) kind))
+                (if (bml-component-kind? item kind)
+                    (cons item rest)
+                    rest))))
 
     (defn bml-class-name (class-component)
         (nth (comp-bml-fields class-component) 0))
@@ -878,6 +912,148 @@
     (defn bml-compile-file (objects)
         (bml-comp-one "File" objects "items"))
 
+    (defn bml-true-property (name)
+        (bml-property-component name "true"))
+
+    (defn bml-join-two-name (first second)
+        (str_concat (str_concat first ".") second))
+
+    (defn bml-join-star-name (name)
+        (str_concat name ".*"))
+
+    (defn bml-emit-file-package-two (objects)
+        (comp-bml-component
+            "Package"
+            (list
+                (bml-join-two-name
+                    (bmf-collection-value objects "first")
+                    (bmf-collection-value objects "second")))))
+
+    (defn bml-emit-file-import-one-star (objects)
+        (comp-bml-component
+            "Import"
+            (list
+                (bml-join-star-name (bmf-collection-value objects "name"))
+                ".*")))
+
+    (defn bml-emit-file-import-two-star (objects)
+        (comp-bml-component
+            "Import"
+            (list
+                (bml-join-star-name
+                    (bml-join-two-name
+                        (bmf-collection-value objects "first")
+                        (bmf-collection-value objects "second")))
+                ".*")))
+
+    (defn bml-emit-file-interface-empty (objects)
+        (comp-bml-component
+            "Interface"
+            (list
+                (bmf-collection-value objects "name")
+                (empty)
+                (bmf-collection-value objects "parent")
+                (empty))))
+
+    (defn bml-emit-file-class-empty-two-base (objects)
+        (comp-bml-component
+            "Class"
+            (list
+                (bmf-collection-value objects "name")
+                (list (bml-true-property (bmf-collection-value objects "property")))
+                (list (bmf-collection-value objects "first")
+                      (bmf-collection-value objects "second"))
+                (empty))))
+
+    (defn bml-file-section-field-class (objects base-name)
+        (do
+            (let field
+                (comp-bml-component
+                    "Field"
+                    (list
+                        (bmf-collection-value objects "field-type")
+                        (bmf-collection-value objects "field-name")
+                        (empty))))
+            (let section
+                (comp-bml-component
+                    "Section"
+                    (list
+                        ""
+                        (list (bml-true-property
+                                (bmf-collection-value objects "section-property")))
+                        (list field))))
+            (comp-bml-component
+                "Class"
+                (list
+                    (bmf-collection-value objects "name")
+                    (list (bml-true-property (bmf-collection-value objects "property")))
+                    (list base-name)
+                    (list section)))))
+
+    (defn bml-emit-file-class-section-field (objects)
+        (bml-file-section-field-class
+            objects
+            (bmf-collection-value objects "base")))
+
+    (defn bml-emit-file-class-section-field-primitive (objects)
+        (bml-file-section-field-class objects "Primitive"))
+
+    (defn bml-emit-file-class-section-const-string (objects)
+        (do
+            (let const
+                (comp-bml-component
+                    "Const"
+                    (list
+                        (bmf-collection-value objects "const-type")
+                        (bmf-collection-value objects "const-name")
+                        (empty)
+                        (bmf-collection-value objects "const-value"))))
+            (let section
+                (comp-bml-component
+                    "Section"
+                    (list
+                        ""
+                        (list (bml-true-property "class")
+                              (bml-true-property
+                                (bmf-collection-value objects "section-property")))
+                        (list const))))
+            (comp-bml-component
+                "Class"
+                (list
+                    (bmf-collection-value objects "name")
+                    (list (bml-true-property (bmf-collection-value objects "property")))
+                    (list (bmf-collection-value objects "base"))
+                    (list section)))))
+
+    (defn bml-emit-file-class-section-return-method (objects)
+        (do
+            (let method
+                (comp-bml-component
+                    "Method"
+                    (list
+                        (bmf-collection-value objects "return-type")
+                        (bmf-collection-value objects "method-name")
+                        (empty)
+                        (bml-ast-return
+                            (bml-ast-int
+                                (str_to_int
+                                    (bmf-collection-value objects "return-value")))))))
+            (let section
+                (comp-bml-component
+                    "Section"
+                    (list
+                        ""
+                        (list (bml-true-property
+                                (bmf-collection-value objects "section-property")))
+                        (list method))))
+            (comp-bml-component
+                "Class"
+                (list
+                    (bmf-collection-value objects "name")
+                    (list (bml-true-property (bmf-collection-value objects "property")))
+                    (list (bmf-collection-value objects "base"))
+                    (list section)))))
+
     (let bml-reference-rule-names
         (list
             "bmlCommentLine" "bmlCommentNest" "File" "MainRule" "Package" "Import"
@@ -1310,12 +1486,21 @@
       operator-naming-decl ::= "'" op-name "'" cut "=" $name:name eol => bml-emit-node-source;
       default-methods ::= "DefaultMethods" cut "{" method "}" => bml-emit-node-source;
       package-simple ::= "package" $name:name ";" => bml-emit-package-simple <= bml-source-package-simple;
+      file-package-two ::= "package" $first:name "." $second:name ";" => bml-emit-file-package-two;
       import-simple ::= "import" $name:name ";" => bml-emit-import-simple <= bml-source-import-simple;
       import-star-simple ::= "import" $name:name ".*" ";" => bml-emit-import-star-simple <= bml-source-import-star-simple;
+      file-import-one-star ::= "import" $name:name ".*" ";" => bml-emit-file-import-one-star;
+      file-import-two-star ::= "import" $first:name "." $second:name ".*" ";" => bml-emit-file-import-two-star;
       class-header ::= "class" $name:name ":" $base:name => bml-emit-class-header <= bml-source-class-header;
       class-two-base-header ::= "class" $name:name ":" $first:name "," $second:name => bml-emit-class-two-base-header;
+      file-class-empty-two-base ::= "class" $name:name "[" $property:property "]" ":" $first:name "," $second:name "{" "}" => bml-emit-file-class-empty-two-base;
+      file-class-section-field ::= "class" $name:name "[" $property:property "]" ":" $base:name "{" "section" "[" $section-property:property "]" "{" $field-type:name $field-name:name ";" "}" "}" => bml-emit-file-class-section-field;
+      file-class-section-field-primitive ::= "class" $name:name "[" $property:property "]" ":" "Primitive" "{" "section" "[" $section-property:property "]" "{" $field-type:name $field-name:name ";" "}" "}" => bml-emit-file-class-section-field-primitive;
+      file-class-section-const-string ::= "class" $name:name "[" $property:property "]" ":" $base:name "{" "section" "[" "class" "," $section-property:property "]" "{" "const" $const-type:name $const-name:name "=" $const-value:string ";" "}" "}" => bml-emit-file-class-section-const-string;
+      file-class-section-return-method ::= "class" $name:name "[" $property:property "]" ":" $base:name "{" "section" "[" $section-property:property "]" "{" $return-type:name $method-name:name "(" ")" "{" "return" $return-value:int ";" "}" "}" "}" => bml-emit-file-class-section-return-method;
       class ::= "class" spc cut class-name properties super-class-list class-block => bml-emit-node-source;
       interface-header ::= "interface" $name:name ":" $parent:name => bml-emit-interface-header <= bml-source-interface-header;
+      file-interface-empty ::= "interface" $name:name ":" $parent:name "{" "}" => bml-emit-file-interface-empty;
       interface ::= "interface" cut class-name properties parent-interface interface-block => bml-emit-node-source;
       template ::= "template" "<" cut template-parameter-list ">" class-or-interface => bml-emit-node-source;
       section-header ::= "section" "[" $property:property "]" => bml-emit-section-header;
@@ -1488,6 +1673,17 @@
               "mark-simple"
               "throw-int"))
 
+    (defn bml-source-declaration-rules (_x)
+        (list "file-class-section-return-method"
+              "file-class-section-const-string"
+              "file-class-section-field-primitive"
+              "file-class-section-field"
+              "file-class-empty-two-base"
+              "file-interface-empty"
+              "file-package-two"
+              "file-import-two-star"
+              "file-import-one-star"))
+
     (defn bml-source-parse-step (ok rule node rest)
         (list "bml-source-parse-step" ok rule node rest))
 
@@ -1560,6 +1756,49 @@
         (bml-compile-program
             (bml-source-exec-parse-node
                 (bml-source-file-parse-executable path))))
+
+    (defn bml-source-parse-declaration-step (objects)
+        (bml-source-parse-executable-step-loop
+            objects
+            (bml-source-declaration-rules 0)))
+
+    (defn bml-source-parse-declaration-stream-loop (objects nodes rules)
+        (if (nil? objects)
+            (bml-source-exec-parse-result
+                true
+                (reverse-list nodes)
+                objects
+                (reverse-list rules))
+            (do
+                (let step (bml-source-parse-declaration-step objects))
+                (if (bml-source-parse-step-ok? step)
+                    (bml-source-parse-declaration-stream-loop
+                        (bml-source-parse-step-rest step)
+                        (cons (bml-source-parse-step-node step) nodes)
+                        (cons (bml-source-parse-step-rule step) rules))
+                    (bml-source-exec-parse-result
+                        false
+                        (reverse-list nodes)
+                        objects
+                        (reverse-list rules))))))
+
+    (defn bml-source-parse-declaration-stream (objects)
+        (bml-source-parse-declaration-stream-loop
+            objects
+            (empty)
+            (empty)))
+
+    (defn bml-source-file-parse-declarations (path)
+        (bml-source-parse-declaration-stream (bml-source-scan-file path)))
+
+    (defn bml-source-declaration-model (result)
+        (bml-model
+            (bml-components-of-kind
+                (bml-source-exec-parse-nodes result)
+                "Class")
+            (bml-components-of-kind
+                (bml-source-exec-parse-nodes result)
+                "Interface")))
 
     (defn bml-thesis-bmf-primitive-rule-count-loop (rule-names)
         (if (nil? rule-names) 0

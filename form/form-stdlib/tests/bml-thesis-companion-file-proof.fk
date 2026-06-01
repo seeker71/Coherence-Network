@@ -1,0 +1,75 @@
+; tests/bml-thesis-companion-file-proof.fk - companion-shaped .bml declarations
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that a real .bml file using thesis companion declaration shapes
+; reaches the BML/BMF declaration rules, forms BML class/interface components,
+; and carries a Main method body into native BMA execution.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn kind-score (component expected bit)
+        (if (str_eq (comp-bml-kind component) expected) bit 0))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-companion-declarations.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-declarations path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+
+    (let package-node (head nodes))
+    (let import-one (nth nodes 1))
+    (let import-two (nth nodes 2))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let e-class (bml-model-find-class model "E"))
+    (let program-class (bml-model-find-class model "Program"))
+    (let clickable-interface (bml-model-find-interface model "Clickable"))
+
+    (let rule-field (bml-find-field (bml-class-own-fields rule-class) "m_strName"))
+    (let rule-field-props
+        (bml-class-member-effective-properties rule-class "Field" "m_strName"))
+    (let default-syntax
+        (bml-find-const (bml-class-own-constants bmf-class) "DefaultBMFSyntax"))
+    (let default-syntax-props
+        (bml-class-member-effective-properties bmf-class "Const" "DefaultBMFSyntax"))
+    (let main-method (bml-find-method (bml-class-own-methods program-class) "Main"))
+    (let main-program (bml-compile-program (bml-method-body main-method)))
+    (let main-state (bma-run-program main-program))
+
+    (sum
+        (list
+            (bool-score (gt (len source-objects) 0) 1)
+            (str-score (bmf-object-kind (head source-objects)) "bml-keyword" 2)
+            (str-score (bmf-object-value (head source-objects)) "package" 4)
+            (bool-score (bml-source-exec-parse-ok? parsed) 8)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 16)
+            (int-score (len (bml-source-exec-parse-rules parsed)) 9 32)
+            (kind-score package-node "Package" 64)
+            (kind-score import-one "Import" 128)
+            (kind-score import-two "Import" 256)
+            (str-score (head (comp-bml-fields package-node)) "BMF.container" 512)
+            (str-score (head (comp-bml-fields import-two)) "BMF.primitive.*" 1024)
+            (str-score (bml-class-structural-base-name rule-class) "Primitive" 2048)
+            (str-score (bml-field-name rule-field) "m_strName" 4096)
+            (bool-score (bml-properties-has? rule-field-props "private") 8192)
+            (str-score (bml-class-structural-base-name bmf-class) "Application" 16384)
+            (str-score (bml-const-value default-syntax) "BMF.library.BMF" 32768)
+            (bool-score (bml-properties-has? default-syntax-props "class") 65536)
+            (bool-score (bml-properties-has? default-syntax-props "public") 131072)
+            (str-score (bml-class-structural-base-name e-class) "C" 262144)
+            (int-score (len (bml-class-delegation-base-names e-class)) 1 524288)
+            (str-score (bml-interface-parent-name clickable-interface) "Renderable" 1048576)
+            (bool-score (bml-interface-extends? model "Clickable" "Renderable") 2097152)
+            (bool-score (bml-application-main-entry? model "Program") 4194304)
+            (int-score (comp-vm-pop-value main-state) 7 8388608)
+            (str-score (comp-vm-mode main-state) "return" 16777216)))
+)
