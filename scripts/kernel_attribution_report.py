@@ -254,6 +254,29 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_grounded_value_demo.fk",
         "expected_result": "[12.5, 6.75, 0.625, 0.815]",
     },
+    {
+        # The STRING-MEMBERSHIP SCORING of concept_auto_tagger._score_concept —
+        # the FIRST kernel-served route to fold STRING MEMBERSHIP (`kw in text`
+        # lowered to str_find(text, kw, 0) >= 0) rather than an int or float
+        # field. It opens the text-scoring family. The honest seam: the host
+        # tokenizes (the regex _extract_keywords + lowercasing + the " ".join
+        # assembly — text preprocessing, a genuine deferred host-side capability)
+        # and the kernel SCORES the already-tokenized keyword lists: forward =
+        # fraction of idea keywords found in concept_text, reverse = fraction of
+        # concept keywords found in idea_text, plus a 0.3 name bonus, combined
+        # round(min(0.5*fwd + 0.3*rev + bonus, 1.0), 4) — _score_concept's body,
+        # weights/bonus/ceiling verbatim from source. The str_find native is
+        # three-way value-identical for ASCII (string-membership-band.fk → 9);
+        # the recipe fold is Rust+TS value-exact == CPython (Go carries no _iter).
+        # Frozen sample (idea "energy flow"/"coherence xyz", concept "Energy
+        # Flow"/"energy flows as coherence through the body field", concept
+        # keywords [Energy, Tissue]) → forward 3/4, reverse 1/2, name bonus 0.3 →
+        # round(min(0.5*0.75 + 0.3*0.5 + 0.3, 1.0), 4) = 0.825, a non-integer
+        # float that prints identically across kernels.
+        "route": "/api/utils/concept_match_score",
+        "recipe": "endpoint_concept_match_score_demo.fk",
+        "expected_result": "0.825",
+    },
 ]
 
 _EXAMPLES_DIR = (

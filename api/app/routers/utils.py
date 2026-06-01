@@ -1979,6 +1979,159 @@ async def grounded_value(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/concept_match_score
+#
+# STRING-MEMBERSHIP SCORING — the computational half of
+# concept_auto_tagger._score_concept, transmuted to a Form recipe. The FIRST
+# kernel-served route to fold STRING MEMBERSHIP (`kw in text` lowered to
+# str_find(text, kw, 0) >= 0) rather than an int or float field; it opens the
+# text-scoring family the API_KERNEL_READINESS ledger named as the next gate.
+#
+# THE HONEST SEAM (mirrors how compute_idea_metrics was decomposed). _score_concept
+# is two capabilities welded together:
+#   (a) TEXT PREPROCESSING — _extract_keywords runs a regex tokenizer
+#       (re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())) + stopword filter + dedup,
+#       and the score body assembles concept_text (lowercased name + description +
+#       keywords) and idea_text (" ".join(keywords)) and lowercases the concept's
+#       own keywords + name. This is REGEX + string preprocessing — text-shaping,
+#       NOT a kernel computation. It stays HOST-SIDE: this route calls
+#       _extract_keywords and does the assembly before the recipe runs. Forcing
+#       regex tokenization into the kernel is the wrong build — it is the residual
+#       host-side capability the ledger names precisely.
+#   (b) THE SCORING — given the already-tokenized keyword lists + assembled strings,
+#       the bidirectional str_find membership fold + the weighted combine
+#       round(min(0.5*forward + 0.3*reverse + name_bonus, 1.0), 4) (weights, bonus,
+#       ceiling read verbatim from _score_concept). This is what the recipe runs.
+#
+# How the inputs travel into the recipe: the bindings carry keywords /
+# concept_keywords as STRING LISTS and concept_text / idea_text / name_lower as
+# STRINGS. form_kernel_bridge marshals a list[str] via _fk_literal's list arm
+# (each element a quoted string literal) and a str as a quoted scalar; the recipe
+# folds membership with str_find. The str_find native is three-way value-identical
+# for ASCII (string-membership-band.fk); the recipe's `for needle in needles` fold
+# lowers to the adapter's _iter head/tail fold (Rust+TS value-exact == CPython —
+# Go carries no _iter, the same situation idea_grounded_cost_sum / grounded_cost
+# ship under). Kernel-or-fallback via serve_via_kernel; the _py fallback is the
+# real _score_concept (the host tokenizes via _extract_keywords either way).
+# ---------------------------------------------------------------------------
+
+
+class ConceptMatchScoreResponse(BaseModel):
+    """GET /api/utils/concept_match_score response — the concept-matching score."""
+
+    model_config = ConfigDict(extra="forbid")
+    score: Annotated[
+        float,
+        Field(
+            description="Bidirectional keyword-match score in [0.0, 1.0] = "
+            "round(min(0.5*forward + 0.3*reverse + name_bonus, 1.0), 4)"
+        ),
+    ]
+    keywords: Annotated[
+        list[str], Field(description="Host-tokenized idea keywords (regex + stopword + dedup), echoed back")
+    ]
+    concept_keywords: Annotated[
+        list[str], Field(description="Lowercased concept keywords the reverse fold tests, echoed back")
+    ]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/concept_match_score",
+    response_model=ConceptMatchScoreResponse,
+    summary="Bidirectional concept-matching score via str_find membership fold (first STRING-MEMBERSHIP Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the FIRST "
+        "kernel-served route to fold STRING MEMBERSHIP. The host tokenizes the "
+        "idea + concept text (concept_auto_tagger._extract_keywords: the regex "
+        "tokenizer + stopword filter + dedup, plus the lowercased concept_text / "
+        "idea_text assembly — text preprocessing, a genuine host-side capability) "
+        "and the kernel SCORES the already-tokenized keyword lists: forward = "
+        "fraction of idea keywords found in concept_text (str_find >= 0), reverse "
+        "= fraction of concept keywords found in idea_text, plus a 0.3 name bonus, "
+        "combined round(min(0.5*forward + 0.3*reverse + bonus, 1.0), 4) — the body "
+        "of _score_concept. str_find is three-way value-identical for ASCII "
+        "(string-membership-band.fk); the recipe fold is Rust+TS value-exact == "
+        "CPython. Kernel-or-fallback via serve_via_kernel; the _py fallback is the "
+        "real _score_concept."
+    ),
+)
+async def concept_match_score(
+    idea_name: Annotated[
+        str, Query(description="Idea name — tokenized host-side into the idea keyword bag")
+    ] = "energy flow",
+    idea_description: Annotated[
+        str, Query(description="Idea description — joined with the name before tokenization")
+    ] = "coherence xyz",
+    concept_name: Annotated[
+        str, Query(description="Concept name — the name-bonus needle, lowercased host-side")
+    ] = "Energy Flow",
+    concept_description: Annotated[
+        str, Query(description="Concept description — folded into concept_text")
+    ] = "energy flows as coherence through the body field",
+    concept_keywords: Annotated[
+        str,
+        Query(description="Comma-separated concept keywords — e.g. 'Energy,Tissue'"),
+    ] = "Energy,Tissue",
+) -> ConceptMatchScoreResponse:
+    from app.services.concept_auto_tagger import _extract_keywords, _score_concept
+
+    # Host-side TEXT PREPROCESSING (the deferred regex/string capability). The
+    # idea keyword bag is the regex tokenizer over name + description; the
+    # concept dict is assembled so _score_concept and the recipe see identical
+    # already-tokenized inputs.
+    ckw_list = [k.strip() for k in concept_keywords.split(",") if k.strip()]
+    keywords = _extract_keywords(f"{idea_name} {idea_description}")
+    concept = {
+        "name": concept_name,
+        "description": concept_description,
+        "keywords": ckw_list,
+    }
+    if not keywords:
+        # The empty-keywords guard is host-side (match_concepts returns [] before
+        # scoring); the recipe is only ever called with len(keywords) > 0.
+        return ConceptMatchScoreResponse(
+            score=0.0,
+            keywords=[],
+            concept_keywords=[k.lower() for k in ckw_list],
+            runtime="python-fallback",
+        )
+
+    # The assembled strings the recipe scores — the same shapes _score_concept
+    # builds internally (lowercased concept_text, idea_text = " ".join(keywords)).
+    concept_text = " ".join([
+        concept_name,
+        concept_description,
+        " ".join(ckw_list),
+    ]).lower()
+    idea_text = " ".join(keywords)
+    concept_keywords_lower = [k.lower() for k in ckw_list]
+    name_lower = concept_name.lower()
+
+    score, runtime = serve_via_kernel(
+        "endpoint_concept_match_score_demo.fk",
+        bindings={
+            "keywords": keywords,
+            "concept_text": concept_text,
+            "concept_keywords": concept_keywords_lower,
+            "idea_text": idea_text,
+            "name_lower": name_lower,
+        },
+        fallback=lambda: _score_concept(concept, keywords),
+        parse=float,
+    )
+    return ConceptMatchScoreResponse(
+        score=score,
+        keywords=keywords,
+        concept_keywords=concept_keywords_lower,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

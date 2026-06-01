@@ -849,7 +849,16 @@
             (if (nil? (tail args))
                 (round_ndigits (head args) 0)
                 (round_ndigits (head args) (head (tail args))))
-            (do (trace "py-builtin: unknown" name) (head (empty))))))))))
+        (if (str_eq name "str_find")
+            ;; str_find(s, needle, from) — the string-MEMBERSHIP primitive
+            ;; (`needle in s` ⟺ str_find(s, needle, 0) >= 0). A bare call in a
+            ;; transmuted recipe resolves to the kernel's str_find native the same
+            ;; way the python-compile path lowers it; intercepting it here keeps
+            ;; the bmf interpreter (the third runtime) value-identical to the
+            ;; compile path on the text-scoring routes (concept_match_score). The
+            ;; native is three-way value-identical for ASCII (string-natives-band.fk).
+            (str_find (head args) (head (tail args)) (head (tail (tail args))))
+            (do (trace "py-builtin: unknown" name) (head (empty)))))))))))
 
     ;; py-builtin? — 1 iff name is one of the reducing builtins above.
     (defn py-builtin? (name)
@@ -859,7 +868,8 @@
         (if (str_eq name "len") 1
         (if (str_eq name "abs") 1
         (if (str_eq name "round") 1
-            0)))))))
+        (if (str_eq name "str_find") 1
+            0))))))))
 
     (defn py-eval (recipe env)
         (do

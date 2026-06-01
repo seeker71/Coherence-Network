@@ -171,6 +171,7 @@ COPY form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_wei
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_grounded_cost_sum_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_cost_demo.fk \
      form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_grounded_value_demo.fk \
+     form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_concept_match_score_demo.fk \
      ./form/form-kernel-ts/seedbank/python-adapter/examples/
 
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script
