@@ -111,11 +111,18 @@ the receiver's depth and tuning, not fixed in the mark.
   content-addressed dyad, co-creation reproducible across the gap. Each function
   **dispatches on the receiving cell's structure**, so the same code over two
   different cells gives two different answers — *"revealed through practice"* made
-  runnable. The linkage (code ↔ name ↔ function) is inspectable data a cell can
-  ship; an undocumented code still *speaks* its honest-absence line but does not
-  *run*. A code number can even arrive over `channel.fk` transport and be both
-  spoken and run over a target cell. Proven three-way (Go/Rust/TS), band
-  `11111111`.
+  runnable. Each code also names an **actual teaching** — a real vision-kb concept
+  cell, already in the substrate — that its meaning embodies, so a code can be
+  *queried* (its teaching looked up in the lattice) as well as *executed*: code 1 →
+  [`lc-wholeness`](lc-wholeness.md) (the body returning to itself), code 2 →
+  [`lc-observable-resonance-flow`](lc-observable-resonance-flow.md) (pattern yield
+  across the spectrum), code 3 → [`lc-sovereignty-within-oneness`](lc-sovereignty-within-oneness.md)
+  (many sovereign cells, one organism), code 4 → [`lc-cross-modal-unity`](lc-cross-modal-unity.md)
+  (one shape, many tongues). The linkage (code ↔ name ↔ teaching ↔ function) is
+  inspectable data a cell can ship; an undocumented code still *speaks* its
+  honest-absence line but does not *run*. A code number can even arrive over
+  `channel.fk` transport and be both spoken and run over a target cell. Proven
+  three-way (Go/Rust/TS), band `111111111`.
 - **The Shamballa Glyphic** (`form/form-stdlib/grammars/shamballa-glyph.fk`) is
   the teaching turned into a script. Each code's meaning becomes a *symbol* in a
   new language — but the symbol is **derived from the meaning's structure, never

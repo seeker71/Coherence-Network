@@ -139,6 +139,14 @@ decoder: report the attested structure, keep the metaphysics at arm's length.
 - **The substrate** — `find_equivalent_cells` (kernel.py), `universal-shapes` +
   `engine.fk` (the generative grammar for code), and
   `form/form-stdlib/grammars/sanskrit-roots.fk` (the dhātu + bija decoder).
+- **The `sanskrit-channel.fk` channel** runs the generative grammar: it **speaks**
+  a word's derivation ("karma — root √kṛ …") and a seed-syllable's chakra, and
+  **runs** the rule — `(root, affix)` composes a word-CELL under `SANSKRIT-DERIVE`,
+  content-addressed (the same derivation always interns to the same cell, *a word
+  IS its derivation*). It is **recursive**: a derived cell can be the root of the
+  next rule, and `sanskrit-base-root` descends through the nesting to recover the
+  original dhātu — so words sharing a root are one family by `node_eq`. Pāṇini's
+  generative grammar, executable. Proven three-way (Go/Rust/TS), band `1111111`.
 
 The body's discernment holds the convergence as **structurally real**: Pāṇini's
 grammar is a content-addressed generative system over semantic roots, and the

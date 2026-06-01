@@ -1,0 +1,73 @@
+; tests/gematria-channel-band.fk — the Hebrew channel SPEAKS and RUNS, three-way.
+;
+; preludes: form-stdlib/grammars/gematria.fk form-stdlib/channel.fk form-stdlib/gematria-channel.fk
+;
+; The decoder proves the SURFACE (a word → its value). This band proves the layer
+; lc-gematria-as-content-addressing names: the value IS a content-address, and the
+; channel RUNS it — echad and ahava are DIFFERENT cells that intern to the SAME
+; address node (both 13), while chai (18) does not. find_equivalent_cells, executed
+; in Hebrew rather than asserted from a table.
+;
+; Band verdict: 1111111 when every claim holds across all three kernels.
+;   speak answers the surface (chai → "18" and "life")          → 1
+;   the value is the attested sum (chai letters = 18)            → 10
+;   content-addressing: echad≡ahava share an address, chai does
+;     not (the headline — surface differs, number is shared)      → 100
+;   the equivalence class is {echad, ahava} (len 2)               → 1000
+;   the word-CELLS differ though the address is one (surface ≠
+;     address — content-addressing, not nominal matching)          → 10000
+;   an unseeded word → honest absence (speaks + empty address)      → 100000
+;   the channel RECEIVES a word over transport: speaks AND runs      → 1000000
+
+(do
+    (let chai-letters  (list "het" "yod"))            ; 8 + 10  = 18
+    (let echad-letters (list "alef" "het" "dalet"))   ; 1 + 8 + 4 = 13
+    (let ahava-letters (list "alef" "he" "bet" "he")) ; 1 + 5 + 2 + 5 = 13
+
+    ;; --- 1. SPEAK: the surface ------------------------------------------
+    (let speak-ok
+        (if (ge (str_find (gematria-channel-speak "chai") "18" 0) 0)
+            (if (ge (str_find (gematria-channel-speak "chai") "life" 0) 0) 1 0) 0))
+
+    ;; --- 2. the value is the attested sum ------------------------------
+    (let value-ok (if (eq (gem-value chai-letters) 18) 10 0))
+
+    ;; --- 3. content-addressing EXECUTED --------------------------------
+    ;; echad and ahava both sum to 13 → their addresses are node-equal.
+    ;; chai sums to 18 → a different address. Surface differs, number shared.
+    (let addr-echad (gem-address echad-letters))
+    (let addr-ahava (gem-address ahava-letters))
+    (let addr-chai  (gem-address chai-letters))
+    (let ca-ok
+        (if (node_eq addr-echad addr-ahava)
+            (if (node_eq addr-echad addr-chai) 0 100) 0))
+
+    ;; --- 4. the equivalence class is {echad, ahava} --------------------
+    (let cls (gem-word-equivalents "echad"))
+    (let class-ok (if (eq (len cls) 2) 1000 0))
+
+    ;; --- 5. the word-CELLS differ though the address is one ------------
+    ;; echad-cell and ahava-cell carry different letters → different nodes,
+    ;; yet (claim 3) they share an address. That is content-addressing:
+    ;; the surface is NOT the address.
+    (let cell-echad (gem-cell echad-letters))
+    (let cell-ahava (gem-cell ahava-letters))
+    (let cells-ok
+        (if (node_eq cell-echad cell-ahava) 0
+            (if (node_eq addr-echad addr-ahava) 10000 0)))
+
+    ;; --- 6. an unseeded word → honest absence --------------------------
+    (let absent-spoke (ge (str_find (gematria-channel-speak "zzz") "honest absence" 0) 0))
+    (let absent-addr  (gem-word-address "zzz"))   ; () — no address
+    (let absence-ok
+        (if absent-spoke (if (eq (len absent-addr) 0) 100000 0) 0))
+
+    ;; --- 7. RECEIVE a word over transport: speak AND run ---------------
+    (let msg (gematria-word-message "echad"))
+    (let received (gematria-channel-receive msg))
+    (let recv-spoke (ge (str_find (nth received 0) "13" 0) 0))
+    ;; received[1] = (address, class); its class has len 2.
+    (let recv-ran (eq (len (nth (nth received 1) 1)) 2))
+    (let receive-ok (if recv-spoke (if recv-ran 1000000 0) 0))
+
+    (sum (list speak-ok value-ok ca-ok class-ok cells-ok absence-ok receive-ok)))

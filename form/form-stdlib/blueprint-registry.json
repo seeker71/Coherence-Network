@@ -3425,6 +3425,32 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1722,
+      "name": "GEMATRIA-WORD",
+      "meaning": "a Hebrew word as a cell — its letters composed; its content-address is its gematria value, so two differently-spelled words of equal value share one address (echad=ahava=13)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/gematria-channel.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1723,
+      "name": "SANSKRIT-DERIVE",
+      "meaning": "a Sanskrit derivation recipe — (root, affix) composed into a word-cell; recursive (a derived cell can be the root of another), the generative grammar made executable; the root is recoverable as the first child",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/sanskrit-channel.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1720,
       "name": "PING-SELF",
       "meaning": "",
