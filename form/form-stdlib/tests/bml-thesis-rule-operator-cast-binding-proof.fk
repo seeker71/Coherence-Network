@@ -61,4 +61,4 @@
             (bool-score (record_has sequence-env "hOther") 256)
             (str-score (record_get sequence-bound "bmlClass") "Rule" 512)
             (str-score (record_get sequence-bound "Name") "right" 1024)
-            (bool-score (record? sequence-result) 2048))))
+            (bool-score (not sequence-result) 2048))))
