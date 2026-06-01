@@ -278,6 +278,27 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_concept_match_score_demo.fk",
         "expected_result": "0.825",
     },
+    {
+        # The TAG-RESONANCE SCORING of belief_service._score_tag_match — folds
+        # EXACT STRING MEMBERSHIP (str_eq over a list), the equality counterpart
+        # to concept_match_score's substring (str_find) fold. The honest seam:
+        # the host extracts the two tag lists (profile.interest_tags off the
+        # BeliefProfile model + the idea's tags — model field extraction dissolves
+        # at the bridge) and dedups each with set() (field extraction + dedup, the
+        # deferred host-side capability), and the kernel SCORES the two deduped
+        # string lists: matched = how many unique contributor tags appear in
+        # idea_tags (nested str_eq fold), then max(0.0, min(1.0, matched /
+        # len(contributor_tags))) with a 0.5 empty-guard when either list is empty
+        # — _score_tag_match's shape verbatim (empty-guard 0.5 not 0.0; denominator
+        # the deduped contributor count; clamp [0,1]). str_eq is COMPARE.EQ,
+        # three-way value-identical for ASCII; the recipe's nested fold is Rust+TS
+        # value-exact == CPython (Go carries no _iter). Frozen sample (contributor
+        # [energy, flow, coherence, field], idea [energy, flow]) → matched 2 of 4 →
+        # max(0.0, min(1.0, 2/4)) = 0.5, an exact float that prints identically.
+        "route": "/api/utils/tag_match_score",
+        "recipe": "endpoint_tag_match_score_demo.fk",
+        "expected_result": "0.5",
+    },
 ]
 
 _EXAMPLES_DIR = (

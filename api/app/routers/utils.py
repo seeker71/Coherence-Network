@@ -2132,6 +2132,131 @@ async def concept_match_score(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/tag_match_score
+#
+# BELIEF-RESONANCE TAG SCORING — the computational half of
+# belief_service._score_tag_match, transmuted to a Form recipe. Folds EXACT
+# STRING MEMBERSHIP (str_eq over a list) rather than the substring membership
+# concept_match_score opened — tags match on equality, not containment.
+#
+# THE HONEST SEAM (mirrors how _score_tag_match decomposes). The function is:
+#   contributor_tags = set(profile.interest_tags); idea_tag_set = set(idea_tags)
+#   if not contributor_tags or not idea_tag_set: return 0.5
+#   matched = contributor_tags & idea_tag_set
+#   return max(0.0, min(1.0, len(matched) / len(contributor_tags)))
+# Two capabilities welded:
+#   (a) FIELD EXTRACTION + DEDUP — pulling profile.interest_tags off the
+#       BeliefProfile model (the bridge marshals model→dict→record) and reading
+#       idea_tags off the idea node, then collapsing each to a set. This is
+#       host-side: Python `set()` is the cheap dedup, and it mirrors the
+#       filtering-stays-host seam — the route dedups both lists before the recipe
+#       runs and passes already-unique string lists in. The BeliefProfile field
+#       extraction dissolves at the bridge; the recipe never sees a model.
+#   (b) THE SCORING — given the two deduped string lists, the str_eq membership
+#       fold (matched = how many unique contributor tags appear in idea_tags) +
+#       the ratio + clamp + empty-guard. This is what the recipe runs.
+#
+# How the inputs travel: contributor_tags / idea_tags marshal as STRING LISTS
+# via _fk_literal's list arm (each element a quoted literal; an empty list
+# marshals as `(list)` so `len` is 0 and the empty-guard fires). The recipe's
+# nested fold (`contains_exact` inner str_eq fold, `match_count` outer fold)
+# lowers to the adapter's _iter head/tail fold (Rust+TS value-exact == CPython
+# — Go carries no _iter, the same situation idea_grounded_cost_sum /
+# concept_match_score ship under). str_eq is COMPARE.EQ, value-identical for
+# ASCII. Kernel-or-fallback via serve_via_kernel; the _py fallback is the real
+# score_tag_match_lists (the host dedups either way).
+# ---------------------------------------------------------------------------
+
+
+class TagMatchScoreResponse(BaseModel):
+    """GET /api/utils/tag_match_score response — the belief-resonance tag score."""
+
+    model_config = ConfigDict(extra="forbid")
+    score: Annotated[
+        float,
+        Field(
+            description="Tag-resonance score in [0.0, 1.0] = "
+            "max(0.0, min(1.0, |contributor ∩ idea| / |contributor|)), 0.5 when "
+            "either deduped list is empty"
+        ),
+    ]
+    contributor_tags: Annotated[
+        list[str], Field(description="Deduped contributor interest tags the recipe folds, echoed back")
+    ]
+    idea_tags: Annotated[
+        list[str], Field(description="Deduped idea tags the membership fold tests against, echoed back")
+    ]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/tag_match_score",
+    response_model=TagMatchScoreResponse,
+    summary="Belief-resonance tag-match score via str_eq membership fold (EXACT-MEMBERSHIP Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — folds "
+        "EXACT STRING MEMBERSHIP (str_eq over a list), the equality counterpart "
+        "to concept_match_score's substring fold. The host extracts the two tag "
+        "lists (profile.interest_tags off the BeliefProfile model + the idea's "
+        "tags) and dedups each with Python set() — field extraction + dedup, the "
+        "host-side capability that mirrors the filtering-stays-host seam — and the "
+        "kernel SCORES the two already-deduped string lists: matched = how many "
+        "unique contributor tags appear in idea_tags (str_eq membership fold), "
+        "then max(0.0, min(1.0, matched / |contributor|)), with a 0.5 empty-guard "
+        "when either list is empty. The denominator is the deduped contributor-tag "
+        "count. str_eq is COMPARE.EQ, value-identical for ASCII; the recipe fold "
+        "is Rust+TS value-exact == CPython. Kernel-or-fallback via "
+        "serve_via_kernel; the _py fallback is the real score_tag_match_lists."
+    ),
+)
+async def tag_match_score(
+    contributor_tags: Annotated[
+        str,
+        Query(description="Comma-separated contributor interest tags — deduped host-side"),
+    ] = "energy,flow,coherence,field",
+    idea_tags: Annotated[
+        str,
+        Query(description="Comma-separated idea tags — deduped host-side, the membership haystack"),
+    ] = "energy,flow",
+) -> TagMatchScoreResponse:
+    from app.services.belief_service import score_tag_match_lists
+
+    # Host-side FIELD EXTRACTION + DEDUP (the deferred set-collapse capability).
+    # set() collapses duplicates exactly as _score_tag_match does; we preserve a
+    # stable order for the echo-back while passing unique lists to the recipe.
+    def _dedup(raw: str) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for tag in (t.strip() for t in raw.split(",")):
+            if tag and tag not in seen:
+                seen.add(tag)
+                out.append(tag)
+        return out
+
+    ct_list = _dedup(contributor_tags)
+    it_list = _dedup(idea_tags)
+
+    score, runtime = serve_via_kernel(
+        "endpoint_tag_match_score_demo.fk",
+        bindings={
+            "contributor_tags": ct_list,
+            "idea_tags": it_list,
+        },
+        fallback=lambda: score_tag_match_lists(ct_list, it_list),
+        parse=float,
+    )
+    return TagMatchScoreResponse(
+        score=score,
+        contributor_tags=ct_list,
+        idea_tags=it_list,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

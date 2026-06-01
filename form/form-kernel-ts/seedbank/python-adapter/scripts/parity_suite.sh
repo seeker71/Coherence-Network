@@ -156,6 +156,18 @@ PARITY_FILES=(
     # idea_grounded_cost_sum ships under). Frozen sample → 0.825, a non-integer
     # float that prints identically across kernels.
     "examples/endpoint_concept_match_score_demo.py"
+    # endpoint_tag_match_score — belief_service._score_tag_match's scoring half:
+    # EXACT STRING MEMBERSHIP (str_eq over a list), the equality counterpart to
+    # concept_match_score's substring (str_find) fold. Given two host-deduped tag
+    # lists, matched = how many unique contributor tags appear in idea_tags
+    # (nested str_eq fold), then max(0.0, min(1.0, matched / len(contributor_tags)))
+    # with a 0.5 empty-guard when either list is empty (shape verbatim from
+    # _score_tag_match). Hit counter seeds 0.0 so matched/len(contributor) is float
+    # division (matches CPython's /). str_eq is COMPARE.EQ, three-way value-identical
+    # for ASCII; the recipe's nested `for` fold lowers to the adapter's _iter
+    # head/tail fold (Rust+TS — Go carries no _iter, the same situation
+    # concept_match_score ships under). Frozen sample → 0.5 (matched 2 of 4).
+    "examples/endpoint_tag_match_score_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"
