@@ -4,8 +4,8 @@
 ;
 ; Proves that larger original companion .bml files can be scanned by the
 ; native sibling kernels and accepted as whole source files. container-Rule.bml
-; now carries parsed class body components; BMF-grammar.bml remains an explicit
-; class shell until its grammar body lowering lands.
+; and BMF-grammar.bml now both carry parsed class body components; BMF grammar
+; semantic lowering remains in the focused body proof and audit gap list.
 
 (do
     (defn bool-score (b bit)
@@ -55,5 +55,5 @@
             (str-score (bml-class-name bmf-class) "BMF" 32768)
             (bool-score (bml-properties-has? (bml-class-properties bmf-class) "public") 65536)
             (str-score (bml-class-structural-base-name bmf-class) "Application" 131072)
-            (int-score (len (bml-class-body bmf-class)) 0 262144)
-            (str-score (nth (bml-source-exec-parse-rules bmf-parsed) 2) "file-class-eof-shell" 524288))))
+            (bool-score (gt (len (bml-class-body bmf-class)) 0) 262144)
+            (str-score (nth (bml-source-exec-parse-rules bmf-parsed) 2) "file-class-body" 524288))))
