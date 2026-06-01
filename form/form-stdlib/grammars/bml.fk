@@ -2346,20 +2346,6 @@
                     (bml-source-parse-step false "" (empty) objects)))
             (bml-source-parse-step false "" (empty) objects)))
 
-    (defn bml-source-large-method-body-source? (class-name method-name)
-        (if (str_eq class-name "BMF")
-            (if (str_eq method-name "AsString") true
-            (if (str_eq method-name "AsBMLString") true
-            (if (str_eq method-name "LoadSyntax") true
-            (if (str_eq method-name "Compile") true
-            (if (str_eq method-name "HandleArgs") true
-            (if (str_eq method-name "LoadSyntaxes") true
-            (if (str_eq method-name "ReadConfigFile") true
-            (if (str_eq method-name "WriteConfigFile") true
-            (if (str_eq method-name "RegisterPrimitives") true
-                (str_eq method-name "PrintCommandLineHelp"))))))))))
-            false))
-
     (defn bml-source-parse-method-after-name (class-name return-type method-name objects)
         (if (bml-source-token-value? (head objects) "(")
             (do
@@ -2372,14 +2358,8 @@
                 (let after-properties (nth properties-parse 1))
                 (if (bml-source-token-value? (head after-properties) "{")
                     (do
-                        (let large-body
-                            (bml-source-large-method-body-source? class-name method-name))
                         (let body-parse
-                            (if large-body
-                                (list
-                                    (empty)
-                                    (bml-source-skip-class-body after-properties))
-                                (bml-source-collect-balanced-brace after-properties)))
+                            (bml-source-collect-balanced-brace after-properties))
                         (bml-source-parse-step
                             true
                             "file-class-method"
