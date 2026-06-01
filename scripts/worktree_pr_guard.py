@@ -690,6 +690,9 @@ def _local_steps(
     )
     if no_v1_check:
         steps.append(("no-internal-v1-guard", no_v1_check))
+    bml_bmf_native_check = _existing_script_command("scripts/audit_bml_bmf_kernel_natives.py")
+    if bml_bmf_native_check:
+        steps.append(("bml-bmf-native-boundary-guard", bml_bmf_native_check))
     steps.extend(
         [
             (
