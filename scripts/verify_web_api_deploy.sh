@@ -609,6 +609,7 @@ required = [
     "field-model-form-public-proof:93",
     "field-model-form-bml-runtime-proof:63",
     "field-auto-research-bml-proof:127",
+    "field-auto-research-perturbation-proof:255",
     "field-model-form-browser-runtime-proof:4",
     "sequence-lift-project-fieldStep",
     "fmf-proof-score",
