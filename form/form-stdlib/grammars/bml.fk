@@ -548,6 +548,120 @@
             self
             env))
 
+    (defn bml-body-source-return-member-add-at? (values)
+        (if (gt (len values) 8)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) ".")
+                    (if (str_eq (nth values 4) "+")
+                        (if (str_eq (nth values 6) ".")
+                            (str_eq (nth values 8) ";")
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-member-add-loop? (values)
+        (if (nil? values) false
+            (if (bml-body-source-return-member-add-at? values) true
+                (bml-body-source-return-member-add-loop? (tail values)))))
+
+    (defn bml-body-source-return-member-add? (body-component)
+        (bml-body-source-return-member-add-loop?
+            (bml-body-source-values body-component)))
+
+    (defn bml-body-source-object-value (self env name)
+        (if (record_has self name)
+            (record_get self name)
+            (record_get env name)))
+
+    (defn bml-body-source-member-value (self env object-name member-name)
+        (record_get
+            (bml-body-source-object-value self env object-name)
+            member-name))
+
+    (defn bml-body-source-eval-return-member-add-at (values self env)
+        (add
+            (bml-body-source-member-value
+                self
+                env
+                (nth values 1)
+                (nth values 3))
+            (bml-body-source-member-value
+                self
+                env
+                (nth values 5)
+                (nth values 7))))
+
+    (defn bml-body-source-exec-return-loop (values self env)
+        (if (nil? values) (empty)
+            (if (bml-body-source-return-member-add-at? values)
+                (bml-body-source-eval-return-member-add-at values self env)
+                (bml-body-source-exec-return-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-return (body-component self env)
+        (bml-body-source-exec-return-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
+    (defn bml-body-source-implicit-call1-at? (values)
+        (if (gt (len values) 4)
+            (if (str_eq (nth values 1) "(")
+                (if (str_eq (nth values 3) ")")
+                    (str_eq (nth values 4) ";")
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-implicit-call1-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-implicit-call1-at? values)
+                (bml-body-source-implicit-call1-count-loop
+                    (drop 5 values)
+                    (add count 1))
+                (bml-body-source-implicit-call1-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-implicit-call1-count (body-component)
+        (bml-body-source-implicit-call1-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-implicit-call1-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-implicit-call1-at? values)
+                (do
+                    (method_invoke
+                        self
+                        (head values)
+                        (bml-body-source-arg-value env (nth values 2)))
+                    (bml-body-source-exec-implicit-call1-loop
+                        (drop 5 values)
+                        self
+                        env))
+                (bml-body-source-exec-implicit-call1-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-implicit-call1 (body-component self env)
+        (bml-body-source-exec-implicit-call1-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
+    (defn bml-body-source-exec (body-component self env)
+        (if (bml-body-source-return-member-add? body-component)
+            (bml-body-source-exec-return body-component self env)
+            (if (gt (bml-body-source-implicit-call1-count body-component) 0)
+                (bml-body-source-exec-implicit-call1 body-component self env)
+                (bml-body-source-exec-assignments body-component self env))))
+
     (defn bml-constructor-env-blueprint (_x)
         (make_nodeid 1 2 99 9202))
 
