@@ -1,0 +1,66 @@
+; tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves mixed statement execution in original BMF-grammar.bml source order:
+; m_hResultStack.Push( m_hResult );
+; m_hResult = ParseStack();
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let start-method
+        (bml-find-method
+            (bml-class-own-methods bmf-class)
+            "StartResultStack"))
+    (let start-body (bml-method-body start-method))
+
+    (let BmfBP (make_nodeid 1 2 99 9250))
+    (let StackBP (make_nodeid 1 2 99 9251))
+    (let OldBP (make_nodeid 1 2 99 9252))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new EnvBP))
+    (let old-result (record_new OldBP "bmlClass" "OldResult"))
+    (let result-stack (record_new StackBP))
+    (let bmf-instance
+        (record_new
+            BmfBP
+            "m_hResultStack" result-stack
+            "m_hResult" old-result))
+
+    (defn stack-push-dispatch (self value)
+        (record_set self "pushed" value))
+
+    (method_define StackBP "Push" stack-push-dispatch)
+    (let exec-result (bml-body-source-exec start-body bmf-instance env))
+    (let pushed-result (record_get result-stack "pushed"))
+    (let new-result (record_get exec-result "m_hResult"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-name start-method) "StartResultStack" 2)
+            (bool-score (bml-body-source-contains? start-body "Push") 4)
+            (bool-score (bml-body-source-contains? start-body "ParseStack") 8)
+            (int-score (bml-body-source-receiver-call1-count start-body) 1 16)
+            (int-score (bml-body-source-constructor-assignment-count start-body) 1 32)
+            (bool-score (method_has StackBP "Push") 64)
+            (str-score (record_get pushed-result "bmlClass") "OldResult" 128)
+            (str-score (record_get new-result "bmlClass") "ParseStack" 256)
+            (bool-score
+                (node_eq
+                    (record_blueprint new-result)
+                    (bml-body-source-constructor-blueprint "ParseStack"))
+                512)
+            (str-score (record_get old-result "bmlClass") "OldResult" 1024))))

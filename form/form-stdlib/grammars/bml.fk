@@ -720,6 +720,58 @@
             self
             env))
 
+    (defn bml-body-source-receiver-call1-at? (values)
+        (if (gt (len values) 6)
+            (if (str_eq (nth values 1) ".")
+                (if (str_eq (nth values 3) "(")
+                    (if (str_eq (nth values 5) ")")
+                        (str_eq (nth values 6) ";")
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-receiver-call1-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-receiver-call1-at? values)
+                (bml-body-source-receiver-call1-count-loop
+                    (drop 7 values)
+                    (add count 1))
+                (bml-body-source-receiver-call1-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-receiver-call1-count (body-component)
+        (bml-body-source-receiver-call1-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-receiver-call1-at (values self env)
+        (method_invoke
+            (bml-body-source-object-value self env (head values))
+            (nth values 2)
+            (bml-body-source-object-value self env (nth values 4))))
+
+    (defn bml-body-source-exec-receiver-call1-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-receiver-call1-at? values)
+                (do
+                    (bml-body-source-exec-receiver-call1-at values self env)
+                    (bml-body-source-exec-receiver-call1-loop
+                        (drop 7 values)
+                        self
+                        env))
+                (bml-body-source-exec-receiver-call1-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-receiver-call1 (body-component self env)
+        (bml-body-source-exec-receiver-call1-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-constructor-blueprint (type-name)
         (if (str_eq type-name "ParseStack")
             (make_nodeid 1 2 99 9241)
@@ -780,16 +832,79 @@
             self
             env))
 
+    (defn bml-body-source-exec-sequence-loop (values previous self env)
+        (if (nil? values) self
+            (if (bml-body-source-return-member-add-at? values)
+                (bml-body-source-eval-return-member-add-at values self env)
+            (if (bml-body-source-constructor-assignment-at? values)
+                (do
+                    (record_set
+                        self
+                        (head values)
+                        (bml-body-source-construct0 (nth values 2)))
+                    (bml-body-source-exec-sequence-loop
+                        (drop 6 values)
+                        ";"
+                        self
+                        env))
+            (if (bml-body-source-assignment-at? values)
+                (do
+                    (record_set
+                        self
+                        (head values)
+                        (record_get env (nth values 2)))
+                    (bml-body-source-exec-sequence-loop
+                        (drop 4 values)
+                        ";"
+                        self
+                        env))
+            (if (bml-body-source-receiver-call1-at? values)
+                (do
+                    (bml-body-source-exec-receiver-call1-at values self env)
+                    (bml-body-source-exec-sequence-loop
+                        (drop 7 values)
+                        ";"
+                        self
+                        env))
+            (if (bml-body-source-receiver-call0-at? values)
+                (do
+                    (method_invoke
+                        (bml-body-source-object-value self env (head values))
+                        (nth values 2))
+                    (bml-body-source-exec-sequence-loop
+                        (drop 6 values)
+                        ";"
+                        self
+                        env))
+            (if (bml-body-source-implicit-call1-at? values)
+                (if (str_eq previous ".")
+                    (bml-body-source-exec-sequence-loop
+                        (tail values)
+                        (head values)
+                        self
+                        env)
+                    (do
+                        (method_invoke
+                            self
+                            (head values)
+                            (bml-body-source-arg-value env (nth values 2)))
+                        (bml-body-source-exec-sequence-loop
+                            (drop 5 values)
+                            ";"
+                            self
+                            env)))
+                (bml-body-source-exec-sequence-loop
+                    (tail values)
+                    (head values)
+                    self
+                    env)))))))))
+
     (defn bml-body-source-exec (body-component self env)
-        (if (bml-body-source-return-member-add? body-component)
-            (bml-body-source-exec-return body-component self env)
-            (if (gt (bml-body-source-implicit-call1-count body-component) 0)
-                (bml-body-source-exec-implicit-call1 body-component self env)
-                (if (gt (bml-body-source-receiver-call0-count body-component) 0)
-                    (bml-body-source-exec-receiver-call0 body-component self env)
-                    (if (gt (bml-body-source-constructor-assignment-count body-component) 0)
-                        (bml-body-source-exec-constructor-assignments body-component self env)
-                        (bml-body-source-exec-assignments body-component self env))))))
+        (bml-body-source-exec-sequence-loop
+            (bml-body-source-values body-component)
+            ""
+            self
+            env))
 
     (defn bml-constructor-env-blueprint (_x)
         (make_nodeid 1 2 99 9202))
