@@ -596,8 +596,16 @@
                     ;; function as a native-fn marker). Module name is head child.
                     (py-stmt-result 0
                         (py-bind-from-import-loop (tail kids) env)))
+            (if (node_eq cat PY-BMF-PASS)
+                ;; No-op statement — `pass`, or a bare type annotation
+                ;; (`header: str`) that binds nothing at runtime. Returns 0
+                ;; (Python None analogue) and threads env unchanged. The
+                ;; expression-position py-eval has no PASS arm (a PASS can only
+                ;; arise in statement position), so a bare annotation MUST land
+                ;; here, not in the default expression arm below.
+                (py-stmt-result 0 env)
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env)))))))))))))))
+                (py-stmt-result (py-eval recipe env) env))))))))))))))))
 
     ;; py-eval-module-loop drives a statement sequence to its value. It serves
     ;; two roles: the top-level module (last-statement value semantics) AND a
