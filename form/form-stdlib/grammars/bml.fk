@@ -424,8 +424,11 @@
             (nth (comp-bml-fields constructor-component) 3)
             (empty)))
 
+    (defn bml-token-cursor-with-rest (tokens index rest)
+        (list "bml-token-cursor" tokens index rest))
+
     (defn bml-token-cursor (tokens index)
-        (list "bml-token-cursor" tokens index))
+        (bml-token-cursor-with-rest tokens index (drop index tokens)))
 
     (defn bml-token-cursor? (cursor)
         (if (nil? cursor) false
@@ -438,8 +441,10 @@
         (nth cursor 2))
 
     (defn bml-token-cursor-rest (cursor)
-        (drop (bml-token-cursor-index cursor)
-              (bml-token-cursor-tokens cursor)))
+        (if (gt (len cursor) 3)
+            (nth cursor 3)
+            (drop (bml-token-cursor-index cursor)
+                  (bml-token-cursor-tokens cursor))))
 
     (defn bml-token-cursor-end? (cursor)
         (nil? (bml-token-cursor-rest cursor)))
@@ -448,9 +453,10 @@
         (head (bml-token-cursor-rest cursor)))
 
     (defn bml-token-cursor-advance (cursor)
-        (bml-token-cursor
+        (bml-token-cursor-with-rest
             (bml-token-cursor-tokens cursor)
-            (add (bml-token-cursor-index cursor) 1)))
+            (add (bml-token-cursor-index cursor) 1)
+            (tail (bml-token-cursor-rest cursor))))
 
     (defn bml-token-span (start length token-values)
         (list "bml-token-span" start length token-values))
@@ -2173,33 +2179,115 @@
                     name-parse)
                 name-parse)))
 
-    (defn bml-source-collect-balanced-brace-loop (objects depth acc)
-        (if (nil? objects)
-            (list (reverse-list acc) objects)
+    (defn bml-source-brace-collect-state (cursor depth acc done body rest steps)
+        (list "bml-source-brace-collect-state"
+              cursor depth acc done body rest steps))
+
+    (defn bml-source-brace-collect-state? (state)
+        (if (nil? state) false
+            (str_eq (head state) "bml-source-brace-collect-state")))
+
+    (defn bml-source-brace-collect-cursor (state) (nth state 1))
+    (defn bml-source-brace-collect-depth (state) (nth state 2))
+    (defn bml-source-brace-collect-acc (state) (nth state 3))
+    (defn bml-source-brace-collect-done? (state) (nth state 4))
+    (defn bml-source-brace-collect-body (state) (nth state 5))
+    (defn bml-source-brace-collect-rest (state) (nth state 6))
+    (defn bml-source-brace-collect-steps (state) (nth state 7))
+
+    (defn bml-source-brace-collect-finish (state body rest)
+        (bml-source-brace-collect-state
+            (bml-source-brace-collect-cursor state)
+            (bml-source-brace-collect-depth state)
+            (bml-source-brace-collect-acc state)
+            true
+            body
+            rest
+            (bml-source-brace-collect-steps state)))
+
+    (defn bml-source-brace-collect-step (state)
+        (if (bml-source-brace-collect-done? state) state
             (do
-                (let object (head objects))
+                (let cursor (bml-source-brace-collect-cursor state))
+                (if (bml-token-cursor-end? cursor)
+                    (bml-source-brace-collect-finish
+                        state
+                        (reverse-list (bml-source-brace-collect-acc state))
+                        (empty))
+                (do
+                (let object (bml-token-cursor-current cursor))
                 (let value (bmf-object-value object))
+                (let next-cursor (bml-token-cursor-advance cursor))
+                (let next-steps
+                    (add (bml-source-brace-collect-steps state) 1))
                 (if (str_eq value "{")
-                    (bml-source-collect-balanced-brace-loop
-                        (tail objects)
-                        (add depth 1)
-                        (cons object acc))
+                    (bml-source-brace-collect-state
+                        next-cursor
+                        (add (bml-source-brace-collect-depth state) 1)
+                        (cons object (bml-source-brace-collect-acc state))
+                        false
+                        (empty)
+                        (empty)
+                        next-steps)
                 (if (str_eq value "}")
-                    (if (eq depth 1)
-                        (list (reverse-list acc) (tail objects))
-                        (bml-source-collect-balanced-brace-loop
-                            (tail objects)
-                            (sub depth 1)
-                            (cons object acc)))
-                    (bml-source-collect-balanced-brace-loop
-                        (tail objects)
-                        depth
-                        (cons object acc)))))))
+                    (if (eq (bml-source-brace-collect-depth state) 1)
+                        (bml-source-brace-collect-state
+                            next-cursor
+                            (bml-source-brace-collect-depth state)
+                            (bml-source-brace-collect-acc state)
+                            true
+                            (reverse-list (bml-source-brace-collect-acc state))
+                            (bml-token-cursor-rest next-cursor)
+                            next-steps)
+                        (bml-source-brace-collect-state
+                            next-cursor
+                            (sub (bml-source-brace-collect-depth state) 1)
+                            (cons object
+                                  (bml-source-brace-collect-acc state))
+                            false
+                            (empty)
+                            (empty)
+                            next-steps))
+                    (bml-source-brace-collect-state
+                        next-cursor
+                        (bml-source-brace-collect-depth state)
+                        (cons object (bml-source-brace-collect-acc state))
+                        false
+                        (empty)
+                        (empty)
+                        next-steps))))))))
+
+    (defn bml-source-brace-collect-run (state)
+        (if (bml-source-brace-collect-done? state) state
+            (bml-source-brace-collect-run
+                (bml-source-brace-collect-step state))))
+
+    (defn bml-source-collect-balanced-brace-state (objects)
+        (if (bml-source-token-value? (head objects) "{")
+            (bml-source-brace-collect-run
+                (bml-source-brace-collect-state
+                    (bml-token-cursor objects 1)
+                    1
+                    (empty)
+                    false
+                    (empty)
+                    (empty)
+                    0))
+            (bml-source-brace-collect-state
+                (bml-token-cursor objects 0)
+                0
+                (empty)
+                true
+                (empty)
+                objects
+                0)))
 
     (defn bml-source-collect-balanced-brace (objects)
-        (if (bml-source-token-value? (head objects) "{")
-            (bml-source-collect-balanced-brace-loop (tail objects) 1 (empty))
-            (list (empty) objects)))
+        (do
+            (let state (bml-source-collect-balanced-brace-state objects))
+            (list
+                (bml-source-brace-collect-body state)
+                (bml-source-brace-collect-rest state))))
 
     (defn bml-source-collect-balanced-paren-loop (objects depth acc)
         (if (nil? objects)
