@@ -85,9 +85,27 @@ jobs:
 
       - name: Sync tracked deploy script to VPS
         run: |
-          scp -i ~/.ssh/id_hostinger deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
-          scp -i ~/.ssh/id_hostinger deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
-          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
+          retry_remote() {
+            local attempt=1
+            local max_attempts=5
+            while :; do
+              if "$@"; then
+                return 0
+              fi
+              rc=$?
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "::error::remote sync command failed after $attempt attempts (rc=$rc): $*"
+                return "$rc"
+              fi
+              echo "::warning::remote sync command failed on attempt $attempt (rc=$rc); retrying in 10s: $*"
+              sleep 10
+              attempt=$((attempt + 1))
+            done
+          }
+          ssh_opts=(-i ~/.ssh/id_hostinger -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=2)
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
+          retry_remote scp "${ssh_opts[@]}" deploy/hostinger/install-gitnexus.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
+          retry_remote ssh "${ssh_opts[@]}" "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${HOSTINGER_DEPLOY_PATH}/install-gitnexus.sh"
 
       - name: Roll forward VPS
         timeout-minutes: 40
