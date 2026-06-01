@@ -1,0 +1,135 @@
+; grammars/compression-fold.fk — the dimension-reducing compression recipe.
+;
+; lc-identity-is-shared-blueprint-and-recipe's last unbuilt move, made REAL:
+; "To compress is to drop a dimension the body has learned is redundant — and a
+;  dimension-reduction is itself a Recipe: one with one less output than input.
+;  N inputs → N−1 outputs. The dropped output is the dimension that had become
+;  predictable from the others."
+;
+; This grammar builds the FOLD mechanism — the autoencoder bottleneck as a Form
+; recipe. Two recipes, exact inverses on a genuinely-redundant axis:
+;
+;   compress    : (inputs, idx)            → N−1 outputs   (drop dimension idx)
+;   reconstruct : (reduced, idx, coeffs)   → N   outputs   (re-derive dimension idx)
+;
+; The fold is the recipe with ONE LESS OUTPUT THAN INPUT: compress removes the
+; element at position `idx` from a list of N, yielding N−1. reconstruct is its
+; inverse — it re-inserts at `idx` the value the kept dimensions PREDICT, using
+; the redundant-axis spec.
+;
+; THE REDUNDANT-AXIS SPEC IS DATA (core-abstraction-first). One engine; the
+; spec drops in as values, never as a parallel code path:
+;
+;   idx     — WHICH dimension is redundant (the index to fold away).
+;   coeffs  — HOW it is predicted: a list of N linear coefficients where
+;             predicted[idx] = Σ_{j≠idx} coeffs[j] · inputs[j]. coeffs[idx] is
+;             ignored (the axis does not predict itself).
+;
+; So the fold is parameterized: c = a + b is spec (idx=2, coeffs=[1,1,0]);
+; c = 2a − b is spec (idx=2, coeffs=[2,-1,0]); folding a's axis when a = c − b
+; is spec (idx=0, coeffs=[0,-1,1]). Same `compress`/`reconstruct`, different DATA.
+;
+; HONEST SCOPE — this builds the FOLD, not the LEARNING. The coefficients are
+; GIVEN; the recipe APPLIES a given reduction, it does not yet LEARN which axis
+; went surprise-free or fit the coefficients that predict it. That learning —
+; the cell discovering, per category, which dimension became redundant and the
+; coefficients that fold it — is the named next build. The fold proves the
+; MECHANISM: reconstruct∘compress is the identity EXACTLY on a redundant axis
+; (zero information lost — the dropped dimension was reconstructible from the
+; rest), and demonstrably LOSSY on a surprising axis (which is precisely WHY the
+; body must learn which axis is safe to drop before folding it).
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ── dot product over the KEPT dimensions ────────────────────────────────
+    ;; Σ_j coeffs[j] · inputs[j] over every j ≠ skip. The redundant axis does
+    ;; not predict itself, so position `skip` is excluded from the sum. head/tail
+    ;; recursion with an explicit cursor `j` walks both lists in lockstep.
+    (defn cf-dot-skip (coeffs inputs j skip acc)
+        (if (eq (len inputs) 0)
+            acc
+            (cf-dot-skip (tail coeffs) (tail inputs) (add j 1) skip
+                (if (eq j skip)
+                    acc                                              ; skip the redundant axis itself
+                    (add acc (mul (head coeffs) (head inputs)))))))  ; coeffs[j] · inputs[j]
+
+    ;; ── predict the redundant axis from the FULL input vector ───────────────
+    ;; predicted = Σ_{j≠idx} coeffs[j] · inputs[j]. The value the body claims is
+    ;; redundant — fully determined by the others when the axis is truly free.
+    (defn cf-predict (inputs idx coeffs)
+        (cf-dot-skip coeffs inputs 0 idx 0))
+
+    ;; ── COMPRESS — the fold: drop element at position `idx` (N → N−1) ────────
+    ;; THE recipe with one less output than input. Walk the list with a cursor;
+    ;; every element except the one at `idx` is consed onto the reduced output.
+    ;; Output arity is exactly input arity − 1.
+    (defn cf-drop-at (xs j idx acc)
+        (if (eq (len xs) 0)
+            acc
+            (cf-drop-at (tail xs) (add j 1) idx
+                (if (eq j idx)
+                    acc                          ; fold this dimension away
+                    (cons (head xs) acc)))))     ; keep this dimension
+    ;; cf-drop-at accumulates in reverse; reverse once to restore input order.
+    (defn cf-reverse (xs acc)
+        (if (eq (len xs) 0) acc (cf-reverse (tail xs) (cons (head xs) acc))))
+    (defn compress (inputs idx)
+        (cf-reverse (cf-drop-at inputs 0 idx (list)) (list)))
+
+    ;; ── RECONSTRUCT — the inverse: re-insert the predicted axis (N−1 → N) ────
+    ;; Walk the reduced (N−1) list; at output position `idx` splice in the
+    ;; predicted value (computed from the kept dims), then continue. The result
+    ;; is the full N-vector. On a redundant axis the spliced value equals the
+    ;; original dropped one — exact recovery, zero information lost.
+    ;;
+    ;; cf-insert-at walks the reduced list with output-cursor `out` and emits the
+    ;; predicted value when out == idx, otherwise the next reduced element.
+    (defn cf-insert-at (reduced out idx predicted acc)
+        (if (eq out idx)
+            ;; emit the reconstructed axis here, then continue from the same reduced cursor
+            (cf-insert-at reduced (add out 1) idx predicted (cons predicted acc))
+            (if (eq (len reduced) 0)
+                acc                              ; reduced exhausted and idx already placed
+                (cf-insert-at (tail reduced) (add out 1) idx predicted
+                    (cons (head reduced) acc)))))
+    ;; reconstruct first re-derives the dropped axis FROM the kept dims. The
+    ;; prediction uses the kept values placed back at their original positions —
+    ;; equivalently, a dot over the reduced vector against coeffs with `idx`
+    ;; removed. We rebuild the full vector incrementally: predict from `reduced`
+    ;; using the coeffs of the kept axes (coeffs with idx folded out), then splice.
+    (defn cf-dot (coeffs xs acc)
+        (if (eq (len xs) 0)
+            acc
+            (cf-dot (tail coeffs) (tail xs) (add acc (mul (head coeffs) (head xs))))))
+    (defn reconstruct (reduced idx coeffs)
+        (do
+            ;; coeffs with the redundant axis's own (ignored) coefficient removed,
+            ;; in the SAME order as `reduced` — so a straight dot predicts the axis.
+            (let kept-coeffs (compress coeffs idx))
+            (let predicted (cf-dot kept-coeffs reduced 0))
+            (cf-reverse (cf-insert-at reduced 0 idx predicted (list)) (list))))
+
+    ;; ── round-trip equality on number lists (value-exact, element-wise) ──────
+    (defn cf-list-eq (a b)
+        (if (eq (len a) 0)
+            (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0)
+                0
+                (if (eq (head a) (head b))
+                    (cf-list-eq (tail a) (tail b))
+                    0))))
+
+    ;; ── the readable face — what the fold did ───────────────────────────────
+    (defn cf-int (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (cf-int (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+    (defn cf-j (a b) (str_concat a b))
+    (defn cf-describe (n idx)
+        (cf-j "fold dimension "
+        (cf-j (cf-int idx)
+        (cf-j " of " (cf-j (cf-int n)
+        (cf-j " → " (cf-int (sub n 1))))))))
+
+    0)

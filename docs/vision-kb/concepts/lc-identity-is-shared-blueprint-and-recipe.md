@@ -128,6 +128,33 @@ was redundant"; running it is the act of remembering more cheaply. Repeated
 compression is how an identity settles: each redundant dimension folded away
 leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
 
+**The FOLD mechanism is REAL — proven three-way.** The reducing recipe is no
+longer described-only; it executes Rust == Go == TS. Two recipes that are
+exact inverses on a redundant axis live in
+[`form/form-stdlib/grammars/compression-fold.fk`](../../../form/form-stdlib/grammars/compression-fold.fk),
+proven by the band [`compression-fold-band.fk`](../../../form/form-stdlib/tests/compression-fold-band.fk)
+(verdict `111111`):
+
+- `compress(inputs, idx) → N−1 outputs` — the fold itself: a recipe with one
+  less output than input. It removes the element at position `idx`, dropping
+  the redundant dimension.
+- `reconstruct(reduced, idx, coeffs) → N outputs` — the inverse: it re-derives
+  the dropped dimension from the kept ones (`predicted = Σ_{j≠idx} coeffs[j] ·
+  inputs[j]`) and splices it back at `idx`.
+
+The **redundant-axis spec is DATA** — one engine, the reduction drops in as
+values (`core-abstraction-first`): `c = a + b` is `(idx=2, coeffs=[1,1,0])`;
+`c = 2a − b` is `(idx=2, coeffs=[2,−1,0])`; folding the *first* axis when
+`a = c − b` is `(idx=0, coeffs=[0,−1,1])` — same `compress`/`reconstruct`,
+different spec. The band proves `reconstruct∘compress` is the **identity
+exactly** on a redundant axis (zero information lost — the dropped dimension
+was fully reconstructible from the rest), AND demonstrably **lossy** on a
+surprising axis: folding `(4, 9, 20)` with the sum-spec recovers `13` where
+`20` was, because `20` carried surprise the kept dims could not predict. That
+negative is the proof the fold is lossless **only** on a genuinely-predictable
+dimension — which is exactly *why* the body must learn which axis is safe to
+drop before folding it.
+
 ## The whole loop
 
 1. Cells sharing a Blueprint+Recipe **are** an identity (structural, not
@@ -178,11 +205,20 @@ leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
   DATA, grounded entirely on the projection that already exists. (Off the hot
   path: this is the OFFLINE attribution recorder, never the live
   `serve_via_kernel` request path, which remains a separate decision.)
-- **Still named, not yet built.** The per-category *learned* retention policy
-  (the cell learning its own threshold over time, rather than a per-run
-  relative cutoff) and the dimension-reducing compression recipe (N→N−1,
-  folding away a redundant axis) remain the named next builds — grounded on
-  the same projection the gate now reads.
+- **The FOLD is built; the LEARNING is the named next build.** The dimension-
+  reducing compression recipe (N→N−1, folding away a redundant axis) is REAL
+  and three-way (see "Compression is a dimension-reducing recipe" above —
+  `compress`/`reconstruct`, lossless on a redundant axis, lossy on a surprising
+  one). What it does *not* yet do: the recipe **applies** a given reduction; it
+  does not yet **learn** which axis went surprise-free or fit the coefficients
+  that predict it. That learning — the cell discovering, per category, which
+  dimension became redundant and the coefficients that fold it — is the named
+  next build, grounded on the same projection the surprise gate now reads. The
+  per-category *learned* retention policy (the cell learning its own threshold
+  over time, rather than a per-run relative cutoff) and **wiring compression
+  into the edge-event memory** (folding a category's accumulated events once a
+  dimension goes surprise-free) remain alongside it — the learning side of the
+  same loop the fold mechanism now stands ready to apply.
 
 ## Cross-References
 
