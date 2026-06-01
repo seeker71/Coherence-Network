@@ -1,0 +1,80 @@
+; tests/bml-thesis-rule-hashcode-return-proof.fk - source HashCode return execution
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves a real return expression from the original thesis companion
+; container-Rule.bml executes from parsed .bml body source through native
+; method dispatch: return m_strName.HashCode + m_hItem.HashCode;
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let hashcode-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "HashCode"))
+    (let hashcode-body (bml-method-body hashcode-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9210))
+    (let ObjBP (make_nodeid 1 2 99 9211))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new EnvBP))
+
+    (let name-object (record_new ObjBP "HashCode" 40))
+    (let item-object (record_new ObjBP "HashCode" 2))
+    (let rule-instance
+        (record_new
+            RuleBP
+            "m_strName" name-object
+            "m_hItem" item-object))
+    (let direct-result
+        (bml-body-source-exec-return
+            hashcode-body
+            rule-instance
+            env))
+
+    (defn rule-hashcode-dispatch (self)
+        (bml-body-source-exec
+            hashcode-body
+            self
+            env))
+
+    (let before-has (method_has RuleBP "HashCode"))
+    (method_define RuleBP "HashCode" rule-hashcode-dispatch)
+    (let after-has (method_has RuleBP "HashCode"))
+
+    (let first-result (method_invoke rule-instance "HashCode"))
+    (let second-rule
+        (record_new
+            RuleBP
+            "m_strName" (record_new ObjBP "HashCode" 5)
+            "m_hItem" (record_new ObjBP "HashCode" 7)))
+    (let second-result (method_invoke second-rule "HashCode"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-return hashcode-method) "int" 2)
+            (str-score (bml-method-name hashcode-method) "HashCode" 4)
+            (bool-score (bml-body-source-contains? hashcode-body "return") 8)
+            (bool-score (bml-body-source-contains? hashcode-body "+") 16)
+            (bool-score (bml-body-source-contains? hashcode-body "m_strName") 32)
+            (bool-score (bml-body-source-contains? hashcode-body "m_hItem") 64)
+            (bool-score (bml-body-source-return-member-add? hashcode-body) 128)
+            (int-score direct-result 42 256)
+            (bool-score (not before-has) 512)
+            (bool-score after-has 1024)
+            (int-score first-result 42 2048)
+            (int-score second-result 12 4096)
+            (bool-score (record_has rule-instance "m_strName") 8192))))
