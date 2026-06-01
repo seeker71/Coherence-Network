@@ -70,6 +70,14 @@ PARITY_FILES=(
     # value-walk carries list construction (append-accumulator → value_to_py
     # List arm) end to end, three-way on the frozen [1,2,3]@1.0 input.
     "examples/endpoint_softmax_weights_demo.py"
+    # Cost/value-vector decomposition — the FIRST routes to use the
+    # round_ndigits native (CPython-exact round(x, 4), PR #2320). Each
+    # returns a LIST of the named components; the decimal inputs (33.333,
+    # 9.205) land on the half-to-even tie-breaks the old round-half-up shim
+    # got wrong, so three-way parity here is the end-to-end proof of the
+    # round() unlock.
+    "examples/endpoint_cost_vector_demo.py"
+    "examples/endpoint_value_vector_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

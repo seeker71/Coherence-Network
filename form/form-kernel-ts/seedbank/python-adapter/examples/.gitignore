@@ -30,3 +30,5 @@
 !endpoint_marginal_cc_return_demo.fk
 !endpoint_breath_balance_demo.fk
 !endpoint_softmax_weights_demo.fk
+!endpoint_cost_vector_demo.fk
+!endpoint_value_vector_demo.fk
