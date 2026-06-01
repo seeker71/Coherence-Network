@@ -345,7 +345,7 @@ returns the statement count (15), not the program's CPython value (40949).
 The driver swaps to a recipe-walking expression in the same script when G4
 (closure interpreter) lands; the orchestration shape stays.
 
-**Open contract — false-green correction (2026-06-01).** Two rows that had
+**Resolved — false-green correction (2026-06-01).** Two rows that had
 been recorded COMPOST READY on 2026-06-01 —
 `python_substrate_demo.py` (claimed three-way `17680`) and
 `endpoint_coherence_weight_demo.py` (claimed three-way `16185`) — were
@@ -381,7 +381,11 @@ demos re-measured **three-way green at their true values** under isolated
 tempdirs — `python_substrate_demo` `17680/17680/17680`,
 `endpoint_coherence_weight_demo` `16185/16185/16185`. Their COMPOST READY rows
 are restored above; the honest count climbs back by two, on real parity this
-time. See the PROVEN return-signal row for the mechanism.
+time. See the PROVEN return-signal row for the mechanism. The short-circuit is
+now pinned against regression by cell 13 of
+`form-stdlib/tests/python-bmf-eval-band.fk` — the early-guard `g(0) + g(5)`
+shape, three-way green at `110` (a regression would collapse it to `20`),
+folded into the band aggregate `91000`.
 
 **Resolved contract — the import arm landed (2026-06-01, #2266).** The third
 false-green removed in the integrity sweep is re-earned. The Form-native
@@ -426,7 +430,7 @@ its own focused PR):
 - `PY-BMF-DICT` + dict-literal lift + key access
 - `PY-BMF-CLASS` + method binding + `PY-BMF-ATTR` for `obj.field`
 - `PY-BMF-FOR` + iterator protocol on lists / ranges — **landed for `range(...)`**: `lift-for` + the PY-BMF-FOR eval arm carry `for i in range(...)`. The lift lifts the iterable as a general expression (not a range-only special-case) and the eval iterates whatever Form list it evaluates to, so `for v in <list-variable>` also walks. `python_range_demo.py` reached COMPOST READY 2026-05-31.
-- `PY-BMF-IF-STMT` + statement-level `if cond: body` lift — **landed** (lift 2026-06-01; return-short-circuit 2026-06-01, `claude/return-signal-fix`): a category distinct from the `PY-BMF-IF` ternary expression (ontology inst 575, auto-bound via `form-ontology-loader.fk`). `lift-if-statement` lifts the header condition with the while colon-stripper and the children as statements, emitting `PY-BMF-IF-STMT(cond, body-stmts...)`; the eval arm on `py-eval-statement` evaluates the condition once and runs the body when truthy (non-zero, the int-bool convention `py-while` uses). **The return-short-circuit gap is closed:** a statement-result now carries a third `returned` slot, `py-eval-body-loop` stops on it and propagates the result, every block arm (IF-STMT / FOR / WHILE) reads it off the body-loop result, and `py-eval-module-loop` (the function-body walker) yields the returned value — so a `return` inside an `if` / `for` / `while` body short-circuits the enclosing function. Minimal proof (each in its own tempdir): `def f():` with `if 1==1: return 1` then `return 2` now yields `1` (matching CPython), `return` inside a `for` yields `9`, `return` inside a `while` yields `128`, the `weighted_score` guard `f(0)` yields `700` — all three-way. This re-earned `python_substrate_demo.py` (`17680`) and `endpoint_coherence_weight_demo.py` (`16185`) on true parity. `elif` / `else` clauses remain a later breath. No kernel native, no grammar edit — the fix is purely in the interpreter's control-flow plumbing.
+- `PY-BMF-IF-STMT` + statement-level `if cond: body` lift — **landed** (lift 2026-06-01; return-short-circuit 2026-06-01, `claude/return-signal-fix`): a category distinct from the `PY-BMF-IF` ternary expression (ontology inst 575, auto-bound via `form-ontology-loader.fk`). `lift-if-statement` lifts the header condition with the while colon-stripper and the children as statements, emitting `PY-BMF-IF-STMT(cond, body-stmts...)`; the eval arm on `py-eval-statement` evaluates the condition once and runs the body when truthy (non-zero, the int-bool convention `py-while` uses). **The return-short-circuit gap is closed:** a statement-result now carries a third `returned` slot, `py-eval-body-loop` stops on it and propagates the result, every block arm (IF-STMT / FOR / WHILE) reads it off the body-loop result, and `py-eval-module-loop` (the function-body walker) yields the returned value — so a `return` inside an `if` / `for` / `while` body short-circuits the enclosing function. Minimal proof (each in its own tempdir): `def f():` with `if 1==1: return 1` then `return 2` now yields `1` (matching CPython), `return` inside a `for` yields `9`, `return` inside a `while` yields `128`, the `weighted_score` guard `f(0)` yields `700` — all three-way. This re-earned `python_substrate_demo.py` (`17680`) and `endpoint_coherence_weight_demo.py` (`16185`) on true parity. `elif` / `else` clauses remain a later breath. No kernel native, no grammar edit — the fix is purely in the interpreter's control-flow plumbing. **Pinned against regression** by cell 13 of `form-stdlib/tests/python-bmf-eval-band.fk` — the dual-path early guard `g(0) + g(5)` (`if p == 0: return 100` else fallthrough `return 10`), three-way green at `110` where a lost short-circuit would collapse the sum to `20`; folded into the band aggregate `91000`.
 - `PY-BMF-LAMBDA` + closure capture in expressions — **landed**: `lift-lambda` + the PY-BMF-LAMBDA eval arm (closure built, walked by PY-BMF-CALL) carry single-expression lambdas assigned, passed as arguments, and used in arithmetic; `python_lambda_demo.py` reached COMPOST READY 2026-05-31 (arms shipped in #2185; this row records the demo closing three-way with them).
 - `PY-BMF-AUG-ASSIGN` (`x += 1`) and multi-target assignment
 
