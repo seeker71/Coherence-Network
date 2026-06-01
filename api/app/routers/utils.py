@@ -970,6 +970,112 @@ async def value_vector(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/grounded_roi
+#
+# Pure computation: the grounded-ROI scalar trio idea_scoring._with_score
+# attaches to every IdeaWithScore —
+#   remaining_cost_cc = round(max(estimated_cost - actual_cost, 0.0), 4)
+#   value_gap_cc      = round(max(potential_value - actual_value, 0.0), 4)
+#   roi_cc            = round(value_gap_cc / remaining_cost_cc, 4)
+#                         if remaining_cost_cc > 0 else 0.0
+# Shares its body with idea_scoring._grounded_roi_components (the fallback);
+# the recipe returns a LIST of the three components in struct order and this
+# route assembles the named struct (same list-returning shape as cost_vector
+# / value_vector).
+#
+# This route folds three prior unlocks into one recipe: the two-argument max
+# expressed as a comparison (the `max` native floors floats; an `if a > b`
+# branch is float-correct and value-identical), the round_ndigits native
+# (CPython-exact round(x, 4), PR #2320), and a guarded division — the
+# `if remaining_cost_cc > 0 else 0.0` ternary is a conditional in the recipe,
+# so the kernel never divides by zero. The falsy-coalescing of
+# estimated_cost / actual_cost (`or 0.0` in _with_score) is the host's job,
+# applied here before the recipe runs.
+# ---------------------------------------------------------------------------
+
+
+class GroundedRoiResponse(BaseModel):
+    """GET /api/utils/grounded_roi response — the grounded-ROI scalar trio."""
+
+    model_config = ConfigDict(extra="forbid")
+    remaining_cost_cc: Annotated[
+        float, Field(description="Unspent cost = round(max(estimated_cost - actual_cost, 0.0), 4)")
+    ]
+    value_gap_cc: Annotated[
+        float, Field(description="Uncaptured value = round(max(potential_value - actual_value, 0.0), 4)")
+    ]
+    roi_cc: Annotated[
+        float,
+        Field(
+            description=(
+                "Return on remaining cost = round(value_gap_cc / remaining_cost_cc, 4), "
+                "or 0.0 when remaining_cost_cc is not positive (guarded division)"
+            )
+        ),
+    ]
+    estimated_cost: Annotated[float, Field(description="Input estimated_cost, echoed back")]
+    actual_cost: Annotated[float, Field(description="Input actual_cost, echoed back")]
+    potential_value: Annotated[float, Field(description="Input potential_value, echoed back")]
+    actual_value: Annotated[float, Field(description="Input actual_value, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/grounded_roi",
+    response_model=GroundedRoiResponse,
+    summary="Grounded-ROI scalar trio with guarded division (body runs as Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe. "
+        "Returns the three CC scalars idea_scoring._with_score attaches to "
+        "every IdeaWithScore: remaining_cost_cc = round(max(estimated_cost - "
+        "actual_cost, 0.0), 4), value_gap_cc = round(max(potential_value - "
+        "actual_value, 0.0), 4), and roi_cc = round(value_gap_cc / "
+        "remaining_cost_cc, 4) — guarded to 0.0 when remaining_cost_cc is not "
+        "positive, so the kernel never divides by zero. Same body as "
+        "idea_scoring._grounded_roi_components. Folds three unlocks into one "
+        "recipe: max-as-comparison, the round_ndigits native (CPython-exact "
+        "round(x, 4), PR #2320), and a guarded-division conditional. "
+        "Kernel-or-fallback via serve_via_kernel; CPython==Rust per-component "
+        "value-parity is the gate."
+    ),
+)
+async def grounded_roi(
+    estimated_cost: Annotated[float, Query(ge=0.0, description="Estimated cost in CC")] = 60.0,
+    actual_cost: Annotated[float, Query(ge=0.0, description="Actual cost spent in CC")] = 12.0,
+    potential_value: Annotated[float, Query(ge=0.0, description="Potential value in CC")] = 33.333,
+    actual_value: Annotated[float, Query(ge=0.0, description="Actual value captured in CC")] = 8.0,
+) -> GroundedRoiResponse:
+    from app.services.idea_scoring import _grounded_roi_components
+
+    components, runtime = serve_via_kernel(
+        "endpoint_grounded_roi_demo.fk",
+        bindings={
+            "estimated_cost": estimated_cost,
+            "actual_cost": actual_cost,
+            "potential_value": potential_value,
+            "actual_value": actual_value,
+        },
+        fallback=lambda: _grounded_roi_components(
+            estimated_cost, actual_cost, potential_value, actual_value
+        ),
+        parse=_coerce_float_list,
+    )
+    return GroundedRoiResponse(
+        remaining_cost_cc=components[0],
+        value_gap_cc=components[1],
+        roi_cc=components[2],
+        estimated_cost=estimated_cost,
+        actual_cost=actual_cost,
+        potential_value=potential_value,
+        actual_value=actual_value,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

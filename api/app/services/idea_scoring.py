@@ -61,11 +61,33 @@ def _build_value_vector(idea: Idea) -> ValueVector:
     )
 
 
-def _with_score(idea: Idea) -> IdeaWithScore:
-    value_gap = max(idea.potential_value - idea.actual_value, 0.0)
-    remaining_cost_cc = round(max((idea.estimated_cost or 0.0) - (idea.actual_cost or 0.0), 0.0), 4)
+def _grounded_roi_components(
+    estimated_cost: float, actual_cost: float, potential_value: float, actual_value: float
+) -> list[float]:
+    """The grounded-ROI scalar core of _with_score: the three CC scalars.
+
+    Returns [remaining_cost_cc, value_gap_cc, roi_cc] in struct order — the
+    pure arithmetic over already-coalesced float scalars (the ``or 0.0``
+    falsy-coalescing of estimated_cost/actual_cost is the caller's job; this
+    is the math after it). roi_cc guards against division by zero: it is 0.0
+    when remaining_cost_cc is not positive. Transmuted to a Form recipe
+    (endpoint_grounded_roi_demo.fk); this is the byte-identical fallback.
+    """
+    value_gap = max(potential_value - actual_value, 0.0)
+    remaining_cost_cc = round(max(estimated_cost - actual_cost, 0.0), 4)
     value_gap_cc = round(value_gap, 4)
     roi_cc = round(value_gap_cc / remaining_cost_cc, 4) if remaining_cost_cc > 0 else 0.0
+    return [remaining_cost_cc, value_gap_cc, roi_cc]
+
+
+def _with_score(idea: Idea) -> IdeaWithScore:
+    value_gap = max(idea.potential_value - idea.actual_value, 0.0)
+    remaining_cost_cc, value_gap_cc, roi_cc = _grounded_roi_components(
+        idea.estimated_cost or 0.0,
+        idea.actual_cost or 0.0,
+        idea.potential_value,
+        idea.actual_value,
+    )
     cost_vector = idea.cost_vector or _build_cost_vector(idea)
     value_vector = idea.value_vector or _build_value_vector(idea)
     data = idea.model_dump()

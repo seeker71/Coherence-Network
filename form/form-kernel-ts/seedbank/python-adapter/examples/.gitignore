@@ -32,3 +32,4 @@
 !endpoint_softmax_weights_demo.fk
 !endpoint_cost_vector_demo.fk
 !endpoint_value_vector_demo.fk
+!endpoint_grounded_roi_demo.fk
