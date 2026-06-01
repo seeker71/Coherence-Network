@@ -1,0 +1,73 @@
+; tests/bml-thesis-primitive-cut-source-proof.fk - thesis companion primitive source
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that the original companion primitive-Cut.bml file parses from .bml
+; declarations into BML/BMF components and lowers its method bodies to native
+; BMA execution, including forward/backward undo proof for System.Cut.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn kind-score (component expected bit)
+        (if (str_eq (comp-bml-kind component) expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/primitive-Cut.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-declarations path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+
+    (let package-node (head nodes))
+    (let import-node (nth nodes 1))
+    (let cut-class (bml-model-find-class model "Cut"))
+    (let methods (bml-class-own-methods cut-class))
+    (let match-method (bml-find-method methods "Match"))
+    (let as-string-method (bml-find-method methods "AsString"))
+    (let as-create-method (bml-find-method methods "AsCreateString"))
+    (let match-params (bml-method-parameters match-method))
+    (let match-props
+        (bml-class-member-effective-properties cut-class "Method" "Match"))
+    (let match-program (bml-compile-program (bml-method-body match-method)))
+    (let match-state (bma-run-program match-program))
+    (let match-proof (bma-run-forward-backward match-program))
+    (let match-trace (bma-forward-backward-trace match-proof))
+    (let as-string-value
+        (bma-run-value (bml-compile-program (bml-method-body as-string-method))))
+    (let as-create-value
+        (bma-run-value (bml-compile-program (bml-method-body as-create-method))))
+
+    (sum
+        (list
+            (bool-score (gt (len source-objects) 0) 1)
+            (str-score (bmf-object-kind (head source-objects)) "bml-keyword" 2)
+            (str-score (bmf-object-value (head source-objects)) "package" 4)
+            (bool-score (bml-source-exec-parse-ok? parsed) 8)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 16)
+            (int-score (len (bml-source-exec-parse-rules parsed)) 3 32)
+            (kind-score package-node "Package" 64)
+            (kind-score import-node "Import" 128)
+            (str-score (head (comp-bml-fields package-node)) "BMF.primitive" 256)
+            (str-score (head (comp-bml-fields import-node)) "BMF.*" 512)
+            (str-score (bml-class-name cut-class) "Cut" 1024)
+            (str-score (bml-class-structural-base-name cut-class) "Primitive" 2048)
+            (int-score (len methods) 3 4096)
+            (str-score (bml-method-return match-method) "void" 8192)
+            (int-score (len match-params) 3 16384)
+            (str-score (bml-parameter-type (head match-params)) "Context" 32768)
+            (str-score (bml-parameter-name (nth match-params 1)) "hEnv" 65536)
+            (bool-score (bml-properties-has? match-props "public") 131072)
+            (int-score (len (comp-program-ops match-program)) 1 262144)
+            (str-score (comp-vm-mode match-state) "cut" 524288)
+            (int-score (bma-trace-count-mode match-trace "DO") 1 1048576)
+            (int-score (bma-trace-count-mode match-trace "UNDO") 1 2097152)
+            (int-score (bma-trace-count-op match-trace "cut") 2 4194304)
+            (str-score as-string-value "#primitive( 2 )" 8388608)
+            (str-score as-create-value "BML.primitive.Cut()" 16777216))))

@@ -1,0 +1,55 @@
+; tests/bml-thesis-includes-source-proof.fk - thesis companion include file
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that the original BMF-includes.bml companion file parses as native
+; BML/BMF include declarations without synthetic fixtures.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn count-rule-name (rules name)
+        (if (nil? rules) 0
+            (add
+                (if (str_eq (head rules) name) 1 0)
+                (count-rule-name (tail rules) name))))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-includes.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-declarations path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let include-nodes (bml-components-of-kind nodes "Include"))
+
+    (sum
+        (list
+            (int-score (len source-objects) 84 1)
+            (str-score (bmf-object-kind (head source-objects)) "bml-op" 2)
+            (str-score (bmf-object-value (head source-objects)) "#" 4)
+            (str-score (bmf-object-value (nth source-objects 1)) "include" 8)
+            (bool-score (bml-source-exec-parse-ok? parsed) 16)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 32)
+            (int-score (len (bml-source-exec-parse-rules parsed)) 28 64)
+            (int-score
+                (count-rule-name (bml-source-exec-parse-rules parsed) "file-include")
+                28
+                128)
+            (int-score (len include-nodes) 28 256)
+            (str-score
+                (bml-include-path (head include-nodes))
+                "BMF/Argument.bml"
+                512)
+            (str-score
+                (bml-include-path (nth include-nodes 18))
+                "BMF/primitive/Cut.bml"
+                1024)
+            (str-score
+                (bml-include-path (nth include-nodes 27))
+                "BMF/terminal/Terminal.bml"
+                2048))))
