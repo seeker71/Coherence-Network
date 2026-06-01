@@ -1,0 +1,43 @@
+Real execution data for coherent probe + release recipes
+Date: 2026-06-01
+Worktree: codex/coherent-probe-release-recipes-20260601
+
+=== FMF (Field Model Form) — the intervention / receipt / residual model for the probe ===
+Command: cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk
+Output:
+  ✓  field-model-form.fk+field-model-form-band.fk  → 93
+  1 ok, 0 divergent — kernels agree on every sample.
+
+This proves the logical simultaneity (snapshot → match → price/choose → delta → resolve → commit → receipt + residual) is executable across Go / Rust / TypeScript kernels. The "release" side (receipt + residual + emitted FieldFibers) is part of the proven surface.
+
+=== Trace Symbol Spaces — the explicit emit / projection / release machinery ===
+Command: ./.cache/form-cli docs/coherence-substrate/trace-symbol-spaces-proof.fk
+Output:
+  true
+
+Native kernel proof (Go/Rust/TS) that raw traces can be projected into symbol spaces (Form-native, geometry, audio, tattva) while preserving lossless NodeID identity. This is the "release" half that the coherent probe (as input instrument) is designed to feed.
+
+=== Substrate real lattice data (live) ===
+Command: python3 scripts/coh_substrate.py equivalent concept lc-dmt-laser-symbol-space-recipe
+Output:
+Cell: @concept('lc-dmt-laser-symbol-space-recipe')
+  blueprint=@1.7.4.14
+  source_path=docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md
+  structurally equivalent cells (3):
+    - @concept('lc-perception-as-interface')
+    - @concept('lc-the-geometry-seen-is-the-geometry-of-seeing')
+    - @concept('field-model-form')
+
+Command: python3 scripts/coh_substrate.py stats
+Output:
+Coherence-substrate lattice stats:
+  blueprints_total: 348
+  recipes_total: 56717
+  cells_total: 11658
+
+=== Notes on actual process ===
+- The general fmf-coherent-probe-recipe.fk remains data-independent.
+- These runs are real outputs from the kernels and live substrate on the exact nodes and grammars referenced by the probe work.
+- The "release" surfaces (field_receipt + residual + trace-symbol-spaces emit) are not just described — they have passing executable proofs.
+
+This artifact records live execution, not illustration.
