@@ -581,6 +581,73 @@
             (bml-body-source-object-value self env object-name)
             member-name))
 
+    (defn bml-body-source-instanceof? (value class-name)
+        (if (record? value)
+            (if (record_has value "bmlClass")
+                (str_eq (record_get value "bmlClass") class-name)
+                false)
+            false))
+
+    (defn bml-body-source-if-not-instanceof-return-false-at? (values)
+        (if (gt (len values) 9)
+            (if (str_eq (head values) "if")
+                (if (str_eq (nth values 1) "(")
+                    (if (str_eq (nth values 2) "!")
+                        (if (str_eq (nth values 4) "instanceof")
+                            (if (str_eq (nth values 6) ")")
+                                (if (str_eq (nth values 7) "return")
+                                    (if (str_eq (nth values 8) "false")
+                                        (str_eq (nth values 9) ";")
+                                        false)
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-if-not-instanceof-return-false-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-if-not-instanceof-return-false-at? values)
+                (bml-body-source-if-not-instanceof-return-false-count-loop
+                    (drop 10 values)
+                    (add count 1))
+                (bml-body-source-if-not-instanceof-return-false-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-if-not-instanceof-return-false-count (body-component)
+        (bml-body-source-if-not-instanceof-return-false-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-if-not-instanceof-condition? (values self env)
+        (not
+            (bml-body-source-instanceof?
+                (bml-body-source-object-value self env (nth values 3))
+                (nth values 5))))
+
+    (defn bml-body-source-exec-if-not-instanceof-return-false-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-if-not-instanceof-return-false-at? values)
+                (if (bml-body-source-if-not-instanceof-condition? values self env)
+                    false
+                    (bml-body-source-exec-if-not-instanceof-return-false-loop
+                        (drop 10 values)
+                        self
+                        env))
+                (bml-body-source-exec-if-not-instanceof-return-false-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-if-not-instanceof-return-false (body-component self env)
+        (bml-body-source-exec-if-not-instanceof-return-false-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-eval-return-member-add-at (values self env)
         (add
             (bml-body-source-member-value
@@ -897,6 +964,14 @@
 
     (defn bml-body-source-exec-sequence-loop (values previous self env)
         (if (nil? values) self
+            (if (bml-body-source-if-not-instanceof-return-false-at? values)
+                (if (bml-body-source-if-not-instanceof-condition? values self env)
+                    false
+                    (bml-body-source-exec-sequence-loop
+                        (drop 10 values)
+                        ";"
+                        self
+                        env))
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
             (if (bml-body-source-constructor-assignment-at? values)
@@ -968,7 +1043,7 @@
                     (tail values)
                     (head values)
                     self
-                    env))))))))))
+                    env)))))))))))
 
     (defn bml-body-source-exec (body-component self env)
         (bml-body-source-exec-sequence-loop
