@@ -1,0 +1,1 @@
+(do (defn max2 (a b) (if (gt a b) a b)) (defn marginal_cc_return (pv av conf ec ac rr) (do (let value_gap (max2 (sub pv av) 0.0)) (do (let remaining_cost (max2 (sub ec ac) 0.1)) (div (mul (mul value_gap conf) conf) (_plus remaining_cost (mul rr 0.5)))))) (let pv 8.0) (let av 3.0) (let conf 0.8) (let ec 4.0) (let ac 1.0) (let rr 2.0) (marginal_cc_return pv av conf ec ac rr))

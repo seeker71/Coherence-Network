@@ -1571,6 +1571,9 @@ def sense_kernel_api() -> list[str]:
             "/api/utils/nodeid_distance": "/api/utils/nodeid_distance",
             "/api/utils/nodeid_compatibility": "/api/utils/nodeid_compatibility",
             "/api/utils/weighted_average": "/api/utils/weighted_average",
+            "/api/utils/simpson_diversity": "/api/utils/simpson_diversity",
+            "/api/utils/idea_score": "/api/utils/idea_score",
+            "/api/utils/marginal_cc_return": "/api/utils/marginal_cc_return",
         }
         for route in (str(s["route"]) for s in served):
             path = endpoint_paths.get(route)
