@@ -1650,6 +1650,21 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
 	})
+	// _list_append — functional list extension: (_list_append xs x) → a NEW
+	// list = xs ++ [x]. Sibling-parity with Rust + TS. The Python adapter
+	// lowers the accumulator idiom `result.append(x)` to
+	// (let result (_list_append result x)), rebinding the name to the grown
+	// list each pass — what unblocks list-returning routes (softmax, vectors).
+	// A non-list receiver yields a single-element list, matching an append
+	// onto an empty accumulator.
+	k.registerNative("_list_append", catListNat(), func(_ *Kernel, args []Value) Value {
+		var xs []Value
+		if args[0].Kind == VList {
+			xs = append(xs, args[0].List...)
+		}
+		xs = append(xs, args[1])
+		return Value{Kind: VList, List: xs}
+	})
 	// Common Python builtins applied to lists. Sibling-parity with
 	// Rust + TS kernels. Honest error messages on empty lists.
 	k.registerNative("min", catMethod(), func(_ *Kernel, args []Value) Value {

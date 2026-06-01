@@ -109,6 +109,16 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_breath_balance_demo.fk",
         "expected_result": "0.9999999999999998",
     },
+    {
+        # First LIST-returning kernel-served route. The result is a list of
+        # softmax weights; the trace renders it as the list display string, so
+        # the parity anchor is that string verbatim. scores [1,2,3] @ temp 1.0
+        # shifted by max 3.0 → weights [e^-2, e^-1, 1]/total, summing to 1.0.
+        # Element-wise CPython==Rust parity is proven by parity_suite.sh.
+        "route": "/api/utils/softmax_weights",
+        "recipe": "endpoint_softmax_weights_demo.fk",
+        "expected_result": "[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]",
+    },
 ]
 
 _EXAMPLES_DIR = (

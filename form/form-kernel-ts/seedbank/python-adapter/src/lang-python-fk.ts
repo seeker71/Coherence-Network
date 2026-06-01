@@ -47,6 +47,37 @@ function isSuperCall(k: Kernel, n: NodeID): boolean {
   return capturedChildren(k, callKids[1]!).length === 0;
 }
 
+// The list methods the adapter lowers to functional list-construction
+// instead of class-method dispatch. A dispatch *table* (append today;
+// extend / insert as later data) — a list receiver carries no "__class__",
+// so `_dispatch` would fail; these route to `_list_append` and friends.
+const LIST_METHODS = new Set<string>(["append"]);
+
+// Is this node `name.append(x)` — a method_call whose receiver is a bare
+// ident and whose method is a known list method? Returns the receiver name
+// and the argument node when so, else null. This is the accumulator idiom
+// (`result = []` then `result.append(x)` in a loop): Python mutates in
+// place and the NAME holds the growing list, so the adapter rebinds the
+// name to the extended list rather than dispatching a class method on a
+// plain list (which has no "__class__" field).
+function listMethodCall(
+  k: Kernel,
+  n: NodeID,
+): { name: string; method: string; arg: NodeID } | null {
+  if (n.level === Level.TRIVIAL) return null;
+  if (capturedCtor(k, n) !== CTOR.method_call) return null;
+  const kids = capturedChildren(k, n);
+  const recvNode = kids[0]!;
+  if (capturedCtor(k, recvNode) !== CTOR.ident) return null;
+  const method = emitIdent(k, kids[1]!);
+  if (!LIST_METHODS.has(method)) return null;
+  const argNodes = capturedChildren(k, kids[2]!);
+  // append takes exactly one argument; a different arity is not the
+  // accumulator shape — let it fall through to the dispatch path.
+  if (argNodes.length !== 1) return null;
+  return { name: emitIdent(k, recvNode), method, arg: argNodes[0]! };
+}
+
 // Counter for synthesized helper names (`_while_N`, `_for_N`,
 // `_lambda_N`). Reset at each emitFk call so output is deterministic.
 let whileCounter = 0;
@@ -235,6 +266,17 @@ function collectAssignTargets(k: Kernel, n: NodeID, out: string[], seen: Set<str
     if (tn !== null && !seen.has(tn)) {
       seen.add(tn);
       out.push(tn);
+    }
+    return;
+  }
+  // `name.append(x)` mutates `name` in Python; the kernel rebinds it to the
+  // grown list, so the accumulator name is a loop-mutated variable that must
+  // thread through the while/for helper exactly like an `assign` target.
+  const lm = listMethodCall(k, n);
+  if (lm !== null) {
+    if (!seen.has(lm.name)) {
+      seen.add(lm.name);
+      out.push(lm.name);
     }
     return;
   }
@@ -464,6 +506,18 @@ function emit(k: Kernel, n: NodeID, opts: EmitFkOptions): string {
       const recvNode = kids[0]!;
       const methodName = emitIdent(k, kids[1]!);
       const argNodes = capturedChildren(k, kids[2]!);
+      // Accumulator idiom: `name.append(x)` rebinds `name` to the extended
+      // list (name ++ [x]) via the kernel's functional `_list_append`,
+      // instead of dispatching a class method on a plain list (no __class__).
+      // collectAssignTargets already treats `name` as a threaded loop var, so
+      // the rebind persists across iterations exactly like Python's in-place
+      // append. This is the lowering that lets list-returning bodies (softmax,
+      // distributions, vectors) serve kernel-native.
+      const lm = listMethodCall(k, n);
+      if (lm !== null) {
+        const argStr = emit(k, lm.arg, opts);
+        return `(let ${lm.name} (_list_append ${lm.name} ${argStr}))`;
+      }
       const argStrs = argNodes.map((a: NodeID) => emit(k, a, opts));
       // Detect super().method(args) — receiver is call(ident("super"), []).
       if (isSuperCall(k, recvNode)) {

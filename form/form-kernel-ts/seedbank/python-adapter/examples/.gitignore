@@ -29,3 +29,4 @@
 !endpoint_idea_score_demo.fk
 !endpoint_marginal_cc_return_demo.fk
 !endpoint_breath_balance_demo.fk
+!endpoint_softmax_weights_demo.fk

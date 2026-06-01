@@ -100,6 +100,23 @@
         ;; node_value to recover the runtime string. Same shape as INT.
         (intern_node PY-BMF-STRING (list (intern_trivial_string s))))
 
+    (defn mk-py-for (var iterable body-stmts)
+        ;; FOR children: var-name-leaf, iterable-recipe, body-stmt-recipes...
+        ;; The eval FOR arm binds var to each element of the evaluated
+        ;; iterable and threads env through the body each pass.
+        (intern_node PY-BMF-FOR
+            (cons (intern_trivial_string var)
+                  (cons iterable body-stmts))))
+
+    (defn mk-py-method-call (obj mname args)
+        ;; METHOD-CALL children: obj-recipe, method-name-leaf, arg-recipes...
+        ;; A LIST receiver + list-method name (`result.append(x)`) lands in
+        ;; the statement-level accumulator arm; other receivers route to
+        ;; class-method dispatch.
+        (intern_node PY-BMF-METHOD-CALL
+            (cons obj
+                  (cons (intern_trivial_string mname) args))))
+
     (defn mk-py-dict (pairs)
         ;; pairs is a flat (k1-recipe v1-recipe k2-recipe v2-recipe ...)
         ;; list; the interpreter expects exactly that shape.
@@ -353,14 +370,41 @@
     (let cell13-value (py-run cell13))                         ; 110
     (let cell13-score (if (eq cell13-value 110) 13000 0))
 
+    ;; ---- cell 14: FOR + list `.append` accumulator — the softmax shape.
+    ;; This is the strange-minimal cell that pins list-construction inside a
+    ;; recipe: `result = []` seeded empty, `for v in [1,2,3]:` builds the list
+    ;; element by element via `result.append(v*v)`, and `sum(result)` reduces
+    ;; the GROWN list to a scalar the band can compare three-way. Before the
+    ;; accumulator arm, `result.append(...)` lowered to a class-method dispatch
+    ;; (record_get "__class__") and failed on the plain list; now it rebinds
+    ;; `result` to the extended list each pass.
+    ;;   result = []
+    ;;   for v in [1, 2, 3]:
+    ;;       result.append(v * v)
+    ;;   sum(result)
+    ;; CPython: 1 + 4 + 9 = 14 ------------------------------------------
+    (let cell14
+        (py-module
+            (list
+                (py-assign "result" (mk-py-list (empty)))
+                (mk-py-for "v"
+                    (mk-py-list (list (py-int-lit 1) (py-int-lit 2) (py-int-lit 3)))
+                    (list
+                        (mk-py-method-call (py-ident "result") "append"
+                            (list (py-binop (py-ident "v") "*" (py-ident "v"))))))
+                (py-call "sum" (list (py-ident "result"))))))
+    (let cell14-value (py-run cell14))                         ; 14
+    (let cell14-score (if (eq cell14-value 14) 14000 0))
+
     ;; ---- aggregate ---------------------------------------------------
     ;; Cell-N awards N*1000 when its value matches CPython. Total when
-    ;; every cell agrees: (1+2+...+13)*1000 = 91000.
+    ;; every cell agrees: (1+2+...+14)*1000 = 105000.
     ;; Any single cell failing leaves the aggregate sensitive to which
-    ;; arm broke — a cell-9 failure shows up as 91000-9000=82000, a
-    ;; cell-13 (return-short-circuit) regression as 91000-13000=78000.
+    ;; arm broke — a cell-9 failure shows up as 105000-9000=96000, a
+    ;; cell-14 (list-accumulator) regression as 105000-14000=91000.
 
     (sum (list cell1-score cell2-score cell3-score cell4-score
                cell5-score cell6-score cell7-score
                cell8-score cell9-score cell10-score
-               cell11-score cell12-score cell13-score)))
+               cell11-score cell12-score cell13-score
+               cell14-score)))

@@ -1534,6 +1534,18 @@ export class Kernel {
       return lst[i] ?? { kind: "null" };
     });
     this.registerNative("empty", catListNat(), () => ({ kind: "list", list: [] }));
+    // _list_append — functional list extension: (_list_append xs x) → a NEW
+    // list = xs ++ [x]. Sibling-parity with Rust + Go. The Python adapter
+    // lowers the accumulator idiom `result.append(x)` to
+    // (let result (_list_append result x)), rebinding the name to the grown
+    // list each pass — what unblocks list-returning routes (softmax, vectors).
+    // A non-list receiver yields a single-element list, matching an append
+    // onto an empty accumulator.
+    this.registerNative("_list_append", catListNat(), (_k, args) => {
+      const base = args[0]?.kind === "list" ? args[0].list : [];
+      const x = args[1] ?? { kind: "null" };
+      return { kind: "list", list: [...base, x] };
+    });
     // --- Dict natives — sibling-parity with Rust _dict_* + _get + _in ---
     // Dicts are first-class but ride on Value{kind:"list"} with a
     // "__dict__" tag in slot 0 followed by alternating key/value pairs:

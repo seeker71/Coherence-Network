@@ -2262,6 +2262,23 @@ impl Kernel {
             Value::Null
         });
         self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        // _list_append — functional list extension: `(_list_append xs x)` →
+        // a NEW list = xs ++ [x]. The Python adapter lowers the accumulator
+        // idiom `result.append(x)` to `(let result (_list_append result x))`,
+        // rebinding the name to the grown list each pass (Python mutates in
+        // place; the kernel's list is an immutable value, so the name carries
+        // the growth). This is what unblocks the whole class of list-returning
+        // routes — softmax, distributions, vectors — without a class-method
+        // dispatch on a plain list. A non-list receiver yields a single-element
+        // list, matching `[].append(x)` having extended an empty accumulator.
+        self.register_native("_list_append", cat_list_nat(), |_, _, args| {
+            let mut xs = match &args[0] {
+                Value::List(xs) => xs.clone(),
+                _ => Vec::new(),
+            };
+            xs.push(args[1].clone());
+            Value::List(xs)
+        });
         // _get — one polymorphic accessor over every container shape the
         // Python adapter emits. The emitter lowers BOTH attribute reads
         // (`obj.field` → `(_get obj "field")`) and subscripts (`x[i]` /
