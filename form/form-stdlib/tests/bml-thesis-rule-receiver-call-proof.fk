@@ -36,8 +36,16 @@
     (defn env-start-result-stack-dispatch (self)
         (record_set self "started" 1))
 
+    (defn env-end-result-stack-dispatch (self tag)
+        (record_set self "endedTag" tag))
+
+    (defn rule-get-tag-dispatch (self tag)
+        tag)
+
     (let before-started (record_get env-object "started"))
     (method_define EnvBP "StartResultStack" env-start-result-stack-dispatch)
+    (method_define EnvBP "EndResultStack" env-end-result-stack-dispatch)
+    (method_define RuleBP "GetTag" rule-get-tag-dispatch)
     (let exec-result
         (bml-body-source-exec-receiver-call0
             match-body
@@ -46,7 +54,11 @@
     (let after-started (record_get env-object "started"))
 
     (let second-env-object (record_new EnvBP "started" 0))
-    (let second-env (record_new CallEnvBP "hEnv" second-env-object))
+    (let second-env
+        (record_new
+            CallEnvBP
+            "hEnv" second-env-object
+            "strTag" "receiver-proof-tag"))
     (bml-body-source-exec match-body rule-instance second-env)
 
     (sum

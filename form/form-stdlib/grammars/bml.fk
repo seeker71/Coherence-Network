@@ -571,9 +571,10 @@
             (bml-body-source-values body-component)))
 
     (defn bml-body-source-object-value (self env name)
-        (if (record_has self name)
-            (record_get self name)
-            (record_get env name)))
+        (if (str_eq name "null") (empty)
+            (if (record_has self name)
+                (record_get self name)
+                (record_get env name))))
 
     (defn bml-body-source-member-value (self env object-name member-name)
         (record_get
@@ -772,6 +773,68 @@
             self
             env))
 
+    (defn bml-body-source-receiver-call1-nested-implicit-at? (values)
+        (if (gt (len values) 9)
+            (if (str_eq (nth values 1) ".")
+                (if (str_eq (nth values 3) "(")
+                    (if (str_eq (nth values 5) "(")
+                        (if (str_eq (nth values 7) ")")
+                            (if (str_eq (nth values 8) ")")
+                                (str_eq (nth values 9) ";")
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-receiver-call1-nested-implicit-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-receiver-call1-nested-implicit-at? values)
+                (bml-body-source-receiver-call1-nested-implicit-count-loop
+                    (drop 10 values)
+                    (add count 1))
+                (bml-body-source-receiver-call1-nested-implicit-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-receiver-call1-nested-implicit-count (body-component)
+        (bml-body-source-receiver-call1-nested-implicit-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-eval-nested-implicit-call1-at (values self env)
+        (method_invoke
+            self
+            (nth values 4)
+            (bml-body-source-object-value self env (nth values 6))))
+
+    (defn bml-body-source-exec-receiver-call1-nested-implicit-at (values self env)
+        (method_invoke
+            (bml-body-source-object-value self env (head values))
+            (nth values 2)
+            (bml-body-source-eval-nested-implicit-call1-at values self env)))
+
+    (defn bml-body-source-exec-receiver-call1-nested-implicit-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-receiver-call1-nested-implicit-at? values)
+                (do
+                    (bml-body-source-exec-receiver-call1-nested-implicit-at values self env)
+                    (bml-body-source-exec-receiver-call1-nested-implicit-loop
+                        (drop 10 values)
+                        self
+                        env))
+                (bml-body-source-exec-receiver-call1-nested-implicit-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-receiver-call1-nested-implicit (body-component self env)
+        (bml-body-source-exec-receiver-call1-nested-implicit-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-constructor-blueprint (type-name)
         (if (str_eq type-name "ParseStack")
             (make_nodeid 1 2 99 9241)
@@ -858,6 +921,14 @@
                         ";"
                         self
                         env))
+            (if (bml-body-source-receiver-call1-nested-implicit-at? values)
+                (do
+                    (bml-body-source-exec-receiver-call1-nested-implicit-at values self env)
+                    (bml-body-source-exec-sequence-loop
+                        (drop 10 values)
+                        ";"
+                        self
+                        env))
             (if (bml-body-source-receiver-call1-at? values)
                 (do
                     (bml-body-source-exec-receiver-call1-at values self env)
@@ -897,7 +968,7 @@
                     (tail values)
                     (head values)
                     self
-                    env)))))))))
+                    env))))))))))
 
     (defn bml-body-source-exec (body-component self env)
         (bml-body-source-exec-sequence-loop
