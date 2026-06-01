@@ -97,6 +97,16 @@ PARITY_FILES=(
     # inline). Proves the recipe body is three-way over a frozen sample object;
     # the bridge marshalling is proven by test_form_kernel_bridge_structure_access.
     "examples/endpoint_idea_marginal_from_record_demo.py"
+    # First LIST-OF-RECORD-REDUCTION route — gate #1 in API_KERNEL_READINESS.
+    # Receives a LIST of records (one idea's pre-fetched specs) and FOLDS a
+    # field across it: spec_count / total_event_count / specs_with_value_count /
+    # max_event_count — the integer grounding signals compute_idea_metrics
+    # reduces its confidence/coverage from. The bridge marshals a Python
+    # list[dict|model] to a kernel list-of-records (each element a record_new
+    # literal / py_to_value Record; the list arm recurses element-wise). The
+    # head/tail fold the adapter lowers `for s in specs` into is proven
+    # three-way here over a frozen sample list; returns [3, 10, 2, 7].
+    "examples/endpoint_idea_grounding_summary_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

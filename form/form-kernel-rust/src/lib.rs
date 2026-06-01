@@ -155,6 +155,25 @@ fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
         }
         return Ok(kernel.make_record(STRUCTURED_INPUT_BLUEPRINT, pairs));
     }
+    // A structured object that isn't a dict (a Pydantic model / dataclass) —
+    // normalize to its field dict and recurse onto the Record marshalling. This
+    // is the model→dict→record step that dissolves the object-OR-dict
+    // polymorphism at the inline boundary, mirroring the Python bridge's
+    // `_as_field_dict`: a recipe that folds over a list[model] sees the same
+    // list-of-records a list[dict] produces. Pydantic v2 `model_dump()` first,
+    // then v1 `.dict()`; if neither yields a dict the value is genuinely
+    // unbindable and we surface the ValueError so the caller's fallback runs.
+    for method in ["model_dump", "dict"] {
+        if let Ok(m) = obj.getattr(method) {
+            if m.is_callable() {
+                if let Ok(res) = m.call0() {
+                    if res.downcast::<PyDict>().is_ok() {
+                        return py_to_value(kernel, &res);
+                    }
+                }
+            }
+        }
+    }
     Err(PyValueError::new_err(format!(
         "form-kernel: cannot bind Python {} into a kernel Value",
         obj.get_type().name()?

@@ -1,0 +1,126 @@
+; list-of-record-reduction-band.fk — three-way sibling parity for REDUCING
+; OVER A LIST OF RECORDS: iterate a list whose elements are records, read a
+; named field from each, and fold the reads into an aggregate.
+;
+; This is the capability the API_KERNEL_READINESS ledger names as gate #1 —
+; the list-of-record-reduction half of "heterogeneous polymorphic structure
+; access". The companion record-field-access-band proves reading ONE record's
+; fields; this band proves the NEXT shape the blocked functions need:
+;   sum(field(s) for s in items)     — fold a field across a collection
+;   count(s for s in items if cond)  — count under a field predicate
+;   max(field(s) for s in items)     — extremum of a field across a collection
+; exactly the shapes compute_idea_metrics and the collective-health summaries
+; reduce over their pre-fetched collections.
+;
+; The portable iteration primitive is HEAD/TAIL recursion over a `list` of
+; records — `head`, `tail`, `len`, `record_get`, `record_new`, `make_nodeid`
+; all ship in ALL THREE kernels (Go has no `_dict_*`/`nth`/`_iter`, so the
+; python-adapter's `_dict_new`/`_get`/`_iter` lowering is Rust+TS only; the
+; Record + head/tail fold is the three-way-portable shape). A real transmuted
+; route hands the recipe a list of records the bridge marshals from a Python
+; `list[dict|model]` (form_kernel_bridge `_fk_literal` renders each element as
+; a `(record_new ...)` literal; lib.rs `py_to_value` marshals each inline) —
+; this band proves the FOLD ITSELF is three-way.
+;
+; THE FLOAT BOUNDARY, named honestly. TS's `add`/`_plus` are i32-only (the
+; documented polymorphic-float-arithmetic divergence — float-natives-band.fk
+; §"deferred"). So a three-way band CANNOT sum a FLOAT field: that path is
+; value-exact on the production Rust carrier (Rust==Go==CPython) but TS rejects
+; it. This band therefore folds INTEGER fields (event_count, a count) and
+; SCORES float fields through comparisons (gt / lt), never summing a float into
+; the aggregate. The integer-field fold + float-field-predicate is precisely
+; the three-way-clean subset of list-of-record reduction; the float-field SUM
+; (spec_actual_cost_sum) stays a Rust-carrier capability, named in the ledger.
+;
+; The aggregate score is 1 per passing check; full pass = 16.
+
+(do
+    ;; A list of records standing in for one idea's pre-fetched specs — each a
+    ;; (blueprint, field-map) the bridge marshals from a Python dict / model.
+    ;; The blueprint is the conventional structured-input tag (@1.5.4.1); the
+    ;; value-bearing fields are what the fold reads.
+    (let specs (list
+        (record_new (make_nodeid 1 5 4 1) "event_count" 3 "actual_value" 2 "idea_id" "a")
+        (record_new (make_nodeid 1 5 4 1) "event_count" 0 "actual_value" 0 "idea_id" "b")
+        (record_new (make_nodeid 1 5 4 1) "event_count" 7 "actual_value" 5 "idea_id" "a")))
+
+    ;; ── sum_field: fold an INTEGER field across the list via head/tail ──
+    ;; The accumulator-recursion shape the python-adapter lowers a `for s in
+    ;; xs: total = total + s["field"]` loop into — proven three-way here.
+    (defn sum_field (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_field (tail xs) field (add acc (record_get (head xs) field)))))
+
+    ;; ── count_pos: count elements whose field is > 0 (a field PREDICATE) ──
+    ;; The `count(s for s in xs if s["field"] > 0)` shape — the confidence
+    ;; coverage signal (has_specs_with_data) reduces exactly this way.
+    (defn count_pos (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (if (gt (record_get (head xs) field) 0)
+                (count_pos (tail xs) field (add acc 1))
+                (count_pos (tail xs) field acc))))
+
+    ;; ── max_field: extremum of an integer field across the list ──
+    ;; The `max(s["field"] for s in xs)` shape — strongest-signal selection.
+    (defn max_field (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (if (gt (record_get (head xs) field) acc)
+                (max_field (tail xs) field (record_get (head xs) field))
+                (max_field (tail xs) field acc))))
+
+    ;; ── 1. Field-sum across the list ──────────────────────────────────
+    (let total_events (sum_field specs "event_count" 0))     ; 3 + 0 + 7 = 10
+    (let s1 (if (eq total_events 10) 1 0))
+    (let total_value (sum_field specs "actual_value" 0))     ; 2 + 0 + 5 = 7
+    (let s2 (if (eq total_value 7) 1 0))
+
+    ;; ── 2. Empty-list fold returns the identity accumulator ───────────
+    (let s3 (if (eq (sum_field (list) "event_count" 0) 0) 1 0))
+
+    ;; ── 3. Count under a field predicate ──────────────────────────────
+    (let n_with_events (count_pos specs "event_count" 0))    ; 3>0, 0 not, 7>0 → 2
+    (let s4 (if (eq n_with_events 2) 1 0))
+    (let n_with_value (count_pos specs "actual_value" 0))    ; 2>0, 0 not, 5>0 → 2
+    (let s5 (if (eq n_with_value 2) 1 0))
+    (let s6 (if (eq (count_pos (list) "event_count" 0) 0) 1 0))  ; empty → 0
+
+    ;; ── 4. Max of a field across the list ─────────────────────────────
+    (let max_events (max_field specs "event_count" 0))       ; max(3,0,7) = 7
+    (let s7 (if (eq max_events 7) 1 0))
+    (let max_value (max_field specs "actual_value" 0))       ; max(2,0,5) = 5
+    (let s8 (if (eq max_value 5) 1 0))
+
+    ;; ── 5. len of the list (spec_count grounding signal) ──────────────
+    (let s9 (if (eq (len specs) 3) 1 0))
+
+    ;; ── 6. Read a field off head/tail elements directly ───────────────
+    ;; The head and the last (tail tail head) carry idea_id "a"; the middle "b".
+    (let s10 (if (str_eq (record_get (head specs) "idea_id") "a") 1 0))
+    (let s11 (if (str_eq (record_get (head (tail specs)) "idea_id") "b") 1 0))
+
+    ;; ── 7. A FLOAT field is READ and SCORED by comparison (never summed) ─
+    ;; The three-way-clean way to touch a float field: compare it, don't fold
+    ;; it. (Folding a float hits TS's i32-only add — the named boundary.)
+    (let specs_f (list
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 3.5)
+        (record_new (make_nodeid 1 5 4 1) "actual_cost" 1.25)))
+    (let s12 (if (gt (record_get (head specs_f) "actual_cost")
+                     (record_get (head (tail specs_f)) "actual_cost")) 1 0))  ; 3.5 > 1.25
+    (let s13 (if (lt (record_get (head (tail specs_f)) "actual_cost") 2.0) 1 0))  ; 1.25 < 2.0
+    (let s14 (if (gt (record_get (head specs_f) "actual_cost") 3) 1 0))      ; 3.5 > 3 (cross-width)
+
+    ;; ── 8. count_pos over a single-element and full list agree on bounds ─
+    (let single (list (record_new (make_nodeid 1 5 4 1) "event_count" 9)))
+    (let s15 (if (eq (sum_field single "event_count" 0) 9) 1 0))
+    (let s16 (if (eq (max_field single "event_count" 0) 9) 1 0))
+
+    ;; ── Aggregate — int + int through MATH (no float in result) ───────
+    ;; Every sub-score is 1 or 0; the sum flows through the integer path in
+    ;; every kernel and prints as a plain integer. Full pass = 16.
+    (add s1 (add s2 (add s3 (add s4 (add s5
+    (add s6 (add s7 (add s8 (add s9 (add s10
+    (add s11 (add s12 (add s13 (add s14 (add s15 s16)))))))))))))))
+)

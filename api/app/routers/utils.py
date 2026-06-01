@@ -1249,6 +1249,159 @@ async def grounded_roi(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/idea_grounding_summary
+#
+# The FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS — gate #1 in
+# kernels/API_KERNEL_READINESS.md ("heterogeneous polymorphic structure
+# access"). Every prior structure-access route read fields from ONE record (the
+# marginal-CC core); this one receives a LIST of records (one idea's pre-fetched
+# specs) and FOLDS a field across it.
+#
+# The honest subset of grounded_idea_metrics_service.compute_idea_metrics: its
+# confidence/grounding signals reduce over the per-idea collections —
+#   spec_count             = len(idea_specs)
+#   total_event_count      = sum(s["event_count"] for s in idea_specs)
+#   specs_with_value_count = count(s for s in idea_specs if s["actual_value"] > 0)
+#   max_event_count        = max(s["event_count"] for s in idea_specs)
+# the INTEGER reductions the full function builds has_specs_with_data / runtime
+# coverage from. FILTERING by idea_id (`_filter_by_idea_id`) is the host's job —
+# the route hands the recipe the already-per-idea list; the kernel does the
+# REDUCTION. The float-field fold (spec_actual_cost_sum) and the six-collection
+# heterogeneous object-OR-dict join stay CPython — named in the ledger.
+#
+# How the list travels in: the bindings carry one `specs` list of dicts (or
+# models — the bridge normalizes model→dict→record at the marshal boundary, so a
+# list[model] marshals identically). form_kernel_bridge marshals it to a kernel
+# list-of-records — `_fk_literal` renders each element as a `(record_new ...)`
+# literal (subprocess), `py_to_value` builds a `Value::Record` per element
+# inline; the list arm recurses element-wise. The recipe iterates via the
+# head/tail fold the adapter lowers `for s in specs` into. Returns a LIST of the
+# four integer signals; this route assembles the named response from it.
+# ---------------------------------------------------------------------------
+
+
+def _coerce_int_list(value: object) -> list[int]:
+    """Coerce a kernel/fallback result into a list[int].
+
+    The inline path hands back a real Python list (value_to_py's List arm); the
+    subprocess path hands back the kernel's display string, e.g. ``[3, 10, 2,
+    7]``; the python-fallback hands back the list directly. One coercion serves
+    all three carriers so the route reads ``runtime`` honestly regardless of path.
+    """
+    if isinstance(value, (list, tuple)):
+        return [int(v) for v in value]
+    s = str(value).strip()
+    if s in ("", "[]", "(list)"):
+        return []
+    s = s.strip("[]() ")
+    if not s:
+        return []
+    sep = "," if "," in s else None
+    parts = s.split(sep) if sep else s.split()
+    return [int(float(p.strip().rstrip(","))) for p in parts if p.strip().rstrip(",")]
+
+
+def _grounding_summary_py(specs: list[dict]) -> list[int]:
+    """Python fallback — value-identical to endpoint_idea_grounding_summary_demo.fk.
+
+    The four integer grounding signals, reduced over the list of spec records:
+    spec_count, total_event_count, specs_with_value_count, max_event_count.
+    """
+    spec_count = len(specs)
+    total_event_count = sum(int(s.get("event_count", 0) or 0) for s in specs)
+    specs_with_value_count = sum(
+        1 for s in specs if (s.get("actual_value", 0) or 0) > 0
+    )
+    max_event_count = 0
+    for s in specs:
+        ec = int(s.get("event_count", 0) or 0)
+        if ec > max_event_count:
+            max_event_count = ec
+    return [spec_count, total_event_count, specs_with_value_count, max_event_count]
+
+
+class IdeaGroundingSummaryResponse(BaseModel):
+    """GET /api/utils/idea_grounding_summary response — the integer grounding signals."""
+
+    model_config = ConfigDict(extra="forbid")
+    spec_count: Annotated[int, Field(description="Number of spec records for this idea = len(specs)")]
+    total_event_count: Annotated[
+        int, Field(description="Summed event_count across the specs = sum(s['event_count'])")
+    ]
+    specs_with_value_count: Annotated[
+        int, Field(description="Count of specs with actual_value > 0 (a field predicate)")
+    ]
+    max_event_count: Annotated[
+        int, Field(description="Largest event_count across the specs = max(s['event_count'])")
+    ]
+    spec_count_in: Annotated[int, Field(description="Number of input spec records, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/idea_grounding_summary",
+    response_model=IdeaGroundingSummaryResponse,
+    summary="Integer grounding signals reduced over a LIST of spec records (first list-of-record-reduction Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the "
+        "FIRST kernel-served route to REDUCE OVER A LIST OF RECORDS (gate #1 in "
+        "API_KERNEL_READINESS). Receives one idea's pre-fetched spec records as "
+        "a list and folds four integer grounding signals across it: spec_count, "
+        "total_event_count, specs_with_value_count (a field predicate), and "
+        "max_event_count. The honest integer subset of compute_idea_metrics' "
+        "confidence/coverage reductions; filtering by idea_id and the float-field "
+        "fold stay CPython (named in the ledger). The bridge marshals the input "
+        "list[dict|model] to a kernel list-of-records (model→dict→record "
+        "normalized at the boundary), and the recipe iterates via the head/tail "
+        "fold. Kernel-or-fallback via serve_via_kernel; three-way "
+        "(CPython/TS/Rust) value-parity is the gate."
+    ),
+)
+async def idea_grounding_summary(
+    event_counts: Annotated[
+        str,
+        Query(description="Comma-separated per-spec event_count ints — e.g. '3,0,7'"),
+    ] = "3,0,7",
+    actual_values: Annotated[
+        str,
+        Query(description="Comma-separated per-spec actual_value floats — e.g. '1.5,0.0,2.25'"),
+    ] = "1.5,0.0,2.25",
+) -> IdeaGroundingSummaryResponse:
+    # Build the list of spec records from two parallel query lists. A real call
+    # site hands the route already-fetched spec dicts/models for one idea; here
+    # the two parallel arrays keep the GET surface simple while exercising the
+    # real list-of-record marshalling and reduction.
+    ec_list = [int(float(x)) for x in event_counts.split(",") if x.strip()]
+    av_list = [float(x) for x in actual_values.split(",") if x.strip()]
+    if len(ec_list) != len(av_list):
+        raise HTTPException(
+            status_code=422,
+            detail="event_counts and actual_values must have the same length",
+        )
+    specs = [
+        {"event_count": ec, "actual_value": av}
+        for ec, av in zip(ec_list, av_list)
+    ]
+    signals, runtime = serve_via_kernel(
+        "endpoint_idea_grounding_summary_demo.fk",
+        bindings={"specs": specs},
+        fallback=lambda: _grounding_summary_py(specs),
+        parse=_coerce_int_list,
+    )
+    return IdeaGroundingSummaryResponse(
+        spec_count=signals[0],
+        total_event_count=signals[1],
+        specs_with_value_count=signals[2],
+        max_event_count=signals[3],
+        spec_count_in=len(specs),
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

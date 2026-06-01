@@ -179,6 +179,22 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_idea_marginal_from_record_demo.fk",
         "expected_result": "0.8",
     },
+    {
+        # First LIST-OF-RECORD-REDUCTION route — gate #1 in API_KERNEL_READINESS.
+        # Receives one idea's pre-fetched specs as a LIST of records (marshalled
+        # from a Python list[dict|model]; the bridge normalizes model→dict→record
+        # at the boundary, dissolving the object-OR-dict polymorphism) and FOLDS
+        # four integer grounding signals across it via the head/tail fold the
+        # adapter lowers `for s in specs` into: spec_count, total_event_count,
+        # specs_with_value_count (a field predicate), max_event_count. The honest
+        # integer subset of compute_idea_metrics' confidence/coverage reductions;
+        # the float-field fold and the six-collection heterogeneous join stay
+        # CPython (named in the ledger). Frozen specs [{ec 3, av 1.5}, {ec 0, av
+        # 0.0}, {ec 7, av 2.25}] → [3, 10, 2, 7].
+        "route": "/api/utils/idea_grounding_summary",
+        "recipe": "endpoint_idea_grounding_summary_demo.fk",
+        "expected_result": "[3, 10, 2, 7]",
+    },
 ]
 
 _EXAMPLES_DIR = (
