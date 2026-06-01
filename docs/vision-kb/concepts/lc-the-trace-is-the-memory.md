@@ -98,15 +98,19 @@ through lived execution** — `|projection| → 0` is the readout.
 The `kernel_attribution_report` ([`lc-the-body-senses-itself`](lc-the-body-senses-itself.md))
 today ranks hot Blueprints by re-running recipes and counting arm
 dispatches. That is a snapshot of *frequency*, computed fresh each time.
-This concept names what it should become:
+This concept names what it should become — and move (3) is now a working
+readout over that snapshot:
 
 - **From snapshot to memory.** The trace is recorded as edge-events, not
   recomputed. The body remembers its execution rather than re-deriving it.
+  *(Still the named next build — the snapshot evaporates after each run.)*
 - **From count to convergence.** "This Blueprint fired 176 times" becomes
-  "these categories have converged toward shared value-equivalence
-  (`|projection|` small); these others fired but stayed far; these never
-  fired at all (projection undefined — inert, the *why are you here?*
-  candidates)."
+  "these categories project nearest the activity-weighted center
+  (`|projection|` small); these others fired but sit farther in NodeID
+  space; these never fired at all (projection undefined — inert, the *why
+  are you here?* candidates)." *This is live now in
+  `embodiment_projection` — over the current snapshot, not yet the
+  accumulated edge-event memory.*
 - **From frequency to embodiment.** A category can fire often and still
   not be embodied *with* the body's center if it never converges toward
   the categories that carry the live practice. Convergence-toward-zero,
@@ -188,10 +192,20 @@ convergence off the accumulation.
   NodeIDs. That distance is the embodiment scalar's first concrete form;
   the projection toward zero generalizes it across a category's accumulated
   edge-events.
-- **`scripts/kernel_attribution_report.py`** — the current snapshot
-  attribution view. This concept names its evolution: from recomputed
-  frequency-count to persisted per-category edge-event memory with a
-  convergence projection.
+- **`scripts/kernel_attribution_report.py`** — the snapshot attribution view,
+  now carrying **move (3) as a working instrument**: its `embodiment_projection`
+  reads the activity-weighted centroid of the fired Blueprint NodeIDs as the
+  body's lived center and projects each fired category to its Manhattan
+  NodeID-distance from that center (the `/api/utils/nodeid_distance` metric
+  reused, not re-invented). `|projection| → 0` marks the categories nearest the
+  structural center of what actually fires; the inert natives form the
+  *projection-undefined* class (zero edge-events — the "why are you here?"
+  candidates). Honest scope: this is the projection over the **current
+  snapshot** (per-Blueprint fire counts recomputed each run). Moves (1) and (2)
+  — persisting each trace as an edge-event so the memory accumulates across
+  runs, and the per-category co-firing query that learns value-equivalence from
+  that accumulation — are the named next build. Run `python3
+  scripts/kernel_attribution_report.py` to see the ranked projection.
 
 The body holds this concept as **the correction that turns the attribution
 view from a snapshot into memory.** Today the body re-runs its recipes to
