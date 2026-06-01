@@ -1,0 +1,88 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-kernel-boundary-cursor-20260601",
+  "commit_scope": "Add a recurring guard for BML/BMF-specific host-native surfaces so new language semantics cannot enter sibling kernels silently.",
+  "files_owned": [
+    "scripts/audit_bml_bmf_kernel_natives.py",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_bmf_native_boundary_guard.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "The inventory guard reports exactly bml_scan_file and bmf_apply_rule_native in Go, Rust, and TypeScript. worktree_pr_guard now runs the inventory as bml-bmf-native-boundary-guard before commit evidence validation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "New BML/BMF host-native surfaces are blocked by local preflight unless the boundary inventory is updated deliberately.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The native boundary is locally machine-guarded. CI, merge, deploy, and public verification are still pending for this branch."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "bml-bmf-native-boundary-guard-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture boundary"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/audit_bml_bmf_kernel_natives.py inventories registered bml_/bmf_ natives in Go, Rust, and TypeScript kernels.",
+    "scripts/worktree_pr_guard.py runs bml-bmf-native-boundary-guard as part of local preflight.",
+    "docs/system_audit/bml_bmf_architecture_review_20260601.md defines the reviewed kernel boundary and migration path."
+  ],
+  "change_files": [
+    "scripts/audit_bml_bmf_kernel_natives.py",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_bmf_native_boundary_guard.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
