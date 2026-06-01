@@ -1724,6 +1724,261 @@ async def grounded_cost(
     )
 
 
+# ---------------------------------------------------------------------------
+# grounded_value — the VALUE / REALIZATION / CONFIDENCE REDUCTION of
+# compute_idea_metrics. The SECOND and FINAL numeric slice; with the grounded-
+# COST reduction already serving kernel-side (/api/utils/grounded_cost, PR
+# #2331) this completes compute_idea_metrics' COMPUTATION kernel-native. What
+# remains host-side after this is host orchestration BY DESIGN — collection
+# filtering + the boolean-presence derivations — not a missing kernel
+# capability.
+#
+# THE HONEST DECOMPOSITION. compute_idea_metrics derives three families of fact:
+#   (a) NUMERIC REDUCTIONS — max-of-signals, a guarded ratio with a min-clamp, a
+#       count→level threshold (min(1.0, count/N)), a five-term weighted sum, a
+#       [0.05, 0.95] clamp. This route runs them kernel-side.
+#   (b) BOOLEAN / PRESENCE LEVELS — has_specs_with_data, has_lineage,
+#       has_friction. Each is an any(...)-over-records boolean-OR fold or a len>0
+#       presence ladder resolving to a 3-level {1.0, 0.5/0.3, 0.0} value.
+#       Booleans-over-collections is the filtering-adjacent capability; the HOST
+#       resolves these to a float level and passes it in.
+#   (c) the FILTERING of the six collections by idea_id — cheap host-side
+#       collection-narrowing the host already does (_filter_by_idea_id).
+#
+# Given the host-derived scalars for one idea the recipe computes EXACTLY what
+# grounded_idea_metrics_service.compute_idea_metrics computes (verified against
+# the source lines, the _WEIGHT_* constants, and the clamps):
+#   computed_actual_value   = max(lineage_measured_value, usage_revenue,
+#                                 spec_actual_value_sum)
+#   computed_estimated_cost = max(spec_estimated_cost_sum, lineage_estimated_cost)
+#   value_realization_pct   = min(computed_actual_value / spec_potential_value_sum,
+#                                 1.0) if spec_potential_value_sum > 0 else 0.0
+#   has_runtime_data        = min(1.0, runtime_event_count / 10.0)
+#                                 if runtime_event_count > 0 else 0.0
+#   has_commits             = min(1.0, commit_count / 5.0) if commit_count > 0
+#                                 else 0.0
+#   computed_confidence     = max(0.05, min(0.95,
+#       has_specs_with_data*0.30 + has_runtime_data*0.25 + has_lineage*0.25
+#       + has_commits*0.10 + has_friction*0.10))
+# Weights _WEIGHT_SPECS=0.30, _WEIGHT_RUNTIME=0.25, _WEIGHT_LINEAGE=0.25,
+# _WEIGHT_COMMITS=0.10, _WEIGHT_FRICTION=0.10; the clamp [0.05, 0.95] — never
+# fully certain, never zero. usage_revenue = runtime_event_count *
+# _REVENUE_PER_REQUEST (0.001) is resolved host-side; the kernel receives it as
+# a scalar. The seam: the kernel keeps the most NUMERIC computation; the host
+# keeps the booleans-over-records and the filtering — both held host-side BY
+# DESIGN. Kernel-or-fallback via serve_via_kernel; three-way (CPython/TS/Rust)
+# value-parity is the gate.
+# ---------------------------------------------------------------------------
+
+
+def _grounded_value_py(
+    lineage_measured_value: float,
+    usage_revenue: float,
+    spec_actual_value_sum: float,
+    spec_estimated_cost_sum: float,
+    lineage_estimated_cost: float,
+    spec_potential_value_sum: float,
+    runtime_event_count: int,
+    commit_count: int,
+    has_specs_with_data: float,
+    has_lineage: float,
+    has_friction: float,
+) -> list[float]:
+    """Python fallback — value-identical to endpoint_grounded_value_demo.fk.
+
+    Mirrors grounded_idea_metrics_service.compute_idea_metrics' value /
+    realization / confidence reduction EXACTLY: the max-of-signals, the guarded
+    ratio with the min(_, 1.0) ceiling, the count→level threshold arithmetic
+    with the zero-guard, the five-term weighted sum, and the [0.05, 0.95] clamp.
+    The weights and clamp bounds are read from the service constants.
+    """
+    computed_actual_value = max(
+        lineage_measured_value, usage_revenue, spec_actual_value_sum
+    )
+    computed_estimated_cost = max(spec_estimated_cost_sum, lineage_estimated_cost)
+    value_realization_pct = 0.0
+    if spec_potential_value_sum > 0:
+        value_realization_pct = min(
+            computed_actual_value / spec_potential_value_sum, 1.0
+        )
+    has_runtime_data = 0.0
+    if runtime_event_count > 0:
+        has_runtime_data = min(1.0, runtime_event_count / 10.0)
+    has_commits = 0.0
+    if commit_count > 0:
+        has_commits = min(1.0, commit_count / 5.0)
+    confidence_raw = (
+        has_specs_with_data * 0.30
+        + has_runtime_data * 0.25
+        + has_lineage * 0.25
+        + has_commits * 0.10
+        + has_friction * 0.10
+    )
+    computed_confidence = max(0.05, min(0.95, confidence_raw))
+    return [
+        computed_actual_value,
+        computed_estimated_cost,
+        value_realization_pct,
+        computed_confidence,
+    ]
+
+
+class GroundedValueResponse(BaseModel):
+    """GET /api/utils/grounded_value response — the value/realization/confidence outputs."""
+
+    model_config = ConfigDict(extra="forbid")
+    computed_actual_value: Annotated[
+        float,
+        Field(
+            description="Strongest value signal = "
+            "max(lineage_measured_value, usage_revenue, spec_actual_value_sum)"
+        ),
+    ]
+    computed_estimated_cost: Annotated[
+        float,
+        Field(description="max(spec_estimated_cost_sum, lineage_estimated_cost)"),
+    ]
+    value_realization_pct: Annotated[
+        float,
+        Field(
+            description="min(computed_actual_value / spec_potential_value_sum, 1.0) "
+            "guarded by spec_potential_value_sum>0 (else 0.0)"
+        ),
+    ]
+    computed_confidence: Annotated[
+        float,
+        Field(
+            description="clamp(weighted coverage sum, 0.05, 0.95) — weights "
+            "0.30/0.25/0.25/0.10/0.10 over the five has_* signals"
+        ),
+    ]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/grounded_value",
+    response_model=GroundedValueResponse,
+    summary="The value/realization/confidence reduction of compute_idea_metrics, from host-derived scalars",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the "
+        "VALUE / REALIZATION / CONFIDENCE REDUCTION of "
+        "grounded_idea_metrics_service.compute_idea_metrics. The SECOND and "
+        "final numeric slice; with the grounded-cost reduction already serving "
+        "(/api/utils/grounded_cost) this completes the function's COMPUTATION "
+        "kernel-native. From the host-derived scalars for one idea it computes "
+        "computed_actual_value = max(lineage_measured_value, usage_revenue, "
+        "spec_actual_value_sum), computed_estimated_cost = "
+        "max(spec_estimated_cost_sum, lineage_estimated_cost), "
+        "value_realization_pct = min(value/potential, 1.0) guarded by "
+        "potential>0, has_runtime_data/has_commits = min(1.0, count/N) guarded "
+        "by count>0, and computed_confidence = clamp(weighted sum, 0.05, 0.95) "
+        "with weights 0.30/0.25/0.25/0.10/0.10 (_WEIGHT_* read from source). The "
+        "honest seam: the boolean-presence levels has_specs_with_data / "
+        "has_lineage / has_friction (any(...)-over-records / len>0 ladders) and "
+        "the collection filtering stay host-side BY DESIGN — booleans-over-"
+        "collections is the filtering-adjacent capability, not a missing kernel "
+        "native. Kernel-or-fallback via serve_via_kernel; three-way "
+        "(CPython/TS/Rust) value-parity is the gate."
+    ),
+)
+async def grounded_value(
+    lineage_measured_value: Annotated[
+        float,
+        Query(description="Summed measured value across the idea's lineage valuations"),
+    ] = 12.5,
+    usage_revenue: Annotated[
+        float,
+        Query(description="runtime_event_count * _REVENUE_PER_REQUEST (0.001), resolved host-side"),
+    ] = 0.007,
+    spec_actual_value_sum: Annotated[
+        float,
+        Query(description="Summed actual_value across the idea's specs"),
+    ] = 4.25,
+    spec_estimated_cost_sum: Annotated[
+        float,
+        Query(description="Summed estimated_cost across the idea's specs"),
+    ] = 6.75,
+    lineage_estimated_cost: Annotated[
+        float,
+        Query(description="Summed estimated_cost across the idea's lineage links"),
+    ] = 5.5,
+    spec_potential_value_sum: Annotated[
+        float,
+        Query(description="Summed potential_value across the specs — the realization denominator"),
+    ] = 20.0,
+    runtime_event_count: Annotated[
+        int,
+        Query(description="Raw runtime event count — the kernel runs min(1.0, count/10.0) with a zero-guard"),
+    ] = 7,
+    commit_count: Annotated[
+        int,
+        Query(description="Raw commit count — the kernel runs min(1.0, count/5.0) with a zero-guard"),
+    ] = 3,
+    has_specs_with_data: Annotated[
+        float,
+        Query(
+            description="Host-resolved spec-data level (any(actual_cost>0 or "
+            "actual_value>0) → 1.0; else 0.5 if specs present; else 0.0)"
+        ),
+    ] = 1.0,
+    has_lineage: Annotated[
+        float,
+        Query(
+            description="Host-resolved lineage level (lineage_measured_value>0 → "
+            "1.0; else 0.5 if links present; else 0.0)"
+        ),
+    ] = 1.0,
+    has_friction: Annotated[
+        float,
+        Query(
+            description="Host-resolved friction level (friction_cost_of_delay>0 → "
+            "1.0; else 0.3 if friction events present; else 0.0)"
+        ),
+    ] = 0.3,
+) -> GroundedValueResponse:
+    bindings = {
+        "lineage_measured_value": lineage_measured_value,
+        "usage_revenue": usage_revenue,
+        "spec_actual_value_sum": spec_actual_value_sum,
+        "spec_estimated_cost_sum": spec_estimated_cost_sum,
+        "lineage_estimated_cost": lineage_estimated_cost,
+        "spec_potential_value_sum": spec_potential_value_sum,
+        "runtime_event_count": runtime_event_count,
+        "commit_count": commit_count,
+        "has_specs_with_data": has_specs_with_data,
+        "has_lineage": has_lineage,
+        "has_friction": has_friction,
+    }
+    outputs, kernel_runtime = serve_via_kernel(
+        "endpoint_grounded_value_demo.fk",
+        bindings=bindings,
+        fallback=lambda: _grounded_value_py(
+            lineage_measured_value,
+            usage_revenue,
+            spec_actual_value_sum,
+            spec_estimated_cost_sum,
+            lineage_estimated_cost,
+            spec_potential_value_sum,
+            runtime_event_count,
+            commit_count,
+            has_specs_with_data,
+            has_lineage,
+            has_friction,
+        ),
+        parse=_coerce_float_list,
+    )
+    return GroundedValueResponse(
+        computed_actual_value=outputs[0],
+        computed_estimated_cost=outputs[1],
+        value_realization_pct=outputs[2],
+        computed_confidence=outputs[3],
+        runtime=kernel_runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",

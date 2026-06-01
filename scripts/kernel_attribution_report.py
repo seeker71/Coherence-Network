@@ -230,6 +230,30 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_grounded_cost_demo.fk",
         "expected_result": "[4.75, 6.75, 2.25, 0.75, 6.75, 7.75]",
     },
+    {
+        # The VALUE / REALIZATION / CONFIDENCE REDUCTION of compute_idea_metrics
+        # — the SECOND and FINAL numeric slice. With the grounded-cost reduction
+        # already serving (endpoint_grounded_cost_demo.fk) this completes the
+        # function's COMPUTATION kernel-native. From the host-derived scalars it
+        # computes computed_actual_value = max(lineage_measured_value,
+        # usage_revenue, spec_actual_value_sum), computed_estimated_cost =
+        # max(spec_estimated_cost_sum, lineage_estimated_cost),
+        # value_realization_pct = min(value/potential, 1.0) guarded by
+        # potential>0, has_runtime_data/has_commits = min(1.0, count/N) guarded
+        # by count>0, and computed_confidence = clamp(weighted sum, 0.05, 0.95)
+        # with weights 0.30/0.25/0.25/0.10/0.10 (_WEIGHT_* from source). The
+        # honest seam: the boolean-presence levels (has_specs_with_data /
+        # has_lineage / has_friction — any(...)-over-records / len>0 ladders) and
+        # the collection filtering stay host-side BY DESIGN. Frozen sample
+        # (lineage 12.5, usage_revenue 0.007, spec_actual_value 4.25, spec_est
+        # 6.75, lineage_est 5.5, potential 20.0, event_count 7, commit_count 3,
+        # has_specs 1.0, has_lineage 1.0, has_friction 0.3) →
+        # [12.5, 6.75, 0.625, 0.815], all NON-integer floats so no value crosses
+        # the print boundary.
+        "route": "/api/utils/grounded_value",
+        "recipe": "endpoint_grounded_value_demo.fk",
+        "expected_result": "[12.5, 6.75, 0.625, 0.815]",
+    },
 ]
 
 _EXAMPLES_DIR = (
