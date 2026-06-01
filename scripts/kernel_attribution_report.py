@@ -85,6 +85,21 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_weighted_average_demo.fk",
         "expected_result": "0.8125",
     },
+    {
+        "route": "/api/utils/simpson_diversity",
+        "recipe": "endpoint_simpson_diversity_demo.fk",
+        "expected_result": "0.625",
+    },
+    {
+        "route": "/api/utils/idea_score",
+        "recipe": "endpoint_idea_score_demo.fk",
+        "expected_result": "2.0",
+    },
+    {
+        "route": "/api/utils/marginal_cc_return",
+        "recipe": "endpoint_marginal_cc_return_demo.fk",
+        "expected_result": "0.8",
+    },
 ]
 
 _EXAMPLES_DIR = (
