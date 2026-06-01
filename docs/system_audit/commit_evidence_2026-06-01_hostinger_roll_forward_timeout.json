@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/hostinger-timeout-20260601",
+  "commit_scope": "Bound the Hostinger auto-deploy roll-forward path so a remote SSH deploy hang cannot keep embodiment blocked indefinitely.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_roll_forward_timeout.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/validate_workflow_references.py",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"ok\"'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_roll_forward_timeout.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "make prompt-guide passed in the clean worktree with blocking_risk_count=0. Workflow reference validation found 28 references and 0 missing. Ruby YAML parsing loaded .github/workflows/hostinger-auto-deploy.yml successfully. Evidence validation passed for this file. Rebase was current. worktree_pr_guard passed with local_preflight=pass. check_pr_followthrough reported 0 open codex PRs and 0 stale codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "The workflow change should trigger Hostinger Auto Deploy after merge because .github/workflows/hostinger-auto-deploy.yml is in the workflow path filter."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passes; CI and deploy proof are pending."
+  },
+  "idea_ids": [
+    "repository-health"
+  ],
+  "spec_ids": [
+    "repository-workflow-health"
+  ],
+  "task_ids": [
+    "hostinger-timeout-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "embodiment policy"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Observed Hostinger Auto Deploy run 26732154098 stuck in step Roll forward VPS from 2026-06-01T02:35:03Z with no job or step timeout in the workflow.",
+    "The deploy job now has timeout-minutes: 45.",
+    "The Roll forward VPS step now has timeout-minutes: 40.",
+    "The remote SSH auto-deploy command is wrapped in timeout 35m and still tails the remote deploy log on failure."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_roll_forward_timeout.json"
+  ],
+  "change_intent": "process_only"
+}
