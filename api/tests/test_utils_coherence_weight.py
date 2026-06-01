@@ -20,6 +20,11 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.routers.utils import coherence_weight_py
+from app.services.form_kernel_bridge import (
+    inline_available,
+    kernel_available,
+    load_recipe,
+)
 
 BASE = "http://test"
 
@@ -92,6 +97,45 @@ class TestCoherenceWeightEndpoint:
             params={"values": "1,2,abc", "threshold": 0},
         )
         assert res.status_code == 400
+
+    @pytest.mark.anyio
+    async def test_recipe_resolves_so_image_serves_kernel_side(self):
+        """The endpoint's .fk resolves on disk — the kernel-served precondition.
+
+        The prod regression this guards: the kernel is present (inline PyO3 or
+        the binary) but the recipe .fk is absent from the image, so the bridge
+        silently degrades to python-fallback. load_recipe succeeding is exactly
+        what flips the endpoint from python-fallback to kernel-served. CI may
+        have no kernel built, so we assert the recipe FILE resolves (the part
+        that fails when an image drops the .fk) rather than requiring the kernel.
+        """
+        # Does not raise FileNotFoundError → the recipe is where the bridge looks.
+        source = load_recipe("endpoint_coherence_weight_demo.fk")
+        assert source.strip().startswith("(do"), "recipe is a (do ...) form"
+
+    @pytest.mark.anyio
+    async def test_when_kernel_present_endpoint_is_not_python_fallback(
+        self, client: AsyncClient
+    ):
+        """When a kernel is reachable AND the recipe resolves, serve kernel-side.
+
+        This is the direct guard for the production gap that motivated the fix:
+        kernel loaded (/api/health shows inline) but endpoints served
+        python-fallback because the recipe was missing from the image. If no
+        kernel is built in this env, the precondition is absent and we skip —
+        the test_recipe_resolves test above still catches the missing-recipe
+        regression without a kernel.
+        """
+        if not (inline_available() or kernel_available()):
+            pytest.skip("no kernel reachable in this env — recipe-resolution test covers it")
+        res = await client.get("/api/utils/coherence_weight")
+        assert res.status_code == 200, res.text
+        runtime = res.json()["runtime"]
+        assert runtime != "python-fallback", (
+            f"kernel is reachable and the recipe resolves, yet the endpoint "
+            f"served {runtime!r} — the recipe is not reaching the kernel path"
+        )
+        assert runtime in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_kernel_status_visibility(self, client: AsyncClient):
