@@ -4,8 +4,9 @@
 ;
 ; Proves that larger original companion .bml files can be scanned by the
 ; native sibling kernels and accepted as whole source files. container-Rule.bml
-; and BMF-grammar.bml now both carry parsed class body components; BMF grammar
-; semantic lowering remains in the focused body proof and audit gap list.
+; carries parsed class body components here; BMF-grammar.bml body details are
+; covered in bml-thesis-bmf-grammar-body-source-proof.fk so each proof stays
+; within all sibling kernels' stack limits.
 
 (do
     (defn bool-score (b bit)
@@ -28,12 +29,6 @@
     (let rule-class (bml-model-find-class container-model "Rule"))
 
     (let bmf-source (bml-source-scan-file bmf-path))
-    (let bmf-parsed (bml-source-file-parse-declarations bmf-path))
-    (let bmf-nodes (bml-source-exec-parse-nodes bmf-parsed))
-    (let bmf-model (bml-source-declaration-model bmf-parsed))
-    (let bmf-package (head bmf-nodes))
-    (let bmf-import (nth bmf-nodes 1))
-    (let bmf-class (bml-model-find-class bmf-model "BMF"))
 
     (sum
         (list
@@ -46,14 +41,4 @@
             (bool-score (bml-properties-has? (bml-class-properties rule-class) "public") 64)
             (int-score (len (bml-class-own-methods rule-process-class)) 1 128)
             (int-score (len (bml-class-body rule-class)) 4 256)
-            (bool-score (gt (len bmf-source) 0) 512)
-            (bool-score (bml-source-exec-parse-ok? bmf-parsed) 1024)
-            (int-score (len (bml-source-exec-parse-rest bmf-parsed)) 0 2048)
-            (int-score (len (bml-source-exec-parse-rules bmf-parsed)) 3 4096)
-            (str-score (head (comp-bml-fields bmf-package)) "BMF" 8192)
-            (str-score (head (comp-bml-fields bmf-import)) "BMF.primitive.*" 16384)
-            (str-score (bml-class-name bmf-class) "BMF" 32768)
-            (bool-score (bml-properties-has? (bml-class-properties bmf-class) "public") 65536)
-            (str-score (bml-class-structural-base-name bmf-class) "Application" 131072)
-            (bool-score (gt (len (bml-class-body bmf-class)) 0) 262144)
-            (str-score (nth (bml-source-exec-parse-rules bmf-parsed) 2) "file-class-body" 524288))))
+            (bool-score (gt (len bmf-source) 0) 512))))
