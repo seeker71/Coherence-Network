@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-bmf-rule-exec-20260601",
+  "commit_scope": "Execute shared BMF component rules over source with rollback and cut proof.",
+  "files_owned": [
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bmf_component_runtime.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/tests/bmf-thesis-primitives-band.fk"
+    ],
+    "notes": "The shared comp-bmf component runtime proof passes at 1023 in source and binary sibling-kernel modes. Adjacent BMF compiler and thesis primitive bands remain green."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "BMF Rule, Branch, Sequence, Repeat, Tag, RuleCall, Primitive, CharRange, and CharChain component objects execute through the character-stream matcher. Failed branch consumption rolls back to the original stream, while Cut commits failure and prevents later alternatives.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Shared BMF component execution is proven for a focused source stream. Full BMF grammar source parsing into this runtime, semantic methods, ParseStack/Context APIs, whitespace policy, and complete BML source lowering remain open parity gaps."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "bml-bmf-rule-exec-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bmf-component-runtime-exec-band.fk builds shared comp-bmf component rules and proves source execution, failed-branch rollback, and Cut commitment.",
+    "form/form-stdlib/compiler.fk now exposes comp-bmf-runtime-match and comp-bmf-runtime-parse over Rule/Branch/Sequence/Repeat/Tag/RuleCall/Primitive/CharRange/CharChain objects.",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md records this as a focused BMF execution proof while keeping full thesis parity gaps explicit."
+  ],
+  "change_files": [
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bmf_component_runtime.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
