@@ -3,13 +3,28 @@
 # Coherence Network API image.
 #
 # Two stages:
-#   1. kernel-builder — compiles form/form-kernel-rust → release binary
+#   1. kernel-builder — compiles form/form-kernel-rust → release binary AND
+#                       (best-effort) the form_kernel_rust PyO3 wheel (maturin)
 #   2. runtime         — Python 3.11 FastAPI, with the kernel binary copied in
+#                       and the PyO3 wheel pip-installed when present
 #
-# The kernel binary lands at /app/bin/form-kernel-rust and FORM_KERNEL_RUST_BIN
-# points there, so api/app/services/form_kernel_bridge.py shells into the
-# native binary at request time. Without this stage the bridge falls back to
-# inline Python and /api/utils/coherence_weight reports runtime="python-fallback".
+# Two carriers come out of the builder, ordered by how the bridge prefers them:
+#
+#   • inline (PyO3)  — the form_kernel_rust wheel, a warm in-process Rust kernel
+#     imported once at module load (no spawn, no socket). Sub-200µs hot path.
+#     Built by maturin in the builder stage; pip-installed in runtime. abi3-py39
+#     so the wheel built by the builder's python imports under runtime's 3.11.
+#   • subprocess     — the /app/bin/form-kernel-rust binary; FORM_KERNEL_RUST_BIN
+#     points there, so api/app/services/form_kernel_bridge.py shells into the
+#     native binary at request time.
+#
+# Both are ADDITIVE and the inline build is NON-FATAL: if maturin fails (or is
+# unavailable), no wheel is produced, the runtime pip-install is a no-op, and
+# the bridge's import of form_kernel_rust fails gracefully → it falls back to
+# the subprocess binary (and that to inline Python). The image always builds and
+# the API always starts; inline is an enhancement, never a hard dependency.
+# Without the binary either, /api/utils/coherence_weight reports
+# runtime="python-fallback".
 #
 # This Dockerfile lives in the repo so the build context the deploy script
 # uses (the repo root, cloned onto the VPS at /docker/coherence-network/repo)
@@ -17,23 +32,46 @@
 # this file via `build: { context: ./repo, dockerfile: Dockerfile.api }`.
 
 # -----------------------------------------------------------------------------
-# Stage 1 — build the form-kernel-rust native binary
+# Stage 1 — build form-kernel-rust: the native binary (must) + PyO3 wheel (best-effort)
 # -----------------------------------------------------------------------------
 FROM rust:1.86-slim-bookworm AS kernel-builder
 
 WORKDIR /build
 
 # Copy the kernel crate. The crate is self-contained — no workspace, no
-# repo-relative path deps — so this is all the source it needs.
-COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock ./
+# repo-relative path deps — so this is all the source it needs. pyproject.toml
+# is the maturin manifest for the PyO3 wheel build below.
+COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock form/form-kernel-rust/pyproject.toml ./
 COPY form/form-kernel-rust/src ./src
 COPY form/form-kernel-rust/libraries ./libraries
 COPY form/form-kernel-rust/recipes ./recipes
 
-# Build the release binary. Cargo's default target dir is /build/target.
+# Build the release binary (the subprocess carrier). Cargo's default target
+# dir is /build/target. This is the load-bearing build — it must succeed; the
+# subprocess path depends on this binary being present in the final image.
 RUN cargo build --release --bin form-kernel-rust \
  && strip target/release/form-kernel-rust \
  && ls -la target/release/form-kernel-rust
+
+# Best-effort: build the form_kernel_rust PyO3 wheel (the inline carrier).
+# NON-FATAL by design — every step is guarded with `|| true` and the wheel
+# directory is always created, so a maturin/toolchain failure here cannot break
+# the binary above or the image. If no wheel lands in /build/dist, the runtime
+# pip-install is a no-op and the bridge falls back to the subprocess binary.
+#
+# maturin is installed via pip (--break-system-packages: bookworm marks the
+# system env externally-managed under PEP 668; this build container is
+# disposable so writing to it is fine). The wheel is abi3-py39 (Cargo.toml
+# pyo3 features), so the interpreter maturin builds against here need not match
+# the runtime's CPython 3.11 — the stable ABI wheel imports across 3.9+.
+RUN mkdir -p /build/dist \
+ && ( apt-get update \
+      && apt-get install -y --no-install-recommends python3 python3-pip \
+      && python3 -m pip install --break-system-packages --no-cache-dir 'maturin>=1.5,<2.0' \
+      && maturin build --release --features pyo3 --out /build/dist \
+      && ls -la /build/dist \
+    ) || echo "form_kernel_rust wheel build skipped — runtime falls back to subprocess"
+
 
 # -----------------------------------------------------------------------------
 # Stage 2 — Python runtime
@@ -74,6 +112,22 @@ RUN python -m pip install --upgrade pip \
 COPY --from=kernel-builder /build/target/release/form-kernel-rust /app/bin/form-kernel-rust
 RUN chmod +x /app/bin/form-kernel-rust \
  && /app/bin/form-kernel-rust --expr "(add 2 3)" || true
+
+# Inline carrier (PyO3): install the form_kernel_rust wheel if the builder
+# produced one. The COPY of the dist DIRECTORY always succeeds (even empty) —
+# unlike a glob, which would fail the build when no wheel exists. The install
+# is NON-FATAL: a missing/failed wheel leaves form_kernel_rust unimportable and
+# the bridge falls back to the subprocess binary above. The runtime confirms
+# whether the inline path is live without failing the build either way.
+COPY --from=kernel-builder /build/dist/ /tmp/form-kernel-wheels/
+RUN if ls /tmp/form-kernel-wheels/*.whl >/dev/null 2>&1; then \
+      python -m pip install --no-cache-dir /tmp/form-kernel-wheels/*.whl \
+        && python -c "import form_kernel_rust; print('form-kernel: inline PyO3 wheel installed')" \
+        || echo "form-kernel: inline PyO3 wheel install failed — subprocess fallback active"; \
+    else \
+      echo "form-kernel: no inline PyO3 wheel — subprocess fallback active"; \
+    fi \
+ && rm -rf /tmp/form-kernel-wheels
 
 # API source. The api/ dir is the package root inside the container; the
 # Procfile uses `app.main:app` so /app needs to BE the api directory contents.
