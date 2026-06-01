@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/hostinger-ssh-accept-new-20260601",
+  "commit_scope": "Make Hostinger deploy SSH setup resilient when ssh-keyscan times out repeatedly.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_ssh_accept_new.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_ssh_accept_new.json"
+    ],
+    "notes": "Two Hostinger deploy attempts in this thread failed only in Configure SSH because ssh-keyscan timed out for 187.77.152.42. The workflow now keeps the existing keyscan path and falls back to OpenSSH accept-new for the configured host after the retry budget is exhausted."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and a manually dispatched Hostinger deploy to settle latest main SHA parity."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger deploy no longer fails before SSH/scp solely because ssh-keyscan timed out. The actual SSH connection still verifies or records the host key with accept-new and will fail if the host is unreachable.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy workflow validates as YAML.",
+      "Hostinger Auto Deploy is manually dispatched for latest main after merge.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The repeated SSH setup blocker is patched locally. CI, merge, deploy, and public verification are still pending."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "deploy-followthrough"
+  ],
+  "task_ids": [
+    "hostinger-ssh-accept-new-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "embodiment-contract"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 26758485202 initially failed on ssh-keyscan and passed on rerun.",
+    "Hostinger Auto Deploy run 26759693738 failed on ssh-keyscan again for the latest main SHA.",
+    ".github/workflows/hostinger-auto-deploy.yml now falls back to StrictHostKeyChecking=accept-new after keyscan retries."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-01_hostinger_ssh_accept_new.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

@@ -56,6 +56,8 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "$HOSTINGER_SSH_KEY" > ~/.ssh/id_hostinger
           chmod 600 ~/.ssh/id_hostinger
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
           host="${HOSTINGER_SSH_HOST#*@}"
           attempt=1
           max_attempts=5
@@ -64,8 +66,17 @@ jobs:
               break
             fi
             if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "::error::ssh-keyscan failed for $host after $attempt attempts"
-              exit 1
+              echo "::warning::ssh-keyscan failed for $host after $attempt attempts; falling back to StrictHostKeyChecking=accept-new"
+              {
+                echo "Host $host"
+                echo "  IdentityFile ~/.ssh/id_hostinger"
+                echo "  StrictHostKeyChecking accept-new"
+                echo "  UserKnownHostsFile ~/.ssh/known_hosts"
+                echo "  BatchMode yes"
+                echo "  ConnectTimeout 20"
+              } >> ~/.ssh/config
+              chmod 600 ~/.ssh/config
+              break
             fi
             echo "::warning::ssh-keyscan attempt $attempt failed for $host; retrying in 5s"
             sleep 5
