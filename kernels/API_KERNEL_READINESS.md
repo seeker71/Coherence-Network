@@ -545,6 +545,14 @@ why is it here?"
    "why here, not involved?" candidates. **The view widens by one row per
    transmuted route** — routes are DATA in `KERNEL_SERVED_RECIPES`; adding a
    transmuted route to that list extends the activity view with no code change.
+   The report also carries an **embodiment projection**
+   ([`lc-the-trace-is-the-memory`](../docs/vision-kb/concepts/lc-the-trace-is-the-memory.md),
+   move 3): each fired Blueprint NodeID is projected to its Manhattan distance
+   from the activity-weighted NodeID centroid (the `/api/utils/nodeid_distance`
+   metric reused), so `|projection| → 0` names the categories nearest the
+   structural center of what fires, and the inert natives form the
+   projection-undefined class. Honest scope: snapshot projection now; the
+   persisted per-category edge-event memory is the named next build.
 
 ### The capability ledger — what's banked, what gates the rest
 

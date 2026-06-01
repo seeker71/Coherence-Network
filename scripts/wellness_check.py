@@ -1519,6 +1519,7 @@ def sense_kernel_api() -> list[str]:
     missing_recipes: list[str] = []
     slow_recipes: list[str] = []
     attribution_present = False
+    embodiment_center: list | None = None  # lc-the-trace-is-the-memory, move 3
     traced = 0
     if not local_unreached:
         report = attr.aggregate()
@@ -1541,6 +1542,11 @@ def sense_kernel_api() -> list[str]:
         # + natives attributed to NodeIDs). Empty attribution on a surface that
         # ran = the body can't see what it exercised.
         attribution_present = bool(report.get("arms")) and bool(report.get("natives"))
+        # Deeper transparency: the embodiment projection's lived center (the
+        # activity-weighted NodeID centroid). Present = the body can see not
+        # just WHAT fired but which categories sit nearest its execution center.
+        emb = report.get("embodiment") or {}
+        embodiment_center = emb.get("center")
 
     # --- LIVE sensing: prod /api/health + /utils/kernel_status + each endpoint's
     # runtime. Reachability is optional (like sense_deploy_lag) — name what we
@@ -1676,10 +1682,14 @@ def sense_kernel_api() -> list[str]:
             "  transparency: attribution unsensed locally (kernel binary absent)"
         )
     elif attribution_present:
+        center_note = ""
+        if embodiment_center:
+            center_str = ".".join(f"{c:g}" for c in embodiment_center)
+            center_note = f"; embodiment center @{center_str} (|proj|→0 = lived center)"
         lines.append(
             "  transparency: attribution present — hot Blueprints + natives "
             "(each resolved to a NodeID) visible via "
-            "scripts/kernel_attribution_report.py"
+            f"scripts/kernel_attribution_report.py{center_note}"
         )
     else:
         lines.append(
