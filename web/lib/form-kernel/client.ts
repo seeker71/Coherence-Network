@@ -8,7 +8,10 @@ import {
   type NodeID,
 } from "./vendor/kernel.ts";
 import { readAll } from "./vendor/reader.ts";
-import { FIELD_MODEL_FORM_DEMO_SOURCE } from "./field-model-form";
+import {
+  FIELD_MODEL_FORM_DEMO_SOURCE,
+  FIELD_MODEL_FORM_PUBLIC_MARKER,
+} from "./field-model-form";
 
 export type LocalFormRun = {
   source: string;
@@ -41,6 +44,7 @@ export type LocalFormExample = {
   label: string;
   source: string;
   note: string;
+  proofMarker?: string;
 };
 
 export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
@@ -77,6 +81,7 @@ export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
     label: "Field Model Form proof",
     source: FIELD_MODEL_FORM_DEMO_SOURCE,
     note: "Runs a 93-point FMF proof over every primitive constructor, seven domain grammars, lineage lenses, quantum rain, observer receipts, and residuals.",
+    proofMarker: FIELD_MODEL_FORM_PUBLIC_MARKER,
   },
 ];
 

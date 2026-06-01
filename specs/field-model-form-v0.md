@@ -1,13 +1,10 @@
 ---
 idea_id: knowledge-and-resonance
-status: active
+status: done
 source:
   - file: docs/coherence-substrate/field-model-form.form
-    symbols: [field-model-form-v0, FieldBlueprint, FieldRecipe, FieldCell]
   - file: docs/coherence-substrate/field-domain-grammars.form
-    symbols: [field-domain-grammars, dna-rna, chemistry, bioelectricity, cell-signaling, plant-communication, electricity-magnetism, interspecies-and-conversation, quantum-rain]
   - file: docs/coherence-substrate/field-lineage-grammars.form
-    symbols: [donald-hoffman-interface, michael-levin-bioelectric-pattern, robert-edward-grant-harmonic-key, stephen-wolfram-ruliad-observer]
   - file: form/form-stdlib/field-model-form.fk
     symbols: [fmf-proof-score, fmf-quantum-rain-proof, fmf-hoffman-proof, fmf-bioelectric-proof, fmf-grant-proof, fmf-wolfram-proof]
   - file: form/form-stdlib/tests/field-model-form-band.fk
@@ -44,17 +41,17 @@ Field Model Form extends the Form substrate from stream execution into field exe
 
 ## Requirements
 
-- [ ] **R1**: FMF declares `FieldBlueprint`, `FieldRecipe`, and `FieldCell` in `docs/coherence-substrate/field-model-form.form`, preserving the existing Blueprint/Recipe/Cell trinity while adding carrier, topology, fiber, boundary, units, observer, cost, residual, evidence, and consent.
-- [ ] **R2**: FMF execution uses bounded logical simultaneity: every step freezes a snapshot, matches rules against that snapshot, prices candidates, chooses by observer policy, emits deltas, resolves conflicts, commits atomically, and writes a receipt plus residual.
-- [ ] **R3**: The TypeScript kernel surface reserves RBasic slots for the FMF primitives and implements a vertical slice in `form/form-kernel-ts/src/field.ts`.
-- [ ] **R4**: Domain grammars exist for DNA/RNA, chemistry, bioelectricity, cell signaling, plant communication, electricity/magnetism, interspecies/conversation, and quantum-rain surfaces in `docs/coherence-substrate/field-domain-grammars.form`.
-- [ ] **R5**: Executable proof uses actual referenced data where practical: NCBI RefSeq HBB CDS prefix for DNA/RNA and PubChem CID 2244 aspirin SMILES/formula for chemistry.
-- [ ] **R6**: Bidirectional proof includes at least one exact lift/project round trip and one intervention/reverse receipt round trip.
-- [ ] **R7**: The Go, Rust, TypeScript, and browser TypeScript kernels expose native constructors for every FMF RBasic slot: `field_blueprint`, `field_cell`, `field_carrier`, `field_topology`, `field_fiber`, `field_region`, `field_boundary`, `field_neighborhood`, `field_match`, `field_delta`, `field_resolve`, `field_commit`, `field_step`, `field_lift`, `field_sample`, `field_observe`, `field_intervene`, `field_residual`, `field_receipt`, `field_cost`, `field_consent`, and `field_evidence`.
-- [ ] **R8**: Donald Hoffman, Michael Levin, Robert Edward Grant, and Stephen Wolfram are represented as evidence-labeled FMF lenses with explicit claim boundaries and executable proof functions.
-- [ ] **R9**: `/substrate/form` includes a public local-kernel playground example that runs the FMF proof and returns `93`.
-- [ ] **R11**: Each requested domain proves the same 11-line contract: carrier algebra, match primitive, recipe primitive, units/dimensions, scheduling, conflict/confluence, scale bridge, evidence, observer identity, residuals, and participation semantics.
-- [ ] **R10**: The spec states the validation boundary explicitly: all sibling kernels validate primitive construction; full forward/reverse field-step semantics are implemented and validated in TypeScript first, not yet in Go/Rust/browser kernels.
+- [x] **R1**: FMF declares `FieldBlueprint`, `FieldRecipe`, and `FieldCell` in `docs/coherence-substrate/field-model-form.form`, preserving the existing Blueprint/Recipe/Cell trinity while adding carrier, topology, fiber, boundary, units, observer, cost, residual, evidence, and consent.
+- [x] **R2**: FMF execution uses bounded logical simultaneity: every step freezes a snapshot, matches rules against that snapshot, prices candidates, chooses by observer policy, emits deltas, resolves conflicts, commits atomically, and writes a receipt plus residual.
+- [x] **R3**: The TypeScript kernel surface reserves RBasic slots for the FMF primitives and implements a vertical slice in `form/form-kernel-ts/src/field.ts`.
+- [x] **R4**: Domain grammars exist for DNA/RNA, chemistry, bioelectricity, cell signaling, plant communication, electricity/magnetism, interspecies/conversation, and quantum-rain surfaces in `docs/coherence-substrate/field-domain-grammars.form`.
+- [x] **R5**: Executable proof uses actual referenced data where practical: NCBI RefSeq HBB CDS prefix for DNA/RNA and PubChem CID 2244 aspirin SMILES/formula for chemistry.
+- [x] **R6**: Bidirectional proof includes at least one exact lift/project round trip and one intervention/reverse receipt round trip.
+- [x] **R7**: The Go, Rust, TypeScript, and browser TypeScript kernels expose native constructors for every FMF RBasic slot: `field_blueprint`, `field_cell`, `field_carrier`, `field_topology`, `field_fiber`, `field_region`, `field_boundary`, `field_neighborhood`, `field_match`, `field_delta`, `field_resolve`, `field_commit`, `field_step`, `field_lift`, `field_sample`, `field_observe`, `field_intervene`, `field_residual`, `field_receipt`, `field_cost`, `field_consent`, and `field_evidence`.
+- [x] **R8**: Donald Hoffman, Michael Levin, Robert Edward Grant, and Stephen Wolfram are represented as evidence-labeled FMF lenses with explicit claim boundaries and executable proof functions.
+- [x] **R9**: `/substrate/form` includes a public local-kernel playground example that runs the FMF proof and returns `93`.
+- [x] **R10**: The spec states the validation boundary explicitly: all sibling kernels validate primitive construction; full forward/reverse field-step semantics are implemented and validated in TypeScript first, not yet in Go/Rust/browser kernels.
+- [x] **R11**: Each requested domain proves the same 11-line contract: carrier algebra, match primitive, recipe primitive, units/dimensions, scheduling, conflict/confluence, scale bridge, evidence, observer identity, residuals, and participation semantics.
 
 ## Research Inputs
 
@@ -120,6 +117,7 @@ FieldRule:
 - `cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk`
 - `cd form/form-kernel-ts && npm run check`
 - `python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md`
+- `PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh`
 
 ## Verification
 
@@ -131,7 +129,7 @@ cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field
 python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md
 ```
 
-Public deployment verification remains pending until this branch has passed PR checks, merged, deployed, and `/substrate/form` has been checked on the public site.
+Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `fmf-proof-score`, and `field_blueprint`.
 
 ## Validation Matrix
 
