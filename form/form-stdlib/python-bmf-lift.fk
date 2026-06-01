@@ -995,6 +995,67 @@
             (intern_node PY-BMF-SUB-ASSIGN
                 (list (intern_trivial_string name) idx value))))
 
+    ;; annotated assignment / bare annotation: `NAME : TYPE [= EXPR]`. The
+    ;; cpython classifier leaves these as kind "expr" / rule "star_expressions"
+    ;; (tokens[1] is ":" not "=" or ":="), so the dispatcher catches them
+    ;; explicitly before the bare-expr arm. The discipline: an annotated
+    ;; assignment IS an assignment with a discarded type slot — erase the
+    ;; annotation and reuse the SAME PY-BMF-ASSIGN lowering, so the runtime
+    ;; value is byte-identical to the un-annotated program. A bare annotation
+    ;; with no value (`header: str`) binds nothing at runtime in CPython, so it
+    ;; lowers to a no-op PY-BMF-PASS (the eval PY-BMF-PASS statement arm threads
+    ;; env unchanged). Both the module-level (`multiplier: int = 1`) and
+    ;; in-function-body (`total: int = self.seed`) cases flow through here
+    ;; identically — the dispatcher runs per-statement at every nesting level.
+    ;;
+    ;; The "=" that separates the (erased) type from the value is found by a
+    ;; depth-0 scan: a subscripted type like `List[Bucket]` carries "[" "]" but
+    ;; never a depth-0 "=", so the scan lands on the real assignment operator.
+
+    ;; ann-assign-eq-index — index of the first depth-0 "=" at or after `i`, or
+    ;; -1 if none (a bare annotation). "[" / "(" / "{" raise depth; their
+    ;; closers lower it; a "=" only counts at depth 0.
+    (defn ann-assign-eq-scan (toks i depth)
+        (if (nil? toks) (sub 0 1)
+            (do
+                (let t (head toks))
+                (if (and (eq depth 0) (tok-op? t "="))
+                    i
+                    (do
+                        (let d2 (if (or (tok-op? t "[") (or (tok-op? t "(") (tok-op? t "{")))
+                                    (add depth 1)
+                                 (if (or (tok-op? t "]") (or (tok-op? t ")") (tok-op? t "}")))
+                                    (sub depth 1)
+                                    depth)))
+                        (ann-assign-eq-scan (tail toks) (add i 1) d2))))))
+
+    ;; stmt-annotated-assign? — 1 iff tokens are `NAME : ...` (a name then a ":"
+    ;; op at index 1). Distinguishes from `NAME := ...` (walrus, op value ":="
+    ;; — a single distinct token, so it does not match here) and from the
+    ;; subscript/attr/aug forms (their index-1 op is "[" / "." / an aug-op).
+    (defn stmt-annotated-assign? (statement-tree)
+        (do
+            (let t (python-statement-tree-tokens statement-tree))
+            (if (lt (len t) 2) 0
+                (if (and (tok-name? (head t))
+                         (tok-op? (nth t 1) ":"))
+                    1 0))))
+
+    ;; lift-annotated-assign — name is token 0; the value (if any) is the token
+    ;; stream after the depth-0 "=". With a value → PY-BMF-ASSIGN (annotation
+    ;; erased, identical to the plain-assignment lowering). With no "=" (bare
+    ;; annotation) → PY-BMF-PASS (runtime no-op).
+    (defn lift-annotated-assign (statement-tree)
+        (do
+            (let t (python-statement-tree-tokens statement-tree))
+            (let name (tok-value (head t)))
+            (let eq-i (ann-assign-eq-scan t 0 0))
+            (if (lt eq-i 0)
+                (intern_node PY-BMF-PASS (empty))
+                (intern_node PY-BMF-ASSIGN
+                    (list (intern_trivial_string name)
+                          (lift-recipe (lift-expr (drop (add eq-i 1) t))))))))
+
     ;; lift-statement dispatches on both `kind` (first-token classifier) and
     ;; `cpython-rule` (the richer rule-name based on token shape). Examples:
     ;;   `x = 5`        — kind "expr", cpython-rule "assignment"
@@ -1020,10 +1081,11 @@
             (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
             (if (eq (stmt-subscript-assign? statement-tree) 1) (lift-subscript-assign statement-tree)
+            (if (eq (stmt-annotated-assign? statement-tree) 1) (lift-annotated-assign statement-tree)
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty))))))))))))))))))
+                    (intern_node PY-BMF-PASS (empty)))))))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;
