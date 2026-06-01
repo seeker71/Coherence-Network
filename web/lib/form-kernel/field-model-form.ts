@@ -1,6 +1,7 @@
 export const FIELD_MODEL_FORM_PUBLIC_MARKER = "field-model-form-public-proof:93";
 export const FIELD_MODEL_FORM_BML_RUNTIME_MARKER = "field-model-form-bml-runtime-proof:63";
 export const FIELD_AUTO_RESEARCH_BML_MARKER = "field-auto-research-bml-proof:127";
+export const FIELD_AUTO_RESEARCH_PERTURBATION_MARKER = "field-auto-research-perturbation-proof:255";
 
 export const FIELD_MODEL_FORM_DEMO_SOURCE = `(do
   (defn s (x) (intern_trivial_string x))

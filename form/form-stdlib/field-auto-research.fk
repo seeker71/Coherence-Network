@@ -82,6 +82,57 @@ section [form.bml] {
         list("ResearchIO", fmar-question-text(fmar-answer-question(answer)), fmar-source-id(source), fmar-source-body(source), fmfrt-project-sequence(fmfrt-result-field(step)), len(fmfrt-receipt-applied(fmfrt-result-receipt(step))), len(fmar-answer-evidence(answer)), fmar-residual-kind(residual), fmar-question-text(next));
     }
 
+    def fmar-gag-to-gtg-delta() = fmfrt-delta("set-site", 19, "symbol", "T");
+    def fmar-perturbation-residual() = fmar-residual("function-validation-after-perturbation", "Does the GAG to GTG perturbation change protein sequence, folding, expression, or disease relevance?", 5, "translation/folding/expression/clinical-context");
+    def fmar-perturbation-evidence(source, before-count, after-count) = list(fmar-evidence("wildtype GAG motif count observed by field grammar", "observed", 90, fmar-source-id(source), "sequence-only observation"), fmar-evidence("GAG to GTG perturbation changes observed motif count", "observed", 88, fmar-source-id(source), "before=2 after=1"), fmar-evidence("biological meaning requires external validation after perturbation", "hypothesis", 40, fmar-source-id(source), "not validated by motif grammar"));
+    def fmar-perturbation-report(source, before-observation, intervention, after-observation, reverse, evidence, residual, next-question) = list("ResearchPerturbationReport", source, before-observation, intervention, after-observation, reverse, evidence, residual, next-question);
+    def fmar-perturbation-source(report) = nth(report, 1);
+    def fmar-perturbation-before-observation(report) = nth(report, 2);
+    def fmar-perturbation-intervention(report) = nth(report, 3);
+    def fmar-perturbation-after-observation(report) = nth(report, 4);
+    def fmar-perturbation-reverse(report) = nth(report, 5);
+    def fmar-perturbation-evidence-cells(report) = nth(report, 6);
+    def fmar-perturbation-residual-cell(report) = nth(report, 7);
+    def fmar-perturbation-next-question(report) = nth(report, 8);
+
+    def fmar-run-dna-perturbation-research() {
+        let source = fmar-dna-source();
+        let field = fmfrt-lift-sequence(fmar-source-body(source));
+        let before = fmfrt-field-step(field, fmar-dna-rules(), fmar-dna-observer());
+        let intervention = fmfrt-intervene(field, fmar-dna-observer(), list(fmar-gag-to-gtg-delta()));
+        let after-field = fmfrt-result-field(intervention);
+        let after = fmfrt-field-step(after-field, fmar-dna-rules(), fmar-dna-observer());
+        let reverse = fmfrt-reverse-receipt(field, intervention);
+        let before-count = fmfrt-count-motif(fmfrt-project-sequence(fmfrt-result-field(before)), "GAG");
+        let after-count = fmfrt-count-motif(fmfrt-project-sequence(fmfrt-result-field(after)), "GAG");
+        let residual = fmar-perturbation-residual();
+        fmar-perturbation-report(source, before, intervention, after, reverse, fmar-perturbation-evidence(source, before-count, after-count), residual, fmar-residual-to-question(residual));
+    }
+
+    def fmar-dna-perturbation-research-io() {
+        let report = fmar-run-dna-perturbation-research();
+        let source = fmar-perturbation-source(report);
+        let before-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-before-observation(report)));
+        let after-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-after-observation(report)));
+        let restored-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-reverse(report)));
+        let intervention = fmar-perturbation-intervention(report);
+        let residual = fmar-perturbation-residual-cell(report);
+        let next = fmar-perturbation-next-question(report);
+        list("PerturbationIO", fmar-source-id(source), before-sequence, after-sequence, restored-sequence, fmfrt-count-motif(before-sequence, "GAG"), fmfrt-count-motif(after-sequence, "GAG"), len(fmfrt-receipt-applied(fmfrt-result-receipt(intervention))), fmar-residual-kind(residual), fmar-question-text(next));
+    }
+
+    def fmar-public-perturbation-proof-score() {
+        let report = fmar-run-dna-perturbation-research();
+        let source = fmar-perturbation-source(report);
+        let before-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-before-observation(report)));
+        let after-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-after-observation(report)));
+        let restored-sequence = fmfrt-project-sequence(fmfrt-result-field(fmar-perturbation-reverse(report)));
+        let intervention = fmar-perturbation-intervention(report);
+        let residual = fmar-perturbation-residual-cell(report);
+        let next = fmar-perturbation-next-question(report);
+        sum(list(fmfrt-bool-score(eq(fmfrt-count-motif(before-sequence, "GAG"), 2), 1), fmfrt-bool-score(str_eq(after-sequence, "ATGGTGCATCTGACTCCTGTGGAGAAGTCT"), 2), fmfrt-bool-score(eq(fmfrt-count-motif(after-sequence, "GAG"), 1), 4), fmfrt-bool-score(and(eq(len(fmfrt-receipt-applied(fmfrt-result-receipt(intervention))), 1), eq(len(fmfrt-residual-conflicts(fmfrt-result-residual(intervention))), 0)), 8), fmfrt-bool-score(str_eq(restored-sequence, fmar-source-body(source)), 16), fmfrt-bool-score(eq(len(fmar-perturbation-evidence-cells(report)), 3), 32), fmfrt-bool-score(str_eq(fmar-residual-kind(residual), "function-validation-after-perturbation"), 64), fmfrt-bool-score(str_eq(fmar-question-text(next), "Does the GAG to GTG perturbation change protein sequence, folding, expression, or disease relevance?"), 128)));
+    }
+
     def fmar-public-auto-research-proof-score() {
         let source = fmar-dna-source();
         let answer = fmar-run-dna-motif-research();
