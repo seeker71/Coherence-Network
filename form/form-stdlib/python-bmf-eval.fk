@@ -858,7 +858,17 @@
             ;; compile path on the text-scoring routes (concept_match_score). The
             ;; native is three-way value-identical for ASCII (string-natives-band.fk).
             (str_find (head args) (head (tail args)) (head (tail (tail args))))
-            (do (trace "py-builtin: unknown" name) (head (empty)))))))))))
+        (if (str_eq name "str_eq")
+            ;; str_eq(a, b) — the EXACT string-membership primitive (set-resonance
+            ;; `a == b` over tag lists, the equality counterpart to str_find's
+            ;; substring test). A bare call in a transmuted recipe resolves to the
+            ;; kernel's str_eq native (COMPARE.EQ) the same way the python-compile
+            ;; path lowers it; intercepting it here keeps the bmf interpreter (the
+            ;; third runtime) value-identical to the compile path on the exact-
+            ;; membership routes (tag_match_score). The native is three-way value-
+            ;; identical for ASCII (string-natives-band.fk).
+            (if (str_eq (head args) (head (tail args))) 1 0)
+            (do (trace "py-builtin: unknown" name) (head (empty))))))))))))
 
     ;; py-builtin? — 1 iff name is one of the reducing builtins above.
     (defn py-builtin? (name)
@@ -869,7 +879,8 @@
         (if (str_eq name "abs") 1
         (if (str_eq name "round") 1
         (if (str_eq name "str_find") 1
-            0))))))))
+        (if (str_eq name "str_eq") 1
+            0)))))))))
 
     (defn py-eval (recipe env)
         (do
