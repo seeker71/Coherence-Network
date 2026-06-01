@@ -8,11 +8,36 @@
 // What this exposes:
 //   compile_and_run(src: str) -> int|float|str|bool|list|None
 //   run_fk(path: str)         -> int|float|str|bool|list|None
+//   Preloader                 — a warm Kernel+Arena that parses each route
+//                               recipe ONCE and runs (handle, bindings) per
+//                               request with no re-parse (the route-preload
+//                               pair below).
 //
 // Both run the same `run_source` the CLI binary runs. The Value → PyAny
 // conversion mirrors the kernel's display(): Int, Float, Bool, Str, List
 // land as native Python types; Closure renders as "<closure #N>"; Nid
 // renders as "@p.l.t.i"; Null becomes None.
+//
+// ──────────────────────────────────────────────────────────────────────────
+// Route preload — drop the per-request parse.
+// ──────────────────────────────────────────────────────────────────────────
+//
+// compile_and_run re-tokenizes + re-reads the WHOLE recipe source on every
+// call (run_source → read_root_from_source → tokenize_sexp + read_sexp), then
+// re-walks every `defn` to re-bind its closure before the trailing call. For a
+// FastAPI endpoint whose recipe shape is fixed and whose only per-request
+// change is the input values, that parse + defn-rebind is pure overhead paid
+// on every request.
+//
+// `Preloader` mirrors cli_serve's pattern (main.rs ~5571): load the routes
+// into a long-lived Kernel+Arena ONCE, then dispatch each request to a fresh
+// child frame. Here the "load" is split into a `setup` recipe (the `defn`s,
+// walked once into the root frame so the closures bind a single time) and a
+// `body` recipe (the trailing call, parsed once into a held NodeID). Per
+// request: a child frame of the root, bind the input names to the request's
+// Values, walk the pre-parsed body NodeID — no tokenize, no read, no
+// defn-rebind. ONE mechanism, routes as DATA (a Vec indexed by handle); no
+// endpoint is special-cased.
 //
 // The whole module is gated on the `pyo3` feature so building the binary
 // alone (cargo build --release) doesn't drag in PyO3 / libpython.
@@ -33,10 +58,10 @@ mod kernel;
 // its items back up.
 pub use kernel::*;
 
-use kernel::Value;
-use pyo3::exceptions::PyRuntimeError;
+use kernel::{read_root_from_source, walk, Arena, Kernel, NodeID, Value};
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyList;
+use pyo3::types::{PyDict, PyList};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// Convert a kernel Value to a Python object — same surface as Value::display()
@@ -70,6 +95,168 @@ fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
         Value::Record(_) => v.display().into_py(py),
     };
     Ok(obj)
+}
+
+/// Convert a Python object into a kernel Value — the inverse of value_to_py,
+/// restricted to the value model the kernel carries (the same surface
+/// _fk_literal renders on the Python side). bool before int (Python bool is an
+/// int subclass); lists recurse. Anything else is a ValueError so the caller's
+/// fallback can take over rather than the kernel walking a fabricated value.
+fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
+    if let Ok(b) = obj.downcast::<pyo3::types::PyBool>() {
+        return Ok(Value::Bool(b.is_true()));
+    }
+    if let Ok(n) = obj.extract::<i64>() {
+        return Ok(Value::Int(n));
+    }
+    if let Ok(f) = obj.extract::<f64>() {
+        return Ok(Value::Float(f));
+    }
+    if let Ok(s) = obj.extract::<String>() {
+        return Ok(Value::Str(s));
+    }
+    if let Ok(list) = obj.downcast::<PyList>() {
+        let mut xs = Vec::with_capacity(list.len());
+        for item in list.iter() {
+            xs.push(py_to_value(&item)?);
+        }
+        return Ok(Value::List(xs));
+    }
+    Err(PyValueError::new_err(format!(
+        "form-kernel: cannot bind Python {} into a kernel Value",
+        obj.get_type().name()?
+    )))
+}
+
+/// A preloaded route — the trailing call expression of one endpoint recipe,
+/// parsed once into a NodeID held against the warm Kernel. The `defn`s that
+/// the body references were walked once into the Preloader's root frame at
+/// load, so this NodeID needs only its input names bound to walk.
+struct PreloadedRoute {
+    body: NodeID,
+}
+
+/// Preloader — a warm Kernel+Arena holding each endpoint recipe parsed ONCE.
+///
+/// The route-preload half of the inline path. Mirrors cli_serve: one long-lived
+/// Kernel+Arena, routes loaded once, each request a fresh child frame. The
+/// handle returned by `load_route` is an index into `routes`; `run` looks the
+/// route up and walks its pre-parsed body with the request's bindings — no
+/// tokenize, no read_sexp, no defn-rebind per call.
+#[pyclass]
+struct Preloader {
+    kernel: Kernel,
+    arena: Arena,
+    // FrameId / NameID are private `type X = u32` aliases in main.rs; use the
+    // underlying u32 here so lib.rs needs no extra visibility change for them.
+    root_env: u32,
+    routes: Vec<PreloadedRoute>,
+}
+
+#[pymethods]
+impl Preloader {
+    #[new]
+    fn new() -> Self {
+        let kernel = Kernel::new();
+        let mut arena = Arena::new();
+        let root_env = arena.new_frame(None);
+        Preloader {
+            kernel,
+            arena,
+            root_env,
+            routes: Vec::new(),
+        }
+    }
+
+    /// Parse a route recipe ONCE and return its handle.
+    ///
+    /// `setup_src` holds the recipe's `defn`s (and any constant lets the body
+    /// depends on); it is walked once into the root frame so its closures bind
+    /// a single time, shared by every subsequent `run`. `body_src` is the
+    /// trailing call expression; it is parsed into a held NodeID. The split is
+    /// the caller's responsibility (the Python bridge owns the recipe text and
+    /// knows which `(let ...)` forms carry per-request inputs) — this side stays
+    /// recipe-agnostic: ONE mechanism for all routes.
+    fn load_route(&mut self, setup_src: &str, body_src: &str) -> PyResult<usize> {
+        let res = catch_unwind(AssertUnwindSafe(|| {
+            // Walk the setup (defns + constant lets) once into the root frame.
+            if !setup_src.trim().is_empty() {
+                let setup_root = read_root_from_source(&mut self.kernel, setup_src);
+                let _ = walk(&mut self.kernel, &mut self.arena, setup_root, self.root_env);
+            }
+            // Parse the body once; hold its NodeID. No walk yet — that happens
+            // per request against a child frame carrying the inputs.
+            read_root_from_source(&mut self.kernel, body_src)
+        }));
+        match res {
+            Ok(body) => {
+                self.routes.push(PreloadedRoute { body });
+                Ok(self.routes.len() - 1)
+            }
+            Err(p) => Err(PyRuntimeError::new_err(format!(
+                "form-kernel: load_route panic: {}",
+                panic_message(&p)
+            ))),
+        }
+    }
+
+    /// Run a preloaded route with per-request bindings — no re-parse.
+    ///
+    /// `bindings` maps input names to Python values; each is converted to a
+    /// kernel Value and bound into a fresh child frame of the root (where the
+    /// `defn` closures live). The pre-parsed body NodeID is then walked in that
+    /// frame. The result converts through the same value_to_py as the inline
+    /// path, so value-parity with compile_and_run is exact.
+    fn run(&mut self, py: Python<'_>, handle: usize, bindings: &Bound<'_, PyDict>) -> PyResult<PyObject> {
+        if handle >= self.routes.len() {
+            return Err(PyValueError::new_err(format!(
+                "form-kernel: no preloaded route for handle {}",
+                handle
+            )));
+        }
+        // Convert the bindings outside the panic boundary so a bad value is a
+        // clean ValueError, not a kernel panic.
+        let mut pairs: Vec<(u32, Value)> = Vec::with_capacity(bindings.len());
+        for (key, val) in bindings.iter() {
+            let name: String = key.extract()?;
+            let value = py_to_value(&val)?;
+            let name_id = self.kernel.intern_string(&name).inst;
+            pairs.push((name_id, value));
+        }
+        let body = self.routes[handle].body;
+        let res = catch_unwind(AssertUnwindSafe(|| {
+            let frame = self
+                .arena
+                .new_frame_with_capacity(Some(self.root_env), pairs.len());
+            for (name_id, value) in &pairs {
+                self.arena.bind(frame, *name_id, value.clone());
+            }
+            walk(&mut self.kernel, &mut self.arena, body, frame)
+        }));
+        match res {
+            Ok(v) => value_to_py(py, &v),
+            Err(p) => Err(PyRuntimeError::new_err(format!(
+                "form-kernel: run panic: {}",
+                panic_message(&p)
+            ))),
+        }
+    }
+
+    /// Number of routes loaded — for the bridge to sanity-check its handle map.
+    fn route_count(&self) -> usize {
+        self.routes.len()
+    }
+}
+
+/// Pull a human string out of a panic payload (used by both Preloader methods).
+fn panic_message(p: &Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = p.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = p.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "(no message)".to_string()
+    }
 }
 
 /// Compile and run a Form recipe source string, return its value as a
@@ -109,6 +296,7 @@ fn run_fk(py: Python<'_>, path: &str) -> PyResult<PyObject> {
 fn form_kernel_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_and_run, m)?)?;
     m.add_function(wrap_pyfunction!(run_fk, m)?)?;
+    m.add_class::<Preloader>()?;
     m.add("__doc__", "form-kernel-rust inline runtime (PyO3 extension)")?;
     Ok(())
 }

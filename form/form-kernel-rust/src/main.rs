@@ -543,18 +543,18 @@ impl Trace {
 // Arena — the mutable-during-walk runtime state. Held as `&mut Arena`
 // by the walker; orthogonal to the kernel so reading recipes and
 // writing frames don't fight the borrow checker.
-struct Arena {
+pub(crate) struct Arena {
     frames: Vec<Frame>,
 }
 
 impl Arena {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             frames: Vec::with_capacity(256),
         }
     }
 
-    fn new_frame(&mut self, parent: Option<FrameId>) -> FrameId {
+    pub(crate) fn new_frame(&mut self, parent: Option<FrameId>) -> FrameId {
         let id = self.frames.len() as FrameId;
         self.frames.push(Frame {
             parent,
@@ -567,7 +567,7 @@ impl Arena {
     // by the FNCALL hot path where the exact arg count is known. Saves
     // Vec capacity reallocations during arg-binding for recursive workloads
     // (fib at 1973 calls × 1 arg = 1973 reallocations avoided).
-    fn new_frame_with_capacity(&mut self, parent: Option<FrameId>, cap: usize) -> FrameId {
+    pub(crate) fn new_frame_with_capacity(&mut self, parent: Option<FrameId>, cap: usize) -> FrameId {
         let id = self.frames.len() as FrameId;
         self.frames.push(Frame {
             parent,
@@ -576,7 +576,7 @@ impl Arena {
         id
     }
 
-    fn bind(&mut self, fid: FrameId, name: NameID, v: Value) {
+    pub(crate) fn bind(&mut self, fid: FrameId, name: NameID, v: Value) {
         let f = &mut self.frames[fid as usize];
         for slot in &mut f.bindings {
             if slot.0 == name {
@@ -587,7 +587,7 @@ impl Arena {
         f.bindings.push((name, v));
     }
 
-    fn lookup(&self, fid: FrameId, name: NameID) -> Option<Value> {
+    pub(crate) fn lookup(&self, fid: FrameId, name: NameID) -> Option<Value> {
         let mut cur = Some(fid);
         while let Some(id) = cur {
             let f = &self.frames[id as usize];
@@ -4457,7 +4457,7 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
 // Walker — full RBasic dispatch
 // ---------------------------------------------------------------------------
 
-fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
+pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
     if n.level == LEVEL_TRIVIAL {
         return k.trivial_value(n);
     }
@@ -5286,7 +5286,7 @@ pub(crate) fn run_source(src: &str) -> Value {
     execute_root(&mut k, root)
 }
 
-fn read_root_from_source(k: &mut Kernel, src: &str) -> NodeID {
+pub(crate) fn read_root_from_source(k: &mut Kernel, src: &str) -> NodeID {
     let toks = tokenize_sexp(src);
     let wrapped: String;
     let toks = if count_top_level(&toks) == 1 {
