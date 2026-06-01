@@ -11,6 +11,8 @@ import {
   type NodeID,
 } from "./vendor/kernel.ts";
 
+export const FIELD_RUNTIME_PUBLIC_MARKER = "field-model-form-browser-runtime-proof:4";
+
 export type CarrierKind =
   | "sequence"
   | "graph"
@@ -159,6 +161,12 @@ export interface FieldStepResult {
   readonly field: FieldCell;
   readonly receipt: FieldReceipt;
   readonly residual: FieldResidual;
+}
+
+export interface FieldRuntimeProof {
+  readonly marker: string;
+  readonly score: number;
+  readonly checks: readonly string[];
 }
 
 const DEFAULT_COST: CostLedger = {
@@ -825,4 +833,92 @@ export function reverseReceipt(k: Kernel, result: FieldStepResult): FieldStepRes
 export function fieldNodeSummary(k: Kernel, node: NodeID): string {
   const category = k.category(node);
   return `${nodeKey(node)} category=${nodeKey(category)}`;
+}
+
+export function runFieldRuntimeProof(): FieldRuntimeProof {
+  const k = new Kernel();
+  const observer: FieldObserver = {
+    name: "public-browser-runtime-observer",
+    policy: "all-compatible",
+  };
+  const checks: string[] = [];
+
+  const sequenceBlueprint = makeFieldBlueprint(
+    k,
+    "public-dna-sequence-field",
+    "sequence",
+    "next-previous",
+    { index: "integer", symbol: "nucleotide" },
+    { index: "nt" },
+    "start-end",
+  );
+  const dna = "ATGGTGCATCTGACTCCTGAGGAGAAGTCT";
+  const sequence = liftSequenceToField(k, "public-hbb-prefix", sequenceBlueprint, dna);
+  const codons = fieldStep(k, sequence, [
+    makeSequenceWindowRule(k, "start-codon", "ATG"),
+    makeSequenceWindowRule(k, "glutamate-codon", "GAG"),
+  ], observer);
+  if (projectSequence(sequence) === dna && codons.receipt.candidates.length === 3) {
+    checks.push("sequence-lift-project-fieldStep");
+  }
+
+  const changed = intervene(k, sequence, observer, [
+    { op: "set-site", site: "p19", key: "symbol", value: "T" },
+  ]);
+  if (projectSequence(reverseReceipt(k, changed).field) === dna) {
+    checks.push("intervene-reverseReceipt");
+  }
+
+  const graphBlueprint = makeFieldBlueprint(
+    k,
+    "public-bioelectric-cell-graph",
+    "cell-graph",
+    "gap-junction",
+    { voltage_mV: "scalar", label: "string" },
+    { voltage_mV: "mV" },
+    "membrane",
+  );
+  const graph = liftGraphToField(
+    k,
+    "public-two-cell-vmem",
+    graphBlueprint,
+    [
+      { id: "cellA", fiber: { voltage_mV: -30, label: "quiet" } },
+      { id: "cellB", fiber: { voltage_mV: -70 } },
+    ],
+    [{ from: "cellA", to: "cellB", kind: "gap-junction" }],
+  );
+  const diffused = fieldStep(k, graph, [
+    makeDiffusionRule(k, "public-vmem-gap-diffusion", "voltage_mV", "gap-junction", 0.25),
+  ], observer);
+  const cellA = diffused.field.state.sites.find((site) => site.id === "cellA");
+  const cellB = diffused.field.state.sites.find((site) => site.id === "cellB");
+  if (cellA?.fiber.voltage_mV === -40 && cellB?.fiber.voltage_mV === -60) {
+    checks.push("snapshot-relative-diffusion");
+  }
+
+  const markHot = makeFieldRule(
+    k,
+    "public-mark-hot",
+    "conflict-demo",
+    () => [{ bindings: { site: "cellA" } }],
+    () => [{ op: "set-site", site: "cellA", key: "label", value: "hot" }],
+  );
+  const markCool = makeFieldRule(
+    k,
+    "public-mark-cool",
+    "conflict-demo",
+    () => [{ bindings: { site: "cellA" } }],
+    () => [{ op: "set-site", site: "cellA", key: "label", value: "cool" }],
+  );
+  const conflicted = fieldStep(k, graph, [markHot, markCool], observer);
+  if (conflicted.residual.conflicts.includes("conflict:site:cellA:label")) {
+    checks.push("conflict-residual");
+  }
+
+  return {
+    marker: FIELD_RUNTIME_PUBLIC_MARKER,
+    score: checks.length,
+    checks,
+  };
 }
