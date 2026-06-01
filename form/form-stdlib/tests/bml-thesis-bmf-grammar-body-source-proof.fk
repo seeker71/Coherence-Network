@@ -4,18 +4,18 @@
 ;
 ; Proves that the original thesis companion BMF-grammar.bml file no longer
 ; lands as an empty class shell. Its BMF class body is parsed into native BML
-; model components: const, class/public fields, constructor, Main, additional
-; method signatures, and small helper method bodies.
+; model components: const, class/public fields, constructor, Main, method
+; signatures, and the formerly large BMF helper method bodies.
 
 (do
     (defn bool-score (b bit)
-        (if b bit 0))
+        (if b 1 0))
 
     (defn int-score (actual expected bit)
-        (if (eq actual expected) bit 0))
+        (if (eq actual expected) 1 0))
 
     (defn str-score (actual expected bit)
-        (if (str_eq actual expected) bit 0))
+        (if (str_eq actual expected) 1 0))
 
     (defn field-score (field expected bit)
         (if (nil? field) 0
@@ -53,7 +53,18 @@
     (let start-result-stack
         (bml-find-method bmf-methods "StartResultStack"))
     (let add-method (bml-find-method bmf-methods "Add"))
+    (let as-string-method (bml-find-method bmf-methods "AsString"))
+    (let as-bml-string-method (bml-find-method bmf-methods "AsBMLString"))
+    (let load-syntax-method (bml-find-method bmf-methods "LoadSyntax"))
     (let compile-method (bml-find-method bmf-methods "Compile"))
+    (let handle-args-method (bml-find-method bmf-methods "HandleArgs"))
+    (let load-syntaxes-method (bml-find-method bmf-methods "LoadSyntaxes"))
+    (let read-config-method (bml-find-method bmf-methods "ReadConfigFile"))
+    (let write-config-method (bml-find-method bmf-methods "WriteConfigFile"))
+    (let register-primitives-method
+        (bml-find-method bmf-methods "RegisterPrimitives"))
+    (let print-command-help-method
+        (bml-find-method bmf-methods "PrintCommandLineHelp"))
 
     (sum
         (list
@@ -81,5 +92,17 @@
             (bool-score (bml-body-source-contains? (bml-method-body get-file-extension) "LastIndexOf") 2097152)
             (bool-score (bml-body-source-contains? (bml-method-body start-result-stack) "Push") 4194304)
             (bool-score (bml-body-source-contains? (bml-method-body add-method) "Append") 8388608)
-            (int-score (len (bml-body-source-values (bml-method-body compile-method))) 0 16777216)))
+            (bool-score (bml-body-source-contains? (bml-method-body compile-method) "ParseStream") 16777216)
+            (bool-score (bml-body-source-contains? (bml-method-body compile-method) "Invoke") 33554432)
+            (bool-score (bml-body-source-contains? (bml-method-body as-string-method) "StringBuffer") 67108864)
+            (bool-score (bml-body-source-contains? (bml-method-body as-bml-string-method) "select") 134217728)
+            (bool-score (bml-body-source-contains? (bml-method-body load-syntax-method) "Global") 268435456)
+            (bool-score (bml-body-source-contains? (bml-method-body load-syntax-method) "Build") 536870912)
+            (bool-score (bml-body-source-contains? (bml-method-body handle-args-method) "PrintCommandLineHelp") 1073741824)
+            (bool-score (bml-body-source-contains? (bml-method-body handle-args-method) "Compile") 2147483648)
+            (bool-score (bml-body-source-contains? (bml-method-body load-syntaxes-method) "PrintOn") 4294967296)
+            (bool-score (bml-body-source-contains? (bml-method-body read-config-method) "FileInputStream") 8589934592)
+            (bool-score (bml-body-source-contains? (bml-method-body write-config-method) "FileOutputStream") 17179869184)
+            (bool-score (bml-body-source-contains? (bml-method-body register-primitives-method) "MultiMatch") 34359738368)
+            (bool-score (bml-body-source-contains? (bml-method-body print-command-help-method) "Comand line options are not case sensitive.") 68719476736)))
 )
