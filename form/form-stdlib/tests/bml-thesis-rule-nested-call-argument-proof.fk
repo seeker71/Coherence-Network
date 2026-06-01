@@ -1,0 +1,71 @@
+; tests/bml-thesis-rule-nested-call-argument-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves nested call argument execution from original container-Rule.bml:
+; hEnv.EndResultStack( GetTag( strTag ));
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let match-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "Match"))
+    (let match-body (bml-method-body match-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9260))
+    (let EnvBP (make_nodeid 1 2 99 9261))
+    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let env-object (record_new EnvBP))
+    (let call-env
+        (record_new
+            CallEnvBP
+            "hEnv" env-object
+            "strTag" "outer-rule-tag"))
+    (let rule-instance (record_new RuleBP "m_strName" "fallback-rule-tag"))
+
+    (defn rule-get-tag-dispatch (self tag)
+        (if (nil? tag)
+            (record_get self "m_strName")
+            tag))
+
+    (defn env-end-result-stack-dispatch (self tag)
+        (record_set self "endedTag" tag))
+
+    (method_define RuleBP "GetTag" rule-get-tag-dispatch)
+    (method_define EnvBP "EndResultStack" env-end-result-stack-dispatch)
+    (let exec-result
+        (bml-body-source-exec-receiver-call1-nested-implicit
+            match-body
+            rule-instance
+            call-env))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-name match-method) "Match" 2)
+            (bool-score (bml-body-source-contains? match-body "EndResultStack") 4)
+            (bool-score (bml-body-source-contains? match-body "GetTag") 8)
+            (int-score
+                (bml-body-source-receiver-call1-nested-implicit-count match-body)
+                1
+                16)
+            (bool-score (method_has RuleBP "GetTag") 32)
+            (bool-score (method_has EnvBP "EndResultStack") 64)
+            (str-score (method_invoke rule-instance "GetTag" "outer-rule-tag") "outer-rule-tag" 128)
+            (str-score (method_invoke rule-instance "GetTag" (empty)) "fallback-rule-tag" 256)
+            (str-score (record_get env-object "endedTag") "outer-rule-tag" 512)
+            (bool-score (record_has env-object "endedTag") 1024)
+            (bool-score (record_has exec-result "m_strName") 2048))))
