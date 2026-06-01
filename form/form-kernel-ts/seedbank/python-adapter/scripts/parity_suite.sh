@@ -16,19 +16,20 @@
 # Rust kernel) is the current gate. PARITY_THIRD_RUNTIME chooses which
 # third runtime fills the seam:
 #
-#   PARITY_THIRD_RUNTIME=ts-eval     (default)
-#     Today's TS bootstrap: parse via lang-python.ts, walk via evalPython.
-#     The path that is named for compost in
-#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md — Phase A.
-#
-#   PARITY_THIRD_RUNTIME=kernel-bmf  (the destination)
+#   PARITY_THIRD_RUNTIME=kernel-bmf  (default — the destination)
 #     Form-native: source bytes → BMF source objects → rules in
 #     form-stdlib/grammars/python-bmf.fk → Form recipe → native walker.
-#     Invokes `kernel-bmf-run <file.py>` which sibling agents on
-#     `template-machinery` + `python-bmf-driven-parse` are bringing up.
-#     When kernel-bmf-run can compile a file, that file's row promotes;
-#     the env-var flip happens demo-by-demo. When all files pass under
-#     kernel-bmf, the ts-eval path is residue per the compost manifest.
+#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01 all 20
+#     PARITY_FILES pass three-way (CPython == Rust-bootstrap == kernel-bmf)
+#     under isolated tempdirs, corroborated by ./validate.sh's python-bmf
+#     bands — so this is now the default. The ts-eval path is residue per
+#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md Phase A.
+#
+#   PARITY_THIRD_RUNTIME=ts-eval     (the bootstrap — explicit opt-out)
+#     The TS bootstrap: parse via lang-python.ts, walk via evalPython.
+#     The path that is named for compost in
+#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md — Phase A. Select it explicitly
+#     to walk the old path; it no longer fills the seam by default.
 #
 # Add new files to PARITY_FILES below as they're ripened.
 # Run from form/form-kernel-ts/.
@@ -36,7 +37,12 @@
 set -euo pipefail
 
 # Third-runtime selector — see header for the migration story.
-PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-ts-eval}"
+# Default flipped ts-eval → kernel-bmf 2026-06-01: all 20 PARITY_FILES pass
+# the Form-native walker three-way (CPython == Rust-bootstrap == kernel-bmf),
+# measured under isolated tempdirs and corroborated by ./validate.sh's
+# python-bmf bands. The bootstrap (ts-eval) is now the explicit opt-out,
+# not the default — set PARITY_THIRD_RUNTIME=ts-eval to walk the old path.
+PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-kernel-bmf}"
 
 PARITY_FILES=(
     # First row that passes under PARITY_THIRD_RUNTIME=kernel-bmf — covers

@@ -13,8 +13,9 @@ The discipline is **discipline + readiness**: every bootstrap file is named here
 with the gate that must be green before it composts, and the parity suite
 already carries a runtime selector that switches the third runtime atomically
 (see `seedbank/python-adapter/scripts/parity_suite.sh` `PARITY_THIRD_RUNTIME`).
-The bootstrap stays as the third runtime *until* `PARITY_THIRD_RUNTIME=kernel-bmf`
-becomes the default — then the named files compost, one phase at a time.
+As of 2026-06-01 `PARITY_THIRD_RUNTIME=kernel-bmf` is the default — all 20
+`PARITY_FILES` proved three-way green under the Form-native walker. The named
+Phase-A files are now residue; their compost proceeds one phase at a time.
 
 This is the readiness map. The compost is downstream of green gates.
 
@@ -242,19 +243,25 @@ confirm Shape 2 classification + LOC count.
 `form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` carries
 `PARITY_THIRD_RUNTIME` (env-var):
 
-- `ts-eval` (default today) — the TS bootstrap evaluator. Backwards-compatible;
-  every existing gate runs unchanged.
-- `kernel-bmf` (the destination) — invokes `kernel-bmf-run <source.py>`,
-  expecting the binary to read `.py` via `form-stdlib/grammars/python-bmf.fk`
-  and execute via Form-native walker. **The binary doesn't exist yet.** The
-  parity script prints a clear "deferred" message naming the file the
-  Form-native path must learn to compile.
+- `kernel-bmf` (**default as of 2026-06-01** — the destination) — invokes
+  `kernel-bmf-run <source.py>`, which reads `.py` via
+  `form-stdlib/grammars/python-bmf.fk`, lifts to PY-BMF-* recipes
+  (`python-bmf-lift.fk`), and walks them through the Form-native interpreter
+  (`python-bmf-eval.fk`) on the Rust kernel. All 20 `PARITY_FILES` pass
+  three-way under it (CPython == Rust-bootstrap == kernel-bmf).
+- `ts-eval` (the bootstrap — explicit opt-out) — the TS bootstrap evaluator
+  (`lang-python.ts` → `evalPython`). Still selectable with
+  `PARITY_THIRD_RUNTIME=ts-eval`; it no longer fills the seam by default.
 
-Switching the default from `ts-eval` to `kernel-bmf` is the single env-var
-change that flips the third runtime. Each demo gets promoted individually
-(file-by-file) as `kernel-bmf-run` learns to compile it. When all
-`PARITY_FILES` are green under `kernel-bmf`, the Phase-A Python-adapter files
-are residue.
+**The default flipped `ts-eval` → `kernel-bmf` on 2026-06-01** once all 20
+`PARITY_FILES` proved green under the Form-native walker, measured in isolated
+tempdirs and corroborated by `./validate.sh`'s python-bmf bands. The flip is a
+one-line change to `parity_suite.sh` (the `${PARITY_THIRD_RUNTIME:-...}`
+fallback) and is fully reversible; no CI workflow runs the parity suite, so the
+flip changes no gate — the `form/**` CI gates run only `bash validate.sh`. With
+the default flipped and every `PARITY_FILES` row green, the Phase-A
+Python-adapter bootstrap files (`lang-python.ts` and friends) are residue: the
+compost can proceed in a sibling PR.
 
 The same selector shape can extend to the TS adapter parity gate
 (`PARITY_THIRD_RUNTIME` over `ts-eval` vs `kernel-bmf-ts`).
@@ -507,6 +514,43 @@ CPython == Rust-bootstrap == kernel-bmf for each. The 13 rows above held green
 through the change (the return-signal touches the shared body-eval paths, so
 every one was re-spot-checked under isolation and none regressed). The ledger
 now stands at 15 genuinely three-way green demos.
+
+**All 20 green — the default flipped (2026-06-01, `claude/parity-bmf-measure`).**
+With the class / inheritance / typing-compose demos closing
+(`python_class_demo` `176`, `python_inheritance_demo` `337`,
+`python_typing_compose_demo` `241`) and the last unledgered demo
+`endpoint_nodeid_compatibility_demo` measured green (`5`), the full
+`PARITY_FILES` set was re-measured under isolated tempdirs against freshly
+rebuilt Go + Rust kernels (main `d248767e`). **Every one of the 20 demos is
+three-way green** (CPython == Rust-bootstrap == kernel-bmf):
+
+| Demo | Three-way value | Demo | Three-way value |
+|---|---|---|---|
+| `python_bridge_demo` | `720` | `python_class_demo` | `176` |
+| `python_demo` | `40949` | `python_dict_demo` | `88` |
+| `python_assign_demo` | `45` | `endpoint_nodeid_distance_demo` | `7` |
+| `python_imperative_demo` | `45370` | `endpoint_nodeid_compatibility_demo` | `5` |
+| `python_substrate_demo` | `17680` | `endpoint_weighted_average_demo` | `0.8125` |
+| `python_range_demo` | `41650` | `python_inheritance_demo` | `337` |
+| `python_builtins_demo` | `131` | `endpoint_lattice_stats_demo` | `1089` |
+| `python_lambda_demo` | `216` | `python_typing_compose_demo` | `241` |
+| `python_string_demo` | `45` | `python_float_demo` | `4.875` |
+| `python_import_demo` | `20.853981633974485` | `endpoint_coherence_weight_demo` | `16185` |
+
+Confirmed three ways: (1) isolated-tempdir harness, each demo at its true
+distinct value; (2) `PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh`
+→ `20 passing, 0 failing`; (3) adversarial novel-expression checks proving
+`kernel-bmf-run` computes Form-native rather than echoing CPython. `./validate.sh`
+corroborates: 209 OK / 1 divergent (the pre-existing untracked
+`seeded-bytes-recipe-band.fk`, excepted), with `python-bmf-arithmetic-band`,
+`python-bmf-eval-band`, `python-bmf-lift-band`, and `python-class-band` all ok.
+
+Because every `PARITY_FILES` row is now green, the parity suite's default
+third runtime flipped `ts-eval` → `kernel-bmf` (see "The runtime-selector
+switch"). The suite stays green under the new default
+(`scripts/parity_suite.sh` with no env var → `20 passing, 0 failing, third
+runtime: kernel-bmf`). The Phase-A Python-adapter bootstrap tissue
+(`lang-python.ts` and friends) is now residue — its compost is the next breath.
 
 **What composts when a demo reaches COMPOST READY.** The `.py` input
 **stays** — the parity suite reads it on every run (it's the substrate the
