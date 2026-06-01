@@ -1,0 +1,71 @@
+; runtime-shared-native-representation-band.fk - grammars share runtime-native BMF capsules.
+;
+; BML and Python are fixtures here, not the boundary of the design. The proof
+; exercises the common runtime shape that any source grammar can use to present
+; source objects, native BMF rules, reversible emitters, and executable Form
+; objects through the same capsule/registry path.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk
+
+section [form.action] {
+    def proof_ok(capability) = 1;
+    def node_child(node, index) = nth(node_children(node), index);
+    def parsed_object(result) = form-adapter-plan-result-value(result);
+    def parsed_node(result) = bmf-object-value(parsed_object(result));
+    def parsed_kind(result) = bmf-object-kind(parsed_object(result));
+    def parse_req(anchor, dialect, rule_name, source) = bmf-runtime-grammar-request(anchor, dialect, rule_name, source);
+    def emit_req(anchor, dialect, rule_name, object) = bmf-runtime-grammar-object-request(anchor, dialect, rule_name, object);
+    def node_score(value, want, score) = if node_eq(value, want) then score else 0;
+    def str_score(value, want, score) = if str_eq(value, want) then score else 0;
+    def int_score(value, want, score) = if eq(value, want) then score else 0;
+
+    let runtime_root = form-capsule-root(131, 1, 9, 1);
+    let kind_role = form-dynamic-kind(runtime_root, 1);
+    let kind_surface = form-dynamic-kind(runtime_root, 2);
+    let kind_capability = form-dynamic-kind(runtime_root, 3);
+    let kind_contract = form-dynamic-kind(runtime_root, 4);
+    let kind_proof = form-dynamic-kind(runtime_root, 5);
+    let role_runtime = form-dynamic-ref(runtime_root, kind_role, 1);
+    let lens_runtime = form-dynamic-ref(runtime_root, kind_role, 2);
+    let parse_kind = form-dynamic-ref(runtime_root, kind_capability, 1);
+    let emit_kind = form-dynamic-ref(runtime_root, kind_capability, 2);
+    let effect_pure = form-dynamic-ref(runtime_root, kind_contract, 1);
+    let reversible_yes = form-dynamic-ref(runtime_root, kind_contract, 2);
+    let lossless_yes = form-dynamic-ref(runtime_root, kind_contract, 3);
+    let deterministic_yes = form-dynamic-ref(runtime_root, kind_contract, 4);
+    let proof_roundtrip = form-dynamic-ref(runtime_root, kind_proof, 1);
+
+    let bml_source_surface = form-dynamic-ref(runtime_root, kind_surface, 1);
+    let bml_form_surface = form-dynamic-ref(runtime_root, kind_surface, 2);
+    let py_source_surface = form-dynamic-ref(runtime_root, kind_surface, 3);
+    let py_form_surface = form-dynamic-ref(runtime_root, kind_surface, 4);
+
+    let bml_capsule = bmf-runtime-dialect-capsule(form-capsule-root(132, 1, 9, 1), bml-bmf-dialect, bml_source_surface, bml_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
+    let py_capsule = bmf-runtime-dialect-capsule(form-capsule-root(133, 1, 9, 1), python-bmf-dialect, py_source_surface, py_form_surface, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1);
+
+    let registry0 = form-recipe-registry-empty();
+    let registry1 = form-recipe-registry-add-capsule(registry0, bml_capsule);
+    let registry = form-recipe-registry-add-capsule(registry1, py_capsule);
+    let ctx = bmf-symbol-context(role_runtime, lens_runtime, empty);
+
+    let bml_result = form-recipe-registry-run-flex(registry, bml_source_surface, bml_form_surface, parse_req("bml", bml-bmf-dialect, "return-int", list(bml-src-keyword("return"), bml-src-int("13"), bml-src-op(";"))), "bml", ctx, 2, empty);
+    let py_result = form-recipe-registry-run-flex(registry, py_source_surface, py_form_surface, parse_req("py", python-bmf-dialect, "return-int", list(py-keyword("return"), py-int("13"))), "py", ctx, 2, empty);
+
+    let bml_reverse = form-recipe-registry-run-flex(registry, bml_form_surface, bml_source_surface, emit_req("bml", bml-bmf-dialect, "return-int", parsed_object(bml_result)), "bml", ctx, 2, empty);
+    let py_reverse = form-recipe-registry-run-flex(registry, py_form_surface, py_source_surface, emit_req("py", python-bmf-dialect, "return-int", parsed_object(py_result)), "py", ctx, 2, empty);
+    let bml_reverse_source = form-adapter-plan-result-value(bml_reverse);
+    let py_reverse_source = form-adapter-plan-result-value(py_reverse);
+
+    let bml_value_node = node_child(parsed_node(bml_result), 0);
+    let py_value_node = node_child(parsed_node(py_result), 0);
+    let bml_program = bml-compile-program(parsed_node(bml_result));
+    let bml_state = bma-run-program(bml_program);
+
+    let registry_score = sum(list(int_score(len(form-recipe-registry-capsules(registry)), 2, 100), int_score(len(form-recipe-registry-capabilities(registry)), 4, 200), int_score(len(form-recipe-registry-contracts(registry)), 4, 300), int_score(len(form-recipe-registry-proofs(registry)), 4, 400)));
+    let native_score = sum(list(int_score(len(bmf-dialect-natives(bml-bmf-dialect)), 21, 500), int_score(len(bmf-dialect-natives(python-bmf-dialect)), 20, 600), node_score(bmf-native-category(nth(bmf-dialect-natives(bml-bmf-dialect), 8)), BML-AST-RETURN, 700), node_score(bmf-native-category(nth(bmf-dialect-natives(python-bmf-dialect), 6)), PY-BMF-RETURN, 800)));
+    let parse_score = sum(list(str_score(parsed_kind(bml_result), "return-int", 900), node_score(node_category(parsed_node(bml_result)), BML-AST-RETURN, 1000), int_score(node_value(node_child(bml_value_node, 0)), 13, 1100), str_score(parsed_kind(py_result), "return-int", 1200), node_score(node_category(parsed_node(py_result)), PY-BMF-RETURN, 1300), int_score(node_value(py_value_node), 13, 1400)));
+    let reverse_score = sum(list(int_score(len(bml_reverse_source), 3, 1500), str_score(bmf-object-value(nth(bml_reverse_source, 0)), "return", 1600), str_score(bmf-object-value(nth(bml_reverse_source, 1)), "13", 1700), str_score(bmf-object-value(nth(bml_reverse_source, 2)), ";", 1800), int_score(len(py_reverse_source), 2, 1900), str_score(bmf-object-value(nth(py_reverse_source, 0)), "return", 2000), str_score(bmf-object-value(nth(py_reverse_source, 1)), "13", 2100)));
+    let execution_score = sum(list(int_score(len(comp-program-ops(bml_program)), 2, 2200), int_score(comp-vm-pop-value(bml_state), 13, 2300), str_score(comp-vm-mode(bml_state), "return", 2400)));
+
+    sum(list(registry_score, native_score, parse_score, reverse_score, execution_score));
+}
