@@ -424,11 +424,68 @@
             (nth (comp-bml-fields constructor-component) 3)
             (empty)))
 
+    (defn bml-token-cursor (tokens index)
+        (list "bml-token-cursor" tokens index))
+
+    (defn bml-token-cursor? (cursor)
+        (if (nil? cursor) false
+            (str_eq (head cursor) "bml-token-cursor")))
+
+    (defn bml-token-cursor-tokens (cursor)
+        (nth cursor 1))
+
+    (defn bml-token-cursor-index (cursor)
+        (nth cursor 2))
+
+    (defn bml-token-cursor-rest (cursor)
+        (drop (bml-token-cursor-index cursor)
+              (bml-token-cursor-tokens cursor)))
+
+    (defn bml-token-cursor-end? (cursor)
+        (nil? (bml-token-cursor-rest cursor)))
+
+    (defn bml-token-cursor-current (cursor)
+        (head (bml-token-cursor-rest cursor)))
+
+    (defn bml-token-cursor-advance (cursor)
+        (bml-token-cursor
+            (bml-token-cursor-tokens cursor)
+            (add (bml-token-cursor-index cursor) 1)))
+
+    (defn bml-token-span (start length token-values)
+        (list "bml-token-span" start length token-values))
+
+    (defn bml-token-span? (span)
+        (if (nil? span) false
+            (str_eq (head span) "bml-token-span")))
+
+    (defn bml-token-span-start (span)
+        (nth span 1))
+
+    (defn bml-token-span-length (span)
+        (nth span 2))
+
+    (defn bml-token-span-values (span)
+        (nth span 3))
+
+    (defn bml-body-source-with-span (token-values token-span)
+        (comp-bml-component "BodySource" (list token-values token-span)))
+
     (defn bml-body-source (token-values)
-        (comp-bml-component "BodySource" (list token-values)))
+        (bml-body-source-with-span
+            token-values
+            (bml-token-span 0 (len token-values) token-values)))
 
     (defn bml-body-source-values (body-component)
         (head (comp-bml-fields body-component)))
+
+    (defn bml-body-source-span (body-component)
+        (if (gt (len (comp-bml-fields body-component)) 1)
+            (nth (comp-bml-fields body-component) 1)
+            (bml-token-span
+                0
+                (len (bml-body-source-values body-component))
+                (bml-body-source-values body-component))))
 
     (defn bml-string-list-contains? (items value)
         (if (nil? items) false
@@ -2213,7 +2270,17 @@
         (bml-source-parse-parameters-loop objects (empty)))
 
     (defn bml-source-body-source-from-tokens (tokens)
-        (bml-body-source (bml-source-token-values tokens)))
+        (do
+            (let cursor (bml-token-cursor tokens 0))
+            (let values
+                (bml-source-token-values
+                    (bml-token-cursor-rest cursor)))
+            (bml-body-source-with-span
+                values
+                (bml-token-span
+                    (bml-token-cursor-index cursor)
+                    (len values)
+                    values))))
 
     (defn bml-source-super-append-current (current acc)
         (if (str_eq current "") acc
