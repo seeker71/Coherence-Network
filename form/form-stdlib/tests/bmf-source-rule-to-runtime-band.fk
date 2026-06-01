@@ -1,0 +1,185 @@
+; tests/bmf-source-rule-to-runtime-band.fk - BMF source objects run as rules
+;
+; preludes: form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+;
+; Proves a BMF rule assembled from source-object compiler stages lowers into
+; the shared comp-bmf runtime and executes over source. The rule uses a tagged
+; repeated rule call plus a literal suffix: start ::= $letters: letter+ "!".
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn kind-score (value expected bit)
+        (if (str_eq (head value) expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn result-object (m)
+        (if (match? m)
+            (cap-get (match-caps m) "result")
+            (bmf-atom "failed-match" (fail-reason m))))
+
+    (defn result-value (m)
+        (if (match? m)
+            (bmf-object-value (result-object m))
+            (list "failed-match" (fail-reason m))))
+
+    (defn object-value (object)
+        (bmf-object-value object))
+
+    (let char-a-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFChar-quoted"
+                (list (bmf-src-op "'") (bmf-src-char "a") (bmf-src-op "'")))))
+    (let char-z-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFChar-quoted"
+                (list (bmf-src-op "'") (bmf-src-char "z") (bmf-src-op "'")))))
+    (let range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFRange"
+                (list char-a-object (bmf-src-op "..") char-z-object))))
+    (let basis-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFBasis-range"
+                (list range-object))))
+    (let item-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItem"
+                (list basis-range-object))))
+    (let itemmethod-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItemMethod"
+                (list item-range-object))))
+    (let factor-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFFactor"
+                (list itemmethod-range-object))))
+    (let term-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFTerm-one"
+                (list factor-range-object))))
+    (let expr-range-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFExpr-one"
+                (list term-range-object))))
+    (let letter-call-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFCall"
+                (list (bmf-src-name "letter") (bmf-src-args (empty))))))
+    (let letter-rule-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFRule"
+                (list letter-call-object (bmf-src-op "::=") expr-range-object (bmf-src-op ";")))))
+
+    (let letter-call-base-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFCallBase"
+                (list letter-call-object))))
+    (let basis-call-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFBasis-call"
+                (list letter-call-base-object))))
+    (let plus-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItem-plus"
+                (list basis-call-object (bmf-src-op "+")))))
+    (let plus-itemmethod-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItemMethod"
+                (list plus-object))))
+    (let tag-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFTag"
+                (list (bmf-src-op "$") (bmf-src-name "letters") (bmf-src-op ":")))))
+    (let tagged-factor-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFFactor-tag"
+                (list tag-object plus-itemmethod-object))))
+
+    (let bang-lit-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFLit"
+                (list (bmf-src-int "0") (bmf-src-string "!") (bmf-src-int "0")))))
+    (let bang-basis-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFBasis-lit"
+                (list bang-lit-object))))
+    (let bang-item-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItem"
+                (list bang-basis-object))))
+    (let bang-itemmethod-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFItemMethod"
+                (list bang-item-object))))
+    (let bang-factor-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFFactor"
+                (list bang-itemmethod-object))))
+
+    (let term-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFTerm"
+                (list tagged-factor-object bang-factor-object))))
+    (let expr-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFExpr-one"
+                (list term-object))))
+    (let start-call-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFCall"
+                (list (bmf-src-name "start") (bmf-src-args (empty))))))
+    (let start-rule-object
+        (result-object
+            (apply-bmf-compiler-rule
+                "BMFRule"
+                (list start-call-object (bmf-src-op "::=") expr-object (bmf-src-op ";")))))
+
+    (let rules (list (object-value letter-rule-object) (object-value start-rule-object)))
+    (let match (comp-bmf-runtime-match rules "start" "abc!"))
+    (let result (if (cmatch? match) (ccap-get (cmatch-caps match) "_result") (empty)))
+    (let min-fail (comp-bmf-runtime-match rules "start" "!"))
+
+    (sum
+        (list
+            (kind-score (object-value letter-rule-object) "comp-bmf-rule" 1)
+            (kind-score (object-value item-range-object) "comp-bmf-char-range" 2)
+            (kind-score (object-value plus-object) "comp-bmf-repeat" 4)
+            (kind-score (object-value tagged-factor-object) "comp-bmf-tag" 8)
+            (kind-score (object-value term-object) "comp-bmf-sequence" 16)
+            (kind-score (object-value start-rule-object) "comp-bmf-rule" 32)
+            (bool-score (cmatch? match) 64)
+            (str-score (ccap-get result "letters") "abc" 128)
+            (int-score (if (cmatch? match) (cs-index (cmatch-rest match)) 0) 4 256)
+            (bool-score (cfail? min-fail) 512))))
