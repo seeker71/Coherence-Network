@@ -1,0 +1,76 @@
+# field-lineage-grammars.form
+# Lineage lenses compiled to Field Model Form.
+
+(field-lineage-grammars
+
+  (principle
+    (runtime-neutral true)
+    (lineage-as-recipe true)
+    (belief-not-baked-into-kernel true)
+    (each-lens-carries evidence-kind source-url executable-proof residual)))
+
+  (lens donald-hoffman-interface
+    (source-url "https://www.psychologicalscience.org/journals/current-directions/0963721416639702/")
+    (evidence-kind "published theory / cognitive-science model")
+    (fmf-carrier attention-interface-field)
+    (cell-types hidden-state fitness-icon truth-icon observer-policy)
+    (recipe
+      (project-hidden-state-to-icon ?state ?observer)
+      (choose-by-fitness-cost ?icons ?observer)
+      (write-receipt ?hidden-state ?selected-icon ?observer)
+      (write-residual ?hidden-truth-not-shown))
+    (proof-function fmf-hoffman-proof)
+    (proof-file "form/form-stdlib/field-model-form.fk")
+    (playground "web/lib/form-kernel/field-model-form.ts")
+    (claim-boundary
+      "The executable proof models observer-costed interface choice; it does not assert the ontology of conscious realism."))
+
+  (lens michael-levin-bioelectric-pattern
+    (source-url "https://pmc.ncbi.nlm.nih.gov/articles/PMC10464596/")
+    (source-url "https://www.drmichaellevin.org/research/spatial.html")
+    (evidence-kind "peer-reviewed biology / lab research program")
+    (fmf-carrier cell-graph-voltage-field)
+    (cell-types membrane-voltage gap-junction boundary target-morphology intercell-signal)
+    (recipe
+      (freeze-voltage-pattern ?tissue)
+      (sample-gradient ?cell-neighborhood)
+      (emit-delta ?vmem-change)
+      (commit-pattern-memory ?field)
+      (receipt ?observer ?disturbance-cost))
+    (proof-function fmf-bioelectric-proof)
+    (proof-function fmf-intercell-proof)
+    (proof-file "form/form-stdlib/field-model-form.fk")
+    (claim-boundary
+      "The proof executes voltage-pattern and receptor-threshold grammar only; anatomical prediction remains domain-validation work."))
+
+  (lens robert-edward-grant-harmonic-key
+    (source-url "https://robertedwardgrant.com/")
+    (source-url "https://robertedwardgrant.com/codex-universalis-principia-mathematica/")
+    (evidence-kind "lineage-inspired hypothesis / self-published mathematical-cosmology claims")
+    (fmf-carrier harmonic-key-field)
+    (cell-types number note polygon-step residue-class projection)
+    (recipe
+      (lift-domain-value-to-key ?value ?modulus)
+      (project-key-across-domains ?key ?target-domain)
+      (write-residual ?meaning-not-carried)
+      (write-receipt ?mapping ?observer))
+    (proof-function fmf-grant-proof)
+    (proof-file "form/form-stdlib/field-model-form.fk")
+    (claim-boundary
+      "The proof demonstrates repeatable cross-domain key mapping; it deliberately does not certify broader physics or biology claims."))
+
+  (lens stephen-wolfram-ruliad-observer
+    (source-url "https://writings.stephenwolfram.com/2023/12/observer-theory/")
+    (source-url "https://wolframinstitute.org/output/the-concept-of-the-ruliad")
+    (evidence-kind "published computational framework / observer theory")
+    (fmf-carrier rule-space-field)
+    (cell-types rule candidate-branch observer-budget sampled-view residual-rule-space)
+    (recipe
+      (enumerate-rule-neighborhood ?field)
+      (sample-by-observer-budget ?budget)
+      (project-to-linear-trace ?sample)
+      (write-residual ?unsampled-rules))
+    (proof-function fmf-wolfram-proof)
+    (proof-file "form/form-stdlib/field-model-form.fk")
+    (claim-boundary
+      "The proof models bounded observation of a larger rule space; it does not claim a physical theory has been validated.")))

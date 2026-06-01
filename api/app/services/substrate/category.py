@@ -304,6 +304,33 @@ class RBasic(IntEnum):
     # how generic types ("a number", "an object") get specialized at
     # runtime via the kernel's content-addressing discipline.
     TRANSMUTE = 76
+    # Field Model Form (FMF) — executable grammars over typed fields of cells.
+    # These slots generalize BMF's stream grammar to field carriers. BMF is
+    # the special case where carrier=sequence, topology=next/previous, and
+    # DELTA is a parse-stack mutation. The runtime contract is logical
+    # simultaneity: freeze one snapshot, emit candidate DELTAs, FIELD_RESOLVE
+    # conflicts, COMMIT atomically, then write a RECEIPT and RESIDUAL.
+    FIELD = 88
+    CARRIER = 89
+    TOPOLOGY = 90
+    FIBER = 91
+    REGION = 92
+    BOUNDARY = 93
+    NEIGHBORHOOD = 94
+    MATCH_FIELD = 95
+    DELTA = 96
+    FIELD_RESOLVE = 97
+    COMMIT = 98
+    STEP = 99
+    LIFT = 100
+    SAMPLE = 101
+    OBSERVE = 102
+    INTERVENE = 103
+    RESIDUAL = 104
+    RECEIPT = 105
+    COST = 106
+    CONSENT = 107
+    EVIDENCE = 108
 
 
 # ---------------------------------------------------------------------------
