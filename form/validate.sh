@@ -52,7 +52,7 @@ run_ts() {
     if [[ -x "$TS_DIR/node_modules/.bin/tsx" ]]; then
         node --stack_size="$HOST_STACK_KB" --import "$loader" "$TS_DIR/src/main.ts" "$@"
     else
-        npx --yes tsx "$TS_DIR/src/main.ts" "$@"
+        npx --yes tsx --stack_size="$HOST_STACK_KB" "$TS_DIR/src/main.ts" "$@"
     fi
 }
 

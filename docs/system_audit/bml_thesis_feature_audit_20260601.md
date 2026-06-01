@@ -46,8 +46,10 @@ What is proven today:
   scan and parse as whole source files with class bodies. `BMF-grammar.bml`
   now forms native BML model components for the `BMF` class body, including
   its string const, class/public fields, constructor, `Main(String[] hArgs)`,
-  method signatures, and small helper method body source for `PrintBanner`,
-  `GetFileExtension`, result-stack helpers, and `Add`. Full grammar body
+  method signatures, and retained body-source tokens for formerly skipped
+  helpers including `AsString`, `AsBMLString`, `LoadSyntax`, `Compile`,
+  `HandleArgs`, `LoadSyntaxes`, `ReadConfigFile`, `WriteConfigFile`,
+  `RegisterPrimitives`, and `PrintCommandLineHelp`. Full grammar body
   semantic lowering remains an explicit gap.
 - The original companion `container-Rule.bml` file now parses real class
   bodies for `RuleProcess` and `Rule`, including sections, fields,
@@ -157,9 +159,11 @@ source subset:
   source tokens.
 - `BMF-grammar.bml` has array parameters such as `void Main( String[] hArgs )`;
   the focused body proof now parses that source method signature and keeps the
-  small `Main`, `PrintBanner`, `GetFileExtension`, result-stack helper, and
-  `Add` body source tokens. Full lowering of loop-heavy and large helper
-  bodies remains a gap.
+  `Main`, `PrintBanner`, `PrintCommandLineHelp`, `AsString`, `AsBMLString`,
+  `LoadSyntax`, `Compile`, `HandleArgs`, `LoadSyntaxes`, config-file helpers,
+  result-stack helpers, primitive registration, and `Add` body source tokens.
+  Full semantic lowering of the loop-heavy and large helper bodies remains a
+  gap.
 - `primitive-Cut.bml` calls `System.Cut( hContext.Argument( 0 ))`; the source
   file now parses directly and lowers that call shape to native BMA `cut`.
   General method-call runtime dispatch remains a gap.

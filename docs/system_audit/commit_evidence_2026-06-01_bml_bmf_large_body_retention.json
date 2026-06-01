@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-large-body-retention-20260601",
+  "commit_scope": "Remove the BMF-grammar.bml large helper signature-only shortcut and prove retained body-source tokens for the formerly skipped thesis BMF methods across sibling kernels.",
+  "files_owned": [
+    "form/validate.sh",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk",
+    "docs/system_audit/bml_bmf_architecture_review_20260601.md",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_bmf_large_body_retention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && npm ci --prefix form-kernel-ts",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-shell-source-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-members-source-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-method-dispatch-proof.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_bml_bmf_large_body_retention.json",
+      "git diff --check"
+    ],
+    "notes": "The focused BMF-grammar body proof now passes at 37 across Go/Rust/TypeScript and proves retained body-source tokens for Compile, HandleArgs, AsString, AsBMLString, LoadSyntax, LoadSyntaxes, ReadConfigFile, WriteConfigFile, RegisterPrimitives, and PrintCommandLineHelp. The source file execution proof passes in source and binary modes at 131071, proving forward and backward execution with restored state."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "BMF-grammar.bml preserves formerly skipped large helper body source in native BML model components, and the TypeScript validation fallback now carries the same stack budget as local node_modules runs.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Large BMF helper body-source retention is proven. Full semantic lowering for those retained bodies and the complete thesis companion corpus remains open."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "bml-large-body-retention-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/grammars/bml.fk no longer special-cases BMF helper bodies as signature-only.",
+    "form/form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk proves body-source retention for all formerly skipped BMF helper methods from the original thesis BMF-grammar.bml file.",
+    "form/validate.sh passes the TypeScript stack budget through the npx fallback path so clean worktrees without node_modules validate the large BMF body proof the same way as prepared worktrees.",
+    "form/form-stdlib/tests/bml-thesis-file-execution-proof.fk proves real .bml source scans, parses, lowers, executes forward, executes backward, and restores state.",
+    "docs/system_audit/bml_bmf_architecture_review_20260601.md records the kernel boundary review and the sequential BML/Form architecture path."
+  ],
+  "change_files": [
+    "form/validate.sh",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk",
+    "docs/system_audit/bml_bmf_architecture_review_20260601.md",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_bmf_large_body_retention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
