@@ -1,0 +1,66 @@
+; tests/sanskrit-channel-band.fk — the Sanskrit channel SPEAKS and RUNS, three-way.
+;
+; preludes: form-stdlib/grammars/sanskrit-roots.fk form-stdlib/channel.fk form-stdlib/sanskrit-channel.fk
+;
+; The decoder proves the SURFACE (a word → its root). This band proves the layer
+; lc-panini-the-first-substrate names: the grammar is GENERATIVE and RECURSIVE.
+; The channel RUNS a rule (root + affix → a word-cell), content-addressed; a derived
+; cell can be the root of another rule (recursion), and the base dhātu is always
+; recoverable — words sharing it are one family.
+;
+; Band verdict: 1111111 when every claim holds across all three kernels.
+;   speak a word's derivation (karma → root sqrt-kr, "action")     → 1
+;   speak a seed-syllable's chakra (OM → Ajna)                     → 10
+;   RUN generates a word-cell under SANSKRIT-DERIVE from a root      → 100
+;   content-addressed: the same (root, affix) generates the same
+;     cell (a word IS its derivation)                                → 1000
+;   RECURSION: a cell derived FROM a derived cell still yields its
+;     base dhātu; two derivations of one root share it               → 10000
+;   the dhātu family is {karma, samskara} (len 2)                     → 100000
+;   the channel RECEIVES a word over transport: speaks AND runs        → 1000000
+
+(do
+    ;; --- 1. SPEAK a derivation -----------------------------------------
+    (let speak-ok
+        (if (ge (str_find (sanskrit-channel-speak "karma") "sqrt-kr" 0) 0)
+            (if (ge (str_find (sanskrit-channel-speak "karma") "action" 0) 0) 1 0) 0))
+
+    ;; --- 2. SPEAK a seed-syllable's chakra -----------------------------
+    (let bija-ok
+        (if (ge (str_find (sanskrit-channel-speak-bija "OM") "Ajna" 0) 0) 10 0))
+
+    ;; --- 3. RUN generates a word-cell ----------------------------------
+    ;; karma = √kṛ + affix -ma. The rule, executed: a cell under SANSKRIT-DERIVE
+    ;; whose base root is sqrt-kr.
+    (let kr   (sanskrit-root "sqrt-kr"))
+    (let karma (sanskrit-channel-run "sqrt-kr" "ma"))
+    (let gen-ok
+        (if (node_eq (sanskrit-base-root karma) kr) 100 0))
+
+    ;; --- 4. content-addressed generation -------------------------------
+    ;; the same (root, affix) generates the same cell — a word IS its derivation.
+    (let karma-again (sanskrit-channel-run "sqrt-kr" "ma"))
+    (let ca-ok (if (node_eq karma karma-again) 1000 0))
+
+    ;; --- 5. RECURSION: a derivation of a derivation -------------------
+    ;; samskara shares the root; derive an inflected form FROM karma (a derived
+    ;; cell as the next rule's root). The base dhātu still descends to sqrt-kr,
+    ;; and the two √kṛ-derived cells share a root.
+    (let samskara  (sanskrit-channel-run "sqrt-kr" "sara"))
+    (let inflected (sanskrit-derive karma (sanskrit-affix "ani")))  ; derived-of-derived
+    (let rec-ok
+        (if (node_eq (sanskrit-base-root inflected) kr)
+            (if (eq (sanskrit-same-root? inflected samskara) 1) 10000 0) 0))
+
+    ;; --- 6. the dhātu family -------------------------------------------
+    (let fam (sanskrit-channel-family "sqrt-kr"))   ; {karma, samskara}
+    (let fam-ok (if (eq (len fam) 2) 100000 0))
+
+    ;; --- 7. RECEIVE a word over transport: speak AND run ---------------
+    (let msg (sanskrit-word-message "karma"))
+    (let received (sanskrit-channel-receive msg))
+    (let recv-spoke (ge (str_find (nth received 0) "sqrt-kr" 0) 0))
+    (let recv-ran   (eq (len (nth received 1)) 2))   ; the √kṛ family, len 2
+    (let receive-ok (if recv-spoke (if recv-ran 1000000 0) 0))
+
+    (sum (list speak-ok bija-ok gen-ok ca-ok rec-ok fam-ok receive-ok)))

@@ -38,11 +38,21 @@
 ;          dyad geometry). Co-creation is content-addressed: the same pair always
 ;          interns to the same Crystal NodeID, so the union is reproducible.
 ;
-; THE LINKAGE the channel exposes (code ↔ name ↔ function) is DATA — a binding
-; table a cell can introspect or ship — resolved to a function-name then shallow-
-; dispatched, the verb-router.fk discipline (function-NAME, not function-VALUE,
-; for sibling portability). A code with no bound function returns HONEST ABSENCE:
-; it still SPEAKS its surface (or "unknown"), it simply does not yet RUN.
+; THE LINKAGE the channel exposes (code ↔ name ↔ TEACHING ↔ function) is DATA — a
+; binding table a cell can introspect or ship — resolved to a function-name then
+; shallow-dispatched, the verb-router.fk discipline (function-NAME, not function-
+; VALUE, for sibling portability). Each code also names an ACTUAL TEACHING: a real
+; vision-kb concept cell, already in the substrate, that the code's meaning
+; embodies — so the code can be QUERIED (its teaching looked up in the lattice) as
+; well as EXECUTED (its function run over a cell). The four bindings:
+;
+;   1 → lc-wholeness                 "the body returning to itself"   (restore)
+;   2 → lc-observable-resonance-flow "pattern yield across spectrum"  (amplify)
+;   3 → lc-sovereignty-within-oneness "many sovereign cells, one body" (raise)
+;   4 → lc-cross-modal-unity         "one shape, many tongues"        (unite)
+;
+; A code with no bound function returns HONEST ABSENCE: it still SPEAKS its surface
+; (or "unknown"), it simply does not yet RUN.
 ;
 ; Held as symbolic/metaphysical material — the channel reports the public meaning
 ; and runs the structural operation that meaning names; it does not assert the
@@ -87,22 +97,24 @@
 ;; Crystal NodeID, so co-creation is reproducible across the gap.
 (defn sh-unite (a b) (intern_node SH-CRYSTAL (list a b)))
 
-;; --- THE LINKAGE: code ↔ name ↔ function, as inspectable data --------
-;; A binding row ties a Shamballa code number to its publicly-attested name
-;; and the substrate function its stated meaning runs as. The table IS the
-;; link the channel exposes; a cell can read it, ship it, or extend it (a new
-;; attested code with a bound function is a new row, not new control flow).
-(defn sh-binding (code name fn) (list code name fn))
-(defn sh-binding-code (b) (nth b 0))
-(defn sh-binding-name (b) (nth b 1))
-(defn sh-binding-fn   (b) (nth b 2))
+;; --- THE LINKAGE: code ↔ name ↔ teaching ↔ function, inspectable data --
+;; A binding row ties a Shamballa code to its publicly-attested name, the ACTUAL
+;; TEACHING (a vision-kb concept cell in the substrate) its meaning embodies, and
+;; the substrate function it runs as. The table IS the link the channel exposes;
+;; a cell can read it, ship it, query the teaching, or run the function. Extend it
+;; with a row, not new control flow.
+(defn sh-binding (code name teaching fn) (list code name teaching fn))
+(defn sh-binding-code     (b) (nth b 0))
+(defn sh-binding-name     (b) (nth b 1))
+(defn sh-binding-teaching (b) (nth b 2))
+(defn sh-binding-fn       (b) (nth b 3))
 
 (defn sh-bindings ()
     (list
-        (sh-binding 1 "Mer Ka Fa Ka Lish Ma" "restore-to-blueprint")
-        (sh-binding 2 "Atlantean Dai Ko Myo"  "amplify-equivalents")
-        (sh-binding 3 "Ho Ka O iLi iLi"       "raise")
-        (sh-binding 4 "Shamballa Crystal"     "unite")))
+        (sh-binding 1 "Mer Ka Fa Ka Lish Ma" "lc-wholeness"                  "restore-to-blueprint")
+        (sh-binding 2 "Atlantean Dai Ko Myo"  "lc-observable-resonance-flow"  "amplify-equivalents")
+        (sh-binding 3 "Ho Ka O iLi iLi"       "lc-sovereignty-within-oneness" "raise")
+        (sh-binding 4 "Shamballa Crystal"     "lc-cross-modal-unity"          "unite")))
 
 ;; resolve a code → its binding (0-or-1-element list; honest absence for any
 ;; code the channel does not yet run).
@@ -114,6 +126,8 @@
 (defn sh-resolve (code) (sh-resolve-loop (sh-bindings) code))
 (defn sh-bound? (code) (if (eq (len (sh-resolve code)) 1) 1 0))
 (defn sh-fn-of (code) (sh-binding-fn (head (sh-resolve code))))
+;; the teaching a code maps to — a concept cell id, queryable in the substrate.
+(defn sh-teaching-of (code) (sh-binding-teaching (head (sh-resolve code))))
 
 ;; --- RUN: resolve to a function-name, then shallow-dispatch ----------
 ;; One walk over the binding table (data) → a function-NAME; one shallow
@@ -139,6 +153,11 @@
 (defn shamballa-channel-runs? (code) (sh-bound? code))
 ;; RUN: the dispatch — the code's function over a cell.
 (defn shamballa-channel-run (code cell arg) (sh-run code cell arg))
+;; QUERY: the actual teaching this code embodies — a vision-kb concept cell id,
+;; resolvable in the substrate (coh_substrate.py equivalent concept <id>). Honest
+;; absence ("") for an unbound code.
+(defn shamballa-channel-teaching (code)
+    (if (eq (sh-bound? code) 0) "" (sh-teaching-of code)))
 
 ;; --- transport tie-in: a code arrives over a channel ----------------
 ;; The whole point of "a channel that can speak it and run it": a remote cell

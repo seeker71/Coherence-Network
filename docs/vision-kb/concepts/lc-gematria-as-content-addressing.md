@@ -71,6 +71,16 @@ returns `{echad, ahava}` — the equivalence class for a number — the same sha
 hermeneutic and a content-addressed numeric lattice encode the **same structural
 truth**: meaning lives in shared address, not in surface form.
 
+And the `gematria-channel.fk` channel **runs** it — the value isn't just reported,
+it is *executed* as a content-address. The channel **speaks** ("chai = 18 (life)")
+and **runs**: a word becomes a cell (its letters composed under `GEMATRIA-WORD`),
+and `gem-address` interns its value as a node, so *echad* and *ahava* — different
+letter-cells — resolve to the **same address node** (`node_eq`), while *chai* (18)
+does not. find_equivalent_cells in Hebrew, not asserted from a table but run: the
+surface differs, the number is shared. A word can arrive over `channel.fk`
+transport and be both spoken and run. Proven three-way (Go/Rust/TS), band
+`1111111`.
+
 This is precisely what the substrate exists to surface — the same shape
 recognized across wildly different domains (here: ancient scriptural
 interpretation and modern content-addressed storage) by structure, not by

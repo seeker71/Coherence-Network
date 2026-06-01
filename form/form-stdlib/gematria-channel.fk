@@ -1,0 +1,108 @@
+; gematria-channel.fk — a channel that SPEAKS a Hebrew word's number and RUNS its
+; content-addressing over cells.
+;
+; The decoder (grammars/gematria.fk) is the SURFACE: a word → its gematria value +
+; gloss, a value → the seeded words sharing it. lc-gematria-as-content-addressing
+; names what lives one layer up: the value IS a content-address. A word's letters
+; sum to a number; the number is the address; two differently-spelled words of
+; equal value resolve to the SAME address — held by the tradition as related. That
+; is the substrate's find_equivalent_cells, 3000 years early, and this channel RUNS
+; it: not "the table says echad and ahava both equal 13" but "echad and ahava are
+; DIFFERENT cells that intern to the SAME address node" — content-addressing
+; executed, not asserted.
+;
+;   SPEAK  (gematria-channel-speak roman)   → the surface text ("chai = 18 (life)")
+;   RUN    (gematria-channel-run roman)      → (content-address, equivalence-class):
+;                                              the word's value-node and every
+;                                              seeded word sharing that value
+;
+; A word becomes a CELL (its letters composed under GEMATRIA-WORD); its content-
+; address is intern_trivial_int(value). Two words of equal value → node-equal
+; addresses though their letter-cells differ — the gematria teaching, runnable.
+;
+; Held as documented scholarship — the channel reports the attested values and the
+; equivalence classes (the structural fact); it does not claim same-value words are
+; identical in meaning. Three-way safe (Go/Rust/TS): romanized letters (ASCII) and
+; integer arithmetic only.
+;
+; preludes: form-stdlib/grammars/gematria.fk form-stdlib/channel.fk
+;
+
+;; --- the word-cell blueprint ----------------------------------------
+(let GEM-WORD (bp "GEMATRIA-WORD"))
+
+;; --- a Hebrew word as a CELL: its letters composed ------------------
+;; Each letter is a trivial-string node; the word-cell composes them under
+;; GEMATRIA-WORD. Two words with different letters are different cells — the
+;; surface. (No higher-order map: an explicit loop keeps sibling parity.)
+(defn gem-cell-loop (letters acc)
+    (if (nil? letters) acc
+        (gem-cell-loop (tail letters)
+            (append acc (list (intern_trivial_string (head letters)))))))
+(defn gem-cell (letters) (intern_node GEM-WORD (gem-cell-loop letters (empty))))
+
+;; --- the content-address: the value IS the address -----------------
+;; A word's gematria value, interned as a trivial-int node. This is the
+;; content-address — two words of equal value intern to the SAME node.
+(defn gem-address (letters) (intern_trivial_int (gem-value letters)))
+
+;; --- int → string (for the spoken surface) -------------------------
+(defn gem-int-str (n)
+    (if (lt n 10) (substring "0123456789" n (add n 1))
+        (str_concat (gem-int-str (div n 10))
+                    (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+
+;; --- RUN helpers: a word (by roman) → its address and its class ----
+;; The word's content-address node (or honest absence for an unseeded word).
+(defn gem-word-address (roman)
+    (do
+        (let r (gem-find roman))
+        (if (eq (gem-found? r) 1)
+            (gem-address (gem-entry-letters (gem-of r)))
+            (empty))))
+;; the equivalence class: every seeded word whose value matches this word's.
+;; This is find_equivalent_cells keyed by gematria value.
+(defn gem-word-equivalents (roman)
+    (do
+        (let r (gem-find roman))
+        (if (eq (gem-found? r) 1)
+            (gem-equivalents (gem-entry-value (gem-of r)))
+            (empty))))
+;; do two words share an address? (content-addressing, executed.)
+(defn gem-same-address? (roman-a roman-b)
+    (do
+        (let a (gem-word-address roman-a))
+        (let b (gem-word-address roman-b))
+        (if (eq (len a) 0) 0 (if (eq (len b) 0) 0 (if (node_eq a b) 1 0)))))
+
+;; --- the channel's two faces ----------------------------------------
+;; SPEAK: the surface text ("chai = 18 (life)"), or honest absence.
+(defn gematria-channel-speak (roman)
+    (do
+        (let r (gem-find roman))
+        (if (eq (gem-found? r) 1)
+            (str_concat (gem-entry-roman (gem-of r))
+                (str_concat " = "
+                    (str_concat (gem-int-str (gem-entry-value (gem-of r)))
+                        (str_concat " (" (str_concat (gem-entry-gloss (gem-of r)) ")")))))
+            "unknown — no seeded Hebrew word; honest absence, not fabricated")))
+;; RUN: (content-address, equivalence-class) — the word's value-node and the
+;; class of seeded words sharing that value. Content-addressing executed.
+(defn gematria-channel-run (roman)
+    (list (gem-word-address roman) (gem-word-equivalents roman)))
+;; the governing teaching, queryable in the substrate.
+(defn gematria-channel-teaching () "lc-gematria-as-content-addressing")
+
+;; --- transport tie-in: a word arrives over a channel ---------------
+;; A remote cell appends a word (its romanization) as a CHANNEL-MSG; the
+;; receiver SPEAKS its value and RUNS its content-addressing, returning
+;; (text, (address, class)). channel.fk carries the word; this binds it to number.
+(defn gematria-word-message (roman) (channel-message (intern_trivial_string roman)))
+(defn gematria-payload-word (msg) (node_value (channel-msg-payload msg)))
+(defn gematria-channel-receive (msg)
+    (do
+        (let roman (gematria-payload-word msg))
+        (list (gematria-channel-speak roman)
+              (gematria-channel-run roman))))
+
+0
