@@ -3602,6 +3602,19 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 9502,
+      "name": "SUPER-BP",
+      "meaning": "Blueprint for a super() proxy under the BMF evaluator — a sentinel-tagged record carrying (__self__, __start_class__); start-class is the __base__ of the class that defined the executing method, so super().M() resolves M from there with the original self.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1750,
       "name": "HTTP-REQUEST",
       "meaning": "",
