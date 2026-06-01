@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-body-sequence-20260601",
+  "commit_scope": "Make parsed BML BodySource execution walk supported statements in source order, including receiver calls with one argument followed by constructor assignments.",
+  "files_owned": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_body_sequence.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-main-call-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-hashcode-return-proof.fk"
+    ],
+    "notes": "The sequence proof executes m_hResultStack.Push(m_hResult) before m_hResult = ParseStack() from original BMF.StartResultStack. The earlier constructor-only proof was updated to provide the stack receiver now that generic execution runs the full body."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A .bml method body with mixed supported statement forms now executes in source order instead of choosing a single feature class for the whole body.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "reference_corpus": [
+      "docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml"
+    ],
+    "test_flows": [
+      "bml-thesis-bmf-start-result-stack-sequence-proof.fk returns 2047 across Go/Rust/TypeScript kernels.",
+      "bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk remains 2047 across Go/Rust/TypeScript kernels.",
+      "bml-thesis-bmf-main-call-proof.fk remains 2047 across Go/Rust/TypeScript kernels.",
+      "bml-thesis-rule-hashcode-return-proof.fk remains 16383 across Go/Rust/TypeScript kernels.",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py before commit to prove no new BML/BMF host-native semantics were introduced.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This adds source-order execution for currently supported statement forms. Full thesis parity still requires nested call arguments, conditionals, loops, casts, comparisons, exceptions, and full BMF rule execution from the known-working companion code."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation",
+    "bml-thesis-parity"
+  ],
+  "task_ids": [
+    "bml-body-sequence-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "sequential-body-architecture"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/grammars/bml.fk defines bml-body-source-exec-sequence-loop and receiver-call1 support.",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk proves Push runs before ParseStack assignment in original BMF.StartResultStack."
+  ],
+  "change_files": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+    "docs/system_audit/commit_evidence_2026-06-01_bml_body_sequence.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

@@ -28,6 +28,7 @@
 
     (let BmfBP (make_nodeid 1 2 99 9242))
     (let OldBP (make_nodeid 1 2 99 9243))
+    (let StackBP (make_nodeid 1 2 99 9244))
     (let EnvBP (bml-constructor-env-blueprint 0))
     (let env (record_new EnvBP))
     (let old-result (record_new OldBP "bmlClass" "OldResult"))
@@ -44,9 +45,16 @@
             env))
     (let direct-new-result (record_get direct-result "m_hResult"))
 
+    (defn stack-push-dispatch (self value)
+        (record_set self "pushed" value))
+
+    (method_define StackBP "Push" stack-push-dispatch)
+    (let result-stack (record_new StackBP))
     (let second-instance
         (record_new
             BmfBP
+            "m_hResultStack"
+            result-stack
             "m_hResult"
             old-result))
     (bml-body-source-exec start-body second-instance env)
