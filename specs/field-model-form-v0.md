@@ -138,7 +138,7 @@ cd web && npm test -- form-kernel-field-runtime.test.ts
 python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md
 ```
 
-Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `fmf-proof-score`, and `field_blueprint`.
+Public deployment verification is enforced by `scripts/verify_web_api_deploy.sh`: it fetches `/substrate/form`, scans the server shell and referenced Next.js chunks, and fails unless the public playground exposes the FMF proof label, `field-model-form-public-proof:93`, `field-model-form-browser-runtime-proof:4`, `sequence-lift-project-fieldStep`, `fmf-proof-score`, and `field_blueprint`.
 
 ## Validation Matrix
 

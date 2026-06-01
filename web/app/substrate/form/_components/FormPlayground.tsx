@@ -5,7 +5,9 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Cpu, Play, RotateCcw, Sparkles } from "lucide-react";
 import {
+  LOCAL_FIELD_RUNTIME_PROOF,
   LOCAL_FORM_EXAMPLES,
+  LOCAL_FORM_PROOF_MARKERS,
   runLocalFormBinary,
   type LocalFormRun,
 } from "@/lib/form-kernel/client";
@@ -716,7 +718,6 @@ function ResultPanel({ result }: { result: FormResultOut }) {
 
 function LocalKernelPanel() {
   const firstExample = LOCAL_FORM_EXAMPLES[0];
-  const proofMarkers = LOCAL_FORM_EXAMPLES.filter((example) => example.proofMarker);
   const [binary, setBinary] = useState(firstExample.source);
   const [activeNote, setActiveNote] = useState(firstExample.note);
   const [localRun, setLocalRun] = useState<LocalFormRun | null>(null);
@@ -752,11 +753,11 @@ function LocalKernelPanel() {
           <p className="text-xs uppercase tracking-[0.22em] text-teal-300/75">
             Local TS kernel
           </p>
-          {proofMarkers.length > 0 ? (
+          {LOCAL_FORM_PROOF_MARKERS.length > 0 ? (
             <div className="sr-only" aria-hidden="true">
-              {proofMarkers.map((example) => (
-                <span key={example.proofMarker} data-form-proof-marker={example.proofMarker}>
-                  {example.label}
+              {LOCAL_FORM_PROOF_MARKERS.map((marker) => (
+                <span key={marker} data-form-proof-marker={marker}>
+                  {marker}
                 </span>
               ))}
             </div>
@@ -817,6 +818,13 @@ function LocalKernelPanel() {
             spellCheck={false}
           />
           <p className="text-xs leading-relaxed text-stone-500">{activeNote}</p>
+          <p
+            className="sr-only"
+            data-field-runtime-proof={LOCAL_FIELD_RUNTIME_PROOF.marker}
+            data-field-runtime-score={LOCAL_FIELD_RUNTIME_PROOF.score}
+          >
+            {LOCAL_FIELD_RUNTIME_PROOF.checks.join(",")}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

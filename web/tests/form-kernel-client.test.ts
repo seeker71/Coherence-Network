@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  LOCAL_FIELD_RUNTIME_PROOF,
   LOCAL_FORM_EXAMPLES,
+  LOCAL_FORM_PROOF_MARKERS,
   runLocalFormBinary,
 } from "../lib/form-kernel/client";
 
@@ -18,5 +20,12 @@ describe("browser-facing Form kernel", () => {
 
     expect(run.result).toBe("40320");
     expect(run.trace.total_walks).toBeGreaterThan(10);
+  });
+
+  it("publishes the browser FMF runtime proof marker", () => {
+    expect(LOCAL_FIELD_RUNTIME_PROOF.marker).toBe("field-model-form-browser-runtime-proof:4");
+    expect(LOCAL_FIELD_RUNTIME_PROOF.score).toBe(4);
+    expect(LOCAL_FIELD_RUNTIME_PROOF.checks).toContain("intervene-reverseReceipt");
+    expect(LOCAL_FORM_PROOF_MARKERS).toContain(LOCAL_FIELD_RUNTIME_PROOF.marker);
   });
 });

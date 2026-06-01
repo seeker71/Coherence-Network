@@ -12,6 +12,7 @@ import {
   FIELD_MODEL_FORM_DEMO_SOURCE,
   FIELD_MODEL_FORM_PUBLIC_MARKER,
 } from "./field-model-form";
+import { runFieldRuntimeProof } from "./field-runtime";
 
 export type LocalFormRun = {
   source: string;
@@ -46,6 +47,12 @@ export type LocalFormExample = {
   note: string;
   proofMarker?: string;
 };
+
+export const LOCAL_FIELD_RUNTIME_PROOF = runFieldRuntimeProof();
+export const LOCAL_FORM_PROOF_MARKERS = [
+  FIELD_MODEL_FORM_PUBLIC_MARKER,
+  LOCAL_FIELD_RUNTIME_PROOF.marker,
+];
 
 export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
   {

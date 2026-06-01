@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/fmf-public-runtime-proof-20260601",
+  "commit_scope": "Expose the browser FMF field runtime proof on the public Form playground and require it in deploy verification.",
+  "files_owned": [
+    "web/lib/form-kernel/field-runtime.ts",
+    "web/lib/form-kernel/client.ts",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "web/tests/form-kernel-client.test.ts",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "docs/system_audit/commit_evidence_2026-06-01_fmf_public_browser_runtime_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "bash -n scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "The browser runtime proof executes four checks and publishes field-model-form-browser-runtime-proof:4 plus sequence-lift-project-fieldStep on /substrate/form."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public /substrate/form exposes the browser FMF runtime proof marker and deploy verification fails if it disappears.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com/substrate/form"
+    ],
+    "test_flows": [
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Public browser runtime proof is wired; production verification remains pending until deployment reaches this commit."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "fmf-public-browser-runtime-proof-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "exit criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/form-kernel/field-runtime.ts exports runFieldRuntimeProof(), executing lift/project, fieldStep, intervention/reverseReceipt, diffusion, and conflict residual checks.",
+    "web/app/substrate/form/_components/FormPlayground.tsx exposes field-model-form-browser-runtime-proof:4 and the runtime check list as public proof markers.",
+    "scripts/verify_web_api_deploy.sh now requires the browser runtime proof marker and sequence-lift-project-fieldStep token from public /substrate/form HTML or chunks."
+  ],
+  "change_files": [
+    "web/lib/form-kernel/field-runtime.ts",
+    "web/lib/form-kernel/client.ts",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "web/tests/form-kernel-client.test.ts",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "docs/system_audit/commit_evidence_2026-06-01_fmf_public_browser_runtime_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
