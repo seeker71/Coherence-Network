@@ -385,6 +385,25 @@ def make_inline_thunk(case: CaptureCall, fk_source: str, bridge) -> Callable[[],
     return thunk
 
 
+def make_preload_thunk(case: CaptureCall, handle: int, bridge) -> Callable[[], Any]:
+    """PRELOAD per-request thunk: run a pre-parsed route — NO inject, NO parse.
+
+    The warm Preloader parsed this recipe ONCE (split into setup + body) when
+    the handle was loaded. Each request only converts the bindings dict and
+    walks the held body NodeID in a child frame — the per-request tokenize +
+    read_sexp + defn-rebind that the inline-with-parse thunk pays is gone. This
+    isolates exactly the cost the route-preload pair removes.
+    """
+    def thunk() -> Any:
+        value = bridge.run_preloaded(handle, case.bindings)
+        try:
+            return case.parse(value)
+        except (TypeError, ValueError):
+            return case.parse(str(value))
+
+    return thunk
+
+
 def make_path_b_thunk(demo_py: str) -> Callable[[], Any]:
     """PATH B thunk: the full pyfkb-run.sh --kernel rust pipeline per call.
 
@@ -650,11 +669,19 @@ class ReadinessResult:
     inline_value_match: Optional[bool] = None
     ratio_inline_p50: Optional[float] = None  # inline p50 / cpython p50
     inline_verdict: Optional[str] = None
+    # Route-preload (PyO3 Preloader) — the inline path with the per-request
+    # parse dropped: recipe parsed ONCE at load, only the body walks per
+    # request. Populated only when --preload runs.
+    preload: Optional[Profile] = None
+    preload_value: Any = None
+    preload_value_match: Optional[bool] = None
+    ratio_preload_p50: Optional[float] = None  # preload p50 / cpython p50
+    preload_verdict: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
         # drop raw sample arrays from json for size; percentiles are kept
-        for k in ("cpython", "kernel_a", "path_b", "serve", "serve_jit", "inline"):
+        for k in ("cpython", "kernel_a", "path_b", "serve", "serve_jit", "inline", "preload"):
             if d.get(k) is not None:
                 d[k].pop("samples_ms", None)
         return d
@@ -728,6 +755,79 @@ def _inline_verdict(value_match: bool, ratio: Optional[float], prof: Profile) ->
                 f"recipe execution + inject, no transport")
     return (f"REVIEW — inline p99={prof.p99_ms:.4f}ms exceeds 5ms; "
             f"investigate recipe-walk / inject overhead")
+
+
+def _preload_verdict(
+    value_match: bool, prof: Profile, inline: Optional[Profile]
+) -> str:
+    """Verdict under the ROUTE-PRELOAD model — parse dropped from the inline path.
+
+    Same absolute-envelope posture as the inline verdict (no spawn, no
+    loopback), but the headline finding is the DELTA vs inline-with-parse: how
+    much the per-request tokenize/read/defn-rebind cost was. When an inline
+    profile is present we name the speedup so the gain is legible at a glance.
+    """
+    if prof.error:
+        return f"NOT-YET — preload path errored: {prof.error}"
+    if not value_match:
+        return "NOT-YET — value parity FAILED on the route-preload path"
+    delta = ""
+    if inline is not None and not inline.error and prof.p50_ms > 0:
+        drop = inline.p50_ms - prof.p50_ms
+        speedup = inline.p50_ms / prof.p50_ms if prof.p50_ms else 0.0
+        delta = (f"  [parse drop: p50 {inline.p50_ms:.5f}→{prof.p50_ms:.5f}ms, "
+                 f"−{drop*1000:.1f}µs, {speedup:.2f}x vs inline-with-parse]")
+    if prof.p99_ms <= 0.1:
+        return (f"READY — warm preloaded route, p50={prof.p50_ms:.5f}ms "
+                f"p99={prof.p99_ms:.5f}ms; sub-100µs, parse dropped{delta}")
+    if prof.p99_ms <= 1.0:
+        return (f"READY (shape) — preload p50={prof.p50_ms:.5f}ms "
+                f"p99={prof.p99_ms:.5f}ms; sub-ms, no per-request parse{delta}")
+    if prof.p99_ms <= 5.0:
+        return (f"HEALTHY-ENVELOPE — preload p99={prof.p99_ms:.5f}ms; "
+                f"low-ms, recipe-walk only{delta}")
+    return (f"REVIEW — preload p99={prof.p99_ms:.5f}ms exceeds 5ms{delta}")
+
+
+def measure_preload(
+    results: List[ReadinessResult],
+    cases: List[CaptureCall],
+    iters: int,
+    bridge,
+) -> None:
+    """Fill preload fields on `results` using the warm Preloader (route-preload).
+
+    Loads each case's recipe into the Preloader ONCE (split + parse), then times
+    only run_preloaded per request — the path with the per-request parse removed.
+    Reuses the same warmed CPython + inline baselines on each ReadinessResult so
+    the delta is apples-to-apples against the inline-with-parse number.
+    """
+    if not bridge.preload_available():
+        for r in results:
+            r.preload_verdict = "UNAVAILABLE — Preloader (route-preload pair) not importable"
+        return
+    for case in cases:
+        r = next((x for x in results if x.name == case.name), None)
+        if r is None:
+            continue
+        # Load once (split + parse) — NOT timed per request; mirror the live
+        # bridge's preload_route(recipe, binding-name-set) seam.
+        recipe = f"endpoint_{case.name}_demo.fk"
+        handle = bridge.preload_route(recipe, set(case.bindings))
+        if handle is None:
+            r.preload_verdict = "UNAVAILABLE — recipe did not split/parse for preload"
+            continue
+        prof, val = profile_runtime(
+            f"{case.name}/preload", make_preload_thunk(case, handle, bridge), iters
+        )
+        r.preload = prof
+        r.preload_value = val
+        r.preload_value_match = (not prof.error) and _values_agree(r.cpython_value, val)
+        if r.cpython.p50_ms > 0 and prof.p50_ms > 0 and not prof.error:
+            r.ratio_preload_p50 = prof.p50_ms / r.cpython.p50_ms
+        r.preload_verdict = _preload_verdict(
+            bool(r.preload_value_match), prof, r.inline
+        )
 
 
 def measure_inline(
@@ -896,6 +996,7 @@ def render(
     include_path_b: bool,
     include_serve: bool = False,
     include_inline: bool = False,
+    include_preload: bool = False,
     jit_demo: Optional["JitDemo"] = None,
 ) -> str:
     L: List[str] = []
@@ -909,7 +1010,10 @@ def render(
                  "request→response over the warm process (apples-to-apples w/ CPython)")
     if include_inline:
         L.append("INLINE = warm PyO3 `form_kernel_rust` in-process — C call into Rust, "
-                 "NO spawn, NO loopback (the production hot path)")
+                 "NO spawn, NO loopback (the prior hot path; inject + re-parse each call)")
+    if include_preload:
+        L.append("PRELOAD = warm Preloader — recipe parsed ONCE at load, per request "
+                 "only the body walks (no inject, no re-parse: the parse dropped)")
     if include_path_b:
         L.append("PATH B = pyfkb full python-bmf pipeline per call (naive shell-out)")
     L.append("=" * 78)
@@ -962,6 +1066,26 @@ def render(
                              f"(absolute p99={r.inline.p99_ms:.5f}ms — judge on the ABSOLUTE)")
                 if r.inline_verdict is not None:
                     L.append(f"   INLINE VERD: {r.inline_verdict}")
+        if r.preload is not None or r.preload_verdict is not None:
+            if r.preload is None:
+                L.append(f"   preload    : {r.preload_verdict}")
+            elif r.preload.error:
+                L.append(f"   preload    : ERROR {r.preload.error}")
+            else:
+                L.append(f"   preload    : p50={r.preload.p50_ms:.5f}ms p95={r.preload.p95_ms:.5f} "
+                         f"p99={r.preload.p99_ms:.5f} mean={r.preload.mean_ms:.5f} sd={r.preload.stdev_ms:.5f}")
+                L.append(f"   preload val: {r.preload_value!r}  match="
+                         f"{'YES' if r.preload_value_match else 'NO'}  (parse dropped, walk only)")
+                if r.inline is not None and not r.inline.error and r.preload.p50_ms > 0:
+                    drop = r.inline.p50_ms - r.preload.p50_ms
+                    spd = r.inline.p50_ms / r.preload.p50_ms if r.preload.p50_ms else 0.0
+                    L.append(f"   parse drop : inline p50 {r.inline.p50_ms:.5f}ms → preload "
+                             f"{r.preload.p50_ms:.5f}ms = −{drop*1000:.1f}µs ({spd:.2f}x)")
+                if r.ratio_preload_p50 is not None:
+                    L.append(f"   preload rt : preload p50 / cpython p50 = {r.ratio_preload_p50:.1f}x "
+                             f"(absolute p99={r.preload.p99_ms:.5f}ms — judge on the ABSOLUTE)")
+                if r.preload_verdict is not None:
+                    L.append(f"   PRELOAD VRD: {r.preload_verdict}")
         if r.path_b is not None:
             if r.path_b.error:
                 L.append(f"   PATH B     : ERROR {r.path_b.error}")
@@ -1004,6 +1128,18 @@ def render(
         i_match = sum(1 for r in results if r.inline_value_match)
         L.append(f"SUMMARY (INLINE): {len(results)} calls — {i_match}/{len(results)} value-parity"
                  f" · {i_ready} READY · {i_healthy} HEALTHY-ENVELOPE")
+    if include_preload:
+        p_ready = sum(1 for r in results if (r.preload_verdict or "").startswith("READY"))
+        p_match = sum(1 for r in results if r.preload_value_match)
+        drops = [
+            (r.inline.p50_ms - r.preload.p50_ms)
+            for r in results
+            if r.preload is not None and not r.preload.error
+            and r.inline is not None and not r.inline.error
+        ]
+        avg_drop = (sum(drops) / len(drops)) if drops else 0.0
+        L.append(f"SUMMARY (PRELOAD): {len(results)} calls — {p_match}/{len(results)} value-parity"
+                 f" · {p_ready} READY · mean parse-drop vs inline = {avg_drop*1000:.1f}µs p50")
     L.append("Value parity is the floor; the profile decides readiness. See "
              "kernels/API_KERNEL_READINESS.md for the readiness map.")
     L.append("=" * 78)
@@ -1024,6 +1160,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="also measure the PERSISTENT serve path (the apples-to-apples model)")
     ap.add_argument("--inline", action="store_true",
                     help="also measure the INLINE PyO3 path (warm in-process kernel, no spawn/loopback)")
+    ap.add_argument("--preload", action="store_true",
+                    help="also measure the ROUTE-PRELOAD path (recipe parsed once, parse dropped per request)")
     ap.add_argument("--jit", action="store_true",
                     help="with --persistent: add the +jit serve mode; also runs the JIT demonstrator")
     ap.add_argument("--json", help="write machine-readable results to this path")
@@ -1059,12 +1197,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         measure_persistent_serve(results, cases, args.iters, with_jit=args.jit)
     if args.inline:
         measure_inline(results, cases, args.iters, bridge)
+    # Preload runs AFTER inline so the verdict can name the parse-drop delta
+    # against the inline-with-parse number measured on the same warm process.
+    if args.preload:
+        measure_preload(results, cases, args.iters, bridge)
     if args.jit:
         jit_demo = profile_jit_demonstrator(args.iters)
 
     print(render(results, args.iters, args.path_b,
                  include_serve=args.persistent, include_inline=args.inline,
-                 jit_demo=jit_demo))
+                 include_preload=args.preload, jit_demo=jit_demo))
 
     if args.json:
         Path(args.json).write_text(

@@ -70,6 +70,34 @@ except Exception as _e:  # pragma: no cover — environment-dependent
     logger.info("form-kernel: PyO3 extension not available (%s) — subprocess path", _e)
 
 
+# ---------------------------------------------------------------------------
+# Route preload (PyO3 Preloader) — the warm kernel parses each endpoint recipe
+# ONCE and runs (handle, bindings) per request, dropping the per-request parse
+# that the inline-with-inject path still pays.
+#
+# The Preloader is a single warm Kernel+Arena (mirroring cli_serve). The bridge
+# holds one process-wide instance and a {recipe_key -> handle} map. The recipe
+# is split into a `setup` part (the defns + constant lets, walked once into the
+# Preloader's root frame) and a `body` part (the trailing call, parsed once);
+# per request only the body is walked with the request's bindings in a child
+# frame. Built only when the PyO3 extension is present; everything below
+# no-ops cleanly to the existing inline/subprocess/fallback ladder otherwise.
+# ---------------------------------------------------------------------------
+try:
+    _PRELOADER = _INLINE_KERNEL.Preloader() if _INLINE_KERNEL is not None else None
+except Exception as _e:  # pragma: no cover — extension without Preloader (old build)
+    _PRELOADER = None
+    logger.info("form-kernel: Preloader unavailable (%s) — inline-with-parse path", _e)
+
+# recipe_key (absolute .fk path + sorted binding names) -> route handle (int).
+_PRELOAD_HANDLES: dict[str, int] = {}
+
+
+def preload_available() -> bool:
+    """True when the warm Preloader (route-preload PyO3 pair) is usable."""
+    return _PRELOADER is not None
+
+
 def inline_available() -> bool:
     """True when the form_kernel_rust PyO3 extension is importable."""
     return _INLINE_KERNEL is not None
@@ -360,6 +388,125 @@ def inject_bindings(recipe_source: str, bindings: Mapping[str, Any]) -> str:
     return "".join(out_parts)
 
 
+# ---------------------------------------------------------------------------
+# Route-preload split + run — the no-parse-per-request path.
+# ---------------------------------------------------------------------------
+
+
+def split_recipe(recipe_source: str, binding_names: set[str]) -> tuple[str, str]:
+    """Split a transmuted-endpoint recipe into (setup, body) for preload.
+
+    The recipe shape is ``(do <defn...> <input lets...> <final call>)`` — the
+    same contract ``inject_bindings`` relies on. ``setup`` is a ``(do ...)`` of
+    every top-level form EXCEPT the input ``(let NAME ...)`` forms (NAME in
+    ``binding_names``) and the final expression; it is walked once into the
+    Preloader's root frame so its closures bind a single time. ``body`` is the
+    final expression — the trailing call — parsed once and walked per request
+    with the inputs bound in a child frame.
+
+    The input lets are dropped (not rewritten): the body's references to those
+    names resolve against the per-request child frame instead. Reuses the same
+    paren-balanced scanner ``inject_bindings`` uses, so the two stay in lockstep
+    on what counts as a top-level form.
+
+    Raises ValueError if the recipe is not a single ``(do ...)`` form, or if no
+    final expression remains after removing setup + input lets.
+    """
+    src = recipe_source.strip()
+    if not (src.startswith("(do") and src.endswith(")")):
+        raise ValueError("split_recipe: recipe must be a single (do ...) form")
+    # Inner span: everything between `(do` and the matching `)`.
+    inner = src[3:-1].strip()
+
+    # Walk inner's top-level forms in order. Each form is either `(...)`
+    # paren-balanced or a bare atom; only paren forms occur in these recipes.
+    forms: list[str] = []
+    i = 0
+    n = len(inner)
+    while i < n:
+        c = inner[i]
+        if c.isspace():
+            i += 1
+            continue
+        if c == "(":
+            end = _scan_balanced(inner, i)
+            forms.append(inner[i:end])
+            i = end
+        else:
+            # A bare atom (shouldn't appear in these recipes, but stay honest).
+            j = i
+            while j < n and not inner[j].isspace():
+                j += 1
+            forms.append(inner[i:j])
+            i = j
+
+    if not forms:
+        raise ValueError("split_recipe: empty (do ...) recipe")
+
+    # The final form is the body (the result expression). Everything before it,
+    # minus the input lets, is the setup.
+    body = forms[-1]
+    setup_forms: list[str] = []
+    for form in forms[:-1]:
+        m = _LET_HEAD.match(form)
+        if m is not None and m.group(1) in binding_names:
+            # Input let — dropped; its name is supplied per request instead.
+            continue
+        setup_forms.append(form)
+
+    setup = "(do " + " ".join(setup_forms) + ")" if setup_forms else ""
+    return setup, body
+
+
+def _recipe_key(recipe_path: str | Path, binding_names: set[str]) -> str:
+    """Stable key for the preload handle map: absolute path + sorted names."""
+    p = Path(recipe_path)
+    if not p.is_absolute():
+        p = _SEEDBANK_EXAMPLES / p
+    return f"{p}::{','.join(sorted(binding_names))}"
+
+
+def preload_route(recipe_path: str | Path, binding_names: set[str]) -> int | None:
+    """Load a recipe into the warm Preloader once; return its handle.
+
+    Idempotent per (recipe, binding-name-set): the first call splits + parses;
+    subsequent calls return the cached handle. Returns None when the Preloader
+    isn't available (caller falls back to the inline-with-parse path). Any split
+    or parse failure also returns None — the body never blocks a request on the
+    preload optimization; it degrades to the proven path.
+    """
+    if _PRELOADER is None:
+        return None
+    key = _recipe_key(recipe_path, binding_names)
+    handle = _PRELOAD_HANDLES.get(key)
+    if handle is not None:
+        return handle
+    try:
+        source = load_recipe(recipe_path)
+        setup, body = split_recipe(source, binding_names)
+        handle = _PRELOADER.load_route(setup, body)
+    except Exception as e:  # pragma: no cover — recipe-shape dependent
+        logger.info(
+            "form-kernel: preload_route(%s) failed (%s) — inline-with-parse path",
+            recipe_path, e,
+        )
+        return None
+    _PRELOAD_HANDLES[key] = handle
+    return handle
+
+
+def run_preloaded(handle: int, bindings: Mapping[str, Any]) -> Any:
+    """Run a preloaded route with per-request bindings — no re-parse.
+
+    Returns a native typed value (the Preloader converts through the same
+    value_to_py the inline path uses). Raises RuntimeError if the Preloader
+    isn't loaded; the kernel raises on a malformed binding value.
+    """
+    if _PRELOADER is None:
+        raise RuntimeError("form-kernel Preloader not loaded")
+    return _PRELOADER.run(handle, dict(bindings))
+
+
 def serve_via_kernel(
     recipe_path: str | Path,
     bindings: Mapping[str, Any],
@@ -383,8 +530,54 @@ def serve_via_kernel(
             fallback=lambda: coherence_weight_py(parsed, threshold),
             parse=int,
         )
+
+    Path ladder, fastest first:
+      - route-preload    — warm Preloader, recipe parsed ONCE at first use, per
+        request only the body walks with the bindings in a child frame (no
+        per-request tokenize/read/defn-rebind). The hottest path. It is a SUB-
+        MODE of the inline carrier, so it still reports ``runtime == "inline"``
+        — the client cares which carrier served (inline PyO3 vs subprocess vs
+        Python), not which inline micro-optimization. The parse-drop is an
+        internal speedup measured by scripts/kernel_readiness_harness.py.
+      - ``inline``       — warm PyO3 kernel, but inject literals + re-parse the
+        whole recipe each call (used if preload split/parse failed for this
+        recipe).
+      - ``subprocess`` / ``python-fallback`` — as before.
     """
-    fk_source = load_recipe(recipe_path)
+    # Hottest path: the recipe is parsed once into the warm Preloader and only
+    # the trailing call walks per request. Falls through to inline-with-parse if
+    # the Preloader is absent or this recipe didn't split/parse cleanly. Reports
+    # "inline" — same carrier, the preload is an internal parse-drop.
+    if bindings:
+        handle = preload_route(recipe_path, set(bindings))
+        if handle is not None:
+            try:
+                value = run_preloaded(handle, bindings)
+            except Exception as e:  # degrade to the proven inline path
+                logger.info(
+                    "form-kernel: run_preloaded failed (%s) — inline-with-parse path", e
+                )
+            else:
+                try:
+                    return parse(value), "inline"
+                except (TypeError, ValueError):
+                    return (
+                        parse(str(value) if not isinstance(value, str) else value),
+                        "inline",
+                    )
+
+    # The .fk recipe is a deploy-time-compiled, gitignored artifact (the deploy
+    # pipeline runs python-compile once). When it is absent — a fresh checkout,
+    # CI without the compile step — the recipe simply isn't on disk; that is the
+    # "no kernel reachable" case the python-fallback exists for, not a 500.
+    try:
+        fk_source = load_recipe(recipe_path)
+    except FileNotFoundError:
+        logger.info(
+            "form-kernel: recipe %s absent (not compiled) — python-fallback",
+            recipe_path,
+        )
+        return fallback(), "python-fallback"
     if bindings:
         fk_source = inject_bindings(fk_source, bindings)
     return run_with_fallback(fk_source, fallback=fallback, parse=parse, timeout=timeout)
