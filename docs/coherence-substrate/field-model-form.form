@@ -1,0 +1,234 @@
+# field-model-form.form
+# FMF — Field Model Form.
+# BMF generalized from ordered character streams to typed fields of cells.
+
+(spec field-model-form-v0
+  (goal
+    "Execute domain grammars as transparent recipes over field cells.")
+
+  (lineage
+    (bmf
+      (carrier sequence)
+      (topology next previous)
+      (match terminal branch sequence repeat)
+      (effect parse-stack-delta)
+      (undo backtrack-unwind))
+    (fmf
+      (carrier declared-field)
+      (topology declared-topology)
+      (match stream tree graph region neighborhood gradient)
+      (effect candidate-delta)
+      (undo receipt-reverse-or-compensate)))
+
+  (triad
+    (FieldBlueprint
+      (extends Blueprint)
+      (base Carrier)
+      (topology Topology)
+      (fiber ValueBlueprint)
+      (units UnitSystem)
+      (boundary Boundary)
+      (scale Scale))
+
+    (FieldRecipe
+      (extends Recipe)
+      (match PatternRecipe)
+      (guard GuardRecipe)
+      (choices ChoiceRecipe)
+      (cost CostLedger)
+      (forward DeltaRecipe)
+      (reverse CompensationRecipe)
+      (observe ObserverRecipe)
+      (residual ResidualRecipe)
+      (evidence EvidenceCell)
+      (consent ConsentCell))
+
+    (FieldCell
+      (extends NamedCell)
+      (blueprint FieldBlueprint)
+      (state FieldState)
+      (active-recipes (sequence FieldRecipe))
+      (trace (sequence TraceCell))))
+
+  (rule-shape
+    (field-rule ?name
+      (carrier ?field-blueprint)
+      (match ?pattern)
+      (guard ?condition)
+      (choices ?candidate-set)
+      (schedule ?observer-policy)
+      (cost ?cost-ledger)
+      (forward ?delta-recipe)
+      (reverse ?undo-or-compensate)
+      (observe ?projection)
+      (residual ?loss-record)
+      (evidence ?status)
+      (consent ?permission)))
+
+  (execution-semantics
+    (logical-simultaneity
+      "same snapshot, same commit boundary; parallel CPU execution is an optimization")
+
+    (step ?field ?observer ?budget
+      (let snapshot   (freeze ?field))
+      (let matches    (match-all snapshot (active-recipes ?field) ?budget))
+      (let candidates (price matches ?observer))
+      (let selected   (choose candidates (observer-policy ?observer)))
+      (let deltas     (execute-against snapshot selected))
+      (let commit     (resolve deltas (conflict-policy ?field)))
+      (let next-field (apply ?field commit))
+      (let receipt    (receipt snapshot candidates selected commit ?observer))
+      (let residual   (residual matches selected deltas ?budget))
+      (return (step-result next-field receipt residual)))))
+
+  (bidirectional-interface
+    (lift ?source ?codec ?placement
+      (returns FieldPatch Residual Receipt))
+    (project ?field ?observer ?view
+      (returns LinearView Residual Receipt))
+    (forward ?field ?recipe
+      (returns FieldDelta Receipt))
+    (reverse ?field ?receipt
+      (returns FieldDelta Residual Receipt))
+    (intervene ?field ?observer ?intent
+      (requires Consent)
+      (returns FieldDelta Cost Receipt)))
+
+  (kernel-primitives
+    (fmf-rbasic-slots
+      FIELD
+      CARRIER
+      TOPOLOGY
+      FIBER
+      REGION
+      BOUNDARY
+      NEIGHBORHOOD
+      MATCH_FIELD
+      DELTA
+      RESOLVE
+      COMMIT
+      STEP
+      LIFT
+      SAMPLE
+      OBSERVE
+      INTERVENE
+      RESIDUAL
+      RECEIPT
+      COST
+      CONSENT
+      EVIDENCE)
+    (existing-or-composed-form-primitives
+      MATCH_STREAM
+      MATCH_TREE
+      MATCH_GRAPH
+      GUARD
+      BIND
+      CHOICE
+      STABILIZE
+      PROJECT
+      UNDO))
+
+  (native-kernel-integration
+    (supported-kernels go rust typescript browser-typescript)
+    (native-constructors
+      field_blueprint
+      field_cell
+      field_carrier
+      field_topology
+      field_fiber
+      field_region
+      field_boundary
+      field_neighborhood
+      field_match
+      field_delta
+      field_resolve
+      field_commit
+      field_step
+      field_lift
+      field_sample
+      field_observe
+      field_intervene
+      field_receipt
+      field_residual
+      field_cost
+      field_consent
+      field_evidence)
+    (coverage
+      (numeric-slot-reservation go rust typescript browser-typescript python-category)
+      (python-category-note "slot 97 is named FIELD_RESOLVE because RBasic.RESOLVE already names identity lookup at slot 5")
+      (native-node-constructor go rust typescript browser-typescript)
+      (cross-kernel-form-proof "constructs all FMF RBasic node categories")
+      (forward-reverse-field-step typescript-only)
+      (cross-kernel-forward-reverse not-yet))
+    (shared-proof "form/form-stdlib/tests/field-model-form-band.fk")
+    (browser-local-playground-proof "web/lib/form-kernel/field-model-form.ts")
+    (public-deploy-proof pending)
+    (expected-result 93))
+
+  (end-to-end-domain-contract
+    (per-domain-score 11)
+    (domain-count 7)
+    (domain-score-total 77)
+    (kernel-node-proof 1)
+    (lineage-lens-proof 4)
+    (quantum-rain-domain-proof 11)
+    (total-proof-score 93)
+    (line-items
+      carrier-algebra
+      match-primitive
+      recipe-primitive
+      units-and-dimensions
+      rule-scheduling
+      conflict-and-confluence
+      scale-bridges
+      truth-and-evidence
+      observer-identity
+      residuals
+      participation-semantics))
+
+  (domain-proof quantum-rain
+    (carrier quantum-fluid-filament-field)
+    (mechanism
+      (quench interspecies-interaction)
+      (stabilize self-bound-droplet via-lhy-repulsion)
+      (elongate optical-waveguide-filament)
+      (match capillary-instability when-length-exceeds-critical)
+      (commit droplet-array-delta)
+      (receipt imaging-observer)
+      (residual continuum-gpe-details))
+    (proof-function fmf-quantum-rain-proof))
+
+  (lineage-lenses
+    (donald-hoffman-interface fmf-hoffman-proof)
+    (michael-levin-bioelectric-pattern fmf-bioelectric-proof fmf-intercell-proof)
+    (robert-edward-grant-harmonic-key fmf-grant-proof)
+    (stephen-wolfram-rule-space-observer fmf-wolfram-proof)
+    (boundary "lineage ideas execute as evidence-labeled recipes, not as kernel beliefs"))
+
+  (conflict-algebra
+    (merge sum max min average)
+    (choose priority least-cost observer-policy)
+    (refuse block expose-choice branch)
+    (receipt required))
+
+  (invariants
+    (observation-is-action true)
+    (projection-is-lossy true)
+    (mutation-via-delta-only true)
+    (choices-write-receipts true)
+    (projection-writes-residual true)
+    (intervention-requires-consent true)
+    (domain-rule-carries-evidence true))
+
+  (bmf-as-special-case
+    (FieldBlueprint bmf-stream
+      (base sequence)
+      (fiber character)
+      (topology next-previous)
+      (boundary eof))
+    (FieldRecipe bmf-rule
+      (match terminal-or-rule)
+      (choices branch)
+      (forward parse-stack-delta)
+      (reverse backtrack-unwind)
+      (observe parse-trace)))))

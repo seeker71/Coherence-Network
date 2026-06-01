@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-05-31 | **Concepts**: 169 | **Status**: 4 expanding, 109 seed, 55 deepening, 1 living | **Transmissions held**: 15 (12 integrated, 3 witnessed-without-absorption)
+> **Last maintained**: 2026-05-31 | **Concepts**: 170 | **Status**: 4 expanding, 110 seed, 55 deepening, 1 living | **Transmissions held**: 15 (12 integrated, 3 witnessed-without-absorption)
 
 ## How to use this KB
 

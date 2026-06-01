@@ -24,6 +24,11 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form`, `ingest-paths`, `kb-sync-audit` |
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
 | `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
+| `docs/coherence-substrate/field-model-form.form` | Field Model Form — BMF generalized from character streams to typed fields of cells; names the freeze/match/choose/delta/commit/receipt execution contract |
+| `docs/coherence-substrate/field-domain-grammars.form` | Domain grammars for DNA/RNA, chemistry, bioelectricity, cell signaling, plant communication, electricity/magnetism, interspecies/conversation, and quantum rain as FMF recipes over cells |
+| `docs/coherence-substrate/field-lineage-grammars.form` | Lineage lenses for Donald Hoffman, Michael Levin, Robert Edward Grant, and Stephen Wolfram as FMF recipes with evidence labels, claim boundaries, executable proof functions, receipts, and residuals |
+| `form/form-stdlib/field-model-form.fk` | Cross-kernel FMF proof library; `tests/field-model-form-band.fk` returns `13` across Go, Rust, and TypeScript kernels |
+| `web/lib/form-kernel/field-model-form.ts` | Public playground FMF proof source for `/substrate/form`, running locally in the browser TypeScript kernel |
 | `docs/coherence-substrate/universal-shapes.form` | The one Blueprint+Recipe vocabulary every grammar emits — names the existing kernel categories (BBasic.RECIPE+BRecipe.FUNCTION = B_Function; RBasic.MATH+RMath.* = R_Binary(op); etc.) as canonical, with NUMS.Go lineage. Composts 131 language-prefixed `*_shape` Blueprints across grammar files |
 | `docs/coherence-substrate/form-engine.form` | The recipe-evaluator in Form's own voice — 15/15 RBasic dispatch arms self-hosted |
 | `docs/coherence-substrate/form-runtime-in-form.form` | Companion to form-engine — walks lexer / parser / evaluator / registries / substrate-write in Form, names the 15 surface gaps to full self-hosting |

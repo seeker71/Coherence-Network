@@ -1,0 +1,910 @@
+; field-model-form.fk - executable field grammar lenses.
+;
+; preludes: (none - uses only kernel primitives)
+;
+; FMF extends blueprint/recipe/cell into field-native recipes. A field recipe
+; does not assume character streams: its primitives are regions, cells, deltas,
+; receipts, residuals, observer cost, and reversible projections between linear
+; and field substrates.
+;
+; This file proves cross-kernel primitive construction and structural field
+; recipes. Full forward/reverse field-step execution is validated in the
+; TypeScript field module first; Go/Rust/browser kernels currently validate the
+; shared primitive surface, not the full scheduler.
+;
+; Evidence labels:
+;   - Hoffman: interface lens - observer selects fitness icons from a hidden
+;     substrate model.
+;   - Levin: bioelectric lens - tissue state is voltage-pattern memory and
+;     inter-cell communication.
+;   - Grant: harmonic-key lens - an inspired cross-domain modulo/key mapping,
+;     not a claim of physical proof.
+;   - Wolfram: rule-space lens - observer budget samples a larger rule field
+;     and leaves explicit residual.
+;   - Quantum rain: quantum-fluid lens - self-bound ultracold droplet stretches
+;     past critical length and commits a droplet-array delta.
+
+(defn fmf-nil? (xs) (eq (len xs) 0))
+(defn fmf-nth (xs i)
+    (if (eq i 0) (head xs) (fmf-nth (tail xs) (sub i 1))))
+(defn fmf-sum (xs)
+    (if (fmf-nil? xs) 0 (add (head xs) (fmf-sum (tail xs)))))
+(defn fmf-str (s) (intern_trivial_string s))
+(defn fmf-int (n) (intern_trivial_int n))
+
+(defn fmf-primitive-cat (ty) (make_nodeid 1 2 ty 1))
+(defn fmf-field-blueprint-cat () (make_nodeid 1 2 88 1))
+(defn fmf-field-cell-cat () (make_nodeid 1 2 88 2))
+(defn fmf-carrier-cat () (fmf-primitive-cat 89))
+(defn fmf-topology-cat () (fmf-primitive-cat 90))
+(defn fmf-fiber-cat () (fmf-primitive-cat 91))
+(defn fmf-region-cat () (fmf-primitive-cat 92))
+(defn fmf-boundary-cat () (fmf-primitive-cat 93))
+(defn fmf-neighborhood-cat () (fmf-primitive-cat 94))
+(defn fmf-match-field-cat () (make_nodeid 1 2 95 1))
+(defn fmf-delta-cat () (make_nodeid 1 2 96 1))
+(defn fmf-resolve-cat () (fmf-primitive-cat 97))
+(defn fmf-commit-cat () (fmf-primitive-cat 98))
+(defn fmf-step-cat () (fmf-primitive-cat 99))
+(defn fmf-lift-cat () (fmf-primitive-cat 100))
+(defn fmf-sample-cat () (fmf-primitive-cat 101))
+(defn fmf-observe-cat () (fmf-primitive-cat 102))
+(defn fmf-intervene-cat () (fmf-primitive-cat 103))
+(defn fmf-residual-cat () (make_nodeid 1 2 104 1))
+(defn fmf-receipt-cat () (make_nodeid 1 2 105 1))
+(defn fmf-cost-cat () (fmf-primitive-cat 106))
+(defn fmf-consent-cat () (fmf-primitive-cat 107))
+(defn fmf-evidence-cat () (fmf-primitive-cat 108))
+
+(defn fmf-node-ok? (node cat)
+    (node_eq (node_category node) cat))
+
+(defn fmf-node-pass (node cat)
+    (if (fmf-node-ok? node cat) 1 0))
+
+(defn fmf-domain-cell (domain label value)
+    (field_cell (list (fmf-str domain) (fmf-str label) (fmf-str value))))
+
+(defn fmf-observer-receipt (observer cost evidence)
+    (field_receipt (list (fmf-str observer) (fmf-int cost) (fmf-str evidence))))
+
+(defn fmf-kernel-node-proof ()
+    (do
+        (let blueprint
+            (field_blueprint
+                (list (fmf-str "field-model-form")
+                      (fmf-str "regions cells deltas receipts residuals"))))
+        (let cell (fmf-domain-cell "dna" "hbb-prefix" "ATGGTG"))
+        (let carrier (field_carrier (list (fmf-str "sequence"))))
+        (let topology (field_topology (list (fmf-str "next-previous"))))
+        (let fiber (field_fiber (list (fmf-str "nucleotide"))))
+        (let region (field_region (list (fmf-str "hbb-prefix"))))
+        (let boundary (field_boundary (list (fmf-str "eof"))))
+        (let neighborhood (field_neighborhood (list (fmf-str "codon-window"))))
+        (let match (field_match (list blueprint cell)))
+        (let delta (field_delta (list cell (fmf-str "replace-base"))))
+        (let resolve (field_resolve (list delta)))
+        (let commit (field_commit (list resolve)))
+        (let step (field_step (list carrier topology match commit)))
+        (let lift (field_lift (list (fmf-str "linear-to-field") cell)))
+        (let sample (field_sample (list region)))
+        (let observe (field_observe (list sample)))
+        (let intervene (field_intervene (list cell delta)))
+        (let residual (field_residual (list (fmf-str "unobserved-neighborhood"))))
+        (let receipt (fmf-observer-receipt "public-playground" 1 "traceable"))
+        (let cost (field_cost (list (fmf-int 1))))
+        (let consent (field_consent (list (fmf-str "observe"))))
+        (let evidence (field_evidence (list (fmf-str "simulated"))))
+        (let primitive-score
+            (fmf-sum
+                (list
+                    (fmf-node-pass blueprint (fmf-field-blueprint-cat))
+                    (fmf-node-pass cell (fmf-field-cell-cat))
+                    (fmf-node-pass carrier (fmf-carrier-cat))
+                    (fmf-node-pass topology (fmf-topology-cat))
+                    (fmf-node-pass fiber (fmf-fiber-cat))
+                    (fmf-node-pass region (fmf-region-cat))
+                    (fmf-node-pass boundary (fmf-boundary-cat))
+                    (fmf-node-pass neighborhood (fmf-neighborhood-cat))
+                    (fmf-node-pass match (fmf-match-field-cat))
+                    (fmf-node-pass delta (fmf-delta-cat))
+                    (fmf-node-pass resolve (fmf-resolve-cat))
+                    (fmf-node-pass commit (fmf-commit-cat))
+                    (fmf-node-pass step (fmf-step-cat))
+                    (fmf-node-pass lift (fmf-lift-cat))
+                    (fmf-node-pass sample (fmf-sample-cat))
+                    (fmf-node-pass observe (fmf-observe-cat))
+                    (fmf-node-pass intervene (fmf-intervene-cat))
+                    (fmf-node-pass residual (fmf-residual-cat))
+                    (fmf-node-pass receipt (fmf-receipt-cat))
+                    (fmf-node-pass cost (fmf-cost-cat))
+                    (fmf-node-pass consent (fmf-consent-cat))
+                    (fmf-node-pass evidence (fmf-evidence-cat)))))
+        (if (eq primitive-score 22)
+            1
+            0)))
+
+(defn fmf-replace-at (s i symbol)
+    (str_concat
+        (substring s 0 i)
+        (str_concat symbol (substring s (add i 1) (str_len s)))))
+
+(defn fmf-count-motif-loop (s motif i limit acc)
+    (if (gt i limit)
+        acc
+        (fmf-count-motif-loop
+            s
+            motif
+            (add i 1)
+            limit
+            (if (str_eq (substring s i (add i (str_len motif))) motif)
+                (add acc 1)
+                acc))))
+
+(defn fmf-count-motif (s motif)
+    (fmf-count-motif-loop s motif 0 (sub (str_len s) (str_len motif)) 0))
+
+(defn fmf-contains? (s motif)
+    (gt (fmf-count-motif s motif) 0))
+
+(defn fmf-carrier-kind (carrier) (fmf-nth carrier 0))
+(defn fmf-carrier-neighborhood (carrier) (fmf-nth carrier 1))
+(defn fmf-carrier (kind neighborhood)
+    (list kind neighborhood))
+
+(defn fmf-carrier-algebra-proof ()
+    (do
+        (let sequence (fmf-carrier "sequence" "next-previous"))
+        (let tree (fmf-carrier "tree" "parent-child"))
+        (let graph (fmf-carrier "graph" "edge-neighbor"))
+        (let hypergraph (fmf-carrier "hypergraph" "many-body-edge"))
+        (let mesh (fmf-carrier "mesh" "cell-face"))
+        (let manifold (fmf-carrier "manifold" "chart-neighborhood"))
+        (let membrane (fmf-carrier "membrane" "inside-boundary-outside"))
+        (let ecology (fmf-carrier "ecology" "air-root-mycorrhizal"))
+        (let conversation (fmf-carrier "conversation" "turn-reply-attention"))
+        (if (and (str_eq (fmf-carrier-neighborhood sequence) "next-previous")
+            (and (str_eq (fmf-carrier-kind tree) "tree")
+            (and (str_eq (fmf-carrier-kind graph) "graph")
+            (and (str_eq (fmf-carrier-kind hypergraph) "hypergraph")
+            (and (str_eq (fmf-carrier-kind mesh) "mesh")
+            (and (str_eq (fmf-carrier-kind manifold) "manifold")
+            (and (str_eq (fmf-carrier-kind membrane) "membrane")
+            (and (str_eq (fmf-carrier-kind ecology) "ecology")
+                 (str_eq (fmf-carrier-kind conversation) "conversation")))))))))
+            1
+            0)))
+
+(defn fmf-unit (name dimension scale)
+    (list name dimension scale))
+
+(defn fmf-unit-name (unit) (fmf-nth unit 0))
+(defn fmf-unit-dimension (unit) (fmf-nth unit 1))
+(defn fmf-unit-scale (unit) (fmf-nth unit 2))
+
+(defn fmf-compatible-units? (a b)
+    (str_eq (fmf-unit-dimension a) (fmf-unit-dimension b)))
+
+(defn fmf-can-transmute? (a b rule-from rule-to)
+    (or (fmf-compatible-units? a b)
+        (and (str_eq (fmf-unit-name a) rule-from)
+             (str_eq (fmf-unit-name b) rule-to))))
+
+(defn fmf-units-proof ()
+    (do
+        (let volt (fmf-unit "V" "voltage" 1))
+        (let millivolt (fmf-unit "mV" "voltage" 1000))
+        (let concentration (fmf-unit "nM" "concentration" 1))
+        (let attention (fmf-unit "attn" "attention" 1))
+        (if (and (fmf-compatible-units? volt millivolt)
+            (and (not (fmf-compatible-units? volt concentration))
+            (and (not (fmf-compatible-units? attention concentration))
+                 (fmf-can-transmute? millivolt volt "mV" "V"))))
+            1
+            0)))
+
+(defn fmf-schedule-fired (policy match-count)
+    (if (str_eq policy "parallel") match-count
+    (if (str_eq policy "sequential") 1
+    (if (str_eq policy "stochastic") 1
+    (if (str_eq policy "priority") 1
+    (if (str_eq policy "least-cost") 1
+    (if (str_eq policy "observer-chosen") 1
+    (if (str_eq policy "until-stable") match-count
+        0))))))))
+
+(defn fmf-scheduling-proof ()
+    (if (and (eq (fmf-schedule-fired "parallel" 4) 4)
+        (and (eq (fmf-schedule-fired "sequential" 4) 1)
+        (and (eq (fmf-schedule-fired "stochastic" 4) 1)
+        (and (eq (fmf-schedule-fired "priority" 4) 1)
+        (and (eq (fmf-schedule-fired "least-cost" 4) 1)
+        (and (eq (fmf-schedule-fired "observer-chosen" 4) 1)
+             (eq (fmf-schedule-fired "until-stable" 4) 4)))))))
+        1
+        0))
+
+(defn fmf-conflict-resolve (policy a b)
+    (if (str_eq policy "merge") (add a b)
+    (if (str_eq policy "block") a
+    (if (str_eq policy "branch") 2
+    (if (str_eq policy "average") (div (add a b) 2)
+    (if (str_eq policy "vote") b
+    (if (str_eq policy "isolate") a
+    (if (str_eq policy "backtrack") 0
+    (if (str_eq policy "expose") (sub 0 1)
+        0)))))))))
+
+(defn fmf-conflict-proof ()
+    (if (and (eq (fmf-conflict-resolve "merge" 4 6) 10)
+        (and (eq (fmf-conflict-resolve "block" 4 6) 4)
+        (and (eq (fmf-conflict-resolve "branch" 4 6) 2)
+        (and (eq (fmf-conflict-resolve "average" 4 6) 5)
+        (and (eq (fmf-conflict-resolve "vote" 4 6) 6)
+        (and (eq (fmf-conflict-resolve "isolate" 4 6) 4)
+        (and (eq (fmf-conflict-resolve "backtrack" 4 6) 0)
+             (eq (fmf-conflict-resolve "expose" 4 6) (sub 0 1)))))))))
+        1
+        0))
+
+(defn fmf-protein-from-codon (codon)
+    (if (str_eq codon "AUG") "Met" "unknown"))
+
+(defn fmf-receptor-state-from-protein (protein)
+    (if (str_eq protein "Met") "ligand-ready" "inactive"))
+
+(defn fmf-cell-state-from-receptor (state)
+    (if (str_eq state "ligand-ready") "polarized" "resting"))
+
+(defn fmf-tissue-from-cell (cell-state)
+    (if (str_eq cell-state "polarized") "gradient" "flat"))
+
+(defn fmf-organism-from-tissue (tissue)
+    (if (str_eq tissue "gradient") "oriented" "neutral"))
+
+(defn fmf-ecosystem-from-organism (organism)
+    (if (str_eq organism "oriented") "signal-emitted" "silent"))
+
+(defn fmf-scale-bridge-proof ()
+    (do
+        (let codon "AUG")
+        (let protein (fmf-protein-from-codon codon))
+        (let receptor (fmf-receptor-state-from-protein protein))
+        (let cell (fmf-cell-state-from-receptor receptor))
+        (let tissue (fmf-tissue-from-cell cell))
+        (let organism (fmf-organism-from-tissue tissue))
+        (let ecosystem (fmf-ecosystem-from-organism organism))
+        (let residual (field_residual (list (fmf-str "codon-to-ecosystem-lossy-projection"))))
+        (if (and (str_eq ecosystem "signal-emitted")
+                 (fmf-node-ok? residual (fmf-residual-cat)))
+            1
+            0)))
+
+(defn fmf-evidence-rank (status)
+    (if (str_eq status "falsified") 0
+    (if (str_eq status "hypothetical") 1
+    (if (str_eq status "inferred") 2
+    (if (str_eq status "simulated") 3
+    (if (str_eq status "observed") 4
+    (if (str_eq status "validated") 5
+        (sub 0 1))))))))
+
+(defn fmf-evidence-proof ()
+    (do
+        (let ev (field_evidence (list (fmf-str "validated") (fmf-str "public-proof"))))
+        (if (and (eq (fmf-evidence-rank "validated") 5)
+            (and (eq (fmf-evidence-rank "falsified") 0)
+                 (fmf-node-ok? ev (fmf-evidence-cat))))
+            1
+            0)))
+
+(defn fmf-observer (who instrument resolution cost blindspot)
+    (list who instrument resolution cost blindspot))
+
+(defn fmf-observer-proof ()
+    (do
+        (let observer (fmf-observer "public-playground" "local-ts-kernel" "node-category" 2 "continuum-details"))
+        (let receipt
+            (field_receipt
+                (list (fmf-str (fmf-nth observer 0))
+                      (fmf-str (fmf-nth observer 1))
+                      (fmf-str (fmf-nth observer 2))
+                      (fmf-int (fmf-nth observer 3))
+                      (fmf-str (fmf-nth observer 4)))))
+        (if (and (eq (fmf-nth observer 3) 2)
+                 (fmf-node-ok? receipt (fmf-receipt-cat)))
+            1
+            0)))
+
+(defn fmf-residual-proof ()
+    (do
+        (let residual
+            (field_residual
+                (list (fmf-str "sampling-rate")
+                      (fmf-str "omitted-dimensions")
+                      (fmf-str "uncertainty")
+                      (fmf-str "scale-mismatch")
+                      (fmf-str "observer-bias")
+                      (fmf-str "compression-loss"))))
+        (if (and (eq (len (node_children residual)) 6)
+                 (fmf-node-ok? residual (fmf-residual-cat)))
+            1
+            0)))
+
+(defn fmf-participation-rank (mode)
+    (if (str_eq mode "simulate") 1
+    (if (str_eq mode "observe") 2
+    (if (str_eq mode "perturb") 3
+    (if (str_eq mode "participate") 4
+        0)))))
+
+(defn fmf-participation-proof ()
+    (do
+        (let observe (field_observe (list (fmf-str "field-view"))))
+        (let perturb (field_intervene (list (fmf-str "small-delta"))))
+        (let participate (field_step (list observe perturb (fmf-str "relational-commit"))))
+        (if (and (lt (fmf-participation-rank "simulate") (fmf-participation-rank "observe"))
+            (and (lt (fmf-participation-rank "observe") (fmf-participation-rank "perturb"))
+            (and (lt (fmf-participation-rank "perturb") (fmf-participation-rank "participate"))
+                 (fmf-node-ok? participate (fmf-step-cat)))))
+            1
+            0)))
+
+(defn fmf-complement-base (c)
+    (if (str_eq c "A") "T"
+    (if (str_eq c "T") "A"
+    (if (str_eq c "C") "G"
+    (if (str_eq c "G") "C"
+        c)))))
+
+(defn fmf-complement-loop (s i n acc)
+    (if (ge i n)
+        acc
+        (fmf-complement-loop
+            s
+            (add i 1)
+            n
+            (str_concat acc (fmf-complement-base (substring s i (add i 1)))))))
+
+(defn fmf-complement (dna)
+    (fmf-complement-loop dna 0 (str_len dna) ""))
+
+(defn fmf-codon-at (dna i)
+    (substring dna i (add i 3)))
+
+(defn fmf-splice (exon-a exon-b)
+    (str_concat exon-a exon-b))
+
+(defn fmf-fold-score (sequence)
+    (add (fmf-count-motif sequence "AU") (fmf-count-motif sequence "GC")))
+
+(defn fmf-dna-proof ()
+    (do
+        (let dna "ATGGTGCATCTGACTCCTGAGGAGAAGTCT")
+        (let edited (fmf-replace-at dna 0 "G"))
+        (let restored (fmf-replace-at edited 0 "A"))
+        (let rna (fmf-transcribe dna))
+        (let spliced (fmf-splice "AUG" "GAG"))
+        (if (and (eq (fmf-count-motif dna "GAG") 2)
+            (and (str_eq (fmf-codon-at dna 0) "ATG")
+            (and (str_eq (fmf-complement "ATGC") "TACG")
+            (and (str_eq rna "AUGGUGCAUCUGACUCCUGAGGAGAAGUCU")
+            (and (str_eq spliced "AUGGAG")
+            (and (fmf-contains? spliced "GAG")
+            (and (gt (fmf-fold-score rna) 0)
+            (and (not (str_eq edited dna))
+                 (str_eq restored dna)))))))))
+            1
+            0)))
+
+(defn fmf-rna-base (c)
+    (if (str_eq c "T") "U" c))
+
+(defn fmf-dna-base (c)
+    (if (str_eq c "U") "T" c))
+
+(defn fmf-transcribe-loop (s i n acc)
+    (if (ge i n)
+        acc
+        (fmf-transcribe-loop
+            s
+            (add i 1)
+            n
+            (str_concat acc (fmf-rna-base (substring s i (add i 1)))))))
+
+(defn fmf-rna-to-dna-loop (s i n acc)
+    (if (ge i n)
+        acc
+        (fmf-rna-to-dna-loop
+            s
+            (add i 1)
+            n
+            (str_concat acc (fmf-dna-base (substring s i (add i 1)))))))
+
+(defn fmf-transcribe (dna)
+    (fmf-transcribe-loop dna 0 (str_len dna) ""))
+
+(defn fmf-rna-to-dna (rna)
+    (fmf-rna-to-dna-loop rna 0 (str_len rna) ""))
+
+(defn fmf-rna-proof ()
+    (do
+        (let dna "ATGC")
+        (let rna (fmf-transcribe dna))
+        (if (and (str_eq rna "AUGC")
+                 (str_eq (fmf-rna-to-dna rna) dna))
+            1
+            0)))
+
+(defn fmf-edge (a b order)
+    (list a b order))
+
+(defn fmf-edge-a (edge) (fmf-nth edge 0))
+(defn fmf-edge-b (edge) (fmf-nth edge 1))
+(defn fmf-edge-order (edge) (fmf-nth edge 2))
+
+(defn fmf-edge-match? (edge a b order)
+    (and (eq (fmf-edge-order edge) order)
+         (or (and (str_eq (fmf-edge-a edge) a) (str_eq (fmf-edge-b edge) b))
+             (and (str_eq (fmf-edge-a edge) b) (str_eq (fmf-edge-b edge) a)))))
+
+(defn fmf-has-edge? (edges a b order)
+    (if (fmf-nil? edges)
+        (eq 0 1)
+        (if (fmf-edge-match? (head edges) a b order)
+            (eq 0 0)
+            (fmf-has-edge? (tail edges) a b order))))
+
+(defn fmf-aspirin-proof ()
+    (do
+        (let bonds
+            (list
+                (fmf-edge "ring-C1" "acetyl-carbonyl-C" 1)
+                (fmf-edge "acetyl-carbonyl-C" "carbonyl-O" 2)
+                (fmf-edge "acetyl-carbonyl-C" "ester-O" 1)
+                (fmf-edge "ring-C1" "ester-O" 1)))
+        (if (and (fmf-has-edge? bonds "acetyl-carbonyl-C" "carbonyl-O" 2)
+                 (and (fmf-has-edge? bonds "acetyl-carbonyl-C" "ester-O" 1)
+                      (fmf-has-edge? bonds "ring-C1" "ester-O" 1)))
+            1
+            0)))
+
+(defn fmf-ohm-current-ma (millivolts ohms)
+    (div millivolts ohms))
+
+(defn fmf-electricity-proof ()
+    (if (eq (fmf-ohm-current-ma 5000 1000) 5) 1 0))
+
+(defn fmf-magnetic-coupling (domain-a domain-b)
+    (mul domain-a domain-b))
+
+(defn fmf-magnetism-proof ()
+    (if (and (eq (fmf-magnetic-coupling 1 1) 1)
+             (eq (fmf-magnetic-coupling 1 (sub 0 1)) (sub 0 1)))
+        1
+        0))
+
+(defn fmf-bioelectric-next (voltage target step)
+    (if (gt voltage target)
+        (if (gt (sub voltage step) target) (sub voltage step) target)
+        voltage))
+
+(defn fmf-bioelectric-proof ()
+    (do
+        (let damaged (sub 0 20))
+        (let target (sub 0 60))
+        (let observed (fmf-bioelectric-next damaged target 20))
+        (let committed (fmf-bioelectric-next observed target 20))
+        (if (and (eq observed (sub 0 40))
+                 (eq committed target))
+            1
+            0)))
+
+(defn fmf-receptor-bound? (concentration threshold)
+    (ge concentration threshold))
+
+(defn fmf-intercell-proof ()
+    (if (and (fmf-receptor-bound? 8 5)
+             (not (fmf-receptor-bound? 3 5)))
+        1
+        0))
+
+(defn fmf-plant-alert (damaged volatile-threshold)
+    (if damaged (add volatile-threshold 1) 0))
+
+(defn fmf-plant-proof ()
+    (if (and (gt (fmf-plant-alert (eq 1 1) 4) 4)
+             (eq (fmf-plant-alert (eq 0 1) 4) 0))
+        1
+        0))
+
+(defn fmf-mutualism-choice (signal-matches reward cost)
+    (and signal-matches (gt reward cost)))
+
+(defn fmf-interspecies-proof ()
+    (if (and (fmf-mutualism-choice (eq 1 1) 7 3)
+             (not (fmf-mutualism-choice (eq 0 1) 7 3)))
+        1
+        0))
+
+(defn fmf-quantum-rain-self-bound? (mean-field-attraction lhy-repulsion)
+    (and (lt mean-field-attraction 0)
+         (gt lhy-repulsion (sub 0 mean-field-attraction))))
+
+(defn fmf-quantum-rain-fragment-count (filament-length critical-length)
+    (if (gt filament-length critical-length)
+        (div filament-length critical-length)
+        1))
+
+(defn fmf-quantum-rain-proof ()
+    (do
+        (let droplet
+            (field_cell
+                (list (fmf-str "quantum-rain")
+                      (fmf-str "41K-87Rb-waveguide")
+                      (fmf-int 360)
+                      (fmf-int 120))))
+        (let fragments (fmf-quantum-rain-fragment-count 360 120))
+        (let delta (field_delta (list droplet (fmf-str "capillary-breakup") (fmf-int fragments))))
+        (let receipt (fmf-observer-receipt "waveguide-imaging" 2 "capillary-instability"))
+        (let residual (field_residual (list (fmf-str "gross-pitaevskii-continuum-details"))))
+        (if (and (fmf-quantum-rain-self-bound? (sub 0 8) 13)
+            (and (eq fragments 3)
+            (and (fmf-node-ok? delta (fmf-delta-cat))
+            (and (fmf-node-ok? receipt (fmf-receipt-cat))
+                 (fmf-node-ok? residual (fmf-residual-cat))))))
+            1
+            0)))
+
+(defn fmf-hoffman-icon-choice (truth-a fitness-a truth-b fitness-b)
+    (if (gt fitness-a fitness-b) "A" "B"))
+
+(defn fmf-hoffman-proof ()
+    (if (str_eq (fmf-hoffman-icon-choice 10 90 90 10) "A") 1 0))
+
+(defn fmf-grant-harmonic-key (n)
+    (mod n 7))
+
+(defn fmf-grant-proof ()
+    (if (and (eq (fmf-grant-harmonic-key 14) 0)
+             (and (eq (fmf-grant-harmonic-key 21) 0)
+                  (eq (fmf-grant-harmonic-key 28) 0)))
+        1
+        0))
+
+(defn fmf-wolfram-observed (rule-count observer-budget)
+    (if (gt rule-count observer-budget) observer-budget rule-count))
+
+(defn fmf-wolfram-residual (rule-count observer-budget)
+    (sub rule-count (fmf-wolfram-observed rule-count observer-budget)))
+
+(defn fmf-wolfram-proof ()
+    (if (and (eq (fmf-wolfram-observed 4 2) 2)
+             (eq (fmf-wolfram-residual 4 2) 2))
+        1
+        0))
+
+(defn fmf-semantic-foundation-score ()
+    (add (fmf-units-proof)
+    (add (fmf-scheduling-proof)
+    (add (fmf-conflict-proof)
+    (add (fmf-scale-bridge-proof)
+    (add (fmf-evidence-proof)
+    (add (fmf-observer-proof)
+    (add (fmf-residual-proof)
+         (fmf-participation-proof)))))))))
+
+(defn fmf-semantic-line-score (carrier-proof match-proof recipe-proof)
+    (add carrier-proof
+    (add match-proof
+    (add recipe-proof
+         (fmf-semantic-foundation-score)))))
+
+(defn fmf-dna-rna-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "sequence-field"))))
+        (let topology (field_topology (list (fmf-str "indexed-strand"))))
+        (let fiber (field_fiber (list (fmf-str "base-or-nucleotide"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+            (and (fmf-node-ok? topology (fmf-topology-cat))
+                 (fmf-node-ok? fiber (fmf-fiber-cat))))
+            1
+            0)))
+
+(defn fmf-dna-rna-match-proof ()
+    (do
+        (let dna "ATGGTGCATCTGACTCCTGAGGAGAAGTCT")
+        (let rna (fmf-transcribe dna))
+        (if (and (fmf-contains? dna "GAG")
+            (and (str_eq (fmf-codon-at dna 0) "ATG")
+            (and (gt (fmf-fold-score rna) 0)
+                 (str_eq (fmf-complement "ATGC") "TACG"))))
+            1
+            0)))
+
+(defn fmf-dna-rna-recipe-proof ()
+    (do
+        (let dna "ATGGTGCATCTGACTCCTGAGGAGAAGTCT")
+        (let rna (fmf-transcribe dna))
+        (let spliced (fmf-splice "AUG" "GAG"))
+        (if (and (str_eq (substring rna 0 3) "AUG")
+            (and (str_eq spliced "AUGGAG")
+            (and (fmf-contains? spliced "GAG")
+                 (gt (fmf-fold-score rna) 0))))
+            1
+            0)))
+
+(defn fmf-dna-rna-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-dna-rna-carrier-proof)
+        (fmf-dna-rna-match-proof)
+        (fmf-dna-rna-recipe-proof)))
+
+(defn fmf-remove-edge (edges a b order)
+    (if (fmf-nil? edges)
+        (list)
+        (if (fmf-edge-match? (head edges) a b order)
+            (fmf-remove-edge (tail edges) a b order)
+            (cons (head edges) (fmf-remove-edge (tail edges) a b order)))))
+
+(defn fmf-add-edge (edges a b order)
+    (cons (fmf-edge a b order) edges))
+
+(defn fmf-transfer-charge (from-charge to-charge amount)
+    (list (sub from-charge amount) (add to-charge amount)))
+
+(defn fmf-chemistry-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "molecular-graph"))))
+        (let topology (field_topology (list (fmf-str "atom-bond-adjacency"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? topology (fmf-topology-cat)))
+            1
+            0)))
+
+(defn fmf-chemistry-match-proof ()
+    (do
+        (let bonds
+            (list
+                (fmf-edge "C" "O" 2)
+                (fmf-edge "C" "O-ester" 1)
+                (fmf-edge "C-ring" "O-ester" 1)))
+        (if (and (fmf-has-edge? bonds "C" "O" 2)
+            (and (fmf-has-edge? bonds "C" "O-ester" 1)
+                 (fmf-has-edge? bonds "C-ring" "O-ester" 1)))
+            1
+            0)))
+
+(defn fmf-chemistry-recipe-proof ()
+    (do
+        (let bonds (list (fmf-edge "C" "O" 2)))
+        (let broken (fmf-remove-edge bonds "C" "O" 2))
+        (let formed (fmf-add-edge broken "C" "N" 1))
+        (let charges (fmf-transfer-charge 0 0 1))
+        (if (and (not (fmf-has-edge? broken "C" "O" 2))
+            (and (fmf-has-edge? formed "C" "N" 1)
+            (and (eq (fmf-nth charges 0) (sub 0 1))
+                 (eq (fmf-nth charges 1) 1))))
+            1
+            0)))
+
+(defn fmf-chemistry-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-chemistry-carrier-proof)
+        (fmf-chemistry-match-proof)
+        (fmf-chemistry-recipe-proof)))
+
+(defn fmf-gradient (a b) (sub b a))
+(defn fmf-diffuse (a b) (div (add a b) 2))
+(defn fmf-gate-channel (voltage threshold) (if (ge voltage threshold) 1 0))
+(defn fmf-clamp-voltage (_voltage target) target)
+
+(defn fmf-bioelectric-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "cell-graph-field"))))
+        (let boundary (field_boundary (list (fmf-str "membrane"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? boundary (fmf-boundary-cat)))
+            1
+            0)))
+
+(defn fmf-bioelectric-match-proof ()
+    (if (and (eq (fmf-gradient (sub 0 20) (sub 0 60)) (sub 0 40))
+        (and (eq (fmf-gate-channel (sub 0 30) (sub 0 40)) 1)
+             (eq (fmf-gate-channel (sub 0 60) (sub 0 40)) 0)))
+        1
+        0))
+
+(defn fmf-bioelectric-recipe-proof ()
+    (if (and (eq (fmf-diffuse (sub 0 20) (sub 0 60)) (sub 0 40))
+        (and (eq (fmf-gate-channel (sub 0 30) (sub 0 40)) 1)
+             (eq (fmf-clamp-voltage (sub 0 20) (sub 0 60)) (sub 0 60))))
+        1
+        0))
+
+(defn fmf-bioelectric-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-bioelectric-carrier-proof)
+        (fmf-bioelectric-match-proof)
+        (fmf-bioelectric-recipe-proof)))
+
+(defn fmf-bind-receptor (ligand receptor)
+    (if (and (str_eq ligand "Delta") (str_eq receptor "Notch")) "bound" "free"))
+
+(defn fmf-phosphorylate (state)
+    (if (str_eq state "bound") "phosphorylated" state))
+
+(defn fmf-internalize (surface-count)
+    (if (gt surface-count 0) (sub surface-count 1) 0))
+
+(defn fmf-cell-signaling-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "agent-site-graph"))))
+        (let region (field_region (list (fmf-str "adjacent-cell-contact"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? region (fmf-region-cat)))
+            1
+            0)))
+
+(defn fmf-cell-signaling-match-proof ()
+    (if (str_eq (fmf-bind-receptor "Delta" "Notch") "bound") 1 0))
+
+(defn fmf-cell-signaling-recipe-proof ()
+    (do
+        (let bound (fmf-bind-receptor "Delta" "Notch"))
+        (if (and (str_eq (fmf-phosphorylate bound) "phosphorylated")
+                 (eq (fmf-internalize 3) 2))
+            1
+            0)))
+
+(defn fmf-cell-signaling-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-cell-signaling-carrier-proof)
+        (fmf-cell-signaling-match-proof)
+        (fmf-cell-signaling-recipe-proof)))
+
+(defn fmf-emit-voc (baseline amount) (add baseline amount))
+(defn fmf-diffuse-voc (source target) (div (add source target) 2))
+(defn fmf-prime-defense (voc threshold) (if (gt voc threshold) 1 0))
+
+(defn fmf-plant-communication-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "ecological-field"))))
+        (let topology (field_topology (list (fmf-str "air-root-mycorrhizal"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? topology (fmf-topology-cat)))
+            1
+            0)))
+
+(defn fmf-plant-communication-match-proof ()
+    (if (and (gt (fmf-gradient 2 8) 0)
+             (fmf-has-edge? (list (fmf-edge "root-a" "mycelium-b" 1)) "root-a" "mycelium-b" 1))
+        1
+        0))
+
+(defn fmf-plant-communication-recipe-proof ()
+    (do
+        (let emitted (fmf-emit-voc 2 8))
+        (let diffused (fmf-diffuse-voc emitted 0))
+        (if (and (eq emitted 10)
+            (and (eq diffused 5)
+                 (eq (fmf-prime-defense diffused 4) 1)))
+            1
+            0)))
+
+(defn fmf-plant-communication-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-plant-communication-carrier-proof)
+        (fmf-plant-communication-match-proof)
+        (fmf-plant-communication-recipe-proof)))
+
+(defn fmf-flux (field-strength area) (mul field-strength area))
+(defn fmf-pde-step (state laplacian dt) (add state (mul laplacian dt)))
+(defn fmf-conserve-charge (inflow outflow) (eq inflow outflow))
+(defn fmf-solve-ohm (millivolts ohms) (div millivolts ohms))
+
+(defn fmf-em-carrier-proof ()
+    (do
+        (let mesh (field_carrier (list (fmf-str "mesh-field"))))
+        (let manifold (field_topology (list (fmf-str "manifold-chart"))))
+        (if (and (fmf-node-ok? mesh (fmf-carrier-cat))
+                 (fmf-node-ok? manifold (fmf-topology-cat)))
+            1
+            0)))
+
+(defn fmf-em-match-proof ()
+    (if (and (eq (fmf-gradient 5 0) (sub 0 5))
+        (and (eq (fmf-flux 3 4) 12)
+             (fmf-node-ok? (field_boundary (list (fmf-str "ground"))) (fmf-boundary-cat))))
+        1
+        0))
+
+(defn fmf-em-recipe-proof ()
+    (if (and (eq (fmf-pde-step 10 (sub 0 2) 3) 4)
+        (and (fmf-conserve-charge 7 7)
+             (eq (fmf-solve-ohm 5000 1000) 5)))
+        1
+        0))
+
+(defn fmf-em-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-em-carrier-proof)
+        (fmf-em-match-proof)
+        (fmf-em-recipe-proof)))
+
+(defn fmf-social-trust-gradient (before after) (sub after before))
+(defn fmf-social-route-attention (from to) (str_concat from (str_concat "->" to)))
+(defn fmf-social-repair (rupture repair-offer) (and rupture repair-offer))
+
+(defn fmf-social-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "conversation-social-field"))))
+        (let topology (field_topology (list (fmf-str "turn-reply-attention"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? topology (fmf-topology-cat)))
+            1
+            0)))
+
+(defn fmf-social-match-proof ()
+    (if (and (gt (fmf-social-trust-gradient 3 5) 0)
+        (and (str_eq (fmf-social-route-attention "ask" "answer") "ask->answer")
+             (eq (fmf-conflict-resolve "expose" 1 2) (sub 0 1))))
+        1
+        0))
+
+(defn fmf-social-recipe-proof ()
+    (if (and (fmf-social-repair (eq 1 1) (eq 1 1))
+             (str_eq (fmf-social-route-attention "observer" "participant") "observer->participant"))
+        1
+        0))
+
+(defn fmf-social-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-social-carrier-proof)
+        (fmf-social-match-proof)
+        (fmf-social-recipe-proof)))
+
+(defn fmf-domain-proof-score ()
+    (add (fmf-dna-rna-proof-score)
+    (add (fmf-chemistry-proof-score)
+    (add (fmf-bioelectric-proof-score)
+    (add (fmf-cell-signaling-proof-score)
+    (add (fmf-plant-communication-proof-score)
+    (add (fmf-em-proof-score)
+         (fmf-social-proof-score))))))))
+
+(defn fmf-lineage-proof-score ()
+    (add (fmf-hoffman-proof)
+    (add (fmf-bioelectric-proof)
+    (add (fmf-grant-proof)
+         (fmf-wolfram-proof)))))
+
+(defn fmf-quantum-rain-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "quantum-fluid-filament-field"))))
+        (let topology (field_topology (list (fmf-str "optical-waveguide"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+                 (fmf-node-ok? topology (fmf-topology-cat)))
+            1
+            0)))
+
+(defn fmf-quantum-rain-match-proof ()
+    (if (and (fmf-quantum-rain-self-bound? (sub 0 8) 13)
+             (eq (fmf-quantum-rain-fragment-count 360 120) 3))
+        1
+        0))
+
+(defn fmf-quantum-rain-recipe-proof ()
+    (fmf-quantum-rain-proof))
+
+(defn fmf-quantum-rain-domain-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-quantum-rain-carrier-proof)
+        (fmf-quantum-rain-match-proof)
+        (fmf-quantum-rain-recipe-proof)))
+
+(defn fmf-proof-score ()
+    (add (fmf-kernel-node-proof)
+    (add (fmf-domain-proof-score)
+    (add (fmf-lineage-proof-score)
+         (fmf-quantum-rain-domain-proof-score)))))

@@ -39,9 +39,9 @@ import (
 // means error (sibling parity with Rust/TS). socket_close on -1 is a
 // no-op returning -1.
 var (
-	socketTableMu  sync.Mutex
-	socketHandles  = map[int64]interface{}{} // listener or conn
-	socketNextHnd  int64                     = 0
+	socketTableMu sync.Mutex
+	socketHandles       = map[int64]interface{}{} // listener or conn
+	socketNextHnd int64 = 0
 )
 
 func socketRegister(v interface{}) int64 {
@@ -92,10 +92,31 @@ const (
 	RBasicMethod    uint32 = 27 // transform on a cell-like value
 	RBasicTransmute uint32 = 76 // present value through Blueprint without changing identity
 	// Kernel-demo additions (extending RBasic for self-hosting needs)
-	RBasicFnDef  uint32 = 31
-	RBasicFnCall uint32 = 32
-	RBasicIdent  uint32 = 33
-	RBasicList   uint32 = 34 // list-literal recipe
+	RBasicFnDef        uint32 = 31
+	RBasicFnCall       uint32 = 32
+	RBasicIdent        uint32 = 33
+	RBasicList         uint32 = 34  // list-literal recipe
+	RBasicField        uint32 = 88  // Field Model Form: distributed field value
+	RBasicCarrier      uint32 = 89  // sequence / graph / mesh / attention carrier
+	RBasicTopology     uint32 = 90  // adjacency and boundary declaration
+	RBasicFiber        uint32 = 91  // value shape at each field location
+	RBasicRegion       uint32 = 92  // named carrier subset
+	RBasicBoundary     uint32 = 93  // membrane / constraint surface
+	RBasicNeighborhood uint32 = 94  // local context relation
+	RBasicMatchField   uint32 = 95  // region / subgraph / gradient match
+	RBasicDelta        uint32 = 96  // snapshot-relative candidate mutation
+	RBasicResolve      uint32 = 97  // conflict algebra over deltas
+	RBasicCommit       uint32 = 98  // atomic logical-time commit
+	RBasicStep         uint32 = 99  // freeze/match/choose/delta/commit
+	RBasicLift         uint32 = 100 // data -> field
+	RBasicSample       uint32 = 101 // point/region probe
+	RBasicObserve      uint32 = 102 // projection + receipt
+	RBasicIntervene    uint32 = 103 // consented perturbation
+	RBasicResidual     uint32 = 104 // loss / budget remainder
+	RBasicReceipt      uint32 = 105 // transparent execution record
+	RBasicCost         uint32 = 106 // observer cost ledger
+	RBasicConsent      uint32 = 107 // permission surface
+	RBasicEvidence     uint32 = 108 // observed/inferred/simulated status
 
 	TrivInt    uint32 = 1
 	TrivString uint32 = 2
@@ -244,6 +265,48 @@ func armName(armTy uint32) string {
 		return "METHOD"
 	case RBasicTransmute:
 		return "TRANSMUTE"
+	case RBasicField:
+		return "FIELD"
+	case RBasicCarrier:
+		return "CARRIER"
+	case RBasicTopology:
+		return "TOPOLOGY"
+	case RBasicFiber:
+		return "FIBER"
+	case RBasicRegion:
+		return "REGION"
+	case RBasicBoundary:
+		return "BOUNDARY"
+	case RBasicNeighborhood:
+		return "NEIGHBORHOOD"
+	case RBasicMatchField:
+		return "MATCH_FIELD"
+	case RBasicDelta:
+		return "DELTA"
+	case RBasicResolve:
+		return "RESOLVE"
+	case RBasicCommit:
+		return "COMMIT"
+	case RBasicStep:
+		return "STEP"
+	case RBasicLift:
+		return "LIFT"
+	case RBasicSample:
+		return "SAMPLE"
+	case RBasicObserve:
+		return "OBSERVE"
+	case RBasicIntervene:
+		return "INTERVENE"
+	case RBasicResidual:
+		return "RESIDUAL"
+	case RBasicReceipt:
+		return "RECEIPT"
+	case RBasicCost:
+		return "COST"
+	case RBasicConsent:
+		return "CONSENT"
+	case RBasicEvidence:
+		return "EVIDENCE"
 	default:
 		return "OTHER"
 	}
@@ -391,18 +454,18 @@ func (t *Trace) toJSON() map[string]interface{} {
 
 // Kernel — the running substrate.
 type Kernel struct {
-	byHash  map[uint64]NodeID
-	byID    map[NodeID]Recipe
-	strs    []string
-	strIdx  map[string]NameID
-	next    uint32
+	byHash map[uint64]NodeID
+	byID   map[NodeID]Recipe
+	strs   []string
+	strIdx map[string]NameID
+	next   uint32
 	// Float64 overflow table — IEEE 754 values don't fit the 32-bit `inst`
 	// field, so the FLOAT64 trivial NodeID carries an index into `f64s`.
 	// `f64Idx` is keyed by the IEEE bit pattern after canonicalization
 	// (NaN → qNaN, -0.0 → +0.0) so the same value parsed twice yields the
 	// same NodeID. Mirrors Rust + TS sibling kernels.
-	f64s   []float64
-	f64Idx map[uint64]uint32
+	f64s       []float64
+	f64Idx     map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
 	// methods — the blueprint method table (BML/NUMS reference: methods live
@@ -450,14 +513,14 @@ type sourceLoc struct {
 
 func NewKernel() *Kernel {
 	k := &Kernel{
-		byHash:     make(map[uint64]NodeID),
-		byID:       make(map[NodeID]Recipe),
-		strIdx:     make(map[string]NameID),
-		sourceAttr: make(map[NodeID]sourceLoc),
-		importSeq:  1,
-		walkCache:  make(map[NodeID]Value),
-		next:       1,
-		f64Idx:     make(map[uint64]uint32),
+		byHash:        make(map[uint64]NodeID),
+		byID:          make(map[NodeID]Recipe),
+		strIdx:        make(map[string]NameID),
+		sourceAttr:    make(map[NodeID]sourceLoc),
+		importSeq:     1,
+		walkCache:     make(map[NodeID]Value),
+		next:          1,
+		f64Idx:        make(map[uint64]uint32),
 		natives:       make(map[NameID]NativeEntry),
 		envNatives:    make(map[NameID]EnvAwareNativeEntry),
 		methods:       make(map[methodKey]*Closure),
@@ -2086,6 +2149,55 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VNodeID, Nid: k.intern(cat, kids)}
 	})
+	fieldNode := func(nativeName string, categoryType uint32, categoryInst uint32) NativeFn {
+		return func(k *Kernel, args []Value) Value {
+			if len(args) != 1 || args[0].Kind != VList {
+				panic(fmt.Sprintf("%s: expected one list of NodeIDs", nativeName))
+			}
+			kids := make([]NodeID, len(args[0].List))
+			for i, c := range args[0].List {
+				if c.Kind != VNodeID {
+					panic(fmt.Sprintf("%s: children must be nodeids", nativeName))
+				}
+				kids[i] = c.Nid
+			}
+			return Value{
+				Kind: VNodeID,
+				Nid:  k.intern(NodeID{Pkg: 1, Level: LevelBasic, Type: categoryType, Inst: categoryInst}, kids),
+			}
+		}
+	}
+	fieldConstructors := []struct {
+		name         string
+		categoryType uint32
+		categoryInst uint32
+	}{
+		{"field_blueprint", RBasicField, 1},
+		{"field_cell", RBasicField, 2},
+		{"field_carrier", RBasicCarrier, 1},
+		{"field_topology", RBasicTopology, 1},
+		{"field_fiber", RBasicFiber, 1},
+		{"field_region", RBasicRegion, 1},
+		{"field_boundary", RBasicBoundary, 1},
+		{"field_neighborhood", RBasicNeighborhood, 1},
+		{"field_match", RBasicMatchField, 1},
+		{"field_delta", RBasicDelta, 1},
+		{"field_resolve", RBasicResolve, 1},
+		{"field_commit", RBasicCommit, 1},
+		{"field_step", RBasicStep, 1},
+		{"field_lift", RBasicLift, 1},
+		{"field_sample", RBasicSample, 1},
+		{"field_observe", RBasicObserve, 1},
+		{"field_intervene", RBasicIntervene, 1},
+		{"field_residual", RBasicResidual, 1},
+		{"field_receipt", RBasicReceipt, 1},
+		{"field_cost", RBasicCost, 1},
+		{"field_consent", RBasicConsent, 1},
+		{"field_evidence", RBasicEvidence, 1},
+	}
+	for _, c := range fieldConstructors {
+		k.registerNative(c.name, catFieldPrimitive(c.categoryType), fieldNode(c.name, c.categoryType, c.categoryInst))
+	}
 	k.registerNative("substrate_mark", catWitness(), func(k *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: k.substrateMark()}
 	})
@@ -2645,8 +2757,8 @@ func (k *Kernel) registerNatives() {
 // bmfMatchPattern mirrors engine.fk's match-object-pattern dispatch. Given
 // a pattern (always a tagged list) and a stream slice, returns one of:
 //
-//   ("match" caps-alist rest-stream)   — success
-//   ("fail" reason)                    — miss
+//	("match" caps-alist rest-stream)   — success
+//	("fail" reason)                    — miss
 //
 // caps-alist is a Form list of (name value) pairs in the same order
 // cap-set/cap-merge would produce, so the result is node_eq-identical to
@@ -3547,6 +3659,13 @@ func catAccess() NodeID    { return NodeID{1, LevelBasic, RBasicAccess, 1} }
 func catMethod() NodeID    { return NodeID{1, LevelBasic, RBasicMethod, 1} }
 func catListNat() NodeID   { return NodeID{1, LevelBasic, RBasicList, 1} }
 func catTransmute() NodeID { return NodeID{1, LevelBasic, RBasicTransmute, 1} }
+func catFieldPrimitive(categoryType uint32) NodeID {
+	return NodeID{1, LevelBasic, categoryType, 1}
+}
+func catField() NodeID     { return NodeID{1, LevelBasic, RBasicField, 1} }
+func catDelta() NodeID     { return NodeID{1, LevelBasic, RBasicDelta, 1} }
+func catReceipt() NodeID   { return NodeID{1, LevelBasic, RBasicReceipt, 1} }
+func catResidual() NodeID  { return NodeID{1, LevelBasic, RBasicResidual, 1} }
 func catUndefined() NodeID { return NodeID{1, LevelBasic, RBasicUndefined, 0} }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,216 @@
+# field-domain-grammars.form
+# Domain grammars compiled to Field Model Form.
+
+(field-domain-grammars
+
+  (end-to-end-proof-contract
+    (domain-count 7)
+    (per-domain-line-items 11)
+    (shared-line-items
+      carrier-algebra
+      match-primitive
+      recipe-primitive
+      units-and-dimensions
+      rule-scheduling
+      conflict-and-confluence
+      scale-bridges
+      truth-and-evidence
+      observer-identity
+      residuals
+      participation-semantics)
+    (domain-total 77)
+    (kernel-node-proof 1)
+    (lineage-lens-proof 4)
+    (quantum-rain-proof 11)
+    (total-proof-score 93)
+    (boundary "structural grammar proof is cross-kernel; typed forward/reverse field runtime is TypeScript-first"))
+
+  (domain dna-rna
+    (carrier sequence-field)
+    (fiber
+      (index integer nt)
+      (symbol nucleotide)
+      (strand direction))
+    (patterns
+      (motif "ATG")
+      (codon-frame 3)
+      (complement A:T C:G)
+      (transcription T:U))
+    (recipes
+      (trace-codon ?start ?triplet)
+      (transcribe-dna-to-rna ?region)
+      (intervene-base ?index ?new-base)
+      (reverse-from-receipt ?receipt))
+    (real-example
+      (source "NCBI RefSeq NM_000518.5 HBB CDS")
+      (data "ATGGTGCATCTGACTCCTGAGGAGAAGTCT")
+      (proof "form-stdlib/field-model-form.fk scores carrier/match/recipe plus shared semantic line items; field.test.ts lifts, projects, mutates, and reverses the HBB prefix")
+      (score-function fmf-dna-rna-proof-score)
+      (score 11)))
+
+  (domain chemistry
+    (carrier molecular-graph)
+    (fiber
+      (site element)
+      (edge bond-order)
+      (site charge)
+      (site role))
+    (patterns
+      (subgraph carbonyl "C=O")
+      (subgraph ester "C(=O)-O-C")
+      (functional-group carboxyl "C(=O)-O"))
+    (recipes
+      (trace-functional-group ?atoms)
+      (break-bond ?edge)
+      (form-bond ?from ?to ?order)
+      (transfer-charge ?from ?to ?amount))
+    (real-example
+      (source "PubChem CID 2244 aspirin")
+      (data "ConnectivitySMILES CC(=O)OC1=CC=CC=C1C(=O)O; formula C9H8O4")
+      (proof "form-stdlib/field-model-form.fk scores molecular graph carrier, subgraph match, and bond/charge recipe shape; field.test.ts matches the aspirin ester graph")
+      (score-function fmf-chemistry-proof-score)
+      (score 11)))
+
+  (domain bioelectricity
+    (carrier cell-graph-field)
+    (fiber
+      (site voltage_mV)
+      (edge conductance)
+      (boundary membrane))
+    (patterns
+      (gradient voltage_mV ?from ?to)
+      (boundary membrane ?region)
+      (wavefront threshold-crossing))
+    (recipes
+      (diffuse-vmem ?from ?to ?conductance)
+      (gate-channel ?site ?channel ?state)
+      (clamp-voltage ?region ?voltage)
+      (trace-wavefront ?region))
+    (proof "form-stdlib/field-model-form.fk scores cell graph field carrier, voltage gradient match, and diffuse/gate/clamp recipe shape; field.test.ts executes snapshot-relative vmem diffusion across a two-cell gap-junction graph")
+    (score-function fmf-bioelectric-proof-score)
+    (score 11))
+
+  (domain cell-signaling
+    (carrier agent-site-graph)
+    (fiber
+      (site receptor-state)
+      (site ligand-state)
+      (site phosphorylation-state)
+      (edge contact))
+    (patterns
+      (receptor-ligand ?receptor ?ligand)
+      (kinase-substrate ?kinase ?substrate ?site)
+      (complex ?agents))
+    (recipes
+      (bind ?ligand ?receptor)
+      (unbind ?complex)
+      (phosphorylate ?substrate ?site)
+      (internalize ?receptor))
+    (real-example
+      (source "Kappa-style rule-based modeling shape")
+      (data "Notch receptor and Delta ligand on adjacent cells")
+      (proof "form-stdlib/field-model-form.fk scores agent/site carrier, receptor-ligand-state match, and bind/phosphorylate/internalize recipe shape; field.test.ts binds sender.delta_ligand to receiver.notch_receptor through a contact edge")
+      (score-function fmf-cell-signaling-proof-score)
+      (score 11)))
+
+  (domain plant-communication
+    (carrier ecological-graph-field)
+    (fiber
+      (site volatile-concentration)
+      (site defense-primed)
+      (edge air-neighborhood)
+      (edge root-or-mycorrhizal-link))
+    (patterns
+      (voc-gradient ?damaged ?neighbor)
+      (root-signal-edge ?from ?to)
+      (threshold ?site ?compound ?value))
+    (recipes
+      (emit-voc ?site ?compound ?amount)
+      (diffuse-voc ?from ?to ?compound)
+      (prime-defense ?site ?pathway))
+    (proof "form-stdlib/field-model-form.fk scores ecological field carrier, VOC/root/mycelial match, and emit/diffuse/prime recipe shape; field.test.ts diffuses methyl_jasmonate_ppb from damaged_leaf to neighbor_leaf with a receipt")
+    (score-function fmf-plant-communication-proof-score)
+    (score 11))
+
+  (domain electricity-magnetism
+    (carrier mesh-or-circuit-field)
+    (fiber
+      (site voltage_V)
+      (edge resistance_ohm)
+      (edge current_A)
+      (region boundary-condition))
+    (patterns
+      (potential-gradient ?from ?to)
+      (resistive-edge ?edge)
+      (boundary-condition ?region))
+    (recipes
+      (ohm-current ?edge)
+      (conserve-charge ?node)
+      (step-field ?dt)
+      (sample-probe ?region))
+    (proof "form-stdlib/field-model-form.fk scores mesh/manifold/circuit carrier, boundary/flux/gradient match, and PDE/conservation/solve recipe shape; field.test.ts runs Ohm's law over a 5 V / 1 kOhm edge and records 0.005 A")
+    (score-function fmf-em-proof-score)
+    (score 11))
+
+  (domain interspecies-and-conversation
+    (carrier attention-graph)
+    (fiber
+      (site signal)
+      (site unresolved-choice)
+      (site trust)
+      (edge reply-to)
+      (edge attention))
+    (patterns
+      (unresolved-choice ?site)
+      (silence ?edge ?duration)
+      (resonance ?a ?b)
+      (repair-needed ?site))
+    (recipes
+      (expose-choice ?site)
+      (ask ?site ?question)
+      (repair ?edge)
+      (route-attention ?from ?to))
+    (proof "form-stdlib/field-model-form.fk scores attention/social graph carrier, unresolved-choice/resonance match, and ask/repair/route-attention recipe shape; field.test.ts turns an unresolved-choice node into a visible choice receipt")
+    (score-function fmf-social-proof-score)
+    (score 11)))
+
+  (domain quantum-rain
+    (carrier quantum-fluid-filament-field)
+    (fiber
+      (site density_arb)
+      (site phase)
+      (site species 41K|87Rb)
+      (region optical-waveguide)
+      (region filament-length_um)
+      (parameter interspecies-attraction)
+      (parameter lhy-repulsion)
+      (parameter surface-tension))
+    (patterns
+      (self-bound-droplet ?mean-field-attraction ?lhy-repulsion)
+      (elongated-filament ?length ?critical-length)
+      (capillary-instability ?filament)
+      (droplet-array ?count))
+    (recipes
+      (quench-interaction ?mixture ?from ?to)
+      (freeze-filament-snapshot ?droplet)
+      (match-critical-breakup ?snapshot)
+      (commit-droplet-array ?count)
+      (write-imaging-receipt ?observer ?count ?cost)
+      (write-continuum-residual ?model-details))
+    (real-example
+      (source "Cavicchioli et al. 2025 Physical Review Letters, Dynamical Formation of Multiple Quantum Droplets in a Bose-Bose Mixture")
+      (data "41K-87Rb ultracold Bose-Bose mixture released in an optical waveguide; stretched quantum droplet splits after exceeding critical length")
+      (proof "form-stdlib/field-model-form.fk models LHY-stabilized self-bound state plus critical-length capillary breakup and returns one 11-point quantum-rain domain proof")
+      (score-function fmf-quantum-rain-domain-proof-score)
+      (score 11)))
+
+  (kernel-proof
+    (source "form/form-stdlib/field-model-form.fk")
+    (band "form/form-stdlib/tests/field-model-form-band.fk")
+    (browser-local-playground "web/lib/form-kernel/field-model-form.ts")
+    (command "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk")
+    (result 93)
+    (sibling-kernels go rust typescript)
+    (browser-local-command "cd web && npx tsx -e '<run Field Model Form proof example>'")
+    (browser-local-result 93)
+    (public-deploy-verification pending)))

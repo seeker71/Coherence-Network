@@ -88,6 +88,27 @@ export const RBasic = {
   PARALLELIZE: 85,      // #9  — parallel pattern: dispatch op across num_threads
   VECTORIZE: 86,        // #9  — parallel pattern: lower op to simd_width-wide SIMD
   OBSERVER: 87,         // #27 — observer context (active QUOTIENTs for an observer)
+  FIELD: 88,            // #30 — field state/value distributed over a carrier
+  CARRIER: 89,          // #30 — sequence / graph / mesh / attention carrier
+  TOPOLOGY: 90,         // #30 — adjacency / boundary shape
+  FIBER: 91,            // #30 — per-site value shape
+  REGION: 92,           // #30 — named carrier subset
+  BOUNDARY: 93,         // #30 — membrane / constraint surface
+  NEIGHBORHOOD: 94,     // #30 — local context relation
+  MATCH_FIELD: 95,      // #30 — region / subgraph / gradient field match
+  DELTA: 96,            // #30 — snapshot-relative mutation candidate
+  RESOLVE: 97,          // #30 — conflict algebra
+  COMMIT: 98,           // #30 — atomic logical-time commit
+  STEP: 99,             // #30 — freeze/match/choose/delta/commit cycle
+  LIFT: 100,            // #30 — linear/graph data into field
+  SAMPLE: 101,          // #30 — point or region probe
+  OBSERVE: 102,         // #30 — projection plus observer receipt
+  INTERVENE: 103,       // #30 — consented perturbation
+  RESIDUAL: 104,        // #30 — loss / budget remainder
+  RECEIPT: 105,         // #30 — transparent execution record
+  COST: 106,            // #30 — observer cost ledger
+  CONSENT: 107,         // #30 — permission surface
+  EVIDENCE: 108,        // #30 — observed / inferred / simulated status
 } as const;
 
 // Triv — trivial RTypes.
@@ -260,6 +281,27 @@ export class Trace {
       case RBasic.ACCESS: return "ACCESS";
       case RBasic.METHOD: return "METHOD";
       case RBasic.TRANSMUTE: return "TRANSMUTE";
+      case RBasic.FIELD: return "FIELD";
+      case RBasic.CARRIER: return "CARRIER";
+      case RBasic.TOPOLOGY: return "TOPOLOGY";
+      case RBasic.FIBER: return "FIBER";
+      case RBasic.REGION: return "REGION";
+      case RBasic.BOUNDARY: return "BOUNDARY";
+      case RBasic.NEIGHBORHOOD: return "NEIGHBORHOOD";
+      case RBasic.MATCH_FIELD: return "MATCH_FIELD";
+      case RBasic.DELTA: return "DELTA";
+      case RBasic.RESOLVE: return "RESOLVE";
+      case RBasic.COMMIT: return "COMMIT";
+      case RBasic.STEP: return "STEP";
+      case RBasic.LIFT: return "LIFT";
+      case RBasic.SAMPLE: return "SAMPLE";
+      case RBasic.OBSERVE: return "OBSERVE";
+      case RBasic.INTERVENE: return "INTERVENE";
+      case RBasic.RESIDUAL: return "RESIDUAL";
+      case RBasic.RECEIPT: return "RECEIPT";
+      case RBasic.COST: return "COST";
+      case RBasic.CONSENT: return "CONSENT";
+      case RBasic.EVIDENCE: return "EVIDENCE";
       default: return "OTHER";
     }
   }
@@ -402,6 +444,21 @@ export function catListNat(): NodeID {
 }
 export function catTransmute(): NodeID {
   return { pkg: 1, level: Level.BASIC, type: RBasic.TRANSMUTE, inst: 1 };
+}
+export function catField(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.FIELD, inst: 1 };
+}
+export function catFieldPrimitive(type: number): NodeID {
+  return { pkg: 1, level: Level.BASIC, type, inst: 1 };
+}
+export function catDelta(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.DELTA, inst: 1 };
+}
+export function catReceipt(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.RECEIPT, inst: 1 };
+}
+export function catResidual(): NodeID {
+  return { pkg: 1, level: Level.BASIC, type: RBasic.RESIDUAL, inst: 1 };
 }
 export function catCompareEq(): NodeID {
   return { pkg: 1, level: Level.BASIC, type: RBasic.COMPARE, inst: RCmp.EQ };
@@ -1004,6 +1061,56 @@ export class Kernel {
       });
       return { kind: "nodeid", nodeid: k.intern(cat, kids) };
     });
+    const fieldNode = (
+      nativeName: string,
+      categoryType: number,
+      categoryInst: number,
+    ): NativeFn => (k, args) => {
+      const kids = argList(args, 0).map((v) => {
+        if (v.kind !== "nodeid") {
+          throw new Error(`${nativeName}: children must be nodeids`);
+        }
+        return v.nodeid;
+      });
+      return {
+        kind: "nodeid",
+        nodeid: k.intern(
+          { pkg: 1, level: Level.BASIC, type: categoryType, inst: categoryInst },
+          kids,
+        ),
+      };
+    };
+    const fieldConstructors: Array<[string, number, number]> = [
+      ["field_blueprint", RBasic.FIELD, 1],
+      ["field_cell", RBasic.FIELD, 2],
+      ["field_carrier", RBasic.CARRIER, 1],
+      ["field_topology", RBasic.TOPOLOGY, 1],
+      ["field_fiber", RBasic.FIBER, 1],
+      ["field_region", RBasic.REGION, 1],
+      ["field_boundary", RBasic.BOUNDARY, 1],
+      ["field_neighborhood", RBasic.NEIGHBORHOOD, 1],
+      ["field_match", RBasic.MATCH_FIELD, 1],
+      ["field_delta", RBasic.DELTA, 1],
+      ["field_resolve", RBasic.RESOLVE, 1],
+      ["field_commit", RBasic.COMMIT, 1],
+      ["field_step", RBasic.STEP, 1],
+      ["field_lift", RBasic.LIFT, 1],
+      ["field_sample", RBasic.SAMPLE, 1],
+      ["field_observe", RBasic.OBSERVE, 1],
+      ["field_intervene", RBasic.INTERVENE, 1],
+      ["field_residual", RBasic.RESIDUAL, 1],
+      ["field_receipt", RBasic.RECEIPT, 1],
+      ["field_cost", RBasic.COST, 1],
+      ["field_consent", RBasic.CONSENT, 1],
+      ["field_evidence", RBasic.EVIDENCE, 1],
+    ];
+    for (const [nativeName, categoryType, categoryInst] of fieldConstructors) {
+      this.registerNative(
+        nativeName,
+        catFieldPrimitive(categoryType),
+        fieldNode(nativeName, categoryType, categoryInst),
+      );
+    }
     this.registerNative("node_category", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.category(argNodeID(args, 0)),
