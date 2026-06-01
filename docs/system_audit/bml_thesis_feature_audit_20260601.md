@@ -17,6 +17,10 @@ What is proven today:
   `EndOfFile`, `EndOfLine`, `Cut`, `MultiMatch`, and `Primitive`.
 - A BMA-like execution band runs forward and backward, including explicit
   `DO` and `UNDO` trace proof.
+- A real `.bml` file can now be scanned from disk, parsed through BML BMF
+  executable rules, lowered into BMA, and run forward/backward through the
+  native kernels for the focused thesis exit slice in
+  `form/form-stdlib/tests/fixtures/bml-thesis-forward-backward-demo.bml`.
 - A BML class/interface/inheritance component model covers structural bases,
   delegated bases, inherited interfaces, default interface methods, section
   property inheritance, class/static flags, member lookup, access checks, and
@@ -24,8 +28,8 @@ What is proven today:
 
 What is not proven yet:
 
-- The source compiler scans `section [...]` blocks; it is not yet a
-  standalone thesis `.bml` file compiler.
+- The source compiler can scan a focused standalone executable `.bml` stream,
+  but it is not yet a full thesis `.bml` file compiler.
 - Full `.bml` files from the thesis companion source tree do not compile end to
   end as source into Form native kernel execution.
 - Most thesis grammar rules are present as a BMF rulebook/manifest, but many
@@ -87,6 +91,7 @@ is not complete rule-for-rule.
 | BML syntax blocks and multi-syntax streams | `backtracking-model-languages.txt:1012-1014`; `bml-search-algorithms.txt:239-246` | native-executed for source-section sidecars; gap for object syntax dispatch | `source-compiler-runtime.fk` and `source-compiler-multi-dialect-band.fk` prove section sidecars; parsing arbitrary objects by syntax name remains a gap. |
 | Object runtime definitions, dispatch, casting, instantiators | `sgb-bml-objects.txt:569-655`, `:778-791` | component-proven only for selected lookup helpers | Full instance/interface/method definitions, indexed dispatch, arbitrary interface casts, unique/singleton instantiators, and detached interfaces remain gaps. |
 | Companion `.bml` source samples | `companion/source-samples/*.bml` | gap | `BMF-grammar.bml`, `container-Rule.bml`, `primitive-Cut.bml`, and related files are reference inputs, not passing compile fixtures yet. |
+| Focused `.bml` file-to-native execution | `bml-thesis-forward-backward-demo.bml` | native-executed | `bml-thesis-file-execution-proof.fk` scans a real `.bml` file, parses `state-int` plus `try-throw-return`, lowers to BMA, runs DO/UNDO, and verifies restored state. |
 
 ## Companion Source Boundary Checks
 
@@ -143,6 +148,7 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-s
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-class-inheritance-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-full-class-model-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-exit-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk
 ```
