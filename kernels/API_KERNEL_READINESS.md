@@ -546,6 +546,49 @@ why is it here?"
    transmuted route** — routes are DATA in `KERNEL_SERVED_RECIPES`; adding a
    transmuted route to that list extends the activity view with no code change.
 
+### The capability ledger — what's banked, what gates the rest
+
+Coverage growth is no longer gated by *finding* candidates — the clean
+pure-scalar well is nearly dry. It is gated by *capability*: each new family of
+routes waits behind one kernel/adapter capability, and each capability, once
+banked, unlocks a whole family at once (the `ln`/`exp`, list-construction,
+`round_ndigits`, and record-access unlocks each did exactly this). The honest
+way to read the path to "most routes kernel-served" is as a **sequence of
+capability builds**, not a candidate hunt.
+
+**Banked (each proven three-way + live):**
+
+| Capability | Native/mechanism | Family it unlocked |
+|---|---|---|
+| Float arithmetic | `Value::Float`, `intern_trivial_float` | weighted averages, ratios, any non-integer math |
+| Transcendentals | `math_log`, `math_exp` (+ existing `sqrt`/`pow`/`floor`/`ceil`) | entropy, softmax, normalization, decay |
+| List construction | `_list_append` + accumulator-loop lowering | list/vector-returning routes (softmax, distributions) |
+| Exact CPython rounding | `round_ndigits` (decimal half-to-even, `_Py_dg_dtoa`-faithful) | every `round(x, n)`-bearing route (cost/value vectors, grounded ROI) |
+| Homogeneous structure access | dict→`Value::Record` marshalling + `_get` Record arm | routes reading numeric fields from ONE dict/model (marginal-from-record) |
+
+**Gates ahead (each blocks a named family; build in leverage order):**
+
+1. **Heterogeneous polymorphic structure access** — read `.field` from a model
+   *or* `["field"]` from a dict, branch on type, reduce across a list of such
+   objects. Blocks the richest remaining function (`compute_idea_metrics`) and
+   the collective-health summaries (nested-dict-over-collection traversal). The
+   homogeneous subset is banked; this is the heterogeneous + list-reduction
+   remainder. **Highest leverage** — clears the largest cluster of blocked
+   functions.
+2. **String-family operations** — `split`, `strip`, `in` (substring), `lower`,
+   regex. Blocks the text/semantic-scoring family (`frequency_scoring`,
+   `concept_auto_tagger`, keyword extraction). A self-contained string-native
+   arc, parallel to the numeric one already walked.
+3. **Exact-decimal arithmetic** — a `Decimal`-faithful path distinct from f64
+   (the `round_ndigits` lesson generalized: f64 scaling diverges from exact
+   decimal). Blocks settlement/value-distribution routes that use `Decimal`.
+   Smallest family; lowest priority unless settlement routes are prioritized.
+
+Each gate, when built, repeats the proven arc: name it precisely → build the
+native/lowering to the bit → prove three-way + live → the family becomes a batch
+of clean parity-gated transmutations. The wellness probe and attribution view
+widen as DATA with each route, so the surface stays sensed throughout.
+
 ### Honest coverage today — and the gap to full coverage
 
 What is **real and complete** for the kernel-served routes today:
