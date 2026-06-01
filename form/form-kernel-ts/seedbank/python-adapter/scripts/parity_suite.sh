@@ -11,25 +11,23 @@
 #
 # === The third-runtime selector ===
 #
-# The bootstrap exists to prove the Form-native pipeline matches CPython
-# before we can rely on it. Three-way parity (CPython + TS bootstrap +
-# Rust kernel) is the current gate. PARITY_THIRD_RUNTIME chooses which
+# The bootstrap existed to prove the Form-native pipeline matches CPython
+# before we could rely on it. That proof is in: all 20 PARITY_FILES pass
+# three-way under the Form-native walker. PARITY_THIRD_RUNTIME chooses which
 # third runtime fills the seam:
 #
-#   PARITY_THIRD_RUNTIME=ts-eval     (default)
-#     Today's TS bootstrap: parse via lang-python.ts, walk via evalPython.
-#     The path that is named for compost in
-#     kernels/BOOTSTRAP_COMPOST_MANIFEST.md — Phase A.
-#
-#   PARITY_THIRD_RUNTIME=kernel-bmf  (the destination)
+#   PARITY_THIRD_RUNTIME=kernel-bmf  (default — the flip is taken, 2026-06-01)
 #     Form-native: source bytes → BMF source objects → rules in
 #     form-stdlib/grammars/python-bmf.fk → Form recipe → native walker.
-#     Invokes `kernel-bmf-run <file.py>`. As of 2026-06-01, all 20
-#     PARITY_FILES pass three-way under isolated tempdirs (verified from
-#     freshly rebuilt kernels — see kernels/BOOTSTRAP_COMPOST_MANIFEST.md).
-#     The kernel-bmf pipeline now matches CPython on every demo; flipping
-#     the default to kernel-bmf (and composting the Phase-A ts-eval tissue)
-#     is the next directional breath.
+#     Invokes `kernel-bmf-run <file.py>`. All 20 PARITY_FILES pass three-way
+#     under isolated tempdirs (verified from freshly rebuilt Go + Rust
+#     kernels — see kernels/BOOTSTRAP_COMPOST_MANIFEST.md). This is now the
+#     canonical Python runtime; the Phase-A ts-eval tissue is compost-eligible.
+#
+#   PARITY_THIRD_RUNTIME=ts-eval     (legacy bootstrap, still available)
+#     The TS bootstrap: parse via lang-python.ts, walk via evalPython. The
+#     path named for compost in kernels/BOOTSTRAP_COMPOST_MANIFEST.md —
+#     Phase A. Selectable explicitly for as long as that tissue lives.
 #
 # Add new files to PARITY_FILES below as they're ripened.
 # Run from form/form-kernel-ts/.
@@ -37,10 +35,11 @@
 set -euo pipefail
 
 # Third-runtime selector — see header for the migration story.
-# All 20 PARITY_FILES now pass kernel-bmf three-way under isolated tempdirs
-# (2026-06-01). The default stays ts-eval until the flip is taken as its own
-# directional breath; kernel-bmf is ready underneath whenever it is.
-PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-ts-eval}"
+# The flip is taken (2026-06-01): all 20 PARITY_FILES pass kernel-bmf
+# three-way, so the Form-native walker IS the default third runtime. The
+# legacy TS bootstrap (ts-eval) remains available via an explicit
+# PARITY_THIRD_RUNTIME=ts-eval for as long as the Phase-A tissue lives.
+PARITY_THIRD_RUNTIME="${PARITY_THIRD_RUNTIME:-kernel-bmf}"
 
 PARITY_FILES=(
     # First row that passes under PARITY_THIRD_RUNTIME=kernel-bmf — covers
@@ -95,16 +94,16 @@ PATH="$SCRIPT_DIR:$PATH"
 # Resolve the third-runtime invoker. The interface is:
 #   third_runtime_run <file.py>  →  prints the final expression's value to stdout
 #
-# ts-eval: walks the parsed Python tree through the TS evaluator directly.
-#          A distinct path from python-run (which shells to the Rust binary)
-#          — this is what makes parity genuinely three-way today.
+# kernel-bmf (default): invokes the Form-native binary `kernel-bmf-run`
+#             that reads .py via form-stdlib/grammars/python-bmf.fk and
+#             executes via the native walker. This is the canonical Python
+#             runtime as of the 2026-06-01 flip — all 20 PARITY_FILES pass
+#             three-way under it (see kernels/BOOTSTRAP_COMPOST_MANIFEST.md).
 #
-# kernel-bmf: invokes a Form-native binary `kernel-bmf-run` that reads
-#             .py via form-stdlib/grammars/python-bmf.fk and executes via
-#             the native walker. Sibling agents on `template-machinery`
-#             + `python-bmf-driven-parse` are bringing this up. When the
-#             binary lands on $PATH, this selector becomes the default
-#             per kernels/BOOTSTRAP_COMPOST_MANIFEST.md.
+# ts-eval: walks the parsed Python tree through the TS evaluator directly.
+#          A distinct path from python-run (which shells to the Rust binary).
+#          The legacy bootstrap, still selectable explicitly for as long as
+#          the Phase-A tissue lives.
 case "$PARITY_THIRD_RUNTIME" in
     ts-eval)
         third_runtime_run() {
@@ -118,9 +117,10 @@ case "$PARITY_THIRD_RUNTIME" in
             echo "The Form-native path interface:" >&2
             echo "  kernel-bmf-run <source.py>  →  prints the final expression's value" >&2
             echo "" >&2
-            echo "Sibling agents on \`template-machinery\` + \`python-bmf-driven-parse\` are" >&2
-            echo "bringing this binary up. See kernels/BOOTSTRAP_COMPOST_MANIFEST.md for the" >&2
-            echo "migration shape. Until then, run with PARITY_THIRD_RUNTIME=ts-eval (default)." >&2
+            echo "kernel-bmf-run ships next to this script (scripts/kernel-bmf-run); this" >&2
+            echo "script already puts that dir on PATH. If it is still not found, the build" >&2
+            echo "is incomplete — see kernels/BOOTSTRAP_COMPOST_MANIFEST.md for the migration" >&2
+            echo "shape. The legacy bootstrap is available via PARITY_THIRD_RUNTIME=ts-eval." >&2
             exit 2
         fi
         third_runtime_run() {
@@ -171,11 +171,11 @@ else:
     npx tsx src/main.ts python-compile "$f" "$fk_path" >/dev/null 2>&1
     rust_result=$("$RUST_BIN" "$fk_path" 2>&1 | tail -1)
 
-    # Third runtime — selected by PARITY_THIRD_RUNTIME. Today's default
-    # (ts-eval) walks the parsed Python tree through the TS evaluator;
-    # the destination (kernel-bmf) invokes the Form-native walker via
-    # kernel-bmf-run. Either way, this is the third path that makes
-    # parity genuinely three-way.
+    # Third runtime — selected by PARITY_THIRD_RUNTIME. The default
+    # (kernel-bmf) invokes the Form-native walker via kernel-bmf-run; the
+    # legacy ts-eval walks the parsed Python tree through the TS evaluator.
+    # Either way, this is the third path that makes parity genuinely
+    # three-way.
     third_result=$(third_runtime_run "$f")
 
     if [[ "$py_result" == "$rust_result" && "$py_result" == "$third_result" ]]; then
