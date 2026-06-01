@@ -130,6 +130,568 @@
     (defn comp-bml-fields (component)
         (nth component 2))
 
+    (defn bml-component-kind? (component kind)
+        (str_eq (comp-bml-kind component) kind))
+
+    (defn bml-model (classes interfaces)
+        (list "bml-model" classes interfaces))
+
+    (defn bml-model-classes (model) (nth model 1))
+    (defn bml-model-interfaces (model) (nth model 2))
+
+    (defn bml-interface-ref-component (name)
+        (comp-bml-component "InterfaceRef" (list name)))
+
+    (defn bml-class-name (class-component)
+        (nth (comp-bml-fields class-component) 0))
+
+    (defn bml-class-properties (class-component)
+        (nth (comp-bml-fields class-component) 1))
+
+    (defn bml-class-supers (class-component)
+        (nth (comp-bml-fields class-component) 2))
+
+    (defn bml-class-body (class-component)
+        (nth (comp-bml-fields class-component) 3))
+
+    (defn bml-class-structural-base-name (class-component)
+        (if (nil? (bml-class-supers class-component)) ""
+            (head (bml-class-supers class-component))))
+
+    (defn bml-class-delegation-base-names (class-component)
+        (if (nil? (bml-class-supers class-component)) (empty)
+            (tail (bml-class-supers class-component))))
+
+    (defn bml-interface-name (interface-component)
+        (nth (comp-bml-fields interface-component) 0))
+
+    (defn bml-interface-properties (interface-component)
+        (nth (comp-bml-fields interface-component) 1))
+
+    (defn bml-interface-parent-name (interface-component)
+        (nth (comp-bml-fields interface-component) 2))
+
+    (defn bml-interface-body (interface-component)
+        (nth (comp-bml-fields interface-component) 3))
+
+    (defn bml-section-body (section-component)
+        (nth (comp-bml-fields section-component) 2))
+
+    (defn bml-field-type (field-component)
+        (nth (comp-bml-fields field-component) 0))
+
+    (defn bml-field-name (field-component)
+        (nth (comp-bml-fields field-component) 1))
+
+    (defn bml-method-return (method-component)
+        (nth (comp-bml-fields method-component) 0))
+
+    (defn bml-method-name (method-component)
+        (nth (comp-bml-fields method-component) 1))
+
+    (defn bml-method-body (method-component)
+        (nth (comp-bml-fields method-component) 3))
+
+    (defn bml-interface-ref-name (interface-ref)
+        (head (comp-bml-fields interface-ref)))
+
+    (defn bml-property-component (name value)
+        (comp-bml-component "Property" (list name value)))
+
+    (defn bml-property-name (property)
+        (nth (comp-bml-fields property) 0))
+
+    (defn bml-property-value (property)
+        (nth (comp-bml-fields property) 1))
+
+    (defn bml-properties-find (properties name)
+        (if (nil? properties) (empty)
+            (if (str_eq (bml-property-name (head properties)) name)
+                (head properties)
+                (bml-properties-find (tail properties) name))))
+
+    (defn bml-properties-has? (properties name)
+        (if (nil? (bml-properties-find properties name)) false true))
+
+    (defn bml-properties-value (properties name default-value)
+        (do
+            (let property (bml-properties-find properties name))
+            (if (nil? property) default-value
+                (bml-property-value property))))
+
+    (defn bml-access-level (properties)
+        (if (bml-properties-has? properties "private") "private"
+            (if (bml-properties-has? properties "protected") "protected"
+                (if (bml-properties-has? properties "public") "public"
+                    (bml-properties-value properties "access" "public")))))
+
+    (defn bml-section-name (section-component)
+        (nth (comp-bml-fields section-component) 0))
+
+    (defn bml-section-properties (section-component)
+        (nth (comp-bml-fields section-component) 1))
+
+    (defn bml-field-properties (field-component)
+        (nth (comp-bml-fields field-component) 2))
+
+    (defn bml-const-type (const-component)
+        (nth (comp-bml-fields const-component) 0))
+
+    (defn bml-const-name (const-component)
+        (nth (comp-bml-fields const-component) 1))
+
+    (defn bml-const-properties (const-component)
+        (nth (comp-bml-fields const-component) 2))
+
+    (defn bml-const-value (const-component)
+        (nth (comp-bml-fields const-component) 3))
+
+    (defn bml-method-properties (method-component)
+        (nth (comp-bml-fields method-component) 2))
+
+    (defn bml-template-parameters (template-component)
+        (nth (comp-bml-fields template-component) 0))
+
+    (defn bml-template-kind (template-component)
+        (nth (comp-bml-fields template-component) 1))
+
+    (defn bml-template-body (template-component)
+        (nth (comp-bml-fields template-component) 2))
+
+    (defn bml-template-valid-kind? (template-component)
+        (if (str_eq (bml-template-kind template-component) "class") true
+            (str_eq (bml-template-kind template-component) "interface")))
+
+    (defn bml-class-abstract? (class-component)
+        (bml-properties-has? (bml-class-properties class-component) "abstract"))
+
+    (defn bml-class-final? (class-component)
+        (bml-properties-has? (bml-class-properties class-component) "final"))
+
+    (defn bml-method-abstract? (method-component)
+        (bml-properties-has? (bml-method-properties method-component) "abstract"))
+
+    (defn bml-method-final? (method-component)
+        (bml-properties-has? (bml-method-properties method-component) "final"))
+
+    (defn bml-method-default? (method-component)
+        (bml-properties-has? (bml-method-properties method-component) "default"))
+
+    (defn bml-method-deferred? (method-component)
+        (bml-properties-has? (bml-method-properties method-component) "deferred"))
+
+    (defn bml-method-class? (method-component)
+        (bml-properties-has? (bml-method-properties method-component) "class"))
+
+    (defn bml-field-delegate? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "delegate"))
+
+    (defn bml-field-class? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "class"))
+
+    (defn bml-field-shared? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "shared"))
+
+    (defn bml-field-get? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "get"))
+
+    (defn bml-field-put? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "put"))
+
+    (defn bml-field-strict? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "strict"))
+
+    (defn bml-field-relaxed? (field-component)
+        (bml-properties-has? (bml-field-properties field-component) "relaxed"))
+
+    (defn bml-const-class? (const-component)
+        (bml-properties-has? (bml-const-properties const-component) "class"))
+
+    (defn bml-member-name (component)
+        (if (bml-component-kind? component "Field")
+            (bml-field-name component)
+            (if (bml-component-kind? component "Method")
+                (bml-method-name component)
+                (if (bml-component-kind? component "Const")
+                    (bml-const-name component)
+                    (if (bml-component-kind? component "Class")
+                        (bml-class-name component)
+                        "")))))
+
+    (defn bml-member-properties (component)
+        (if (bml-component-kind? component "Field")
+            (bml-field-properties component)
+            (if (bml-component-kind? component "Method")
+                (bml-method-properties component)
+                (if (bml-component-kind? component "Const")
+                    (bml-const-properties component)
+                    (if (bml-component-kind? component "Class")
+                        (bml-class-properties component)
+                        (empty))))))
+
+    (defn bml-model-find-class-loop (classes name)
+        (if (nil? classes) (empty)
+            (if (str_eq (bml-class-name (head classes)) name)
+                (head classes)
+                (bml-model-find-class-loop (tail classes) name))))
+
+    (defn bml-model-find-class (model name)
+        (bml-model-find-class-loop (bml-model-classes model) name))
+
+    (defn bml-model-find-interface-loop (interfaces name)
+        (if (nil? interfaces) (empty)
+            (if (str_eq (bml-interface-name (head interfaces)) name)
+                (head interfaces)
+                (bml-model-find-interface-loop (tail interfaces) name))))
+
+    (defn bml-model-find-interface (model name)
+        (bml-model-find-interface-loop (bml-model-interfaces model) name))
+
+    (defn bml-body-members-of-kind (items kind)
+        (if (nil? items) (empty)
+            (do
+                (let item (head items))
+                (let rest (bml-body-members-of-kind (tail items) kind))
+                (if (bml-component-kind? item kind)
+                    (cons item rest)
+                    (if (bml-component-kind? item "Section")
+                        (append (bml-body-members-of-kind (bml-section-body item) kind) rest)
+                        rest)))))
+
+    (defn bml-body-member-effective-properties (items kind name inherited-properties)
+        (if (nil? items) (empty)
+            (do
+                (let item (head items))
+                (if (bml-component-kind? item kind)
+                    (if (str_eq (bml-member-name item) name)
+                        (append inherited-properties (bml-member-properties item))
+                        (bml-body-member-effective-properties (tail items) kind name inherited-properties))
+                    (if (bml-component-kind? item "Section")
+                        (do
+                            (let section-found
+                                (bml-body-member-effective-properties
+                                    (bml-section-body item)
+                                    kind
+                                    name
+                                    (append inherited-properties (bml-section-properties item))))
+                            (if (nil? section-found)
+                                (bml-body-member-effective-properties (tail items) kind name inherited-properties)
+                                section-found))
+                        (bml-body-member-effective-properties (tail items) kind name inherited-properties))))))
+
+    (defn bml-class-member-effective-properties (class-component kind name)
+        (bml-body-member-effective-properties (bml-class-body class-component) kind name (empty)))
+
+    (defn bml-class-own-fields (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "Field"))
+
+    (defn bml-class-own-methods (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "Method"))
+
+    (defn bml-class-interface-refs (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "InterfaceRef"))
+
+    (defn bml-interface-own-methods (interface-component)
+        (bml-body-members-of-kind (bml-interface-body interface-component) "Method"))
+
+    (defn bml-class-own-constants (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "Const"))
+
+    (defn bml-class-own-inner-classes (class-component)
+        (bml-body-members-of-kind (bml-class-body class-component) "Class"))
+
+    (defn bml-find-field (fields name)
+        (if (nil? fields) (empty)
+            (if (str_eq (bml-field-name (head fields)) name)
+                (head fields)
+                (bml-find-field (tail fields) name))))
+
+    (defn bml-find-method (methods name)
+        (if (nil? methods) (empty)
+            (if (str_eq (bml-method-name (head methods)) name)
+                (head methods)
+                (bml-find-method (tail methods) name))))
+
+    (defn bml-find-const (constants name)
+        (if (nil? constants) (empty)
+            (if (str_eq (bml-const-name (head constants)) name)
+                (head constants)
+                (bml-find-const (tail constants) name))))
+
+    (defn bml-find-inner-class (classes name)
+        (if (nil? classes) (empty)
+            (if (str_eq (bml-class-name (head classes)) name)
+                (head classes)
+                (bml-find-inner-class (tail classes) name))))
+
+    (defn bml-class-structural-fields (model class-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let base (bml-class-structural-base-name class-component))
+                    (append
+                        (if (str_eq base "") (empty)
+                            (bml-class-structural-fields model base))
+                        (bml-class-own-fields class-component))))))
+
+    (defn bml-class-field-lookup-structural (model class-name field-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let own (bml-find-field (bml-class-own-fields class-component) field-name))
+                    (if (nil? own)
+                        (do
+                            (let base (bml-class-structural-base-name class-component))
+                            (if (str_eq base "") (empty)
+                                (bml-class-field-lookup-structural model base field-name)))
+                        own)))))
+
+    (defn bml-class-const-lookup-structural (model class-name const-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let own (bml-find-const (bml-class-own-constants class-component) const-name))
+                    (if (nil? own)
+                        (do
+                            (let base (bml-class-structural-base-name class-component))
+                            (if (str_eq base "") (empty)
+                                (bml-class-const-lookup-structural model base const-name)))
+                        own)))))
+
+    (defn bml-class-inner-class-lookup-structural (model class-name inner-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let own (bml-find-inner-class (bml-class-own-inner-classes class-component) inner-name))
+                    (if (nil? own)
+                        (do
+                            (let base (bml-class-structural-base-name class-component))
+                            (if (str_eq base "") (empty)
+                                (bml-class-inner-class-lookup-structural model base inner-name)))
+                        own)))))
+
+    (defn bml-class-extends-structural? (model actual-name expected-name)
+        (if (str_eq actual-name expected-name) true
+            (do
+                (let class-component (bml-model-find-class model actual-name))
+                (if (nil? class-component) false
+                    (do
+                        (let base (bml-class-structural-base-name class-component))
+                        (if (str_eq base "") false
+                            (bml-class-extends-structural? model base expected-name)))))))
+
+    (defn bml-class-can-extend? (model base-name)
+        (do
+            (let base-component (bml-model-find-class model base-name))
+            (if (nil? base-component) false
+                (if (bml-class-final? base-component) false true))))
+
+    (defn bml-member-accessible? (model owner-class from-class properties)
+        (do
+            (let access (bml-access-level properties))
+            (if (str_eq access "private")
+                (str_eq owner-class from-class)
+                (if (str_eq access "protected")
+                    (bml-class-extends-structural? model from-class owner-class)
+                    true))))
+
+    (defn bml-class-all-delegation-bases (model class-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let base (bml-class-structural-base-name class-component))
+                    (append
+                        (bml-class-delegation-base-names class-component)
+                        (if (str_eq base "") (empty)
+                            (bml-class-all-delegation-bases model base)))))))
+
+    (defn bml-method-binding (self-class this-class method-component)
+        (list "bml-method-binding" self-class this-class method-component))
+
+    (defn bml-method-binding-self (binding) (nth binding 1))
+    (defn bml-method-binding-this (binding) (nth binding 2))
+    (defn bml-method-binding-method (binding) (nth binding 3))
+
+    (defn bml-class-method-lookup-bases (model bases self-class method-name)
+        (if (nil? bases) (empty)
+            (do
+                (let found (bml-class-method-lookup-in-class model (head bases) self-class method-name))
+                (if (nil? found)
+                    (bml-class-method-lookup-bases model (tail bases) self-class method-name)
+                    found))))
+
+    (defn bml-class-method-lookup-in-class (model class-name self-class method-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let own (bml-find-method (bml-class-own-methods class-component) method-name))
+                    (if (nil? own)
+                        (bml-class-method-lookup-bases
+                            model
+                            (bml-class-supers class-component)
+                            self-class
+                            method-name)
+                        (bml-method-binding self-class class-name own))))))
+
+    (defn bml-class-method-lookup (model class-name method-name)
+        (bml-class-method-lookup-in-class model class-name class-name method-name))
+
+    (defn bml-invoke-from-context (model self-class _this-class method-name)
+        (bml-class-method-lookup-in-class model self-class self-class method-name))
+
+    (defn bml-super-invoke (model self-class this-class method-name)
+        (do
+            (let class-component (bml-model-find-class model this-class))
+            (if (nil? class-component) (empty)
+                (bml-class-method-lookup-bases
+                    model
+                    (bml-class-supers class-component)
+                    self-class
+                    method-name))))
+
+    (defn bml-class-method-override-allowed? (model class-name method-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) false
+                (do
+                    (let own (bml-find-method (bml-class-own-methods class-component) method-name))
+                    (if (nil? own) true
+                        (do
+                            (let inherited
+                                (bml-class-method-lookup-bases
+                                    model
+                                    (bml-class-supers class-component)
+                                    class-name
+                                    method-name))
+                            (if (nil? inherited) true
+                                (if (bml-method-final? (bml-method-binding-method inherited))
+                                    false
+                                    true))))))))
+
+    (defn bml-interface-method-lookup (model interface-name method-name)
+        (do
+            (let interface-component (bml-model-find-interface model interface-name))
+            (if (nil? interface-component) (empty)
+                (do
+                    (let own (bml-find-method (bml-interface-own-methods interface-component) method-name))
+                    (if (nil? own)
+                        (do
+                            (let parent (bml-interface-parent-name interface-component))
+                            (if (str_eq parent "") (empty)
+                                (bml-interface-method-lookup model parent method-name)))
+                        own)))))
+
+    (defn bml-interface-default-method-lookup (model interface-name method-name)
+        (do
+            (let method (bml-interface-method-lookup model interface-name method-name))
+            (if (nil? method) (empty)
+                (if (bml-method-default? method) method
+                    (empty)))))
+
+    (defn bml-interface-refs-default-method-lookup (model refs method-name)
+        (if (nil? refs) (empty)
+            (do
+                (let found
+                    (bml-interface-default-method-lookup
+                        model
+                        (bml-interface-ref-name (head refs))
+                        method-name))
+                (if (nil? found)
+                    (bml-interface-refs-default-method-lookup model (tail refs) method-name)
+                    found))))
+
+    (defn bml-class-bases-interface-default-method-lookup (model bases method-name)
+        (if (nil? bases) (empty)
+            (do
+                (let found
+                    (bml-class-interface-default-method-lookup model (head bases) method-name))
+                (if (nil? found)
+                    (bml-class-bases-interface-default-method-lookup model (tail bases) method-name)
+                    found))))
+
+    (defn bml-class-interface-default-method-lookup (model class-name method-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) (empty)
+                (do
+                    (let own (bml-find-method (bml-class-own-methods class-component) method-name))
+                    (if (nil? own)
+                        (do
+                            (let own-interface
+                                (bml-interface-refs-default-method-lookup
+                                    model
+                                    (bml-class-interface-refs class-component)
+                                    method-name))
+                            (if (nil? own-interface)
+                                (bml-class-bases-interface-default-method-lookup
+                                    model
+                                    (bml-class-supers class-component)
+                                    method-name)
+                                own-interface))
+                        (empty))))))
+
+    (defn bml-interface-extends? (model actual-name expected-name)
+        (if (str_eq actual-name expected-name) true
+            (do
+                (let interface-component (bml-model-find-interface model actual-name))
+                (if (nil? interface-component) false
+                    (do
+                        (let parent (bml-interface-parent-name interface-component))
+                        (if (str_eq parent "") false
+                            (bml-interface-extends? model parent expected-name)))))))
+
+    (defn bml-interface-refs-support? (model refs interface-name)
+        (if (nil? refs) false
+            (if (bml-interface-extends? model (bml-interface-ref-name (head refs)) interface-name)
+                true
+                (bml-interface-refs-support? model (tail refs) interface-name))))
+
+    (defn bml-class-bases-support-interface? (model bases interface-name)
+        (if (nil? bases) false
+            (if (bml-class-supports-interface? model (head bases) interface-name)
+                true
+                (bml-class-bases-support-interface? model (tail bases) interface-name))))
+
+    (defn bml-class-supports-interface? (model class-name interface-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) false
+                (if (bml-interface-refs-support?
+                        model
+                        (bml-class-interface-refs class-component)
+                        interface-name)
+                    true
+                    (bml-class-bases-support-interface?
+                        model
+                        (bml-class-supers class-component)
+                        interface-name)))))
+
+    (defn bml-class-own-concrete-method? (class-component method-name)
+        (do
+            (let method (bml-find-method (bml-class-own-methods class-component) method-name))
+            (if (nil? method) false
+                (if (bml-method-abstract? method) false
+                    (if (bml-method-deferred? method) false true)))))
+
+    (defn bml-class-concrete? (class-component)
+        (if (bml-class-abstract? class-component) false true))
+
+    (defn bml-application-main-entry? (model class-name)
+        (do
+            (let class-component (bml-model-find-class model class-name))
+            (if (nil? class-component) false
+                (if (if (bml-class-extends-structural? model class-name "BML.lang.Application")
+                        true
+                        (bml-class-extends-structural? model class-name "Application"))
+                    (bml-class-own-concrete-method? class-component "Main")
+                    false))))
+
     (defn bml-comp-one (kind objects field)
         (comp-bml-component kind (list (bmf-collection-value objects field))))
 
@@ -251,6 +813,13 @@
             "BMFInline" "BMFTag" "BMFExpr" "BMFTerm" "BMFFactor" "BMFItemMethod"
             "BMFItem" "BMFOpt" "BMFMust" "BMFAttribute"))
 
+    (let bml-thesis-bmf-primitives
+        (list "Nil" "Fail" "EndOfFile" "EndOfLine" "Cut" "MultiMatch" "Primitive"))
+
+    (let bml-thesis-bmf-primitive-rule-names
+        (list "bmf-nil" "bmf-fail" "bmf-end-of-file" "bmf-end-of-line"
+              "bmf-cut-primitive" "bmf-multi-match" "bmf-primitive-base"))
+
     (let bml-compiler-rules
         (list
             (list "bml-package"
@@ -351,6 +920,9 @@
     (defn bml-reference-rule-count (_x)
         (len bml-reference-rule-names))
 
+    (defn bml-thesis-bmf-primitive-count (_x)
+        (len bml-thesis-bmf-primitives))
+
     (defn apply-bml-compiler-rule (rule-name objects)
         (apply-object-rule (bml-compiler-find-rule rule-name bml-compiler-rules) objects))
 
@@ -361,6 +933,16 @@
             (bmf-collection-value objects "name")
             (bmf-collection-value objects "base")
             (intern_node BML-AST-BLOCK (empty))))
+
+    (defn bml-emit-class-two-base-header (objects)
+        (comp-bml-component
+            "Class"
+            (list
+                (bmf-collection-value objects "name")
+                (empty)
+                (list (bmf-collection-value objects "first")
+                      (bmf-collection-value objects "second"))
+                (empty))))
 
     (defn bml-source-class-header (object)
         (do
@@ -562,6 +1144,24 @@
                             (intern_node BML-AST-INT
                                          (list (bml-cap-int objects "value")))))))))
 
+    (defn bml-emit-fail-simple (_objects)
+        (bml-ast-fail 0))
+
+    (defn bml-source-fail-simple (_object)
+        (list (bml-src-keyword "fail") (bml-src-op ";")))
+
+    (defn bml-emit-cut-simple (_objects)
+        (bml-ast-cut 0))
+
+    (defn bml-source-cut-simple (_object)
+        (list (bml-src-keyword "cut") (bml-src-op ";")))
+
+    (defn bml-emit-mark-simple (_objects)
+        (bml-ast-save 0))
+
+    (defn bml-source-mark-simple (_object)
+        (list (bml-src-keyword "mark") (bml-src-op ";")))
+
     (defn bml-emit-state-int (objects)
         (bml-ast-block
             (list (bml-ast-save 0)
@@ -608,11 +1208,16 @@
       import-simple ::= "import" $name:name ";" => bml-emit-import-simple <= bml-source-import-simple;
       import-star-simple ::= "import" $name:name ".*" ";" => bml-emit-import-star-simple <= bml-source-import-star-simple;
       class-header ::= "class" $name:name ":" $base:name => bml-emit-class-header <= bml-source-class-header;
+      class-two-base-header ::= "class" $name:name ":" $first:name "," $second:name => bml-emit-class-two-base-header;
       class ::= "class" spc cut class-name properties super-class-list class-block => bml-emit-node-source;
       interface-header ::= "interface" $name:name ":" $parent:name => bml-emit-interface-header <= bml-source-interface-header;
       interface ::= "interface" cut class-name properties parent-interface interface-block => bml-emit-node-source;
       template ::= "template" "<" cut template-parameter-list ">" class-or-interface => bml-emit-node-source;
       section-header ::= "section" "[" $property:property "]" => bml-emit-section-header;
+      section-comma-header ::= "section" "[" $first:property "," $second:property "]" => bml-emit-node-source;
+      section-named-header ::= "section" $name:name "[" $property:property "]" => bml-emit-node-source;
+      section-named-comma-header ::= "section" $name:name "[" $first:property "," $second:property "]" => bml-emit-node-source;
+      section-library-header ::= "section" "[" "library" "=" $value:string "]" => bml-emit-node-source;
       class-section ::= "section" spc cut properties class-block => bml-emit-node-source;
       syntax-section ::= "syntax" spc cut "[" $name:name "]" "{" bmf-rule-list bmf-attribute-list "}" => bml-emit-node-source;
       class-block ::= "{" template class-section syntax-section class-interface code-block class const method field "}" => bml-emit-node-source;
@@ -631,11 +1236,13 @@
       method ::= method-head properties code-block => bml-emit-node-source;
       method-head ::= "operator" spc cut full-class-name "|" interface-ref method-name => bml-emit-node-source;
       parameter ::= field-definition => bml-emit-node-source;
-      statement ::= for while loop switch select if return break continue try throw fail with choose asm expression-statement code-block => bml-emit-node-source;
+      statement ::= for while loop switch select if if-fail while-success return break continue try throw fail mark-simple cut-simple with choice choose asm expression-statement code-block => bml-emit-node-source;
       code-block ::= "{" cut statement-list "}" => bml-emit-node-source;
       expression-statement ::= expression ";" => bml-emit-node-source;
       for ::= label "for" "(" cut for-init expression ";" expression ")" statement => bml-emit-node-source;
       while ::= label "while" "(" cut expression ")" statement => bml-emit-node-source;
+      if-fail ::= "if_fail" code-block => bml-emit-node-source;
+      while-success ::= "while_success" code-block => bml-emit-node-source;
       loop ::= label "loop" spc cut statement => bml-emit-node-source;
       switch ::= "switch" "(" cut expression ")" switch-block => bml-emit-node-source;
       select ::= "select" "(" cut expression ")" switch-block => bml-emit-node-source;
@@ -652,6 +1259,13 @@
       try ::= "try" spc cut statement "catch" "(" interface-ref field-name properties ")" statement => bml-emit-node-source;
       throw-int ::= "throw" $value:int ";" => bml-emit-throw-int <= bml-source-throw-int;
       throw ::= "throw" spc cut expression ";" cut => bml-emit-node-source;
+      fail-simple ::= "fail" ";" => bml-emit-fail-simple <= bml-source-fail-simple;
+      fail ::= fail-simple => bml-emit-node-source;
+      cut-simple ::= "cut" ";" => bml-emit-cut-simple <= bml-source-cut-simple;
+      mark-simple ::= "mark" ";" => bml-emit-mark-simple <= bml-source-mark-simple;
+      nostate-property ::= "nostate" => bml-emit-node-source;
+      choice-fail-int ::= "choice" "{" "fail" ";" "}" "," "{" "return" $value:int ";" "}" => bml-emit-choose-fail-int;
+      choice ::= "choice" code-block choose-tail => bml-emit-node-source;
       choose-fail-int ::= "choose" "{" "fail" ";" "}" "," "{" "return" $value:int ";" "}" => bml-emit-choose-fail-int;
       choose ::= "choose" code-block choose-tail => bml-emit-node-source;
       asm ::= "asm" cut "{" asm-local-decl-list asm-statement-list "}" => bml-emit-node-source;
@@ -717,10 +1331,19 @@
       bmf-lit ::= bmf-bang-prefix string bmf-bang-suffix => bml-emit-node-source;
       bmf-range ::= bmf-char ".." bmf-char => bml-emit-node-source;
       bmf-char ::= "\\" cut int "|" "'" cut bmf-char-body "'" => bml-emit-node-source;
-      bmf-basis ::= bmf-range "|" bmf-lit "|" bmf-call-base => bml-emit-node-source;
+      bmf-basis ::= bmf-range "|" bmf-lit "|" bmf-call-base "|" bmf-primitive => bml-emit-node-source;
       bmf-literal ::= float "|" int "|" string "|" "#" cut field-name => bml-emit-node-source;
       bmf-call ::= $base:name bmf-call-args => bml-emit-node-source;
       bmf-call-base ::= bmf-call => bml-emit-node-source;
+      bmf-primitive ::= bmf-nil "|" bmf-fail "|" bmf-end-of-file "|" bmf-end-of-line "|" bmf-cut-primitive "|" bmf-multi-match "|" bmf-primitive-base => bml-emit-node-source;
+      bmf-nil ::= "Nil" => bml-emit-node-source;
+      bmf-fail ::= "Fail" => bml-emit-node-source;
+      bmf-end-of-file ::= "EndOfFile" => bml-emit-node-source;
+      bmf-end-of-line ::= "EndOfLine" => bml-emit-node-source;
+      bmf-cut-primitive ::= "Cut" => bml-emit-node-source;
+      bmf-multi-match ::= "MultiMatch" => bml-emit-node-source;
+      bmf-multi-match-count ::= "MultiMatch" "(" bmf-expr "," int ")" => bml-emit-node-source;
+      bmf-primitive-base ::= "Primitive" => bml-emit-node-source;
       bmf-prim ::= "<<prim" spc id ">>" => bml-emit-node-source;
       bmf-inline ::= "<<" bmf-expr ">>" => bml-emit-node-source;
       bmf-tag ::= "$" $tag:name cut ":" => bml-emit-node-source;
@@ -746,6 +1369,15 @@
     (defn apply-bml-bmf-rule (rule-name objects)
         (apply-object-rule (bml-bmf-find-rule rule-name bml-bmf-rules) objects))
 
+    (defn bml-thesis-bmf-primitive-rule-count-loop (rule-names)
+        (if (nil? rule-names) 0
+            (add
+                (if (nil? (bml-bmf-find-rule (head rule-names) bml-bmf-rules)) 0 1)
+                (bml-thesis-bmf-primitive-rule-count-loop (tail rule-names)))))
+
+    (defn bml-thesis-bmf-primitive-rule-count (_x)
+        (bml-thesis-bmf-primitive-rule-count-loop bml-thesis-bmf-primitive-rule-names))
+
     ;; --- native source sections -------------------------------------
 
     (let bml-recipe-section
@@ -761,9 +1393,13 @@
                 (compiler-rule "bml" "continue-simple" "BML continue object to BMA ops" bml-emit-continue-simple)
                 (compiler-rule "bml" "throw-int" "BML throw object to BMA ops" bml-emit-throw-int)
                 (compiler-rule "bml" "try-throw-return" "BML try object to BMA ops" bml-emit-try-throw-return)
+                (compiler-rule "bml" "fail-simple" "BML fail primitive to BMA ops" bml-emit-fail-simple)
+                (compiler-rule "bml" "cut-simple" "BML cut primitive to BMA ops" bml-emit-cut-simple)
+                (compiler-rule "bml" "mark-simple" "BML mark primitive to BMA save ops" bml-emit-mark-simple)
                 (compiler-rule "bml" "char-lit" "BML char literal source objects" bml-emit-char-lit)
                 (compiler-rule "bml" "array-int" "BML array literal source objects" bml-emit-array-int)
                 (compiler-rule "bml" "method-return-add" "BML method object to BMA ops" bml-emit-method-return-add)
+                (compiler-rule "bml" "choice-fail-int" "BML thesis choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "choose-fail-int" "BML choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "state-int" "BML state object to BMA ops" bml-emit-state-int))))
 
@@ -782,9 +1418,13 @@
     (defn bma-break (label) (bma-op "break" label))
     (defn bma-continue (label) (bma-op "continue" label))
     (defn bma-throw (_x) (bma-op "throw" 0))
+    (defn bma-raise (_x) (bma-op "raise" 0))
+    (defn bma-resume (_x) (bma-op "resume" 0))
     (defn bma-save (_x) (bma-op "save" 0))
+    (defn bma-mark (_x) (bma-op "mark" 0))
     (defn bma-restore (_x) (bma-op "restore" 0))
     (defn bma-discard (_x) (bma-op "discard" 0))
+    (defn bma-nostate (_x) (bma-op "nostate" 0))
     (defn bma-fail (_x) (bma-op "fail" 0))
     (defn bma-cut (_x) (bma-op "cut" 0))
     (defn bma-choose (branches) (bma-op "choose" branches))
@@ -884,14 +1524,18 @@
             (if (str_eq name "break") (comp-vm-with-mode state "break")
             (if (str_eq name "continue") (comp-vm-with-mode state "continue")
             (if (str_eq name "throw") (comp-vm-with-mode state "throw")
+            (if (str_eq name "raise") (comp-vm-with-mode state "raise")
+            (if (str_eq name "resume") (comp-vm-with-mode state "run")
             (if (str_eq name "save") (comp-vm-save state)
+            (if (str_eq name "mark") (comp-vm-save state)
             (if (str_eq name "restore") (comp-vm-restore state)
             (if (str_eq name "discard") (comp-vm-discard state)
+            (if (str_eq name "nostate") state
             (if (str_eq name "fail") (comp-vm-with-mode state "fail")
             (if (str_eq name "cut") (comp-vm-with-mode state "cut")
             (if (str_eq name "choose") (bma-exec-choose-branches (comp-op-value op) state)
             (if (str_eq name "try") (bma-exec-try-branches (comp-op-value op) state)
-                state))))))))))))))))
+                state))))))))))))))))))))
 
     (defn bma-exec-ops (ops state)
         (if (nil? ops) state
@@ -904,5 +1548,88 @@
 
     (defn bma-run-value (program)
         (comp-vm-pop-value (bma-run-program program)))
+
+    ;; Thesis exit proof: record the executable BMA stream in forward
+    ;; DO mode, then replay the trace backward in UNDO mode by restoring
+    ;; each op's saved pre-state.
+    (defn bma-trace-entry (mode op before after)
+        (list "bma-trace-entry" mode (comp-op-name op) before after))
+
+    (defn bma-trace-mode (entry) (nth entry 1))
+    (defn bma-trace-op-name (entry) (nth entry 2))
+    (defn bma-trace-before (entry) (nth entry 3))
+    (defn bma-trace-after (entry) (nth entry 4))
+
+    (defn bma-trace-result (state trace)
+        (list "bma-trace-result" state trace))
+
+    (defn bma-trace-result-state (result) (nth result 1))
+    (defn bma-trace-result-trace (result) (nth result 2))
+
+    (defn bma-run-program-forward-trace-loop (ops state trace)
+        (if (nil? ops)
+            (bma-trace-result state (reverse trace))
+            (if (str_eq (comp-vm-mode state) "run")
+                (do
+                    (let op (head ops))
+                    (let after (bma-exec-op op state))
+                    (bma-run-program-forward-trace-loop
+                        (tail ops)
+                        after
+                        (cons (bma-trace-entry "DO" op state after) trace)))
+                (bma-trace-result state (reverse trace)))))
+
+    (defn bma-run-program-forward-trace (program)
+        (bma-run-program-forward-trace-loop
+            (comp-program-ops program)
+            (comp-vm-empty 0)
+            (empty)))
+
+    (defn bma-run-program-backward-trace-loop (entries state trace)
+        (if (nil? entries)
+            (bma-trace-result state (reverse trace))
+            (do
+                (let entry (head entries))
+                (let before (bma-trace-before entry))
+                (let op (bma-op (bma-trace-op-name entry) 0))
+                (bma-run-program-backward-trace-loop
+                    (tail entries)
+                    before
+                    (cons (bma-trace-entry "UNDO" op state before) trace)))))
+
+    (defn bma-run-program-backward-trace (forward-result)
+        (bma-run-program-backward-trace-loop
+            (reverse (bma-trace-result-trace forward-result))
+            (bma-trace-result-state forward-result)
+            (empty)))
+
+    (defn bma-forward-backward-result (forward-state restored-state trace)
+        (list "bma-forward-backward" forward-state restored-state trace))
+
+    (defn bma-forward-backward-forward-state (result) (nth result 1))
+    (defn bma-forward-backward-restored-state (result) (nth result 2))
+    (defn bma-forward-backward-trace (result) (nth result 3))
+
+    (defn bma-run-forward-backward (program)
+        (do
+            (let forward (bma-run-program-forward-trace program))
+            (let backward (bma-run-program-backward-trace forward))
+            (bma-forward-backward-result
+                (bma-trace-result-state forward)
+                (bma-trace-result-state backward)
+                (append (bma-trace-result-trace forward)
+                        (bma-trace-result-trace backward)))))
+
+    (defn bma-trace-count-mode (trace mode)
+        (if (nil? trace) 0
+            (add
+                (if (str_eq (bma-trace-mode (head trace)) mode) 1 0)
+                (bma-trace-count-mode (tail trace) mode))))
+
+    (defn bma-trace-count-op (trace op-name)
+        (if (nil? trace) 0
+            (add
+                (if (str_eq (bma-trace-op-name (head trace)) op-name) 1 0)
+                (bma-trace-count-op (tail trace) op-name))))
 
     0)

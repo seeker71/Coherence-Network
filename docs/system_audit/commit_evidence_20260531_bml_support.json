@@ -1,0 +1,133 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/bml-support-20260531",
+  "commit_scope": "Expand BML thesis-support coverage in the Form BMF grammar, class model, inheritance semantics, primitive manifest, and BMA forward/backward runtime proof layer, with an explicit full-claim coverage audit.",
+  "files_owned": [
+    "form/form-stdlib/grammar-chars.fk",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bmf-thesis-primitives-band.fk",
+    "form/form-stdlib/tests/bml-class-inheritance-proof.fk",
+    "form/form-stdlib/tests/bml-full-class-model-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-exit-proof.fk",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_20260531_bml_support.json",
+    "scripts/validate_commit_evidence.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-20260531 && PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/tests/bmf-thesis-primitives-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-class-inheritance-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-full-class-model-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-exit-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-action-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-reference-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/tests/grammar-chars.fk",
+      "cd api && PYTHONDONTWRITEBYTECODE=1 /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_substrate_form_bml_state.py tests/test_substrate_form_bml_full.py",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "cd form && ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260531_bml_support.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Focused BMF/BML proof bands passed across Go, Rust, and TypeScript kernels after rebasing onto origin/main: BMF primitives=18, BML class inheritance=8388607, BML full class model=1073741823, BML thesis forward/backward=1073741840. Native source-section proofs pass for bml.bmf/form.bml .fkb sidecar execution. Full Form validation passed with 213 ok, 0 divergent. API BML substrate tests passed with 33 passed. Worktree PR guard passed with ready_for_push=true after rebase. The 2026-06-01 thesis audit explicitly records that full .bml source compile-to-native support is not yet proven."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI not run yet; branch is local."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until this branch is pushed, reviewed, merged, and deployed."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "BML compiler/runtime support now recognizes the thesis BMF primitive set, richer BML class/interface/inheritance semantics, and BMA-style forward/backward execution proof bands in the native Form kernel validation suite.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof is complete; CI remains pending until push/PR."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "bml-thesis-reference-support"
+  ],
+  "task_ids": [
+    "bml-support-20260531"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "codex-subagents",
+      "contributor_type": "machine",
+      "roles": [
+        "reference-inventory",
+        "proof-checklist"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "BMF primitive manifest: Nil, Fail, EndOfFile, EndOfLine, Cut, MultiMatch, and Primitive are represented by BML BMF rules and pass form/form-stdlib/tests/bmf-thesis-primitives-band.fk with result 18 across sibling kernels.",
+    "BML class/inheritance proof: form/form-stdlib/tests/bml-class-inheritance-proof.fk passed with result 8388607, proving class headers with structural/delegated bases, section-contained members, structural field lookup, delegated method lookup, self/this/super dispatch, and inherited interfaces.",
+    "BML full class-model proof: form/form-stdlib/tests/bml-full-class-model-proof.fk passed with result 1073741823, proving property helpers, abstract/final/deferred/class/default flags, delegate/shared/get/put/strict/relaxed field attributes, class/static field-method-const predicates, constants, inner classes, access checks, effective section properties on contained members, template class/interface restriction, default interface methods, and BML.lang.Application.Main entry detection with deferred Main rejection.",
+    "BML thesis exit proof: choice/choose aliases, fail/cut/mark statement primitives, section variants, syntax-section presence, BMF reference object model count, branch undo, raise/resume/nostate, and explicit DO/UNDO BMA forward/backward trace pass form/form-stdlib/tests/bml-thesis-exit-proof.fk with result 1073741840.",
+    "BML thesis full-claim audit: docs/system_audit/bml_thesis_feature_audit_20260601.md checks every thesis feature group against current machine proof and records the remaining gap: full companion .bml source files do not yet compile end-to-end into native Form kernel execution.",
+    "Source-section proof: form/form-stdlib/tests/source-compiler-runtime.fk proves section [bml.bmf] compiles to a .bml.bmf.fkb sidecar and executes through walk_recipe_here; source-compiler-multi-dialect-band.fk proves multi-section .fkb sidecar generation including the form.bml maintenance dialect.",
+    "Full Form suite after rebase: cd form && ./validate.sh produced 213 ok, 0 divergent.",
+    "Full Form suite after final rebase: cd form && ./validate.sh produced 215 ok, 0 divergent and regenerated kernel blueprint tables, adding SUPER-BP consistently to Go, Rust, and TypeScript kernels.",
+    "API BML substrate guard: 33 pytest tests passed using the existing primary api venv because this fresh worktree has no api/.venv.",
+    "Local PR guard: scripts/worktree_pr_guard.py --mode local --base-ref origin/main reported ready_for_push=True; check_pr_followthrough reported codex_open_prs=0 and stale_codex_prs=0."
+  ],
+  "change_files": [
+    "form/form-stdlib/grammar-chars.fk",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bmf-thesis-primitives-band.fk",
+    "form/form-stdlib/tests/bml-class-inheritance-proof.fk",
+    "form/form-stdlib/tests/bml-full-class-model-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-exit-proof.fk",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_20260531_bml_support.json",
+    "scripts/validate_commit_evidence.py"
+  ],
+  "change_intent": "runtime_feature"
+}
