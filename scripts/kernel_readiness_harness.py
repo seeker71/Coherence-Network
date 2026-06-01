@@ -360,6 +360,31 @@ def make_kernel_path_a_thunk(case: CaptureCall, fk_source: str, bridge) -> Calla
     return thunk
 
 
+def make_inline_thunk(case: CaptureCall, fk_source: str, bridge) -> Callable[[], Any]:
+    """INLINE per-request thunk: inject bindings + a C call into the warm PyO3
+    kernel — NO process spawn, NO socket loopback.
+
+    This is precisely serve_via_kernel's per-request work on the hot path: the
+    `form_kernel_rust` extension is imported ONCE at module load (a warm Rust
+    runtime living in the Python process); each request injects literals and
+    calls `compile_and_run`, returning an already-typed Python value. The only
+    per-request cost is inject (µs) + parse + recipe execution in-process — the
+    spawn AND the HTTP/1.0 loopback that dominate PATH A and SERVE are both
+    gone. This is the production hot path the readiness evidence named.
+    """
+    def thunk() -> Any:
+        injected = bridge.inject_bindings(fk_source, case.bindings)
+        value = bridge.run_inline(injected)
+        # run_inline returns a native typed value (int/float/list); parse is a
+        # no-op for the int/float cases (int(int)==int, float(float)==float).
+        try:
+            return case.parse(value)
+        except (TypeError, ValueError):
+            return case.parse(str(value))
+
+    return thunk
+
+
 def make_path_b_thunk(demo_py: str) -> Callable[[], Any]:
     """PATH B thunk: the full pyfkb-run.sh --kernel rust pipeline per call.
 
@@ -618,11 +643,18 @@ class ReadinessResult:
     serve_jit_value: Any = None
     serve_verdict: Optional[str] = None
     serve_marshalled: bool = False           # True when a real query string carried inputs
+    # Inline (PyO3) — the warm in-process kernel, no spawn, no loopback. The
+    # production hot path. Populated only when --inline runs.
+    inline: Optional[Profile] = None
+    inline_value: Any = None
+    inline_value_match: Optional[bool] = None
+    ratio_inline_p50: Optional[float] = None  # inline p50 / cpython p50
+    inline_verdict: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
         # drop raw sample arrays from json for size; percentiles are kept
-        for k in ("cpython", "kernel_a", "path_b", "serve", "serve_jit"):
+        for k in ("cpython", "kernel_a", "path_b", "serve", "serve_jit", "inline"):
             if d.get(k) is not None:
                 d[k].pop("samples_ms", None)
         return d
@@ -667,6 +699,72 @@ def _serve_verdict(value_match: bool, ratio: Optional[float], prof: Profile) -> 
                 f"low-single-digit-ms, dominated by HTTP/1.0 loopback, not compute")
     return (f"REVIEW — warm channel p99={prof.p99_ms:.3f}ms exceeds 10ms; "
             f"investigate loopback/marshalling overhead")
+
+
+def _inline_verdict(value_match: bool, ratio: Optional[float], prof: Profile) -> str:
+    """Readiness verdict under the INLINE (PyO3) model — spawn AND loopback gone.
+
+    Inline removes BOTH the per-request process spawn (PATH A) and the HTTP/1.0
+    loopback (SERVE). What remains is inject (µs) + a C call + recipe execution.
+    CPython's pure-compute p50 is sub-microsecond, so even a small constant
+    overhead reads as a large MULTIPLE — judge on the ABSOLUTE p99 against a
+    per-request budget, same posture as the serve verdict but with a tighter
+    envelope (no socket).
+    """
+    if prof.error:
+        return f"NOT-YET — inline path errored: {prof.error}"
+    if not value_match:
+        return "NOT-YET — value parity FAILED on the inline (PyO3) path"
+    if ratio is None:
+        return "UNKNOWN — could not compute inline ratio"
+    if prof.p99_ms <= 0.1:
+        return (f"READY — warm in-process kernel, p50={prof.p50_ms:.4f}ms "
+                f"p99={prof.p99_ms:.4f}ms; sub-100µs, no spawn, no loopback")
+    if prof.p99_ms <= 1.0:
+        return (f"READY (shape) — inline p50={prof.p50_ms:.4f}ms "
+                f"p99={prof.p99_ms:.4f}ms; sub-ms in-process, spawn+loopback removed")
+    if prof.p99_ms <= 5.0:
+        return (f"HEALTHY-ENVELOPE — inline p99={prof.p99_ms:.4f}ms; low-ms, "
+                f"recipe execution + inject, no transport")
+    return (f"REVIEW — inline p99={prof.p99_ms:.4f}ms exceeds 5ms; "
+            f"investigate recipe-walk / inject overhead")
+
+
+def measure_inline(
+    results: List[ReadinessResult],
+    cases: List[CaptureCall],
+    iters: int,
+    bridge,
+) -> None:
+    """Fill inline fields on `results` using the warm PyO3 kernel.
+
+    The `form_kernel_rust` extension is already imported once at bridge module
+    load — that IS the warm kernel. Each case re-uses the same compiled .fk the
+    PATH A measurement built (held in /tmp by run_readiness_case), injects its
+    bindings, and calls run_inline. CPython's baseline is reused from each
+    ReadinessResult so the comparison is against the identical warm-CPython
+    number PATH A and SERVE used.
+    """
+    if not bridge.inline_available():
+        for r in results:
+            r.inline_verdict = "UNAVAILABLE — form_kernel_rust PyO3 extension not importable"
+        return
+    for case in cases:
+        r = next((x for x in results if x.name == case.name), None)
+        if r is None:
+            continue
+        fk_source = (Path("/tmp") / f"kr_{case.name}.fk").read_text(encoding="utf-8")
+        prof, val = profile_runtime(
+            f"{case.name}/inline", make_inline_thunk(case, fk_source, bridge), iters
+        )
+        r.inline = prof
+        r.inline_value = val
+        r.inline_value_match = (not prof.error) and _values_agree(r.cpython_value, val)
+        if r.cpython.p50_ms > 0 and prof.p50_ms > 0 and not prof.error:
+            r.ratio_inline_p50 = prof.p50_ms / r.cpython.p50_ms
+        r.inline_verdict = _inline_verdict(
+            bool(r.inline_value_match), r.ratio_inline_p50, prof
+        )
 
 
 def measure_persistent_serve(
@@ -797,6 +895,7 @@ def render(
     iters: int,
     include_path_b: bool,
     include_serve: bool = False,
+    include_inline: bool = False,
     jit_demo: Optional["JitDemo"] = None,
 ) -> str:
     L: List[str] = []
@@ -808,6 +907,9 @@ def render(
     if include_serve:
         L.append("SERVE  = persistent `form-kernel-rust serve` — routes load ONCE, "
                  "request→response over the warm process (apples-to-apples w/ CPython)")
+    if include_inline:
+        L.append("INLINE = warm PyO3 `form_kernel_rust` in-process — C call into Rust, "
+                 "NO spawn, NO loopback (the production hot path)")
     if include_path_b:
         L.append("PATH B = pyfkb full python-bmf pipeline per call (naive shell-out)")
     L.append("=" * 78)
@@ -845,6 +947,21 @@ def render(
                          f"p99={r.serve_jit.p99_ms:.4f}  (no-op for this recipe — see JIT note)")
             if r.serve_verdict is not None:
                 L.append(f"   SERVE VERD : {r.serve_verdict}")
+        if r.inline is not None or r.inline_verdict is not None:
+            if r.inline is None:
+                L.append(f"   inline     : {r.inline_verdict}")
+            elif r.inline.error:
+                L.append(f"   inline     : ERROR {r.inline.error}")
+            else:
+                L.append(f"   inline     : p50={r.inline.p50_ms:.5f}ms p95={r.inline.p95_ms:.5f} "
+                         f"p99={r.inline.p99_ms:.5f} mean={r.inline.mean_ms:.5f} sd={r.inline.stdev_ms:.5f}")
+                L.append(f"   inline val : {r.inline_value!r}  match="
+                         f"{'YES' if r.inline_value_match else 'NO'}  (PyO3, no spawn, no loopback)")
+                if r.ratio_inline_p50 is not None:
+                    L.append(f"   inline rt  : inline p50 / cpython p50 = {r.ratio_inline_p50:.1f}x "
+                             f"(absolute p99={r.inline.p99_ms:.5f}ms — judge on the ABSOLUTE)")
+                if r.inline_verdict is not None:
+                    L.append(f"   INLINE VERD: {r.inline_verdict}")
         if r.path_b is not None:
             if r.path_b.error:
                 L.append(f"   PATH B     : ERROR {r.path_b.error}")
@@ -881,6 +998,12 @@ def render(
         s_match = sum(1 for r in results if r.serve_value_match)
         L.append(f"SUMMARY (SERVE): {len(results)} calls — {s_match}/{len(results)} value-parity"
                  f" · {s_ready} READY-shape · {s_healthy} HEALTHY-ENVELOPE")
+    if include_inline:
+        i_ready = sum(1 for r in results if (r.inline_verdict or "").startswith("READY"))
+        i_healthy = sum(1 for r in results if (r.inline_verdict or "").startswith("HEALTHY"))
+        i_match = sum(1 for r in results if r.inline_value_match)
+        L.append(f"SUMMARY (INLINE): {len(results)} calls — {i_match}/{len(results)} value-parity"
+                 f" · {i_ready} READY · {i_healthy} HEALTHY-ENVELOPE")
     L.append("Value parity is the floor; the profile decides readiness. See "
              "kernels/API_KERNEL_READINESS.md for the readiness map.")
     L.append("=" * 78)
@@ -899,6 +1022,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--path-b", action="store_true", help="also profile the pyfkb PATH B")
     ap.add_argument("--persistent", action="store_true",
                     help="also measure the PERSISTENT serve path (the apples-to-apples model)")
+    ap.add_argument("--inline", action="store_true",
+                    help="also measure the INLINE PyO3 path (warm in-process kernel, no spawn/loopback)")
     ap.add_argument("--jit", action="store_true",
                     help="with --persistent: add the +jit serve mode; also runs the JIT demonstrator")
     ap.add_argument("--json", help="write machine-readable results to this path")
@@ -932,11 +1057,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"serve routes file missing at {SERVE_ROUTES}", file=sys.stderr)
             return 2
         measure_persistent_serve(results, cases, args.iters, with_jit=args.jit)
+    if args.inline:
+        measure_inline(results, cases, args.iters, bridge)
     if args.jit:
         jit_demo = profile_jit_demonstrator(args.iters)
 
     print(render(results, args.iters, args.path_b,
-                 include_serve=args.persistent, jit_demo=jit_demo))
+                 include_serve=args.persistent, include_inline=args.inline,
+                 jit_demo=jit_demo))
 
     if args.json:
         Path(args.json).write_text(

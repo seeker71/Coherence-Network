@@ -62,6 +62,12 @@ fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
         // Value::display(); avoids touching the private Closure fields.
         Value::Closure(_) => v.display().into_py(py),
         Value::Nid(n) => format!("@{}.{}.{}.{}", n.pkg, n.level, n.ty, n.inst).into_py(py),
+        // Records (structured cells) render as their display string — the
+        // same surface the CLI prints. The transmuted endpoints return
+        // scalars/lists; a Record reaching here means a recipe shape the
+        // inline path doesn't structurally unwrap yet, so we hand back the
+        // honest display text rather than fabricate a Python dict.
+        Value::Record(_) => v.display().into_py(py),
     };
     Ok(obj)
 }

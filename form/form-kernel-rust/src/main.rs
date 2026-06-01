@@ -3159,7 +3159,7 @@ impl Kernel {
         // Sibling parity with form-kernel-go + form-kernel-ts.
         self.register_native("bp", cat_witness(), |_, _, args| {
             let name = args[0].as_str();
-            for (entry_name, [pkg, level, ty, inst]) in crate::bp_table::BP_ENTRIES {
+            for (entry_name, [pkg, level, ty, inst]) in self::bp_table::BP_ENTRIES {
                 if *entry_name == name {
                     return Value::Nid(NodeID {
                         pkg: *pkg,
