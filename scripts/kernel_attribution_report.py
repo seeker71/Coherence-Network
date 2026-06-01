@@ -119,6 +119,29 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_softmax_weights_demo.fk",
         "expected_result": "[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]",
     },
+    {
+        # First kernel-served routes to use the round_ndigits native
+        # (CPython-exact round(x, 4), PR #2320). Cost-vector decomposition:
+        # estimated_cost 33.333 → compute 60% / infrastructure 15% /
+        # human_attention 25% / opportunity 0 / external 0 / total, each
+        # round(_, 4). The decimal input lands on the half-to-even tie-breaks
+        # the old round-half-up shim got wrong (infrastructure 4.9999 from
+        # 4.99995, human_attention 8.3332 from 8.33325) — so this anchor is
+        # the end-to-end proof the round() unlock is correct in production.
+        "route": "/api/utils/cost_vector",
+        "recipe": "endpoint_cost_vector_demo.fk",
+        "expected_result": "[19.9998, 4.9999, 8.3332, 0.0, 0.0, 33.333]",
+    },
+    {
+        # Value-vector decomposition, sibling of cost_vector — same
+        # round_ndigits unlock. potential_value 9.205 → adoption 50% /
+        # lineage 30% / friction_avoided 20% / revenue 0 / total, each
+        # round(_, 4). Per-component CPython==Rust parity proven by
+        # parity_suite.sh.
+        "route": "/api/utils/value_vector",
+        "recipe": "endpoint_value_vector_demo.fk",
+        "expected_result": "[4.6025, 2.7615, 1.841, 0.0, 9.205]",
+    },
 ]
 
 _EXAMPLES_DIR = (
