@@ -23,6 +23,111 @@
     (defn bml-src-list (value) (bmf-atom "bml-list" value))
     (defn bml-src-code (value) (bmf-atom "bml-code" value))
 
+    ;; --- file source scanner ----------------------------------------
+    ;; This is the real file boundary for BML proof: bytes on disk become
+    ;; BML source objects before any BMF rule or BMA lowering can run.
+
+    (defn bml-source-keywords (_x)
+        (list "package" "import" "class" "interface" "template" "section"
+              "syntax" "const" "enum" "operator" "for" "while" "loop"
+              "switch" "select" "case" "default" "if" "else" "if_fail"
+              "while_success" "return" "break" "continue" "try" "catch"
+              "throw" "fail" "cut" "mark" "save" "restore" "discard"
+              "choice" "choose" "asm" "instanceof" "library" "naming"
+              "conventions" "DefaultMethods" "Nil" "Fail" "EndOfFile"
+              "EndOfLine" "Cut" "MultiMatch" "Primitive"))
+
+    (defn bml-source-ops (_x)
+        (list "<<prim" ".*" "::=" "=>" "<=" ">>>=" ">>=" "<<=" ">>>"
+              ">>" "<<" "++" "--" "==" "!=" ">=" "<=" ":=" "*=" "/="
+              "%=" "+=" "-=" "&=" "|=" "^=" "&&" "||" ".." "#("
+              "{" "}" "(" ")" "[" "]" ";" "," ":" "." "+" "-" "*" "/"
+              "%" "=" "'" "<" ">" "!" "~" "?" "|" "&" "^" "$"))
+
+    (defn bml-source-dialect (_x)
+        (fsc-source-dialect
+            (bml-source-keywords 0)
+            "bml-keyword"
+            "bml-name"
+            "bml-int"
+            "bml-string"
+            "bml-op"
+            "bml-eof"
+            (bml-source-ops 0)))
+
+    (defn bml-line-comment-prefix (_x) (str_concat "/" "/"))
+    (defn bml-block-comment-open (_x) (str_concat "/" "*"))
+    (defn bml-block-comment-close (_x) (str_concat "*" "/"))
+
+    (defn bml-source-skip-line-comment (cursor)
+        (if (fsc-source-cursor-end? cursor) cursor
+            (if (str_eq (fsc-source-cursor-char cursor) "\n") cursor
+                (bml-source-skip-line-comment
+                    (fsc-source-cursor-advance cursor)))))
+
+    (defn bml-source-skip-block-comment (cursor)
+        (if (fsc-source-cursor-end? cursor) cursor
+            (if (fsc-source-cursor-prefix? cursor (bml-block-comment-close 0))
+                (fsc-source-advance-n cursor 2)
+                (bml-source-skip-block-comment
+                    (fsc-source-cursor-advance cursor)))))
+
+    (defn bml-source-scan-skip (cursor)
+        (do
+            (let start (fsc-source-scan-skip cursor))
+            (if (fsc-source-cursor-prefix? start (bml-line-comment-prefix 0))
+                (bml-source-scan-skip
+                    (bml-source-skip-line-comment
+                        (fsc-source-advance-n start 2)))
+            (if (fsc-source-cursor-prefix? start (bml-block-comment-open 0))
+                (bml-source-scan-skip
+                    (bml-source-skip-block-comment
+                        (fsc-source-advance-n start 2)))
+                start))))
+
+    (defn bml-source-scan-next (cursor)
+        (do
+            (let start (bml-source-scan-skip cursor))
+            (let ch (fsc-source-cursor-char start))
+            (if (fsc-source-cursor-end? start)
+                (fsc-scan-result
+                    (fsc-source-object "bml-eof" "" start start)
+                    start)
+            (if (str_eq ch "\"")
+                (fsc-source-scan-string start "bml-string")
+            (if (fsc-digit? ch)
+                (fsc-source-scan-int start "bml-int")
+            (if (fsc-source-name-start-char? ch)
+                (fsc-source-scan-name
+                    start
+                    (bml-source-keywords 0)
+                    "bml-keyword"
+                    "bml-name")
+                (fsc-source-scan-op
+                    start
+                    "bml-op"
+                    (bml-source-ops 0))))))))
+
+    (defn bml-source-scan-text-loop (cursor acc)
+        (do
+            (let result (bml-source-scan-next cursor))
+            (let object (fsc-scan-result-object result))
+            (if (str_eq (bmf-object-kind object) "bml-eof")
+                (reverse-list acc)
+                (bml-source-scan-text-loop
+                    (fsc-scan-result-cursor result)
+                    (cons object acc)))))
+
+    (defn bml-source-scan-text (source)
+        (bml-source-scan-text-loop
+            (fsc-source-cursor source 0 1 0)
+            (empty)))
+
+    (defn bml-source-scan-file (path)
+        (bml-source-scan-text-loop
+            (fsc-file-source-cursor path 0 1 0 (file_size path))
+            (empty)))
+
     (defn bml-kw (value) (object-lit "bml-keyword" value))
     (defn bml-op (value) (object-lit "bml-op" value))
     (defn bml-ref (name) (object-lit "bml-ref" name))
@@ -1368,6 +1473,93 @@
 
     (defn apply-bml-bmf-rule (rule-name objects)
         (apply-object-rule (bml-bmf-find-rule rule-name bml-bmf-rules) objects))
+
+    (defn bml-bmf-match-node (match)
+        (bmf-object-value (cap-get (match-caps match) "result")))
+
+    (defn bml-source-executable-rules (_x)
+        (list "try-throw-return"
+              "choice-fail-int"
+              "choose-fail-int"
+              "state-int"
+              "return-int"
+              "fail-simple"
+              "cut-simple"
+              "mark-simple"
+              "throw-int"))
+
+    (defn bml-source-parse-step (ok rule node rest)
+        (list "bml-source-parse-step" ok rule node rest))
+
+    (defn bml-source-parse-step-ok? (step) (nth step 1))
+    (defn bml-source-parse-step-rule (step) (nth step 2))
+    (defn bml-source-parse-step-node (step) (nth step 3))
+    (defn bml-source-parse-step-rest (step) (nth step 4))
+
+    (defn bml-source-parse-executable-step-loop (objects rule-names)
+        (if (nil? rule-names)
+            (bml-source-parse-step false "" (empty) objects)
+            (do
+                (let rule-name (head rule-names))
+                (let m (apply-bml-bmf-rule rule-name objects))
+                (if (match? m)
+                    (bml-source-parse-step
+                        true
+                        rule-name
+                        (bml-bmf-match-node m)
+                        (match-rest m))
+                    (bml-source-parse-executable-step-loop
+                        objects
+                        (tail rule-names))))))
+
+    (defn bml-source-parse-executable-step (objects)
+        (bml-source-parse-executable-step-loop
+            objects
+            (bml-source-executable-rules 0)))
+
+    (defn bml-source-exec-parse-result (ok nodes rest rules)
+        (list "bml-source-exec-parse-result" ok nodes rest rules))
+
+    (defn bml-source-exec-parse-ok? (result) (nth result 1))
+    (defn bml-source-exec-parse-nodes (result) (nth result 2))
+    (defn bml-source-exec-parse-rest (result) (nth result 3))
+    (defn bml-source-exec-parse-rules (result) (nth result 4))
+    (defn bml-source-exec-parse-node (result)
+        (bml-ast-block (bml-source-exec-parse-nodes result)))
+
+    (defn bml-source-parse-executable-stream-loop (objects nodes rules)
+        (if (nil? objects)
+            (bml-source-exec-parse-result
+                true
+                (reverse-list nodes)
+                objects
+                (reverse-list rules))
+            (do
+                (let step (bml-source-parse-executable-step objects))
+                (if (bml-source-parse-step-ok? step)
+                    (bml-source-parse-executable-stream-loop
+                        (bml-source-parse-step-rest step)
+                        (cons (bml-source-parse-step-node step) nodes)
+                        (cons (bml-source-parse-step-rule step) rules))
+                    (bml-source-exec-parse-result
+                        false
+                        (reverse-list nodes)
+                        objects
+                        (reverse-list rules))))))
+
+    (defn bml-source-parse-executable-stream (objects)
+        (bml-source-parse-executable-stream-loop
+            objects
+            (empty)
+            (empty)))
+
+    (defn bml-source-file-parse-executable (path)
+        (bml-source-parse-executable-stream (bml-source-scan-file path)))
+
+    (defn bml-source-file-compile-executable (path)
+        (bml-compile-program
+            (bml-source-exec-parse-node
+                (bml-source-file-parse-executable path))))
 
     (defn bml-thesis-bmf-primitive-rule-count-loop (rule-names)
         (if (nil? rule-names) 0
