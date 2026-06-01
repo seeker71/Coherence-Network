@@ -3169,12 +3169,17 @@ impl Kernel {
                     });
                 }
             }
-            Value::Nid(NodeID {
-                pkg: 1,
-                level: 2,
-                ty: 0,
-                inst: 0,
-            })
+            // Fail loud — never invent a NodeID for an unknown name. The old
+            // silent fallback to {1,2,0,0} collapsed every unregistered name
+            // onto one NodeID, so distinct blueprints collided invisibly. An
+            // unregistered name is a missing registration, not a valid shape.
+            // Sibling parity: Go panics, TS throws.
+            panic!(
+                "bp: unregistered blueprint name {:?} — register it: \
+                 python3 scripts/scan_form_blueprints.py register {} (bp tables then regenerate). \
+                 The substrate never invents a NodeID for an unknown name.",
+                name, name
+            )
         });
         self.register_native("intern_trivial_int", cat_witness(), |k, _, args| {
             Value::Nid(k.intern_trivial_int(args[0].as_int()))

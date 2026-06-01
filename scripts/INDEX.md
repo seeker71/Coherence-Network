@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 136
+**Total files**: 137
 
 | File | Purpose |
 |---|---|
@@ -16,6 +16,7 @@
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
 | [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | assemblage_shift_recipe_proof.py — the modality round-trip, walking. |
 | [audit_external_tools.py](audit_external_tools.py) | Audit external tooling usage and detect untracked additions. |
+| [audit_stranded_work.py](audit_stranded_work.py) | Find work that may have been stranded on abandoned branches. |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | Audit regenerated vision image candidates before production promotion. |
 | [awareness_node_daemon.py](awareness_node_daemon.py) | Quiet local presence loop for Coherence agents. |
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |

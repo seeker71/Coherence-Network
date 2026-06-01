@@ -2310,7 +2310,19 @@ export class Kernel {
     this.registerNative("bp", catWitness(), (_k, args) => {
       const name = argStr(args, 0);
       const entry = BP_TABLE[name];
-      const [pkg, level, type, inst] = entry ?? [1, 2, 0, 0];
+      if (entry === undefined) {
+        // Fail loud — never invent a NodeID for an unknown name. The old silent
+        // fallback to [1,2,0,0] collapsed every unregistered name onto one
+        // NodeID, so distinct blueprints collided invisibly. An unregistered
+        // name is a missing registration, not a valid shape. Sibling parity:
+        // Go panics, Rust panics.
+        throw new Error(
+          `bp: unregistered blueprint name ${JSON.stringify(name)} — register it: ` +
+            `python3 scripts/scan_form_blueprints.py register ${name} (bp tables then regenerate). ` +
+            `The substrate never invents a NodeID for an unknown name.`,
+        );
+      }
+      const [pkg, level, type, inst] = entry;
       return { kind: "nodeid", nodeid: { pkg, level, type, inst } };
     });
     this.registerNative("intern_trivial_int", catWitness(), (k, args) => ({

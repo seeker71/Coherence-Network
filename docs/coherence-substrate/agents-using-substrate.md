@@ -290,6 +290,8 @@ These are the patterns that will burn you. Notice them.
 
 **Anti-pattern 5: Inventing NodeIDs.** Never write `@1.7.3.42` from imagination. NodeIDs come from the substrate; you receive them, you don't author them. If you need a NodeID, get one via `intern_node` or `lookup_cell`. **Form NodeID literals are *anchors* into the lattice, not free-form integers.**
 
+**Anti-pattern 6: Trusting a worktree-local ingest as durable.** The substrate DB is a sqlite file under the checkout's `data/`. An ingest you run inside a git worktree writes to *that worktree's* DB — which is composted with the worktree. So "I ingested it last session" can be a lie: the cell lived only in a DB that no longer exists. The durable surfaces are the **prod API** (`https://api.coherencycoin.com/api/substrate/...`, the lattice agents actually query) and the **post-merge hook** (`substrate_post_merge_hook.sh`), which ingests *changed* files on merge to main. Consequences: (1) a concept you reference but don't *edit* won't be re-ingested by the hook — if it wasn't already on prod, the reference dangles; verify with `GET /api/substrate/cell/{domain}/{name}` against prod, not a local query. (2) To make new structure durably queryable, land it through a merge, then confirm on prod. The body's memory is the merged main + prod, never a worktree's scratch DB.
+
 ## A worked end-to-end example
 
 You're reasoning about whether to merge two ideas: `agent-pipeline` and `agent-orchestration`.

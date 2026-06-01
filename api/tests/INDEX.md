@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 226
+**Total files**: 227
 
 | File | Purpose |
 |---|---|
@@ -226,6 +226,7 @@
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
+| [test_utils_nodeid_compatibility.py](test_utils_nodeid_compatibility.py) | Tests for /api/utils/nodeid_compatibility — transmuted under the habit pattern. |
 | [test_utils_nodeid_distance.py](test_utils_nodeid_distance.py) | Tests for /api/utils/nodeid_distance — transmuted under the habit pattern. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |

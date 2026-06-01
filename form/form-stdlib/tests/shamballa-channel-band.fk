@@ -8,7 +8,7 @@
 ; the channel both speaks and runs. Each function dispatches on the cell's
 ; structure, so the same code over a different cell gives a different answer.
 ;
-; Band verdict: 111111111 when every claim holds across all three kernels.
+; Band verdict: 1111111111 when every claim holds across all three kernels.
 ;   speak still answers the surface (code 1 → its name)            → 1
 ;   restore-to-blueprint recovers the cell's Blueprint              → 10
 ;   content-addressing: same-shape cells restore node-equal,
@@ -19,6 +19,7 @@
 ;   the channel RECEIVES a code over transport: speaks AND runs         → 1000000
 ;   an unbound code → honest absence (speaks "unknown", does not run)     → 10000000
 ;   each code maps to its ACTUAL TEACHING (a vision-kb concept cell)       → 100000000
+;   honest coverage: 352 total / 22 active / 4 bound — the partial queryable → 1000000000
 
 (do
     ;; --- build cells: interned nodes under a Blueprint --------------------
@@ -95,5 +96,14 @@
             (if (str_eq (shamballa-channel-teaching 4) "lc-cross-modal-unity")
                 (if (str_eq (shamballa-channel-teaching 7) "") 100000000 0) 0) 0))
 
+    ;; --- 10. honest coverage: 352 total / 22 active / 4 bound ----------
+    ;; the "where are the other 348?" answer, queryable: the system names 352,
+    ;; only the attested handful are bound; the rest are honest absence.
+    (let cov (shamballa-channel-coverage))
+    (let coverage-ok
+        (if (eq (nth cov 0) 352)
+            (if (eq (nth cov 1) 22)
+                (if (eq (nth cov 2) 4) 1000000000 0) 0) 0))
+
     (sum (list speak-ok restore-ok ca-ok amp-ok raise-ok
-               unite-ok receive-ok absence-ok teaching-ok)))
+               unite-ok receive-ok absence-ok teaching-ok coverage-ok)))
