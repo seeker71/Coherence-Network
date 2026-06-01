@@ -440,6 +440,51 @@
             (bml-body-source-values body-component)
             value))
 
+    (defn bml-body-source-assignment-at? (values)
+        (if (gt (len values) 3)
+            (if (str_eq (nth values 1) "=")
+                (str_eq (nth values 3) ";")
+                false)
+            false))
+
+    (defn bml-body-source-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-assignment-at? values)
+                (bml-body-source-assignment-count-loop
+                    (drop 4 values)
+                    (add count 1))
+                (bml-body-source-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-assignment-count (body-component)
+        (bml-body-source-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-assignments-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-assignment-at? values)
+                (do
+                    (record_set
+                        self
+                        (head values)
+                        (record_get env (nth values 2)))
+                    (bml-body-source-exec-assignments-loop
+                        (drop 4 values)
+                        self
+                        env))
+                (bml-body-source-exec-assignments-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-assignments (body-component self env)
+        (bml-body-source-exec-assignments-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-template-parameters (template-component)
         (nth (comp-bml-fields template-component) 0))
 

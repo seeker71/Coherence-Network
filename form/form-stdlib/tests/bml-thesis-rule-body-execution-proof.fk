@@ -1,0 +1,68 @@
+; tests/bml-thesis-rule-body-execution-proof.fk - source Rule body execution
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves a first source-originated execution bridge for the original thesis
+; companion container-Rule.bml: simple assignment bodies parsed from the real
+; .bml file execute against native record state in the sibling kernels.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let constructors (bml-class-own-constructors rule-class))
+    (let full-constructor (head constructors))
+    (let full-body (bml-constructor-body full-constructor))
+    (let set-process-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "SetProcess"))
+    (let set-process-body (bml-method-body set-process-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9201))
+    (let EnvBP (make_nodeid 1 2 99 9202))
+
+    (let env
+        (record_new
+            EnvBP
+            "hSyntax" "syntax-object"
+            "strName" "rule-name"
+            "hArgs" "args-array"
+            "hItem" "parse-item"
+            "hProcess" "process-object"
+            "DefaultProcess" "default-process"))
+
+    (let rule-instance (record_new RuleBP))
+    (bml-body-source-exec-assignments full-body rule-instance env)
+
+    (let process-instance
+        (record_new RuleBP "m_hProcess" "old-process"))
+    (bml-body-source-exec-assignments
+        set-process-body
+        process-instance
+        env)
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (bml-body-source-assignment-count full-body) 5 2)
+            (bool-score (bml-body-source-contains? full-body "m_hProcess") 4)
+            (str-score (record_get rule-instance "m_strName") "rule-name" 8)
+            (str-score (record_get rule-instance "m_hArgs") "args-array" 16)
+            (str-score (record_get rule-instance "m_hSyntax") "syntax-object" 32)
+            (str-score (record_get rule-instance "m_hItem") "parse-item" 64)
+            (str-score (record_get rule-instance "m_hProcess") "process-object" 128)
+            (int-score (bml-body-source-assignment-count set-process-body) 1 256)
+            (bool-score (bml-body-source-contains? set-process-body "DefaultProcess") 512)
+            (str-score (record_get process-instance "m_hProcess") "default-process" 1024)
+            (bool-score (record_has process-instance "m_hProcess") 2048))))
