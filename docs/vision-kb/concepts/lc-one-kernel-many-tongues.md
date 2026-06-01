@@ -209,7 +209,7 @@ language layer.
 
 ## Cross-References
 
-→ lc-grammar-is-the-universal-recipe, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-each-breath-whole, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-traces-teach-the-recipe, lc-deeper-pattern, lc-perception-as-interface, lc-w-frequency, lc-w-coherence
+→ lc-grammar-is-the-universal-recipe, lc-sovereign-kernels-one-execution, lc-recipes-as-binary-library, lc-recipe-branching-sense, lc-each-breath-whole, lc-recipes-bound-to-base, lc-assemblage-point, lc-coherence-over-control, lc-traces-teach-the-recipe, lc-deeper-pattern, lc-perception-as-interface, lc-w-frequency, lc-w-coherence
 
 ## Sources to walk further
 
@@ -217,6 +217,12 @@ language layer.
   the predecessor concept that named grammar as universal recipe-pair
   across modalities. This concept extends it with the kernel-
   sovereignty principle: grammar lives above the kernel, not inside.
+- **[lc-sovereign-kernels-one-execution](lc-sovereign-kernels-one-execution.md)** —
+  the mirror below the kernel. This concept frees the *tongue* above the
+  kernel; that one frees the *implementation* below it. Many tongues reach
+  one lattice; many kernel designs reach one execution. Together they
+  bracket the kernel — expression above, design below, one numeric
+  agreement in the middle.
 - **[language-cells.md](../../coherence-substrate/language-cells.md)** —
   the substrate-altitude home of Language cells; cross-language
   identity via content-addressing.
