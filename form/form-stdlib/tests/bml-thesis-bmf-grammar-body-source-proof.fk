@@ -4,8 +4,8 @@
 ;
 ; Proves that the original thesis companion BMF-grammar.bml file no longer
 ; lands as an empty class shell. Its BMF class body is parsed into native BML
-; model components: const, class/public fields, constructor, Main, and
-; additional method signatures.
+; model components: const, class/public fields, constructor, Main, additional
+; method signatures, and small helper method bodies.
 
 (do
     (defn bool-score (b bit)
@@ -48,8 +48,11 @@
     (let default-config-props
         (bml-class-member-effective-properties bmf-class "Field" "m_strDefaultConfigFile"))
     (let main-method (bml-find-method bmf-methods "Main"))
+    (let print-banner (bml-find-method bmf-methods "PrintBanner"))
+    (let get-file-extension (bml-find-method bmf-methods "GetFileExtension"))
     (let start-result-stack
         (bml-find-method bmf-methods "StartResultStack"))
+    (let add-method (bml-find-method bmf-methods "Add"))
     (let compile-method (bml-find-method bmf-methods "Compile"))
 
     (sum
@@ -73,5 +76,10 @@
             (int-score (len (bml-method-parameters main-method)) 1 65536)
             (bool-score (bml-body-source-contains? (bml-method-body main-method) "HandleArgs") 131072)
             (method-score start-result-stack "void" 262144)
-            (method-score compile-method "bool" 524288)))
+            (method-score compile-method "bool" 524288)
+            (bool-score (bml-body-source-contains? (bml-method-body print-banner) "Digi4Fun (R) BMF 1.0 Alpha 1") 1048576)
+            (bool-score (bml-body-source-contains? (bml-method-body get-file-extension) "LastIndexOf") 2097152)
+            (bool-score (bml-body-source-contains? (bml-method-body start-result-stack) "Push") 4194304)
+            (bool-score (bml-body-source-contains? (bml-method-body add-method) "Append") 8388608)
+            (int-score (len (bml-body-source-values (bml-method-body compile-method))) 0 16777216)))
 )

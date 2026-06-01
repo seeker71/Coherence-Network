@@ -46,8 +46,9 @@ What is proven today:
   scan and parse as whole source files with class bodies. `BMF-grammar.bml`
   now forms native BML model components for the `BMF` class body, including
   its string const, class/public fields, constructor, `Main(String[] hArgs)`,
-  and method signatures. Full grammar body semantic lowering remains an
-  explicit gap.
+  method signatures, and small helper method body source for `PrintBanner`,
+  `GetFileExtension`, result-stack helpers, and `Add`. Full grammar body
+  semantic lowering remains an explicit gap.
 - The original companion `container-Rule.bml` file now parses real class
   bodies for `RuleProcess` and `Rule`, including sections, fields,
   constructors, method signatures, parameters, properties, initialized fields,
@@ -136,7 +137,7 @@ is not complete rule-for-rule.
 | Exceptions | `backtracking-model-languages.txt:760-762` | native-executed for int throw/catch proof slice | Arbitrary object exception typing/catch matching remains a gap. |
 | BML syntax blocks and multi-syntax streams | `backtracking-model-languages.txt:1012-1014`; `bml-search-algorithms.txt:239-246` | native-executed for source-section sidecars; gap for object syntax dispatch | `source-compiler-runtime.fk` and `source-compiler-multi-dialect-band.fk` prove section sidecars; parsing arbitrary objects by syntax name remains a gap. |
 | Object runtime definitions, dispatch, casting, instantiators | `sgb-bml-objects.txt:569-655`, `:778-791` | partial native-executed / gap | Native record and blueprint method dispatch are proven. `bml-thesis-rule-method-dispatch-proof.fk` installs the source-originated `SetProcess` body from `container-Rule.bml` and invokes it through `method_invoke`. Full instance/interface definitions, indexed dispatch, arbitrary interface casts, unique/singleton instantiators, and detached interfaces remain gaps. |
-| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` now parses real sections, fields, constructors, method signatures, parameters, properties, field initializers, and body source tokens; its full constructor, `self(...)` constructor chaining, and `SetProcess` simple assignment body execute against native records, including native blueprint method dispatch. `BMF-grammar.bml` now parses the `BMF` class body into native model components for its string const, class/public fields, constructor, `Main(String[] hArgs)`, and method signatures; full grammar-body semantic lowering remains a gap. |
+| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` now parses real sections, fields, constructors, method signatures, parameters, properties, field initializers, and body source tokens; its full constructor, `self(...)` constructor chaining, and `SetProcess` simple assignment body execute against native records, including native blueprint method dispatch. `BMF-grammar.bml` now parses the `BMF` class body into native model components for its string const, class/public fields, constructor, `Main(String[] hArgs)`, method signatures, and small helper body source; full grammar-body semantic lowering remains a gap. |
 | Focused `.bml` file-to-native execution | `bml-thesis-forward-backward-demo.bml` | native-executed | `bml-thesis-file-execution-proof.fk` scans a real `.bml` file, parses `state-int` plus `try-throw-return`, lowers to BMA, runs DO/UNDO, and verifies restored state. |
 | Focused companion-shaped `.bml` declarations | `BMF-grammar.bml`, `container-Rule.bml`, `primitive-Cut.bml` slices | component/native-proven | `bml-thesis-companion-file-proof.fk` scans `bml-thesis-companion-declarations.bml`, parses package/import/interface/class/section/field/string const/two-base/Main method shapes, builds the class model, and runs `Main` through BMA. |
 
@@ -156,8 +157,9 @@ source subset:
   source tokens.
 - `BMF-grammar.bml` has array parameters such as `void Main( String[] hArgs )`;
   the focused body proof now parses that source method signature and keeps the
-  small `Main` body source tokens. Full lowering of the large helper bodies
-  remains a gap.
+  small `Main`, `PrintBanner`, `GetFileExtension`, result-stack helper, and
+  `Add` body source tokens. Full lowering of loop-heavy and large helper
+  bodies remains a gap.
 - `primitive-Cut.bml` calls `System.Cut( hContext.Argument( 0 ))`; the source
   file now parses directly and lowers that call shape to native BMA `cut`.
   General method-call runtime dispatch remains a gap.

@@ -2348,7 +2348,16 @@
 
     (defn bml-source-large-method-body-source? (class-name method-name)
         (if (str_eq class-name "BMF")
-            (not (str_eq method-name "Main"))
+            (if (str_eq method-name "AsString") true
+            (if (str_eq method-name "AsBMLString") true
+            (if (str_eq method-name "LoadSyntax") true
+            (if (str_eq method-name "Compile") true
+            (if (str_eq method-name "HandleArgs") true
+            (if (str_eq method-name "LoadSyntaxes") true
+            (if (str_eq method-name "ReadConfigFile") true
+            (if (str_eq method-name "WriteConfigFile") true
+            (if (str_eq method-name "RegisterPrimitives") true
+                (str_eq method-name "PrintCommandLineHelp"))))))))))
             false))
 
     (defn bml-source-parse-method-after-name (class-name return-type method-name objects)
