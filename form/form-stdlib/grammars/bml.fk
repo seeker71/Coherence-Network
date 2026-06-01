@@ -648,6 +648,60 @@
             self
             env))
 
+    (defn bml-body-source-typed-cast-assignment-at? (values)
+        (if (gt (len values) 7)
+            (if (str_eq (nth values 2) "=")
+                (if (str_eq (nth values 3) "(")
+                    (if (str_eq (nth values 5) ")")
+                        (if (str_eq (nth values 7) ";")
+                            (str_eq (head values) (nth values 4))
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-typed-cast-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-typed-cast-assignment-at? values)
+                (bml-body-source-typed-cast-assignment-count-loop
+                    (drop 8 values)
+                    (add count 1))
+                (bml-body-source-typed-cast-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-typed-cast-assignment-count (body-component)
+        (bml-body-source-typed-cast-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-typed-cast-assignment-at (values self env)
+        (record_set
+            env
+            (nth values 1)
+            (bml-body-source-object-value self env (nth values 6))))
+
+    (defn bml-body-source-exec-typed-cast-assignments-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-typed-cast-assignment-at? values)
+                (do
+                    (bml-body-source-exec-typed-cast-assignment-at values self env)
+                    (bml-body-source-exec-typed-cast-assignments-loop
+                        (drop 8 values)
+                        self
+                        env))
+                (bml-body-source-exec-typed-cast-assignments-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-typed-cast-assignments (body-component self env)
+        (bml-body-source-exec-typed-cast-assignments-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-eval-return-member-add-at (values self env)
         (add
             (bml-body-source-member-value
@@ -972,6 +1026,14 @@
                         ";"
                         self
                         env))
+            (if (bml-body-source-typed-cast-assignment-at? values)
+                (do
+                    (bml-body-source-exec-typed-cast-assignment-at values self env)
+                    (bml-body-source-exec-sequence-loop
+                        (drop 8 values)
+                        ";"
+                        self
+                        env))
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
             (if (bml-body-source-constructor-assignment-at? values)
@@ -1043,7 +1105,7 @@
                     (tail values)
                     (head values)
                     self
-                    env)))))))))))
+                    env))))))))))))
 
     (defn bml-body-source-exec (body-component self env)
         (bml-body-source-exec-sequence-loop
