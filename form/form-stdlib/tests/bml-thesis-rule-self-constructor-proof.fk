@@ -1,0 +1,81 @@
+; tests/bml-thesis-rule-self-constructor-proof.fk - Rule self(...) chaining
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves that self(...) constructor chaining parsed from the original thesis
+; companion container-Rule.bml dispatches into the full constructor and mutates
+; native record state from source-originated constructor bodies.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let constructors (bml-class-own-constructors rule-class))
+    (let full-constructor (head constructors))
+    (let strargs-constructor (nth constructors 1))
+    (let array-constructor (nth constructors 2))
+    (let strargs-body (bml-constructor-body strargs-constructor))
+    (let array-body (bml-constructor-body array-constructor))
+    (let strargs-args (bml-body-source-self-args strargs-body))
+    (let array-args (bml-body-source-self-args array-body))
+
+    (let RuleBP (make_nodeid 1 2 99 9201))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+
+    (let env-strargs
+        (record_new
+            EnvBP
+            "hSyntax" "syntax-self"
+            "strName" "name-self"
+            "strArgs" "args-self"
+            "hItem" "item-self"))
+    (let self-strargs (record_new RuleBP))
+    (bml-exec-constructor
+        constructors
+        strargs-constructor
+        self-strargs
+        env-strargs)
+
+    (let env-array
+        (record_new
+            EnvBP
+            "hSyntax" "syntax-array"
+            "strName" "name-array"
+            "hItem" "item-array"
+            "hProcess" "process-array"))
+    (let self-array (record_new RuleBP))
+    (bml-exec-constructor
+        constructors
+        array-constructor
+        self-array
+        env-array)
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (len constructors) 4 2)
+            (int-score (len (bml-constructor-parameters full-constructor)) 5 4)
+            (bool-score (bml-body-source-self-call? strargs-body) 8)
+            (int-score (len strargs-args) 5 16)
+            (str-score (nth strargs-args 2) "strArgs" 32)
+            (str-score (record_get self-strargs "m_strName") "name-self" 64)
+            (str-score (record_get self-strargs "m_hArgs") "args-self" 128)
+            (str-score (record_get self-strargs "m_hSyntax") "syntax-self" 256)
+            (str-score (record_get self-strargs "m_hItem") "item-self" 512)
+            (bool-score (nil? (record_get self-strargs "m_hProcess")) 1024)
+            (bool-score (record_has self-strargs "m_hProcess") 2048)
+            (bool-score (bml-body-source-self-call? array-body) 4096)
+            (int-score (len array-args) 5 8192)
+            (str-score (nth array-args 2) "Array" 16384)
+            (bool-score (nil? (record_get self-array "m_hArgs")) 32768)
+            (str-score (record_get self-array "m_hProcess") "process-array" 65536))))
