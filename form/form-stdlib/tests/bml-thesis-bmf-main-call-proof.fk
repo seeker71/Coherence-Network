@@ -1,0 +1,59 @@
+; tests/bml-thesis-bmf-main-call-proof.fk - source Main implicit self call
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the original thesis companion BMF-grammar.bml Main body executes
+; its implicit self method call: HandleArgs(hArgs);
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let main-method
+        (bml-find-method
+            (bml-class-own-methods bmf-class)
+            "Main"))
+    (let main-body (bml-method-body main-method))
+
+    (let BmfBP (make_nodeid 1 2 99 9220))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new EnvBP "hArgs" "argv-vector"))
+
+    (defn bmf-handle-args-dispatch (self hArgs)
+        (record_set self "handledArgs" hArgs))
+
+    (method_define BmfBP "HandleArgs" bmf-handle-args-dispatch)
+
+    (let app (record_new BmfBP))
+    (let exec-result
+        (bml-body-source-exec-implicit-call1
+            main-body
+            app
+            env))
+
+    (let second-app (record_new BmfBP))
+    (bml-body-source-exec main-body second-app env)
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-class-name bmf-class) "BMF" 2)
+            (str-score (bml-method-return main-method) "void" 4)
+            (str-score (bml-method-name main-method) "Main" 8)
+            (bool-score (bml-body-source-contains? main-body "HandleArgs") 16)
+            (bool-score (bml-body-source-contains? main-body "hArgs") 32)
+            (int-score (bml-body-source-implicit-call1-count main-body) 1 64)
+            (bool-score (method_has BmfBP "HandleArgs") 128)
+            (bool-score (record_has exec-result "handledArgs") 256)
+            (str-score (record_get app "handledArgs") "argv-vector" 512)
+            (str-score (record_get second-app "handledArgs") "argv-vector" 1024))))
