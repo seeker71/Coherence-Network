@@ -636,6 +636,29 @@ function parseAtom(k: Kernel, c: Cursor): NodeID | null {
     // synthesize a 0-arg call so the kernel native fires. CPython
     // resolves the same `pi` through the module's attribute table — same
     // result, no behavioural divergence.
+    // Python builtin `round(x, n)` — lower the 2-arg form to the kernel
+    // native `round_ndigits`, which replicates CPython's round() for floats
+    // EXACTLY (rounds the exact decimal value half-to-even at n places). The
+    // 1-arg form `round(x)` returns an int in CPython; we leave it as the
+    // bare `round` ident (no kernel native today — out of scope, since the
+    // substrate's round-bearing routes all use 2-arg round(x, 4)/round(x, 2)).
+    // The rewrite is arity-aware: we peek for `(`, parse the args, and only
+    // redirect to round_ndigits when exactly two were supplied.
+    if (name === "round") {
+      const afterName = c.pos;
+      skipSpacesAndComments(c);
+      if (!atEnd(c) && peek(c) === "(") {
+        c.pos++; // consume '('
+        const args = parseArgsList(k, c);
+        expect(c, ")");
+        const calleeName = args.length === 2 ? "round_ndigits" : "round";
+        return captureNode(k, CTOR.call, [
+          captureNode(k, CTOR.ident, [k.internString(calleeName)]),
+          captureNode(k, CTOR.args, args),
+        ]);
+      }
+      c.pos = afterName; // bare reference to `round` — leave as ident
+    }
     const directNative = c.imports.directImports.get(name);
     if (directNative !== undefined) {
       const savedAfter = c.pos;
@@ -763,10 +786,13 @@ function parsePostfix(k: Kernel, c: Cursor): NodeID | null {
   return node;
 }
 
-function parseArgs(k: Kernel, c: Cursor): NodeID {
+// parseArgsList — parse a comma-separated argument list (cursor positioned
+// just after the opening '('), returning the parsed arg NodeIDs. Shared by
+// parseArgs and the arity-aware `round` lowering in parseAtom.
+function parseArgsList(k: Kernel, c: Cursor): NodeID[] {
   const args: NodeID[] = [];
   skipAllWhitespace(c);
-  if (peek(c) === ")") return captureNode(k, CTOR.args, []);
+  if (peek(c) === ")") return args;
   while (true) {
     skipAllWhitespace(c);
     const e = parseExpr(k, c);
@@ -775,7 +801,11 @@ function parseArgs(k: Kernel, c: Cursor): NodeID {
     skipAllWhitespace(c);
     if (!consume(c, ",")) break;
   }
-  return captureNode(k, CTOR.args, args);
+  return args;
+}
+
+function parseArgs(k: Kernel, c: Cursor): NodeID {
+  return captureNode(k, CTOR.args, parseArgsList(k, c));
 }
 
 function parseUnary(k: Kernel, c: Cursor): NodeID | null {
