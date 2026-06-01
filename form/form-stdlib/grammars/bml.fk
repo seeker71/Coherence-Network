@@ -1380,6 +1380,32 @@
 
     ;; --- native source sections -------------------------------------
 
+    (let bml-bmf-section bml-bmf-second)
+
+    (let bml-bmf-native-section
+        (list
+            (bmf-native "bml-emit-package-simple" bml-emit-package-simple BML-AST-PACKAGE)
+            (bmf-native "bml-emit-import-simple" bml-emit-import-simple BML-AST-IMPORT)
+            (bmf-native "bml-emit-import-star-simple" bml-emit-import-star-simple BML-AST-IMPORT)
+            (bmf-native "bml-emit-class-header" bml-emit-class-header BML-AST-CLASS)
+            (bmf-native "bml-emit-interface-header" bml-emit-interface-header BML-AST-INTERFACE)
+            (bmf-native "bml-emit-section-header" bml-emit-section-header BML-AST-SECTION)
+            (bmf-native "bml-emit-field" bml-emit-field BML-AST-FIELD)
+            (bmf-native "bml-emit-const-int" bml-emit-const-int BML-AST-CONST)
+            (bmf-native "bml-emit-return-int" bml-emit-return-int BML-AST-RETURN)
+            (bmf-native "bml-emit-break-simple" bml-emit-break-simple BML-AST-BREAK)
+            (bmf-native "bml-emit-continue-simple" bml-emit-continue-simple BML-AST-CONTINUE)
+            (bmf-native "bml-emit-throw-int" bml-emit-throw-int BML-AST-THROW)
+            (bmf-native "bml-emit-try-throw-return" bml-emit-try-throw-return BML-AST-TRY)
+            (bmf-native "bml-emit-fail-simple" bml-emit-fail-simple BML-AST-FAIL)
+            (bmf-native "bml-emit-cut-simple" bml-emit-cut-simple BML-AST-CUT)
+            (bmf-native "bml-emit-mark-simple" bml-emit-mark-simple BML-AST-SAVE)
+            (bmf-native "bml-emit-char-lit" bml-emit-char-lit BML-AST-CHAR)
+            (bmf-native "bml-emit-array-int" bml-emit-array-int BML-AST-ARRAY)
+            (bmf-native "bml-emit-method-return-add" bml-emit-method-return-add BML-AST-METHOD)
+            (bmf-native "bml-emit-choose-fail-int" bml-emit-choose-fail-int BML-AST-CHOOSE)
+            (bmf-native "bml-emit-state-int" bml-emit-state-int BML-AST-BLOCK)))
+
     (let bml-recipe-section
         (form-rule-recipe-section "bml"
             (list
@@ -1404,7 +1430,13 @@
                 (compiler-rule "bml" "state-int" "BML state object to BMA ops" bml-emit-state-int))))
 
     (let bml-form-source
-        (form-source "bml" (list bml-bmf-second bml-recipe-section)))
+        (form-source "bml" (list bml-bmf-section bml-recipe-section)))
+
+    (let bml-bmf-dialect
+        (bmf-dialect "bml"
+                     (form-section-object bml-bmf-section)
+                     bml-bmf-native-section
+                     bml-bmf-rules))
 
     ;; --- BMA-like program lowering ----------------------------------
 
