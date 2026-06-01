@@ -135,6 +135,36 @@
     (defn py-class? (v) (and (record? v) (node_eq (record_blueprint v) CLASS-BP)))
     (defn py-instance? (v) (and (record? v) (node_eq (record_blueprint v) INSTANCE-BP)))
 
+    ;; --- inheritance: ONE method-resolution walk ------------------------
+    ;; py-resolve-owner — given a class record and a method name, return the
+    ;; class in the __base__ chain that actually DEFINES the method (starting
+    ;; at `cls`, walking "__base__" until found). This single walk grounds
+    ;; BOTH normal dispatch (start at the instance's __class__) AND super
+    ;; dispatch (start at the base of the method's defining class): same
+    ;; operation, different start class. When no class in the chain defines
+    ;; the method, the honest missing-method panic surfaces the site.
+    (defn py-resolve-owner (cls mname)
+        (if (record_has cls mname)
+            cls
+            (if (record_has cls "__base__")
+                (py-resolve-owner (record_get cls "__base__") mname)
+                (do
+                    (trace "py-resolve-owner: no such method" mname)
+                    (head (empty))))))
+
+    ;; --- super proxy ----------------------------------------------------
+    ;; A super() value is a sentinel-tagged record carrying (self, start-class).
+    ;; start-class is the __base__ of the class that DEFINED the currently
+    ;; executing method — so super().M() resolves M from there, with the
+    ;; original self. py-call-method binds one of these into each method's env
+    ;; under "super"; the CALL arm hands it back when the body writes super().
+    (let SUPER-BP (make_nodeid 1 2 99 9502))
+    (defn py-super-proxy (self-obj start-class)
+        (do
+            (let p (record_new SUPER-BP "__self__" self-obj))
+            (record_set p "__start_class__" start-class)))
+    (defn py-super? (v) (and (record? v) (node_eq (record_blueprint v) SUPER-BP)))
+
     ;; py-instantiate — construct an instance of a class record: a fresh
     ;; INSTANCE-BP record with "__class__" set, then run __init__ if present
     ;; (binding self + the call args). Returns the instance.
@@ -857,7 +887,7 @@
                                                     (py-closure-params callee)
                                                     arg-values
                                                     captured-with-self))
-                                    (py-eval (py-closure-body callee) call-env))))))))
+                                    (py-eval (py-closure-body callee) call-env)))))))))
             (if (node_eq cat PY-BMF-ATTR)
                 (do
                     ;; ATTR children: obj-recipe, attr-leaf. When obj is an
