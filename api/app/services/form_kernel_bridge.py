@@ -319,15 +319,60 @@ def load_recipe(recipe_path: str | Path) -> str:
 _STRUCTURED_INPUT_BLUEPRINT = "(make_nodeid 1 5 4 1)"
 
 
+def _as_field_dict(value: Any) -> dict | None:
+    """Normalize a model / object into a flat ``{field: value}`` dict, or None.
+
+    The bridge's answer to the object-OR-dict polymorphism the blocked functions
+    carry (``_safe_float(obj, f)`` reads ``obj.f`` from a model *or* ``obj[f]``
+    from a dict). Rather than teach the kernel both access paths, we DISSOLVE the
+    branch HERE: every structured value is normalized to a dict before it
+    marshals to a Record, so the recipe only ever sees Records and reads fields
+    homogeneously. A dict passes through; a Pydantic model becomes ``model_dump()``;
+    a plain object with ``__dict__`` becomes its instance attributes. Anything
+    without a field view returns None (the caller treats it as a leaf value).
+    """
+    if isinstance(value, dict):
+        return value
+    # Pydantic v2 model — the canonical structured-input shape for API data.
+    dump = getattr(value, "model_dump", None)
+    if callable(dump):
+        try:
+            d = dump()
+        except Exception:
+            d = None
+        if isinstance(d, dict):
+            return d
+    # Pydantic v1 — .dict(); kept for any models still on the old base.
+    legacy = getattr(value, "dict", None)
+    if callable(legacy) and not isinstance(value, (list, tuple, str, bytes)):
+        try:
+            d = legacy()
+        except Exception:
+            d = None
+        if isinstance(d, dict):
+            return d
+    # A plain object (dataclass instance, simple namespace) — its __dict__ is the
+    # field view. Excludes builtins (int/str/list have no useful __dict__).
+    obj_dict = getattr(value, "__dict__", None)
+    if isinstance(obj_dict, dict) and obj_dict:
+        return dict(obj_dict)
+    return None
+
+
 def _fk_literal(value: Any) -> str:
     """Render a Python value as an .fk literal.
 
-    Supported: int, float, bool, str, list of supported, and dict — the
-    structure-access marshalling: a dict (string keys → supported values, e.g.
-    a model via ``model_dump()``) becomes a ``(record_new <blueprint> "k" v ...)``
-    form a transmuted recipe reads via ``record_get``. Strings get Lisp-style
-    double-quote escaping; lists become ``(list ...)`` forms. Anything else
-    raises TypeError — the kernel's value model is small and deliberate.
+    Supported: int, float, bool, str, list of supported, dict, and any model /
+    object normalizable to a field dict — the structure-access marshalling. A
+    dict OR a model (via ``model_dump()`` / ``__dict__``) becomes a
+    ``(record_new <blueprint> "k" v ...)`` form a transmuted recipe reads via
+    ``record_get``; a list recurses element-wise, so a ``list[dict|model]``
+    becomes a ``(list (record_new ...) ...)`` — the list-of-records shape a
+    reduction recipe folds over. Normalizing model→dict at this boundary is what
+    dissolves the object-OR-dict polymorphism: the recipe only ever sees
+    Records. Strings get Lisp-style double-quote escaping. Anything with no
+    scalar/list/field view raises TypeError — the kernel's value model is small
+    and deliberate.
     """
     if isinstance(value, bool):
         # bool before int — Python bool is an int subclass.
@@ -366,6 +411,13 @@ def _fk_literal(value: Any) -> str:
         if not value:
             return "(list)"
         return "(list " + " ".join(_fk_literal(v) for v in value) + ")"
+    # Last: a structured object (Pydantic model / dataclass / namespace) that
+    # isn't already a dict. Normalize to its field dict and marshal as a Record —
+    # the model→dict→record step that dissolves the object-OR-dict polymorphism
+    # at the boundary, so a list[model] marshals identically to a list[dict].
+    field_dict = _as_field_dict(value)
+    if field_dict is not None:
+        return _fk_literal(field_dict)
     raise TypeError(f"_fk_literal: unsupported type {type(value).__name__}")
 
 
