@@ -22,6 +22,13 @@ green demo count cannot give.
 > number is the one that decides the flip; the per-request-spawn number was an
 > artifact of the wrong harness shape. Both are stated below so the correction
 > is legible.
+>
+> **The production carrier landed (2026-06-01).** The inline PyO3 extension the
+> serve evidence pointed at is now **built and measured** — it removes the
+> HTTP/1.0 loopback the serve number was dominated by, landing at **~0.05–0.13 ms
+> p50, sub-200µs p99, faster than serve on all four endpoints (~4.5–4.9× on the
+> integer ones)**. The warm in-process kernel is no longer a prediction; it is a
+> measured profile. See "The inline PyO3 carrier" below.
 
 ## What's eligible for the flip, and what stays CPython
 
@@ -54,7 +61,10 @@ Per request it:
 2. `inject_bindings(...)` — rewrites the `(let ...)` input literals in-process (µs).
 3. **The dispatch fork**, fastest path available:
    - `inline` — the `form_kernel_rust` PyO3 extension, a C call into Rust, no
-     spawn. **Not built in this environment** (nor, today, in the deploy image).
+     spawn. **Built and measured in this worktree (2026-06-01)** via
+     `maturin develop --release` into the API venv; the hot path the
+     persistent-serve evidence pointed at. The deploy image still needs the
+     build step (named below).
    - `subprocess` — fork+exec the `form-kernel-rust` binary on a temp `.fk`.
      **This is the path that serves today** wherever the binary is present.
    - `python-fallback` — the inline-CPython twin, when no kernel is reachable.
@@ -175,7 +185,79 @@ plainly:
 The serve mode proves **the persistent shape is sound and sub-ms**. The
 production carrier of that shape is the **inline PyO3** path (a warm `Kernel`
 held in-process, called by FastAPI with no socket at all) — same warm-kernel
-win, no HTTP/1.0 limits.
+win, no HTTP/1.0 limits. **That carrier is now built and measured** — next
+section.
+
+## The inline PyO3 carrier — the production hot path, built and measured
+
+The persistent-serve number is dominated by HTTP/1.0 loopback, not compute. The
+inline carrier removes the loopback entirely: the `form_kernel_rust` PyO3
+extension is imported **once** at `form_kernel_bridge` module load — a warm Rust
+runtime living *inside* the Python process — and each request is a C call
+straight into `compile_and_run`, returning an already-typed Python value
+(`int`/`float`/`list`). No process spawn, no socket. This is the path
+`serve_via_kernel` takes first whenever `inline_available()` is true.
+
+**What was built (2026-06-01).** The PyO3 surface already existed in source
+([`form/form-kernel-rust/src/lib.rs`](../form/form-kernel-rust/src/lib.rs),
+`Cargo.toml` `[lib] crate-type=["cdylib","rlib"]` + `pyo3` feature,
+`pyproject.toml` maturin config, bridge wired to `compile_and_run`) but had
+**never been built** — it didn't compile against the current kernel. Two shallow
+breaks fixed:
+
+1. `src/main.rs` `crate::bp_table::BP_ENTRIES` → `self::bp_table::BP_ENTRIES` —
+   a path that resolves in **both** the bin build (where `main.rs` is the crate
+   root) and the lib build (where `main.rs` is `mod kernel`).
+2. `src/lib.rs` `value_to_py` gained the missing `Value::Record(_)` arm
+   (renders via the kernel's own `display()`, same surface as the CLI).
+
+Then `maturin develop --release` (maturin 1.13.3, Rust 1.95, CPython 3.11,
+abi3-py39) built and installed `form_kernel_rust` into the API venv. The bridge
+loads it (`inline_available() == True`, `active_runtime() == "inline"`) and
+`serve_via_kernel` returns typed values via the warm kernel with no spawn.
+
+**Measured (2026-06-01, this worktree, release build, `--inline --persistent
+--iters 300`):**
+
+| Endpoint | Value parity | CPython p50 | Serve p50 | **Inline p50** | **Inline p99** | Serve→Inline |
+|----------|:---:|---:|---:|---:|---:|---:|
+| `coherence_weight` | ✓ 16185 | 0.0008 ms | 0.176 ms | **0.128 ms** | **0.190 ms** | 1.4× faster |
+| `nodeid_distance` | ✓ 7 | 0.0004 ms | 0.244 ms | **0.050 ms** | **0.078 ms** | 4.9× faster |
+| `nodeid_compatibility` | ✓ 2 | 0.0004 ms | 0.241 ms | **0.054 ms** | **0.085 ms** | 4.5× faster |
+| `weighted_average` | ✓ 0.8125 | 0.0004 ms | 0.107 ms | **0.092 ms** | **0.139 ms** | 1.2× faster |
+
+**Inline beats serve on all four, and the loopback was the difference.** On the
+two integer NodeID endpoints — which marshal real inputs both ways (no frozen
+sample) — inline is **~4.5–4.9× faster** than serve, landing at **sub-100µs p99**
+(0.078 / 0.085 ms). That delta is precisely the HTTP/1.0 connect + request-line
++ read/write round-trip that serve pays and inline does not. `coherence_weight`
+and `weighted_average` carry list/float inputs that the inline path injects as
+`.fk` literals per request (the inject + larger recipe walk), so their win over
+serve is smaller (1.2–1.4×) but still real, and still sub-200µs p99.
+
+**Value parity holds exactly inline** — 16185 / 7 / 2 / 0.8125, with types
+preserved (ints stay `int`, 0.8125 is a `float`, via `value_to_py`). The inline
+path returns the response model's headline scalar directly; the host echoes the
+other fields, same as serve.
+
+**Why the CPython ratio is still the wrong lens.** Inline p50 / CPython p50 reads
+as ~130–250× — but CPython's headline is a sub-microsecond arithmetic loop with
+**zero transport and zero recipe machinery**. Inline's ~0.05–0.13 ms includes
+inject + a C boundary crossing + a full recipe walk. Judge on the **absolute**:
+**sub-100µs p99 for the integer endpoints, sub-200µs for the list/float ones** —
+negligible against FastAPI routing + Pydantic + the network, which dwarf it.
+
+**Honest limit of these inline numbers.** The inline path still re-parses the
+`.fk` source per request inside `compile_and_run` — it removes the *spawn* and
+the *loopback*, not the per-request parse. For these tiny recipes the parse is a
+small fraction of the sub-100µs envelope, but a fully warm carrier would hold the
+*pre-parsed recipe root* and re-walk only with fresh bindings (the same shape
+`cli_serve` already uses internally with its loaded `routes` list). Exposing a
+`load_route(name, src) → handle` + `run(handle, bindings) → value` pair on the
+PyO3 module — reusing the kernel's existing `read_root_from_source` + `walk` with
+a fresh child frame — is the named next refinement; the current
+`compile_and_run` surface already proves the spawn-and-loopback removal, which
+was the whole readiness gap.
 
 ## JIT — what `register_jit` and `jit_compile` actually do today
 
@@ -225,18 +307,26 @@ for the *operator* subset and the named extension for the rest.**
 
 Two models, stated separately so the correction is legible:
 
-| Endpoint | PATH A (per-req fork+exec — WRONG model) | **Persistent serve (apples-to-apples)** |
-|----------|------------------------------------------|------------------------------------------|
-| `coherence_weight` | NOT-YET — +5 ms/req spawn | **READY (shape)** — 0.189 ms p50, 0.265 ms p99 |
-| `nodeid_distance` | NOT-YET — spawn-bound | **READY (shape)** — 0.231 ms p50, 0.288 ms p99 |
-| `nodeid_compatibility` | NOT-YET — spawn-bound | **READY (shape)** — 0.235 ms p50, 0.278 ms p99 |
-| `weighted_average` | NOT-YET — spawn-bound | **READY (shape)** — 0.090 ms p50, 0.192 ms p99 |
+| Endpoint | PATH A (per-req fork+exec — WRONG model) | Persistent serve (HTTP loopback) | **Inline PyO3 (production carrier)** |
+|----------|------------------------------------------|----------------------------------|--------------------------------------|
+| `coherence_weight` | NOT-YET — +5 ms/req spawn | 0.176 ms p50, 0.190 ms p99 | **0.128 ms p50, 0.190 ms p99 — READY** |
+| `nodeid_distance` | NOT-YET — spawn-bound | 0.244 ms p50, 0.288 ms p99 | **0.050 ms p50, 0.078 ms p99 — READY** |
+| `nodeid_compatibility` | NOT-YET — spawn-bound | 0.241 ms p50, 0.278 ms p99 | **0.054 ms p50, 0.085 ms p99 — READY** |
+| `weighted_average` | NOT-YET — spawn-bound | 0.107 ms p50, 0.192 ms p99 | **0.092 ms p50, 0.139 ms p99 — READY** |
 
-"READY (shape)" means: correct (4/4 value parity over the warm channel), stable
-percentiles, and a sub-ms absolute latency envelope under the persistent model.
-It is **not** "ship it" — the serve mode's HTTP/1.0 / single-thread / string-arg
-limits above mean the *production* carrier is inline PyO3, not this listener.
-The shape is proven; the production path is named.
+The three-way profile: per-request **fork+exec** (~5 ms, the wrong model) →
+**persistent serve** (~0.1–0.24 ms, sub-ms but HTTP/1.0-loopback-bound) →
+**inline PyO3** (~0.05–0.13 ms, the loopback gone). Each step removes a
+transport cost the previous paid; inline is the floor a synchronous in-process
+kernel can reach for these recipes.
+
+"READY" here means: correct (4/4 value parity inline, types preserved), stable
+percentiles, and a **sub-100µs-to-sub-200µs absolute envelope with no spawn and
+no socket** — the warm-in-process carrier the readiness evidence named. It is
+**healthy to carry the four transmuted endpoints' computational core.** What
+remains before a production flip is the deploy-image build of the extension and
+the per-request-parse refinement (both named below), not a profile question —
+the profile is met.
 
 Read precisely:
 
@@ -246,25 +336,35 @@ Read precisely:
   p99 under 0.29 ms — and most of that is HTTP/1.0 loopback, not recipe
   execution. The per-request-spawn ~5 ms was an artifact of the wrong harness
   shape, never the kernel's cost.
-- **The production carrier is the warm kernel held in-process.** The serve mode
-  proves the shape; **inline PyO3** (a `Kernel` loaded once at module import,
-  called by FastAPI with no socket) carries it without the HTTP/1.0 /
-  single-thread / string-arg limits. The bridge already routes to an `inline`
-  path when the `form_kernel_rust` extension is built — building that extension
-  in the deploy image is what turns "READY (shape)" into "READY (production)".
+- **The production carrier is built and measured.** **Inline PyO3** (the
+  `form_kernel_rust` extension imported once at module load, called by FastAPI
+  with no socket) is now built in this worktree and measured at **0.05–0.13 ms
+  p50, sub-200µs p99 — faster than serve on all four, ~4.5–4.9× faster on the
+  integer endpoints where the HTTP loopback was the whole difference.** The
+  bridge routes to it first when available. What turns this into "READY
+  (production)" is the **deploy-image build** of the extension (the same
+  `maturin develop --release` this worktree ran), plus the per-request-parse
+  refinement — not a further profile question.
 
-The number that matters for the flip decision: **with the kernel persistent,
-request→response is ~0.2 ms — sub-millisecond, HTTP-negligible.** The flip needs
-a **warm kernel** (inline PyO3, or a long-lived serve process), not a per-call
-shell-out. That requirement is now backed by a measured persistent profile, not
-a prediction.
+The number that matters for the flip decision: **with the kernel inline,
+request→response compute is ~0.05–0.13 ms — sub-100µs p99 on the integer
+endpoints, HTTP-negligible.** The flip needs a **warm kernel**; the warm kernel
+now exists as a built PyO3 extension with a measured profile, not a prediction.
 
 ## What's needed before a real flip
 
-1. **Build the inline PyO3 kernel** (`form_kernel_rust`) in the API image and
-   re-run with `--persistent` — confirm the in-process `inline` path lands at or
-   below the serve number (it should be *faster*, with no socket round-trip).
-   That is the load-ready, production-carrier measurement.
+1. **Build the inline PyO3 kernel in the deploy image.** ✅ **Built and measured
+   in this worktree (2026-06-01)** — `maturin develop --release` into the API
+   venv; inline lands **below** the serve number (~4.5–4.9× faster on the integer
+   endpoints, sub-200µs p99 across all four). What remains is reproducing that
+   build **in the deploy image**: add `maturin` to the API image build and run
+   `cd form/form-kernel-rust && maturin build --release` (or `develop` into the
+   image's venv) so `form_kernel_rust` imports in production. Then the live
+   `active_runtime()` reports `inline` and `/api/health` shows the hot path.
+   *Refinement:* the current `compile_and_run` surface re-parses the `.fk` per
+   request — expose a `load_route + run(handle, bindings)` pair on the PyO3
+   module (reusing `read_root_from_source` + `walk` with a fresh child frame, the
+   shape `cli_serve` already uses) to drop the per-request parse too.
 2. **Marshal real inputs over the channel.** The two list/float endpoints
    currently compute a frozen sample under serve because the string-only query
    alist plus the missing `split` / `str_to_float` natives can't carry a list.
@@ -294,11 +394,18 @@ a prediction.
 ```bash
 python3 scripts/kernel_readiness_harness.py                          # PATH A, 50 iters
 python3 scripts/kernel_readiness_harness.py --persistent             # + the warm serve path (apples-to-apples)
+python3 scripts/kernel_readiness_harness.py --inline                 # + the warm in-process PyO3 path (production carrier)
+python3 scripts/kernel_readiness_harness.py --inline --persistent    # the full three-way profile
 python3 scripts/kernel_readiness_harness.py --persistent --jit       # + serve+jit mode and the JIT demonstrator
-python3 scripts/kernel_readiness_harness.py --iters 1000 --persistent # load replay
+python3 scripts/kernel_readiness_harness.py --iters 1000 --inline    # load replay, inline
 python3 scripts/kernel_readiness_harness.py --path-b                 # include PATH B
 python3 scripts/kernel_readiness_harness.py --json out.json          # machine-readable
 ```
+
+The `--inline` mode requires the `form_kernel_rust` PyO3 extension built into
+the running interpreter (`maturin develop --release` from
+`form/form-kernel-rust/`); when it is absent the harness reports the inline
+verdict as `UNAVAILABLE` and the other modes are unaffected.
 
 The harness exits nonzero **only** on a value-parity failure. Slowness is
 reported as evidence, never as a test failure — the profile informs the flip
