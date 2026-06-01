@@ -205,20 +205,39 @@ drop before folding it.
   DATA, grounded entirely on the projection that already exists. (Off the hot
   path: this is the OFFLINE attribution recorder, never the live
   `serve_via_kernel` request path, which remains a separate decision.)
-- **The FOLD is built; the LEARNING is the named next build.** The dimension-
-  reducing compression recipe (N→N−1, folding away a redundant axis) is REAL
-  and three-way (see "Compression is a dimension-reducing recipe" above —
-  `compress`/`reconstruct`, lossless on a redundant axis, lossy on a surprising
-  one). What it does *not* yet do: the recipe **applies** a given reduction; it
-  does not yet **learn** which axis went surprise-free or fit the coefficients
-  that predict it. That learning — the cell discovering, per category, which
-  dimension became redundant and the coefficients that fold it — is the named
-  next build, grounded on the same projection the surprise gate now reads. The
-  per-category *learned* retention policy (the cell learning its own threshold
-  over time, rather than a per-run relative cutoff) and **wiring compression
-  into the edge-event memory** (folding a category's accumulated events once a
-  dimension goes surprise-free) remain alongside it — the learning side of the
-  same loop the fold mechanism now stands ready to apply.
+- **The FOLD is built AND the LEARNING is built — the autoencoder loop is
+  closed.** The dimension-reducing compression recipe (N→N−1, folding away a
+  redundant axis) is REAL and three-way (see "Compression is a dimension-
+  reducing recipe" above — `compress`/`reconstruct`, lossless on a redundant
+  axis, lossy on a surprising one). What was the named next build is now real
+  too: `scripts/kernel_attribution_report.py --compress-memory` reads the
+  accumulated edge-event memory, groups it by Blueprint NodeID (the content-
+  addressed category), and **LEARNS, per category, which dimension is
+  redundant** — by solving no-intercept least-squares to predict each candidate
+  dimension `[pkg, level, type, inst, fire_count]` from the others and measuring
+  the max-abs residual. A dimension whose residual is within tolerance (`1e-6` —
+  exact linear redundancy, a constant column or a literal linear combination,
+  never a noisy fit) is genuinely redundant; the least-squares coefficients are
+  exactly what `reconstruct` needs. The learner then **drives the REAL Form
+  `compress`/`reconstruct` recipe through the kernel** on the category's
+  representative integer vector and proves the round-trip recovers the dropped
+  dimension EXACTLY — the fold is Form-native, not a Python reimplementation
+  (the learning runs in Python; the fold + proof run in the kernel). On the
+  recorded production-shape memory both fired categories compress losslessly
+  5→4 dims (the structural axis `level = 2·pkg` is redundant and folds away
+  exactly; the kernel round-trip recovers it bit-for-bit), while `fire_count`
+  — the one axis that VARIES and carries surprise — is correctly refused
+  (residual ≫ tolerance), never folded. That refusal IS the honest negative on
+  real data: content-addressing makes a category's four structural columns
+  constant (hence always at least one foldable dimension), so the non-redundant
+  axis surfaces at the *dimension* level (`fire_count`), not the category level.
+  **What stays named** (not built here): non-linear redundancy (only exact
+  LINEAR dependence is detected); online/continuous learning (this is an offline
+  batch over the persisted store, not a live-updating policy); a per-category
+  *learned* retention threshold that drifts over time (the surprise gate's
+  cutoff is still a per-run relative statistic); and recording on the LIVE
+  `serve_via_kernel` request path (this reads the OFFLINE store only — the
+  hot-path memory remains a separate, latency-touching Urs-level decision).
 
 ## Cross-References
 
@@ -252,7 +271,11 @@ drop before folding it.
 - **Autoencoders / dimensionality reduction (PCA, bottleneck layers)** — the
   ML analog: a network learns to drop the redundant dimensions and keep the
   informative ones. "A recipe with one less output than input" is that
-  operation as a Form recipe — the body's own learned bottleneck.
+  operation as a Form recipe — the body's own learned bottleneck. The loop is
+  closed: `--compress-memory` is the encoder (least-squares learns which axis is
+  redundant per category) feeding the decoder (`reconstruct` re-derives it
+  exactly), with the residual as the reconstruction loss that gates whether a
+  dimension is safe to drop at all.
 
 The body holds this concept as **the synthesis that turns the trace-memory
 machinery into an honest economy.** Identity is shared Blueprint+Recipe;
