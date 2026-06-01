@@ -586,15 +586,53 @@ structure-walking, not numeric computation:
 
 The gate it sits behind is **polymorphic structure/field extraction from
 heterogeneous object-or-dict collections**, a *different* capability than
-`round` — one the kernel does not carry today. The Form recipe value-walk
-carries scalars, lists, and (via `round_ndigits`) CPython-exact rounding; it
-does **not** carry "reach into an arbitrary Python object *or* dict and pull a
-named field, polymorphically, then marshal six such collections." Transmuting
-`grounded_idea_metrics` would mean forcing that data-marshalling through a
-recipe it has no honest shape for. So it stays CPython until the
-structure/field-access capability is built and earns its own three-way parity
-proof — **the round() unlock is necessary but not sufficient for this route, and
-its round-heavy return dict must not be misread as round-only eligibility.**
+`round`. The CLEAN SUBSET of that gate is now built and proven; the
+heterogeneous-polymorphic remainder stays deferred. The boundary, named
+honestly:
+
+**Built — homogeneous record field access (three-way proven).** A recipe can
+receive structured data as ONE binding and read named fields from it. The
+kernel already carried the primitive in all three siblings
+(`record_new`/`record_get`/`record_has`/`make_nodeid`); what was missing was the
+bridge marshalling. The seam:
+
+- `form_kernel_bridge._fk_literal` renders a Python dict (or a model via
+  `model_dump()`) as a `(record_new <blueprint> "field" value ...)` literal —
+  the subprocess / inline-with-parse carrier.
+- lib.rs `py_to_value` builds a `Value::Record` from a Python dict — the inline
+  (Preloader) carrier. `Kernel::make_record` interns field names exactly as the
+  `record_new` native does, so a marshalled record and one built in Form are the
+  same shape.
+- The `_get` native (the python-bmf SUBSCRIPT lowering) now reads `Value::Record`
+  fields, so `obj["field"]` in a transmuted recipe resolves against a record
+  binding without any recipe rewrite.
+
+Proof: `form-stdlib/tests/record-field-access-band.fk` (three-way green: Go ==
+Rust == TS, full score 16) proves the Record field-read primitive across all
+siblings; `endpoint_idea_marginal_from_record_demo.{py,fk}` (the marginal-CC
+core reading its six inputs from one structured idea) earns three-way parity
+through `parity_suite.sh` and serves live at
+`/api/utils/idea_marginal_from_record`; the bridge marshalling is covered by
+`test_form_kernel_bridge_structure_access.py`. This unlocks the family of
+functions that take a **homogeneous dict / single model** and read numeric
+fields — the marginal-CC core, the collective-health summaries built from a
+counts dict, `_safe_ratio`-adjacent shapes over a structured input.
+
+**Deferred — heterogeneous object-OR-dict polymorphism.** `compute_idea_metrics`
+still stays CPython, because `_safe_float(obj, "field")` reads `obj.field` from a
+model instance *OR* `obj["field"]` from a dict, polymorphically, across SIX
+pre-fetched collections, plus `.get(...)` on a valuations map and `max`/`min`/
+`any` over filtered sets. The clean subset built here is "marshal ONE dict/model
+to a record and read its fields"; the deferred remainder is "branch on whether
+each of six heterogeneous inputs is a model or a dict, marshal each, and reduce
+across them." That needs either (a) the bridge normalizing every collection to
+records before the recipe runs (per-model schema knowledge, a host concern that
+defeats the point), or (b) a kernel value model that carries both attribute and
+subscript access behind one polymorphic reader plus list-of-record reduction —
+a larger arc than this capability. So `compute_idea_metrics` stays CPython until
+the heterogeneous-collection reduction earns its own proof; **the round() unlock
+and the homogeneous-record unlock together are necessary but still not
+sufficient for that route.**
 
 The wellness probe and the attribution view are the two instruments that make
 the incremental transmutation **safe and legible**: the probe says *the surface
