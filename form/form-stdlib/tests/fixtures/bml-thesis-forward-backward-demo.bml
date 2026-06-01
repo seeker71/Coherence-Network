@@ -1,0 +1,14 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Name: bml-thesis-forward-backward-demo.bml
+// Platform: Form native kernel
+//
+//////////////////////////////////////////////////////////////////////
+
+/* A minimal executable BML stream for the thesis exit proof:
+   source file -> BML scanner -> BMF rules -> BMA program -> DO/UNDO trace. */
+
+save;
+4;
+discard;
+try { throw 1; } catch { return 7; }
