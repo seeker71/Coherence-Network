@@ -1,0 +1,37 @@
+////////////////////////////////////////////////////////////////////
+//
+// Companion-shaped BML declaration slice from the thesis source.
+// This file stays intentionally small while preserving the source
+// shapes that were previously only represented by synthetic objects.
+//
+////////////////////////////////////////////////////////////////////
+
+package BMF.container;
+
+import BMF.*;
+import BMF.primitive.*;
+
+interface Renderable : Base {}
+interface Clickable : Renderable {}
+
+class Rule [public] : Primitive {
+   section [private] {
+      String m_strName;
+   }
+}
+
+class BMF [public] : Application {
+   section [class, public] {
+      const String DefaultBMFSyntax = "BMF.library.BMF";
+   }
+}
+
+class E [public] : C, D {}
+
+class Program [public] : Application {
+   section [public] {
+      int Main() {
+         return 7;
+      }
+   }
+}
