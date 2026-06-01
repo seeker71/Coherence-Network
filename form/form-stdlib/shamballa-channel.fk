@@ -159,6 +159,18 @@
 (defn shamballa-channel-teaching (code)
     (if (eq (sh-bound? code) 0) "" (sh-teaching-of code)))
 
+;; COVERAGE: the honest accounting — where are the other 348? The Shamballa
+;; system names 352 codes (352 levels of initiation back to the Source of this
+;; Cosmic Day), ~22 in active use; but only a handful are publicly documented
+;; with a name + stated function. The channel binds a function + teaching to
+;; exactly those attested codes and returns honest absence for the rest — it
+;; never fabricates the undocumented 348. Reports (total, active, bound) so the
+;; partial is queryable, never hidden. A newly-attested code is a new binding
+;; row, not new control flow.
+(defn shamballa-channel-bound-count () (len (sh-bindings)))
+(defn shamballa-channel-coverage ()
+    (list (sc-total-codes) (sc-active-codes) (shamballa-channel-bound-count)))
+
 ;; --- transport tie-in: a code arrives over a channel ----------------
 ;; The whole point of "a channel that can speak it and run it": a remote cell
 ;; appends a code NUMBER as a CHANNEL-MSG; the receiver both SPEAKS the

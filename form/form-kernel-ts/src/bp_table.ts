@@ -388,6 +388,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "SQL-OBJ": [1, 2, 99, 10],
   "SQL-PAIR": [1, 2, 99, 12],
   "SUBSTRATE-REF": [1, 2, 99, 1712],
+  "SUPER-BP": [1, 2, 99, 9502],
   "SYMBOL-BIND": [1, 2, 99, 1730],
   "SYMBOL-NOT-FOUND": [1, 2, 99, 1732],
   "SYMBOL-TABLE": [1, 2, 99, 1731],

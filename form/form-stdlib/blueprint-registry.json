@@ -3397,54 +3397,15 @@
     },
     {
       "pkg": 1,
-      "level": 3,
-      "type": 99,
-      "inst": 1718,
-      "name": "SHAMBALLA-RAISED",
-      "meaning": "the regal envelope of Ho Ka O iLi iLi (code 3): a cell composed under a higher-level blueprint — assemblage point lifted",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/shamballa-channel.fk"
-      ]
-    },
-    {
-      "pkg": 1,
       "level": 2,
       "type": 99,
       "inst": 1719,
       "name": "SHAMBALLA-CRYSTAL",
-      "meaning": "the union-of-forces dyad of the Shamballa Crystal (code 4): two cells composed in balance — content-addressed co-creation",
+      "meaning": "the union-of-forces dyad of the Shamballa Crystal (code 4): two cells composed in balance \u2014 content-addressed co-creation",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
         "form/form-stdlib/shamballa-channel.fk"
-      ]
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1722,
-      "name": "GEMATRIA-WORD",
-      "meaning": "a Hebrew word as a cell — its letters composed; its content-address is its gematria value, so two differently-spelled words of equal value share one address (echad=ahava=13)",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/gematria-channel.fk"
-      ]
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1723,
-      "name": "SANSKRIT-DERIVE",
-      "meaning": "a Sanskrit derivation recipe — (root, affix) composed into a word-cell; recursive (a derived cell can be the root of another), the generative grammar made executable; the root is recoverable as the first child",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/sanskrit-channel.fk"
       ]
     },
     {
@@ -3474,6 +3435,32 @@
       "reuse": 1,
       "defined_in": [
         "form/form-stdlib/cell-registry.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1722,
+      "name": "GEMATRIA-WORD",
+      "meaning": "a Hebrew word as a cell \u2014 its letters composed; its content-address is its gematria value, so two differently-spelled words of equal value share one address (echad=ahava=13)",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/gematria-channel.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1723,
+      "name": "SANSKRIT-DERIVE",
+      "meaning": "a Sanskrit derivation recipe \u2014 (root, affix) composed into a word-cell; recursive (a derived cell can be the root of another), the generative grammar made executable; the root is recoverable as the first child",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/sanskrit-channel.fk"
       ]
     },
     {
@@ -3563,39 +3550,13 @@
       "type": 99,
       "inst": 1745,
       "name": "HOLO-ONE",
-      "meaning": "The One — the prima materia, the single source Blueprint all holographic forms differentiate from (the ground every bulk is interned under). Carries its own address, distinct from HANDLER-NOT-FOUND: the source of all forms is not absence.",
+      "meaning": "The One \u2014 the prima materia, the single source Blueprint all holographic forms differentiate from (the ground every bulk is interned under). Carries its own address, distinct from HANDLER-NOT-FOUND: the source of all forms is not absence.",
       "aliases": [
         "holo-one"
       ],
       "reuse": 1,
       "defined_in": [
         "form/form-stdlib/grammars/holographic.fk"
-      ]
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 9500,
-      "name": "CLASS-BP",
-      "meaning": "Blueprint for a Python class value under the BMF evaluator — a record holding each method as a field; the captured def-site env.",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/python-bmf-eval.fk"
-      ]
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 9501,
-      "name": "INSTANCE-BP",
-      "meaning": "Blueprint for a Python instance value under the BMF evaluator — a record holding data fields plus a __class__ pointer.",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/python-bmf-eval.fk"
       ]
     },
     {
@@ -4310,6 +4271,59 @@
       "reuse": 1,
       "defined_in": [
         "form/form-stdlib/concept-xpath.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9500,
+      "name": "CLASS-BP",
+      "meaning": "Blueprint for a Python class value under the BMF evaluator \u2014 a record holding each method as a field; the captured def-site env.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9501,
+      "name": "INSTANCE-BP",
+      "meaning": "Blueprint for a Python instance value under the BMF evaluator \u2014 a record holding data fields plus a __class__ pointer.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9502,
+      "name": "SUPER-BP",
+      "meaning": "Python super() proxy blueprint \u2014 the MRO-walk owner marker in python-bmf-eval",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/python-bmf-eval.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 3,
+      "type": 99,
+      "inst": 1718,
+      "name": "SHAMBALLA-RAISED",
+      "meaning": "the regal envelope of Ho Ka O iLi iLi (code 3): a cell composed under a higher-level blueprint \u2014 assemblage point lifted",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/shamballa-channel.fk"
       ]
     },
     {
