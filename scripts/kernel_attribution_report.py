@@ -54,6 +54,7 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -339,8 +340,13 @@ def native_blueprint(name: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def aggregate() -> dict:
+def aggregate(collect_edges: bool = False) -> dict:
     """Trace every kernel-served recipe and aggregate the attribution signal.
+
+    ``collect_edges`` (default False) adds a ``per_route_natives`` key carrying
+    the per-route native fire-counts — the raw material the ``--record`` path
+    persists as edge-events. It is OFF by default so the no-flag run (human and
+    ``--json``) is byte-identical to today.
 
     Returns a dict with:
       - per_recipe:  [{route, recipe, result, expected, parity, elapsed_us,
@@ -356,6 +362,10 @@ def aggregate() -> dict:
     fn_counts: dict[str, int] = defaultdict(int)
     native_counts: dict[str, int] = defaultdict(int)
     per_recipe: list[dict] = []
+    # Per-route native fire-counts — the raw material of the edge-event
+    # (route -> native -> count). Kept on the aggregate so --record can persist
+    # it as edge-events WITHOUT re-tracing; it costs nothing when not recorded.
+    per_route_natives: list[dict] = []
     reached = 0
 
     for entry in KERNEL_SERVED_RECIPES:
@@ -390,8 +400,13 @@ def aggregate() -> dict:
             arm_counts[v.get("arm_variant_name", "?")] += int(v.get("count", 0))
         for f in tr.get("functions", []):
             fn_counts[f.get("name", "?")] += int(f.get("count", 0))
+        route_natives: dict[str, int] = defaultdict(int)
         for n in tr.get("natives", []):
-            native_counts[n.get("name", "?")] += int(n.get("count", 0))
+            nm = n.get("name", "?")
+            cnt = int(n.get("count", 0))
+            native_counts[nm] += cnt
+            route_natives[nm] += cnt
+        per_route_natives.append({"route": entry["route"], "natives": dict(route_natives)})
         per_recipe.append(rec)
 
     # Attribute each fired native to its Blueprint NodeID (transparency thread).
@@ -403,7 +418,7 @@ def aggregate() -> dict:
         }
 
     inert = _inert_natives(set(native_counts))
-    return {
+    report: dict = {
         "per_recipe": per_recipe,
         "arms": dict(arm_counts),
         "functions": dict(fn_counts),
@@ -418,6 +433,12 @@ def aggregate() -> dict:
         "reached": reached,
         "eligible": len(KERNEL_SERVED_RECIPES),
     }
+    if collect_edges:
+        # Only present under --record: the per-route native fire-counts that
+        # become edge-event rows. Kept OFF the default dict so the no-flag run
+        # (human and --json) is byte-identical to today — zero behavior change.
+        report["per_route_natives"] = per_route_natives
+    return report
 
 
 # Registered natives the kernel ships. Sourced from the kernel's own
@@ -622,6 +643,202 @@ def embodiment_inert(natives: dict, inert_names: list[str]) -> dict:
     return {"center": center, "inert": rows}
 
 
+# ---------------------------------------------------------------------------
+# Edge-event memory — lc-the-trace-is-the-memory, moves (1) and (2), the SAFE
+# offline slice.
+#
+# Move 1: the execution trace IS memory, recorded as edge-events
+# (firing-cell, touched-cell, event). Here the firing-cell is the route's
+# recipe, the touched-cell is the native's Blueprint NodeID, and the event is
+# a fire-count for this run. We persist each as an append-only JSONL row so the
+# memory ACCUMULATES across runs instead of evaporating with each snapshot.
+#
+# Move 2: query per cell IS query per category — the Blueprint NodeID is the
+# content-addressed category, so summing accumulated fire_counts per NodeID
+# (across all routes and all recorded runs) gives the per-category memory the
+# projection reads.
+#
+# CRITICAL SEAM (off the hot path): this records the OFFLINE attribution run's
+# traces, NOT the live `serve_via_kernel` request path. Recording on the live
+# request path (async / sampled / opt-in, to avoid regressing the sub-100µs
+# inline-kernel profile) is a SEPARATE, larger decision that belongs to Urs —
+# it touches production latency. This module never touches a live route.
+#
+# Gating: like runtime_event_store.enabled(), recording is OPT-IN and a no-op
+# when the store path is unconfigured. A fresh checkout with no path set runs
+# the report identically to today — no writes, no file, no side-effects.
+# ---------------------------------------------------------------------------
+
+_EDGE_EVENTS_ENV = "KERNEL_EDGE_EVENTS_PATH"
+
+
+def edge_events_path() -> Path | None:
+    """The configured edge-event store path, or None when unconfigured.
+
+    Reads ``KERNEL_EDGE_EVENTS_PATH``. When unset/blank the store is disabled —
+    recording is a no-op and the accumulated read finds no memory (falls back
+    to the snapshot). This is the runtime_event_store.enabled() gating shape:
+    opt-in, no-op by default, no side-effects in a fresh checkout.
+    """
+    raw = os.environ.get(_EDGE_EVENTS_ENV, "").strip()
+    return Path(raw) if raw else None
+
+
+def record_edge_events(report: dict, path: Path) -> int:
+    """Persist this run's per-route fire-events as edge-event rows (JSONL).
+
+    ONE record function over the aggregate's per-route natives as DATA: each
+    (route, native, blueprint, fire_count) becomes one edge-event row stamped
+    with the run's recorded_at. Append-only — the file IS the accumulation.
+
+    Row shape:
+      {recorded_at, run_id, route, native, blueprint, fire_count}
+
+    The native's Blueprint NodeID is the content-addressed category (move 2):
+    it is pulled from the run's already-resolved ``natives`` map so no extra
+    kernel calls are made. Returns the number of rows written.
+    """
+    natives = report.get("natives", {})
+    recorded_at = datetime.now(timezone.utc).isoformat()
+    run_id = recorded_at  # one run == one timestamped batch of edge-events
+    rows: list[dict] = []
+    for route_entry in report.get("per_route_natives", []):
+        route = route_entry["route"]
+        for native, fire_count in route_entry["natives"].items():
+            bp = (natives.get(native) or {}).get("blueprint")
+            rows.append(
+                {
+                    "recorded_at": recorded_at,
+                    "run_id": run_id,
+                    "route": route,
+                    "native": native,
+                    "blueprint": bp,
+                    "fire_count": int(fire_count),
+                }
+            )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        for row in rows:
+            fh.write(json.dumps(row, separators=(",", ":")) + "\n")
+    return len(rows)
+
+
+def read_edge_events(path: Path) -> list[dict]:
+    """Read all accumulated edge-event rows from the JSONL store."""
+    if not path.is_file():
+        return []
+    rows: list[dict] = []
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return rows
+
+
+def accumulated_natives(rows: list[dict]) -> dict:
+    """Fold accumulated edge-events into a ``natives``-shaped map.
+
+    Sums ``fire_count`` per native across ALL recorded runs and routes, pairing
+    each with its Blueprint NodeID. The output is the SAME shape
+    ``embodiment_projection`` consumes for the snapshot — so the projection
+    mechanism is ONE function, fed either the live snapshot or the accumulated
+    memory. This is move (2) made concrete: per-NodeID summation across history
+    is the per-category memory.
+    """
+    by_native: dict[str, dict] = {}
+    for row in rows:
+        name = row.get("native")
+        if not name:
+            continue
+        slot = by_native.setdefault(name, {"count": 0, "blueprint": row.get("blueprint")})
+        slot["count"] += int(row.get("fire_count", 0))
+        if slot["blueprint"] is None:
+            slot["blueprint"] = row.get("blueprint")
+    return by_native
+
+
+def accumulated_report(path: Path) -> dict | None:
+    """Build a projection over the ACCUMULATED edge-event memory, or None.
+
+    Reads the whole store, folds it per category (move 2), and runs the SAME
+    ``embodiment_projection`` over the accumulated fire-counts. Returns a dict
+    carrying the runs/rows counts and the accumulated projection, or None when
+    no memory has been recorded yet (caller falls back to the snapshot and says
+    so — honest about empty history).
+    """
+    rows = read_edge_events(path)
+    if not rows:
+        return None
+    natives = accumulated_natives(rows)
+    run_ids = {r.get("run_id") for r in rows if r.get("run_id")}
+    return {
+        "runs": len(run_ids),
+        "rows": len(rows),
+        "natives": natives,
+        "embodiment": embodiment_projection(natives),
+    }
+
+
+def render_accumulated(acc: dict, top: int | None) -> str:
+    """Render the accumulated-memory projection — the memory the body kept."""
+    out: list[str] = []
+    out.append("# Kernel attribution — ACCUMULATED edge-event memory")
+    out.append("")
+    out.append(
+        f"Read {acc['rows']} edge-event rows across {acc['runs']} recorded run(s) "
+        f"from the persisted store."
+    )
+    out.append(
+        "  Each row is (route, native, Blueprint NodeID, fire_count) — the trace"
+    )
+    out.append(
+        "  recorded as an edge-event (lc-the-trace-is-the-memory, moves 1-2). The"
+    )
+    out.append(
+        "  projection below reads the ACCUMULATED fire-counts, not one snapshot:"
+    )
+    out.append(
+        "  fire-counts grow run over run, and the center reflects history."
+    )
+    out.append("")
+    emb = acc.get("embodiment") or {}
+    if emb.get("categories"):
+        center = emb["center"]
+        center_str = ".".join(f"{c:g}" for c in center)
+        out.append(
+            f"  Embodied center (activity-weighted NodeID centroid of "
+            f"{emb['total_fires']} ACCUMULATED fires): @{center_str}"
+        )
+        out.append("")
+        out.append("    proj  fires  share  Blueprint    natives")
+        for c in _ranked_categories(emb["categories"], top):
+            members = ", ".join(c["natives"])
+            out.append(
+                f"    {c['projection']:>6.3f}  {c['fires']:>4}  {c['share']:>5.3f}  "
+                f"{c['blueprint']:<11}  {members}"
+            )
+    else:
+        out.append("  (no resolvable Blueprint NodeIDs in the accumulated memory)")
+    out.append("")
+    out.append(
+        "  This is the snapshot->memory transition, bounded to the OFFLINE"
+    )
+    out.append(
+        "  attribution path. Recording on the LIVE serve_via_kernel request path"
+    )
+    out.append(
+        "  (async/sampled/opt-in, to protect the sub-100µs profile) is the named"
+    )
+    out.append("  larger build — a separate Urs-level decision, not done here.")
+    out.append("")
+    return "\n".join(out)
+
+
 def _ranked(counts: dict, top: int | None) -> list[tuple]:
     items = sorted(counts.items(), key=lambda kv: (-_count_of(kv[1]), kv[0]))
     return items[:top] if top else items
@@ -812,7 +1029,50 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--top", type=int, default=None, help="top-N per section")
+    parser.add_argument(
+        "--record",
+        action="store_true",
+        help=(
+            "persist this run's per-route fire-events as edge-events "
+            "(lc-the-trace-is-the-memory moves 1-2). OPT-IN and a no-op unless "
+            f"{_EDGE_EVENTS_ENV} is set. The default run writes nothing."
+        ),
+    )
+    parser.add_argument(
+        "--from-memory",
+        action="store_true",
+        help=(
+            "read the projection over the ACCUMULATED edge-event memory across "
+            "all recorded runs (falls back to the live snapshot if none recorded)."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    store_path = edge_events_path()
+
+    # --from-memory: read the accumulated memory and project over it. Honest
+    # fallback: if no memory recorded yet, say so and fall through to the
+    # snapshot so the command always returns a useful projection.
+    if args.from_memory:
+        acc = accumulated_report(store_path) if store_path is not None else None
+        if acc is not None:
+            if args.json:
+                print(json.dumps(acc, indent=2))
+            else:
+                print(render_accumulated(acc, args.top))
+            return 0
+        note = (
+            "(no accumulated edge-event memory yet"
+            + (
+                f" at {store_path} — record runs with --record first;"
+                if store_path is not None
+                else f" — set {_EDGE_EVENTS_ENV} and record runs with --record first;"
+            )
+            + " showing the live snapshot instead)"
+        )
+        print(note)
+        print("")
+        # fall through to the snapshot path below
 
     if not kernel_available():
         msg = (
@@ -825,7 +1085,29 @@ def main(argv: list[str] | None = None) -> int:
             print(f"(could not reach the kernel binary)\n  {msg}")
         return 2
 
-    report = aggregate()
+    report = aggregate(collect_edges=args.record)
+
+    if args.record:
+        if store_path is None:
+            # Gated no-op, like runtime_event_store.enabled() == False. Named,
+            # not silent — so an operator knows recording was requested but the
+            # store is unconfigured.
+            note = (
+                f"(--record requested but {_EDGE_EVENTS_ENV} is unset — "
+                "no edge-events written; set it to a writable path to accumulate)"
+            )
+            if not args.json:
+                print(note)
+        else:
+            written = record_edge_events(report, store_path)
+            if not args.json:
+                print(
+                    f"(recorded {written} edge-event rows to {store_path} — "
+                    "the trace is now memory; --from-memory reads the accumulation)"
+                )
+        # Don't leak the recording-only key into --json output.
+        report.pop("per_route_natives", None)
+
     if args.json:
         print(json.dumps(report, indent=2))
     else:
