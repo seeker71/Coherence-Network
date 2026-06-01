@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 138
+**Total files**: 140
 
 | File | Purpose |
 |---|---|
@@ -78,6 +78,7 @@
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
+| [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
@@ -103,6 +104,7 @@
 | [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
 | [scan_dyad_candidates_word.py](scan_dyad_candidates_word.py) | WORD-domain prose-structural dyad-pair scan over Living Collective concepts. |
 | [scan_form_blueprints.py](scan_form_blueprints.py) | Scan Form (.fk) sources for `make_nodeid` Blueprint literals and measure |
+| [scan_form_user_blueprints.py](scan_form_user_blueprints.py) | Form User Blueprint Scanner |
 | [schedule_attunement.py](schedule_attunement.py) | Re-attune every presence so newly added concepts get picked up. |
 | [seed_commit_evidence.py](seed_commit_evidence.py) | Seed the commit evidence API from local git history. |
 | [seed_db.py](seed_db.py) | Seed data/coherence.db from spec markdown files, commit evidence JSON, and inline idea data. |

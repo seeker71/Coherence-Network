@@ -498,3 +498,90 @@ reported as evidence, never as a test failure — the profile informs the flip
 decision; it does not gate CI. The persistent serve mode starts one
 `form-kernel-rust serve` process per mode, fires all requests over it, and kills
 it on exit; no listener is left running.
+
+## Toward full kernel-native routing + attribution
+
+The four transmuted endpoints are the seed, not the destination. The direction
+Urs named: **serve most/all routes through the kernel → full attribution and
+traceability → an activity view that shows which Blueprints / Recipes / Cells
+are most alive, and which sit inert and want a look at why they're registered
+but never involved.** This section writes that destination down so the next
+breath continues it instead of re-deriving it.
+
+### The destination
+
+A body where the **computational core of every eligible route** runs as a Form
+recipe on the warm in-process kernel. Then every request leaves an attribution
+trace — which arm categories (Blueprints) dispatched, which Form functions
+(Recipes) were called, which natives fired — and the body can **see its own
+execution shape**: hot paths exercised on every request, dormant paths that no
+route reaches. The substrate's promise (content-addressed structural identity)
+becomes a *live* signal: not just "these two cells share a Blueprint" but "this
+Blueprint fired 176 times serving real traffic; that one has never fired —
+why is it here?"
+
+### The path — incremental, each step earning its proof
+
+1. **Transmute routes incrementally.** Each eligible route (pure
+   numeric/structural computation — see "What's eligible" above) lands a `.py`
+   demo + compiled `.fk` recipe, joins `PARITY_FILES`, and calls
+   `serve_via_kernel`. **Every transmuted route earns value-parity proof** (the
+   three-way CPython/TS/Rust gate) before it ships. The growth edge is the
+   `total − served` count the wellness probe names.
+2. **The wellness probe guards the surface.** `sense_kernel_api()` in
+   `scripts/wellness_check.py` senses the kernel-native surface across the five
+   dimensions Urs named — **performance, stability, accuracy, transparency,
+   vitality** — quiet when healthy, specific on drift (a python-fallback that
+   should be inline, a parity break, a latency regression, attribution gone
+   missing). As routes are transmuted, the probe's vitality ratio climbs and the
+   same five signals keep watch over the wider surface. It is the standing
+   sensor that lets the transmutation proceed without fear.
+3. **The attribution-activity view grows with coverage.**
+   `scripts/kernel_attribution_report.py` runs the kernel-served recipes through
+   the kernel's `trace` mode and aggregates the arm / function / native
+   attribution into a ranked view — hot Blueprints, hot Recipes, and natives
+   each resolved to a Blueprint NodeID via `native_blueprint`. It also names the
+   **inert** natives: registered but never fired across today's routes, the
+   "why here, not involved?" candidates. **The view widens by one row per
+   transmuted route** — routes are DATA in `KERNEL_SERVED_RECIPES`; adding a
+   transmuted route to that list extends the activity view with no code change.
+
+### Honest coverage today — and the gap to full coverage
+
+What is **real and complete** for the kernel-served routes today:
+
+- **Value parity** — 4/4, types preserved (inline `value_to_py`).
+- **Arm-dispatch attribution** — every walked arm is counted by category and
+  variant (`MATH.MUL`, `COMPARE.EQ`, `BLOCK.LET`, …).
+- **Native-Blueprint attribution** — every native fired is resolved to its Form
+  category NodeID (`abs → @1.2.27.1`, `len → @1.2.15.1`, …).
+- **Recipe (Form-function) activity** — which named recipes were called, ranked.
+
+What **requires more transmuted routes** before it is real:
+
+- **Per-route Recipe/Cell activity across ALL routes.** The activity view today
+  covers the four pure-compute cores. Full coverage — every route's recipe and
+  the substrate Cells it touches, ranked by liveness across the whole API —
+  arrives only as more routes are transmuted. The view does not fake this; it
+  names its scope (`reached/eligible`) and the path to widen it.
+- **Cell-level liveness** in the substrate sense (which `NamedCell`s a request
+  reads/writes) needs the I/O-carrier routes (substrate ports) transmuted, a
+  separate arc from the pure-compute flip.
+
+The wellness probe and the attribution view are the two instruments that make
+the incremental transmutation **safe and legible**: the probe says *the surface
+is healthy as it grows*, the activity view says *here is what's alive and what's
+inert*. Together they turn "serve everything through the kernel" from a leap
+into a walk — one route at a time, each one sensed and attributed.
+
+### Running these two instruments
+
+```bash
+python3 scripts/wellness_check.py                 # includes sense_kernel_api (quiet when healthy)
+python3 scripts/kernel_attribution_report.py      # ranked Blueprint/Recipe/native activity + inert list
+python3 scripts/kernel_attribution_report.py --json --top 5   # machine-readable, top-N per section
+```
+
+Both degrade gracefully: with no kernel binary or no network they sense what
+they can locally and name what they couldn't reach (the probe), or name the
+missing binary and exit 2 (the report) — never a faked reading.

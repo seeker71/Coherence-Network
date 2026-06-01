@@ -1441,6 +1441,279 @@ def sense_deploy_lag() -> list[str]:
     return lines
 
 
+# Kernel-native API surface — the readiness envelope this probe senses against.
+# From kernels/API_KERNEL_READINESS.md: the route-preload carrier lands the
+# integer endpoints at 3-4µs p50 and the list/float ones at 17-48µs p50; the
+# inline-with-parse path is sub-200µs p99. A LOCAL `trace` walk (cold subprocess
+# kernel, no warm preloader) is a coarser instrument — it includes parse + a
+# fresh process's first walk — so the wellness threshold is deliberately loose:
+# it catches a recipe that has regressed by an ORDER of magnitude (something
+# structurally wrong), not p50 micro-jitter. The precise p50 profile is the
+# harness's job (scripts/kernel_readiness_harness.py); this probe senses gross
+# drift on the live surface.
+_KERNEL_TRACE_REGRESSION_US = 5000  # a single recipe trace over ~5ms ⇒ look
+
+
+def sense_kernel_api() -> list[str]:
+    """Is the kernel-native API surface breathing across all five dimensions?
+
+    The body just brought four endpoints' computational cores live serving
+    ``runtime: "inline"`` through the warm in-process Form kernel
+    (api/app/routers/utils.py → form_kernel_bridge.serve_via_kernel). This probe
+    senses that surface the way Urs named it — performance, stability, accuracy,
+    transparency, vitality — each as a concrete signal, quiet when healthy and
+    specific when it drifts.
+
+    ONE sensing mechanism: the kernel-served routes are DATA
+    (kernel_attribution_report.KERNEL_SERVED_RECIPES); the probe walks them once
+    locally (the kernel `trace` gives value + elapsed + attribution in one pass)
+    and, when prod is reachable, reads the live ``runtime`` each endpoint serves.
+
+    Degrades gracefully like sense_deploy_lag: with no live kernel/network it
+    senses what it can LOCALLY (binary present, recipes parse, value parity,
+    attribution present) and from the readiness doc, and SAYS what it couldn't
+    reach — it never fakes a live reading.
+
+    The drift it is built to catch (each a real failure mode, not performed
+    caution):
+      - Stability: an endpoint silently serving ``python-fallback`` — the body
+        quietly losing Form-native execution (the exact drift that hid for a
+        deploy: kernel loaded but endpoints on python-fallback for missing
+        recipes). NAMED, not glossed.
+      - Accuracy: a kernel that serves the WRONG value — parity break caught,
+        not just a slow one.
+      - Performance: the kernel path degraded off the fast carrier, or a recipe
+        trace regressed by an order of magnitude.
+      - Transparency: attribution/trace signal missing — the body can no longer
+        see which Blueprints/recipes a call exercised.
+      - Vitality: how MUCH of the API is kernel-served — the ratio and the
+        growth edge toward most/all routes through the kernel.
+    """
+    import importlib.util
+    import urllib.request
+    import urllib.error
+
+    lines: list[str] = []
+
+    # Load the attribution module (single source of truth for the kernel-served
+    # routes + the trace/aggregate mechanism). If it can't load, say so and stop
+    # — the probe shares ONE mechanism with the activity view by design.
+    attr_path = ROOT / "scripts" / "kernel_attribution_report.py"
+    if not attr_path.is_file():
+        return ["  drift: scripts/kernel_attribution_report.py missing — "
+                "cannot sense the kernel-native surface"]
+    try:
+        spec = importlib.util.spec_from_file_location("kernel_attribution_report", attr_path)
+        attr = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(attr)  # type: ignore[union-attr]
+    except Exception as exc:
+        return [f"  drift: could not load kernel_attribution_report ({exc})"]
+
+    served = attr.KERNEL_SERVED_RECIPES
+    n_served = len(served)
+
+    # --- LOCAL sensing: trace each kernel-served recipe once (value + elapsed +
+    # attribution in a single walk). Routes as DATA — one loop, all dimensions.
+    local_unreached = not attr.kernel_available()
+    parity_breaks: list[str] = []
+    missing_recipes: list[str] = []
+    slow_recipes: list[str] = []
+    attribution_present = False
+    traced = 0
+    if not local_unreached:
+        report = attr.aggregate()
+        traced = report.get("reached", 0)
+        for r in report.get("per_recipe", []):
+            if r.get("missing"):
+                missing_recipes.append(str(r["route"]))
+                continue
+            if r.get("failed"):
+                parity_breaks.append(f"{r['route']} (trace failed)")
+                continue
+            if not r.get("parity"):
+                parity_breaks.append(
+                    f"{r['route']} → {r.get('result')} (expected {r.get('expected')})"
+                )
+            us = r.get("elapsed_us")
+            if isinstance(us, (int, float)) and us > _KERNEL_TRACE_REGRESSION_US:
+                slow_recipes.append(f"{r['route']} ({us}µs)")
+        # Transparency: did the trace actually yield attribution? (hot blueprints
+        # + natives attributed to NodeIDs). Empty attribution on a surface that
+        # ran = the body can't see what it exercised.
+        attribution_present = bool(report.get("arms")) and bool(report.get("natives"))
+
+    # --- LIVE sensing: prod /api/health + /utils/kernel_status + each endpoint's
+    # runtime. Reachability is optional (like sense_deploy_lag) — name what we
+    # couldn't reach rather than failing.
+    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com")
+
+    def _get(path: str):
+        try:
+            req = urllib.request.Request(
+                f"{api}{path}", headers={"User-Agent": "wellness-kernel/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                return json.load(resp)
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+            return None
+
+    health = _get("/api/health")
+    live_runtime = health.get("kernel_runtime") if health else None
+    live_fallbacks: list[str] = []
+    live_runtimes_seen: set[str] = set()
+    live_unreached = health is None
+    if not live_unreached:
+        # Stability: each transmuted endpoint should report inline/preload, not
+        # python-fallback. Hit each with its defaults (no query → documented
+        # sample input), read the `runtime` field.
+        endpoint_paths = {
+            "/api/utils/coherence_weight": "/api/utils/coherence_weight",
+            "/api/utils/nodeid_distance": "/api/utils/nodeid_distance",
+            "/api/utils/nodeid_compatibility": "/api/utils/nodeid_compatibility",
+            "/api/utils/weighted_average": "/api/utils/weighted_average",
+        }
+        for route in (str(s["route"]) for s in served):
+            path = endpoint_paths.get(route)
+            if not path:
+                continue
+            body = _get(path)
+            if body is None:
+                continue
+            rt = body.get("runtime")
+            if rt:
+                live_runtimes_seen.add(rt)
+            if rt == "python-fallback":
+                live_fallbacks.append(route)
+
+    # --- Compose the reading. Quiet when healthy; specific lines on drift. The
+    # attention markers (drift:/missing/could not reach) and compost markers
+    # (within budget/aligned) steer build_reading's shared shape.
+
+    # Vitality: how much of the API is kernel-served.
+    total_routes = _count_api_routes()
+    if total_routes:
+        pct = 100.0 * n_served / total_routes
+        lines.append(
+            f"  vitality: {n_served}/{total_routes} API routes kernel-served "
+            f"({pct:.1f}%) — the {total_routes - n_served} on pure Python are the growth edge "
+            "toward most/all routes through the kernel"
+        )
+    else:
+        lines.append(
+            f"  vitality: {n_served} routes kernel-served (total-route count unread)"
+        )
+
+    # Stability.
+    if live_unreached:
+        lines.append(f"  stability: could not reach {api}/api/health — sensed locally only")
+    elif live_runtime in ("inline", "preload"):
+        if live_fallbacks:
+            lines.append(
+                "  drift: stability — these endpoints served python-fallback "
+                "(Form-native execution lost): " + ", ".join(live_fallbacks)
+            )
+        else:
+            seen = ", ".join(sorted(live_runtimes_seen)) or live_runtime
+            lines.append(
+                f"  stability: production kernel_runtime '{live_runtime}'; "
+                f"endpoints serving via kernel ({seen}) — no fallback"
+            )
+    elif live_runtime == "python-fallback":
+        lines.append(
+            "  drift: stability — production kernel_runtime is 'python-fallback'; "
+            "the body has lost Form-native execution on this surface"
+        )
+    elif live_runtime:
+        lines.append(f"  stability: production kernel_runtime '{live_runtime}'")
+    else:
+        lines.append("  stability: /api/health did not report kernel_runtime")
+
+    # Performance.
+    if local_unreached:
+        lines.append(
+            "  performance: kernel binary not built locally — could not trace; "
+            "per kernels/API_KERNEL_READINESS.md the route-preload carrier lands "
+            "3-48µs p50 (run scripts/kernel_readiness_harness.py for the live profile)"
+        )
+    elif slow_recipes:
+        lines.append(
+            "  drift: performance — recipe trace over the order-of-magnitude "
+            "threshold (structurally wrong?): " + ", ".join(slow_recipes)
+        )
+    elif "python-fallback" in live_runtimes_seen or live_runtime == "python-fallback":
+        lines.append(
+            "  drift: performance — kernel degraded off the fast carrier to python-fallback"
+        )
+    else:
+        lines.append(
+            f"  performance: {traced}/{n_served} recipes trace within the local envelope; "
+            "fast carrier intact (inline/preload)"
+        )
+
+    # Accuracy (value parity).
+    if local_unreached:
+        lines.append("  accuracy: parity unverified locally (kernel binary absent)")
+    elif parity_breaks:
+        lines.append(
+            "  drift: accuracy — kernel value-parity BREAK: " + "; ".join(parity_breaks)
+        )
+    elif missing_recipes:
+        lines.append(
+            "  accuracy: recipes absent (not compiled here), parity unverified for: "
+            + ", ".join(missing_recipes)
+        )
+    else:
+        lines.append(
+            f"  accuracy: {traced}/{n_served} recipes match documented value parity"
+        )
+
+    # Transparency / attribution.
+    if local_unreached:
+        lines.append(
+            "  transparency: attribution unsensed locally (kernel binary absent)"
+        )
+    elif attribution_present:
+        lines.append(
+            "  transparency: attribution present — hot Blueprints + natives "
+            "(each resolved to a NodeID) visible via "
+            "scripts/kernel_attribution_report.py"
+        )
+    else:
+        lines.append(
+            "  drift: transparency — trace produced no attribution; the body "
+            "can't see which Blueprints/recipes the calls exercised"
+        )
+
+    # A quiet closing line so a fully-healthy reading lands a compost marker.
+    drifted = any(line.strip().startswith("drift:") for line in lines)
+    if not drifted and not live_unreached and not local_unreached:
+        lines.append(
+            "  kernel-native surface breathing within envelope — no action needed"
+        )
+
+    return lines
+
+
+def _count_api_routes() -> int:
+    """Count route decorators across api/app/routers/*.py — the vitality denominator.
+
+    A coarse count (every @router.<verb>(...) decorator) — enough to size the
+    growth edge (kernel-served vs total). Returns 0 if the routers dir is
+    unreadable, so the vitality line degrades to a bare served-count.
+    """
+    routers = ROOT / "api" / "app" / "routers"
+    if not routers.is_dir():
+        return 0
+    pattern = re.compile(r"@router\.(get|post|patch|put|delete)\(")
+    total = 0
+    for p in routers.glob("*.py"):
+        try:
+            total += len(pattern.findall(p.read_text(encoding="utf-8")))
+        except OSError:
+            continue
+    return total
+
+
 def _wellness_attention_line(line: str) -> bool:
     lower = line.lower()
     attention_markers = (
@@ -1534,6 +1807,7 @@ def main() -> int:
         ("Substrate shape — do cell CTORs carry composition or flat type-markers?", sense_substrate_shape()),
         ("Witness-trace — is the visit-recorder within budget?", sense_witness_trace()),
         ("Deploy lag — is the body's main reach production?", sense_deploy_lag()),
+        ("Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?", sense_kernel_api()),
     ]
     reading = build_reading(sections)
 
