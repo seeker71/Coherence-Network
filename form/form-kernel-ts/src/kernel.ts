@@ -1839,6 +1839,19 @@ export class Kernel {
       const a = args[0];
       const b = args[1];
       if (a?.kind === "int" && b?.kind === "int") return { kind: "int", int: a.int + b.int };
+      // Float promotion — matches Python (int+float→float, float+int→float,
+      // float+float→float) and the Rust + Go _plus dispatch exactly. Any
+      // float operand forces an f64 result; mixed int/float reads the int
+      // through argFloat-style widening. Sibling-parity float arm.
+      if (
+        (a?.kind === "f64" || a?.kind === "int") &&
+        (b?.kind === "f64" || b?.kind === "int") &&
+        (a?.kind === "f64" || b?.kind === "f64")
+      ) {
+        const af = a.kind === "f64" ? a.float : a.int;
+        const bf = b.kind === "f64" ? b.float : b.int;
+        return { kind: "f64", float: af + bf };
+      }
       if (a?.kind === "str" && b?.kind === "str") return { kind: "str", str: a.str + b.str };
       if (a?.kind === "str" && b?.kind === "int") return { kind: "str", str: a.str + String(b.int) };
       if (a?.kind === "int" && b?.kind === "str") return { kind: "str", str: String(a.int) + b.str };
@@ -3852,9 +3865,45 @@ function walkMath(
   }
 
   // I32 default path — backward-compat fast path.
-  let acc = expectInt(walk(k, kids[0]!, frame), "math.i32");
-  for (let i = 1; i < kids.length; i++) {
-    const x = expectInt(walk(k, kids[i]!, frame), "math.i32");
+  //
+  // Runtime float promotion: the bare-width op (`add`/`+`/`sub`/… with no
+  // width-encoded inst) is what Python's polymorphic `+` lowers to. When any
+  // operand walks to a float at runtime, promote the whole fold to f64 —
+  // matching the Rust + Go MATH walker arms, which dispatch on the actual
+  // operand kind rather than the encoded width. This keeps int+int on the
+  // fast i32 path while opening float-field folds (sum of float `actual_cost`
+  // across a list of records) to three-way parity. Mirrors Python:
+  // int+float→float, float+int→float, float+float→float.
+  const vals = kids.map((kid) => walk(k, kid!, frame));
+  if (vals.some((v) => v.kind === "f32" || v.kind === "f64")) {
+    let facc = expectFloat(vals[0]!, "math.f64");
+    for (let i = 1; i < vals.length; i++) {
+      const x = expectFloat(vals[i]!, "math.f64");
+      switch (op) {
+        case RMath.PLUS:
+          facc = facc + x;
+          break;
+        case RMath.MINUS:
+          facc = facc - x;
+          break;
+        case RMath.MUL:
+          facc = facc * x;
+          break;
+        case RMath.DIV:
+          facc = facc / x;
+          break;
+        case RMath.MOD:
+          facc = facc - Math.floor(facc / x) * x;
+          break;
+        default:
+          throw new Error(`math.f64: unknown op ${op}`);
+      }
+    }
+    return { kind: "f64", float: facc };
+  }
+  let acc = expectInt(vals[0]!, "math.i32");
+  for (let i = 1; i < vals.length; i++) {
+    const x = expectInt(vals[i]!, "math.i32");
     switch (op) {
       case RMath.PLUS:
         acc = (acc + x) | 0;

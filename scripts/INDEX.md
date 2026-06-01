@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 139
+**Total files**: 140
 
 | File | Purpose |
 |---|---|
@@ -15,6 +15,7 @@
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
 | [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | assemblage_shift_recipe_proof.py — the modality round-trip, walking. |
+| [audit_bml_bmf_kernel_natives.py](audit_bml_bmf_kernel_natives.py) | Audit BML/BMF-specific host-native surfaces in sibling kernels. |
 | [audit_external_tools.py](audit_external_tools.py) | Audit external tooling usage and detect untracked additions. |
 | [audit_stranded_work.py](audit_stranded_work.py) | Find work that may have been stranded on abandoned branches. |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | Audit regenerated vision image candidates before production promotion. |

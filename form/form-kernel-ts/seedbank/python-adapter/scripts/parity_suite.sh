@@ -107,6 +107,14 @@ PARITY_FILES=(
     # head/tail fold the adapter lowers `for s in specs` into is proven
     # three-way here over a frozen sample list; returns [3, 10, 2, 7].
     "examples/endpoint_idea_grounding_summary_demo.py"
+    # Float-field SUM over a list of records — the capability the integer
+    # grounding-summary route named as deferred (TS's add/_plus were i32-only).
+    # With the float-add sibling-parity fix the fold over a FLOAT field is
+    # portable: total = total + s["actual_cost"] seeds a float accumulator and
+    # stays float; CPython == Rust == TS == [5.25, 3.75]. (Go has no _dict_*,
+    # so this adapter path is Rust+TS like the integer route; the kernel-level
+    # three-way is proven over record_new in list-of-record-reduction-band.fk.)
+    "examples/endpoint_idea_grounded_cost_sum_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

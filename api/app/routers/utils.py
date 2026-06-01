@@ -1402,6 +1402,117 @@ async def idea_grounding_summary(
     )
 
 
+# ---------------------------------------------------------------------------
+# idea_grounded_cost_sum — SUMMING A FLOAT FIELD over a LIST OF RECORDS.
+#
+# The float-field half of the list-of-record reduction the integer
+# idea_grounding_summary route named as deferred. compute_idea_metrics folds
+# FLOAT cost/value across one idea's specs:
+#   spec_actual_cost_sum  = sum(s["actual_cost"]  for s in idea_specs)
+#   spec_actual_value_sum = sum(s["actual_value"] for s in idea_specs)
+# That fold was blocked on the kernels: TS's `add`/`_plus` were i32-only, so a
+# float-field SUM threw on TS while running value-exact on Rust+Go. The
+# float-add sibling-parity fix closed that gap — the bare-width MATH arm now
+# promotes to f64 at runtime and `_plus` gained the float arms — so the
+# float-field fold is sibling-portable: CPython == Rust == TS.
+#
+# The accumulator seeds at 0.0 (a float), so every `total = total + s[field]`
+# walks (float, float). The recipe returns [cost_sum, value_sum]; the route
+# names the pair. Sample folds land on non-integer floats (5.25, 3.75) that
+# print identically across kernels — the integer-valued-float print divergence
+# named in float-natives-band.fk is avoided by construction.
+# ---------------------------------------------------------------------------
+
+
+def _grounded_cost_sum_py(specs: list[dict]) -> list[float]:
+    """Python fallback — value-identical to endpoint_idea_grounded_cost_sum_demo.fk.
+
+    The two float grounding sums, folded over the list of spec records:
+    total_actual_cost, total_actual_value. Seeds float accumulators so the
+    fold stays on the float path (matches the recipe's 0.0 seed exactly).
+    """
+    total_cost = 0.0
+    for s in specs:
+        total_cost = total_cost + float(s.get("actual_cost", 0.0) or 0.0)
+    total_value = 0.0
+    for s in specs:
+        total_value = total_value + float(s.get("actual_value", 0.0) or 0.0)
+    return [total_cost, total_value]
+
+
+class IdeaGroundedCostSumResponse(BaseModel):
+    """GET /api/utils/idea_grounded_cost_sum response — the float grounding sums."""
+
+    model_config = ConfigDict(extra="forbid")
+    spec_actual_cost_sum: Annotated[
+        float, Field(description="Summed actual_cost across the specs = sum(s['actual_cost'])")
+    ]
+    spec_actual_value_sum: Annotated[
+        float, Field(description="Summed actual_value across the specs = sum(s['actual_value'])")
+    ]
+    spec_count_in: Annotated[int, Field(description="Number of input spec records, echoed back")]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/idea_grounded_cost_sum",
+    response_model=IdeaGroundedCostSumResponse,
+    summary="Float grounding sums folded over a LIST of spec records (float-field list-of-record reduction)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the "
+        "FLOAT-FIELD reduction the integer idea_grounding_summary route named "
+        "as deferred. Receives one idea's pre-fetched spec records as a list "
+        "and folds two FLOAT grounding sums across it: spec_actual_cost_sum and "
+        "spec_actual_value_sum. This was the capability blocked by TS's "
+        "i32-only add/_plus; the float-add sibling-parity fix opened it, so the "
+        "float-field fold is value-exact across CPython / Rust / TS. The bridge "
+        "marshals the input list[dict|model] to a kernel list-of-records and the "
+        "recipe iterates via the head/tail fold with a float accumulator. "
+        "Kernel-or-fallback via serve_via_kernel."
+    ),
+)
+async def idea_grounded_cost_sum(
+    actual_costs: Annotated[
+        str,
+        Query(description="Comma-separated per-spec actual_cost floats — e.g. '3.5,1.25,0.5'"),
+    ] = "3.5,1.25,0.5",
+    actual_values: Annotated[
+        str,
+        Query(description="Comma-separated per-spec actual_value floats — e.g. '1.5,0.0,2.25'"),
+    ] = "1.5,0.0,2.25",
+) -> IdeaGroundedCostSumResponse:
+    # Build the list of spec records from two parallel float lists. A real call
+    # site hands the route already-fetched spec dicts/models for one idea; the
+    # two parallel arrays keep the GET surface simple while exercising the real
+    # list-of-record marshalling and the float-field fold.
+    cost_list = [float(x) for x in actual_costs.split(",") if x.strip()]
+    val_list = [float(x) for x in actual_values.split(",") if x.strip()]
+    if len(cost_list) != len(val_list):
+        raise HTTPException(
+            status_code=422,
+            detail="actual_costs and actual_values must have the same length",
+        )
+    specs = [
+        {"actual_cost": ac, "actual_value": av}
+        for ac, av in zip(cost_list, val_list)
+    ]
+    sums, runtime = serve_via_kernel(
+        "endpoint_idea_grounded_cost_sum_demo.fk",
+        bindings={"specs": specs},
+        fallback=lambda: _grounded_cost_sum_py(specs),
+        parse=_coerce_float_list,
+    )
+    return IdeaGroundedCostSumResponse(
+        spec_actual_cost_sum=sums[0],
+        spec_actual_value_sum=sums[1],
+        spec_count_in=len(specs),
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",
