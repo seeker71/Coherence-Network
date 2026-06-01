@@ -39,9 +39,9 @@ import (
 // means error (sibling parity with Rust/TS). socket_close on -1 is a
 // no-op returning -1.
 var (
-	socketTableMu  sync.Mutex
-	socketHandles  = map[int64]interface{}{} // listener or conn
-	socketNextHnd  int64                     = 0
+	socketTableMu sync.Mutex
+	socketHandles       = map[int64]interface{}{} // listener or conn
+	socketNextHnd int64 = 0
 )
 
 func socketRegister(v interface{}) int64 {
@@ -391,18 +391,18 @@ func (t *Trace) toJSON() map[string]interface{} {
 
 // Kernel — the running substrate.
 type Kernel struct {
-	byHash  map[uint64]NodeID
-	byID    map[NodeID]Recipe
-	strs    []string
-	strIdx  map[string]NameID
-	next    uint32
+	byHash map[uint64]NodeID
+	byID   map[NodeID]Recipe
+	strs   []string
+	strIdx map[string]NameID
+	next   uint32
 	// Float64 overflow table — IEEE 754 values don't fit the 32-bit `inst`
 	// field, so the FLOAT64 trivial NodeID carries an index into `f64s`.
 	// `f64Idx` is keyed by the IEEE bit pattern after canonicalization
 	// (NaN → qNaN, -0.0 → +0.0) so the same value parsed twice yields the
 	// same NodeID. Mirrors Rust + TS sibling kernels.
-	f64s   []float64
-	f64Idx map[uint64]uint32
+	f64s       []float64
+	f64Idx     map[uint64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
 	// methods — the blueprint method table (BML/NUMS reference: methods live
@@ -450,14 +450,14 @@ type sourceLoc struct {
 
 func NewKernel() *Kernel {
 	k := &Kernel{
-		byHash:     make(map[uint64]NodeID),
-		byID:       make(map[NodeID]Recipe),
-		strIdx:     make(map[string]NameID),
-		sourceAttr: make(map[NodeID]sourceLoc),
-		importSeq:  1,
-		walkCache:  make(map[NodeID]Value),
-		next:       1,
-		f64Idx:     make(map[uint64]uint32),
+		byHash:        make(map[uint64]NodeID),
+		byID:          make(map[NodeID]Recipe),
+		strIdx:        make(map[string]NameID),
+		sourceAttr:    make(map[NodeID]sourceLoc),
+		importSeq:     1,
+		walkCache:     make(map[NodeID]Value),
+		next:          1,
+		f64Idx:        make(map[uint64]uint32),
 		natives:       make(map[NameID]NativeEntry),
 		envNatives:    make(map[NameID]EnvAwareNativeEntry),
 		methods:       make(map[methodKey]*Closure),
@@ -941,6 +941,160 @@ func (v Value) String() string {
 	return "?"
 }
 
+var bmlNativeKeywords = map[string]bool{
+	"package": true, "import": true, "class": true, "interface": true, "template": true, "section": true,
+	"syntax": true, "const": true, "enum": true, "operator": true, "for": true, "while": true, "loop": true,
+	"switch": true, "select": true, "case": true, "default": true, "if": true, "else": true, "if_fail": true,
+	"while_success": true, "return": true, "break": true, "continue": true, "try": true, "catch": true,
+	"throw": true, "fail": true, "cut": true, "mark": true, "save": true, "restore": true, "discard": true,
+	"choice": true, "choose": true, "asm": true, "instanceof": true, "library": true, "naming": true,
+	"conventions": true, "DefaultMethods": true, "Nil": true, "Fail": true, "EndOfFile": true,
+	"EndOfLine": true, "Cut": true, "MultiMatch": true, "Primitive": true,
+}
+
+var bmlNativeProperties = map[string]bool{
+	"public": true, "private": true, "protected": true, "abstract": true, "static": true, "final": true,
+	"default": true, "delegate": true, "shared": true, "get": true, "put": true, "strict": true, "relaxed": true,
+	"deferred": true, "native": true, "exception": true, "explicit": true, "extern": true, "library": true,
+	"name": true, "guid": true, "operator": true, "coercion": true, "reassign": true, "array": true,
+	"exclusive": true, "in": true, "out": true, "inout": true, "assign": true, "inline": true, "hidden": true,
+	"singleton": true, "unique": true, "struct": true, "noobject": true, "dynamic": true, "alias": true,
+	"outer": true, "nostate": true,
+}
+
+var bmlNativeOps = []string{
+	"<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>",
+	">>", "<<", "++", "--", "==", "!=", ">=", "<=", ":=", "*=", "/=",
+	"%=", "+=", "-=", "&=", "|=", "^=", "&&", "||", "..", "#(",
+	"{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/",
+	"%", "=", "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
+}
+
+func bmlNativeStr(value string) Value {
+	return Value{Kind: VStr, Str: value}
+}
+
+func bmlNativeEmptyList() Value {
+	return Value{Kind: VList, List: []Value{}}
+}
+
+func bmlNativeAtom(kind, value string) Value {
+	return Value{Kind: VList, List: []Value{
+		bmlNativeStr("cell"),
+		bmlNativeStr(kind),
+		bmlNativeStr(value),
+		bmlNativeEmptyList(),
+		Value{Kind: VNull},
+	}}
+}
+
+func bmlNativeNameKind(value string) string {
+	if bmlNativeKeywords[value] {
+		return "bml-keyword"
+	}
+	if bmlNativeProperties[value] {
+		return "bml-property"
+	}
+	return "bml-name"
+}
+
+func bmlNativeNameStart(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
+}
+
+func bmlNativeNameChar(b byte) bool {
+	return bmlNativeNameStart(b) || (b >= '0' && b <= '9')
+}
+
+func bmlNativeScanQuoted(src string, i int, quote byte) (string, int) {
+	j := i + 1
+	var b strings.Builder
+	for j < len(src) {
+		c := src[j]
+		if c == '\\' && j+1 < len(src) {
+			b.WriteByte(src[j+1])
+			j += 2
+			continue
+		}
+		if c == quote {
+			return b.String(), j + 1
+		}
+		b.WriteByte(c)
+		j++
+	}
+	return b.String(), j
+}
+
+func bmlNativeScanText(src string) Value {
+	out := []Value{}
+	for i := 0; i < len(src); {
+		c := src[i]
+		if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+			i++
+			continue
+		}
+		if i+1 < len(src) && src[i:i+2] == "//" {
+			i += 2
+			for i < len(src) && src[i] != '\n' {
+				i++
+			}
+			continue
+		}
+		if i+1 < len(src) && src[i:i+2] == "/*" {
+			end := strings.Index(src[i+2:], "*/")
+			if end < 0 {
+				break
+			}
+			i = i + 2 + end + 2
+			continue
+		}
+		if c == '"' {
+			value, next := bmlNativeScanQuoted(src, i, '"')
+			out = append(out, bmlNativeAtom("bml-string", value))
+			i = next
+			continue
+		}
+		if c == '\'' {
+			value, next := bmlNativeScanQuoted(src, i, '\'')
+			out = append(out, bmlNativeAtom("bml-string", value))
+			i = next
+			continue
+		}
+		if c >= '0' && c <= '9' {
+			j := i + 1
+			for j < len(src) && src[j] >= '0' && src[j] <= '9' {
+				j++
+			}
+			out = append(out, bmlNativeAtom("bml-int", src[i:j]))
+			i = j
+			continue
+		}
+		if bmlNativeNameStart(c) {
+			j := i + 1
+			for j < len(src) && bmlNativeNameChar(src[j]) {
+				j++
+			}
+			value := src[i:j]
+			out = append(out, bmlNativeAtom(bmlNativeNameKind(value), value))
+			i = j
+			continue
+		}
+		matched := ""
+		for _, op := range bmlNativeOps {
+			if strings.HasPrefix(src[i:], op) {
+				matched = op
+				break
+			}
+		}
+		if matched == "" {
+			matched = string(c)
+		}
+		out = append(out, bmlNativeAtom("bml-op", matched))
+		i += len(matched)
+	}
+	return Value{Kind: VList, List: out}
+}
+
 // asFloat — coerce a Value to float64 for IEEE 754 arithmetic. VFloat
 // passes through; VInt and VBool widen by Go's standard conversion. Other
 // kinds panic — float arithmetic on a string or list is a Form-author
@@ -1112,6 +1266,13 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
+	})
+	k.registerNative("bml_scan_file", catCall(), func(_ *Kernel, args []Value) Value {
+		body, err := os.ReadFile(args[0].Str)
+		if err != nil {
+			panic(err)
+		}
+		return bmlNativeScanText(string(body))
 	})
 	// pow — integer exponentiation in native code (no Form recursion).
 	// (pow base exp) → base**exp. Negative exponents return 0 (Python's
@@ -2645,8 +2806,8 @@ func (k *Kernel) registerNatives() {
 // bmfMatchPattern mirrors engine.fk's match-object-pattern dispatch. Given
 // a pattern (always a tagged list) and a stream slice, returns one of:
 //
-//   ("match" caps-alist rest-stream)   — success
-//   ("fail" reason)                    — miss
+//	("match" caps-alist rest-stream)   — success
+//	("fail" reason)                    — miss
 //
 // caps-alist is a Form list of (name value) pairs in the same order
 // cap-set/cap-merge would produce, so the result is node_eq-identical to

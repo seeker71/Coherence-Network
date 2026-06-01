@@ -119,12 +119,11 @@ fn pg_drop(h: i64) -> bool {
 fn pg_cell_to_string(row: &postgres::Row, ci: usize) -> String {
     let ty = row.columns()[ci].type_().name().to_string();
     match ty.as_str() {
-        "text" | "varchar" | "bpchar" | "name" => {
-            row.try_get::<usize, Option<String>>(ci)
-                .ok()
-                .flatten()
-                .unwrap_or_default()
-        }
+        "text" | "varchar" | "bpchar" | "name" => row
+            .try_get::<usize, Option<String>>(ci)
+            .ok()
+            .flatten()
+            .unwrap_or_default(),
         "int8" => row
             .try_get::<usize, Option<i64>>(ci)
             .ok()
@@ -567,7 +566,11 @@ impl Arena {
     // by the FNCALL hot path where the exact arg count is known. Saves
     // Vec capacity reallocations during arg-binding for recursive workloads
     // (fib at 1973 calls × 1 arg = 1973 reallocations avoided).
-    pub(crate) fn new_frame_with_capacity(&mut self, parent: Option<FrameId>, cap: usize) -> FrameId {
+    pub(crate) fn new_frame_with_capacity(
+        &mut self,
+        parent: Option<FrameId>,
+        cap: usize,
+    ) -> FrameId {
         let id = self.frames.len() as FrameId;
         self.frames.push(Frame {
             parent,
@@ -1076,7 +1079,11 @@ pub(crate) struct Record {
 
 impl Record {
     fn get(&self, name: NameID) -> Option<Value> {
-        self.fields.iter().rev().find(|(n, _)| *n == name).map(|(_, v)| v.clone())
+        self.fields
+            .iter()
+            .rev()
+            .find(|(n, _)| *n == name)
+            .map(|(_, v)| v.clone())
     }
     fn set(&mut self, name: NameID, value: Value) {
         if let Some(slot) = self.fields.iter_mut().find(|(n, _)| *n == name) {
@@ -1251,6 +1258,239 @@ impl Value {
     }
 }
 
+fn bml_native_str(value: &str) -> Value {
+    Value::Str(value.to_string())
+}
+
+fn bml_native_empty_list() -> Value {
+    Value::List(vec![])
+}
+
+fn bml_native_atom(kind: &str, value: &str) -> Value {
+    Value::List(vec![
+        bml_native_str("cell"),
+        bml_native_str(kind),
+        bml_native_str(value),
+        bml_native_empty_list(),
+        Value::Null,
+    ])
+}
+
+fn bml_native_keyword(value: &str) -> bool {
+    matches!(
+        value,
+        "package"
+            | "import"
+            | "class"
+            | "interface"
+            | "template"
+            | "section"
+            | "syntax"
+            | "const"
+            | "enum"
+            | "operator"
+            | "for"
+            | "while"
+            | "loop"
+            | "switch"
+            | "select"
+            | "case"
+            | "default"
+            | "if"
+            | "else"
+            | "if_fail"
+            | "while_success"
+            | "return"
+            | "break"
+            | "continue"
+            | "try"
+            | "catch"
+            | "throw"
+            | "fail"
+            | "cut"
+            | "mark"
+            | "save"
+            | "restore"
+            | "discard"
+            | "choice"
+            | "choose"
+            | "asm"
+            | "instanceof"
+            | "library"
+            | "naming"
+            | "conventions"
+            | "DefaultMethods"
+            | "Nil"
+            | "Fail"
+            | "EndOfFile"
+            | "EndOfLine"
+            | "Cut"
+            | "MultiMatch"
+            | "Primitive"
+    )
+}
+
+fn bml_native_property(value: &str) -> bool {
+    matches!(
+        value,
+        "public"
+            | "private"
+            | "protected"
+            | "abstract"
+            | "static"
+            | "final"
+            | "default"
+            | "delegate"
+            | "shared"
+            | "get"
+            | "put"
+            | "strict"
+            | "relaxed"
+            | "deferred"
+            | "native"
+            | "exception"
+            | "explicit"
+            | "extern"
+            | "library"
+            | "name"
+            | "guid"
+            | "operator"
+            | "coercion"
+            | "reassign"
+            | "array"
+            | "exclusive"
+            | "in"
+            | "out"
+            | "inout"
+            | "assign"
+            | "inline"
+            | "hidden"
+            | "singleton"
+            | "unique"
+            | "struct"
+            | "noobject"
+            | "dynamic"
+            | "alias"
+            | "outer"
+            | "nostate"
+    )
+}
+
+fn bml_native_name_kind(value: &str) -> &'static str {
+    if bml_native_keyword(value) {
+        "bml-keyword"
+    } else if bml_native_property(value) {
+        "bml-property"
+    } else {
+        "bml-name"
+    }
+}
+
+fn bml_native_name_start(b: u8) -> bool {
+    b.is_ascii_alphabetic() || b == b'_'
+}
+
+fn bml_native_name_char(b: u8) -> bool {
+    bml_native_name_start(b) || b.is_ascii_digit()
+}
+
+fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
+    let bytes = src.as_bytes();
+    let mut j = i + 1;
+    let mut out = String::new();
+    while j < bytes.len() {
+        let c = bytes[j];
+        if c == b'\\' && j + 1 < bytes.len() {
+            out.push(bytes[j + 1] as char);
+            j += 2;
+            continue;
+        }
+        if c == quote {
+            return (out, j + 1);
+        }
+        out.push(c as char);
+        j += 1;
+    }
+    (out, j)
+}
+
+fn bml_native_scan_text(src: &str) -> Value {
+    let bytes = src.as_bytes();
+    let ops = [
+        "<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>", ">>", "<<", "++", "--",
+        "==", "!=", ">=", "<=", ":=", "*=", "/=", "%=", "+=", "-=", "&=", "|=", "^=", "&&", "||",
+        "..", "#(", "{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/", "%", "=",
+        "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
+    ];
+    let mut out: Vec<Value> = vec![];
+    let mut i = 0usize;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if matches!(c, b' ' | b'\t' | b'\n' | b'\r') {
+            i += 1;
+            continue;
+        }
+        if i + 1 < bytes.len() && &src[i..i + 2] == "//" {
+            i += 2;
+            while i < bytes.len() && bytes[i] != b'\n' {
+                i += 1;
+            }
+            continue;
+        }
+        if i + 1 < bytes.len() && &src[i..i + 2] == "/*" {
+            if let Some(end) = src[i + 2..].find("*/") {
+                i = i + 2 + end + 2;
+                continue;
+            }
+            break;
+        }
+        if c == b'"' {
+            let (value, next) = bml_native_scan_quoted(src, i, b'"');
+            out.push(bml_native_atom("bml-string", &value));
+            i = next;
+            continue;
+        }
+        if c == b'\'' {
+            let (value, next) = bml_native_scan_quoted(src, i, b'\'');
+            out.push(bml_native_atom("bml-string", &value));
+            i = next;
+            continue;
+        }
+        if c.is_ascii_digit() {
+            let mut j = i + 1;
+            while j < bytes.len() && bytes[j].is_ascii_digit() {
+                j += 1;
+            }
+            out.push(bml_native_atom("bml-int", &src[i..j]));
+            i = j;
+            continue;
+        }
+        if bml_native_name_start(c) {
+            let mut j = i + 1;
+            while j < bytes.len() && bml_native_name_char(bytes[j]) {
+                j += 1;
+            }
+            let value = &src[i..j];
+            out.push(bml_native_atom(bml_native_name_kind(value), value));
+            i = j;
+            continue;
+        }
+        let mut matched = "";
+        for op in ops {
+            if src[i..].starts_with(op) {
+                matched = op;
+                break;
+            }
+        }
+        if matched.is_empty() {
+            matched = &src[i..i + 1];
+        }
+        out.push(bml_native_atom("bml-op", matched));
+        i += matched.len();
+    }
+    Value::List(out)
+}
+
 // format_float_python — render an f64 the way CPython's `print(float)`
 // renders it. Rust's default `{}` format drops the trailing zero for
 // integer-valued floats (`1.0` → `"1"`); CPython keeps it (`"1.0"`).
@@ -1261,7 +1501,11 @@ fn format_float_python(f: f64) -> String {
         return "nan".to_string();
     }
     if f.is_infinite() {
-        return if f > 0.0 { "inf".to_string() } else { "-inf".to_string() };
+        return if f > 0.0 {
+            "inf".to_string()
+        } else {
+            "-inf".to_string()
+        };
     }
     // Rust's `{}` produces "1", "1.5", "0.125", "5e-10" etc. Add a trailing
     // ".0" iff the rendered form has neither a "." nor an exponent — that
@@ -1526,6 +1770,11 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
+        self.register_native("bml_scan_file", cat_call(), |_, _, args| {
+            let body = fs::read_to_string(args[0].as_str())
+                .unwrap_or_else(|e| panic!("bml_scan_file: {}", e));
+            bml_native_scan_text(&body)
+        });
         // pow — integer exponentiation in native code (no Form recursion).
         // (pow base exp) → base**exp. Negative exponents return 0 (Python's
         // int**-n is a float; floats on this path are a later breath).
@@ -1604,8 +1853,7 @@ impl Kernel {
         // (e.g. cell-log-store.fk's keydir for compaction).
         self.register_native("record_keys", cat_access(), |k, _, args| match &args[0] {
             Value::Record(r) => {
-                let names: Vec<NameID> =
-                    r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
+                let names: Vec<NameID> = r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
                 Value::List(
                     names
                         .into_iter()
@@ -1725,12 +1973,40 @@ impl Kernel {
             let n = bytes.len();
             let mut end = from.min(n);
             match class {
-                0 => while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') { end += 1; },
-                1 => while end < n && bytes[end].is_ascii_digit() { end += 1; },
-                2 => while end < n && bytes[end].is_ascii_alphabetic() { end += 1; },
-                3 => while end < n && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_' || bytes[end] == b'-') { end += 1; },
-                4 => while end < n && bytes[end] != b'"' && bytes[end] != b'\\' { end += 1; },
-                5 => while end < n && bytes[end] != b'\n' { end += 1; },
+                0 => {
+                    while end < n && matches!(bytes[end], b' ' | b'\t' | b'\n' | b'\r') {
+                        end += 1;
+                    }
+                }
+                1 => {
+                    while end < n && bytes[end].is_ascii_digit() {
+                        end += 1;
+                    }
+                }
+                2 => {
+                    while end < n && bytes[end].is_ascii_alphabetic() {
+                        end += 1;
+                    }
+                }
+                3 => {
+                    while end < n
+                        && (bytes[end].is_ascii_alphanumeric()
+                            || bytes[end] == b'_'
+                            || bytes[end] == b'-')
+                    {
+                        end += 1;
+                    }
+                }
+                4 => {
+                    while end < n && bytes[end] != b'"' && bytes[end] != b'\\' {
+                        end += 1;
+                    }
+                }
+                5 => {
+                    while end < n && bytes[end] != b'\n' {
+                        end += 1;
+                    }
+                }
                 _ => panic!("scan_run: unknown class_code {} (valid: 0-5)", class),
             }
             Value::Int(end as i64)
@@ -1756,7 +2032,11 @@ impl Kernel {
             for byte in s.as_bytes().to_vec() {
                 let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
                 a.bind(call_frame, cl.params[0], acc);
-                a.bind(call_frame, cl.params[1], Value::Str((byte as char).to_string()));
+                a.bind(
+                    call_frame,
+                    cl.params[1],
+                    Value::Str((byte as char).to_string()),
+                );
                 acc = walk(k, a, cl.body, call_frame);
             }
             acc
@@ -2670,8 +2950,8 @@ impl Kernel {
             let form_name = args[0].as_str().to_string();
             let native_name = args[1].as_str().to_string();
             let native_id = k.intern_string(&native_name).inst;
-            let exists = k.natives.contains_key(&native_id)
-                || k.env_natives.contains_key(&native_id);
+            let exists =
+                k.natives.contains_key(&native_id) || k.env_natives.contains_key(&native_id);
             if !exists {
                 return Value::Int(0);
             }
@@ -2796,17 +3076,15 @@ impl Kernel {
         // sum_bytes_list(list) — sum all integer elements. Used for fast
         // verification that two cells' large byte-lists agree without
         // materializing them through the Form recursion. O(n) compiled.
-        self.register_native("sum_bytes_list", cat_call(), |_, _, args| {
-            match &args[0] {
-                Value::List(xs) => {
-                    let mut s: i64 = 0;
-                    for v in xs {
-                        s = s.wrapping_add(v.as_int());
-                    }
-                    Value::Int(s)
+        self.register_native("sum_bytes_list", cat_call(), |_, _, args| match &args[0] {
+            Value::List(xs) => {
+                let mut s: i64 = 0;
+                for v in xs {
+                    s = s.wrapping_add(v.as_int());
                 }
-                _ => Value::Int(0),
+                Value::Int(s)
             }
+            _ => Value::Int(0),
         });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
@@ -2821,14 +3099,14 @@ impl Kernel {
                 Err(_) => Value::Int(-1),
             }
         });
-        self.register_native("read_form_binary", cat_call(), |k, _, args| {
-            match fs::read(args[0].as_str()) {
-                Ok(bytes) => match deserialize_artifact(k, &bytes) {
-                    Ok(root) => Value::Nid(root),
-                    Err(_) => Value::Null,
-                },
+        self.register_native("read_form_binary", cat_call(), |k, _, args| match fs::read(
+            args[0].as_str(),
+        ) {
+            Ok(bytes) => match deserialize_artifact(k, &bytes) {
+                Ok(root) => Value::Nid(root),
                 Err(_) => Value::Null,
-            }
+            },
+            Err(_) => Value::Null,
         });
         self.register_native("write_form_binary", cat_call(), |k, _, args| {
             let bytes = serialize_artifact(k, args[1].as_nid());
@@ -2913,12 +3191,14 @@ impl Kernel {
                 _ => Value::Int(0),
             }
         });
-        self.register_native("fs_mkdir", cat_call(), |_, _, args| {
-            match fs::create_dir_all(args[0].as_str()) {
+        self.register_native(
+            "fs_mkdir",
+            cat_call(),
+            |_, _, args| match fs::create_dir_all(args[0].as_str()) {
                 Ok(_) => Value::Int(0),
                 Err(_) => Value::Int(-1),
-            }
-        });
+            },
+        );
         self.register_native("fs_rmdir", cat_call(), |_, _, args| {
             match fs::metadata(args[0].as_str()) {
                 Ok(meta) if meta.is_dir() => match fs::remove_dir_all(args[0].as_str()) {
@@ -3838,7 +4118,13 @@ impl<'a> EmitScope<'a> {
         self.uid += 1;
         let sanitized: String = hint
             .chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
         format!("v_{}_{}", sanitized, self.uid)
     }
@@ -3848,13 +4134,24 @@ impl<'a> EmitScope<'a> {
 fn sanitize_rust_ident(s: &str) -> String {
     let cleaned: String = s
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     if cleaned.is_empty() {
         return "fn_".to_string();
     }
     // Rust keywords / leading-digit guard.
-    if cleaned.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+    if cleaned
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit())
+        .unwrap_or(false)
+    {
         format!("f_{}", cleaned)
     } else {
         format!("fn_{}", cleaned)
@@ -3902,9 +4199,8 @@ fn collect_siblings(
             let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
             let arity = params.len();
             let fbody = kids[2];
-            out.entry(name).or_insert_with(|| {
-                (sanitize_rust_ident(k.name_str(name)), arity, fbody)
-            });
+            out.entry(name)
+                .or_insert_with(|| (sanitize_rust_ident(k.name_str(name)), arity, fbody));
         }
         for c in kids {
             visit.push(c);
@@ -3993,29 +4289,27 @@ fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<Emitted
             let b = emit_expr(k, kids[1], scope)?.into_i64();
             Some(EmittedExpr::Bool(format!("(({}) {} ({}))", a, op, b)))
         }
-        RB_LOGIC => {
-            match cat.inst {
-                RLOG_NOT => {
-                    if kids.len() != 1 {
-                        return None;
-                    }
-                    let a = emit_expr(k, kids[0], scope)?.into_bool();
-                    Some(EmittedExpr::Bool(format!("(!({}))", a)))
+        RB_LOGIC => match cat.inst {
+            RLOG_NOT => {
+                if kids.len() != 1 {
+                    return None;
                 }
-                RLOG_AND | RLOG_OR => {
-                    let op = if cat.inst == RLOG_AND { "&&" } else { "||" };
-                    let mut parts: Vec<String> = Vec::new();
-                    for c in &kids {
-                        parts.push(emit_expr(k, *c, scope)?.into_bool());
-                    }
-                    Some(EmittedExpr::Bool(format!(
-                        "({})",
-                        parts.join(&format!(" {} ", op))
-                    )))
-                }
-                _ => None,
+                let a = emit_expr(k, kids[0], scope)?.into_bool();
+                Some(EmittedExpr::Bool(format!("(!({}))", a)))
             }
-        }
+            RLOG_AND | RLOG_OR => {
+                let op = if cat.inst == RLOG_AND { "&&" } else { "||" };
+                let mut parts: Vec<String> = Vec::new();
+                for c in &kids {
+                    parts.push(emit_expr(k, *c, scope)?.into_bool());
+                }
+                Some(EmittedExpr::Bool(format!(
+                    "({})",
+                    parts.join(&format!(" {} ", op))
+                )))
+            }
+            _ => None,
+        },
         RB_COND => {
             match cat.inst {
                 RCOND_IF => {
@@ -4093,7 +4387,8 @@ fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<Emitted
                         let cat_c = k.category(*c);
                         if cat_c.ty == RB_BLOCK && cat_c.inst == RBLK_LET {
                             let kc = k.children(*c);
-                            if kc.len() < 2 || kc[0].level != LEVEL_TRIVIAL
+                            if kc.len() < 2
+                                || kc[0].level != LEVEL_TRIVIAL
                                 || kc[0].ty != TRIV_STRING
                             {
                                 return None;
@@ -4184,8 +4479,13 @@ fn emit_rust_source(
     target_params: &[NameID],
     target_body: NodeID,
 ) -> Option<String> {
-    let siblings_full =
-        collect_siblings(k, target_body, target_name, target_params.len(), target_body);
+    let siblings_full = collect_siblings(
+        k,
+        target_body,
+        target_name,
+        target_params.len(),
+        target_body,
+    );
     // Strip body NodeIDs for the scope (the scope just needs name → (rust_name, arity)).
     let siblings: HashMap<NameID, (String, usize)> = siblings_full
         .iter()
@@ -4421,8 +4721,7 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
                 f(i64s[0], i64s[1], i64s[2])
             }
             4 => {
-                let f: unsafe extern "C" fn(i64, i64, i64, i64) -> i64 =
-                    std::mem::transmute(p);
+                let f: unsafe extern "C" fn(i64, i64, i64, i64) -> i64 = std::mem::transmute(p);
                 f(i64s[0], i64s[1], i64s[2], i64s[3])
             }
             5 => {
@@ -4438,7 +4737,9 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
             7 => {
                 let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64) -> i64 =
                     std::mem::transmute(p);
-                f(i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6])
+                f(
+                    i64s[0], i64s[1], i64s[2], i64s[3], i64s[4], i64s[5], i64s[6],
+                )
             }
             8 => {
                 let f: unsafe extern "C" fn(i64, i64, i64, i64, i64, i64, i64, i64) -> i64 =
@@ -4820,9 +5121,8 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 // The dot must be followed by a digit so `(.foo bar)` and
                 // bare integers stay legible. Sibling-parity: TS reader
                 // recognises the same shape.
-                let is_float = i + 1 < bytes.len()
-                    && bytes[i] == b'.'
-                    && bytes[i + 1].is_ascii_digit();
+                let is_float =
+                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
                 if is_float {
                     i += 1; // consume '.'
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
@@ -4860,9 +5160,8 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                let is_float = i + 1 < bytes.len()
-                    && bytes[i] == b'.'
-                    && bytes[i + 1].is_ascii_digit();
+                let is_float =
+                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
                 if is_float {
                     i += 1;
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
