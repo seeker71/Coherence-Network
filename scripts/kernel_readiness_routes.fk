@@ -1,0 +1,187 @@
+; kernel_readiness_routes.fk — the persistent-serve registration for the
+; API → Form-kernel readiness measurement.
+;
+; This file is loaded ONCE by `form-kernel-rust serve --port P --routes <this>`.
+; The serve mode (form/form-kernel-rust/src/main.rs cli_serve) reads the
+; top-level `routes` binding into a long-lived Kernel + Arena, then dispatches
+; each HTTP/1.0 GET to the matching handler closure with a fresh child frame.
+; NO per-request process spawn, NO per-request source-compile — the apples-to-
+; apples counterpart to CPython serving from a warm process.
+;
+; The 4 endpoint computations below are the SAME recipe bodies the live
+; endpoints run (api/app/routers/utils.py via form_kernel_bridge), captured
+; from form-kernel-ts/seedbank/python-adapter/examples/endpoint_*_demo.py and
+; compiled to .fk. Here they are bound once into the persistent kernel and
+; wrapped in handler closures so a request → handler call → recipe walk →
+; response body is one in-process movement.
+;
+; Arg marshalling, named honestly:
+;   - The serve mode passes the query string as a list-of-(key value) pairs
+;     where every value is a STRING (HTTP/1.0, no typed body). `alist_get`
+;     reads a value out by key; `str_to_int` parses an int.
+;   - nodeid_distance / nodeid_compatibility take 8 integer query params each
+;     — full request→response marshalling, real per-request inputs.
+;   - coherence_weight / weighted_average take a LIST (and floats). The serve
+;     alist is string-only and the kernel ships no `split` / `str_to_float`
+;     native, so these handlers compute the endpoint's FROZEN sample input
+;     (the same input the harness and parity_suite use). This isolates the
+;     measurement to persistent dispatch + recipe execution; list/float query
+;     marshalling is an HTTP-layer gap named in API_KERNEL_READINESS.md, not
+;     the number under test. The recipe body that runs is identical to live.
+
+; --- query-alist reader: pairs is (list (list k v) ...), all v are strings ---
+(defn alist_get (pairs key)
+  (if (eq (len pairs) 0)
+    ""
+    (do
+      (let row (head pairs))
+      (if (str_eq (nth row 0) key)
+        (nth row 1)
+        (alist_get (tail pairs) key)))))
+
+; ===================================================================
+; coherence_weight — endpoint_coherence_weight_demo.py recipe body
+; ===================================================================
+(defn weighted_score (value position)
+  (if (eq position 0) (mul value 100)
+    (if (eq position 1) (mul value 50)
+      (if (eq position 2) (mul value 25)
+        (mul value 10)))))
+(defn coherence_score (values threshold)
+  (do (let total 0)
+    (do (let position 0)
+      (do
+        (do
+          (defn _cw_for (_remaining total position)
+            (if (eq (len _remaining) 0) (list total position)
+              (do (let v (head _remaining))
+                (if (ge v threshold)
+                  (do (let total (_plus total (weighted_score v position)))
+                    (let position (_plus position 1)))
+                  false)
+                (_cw_for (tail _remaining) total position))))
+          (let _r (_cw_for (_iter values) total position))
+          (let total (nth _r 0))
+          (let position (nth _r 1)))
+        total))))
+(defn count_above (values threshold)
+  (do (let n 0)
+    (do
+      (do
+        (defn _ca_for (_remaining n)
+          (if (eq (len _remaining) 0) n
+            (do (let v (head _remaining))
+              (if (ge v threshold) (let n (_plus n 1)) false)
+              (_ca_for (tail _remaining) n))))
+        (let n (_ca_for (_iter values) n)))
+      n)))
+(defn coherence_weight (values threshold)
+  (do (let above (count_above values threshold))
+    (do (let coherence (coherence_score values threshold))
+      (_plus (mul above 100) coherence))))
+
+; ===================================================================
+; nodeid_distance — endpoint_nodeid_distance_demo.py recipe body
+; ===================================================================
+(defn manhattan (a_pkg a_lvl a_type a_inst b_pkg b_lvl b_type b_inst)
+  (do
+    (let d (_plus (abs (sub a_pkg b_pkg)) (abs (sub a_lvl b_lvl))))
+    (do
+      (let d (_plus (_plus d (abs (sub a_type b_type))) (abs (sub a_inst b_inst))))
+      d)))
+
+; ===================================================================
+; nodeid_compatibility — endpoint_nodeid_compatibility_demo.py recipe body
+; ===================================================================
+(defn match1 (x y) (if (eq x y) 1 0))
+(defn compatibility (a_pkg a_lvl a_type a_inst b_pkg b_lvl b_type b_inst)
+  (do
+    (let c (_plus (match1 a_pkg b_pkg) (match1 a_lvl b_lvl)))
+    (do
+      (let c (_plus (_plus c (match1 a_type b_type)) (match1 a_inst b_inst)))
+      c)))
+
+; ===================================================================
+; weighted_average — endpoint_weighted_average_demo.py recipe body
+; ===================================================================
+(defn dot (values weights)
+  (do (let total 0.0)
+    (do (let i 0)
+      (do (let n (len values))
+        (do
+          (do
+            (defn _dot_while (total i)
+              (if (lt i n)
+                (do
+                  (do (let total (_plus total (mul (_get values i) (_get weights i))))
+                    (let i (_plus i 1)))
+                  (_dot_while total i))
+                (list total i)))
+            (let _r (_dot_while total i))
+            (let total (nth _r 0))
+            (let i (nth _r 1)))
+          total)))))
+(defn sum_floats (weights)
+  (do (let total 0.0)
+    (do (let i 0)
+      (do (let n (len weights))
+        (do
+          (do
+            (defn _sf_while (total i)
+              (if (lt i n)
+                (do
+                  (do (let total (_plus total (_get weights i)))
+                    (let i (_plus i 1)))
+                  (_sf_while total i))
+                (list total i)))
+            (let _r (_sf_while total i))
+            (let total (nth _r 0))
+            (let i (nth _r 1)))
+          total)))))
+(defn weighted_average (values weights)
+  (do (let numerator (dot values weights))
+    (do (let denominator (sum_floats weights))
+      (div numerator denominator))))
+
+; ===================================================================
+; Handler closures — request (query alist) → recipe call → response
+; ===================================================================
+
+; coherence_weight: frozen sample input (list marshalling gap, see header).
+(defn route_coherence_weight (q)
+  (coherence_weight (list 72 38 91 55 28 67 84 45 95 12) 50))
+
+; nodeid_distance: 8 integer query params, full request→response marshalling.
+(defn route_nodeid_distance (q)
+  (manhattan
+    (str_to_int (alist_get q "a_pkg"))
+    (str_to_int (alist_get q "a_lvl"))
+    (str_to_int (alist_get q "a_type"))
+    (str_to_int (alist_get q "a_inst"))
+    (str_to_int (alist_get q "b_pkg"))
+    (str_to_int (alist_get q "b_lvl"))
+    (str_to_int (alist_get q "b_type"))
+    (str_to_int (alist_get q "b_inst"))))
+
+; nodeid_compatibility: 8 integer query params, full request→response marshalling.
+(defn route_nodeid_compatibility (q)
+  (compatibility
+    (str_to_int (alist_get q "a_pkg"))
+    (str_to_int (alist_get q "a_lvl"))
+    (str_to_int (alist_get q "a_type"))
+    (str_to_int (alist_get q "a_inst"))
+    (str_to_int (alist_get q "b_pkg"))
+    (str_to_int (alist_get q "b_lvl"))
+    (str_to_int (alist_get q "b_type"))
+    (str_to_int (alist_get q "b_inst"))))
+
+; weighted_average: frozen sample input (list+float marshalling gap, see header).
+(defn route_weighted_average (q)
+  (weighted_average (list 0.5 0.75 1.0) (list 0.25 0.25 0.5)))
+
+; --- the persistent route table: registered ONCE into the warm kernel ---
+(let routes (list
+  (list "/coherence_weight"     route_coherence_weight)
+  (list "/nodeid_distance"      route_nodeid_distance)
+  (list "/nodeid_compatibility" route_nodeid_compatibility)
+  (list "/weighted_average"     route_weighted_average)))
