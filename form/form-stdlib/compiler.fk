@@ -714,7 +714,13 @@
                   bmf-compile-bmf-factor-tag-item
                   bmf-identity-inverse)
             (list "BMFItemMethod"
-                  (list "capture" "item" (object-lit "BMFItem" ""))
+                  (list "capture" "item"
+                        (list "choice"
+                              (object-lit "BMFItem" "")
+                              (object-lit "BMFItem-opt" "")
+                              (object-lit "BMFItem-must" "")
+                              (object-lit "BMFItem-star" "")
+                              (object-lit "BMFItem-plus" "")))
                   bmf-compile-bmf-item-method-bare
                   bmf-identity-inverse)
             (list "BMFItemMethod-call"
@@ -725,7 +731,11 @@
                   bmf-compile-bmf-item-method
                   bmf-identity-inverse)
             (list "BMFItem"
-                  (list "capture" "item" (object-lit "BMFBasis-lit" ""))
+                  (list "capture" "item"
+                        (list "choice"
+                              (object-lit "BMFBasis-range" "")
+                              (object-lit "BMFBasis-lit" "")
+                              (object-lit "BMFBasis-call" "")))
                   bmf-compile-bmf-item-bare
                   bmf-identity-inverse)
             (list "BMFItem-opt"
