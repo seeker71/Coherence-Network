@@ -684,43 +684,246 @@ def edge_events_path() -> Path | None:
     return Path(raw) if raw else None
 
 
-def record_edge_events(report: dict, path: Path) -> int:
+# ---------------------------------------------------------------------------
+# The surprise gate — lc-identity-is-shared-blueprint-and-recipe, the honest
+# memory economy.
+#
+# The concept: low surprise == embodied identity == |projection| -> 0. What is
+# cheap to predict (the embodied center) does not need to be persistently
+# tracked — it lives in RAM/the-run only. Only the SURPRISING tail (large
+# projection = far from the activity-weighted center = model-changing = worth
+# the cost of remembering) gets written to durable memory.
+#
+# The instrument already exists: embodiment_projection() computes, per category
+# (Blueprint NodeID), its Manhattan distance from the activity-weighted center.
+# That projection IS the surprise proxy. The gate is one comparison over the
+# categories-as-DATA: persist iff projection > threshold.
+#
+# Threshold honesty (the default and why): the gate is RELATIVE, not a magic
+# constant. The default is the MEAN projection across the fired categories —
+# the "above-average surprise" tail. A relative threshold is the honest choice
+# because it adapts to the actual distribution of this run rather than asserting
+# a fixed cutoff that would mean different things as the route surface grows.
+# The mean (not the median) is chosen so the embodied CENTER — the lowest-
+# projection, highest-proximity category (e.g. _plus @1.2.27.1, the activity
+# centroid the bulk of execution clusters around) — stays below the line and is
+# NOT persisted, while categories sitting structurally far out cross it. On the
+# current 3-category surface {1.64, 8.64, 10.36} the mean is 6.88: _plus's 1.64
+# stays RAM-only (predictable center), the two far categories persist. The
+# median (8.64) would also keep _plus in RAM but would drop a genuinely-far
+# category that sits at the median — the mean keeps the full surprising tail.
+#
+# Modes (KERNEL_SURPRISE_MODE / --surprise-mode), all over the same gate:
+#   mean   (default) — persist projection > mean(projections): above-average surprise
+#   median           — persist projection > median(projections)
+#   fixed:<T>        — persist projection > T (absolute; for debugging/pinning)
+#   topk:<K>         — persist the K most-surprising categories
+# The threshold each resolves to is REPORTED, never buried — the operator sees
+# the cutoff and which categories landed on each side.
+# ---------------------------------------------------------------------------
+
+_SURPRISE_MODE_ENV = "KERNEL_SURPRISE_MODE"
+_DEFAULT_SURPRISE_MODE = "mean"
+
+
+def is_surprising(projection: float, threshold: float) -> bool:
+    """The gate — ONE comparison over a category's projection as DATA.
+
+    Surprising == far from the embodied center == projection ABOVE the
+    threshold. The embodied center (|projection| -> 0) is by definition NOT
+    surprising: it stays below the line and lives in RAM only. Strict ``>`` so
+    a category sitting exactly at a relative threshold (e.g. the lone median
+    category) is treated as predictable, not persisted — the gate keeps the
+    tail, not the boundary.
+    """
+    return projection > threshold
+
+
+def _median(values: list[float]) -> float:
+    s = sorted(values)
+    n = len(s)
+    if n == 0:
+        return 0.0
+    mid = n // 2
+    return s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2.0
+
+
+def surprise_threshold(
+    categories: list[dict], mode: str = _DEFAULT_SURPRISE_MODE
+) -> tuple[float, str]:
+    """Resolve the projection threshold for the given categories + mode.
+
+    Returns ``(threshold, resolved_mode_label)``. The categories carry the
+    embodiment projection already computed by ``embodiment_projection``; this
+    reduces their projections to a single cutoff per the chosen mode. ONE
+    resolver over the projections-as-DATA — the modes differ only in the
+    statistic, not in the gate.
+
+    ``mean``/``median`` are relative (adapt to this run's distribution).
+    ``fixed:<T>`` pins an absolute cutoff (debug/pin). ``topk:<K>`` resolves to
+    a threshold just below the K-th largest projection so the same ``> T`` gate
+    keeps exactly the K most-surprising categories.
+    """
+    projs = [c["projection"] for c in categories]
+    if not projs:
+        return (0.0, mode)
+
+    m = (mode or _DEFAULT_SURPRISE_MODE).strip().lower()
+
+    if m.startswith("fixed:"):
+        try:
+            t = float(m.split(":", 1)[1])
+        except ValueError:
+            t = sum(projs) / len(projs)
+            return (t, f"mean (bad fixed: spec, fell back)")
+        return (t, f"fixed:{t:g}")
+
+    if m.startswith("topk:"):
+        try:
+            k = int(m.split(":", 1)[1])
+        except ValueError:
+            k = 1
+        k = max(0, min(k, len(projs)))
+        if k == 0:
+            # Keep nothing: threshold above the max so the gate excludes all.
+            return (max(projs), "topk:0 (persist none)")
+        if k >= len(projs):
+            # Keep all: threshold below the min so the gate includes all.
+            return (min(projs) - 1.0, f"topk:{k} (persist all {len(projs)})")
+        # Threshold strictly between the K-th and (K+1)-th largest projection,
+        # so `> T` keeps exactly the top K. Strict `>` means we set T to the
+        # (K+1)-th largest value itself: the K above it pass, it and below stay.
+        ranked_desc = sorted(projs, reverse=True)
+        return (ranked_desc[k], f"topk:{k}")
+
+    if m == "median":
+        return (_median(projs), "median")
+
+    # default: mean — the above-average-surprise tail.
+    return (sum(projs) / len(projs), "mean")
+
+
+def surprise_split(
+    report: dict, mode: str = _DEFAULT_SURPRISE_MODE
+) -> dict:
+    """Partition the fired categories into surprising (persist) vs RAM-only.
+
+    Reads the embodiment projection already on the report, resolves the
+    threshold for ``mode``, and applies ``is_surprising`` to each category.
+    Returns:
+      - threshold:       the resolved projection cutoff
+      - mode:            the resolved mode label (what was actually applied)
+      - surprising:      [blueprint, ...] categories ABOVE the gate (persisted)
+      - predictable:     [blueprint, ...] categories at/below the gate (RAM only)
+      - surprising_full / predictable_full: the full category dicts for each side
+    The split is pure DATA over the categories — the recorder consumes
+    ``surprising`` as the set of Blueprint NodeIDs whose rows are written.
+    """
+    emb = report.get("embodiment") or {}
+    cats = emb.get("categories") or []
+    threshold, resolved = surprise_threshold(cats, mode)
+    surprising_full = [c for c in cats if is_surprising(c["projection"], threshold)]
+    predictable_full = [
+        c for c in cats if not is_surprising(c["projection"], threshold)
+    ]
+    return {
+        "threshold": round(threshold, 4),
+        "mode": resolved,
+        "surprising": [c["blueprint"] for c in surprising_full],
+        "predictable": [c["blueprint"] for c in predictable_full],
+        "surprising_full": surprising_full,
+        "predictable_full": predictable_full,
+    }
+
+
+def record_edge_events(
+    report: dict,
+    path: Path,
+    *,
+    surprise_gated: bool = True,
+    mode: str = _DEFAULT_SURPRISE_MODE,
+) -> dict:
     """Persist this run's per-route fire-events as edge-event rows (JSONL).
 
-    ONE record function over the aggregate's per-route natives as DATA: each
-    (route, native, blueprint, fire_count) becomes one edge-event row stamped
-    with the run's recorded_at. Append-only — the file IS the accumulation.
+    SURPRISE-GATED by default (lc-identity-is-shared-blueprint-and-recipe): the
+    predictable embodied center (|projection| -> 0) is kept in RAM only; ONLY
+    the surprising tail (category projection ABOVE the threshold) is written.
+    This corrects the naive "record everything" recorder — the body stops
+    paying full memory cost for what it already predicts.
 
-    Row shape:
-      {recorded_at, run_id, route, native, blueprint, fire_count}
+    ONE record function over the aggregate's per-route natives as DATA: each
+    (route, native, blueprint, fire_count) row is emitted IFF its category's
+    Blueprint NodeID is in the surprising set. ``surprise_gated=False`` opts
+    back into the legacy everything-recorder (debugging / parity baseline).
+
+    Row shape (unchanged): {recorded_at, run_id, route, native, blueprint,
+    fire_count} — plus, when gated, ``surprise`` carrying the projection and
+    threshold so the persisted memory is self-describing about WHY it was kept.
 
     The native's Blueprint NodeID is the content-addressed category (move 2):
-    it is pulled from the run's already-resolved ``natives`` map so no extra
-    kernel calls are made. Returns the number of rows written.
+    pulled from the run's already-resolved ``natives`` map; no extra kernel
+    calls. Returns a dict: {written, skipped, threshold, mode, surprising,
+    predictable} — the RAM-vs-persist split, so the gating is visible.
     """
     natives = report.get("natives", {})
     recorded_at = datetime.now(timezone.utc).isoformat()
     run_id = recorded_at  # one run == one timestamped batch of edge-events
+
+    split = surprise_split(report, mode)
+    threshold = split["threshold"]
+    # Map each category dict by Blueprint NodeID for fast projection lookup.
+    proj_by_bp = {
+        c["blueprint"]: c["projection"]
+        for c in (report.get("embodiment", {}) or {}).get("categories", [])
+    }
+    surprising_bps = set(split["surprising"])
+
     rows: list[dict] = []
+    skipped = 0
     for route_entry in report.get("per_route_natives", []):
         route = route_entry["route"]
         for native, fire_count in route_entry["natives"].items():
             bp = (natives.get(native) or {}).get("blueprint")
-            rows.append(
-                {
-                    "recorded_at": recorded_at,
-                    "run_id": run_id,
-                    "route": route,
-                    "native": native,
-                    "blueprint": bp,
-                    "fire_count": int(fire_count),
+            if surprise_gated and bp not in surprising_bps:
+                # Predictable center (or unresolved NodeID) — RAM only, not
+                # persisted. Unresolved-NodeID categories have no projection /
+                # structural position, so the gate cannot call them surprising;
+                # honest default is to NOT persist (matches the inert handling).
+                skipped += 1
+                continue
+            row = {
+                "recorded_at": recorded_at,
+                "run_id": run_id,
+                "route": route,
+                "native": native,
+                "blueprint": bp,
+                "fire_count": int(fire_count),
+            }
+            if surprise_gated:
+                # Self-describing: the persisted trace carries WHY it was kept.
+                row["surprise"] = {
+                    "projection": proj_by_bp.get(bp),
+                    "threshold": threshold,
+                    "mode": split["mode"],
                 }
-            )
+            rows.append(row)
+
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row, separators=(",", ":")) + "\n")
-    return len(rows)
+
+    return {
+        "written": len(rows),
+        "skipped": skipped,
+        "threshold": threshold,
+        "mode": split["mode"],
+        "gated": surprise_gated,
+        "surprising": split["surprising"],
+        "predictable": split["predictable"],
+        "surprising_full": split["surprising_full"],
+        "predictable_full": split["predictable_full"],
+    }
 
 
 def read_edge_events(path: Path) -> list[dict]:
@@ -1033,9 +1236,31 @@ def main(argv: list[str] | None = None) -> int:
         "--record",
         action="store_true",
         help=(
-            "persist this run's per-route fire-events as edge-events "
-            "(lc-the-trace-is-the-memory moves 1-2). OPT-IN and a no-op unless "
-            f"{_EDGE_EVENTS_ENV} is set. The default run writes nothing."
+            "persist this run's per-route fire-events as edge-events, "
+            "SURPRISE-GATED (lc-identity-is-shared-blueprint-and-recipe): only "
+            "the surprising tail (projection above the threshold) is written; "
+            "the predictable embodied center stays in RAM only. OPT-IN and a "
+            f"no-op unless {_EDGE_EVENTS_ENV} is set. The default run (no "
+            "--record) writes nothing."
+        ),
+    )
+    parser.add_argument(
+        "--surprise-mode",
+        default=None,
+        help=(
+            "how the persistence threshold is resolved from the per-category "
+            "projections: mean (default; above-average-surprise tail), median, "
+            "fixed:<T> (absolute cutoff), or topk:<K> (the K most-surprising). "
+            f"Env {_SURPRISE_MODE_ENV} sets the default; this flag overrides it."
+        ),
+    )
+    parser.add_argument(
+        "--record-everything",
+        action="store_true",
+        help=(
+            "opt OUT of the surprise gate and persist EVERY category's "
+            "fire-events (the legacy #2341 record-everything behavior). For "
+            "debugging / parity baselines only — the gated recorder is default."
         ),
     )
     parser.add_argument(
@@ -1099,12 +1324,58 @@ def main(argv: list[str] | None = None) -> int:
             if not args.json:
                 print(note)
         else:
-            written = record_edge_events(report, store_path)
+            mode = (
+                args.surprise_mode
+                or os.environ.get(_SURPRISE_MODE_ENV, "").strip()
+                or _DEFAULT_SURPRISE_MODE
+            )
+            gated = not args.record_everything
+            result = record_edge_events(
+                report, store_path, surprise_gated=gated, mode=mode
+            )
             if not args.json:
-                print(
-                    f"(recorded {written} edge-event rows to {store_path} — "
-                    "the trace is now memory; --from-memory reads the accumulation)"
-                )
+                if gated:
+                    surprising = result["surprising"]
+                    predictable = result["predictable"]
+                    print(
+                        f"(SURPRISE-GATED record → {store_path})"
+                    )
+                    print(
+                        f"  threshold: projection > {result['threshold']:g} "
+                        f"(mode: {result['mode']}) — the above-surprise tail"
+                    )
+                    print(
+                        f"  persisted {result['written']} edge-event row(s) from "
+                        f"{len(surprising)} SURPRISING categor"
+                        f"{'y' if len(surprising) == 1 else 'ies'} "
+                        "(far from the embodied center):"
+                    )
+                    for c in result["surprising_full"]:
+                        print(
+                            f"    proj {c['projection']:>7.3f}  {c['blueprint']:<11}  "
+                            f"{', '.join(c['natives'])}"
+                        )
+                    print(
+                        f"  kept {result['skipped']} row(s) from "
+                        f"{len(predictable)} PREDICTABLE categor"
+                        f"{'y' if len(predictable) == 1 else 'ies'} in RAM ONLY "
+                        "(near the embodied center, not persisted):"
+                    )
+                    for c in result["predictable_full"]:
+                        print(
+                            f"    proj {c['projection']:>7.3f}  {c['blueprint']:<11}  "
+                            f"{', '.join(c['natives'])}"
+                        )
+                    print(
+                        "  the body sees what it keeps and what it lets go — "
+                        "--from-memory reads the accumulation."
+                    )
+                else:
+                    print(
+                        f"(record-EVERYTHING (gate off) → recorded "
+                        f"{result['written']} edge-event rows to {store_path}; "
+                        "legacy #2341 behavior, no surprise gate)"
+                    )
         # Don't leak the recording-only key into --json output.
         report.pop("per_route_natives", None)
 

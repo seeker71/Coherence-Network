@@ -103,11 +103,15 @@ readout over that snapshot:
 
 - **From snapshot to memory.** The trace is recorded as edge-events, not
   recomputed. The body remembers its execution rather than re-deriving it.
-  *(Now PARTIALLY real: the OFFLINE attribution run persists its per-route
-  fire-events as edge-event rows under `--record`, so the memory accumulates
-  across runs and `--from-memory` projects over the accumulation. The
-  LIVE-REQUEST recording — on `serve_via_kernel`, async/sampled — is still the
-  named larger build, deferred because it touches production latency.)*
+  *(Now PARTIALLY real, and SURPRISE-GATED: the OFFLINE attribution run
+  persists its per-route fire-events as edge-event rows under `--record`,
+  writing per category ONLY the surprising tail (projection above a relative
+  threshold) — the predictable embodied center stays in RAM only
+  ([`lc-identity-is-shared-blueprint-and-recipe`](lc-identity-is-shared-blueprint-and-recipe.md)
+  carries the gate). The memory accumulates across runs and `--from-memory`
+  projects over the accumulation. The LIVE-REQUEST recording — on
+  `serve_via_kernel`, async/sampled — is still the named larger build,
+  deferred because it touches production latency.)*
 - **From count to convergence.** "This Blueprint fired 176 times" becomes
   "these categories project nearest the activity-weighted center
   (`|projection|` small); these others fired but sit farther in NodeID
@@ -217,9 +221,15 @@ async/sampled/opt-in decision, named below as the seam.
   *projection-undefined* class (zero edge-events — the "why are you here?"
   candidates). Moves (1) and (2): `--record` persists each OFFLINE run's
   per-route fire-events as edge-event rows
-  `(recorded_at, route, native, blueprint, fire_count)` in an append-only JSONL
-  store (gated on `KERNEL_EDGE_EVENTS_PATH`, opt-in and a no-op when unset — the
-  default run writes nothing). `--from-memory` folds the accumulated rows
+  `(recorded_at, route, native, blueprint, fire_count, surprise)` in an
+  append-only JSONL store (gated on `KERNEL_EDGE_EVENTS_PATH`, opt-in and a
+  no-op when unset — the default run writes nothing). The recorder is
+  SURPRISE-GATED
+  ([`lc-identity-is-shared-blueprint-and-recipe`](lc-identity-is-shared-blueprint-and-recipe.md)):
+  it persists per category only the surprising tail (projection above a
+  relative threshold — default the mean projection), keeping the predictable
+  embodied center in RAM only; `--record-everything` opts back into the legacy
+  record-everything path. `--from-memory` folds the accumulated rows
   per-NodeID (move 2's per-category summation) and runs the SAME projection over
   the accumulated fire-counts, so after N recorded runs a category's fire-count
   is about N-times its single-run value while the projection still reads the
