@@ -1,0 +1,105 @@
+; compression-fold-band.fk — three-way sibling parity for the dimension-reducing
+; compression recipe: the FOLD mechanism of lc-identity-is-shared-blueprint-and-
+; recipe, made real and proven Rust == Go == TS.
+;
+; The grammar (grammars/compression-fold.fk) defines two recipes that are exact
+; inverses on a redundant axis:
+;
+;   compress    : (inputs, idx)          → N−1 outputs   (drop dimension idx)
+;   reconstruct : (reduced, idx, coeffs) → N   outputs   (re-derive dimension idx)
+;
+; The redundant-axis spec (idx + linear coeffs) is DATA: c = a+b is (idx=2,
+; coeffs=[1,1,0]); c = 2a−b is (idx=2, coeffs=[2,-1,0]); folding a when a = c−b
+; is (idx=0, coeffs=[0,-1,1]). Same engine, different values.
+;
+; What this band proves, in three independent kernels:
+;   (a) THE FOLD DROPS EXACTLY ONE DIMENSION — output arity = input arity − 1.   →      1
+;   (b) RECONSTRUCT∘COMPRESS = IDENTITY on a REDUNDANT axis (c = a + b).          →     10
+;       The dropped dimension is recovered EXACTLY — zero information lost,
+;       proving it was truly redundant (reconstructible from the rest).
+;   (c) A MORE INTERESTING LINEAR REDUNDANCY round-trips too (c = 2a − b).        →    100
+;       The spec is data; the engine is one recipe.
+;   (d) FOLDING A NON-LAST AXIS round-trips (drop a when a = c − b, idx=0).       →   1000
+;       Compression is not special-cased to "drop the last column."
+;   (e) THE HONEST NEGATIVE — dropping a SURPRISING axis LOSES information.       →  10000
+;       Apply a spec that does NOT predict the real value; reconstruct ≠ the
+;       original. This is WHY the body must LEARN which axis is safe to drop
+;       before folding it — lossless ONLY on a genuinely-redundant dimension.
+;   (f) THE DROPPED VALUE EQUALS THE PREDICTION on a redundant axis — the         → 100000
+;       reconstructed coordinate is exactly cf-predict of the kept dims.
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;
+; No float crosses the print boundary — every check is an integer comparison
+; (cf-list-eq → 0/1, eq on integer coordinates). The test vectors are integers
+; so the dot products and reconstructions land on exact integers in every kernel.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/compression-fold.fk
+;
+(do
+    ;; ── (a) THE FOLD DROPS EXACTLY ONE DIMENSION ───────────────────────────
+    ;; compress a 3-vector → a 2-vector. Output arity is input arity − 1, and
+    ;; the kept coordinates are exactly the un-folded ones in order.
+    (let v3 (list 4 9 13))                      ; (a=4, b=9, c=13) with c = a + b
+    (let folded (compress v3 2))                ; drop idx 2 → (4, 9)
+    (let arity-ok
+        (if (eq (len folded) (sub (len v3) 1))  ; 2 == 3 − 1
+            (if (eq (head folded) 4)
+                (if (eq (head (tail folded)) 9) 1 0) 0) 0))
+
+    ;; ── (b) RECONSTRUCT∘COMPRESS = IDENTITY on a REDUNDANT axis (c = a + b) ──
+    ;; spec: idx=2, coeffs=[1,1,0] → predicted c = 1·a + 1·b. Since the real
+    ;; c = a + b, the dropped axis is fully redundant; recovery is EXACT.
+    (let spec-sum (list 1 1 0))
+    (let rt-sum (reconstruct (compress v3 2) 2 spec-sum))   ; (4,9) → (4,9,13)
+    (let redundant-ok
+        (if (eq (cf-list-eq rt-sum v3) 1) 10 0))
+
+    ;; ── (c) A MORE INTERESTING LINEAR REDUNDANCY (c = 2a − b) ───────────────
+    ;; spec: idx=2, coeffs=[2,-1,0] → predicted c = 2a − b. Vector (5, 3, 7):
+    ;; 2·5 − 3 = 7, so c is redundant. Round-trip recovers it exactly.
+    (let w3 (list 5 3 7))
+    (let spec-2a-b (list 2 -1 0))
+    (let rt-2a-b (reconstruct (compress w3 2) 2 spec-2a-b))
+    (let linear-ok
+        (if (eq (cf-list-eq rt-2a-b w3) 1) 100 0))
+
+    ;; ── (d) FOLDING A NON-LAST AXIS (drop a when a = c − b, idx=0) ──────────
+    ;; spec: idx=0, coeffs=[0,-1,1] → predicted a = −b + c. Vector (4, 9, 13):
+    ;; −9 + 13 = 4, so the FIRST axis is the redundant one. compress drops it,
+    ;; reconstruct splices it back at position 0 — proving the fold is not
+    ;; special-cased to the last column; the index is data.
+    (let spec-first (list 0 -1 1))
+    (let rt-first (reconstruct (compress v3 0) 0 spec-first))  ; (9,13) → (4,9,13)
+    (let nonlast-ok
+        (if (eq (cf-list-eq rt-first v3) 1) 1000 0))
+
+    ;; ── (e) THE HONEST NEGATIVE — dropping a SURPRISING axis LOSES info ─────
+    ;; Vector (4, 9, 20): here c = 20, but a + b = 13 — the axis is NOT redundant
+    ;; (it carries surprise: 20 ≠ 13). Folding it with the sum-spec and
+    ;; reconstructing yields 13 where 20 was — reconstruct ≠ identity. The
+    ;; information in the surprising axis is genuinely LOST. This is the proof
+    ;; that the fold is lossless ONLY on a predictable dimension, and therefore
+    ;; WHY learning-which-to-drop matters (the named next build).
+    (let surprising (list 4 9 20))
+    (let rt-surprising (reconstruct (compress surprising 2) 2 spec-sum))  ; → (4,9,13)
+    (let lossy-ok
+        (if (eq (cf-list-eq rt-surprising surprising) 0)   ; NOT identity — info lost
+            (if (eq (head (tail (tail rt-surprising))) 13)  ; recovered the PREDICTED 13, not the real 20
+                10000 0) 0))
+
+    ;; ── (f) THE DROPPED VALUE EQUALS THE PREDICTION on a redundant axis ─────
+    ;; cf-predict over the full vector gives the value the kept dims imply; on a
+    ;; redundant axis that equals the original coordinate AND the reconstructed
+    ;; one. Direct check that the fold's prediction is the dropped coordinate.
+    (let predicted-c (cf-predict v3 2 spec-sum))            ; 1·4 + 1·9 = 13
+    (let predict-ok
+        (if (eq predicted-c 13)                              ; equals original c
+            (if (eq (head (tail (tail rt-sum))) 13) 100000 0) 0))
+
+    ;; ── Aggregate — every sub-score is its bit or 0; full pass = 111111 ─────
+    (add arity-ok
+    (add redundant-ok
+    (add linear-ok
+    (add nonlast-ok
+    (add lossy-ok predict-ok))))))
