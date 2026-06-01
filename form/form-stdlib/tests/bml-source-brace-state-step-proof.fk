@@ -1,0 +1,41 @@
+; tests/bml-source-brace-state-step-proof.fk - BML body collector state-step proof
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves balanced BML method-body collection is represented as an explicit
+; cursor/depth/accumulator state machine.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let synthetic
+        (list
+            (bml-op "{")
+            (bml-kw "ParseStream")
+            (bml-op "{")
+            (bml-kw "Invoke")
+            (bml-op "}")
+            (bml-kw "Compile")
+            (bml-op "}")
+            (bml-kw "afterBody")))
+    (let state (bml-source-collect-balanced-brace-state synthetic))
+    (let body (bml-source-brace-collect-body state))
+    (let rest (bml-source-brace-collect-rest state))
+
+    (sum
+        (list
+            (bool-score (bml-source-brace-collect-state? state) 1)
+            (bool-score (bml-source-brace-collect-done? state) 2)
+            (int-score (bml-source-brace-collect-steps state) 6 4)
+            (int-score (len body) 5 8)
+            (int-score (len rest) 1 16)
+            (str-score (bmf-object-value (head body)) "ParseStream" 32)
+            (str-score (bmf-object-value (nth body 2)) "Invoke" 64)
+            (str-score (bmf-object-value (head rest)) "afterBody" 128))))
