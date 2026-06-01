@@ -99,3 +99,14 @@ def test_aggregate_evidence_coverage_reports_missing_paths() -> None:
 
     assert errors
     assert "api/app/services/memory_service.py" in errors[0]
+
+
+def test_web_lib_changes_are_runtime_evidence() -> None:
+    mod = _load_validator()
+    changed_files = ["web/lib/form-kernel/field-runtime.ts"]
+
+    assert mod.validate(_record(changed_files, "runtime_feature"), changed_files=changed_files) == []
+
+    errors = mod.validate(_record(changed_files, "test_only"), changed_files=changed_files)
+
+    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
