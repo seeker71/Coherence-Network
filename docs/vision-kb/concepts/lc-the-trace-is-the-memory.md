@@ -184,7 +184,7 @@ async/sampled/opt-in decision, named below as the seam.
 
 ## Cross-References
 
-→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality
+→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-identity-is-shared-blueprint-and-recipe, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality
 
 ## Sources to walk further
 

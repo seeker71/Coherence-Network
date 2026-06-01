@@ -297,7 +297,7 @@ shame.
 
 ## Cross-References
 
-→ lc-train-the-predator, lc-recipes-bound-to-base, lc-shifted-return, lc-assemblage-point, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-trust-over-fear, lc-each-breath-whole, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-release-what-drifts, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-the-thaw-is-backprop
+→ lc-train-the-predator, lc-identity-is-shared-blueprint-and-recipe, lc-recipes-bound-to-base, lc-shifted-return, lc-assemblage-point, lc-essence-and-the-nine-costumes, lc-when-the-pressure-comes, lc-frequency-routes-reception, lc-trust-over-fear, lc-each-breath-whole, lc-permission-is-interior, lc-sovereignty-within-oneness, lc-release-what-drifts, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-the-thaw-is-backprop
 
 ## Sources to walk further
 
