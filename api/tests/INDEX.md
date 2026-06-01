@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 230
+**Total files**: 233
 
 | File | Purpose |
 |---|---|
@@ -98,6 +98,7 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
+| [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
 | [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
 | [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
@@ -228,8 +229,10 @@
 | [test_utils_breath_balance.py](test_utils_breath_balance.py) | Tests for /api/utils/breath_balance — the first kernel-served route to use a transcendental native (ln). |
 | [test_utils_coherence_weight.py](test_utils_coherence_weight.py) | Tests for /api/utils/coherence_weight — the first transmuted endpoint. |
 | [test_utils_cost_value_vector.py](test_utils_cost_value_vector.py) | Tests for /api/utils/cost_vector and /api/utils/value_vector. |
+| [test_utils_idea_marginal_from_record.py](test_utils_idea_marginal_from_record.py) | Tests for /api/utils/idea_marginal_from_record — the first structure-access route. |
 | [test_utils_nodeid_compatibility.py](test_utils_nodeid_compatibility.py) | Tests for /api/utils/nodeid_compatibility — transmuted under the habit pattern. |
 | [test_utils_nodeid_distance.py](test_utils_nodeid_distance.py) | Tests for /api/utils/nodeid_distance — transmuted under the habit pattern. |
+| [test_utils_shannon_entropy.py](test_utils_shannon_entropy.py) | Tests for /api/utils/shannon_entropy — normalized Shannon entropy as a Form recipe. |
 | [test_utils_softmax_weights.py](test_utils_softmax_weights.py) | Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route. |
 | [test_utils_weighted_average.py](test_utils_weighted_average.py) | Tests for /api/utils/weighted_average — transmuted under the habit pattern. |
 | [test_value_lineage.py](test_value_lineage.py) | Tests for the value lineage and payout attribution API. |

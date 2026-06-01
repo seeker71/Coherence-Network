@@ -29,7 +29,9 @@
 !endpoint_idea_score_demo.fk
 !endpoint_marginal_cc_return_demo.fk
 !endpoint_breath_balance_demo.fk
+!endpoint_shannon_entropy_demo.fk
 !endpoint_softmax_weights_demo.fk
 !endpoint_cost_vector_demo.fk
 !endpoint_value_vector_demo.fk
 !endpoint_grounded_roi_demo.fk
+!endpoint_idea_marginal_from_record_demo.fk

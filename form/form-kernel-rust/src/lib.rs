@@ -97,12 +97,30 @@ fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
     Ok(obj)
 }
 
+/// Conventional blueprint NodeID for a record marshalled from a Python dict /
+/// model — the structured-input tag the bridge's `_fk_literal` renders too
+/// (`(make_nodeid 1 5 4 1)`), so a record marshalled inline and one injected as
+/// a `record_new` literal on the subprocess path share the same blueprint. The
+/// recipe reads fields by name (record_get), not by blueprint, so the exact
+/// value only needs to be stable and consistent across the two carriers.
+const STRUCTURED_INPUT_BLUEPRINT: NodeID = NodeID {
+    pkg: 1,
+    level: 5,
+    ty: 4,
+    inst: 1,
+};
+
 /// Convert a Python object into a kernel Value — the inverse of value_to_py,
 /// restricted to the value model the kernel carries (the same surface
 /// _fk_literal renders on the Python side). bool before int (Python bool is an
-/// int subclass); lists recurse. Anything else is a ValueError so the caller's
-/// fallback can take over rather than the kernel walking a fabricated value.
-fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
+/// int subclass); lists recurse; a dict marshals to a kernel Record so a
+/// transmuted recipe can read named fields via `record_get` (the structure-
+/// access capability). Anything else is a ValueError so the caller's fallback
+/// can take over rather than the kernel walking a fabricated value.
+///
+/// `kernel` is threaded so a dict's field names can intern to NameIDs exactly
+/// as the `record_new` native does — the marshalling seam for structured input.
+fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if let Ok(b) = obj.downcast::<pyo3::types::PyBool>() {
         return Ok(Value::Bool(b.is_true()));
     }
@@ -118,9 +136,24 @@ fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if let Ok(list) = obj.downcast::<PyList>() {
         let mut xs = Vec::with_capacity(list.len());
         for item in list.iter() {
-            xs.push(py_to_value(&item)?);
+            xs.push(py_to_value(kernel, &item)?);
         }
         return Ok(Value::List(xs));
+    }
+    if let Ok(dict) = obj.downcast::<PyDict>() {
+        // Marshal a flat dict (string keys → scalar/list/dict values) onto a
+        // Record. Keys must be strings (a field name); the recipe reads them
+        // back by name via record_get. Insertion order is preserved.
+        let mut pairs: Vec<(String, Value)> = Vec::with_capacity(dict.len());
+        for (key, val) in dict.iter() {
+            let name: String = key.extract().map_err(|_| {
+                PyValueError::new_err(
+                    "form-kernel: record field name must be a string",
+                )
+            })?;
+            pairs.push((name, py_to_value(kernel, &val)?));
+        }
+        return Ok(kernel.make_record(STRUCTURED_INPUT_BLUEPRINT, pairs));
     }
     Err(PyValueError::new_err(format!(
         "form-kernel: cannot bind Python {} into a kernel Value",
@@ -219,7 +252,7 @@ impl Preloader {
         let mut pairs: Vec<(u32, Value)> = Vec::with_capacity(bindings.len());
         for (key, val) in bindings.iter() {
             let name: String = key.extract()?;
-            let value = py_to_value(&val)?;
+            let value = py_to_value(&mut self.kernel, &val)?;
             let name_id = self.kernel.intern_string(&name).inst;
             pairs.push((name_id, value));
         }

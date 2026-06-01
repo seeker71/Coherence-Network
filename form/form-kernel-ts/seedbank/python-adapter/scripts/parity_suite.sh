@@ -66,6 +66,12 @@ PARITY_FILES=(
     "examples/endpoint_idea_score_demo.py"
     "examples/endpoint_marginal_cc_return_demo.py"
     "examples/endpoint_breath_balance_demo.py"
+    # Normalized Shannon entropy over three phase counts — the body of
+    # breath_service._shannon_entropy_normalized. Folds two prior unlocks
+    # (math_log ln, round_ndigits) into one recipe. Distinct from
+    # breath_balance: subtractive accumulator (+0.0 single-phase, not -0.0) and
+    # a round(_, 4) wrapper.
+    "examples/endpoint_shannon_entropy_demo.py"
     # First LIST-RETURNING kernel-served route — softmax weights. Proves the
     # value-walk carries list construction (append-accumulator → value_to_py
     # List arm) end to end, three-way on the frozen [1,2,3]@1.0 input.
@@ -83,6 +89,14 @@ PARITY_FILES=(
     # `if remaining_cost_cc > 0 else 0.0` ternary) into one recipe. Returns
     # [remaining_cost_cc, value_gap_cc, roi_cc].
     "examples/endpoint_grounded_roi_demo.py"
+    # First STRUCTURE-ACCESS route — the marginal-CC core reading its six
+    # inputs from one structured object (idea["potential_value"], …) instead of
+    # six scalar args. Subscript lowers to the kernel's `_get` field access; at
+    # request time the bridge marshals a Python dict / model into a kernel
+    # Record (record_new literal on the subprocess path, py_to_value's dict arm
+    # inline). Proves the recipe body is three-way over a frozen sample object;
+    # the bridge marshalling is proven by test_form_kernel_bridge_structure_access.
+    "examples/endpoint_idea_marginal_from_record_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"
