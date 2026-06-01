@@ -138,6 +138,11 @@ COPY api/ ./
 # is self-contained for local docker runs.
 COPY scripts/ ./scripts/
 
+# Form stdlib sources are executable runtime material. BML/Python-BMF grammar
+# support lands here, so production must carry these files instead of treating
+# them as inert repository content.
+COPY form/form-stdlib/ ./form/form-stdlib/
+
 # Frontmatter source surfaces (specs, ideas, vision-kb). The deploy script
 # re-syncs these on each deploy, but baking them in lets the image boot
 # substrate-complete from a cold start.

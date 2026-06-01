@@ -13,6 +13,7 @@ on:
       - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
       - 'Dockerfile*'
+      - 'form/form-stdlib/**'
       - 'form/form-kernel-rust/**'
       - 'kernels/python_bmf/**'
   workflow_dispatch:
