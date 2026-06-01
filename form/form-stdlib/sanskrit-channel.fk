@@ -1,0 +1,84 @@
+; sanskrit-channel.fk — a channel that SPEAKS a Sanskrit derivation and RUNS the
+; generative grammar over cells.
+;
+; The decoder (grammars/sanskrit-roots.fk) is the SURFACE: a word → its root +
+; meaning, a seed-syllable → its chakra. lc-panini-the-first-substrate names what
+; lives one layer up: Pāṇini's grammar is GENERATIVE and RECURSIVE — a finite set
+; of dhātu roots + ordered rules generate an unbounded space of words, each
+; derivable back to its root. "A word IS its derivation, as a NodeID IS its
+; content-address." This channel RUNS that: a rule (root + affix) composes a
+; word-CELL; the cell can itself be the root of another rule (recursion); and the
+; base root is always recoverable — words sharing it are one dhātu family.
+;
+;   SPEAK  (sanskrit-channel-speak word)        → the surface ("karma — root √kṛ …")
+;          (sanskrit-channel-speak-bija syl)     → the seed-syllable's chakra
+;   RUN    (sanskrit-channel-run root affix)      → a derived word-CELL (the rule,
+;                                                   executed; content-addressed)
+;          (sanskrit-channel-family root)          → the dhātu equivalence class
+;
+; A derivation is intern_node(SANSKRIT-DERIVE, (root, affix)) — content-addressed,
+; so the same (root, affix) always generates the same cell. RECURSION: pass a
+; derived cell as the root of the next derivation; sanskrit-base-root descends
+; through the nesting to the original dhātu. The generative grammar, runnable.
+;
+; Held as documented scholarship — IAST romanization is the kernel-comparable form
+; (native Devanāgarī diverges across kernels; it lives in the doc). Three-way safe:
+; ASCII tokens and node composition only.
+;
+; preludes: form-stdlib/grammars/sanskrit-roots.fk form-stdlib/channel.fk
+;
+
+;; --- the derivation blueprint ---------------------------------------
+(let SK-DERIVE (bp "SANSKRIT-DERIVE"))
+
+;; --- roots and affixes as nodes -------------------------------------
+(defn sanskrit-root  (name) (intern_trivial_string name))
+(defn sanskrit-affix (name) (intern_trivial_string name))
+
+;; --- derive: the generative rule, executed --------------------------
+;; (root, affix) → a word-CELL composed under SANSKRIT-DERIVE. Content-addressed:
+;; the same (root, affix) always interns to the same cell — a word IS its
+;; derivation. `root` may itself be a derived cell (recursion).
+(defn sanskrit-derive (root affix) (intern_node SK-DERIVE (list root affix)))
+
+;; --- the base root, recovered through recursion ---------------------
+;; The first child of a derivation is its root; if that root is itself a
+;; derivation, descend. So a doubly-derived cell still yields its original dhātu —
+;; the derivation is reversible to its seed, as Pāṇini's rules are.
+(defn sanskrit-base-root (cell)
+    (if (node_eq (node_category cell) SK-DERIVE)
+        (sanskrit-base-root (head (node_children cell)))
+        cell))
+
+;; two cells share a base root → one dhātu family (content-addressing by root).
+(defn sanskrit-same-root? (a b)
+    (if (node_eq (sanskrit-base-root a) (sanskrit-base-root b)) 1 0))
+
+;; --- the channel's two faces ----------------------------------------
+;; SPEAK: the surface — a word's derivation, or a seed-syllable's chakra.
+(defn sanskrit-channel-speak      (word)     (dhatu-answer word))
+(defn sanskrit-channel-speak-bija (syllable) (bija-answer  syllable))
+;; RUN: generate a word-cell from a root name + affix name (the rule, executed).
+(defn sanskrit-channel-run (root-name affix-name)
+    (sanskrit-derive (sanskrit-root root-name) (sanskrit-affix affix-name)))
+;; the dhātu family of a root — the seeded words sharing it (equivalence class).
+(defn sanskrit-channel-family (root-name) (dhatu-family root-name))
+;; the governing teaching, queryable in the substrate.
+(defn sanskrit-channel-teaching () "lc-panini-the-first-substrate")
+
+;; --- transport tie-in: a word arrives over a channel ---------------
+;; A remote cell appends a word as a CHANNEL-MSG; the receiver SPEAKS its
+;; derivation and RUNS its root's family (the dhātu equivalence class), returning
+;; (text, family). channel.fk carries the word; this binds it to its root.
+(defn sanskrit-word-message (word) (channel-message (intern_trivial_string word)))
+(defn sanskrit-payload-word (msg) (node_value (channel-msg-payload msg)))
+(defn sanskrit-channel-receive (msg)
+    (do
+        (let word (sanskrit-payload-word msg))
+        (let r (dhatu-decode word))
+        (list (sanskrit-channel-speak word)
+              (if (eq (dhatu-found? r) 1)
+                  (dhatu-family (dhatu-root (dhatu-of r)))
+                  (empty)))))
+
+0
