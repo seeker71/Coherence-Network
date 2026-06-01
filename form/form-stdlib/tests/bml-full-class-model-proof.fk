@@ -1,0 +1,233 @@
+; tests/bml-full-class-model-proof.fk - full BML class model proof band
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the class-model features that sit beside inheritance: attribute
+; contracts, constants, inner classes, templates, default interface methods,
+; member access, final/abstract/deferred/class flags, and Application.Main.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn both (a b)
+        (if a b false))
+
+    (defn test-prop (name value)
+        (bml-property-component name value))
+
+    (defn test-field-props (field-type name props)
+        (comp-bml-component "Field" (list field-type name props)))
+
+    (defn test-method-props (name props value)
+        (comp-bml-component
+            "Method"
+            (list "int" name props (bml-ast-return (bml-ast-int value)))))
+
+    (defn test-const (const-type name props value)
+        (comp-bml-component "Const" (list const-type name props value)))
+
+    (defn test-section (name props items)
+        (comp-bml-component "Section" (list name props items)))
+
+    (defn test-class-props (name props supers body)
+        (comp-bml-component "Class" (list name props supers body)))
+
+    (defn test-interface (name parent body)
+        (comp-bml-component "Interface" (list name (empty) parent body)))
+
+    (let access-prop (test-prop "access" "protected"))
+    (let abstract-class
+        (test-class-props "AbstractThing" (list (test-prop "abstract" "true")) (empty) (empty)))
+    (let final-base
+        (test-class-props "FinalBase" (list (test-prop "final" "true")) (empty) (empty)))
+
+    (let locked-base-method
+        (test-method-props "locked" (list (test-prop "final" "true")) 1))
+    (let locked-override-method
+        (test-method-props "locked" (empty) 2))
+    (let deferred-method
+        (test-method-props "later" (list (test-prop "deferred" "true")) 3))
+    (let class-method
+        (test-method-props "staticName" (list (test-prop "class" "true")) 4))
+    (let section-method
+        (test-method-props "sectionWork" (empty) 8))
+    (let default-render
+        (test-method-props "render" (list (test-prop "default" "true")) 5))
+    (let main-abstract
+        (test-method-props "Main" (list (test-prop "abstract" "true")) 0))
+    (let main-concrete
+        (test-method-props "Main" (empty) 6))
+
+    (let rich-field
+        (test-field-props
+            "int"
+            "slot"
+            (list
+                (test-prop "delegate" "true")
+                (test-prop "shared" "true")
+                (test-prop "class" "true")
+                (test-prop "get" "true")
+                (test-prop "put" "true")
+                (test-prop "strict" "true"))))
+    (let relaxed-field
+        (test-field-props "int" "loose" (list (test-prop "relaxed" "true"))))
+
+    (let answer-const (test-const "int" "Answer" (list (test-prop "public" "true")) 99))
+    (let private-const (test-const "int" "Secret" (list (test-prop "private" "true")) 7))
+    (let class-const (test-const "int" "SharedAnswer" (list (test-prop "class" "true")) 100))
+    (let section-const (test-const "int" "SectionAnswer" (empty) 101))
+    (let protected-field (test-field-props "int" "guarded" (list access-prop)))
+    (let public-field (test-field-props "int" "open" (list (test-prop "public" "true"))))
+    (let inner-class (test-class-props "Nested" (empty) (empty) (empty)))
+    (let nested-section
+        (test-section "protected-zone" (list access-prop) (list answer-const inner-class)))
+    (let class-public-section
+        (test-section
+            "class-public"
+            (list (test-prop "class" "true") (test-prop "public" "true"))
+            (list section-method section-const)))
+
+    (let base-with-members
+        (test-class-props
+            "BaseWithMembers"
+            (empty)
+            (empty)
+            (list
+                rich-field relaxed-field private-const class-const protected-field
+                public-field locked-base-method nested-section class-public-section)))
+    (let override-child
+        (test-class-props
+            "OverrideChild"
+            (empty)
+            (list "BaseWithMembers")
+            (list locked-override-method deferred-method class-method)))
+    (let access-child
+        (test-class-props "AccessChild" (empty) (list "BaseWithMembers") (empty)))
+    (let app-base
+        (test-class-props
+            "BML.lang.Application"
+            (list (test-prop "abstract" "true"))
+            (empty)
+            (list main-abstract)))
+    (let app-program
+        (test-class-props "Demo.Program" (empty) (list "BML.lang.Application") (list main-concrete)))
+    (let app-no-main
+        (test-class-props "Demo.NoMain" (empty) (list "BML.lang.Application") (empty)))
+    (let app-deferred-main
+        (test-class-props "Demo.DeferredMain" (empty) (list "BML.lang.Application") (list deferred-method)))
+    (let defaults-interface
+        (test-interface "ButtonDefaults" "" (list default-render)))
+    (let widget
+        (test-class-props
+            "Widget"
+            (empty)
+            (empty)
+            (list (bml-interface-ref-component "ButtonDefaults"))))
+
+    (let model
+        (bml-model
+            (list
+                abstract-class final-base base-with-members override-child access-child
+                app-base app-program app-no-main app-deferred-main widget)
+            (list defaults-interface)))
+
+    (let template-class
+        (comp-bml-component "Template" (list (list "T") "class" (list base-with-members))))
+    (let template-interface
+        (comp-bml-component "Template" (list (list "T") "interface" (list defaults-interface))))
+    (let template-block
+        (comp-bml-component "Template" (list (list "T") "block" (empty))))
+
+    (let property-score
+        (add (str-score (bml-properties-value (list access-prop) "access" "") "protected" 1)
+        (add (bool-score (bml-class-abstract? abstract-class) 2)
+        (add (bool-score (not (bml-class-concrete? abstract-class)) 4)
+        (add (bool-score (bml-class-final? final-base) 8)
+             (bool-score (not (bml-class-can-extend? model "FinalBase")) 16))))))
+
+    (let method-score
+        (add (bool-score (not (bml-class-method-override-allowed? model "OverrideChild" "locked")) 32)
+        (add (bool-score (bml-method-deferred? deferred-method) 64)
+             (bool-score (bml-method-class? class-method) 128))))
+
+    (let access-score
+        (add (bool-score (bml-member-accessible? model "BaseWithMembers" "BaseWithMembers" (bml-const-properties private-const)) 256)
+        (add (bool-score (not (bml-member-accessible? model "BaseWithMembers" "Widget" (bml-const-properties private-const))) 512)
+        (add (bool-score (bml-member-accessible? model "BaseWithMembers" "AccessChild" (bml-field-properties protected-field)) 1024)
+             (bool-score (bml-member-accessible? model "BaseWithMembers" "Widget" (bml-field-properties public-field)) 2048)))))
+
+    (let field-score
+        (add (bool-score (both (bml-field-delegate? rich-field) (bml-field-class? rich-field)) 4096)
+        (add (bool-score (bml-field-shared? rich-field) 8192)
+        (add (bool-score (bml-field-get? rich-field) 16384)
+        (add (bool-score (bml-field-put? rich-field) 32768)
+        (add (bool-score (both (bml-field-strict? rich-field) (not (bml-field-relaxed? rich-field))) 65536)
+             (bool-score (both (bml-field-relaxed? relaxed-field) (not (bml-field-strict? relaxed-field))) 131072)))))))
+
+    (let inherited-const (bml-class-const-lookup-structural model "OverrideChild" "Answer"))
+    (let inherited-inner (bml-class-inner-class-lookup-structural model "OverrideChild" "Nested"))
+    (let member-score
+        (add (bool-score (both (str_eq (bml-const-name inherited-const) "Answer") (bml-const-class? class-const)) 262144)
+        (add (int-score (bml-const-value inherited-const) 99 524288)
+             (str-score (bml-class-name inherited-inner) "Nested" 1048576))))
+
+    (let template-score
+        (add (bool-score (bml-template-valid-kind? template-class) 2097152)
+        (add (bool-score (bml-template-valid-kind? template-interface) 4194304)
+             (bool-score
+                (both
+                    (not (bml-template-valid-kind? template-block))
+                    (both
+                        (not (bml-template-valid-kind? (comp-bml-component "Template" (list (list "T") "method" (empty)))))
+                        (not (bml-template-valid-kind? (comp-bml-component "Template" (list (list "T") "field" (empty)))))))
+                8388608))))
+
+    (let interface-score
+        (add (bool-score (not (nil? (bml-interface-default-method-lookup model "ButtonDefaults" "render"))) 16777216)
+             (bool-score (not (nil? (bml-class-interface-default-method-lookup model "Widget" "render"))) 33554432)))
+
+    (let application-score
+        (add (bool-score (bml-application-main-entry? model "Demo.Program") 67108864)
+             (bool-score
+                (both
+                    (not (bml-application-main-entry? model "Demo.NoMain"))
+                    (not (bml-application-main-entry? model "Demo.DeferredMain")))
+                134217728)))
+
+    (let section-method-props
+        (bml-class-member-effective-properties base-with-members "Method" "sectionWork"))
+    (let section-const-props
+        (bml-class-member-effective-properties base-with-members "Const" "SectionAnswer"))
+    (let section-score
+        (add
+            (bool-score
+                (both
+                    (str_eq (bml-section-name nested-section) "protected-zone")
+                    (both
+                        (bml-properties-has? section-method-props "class")
+                        (bml-properties-has? section-method-props "public")))
+                268435456)
+            (bool-score
+                (both
+                    (str_eq (bml-access-level (bml-section-properties nested-section)) "protected")
+                    (both
+                        (bml-properties-has? section-const-props "class")
+                        (bml-properties-has? section-const-props "public")))
+                536870912)))
+
+    (add property-score
+    (add method-score
+    (add access-score
+    (add field-score
+    (add member-score
+    (add template-score
+    (add interface-score
+    (add application-score section-score))))))))
+)

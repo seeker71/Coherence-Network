@@ -1,0 +1,164 @@
+; tests/bml-class-inheritance-proof.fk - BML class and inheritance model proof
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the object-model commitments from the BML thesis/reference:
+; classes carry fields, methods, sections, and interfaces; the first
+; superclass is the structural base; additional superclasses are delegated;
+; method lookup is behavioral and starts at self; field lookup is structural
+; and starts at this; interface support is inherited through interface and
+; class parent chains.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn test-field (field-type name)
+        (comp-bml-component "Field" (list field-type name (empty))))
+
+    (defn test-method (name value)
+        (comp-bml-component
+            "Method"
+            (list "int" name (empty) (bml-ast-return (bml-ast-int value)))))
+
+    (defn test-section (name items)
+        (comp-bml-component "Section" (list name (empty) items)))
+
+    (defn test-class (name supers body)
+        (comp-bml-component "Class" (list name (empty) supers body)))
+
+    (defn test-interface (name parent body)
+        (comp-bml-component "Interface" (list name (empty) parent body)))
+
+    (defn binding-this-score (binding expected bit)
+        (if (nil? binding) 0
+            (str-score (bml-method-binding-this binding) expected bit)))
+
+    (defn binding-self-score (binding expected bit)
+        (if (nil? binding) 0
+            (str-score (bml-method-binding-self binding) expected bit)))
+
+    (defn field-name-score (field expected bit)
+        (if (nil? field) 0
+            (str-score (bml-field-name field) expected bit)))
+
+    ;; Source rule proof for multiple class bases: the source spelling
+    ;; `class E : C, D` becomes one structural base (C) and one delegated
+    ;; base (D) in the class component.
+    (let parsed-class-match
+        (apply-bml-bmf-rule "class-two-base-header"
+            (list (bml-src-keyword "class") (bml-src-name "E")
+                  (bml-src-op ":") (bml-src-name "C")
+                  (bml-src-op ",") (bml-src-name "D"))))
+    (let parsed-class (result-value parsed-class-match))
+    (let source-score
+        (add (bool-score (match? parsed-class-match) 1)
+        (add (str-score (bml-class-name parsed-class) "E" 2)
+        (add (str-score (bml-class-structural-base-name parsed-class) "C" 4)
+             (int-score (len (bml-class-delegation-base-names parsed-class)) 1 8)))))
+
+    (let field-a (test-field "int" "a"))
+    (let field-b (test-field "int" "b"))
+    (let field-c (test-field "int" "c"))
+    (let field-d (test-field "int" "d"))
+    (let field-e (test-field "int" "e"))
+
+    (let method-foo-a (test-method "foo" 1))
+    (let method-goo-a (test-method "goo" 2))
+    (let method-b-only (test-method "bOnly" 3))
+    (let method-d-only (test-method "dOnly" 4))
+    (let method-goo-e (test-method "goo" 5))
+    (let method-draw (test-method "draw" 6))
+    (let method-click (test-method "click" 7))
+
+    (let interface-renderable
+        (test-interface "Renderable" "" (list method-draw)))
+    (let interface-clickable
+        (test-interface "Clickable" "Renderable" (list method-click)))
+
+    (let class-a
+        (test-class "A" (empty) (list field-a method-foo-a method-goo-a)))
+    (let class-b
+        (test-class "B" (empty) (list field-b method-b-only)))
+    (let class-c
+        (test-class "C" (list "A" "B") (list field-c)))
+    (let class-d
+        (test-class "D" (empty) (list field-d method-d-only)))
+    (let class-e
+        (test-class
+            "E"
+            (list "C" "D")
+            (list
+                (test-section "public" (list field-e method-goo-e))
+                (bml-interface-ref-component "Clickable"))))
+
+    (let model
+        (bml-model
+            (list class-e class-c class-a class-b class-d)
+            (list interface-clickable interface-renderable)))
+
+    ;; Section-contained members are visible to the class model.
+    (let section-member-score
+        (add (int-score (len (bml-class-own-fields class-e)) 1 16)
+             (field-name-score (bml-find-field (bml-class-own-fields class-e) "e") "e" 32)))
+
+    ;; Structural inheritance uses the first superclass only: E -> C -> A.
+    ;; Delegated base objects are the remaining superclasses: E delegates D,
+    ;; and C delegates B.
+    (let structural-fields (bml-class-structural-fields model "E"))
+    (let delegation-bases (bml-class-all-delegation-bases model "E"))
+    (let structure-score
+        (add (str-score (bml-class-structural-base-name class-e) "C" 64)
+        (add (str-score (bml-class-structural-base-name class-c) "A" 128)
+        (add (int-score (len structural-fields) 3 256)
+        (add (int-score (len delegation-bases) 2 512)
+        (add (field-name-score (bml-class-field-lookup-structural model "E" "a") "a" 1024)
+             (bool-score (nil? (bml-class-field-lookup-structural model "E" "b")) 2048)))))))
+
+    ;; Behavioral method lookup searches from self and lets the most-derived
+    ;; definition win. Inherited methods retain their implementation context.
+    (let foo-binding (bml-class-method-lookup model "E" "foo"))
+    (let goo-binding (bml-class-method-lookup model "E" "goo"))
+    (let d-binding (bml-class-method-lookup model "E" "dOnly"))
+    (let method-score
+        (add (binding-this-score foo-binding "A" 4096)
+        (add (binding-self-score foo-binding "E" 8192)
+        (add (binding-this-score goo-binding "E" 16384)
+             (binding-this-score d-binding "D" 32768)))))
+
+    ;; From inside A.foo, invoking goo() still starts at self=E, so E.goo
+    ;; overrides A.goo. super.goo from E starts at E's bases and reaches A.
+    (let self-dispatch (bml-invoke-from-context model "E" "A" "goo"))
+    (let super-dispatch (bml-super-invoke model "E" "E" "goo"))
+    (let dispatch-score
+        (add (binding-this-score self-dispatch "E" 65536)
+        (add (binding-self-score self-dispatch "E" 131072)
+             (binding-this-score super-dispatch "A" 262144))))
+
+    ;; Interface inheritance: E directly supports Clickable and, through the
+    ;; interface parent chain, also supports Renderable. Clickable inherits
+    ;; Renderable.draw.
+    (let interface-score
+        (add (bool-score (bml-class-supports-interface? model "E" "Clickable") 524288)
+        (add (bool-score (bml-class-supports-interface? model "E" "Renderable") 1048576)
+        (add (bool-score (not (nil? (bml-interface-method-lookup model "Clickable" "click"))) 2097152)
+             (bool-score (not (nil? (bml-interface-method-lookup model "Clickable" "draw"))) 4194304)))))
+
+    (add source-score
+    (add section-member-score
+    (add structure-score
+    (add method-score
+    (add dispatch-score interface-score)))))
+)
