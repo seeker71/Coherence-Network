@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-01",
+  "thread_branch": "codex/fmf-public-proof-20260601",
+  "commit_scope": "Close the Field Model Form public-proof gap by adding a stable FMF proof marker to the browser-local playground example and extending public deploy verification to fail unless /substrate/form serves the FMF proof label and source markers from the page shell or referenced Next.js chunks.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/field-model-form.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "cd web && npx tsx -e 'import { LOCAL_FORM_EXAMPLES, runLocalFormBinary } from \"./lib/form-kernel/client\"; const ex = LOCAL_FORM_EXAMPLES.find((item) => item.label === \"Field Model Form proof\"); if (!ex) throw new Error(\"missing FMF example\"); const run = runLocalFormBinary(ex.source); console.log(JSON.stringify({ label: ex.label, marker: ex.proofMarker, result: run.result })); if (run.result !== \"93\" || ex.proofMarker !== \"field-model-form-public-proof:93\") process.exit(1);'",
+      "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+      "cd web && npm install",
+      "cd web && npm run build",
+      "cd web && npm test -- form-kernel-client.test.ts",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "git diff --check"
+    ],
+    "summary": "Prompt guide passed in a fresh linked worktree. The deploy verifier is syntactically valid. The FMF browser-local example returns 93 and carries field-model-form-public-proof:93. The shared .fk FMF band still returns 93 across sibling kernels. Next production build passes after installing declared web dependencies; the build contains the FMF label, marker, proof function, and field_blueprint constructor in generated chunks. The focused web form-kernel test passes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push, PR creation, and GitHub Actions checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending merge to main and Hostinger deploy"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local proof is complete. Public proof becomes complete only after the PR is merged, Hostinger rebuilds the web container, and scripts/verify_web_api_deploy.sh passes against https://coherencycoin.com/substrate/form."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "codex-thread-fmf-public-proof-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance pressure"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deploy proof repair"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/pull/2298",
+    "https://coherencycoin.com/substrate/form",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "cd web && npx tsx -e '<FMF local example returns 93 and marker field-model-form-public-proof:93>'",
+    "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+    "cd web && npm run build",
+    "cd web && npm test -- form-kernel-client.test.ts"
+  ],
+  "change_files": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/field-model-form-v0.md",
+    "web/app/substrate/form/_components/FormPlayground.tsx",
+    "web/lib/form-kernel/client.ts",
+    "web/lib/form-kernel/field-model-form.ts"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A public deploy cannot pass while the Form playground is missing the FMF 93-point proof example. The verifier now scans the live route and its Next.js chunks for the FMF label, stable proof marker, proof function, and field constructor.",
+    "public_endpoints": [
+      "https://coherencycoin.com/substrate/form",
+      "https://coherencycoin.com/api/health-proxy"
+    ],
+    "test_flows": [
+      "Browser-local FMF example executes through runLocalFormBinary and returns 93.",
+      "Next production build includes Field Model Form proof, field-model-form-public-proof:93, fmf-proof-score, and field_blueprint in generated chunks.",
+      "Post-merge public deploy must run scripts/verify_web_api_deploy.sh, which fails if the public /substrate/form shell and chunks do not contain those FMF proof markers."
+    ]
+  }
+}

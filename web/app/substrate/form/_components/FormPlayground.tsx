@@ -716,6 +716,7 @@ function ResultPanel({ result }: { result: FormResultOut }) {
 
 function LocalKernelPanel() {
   const firstExample = LOCAL_FORM_EXAMPLES[0];
+  const proofMarkers = LOCAL_FORM_EXAMPLES.filter((example) => example.proofMarker);
   const [binary, setBinary] = useState(firstExample.source);
   const [activeNote, setActiveNote] = useState(firstExample.note);
   const [localRun, setLocalRun] = useState<LocalFormRun | null>(null);
@@ -751,6 +752,15 @@ function LocalKernelPanel() {
           <p className="text-xs uppercase tracking-[0.22em] text-teal-300/75">
             Local TS kernel
           </p>
+          {proofMarkers.length > 0 ? (
+            <div className="sr-only" aria-hidden="true">
+              {proofMarkers.map((example) => (
+                <span key={example.proofMarker} data-form-proof-marker={example.proofMarker}>
+                  {example.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <h2 id="local-kernel-heading" className="text-2xl font-light text-stone-100">
             Run a Form binary in this browser.
           </h2>
