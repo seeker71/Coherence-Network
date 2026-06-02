@@ -92,20 +92,23 @@ type goCompileScope struct {
 	selfFn    string
 	// uid for fresh-name generation.
 	uid *int
+	// isFloat: whether this recipe uses float values (for Phase 1 float vector JIT support).
+	isFloat bool
 }
 
-func newGoCompileScope(selfName NameID, selfFn string) *goCompileScope {
+func newGoCompileScope(selfName NameID, selfFn string, isFloat bool) *goCompileScope {
 	n := 0
 	return &goCompileScope{
 		vars:     map[NameID]string{},
 		selfName: selfName,
 		selfFn:   selfFn,
 		uid:      &n,
+		isFloat:  isFloat,
 	}
 }
 
 func (s *goCompileScope) child() *goCompileScope {
-	cp := newGoCompileScope(s.selfName, s.selfFn)
+	cp := newGoCompileScope(s.selfName, s.selfFn, s.isFloat)
 	for k, v := range s.vars {
 		cp.vars[k] = v
 	}
@@ -149,6 +152,22 @@ func (e *jitCompileError) Error() string { return e.reason }
 
 func unsupported(reason string) error { return &jitCompileError{reason: reason} }
 
+// recipeUsesFloat walks the recipe tree to see if it contains any float
+// trivials. Used to decide whether to emit float64 or int64 code for the
+// compiled function (for Phase 1 float vector support in geometry recipes).
+func recipeUsesFloat(k *Kernel, node NodeID) bool {
+	if node.Level == LevelTrivial {
+		t := node.Type
+		return t == TrivFloat32 || t == TrivFloat64
+	}
+	for _, c := range k.children(node) {
+		if recipeUsesFloat(k, c) {
+			return true
+		}
+	}
+	return false
+}
+
 // jitCompileClosureGo — the entry point. Given a closure, emits a Go
 // program that defines a function of (n int64 args) → int64, writes it
 // to disk, invokes `go build -buildmode=plugin`, loads the .so, and
@@ -158,8 +177,20 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
 	// Closure over outer state — the emitter only handles params + the
 	// closure's own recursive self-reference. Any IDENT that doesn't
 	// resolve to a param surfaces as unsupported during emission.
+	isFloat := recipeUsesFloat(k, cl.Body)
+	paramType := "int64"
+	if isFloat {
+		// For Phase 1 geometry (list of floats for 8-band vectors), declare list params as []float64.
+		// The shim will build the slices from serialized args (float bits as int64).
+		paramType = "[]float64"
+	}
+	returnType := "int64"
+	if isFloat {
+		returnType = "float64"
+	}
+
 	selfFn := "fn_self"
-	scope := newGoCompileScope(cl.Name, selfFn)
+	scope := newGoCompileScope(cl.Name, selfFn, isFloat)
 
 	// Bind parameters to generated Go names. Use `p0, p1, ...` for clarity
 	// in the generated code.
@@ -185,7 +216,7 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
 		if i > 0 {
 			paramSig.WriteString(", ")
 		}
-		paramSig.WriteString(fmt.Sprintf("p%d int64", i))
+		paramSig.WriteString(fmt.Sprintf("p%d %s", i, paramType))
 	}
 
 	callArgs := strings.Builder{}
@@ -204,20 +235,39 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
 	src.WriteString("// The recipe stays canonical truth in the Form substrate; this file is a\n")
 	src.WriteString("// throwaway expression of it for one execution. Compiles to plugin.so via\n")
 	src.WriteString("// `go build -buildmode=plugin`, loaded via plugin.Open + plugin.Lookup.\n\n")
+	if isFloat {
+		src.WriteString("import \"math\"\n\n")
+	}
 	src.WriteString("package main\n\n")
-	src.WriteString(fmt.Sprintf("func %s(%s) int64 {\n", selfFn, paramSig.String()))
+	src.WriteString(fmt.Sprintf("func %s(%s) %s {\n", selfFn, paramSig.String(), returnType))
 	src.WriteString("\treturn ")
 	src.WriteString(bodySrc)
 	src.WriteString("\n}\n\n")
 	src.WriteString("// Fn — the exported entry point. Plugin.Lookup loads this symbol.\n")
 	src.WriteString(fmt.Sprintf("func Fn(args []int64) int64 {\n"))
-	src.WriteString(fmt.Sprintf("\tif len(args) != %d {\n", len(cl.Params)))
+	// arity check relaxed for Phase 1: list params (e.g. 8-band vectors) are serialized as multiple scalar args in the []int64
+	src.WriteString(fmt.Sprintf("\tif len(args) < %d {\n", len(cl.Params)))
 	src.WriteString("\t\tpanic(\"form-jit: arity mismatch\")\n")
 	src.WriteString("\t}\n")
-	if len(cl.Params) == 0 {
-		src.WriteString(fmt.Sprintf("\treturn %s()\n", selfFn))
+	if isFloat {
+		// Phase 1 for geometry: two list params of 8 floats each, serialized as 16 int64 (float bits).
+		// Build the []float64 slices for the list params.
+		src.WriteString("\t// Phase 1 geometry vector reconstruction from serialized float bits\n")
+		src.WriteString("\tv1 := make([]float64, 8)\n")
+		src.WriteString("\tfor i := 0; i < 8; i++ {\n")
+		src.WriteString("\t\tv1[i] = math.Float64frombits(uint64(args[i]))\n")
+		src.WriteString("\t}\n")
+		src.WriteString("\tv2 := make([]float64, 8)\n")
+		src.WriteString("\tfor i := 0; i < 8; i++ {\n")
+		src.WriteString("\t\tv2[i] = math.Float64frombits(uint64(args[8+i]))\n")
+		src.WriteString("\t}\n")
+		src.WriteString("\treturn int64(math.Float64bits(" + selfFn + "(v1, v2)))\n")
 	} else {
-		src.WriteString(fmt.Sprintf("\treturn %s(%s)\n", selfFn, callArgs.String()))
+		if len(cl.Params) == 0 {
+			src.WriteString(fmt.Sprintf("\treturn %s()\n", selfFn))
+		} else {
+			src.WriteString(fmt.Sprintf("\treturn %s(%s)\n", selfFn, callArgs.String()))
+		}
 	}
 	src.WriteString("}\n")
 
@@ -311,7 +361,25 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 		return "", unsupported("jit: logic ops not in subset")
 
 	case RBasicList:
-		return "", unsupported("jit: list construction not in subset")
+		if len(kids) == 0 {
+			if scope.isFloat {
+				return "[]float64{}", nil
+			}
+			return "[]int64{}", nil
+		}
+		elemType := "int64"
+		if scope.isFloat {
+			elemType = "float64"
+		}
+		var elems []string
+		for _, kid := range kids {
+			s, err := emitGoExpr(k, kid, scope)
+			if err != nil {
+				return "", err
+			}
+			elems = append(elems, s)
+		}
+		return "[]" + elemType + "{" + strings.Join(elems, ", ") + "}", nil
 
 	case RBasicFnDef:
 		return "", unsupported("jit: nested defn not in subset")
@@ -542,5 +610,57 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 		}
 		return emitGoCond(k, op, kids[1:], scope)
 	}
+
+	// List primitives for vector recipes in recipelib (head/tail/len/concat).
+	// Used by vector_add, dot_product etc. Emitted using Go slice ops.
+	if name == "len" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: len expects list arg")
+		}
+		listSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return "int64(len(" + listSrc + "))", nil
+	}
+	if name == "head" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: head expects list arg")
+		}
+		listSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return listSrc + "[0]", nil
+	}
+	if name == "tail" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: tail expects list arg")
+		}
+		listSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return listSrc + "[1:]", nil
+	}
+	if name == "concat" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: concat expects two list args")
+		}
+		aSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		bSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		elemType := "int64"
+		if scope.isFloat {
+			elemType = "float64"
+		}
+		return "append(append([]" + elemType + "{}, " + aSrc + "...), " + bSrc + "...)", nil
+	}
+
 	return "", unsupported(fmt.Sprintf("jit: unsupported call %q (only self-recursion + arithmetic primitives in subset)", name))
 }
