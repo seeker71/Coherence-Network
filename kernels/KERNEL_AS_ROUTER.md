@@ -203,6 +203,12 @@ which the `X-Form-Router` header makes directly countable from access logs.
 
 ## Proof-of-shape — what is demonstrated, and what it is not
 
+Three harnesses prove the shape against a mock CPython upstream; a fourth
+([below](#proof-against-the-real-fastapi-app--not-a-mock)) proves it against the
+**real FastAPI app**. Start with the mock harnesses — they isolate routing,
+concurrency, and body-reading — then read the real-app proof for the
+flip-decision evidence.
+
 [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py)
 spins up a mock CPython upstream (standing in for FastAPI — so the proof touches
 NO production routing) and the kernel-router fanning out to it, then exercises
@@ -268,13 +274,70 @@ fans out carries its body to the upstream (the mock CPython echoes the forwarded
 `hello=world&n=7`); and an over-cap body is rejected with 413 on the
 Content-Length header alone, never buffered.
 
+## Proof against the REAL FastAPI app — not a mock
+
+The three harnesses above fan out to a mock CPython upstream. The flip-decision
+question is sharper: does the kernel-router work in front of OUR actual app?
+[`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py)
+answers it. It boots the **real `app.main:app`** under uvicorn on a test port
+(`COH_ENV=dev`, the sqlite fallback DB — 816 routes, the genuine app, not a
+stand-in), stands the kernel-router in front of it
+([`router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk):
+one native route, the rest fan out), and exercises both arms end-to-end against
+the live app. This is a LOCAL side-by-side proof on throwaway ports — the
+production front door is untouched.
+
+```
+real app /api/health                  -> 200  status='ok' version='1.0.0' kernel_runtime='subprocess'  REAL FastAPI
+real app /api/utils/weighted_average  -> 200  average=0.8125 runtime='subprocess'  (the oracle)
+
+[native  ] /api/utils/weighted_average -> 200 '0.8125' X-Form-Router=native-kernel
+           kernel-router native value 0.8125 == real-app value 0.8125  -> MATCH
+[fanout G] /api/health                 -> 200 X-Form-Router=fanout-python  (real health JSON: status='ok' version='1.0.0')
+[fanout P] /api/cc/exchange/quote      -> 200 X-Form-Router=fanout-python  (real quote: quote_id='1ad6ce783c33' rate=1.0)
+
+native  /api/utils/weighted_average THROUGH kernel-router (Form)        p50= 0.197 ms  p99= 0.272 ms
+native  /api/utils/weighted_average via app serve_via_kernel guest      p50=10.983 ms  p99=12.819 ms
+fan-out /api/health DIRECT on FastAPI                                   p50= 4.432 ms  p99= 5.302 ms
+fan-out /api/health THROUGH kernel-router proxy                         p50= 4.732 ms  p99= 6.166 ms
+
+proxy-hop overhead (fan-out):  +0.300 ms  (+6.8% of the direct call)
+native-route saving:           +10.79 ms  (the native route skips the whole CPython request lifecycle — ~56x faster)
+```
+
+**Shown against the real app (measured, not asserted):** the kernel-router
+serves `/api/utils/weighted_average` **entirely in Form** — it parses the
+`values`/`weights` query args and runs the real `sum(v*w)/sum(w)` arithmetic in
+the kernel (the `str_to_float` leaf native, the float sibling of `str_to_int`,
+is what lets it parse arbitrary float inputs rather than serve a constant) — and
+its value **equals the live app's answer** for the same route (the app computes
+it via `serve_via_kernel`; the kernel-router computes the same answer with no
+CPython in the path). It **fans out** `/api/health` (GET) and
+`/api/cc/exchange/quote` (POST, body forwarded) to the real FastAPI, relaying
+**genuine app responses** — the real health JSON (status/version/uptime/
+kernel_runtime) and a real exchange quote (a server-issued `quote_id` + rate),
+not a mock marker. The numbers are the honest input to the flip decision: the
+**proxy hop costs ~0.2–0.3 ms (~5–7%)** on a fan-out route — a real localhost TCP
+hop over the kernel's HTTP/1.0, the price of fronting; the **native route saves
+~10.8 ms (~56x)** by skipping the entire CPython request lifecycle (uvicorn
+parse → routing → Pydantic bind → `serve_via_kernel` subprocess spawn →
+response model), serving the value-walk directly. A hot native route is far
+cheaper than the same compute reached through the CPython doorway; the tail pays
+a small, measured proxy toll to keep working unchanged.
+
 **NOT shown / not claimed:** full production-readiness. The proof is HTTP/1.0
-(no keep-alive), with a mock upstream, and the accept loop is
-thread-per-request-blocked (it parallelizes to the worker count, not an async
-reactor); JSON bodies are raw-captured, not structurally parsed into Form
-values; request/response headers beyond the body are not yet passed through.
-Concurrency and request-body reading are now shown; the other rows above are the
-remaining build.
+(no keep-alive — every request is a fresh connection on both hops), and the
+accept loop is thread-per-request-blocked (it parallelizes to the worker count,
+not an async reactor); JSON bodies are raw-captured, not structurally parsed
+into Form values; request/response headers beyond the body are not yet passed
+through (the fan-out relays status + body as text/plain, not the upstream's
+content-type/headers). The real-app proof ran against the dev sqlite DB; the
+production deployment shape (TLS/Traefik front, the routes.fk covering the real
+native-eligible set, header/content-type passthrough so a JSON route's
+content-type survives the proxy) is the remaining build. Concurrency,
+request-body reading, and the **real-app fan-out + native side-by-side** are now
+shown; the HTTP/1.1, header-passthrough, and structural-JSON rows above are the
+rest.
 
 ## The flip is Urs's decision
 
@@ -295,10 +358,12 @@ test port so the reversal can be weighed with evidence rather than assertion.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape, now reading the full request + body), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read and content-type body parse), `fanout_request` (the proxy arm, forwarding method + body), `http_response` (the X-Form-Router header).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape, now reading the full request + body), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read and content-type body parse), `fanout_request` (the proxy arm, forwarding method + body), `http_response` (the X-Form-Router header), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
-- [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement.
-- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413.
+- [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
+- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
 - [`form/form-kernel-rust/examples/router-body-proof.fk`](../form/form-kernel-rust/examples/router-body-proof.fk) — the body-reading native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
+- [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
+- [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
