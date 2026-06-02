@@ -145,19 +145,26 @@ gap, named precisely:
 |-----|-----------------|-----------------------------|
 | **HTTP version** | HTTP/1.0, `Connection: close` per request | HTTP/1.1 + keep-alive (and ideally HTTP/2 behind Traefik), chunked transfer |
 | **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
-| **Request parsing** | request line + flat string query alist; 8 KiB cap; GET only | full header map, request bodies (POST/PUT/PATCH), content-type aware parsing, larger/streamed bodies |
-| **Fan-out proxy** | GET only, status+body relayed as text/plain, no header passthrough | method + header + body passthrough, response content-type/headers relayed, streaming, connection reuse, timeouts, retries |
-| **Handler inputs** | 0 or 1 arg (the query alist) | path params, headers, parsed bodies marshalled into the handler frame |
-| **Errors / observability** | 404/405/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
+| **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; 1 MiB body cap rejected with 413; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
+| **Fan-out proxy** | forwards the original method and the request body (Content-Type + Content-Length set from the captured body) so a POST that fans out to the upstream carries its payload; status+body relayed as text/plain | request/response header passthrough, response content-type/headers relayed, streaming, connection reuse, timeouts, retries |
+| **Handler inputs** | 0 or 1 arg — the request alist, carrying query params AND parsed body fields uniformly (form-urlencoded merged in; JSON/other body under `__body__`), so a handler reads a field the same way regardless of how it arrived | path params and headers marshalled into the handler frame; a richer body shape than a flat alist (e.g. structural JSON) |
+| **Errors / observability** | 404/413/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
 | **TLS / lifecycle** | plain TCP on 127.0.0.1, runs until killed | TLS termination (or behind Traefik), graceful shutdown, health/readiness, config reload |
 
-None of these is exotic; each is a named breath. Concurrency was the
-load-bearing one and it is built: the kernel's per-process intern table
+None of these is exotic; each is a named breath. Two of the load-bearing ones
+are built. **Concurrency**: the kernel's per-process intern table
 (`lc-native-kernel-binary` names this: *"Not multi-process"*) makes the
 production shape a **pool of kernel workers behind the accept loop**, each
 holding its own `Kernel + Arena`, rather than one shared mutable kernel — and
-that pool is now what `cli_serve` runs. The remaining rows are still open
-breaths.
+that pool is now what `cli_serve` runs. **Request bodies**: `cli_serve` reads
+the full request honoring Content-Length (a body past the initial 8 KiB read is
+captured across multiple reads), parses `application/x-www-form-urlencoded`
+bodies into the same handler alist the query string uses, captures
+`application/json` raw under `__body__`, and the fan-out hop forwards the method
+and body to the upstream — so a POST is served (or fanned out) with its payload,
+not just a GET. The remaining rows (HTTP/1.1 keep-alive, full header passthrough,
+a structural JSON→Form parse, streaming, TLS/lifecycle, observability) are still
+open breaths.
 
 ## The BML preference
 
@@ -236,10 +243,38 @@ critical correctness property of a per-worker-kernel pool); and N workers delive
 multiples of single-worker throughput on CPU-bearing concurrent load (the single
 worker serializes the value-walks; the pool parallelizes them across cores).
 
-**NOT shown / not claimed:** full production-readiness. The proof is HTTP/1.0,
-GET-only, with a mock upstream, and the accept loop is thread-per-request-blocked
-(it parallelizes to the worker count, not an async reactor). Concurrency itself
-is now shown; the other rows above are the remaining build.
+[`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py)
+proves the request-body row above — the matured serve primitive reads bodies, not
+just GET tails:
+
+```
+[native POST form ] /sum a=40&b=2          -> 200 '42'    router=native-kernel  OK
+[native POST json ] /echo_len (36B JSON)   -> 200 '36'    router=native-kernel  OK
+[native POST >8KiB] /payload_len (20008B)  -> 200 '20000' router=native-kernel  OK
+[native GET       ] /health                -> 200 'ok'    router=native-kernel  OK
+[fanout GET       ] /api/whatever          -> 200 via CPython router=fanout-python OK
+[fanout POST body ] /api/echo (body fwd)   -> 200 via CPython router=fanout-python OK
+[over-cap 413     ] declared CL=1053576    -> 413 Payload Too Large  OK
+```
+
+**Also shown (measured):** a native POST handler reads form-urlencoded body
+fields through the SAME alist a GET handler reads query params from (`a=40&b=2`
+→ `42`); a JSON body is captured raw under `__body__` and handed to Form (the
+36-byte JSON's length comes back); a body **larger than the initial 8 KiB read**
+is fully captured across multiple reads honoring Content-Length (a 20 KB field
+value returns its exact length — the correctness property the old single-buffer
+read failed); GET is unchanged on both the native and fan-out arms; a POST that
+fans out carries its body to the upstream (the mock CPython echoes the forwarded
+`hello=world&n=7`); and an over-cap body is rejected with 413 on the
+Content-Length header alone, never buffered.
+
+**NOT shown / not claimed:** full production-readiness. The proof is HTTP/1.0
+(no keep-alive), with a mock upstream, and the accept loop is
+thread-per-request-blocked (it parallelizes to the worker count, not an async
+reactor); JSON bodies are raw-captured, not structurally parsed into Form
+values; request/response headers beyond the body are not yet passed through.
+Concurrency and request-body reading are now shown; the other rows above are the
+remaining build.
 
 ## The flip is Urs's decision
 
@@ -260,8 +295,10 @@ test port so the reversal can be weighed with evidence rather than assertion.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape), `fan_out_to_upstream` (the proxy arm), `http_response_routed` (the X-Form-Router header).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape, now reading the full request + body), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read and content-type body parse), `fanout_request` (the proxy arm, forwarding method + body), `http_response` (the X-Form-Router header).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement.
+- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413.
+- [`form/form-kernel-rust/examples/router-body-proof.fk`](../form/form-kernel-rust/examples/router-body-proof.fk) — the body-reading native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
