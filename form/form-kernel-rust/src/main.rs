@@ -804,12 +804,11 @@ impl Kernel {
     // NodeID by construction. NaN bit patterns are NOT canonicalized here (f32
     // NaNs are uncommon at the substrate boundary); a typed-numeric layer above
     // collapses them if needed. Sibling parity with Go/TS internTrivialFloat32.
-    // This kernel never CREATES a float32 (float literals parse as float64); the
-    // primitive exists so a float32 leaf from a sibling kernel reads back here.
-    // Uncalled in Rust by design — the decode side (decode_float32, the
-    // TRIV_FLOAT32 dispatch arms) carries the read-parity; this is the symmetric
-    // constructor kept for sibling parity with Go/TS internTrivialFloat32.
-    #[allow(dead_code)]
+    // Float *literals* in .fk source still parse as float64; this constructor is
+    // reached when Form code explicitly asks for a float32 via the make_float32
+    // native (sibling of Go/TS make_float32), and the decode side
+    // (decode_float32, the TRIV_FLOAT32 dispatch arms) carries the read-parity.
+    // Constructor and decoder are now both live three-way.
     pub(crate) fn intern_trivial_float32(&self, f: f32) -> NodeID {
         NodeID {
             pkg: 1,
@@ -3873,6 +3872,22 @@ impl Kernel {
         self.register_native("intern_trivial_float", cat_witness(), |k, _, args| {
             let f: f64 = args[0].as_str().parse().unwrap_or(0.0);
             Value::Nid(k.intern_trivial_float64(f))
+        });
+        // make_float32 / make_float64 — intern a float-valued substrate trivial
+        // from a numeric arg (int or float, coerced via as_float). Sibling
+        // parity with Go (internTrivialFloat32/64 + VNodeID) and TS
+        // (internTrivialFloat32/64 + boxValue). Where intern_trivial_float takes
+        // the float's *source text*, these take the *value* — the verb Form code
+        // calls when it holds a number and wants the substrate identity of the
+        // typed float (FLOAT32 = type 6, FLOAT64 = type 7). Read back with
+        // float_value. 0.5 is exact in both widths, so make_float32(0.5) and
+        // make_float64(0.5) both decode to 0.5 three-way; the NODE-level type
+        // tag (6 vs 7) stays distinct even where the value-level f64 collapses.
+        self.register_native("make_float32", cat_witness(), |k, _, args| {
+            Value::Nid(k.intern_trivial_float32(args[0].as_float() as f32))
+        });
+        self.register_native("make_float64", cat_witness(), |k, _, args| {
+            Value::Nid(k.intern_trivial_float64(args[0].as_float()))
         });
         self.register_native("float_value", cat_method(), |k, _, args| {
             let n = args[0].as_nid();
