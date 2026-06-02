@@ -146,7 +146,7 @@ gap, named precisely:
 | **HTTP version** | serves HTTP/1.1 with keep-alive on BOTH hops — on the client hop a worker holds the accepted connection and serves multiple requests on it (one TCP handshake amortized across the connection), and on the fan-out hop each worker reuses a per-worker keep-alive connection to the upstream (the router→upstream handshake amortized across requests, the symmetric saving); every response is Content-Length-framed so the reader knows exactly where one ends and the next begins; the client's intent is honored (HTTP/1.1 default-keep-alive unless `Connection: close`, HTTP/1.0 close-unless-`keep-alive`); a 5s idle read-timeout closes a quiet client connection so it cannot pin a worker; over-read bytes (pipelining) are carried into the next request on both hops, never dropped | chunked transfer encoding (today every response is Content-Length-framed; a streamed/unknown-length body would need chunked — and an upstream chunked response is read-to-close and not pooled), HTTP/2 behind Traefik |
 | **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
 | **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; 1 MiB body cap rejected with 413; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
-| **Fan-out proxy** | reuses a per-worker keep-alive connection to the upstream, framing each response by Content-Length, reconnecting transparently on a stale pooled connection — repeated fan-outs amortize the upstream TCP handshake instead of opening a fresh connection per request. Forwards the original method, the request body, and the client's end-to-end request headers (Authorization, Cookie, Accept\*, User-Agent, Content-Type, X-\*, …) — hop-by-hop headers (Connection, Keep-Alive, Transfer-Encoding, Upgrade, Proxy-\*, Proxy-Connection, TE, Trailer) stripped, Host rewritten to the upstream, Content-Length re-derived from the captured body, the router writing its OWN `Connection: keep-alive` to the upstream — and relays the upstream's response headers back (Content-Type so a JSON/HTML route survives the proxy, Set-Cookie, Cache-Control, Location, ETag, X-\*, …), with the router owning the client-hop framing (its own Content-Length + Connection; the upstream's hop-by-hop/framing headers are not relayed) | chunked/streaming response bodies (an upstream chunked response is read-to-close and its connection not pooled), fan-out timeouts and retries beyond the single stale-connection retry |
+| **Fan-out proxy** | reuses a per-worker keep-alive connection to the upstream, framing each response by Content-Length, reconnecting transparently on a stale pooled connection — repeated fan-outs amortize the upstream TCP handshake instead of opening a fresh connection per request. Bounds each fan-out with a connect timeout (~5s) and a read/write timeout (~30s) so a hung upstream returns a 504 and frees the worker rather than pinning it; a read-timeout is not retried (the upstream is hung — a retry would only re-hang and double the latency), a connect-timeout may retry once (in case a pooled-addr was bad), distinct from the stale-close path which reconnects+retries once on an idle-closed pooled connection. Forwards the original method, the request body, and the client's end-to-end request headers (Authorization, Cookie, Accept\*, User-Agent, Content-Type, X-\*, …) — hop-by-hop headers (Connection, Keep-Alive, Transfer-Encoding, Upgrade, Proxy-\*, Proxy-Connection, TE, Trailer) stripped, Host rewritten to the upstream, Content-Length re-derived from the captured body, the router writing its OWN `Connection: keep-alive` to the upstream — and relays the upstream's response headers back (Content-Type so a JSON/HTML route survives the proxy, Set-Cookie, Cache-Control, Location, ETag, X-\*, …), with the router owning the client-hop framing (its own Content-Length + Connection; the upstream's hop-by-hop/framing headers are not relayed) | chunked/streaming response bodies (an upstream chunked response is read-to-close and its connection not pooled), per-route timeout config and circuit-breaking, retries beyond the single stale-connection / connect-timeout retry |
 | **Handler inputs** | 0 or 1 arg — the request alist, carrying query params AND parsed body fields uniformly (form-urlencoded merged in; JSON/other body under `__body__`), so a handler reads a field the same way regardless of how it arrived | path params and headers marshalled into the handler frame; a richer body shape than a flat alist (e.g. structural JSON) |
 | **Errors / observability** | 404/413/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
 | **TLS / lifecycle** | plain TCP on 127.0.0.1, runs until killed | TLS termination (or behind Traefik), graceful shutdown, health/readiness, config reload |
@@ -207,8 +207,32 @@ unframed response is read-to-close and its connection is dropped, not pooled
 (chunked-body reuse is a named-later breath). The ONE `fanout_request` shape is
 preserved — the pool only changes the connection lifecycle (reused vs fresh); the
 request build and response framing are identical either way.
+**Fan-out timeouts**: each fan-out hop is bounded by a connect timeout (~5s) and a
+read/write timeout (~30s) so a SLOW or HUNG upstream cannot pin a worker forever —
+the client-hop already reaps an idle connection (`KEEPALIVE_IDLE_TIMEOUT`); this is
+the symmetric robustness on the upstream hop, but for a HUNG (not merely idle)
+upstream it bounds the ACTIVE request: connect resolves a concrete SocketAddr and
+dials with `connect_timeout`, and the connected stream gets explicit read AND write
+deadlines on every use. On expiry the worker returns a clean 504 Gateway Timeout to
+the client and DROPS the connection (never returns a half-read connection to the
+pool — it is now desynced), then is free to serve other requests. The hung upstream
+therefore consumes ONE worker for at most (connect + read timeout), not forever, so
+a flood of hung fan-outs cannot starve the pool. The retry-vs-504 distinction is
+carried by error CLASSIFICATION, not a fork of the fan-out shape: a read-timeout on
+an actively-connected upstream is terminal → 504 (the upstream is hung; retrying
+would only re-hang and double the latency), a connect-timeout may retry once on a
+fresh connection (the pooled addr may have been bad), and the stale-CLOSE path
+(EOF/broken pipe on a pooled connection the upstream idle-closed) reconnects+retries
+once — a timeout is deliberately NOT the stale-close path, so a timeout never
+becomes an infinite (or even doubled) retry loop. The timeout values are sane
+defaults (overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`
+so a test proves the path in seconds); production tuning of the exact values and
+per-route timeouts is a named-later breath. The ONE `fanout_request` shape is
+preserved — the timeouts are deadlines set on the stream plus the error
+classification, not a second fan-out path.
 The remaining rows (chunked transfer, a structural JSON→Form parse, streaming,
-fan-out timeouts, TLS/lifecycle, observability) are still open breaths.
+per-route timeout config + circuit-breaking, TLS/lifecycle, observability) are
+still open breaths.
 
 ## The BML preference
 
@@ -387,20 +411,28 @@ client's Authorization/Cookie/Accept/X-\* reach the upstream with Host rewritten
 and hop-by-hop stripped, the router writing its own `Connection: keep-alive`; the
 upstream's Content-Type/Set-Cookie/Cache-Control reach the client; verified
 against the REAL FastAPI app, whose `/api/health` relays as `application/json`
-rather than the old flattened text/plain). What stays open: chunked/streaming
-upstream response bodies (an upstream chunked response is read-to-close and not
-pooled), fan-out timeouts and retries beyond the single stale-connection retry,
-and the accept loop is thread-per-connection-blocked (it parallelizes to the
-worker count, not an async reactor; a worker serving a keep-alive client is held
-until that connection closes or times out). Responses are Content-Length-framed,
-not chunked; JSON bodies are raw-captured, not structurally parsed into Form
-values. The real-app proof ran against the dev sqlite DB; the production
-deployment shape (TLS/Traefik front, the routes.fk covering the real
-native-eligible set) is the remaining build. Concurrency, request-body reading,
-**bidirectional header passthrough**, the **real-app fan-out + native
-side-by-side**, **HTTP/1.1 keep-alive on the client→router hop**, and
-**upstream connection reuse on the fan-out hop** are now shown; chunked transfer
-and structural-JSON are the rest.
+rather than the old flattened text/plain). The fan-out hop also BOUNDS a hung
+upstream (proven by `router_fanout_timeout_harness.py` against a deliberately-hung
+upstream that accepts the connection but never responds — the router returns a clean
+504 Gateway Timeout at ~one read deadline and frees the worker; an unreachable /
+blackholed upstream returns a clean 504/502 rather than hanging; with N workers a
+hung fan-out occupies ONE worker for at most the connect+read timeout while the rest
+of the pool keeps serving 20 native requests in milliseconds — the pool is NOT
+starved; a read-timeout returns 504 ONCE, not reconnect+retried). What stays open:
+chunked/streaming upstream response bodies (an upstream chunked response is
+read-to-close and not pooled), per-route timeout config + circuit-breaking and
+retries beyond the single stale-connection / connect-timeout retry, and the accept
+loop is thread-per-connection-blocked (it parallelizes to the worker count, not an
+async reactor; a worker serving a keep-alive client is held until that connection
+closes or times out). Responses are Content-Length-framed, not chunked; JSON bodies
+are raw-captured, not structurally parsed into Form values. The real-app proof ran
+against the dev sqlite DB; the production deployment shape (TLS/Traefik front, the
+routes.fk covering the real native-eligible set) is the remaining build.
+Concurrency, request-body reading, **bidirectional header passthrough**, the
+**real-app fan-out + native side-by-side**, **HTTP/1.1 keep-alive on the
+client→router hop**, **upstream connection reuse on the fan-out hop**, and
+**fan-out timeouts (hung upstream → 504, worker freed, pool not starved)** are now
+shown; chunked transfer and structural-JSON are the rest.
 
 ## The flip is Urs's decision
 
@@ -421,7 +453,7 @@ test port so the reversal can be weighed with evidence rather than assertion.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
 - [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
@@ -429,6 +461,7 @@ test port so the reversal can be weighed with evidence rather than assertion.
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
 - [`form/form-kernel-rust/router_keepalive_harness.py`](../form/form-kernel-rust/router_keepalive_harness.py) — the HTTP/1.1 keep-alive proof (CLIENT→router hop): N sequential requests on ONE connection (Content-Length framed, distinct inputs, each correct), pipelined two-in-one-send (leftover bytes carried, none dropped), `Connection: close` honored, HTTP/1.0 default-close back-compat, idle-timeout reaping the connection (worker freed), an idle connection NOT starving the pool, and the per-request handshake saving (reused vs fresh connection). Mock upstream — no production routing.
 - [`form/form-kernel-rust/router_upstream_reuse_harness.py`](../form/form-kernel-rust/router_upstream_reuse_harness.py) — the upstream connection reuse proof (router→UPSTREAM hop): against a connection-COUNTING mock upstream with `--workers 1`, N fan-outs land on ONE reused upstream connection (connections << requests — the handshake amortized); each of N DISTINCT requests on the reused connection reads its OWN correct Content-Length-framed response (no response-framing bleed, the classic proxy keep-alive bug proven absent); reused-vs-fresh-connect latency (the reused path opens 1 connection where close-each opens N); and a stale POOLED keep-alive connection (the upstream silently drops it after N requests) triggers a transparent reconnect+retry, never a client-facing error. Mock upstream — no production routing.
+- [`form/form-kernel-rust/router_fanout_timeout_harness.py`](../form/form-kernel-rust/router_fanout_timeout_harness.py) — the fan-out TIMEOUT proof (router→UPSTREAM hop): against a deliberately-HUNG upstream that accepts the connection but never responds, the router returns a clean 504 Gateway Timeout at ~one read deadline (measured) and frees the worker — never an indefinite hang; an unreachable / blackholed upstream returns a clean 504/502 (connect-timeout) rather than blocking; with N workers a hung fan-out occupies ONE worker for at most the connect+read timeout while the pool keeps serving 20 native requests in milliseconds (the pool is NOT starved); a read-timeout returns 504 ONCE, not reconnect+retried (latency ~1x the read-timeout, not 2x — distinct from the stale-close retry path); and the happy path (native + responsive-upstream fan-out) is unaffected. Uses short env-set timeouts (`COH_FANOUT_READ_TIMEOUT_MS`/`COH_FANOUT_CONNECT_TIMEOUT_MS`) for a seconds-fast proof. Mock upstreams — no production routing.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
