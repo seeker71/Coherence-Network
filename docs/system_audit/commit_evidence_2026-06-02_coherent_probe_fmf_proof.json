@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/coherent-probe-proof-20260602",
+  "commit_scope": "Convert loose coherent-probe local examples into one validated Form-native FMF proof.",
+  "files_owned": [
+    "form/form-stdlib/tests/coherent-probe-fmf-proof.fk",
+    "docs/system_audit/commit_evidence_2026-06-02_coherent_probe_fmf_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_coherent_probe_fmf_proof.json",
+      "git diff --check"
+    ],
+    "notes": "Loose local coherent-probe examples were composted into a single proof with forward intervention, receipt, residual, trace emission, and reverse restoration."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The coherent-probe operator has a validated Form-native FMF proof instead of loose temp example files.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "coherent-probe-fmf-proof.fk returns 127 across sibling kernels in source mode.",
+      "coherent-probe-fmf-proof.fk returns 127 across sibling kernels in binary mode.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This proof composts the local coherent-probe examples. Remaining local work still includes the agent relationship deployment proof script and larger shared compiler branches."
+  },
+  "idea_ids": [
+    "coherent-probe",
+    "field-model-form"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "coherent-probe-proof-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "proof-boundary"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/coherent-probe-fmf-proof.fk proves coherent-probe as FMF intervention with reverse restoration."
+  ],
+  "change_files": [
+    "form/form-stdlib/tests/coherent-probe-fmf-proof.fk",
+    "docs/system_audit/commit_evidence_2026-06-02_coherent_probe_fmf_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

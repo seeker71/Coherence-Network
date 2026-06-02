@@ -1,0 +1,102 @@
+; tests/coherent-probe-fmf-proof.fk - coherent probe as FMF intervention.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk
+;
+; Band verdict: 127 when the coherent-probe operator is executable as:
+;   1  quieted field cell is constructed
+;   2  coherent input writes probe state
+;   4  emitted symbol count is changed by intervention
+;   8  receipt records both applied deltas
+;   16 residual carries no conflicts
+;   32 reverse receipt restores the field
+;   64 trace emission is addressable as a field trace
+
+(do
+    (let blueprint
+        (fmfrt-blueprint
+            "coherent-probe"
+            "perceptual-field"
+            "geometry-form-native"
+            (list)
+            (list)
+            "consent-boundary"))
+    (let quiet-field
+        (fmfrt-field
+            "stable-observation-window"
+            blueprint
+            (list
+                (fmfrt-site
+                    0
+                    (list
+                        (fmfrt-pair "binding" "reduced")
+                        (fmfrt-pair "probe" "")))
+                (fmfrt-site
+                    1
+                    (list
+                        (fmfrt-pair "emitted-symbols" 0))))
+            (list)
+            (list)
+            0))
+    (let observer (fmfrt-observer "coherent-probe-proof" "all-compatible"))
+    (let intervention
+        (fmfrt-intervene
+            quiet-field
+            observer
+            (list
+                (fmfrt-delta "set-site" 0 "probe" "low-intensity-diffracted-650nm-light")
+                (fmfrt-delta "inc-site" 1 "emitted-symbols" 3))))
+    (let next-field (fmfrt-result-field intervention))
+    (let receipt (fmfrt-result-receipt intervention))
+    (let residual (fmfrt-result-residual intervention))
+    (let reversed (fmfrt-reverse-receipt quiet-field intervention))
+    (let reversed-field (fmfrt-result-field reversed))
+    (let trace-result
+        (fmfrt-intervene
+            quiet-field
+            observer
+            (list
+                (fmfrt-delta
+                    "trace"
+                    0
+                    ""
+                    (fmfrt-trace
+                        "coherent-probe"
+                        "emit"
+                        (list
+                            (fmfrt-pair "field" "stable-observation-window")
+                            (fmfrt-pair "input" "coherent-light")
+                            (fmfrt-pair "lens" "geometry-form-native"))
+                        (list))))))
+    (sum
+        (list
+            (fmfrt-bool-score
+                (str_eq (fmfrt-field-name quiet-field) "stable-observation-window")
+                1)
+            (fmfrt-bool-score
+                (str_eq
+                    (fmfrt-site-get (fmfrt-find-site (fmfrt-field-sites next-field) 0) "probe" "")
+                    "low-intensity-diffracted-650nm-light")
+                2)
+            (fmfrt-bool-score
+                (eq
+                    (fmfrt-site-get (fmfrt-find-site (fmfrt-field-sites next-field) 1) "emitted-symbols" 0)
+                    3)
+                4)
+            (fmfrt-bool-score
+                (eq (len (fmfrt-receipt-applied receipt)) 2)
+                8)
+            (fmfrt-bool-score
+                (eq (len (fmfrt-residual-conflicts residual)) 0)
+                16)
+            (fmfrt-bool-score
+                (and
+                    (str_eq
+                        (fmfrt-site-get (fmfrt-find-site (fmfrt-field-sites reversed-field) 0) "probe" "")
+                        "")
+                    (eq
+                        (fmfrt-site-get (fmfrt-find-site (fmfrt-field-sites reversed-field) 1) "emitted-symbols" 0)
+                        0))
+                32)
+            (fmfrt-bool-score
+                (eq (len (fmfrt-field-traces (fmfrt-result-field trace-result))) 1)
+                64))))
