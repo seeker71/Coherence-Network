@@ -144,17 +144,20 @@ gap, named precisely:
 | Gap | cli_serve today | Production front door needs |
 |-----|-----------------|-----------------------------|
 | **HTTP version** | HTTP/1.0, `Connection: close` per request | HTTP/1.1 + keep-alive (and ideally HTTP/2 behind Traefik), chunked transfer |
-| **Concurrency** | single-threaded `for incoming in listener.incoming()` — one request at a time | a thread pool or async accept loop; the `Kernel + Arena` is `!Sync` today, so either a kernel-per-worker pool or an arena-sharding pass |
+| **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
 | **Request parsing** | request line + flat string query alist; 8 KiB cap; GET only | full header map, request bodies (POST/PUT/PATCH), content-type aware parsing, larger/streamed bodies |
 | **Fan-out proxy** | GET only, status+body relayed as text/plain, no header passthrough | method + header + body passthrough, response content-type/headers relayed, streaming, connection reuse, timeouts, retries |
 | **Handler inputs** | 0 or 1 arg (the query alist) | path params, headers, parsed bodies marshalled into the handler frame |
 | **Errors / observability** | 404/405/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
 | **TLS / lifecycle** | plain TCP on 127.0.0.1, runs until killed | TLS termination (or behind Traefik), graceful shutdown, health/readiness, config reload |
 
-None of these is exotic; each is a named breath. The concurrency item is the
-load-bearing one — the kernel's per-process intern table (`lc-native-kernel-binary`
-names this: *"Not multi-process"*) means a production router is a **pool of
-kernel workers behind the accept loop**, not one shared mutable kernel.
+None of these is exotic; each is a named breath. Concurrency was the
+load-bearing one and it is built: the kernel's per-process intern table
+(`lc-native-kernel-binary` names this: *"Not multi-process"*) makes the
+production shape a **pool of kernel workers behind the accept loop**, each
+holding its own `Kernel + Arena`, rather than one shared mutable kernel — and
+that pool is now what `cli_serve` runs. The remaining rows are still open
+breaths.
 
 ## The BML preference
 
@@ -215,9 +218,28 @@ it fans out the tail to a CPython upstream over a real HTTP hop; sub-millisecond
 native latency (whole-request wall time including the loopback socket — the Form
 value-walk is a sub-fraction).
 
-**NOT shown / not claimed:** production-readiness. The proof is HTTP/1.0,
-single-threaded, GET-only, with a mock upstream. The production build is the
-table above.
+[`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py)
+proves the worker pool under concurrent load — the load-bearing concurrency row
+above. It fires 50 parallel clients and measures three properties:
+
+```
+[no-bleed ] 50 parallel clients, each a DISTINCT input -> ALL got their OWN correct value (k commas -> k+1). No cross-request state bleed.
+[  1 worker] 600 reqs @ 50 parallel:    113.3 req/s  p50=437.94 ms  p99= 470.00 ms  correct=600/600
+[ 8 workers] 600 reqs @ 50 parallel:    555.1 req/s  p50= 84.02 ms  p99= 111.53 ms  correct=600/600
+speedup (8 workers / 1 worker): 4.90x throughput under 50-way concurrent load
+```
+
+**Also shown (measured):** the pool serves correctly under 50-way concurrency;
+each worker's isolated `Kernel + Arena` means concurrent requests with DIFFERENT
+inputs each return their OWN correct value with no cross-request state bleed (the
+critical correctness property of a per-worker-kernel pool); and N workers deliver
+multiples of single-worker throughput on CPU-bearing concurrent load (the single
+worker serializes the value-walks; the pool parallelizes them across cores).
+
+**NOT shown / not claimed:** full production-readiness. The proof is HTTP/1.0,
+GET-only, with a mock upstream, and the accept loop is thread-per-request-blocked
+(it parallelizes to the worker count, not an async reactor). Concurrency itself
+is now shown; the other rows above are the remaining build.
 
 ## The flip is Urs's decision
 
@@ -238,7 +260,8 @@ test port so the reversal can be weighed with evidence rather than assertion.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener), `fan_out_to_upstream` (the proxy arm), `http_response_routed` (the X-Form-Router header).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape), `fan_out_to_upstream` (the proxy arm), `http_response_routed` (the X-Form-Router header).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
-- [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end proof + measurement.
+- [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement.
+- [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.

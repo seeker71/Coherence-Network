@@ -23,7 +23,9 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::thread;
 use std::time::Instant;
 
 mod bp_table;
@@ -6243,6 +6245,202 @@ Source adapter modes:
 // argument. The walker turns either return value into a string for
 // the response body via `Value::display()`.
 
+// Per-worker thread stack. The kernel value-walk is a recursive tree-walker, so
+// a deeply self-recursive native handler consumes real stack. 16 MiB comfortably
+// exceeds the typical main-thread stack (~8 MiB), so a pooled worker handles at
+// least the recursion depth the single-threaded serve path did before the pool.
+const WORKER_STACK_SIZE: usize = 16 * 1024 * 1024;
+
+// The route manifest a worker resolves from its own kernel+arena: a list of
+// (path, handler-closure). Each closure's `env` is a frame index INTO THAT
+// worker's arena, so route_pairs are NOT shareable across workers — every
+// worker re-loads routes.fk into its own Kernel+Arena and resolves its own
+// copy. This is the !Sync constraint the pool answers (lc-native-kernel-binary:
+// the per-process intern table means a pool of kernel workers, not one shared
+// mutable kernel).
+type RoutePairs = Vec<(String, Arc<Closure>)>;
+
+// Resolve the top-level `routes` binding from a kernel+arena that has already
+// walked the manifest source. Pulled out of cli_serve so BOTH the single-path
+// load and each worker's per-thread load run the SAME resolution shape. Returns
+// the (path, closure) pairs, or an error string for the caller to report.
+fn build_route_pairs(
+    k: &mut Kernel,
+    arena: &Arena,
+    root_env: FrameId,
+    routes_path: &str,
+) -> Result<RoutePairs, String> {
+    let routes_name = k.intern_string("routes").inst;
+    let routes_val = match arena.lookup(root_env, routes_name) {
+        Some(v) => v,
+        None => {
+            return Err(format!(
+                "{} must bind a top-level `routes` list",
+                routes_path
+            ))
+        }
+    };
+    match &routes_val {
+        Value::List(xs) => xs
+            .iter()
+            .map(|row| match row {
+                Value::List(ys) if ys.len() == 2 => {
+                    let path = match &ys[0] {
+                        Value::Str(s) => s.clone(),
+                        _ => return Err("route key must be a string".to_string()),
+                    };
+                    let cl = match &ys[1] {
+                        Value::Closure(c) => c.clone(),
+                        _ => {
+                            return Err(format!("route value for {} must be a closure", path))
+                        }
+                    };
+                    Ok((path, cl))
+                }
+                _ => Err("each route must be (path closure)".to_string()),
+            })
+            .collect(),
+        _ => Err("`routes` must be a list of (path closure) pairs".to_string()),
+    }
+}
+
+// Build a worker's OWN Kernel + Arena from the manifest source, resolve its own
+// route_pairs, and return all three. Called once per worker at startup (loading
+// the source N times is fine — it is once-per-worker, not per-request). The
+// returned arena owns the frames the route closures capture, so it must stay
+// alive alongside the kernel for the worker's lifetime.
+fn build_worker_kernel(
+    src: &str,
+    routes_path: &str,
+) -> Result<(Kernel, Arena, RoutePairs), String> {
+    let mut k = Kernel::new();
+    let root = read_root_from_source(&mut k, src);
+    let mut arena = Arena::new();
+    let root_env = arena.new_frame(None);
+    k.active_roots = vec![root];
+    let _ = walk(&mut k, &mut arena, root, root_env);
+    let route_pairs = build_route_pairs(&mut k, &arena, root_env, routes_path)?;
+    Ok((k, arena, route_pairs))
+}
+
+// Handle ONE request on a worker's own kernel+arena. This is the single factored
+// serving shape (core-abstraction-first): the routing decision (native Form
+// handler vs fan-out to the Python upstream vs 404) lives here ONCE, and the
+// worker pool simply parallelizes calling it. Because `k` and `arena` belong to
+// the calling worker alone, concurrent requests on different workers never share
+// mutable kernel state — each request's value-walk is isolated.
+fn handle_request(
+    mut stream: TcpStream,
+    k: &mut Kernel,
+    arena: &mut Arena,
+    route_pairs: &RoutePairs,
+    upstream: &Option<String>,
+) {
+    // Read up to 8 KiB of request — enough for line + headers; this
+    // is HTTP/1.0, no chunked bodies, no keep-alive.
+    let mut buf = [0u8; 8192];
+    let n = match stream.read(&mut buf) {
+        Ok(n) => n,
+        Err(_) => return,
+    };
+    let req = String::from_utf8_lossy(&buf[..n]).to_string();
+    let (method, target, path, query) = parse_request_line(&req);
+
+    // The router decision: a path with a native Form handler is served
+    // entirely in the kernel; a path with no handler fans out to the
+    // Python upstream (if --upstream is set) or 404s.
+    let body: String;
+    let status: String;
+    let router: &str;
+    if method != "GET" {
+        // GET-only doorway today; non-idempotent verbs are a named build.
+        status = "405 Method Not Allowed".to_string();
+        body = format!("method not allowed: {}\n", method);
+        router = "local-control";
+    } else if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
+        // NATIVE: served entirely in Form, no Python in the path.
+        // Build the query alist as Value::List of (key, value) pairs.
+        let q_alist = Value::List(
+            query
+                .iter()
+                .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), Value::Str(v.clone())]))
+                .collect(),
+        );
+        let cl = cl.clone();
+        let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
+        if cl.params.len() == 1 {
+            arena.bind(call_frame, cl.params[0], q_alist);
+        } else if cl.params.len() != 0 {
+            let status = "500 Internal Server Error".to_string();
+            let body = format!(
+                "handler for {} wants {} params; serve passes 0 or 1\n",
+                path,
+                cl.params.len()
+            );
+            let _ =
+                stream.write_all(http_response(&status, &body, "native-kernel-error").as_bytes());
+            return;
+        }
+        let result = walk(k, arena, cl.body, call_frame);
+        status = "200 OK".to_string();
+        body = result.display();
+        router = "native-kernel";
+    } else if let Some(upstream_base) = upstream {
+        // FAN-OUT: no native handler — forward to the Python upstream and
+        // relay its response. The kernel owns the front door; Python is the
+        // upstream for the not-yet-native tail. Each worker issues its own
+        // independent fan-out hop.
+        let (fanout_status, fanout_body) = fanout_get(upstream_base, &target);
+        status = fanout_status;
+        body = fanout_body;
+        router = "fanout-python";
+    } else {
+        // No native handler and no upstream configured.
+        status = "404 Not Found".to_string();
+        body = format!("no route for {}\n", path);
+        router = "local-control";
+    }
+    let _ = stream.write_all(http_response(&status, &body, router).as_bytes());
+}
+
+// One kernel worker. Builds its OWN Kernel + Arena (the routes.fk loaded once
+// into it at startup — !Sync, never shared), then pulls accepted streams from
+// the shared work queue and serves each via the factored handle_request. N of
+// these run concurrently behind the accept loop; because each owns its kernel,
+// concurrent requests never corrupt one another's state.
+fn worker_loop(
+    id: usize,
+    src: Arc<String>,
+    routes_path: Arc<String>,
+    upstream: Arc<Option<String>>,
+    rx: Arc<Mutex<mpsc::Receiver<TcpStream>>>,
+) {
+    let (mut k, mut arena, route_pairs) = match build_worker_kernel(&src, &routes_path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("serve: worker {} failed to load routes: {}", id, e);
+            return;
+        }
+    };
+    loop {
+        // Lock only to dequeue one stream, then release before serving so the
+        // workers truly run in parallel (the lock guards the queue, not the
+        // request handling).
+        let stream = {
+            let guard = match rx.lock() {
+                Ok(g) => g,
+                Err(_) => return,
+            };
+            guard.recv()
+        };
+        match stream {
+            Ok(s) => handle_request(s, &mut k, &mut arena, &route_pairs, &upstream),
+            // Sender dropped (listener closed) — drain done, worker exits.
+            Err(_) => return,
+        }
+    }
+}
+
 fn cli_serve(args: &[String]) -> i32 {
     // --port <p> --routes <file.fk> [--upstream <http-base-url>]
     let mut port: u16 = 8001;
@@ -6254,6 +6452,12 @@ fn cli_serve(args: &[String]) -> i32 {
     // flag an unmatched path is a 404 — the original proof-of-shape behavior,
     // unchanged, so existing callers see no difference.
     let mut upstream: Option<String> = None;
+    // --workers <n> sizes the pool of kernel workers behind the accept loop.
+    // Each worker owns its own Kernel + Arena (the !Sync constraint), so the
+    // pool gives REAL concurrency, not one shared mutable kernel serialized.
+    // Default: the host's available parallelism (capped sane), so the box's
+    // cores are used out of the box; 0 or unset falls back to the default.
+    let mut workers: Option<usize> = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -6287,6 +6491,20 @@ fn cli_serve(args: &[String]) -> i32 {
                 upstream = Some(args[i + 1].trim_end_matches('/').to_string());
                 i += 2;
             }
+            "--workers" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --workers requires a number");
+                    return 2;
+                }
+                workers = match args[i + 1].parse() {
+                    Ok(w) => Some(w),
+                    Err(_) => {
+                        eprintln!("serve: --workers must be a number");
+                        return 2;
+                    }
+                };
+                i += 2;
+            }
             other => {
                 eprintln!("serve: unknown argument: {}", other);
                 return 2;
@@ -6308,47 +6526,21 @@ fn cli_serve(args: &[String]) -> i32 {
         }
     };
 
-    // Load the routes file into a long-lived kernel + arena. The root
-    // frame holds the `routes` binding after the file runs; each request
-    // gets a child frame so handler-local lets don't pollute the root.
-    let mut k = Kernel::new();
-    let root = read_root_from_source(&mut k, &src);
-    let mut arena = Arena::new();
-    let root_env = arena.new_frame(None);
-    k.active_roots = vec![root];
-    let _ = walk(&mut k, &mut arena, root, root_env);
+    // Validate the manifest ONCE up front (in the main thread) so a broken
+    // routes.fk fails fast with a clear message before any worker spins up.
+    // Each worker re-loads the same source into its OWN kernel+arena below.
+    if let Err(e) = build_worker_kernel(&src, &routes_path) {
+        eprintln!("serve: {}", e);
+        return 1;
+    }
 
-    let routes_name = k.intern_string("routes").inst;
-    let routes_val = match arena.lookup(root_env, routes_name) {
-        Some(v) => v,
-        None => {
-            eprintln!("serve: {} must bind a top-level `routes` list", routes_path);
-            return 1;
-        }
-    };
-    let route_pairs: Vec<(String, Arc<Closure>)> = match &routes_val {
-        Value::List(xs) => xs
-            .iter()
-            .map(|row| match row {
-                Value::List(ys) if ys.len() == 2 => {
-                    let path = match &ys[0] {
-                        Value::Str(s) => s.clone(),
-                        _ => panic!("serve: route key must be a string"),
-                    };
-                    let cl = match &ys[1] {
-                        Value::Closure(c) => c.clone(),
-                        _ => panic!("serve: route value for {} must be a closure", path),
-                    };
-                    (path, cl)
-                }
-                _ => panic!("serve: each route must be (path closure)"),
-            })
-            .collect(),
-        _ => {
-            eprintln!("serve: `routes` must be a list of (path closure) pairs");
-            return 1;
-        }
-    };
+    // Size the pool. Default to the host's available parallelism so the box's
+    // cores are used; cap at 64 so a pathological --workers can't exhaust the
+    // thread table; floor at 1 so the pool always has at least one worker.
+    let default_workers = thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let n_workers = workers.unwrap_or(default_workers).clamp(1, 64);
 
     let listener = match TcpListener::bind(("127.0.0.1", port)) {
         Ok(l) => l,
@@ -6357,84 +6549,94 @@ fn cli_serve(args: &[String]) -> i32 {
             return 1;
         }
     };
-    eprintln!(
-        "form-kernel-rust serve: listening on 127.0.0.1:{} ({} native route{})",
-        port,
-        route_pairs.len(),
-        if route_pairs.len() == 1 { "" } else { "s" }
-    );
-    for r in &route_pairs {
-        eprintln!("  {} -> native (Form handler)", r.0);
+
+    // The shared work queue: the accept loop sends each accepted stream; the
+    // receiver is shared across workers behind a Mutex (the classic std
+    // threadpool — mpsc + Arc<Mutex<Receiver>>). The lock guards only the
+    // dequeue; request handling runs lock-free on each worker's own kernel,
+    // so N workers serve N requests truly in parallel.
+    let (tx, rx) = mpsc::channel::<TcpStream>();
+    let rx = Arc::new(Mutex::new(rx));
+    let src = Arc::new(src);
+    let routes_path_arc = Arc::new(routes_path);
+    let upstream_arc = Arc::new(upstream);
+
+    // Spawn the pool. Each worker builds its OWN Kernel + Arena from the source
+    // (routes.fk loaded once per worker at startup), then drains the queue.
+    // Workers get an EXPLICIT generous stack: the kernel's value-walk is a
+    // recursive tree-walker, so a deeply self-recursive native handler needs
+    // real stack depth. A spawned thread's default stack (~2 MiB on many
+    // platforms) is smaller than the main thread's (~8 MiB), and a Rust stack
+    // overflow ABORTS THE PROCESS (it is not a catchable panic) — so an
+    // under-sized worker stack would let one pathological request take the
+    // whole server down. WORKER_STACK_SIZE exceeds the typical main-thread
+    // stack so a worker handles at least the recursion depth the single-thread
+    // path did. (Unbounded recursion is still the handler's responsibility; the
+    // generous stack matches the prior behavior rather than promising infinity.)
+    let mut handles = Vec::with_capacity(n_workers);
+    for id in 0..n_workers {
+        let src = Arc::clone(&src);
+        let routes_path = Arc::clone(&routes_path_arc);
+        let upstream = Arc::clone(&upstream_arc);
+        let rx = Arc::clone(&rx);
+        let builder = thread::Builder::new()
+            .name(format!("kernel-worker-{}", id))
+            .stack_size(WORKER_STACK_SIZE);
+        match builder.spawn(move || {
+            worker_loop(id, src, routes_path, upstream, rx);
+        }) {
+            Ok(h) => handles.push(h),
+            Err(e) => {
+                eprintln!("serve: failed to spawn worker {}: {}", id, e);
+                // Workers already spawned keep serving; a partial pool is
+                // better than none. If NONE spawned, the accept loop's send
+                // will fail and we stop cleanly below.
+            }
+        }
     }
-    match &upstream {
+    if handles.is_empty() {
+        eprintln!("serve: no workers could be spawned");
+        return 1;
+    }
+
+    // Re-resolve the route list once (in the main thread, throwaway kernel)
+    // purely to print the startup banner — the workers hold the live copies.
+    if let Ok((_, _, route_pairs)) = build_worker_kernel(&src, &routes_path_arc) {
+        eprintln!(
+            "form-kernel-rust serve: listening on 127.0.0.1:{} ({} worker{}, {} native route{})",
+            port,
+            n_workers,
+            if n_workers == 1 { "" } else { "s" },
+            route_pairs.len(),
+            if route_pairs.len() == 1 { "" } else { "s" }
+        );
+        for r in &route_pairs {
+            eprintln!("  {} -> native (Form handler)", r.0);
+        }
+    }
+    match upstream_arc.as_ref() {
         Some(u) => eprintln!("  *  -> fan-out to Python upstream {}", u),
         None => eprintln!("  *  -> 404 (no --upstream; fan-out arm inactive)"),
     }
 
+    // The accept loop is now thin: it only hands each accepted stream to the
+    // pool. The kernel work happens on the workers, concurrently.
     for incoming in listener.incoming() {
-        let mut stream = match incoming {
+        let stream = match incoming {
             Ok(s) => s,
             Err(_) => continue,
         };
-        // Read up to 8 KiB of request — enough for line + headers; this
-        // is HTTP/1.0, no chunked bodies, no keep-alive.
-        let mut buf = [0u8; 8192];
-        let n = match stream.read(&mut buf) {
-            Ok(n) => n,
-            Err(_) => continue,
-        };
-        let req = String::from_utf8_lossy(&buf[..n]).to_string();
-        let (method, target, path, query) = parse_request_line(&req);
-
-        // The router decision: a path with a native Form handler is served
-        // entirely in the kernel; a path with no handler fans out to the
-        // Python upstream (if --upstream is set) or 404s.
-        let body: String;
-        let status: String;
-        let router: &str;
-        if method != "GET" {
-            status = "405 Method Not Allowed".to_string();
-            body = format!("method not allowed: {}\n", method);
-            router = "local-control";
-        } else if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
-            // NATIVE: served entirely in Form, no Python in the path.
-            // Build the query alist as Value::List of (key, value) pairs.
-            let q_alist = Value::List(
-                query
-                    .iter()
-                    .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), Value::Str(v.clone())]))
-                    .collect(),
-            );
-            let cl = cl.clone();
-            let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
-            if cl.params.len() == 1 {
-                arena.bind(call_frame, cl.params[0], q_alist);
-            } else if cl.params.len() != 0 {
-                status = "500 Internal Server Error".to_string();
-                body = format!(
-                    "handler for {} wants {} params; serve passes 0 or 1\n",
-                    path,
-                    cl.params.len()
-                );
-                let _ = stream
-                    .write_all(http_response(&status, &body, "native-kernel-error").as_bytes());
-                continue;
-            }
-            let result = walk(&mut k, &mut arena, cl.body, call_frame);
-            status = "200 OK".to_string();
-            body = result.display();
-            router = "native-kernel";
-        } else if let Some(upstream_base) = &upstream {
-            let (fanout_status, fanout_body) = fanout_get(upstream_base, &target);
-            status = fanout_status;
-            body = fanout_body;
-            router = "fanout-python";
-        } else {
-            status = "404 Not Found".to_string();
-            body = format!("no route for {}\n", path);
-            router = "local-control";
+        if tx.send(stream).is_err() {
+            // All workers gone — nothing can serve; stop accepting.
+            break;
         }
-        let _ = stream.write_all(http_response(&status, &body, router).as_bytes());
+    }
+
+    // Listener ended: drop the sender so workers see the channel close and
+    // exit, then join them so no thread is leaked.
+    drop(tx);
+    for h in handles {
+        let _ = h.join();
     }
     0
 }
