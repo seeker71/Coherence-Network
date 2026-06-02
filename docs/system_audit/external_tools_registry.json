@@ -42,6 +42,7 @@
     "ssh-keyscan",
     "test",
     "timeout",
+    "touch",
     "which"
   ],
   "dependency_ecosystems": [
