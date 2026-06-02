@@ -147,9 +147,7 @@ fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
         let mut pairs: Vec<(String, Value)> = Vec::with_capacity(dict.len());
         for (key, val) in dict.iter() {
             let name: String = key.extract().map_err(|_| {
-                PyValueError::new_err(
-                    "form-kernel: record field name must be a string",
-                )
+                PyValueError::new_err("form-kernel: record field name must be a string")
             })?;
             pairs.push((name, py_to_value(kernel, &val)?));
         }
@@ -259,7 +257,12 @@ impl Preloader {
     /// `defn` closures live). The pre-parsed body NodeID is then walked in that
     /// frame. The result converts through the same value_to_py as the inline
     /// path, so value-parity with compile_and_run is exact.
-    fn run(&mut self, py: Python<'_>, handle: usize, bindings: &Bound<'_, PyDict>) -> PyResult<PyObject> {
+    fn run(
+        &mut self,
+        py: Python<'_>,
+        handle: usize,
+        bindings: &Bound<'_, PyDict>,
+    ) -> PyResult<PyObject> {
         if handle >= self.routes.len() {
             return Err(PyValueError::new_err(format!(
                 "form-kernel: no preloaded route for handle {}",
@@ -338,9 +341,8 @@ fn compile_and_run(py: Python<'_>, src: &str) -> PyResult<PyObject> {
 /// `form-kernel-rust <file.fk>`.
 #[pyfunction]
 fn run_fk(py: Python<'_>, path: &str) -> PyResult<PyObject> {
-    let src = std::fs::read_to_string(path).map_err(|e| {
-        PyRuntimeError::new_err(format!("form-kernel: read {}: {}", path, e))
-    })?;
+    let src = std::fs::read_to_string(path)
+        .map_err(|e| PyRuntimeError::new_err(format!("form-kernel: read {}: {}", path, e)))?;
     compile_and_run(py, &src)
 }
 
@@ -349,6 +351,9 @@ fn form_kernel_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_and_run, m)?)?;
     m.add_function(wrap_pyfunction!(run_fk, m)?)?;
     m.add_class::<Preloader>()?;
-    m.add("__doc__", "form-kernel-rust inline runtime (PyO3 extension)")?;
+    m.add(
+        "__doc__",
+        "form-kernel-rust inline runtime (PyO3 extension)",
+    )?;
     Ok(())
 }
