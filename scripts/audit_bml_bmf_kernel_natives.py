@@ -28,12 +28,7 @@ REGISTER_PATTERNS = [
     re.compile(r"\bregister_native\(\s*\"([^\"]+)\""),
 ]
 
-ALLOWED_LANGUAGE_NATIVES = {
-    "bmf_apply_rule_native": {
-        "classification": "deprecated_bmf_semantic_fast_path",
-        "migration": "Replace with BML/Form compiled BMF automaton over generic VM/cursor steps.",
-    },
-}
+ALLOWED_LANGUAGE_NATIVES: dict[str, dict[str, str]] = {}
 
 REQUIRED_GENERIC_NATIVES = {"source_scan_file"}
 
@@ -43,6 +38,8 @@ FORBIDDEN_SCANNER_PATTERNS = [
     re.compile(r"\bbml_native_(keyword|property|name_kind)\b"),
     re.compile(r"\bregisterNative\(\s*\"bml_scan_file\""),
     re.compile(r"\bregister_native\(\s*\"bml_scan_file\""),
+    re.compile(r"\bregisterNative\(\s*\"bmf_apply_rule_native\""),
+    re.compile(r"\bregister_native\(\s*\"bmf_apply_rule_native\""),
 ]
 
 
