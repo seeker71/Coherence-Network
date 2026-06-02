@@ -71,7 +71,7 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 | `make_float32`, `make_float64` | Wrappers; could be composed once `intern_trivial_float` is the primitive |
 | `scan_run` | A while-loop scanning predicate — Form-native shape |
 
-### Algorithmic natives that SHOULD compost to Form recipes (~7)
+### Algorithmic natives that SHOULD compost to Form recipes (~6)
 
 | Native | Algorithm | Status |
 |---|---|---|
@@ -81,7 +81,11 @@ kernel's walker faster (JIT) so Form recipes can carry them.
 | `ed25519_keypair_from_seed` | Ed25519 keygen (RFC 8032) | **Added in this branch — should be Form recipe** |
 | `ed25519_sign` | Ed25519 signing | **Added in this branch — should be Form recipe** |
 | `ed25519_verify` | Ed25519 verification | **Added in this branch — should be Form recipe** |
-| `bmf_apply_rule_native` | BMF rule application | Algorithmic; could be Form |
+
+The former BMF rule-application native has been composted. BMF object rules now
+execute through `form/form-stdlib/engine.fk`; future acceleration should compile
+to generic Form-native cursor/step machinery rather than a BMF-named kernel
+primitive.
 
 ### Walker / runtime internals (~10)
 
