@@ -1478,6 +1478,14 @@ fn bml_native_name_char(b: u8) -> bool {
     bml_native_name_start(b) || b.is_ascii_digit()
 }
 
+fn bml_native_hex_digit(b: u8) -> bool {
+    b.is_ascii_hexdigit()
+}
+
+fn bml_native_bin_digit(b: u8) -> bool {
+    matches!(b, b'0' | b'1')
+}
+
 fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
     let bytes = src.as_bytes();
     let mut j = i + 1;
@@ -1542,8 +1550,20 @@ fn bml_native_scan_text(src: &str) -> Value {
         }
         if c.is_ascii_digit() {
             let mut j = i + 1;
-            while j < bytes.len() && bytes[j].is_ascii_digit() {
+            if c == b'0' && j < bytes.len() && matches!(bytes[j], b'x' | b'X') {
                 j += 1;
+                while j < bytes.len() && bml_native_hex_digit(bytes[j]) {
+                    j += 1;
+                }
+            } else if c == b'0' && j < bytes.len() && matches!(bytes[j], b'b' | b'B') {
+                j += 1;
+                while j < bytes.len() && bml_native_bin_digit(bytes[j]) {
+                    j += 1;
+                }
+            } else {
+                while j < bytes.len() && bytes[j].is_ascii_digit() {
+                    j += 1;
+                }
             }
             out.push(bml_native_atom("bml-int", &src[i..j]));
             i = j;
