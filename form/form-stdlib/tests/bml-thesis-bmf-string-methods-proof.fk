@@ -1,0 +1,104 @@
+; tests/bml-thesis-bmf-string-methods-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the original thesis companion BMF-grammar.bml string helper bodies
+; execute in Form from parsed BodySource:
+;   AsString(String strValue)
+;   AsBMLString(String strValue)
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn concat-str-list (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (concat-str-list (tail xs)))))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let methods (bml-class-own-methods bmf-class))
+    (let as-string-method (bml-find-method methods "AsString"))
+    (let as-bml-string-method (bml-find-method methods "AsBMLString"))
+    (let as-string-body (bml-method-body as-string-method))
+    (let as-bml-string-body (bml-method-body as-bml-string-method))
+
+    (let bs (byte_to_str 92))
+    (let sq (byte_to_str 39))
+    (let dq (byte_to_str 34))
+    (let lf (byte_to_str 10))
+    (let tab (byte_to_str 9))
+    (let cr (byte_to_str 13))
+    (let nul (byte_to_str 0))
+
+    (let escaped-source
+        (concat-str-list
+            (list
+                "a" bs "n"
+                "b" bs "t"
+                "c" bs sq
+                "d" bs bs
+                "e" bs "r"
+                "f")))
+    (let escaped-expected
+        (concat-str-list
+            (list "a" lf "b" tab "c" sq "d" bs "e" "f")))
+    (let as-string-env
+        (record_new
+            (bml-constructor-env-blueprint 0)
+            "strValue"
+            escaped-source))
+    (let as-string-result
+        (bml-body-source-exec-as-string
+            as-string-body
+            as-string-env))
+
+    (let raw-source
+        (concat-str-list
+            (list
+                "a" lf
+                "b" tab
+                "c" cr
+                "d" bs
+                "e" dq
+                "f" nul
+                "g")))
+    (let raw-expected
+        (concat-str-list
+            (list
+                "a" bs "n"
+                "b" bs "t"
+                "c" bs "r"
+                "d" bs bs
+                "e" bs dq
+                "f" bs "0"
+                "g")))
+    (let as-bml-string-env
+        (record_new
+            (bml-constructor-env-blueprint 0)
+            "strValue"
+            raw-source))
+    (let as-bml-string-result
+        (bml-body-source-exec-as-bml-string
+            as-bml-string-body
+            as-bml-string-env))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-class-name bmf-class) "BMF" 2)
+            (str-score (bml-method-name as-string-method) "AsString" 4)
+            (str-score (bml-method-return as-string-method) "String" 8)
+            (str-score (bml-method-name as-bml-string-method) "AsBMLString" 16)
+            (str-score (bml-method-return as-bml-string-method) "String" 32)
+            (bool-score (bml-body-source-as-string-shape? as-string-body) 64)
+            (bool-score (bml-body-source-as-bml-string-shape? as-bml-string-body) 128)
+            (bool-score (bml-body-source-contains? as-string-body "switch") 256)
+            (bool-score (bml-body-source-contains? as-bml-string-body "select") 512)
+            (str-score as-string-result escaped-expected 1024)
+            (str-score as-bml-string-result raw-expected 2048))))
