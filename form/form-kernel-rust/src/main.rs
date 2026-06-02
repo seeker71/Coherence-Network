@@ -6336,15 +6336,29 @@ fn handle_request(
     route_pairs: &RoutePairs,
     upstream: &Option<String>,
 ) {
-    // Read up to 8 KiB of request — enough for line + headers; this
-    // is HTTP/1.0, no chunked bodies, no keep-alive.
-    let mut buf = [0u8; 8192];
-    let n = match stream.read(&mut buf) {
-        Ok(n) => n,
-        Err(_) => return,
+    // Read the FULL request: the header block, then exactly Content-Length
+    // body bytes if present (read_request honors Content-Length across as many
+    // socket reads as the body needs — a body larger than one buffer is fully
+    // captured). Still HTTP/1.0, Connection: close; keep-alive and chunked
+    // transfer remain named breaths (KERNEL_AS_ROUTER.md request row).
+    let (head, body_bytes) = match read_request(&mut stream) {
+        RequestRead::Ok(h, b) => (h, b),
+        RequestRead::TooLarge => {
+            let status = "413 Payload Too Large".to_string();
+            let msg = format!("request body exceeds {} bytes\n", MAX_BODY_BYTES);
+            let _ = stream.write_all(http_response(&status, &msg, "local-control").as_bytes());
+            return;
+        }
+        RequestRead::Error => return,
     };
-    let req = String::from_utf8_lossy(&buf[..n]).to_string();
-    let (method, target, path, query) = parse_request_line(&req);
+    let (method, target, path, mut request_data) = parse_request_line(&head);
+    // Parse the body by Content-Type and MERGE its fields into the same alist
+    // the handler reads (core-abstraction-first: ONE request-data shape, whether
+    // a field arrived as a query param or a body field). Query fields come
+    // first; body fields are appended. form-urlencoded fields land as plain
+    // (k v) pairs; a JSON / other body lands as a single ("__body__", raw) pair.
+    let content_type = parse_content_type(&head);
+    request_data.extend(parse_request_body(&content_type, &body_bytes));
 
     // The router decision: a path with a native Form handler is served
     // entirely in the kernel; a path with no handler fans out to the
@@ -6352,16 +6366,14 @@ fn handle_request(
     let body: String;
     let status: String;
     let router: &str;
-    if method != "GET" {
-        // GET-only doorway today; non-idempotent verbs are a named build.
-        status = "405 Method Not Allowed".to_string();
-        body = format!("method not allowed: {}\n", method);
-        router = "local-control";
-    } else if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
+    if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
         // NATIVE: served entirely in Form, no Python in the path.
-        // Build the query alist as Value::List of (key, value) pairs.
+        // Build the request alist as Value::List of (key, value) pairs — query
+        // params AND body fields, uniformly (form-urlencoded merged in;
+        // JSON/other captured under "__body__"). The handler reads them the same
+        // way regardless of how each field arrived.
         let q_alist = Value::List(
-            query
+            request_data
                 .iter()
                 .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), Value::Str(v.clone())]))
                 .collect(),
@@ -6389,8 +6401,11 @@ fn handle_request(
         // FAN-OUT: no native handler — forward to the Python upstream and
         // relay its response. The kernel owns the front door; Python is the
         // upstream for the not-yet-native tail. Each worker issues its own
-        // independent fan-out hop.
-        let (fanout_status, fanout_body) = fanout_get(upstream_base, &target);
+        // independent fan-out hop, passing the request's METHOD and BODY so a
+        // POST that fans out to Python carries its payload (Content-Type +
+        // Content-Length set from the captured body).
+        let (fanout_status, fanout_body) =
+            fanout_request(upstream_base, &method, &target, &content_type, &body_bytes);
         status = fanout_status;
         body = fanout_body;
         router = "fanout-python";
@@ -6641,6 +6656,159 @@ fn cli_serve(args: &[String]) -> i32 {
     0
 }
 
+// Maximum request body the router will read into memory. A body larger than
+// this is rejected with 413 rather than letting a malicious/huge Content-Length
+// OOM the process. 1 MiB is generous for form posts and JSON payloads; true
+// streaming bodies are a named-later breath (KERNEL_AS_ROUTER.md request row).
+const MAX_BODY_BYTES: usize = 1024 * 1024;
+
+// The outcome of reading a request: either the parsed (head, body), or a signal
+// that the body exceeded MAX_BODY_BYTES (the caller answers 413), or a read
+// error / empty peer (the caller drops the connection silently).
+enum RequestRead {
+    Ok(String, Vec<u8>),
+    TooLarge,
+    Error,
+}
+
+// Read a full HTTP request: the header block (up to the `\r\n\r\n` terminator)
+// followed by exactly `Content-Length` body bytes if that header is present.
+// The first read may already contain some or all of the body (it arrived in the
+// same TCP segment), so bytes captured past the terminator are counted toward
+// the body and only the remainder is read from the socket. Returns the raw head
+// string (request line + headers, terminator excluded) and the body bytes.
+//
+// This replaces the old single 8 KiB read: it honors Content-Length across as
+// many `read` calls as the body needs, so a body larger than one buffer is
+// fully captured (the correctness property the single-buffer read failed).
+fn read_request(stream: &mut TcpStream) -> RequestRead {
+    let mut raw: Vec<u8> = Vec::with_capacity(8192);
+    let mut buf = [0u8; 8192];
+    // Phase 1: read until the header terminator is seen (or EOF / cap).
+    let header_end: Option<usize> = loop {
+        match stream.read(&mut buf) {
+            Ok(0) => break find_header_end(&raw), // peer closed; use what we have
+            Ok(n) => {
+                raw.extend_from_slice(&buf[..n]);
+                if let Some(t) = find_header_end(&raw) {
+                    break Some(t);
+                }
+                // Guard: the header block alone must not grow without bound.
+                if raw.len() > MAX_BODY_BYTES {
+                    return RequestRead::TooLarge;
+                }
+            }
+            Err(_) => return RequestRead::Error,
+        }
+    };
+    if raw.is_empty() {
+        return RequestRead::Error; // nothing arrived at all
+    }
+    // `header_end` is the index just past "\r\n\r\n" when found. The head text
+    // (terminator excluded) is everything before it; if no terminator was seen
+    // the whole buffer is the head and there is no body.
+    let (head_end_excl_term, body_start) = match header_end {
+        Some(t) => (t - 4, t),
+        None => (raw.len(), raw.len()),
+    };
+    let head = String::from_utf8_lossy(&raw[..head_end_excl_term]).to_string();
+
+    // Phase 2: if Content-Length says there's a body, read exactly that many
+    // bytes, counting whatever already arrived past the header terminator.
+    let mut body: Vec<u8> = raw[body_start..].to_vec();
+    if let Some(total) = parse_content_length(&head) {
+        if total > MAX_BODY_BYTES {
+            return RequestRead::TooLarge; // oversized — caller answers 413
+        }
+        while body.len() < total {
+            match stream.read(&mut buf) {
+                Ok(0) => break, // peer closed early; return the partial body honestly
+                Ok(n) => body.extend_from_slice(&buf[..n]),
+                Err(_) => break,
+            }
+        }
+        body.truncate(total); // never hand back more than Content-Length promised
+    }
+    RequestRead::Ok(head, body)
+}
+
+// Find the index just past the first "\r\n\r\n" header terminator, if present.
+fn find_header_end(raw: &[u8]) -> Option<usize> {
+    raw.windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .map(|i| i + 4)
+}
+
+// Pull the Content-Length value out of a raw header block (case-insensitive
+// header name). Returns None when absent or unparseable.
+fn parse_content_length(head: &str) -> Option<usize> {
+    for line in head.lines() {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.trim().eq_ignore_ascii_case("content-length") {
+                return value.trim().parse::<usize>().ok();
+            }
+        }
+    }
+    None
+}
+
+// Pull the Content-Type value (lowercased, parameters stripped) out of a raw
+// header block. "application/json; charset=utf-8" -> "application/json".
+fn parse_content_type(head: &str) -> String {
+    for line in head.lines() {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.trim().eq_ignore_ascii_case("content-type") {
+                let v = value.trim();
+                let main = v.split(';').next().unwrap_or(v);
+                return main.trim().to_ascii_lowercase();
+            }
+        }
+    }
+    String::new()
+}
+
+// Parse a request body into the SAME (key, value) alist shape the query string
+// already uses, so a handler reads body fields exactly like query fields
+// (core-abstraction-first: ONE request-data shape regardless of how the data
+// arrived). The marshalling depends on Content-Type:
+//   - application/x-www-form-urlencoded -> each `k=v&...` pair url-decoded into
+//     the alist (reuses the query-pair parsing), so a form-POST handler sees its
+//     fields uniformly with query params.
+//   - application/json -> the raw JSON string is captured under the reserved key
+//     `__body__` so a handler CAN read it via (assoc "__body__" q). A full
+//     JSON->Form-value parse is a deeper, named-later breath; raw-capture is the
+//     honest first step that already lets a handler process the payload.
+//   - anything else (with a non-empty body) -> the raw bytes captured under
+//     `__body__`. The handler always gets a well-formed alist.
+fn parse_request_body(content_type: &str, body: &[u8]) -> Vec<(String, String)> {
+    if body.is_empty() {
+        return Vec::new();
+    }
+    if content_type == "application/x-www-form-urlencoded" {
+        let s = String::from_utf8_lossy(body);
+        let mut pairs = Vec::new();
+        for pair in s.split('&') {
+            if pair.is_empty() {
+                continue;
+            }
+            let (k, v) = match pair.find('=') {
+                Some(i) => (pair[..i].to_string(), pair[i + 1..].to_string()),
+                None => (pair.to_string(), String::new()),
+            };
+            pairs.push((url_decode(&k), url_decode(&v)));
+        }
+        pairs
+    } else {
+        // application/json and everything else: capture the raw body so the
+        // handler can process it. JSON is left as the raw string by design
+        // (raw-capture, not yet a structural parse).
+        vec![(
+            "__body__".to_string(),
+            String::from_utf8_lossy(body).to_string(),
+        )]
+    }
+}
+
 // Parse the request line "GET /path?k=v HTTP/1.0" into
 // (method, target, path, query).
 // Query string is decoded as a flat list of (key, value) pairs — sufficient
@@ -6697,8 +6865,14 @@ fn url_decode(s: &str) -> String {
     out
 }
 
-fn fanout_get(upstream: &str, target: &str) -> (String, String) {
-    match fanout_get_result(upstream, target) {
+fn fanout_request(
+    upstream: &str,
+    method: &str,
+    target: &str,
+    content_type: &str,
+    body: &[u8],
+) -> (String, String) {
+    match fanout_request_result(upstream, method, target, content_type, body) {
         Ok(v) => v,
         Err(e) => (
             "502 Bad Gateway".to_string(),
@@ -6717,7 +6891,13 @@ fn http_response(status: &str, body: &str, router: &str) -> String {
     )
 }
 
-fn fanout_get_result(upstream: &str, target: &str) -> Result<(String, String), String> {
+fn fanout_request_result(
+    upstream: &str,
+    method: &str,
+    target: &str,
+    content_type: &str,
+    body: &[u8],
+) -> Result<(String, String), String> {
     let (host, port, base_path) = parse_http_upstream(upstream)?;
     let request_target = format!(
         "{}{}",
@@ -6726,17 +6906,31 @@ fn fanout_get_result(upstream: &str, target: &str) -> Result<(String, String), S
     );
     let mut stream = TcpStream::connect((host.as_str(), port))
         .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
-    let request = format!(
-        "GET {} HTTP/1.0\r\nHost: {}\r\nConnection: close\r\n\r\n",
-        request_target, host
+    // Forward the request line with the ORIGINAL method, then the headers, then
+    // the body bytes. A POST/PUT/PATCH that fans out to Python carries its body
+    // (Content-Length tells the upstream how much to read); Content-Type is
+    // relayed when the original request had one. GET/HEAD send no body.
+    let mut head = format!(
+        "{} {} HTTP/1.0\r\nHost: {}\r\nConnection: close\r\n",
+        method, request_target, host
     );
+    if !body.is_empty() {
+        if !content_type.is_empty() {
+            head.push_str(&format!("Content-Type: {}\r\n", content_type));
+        }
+        head.push_str(&format!("Content-Length: {}\r\n", body.len()));
+    }
+    head.push_str("\r\n");
+    let mut request: Vec<u8> = head.into_bytes();
+    request.extend_from_slice(body);
     stream
-        .write_all(request.as_bytes())
+        .write_all(&request)
         .map_err(|e| format!("write request: {}", e))?;
-    let mut response = String::new();
+    let mut response_bytes = Vec::new();
     stream
-        .read_to_string(&mut response)
+        .read_to_end(&mut response_bytes)
         .map_err(|e| format!("read response: {}", e))?;
+    let response = String::from_utf8_lossy(&response_bytes).to_string();
     let mut lines = response.lines();
     let status = lines
         .next()

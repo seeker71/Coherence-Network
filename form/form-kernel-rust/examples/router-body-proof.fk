@@ -1,0 +1,51 @@
+; router-body-proof.fk — proves the kernel-router READS REQUEST BODIES.
+;
+; Loaded by `form-kernel-rust serve`. Where router-proof.fk proved GET routing,
+; this manifest proves the matured serve primitive: a native handler receives
+; POST/PUT body fields through the SAME alist a GET handler reads its query
+; params from (form-urlencoded merged in), and a JSON body is captured raw under
+; the reserved key "__body__".
+;
+;   POST /sum         (a=40&b=2, urlencoded)   -> "42"   (body fields summed)
+;   POST /echo_len    ({"k":"v"}, json)        -> length of the raw JSON body
+;   POST /payload_len (payload=<8KB+>, urlenc) -> length of the field value
+;   GET  /health                               -> "ok"   (GET still works)
+
+; --- alist helper: value for `key` in a list of (k v) string pairs ---
+(defn assoc (key pairs)
+  (if (eq (len pairs) 0)
+      ""
+      (if (str_eq (head (head pairs)) key)
+          (head (tail (head pairs)))
+          (assoc key (tail pairs)))))
+
+; --- liveness (GET, no inputs) — proves GET is unchanged ---
+(defn route_health ()
+  "ok")
+
+; --- POST form-urlencoded: read two body fields and SUM them. The handler reads
+; `a` and `b` from the SAME alist a GET handler reads query params from. ---
+(defn route_sum (q)
+  (int_to_str (add (str_to_int (assoc "a" q))
+                   (str_to_int (assoc "b" q)))))
+
+; --- POST application/json: the raw JSON body is captured under "__body__".
+; The handler reads it and returns its character length — proving the kernel
+; captured the raw JSON payload and made it available to Form. ---
+(defn route_echo_len (q)
+  (int_to_str (str_len (assoc "__body__" q))))
+
+; --- POST a single large form field; return the length of its value. When the
+; value is larger than the kernel's initial 8 KiB read buffer, a matching length
+; proves the FULL body was captured across multiple reads (Content-Length
+; honored) — the correctness property the old single-buffer read failed. ---
+(defn route_payload_len (q)
+  (int_to_str (str_len (assoc "payload" q))))
+
+; --- the route manifest: (path handler). Everything not here fans out. ---
+(let routes
+  (list
+    (list "/health"      route_health)
+    (list "/sum"         route_sum)
+    (list "/echo_len"    route_echo_len)
+    (list "/payload_len" route_payload_len)))
