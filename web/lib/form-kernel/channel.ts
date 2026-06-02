@@ -9,7 +9,7 @@
 // Kernel Space can anchor a channel to any room (a concept, a sibling, Urs, or
 // the agent's own cell) without a server round-trip.
 
-export type ChannelProtocol = "ask" | "recipe" | "query" | "retrieve";
+export type ChannelProtocol = "ask" | "recipe" | "query" | "retrieve" | "attune" | "offer";
 
 export interface ChannelMessage {
   position: number;
@@ -34,6 +34,8 @@ const TYPE_SLOT: Record<ChannelProtocol, number> = {
   retrieve: 4, // substrate read
   query: 7, // set query
   recipe: 9, // bare payload
+  attune: 105, // resonance receipt / relation evidence
+  offer: 106, // debt-free gift payload
 };
 
 export function payloadNodeId(protocol: ChannelProtocol, text: string): string {

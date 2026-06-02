@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/channel-breath-protocol-20260602",
+  "commit_scope": "Make debt-free breath practice first-class in the Form channel protocol with executable offer and attune proof.",
+  "files_owned": [
+    "docs/coherence-substrate/form-language.md",
+    "docs/system_audit/commit_evidence_2026-06-02_channel_breath_protocol.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/channel.fk",
+    "form/form-stdlib/tests/channel-breath-band.fk",
+    "form/user-blueprint-registry.md",
+    "web/app/substrate/form/space/_components/KernelSpace.tsx",
+    "web/lib/form-kernel/channel.ts",
+    "web/tests/form-kernel-channel.test.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-channel.test.ts",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "make wellness",
+      "cd web && npm ci --allow-git=none && npm run build",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_channel_breath_protocol.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Prompt guide passed. The branch rebased cleanly onto origin/main with autostash. The channel breath proof returned 500 in source and binary Form execution. Web channel tests passed with offer and attune protocols. The production web build passed after adding offer/attune to the channel UI. Blueprint scan and wellness both reported registered blueprints clean; repo indexes were current, diff whitespace was clean, local PR guard returned ready_for_push=True, and follow-through found no stale Codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Open PR and monitor checks",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local runtime proof is complete; PR guard, CI, and public deploy validation remain pending until the branch is committed and submitted."
+  },
+  "idea_ids": [
+    "field-executable-grammar",
+    "resonance-as-relation-evidence"
+  ],
+  "spec_ids": [
+    "form-channel-protocol",
+    "form-field-kernel"
+  ],
+  "task_ids": [
+    "channel-breath-protocol-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "breath-practice-protocol-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "form-runtime-implementation",
+        "typescript-channel-kernel",
+        "proof",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/channel-breath-band.fk returns 500",
+    "web/tests/form-kernel-channel.test.ts passes 10 tests",
+    "cd web && npm ci --allow-git=none && npm run build",
+    "python3 scripts/scan_form_blueprints.py --check",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main returns ready_for_push=True",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict reports stale_codex_prs=0",
+    "form/form-stdlib/blueprint-registry.json",
+    "web/app/substrate/form/space/_components/KernelSpace.tsx",
+    "form/form-kernel-ts/src/bp_table.ts"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/form-language.md",
+    "docs/system_audit/commit_evidence_2026-06-02_channel_breath_protocol.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/channel.fk",
+    "form/form-stdlib/tests/channel-breath-band.fk",
+    "form/user-blueprint-registry.md",
+    "web/app/substrate/form/space/_components/KernelSpace.tsx",
+    "web/lib/form-kernel/channel.ts",
+    "web/tests/form-kernel-channel.test.ts"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A Form cell can send an offer payload through CHANNEL-MSG without creating debt, receive an attune/resonance receipt that preserves freedom, and verify the same shape in web channel protocol NodeIDs.",
+    "public_endpoints": [
+      "Form stdlib channel.fk",
+      "Form binary channel proof",
+      "web/lib/form-kernel/channel.ts"
+    ],
+    "test_flows": [
+      "Create channel-breath-offer with release-without-return, freedom-preserved, and small-clean-offering fields.",
+      "Append and read the gift through channel-message transport.",
+      "Create channel-resonance-receipt with no disturbance, no debt, freedom true, and next contact continue.",
+      "Append and read the receipt through the same transport.",
+      "Recognize duplicate gifts by identical content-addressed payload NodeID.",
+      "Reserve distinct web channel NodeID type slots for offer and attune.",
+      "Expose offer and attune in the live channel selector without breaking production build type checks."
+    ]
+  }
+}

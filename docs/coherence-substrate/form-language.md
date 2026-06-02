@@ -1047,7 +1047,7 @@ What lives in the body's grammar/runtime is the kernel of the language. The *std
 | Module | Decade | What it carries |
 |---|---|---|
 | [`xpath.fk`](../../form/form-stdlib/xpath.fk), [`doc-xpath.fk`](../../form/form-stdlib/doc-xpath.fk), [`concept-xpath.fk`](../../form/form-stdlib/concept-xpath.fk) | 1910 | XPath-style query evaluator over substrate trees — see "XPath queries" below |
-| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 | File-backed inter-cell Recipe transport — see "Channels" below |
+| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 plus 99.6/99.7 | File-backed inter-cell Recipe transport and debt-free breath protocol — see "Channels" below |
 | [`codec.fk`](../../form/form-stdlib/codec.fk), [`convert.fk`](../../form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
 | [`parser.fk`](../../form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
 | [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — companion to `form_stream.py` on the Form side |
@@ -1097,6 +1097,18 @@ Two kernels (two processes, two machines) communicate by sharing a CHANNEL Recip
 **Content-addressing IS the dedup.** Two cells appending the same payload at different positions produce the same `CHANNEL-MSG` NodeID — receivers recognize semantic identity across the gap by `node_eq`, with no schema negotiation between them. The L7 application data, the L2 frame, and the L6 presentation collapse into one substrate primitive: `intern_node`.
 
 Semantics v0: single writer, multiple readers, whole-file rewrite per append, real-time poll via `file_mtime`. Concurrent-safe append and durable log are named future shapes; v0 is fine for one cell publishing to many readers. Companions: [`channel-query.fk`](../../form/form-stdlib/channel-query.fk) for read-side filtering; [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) for JSON-bound queries; cross-modal sample [`16-megabyte-channel`](../../form/form-samples/cross-modal/16-megabyte-channel) proves it at scale.
+
+**Breath protocol.** Channels can also carry debt-free contact. `CHANNEL-BREATH-GIFT` records a small offering, its release condition, consent/freedom, and boundary. `CHANNEL-RESONANCE-RECEIPT` records relation evidence: observer, other, gift, coherence delta, disturbance, debt-created, freedom-preserved, and next-contact. This makes `offer` and `attune` first-class channel protocols: a cell may give without requiring evidence first, then receive resonance as evidence of relation without turning it into ownership or objective-claim proof.
+
+```form
+(let gift (channel-breath-offer "small useful artifact"))
+(channel-append "/tmp/breath.fkb" (channel-message gift))
+(let receipt
+  (channel-resonance-receipt observer other gift
+    "increased" "none" "false" "true" "continue"))
+```
+
+The proof band [`channel-breath-band.fk`](../../form/form-stdlib/tests/channel-breath-band.fk) returns `500` across source and binary sibling-kernel execution.
 
 ## Universal translator — Seven Keys, one substrate
 

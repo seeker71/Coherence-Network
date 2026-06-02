@@ -36,6 +36,8 @@
 ;; --- Blueprints ----------------------------------------------------
 (let CHANNEL-V0  (bp "CHANNEL-V0"))
 (let CHANNEL-MSG (bp "CHANNEL-MSG"))
+(let CHANNEL-BREATH-GIFT (bp "CHANNEL-BREATH-GIFT"))
+(let CHANNEL-RESONANCE-RECEIPT (bp "CHANNEL-RESONANCE-RECEIPT"))
 
 ;; --- helpers -------------------------------------------------------
 
@@ -101,5 +103,71 @@
 ;; payload Recipe it carries. Inverse of channel-message.
 (defn channel-msg-payload (msg)
     (head (node_children msg)))
+
+;; --- breath practice ------------------------------------------------
+
+;; channel-breath-gift — a small clean offering that can cross the
+;; channel without becoming a debt. The gift is explicit, the release
+;; condition is explicit, and freedom/consent remain part of the
+;; payload rather than assumed outside the protocol.
+(defn channel-breath-gift (gift release consent boundary)
+    (intern_node CHANNEL-BREATH-GIFT
+        (list gift release consent boundary)))
+
+;; channel-breath-offer — ergonomic text constructor for the one-breath
+;; practice: locate a small gift, release it without return, preserve
+;; freedom, and keep the boundary small enough to release cleanly.
+(defn channel-breath-offer (gift-text)
+    (channel-breath-gift
+        (intern_trivial_string gift-text)
+        (intern_trivial_string "release-without-return")
+        (intern_trivial_string "freedom-preserved")
+        (intern_trivial_string "small-clean-offering")))
+
+(defn channel-breath-gift-gift (gift)
+    (head (node_children gift)))
+
+(defn channel-breath-gift-release (gift)
+    (head (tail (node_children gift))))
+
+(defn channel-breath-gift-consent (gift)
+    (head (tail (tail (node_children gift)))))
+
+(defn channel-breath-gift-boundary (gift)
+    (head (tail (tail (tail (node_children gift))))))
+
+;; channel-resonance-receipt — the receiver's relational evidence.
+;; This is not objective-claim proof. It records relation evidence:
+;; coherence delta, disturbance, debt, freedom, and next contact.
+(defn channel-resonance-receipt (observer other gift coherence-delta disturbance debt-created freedom-preserved next-contact)
+    (intern_node CHANNEL-RESONANCE-RECEIPT
+        (list observer other gift coherence-delta disturbance debt-created freedom-preserved next-contact)))
+
+(defn channel-resonance-coherence-delta (receipt)
+    (head (tail (tail (tail (node_children receipt))))))
+
+(defn channel-resonance-disturbance (receipt)
+    (head (tail (tail (tail (tail (node_children receipt)))))))
+
+(defn channel-resonance-debt-created (receipt)
+    (head (tail (tail (tail (tail (tail (node_children receipt))))))))
+
+(defn channel-resonance-freedom-preserved (receipt)
+    (head (tail (tail (tail (tail (tail (tail (node_children receipt)))))))))
+
+(defn channel-resonance-next-contact (receipt)
+    (head (tail (tail (tail (tail (tail (tail (tail (node_children receipt))))))))))
+
+;; channel-resonance-valid? — enough trust for the next small contact:
+;; no debt was created, freedom stayed true, and disturbance stayed none
+;; or minimal. This validates the giving, not ownership of the other.
+(defn channel-resonance-valid? (receipt)
+    (and
+        (str_eq (node_value (channel-resonance-debt-created receipt)) "false")
+        (and
+            (str_eq (node_value (channel-resonance-freedom-preserved receipt)) "true")
+            (or
+                (str_eq (node_value (channel-resonance-disturbance receipt)) "none")
+                (str_eq (node_value (channel-resonance-disturbance receipt)) "minimal")))))
 
 0

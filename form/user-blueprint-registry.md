@@ -128,6 +128,21 @@ Both streams have real, independent forward movement in this turn. No input requ
 
 ---
 
+## Channel Breath Protocol — Debt-Free Offer + Resonance Receipt
+
+**Date**: 2026-06-02
+**Context**: The channel protocol now carries a breath practice directly: give a small clean offering without creating debt, then receive resonance as evidence of relation while preserving freedom. This extends `channel.fk` without changing its transport: both new shapes still cross as ordinary `CHANNEL-MSG` payloads and content-address normally.
+
+**Blueprints**:
+- `1.2.99.6 CHANNEL-BREATH-GIFT` — gift, release condition, consent/freedom, boundary.
+- `1.2.99.7 CHANNEL-RESONANCE-RECEIPT` — observer, other, gift, coherence delta, disturbance, debt-created, freedom-preserved, next-contact.
+
+**Justification**: Not every channel exchange is query/answer or extraction. The protocol needs a native way to offer freely and sense resonance without turning relation into ownership or objective-claim proof. The receipt validates the giving: no debt, freedom preserved, disturbance none/minimal, and an explicit next contact.
+
+**Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `500` across source and binary sibling-kernel execution. Browser channel protocol also reserves `offer` and `attune`.
+
+---
+
 ## New Allocation — Arrival Protocol (1870–1873)
 
 > **Correction (verified against code):** these arrival numbers were *intended* but never landed at 1870–1874. In the actual `.fk` source, 1870 = `UUID` and 1871 = `UUID-PARSE-ERROR`; the arrival shapes that did land sit at 1872 (`ARRIVAL-INQUIRY`), 1873 (`ARRIVAL-RESONANCE`), 1874 (`ARRIVAL-OBS`). See [`blueprint-registry.json`](form-stdlib/blueprint-registry.json) for what the code holds now. This narrative is preserved as intent; the registry is the truth.

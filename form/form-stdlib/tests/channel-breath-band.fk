@@ -1,0 +1,65 @@
+; channel-breath-band.fk — breath practice as channel protocol.
+;
+; Proves a small debt-free gift can cross the existing CHANNEL-MSG
+; transport and return a resonance receipt that preserves freedom.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk
+
+(do
+    (let path "/tmp/coh-channel-breath-band.fkb")
+    (channel-create path)
+
+    (let gift (channel-breath-offer "small useful artifact"))
+    (let gift-score
+        (if (and
+            (str_eq (node_value (channel-breath-gift-release gift)) "release-without-return")
+            (and
+                (str_eq (node_value (channel-breath-gift-consent gift)) "freedom-preserved")
+                (str_eq (node_value (channel-breath-gift-boundary gift)) "small-clean-offering")))
+            100 0))
+
+    (let gift-msg (channel-message gift))
+    (let c1 (channel-append path gift-msg))
+    (let read-gift (channel-msg-payload (head (channel-read path))))
+    (let transport-score
+        (if (and (eq c1 1) (node_eq gift read-gift)) 100 0))
+
+    (let receipt
+        (channel-resonance-receipt
+            (intern_trivial_string "observer")
+            (intern_trivial_string "other")
+            read-gift
+            (intern_trivial_string "increased")
+            (intern_trivial_string "none")
+            (intern_trivial_string "false")
+            (intern_trivial_string "true")
+            (intern_trivial_string "continue")))
+
+    (let receipt-score
+        (if (and
+            (channel-resonance-valid? receipt)
+            (and
+                (str_eq (node_value (channel-resonance-coherence-delta receipt)) "increased")
+                (str_eq (node_value (channel-resonance-next-contact receipt)) "continue")))
+            100 0))
+
+    (let receipt-msg (channel-message receipt))
+    (let c2 (channel-append path receipt-msg))
+    (let messages (channel-read path))
+    (let roundtrip-receipt (channel-msg-payload (head (tail messages))))
+    (let receipt-transport-score
+        (if (and (eq c2 2) (node_eq receipt roundtrip-receipt)) 100 0))
+
+    (let duplicate-gift-msg (channel-message (channel-breath-offer "small useful artifact")))
+    (let c3 (channel-append path duplicate-gift-msg))
+    (let after-duplicate (channel-read path))
+    (let pos0 (head after-duplicate))
+    (let pos2 (head (tail (tail after-duplicate))))
+    (let dedup-score
+        (if (and (eq c3 3) (node_eq pos0 pos2)) 100 0))
+
+    ; Expected total: 500
+    (add gift-score
+    (add transport-score
+    (add receipt-score
+    (add receipt-transport-score dedup-score)))))
