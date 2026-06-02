@@ -143,7 +143,7 @@ gap, named precisely:
 
 | Gap | cli_serve today | Production front door needs |
 |-----|-----------------|-----------------------------|
-| **HTTP version** | HTTP/1.0, `Connection: close` per request | HTTP/1.1 + keep-alive (and ideally HTTP/2 behind Traefik), chunked transfer |
+| **HTTP version** | serves HTTP/1.1 with keep-alive — a worker holds the accepted connection and serves multiple requests on it (one TCP handshake amortized across the connection), each response Content-Length-framed so the client knows exactly where one ends and the next begins; the client's intent is honored (HTTP/1.1 default-keep-alive unless `Connection: close`, HTTP/1.0 close-unless-`keep-alive`); a 5s idle read-timeout closes a quiet connection so it cannot pin a worker; over-read bytes (pipelining) are carried into the next request, never dropped | chunked transfer encoding (today every response is Content-Length-framed; a streamed/unknown-length body would need chunked), upstream connection reuse on the fan-out hop (the fan-out still opens a fresh upstream connection per request), HTTP/2 behind Traefik |
 | **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
 | **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; 1 MiB body cap rejected with 413; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
 | **Fan-out proxy** | forwards the original method and the request body (Content-Type + Content-Length set from the captured body) so a POST that fans out to the upstream carries its payload; status+body relayed as text/plain | request/response header passthrough, response content-type/headers relayed, streaming, connection reuse, timeouts, retries |
@@ -151,7 +151,7 @@ gap, named precisely:
 | **Errors / observability** | 404/413/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
 | **TLS / lifecycle** | plain TCP on 127.0.0.1, runs until killed | TLS termination (or behind Traefik), graceful shutdown, health/readiness, config reload |
 
-None of these is exotic; each is a named breath. Two of the load-bearing ones
+None of these is exotic; each is a named breath. Three of the load-bearing ones
 are built. **Concurrency**: the kernel's per-process intern table
 (`lc-native-kernel-binary` names this: *"Not multi-process"*) makes the
 production shape a **pool of kernel workers behind the accept loop**, each
@@ -162,9 +162,21 @@ captured across multiple reads), parses `application/x-www-form-urlencoded`
 bodies into the same handler alist the query string uses, captures
 `application/json` raw under `__body__`, and the fan-out hop forwards the method
 and body to the upstream — so a POST is served (or fanned out) with its payload,
-not just a GET. The remaining rows (HTTP/1.1 keep-alive, full header passthrough,
-a structural JSON→Form parse, streaming, TLS/lifecycle, observability) are still
-open breaths.
+not just a GET. **HTTP/1.1 keep-alive**: a worker serves a whole connection's
+lifetime — `handle_request` (the one factored per-request shape) runs in a loop
+on the same `TcpStream`, so multiple requests reuse one TCP connection; each
+response is HTTP/1.1 with an accurate Content-Length (the framing that lets a
+client read one response and the next without chunked encoding); the
+`Connection` header is honored both ways (HTTP/1.1 stays open unless the client
+sends `close`, HTTP/1.0 closes unless it sends `keep-alive`); a 5s idle
+read-timeout reaps a quiet connection so it frees its worker; and over-read
+bytes from one request are carried into the next, never dropped (the pipelining
+hazard). The honest tradeoff: a worker serving a keep-alive client is
+unavailable to the pool until the connection closes or the idle timeout fires —
+standard thread-per-connection behavior, tuned by the idle-timeout value and the
+worker count. The remaining rows (chunked transfer, upstream connection reuse on
+the fan-out hop, full header passthrough, a structural JSON→Form parse,
+streaming, TLS/lifecycle, observability) are still open breaths.
 
 ## The BML preference
 
@@ -325,19 +337,26 @@ response model), serving the value-walk directly. A hot native route is far
 cheaper than the same compute reached through the CPython doorway; the tail pays
 a small, measured proxy toll to keep working unchanged.
 
-**NOT shown / not claimed:** full production-readiness. The proof is HTTP/1.0
-(no keep-alive — every request is a fresh connection on both hops), and the
-accept loop is thread-per-request-blocked (it parallelizes to the worker count,
-not an async reactor); JSON bodies are raw-captured, not structurally parsed
-into Form values; request/response headers beyond the body are not yet passed
-through (the fan-out relays status + body as text/plain, not the upstream's
-content-type/headers). The real-app proof ran against the dev sqlite DB; the
-production deployment shape (TLS/Traefik front, the routes.fk covering the real
-native-eligible set, header/content-type passthrough so a JSON route's
-content-type survives the proxy) is the remaining build. Concurrency,
-request-body reading, and the **real-app fan-out + native side-by-side** are now
-shown; the HTTP/1.1, header-passthrough, and structural-JSON rows above are the
-rest.
+**NOT shown / not claimed:** full production-readiness. The server serves
+HTTP/1.1 with keep-alive (proven by `router_keepalive_harness.py` — multiple
+requests on one connection, `Connection` honored both ways, idle-timeout reaping,
+pipelining bytes carried), but the **upstream fan-out hop still opens a fresh
+connection per request** (the client→router hop reuses connections; the
+router→upstream hop does not yet — so the proxy-hop latency above is measured on
+a non-reused upstream connection), and the accept loop is
+thread-per-connection-blocked (it parallelizes to the worker count, not an async
+reactor; a worker serving a keep-alive client is held until that connection
+closes or times out). Responses are Content-Length-framed, not chunked; JSON
+bodies are raw-captured, not structurally parsed into Form values;
+request/response headers beyond the body are not yet passed through (the fan-out
+relays status + body as text/plain, not the upstream's content-type/headers). The
+real-app proof ran against the dev sqlite DB; the production deployment shape
+(TLS/Traefik front, the routes.fk covering the real native-eligible set,
+header/content-type passthrough so a JSON route's content-type survives the
+proxy) is the remaining build. Concurrency, request-body reading, the
+**real-app fan-out + native side-by-side**, and **HTTP/1.1 keep-alive on the
+client→router hop** are now shown; chunked transfer, upstream connection reuse,
+header-passthrough, and structural-JSON are the rest.
 
 ## The flip is Urs's decision
 
@@ -358,12 +377,13 @@ test port so the reversal can be weighed with evidence rather than assertion.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `handle_request` (the single factored serving shape, now reading the full request + body), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read and content-type body parse), `fanout_request` (the proxy arm, forwarding method + body), `http_response` (the X-Form-Router header), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` (the proxy arm, forwarding method + body), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
 - [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
 - [`form/form-kernel-rust/examples/router-body-proof.fk`](../form/form-kernel-rust/examples/router-body-proof.fk) — the body-reading native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
+- [`form/form-kernel-rust/router_keepalive_harness.py`](../form/form-kernel-rust/router_keepalive_harness.py) — the HTTP/1.1 keep-alive proof: N sequential requests on ONE connection (Content-Length framed, distinct inputs, each correct), pipelined two-in-one-send (leftover bytes carried, none dropped), `Connection: close` honored, HTTP/1.0 default-close back-compat, idle-timeout reaping the connection (worker freed), an idle connection NOT starving the pool, and the per-request handshake saving (reused vs fresh connection). Mock upstream — no production routing.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
