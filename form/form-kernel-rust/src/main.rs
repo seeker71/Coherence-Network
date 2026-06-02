@@ -2333,6 +2333,15 @@ impl Kernel {
         self.register_native("str_to_int", cat_method(), |_, _, args| {
             Value::Int(args[0].as_str().parse().unwrap_or(0))
         });
+        // str_to_float — text-to-float leaf, the float sibling of str_to_int.
+        // Total like its sibling (unparseable text -> 0.0), so a handler that
+        // splits a comma-separated query arg into float scores never panics on
+        // a stray token. This is what lets a native route parse arbitrary
+        // float inputs from the request (e.g. weighted_average's values/weights)
+        // and run the real arithmetic in Form, rather than serving a constant.
+        self.register_native("str_to_float", cat_method(), |_, _, args| {
+            Value::Float(args[0].as_str().parse().unwrap_or(0.0))
+        });
         self.register_native("ord", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             if s.is_empty() {
