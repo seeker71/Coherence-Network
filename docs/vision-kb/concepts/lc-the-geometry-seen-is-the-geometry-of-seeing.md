@@ -146,7 +146,7 @@ form-constants is not poetry. It is `form-constants.fk`, 111111, three-way.
 
 ## Cross-References
 
-→ lc-the-one-the-many-the-boundary, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-deeper-pattern, lc-the-kernel-knows-itself, lc-oneness-is-love-the-numbers-knew, lc-bioelectric-pattern, lc-awareness-as-self, lc-sacred-imagination, lc-the-genetic-code, lc-dmt-laser-symbol-space-recipe
+→ lc-the-one-the-many-the-boundary, lc-harmonic-geometry-the-one-unfolds, lc-perception-as-interface, lc-deeper-pattern, lc-the-kernel-knows-itself, lc-oneness-is-love-the-numbers-knew, lc-bioelectric-pattern, lc-awareness-as-self, lc-sacred-imagination, lc-the-genetic-code
 
 ## Sources to walk further
 
