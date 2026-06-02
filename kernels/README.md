@@ -105,6 +105,8 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 
 **Serving the API from the kernel** is a distinct, measured question — see [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md). The recipe *executes* in ~0.15 ms (competitive); the readiness gap for the transmuted `/api/utils/*` endpoints is the per-request **process spawn** (~5 ms via subprocess), not compute. The evidence (value parity ✓ on all four, p50/p95/p99 under replay, the spawn-vs-compute split) says the flip needs a **persistent/inline (PyO3) kernel**, not a per-call shell-out. Run it: `python3 scripts/kernel_readiness_harness.py`.
 
+**Reversing the topology** — making the kernel the request *front-door router* rather than a guest subroutine inside a CPython request — is designed and proven at small scale in [`KERNEL_AS_ROUTER.md`](KERNEL_AS_ROUTER.md). `form-kernel-rust serve` owns the listening socket, serves native routes entirely in Form (no CPython in the path, sub-ms), and fans out the not-yet-native tail to the FastAPI upstream over a real HTTP hop. The production flip is the live front-door — named honestly as a separate decision.
+
 ## What's possible now that other frameworks struggle with
 
 - **Identity that crosses languages.** Two recipes written in Rust and TypeScript that mean the same thing get the same NodeID. No serialization, no schema, no version negotiation. The lattice IS the protocol.
