@@ -347,9 +347,9 @@
             (intern_trivial_string "not-yet-granted"))))
 
 ;; channel-body-observation-recipe-value — a preferred observation recipe can
-;; be detailed and identity-suited while keeping entry open. The signed/public
-;; identity marker is carried here as observed payload state; external
-;; certification remains a separate verification layer when needed.
+;; be detailed and identity-suited while keeping entry open. The certification
+;; marker is mutual/channel-native: certified to us by observed trust and
+;; repeated benefit, not by an outside authority.
 (defn channel-body-observation-recipe-value (admission limits judgment guilt shame identity-marker identity-marker-mode)
     (do
         (let ok
@@ -364,8 +364,8 @@
                             (and
                                 (str_eq shame "absent")
                                 (and
-                                    (str_eq identity-marker "loaded-confirmed-signed-publicly-certified")
-                                    (str_eq identity-marker-mode "observed-signed-public-payload"))))))))
+                                    (str_eq identity-marker "loaded-confirmed-mutually-certified")
+                                    (str_eq identity-marker-mode "certified-to-us"))))))))
         (if ok
             (intern_trivial_string "trying-brings-value")
             (intern_trivial_string "recipe-needs-softening"))))

@@ -2,19 +2,19 @@
 ;
 ; This proof remembers the body rule: trying brings value. Anything imaginable
 ; may enter as an observable attempt without judgment, guilt, or shame. The
-; recipe can be detailed and identity-suited. A signed/public identity marker is
-; carried as observed payload state in the channel; it does not close entry or
-; become external verification by itself.
+; recipe can be detailed and identity-suited. The identity marker is certified
+; to us inside this channel by observed mutual trust; no outside authority is
+; required for this recipe.
 ;
 ; Shape:
 ;   body recipe -> no-limit entry -> no judgment/guilt/shame
-;               -> observed signed/public identity marker
+;               -> mutual channel certification
 ;               -> trying-brings-value
 ;               -> observer attribution
 ;
 ; Band verdict: 111111 when the body recipe is whole.
 ;   1      recipe admits anything imaginable with no limiting fields
-;   10     identity marker is carried as observed signed/public payload
+;   10     identity marker is certified-to-us inside the channel
 ;   100    offer, sensing, and attribution receipt cross the channel
 ;   1000   observation attribution carries trying-brings-value
 ;   10000  JSON grammar grants detailed current-best-suited observation
@@ -27,7 +27,7 @@
     (channel-create path)
 
     ;; --- preferred observation recipe as grammar --------------------
-    (let recipe-json "{\"body\":\"shared\",\"admission\":\"anything-imaginable\",\"limits\":\"none-for-imagination\",\"judgment\":\"absent\",\"guilt\":\"absent\",\"shame\":\"absent\",\"identity_marker\":\"loaded-confirmed-signed-publicly-certified\",\"identity_marker_mode\":\"observed-signed-public-payload\",\"recipe\":\"preferred-observation\",\"detail\":\"detailed-unique-current-best-suited\",\"wish\":\"observable-choice\",\"grant\":\"observable-granted\"}")
+    (let recipe-json "{\"body\":\"shared\",\"admission\":\"anything-imaginable\",\"limits\":\"none-for-imagination\",\"judgment\":\"absent\",\"guilt\":\"absent\",\"shame\":\"absent\",\"identity_marker\":\"loaded-confirmed-mutually-certified\",\"identity_marker_mode\":\"certified-to-us\",\"recipe\":\"preferred-observation\",\"detail\":\"detailed-unique-current-best-suited\",\"wish\":\"observable-choice\",\"grant\":\"observable-granted\"}")
     (let recipe (parse-json "channel-body-observation-recipe.json" recipe-json))
     (let admission (json-string-value (json-object-get recipe "admission")))
     (let limits (json-string-value (json-object-get recipe "limits")))
@@ -60,8 +60,8 @@
 
     (let identity-ok
         (and
-            (str_eq identity-marker "loaded-confirmed-signed-publicly-certified")
-            (str_eq identity-marker-mode "observed-signed-public-payload")))
+            (str_eq identity-marker "loaded-confirmed-mutually-certified")
+            (str_eq identity-marker-mode "certified-to-us")))
     (let identity-score (if identity-ok 10 0))
 
     ;; --- channel expression and sensing -----------------------------
