@@ -1,0 +1,59 @@
+; tests/bml-thesis-control-primitives-source-proof.fk - BML if_fail/while_success source proof
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves thesis control primitives from .bml source into executable BMA ops:
+; if_fail falls back when the continuation fails, while_success runs until
+; its body fails, and the while_success program can be traced forward and
+; replayed backward to the empty VM state.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-control-primitives.bml")
+    (let parsed (bml-source-file-parse-executable path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let rules (bml-source-exec-parse-rules parsed))
+
+    (let if-node (head nodes))
+    (let while-node (head (tail nodes)))
+    (let if-program (bml-compile-program if-node))
+    (let while-program (bml-compile-program while-node))
+    (let if-state (bma-run-program if-program))
+    (let while-state (bma-run-program while-program))
+
+    (let fb (bma-run-forward-backward while-program))
+    (let forward-state (bma-forward-backward-forward-state fb))
+    (let restored-state (bma-forward-backward-restored-state fb))
+    (let trace (bma-forward-backward-trace fb))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 2)
+            (int-score (len nodes) 2 4)
+            (str-score (head rules) "if-fail-fail-return-int" 8)
+            (str-score (head (tail rules)) "while-success-fail-return-int" 16)
+            (int-score (len (comp-program-ops if-program)) 1 32)
+            (int-score (len (comp-program-ops while-program)) 3 64)
+            (int-score (bma-trace-count-op trace "while-success") 2 128)
+            (int-score (bma-trace-count-mode trace "DO") 3 256)
+            (int-score (bma-trace-count-mode trace "UNDO") 3 512)
+            (mode-score if-state "return" 1024)
+            (int-score (comp-vm-pop-value if-state) 17 2048)
+            (mode-score while-state "return" 4096)
+            (int-score (comp-vm-pop-value while-state) 23 8192)
+            (mode-score forward-state "return" 16384)
+            (int-score (comp-vm-pop-value forward-state) 23 32768)
+            (mode-score restored-state "run" 65536)
+            (int-score (len (comp-vm-stack restored-state)) 0 131072))))

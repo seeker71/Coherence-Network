@@ -1,0 +1,9 @@
+if_fail {
+  return 17;
+}
+fail;
+
+while_success {
+  fail;
+}
+return 23;
