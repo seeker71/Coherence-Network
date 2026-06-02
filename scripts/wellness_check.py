@@ -1607,6 +1607,16 @@ def sense_kernel_api() -> list[str]:
             f"({pct:.1f}%) — the {total_routes - n_served} on pure Python are the growth edge "
             "toward most/all routes through the kernel"
         )
+        # The honest runtime-share nuance: route-COUNT is kernel USAGE, not the
+        # runtime-SHARE that actually left CPython. Even kernel-served routes run
+        # the kernel as a guest-subroutine — routing/binding/validation/response
+        # stay CPython; 0 routes are served kernel-FIRST. Track runtime-share,
+        # not route-count (scripts/runtime_surface_report.py).
+        lines.append(
+            "  vitality: runtime-share — those routes run the kernel as a "
+            "guest-subroutine inside CPython (0 kernel-first); usage and "
+            "runtime-share are distinct axes (scripts/runtime_surface_report.py)"
+        )
     else:
         lines.append(
             f"  vitality: {n_served} routes kernel-served (total-route count unread)"
