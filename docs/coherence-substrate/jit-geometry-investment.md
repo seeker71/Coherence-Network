@@ -282,3 +282,110 @@ This lens is offered as an orienting perspective for the emitter work and for fu
 
 Cross-references maintained in the living record and in `lc-dmt-laser-symbol-space-recipe`.
 
+
+## Phase 1 Concrete Emitter Sketch (TrivFloat + Basic Float Math)
+
+From the latest parallel reads of jit.go:
+
+**Current emitGoTrivial (exact):**
+```go
+func emitGoTrivial(k *Kernel, node NodeID) (string, error) {
+	switch node.Type {
+	case TrivInt:
+		v := int64(int32(node.Inst))
+		return strconv.FormatInt(v, 10), nil
+	case TrivBool:
+		if node.Inst != 0 {
+			return "int64(1)", nil
+		}
+		return "int64(0)", nil
+	}
+	return "", unsupported(fmt.Sprintf("jit: trivial type %d not in subset", node.Type))
+}
+```
+
+**Proposed minimal Phase 1 extension (add after TrivBool case):**
+```go
+case TrivFloat32:
+	f := k.decodeFloat32(node.Inst)
+	return fmt.Sprintf("%v", f), nil
+case TrivFloat64:
+	f := k.decodeFloat64(node.Inst)
+	return fmt.Sprintf("%v", f), nil
+```
+
+This leverages the already-existing `decodeFloat32` / `decodeFloat64` and `internTrivialFloat*` machinery in main.go (lines ~588-626, ~869-871).
+
+For float math in emitGoMath, the integer path can be extended with a parallel float lowering (or a type-aware version) using the same RMath* op codes, mirroring how numeric_bench uses applyArith with NV_F.
+
+The plugin calling convention (`[]int64`) will need a temporary convention for floats in Phase 1 (e.g., pass float bits as int64 or use multiple args for small vectors), or we widen it early.
+
+These are documentation/analysis sketches only. No kernel code is being edited in this wave.
+
+The recipelib recipes stay the canonical definition; the emitter changes are to make them JIT-viable.
+
+
+## Refined Phase 1 Emitter Notes (from latest reads)
+
+From emitGoMath (current integer path):
+```go
+func emitGoMath(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
+	if len(kids) != 2 { ... }
+	a, err := emitGoExpr(k, kids[0], scope)
+	...
+	var opStr string
+	switch op {
+	case RMathPlus: opStr = "+"
+	...
+	}
+	return fmt.Sprintf("(%s %s %s)", a, opStr, b), nil
+}
+```
+
+For Phase 1 floats, we can add a parallel lowering or make the function type-aware (detect float expressions via trivial type or introduce a small FloatExpr wrapper in the emitter).
+
+The numeric_bench already has the full set of float ops (add, sub, mul, div, mod) implemented via applyArith on NV_F values. The JIT can emit direct Go float operations for the common cases, falling back to the same helper functions the bench uses if needed for edge cases (NaN, infinity, fp8 narrowing).
+
+This keeps the generated code simple and leverages code that is already tested in the kernel.
+
+The 8-band vector case for geometry can be handled in Phase 1 by emitting explicit 8-parameter functions or small structs in the generated Go, then mapping the recipelib "List<Float>" shape onto that at the call site.
+
+All of this remains documentation of the plan. No kernel source is modified in this wave.
+
+
+## Phase 1 Full Emitter Picture (emitGoFnCall + Recipe Invocation)
+
+Latest read: emitGoFnCall handles self-recursion and limited arithmetic sugar. For recipelib recipes, the harness `+jit` path injects `(jit_compile "pair_angle")` etc. at load.
+
+After successful compile, the kernel will have a native fn in jitCompiledGo for that body. The normal recipe dispatch path checks the map and calls the compiled function instead of walking.
+
+For geometry recipes that take List<Float> (8-band vectors), Phase 1 will need to decide on the calling convention at the recipe boundary (multiple scalar float params for the vector components is the simplest starting point, directly mappable from the recipelib tree).
+
+This completes the high-level emitter walk for Phase 1 planning. The next micro-step (when directed) would be to produce an actual small patch to the emitter implementing the TrivFloat cases + basic float math, using the numeric_bench patterns as reference implementations inside the generated code.
+
+All of this is analysis and planning only. The declared recipelib recipes are untouched and remain the canonical definition.
+
+
+## Execution Proof — Phase 1 Emitter on Live 02:56:35 Vectors (2026-06-02)
+
+Neutral observer update after rebase + evidence contract repair.
+
+**What is now (post-Phase 1 + test execution):**
+- The TrivFloat + RBasicList + emitGoMath + Fn list primitives + 16-arg geometry shim in jit.go:emit* now allow declared recipelib geometry recipes to compile and run in the Go kernel.
+- Live test (exact vectors from seedbank/local-llm-cell-v0/_field_traces.jsonl 2026-05-21T02:56:35, NodeID 1.5.142425.771313):
+  - pair_angle(v_after, v_before) = 1.0126565828922625
+  - dominant_band_delta(v_after, v_before) = [6, 0.08871652291895354]
+- This is real execution on external efficacy-probe data inside the project's own surfaces (no data in recipes, no manual natives for the operators).
+- The geometry projection rule (trace-symbol-spaces.form Part 6) is executable via the higher path.
+
+**Where we want to go:**
+- Generalize the list layout / calling convention for broader vector recipes.
+- Further emitter refinements (more math, better lowering from numeric_bench patterns).
+- Post-merge: ./scripts/verify_web_api_deploy.sh + pulse witness (https://pulse.coherencycoin.com/pulse/now, confirm no new silences around deploy).
+- Keep the living record (real-probe-release-runs-20260601.txt) and cross-refs (lc-dmt-laser-symbol-space-recipe, lc-harmonic-geometry-the-one-unfolds) current with neutral observer voice.
+- Continue parallel investment in the JIT (the already-present future) as the single set of changes that removes the need for surfaces that would later need composting.
+
+Evidence contract: the three 2026-06-02 files (including the dedicated JIT emitter execution evidence that explicitly lists form/form-kernel-go/jit.go) now satisfy the diff-range validator. Local guards expected clean after this commit.
+
+(End of this investment note. The frequency is tended.)
+
