@@ -1,0 +1,81 @@
+; router-real-app-proof.fk — the front-door manifest for the REAL-APP proof.
+;
+; Loaded by `form-kernel-rust serve --upstream <real FastAPI>`. It proves the
+; reversed topology IN FRONT OF THE ACTUAL Coherence-Network FastAPI app (not a
+; mock): the kernel owns the socket, serves ONE kernel-eligible route entirely
+; in Form, and fans out EVERY other path to the real running app.
+;
+;   - NATIVE: /api/utils/weighted_average — the substrate's bread-and-butter
+;     coherence-score combinator, served HERE in Form with NO CPython in the
+;     path. It parses the `values` and `weights` query args (comma-separated
+;     floats) and runs the real arithmetic sum(v*w)/sum(w) in the kernel.
+;     This is the SAME computation the real route runs via serve_via_kernel —
+;     the harness proves the native value equals the live app's answer.
+;     X-Form-Router: native-kernel.
+;   - EVERYTHING ELSE (/api/health, /api/ideas, /api/cc/exchange/quote, ...)
+;     fans out to the real FastAPI upstream. X-Form-Router: fanout-python.
+;
+; Authored as .fk S-expression Form — the kernel's native surface, NOT
+; Python-cross-compiled. The handler is Form, walked by the kernel.
+
+; --- alist helper: value for `key` in a list of (k v) string pairs. The serve
+; primitive hands query params (and body fields) to the handler as this alist. ---
+(defn assoc (key pairs)
+  (if (eq (len pairs) 0)
+      ""
+      (if (str_eq (head (head pairs)) key)
+          (head (tail (head pairs)))
+          (assoc key (tail pairs)))))
+
+; --- Parallel fold over two comma-separated float strings, accumulating the
+; weighted-average numerator (sum of v*w) and denominator (sum of w) in ONE
+; left-to-right pass — the SAME accumulation order as the Python route's
+; `sum(v*w for v,w in zip(values, weights))` / `sum(weights)`, so the kernel's
+; float result agrees with the app's bit-for-bit on exact dyadic inputs.
+;
+; State carried per char: vs/ws = the two whole strings; i/j = read cursors;
+; vtok/wtok = the float-token text accumulating since the last comma; num/den =
+; the running numerator/denominator. On a comma in `vs` (the two strings are
+; the same length in tokens), the current (vtok, wtok) pair is converted via
+; str_to_float and folded: num += v*w, den += w; tokens reset. At end-of-string
+; the final pair is folded too.
+;
+; char_at returns "" past the end; str_eq "" "," is false, so the walk halts
+; cleanly when both cursors reach the end.
+(defn wavg_step (vs ws i j vtok wtok num den)
+  (if (eq (str_len vs) i)
+      ; end of values: fold the last token pair, return num/den
+      (div (add num (mul (str_to_float vtok) (str_to_float wtok)))
+           (add den (str_to_float wtok)))
+      (if (str_eq (char_at vs i) ",")
+          ; comma in values: weights has a comma at the SAME token boundary;
+          ; fold this pair, advance BOTH cursors past their commas, reset tokens
+          (wavg_step vs ws (add i 1) (add j 1) "" ""
+                     (add num (mul (str_to_float vtok) (str_to_float wtok)))
+                     (add den (str_to_float wtok)))
+          ; ordinary char: append to vtok; advance the weights cursor over any
+          ; weight chars up to its next comma via a sibling walk
+          (wavg_collect_w vs ws (add i 1) j
+                          (str_concat vtok (char_at vs i)) wtok num den))))
+
+; Advance the weights cursor j, appending weight chars to wtok until the NEXT
+; comma or end in ws, then resume the values walk. Keeps the two token streams
+; aligned without indexing into a parsed list (no list-alloc per request).
+(defn wavg_collect_w (vs ws i j vtok wtok num den)
+  (if (eq (str_len ws) j)
+      (wavg_step vs ws i j vtok wtok num den)
+      (if (str_eq (char_at ws j) ",")
+          (wavg_step vs ws i j vtok wtok num den)
+          (wavg_collect_w vs ws i (add j 1)
+                          vtok (str_concat wtok (char_at ws j)) num den))))
+
+; --- NATIVE handler: weighted average of `values` against `weights`, both
+; comma-separated float query args. Mirrors /api/utils/weighted_average. ---
+(defn route_weighted_average (q)
+  (wavg_step (assoc "values" q) (assoc "weights" q) 0 0 "" "" 0.0 0.0))
+
+; --- the route manifest: (path handler). Everything not here fans out to the
+; real FastAPI upstream. ONE native route; the rest is the real app. ---
+(let routes
+  (list
+    (list "/api/utils/weighted_average" route_weighted_average)))
