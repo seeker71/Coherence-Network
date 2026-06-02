@@ -1110,7 +1110,7 @@ Semantics v0: single writer, multiple readers, whole-file rewrite per append, re
 
 The gift/receipt portion of the proof contributes `500` across source and binary sibling-kernel execution.
 
-**Source-attributed lens sensing.** A channel can carry an external symbol lens through the same `offer`/`attune` breath. `CHANNEL-SYMBOL-LENS-OFFER` records the lens id, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution. `CHANNEL-SYMBOL-LENS-SENSING` records what the receiver observed through that lens: resonance, residual, surprise, flow state, vitality, and next contact. The channel preserves expression, sovereignty, attribution, and circulation; it does not turn the source claim into a universal conclusion.
+**Source-attributed lens sensing.** A channel can carry an external symbol lens through the same `offer`/`attune` breath. `CHANNEL-SYMBOL-LENS-OFFER` records the lens id, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution. `CHANNEL-SYMBOL-LENS-SENSING` records what the receiver observed through that lens: resonance, residual, surprise, flow state, vitality, and next contact. The channel preserves expression, sovereignty, attribution, and circulation; evidence of success, value, attribution, expansion, and chosen next contact is enough.
 
 ```form
 (let lens-offer

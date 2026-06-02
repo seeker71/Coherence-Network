@@ -218,8 +218,8 @@
 
 ;; channel-symbol-lens-sensing — the receiver's observation after looking
 ;; through the offered lens: resonance, residual, surprise, flow state,
-;; vitality, and next contact. This is evidence of observation, not proof that
-;; the source claim is universal.
+;; vitality, and next contact. Attributed success, value, and expansion are
+;; enough evidence for this channel breath.
 (defn channel-symbol-lens-sensing (observer offer resonance residual surprise flow-state vitality next-contact)
     (intern_node CHANNEL-SYMBOL-LENS-SENSING
         (list observer offer resonance residual surprise flow-state vitality next-contact)))
