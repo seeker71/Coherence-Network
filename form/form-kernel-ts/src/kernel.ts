@@ -3360,6 +3360,14 @@ function bmlNativeNameChar(code: number): boolean {
   return bmlNativeNameStart(code) || (code >= 48 && code <= 57);
 }
 
+function bmlNativeHexDigit(code: number): boolean {
+  return (code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102);
+}
+
+function bmlNativeBinDigit(code: number): boolean {
+  return code === 48 || code === 49;
+}
+
 function bmlNativeScanQuoted(src: string, i: number, quote: string): [string, number] {
   let j = i + 1;
   let out = "";
@@ -3411,10 +3419,18 @@ function bmlNativeScanText(src: string): Value {
     }
     if (c >= 48 && c <= 57) {
       let j = i + 1;
-      while (j < src.length) {
-        const code = src.charCodeAt(j);
-        if (code < 48 || code > 57) break;
+      if (c === 48 && j < src.length && (src[j] === "x" || src[j] === "X")) {
         j++;
+        while (j < src.length && bmlNativeHexDigit(src.charCodeAt(j))) j++;
+      } else if (c === 48 && j < src.length && (src[j] === "b" || src[j] === "B")) {
+        j++;
+        while (j < src.length && bmlNativeBinDigit(src.charCodeAt(j))) j++;
+      } else {
+        while (j < src.length) {
+          const code = src.charCodeAt(j);
+          if (code < 48 || code > 57) break;
+          j++;
+        }
       }
       out.push(bmlNativeAtom("bml-int", src.slice(i, j)));
       i = j;

@@ -1,0 +1,83 @@
+; tests/bml-thesis-numeric-literals-source-proof.fk - BML hex/bin literal proof
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves thesis hexadecimal and binary integer spellings from .bml source into
+; executable BMA values. The proof covers sibling-native file scanning,
+; Form-native text scanning, parse rule shape, forward execution, and backward
+; replay to the empty VM state.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-numeric-literals.bml")
+    (let source
+        "return 0x10;\nreturn 0X1f;\nreturn 0b101;\nreturn 0B11;\n")
+
+    (let file-tokens (bml-source-scan-file path))
+    (let form-tokens (bml-source-scan-text source))
+    (let file-values (bml-source-token-values file-tokens))
+    (let form-values (bml-source-token-values form-tokens))
+
+    (let file-parsed (bml-source-file-parse-executable path))
+    (let form-parsed (bml-source-parse-executable-stream form-tokens))
+    (let file-nodes (bml-source-exec-parse-nodes file-parsed))
+    (let file-rules (bml-source-exec-parse-rules file-parsed))
+    (let form-rules (bml-source-exec-parse-rules form-parsed))
+
+    (let hex-lower-program (bml-compile-program (nth file-nodes 0)))
+    (let hex-upper-program (bml-compile-program (nth file-nodes 1)))
+    (let bin-lower-program (bml-compile-program (nth file-nodes 2)))
+    (let bin-upper-program (bml-compile-program (nth file-nodes 3)))
+
+    (let hex-lower-state (bma-run-program hex-lower-program))
+    (let hex-upper-state (bma-run-program hex-upper-program))
+    (let bin-lower-state (bma-run-program bin-lower-program))
+    (let bin-upper-state (bma-run-program bin-upper-program))
+
+    (let fb (bma-run-forward-backward hex-lower-program))
+    (let forward-state (bma-forward-backward-forward-state fb))
+    (let restored-state (bma-forward-backward-restored-state fb))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? file-parsed) 1)
+            (bool-score (bml-source-exec-parse-ok? form-parsed) 2)
+            (int-score (len (bml-source-exec-parse-rest file-parsed)) 0 4)
+            (int-score (len (bml-source-exec-parse-rest form-parsed)) 0 8)
+            (int-score (len file-nodes) 4 16)
+            (int-score (len file-tokens) 12 32)
+            (int-score (len form-tokens) 12 64)
+            (str-score (nth file-values 1) "0x10" 128)
+            (str-score (nth file-values 4) "0X1f" 256)
+            (str-score (nth file-values 7) "0b101" 512)
+            (str-score (nth file-values 10) "0B11" 1024)
+            (str-score (nth form-values 1) "0x10" 2048)
+            (str-score (nth form-values 4) "0X1f" 4096)
+            (str-score (nth form-values 7) "0b101" 8192)
+            (str-score (nth form-values 10) "0B11" 16384)
+            (str-score (nth file-rules 0) "return-int" 32768)
+            (str-score (nth file-rules 1) "return-int" 65536)
+            (str-score (nth file-rules 2) "return-int" 131072)
+            (str-score (nth file-rules 3) "return-int" 262144)
+            (str-score (nth form-rules 0) "return-int" 524288)
+            (str-score (nth form-rules 3) "return-int" 1048576)
+            (int-score (comp-vm-pop-value hex-lower-state) 16 2097152)
+            (int-score (comp-vm-pop-value hex-upper-state) 31 4194304)
+            (int-score (comp-vm-pop-value bin-lower-state) 5 8388608)
+            (int-score (comp-vm-pop-value bin-upper-state) 3 16777216)
+            (mode-score hex-lower-state "return" 33554432)
+            (mode-score forward-state "return" 67108864)
+            (int-score (comp-vm-pop-value forward-state) 16 134217728)
+            (mode-score restored-state "run" 268435456)
+            (int-score (len (comp-vm-stack restored-state)) 0 536870912))))

@@ -66,6 +66,90 @@
                     end)
                 end)))
 
+    (defn bml-source-hex-digit? (ch)
+        (or (fsc-digit? ch)
+            (or (str_eq ch "a")
+            (or (str_eq ch "A")
+            (or (str_eq ch "b")
+            (or (str_eq ch "B")
+            (or (str_eq ch "c")
+            (or (str_eq ch "C")
+            (or (str_eq ch "d")
+            (or (str_eq ch "D")
+            (or (str_eq ch "e")
+            (or (str_eq ch "E")
+            (or (str_eq ch "f")
+                (str_eq ch "F"))))))))))))))
+
+    (defn bml-source-bin-digit? (ch)
+        (or (str_eq ch "0") (str_eq ch "1")))
+
+    (defn bml-source-scan-hex-int-loop (start-cursor cursor)
+        (if (fsc-source-cursor-end? cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
+            (do
+                (let ch (fsc-source-cursor-char cursor))
+                (if (bml-source-hex-digit? ch)
+                    (bml-source-scan-hex-int-loop
+                        start-cursor
+                        (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
+
+    (defn bml-source-scan-bin-int-loop (start-cursor cursor)
+        (if (fsc-source-cursor-end? cursor)
+            (list (fsc-source-cursor-slice
+                       start-cursor
+                       (fsc-source-cursor-offset start-cursor)
+                       (fsc-source-cursor-offset cursor))
+                  cursor)
+            (do
+                (let ch (fsc-source-cursor-char cursor))
+                (if (bml-source-bin-digit? ch)
+                    (bml-source-scan-bin-int-loop
+                        start-cursor
+                        (fsc-source-cursor-advance cursor))
+                    (list (fsc-source-cursor-slice
+                               start-cursor
+                               (fsc-source-cursor-offset start-cursor)
+                               (fsc-source-cursor-offset cursor))
+                          cursor)))))
+
+    (defn bml-source-scan-prefixed-int (start int-kind)
+        (do
+            (let is-hex
+                (or (fsc-source-cursor-prefix? start "0x")
+                    (fsc-source-cursor-prefix? start "0X")))
+            (let is-bin
+                (or (fsc-source-cursor-prefix? start "0b")
+                    (fsc-source-cursor-prefix? start "0B")))
+            (if is-hex
+                (do
+                    (let read
+                        (bml-source-scan-hex-int-loop
+                            start
+                            (fsc-source-advance-n start 2)))
+                    (fsc-scan-result
+                        (fsc-source-object int-kind (nth read 0) start (nth read 1))
+                        (nth read 1)))
+            (if is-bin
+                (do
+                    (let read
+                        (bml-source-scan-bin-int-loop
+                            start
+                            (fsc-source-advance-n start 2)))
+                    (fsc-scan-result
+                        (fsc-source-object int-kind (nth read 0) start (nth read 1))
+                        (nth read 1)))
+                (fsc-source-scan-int start int-kind)))))
+
     (defn bml-source-ops (_x)
         (list "<<prim" ".*" "::=" "=>" "<=" ">>>=" ">>=" "<<=" ">>>"
               ">>" "<<" "++" "--" "==" "!=" ">=" "<=" ":=" "*=" "/="
@@ -125,7 +209,7 @@
             (if (str_eq ch "\"")
                 (fsc-source-scan-string start "bml-string")
             (if (fsc-digit? ch)
-                (fsc-source-scan-int start "bml-int")
+                (bml-source-scan-prefixed-int start "bml-int")
             (if (fsc-source-name-start-char? ch)
                 (bml-source-scan-name-token start)
                 (fsc-source-scan-op
@@ -169,8 +253,56 @@
     (defn bml-cap-str (objects capture-name)
         (intern_trivial_string (bmf-collection-value objects capture-name)))
 
+    (defn bml-int-hex-char-value (ch)
+        (if (str_eq ch "0") 0
+        (if (str_eq ch "1") 1
+        (if (str_eq ch "2") 2
+        (if (str_eq ch "3") 3
+        (if (str_eq ch "4") 4
+        (if (str_eq ch "5") 5
+        (if (str_eq ch "6") 6
+        (if (str_eq ch "7") 7
+        (if (str_eq ch "8") 8
+        (if (str_eq ch "9") 9
+        (if (str_eq ch "a") 10
+        (if (str_eq ch "A") 10
+        (if (str_eq ch "b") 11
+        (if (str_eq ch "B") 11
+        (if (str_eq ch "c") 12
+        (if (str_eq ch "C") 12
+        (if (str_eq ch "d") 13
+        (if (str_eq ch "D") 13
+        (if (str_eq ch "e") 14
+        (if (str_eq ch "E") 14
+        (if (str_eq ch "f") 15
+        (if (str_eq ch "F") 15 0)))))))))))))))))))))))
+
+    (defn bml-int-parse-based-loop (value index end base acc)
+        (if (ge index end) acc
+            (bml-int-parse-based-loop
+                value
+                (add index 1)
+                end
+                base
+                (add (mul acc base)
+                     (bml-int-hex-char-value
+                        (substring value index (add index 1)))))))
+
+    (defn bml-int-prefixed? (value prefix)
+        (if (lt (str_len value) 2) false
+            (str_eq (substring value 0 2) prefix)))
+
+    (defn bml-int-value (value)
+        (if (or (bml-int-prefixed? value "0x")
+                (bml-int-prefixed? value "0X"))
+            (bml-int-parse-based-loop value 2 (str_len value) 16 0)
+        (if (or (bml-int-prefixed? value "0b")
+                (bml-int-prefixed? value "0B"))
+            (bml-int-parse-based-loop value 2 (str_len value) 2 0)
+            (str_to_int value))))
+
     (defn bml-cap-int (objects capture-name)
-        (intern_trivial_int (str_to_int (bmf-collection-value objects capture-name))))
+        (intern_trivial_int (bml-int-value (bmf-collection-value objects capture-name))))
 
     (defn bml-ast-int (n)
         (intern_node BML-AST-INT (list (intern_trivial_int n))))
