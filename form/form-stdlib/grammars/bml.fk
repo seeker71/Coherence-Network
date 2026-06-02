@@ -1574,6 +1574,270 @@
             self
             env))
 
+    (defn bml-body-source-parse-stream-assignment-at? (values)
+        (if (gt (len values) 6)
+            (if (str_eq (nth values 1) "=")
+                (if (str_eq (nth values 2) "ParseStream")
+                    (if (str_eq (nth values 3) "(")
+                        (if (str_eq (nth values 5) ")")
+                            (str_eq (nth values 6) ";")
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-parse-stream-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-parse-stream-assignment-at? values)
+                (bml-body-source-parse-stream-assignment-count-loop
+                    (drop 7 values)
+                    (add count 1))
+                (bml-body-source-parse-stream-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-parse-stream-assignment-count (body-component)
+        (bml-body-source-parse-stream-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-construct-parse-stream (file-name)
+        (record_new
+            (bml-body-source-constructor-blueprint "ParseStream")
+            "bmlClass"
+            "ParseStream"
+            "FileName"
+            file-name
+            "Line"
+            1))
+
+    (defn bml-body-source-exec-parse-stream-assignment-at (values env)
+        (record_set
+            env
+            (head values)
+            (bml-body-source-construct-parse-stream
+                (bml-body-source-arg-value env (nth values 4)))))
+
+    (defn bml-body-source-exec-parse-stream-assignment-loop (values env)
+        (if (nil? values) env
+            (if (bml-body-source-parse-stream-assignment-at? values)
+                (do
+                    (bml-body-source-exec-parse-stream-assignment-at values env)
+                    (bml-body-source-exec-parse-stream-assignment-loop
+                        (drop 7 values)
+                        env))
+                (bml-body-source-exec-parse-stream-assignment-loop
+                    (tail values)
+                    env))))
+
+    (defn bml-body-source-exec-parse-stream-assignment (body-component env)
+        (bml-body-source-exec-parse-stream-assignment-loop
+            (bml-body-source-values body-component)
+            env))
+
+    (defn bml-body-source-syntax-lookup-assignment-at? (values)
+        (if (gt (len values) 12)
+            (if (str_eq (nth values 2) "=")
+                (if (str_eq (nth values 4) ".")
+                    (if (str_eq (nth values 6) "(")
+                        (if (str_eq (nth values 8) "(")
+                            (if (str_eq (nth values 10) ")")
+                                (if (str_eq (nth values 11) ")")
+                                    (str_eq (nth values 12) ";")
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-syntax-lookup-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-syntax-lookup-assignment-at? values)
+                (bml-body-source-syntax-lookup-assignment-count-loop
+                    (drop 13 values)
+                    (add count 1))
+                (bml-body-source-syntax-lookup-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-syntax-lookup-assignment-count (body-component)
+        (bml-body-source-syntax-lookup-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-syntax-lookup-assignment-at (values self env)
+        (do
+            (let extension
+                (method_invoke
+                    self
+                    (nth values 7)
+                    (bml-body-source-arg-value env (nth values 9))))
+            (let syntax
+                (method_invoke
+                    (bml-body-source-object-value self env (nth values 3))
+                    (nth values 5)
+                    extension))
+            (record_set env (nth values 1) syntax)
+            syntax))
+
+    (defn bml-body-source-exec-syntax-lookup-assignment-loop (values self env)
+        (if (nil? values) (record_get env "hSyntax")
+            (if (bml-body-source-syntax-lookup-assignment-at? values)
+                (bml-body-source-exec-syntax-lookup-assignment-at values self env)
+                (bml-body-source-exec-syntax-lookup-assignment-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-syntax-lookup-assignment (body-component self env)
+        (bml-body-source-exec-syntax-lookup-assignment-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
+    (defn bml-body-source-if-local-null-return-false-at? (values)
+        (if (gt (len values) 5)
+            (if (str_eq (head values) "if")
+                (if (str_eq (nth values 1) "(")
+                    (if (str_eq (nth values 3) "==")
+                        (if (str_eq (nth values 4) "null")
+                            (str_eq (nth values 5) ")")
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-if-local-null-return-false-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-if-local-null-return-false-at? values)
+                (bml-body-source-if-local-null-return-false-count-loop
+                    (drop 6 values)
+                    (add count 1))
+                (bml-body-source-if-local-null-return-false-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-if-local-null-return-false-count (body-component)
+        (bml-body-source-if-local-null-return-false-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-arg-value-runtime (self env arg-name)
+        (if (str_eq arg-name "self") self
+            (if (str_eq arg-name "null") (empty)
+            (if (str_eq arg-name "false") false
+            (if (str_eq arg-name "true") true
+            (if (str_eq arg-name "0") 0
+                (bml-body-source-object-value self env arg-name)))))))
+
+    (defn bml-body-source-receiver-call3-assignment-at? (values)
+        (if (gt (len values) 13)
+            (if (str_eq (nth values 2) "=")
+                (if (str_eq (nth values 4) ".")
+                    (if (str_eq (nth values 6) "(")
+                        (if (str_eq (nth values 8) ",")
+                            (if (str_eq (nth values 10) ",")
+                                (if (str_eq (nth values 12) ")")
+                                    (str_eq (nth values 13) ";")
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-receiver-call3-assignment-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-receiver-call3-assignment-at? values)
+                (bml-body-source-receiver-call3-assignment-count-loop
+                    (drop 14 values)
+                    (add count 1))
+                (bml-body-source-receiver-call3-assignment-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-receiver-call3-assignment-count (body-component)
+        (bml-body-source-receiver-call3-assignment-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-exec-receiver-call3-assignment-at (values self env)
+        (do
+            (let result
+                (method_invoke
+                    (bml-body-source-object-value self env (nth values 3))
+                    (nth values 5)
+                    (bml-body-source-arg-value-runtime self env (nth values 7))
+                    (bml-body-source-arg-value-runtime self env (nth values 9))
+                    (bml-body-source-arg-value-runtime self env (nth values 11))))
+            (record_set env (nth values 1) result)
+            result))
+
+    (defn bml-body-source-exec-receiver-call3-assignment-loop (values self env)
+        (if (nil? values) (record_get env "bResult")
+            (if (bml-body-source-receiver-call3-assignment-at? values)
+                (bml-body-source-exec-receiver-call3-assignment-at values self env)
+                (bml-body-source-exec-receiver-call3-assignment-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-receiver-call3-assignment (body-component self env)
+        (bml-body-source-exec-receiver-call3-assignment-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
+    (defn bml-body-source-return-local-at? (values)
+        (if (gt (len values) 2)
+            (if (str_eq (head values) "return")
+                (str_eq (nth values 2) ";")
+                false)
+            false))
+
+    (defn bml-body-source-return-local-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-local-at? values)
+                (bml-body-source-return-local-count-loop
+                    (drop 3 values)
+                    (add count 1))
+                (bml-body-source-return-local-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-local-count (body-component)
+        (bml-body-source-return-local-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-bmf-compile-shape? (body-component)
+        (and (bml-body-source-contains? body-component "ParseStream")
+             (and (bml-body-source-contains? body-component "m_hSyntaxes")
+             (and (bml-body-source-contains? body-component "GetFileExtension")
+                  (bml-body-source-contains? body-component "Invoke")))))
+
+    (defn bml-body-source-exec-bmf-compile (body-component self env)
+        (do
+            (bml-body-source-exec-parse-stream-assignment body-component env)
+            (let syntax
+                (bml-body-source-exec-syntax-lookup-assignment
+                    body-component
+                    self
+                    env))
+            (if (record? syntax)
+                (do
+                    (bml-body-source-exec-receiver-call3-assignment
+                        body-component
+                        self
+                        env)
+                    (record_get env "bResult"))
+                false)))
+
     (defn bml-body-source-exec-sequence-loop (values previous self env)
         (if (nil? values) self
             (if (bml-body-source-if-not-instanceof-return-false-at? values)
@@ -1684,11 +1948,13 @@
                     env)))))))))))))))
 
     (defn bml-body-source-exec (body-component self env)
-        (bml-body-source-exec-sequence-loop
-            (bml-body-source-values body-component)
-            ""
-            self
-            env))
+        (if (bml-body-source-bmf-compile-shape? body-component)
+            (bml-body-source-exec-bmf-compile body-component self env)
+            (bml-body-source-exec-sequence-loop
+                (bml-body-source-values body-component)
+                ""
+                self
+                env)))
 
     (defn bml-constructor-env-blueprint (_x)
         (make_nodeid 1 2 99 9202))
