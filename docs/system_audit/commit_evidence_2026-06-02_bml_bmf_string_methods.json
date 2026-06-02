@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/bml-bmf-class-body-20260602",
+  "commit_scope": "Execute real BMF-grammar.bml AsString and AsBMLString BodySource methods in Form.",
+  "files_owned": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-string-methods-proof.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-02_bml_bmf_string_methods.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-string-methods-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-grammar-body-source-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-main-call-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-char-escapes-source-proof.fk",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "git diff --check"
+    ],
+    "notes": "The BMF string methods proof returns 4095 across Go/Rust/TypeScript kernels. Existing BMF grammar body, Main call, StartResultStack assignment, and char escape proofs remain green: 37, 2047, 2047, and 2147483647. The kernel-native audit reports no new unexpected BML/BMF host-native semantics."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The real BMF-grammar.bml AsString and AsBMLString method bodies are extracted as BodySource components and executed by Form-side helper semantics for thesis escape conversion behavior.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-string-methods-proof.fk",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This closes focused BodySource execution for two real BMF-grammar.bml string helper bodies. Full BML thesis parity remains open: generic expression/member/index/call lowering, for-loop execution, switch/select dispatch, complete BMF grammar body semantics, and whole companion-corpus native execution are still required."
+  },
+  "idea_ids": [
+    "bml-thesis-parity",
+    "bml-in-bml"
+  ],
+  "spec_ids": [
+    "bml-full-support"
+  ],
+  "task_ids": [
+    "bml-bmf-string-methods-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "proof-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-thesis-bmf-string-methods-proof.fk parses the real BMF-grammar.bml file, extracts AsString and AsBMLString methods, and executes their BodySource semantics.",
+    "form/form-stdlib/grammars/bml.fk keeps the execution helpers in Form rather than adding non-primitive BML/BMF logic to the kernels.",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md records the newly proven focused string-helper execution and keeps remaining full-parity gaps explicit."
+  ],
+  "change_files": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-string-methods-proof.fk",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/commit_evidence_2026-06-02_bml_bmf_string_methods.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
