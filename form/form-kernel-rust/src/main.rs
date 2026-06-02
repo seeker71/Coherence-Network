@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
@@ -6574,6 +6574,92 @@ fn handle_request(
 // THIS value and the worker count (cli_serve --workers).
 const KEEPALIVE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 
+// Fan-out hop timeouts so a SLOW or HUNG upstream cannot pin a worker forever.
+// The client-hop already reaps an IDLE connection (KEEPALIVE_IDLE_TIMEOUT above);
+// these are the symmetric robustness on the UPSTREAM hop, but for a HUNG (not
+// merely idle) upstream they must bound the ACTIVE request — connect, write, and
+// read each get a deadline, and an expiry returns a clean 504 to the client
+// instead of blocking the worker indefinitely. Without these, the worker pool
+// (--workers) starves under load: enough hung fan-outs and no worker is free to
+// serve other requests.
+//
+//   - CONNECT (~5s): the upstream must accept the TCP connection within this; a
+//     non-listening / blackholed / unreachable upstream addr that never completes
+//     the handshake times out here rather than blocking forever.
+//   - READ (~30s): the TOTAL per-read deadline once connected. 30s is long enough
+//     for a legitimately slow endpoint to respond, short enough that a genuinely
+//     hung upstream (accepts the connection but never sends the response) frees
+//     the worker rather than pinning it. A read that hits TimedOut/WouldBlock is
+//     treated as an upstream timeout -> 504.
+//   - WRITE (~30s): so a stuck write (an upstream that accepts but never drains
+//     its receive buffer) cannot hang the worker either.
+//
+// These are sane DEFAULTS; production tuning of the exact values (and per-route
+// timeouts) is a later breath. Overridable for testing/ops via the env vars
+// COH_FANOUT_CONNECT_TIMEOUT_MS / COH_FANOUT_READ_TIMEOUT_MS (the write timeout
+// tracks the read one) so a harness can prove the timeout path in seconds without
+// a separate build; unset -> the production defaults below.
+const FANOUT_CONNECT_TIMEOUT_DEFAULT_MS: u64 = 5_000;
+const FANOUT_READ_TIMEOUT_DEFAULT_MS: u64 = 30_000;
+
+fn fanout_timeout_ms(env_key: &str, default_ms: u64) -> Duration {
+    let ms = env::var(env_key)
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|&v| v > 0)
+        .unwrap_or(default_ms);
+    Duration::from_millis(ms)
+}
+
+fn fanout_connect_timeout() -> Duration {
+    fanout_timeout_ms("COH_FANOUT_CONNECT_TIMEOUT_MS", FANOUT_CONNECT_TIMEOUT_DEFAULT_MS)
+}
+
+fn fanout_read_timeout() -> Duration {
+    fanout_timeout_ms("COH_FANOUT_READ_TIMEOUT_MS", FANOUT_READ_TIMEOUT_DEFAULT_MS)
+}
+
+// A fan-out hop failure, classified so the caller knows whether to RETRY or 504:
+//   - Timeout: the upstream is reachable but SLOW/HUNG — connect, write, or read
+//     hit its deadline (TimedOut / WouldBlock). Retrying does NOT help (the
+//     upstream is hung, a retry only doubles the latency before the same timeout),
+//     so this becomes a 504 Gateway Timeout, never a retry.
+//   - Closed: the connection was CLOSED by the upstream (immediate EOF / broken
+//     pipe on a pooled-connection reuse — the upstream idle-closed it). This is
+//     the stale-pool path: a fresh connection + ONE retry of the same request.
+//   - Other: a resolve failure, a malformed response, an oversized body — neither
+//     a timeout nor a stale-close; surfaced as a 502-class error, not retried.
+// This is what keeps a timeout from becoming an infinite retry loop: only Closed
+// retries (once), and only on a POOLED connection; a Timeout is terminal -> 504.
+enum FanoutError {
+    Timeout(String),
+    Closed(String),
+    Other(String),
+}
+
+// Classify an io::Error from a fan-out connect/write/read into the retry-vs-504
+// decision:
+//   - TimedOut / WouldBlock -> Timeout. TimedOut is the connect deadline (and the
+//     read/write deadline on Windows); WouldBlock is the read/write deadline on
+//     Unix (set_read_timeout/set_write_timeout surface as WouldBlock there). A
+//     hung upstream lands here -> 504, never retried.
+//   - BrokenPipe / ConnectionReset / ConnectionAborted / UnexpectedEof -> Closed.
+//     A POOLED connection the upstream already closed can surface as a write EPIPE
+//     or a reset BEFORE the read sees EOF; treating these as Closed preserves the
+//     stale-pool reconnect+retry-once path (the same robustness the pre-timeout
+//     code had when ANY pooled error retried).
+//   - everything else -> Other (a 502-class error; not retried).
+fn classify_io_error(e: &std::io::Error, context: &str) -> FanoutError {
+    use std::io::ErrorKind::*;
+    match e.kind() {
+        TimedOut | WouldBlock => FanoutError::Timeout(format!("{}: {}", context, e)),
+        BrokenPipe | ConnectionReset | ConnectionAborted | UnexpectedEof => {
+            FanoutError::Closed(format!("{}: {}", context, e))
+        }
+        _ => FanoutError::Other(format!("{}: {}", context, e)),
+    }
+}
+
 // Serve a connection's full keep-alive LIFETIME: repeatedly handle requests on
 // the SAME TcpStream until the client closes it, an error/EOF arrives, the idle
 // read-timeout fires, or a response forces close (client `Connection: close`,
@@ -7296,7 +7382,7 @@ struct UpstreamResponse {
 //
 // Errors (a broken pipe, an immediate EOF before any byte) propagate up so the
 // caller can transparently reconnect+retry on a stale pooled connection.
-fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<UpstreamResponse, String> {
+fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<UpstreamResponse, FanoutError> {
     // Phase 1: read until the header terminator, seeding from carried bytes.
     let mut raw: Vec<u8> = carry;
     let mut buf = [0u8; 8192];
@@ -7306,9 +7392,13 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
             match stream.read(&mut buf) {
                 Ok(0) => {
                     // EOF before any header terminator. If NOTHING arrived this
-                    // was a dead/stale connection — signal so the caller retries.
+                    // was a dead/stale connection — signal CLOSED so the caller
+                    // reconnects+retries ONCE (distinct from a Timeout, which is
+                    // terminal). This is the pooled-connection stale-close path.
                     if raw.is_empty() {
-                        return Err("upstream closed before response (stale connection)".to_string());
+                        return Err(FanoutError::Closed(
+                            "upstream closed before response (stale connection)".to_string(),
+                        ));
                     }
                     // Some bytes but no terminator — a malformed/truncated head.
                     break raw.len();
@@ -7319,10 +7409,15 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
                         break t;
                     }
                     if raw.len() > MAX_BODY_BYTES {
-                        return Err("upstream response head too large".to_string());
+                        return Err(FanoutError::Other(
+                            "upstream response head too large".to_string(),
+                        ));
                     }
                 }
-                Err(e) => return Err(format!("read upstream response head: {}", e)),
+                // A read deadline (FANOUT_READ_TIMEOUT) surfaces here as
+                // WouldBlock/TimedOut on a HUNG upstream that accepted the
+                // connection but never sent the head -> Timeout -> 504.
+                Err(e) => return Err(classify_io_error(&e, "read upstream response head")),
             }
         },
     };
@@ -7351,18 +7446,24 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
     // Phase 2: frame the body. Content-Length is the path that allows reuse.
     if let Some(total) = parse_content_length(&head) {
         if total > MAX_BODY_BYTES {
-            return Err("upstream response body too large".to_string());
+            return Err(FanoutError::Other(
+                "upstream response body too large".to_string(),
+            ));
         }
         let mut body: Vec<u8> = raw[body_start..].to_vec();
         while body.len() < total {
             match stream.read(&mut buf) {
                 Ok(0) => {
                     // Upstream closed before the full framed body — the response
-                    // is incomplete; cannot be trusted or reused.
-                    return Err("upstream closed mid-body (short Content-Length read)".to_string());
+                    // is incomplete; cannot be trusted or reused. NOT retried (we
+                    // already got the head, the request may have side-effected).
+                    return Err(FanoutError::Other(
+                        "upstream closed mid-body (short Content-Length read)".to_string(),
+                    ));
                 }
                 Ok(n) => body.extend_from_slice(&buf[..n]),
-                Err(e) => return Err(format!("read upstream response body: {}", e)),
+                // A read deadline mid-body on a stalled upstream -> Timeout -> 504.
+                Err(e) => return Err(classify_io_error(&e, "read upstream response body")),
             }
         }
         // Any bytes past the framed body are the NEXT response's — carry forward.
@@ -7401,10 +7502,13 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
             Ok(n) => {
                 body.extend_from_slice(&buf[..n]);
                 if body.len() > MAX_BODY_BYTES {
-                    return Err("upstream response body too large".to_string());
+                    return Err(FanoutError::Other(
+                        "upstream response body too large".to_string(),
+                    ));
                 }
             }
-            Err(e) => return Err(format!("read upstream response body (to close): {}", e)),
+            // A read deadline while draining a read-to-close body -> Timeout -> 504.
+            Err(e) => return Err(classify_io_error(&e, "read upstream response body (to close)")),
         }
     }
     let body_text = String::from_utf8_lossy(&body).to_string();
@@ -7471,13 +7575,56 @@ fn fanout_request(
 ) -> FanoutResult {
     match fanout_request_result(upstream, method, target, req_headers, body, pool) {
         Ok(v) => v,
-        Err(e) => FanoutResult {
+        // A TIMEOUT (hung/slow upstream: connect, write, or read deadline expired)
+        // becomes a clean 504 Gateway Timeout — the client gets a definite answer
+        // instead of a hang, and the worker is already free (the stale connection
+        // was dropped on the error path, never returned to the pool). A Closed or
+        // Other failure is a 502 Bad Gateway (the upstream is reachable but the
+        // hop failed). This is the single place the fan-out error maps to a status.
+        Err(FanoutError::Timeout(e)) => FanoutResult {
+            status: "504 Gateway Timeout".to_string(),
+            content_type: String::new(),
+            headers: Vec::new(),
+            body: format!("upstream timeout: {}\n", e),
+        },
+        Err(FanoutError::Closed(e)) | Err(FanoutError::Other(e)) => FanoutResult {
             status: "502 Bad Gateway".to_string(),
             content_type: String::new(),
             headers: Vec::new(),
             body: format!("fan-out upstream error: {}\n", e),
         },
     }
+}
+
+// Resolve + connect to the upstream with a BOUNDED connect timeout, then set the
+// per-use read AND write deadlines on the fresh stream. Every fan-out connection
+// (the first, the no-pool path, and the stale-pool retry) goes through here, so
+// the deadlines are set in ONE place and a pooled connection that may carry the
+// client-hop's idle timeout is re-armed with the fan-out deadlines on each use.
+//   - resolve failure -> Other (a 502; the host name is bad, not a timeout).
+//   - connect_timeout expiry -> TimedOut io error -> Timeout (a 504).
+// connect_timeout needs a concrete SocketAddr (not a (host,port) tuple), so the
+// host is resolved first and the first resolved address is dialed.
+fn connect_upstream_with_timeout(host: &str, port: u16) -> Result<TcpStream, FanoutError> {
+    let connect_timeout = fanout_connect_timeout();
+    let read_timeout = fanout_read_timeout();
+    let addr = (host, port)
+        .to_socket_addrs()
+        .map_err(|e| FanoutError::Other(format!("resolve {}:{}: {}", host, port, e)))?
+        .next()
+        .ok_or_else(|| FanoutError::Other(format!("resolve {}:{}: no address", host, port)))?;
+    let stream = TcpStream::connect_timeout(&addr, connect_timeout)
+        .map_err(|e| classify_io_error(&e, &format!("connect {}:{}", host, port)))?;
+    // Bound every active read and write so a HUNG upstream (accepts the connection
+    // but never responds, or never drains its receive buffer) cannot pin the worker
+    // — the deadline surfaces as a TimedOut/WouldBlock io error -> Timeout -> 504.
+    stream
+        .set_read_timeout(Some(read_timeout))
+        .map_err(|e| FanoutError::Other(format!("set read timeout: {}", e)))?;
+    stream
+        .set_write_timeout(Some(read_timeout))
+        .map_err(|e| FanoutError::Other(format!("set write timeout: {}", e)))?;
+    Ok(stream)
 }
 
 // The ONE response-emit shape — core-abstraction-first: every response (native,
@@ -7560,10 +7707,17 @@ fn send_and_read_one(
     stream: &mut TcpStream,
     request: &[u8],
     carry: Vec<u8>,
-) -> Result<UpstreamResponse, String> {
+) -> Result<UpstreamResponse, FanoutError> {
+    // A write deadline (FANOUT_READ_TIMEOUT, set as the write timeout too) surfaces
+    // here as Timeout if the upstream accepts but never drains its receive buffer.
+    // A broken pipe / reset on a POOLED connection the upstream already closed is
+    // classified Closed by classify_io_error -> the stale-pool reconnect+retry. A
+    // clean stale-close that buffers the write and only EOFs on the read is caught
+    // on the read side (also Closed). Either way a stale pooled connection retries
+    // once; a Timeout never does.
     stream
         .write_all(request)
-        .map_err(|e| format!("write request: {}", e))?;
+        .map_err(|e| classify_io_error(&e, "write request"))?;
     read_upstream_response(stream, carry)
 }
 
@@ -7574,8 +7728,8 @@ fn fanout_request_result(
     req_headers: &[(String, String)],
     body: &[u8],
     pool: &mut UpstreamPool,
-) -> Result<FanoutResult, String> {
-    let (host, port, base_path) = parse_http_upstream(upstream)?;
+) -> Result<FanoutResult, FanoutError> {
+    let (host, port, base_path) = parse_http_upstream(upstream).map_err(FanoutError::Other)?;
     let request_target = format!(
         "{}{}",
         base_path,
@@ -7616,12 +7770,22 @@ fn fanout_request_result(
     // GET-OR-CREATE FROM POOL, wrapping the connect step (core-abstraction-first:
     // the only thing the pool changes is connection lifecycle — fresh vs reused;
     // the request build + response framing are identical either way). If a live
-    // connection is pooled for this upstream, try it first; a pooled connection
-    // may have been closed by the upstream's idle timeout since it was returned,
-    // so a write/read failure on it is EXPECTED — drop it and reconnect+retry
-    // ONCE transparently, never surfacing the stale-pool error to the client.
-    // This stale-then-reconnect is the standard, expected behavior of a keep-
-    // alive client connection pool.
+    // connection is pooled for this upstream, try it first.
+    //
+    // The retry-vs-504 discipline lives in the error CLASSIFICATION, not in a
+    // fork of the fan-out shape:
+    //   - Closed: the pooled connection was idle-closed by the upstream (EOF /
+    //     broken pipe on reuse). This is EXPECTED for a keep-alive pool — drop it,
+    //     open a FRESH connection, retry the SAME request ONCE. Standard stale-pool
+    //     behavior, never surfaced to the client.
+    //   - Timeout: the upstream is reachable but HUNG (connect/write/read deadline
+    //     expired). Retrying does NOT help — the upstream is hung, a retry only
+    //     doubles the latency before the same deadline — so a Timeout PROPAGATES
+    //     immediately to a 504. This is what keeps a timeout from becoming an
+    //     infinite (or even doubled) retry loop.
+    //   - Other: a malformed/oversized response — propagates to a 502.
+    // The connection is taken OUT of the pool before use, so any error path simply
+    // drops it (it is never returned to the pool) and the worker is freed.
     let response = if let Some(mut pooled) = pool.take(&host, port) {
         let carry = std::mem::take(&mut pooled.carry);
         match send_and_read_one(&mut pooled.stream, &request, carry) {
@@ -7640,14 +7804,14 @@ fn fanout_request_result(
                 }
                 resp
             }
-            Err(_) => {
-                // Stale pooled connection (upstream idle-closed it, or a broken
-                // pipe). Drop it and open a FRESH connection, retrying the SAME
-                // request once. A failure on the fresh connection is a real
-                // upstream error and propagates.
+            // ONLY a Closed (stale pooled connection) reconnects+retries once. A
+            // Timeout or Other on the pooled connection propagates unchanged — a
+            // hung upstream must not be retried (it would just hang again).
+            Err(FanoutError::Closed(_)) => {
                 drop(pooled);
-                let mut fresh = TcpStream::connect((host.as_str(), port))
-                    .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
+                let mut fresh = connect_upstream_with_timeout(&host, port)?;
+                // A failure on the FRESH connection is a real upstream error and
+                // propagates (Timeout -> 504, else 502) — the retry is at most ONCE.
                 let resp = send_and_read_one(&mut fresh, &request, Vec::new())?;
                 if resp.reusable {
                     pool.store(
@@ -7661,12 +7825,20 @@ fn fanout_request_result(
                 }
                 resp
             }
+            Err(other) => {
+                // Timeout (hung upstream) or Other (bad response) — drop the
+                // connection (already taken from the pool) and propagate; the
+                // worker is freed and the client gets a 504/502, not a hang.
+                drop(pooled);
+                return Err(other);
+            }
         }
     } else {
         // No pooled connection — open a fresh one (the first fan-out, or after a
-        // non-reusable response dropped the previous connection).
-        let mut fresh = TcpStream::connect((host.as_str(), port))
-            .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
+        // non-reusable response dropped the previous connection). A connect-timeout
+        // here (unreachable/blackholed upstream) is a Timeout -> 504; a resolve
+        // failure is Other -> 502.
+        let mut fresh = connect_upstream_with_timeout(&host, port)?;
         let resp = send_and_read_one(&mut fresh, &request, Vec::new())?;
         if resp.reusable {
             pool.store(
