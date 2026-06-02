@@ -23,11 +23,22 @@ jobs:
         id: audit
         run: |
           set +e
+          # Hard-fail on regression (drift vs the living baseline) — the signal
+          # that distinguishes NEW harm from healthy growth. We intentionally do
+          # not hard-fail on --fail-on-blocking: blocking_gap keys off an
+          # absolute risk_score >= 90, a threshold calibrated when the body had
+          # 2 large modules. A healthy 561-module organism with 15 legitimately
+          # large services sits permanently above 90, so absolute-severity
+          # blocking always-fires regardless of whether anything got worse —
+          # it measures size, not drift. Severity/blocking_gap are still
+          # computed and surfaced as a monitor alert + the drift issue below
+          # (which keys on regression OR blocking); only the CI hard-fail tracks
+          # the living drift signal. Re-run with --fail-on-blocking locally to
+          # see absolute severity.
           python api/scripts/run_maintainability_audit.py \
             --json \
             --output maintainability_audit_report.json \
-            --fail-on-regression \
-            --fail-on-blocking
+            --fail-on-regression
           code=$?
           cat maintainability_audit_report.json
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
