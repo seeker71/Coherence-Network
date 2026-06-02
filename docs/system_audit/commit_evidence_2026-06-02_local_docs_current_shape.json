@@ -1,0 +1,81 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/local-docs-current-shape-20260602",
+  "commit_scope": "Compost local coherent-probe and Field Model Form documentation into current-facing, high-level concept records.",
+  "files_owned": [
+    "docs/coherence-substrate/coherent-probe.form",
+    "docs/vision-kb/concepts/field-model-form.md",
+    "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md",
+    "docs/vision-kb/concepts/lc-the-geometry-seen-is-the-geometry-of-seeing.md",
+    "docs/system_audit/commit_evidence_2026-06-02_local_docs_current_shape.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_local_docs_current_shape.json",
+      "git diff --check"
+    ],
+    "notes": "Documentation was reduced to current goals and reusable high-level operator shape. Detailed local path notes remain composted out of public concept docs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This docs compost batch integrates the current-facing concept shape. Remaining local work still includes executable coherent-probe examples and agent relationship proof script review."
+  },
+  "idea_ids": [
+    "coherent-probe",
+    "field-model-form"
+  ],
+  "spec_ids": [
+    "field-model-form-v0",
+    "trace-symbol-spaces-form"
+  ],
+  "task_ids": [
+    "local-docs-current-shape-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "documentation-boundary"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md now holds the coherent-probe operator as a compact concept card.",
+    "docs/vision-kb/concepts/field-model-form.md gives FMF a concise current-facing concept page.",
+    "docs/coherence-substrate/coherent-probe.form keeps the operator available as a small Form sketch."
+  ],
+  "change_files": [
+    "docs/coherence-substrate/coherent-probe.form",
+    "docs/vision-kb/concepts/field-model-form.md",
+    "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md",
+    "docs/vision-kb/concepts/lc-the-geometry-seen-is-the-geometry-of-seeing.md",
+    "docs/system_audit/commit_evidence_2026-06-02_local_docs_current_shape.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "docs_only"
+}

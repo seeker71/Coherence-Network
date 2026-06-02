@@ -1,0 +1,21 @@
+; coherent-probe.form -- compact sketch of the general operator
+;
+; Reduced binding + coherent input -> addressable symbolic output.
+; Keep raw cells, consent, receipts, residuals, and reverse paths primary.
+
+(do
+    (defn coherent-probe (field coherent-input observer)
+        (list
+            "field" field
+            "input" coherent-input
+            "observer" observer
+            "output" "addressable-symbolic-structure"
+            "discipline" "symbols-are-lenses-raw-cells-remain-primary"))
+
+    (defn dmt-laser-example ()
+        (coherent-probe
+            "stable-observation-window"
+            "low-intensity-diffracted-650nm-light"
+            "consenting-observer"))
+
+    0)
