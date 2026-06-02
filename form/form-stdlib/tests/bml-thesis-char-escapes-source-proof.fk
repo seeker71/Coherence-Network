@@ -1,0 +1,113 @@
+; tests/bml-thesis-char-escapes-source-proof.fk - BML char escape proof
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves thesis-style BML character literals from .bml source into BML AST
+; return nodes, BMA execution, and backward replay. The escape set is the
+; thesis companion set: backslash, single quote, double quote, newline, tab,
+; carriage return, and NUL.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (defn concat-str-list (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (concat-str-list (tail xs)))))
+
+    (defn bml-char-source-line (body)
+        (str_concat "return '"
+            (str_concat body
+                (str_concat "';" (byte_to_str 10)))))
+
+    (defn char-code-score (value code bit)
+        (if (eq (str_len value) 1)
+            (if (eq (ord (char_at value 0)) code) bit 0)
+            0))
+
+    (defn state-char-code-score (state code bit)
+        (char-code-score (comp-vm-pop-value state) code bit))
+
+    (defn restored-score (state bit)
+        (if (str_eq (comp-vm-mode state) "run")
+            (if (eq (len (comp-vm-stack state)) 0) bit 0)
+            0))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-char-escapes.bml")
+    (let bs (byte_to_str 92))
+    (let sq (byte_to_str 39))
+    (let dq (byte_to_str 34))
+    (let source
+        (concat-str-list
+            (list
+                (bml-char-source-line "x")
+                (bml-char-source-line (str_concat bs bs))
+                (bml-char-source-line (str_concat bs sq))
+                (bml-char-source-line dq)
+                (bml-char-source-line (str_concat bs "n"))
+                (bml-char-source-line (str_concat bs "t"))
+                (bml-char-source-line (str_concat bs "r"))
+                (bml-char-source-line (str_concat bs "0")))))
+
+    (let file-tokens (bml-source-scan-file path))
+    (let form-tokens (bml-source-scan-text source))
+    (let file-values (bml-source-token-values file-tokens))
+    (let form-values (bml-source-token-values form-tokens))
+
+    (let file-parsed (bml-source-file-parse-executable path))
+    (let form-parsed (bml-source-parse-executable-stream form-tokens))
+    (let file-nodes (bml-source-exec-parse-nodes file-parsed))
+    (let file-rules (bml-source-exec-parse-rules file-parsed))
+    (let form-rules (bml-source-exec-parse-rules form-parsed))
+
+    (let x-program (bml-compile-program (nth file-nodes 0)))
+    (let backslash-program (bml-compile-program (nth file-nodes 1)))
+    (let newline-program (bml-compile-program (nth file-nodes 4)))
+    (let x-state (bma-run-program x-program))
+    (let backslash-state (bma-run-program backslash-program))
+    (let fb (bma-run-forward-backward newline-program))
+    (let forward-state (bma-forward-backward-forward-state fb))
+    (let restored-state (bma-forward-backward-restored-state fb))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? file-parsed) 1)
+            (bool-score (bml-source-exec-parse-ok? form-parsed) 2)
+            (int-score (len (bml-source-exec-parse-rest file-parsed)) 0 4)
+            (int-score (len (bml-source-exec-parse-rest form-parsed)) 0 8)
+            (int-score (len file-nodes) 8 16)
+            (int-score (len file-tokens) 24 32)
+            (int-score (len form-tokens) 24 64)
+            (char-code-score (nth file-values 1) 120 128)
+            (char-code-score (nth file-values 4) 92 256)
+            (char-code-score (nth file-values 7) 39 512)
+            (char-code-score (nth file-values 10) 34 1024)
+            (char-code-score (nth file-values 13) 10 2048)
+            (char-code-score (nth file-values 16) 9 4096)
+            (char-code-score (nth file-values 19) 13 8192)
+            (char-code-score (nth file-values 22) 0 16384)
+            (char-code-score (nth form-values 1) 120 32768)
+            (char-code-score (nth form-values 4) 92 65536)
+            (char-code-score (nth form-values 7) 39 131072)
+            (char-code-score (nth form-values 10) 34 262144)
+            (char-code-score (nth form-values 13) 10 524288)
+            (char-code-score (nth form-values 16) 9 1048576)
+            (char-code-score (nth form-values 19) 13 2097152)
+            (char-code-score (nth form-values 22) 0 4194304)
+            (int-score (len file-rules) 8 8388608)
+            (str-score (nth file-rules 0) "return-char" 16777216)
+            (str-score (nth file-rules 7) "return-char" 33554432)
+            (str-score (nth form-rules 0) "return-char" 67108864)
+            (state-char-code-score x-state 120 134217728)
+            (state-char-code-score backslash-state 92 268435456)
+            (char-code-score (comp-vm-pop-value forward-state) 10 1073741824)
+            (restored-score restored-state 536870912))))

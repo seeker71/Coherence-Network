@@ -1486,6 +1486,19 @@ fn bml_native_bin_digit(b: u8) -> bool {
     matches!(b, b'0' | b'1')
 }
 
+fn bml_native_decode_escape(b: u8) -> u8 {
+    match b {
+        b'\\' => b'\\',
+        b'\'' => b'\'',
+        b'"' => b'"',
+        b'n' => b'\n',
+        b't' => b'\t',
+        b'r' => b'\r',
+        b'0' => 0,
+        _ => b,
+    }
+}
+
 fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
     let bytes = src.as_bytes();
     let mut j = i + 1;
@@ -1493,7 +1506,7 @@ fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
     while j < bytes.len() {
         let c = bytes[j];
         if c == b'\\' && j + 1 < bytes.len() {
-            out.push(bytes[j + 1] as char);
+            out.push(bml_native_decode_escape(bytes[j + 1]) as char);
             j += 2;
             continue;
         }
@@ -1544,7 +1557,7 @@ fn bml_native_scan_text(src: &str) -> Value {
         }
         if c == b'\'' {
             let (value, next) = bml_native_scan_quoted(src, i, b'\'');
-            out.push(bml_native_atom("bml-string", &value));
+            out.push(bml_native_atom("bml-char", &value));
             i = next;
             continue;
         }

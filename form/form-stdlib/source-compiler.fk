@@ -162,10 +162,11 @@
             (if (str_eq kind "int") (fsc-dialect-fn dialect "int-lit")
             (if (str_eq kind "float") (fsc-dialect-fn dialect "float-lit")
             (if (str_eq kind "string") (fsc-dialect-fn dialect "string-lit")
+            (if (str_eq kind "char") (fsc-dialect-fn dialect "char-lit")
             (if (str_eq kind "bytes") (fsc-dialect-fn dialect "bytes-lit")
             (if (str_eq kind "fstring") (fsc-dialect-fn dialect "fstring-lit")
             (if (str_eq kind "property") (fsc-dialect-fn dialect "prop")
-                (fsc-dialect-fn dialect "name")))))))))
+                (fsc-dialect-fn dialect "name"))))))))))
 
     (defn fsc-capture-expr (dialect spec)
         (do

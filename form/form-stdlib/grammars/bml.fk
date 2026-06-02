@@ -20,6 +20,7 @@
     (defn bml-src-int (value) (bmf-atom "bml-int" value))
     (defn bml-src-float (value) (bmf-atom "bml-float" value))
     (defn bml-src-string (value) (bmf-atom "bml-string" value))
+    (defn bml-src-char (value) (bmf-atom "bml-char" value))
     (defn bml-src-prop (value) (bmf-atom "bml-property" value))
     (defn bml-src-list (value) (bmf-atom "bml-list" value))
     (defn bml-src-code (value) (bmf-atom "bml-code" value))
@@ -235,6 +236,47 @@
                         (nth read 1)))
                 (bml-source-scan-decimal-or-float start int-kind)))))
 
+    (defn bml-source-escape-char (ch)
+        (if (str_eq ch (byte_to_str 92)) (byte_to_str 92)
+        (if (str_eq ch "'") (byte_to_str 39)
+        (if (str_eq ch "\"") (byte_to_str 34)
+        (if (str_eq ch "n") (byte_to_str 10)
+        (if (str_eq ch "t") (byte_to_str 9)
+        (if (str_eq ch "r") (byte_to_str 13)
+        (if (str_eq ch "0") (byte_to_str 0)
+            ch))))))))
+
+    (defn bml-source-scan-char-loop (cursor acc)
+        (if (fsc-source-cursor-end? cursor)
+            (list acc cursor)
+            (do
+                (let ch (fsc-source-cursor-char cursor))
+                (if (str_eq ch "'")
+                    (list acc (fsc-source-cursor-advance cursor))
+                (if (and (str_eq ch (byte_to_str 92))
+                         (not (fsc-source-cursor-end?
+                                (fsc-source-cursor-advance cursor))))
+                    (do
+                        (let next-cursor (fsc-source-cursor-advance cursor))
+                        (let escaped (bml-source-escape-char
+                                        (fsc-source-cursor-char next-cursor)))
+                        (bml-source-scan-char-loop
+                            (fsc-source-cursor-advance next-cursor)
+                            (str_concat acc escaped)))
+                    (bml-source-scan-char-loop
+                        (fsc-source-cursor-advance cursor)
+                        (str_concat acc ch)))))))
+
+    (defn bml-source-scan-char (start)
+        (do
+            (let body-start (fsc-source-cursor-advance start))
+            (let read (bml-source-scan-char-loop body-start ""))
+            (let value (nth read 0))
+            (let end (nth read 1))
+            (fsc-scan-result
+                (fsc-source-object "bml-char" value start end)
+                end)))
+
     (defn bml-source-ops (_x)
         (list "<<prim" ".*" "::=" "=>" "<=" ">>>=" ">>=" "<<=" ">>>"
               ">>" "<<" "++" "--" "==" "!=" ">=" "<=" ":=" "*=" "/="
@@ -293,6 +335,8 @@
                     start)
             (if (str_eq ch "\"")
                 (fsc-source-scan-string start "bml-string")
+            (if (str_eq ch "'")
+                (bml-source-scan-char start)
             (if (fsc-digit? ch)
                 (bml-source-scan-prefixed-int start "bml-int")
             (if (fsc-source-name-start-char? ch)
@@ -300,7 +344,7 @@
                 (fsc-source-scan-op
                     start
                     "bml-op"
-                    (bml-source-ops 0))))))))
+                    (bml-source-ops 0)))))))))
 
     (defn bml-source-scan-text-loop (cursor acc)
         (do
@@ -332,6 +376,7 @@
     (defn bml-int-lit (capture-name) (list "capture" capture-name (object-lit "bml-int" "")))
     (defn bml-float-lit (capture-name) (list "capture" capture-name (object-lit "bml-float" "")))
     (defn bml-string-lit (capture-name) (list "capture" capture-name (object-lit "bml-string" "")))
+    (defn bml-char-lit (capture-name) (list "capture" capture-name (object-lit "bml-char" "")))
     (defn bml-prop (capture-name) (list "capture" capture-name (object-lit "bml-property" "")))
 
     ;; --- AST helpers --------------------------------------------------
@@ -2641,6 +2686,10 @@
         (bml-ast-return
             (bml-ast-float-node (bml-cap-float objects "value"))))
 
+    (defn bml-emit-return-char (objects)
+        (bml-ast-return
+            (bml-ast-char (bmf-collection-value objects "value"))))
+
     (defn bml-source-return-int (object)
         (do
             (let kids (node_children (bmf-object-value object)))
@@ -2716,9 +2765,7 @@
     (defn bml-source-char-lit (object)
         (do
             (let kids (node_children (bmf-object-value object)))
-            (list (bml-src-op "'")
-                  (bml-src-string (node_value (head kids)))
-                  (bml-src-op "'"))))
+            (list (bml-src-char (node_value (head kids))))))
 
     (defn bml-emit-array-int (objects)
         (bml-ast-array
@@ -2888,6 +2935,7 @@
       if ::= "if" "(" cut expression ")" statement "else" spc cut statement => bml-emit-node-source;
       return-int ::= "return" $value:int ";" => bml-emit-return-int <= bml-source-return-int;
       return-float ::= "return" $value:float ";" => bml-emit-return-float;
+      return-char ::= "return" $value:char ";" => bml-emit-return-char;
       return ::= "return" expression ";" => bml-emit-node-source;
       break-simple ::= "break" $label:name ";" => bml-emit-break-simple <= bml-source-break-simple;
       break ::= "break" label-name ";" cut => bml-emit-node-source;
@@ -2913,8 +2961,8 @@
       identifier ::= interface-ref local-field-list => bml-emit-node-source;
       const-expression ::= float "|" int "|" string "|" char "|" array "|" block "|" anonymous => bml-emit-node-source;
       float ::= signed-digits "." digits exponent => bml-emit-node-source;
-      char-lit ::= "'" $value:string "'" => bml-emit-char-lit <= bml-source-char-lit;
-      char ::= "'" cut char-body "'" => bml-emit-node-source;
+      char-lit ::= $value:char => bml-emit-char-lit <= bml-source-char-lit;
+      char ::= char-lit => bml-emit-node-source;
       array-int ::= "#(" $value:int ")" => bml-emit-array-int <= bml-source-array-int;
       array ::= "#(" expression-list ")" => bml-emit-node-source;
       block ::= interface-ref "(" parameter-list ")" properties code-block => bml-emit-node-source;
@@ -3017,6 +3065,7 @@
               "choice-fail-int"
               "choose-fail-int"
               "state-int"
+              "return-char"
               "return-float"
               "return-int"
               "fail-simple"
@@ -3856,6 +3905,7 @@
             (bmf-native "bml-emit-const-int" bml-emit-const-int BML-AST-CONST)
             (bmf-native "bml-emit-return-int" bml-emit-return-int BML-AST-RETURN)
             (bmf-native "bml-emit-return-float" bml-emit-return-float BML-AST-RETURN)
+            (bmf-native "bml-emit-return-char" bml-emit-return-char BML-AST-RETURN)
             (bmf-native "bml-emit-break-simple" bml-emit-break-simple BML-AST-BREAK)
             (bmf-native "bml-emit-continue-simple" bml-emit-continue-simple BML-AST-CONTINUE)
             (bmf-native "bml-emit-throw-int" bml-emit-throw-int BML-AST-THROW)
@@ -3881,6 +3931,7 @@
                 (compiler-rule "bml" "section-header" "BML section source objects" bml-emit-section-header)
                 (compiler-rule "bml" "return-int" "BML return object to BMA ops" bml-emit-return-int)
                 (compiler-rule "bml" "return-float" "BML float return object to BMA ops" bml-emit-return-float)
+                (compiler-rule "bml" "return-char" "BML char return object to BMA ops" bml-emit-return-char)
                 (compiler-rule "bml" "break-simple" "BML break object to BMA ops" bml-emit-break-simple)
                 (compiler-rule "bml" "continue-simple" "BML continue object to BMA ops" bml-emit-continue-simple)
                 (compiler-rule "bml" "throw-int" "BML throw object to BMA ops" bml-emit-throw-int)

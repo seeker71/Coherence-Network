@@ -1,0 +1,8 @@
+return 'x';
+return '\\';
+return '\'';
+return '"';
+return '\n';
+return '\t';
+return '\r';
+return '\0';
