@@ -1,0 +1,78 @@
+; tests/bml-thesis-float-literals-source-proof.fk - BML float literal proof
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves focused thesis decimal/exponent float spellings from .bml source into
+; executable BMA values. The proof covers sibling-native file scanning,
+; Form-native text scanning, parse rule shape, f64 decode, and backward replay.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (defn float-cents (nodeid)
+        (math_floor (mul (float_value nodeid) 100)))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-float-literals.bml")
+    (let source "return 1.25;\nreturn 2.5e1;\nreturn 0.125E+2;\n")
+
+    (let file-tokens (bml-source-scan-file path))
+    (let form-tokens (bml-source-scan-text source))
+    (let file-values (bml-source-token-values file-tokens))
+    (let form-values (bml-source-token-values form-tokens))
+
+    (let file-parsed (bml-source-file-parse-executable path))
+    (let form-parsed (bml-source-parse-executable-stream form-tokens))
+    (let file-nodes (bml-source-exec-parse-nodes file-parsed))
+    (let file-rules (bml-source-exec-parse-rules file-parsed))
+    (let form-rules (bml-source-exec-parse-rules form-parsed))
+
+    (let first-program (bml-compile-program (nth file-nodes 0)))
+    (let second-program (bml-compile-program (nth file-nodes 1)))
+    (let third-program (bml-compile-program (nth file-nodes 2)))
+
+    (let first-state (bma-run-program first-program))
+    (let second-state (bma-run-program second-program))
+    (let third-state (bma-run-program third-program))
+
+    (let fb (bma-run-forward-backward second-program))
+    (let forward-state (bma-forward-backward-forward-state fb))
+    (let restored-state (bma-forward-backward-restored-state fb))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? file-parsed) 1)
+            (bool-score (bml-source-exec-parse-ok? form-parsed) 2)
+            (int-score (len (bml-source-exec-parse-rest file-parsed)) 0 4)
+            (int-score (len (bml-source-exec-parse-rest form-parsed)) 0 8)
+            (int-score (len file-nodes) 3 16)
+            (int-score (len file-tokens) 9 32)
+            (int-score (len form-tokens) 9 64)
+            (str-score (nth file-values 1) "1.25" 128)
+            (str-score (nth file-values 4) "2.5e1" 256)
+            (str-score (nth file-values 7) "0.125E+2" 512)
+            (str-score (nth form-values 1) "1.25" 1024)
+            (str-score (nth form-values 4) "2.5e1" 2048)
+            (str-score (nth form-values 7) "0.125E+2" 4096)
+            (str-score (nth file-rules 0) "return-float" 8192)
+            (str-score (nth file-rules 1) "return-float" 16384)
+            (str-score (nth file-rules 2) "return-float" 32768)
+            (str-score (nth form-rules 0) "return-float" 65536)
+            (str-score (nth form-rules 2) "return-float" 131072)
+            (int-score (float-cents (comp-vm-pop-value first-state)) 125 262144)
+            (int-score (float-cents (comp-vm-pop-value second-state)) 2500 524288)
+            (int-score (float-cents (comp-vm-pop-value third-state)) 1250 1048576)
+            (mode-score first-state "return" 2097152)
+            (mode-score forward-state "return" 4194304)
+            (int-score (float-cents (comp-vm-pop-value forward-state)) 2500 8388608)
+            (mode-score restored-state "run" 16777216)
+            (int-score (len (comp-vm-stack restored-state)) 0 33554432))))
