@@ -247,6 +247,8 @@
         (intern_node BML-AST-CHAR (list (intern_trivial_string value))))
     (defn bml-ast-array (items)
         (intern_node BML-AST-ARRAY items))
+    (defn bml-ast-while-success (body)
+        (intern_node BML-AST-WHILE (list body)))
 
     ;; --- BML compiler component objects -----------------------------
     ;; BML support is a compiler band above the kernel. Source sections
@@ -2519,6 +2521,24 @@
                             (intern_node BML-AST-INT
                                          (list (bml-cap-int objects "value")))))))))
 
+    (defn bml-emit-if-fail-fail-return-int (objects)
+        (bml-ast-choose
+            (list
+                (bml-ast-block (list (bml-ast-fail 0)))
+                (bml-ast-block
+                    (list (bml-ast-return
+                            (intern_node BML-AST-INT
+                                         (list (bml-cap-int objects "value")))))))))
+
+    (defn bml-emit-while-success-fail-return-int (objects)
+        (bml-ast-block
+            (list
+                (bml-ast-while-success
+                    (bml-ast-block (list (bml-ast-fail 0))))
+                (bml-ast-return
+                    (intern_node BML-AST-INT
+                                 (list (bml-cap-int objects "value")))))))
+
     (defn bml-emit-fail-simple (_objects)
         (bml-ast-fail 0))
 
@@ -2630,6 +2650,8 @@
       while ::= label "while" "(" cut expression ")" statement => bml-emit-node-source;
       if-fail ::= "if_fail" code-block => bml-emit-node-source;
       while-success ::= "while_success" code-block => bml-emit-node-source;
+      if-fail-fail-return-int ::= "if_fail" "{" "return" $value:int ";" "}" "fail" ";" => bml-emit-if-fail-fail-return-int;
+      while-success-fail-return-int ::= "while_success" "{" "fail" ";" "}" "return" $value:int ";" => bml-emit-while-success-fail-return-int;
       loop ::= label "loop" spc cut statement => bml-emit-node-source;
       switch ::= "switch" "(" cut expression ")" switch-block => bml-emit-node-source;
       select ::= "select" "(" cut expression ")" switch-block => bml-emit-node-source;
@@ -2760,7 +2782,9 @@
         (bmf-object-value (cap-get (match-caps match) "result")))
 
     (defn bml-source-executable-rules (_x)
-        (list "try-throw-return"
+        (list "if-fail-fail-return-int"
+              "while-success-fail-return-int"
+              "try-throw-return"
               "choice-fail-int"
               "choose-fail-int"
               "state-int"
@@ -3612,6 +3636,8 @@
             (bmf-native "bml-emit-array-int" bml-emit-array-int BML-AST-ARRAY)
             (bmf-native "bml-emit-method-return-add" bml-emit-method-return-add BML-AST-METHOD)
             (bmf-native "bml-emit-choose-fail-int" bml-emit-choose-fail-int BML-AST-CHOOSE)
+            (bmf-native "bml-emit-if-fail-fail-return-int" bml-emit-if-fail-fail-return-int BML-AST-CHOOSE)
+            (bmf-native "bml-emit-while-success-fail-return-int" bml-emit-while-success-fail-return-int BML-AST-WHILE)
             (bmf-native "bml-emit-state-int" bml-emit-state-int BML-AST-BLOCK)))
 
     (let bml-recipe-section
@@ -3635,6 +3661,8 @@
                 (compiler-rule "bml" "method-return-add" "BML method object to BMA ops" bml-emit-method-return-add)
                 (compiler-rule "bml" "choice-fail-int" "BML thesis choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "choose-fail-int" "BML choice object to BMA ops" bml-emit-choose-fail-int)
+                (compiler-rule "bml" "if-fail-fail-return-int" "BML if_fail fallback object to BMA ops" bml-emit-if-fail-fail-return-int)
+                (compiler-rule "bml" "while-success-fail-return-int" "BML while_success object to BMA ops" bml-emit-while-success-fail-return-int)
                 (compiler-rule "bml" "state-int" "BML state object to BMA ops" bml-emit-state-int))))
 
     (let bml-form-source
@@ -3669,6 +3697,7 @@
     (defn bma-cut (_x) (bma-op "cut" 0))
     (defn bma-choose (branches) (bma-op "choose" branches))
     (defn bma-try (branches) (bma-op "try" branches))
+    (defn bma-while-success (body) (bma-op "while-success" body))
 
     (defn bml-node-child (node index)
         (nth (node_children node) index))
@@ -3709,6 +3738,9 @@
                 (list (bma-try
                         (list (bml-compile-node (bml-node-child node 0))
                               (bml-compile-node (bml-node-child node 1)))))
+            (if (node_eq cat BML-AST-WHILE)
+                (list (bma-while-success
+                        (bml-compile-node (bml-node-child node 0))))
             (if (node_eq cat BML-AST-METHOD)
                 (bml-compile-node (bml-node-child node 1))
             (if (node_eq cat BML-AST-BLOCK)
@@ -3725,7 +3757,7 @@
                 (list (bma-restore 0))
             (if (node_eq cat BML-AST-DISCARD)
                 (list (bma-discard 0))
-                (empty))))))))))))))))))))))
+                (empty)))))))))))))))))))))))
 
     (defn bml-compile-program (node)
         (comp-program "bma" (bml-compile-node node)))
@@ -3756,6 +3788,26 @@
                 (bma-exec-ops (head (tail branches)) (comp-vm-with-mode state "run"))
                 body-state)))
 
+    (defn bma-while-success-iteration-limit (_x) 64)
+
+    (defn bma-exec-while-success-loop (body state remaining)
+        (if (eq remaining 0)
+            (comp-vm-with-mode state "fail")
+            (do
+                (let body-state (bma-exec-ops body (comp-vm-with-mode state "run")))
+                (if (str_eq (comp-vm-mode body-state) "fail")
+                    (comp-vm-with-mode state "run")
+                    (if (str_eq (comp-vm-mode body-state) "run")
+                        (bma-exec-while-success-loop body body-state (sub remaining 1))
+                        body-state)))))
+
+    (defn bma-exec-while-success (body state)
+        (do
+            (bma-exec-while-success-loop
+                body
+                state
+                (bma-while-success-iteration-limit 0))))
+
     (defn bma-exec-op (op state)
         (do
             (let name (comp-op-name op))
@@ -3777,7 +3829,8 @@
             (if (str_eq name "cut") (comp-vm-with-mode state "cut")
             (if (str_eq name "choose") (bma-exec-choose-branches (comp-op-value op) state)
             (if (str_eq name "try") (bma-exec-try-branches (comp-op-value op) state)
-                state))))))))))))))))))))
+            (if (str_eq name "while-success") (bma-exec-while-success (comp-op-value op) state)
+                state)))))))))))))))))))))
 
     (defn bma-exec-ops (ops state)
         (if (nil? ops) state
