@@ -156,7 +156,8 @@
         {"name": "BREAK",     "inst": 28},
         {"name": "CONTINUE",  "inst": 29},
         {"name": "CHAR",      "inst": 32, "note": "insts 30-31 are reserved/skipped historically"},
-        {"name": "ARRAY",     "inst": 33}
+        {"name": "ARRAY",     "inst": 33},
+        {"name": "FLOAT",     "inst": 34}
       ]
     },
     "go.bmf": {

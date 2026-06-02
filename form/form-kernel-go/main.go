@@ -1133,6 +1133,7 @@ func bmlNativeScanText(src string) Value {
 		}
 		if c >= '0' && c <= '9' {
 			j := i + 1
+			kind := "bml-int"
 			if c == '0' && j < len(src) && (src[j] == 'x' || src[j] == 'X') {
 				j++
 				for j < len(src) && bmlNativeHexDigit(src[j]) {
@@ -1147,8 +1148,27 @@ func bmlNativeScanText(src string) Value {
 				for j < len(src) && src[j] >= '0' && src[j] <= '9' {
 					j++
 				}
+				if j < len(src) && src[j] == '.' && j+1 < len(src) && src[j+1] >= '0' && src[j+1] <= '9' {
+					kind = "bml-float"
+					j++
+					for j < len(src) && src[j] >= '0' && src[j] <= '9' {
+						j++
+					}
+					if j < len(src) && (src[j] == 'e' || src[j] == 'E') {
+						k := j + 1
+						if k < len(src) && (src[k] == '+' || src[k] == '-') {
+							k++
+						}
+						if k < len(src) && src[k] >= '0' && src[k] <= '9' {
+							j = k + 1
+							for j < len(src) && src[j] >= '0' && src[j] <= '9' {
+								j++
+							}
+						}
+					}
+				}
 			}
-			out = append(out, bmlNativeAtom("bml-int", src[i:j]))
+			out = append(out, bmlNativeAtom(kind, src[i:j]))
 			i = j
 			continue
 		}

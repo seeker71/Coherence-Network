@@ -2445,6 +2445,12 @@ export class Kernel {
       kind: "nodeid",
       nodeid: k.internTrivialFloat64(Number(argStr(args, 0)) || 0),
     }));
+    this.registerNative("float_value", catMethod(), (k, args) => {
+      const n = argNodeID(args, 0);
+      if (n.type === Triv.FLOAT32) return { kind: "f32", float: k.decodeFloat32(n.inst) };
+      if (n.type === Triv.FLOAT64) return { kind: "f64", float: k.decodeFloat64(n.inst) };
+      throw new Error("float_value expects a float NodeID");
+    });
     this.registerNative("intern_node", catWitness(), (k, args) => {
       const cat = argNodeID(args, 0);
       const kids = argList(args, 1).map((v) => {
@@ -3419,6 +3425,7 @@ function bmlNativeScanText(src: string): Value {
     }
     if (c >= 48 && c <= 57) {
       let j = i + 1;
+      let kind = "bml-int";
       if (c === 48 && j < src.length && (src[j] === "x" || src[j] === "X")) {
         j++;
         while (j < src.length && bmlNativeHexDigit(src.charCodeAt(j))) j++;
@@ -3431,8 +3438,35 @@ function bmlNativeScanText(src: string): Value {
           if (code < 48 || code > 57) break;
           j++;
         }
+        if (j < src.length && src[j] === "." && j + 1 < src.length) {
+          const afterDot = src.charCodeAt(j + 1);
+          if (afterDot >= 48 && afterDot <= 57) {
+            kind = "bml-float";
+            j++;
+            while (j < src.length) {
+              const code = src.charCodeAt(j);
+              if (code < 48 || code > 57) break;
+              j++;
+            }
+            if (j < src.length && (src[j] === "e" || src[j] === "E")) {
+              let k = j + 1;
+              if (k < src.length && (src[k] === "+" || src[k] === "-")) k++;
+              if (k < src.length) {
+                const expFirst = src.charCodeAt(k);
+                if (expFirst >= 48 && expFirst <= 57) {
+                  j = k + 1;
+                  while (j < src.length) {
+                    const code = src.charCodeAt(j);
+                    if (code < 48 || code > 57) break;
+                    j++;
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-      out.push(bmlNativeAtom("bml-int", src.slice(i, j)));
+      out.push(bmlNativeAtom(kind, src.slice(i, j)));
       i = j;
       continue;
     }

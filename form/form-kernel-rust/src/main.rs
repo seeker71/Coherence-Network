@@ -1550,6 +1550,7 @@ fn bml_native_scan_text(src: &str) -> Value {
         }
         if c.is_ascii_digit() {
             let mut j = i + 1;
+            let mut kind = "bml-int";
             if c == b'0' && j < bytes.len() && matches!(bytes[j], b'x' | b'X') {
                 j += 1;
                 while j < bytes.len() && bml_native_hex_digit(bytes[j]) {
@@ -1564,8 +1565,31 @@ fn bml_native_scan_text(src: &str) -> Value {
                 while j < bytes.len() && bytes[j].is_ascii_digit() {
                     j += 1;
                 }
+                if j < bytes.len()
+                    && bytes[j] == b'.'
+                    && j + 1 < bytes.len()
+                    && bytes[j + 1].is_ascii_digit()
+                {
+                    kind = "bml-float";
+                    j += 1;
+                    while j < bytes.len() && bytes[j].is_ascii_digit() {
+                        j += 1;
+                    }
+                    if j < bytes.len() && matches!(bytes[j], b'e' | b'E') {
+                        let mut k = j + 1;
+                        if k < bytes.len() && matches!(bytes[k], b'+' | b'-') {
+                            k += 1;
+                        }
+                        if k < bytes.len() && bytes[k].is_ascii_digit() {
+                            j = k + 1;
+                            while j < bytes.len() && bytes[j].is_ascii_digit() {
+                                j += 1;
+                            }
+                        }
+                    }
+                }
             }
-            out.push(bml_native_atom("bml-int", &src[i..j]));
+            out.push(bml_native_atom(kind, &src[i..j]));
             i = j;
             continue;
         }
@@ -3818,6 +3842,13 @@ impl Kernel {
         self.register_native("intern_trivial_float", cat_witness(), |k, _, args| {
             let f: f64 = args[0].as_str().parse().unwrap_or(0.0);
             Value::Nid(k.intern_trivial_float64(f))
+        });
+        self.register_native("float_value", cat_method(), |k, _, args| {
+            let n = args[0].as_nid();
+            match n.ty {
+                TRIV_FLOAT64 => Value::Float(k.decode_float64(n.inst)),
+                _ => panic!("float_value expects a float NodeID"),
+            }
         });
         self.register_native("intern_node", cat_witness(), |k, _, args| {
             // args[0]: category as Nid; args[1]: children as List of Nids
