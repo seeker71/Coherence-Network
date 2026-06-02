@@ -4209,6 +4209,14 @@ func runBench() {
 const (
 	formBinaryLeaf      uint32 = 0
 	formBinaryComposite uint32 = 1
+	// FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's
+	// Inst is a per-kernel f64s-table index — meaningless in another kernel.
+	// So a float node serializes as [formBinaryFloat64][8 bytes IEEE-754
+	// little-endian] and each kernel re-interns the value on read (fresh
+	// local index). The dedicated tag also sidesteps the divergent per-kernel
+	// float type numbering (Rust TrivFloat64=5, Go/TS=7): the value travels
+	// in bytes, not the index nor the local type-tag.
+	formBinaryFloat64 uint32 = 2
 )
 
 func pushU32(bytes []byte, v uint32) []byte {
@@ -4223,6 +4231,27 @@ func readU32(bytes []byte, pos int) (uint32, int) {
 	return v, pos + 4
 }
 
+// pushF64LE — append an IEEE-754 f64 as 8 little-endian bytes (the payload of
+// a formBinaryFloat64 node). Sibling parity with Rust/TS little-endian writers.
+func pushF64LE(bytes []byte, f float64) []byte {
+	bits := math.Float64bits(f)
+	return append(bytes,
+		byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24),
+		byte(bits>>32), byte(bits>>40), byte(bits>>48), byte(bits>>56))
+}
+
+func readF64LE(bytes []byte, pos int) (float64, int) {
+	bits := uint64(bytes[pos]) |
+		uint64(bytes[pos+1])<<8 |
+		uint64(bytes[pos+2])<<16 |
+		uint64(bytes[pos+3])<<24 |
+		uint64(bytes[pos+4])<<32 |
+		uint64(bytes[pos+5])<<40 |
+		uint64(bytes[pos+6])<<48 |
+		uint64(bytes[pos+7])<<56
+	return math.Float64frombits(bits), pos + 8
+}
+
 func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	if r, ok := k.byID[nid]; ok {
 		bytes = pushU32(bytes, formBinaryComposite)
@@ -4231,6 +4260,11 @@ func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 		for _, c := range r.Children {
 			bytes = serializeNid(k, c, bytes)
 		}
+		return bytes
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivFloat64 {
+		bytes = pushU32(bytes, formBinaryFloat64)
+		bytes = pushF64LE(bytes, k.decodeFloat64(nid.Inst))
 		return bytes
 	}
 	bytes = pushU32(bytes, formBinaryLeaf)
@@ -4243,6 +4277,11 @@ func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 
 func deserializeNid(k *Kernel, bytes []byte, pos int, scope uint32) (NodeID, int) {
 	tag, pos := readU32(bytes, pos)
+	if tag == formBinaryFloat64 {
+		var value float64
+		value, pos = readF64LE(bytes, pos)
+		return k.internTrivialFloat64(value), pos
+	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32
 		pkg, pos = readU32(bytes, pos)
@@ -4347,6 +4386,14 @@ func deserializeArtifact(k *Kernel, bytes []byte) (NodeID, error) {
 
 func deserializeNidWithStrings(k *Kernel, bytes []byte, pos int, stringsTable []string, scope uint32) (NodeID, int) {
 	tag, pos := readU32(bytes, pos)
+	if tag == formBinaryFloat64 {
+		if pos+8 > len(bytes) {
+			panic("form binary: truncated float64")
+		}
+		var value float64
+		value, pos = readF64LE(bytes, pos)
+		return k.internTrivialFloat64(value), pos
+	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32
 		pkg, pos = readU32(bytes, pos)

@@ -4195,6 +4195,13 @@ const FORM_BINARY_MAGIC_V1 = Buffer.from("FORMBIN1", "ascii");
 const FORM_BINARY_MAGIC = Buffer.from("FORMBIN2", "ascii");
 const FORM_BINARY_LEAF = 0;
 const FORM_BINARY_COMPOSITE = 1;
+// FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
+// is a per-kernel f64s-table index — meaningless in another kernel. So a float
+// node serializes as [FORM_BINARY_FLOAT64][8 bytes IEEE-754 little-endian] and
+// each kernel re-interns the value on read (fresh local index). The dedicated
+// tag also sidesteps the divergent per-kernel float type numbering (Rust
+// FLOAT64=5, Go/TS=7): the value travels in bytes, not the index nor the tag.
+const FORM_BINARY_FLOAT64 = 2;
 
 function pushU32(out: number[], v: number): void {
   const n = v >>> 0;
@@ -4211,6 +4218,21 @@ function readU32(bytes: Uint8Array, pos: number): [number, number] {
   return [v >>> 0, pos + 4];
 }
 
+// pushF64LE / readF64LE — an IEEE-754 f64 as 8 little-endian bytes (the payload
+// of a FORM_BINARY_FLOAT64 node). Sibling parity with Rust/Go little-endian.
+function pushF64LE(out: number[], f: number): void {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, f, true);
+  for (let i = 0; i < 8; i++) out.push(view.getUint8(i));
+}
+
+function readF64LE(bytes: Uint8Array, pos: number): [number, number] {
+  if (pos + 8 > bytes.length) throw new Error("form binary: truncated float64");
+  const view = new DataView(new ArrayBuffer(8));
+  for (let i = 0; i < 8; i++) view.setUint8(i, bytes[pos + i]!);
+  return [view.getFloat64(0, true), pos + 8];
+}
+
 function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   const recipe = k.recipeAt(nid);
   if (recipe) {
@@ -4218,6 +4240,11 @@ function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
     serializeNode(k, recipe.category, out);
     pushU32(out, recipe.children.length);
     for (const child of recipe.children) serializeNode(k, child, out);
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.FLOAT64) {
+    pushU32(out, FORM_BINARY_FLOAT64);
+    pushF64LE(out, k.decodeFloat64(nid.inst));
     return;
   }
   pushU32(out, FORM_BINARY_LEAF);
@@ -4230,6 +4257,11 @@ function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
 function deserializeRawNode(k: Kernel, bytes: Uint8Array, pos: number, scope: number): [NodeID, number] {
   let tag: number;
   [tag, pos] = readU32(bytes, pos);
+  if (tag === FORM_BINARY_FLOAT64) {
+    let value: number;
+    [value, pos] = readF64LE(bytes, pos);
+    return [k.internTrivialFloat64(value), pos];
+  }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;
     let level: number;
@@ -4263,6 +4295,11 @@ function deserializeNode(
 ): [NodeID, number] {
   let tag: number;
   [tag, pos] = readU32(bytes, pos);
+  if (tag === FORM_BINARY_FLOAT64) {
+    let value: number;
+    [value, pos] = readF64LE(bytes, pos);
+    return [k.internTrivialFloat64(value), pos];
+  }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;
     let level: number;
