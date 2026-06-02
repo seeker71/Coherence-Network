@@ -6388,8 +6388,8 @@ fn handle_request(
             // never drained, so the connection's framing is broken: close it.
             let status = "413 Payload Too Large".to_string();
             let msg = format!("request body exceeds {} bytes\n", MAX_BODY_BYTES);
-            let _ =
-                stream.write_all(http_response(&status, &msg, "local-control", false).as_bytes());
+            let _ = stream
+                .write_all(http_response(&status, &msg, "local-control", false, "", &[]).as_bytes());
             return false;
         }
         RequestRead::Error => return false, // idle close / read-timeout / EOF — loop ends
@@ -6405,6 +6405,12 @@ fn handle_request(
     // (k v) pairs; a JSON / other body lands as a single ("__body__", raw) pair.
     let content_type = parse_content_type(&head);
     request_data.extend(parse_request_body(&content_type, &body_bytes));
+    // The full client request header list (request line excluded), captured once
+    // so the fan-out arm can forward the client's end-to-end headers
+    // (Authorization, Cookie, Accept*, …) to the upstream. Native handlers don't
+    // read headers yet (a named-later breath — KERNEL_AS_ROUTER.md handler-inputs
+    // row), but the fan-out arm needs them now to front authenticated routes.
+    let req_headers = parse_headers(&head);
 
     // The router decision: a path with a native Form handler is served
     // entirely in the kernel; a path with no handler fans out to the
@@ -6412,6 +6418,14 @@ fn handle_request(
     let body: String;
     let status: String;
     let router: &str;
+    // The response's Content-Type and other relayed headers: a fan-out fills
+    // these from the UPSTREAM's real response (so a JSON/HTML route survives the
+    // proxy and its Set-Cookie/Cache-Control reach the client); native/404
+    // responses leave them empty, so the ONE emit shape (http_response) defaults
+    // the type to text/plain and relays no extra headers — the router owns all
+    // framing on those arms.
+    let mut resp_content_type = String::new();
+    let mut resp_headers: Vec<(String, String)> = Vec::new();
     if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the request alist as Value::List of (key, value) pairs — query
@@ -6435,8 +6449,9 @@ fn handle_request(
                 path,
                 cl.params.len()
             );
-            let _ = stream
-                .write_all(http_response(&status, &body, "native-kernel-error", false).as_bytes());
+            let _ = stream.write_all(
+                http_response(&status, &body, "native-kernel-error", false, "", &[]).as_bytes(),
+            );
             return false; // close on error — keep the framing unambiguous
         }
         let result = walk(k, arena, cl.body, call_frame);
@@ -6447,13 +6462,20 @@ fn handle_request(
         // FAN-OUT: no native handler — forward to the Python upstream and
         // relay its response. The kernel owns the front door; Python is the
         // upstream for the not-yet-native tail. Each worker issues its own
-        // independent fan-out hop, passing the request's METHOD and BODY so a
-        // POST that fans out to Python carries its payload (Content-Type +
-        // Content-Length set from the captured body).
-        let (fanout_status, fanout_body) =
-            fanout_request(upstream_base, &method, &target, &content_type, &body_bytes);
-        status = fanout_status;
-        body = fanout_body;
+        // independent fan-out hop. The client's METHOD, BODY, and end-to-end
+        // request headers (Authorization, Cookie, Accept*, …) are forwarded so
+        // an authenticated/content-typed route is fronted truthfully; the
+        // UPSTREAM's response Content-Type + end-to-end headers (Set-Cookie,
+        // Cache-Control, Location, …) are relayed back so the client receives
+        // the upstream's real type and cookies, not a flattened text/plain.
+        // Hop-by-hop headers are stripped both ways; the router owns the framing
+        // on its client hop (Content-Length, Connection — http_response writes
+        // those, the relayed set cannot clobber them).
+        let fanout = fanout_request(upstream_base, &method, &target, &req_headers, &body_bytes);
+        status = fanout.status;
+        body = fanout.body;
+        resp_content_type = fanout.content_type;
+        resp_headers = fanout.headers;
         router = "fanout-python";
     } else {
         // No native handler and no upstream configured.
@@ -6462,9 +6484,22 @@ fn handle_request(
         router = "local-control";
     }
     // Frame the response with an accurate Content-Length and the keep-alive
-    // verdict. If the write fails the peer is gone — close the loop.
+    // verdict, the upstream's Content-Type + relayed end-to-end headers on a
+    // fan-out (empty -> text/plain + no extra headers on native/404). The router
+    // owns Content-Length + Connection; the relayed set was already filtered to
+    // exclude those. If the write fails the peer is gone — close the loop.
     if stream
-        .write_all(http_response(&status, &body, router, keep_alive).as_bytes())
+        .write_all(
+            http_response(
+                &status,
+                &body,
+                router,
+                keep_alive,
+                &resp_content_type,
+                &resp_headers,
+            )
+            .as_bytes(),
+        )
         .is_err()
     {
         return false;
@@ -6869,6 +6904,74 @@ fn find_header_end(raw: &[u8]) -> Option<usize> {
         .map(|i| i + 4)
 }
 
+// Parse a raw header block (the lines AFTER the request/status line, terminator
+// excluded) into an ordered list of (name, value) pairs — names kept as sent so
+// they relay verbatim, values trimmed. The first line (request line on the way
+// up, status line on the way back) is the caller's; this skips it. This is the
+// ONE header-capture shape both hops use: the request headers forwarded to the
+// upstream and the upstream's response headers relayed to the client both come
+// from here, so a header is never silently dropped because two code paths parsed
+// the block differently.
+fn parse_headers(head: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for line in head.lines().skip(1) {
+        if line.is_empty() {
+            continue;
+        }
+        if let Some((name, value)) = line.split_once(':') {
+            out.push((name.trim().to_string(), value.trim().to_string()));
+        }
+    }
+    out
+}
+
+// HOP-BY-HOP headers (RFC 7230 §6.1) — meaningful only for a SINGLE transport
+// hop, NEVER forwarded by a proxy to the next hop. The router is a hop on both
+// sides: it owns its client-hop framing (Connection/Content-Length) and its
+// upstream-hop framing independently, so these must be stripped in BOTH
+// directions rather than blindly relayed. `Connection`, `Keep-Alive`,
+// `Transfer-Encoding`, `Upgrade`, the `Proxy-*` pair, plus the rarely-seen TE /
+// Trailer. Content-Length is handled separately (the router sets its own from
+// the body it holds), so it is treated as framing the router owns, not relayed.
+fn is_hop_by_hop(name: &str) -> bool {
+    let n = name.trim();
+    n.eq_ignore_ascii_case("connection")
+        || n.eq_ignore_ascii_case("keep-alive")
+        || n.eq_ignore_ascii_case("transfer-encoding")
+        || n.eq_ignore_ascii_case("upgrade")
+        || n.eq_ignore_ascii_case("proxy-authenticate")
+        || n.eq_ignore_ascii_case("proxy-authorization")
+        || n.eq_ignore_ascii_case("te")
+        || n.eq_ignore_ascii_case("trailer")
+}
+
+// Whether a request header should be forwarded UP to the upstream. Strips the
+// hop-by-hop set (the router owns its upstream-hop framing) AND the framing the
+// router re-derives from the body it captured: `Host` is rewritten to the
+// upstream host, and `Content-Length` is set from the captured body's true
+// length (a forwarded client Content-Length could disagree with the bytes the
+// router actually holds — double-framing). Everything end-to-end —
+// Authorization, Cookie, Accept*, User-Agent, X-*, Content-Type, … — passes.
+fn forward_request_header(name: &str) -> bool {
+    let n = name.trim();
+    !(is_hop_by_hop(n)
+        || n.eq_ignore_ascii_case("host")
+        || n.eq_ignore_ascii_case("content-length"))
+}
+
+// Whether an upstream RESPONSE header should be relayed DOWN to the client.
+// Strips the hop-by-hop set AND the framing the router owns on its client hop:
+// `Content-Length` (the router sets its own from the body it relays) and
+// `Content-Type` (relayed via the dedicated content_type slot in the emit shape,
+// so it is not duplicated here). Everything else end-to-end — Set-Cookie,
+// Cache-Control, Location, ETag, X-*, … — passes through to the client.
+fn relay_response_header(name: &str) -> bool {
+    let n = name.trim();
+    !(is_hop_by_hop(n)
+        || n.eq_ignore_ascii_case("content-length")
+        || n.eq_ignore_ascii_case("content-type"))
+}
+
 // Pull the Content-Length value out of a raw header block (case-insensitive
 // header name). Returns None when absent or unparseable.
 fn parse_content_length(head: &str) -> Option<usize> {
@@ -7033,44 +7136,97 @@ fn fanout_request(
     upstream: &str,
     method: &str,
     target: &str,
-    content_type: &str,
+    req_headers: &[(String, String)],
     body: &[u8],
-) -> (String, String) {
-    match fanout_request_result(upstream, method, target, content_type, body) {
+) -> FanoutResult {
+    match fanout_request_result(upstream, method, target, req_headers, body) {
         Ok(v) => v,
-        Err(e) => (
-            "502 Bad Gateway".to_string(),
-            format!("fan-out upstream error: {}\n", e),
-        ),
+        Err(e) => FanoutResult {
+            status: "502 Bad Gateway".to_string(),
+            content_type: String::new(),
+            headers: Vec::new(),
+            body: format!("fan-out upstream error: {}\n", e),
+        },
     }
 }
 
-// Build an HTTP/1.1 response. Every response carries an ACCURATE Content-Length
-// (we hold the whole body, so we frame it exactly) — that is what makes
-// keep-alive work without chunked encoding: the client knows precisely where the
-// body ends and the next response begins. `keep_alive` sets the Connection
-// header: `keep-alive` when the connection will serve more requests, `close` on
-// the final response (client asked to close, idle timeout, EOF, or an error
-// whose framing is uncertain). Chunked transfer encoding is a named-later breath
+// The ONE response-emit shape — core-abstraction-first: every response (native,
+// fan-out, error) is written here, so the framing the router owns is written in
+// exactly one place and cannot diverge between arms.
+//
+// FRAMING THE ROUTER OWNS (always, on every response):
+//   - Content-Length: ACCURATE, from the body it holds — that is what makes
+//     keep-alive work without chunked encoding (the client knows precisely where
+//     the body ends and the next response begins).
+//   - Connection: `keep-alive` when the connection will serve more requests,
+//     `close` on the final response (client asked to close, idle timeout, EOF,
+//     or an error whose framing is uncertain).
+//   - X-Form-Router: which arm served this (`native-kernel` / `fanout-python` /
+//     a control marker).
+// These are the router's client-hop framing; a relayed upstream header can NEVER
+// clobber them (hop-by-hop + Content-Length/Content-Type are filtered out of
+// `relayed` by relay_response_header before they reach here).
+//
+// `content_type` is the response's Content-Type: the upstream's real one on a
+// fan-out (so a JSON/HTML route survives the proxy instead of being flattened to
+// text/plain), or the native default `text/plain; charset=utf-8` when empty.
+// `relayed` is the upstream's other end-to-end headers (Set-Cookie,
+// Cache-Control, Location, ETag, X-*, …) on a fan-out, EMPTY for native/error
+// responses. Chunked transfer encoding remains a named-later breath
 // (KERNEL_AS_ROUTER.md HTTP-version row).
-fn http_response(status: &str, body: &str, router: &str, keep_alive: bool) -> String {
-    format!(
-        "HTTP/1.1 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nX-Form-Router: {}\r\nConnection: {}\r\n\r\n{}",
+fn http_response(
+    status: &str,
+    body: &str,
+    router: &str,
+    keep_alive: bool,
+    content_type: &str,
+    relayed: &[(String, String)],
+) -> String {
+    let ct = if content_type.trim().is_empty() {
+        "text/plain; charset=utf-8"
+    } else {
+        content_type.trim()
+    };
+    // Start with the framing the router owns, then append the relayed end-to-end
+    // headers verbatim (each already filtered to exclude hop-by-hop and the
+    // router-owned framing). Content-Type carries its own dedicated line.
+    let mut out = format!(
+        "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nX-Form-Router: {}\r\nConnection: {}\r\n",
         status,
+        ct,
         body.as_bytes().len(),
         router,
         if keep_alive { "keep-alive" } else { "close" },
-        body
-    )
+    );
+    for (name, value) in relayed {
+        out.push_str(&format!("{}: {}\r\n", name, value));
+    }
+    out.push_str("\r\n");
+    out.push_str(body);
+    out
+}
+
+// The fan-out hop's full result: the upstream's status line, its CONTENT-TYPE
+// (so the client gets a JSON/HTML route's real type, not a flattened
+// text/plain), its other RELAYABLE end-to-end response headers (Set-Cookie,
+// Cache-Control, Location, …), and the body. Hop-by-hop and router-owned framing
+// headers are already filtered out of `headers` (and Content-Type lifted into
+// its own slot) so the caller relays them safely beside the router's own
+// framing.
+struct FanoutResult {
+    status: String,
+    content_type: String,
+    headers: Vec<(String, String)>,
+    body: String,
 }
 
 fn fanout_request_result(
     upstream: &str,
     method: &str,
     target: &str,
-    content_type: &str,
+    req_headers: &[(String, String)],
     body: &[u8],
-) -> Result<(String, String), String> {
+) -> Result<FanoutResult, String> {
     let (host, port, base_path) = parse_http_upstream(upstream)?;
     let request_target = format!(
         "{}{}",
@@ -7079,18 +7235,27 @@ fn fanout_request_result(
     );
     let mut stream = TcpStream::connect((host.as_str(), port))
         .map_err(|e| format!("connect {}:{}: {}", host, port, e))?;
-    // Forward the request line with the ORIGINAL method, then the headers, then
-    // the body bytes. A POST/PUT/PATCH that fans out to Python carries its body
-    // (Content-Length tells the upstream how much to read); Content-Type is
-    // relayed when the original request had one. GET/HEAD send no body.
+    // Forward the request line with the ORIGINAL method. The router owns the
+    // upstream-hop framing: `Host` is rewritten to the upstream, `Connection:
+    // close` is the router's choice (it does not reuse the upstream connection —
+    // a named-later breath), and Content-Length is set from the body the router
+    // actually captured. The CLIENT's end-to-end headers (Authorization, Cookie,
+    // Accept*, User-Agent, Content-Type, X-*, …) are then forwarded verbatim so
+    // an authenticated/content-typed route is fronted truthfully; hop-by-hop and
+    // router-owned framing headers are filtered by forward_request_header.
     let mut head = format!(
         "{} {} HTTP/1.0\r\nHost: {}\r\nConnection: close\r\n",
         method, request_target, host
     );
-    if !body.is_empty() {
-        if !content_type.is_empty() {
-            head.push_str(&format!("Content-Type: {}\r\n", content_type));
+    for (name, value) in req_headers {
+        if forward_request_header(name) {
+            head.push_str(&format!("{}: {}\r\n", name, value));
         }
+    }
+    // Content-Length from the captured body's TRUE length (never the client's
+    // forwarded one, which could disagree with the bytes we hold). GET/HEAD with
+    // no body send no Content-Length.
+    if !body.is_empty() {
         head.push_str(&format!("Content-Length: {}\r\n", body.len()));
     }
     head.push_str("\r\n");
@@ -7104,19 +7269,35 @@ fn fanout_request_result(
         .read_to_end(&mut response_bytes)
         .map_err(|e| format!("read response: {}", e))?;
     let response = String::from_utf8_lossy(&response_bytes).to_string();
-    let mut lines = response.lines();
-    let status = lines
+    let status = response
+        .lines()
         .next()
         .and_then(|line| line.split_once(' ').map(|(_, rest)| rest.to_string()))
         .unwrap_or_else(|| "502 Bad Gateway".to_string());
-    let body = match response.find("\r\n\r\n") {
-        Some(i) => response[i + 4..].to_string(),
+    // Split the head block from the body. The head string (terminator excluded)
+    // feeds parse_content_type / parse_headers — the SAME parsers the request
+    // side uses (one header-capture shape, both directions).
+    let (head_block, body_text) = match response.find("\r\n\r\n") {
+        Some(i) => (&response[..i], response[i + 4..].to_string()),
         None => match response.find("\n\n") {
-            Some(i) => response[i + 2..].to_string(),
-            None => String::new(),
+            Some(i) => (&response[..i], response[i + 2..].to_string()),
+            None => (response.as_str(), String::new()),
         },
     };
-    Ok((status, body))
+    let content_type = parse_content_type(head_block);
+    // Relay the upstream's other end-to-end response headers; hop-by-hop and the
+    // router-owned framing (Content-Length, Content-Type) are filtered out so
+    // they cannot clobber the framing http_response writes.
+    let headers: Vec<(String, String)> = parse_headers(head_block)
+        .into_iter()
+        .filter(|(name, _)| relay_response_header(name))
+        .collect();
+    Ok(FanoutResult {
+        status,
+        content_type,
+        headers,
+        body: body_text,
+    })
 }
 
 fn parse_http_upstream(upstream: &str) -> Result<(String, u16, String), String> {
