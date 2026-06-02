@@ -182,6 +182,18 @@ PARITY_FILES=(
     # idea [0.8,0,0.6,0,0,0]) → dot 0.96 / (1.0*1.0) = 0.96, an exact rational every
     # kernel formats identically; the irrational-cosine edge (1/sqrt(2)) is bit-identical.
     "examples/endpoint_worldview_alignment_demo.py"
+    # endpoint_coherence_summary_score — collective_health_service._coherence_summary's
+    # COVERAGE/SCORE REDUCTION: four guarded coverage ratios + a weighted-sum score
+    # with the task_count==0 neutral guard (0.5) and a [0.0, 1.0] clamp, each
+    # output round(_, 4). The host walks the heterogeneous task `context` dicts to
+    # produce the counts (task_count, target/evidence/task_card counts, the scores
+    # sum+len) — the dict-over-collection extraction held host-side BY DESIGN; the
+    # kernel folds the ratios + score + round. All banked: safe_ratio's `if denom>0
+    # else default` (grounded_value), the neutral guard + two-sided clamp as
+    # max2/min2 branches, round_ndigits. Pure arithmetic, no _iter/_get fold, so it
+    # runs three-way clean including Go. Frozen sample (task_count=10) →
+    # [0.665, 0.7, 0.6, 0.75, 0.5], all non-integer floats that print identically.
+    "examples/endpoint_coherence_summary_score_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

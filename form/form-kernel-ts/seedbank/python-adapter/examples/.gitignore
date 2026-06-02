@@ -42,3 +42,4 @@
 !endpoint_concept_match_score_demo.fk
 !endpoint_tag_match_score_demo.fk
 !endpoint_worldview_alignment_demo.fk
+!endpoint_coherence_summary_score_demo.fk
