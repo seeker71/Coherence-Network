@@ -43,7 +43,7 @@
 ; in-kernel type tag stays off the wire for floats; portability rides on
 ; the value, not the constant.
 ;
-; The aggregate score is 1 per passing check; full pass = 26.
+; The aggregate score is 1 per passing check; full pass = 28.
 ;
 ; In service of `numeric-types-plan` (kernels carry one current-epoch
 ; IEEE 754 path while the substrate moves toward format-recipes) and
@@ -136,21 +136,43 @@
     (let s25 (if (eq (node_type (intern_trivial_float "0.8125")) 7) 1 0))
 
     ;; A float32 trivial's type tag is 6 three-way, and a float32 leaf
-    ;; reads back its IEEE value in every kernel. Rust never PRODUCES a
-    ;; float32 (float literals parse as float64; make_float32 is a Go/TS
-    ;; native), but Rust READS one: a hand-built type-6 leaf carrying the
-    ;; IEEE bits of 0.5f32 (0x3F000000 = 1056964608) decodes to 0.5 via
-    ;; float_value in all three kernels. Before alignment Rust panicked
-    ;; on type 6; now it recognizes float32 for sibling read-parity.
+    ;; reads back its IEEE value in every kernel. A hand-built type-6 leaf
+    ;; carrying the IEEE bits of 0.5f32 (0x3F000000 = 1056964608) decodes
+    ;; to 0.5 via float_value in all three kernels. Before alignment Rust
+    ;; panicked on type 6; now it recognizes float32 for sibling read-parity.
     (let f32-leaf (make_nodeid 1 1 6 1056964608))
     (let s26 (if (and (eq (node_type f32-leaf) 6)
                       (eq (float_value f32-leaf) 0.5)) 1 0))
 
+    ;; ── 9. Float CONSTRUCTION — make_float32 / make_float64 three-way ──
+    ;; The construction verbs: take a number, intern the typed float
+    ;; trivial, return its NodeID. Sibling parity with Go/TS
+    ;; (internTrivialFloat32/64). Rust registers these too as of the
+    ;; construction-parity work — before it, make_float32/make_float64
+    ;; were UNBOUND in Rust while Go/TS bound them, so any recipe calling
+    ;; them diverged (error in Rust, value in Go/TS). Now all three agree.
+    ;;
+    ;; 0.5 is exact in both IEEE widths. The NODE-level type tag stays
+    ;; distinct (make_float32 → type 6, make_float64 → type 7), proving the
+    ;; constructors hit the right intern path; the value-level read-back
+    ;; (float_value) is 0.5 in every kernel. Rust's Value::Float is f64 and
+    ;; the f32 leaf's value collapses to f64 0.5 on decode — that collapse
+    ;; is honest and identical to Go (VFloat is f64); TS keeps an f32 value
+    ;; kind but the numeric value is the same 0.5. The gate compares value
+    ;; equality against an exact literal, so all three MUST agree.
+    (let mf32 (make_float32 0.5))
+    (let mf64 (make_float64 0.5))
+    (let s27 (if (and (eq (node_type mf32) 6)
+                      (eq (node_type mf64) 7)) 1 0))
+    (let s28 (if (and (eq (float_value mf32) 0.5)
+                      (eq (float_value mf64) 0.5)) 1 0))
+
     ;; ── Aggregate — int + int through MATH (no float in result) ───
     ;; Every sub-score is 1 or 0; the sum flows through the I32 path
-    ;; in every kernel and prints as a plain integer. Full pass = 26.
+    ;; in every kernel and prints as a plain integer. Full pass = 28.
     (add s1 (add s2 (add s3 (add s4 (add s5
     (add s6 (add s7 (add s8 (add s9 (add s10
     (add s11 (add s12 (add s13 (add s14 (add s15
     (add s16 (add s17 (add s18 (add s19 (add s20
-    (add s21 (add s22 (add s23 (add s24 (add s25 s26))))))))))))))))))))))))))
+    (add s21 (add s22 (add s23 (add s24 (add s25
+    (add s26 (add s27 s28))))))))))))))))))))))))))))
