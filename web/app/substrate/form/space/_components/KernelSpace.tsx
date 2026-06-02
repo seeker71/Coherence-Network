@@ -68,6 +68,8 @@ const PROTO_COLOR: Record<ChannelProtocol, string> = {
   recipe: "#f59e0b",
   query: "#4ade80",
   retrieve: "#a78bfa",
+  offer: "#fb7185",
+  attune: "#2dd4bf",
 };
 
 const STARTERS: { label: string; source: string; note: string }[] = [
@@ -1365,6 +1367,8 @@ export default function KernelSpace() {
                 <option value="recipe">recipe</option>
                 <option value="query">query</option>
                 <option value="retrieve">retrieve</option>
+                <option value="offer">offer</option>
+                <option value="attune">attune</option>
               </select>
               <input
                 value={draft}
