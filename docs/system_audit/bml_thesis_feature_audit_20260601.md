@@ -55,7 +55,12 @@ What is proven today:
   `RegisterPrimitives`, and `PrintCommandLineHelp`. Full grammar body
   semantic lowering remains an explicit gap, but the real `AsString` and
   `AsBMLString` helper bodies now execute from parsed BodySource through
-  focused Form-side semantics.
+  focused Form-side semantics. The real `Compile(String strFileName)` body now
+  executes its focused compiler-driver path from parsed BodySource: it creates a
+  `ParseStream`, looks up syntax through
+  `m_hSyntaxes.Get(GetFileExtension(strFileName))`, returns false when no syntax
+  is available without invoking the syntax object, and invokes
+  `hSyntax.Invoke(self, hStream, 0)` for successful and failed parser results.
 - The original companion `container-Rule.bml` file now parses real class
   bodies for `RuleProcess` and `Rule`, including sections, fields,
   constructors, method signatures, parameters, properties, initialized fields,
@@ -162,7 +167,7 @@ is not complete rule-for-rule.
 | Exceptions | `backtracking-model-languages.txt:760-762` | native-executed for int throw/catch proof slice | Arbitrary object exception typing/catch matching remains a gap. |
 | BML syntax blocks and multi-syntax streams | `backtracking-model-languages.txt:1012-1014`; `bml-search-algorithms.txt:239-246` | native-executed for source-section sidecars; gap for object syntax dispatch | `source-compiler-runtime.fk` and `source-compiler-multi-dialect-band.fk` prove section sidecars; parsing arbitrary objects by syntax name remains a gap. |
 | Object runtime definitions, dispatch, casting, instantiators | `sgb-bml-objects.txt:569-655`, `:778-791` | partial native-executed / gap | Native record and blueprint method dispatch are proven. `bml-thesis-rule-method-dispatch-proof.fk` installs the source-originated `SetProcess` body from `container-Rule.bml` and invokes it through `method_invoke`. Full instance/interface definitions, indexed dispatch, arbitrary interface casts, unique/singleton instantiators, and detached interfaces remain gaps. |
-| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` now parses real sections, fields, constructors, method signatures, parameters, properties, field initializers, and body source tokens; its full constructor, `self(...)` constructor chaining, and `SetProcess` simple assignment body execute against native records, including native blueprint method dispatch. `BMF-grammar.bml` now parses the `BMF` class body into native model components for its string const, class/public fields, constructor, `Main(String[] hArgs)`, method signatures, and small helper body source. `bml-thesis-bmf-string-methods-proof.fk` executes the real `AsString` and `AsBMLString` parsed bodies for the thesis escape sets. Full grammar-body semantic lowering remains a gap. |
+| Companion `.bml` source samples | `companion/source-samples/*.bml` | partial native-executed / gap | `BMF-includes.bml` now parses as a whole source file. `primitive-Cut.bml` now parses as a whole source file and its executable method bodies run natively. `container-Rule.bml` now parses real sections, fields, constructors, method signatures, parameters, properties, field initializers, and body source tokens; its full constructor, `self(...)` constructor chaining, and `SetProcess` simple assignment body execute against native records, including native blueprint method dispatch. `BMF-grammar.bml` now parses the `BMF` class body into native model components for its string const, class/public fields, constructor, `Main(String[] hArgs)`, method signatures, and small helper body source. `bml-thesis-bmf-string-methods-proof.fk` executes the real `AsString` and `AsBMLString` parsed bodies for the thesis escape sets. `bml-thesis-bmf-compile-source-proof.fk` executes the real `Compile(String strFileName)` compiler-driver body for happy, failed-invoke, and no-syntax false paths. Full grammar-body semantic lowering remains a gap. |
 | Focused `.bml` file-to-native execution | `bml-thesis-forward-backward-demo.bml` | native-executed | `bml-thesis-file-execution-proof.fk` scans a real `.bml` file, parses `state-int` plus `try-throw-return`, lowers to BMA, runs DO/UNDO, and verifies restored state. |
 | Focused companion-shaped `.bml` declarations | `BMF-grammar.bml`, `container-Rule.bml`, `primitive-Cut.bml` slices | component/native-proven | `bml-thesis-companion-file-proof.fk` scans `bml-thesis-companion-declarations.bml`, parses package/import/interface/class/section/field/string const/two-base/Main method shapes, builds the class model, and runs `Main` through BMA. |
 
@@ -187,8 +192,15 @@ source subset:
   result-stack helpers, primitive registration, and `Add` body source tokens.
   `bml-thesis-bmf-string-methods-proof.fk` now executes the real parsed
   `AsString` and `AsBMLString` bodies for backslash, quote, newline, tab,
-  carriage-return, and NUL string conversion behavior. Full semantic lowering
-  of the remaining loop-heavy and large helper bodies remains a gap.
+	  carriage-return, and NUL string conversion behavior. Full semantic lowering
+	  of the remaining loop-heavy and large helper bodies remains a gap.
+	  `bml-thesis-bmf-compile-source-proof.fk` now executes the original
+	  `Compile(String strFileName)` body for the `ParseStream` creation,
+	  `m_hSyntaxes.Get(GetFileExtension(strFileName))` syntax lookup,
+	  `hSyntax == null` early false return, and
+	  `hSyntax.Invoke(self, hStream, 0)` parser-dispatch paths. Console print
+	  formatting, exception object matching, and line-count success text remain
+	  outside this focused slice.
 - `primitive-Cut.bml` calls `System.Cut( hContext.Argument( 0 ))`; the source
   file now parses directly and lowers that call shape to native BMA `cut`.
   General method-call runtime dispatch remains a gap.

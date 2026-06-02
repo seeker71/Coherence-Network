@@ -1,0 +1,152 @@
+; tests/bml-thesis-bmf-compile-source-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves focused execution of original BMF-grammar.bml:
+; bool Compile(String strFileName)
+;   hStream = ParseStream(strFileName);
+;   Syntax hSyntax = m_hSyntaxes.Get(GetFileExtension(strFileName));
+;   if (hSyntax == null) return false;
+;   bool bResult = hSyntax.Invoke(self, hStream, 0);
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn false-score (b bit)
+        (if b 0 bit))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn record-str-score (rec key expected bit)
+        (if (record_has rec key)
+            (str-score (record_get rec key) expected bit)
+            0))
+
+    (defn record-int-score (rec key expected bit)
+        (if (record_has rec key)
+            (int-score (record_get rec key) expected bit)
+            0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/BMF-grammar.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let bmf-class (bml-model-find-class model "BMF"))
+    (let compile-method
+        (bml-find-method
+            (bml-class-own-methods bmf-class)
+            "Compile"))
+    (let compile-body (bml-method-body compile-method))
+
+    (let BmfBP (make_nodeid 1 2 99 9220))
+    (let HashBP (make_nodeid 1 2 99 9221))
+    (let SyntaxBP (make_nodeid 1 2 99 9222))
+    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let syntax-table (record_new HashBP))
+    (let syntax-ok
+        (record_new
+            SyntaxBP
+            "FileExtension"
+            "BMF"
+            "invokeResult"
+            true))
+    (let syntax-fail
+        (record_new
+            SyntaxBP
+            "FileExtension"
+            "FAIL"
+            "invokeResult"
+            false))
+    (record_set syntax-table "BMF" syntax-ok)
+    (record_set syntax-table "FAIL" syntax-fail)
+
+    (defn bmf-get-file-extension-dispatch (self file-name)
+        (do
+            (record_set self "extensionRequested" file-name)
+            (if (str_eq file-name "grammar.bmf") "BMF"
+                (if (str_eq file-name "broken.fail") "FAIL"
+                    "XYZ"))))
+
+    (defn syntax-table-get-dispatch (self key)
+        (record_get self key))
+
+    (defn syntax-invoke-dispatch (self compiler stream depth)
+        (do
+            (record_set self "invokedCompiler" compiler)
+            (record_set self "invokedStream" stream)
+            (record_set self "invokedDepth" depth)
+            (record_set compiler "lastCompiledFile" (record_get stream "FileName"))
+            (record_get self "invokeResult")))
+
+    (method_define BmfBP "GetFileExtension" bmf-get-file-extension-dispatch)
+    (method_define HashBP "Get" syntax-table-get-dispatch)
+    (method_define SyntaxBP "Invoke" syntax-invoke-dispatch)
+
+    (let bmf-ok-direct (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let env-ok (record_new EnvBP "strFileName" "grammar.bmf"))
+    (let direct-ok
+        (bml-body-source-exec-bmf-compile
+            compile-body
+            bmf-ok-direct
+            env-ok))
+    (let stream-ok (record_get env-ok "hStream"))
+
+    (let bmf-no-syntax (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let env-no-syntax (record_new EnvBP "strFileName" "missing.xyz"))
+    (let direct-no-syntax
+        (bml-body-source-exec-bmf-compile
+            compile-body
+            bmf-no-syntax
+            env-no-syntax))
+
+    (let bmf-fail (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let env-fail (record_new EnvBP "strFileName" "broken.fail"))
+    (let direct-fail
+        (bml-body-source-exec-bmf-compile compile-body bmf-fail env-fail))
+
+    (defn bmf-compile-dispatch (self file-name)
+        (do
+            (let call-env
+                (record_new
+                    (bml-constructor-env-blueprint 0)
+                    "strFileName"
+                    file-name))
+            (bml-body-source-exec compile-body self call-env)))
+
+    (method_define BmfBP "Compile" bmf-compile-dispatch)
+    (let bmf-ok-invoke (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let invoked-ok (method_invoke bmf-ok-invoke "Compile" "grammar.bmf"))
+    (let bmf-no-syntax-invoke (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let invoked-no-syntax
+        (method_invoke bmf-no-syntax-invoke "Compile" "missing.xyz"))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-class-name bmf-class) "BMF" 2)
+            (str-score (bml-method-return compile-method) "bool" 4)
+            (str-score (bml-method-name compile-method) "Compile" 8)
+            (bool-score (bml-body-source-bmf-compile-shape? compile-body) 16)
+            (int-score (bml-body-source-parse-stream-assignment-count compile-body) 1 32)
+            (int-score (bml-body-source-syntax-lookup-assignment-count compile-body) 1 64)
+            (int-score (bml-body-source-if-local-null-return-false-count compile-body) 1 128)
+            (int-score (bml-body-source-receiver-call3-assignment-count compile-body) 1 256)
+            (bool-score (gt (bml-body-source-return-local-count compile-body) 0) 512)
+            (bool-score direct-ok 1024)
+            (record-str-score stream-ok "bmlClass" "ParseStream" 2048)
+            (record-str-score stream-ok "FileName" "grammar.bmf" 4096)
+            (record-int-score stream-ok "Line" 1 8192)
+            (record-str-score bmf-ok-direct "extensionRequested" "grammar.bmf" 16384)
+            (record-str-score bmf-ok-direct "lastCompiledFile" "grammar.bmf" 32768)
+            (record-int-score syntax-ok "invokedDepth" 0 65536)
+            (false-score direct-no-syntax 131072)
+            (false-score direct-fail 262144)
+            (bool-score invoked-ok 524288)
+            (false-score invoked-no-syntax 1048576)
+            (false-score (record_has bmf-no-syntax "lastCompiledFile") 2097152)
+            (false-score (record_has env-no-syntax "bResult") 4194304)
+            (false-score (record_has bmf-no-syntax-invoke "lastCompiledFile") 8388608))))
