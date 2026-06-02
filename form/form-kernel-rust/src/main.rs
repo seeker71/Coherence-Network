@@ -6264,7 +6264,7 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
-  serve --port <p> --routes <file.fk> [--upstream <base-url>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest (HTTP/1.0 proof-of-shape)
+  serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a BML-authored `section [form.bml]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
 
 Source adapter modes:
   <file.fk> [more.fk ...]              run .fk files
@@ -6731,6 +6731,179 @@ fn worker_loop(
     }
 }
 
+// The form-stdlib preludes a BML manifest is source-compiled through, in load
+// order: json.fk + cache.fk feed the ontology loader, which binds the Form
+// category/primitive tables source-compiler.fk lowers a `section [...]` against.
+// This is the SAME prelude set + lowering `form/validate.sh prepare_sources`
+// runs to source-compile a `section [...]` file — the router reuses the body's
+// own compiler, not a Rust reimplementation of the BML surface parser.
+const SOURCE_COMPILE_PRELUDES: [&str; 4] = [
+    "json.fk",
+    "cache.fk",
+    "form-ontology-loader.fk",
+    "source-compiler.fk",
+];
+
+// A routes manifest is BML-authored (vs raw S-expression) iff it opens a
+// `section [...]` block — the source-compiler's own section marker. The check
+// is the same `section [` line-prefix scan form-source-compile-loop uses to
+// find sections, so "needs lowering" and "has a section" are the one judgement.
+fn manifest_is_bml(src: &str) -> bool {
+    src.lines().any(|line| line.trim_start().starts_with("section ["))
+}
+
+// Source-compile a BML-authored routes manifest to the S-expression Form the
+// kernel walks, returning the lowered source. This is PATH A — source-compile
+// AT LOAD: the router accepts a BML manifest directly, lowering it through the
+// body's own form-stdlib source-compiler (the same `form-source-compile-file`
+// the validate path uses) before `read_root_from_source` reads it. The compile
+// writes a `.fkb` Recipe sidecar next to the lowered `.fk` (the compiled output
+// references it via `walk_recipe_here (read_form_binary "...")`), so both files
+// live in `work_dir`, which the caller keeps alive for the server's lifetime.
+//
+// Reuse, not reinvention: the 4 preludes + driver are concatenated and walked
+// by a fresh kernel exactly as `validate.sh` loads them — the BML surface parser
+// (form.bml dialect in source-compiler.fk) is Form-stdlib tissue, run here, never
+// duplicated in Rust. Called ONCE in the main thread before workers spawn, so the
+// lowering cost is paid once at startup, not per-worker and not per-request; each
+// worker then loads the lowered `.fk` exactly as it loads a raw S-expression one.
+fn source_compile_bml_manifest(
+    routes_path: &str,
+    stdlib_dir: &str,
+    work_dir: &std::path::Path,
+) -> Result<String, String> {
+    // work_dir is absolute (env::temp_dir()); out_path therefore is too.
+    let out_path = work_dir.join("routes-compiled.fk");
+    let out_str = out_path.to_string_lossy().to_string();
+
+    // The source-compiler's ontology loader reads its data files by paths
+    // RELATIVE to "form-stdlib/" (e.g. read_with_cache "form-stdlib/form-ontology.json")
+    // — exactly as validate.sh runs it with cwd = form/. So the compile must run
+    // with the working directory set to the PARENT of the stdlib dir, where
+    // "form-stdlib/..." resolves. We set cwd for the (single-threaded, pre-worker)
+    // compile and restore it after. Because cwd changes, routes_path and out_path
+    // are made ABSOLUTE before they go into the driver, so they resolve regardless.
+    let stdlib_path = std::path::Path::new(stdlib_dir);
+    let stdlib_abs = stdlib_path
+        .canonicalize()
+        .map_err(|e| format!("source-compile: --stdlib {}: {}", stdlib_dir, e))?;
+    let stdlib_parent = stdlib_abs
+        .parent()
+        .ok_or_else(|| format!("source-compile: --stdlib {} has no parent dir", stdlib_dir))?
+        .to_path_buf();
+    let stdlib_name = stdlib_abs
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "form-stdlib".to_string());
+    let routes_abs = std::path::Path::new(routes_path)
+        .canonicalize()
+        .map_err(|e| format!("source-compile: --routes {}: {}", routes_path, e))?
+        .to_string_lossy()
+        .to_string();
+
+    // Concatenate the form-stdlib preludes (read from stdlib_dir) and a one-line
+    // driver that calls the source-compiler over the BML manifest. The kernel's
+    // multi-file load joins files with "\n"; we build the same joined source so
+    // the driver sees every prelude's bindings.
+    let mut parts: Vec<String> = Vec::with_capacity(SOURCE_COMPILE_PRELUDES.len() + 1);
+    for name in SOURCE_COMPILE_PRELUDES {
+        let p = stdlib_abs.join(name);
+        match fs::read_to_string(&p) {
+            Ok(s) => parts.push(s),
+            Err(e) => {
+                return Err(format!(
+                    "source-compile: read prelude {}: {} (is --stdlib {} correct?)",
+                    p.display(),
+                    e,
+                    stdlib_dir
+                ))
+            }
+        }
+    }
+    // The driver runs the existing form-source-compile-file: lower every
+    // `section [...]` in routes_path into Recipe + .fkb sidecar, emit the
+    // S-expression Form (with walk_recipe_here drivers) to out_path. Absolute
+    // paths so they resolve under the changed cwd.
+    parts.push(format!(
+        "(do (form-source-compile-file {} {}))",
+        sexp_string_literal(&routes_abs),
+        sexp_string_literal(&out_str)
+    ));
+    let driver_src = parts.join("\n");
+
+    // Set cwd to the stdlib's parent so the ontology loader's "form-stdlib/..."
+    // relative reads resolve, run the compile, then restore cwd. Restoring is
+    // important: the rest of cli_serve (and the workers) expect the original cwd.
+    let prev_cwd = env::current_dir()
+        .map_err(|e| format!("source-compile: read cwd: {}", e))?;
+    // Guard against a surprising layout where the stdlib's parent isn't named to
+    // match the loader's hardcoded "form-stdlib/" prefix — if the dir name isn't
+    // "form-stdlib", the relative reads would still miss. Name it explicitly.
+    if stdlib_name != "form-stdlib" {
+        return Err(format!(
+            "source-compile: --stdlib must point at a directory named 'form-stdlib' \
+             (the source-compiler reads form-stdlib/form-ontology.json relative to its parent); \
+             got {}",
+            stdlib_abs.display()
+        ));
+    }
+    env::set_current_dir(&stdlib_parent)
+        .map_err(|e| format!("source-compile: chdir {}: {}", stdlib_parent.display(), e))?;
+
+    // Walk the compile in a throwaway kernel — its only purpose is the file
+    // side-effects (out_path + .fkb sidecar). run_source already builds a fresh
+    // Kernel + Arena and walks the source; a parse/lowering failure surfaces as a
+    // kernel panic, which the spawned worker thread in main() turns into a clean
+    // process message. We run it on a generous-stack thread because the BML
+    // lowering is deeply recursive (the source-compiler walks the section body).
+    let compile_result = std::thread::Builder::new()
+        .name("bml-source-compile".to_string())
+        .stack_size(FORM_KERNEL_STACK_BYTES)
+        .spawn(move || {
+            let _ = run_source(&driver_src);
+        })
+        .map_err(|e| format!("source-compile: spawn compile thread: {}", e))
+        .and_then(|h| {
+            h.join().map_err(|_| {
+                "source-compile: lowering the BML manifest panicked (see message above)"
+                    .to_string()
+            })
+        });
+
+    // Restore cwd before propagating any compile error, so a failed compile never
+    // leaves the process in the stdlib's parent.
+    let _ = env::set_current_dir(&prev_cwd);
+    compile_result?;
+
+    // Read the lowered S-expression Form back as the manifest source the router
+    // loads. If it is absent, the section never lowered (a malformed manifest).
+    fs::read_to_string(&out_path).map_err(|e| {
+        format!(
+            "source-compile: lowered manifest {} not produced: {} (does {} contain a `section [...]` block?)",
+            out_path.display(),
+            e,
+            routes_path
+        )
+    })
+}
+
+// Quote a path/string as an S-expression string literal for the compile driver:
+// wrap in double quotes, escaping backslash and double-quote. Paths with a quote
+// or backslash are exotic but must not break the driver's parse.
+fn sexp_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            _ => out.push(ch),
+        }
+    }
+    out.push('"');
+    out
+}
+
 fn cli_serve(args: &[String]) -> i32 {
     // --port <p> --routes <file.fk> [--upstream <http-base-url>]
     let mut port: u16 = 8001;
@@ -6748,6 +6921,12 @@ fn cli_serve(args: &[String]) -> i32 {
     // Default: the host's available parallelism (capped sane), so the box's
     // cores are used out of the box; 0 or unset falls back to the default.
     let mut workers: Option<usize> = None;
+    // --stdlib <dir> points at the form-stdlib directory whose source-compiler a
+    // BML-authored manifest is lowered through (PATH A — source-compile at load).
+    // It is used ONLY when the manifest opens a `section [...]` block; a raw
+    // S-expression manifest never touches it. Default: "form-stdlib" relative to
+    // the cwd, the same relative path validate.sh uses.
+    let mut stdlib_dir: String = "form-stdlib".to_string();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -6795,6 +6974,14 @@ fn cli_serve(args: &[String]) -> i32 {
                 };
                 i += 2;
             }
+            "--stdlib" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --stdlib requires a directory argument");
+                    return 2;
+                }
+                stdlib_dir = args[i + 1].clone();
+                i += 2;
+            }
             other => {
                 eprintln!("serve: unknown argument: {}", other);
                 return 2;
@@ -6808,12 +6995,45 @@ fn cli_serve(args: &[String]) -> i32 {
             return 2;
         }
     };
-    let src = match fs::read_to_string(&routes_path) {
+    let raw_src = match fs::read_to_string(&routes_path) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("serve: read {}: {}", routes_path, e);
             return 1;
         }
+    };
+
+    // PATH A — source-compile at load. If the manifest is BML-authored (opens a
+    // `section [...]` block), lower it ONCE here in the main thread through the
+    // body's own form-stdlib source-compiler into the S-expression Form the
+    // kernel walks; the workers then load that lowered source exactly as they
+    // load a raw S-expression manifest. `_compile_work_dir` holds the temp dir
+    // (the lowered .fk + its .fkb Recipe sidecar) alive for the server's life —
+    // dropping it would unlink the .fkb a worker's `walk_recipe_here` reads.
+    let mut _compile_work_dir: Option<PathBuf> = None;
+    let src = if manifest_is_bml(&raw_src) {
+        let dir = env::temp_dir().join(format!("form-router-bml-{}", std::process::id()));
+        if let Err(e) = fs::create_dir_all(&dir) {
+            eprintln!("serve: create source-compile work dir {}: {}", dir.display(), e);
+            return 1;
+        }
+        match source_compile_bml_manifest(&routes_path, &stdlib_dir, &dir) {
+            Ok(lowered) => {
+                eprintln!(
+                    "form-kernel-rust serve: BML manifest {} source-compiled via {} (form.bml dialect)",
+                    routes_path, stdlib_dir
+                );
+                _compile_work_dir = Some(dir);
+                lowered
+            }
+            Err(e) => {
+                eprintln!("serve: {}", e);
+                let _ = fs::remove_dir_all(&dir);
+                return 1;
+            }
+        }
+    } else {
+        raw_src
     };
 
     // Validate the manifest ONCE up front (in the main thread) so a broken

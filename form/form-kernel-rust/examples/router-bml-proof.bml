@@ -1,0 +1,51 @@
+; router-bml-proof.bml — the kernel-as-router proof, authored in BML SURFACE syntax.
+;
+; The sibling of examples/router-proof.fk. Native handlers + the routes manifest
+; written in the BML surface tongue (`def name(args) = expr;`), NOT raw
+; S-expression and NOT Python-cross-compiled. `form-kernel-rust serve --routes
+; <this> --stdlib form-stdlib` SOURCE-COMPILES this manifest at load — reusing
+; the EXISTING form-stdlib source compiler (form-source-compile-file lowering the
+; form.bml dialect) into the S-expression Form the kernel walks — then serves it.
+; The handler is Form, walked by the kernel: the BML surface is the authoring
+; tongue, lowered by the body's own compiler, never a Rust-side reimplementation.
+;
+;   curl :PORT/health                          -> "ok"   (native, Form)
+;   curl ':PORT/weighted_sum'                  -> 39     (native multi-step int math)
+;   curl ':PORT/count_signals?values=a,b,c'    -> "3"    (native, input-driven)
+;   curl :PORT/api/ideas                       -> fan-out -> CPython upstream
+;
+; Everything inside the form.bml section below is BML surface syntax, lowered to
+; ordinary Form before the kernel serves a request. In this dialect each
+; `def name(args) = expr;` is a single line (the multi-line shape is the block
+; form `def name(args) { ... }`); the expressions nest `if c then a else b` and
+; `f(a, b)` calls freely. The compute here is integer/string — the values cross
+; the source compiler's .fkb artifact intact; a BML float-literal handler is a
+; further breath (see KERNEL_AS_ROUTER.md "BML preference").
+
+section [form.bml] {
+    ; tiny alist helper: value for `key` in a list of (k v) string pairs
+    def assoc(key, pairs) = if eq(len(pairs), 0) then "" else if str_eq(head(head(pairs)), key) then head(tail(head(pairs))) else assoc(key, tail(pairs));
+
+    ; NATIVE handler 1: liveness. Pure Form, zero inputs (`def name() = ...`).
+    def route_health() = "ok";
+
+    ; NATIVE handler 2: a real multi-step aggregator in Form integer math. The
+    ; weighted sum of three signal counts (3, 5, 7) against weights (2, 1, 4) —
+    ; (3*2)+(5*1)+(7*4) = 39. The value-walk runs the whole arithmetic in the
+    ; kernel and the int result becomes the HTTP body. The same shape an
+    ; S-expression handler would compute — proven equal in the harness.
+    def route_weighted_sum() = int_to_str(add(add(mul(3, 2), mul(5, 1)), mul(7, 4)));
+
+    ; NATIVE handler 3: input-driven Form compute. Counts comma-separated
+    ; signals in the `values` query arg by walking the string char-by-char in
+    ; the kernel (commas + 1). Reads request input, computes a non-trivial
+    ; value entirely in Form.
+    def count_commas(s, i, n) = if eq(i, str_len(s)) then n else count_commas(s, add(i, 1), if str_eq(char_at(s, i), ",") then add(n, 1) else n);
+
+    def route_count_signals(q) = if eq(str_len(assoc("values", q)), 0) then "0" else int_to_str(add(count_commas(assoc("values", q), 0, 0), 1));
+
+    ; the route manifest: (path handler). Everything not here fans out. The
+    ; kernel resolves this top-level `routes` binding exactly as it does for the
+    ; S-expression manifest — the BML section lowered it to the same shape.
+    let routes = list(list("/health", route_health), list("/weighted_sum", route_weighted_sum), list("/count_signals", route_count_signals));
+}

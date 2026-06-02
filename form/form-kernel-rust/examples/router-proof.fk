@@ -13,8 +13,10 @@
 ;     X-Form-Router: fanout-python.
 ;
 ; Authored as .fk S-expression Form — the kernel's native surface, NOT
-; Python-cross-compiled. (BML surface -> routes would need the Form surface
-; parser in Rust; named as a build in KERNEL_AS_ROUTER.md.)
+; Python-cross-compiled. A BML-surface sibling of this manifest serves too:
+; examples/router-bml-proof.bml is source-compiled at load via the form-stdlib
+; form.bml dialect (serve --routes <bml> --stdlib form-stdlib). See the "BML
+; preference" section in KERNEL_AS_ROUTER.md.
 ;
 ;   curl :PORT/health                          -> "ok"        (native, Form)
 ;   curl ':PORT/coherence_weight'              -> 0.8125      (native float math)

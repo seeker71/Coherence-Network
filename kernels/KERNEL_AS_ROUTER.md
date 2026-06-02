@@ -237,16 +237,53 @@ still open breaths.
 ## The BML preference
 
 Native handlers and the routes manifest are **Form-native tissue, not
-Python-cross-compiled**. The proof manifest is authored as `.fk` S-expression
-Form — the kernel's native surface that `read_root_from_source` reads directly.
-BML surface syntax (`defn name(a, b) = do { ... };`) is the preferred authoring
-tongue because it exposes Form features directly (Python reaches Form only via
-the bolted-on adapter SDK); serving a BML-authored manifest needs the Form
-surface parser in Rust (the `.recipelib.json` tongue_caches → S-expression
-converter named in [`lc-native-kernel-binary`](../docs/vision-kb/concepts/lc-native-kernel-binary.md)).
+Python-cross-compiled**. BML surface syntax (`def name(args) = expr;`) is the
+preferred authoring tongue because it exposes Form features directly — Python
+reaches Form only through the bolted-on adapter SDK — and the router serves a
+BML-authored manifest today.
+
+The BML surface parser is not a Rust build — it already lives in Form-stdlib.
+`form-stdlib/source-compiler.fk`'s `form.bml` dialect lowers a `section [form.bml]
+{ ... }` block into ordinary Form, the same `form-source-compile-file` lowering
+`form/validate.sh prepare_sources` runs to source-compile any section file. The
+router reuses that compiler directly: `serve --routes <manifest> --stdlib
+form-stdlib` SOURCE-COMPILES a BML manifest **at load** (the manifest is BML iff
+it opens a `section [...]` block), in the main thread before any worker spawns,
+through the four form-stdlib preludes (`json.fk` + `cache.fk` +
+`form-ontology-loader.fk` + `source-compiler.fk`) — then loads the lowered
+S-expression with the SAME `read_root_from_source` an S-expression manifest uses.
+The lowering writes a `.fkb` Recipe sidecar the lowered manifest reads via
+`walk_recipe_here`; both live in a temp dir held for the server's lifetime. The
+cost is paid once at startup, not per-worker and not per-request: a worker loads
+the lowered `.fk` exactly as it loads a raw S-expression one.
+[`examples/router-bml-proof.bml`](../form/form-kernel-rust/examples/router-bml-proof.bml)
+is a working BML-authored manifest;
+[`router_bml_proof_harness.py`](../form/form-kernel-rust/router_bml_proof_harness.py)
+proves each BML route serves the correct value in Form (`X-Form-Router:
+native-kernel`, no CPython) and EQUAL to the same handler authored in
+S-expression — the BML surface lowered to the same Form shape. A raw
+S-expression manifest is unchanged: it has no `section [...]`, so it never
+touches the source-compiler and `read_root_from_source` reads it directly.
+
+Honest scope of the BML authoring path as it stands: the `form.bml` dialect
+lowers `def name(args) = expr;` (single-line), the block form `def name(args)
+{ ... }`, nested `if c then a else b`, `f(a, b)` calls, and integer/string
+literals — the proof's handlers (a multi-step integer aggregator, an
+input-driven counter, liveness) are authored in it and their values cross the
+source-compiler's `.fkb` artifact intact. A BML **float-literal** handler is the
+next breath: the compiler can lower a float in-process, but the `.fkb` artifact
+format carries a float as an overflow-table index, not the value, so a lowered
+float does not yet survive the cross-kernel round-trip (a float-value embedding
+across all three kernels' artifact (de)serializers is the named build).
+An S-expression manifest serves floats today — the kernel's `.fk` source reader
+reads float tokens directly (the existing `router-proof.fk`'s 0.8125
+coherence-weight is one) — so float routes have a path; only the BML→`.fkb` route
+waits on that artifact change.
+
 Either way the handler is Form, walked by the kernel — never a Python function
 the kernel calls. That is the point of the reversal: the front door speaks the
-body's own tongue.
+body's own tongue, and now it can be authored in the body's own surface syntax,
+lowered by the body's own compiler.
 
 ## The migration path — runtime-share, not route-count
 
