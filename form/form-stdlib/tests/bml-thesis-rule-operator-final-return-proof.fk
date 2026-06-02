@@ -1,0 +1,109 @@
+; tests/bml-thesis-rule-operator-final-return-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the final return expression in original container-Rule.bml
+; operator== executes from parsed .bml body source:
+; return m_hItem == hOther.Item;
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (let path "../docs/field/urs/artifacts/master-thesis-2000/companion/source-samples/container-Rule.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+    (let rule-class (bml-model-find-class model "Rule"))
+    (let operator-method
+        (bml-find-method
+            (bml-class-own-methods rule-class)
+            "operator=="))
+    (let operator-body (bml-method-body operator-method))
+
+    (let RuleBP (make_nodeid 1 2 99 9310))
+    (let ArgsBP (make_nodeid 1 2 99 9311))
+    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let shared-process "same-process")
+    (let left-args (record_new ArgsBP "Count" 2))
+    (let right-args (record_new ArgsBP "Count" 2))
+    (let matching-rule
+        (record_new
+            RuleBP
+            "bmlClass" "Rule"
+            "m_strName" "same-name"
+            "m_hProcess" shared-process
+            "m_hArgs" left-args
+            "m_hItem" "same-item"))
+    (let matching-other
+        (record_new
+            RuleBP
+            "bmlClass" "Rule"
+            "Name" "same-name"
+            "InternProcess" shared-process
+            "Args" right-args
+            "Item" "same-item"))
+    (let direct-env
+        (record_new
+            CallEnvBP
+            "hObj" matching-other
+            "hOther" matching-other))
+    (let direct-result
+        (bml-body-source-exec-return
+            operator-body
+            matching-rule
+            direct-env))
+
+    (let sequence-env (record_new CallEnvBP "hObj" matching-other))
+    (let sequence-result
+        (bml-body-source-exec
+            operator-body
+            matching-rule
+            sequence-env))
+
+    (let different-other
+        (record_new
+            RuleBP
+            "bmlClass" "Rule"
+            "Name" "same-name"
+            "InternProcess" shared-process
+            "Args" right-args
+            "Item" "different-item"))
+    (let different-env (record_new CallEnvBP "hObj" different-other))
+    (let different-result
+        (bml-body-source-exec
+            operator-body
+            matching-rule
+            different-env))
+
+    (defn rule-eq-dispatch (self hObj)
+        (bml-body-source-exec
+            operator-body
+            self
+            (record_new CallEnvBP "hObj" hObj)))
+
+    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (let method-match (method_invoke matching-rule "operator==" matching-other))
+    (let method-different (method_invoke matching-rule "operator==" different-other))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (str-score (bml-method-name operator-method) "operator==" 2)
+            (bool-score (bml-body-source-contains? operator-body "m_hItem") 4)
+            (bool-score (bml-body-source-contains? operator-body "Item") 8)
+            (bool-score (bml-body-source-return-member-eq? operator-body) 16)
+            (int-score (bml-body-source-return-member-eq-count operator-body) 1 32)
+            (bool-score direct-result 64)
+            (bool-score (record_has sequence-env "hOther") 128)
+            (bool-score sequence-result 256)
+            (bool-score (not different-result) 512)
+            (bool-score method-match 1024)
+            (bool-score (not method-different) 2048)
+            (str-score (record_get matching-rule "m_hItem") "same-item" 4096)
+            (str-score (record_get matching-other "Item") "same-item" 8192))))
