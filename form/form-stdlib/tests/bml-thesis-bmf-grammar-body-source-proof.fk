@@ -8,13 +8,15 @@
 ; signatures, and the formerly large BMF helper method bodies.
 
 (do
-    (defn bool-score (b bit)
+    ;; This proof has more than 31 assertions, so it reports a portable
+    ;; assertion count instead of a bitmask that overflows sibling kernels.
+    (defn bool-score (b _bit)
         (if b 1 0))
 
-    (defn int-score (actual expected bit)
+    (defn int-score (actual expected _bit)
         (if (eq actual expected) 1 0))
 
-    (defn str-score (actual expected bit)
+    (defn str-score (actual expected _bit)
         (if (str_eq actual expected) 1 0))
 
     (defn field-score (field expected bit)
