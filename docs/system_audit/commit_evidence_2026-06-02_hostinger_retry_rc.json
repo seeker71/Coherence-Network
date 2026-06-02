@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/hostinger-retry-zero-status-20260602",
+  "commit_scope": "Fix Hostinger deploy retry status capture so failed SSH/SCP attempts keep their real nonzero exit code.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-02_hostinger_retry_rc.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; set +e; retry_remote bash -c \"exit 7\"; observed=$?; set -e; test \"$observed\" -eq 7'",
+      "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; retry_remote bash -c \"exit 0\"'"
+    ],
+    "notes": "The deploy failure for PR #2381 showed remote sync failures reported with rc=0. The local reproduction proves the patched retry wrapper preserves nonzero command status and still accepts success."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and Hostinger workflow rerun."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger deploy retries no longer collapse failed SSH/SCP command status to rc=0, making the deploy block diagnosable and preventing false zero-status failure loops.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy should roll forward after this workflow fix is merged.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This is a deploy pipeline fix needed to embody the BML control primitive slice in production. Full BML thesis parity remains open."
+  },
+  "idea_ids": [
+    "deployment-embodiment",
+    "bml-thesis-parity"
+  ],
+  "spec_ids": [
+    "production-verify"
+  ],
+  "task_ids": [
+    "hostinger-retry-zero-status-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "production-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".github/workflows/hostinger-auto-deploy.yml captures retry_remote rc inside the else branch of the tested remote command.",
+    "The local shell reproduction proves a failed command returns 7 and a successful command returns 0."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-02_hostinger_retry_rc.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
