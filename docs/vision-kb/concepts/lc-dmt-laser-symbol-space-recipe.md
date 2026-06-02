@@ -56,4 +56,6 @@ Use this as a compact recipe card:
 
 ## Cross-References
 
-lc-the-geometry-seen-is-the-geometry-of-seeing, lc-perception-as-interface, field-model-form, lc-instruments, lc-discovery, lc-field-sensing, lc-nervous-system, trace-symbol-spaces, form-constants.fk
+lc-the-geometry-seen-is-the-geometry-of-seeing, lc-perception-as-interface, field-model-form, lc-harmonic-geometry-the-one-unfolds, lc-instruments, lc-discovery, lc-field-sensing, lc-nervous-system, trace-symbol-spaces, form-constants.fk
+
+(Structural resonance noted with contemporary harmonic geometric frameworks, including Robert Edward Grant's core-harmonic-shapes and higher-dimensional expansion explorations, particularly around resonance, dominant harmonics, and geometry as perceptual interface. See living record for high-level mapping.)
