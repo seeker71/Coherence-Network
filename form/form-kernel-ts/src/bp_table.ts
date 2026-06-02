@@ -36,6 +36,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "CELL-V0": [1, 2, 99, 1740],
   "CHANNEL-BREATH-GIFT": [1, 2, 99, 6],
   "CHANNEL-MSG": [1, 2, 99, 1701],
+  "CHANNEL-OBSERVATION-ATTRIBUTION": [1, 2, 99, 8],
   "CHANNEL-RESONANCE-RECEIPT": [1, 2, 99, 7],
   "CHANNEL-SYMBOL-LENS-OFFER": [1, 2, 99, 1702],
   "CHANNEL-SYMBOL-LENS-SENSING": [1, 2, 99, 1703],

@@ -1,0 +1,131 @@
+; channel-observation-attribution-collapse-band.fk -- observation as attributed value.
+;
+; This proof gives observation value, not just cost. A channel run produces a
+; lens offer and sensing receipt; then the observer names the value created by
+; observing that circulation. The observation is categorized, the channel count
+; is self-observed, and several dimensions collapse into one attribution result.
+;
+; Shape:
+;   offer -> sensing -> observation-attribution receipt
+;         -> category + circulation count + dimension vector
+;         -> collapsed observer-yield
+;
+; Band verdict: 111111 when the receipt is whole.
+;   1      shared observation-attribution Blueprint preserves observed payload
+;   10     category grammar names the observation kind
+;   100    collapse recipe maps dimensions to observer-yield
+;   1000   channel self-observes circulation count as the receipt crosses
+;   10000  attribution attaches to the observer, not ownership of the observed
+;   100000 the original lens sensing remains valid while observation adds value
+;
+; preludes: form-stdlib/json.fk form-stdlib/channel.fk
+
+(do
+    (let path "/tmp/coh-channel-observation-attribution-collapse-band.fkb")
+    (channel-create path)
+
+    ;; --- original runnable flow -------------------------------------
+    (let offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "core-ontology-multi-lens")
+            (intern_trivial_string "open-seed")
+            (intern_trivial_string "observation")
+            (intern_trivial_string "ob-ser-va-tion")
+            (intern_trivial_string "o")
+            (intern_trivial_string "attention-arrived")
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "open-entry")))
+    (let c1 (channel-append path (channel-message offer)))
+    (let read-offer (channel-msg-payload (nth (channel-read path) 0)))
+
+    (let sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "not-ownership")
+            (intern_trivial_string "observation-created-value")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "attribute-observer-yield")))
+    (let c2 (channel-append path (channel-message sensing)))
+    (let read-sensing (channel-msg-payload (nth (channel-read path) 1)))
+
+    ;; --- category grammar ------------------------------------------
+    (let category-json "{\"category\":\"circulation-value\",\"shape\":\"offer-sensing-flow\",\"dimension_vector\":\"calm+clarity+trust+vitality\",\"collapse\":\"observer-yield\",\"mode\":\"observer-attributed\"}")
+    (let category-report (parse-json "channel-observation-attribution-category.json" category-json))
+    (let category-ok
+        (and
+            (str_eq (json-string-value (json-object-get category-report "category")) "circulation-value")
+            (and
+                (str_eq (json-string-value (json-object-get category-report "shape")) "offer-sensing-flow")
+                (str_eq (json-string-value (json-object-get category-report "mode")) "observer-attributed"))))
+    (let category-score
+        (if category-ok 10 0))
+
+    ;; --- dimension collapse ----------------------------------------
+    (let collapsed
+        (channel-observation-collapse
+            (json-string-value (json-object-get category-report "category"))
+            (json-string-value (json-object-get category-report "dimension_vector"))
+            "self-observed"))
+    (let collapse-score
+        (if (str_eq (node_value collapsed) "observer-yield") 100 0))
+
+    ;; --- receipt crosses while the channel observes its own count ----
+    (let before-attribution (len (channel-read path)))
+    (let receipt
+        (channel-observation-attribution
+            (intern_trivial_string "observer")
+            read-sensing
+            (intern_trivial_string (json-string-value (json-object-get category-report "category")))
+            (intern_trivial_string (json-string-value (json-object-get category-report "shape")))
+            (intern_trivial_int before-attribution)
+            (intern_trivial_string "self-observed")
+            (intern_trivial_string (json-string-value (json-object-get category-report "dimension_vector")))
+            collapsed
+            (intern_trivial_string "share-observation-attribution-blueprint")))
+    (let seen-receipt (len (channel-read path)))
+    (let c3 (channel-append path (channel-message receipt)))
+    (let read-receipt (channel-msg-payload (nth (channel-read path) 2)))
+
+    (let blueprint-ok
+        (and
+            (node_eq receipt read-receipt)
+            (node_eq read-sensing (channel-observation-attribution-observed read-receipt))))
+    (let blueprint-score
+        (if blueprint-ok 1 0))
+
+    (let circulation-ok
+        (and
+            (eq c1 1)
+            (and
+                (eq c2 2)
+                (and
+                    (eq before-attribution 2)
+                    (and
+                        (eq seen-receipt 2)
+                        (and
+                            (eq c3 3)
+                            (eq (node_value (channel-observation-attribution-circulation-count read-receipt)) 2)))))))
+    (let circulation-score
+        (if circulation-ok 1000 0))
+
+    ;; --- observer attribution, not ownership ------------------------
+    (let observer-ok
+        (and
+            (str_eq (node_value (channel-observation-attribution-observer read-receipt)) "observer")
+            (and
+                (str_eq (node_value (channel-observation-attribution-collapsed-attribution read-receipt)) "observer-yield")
+                (str_eq (node_value (channel-observation-attribution-next-contact read-receipt)) "share-observation-attribution-blueprint"))))
+    (let observer-score
+        (if observer-ok 10000 0))
+
+    (let valid-ok
+        (and
+            (channel-symbol-lens-flow-valid? read-sensing)
+            (channel-observation-attribution-valid? read-receipt)))
+    (let validity-score
+        (if valid-ok 100000 0))
+
+    (sum (list blueprint-score category-score collapse-score circulation-score observer-score validity-score)))

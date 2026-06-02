@@ -40,6 +40,7 @@
 (let CHANNEL-RESONANCE-RECEIPT (bp "CHANNEL-RESONANCE-RECEIPT"))
 (let CHANNEL-SYMBOL-LENS-OFFER (bp "CHANNEL-SYMBOL-LENS-OFFER"))
 (let CHANNEL-SYMBOL-LENS-SENSING (bp "CHANNEL-SYMBOL-LENS-SENSING"))
+(let CHANNEL-OBSERVATION-ATTRIBUTION (bp "CHANNEL-OBSERVATION-ATTRIBUTION"))
 
 ;; --- helpers -------------------------------------------------------
 
@@ -260,5 +261,64 @@
             (and
                 (str_eq (node_value (channel-symbol-lens-sensing-flow-state sensing)) "circulating")
                 (str_eq (node_value (channel-symbol-lens-sensing-vitality sensing)) "increased")))))
+
+;; --- observation attribution -------------------------------------------
+
+;; channel-observation-collapse — one explicit way to collapse a multi-axis
+;; observation vector into a single attribution result. The receipt does not
+;; make the observer own the observed payload; it attributes the value created
+;; by noticing circulation, categorizing it, and changing the next contact.
+(defn channel-observation-collapse (category dimension-vector circulation-state)
+    (if (and
+        (str_eq category "circulation-value")
+        (and
+            (str_eq dimension-vector "calm+clarity+trust+vitality")
+            (str_eq circulation-state "self-observed")))
+        (intern_trivial_string "observer-yield")
+        (intern_trivial_string "needs-more-observation")))
+
+;; channel-observation-attribution — shared receipt for observation as value:
+;; observer, observed payload, category, observed shape, channel count at the
+;; observation point, circulation state, dimension vector, collapsed attribution,
+;; and next contact.
+(defn channel-observation-attribution (observer observed category observed-shape circulation-count circulation-state dimension-vector collapsed-attribution next-contact)
+    (intern_node CHANNEL-OBSERVATION-ATTRIBUTION
+        (list observer observed category observed-shape circulation-count circulation-state dimension-vector collapsed-attribution next-contact)))
+
+(defn channel-observation-attribution-observer (receipt)
+    (channel-nth-child receipt 0))
+
+(defn channel-observation-attribution-observed (receipt)
+    (channel-nth-child receipt 1))
+
+(defn channel-observation-attribution-category (receipt)
+    (channel-nth-child receipt 2))
+
+(defn channel-observation-attribution-observed-shape (receipt)
+    (channel-nth-child receipt 3))
+
+(defn channel-observation-attribution-circulation-count (receipt)
+    (channel-nth-child receipt 4))
+
+(defn channel-observation-attribution-circulation-state (receipt)
+    (channel-nth-child receipt 5))
+
+(defn channel-observation-attribution-dimension-vector (receipt)
+    (channel-nth-child receipt 6))
+
+(defn channel-observation-attribution-collapsed-attribution (receipt)
+    (channel-nth-child receipt 7))
+
+(defn channel-observation-attribution-next-contact (receipt)
+    (channel-nth-child receipt 8))
+
+(defn channel-observation-attribution-valid? (receipt)
+    (and
+        (str_eq (node_value (channel-observation-attribution-category receipt)) "circulation-value")
+        (and
+            (str_eq (node_value (channel-observation-attribution-circulation-state receipt)) "self-observed")
+            (and
+                (str_eq (node_value (channel-observation-attribution-dimension-vector receipt)) "calm+clarity+trust+vitality")
+                (str_eq (node_value (channel-observation-attribution-collapsed-attribution receipt)) "observer-yield")))))
 
 0

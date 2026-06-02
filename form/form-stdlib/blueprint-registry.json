@@ -408,6 +408,20 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 8,
+      "name": "CHANNEL-OBSERVATION-ATTRIBUTION",
+      "meaning": "channel observation-attribution receipt: observer, observed payload, category, observed shape, circulation count/state, dimension vector, collapsed attribution, and next contact",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 10,
       "name": "JSON-OBJECT",
       "meaning": "map: list of (key, value) pairs",
