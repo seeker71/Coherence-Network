@@ -1,0 +1,4 @@
+return 0x10;
+return 0X1f;
+return 0b101;
+return 0B11;

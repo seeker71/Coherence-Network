@@ -1069,6 +1069,14 @@ func bmlNativeNameChar(b byte) bool {
 	return bmlNativeNameStart(b) || (b >= '0' && b <= '9')
 }
 
+func bmlNativeHexDigit(b byte) bool {
+	return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')
+}
+
+func bmlNativeBinDigit(b byte) bool {
+	return b == '0' || b == '1'
+}
+
 func bmlNativeScanQuoted(src string, i int, quote byte) (string, int) {
 	j := i + 1
 	var b strings.Builder
@@ -1125,8 +1133,20 @@ func bmlNativeScanText(src string) Value {
 		}
 		if c >= '0' && c <= '9' {
 			j := i + 1
-			for j < len(src) && src[j] >= '0' && src[j] <= '9' {
+			if c == '0' && j < len(src) && (src[j] == 'x' || src[j] == 'X') {
 				j++
+				for j < len(src) && bmlNativeHexDigit(src[j]) {
+					j++
+				}
+			} else if c == '0' && j < len(src) && (src[j] == 'b' || src[j] == 'B') {
+				j++
+				for j < len(src) && bmlNativeBinDigit(src[j]) {
+					j++
+				}
+			} else {
+				for j < len(src) && src[j] >= '0' && src[j] <= '9' {
+					j++
+				}
 			}
 			out = append(out, bmlNativeAtom("bml-int", src[i:j]))
 			i = j
