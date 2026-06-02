@@ -22,8 +22,8 @@
     ;; Form is now within one order of magnitude of native parsers
     ;; at the scale of small data files. That's the working zone for
     ;; "Form as universal runtime translator" at the ontology + config
-    ;; scale. At document scale (10MB+) native BMF runtime (Path C in
-    ;; the response thread) is the next horizon.
+    ;; scale. At document scale (10MB+) compiled generic source/runtime
+    ;; steps are the next horizon.
 
     ;; --- the universal pattern -------------------------------------
     ;;
@@ -85,11 +85,10 @@
     ;;   to substrate-native binary, regenerate when source mtime
     ;;   drifts. Eliminates RE-parse cost; doesn't speed first parse.
     ;;
-    ;; Path C — BMF rules natively executable: kernel runs BMF state
-    ;;   machines directly. ALL grammars (every file in grammars/)
-    ;;   get native speed from one kernel feature. ~500 LoC per
-    ;;   kernel. The biggest payoff toward "universal runtime
-    ;;   translator at any scale."
+    ;; Path C — BMF rules compile to generic cursor/state steps. ALL
+    ;;   grammars (every file in grammars/) get speed from one universal
+    ;;   runtime feature without BMF-named kernel semantics. The biggest
+    ;;   payoff toward "universal runtime translator at any scale."
     ;;
     ;; Path D — walker bytecode mode: compile hot recipes to flat
     ;;   dispatch. Speeds everything, not just parsers. Trace

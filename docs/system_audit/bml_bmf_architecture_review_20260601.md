@@ -4,68 +4,60 @@
 
 ### Did non-primitive BMF/BML code enter the kernels?
 
-Yes. The kernels currently contain two language-specific surfaces:
+Previously yes. The kernels now contain one generic source-scanning surface and
+no BMF-named rule matcher:
 
-- `bml_scan_file` in Go, Rust, and TypeScript. This is a BML-specific scanner
-  fast path that reads a file and returns BMF cell-shaped source objects.
-- `bmf_apply_rule_native` in Go, Rust, and TypeScript. This is a BMF rule
-  matcher fast path. It embeds BMF pattern semantics in host kernels and is
-  not symmetric: Go handles more pattern shapes than Rust and TypeScript.
+- `source_scan_file` in Go, Rust, and TypeScript is generic scanner plumbing
+  driven by a Form-owned lexicon. BML keyword/property/operator tables now live
+  in `form/form-stdlib/grammars/bml.fk`.
+- The former BMF rule matcher native has been removed from Go, Rust, and
+  TypeScript. BMF object rules execute through `engine.fk` and shared
+  compiler/runtime forms.
 
 The current large-body retention slice did not add new non-primitive BMF code
 to the kernels. It removed a BML grammar shortcut and fixed `form/validate.sh`
 so the TypeScript runner fallback receives the same stack budget as the
 prepared `node_modules` path.
 
-The clean architecture should not grow either BML or BMF semantics in host
-kernels. The kernel boundary should stay at universal primitives: data,
+The clean architecture should not grow BML or BMF semantics in host kernels.
+The kernel boundary should stay at universal primitives: data,
 records, lists, binary recipe load/write, source bytes/text access, and generic
 cursor/step mechanics. Language grammars, parse rules, source objects, emitters,
 and reversibility belong in BML/Form source.
 
 ## Code Review Findings
 
-### 1. BMF semantics are duplicated in host kernels
+### 1. BMF semantics were duplicated in host kernels
 
-`bmf_apply_rule_native` mirrors `engine.fk` rule matching in host code:
+The retired BMF native mirrored `engine.fk` rule matching in host code:
 
-- TypeScript: `form/form-kernel-ts/src/kernel.ts:2808`
-- Go: `form/form-kernel-go/main.go:2931`
-- Rust: `form/form-kernel-rust/src/main.rs:4164`
 - Canonical Form path: `form/form-stdlib/engine.fk:1837`
 
-This is the wrong long-term shape. It creates four meanings for BMF:
+That was the wrong long-term shape. It created four meanings for BMF:
 
 - one in `engine.fk`
 - one in Go
 - one in Rust
 - one in TypeScript
 
-It already drifted: Go supports `capture`, `choice`, `star`, and `opt`, while
-Rust and TypeScript still document and implement only the flat object-sequence
-POC. That makes the sibling kernels less like independent witnesses and more
-like competing implementations.
+It already drifted: Go supported `capture`, `choice`, `star`, and `opt`, while
+Rust and TypeScript only implemented the flat object-sequence POC. That made
+the sibling kernels less like independent witnesses and more like competing
+implementations.
 
-Direction: retire `bmf_apply_rule_native` as a semantic source. If speed is
-needed, compile the BMF rule graph into a generic Form-native automaton/bytecode
-and let kernels execute universal VM steps. The BMF rules still live in BML.
+Current boundary: the host-native BMF matcher is removed and the audit forbids
+re-registering it. If speed is needed, compile the BMF rule graph into a generic
+Form-native automaton/bytecode and let kernels execute universal VM steps. The
+BMF rules still live in BML/Form source.
 
 ### 2. BML scanning is language-specific host code
 
-`bml_scan_file` appears at:
+The former `bml_scan_file` was replaced by `source_scan_file(path, lexicon)`.
+This was a pragmatic fix for source-size and stack pressure without embedding
+BML keyword/property/operator tables in each host.
 
-- TypeScript: `form/form-kernel-ts/src/kernel.ts:1230`
-- Go: `form/form-kernel-go/main.go:1463`
-- Rust: `form/form-kernel-rust/src/main.rs:2025`
-
-This was a pragmatic fix for source-size and stack pressure, but it hard-codes
-BML keyword/property/operator tables in each host. That should become a generic
-scanner surface driven by a BML-defined lexical table, or a BML scanner compiled
-to a Form-native sequential recipe.
-
-Direction: keep `bml_scan_file` temporarily as a bootstrap proof bridge, then
-replace it with `scan_with_lexicon` or a compiled scanner recipe whose lexicon
-is declared in `.bml`.
+Direction: keep the scanner generic and move toward a compiled scanner recipe
+whose lexicon is declared in `.bml`.
 
 ### 3. Sequential work is encoded as recursion
 
@@ -161,7 +153,7 @@ BMF should be defined as objects and executed by a sequential machine:
   state transitions
 - provide a reverse emitter path from the same rule object
 
-This replaces host `bmf_apply_rule_native`.
+This keeps BMF semantics out of host kernels.
 
 ### Layer 3: BML Language Definition In BML
 
@@ -195,16 +187,16 @@ belongs in the universal source runtime, not in the language adapter.
 
 ### Phase 1: Freeze and prove the boundary
 
-1. Keep the current BMF/BML kernel surfaces as compatibility shims.
+1. Keep the generic scanner boundary explicit.
 2. Add an audit gate that lists every native name beginning with `bml_` or
    `bmf_`.
-3. Mark `bmf_apply_rule_native` as deprecated for semantic expansion.
+3. Fail if BMF/BML semantic natives re-enter the kernels.
 4. Require every new BML/BMF feature proof to run without adding host-kernel
    BML/BMF semantics.
 
 Exit proof:
 
-- native inventory test passes
+- native inventory test passes with no BML/BMF semantic natives
 - current BML thesis proof band still passes
 - no new `bml_` or `bmf_` native appears without an architecture note
 
@@ -230,14 +222,14 @@ Exit proof:
 3. Port `sequence`, `object`, `capture`, `choice`, `star`, `opt`, `cut`, and
    `stop`.
 4. Make the Go/Rust/TypeScript kernels execute only generic VM steps.
-5. Remove or disable `bmf_apply_rule_native` from production proof paths.
+5. Keep BMF execution in Form/runtime code and generic compiled steps only.
 
 Exit proof:
 
 - interpreted `engine.fk`, compiled BMF automaton, and binary artifact execution
   produce the same captures/rest/result/source-span
 - Go/Rust/TypeScript agree
-- `bmf_apply_rule_native` is unused by BML thesis proofs
+- no BMF/BML semantic native is needed by BML thesis proofs
 
 ### Phase 4: Move BML grammar definition into `.bml`
 

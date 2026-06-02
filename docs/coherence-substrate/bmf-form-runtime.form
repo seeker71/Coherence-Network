@@ -1,0 +1,50 @@
+; bmf-form-runtime.form — BMF rule machinery lives above the kernel
+;
+; The BMF object-rule runtime is defined in form/form-stdlib/engine.fk and is
+; shared by BML, Python, TypeScript, Go, Rust, natural language, and media
+; grammars. Host kernels expose generic execution and source primitives; they
+; do not own BMF rule semantics.
+
+(do
+    ;; Runtime surface:
+    ;;
+    ;;   (apply-object-rule rule object-stream)
+    ;;
+    ;; where rule is:
+    ;;
+    ;;   (name pattern action [inverse [reverse-emitter]])
+    ;;
+    ;; and pattern is a tagged tree:
+    ;;
+    ;;   ("object" kind value)
+    ;;   ("sequence" p1 p2 ...)
+    ;;   ("choice" p1 p2 ...)
+    ;;   ("capture" name child)
+    ;;   ("star" child)
+    ;;   ("opt" child)
+    ;;   ("cut")
+    ;;   ("stop")
+    ;;
+    ;; The runtime returns the same Form match shape everywhere:
+    ;;
+    ;;   ("match" caps rest)
+    ;;   ("fail" reason)
+    ;;   ("fail-cut" reason)
+    ;;
+    ;; apply-object-rule wraps successful matches with bmf-match-source,
+    ;; preserves the consumed source span, calls the Form action closure, and
+    ;; emits a reversible bmf-object.
+
+    ;; Boundary rule:
+    ;;
+    ;; BMF pattern semantics are not kernel primitives. If speed is needed,
+    ;; compile BMF rules into a generic Form-native automaton/bytecode and
+    ;; execute generic cursor/step operations in the kernels. Do not add a
+    ;; BMF-named native or duplicate match-object-pattern in host code.
+
+    ;; Proof:
+    ;;
+    ;; form/form-stdlib/tests/bmf-form-object-runtime-band.fk exercises object,
+    ;; sequence, capture, choice, star, opt, cut, stop, match source spans, and
+    ;; reverse emission through engine.fk.
+    "bmf-form-runtime-boundary"))

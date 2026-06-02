@@ -1,0 +1,94 @@
+; tests/bmf-form-object-runtime-band.fk - BMF object rules execute in Form
+;
+; preludes: form-stdlib/engine.fk
+;
+; Proves the BMF object-rule surface is carried by engine.fk rather than by
+; host-kernel BMF natives. This covers object literals, sequence, capture,
+; choice, star, opt, cut/stop failure behavior, match source spans, and reverse
+; emission from the matched object.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn emit-captures (captures)
+        captures)
+
+    (defn emit-source-span (obj)
+        (bmf-object-source-span obj))
+
+    (let object-stream
+        (list
+            (bmf-atom "int" "7")
+            (bmf-atom "ws" " ")
+            (bmf-atom "trailing" "x")
+            (bmf-atom "end" ".")))
+
+    (let capture-choice-opt-rule
+        (list "record"
+              (list "sequence"
+                    (list "capture" "n" (object-lit "int" ""))
+                    (list "choice"
+                          (object-lit "comma" ",")
+                          (object-lit "ws" ""))
+                    (list "opt" (object-lit "trailing" "x")))
+              emit-captures
+              emit-source-span))
+
+    (let match (apply-object-rule capture-choice-opt-rule object-stream))
+    (let result (cap-get (match-caps match) "result"))
+    (let captures (bmf-object-value result))
+    (let reverse-source (apply-object-rule-reverse capture-choice-opt-rule result))
+
+    (let opt-absent-stream
+        (list
+            (bmf-atom "int" "8")
+            (bmf-atom "ws" " ")
+            (bmf-atom "end" ".")))
+    (let opt-absent-match
+        (apply-object-rule capture-choice-opt-rule opt-absent-stream))
+
+    (let star-stream
+        (list
+            (bmf-atom "int" "1")
+            (bmf-atom "int" "2")
+            (bmf-atom "ws" " ")))
+    (let star-match
+        (match-object-pattern
+            (list "star" (list "capture" "each" (object-lit "int" "")))
+            star-stream))
+
+    (let cut-rule
+        (list "cut-proof"
+              (list "choice"
+                    (list "sequence"
+                          (object-lit "int" "")
+                          (list "cut")
+                          (object-lit "comma" ","))
+                    (list "sequence"
+                          (object-lit "int" "")
+                          (object-lit "ws" "")))
+              emit-captures
+              emit-source-span))
+    (let cut-match (apply-object-rule cut-rule opt-absent-stream))
+    (let stop-match (match-object-pattern (list "stop") object-stream))
+
+    (sum
+        (list
+            (bool-score (match? match) 1)
+            (str-score (bmf-collection-value captures "n") "7" 2)
+            (int-score (len (match-rest match)) 1 4)
+            (int-score (len (bmf-object-source-span result)) 3 8)
+            (int-score (len reverse-source) 3 16)
+            (bool-score (match? opt-absent-match) 32)
+            (int-score (len (match-rest opt-absent-match)) 1 64)
+            (bool-score (match? star-match) 128)
+            (int-score (len (cap-get (match-caps star-match) "items")) 2 256)
+            (bool-score (fail? cut-match) 512)
+            (bool-score (fail? stop-match) 1024))))
