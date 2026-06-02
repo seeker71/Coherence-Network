@@ -130,10 +130,10 @@ const (
 	// so the inst carries an index into the kernel's `f64s` overflow table.
 	// Canonicalization on intern: NaN bit patterns collapse to qNaN, -0.0
 	// collapses to +0.0, ±Inf stay distinct (mirrors Rust + TS sibling
-	// kernels). Matches TS kernel's Triv.FLOAT64 = 7. (The Rust kernel uses
-	// 5 for FLOAT64 internally — each kernel's trivial-type constants are
-	// private to its substrate; cross-kernel parity rides on .fk source
-	// where the token shape — digits+dot vs digits — names the type.)
+	// kernels). The trivial float type tags are aligned three-way — Rust,
+	// Go, and TS all carry FLOAT32 = 6 and FLOAT64 = 7. Cross-kernel parity
+	// also rides on .fk source, where the token shape (digits+dot vs digits)
+	// names the type, and on the .fkb value-carrying float record.
 	TrivFloat64 uint32 = 7
 )
 
@@ -4213,9 +4213,10 @@ const (
 	// Inst is a per-kernel f64s-table index — meaningless in another kernel.
 	// So a float node serializes as [formBinaryFloat64][8 bytes IEEE-754
 	// little-endian] and each kernel re-interns the value on read (fresh
-	// local index). The dedicated tag also sidesteps the divergent per-kernel
-	// float type numbering (Rust TrivFloat64=5, Go/TS=7): the value travels
-	// in bytes, not the index nor the local type-tag.
+	// local index). The trivial float type tag (FLOAT64 = 7 three-way) never
+	// rides the wire either: the value travels in bytes, not the index nor
+	// the local type-tag, so the .fkb stays portable regardless of how each
+	// kernel numbers its trivial types.
 	formBinaryFloat64 uint32 = 2
 )
 
