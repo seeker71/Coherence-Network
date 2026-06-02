@@ -762,6 +762,82 @@
             self
             env))
 
+    (defn bml-body-source-chain-member-value (self env object-name first-member second-member)
+        (record_get
+            (record_get
+                (bml-body-source-object-value self env object-name)
+                first-member)
+            second-member))
+
+    (defn bml-body-source-if-chain-member-neq-return-false-at? (values)
+        (if (gt (len values) 14)
+            (if (str_eq (head values) "if")
+                (if (str_eq (nth values 1) "(")
+                    (if (str_eq (nth values 3) ".")
+                        (if (str_eq (nth values 5) "!=")
+                            (if (str_eq (nth values 7) ".")
+                                (if (str_eq (nth values 9) ".")
+                                    (if (str_eq (nth values 11) ")")
+                                        (if (str_eq (nth values 12) "return")
+                                            (if (str_eq (nth values 13) "false")
+                                                (str_eq (nth values 14) ";")
+                                                false)
+                                            false)
+                                        false)
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-if-chain-member-neq-return-false-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-if-chain-member-neq-return-false-at? values)
+                (bml-body-source-if-chain-member-neq-return-false-count-loop
+                    (drop 15 values)
+                    (add count 1))
+                (bml-body-source-if-chain-member-neq-return-false-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-if-chain-member-neq-return-false-count (body-component)
+        (bml-body-source-if-chain-member-neq-return-false-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-if-chain-member-neq-condition? (values self env)
+        (not
+            (value_eq
+                (bml-body-source-member-value self env (nth values 2) (nth values 4))
+                (bml-body-source-chain-member-value
+                    self
+                    env
+                    (nth values 6)
+                    (nth values 8)
+                    (nth values 10)))))
+
+    (defn bml-body-source-exec-if-chain-member-neq-return-false-loop (values self env)
+        (if (nil? values) self
+            (if (bml-body-source-if-chain-member-neq-return-false-at? values)
+                (if (bml-body-source-if-chain-member-neq-condition? values self env)
+                    false
+                    (bml-body-source-exec-if-chain-member-neq-return-false-loop
+                        (drop 15 values)
+                        self
+                        env))
+                (bml-body-source-exec-if-chain-member-neq-return-false-loop
+                    (tail values)
+                    self
+                    env))))
+
+    (defn bml-body-source-exec-if-chain-member-neq-return-false (body-component self env)
+        (bml-body-source-exec-if-chain-member-neq-return-false-loop
+            (bml-body-source-values body-component)
+            self
+            env))
+
     (defn bml-body-source-eval-return-member-add-at (values self env)
         (add
             (bml-body-source-member-value
@@ -1102,6 +1178,14 @@
                         ";"
                         self
                         env))
+            (if (bml-body-source-if-chain-member-neq-return-false-at? values)
+                (if (bml-body-source-if-chain-member-neq-condition? values self env)
+                    false
+                    (bml-body-source-exec-sequence-loop
+                        (drop 15 values)
+                        ";"
+                        self
+                        env))
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
             (if (bml-body-source-constructor-assignment-at? values)
@@ -1173,7 +1257,7 @@
                     (tail values)
                     (head values)
                     self
-                    env)))))))))))))
+                    env))))))))))))))
 
     (defn bml-body-source-exec (body-component self env)
         (bml-body-source-exec-sequence-loop
