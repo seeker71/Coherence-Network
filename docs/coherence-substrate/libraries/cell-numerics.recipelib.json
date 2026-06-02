@@ -187,6 +187,81 @@
         "python": "def matvec(matrix, x):\n    return [sum(row[i] * x[i] for i in range(len(x))) for row in matrix]",
         "typescript": "function matvec(matrix: number[][], x: number[]): number[] {\n    return matrix.map(row => row.reduce((s, v, i) => s + v * x[i], 0));\n}"
       }
+    },
+    {
+      "name": "pair_cosine",
+      "node_id_hint": "1.3.pair_cosine.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Float>", "List<Float>"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.LET", "name": "c", "value": "cosine(a, b)"},
+          {"category": "R_Block.RETURN", "value": "c"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/trace-symbol-spaces.form"
+      },
+      "tongue_caches": {
+        "form": "defn pair_cosine(a, b) = cosine(a, b);",
+        "python": "def pair_cosine(a, b):\n    return cosine(a, b)",
+        "typescript": "function pair_cosine(a: number[], b: number[]): number {\n    return cosine(a, b);\n}"
+      }
+    },
+    {
+      "name": "pair_angle",
+      "node_id_hint": "1.3.pair_angle.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Float>", "List<Float>"],
+        "output_type": "Float"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.LET", "name": "c", "value": "cosine(a, b)"},
+          {"category": "R_Block.RETURN", "value": "(math_acos c)"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/trace-symbol-spaces.form"
+      },
+      "tongue_caches": {
+        "form": "defn pair_angle(a, b) = math_acos (cosine(a, b));",
+        "python": "def pair_angle(a, b):\n    return pair_angle(a, b)  # see form_native.py (host acos for CLI parity)",
+        "typescript": "function pair_angle(a: number[], b: number[]): number {\n    return Math.acos(cosine(a, b));\n}"
+      }
+    },
+    {
+      "name": "dominant_band_delta",
+      "node_id_hint": "1.3.dominant_band_delta.1",
+      "blueprint": {
+        "category": "B_Function",
+        "input_types": ["List<Float>", "List<Float>"],
+        "output_type": "List<Float>"
+      },
+      "tree": {
+        "category": "R_Block.DO",
+        "children": [
+          {"category": "R_Block.LET", "name": "res", "value": "dominant_band_delta(a, b)"},
+          {"category": "R_Block.RETURN", "value": "res"}
+        ]
+      },
+      "source_provenance": {
+        "tongue": "form",
+        "source_path": "docs/coherence-substrate/trace-symbol-spaces.form"
+      },
+      "tongue_caches": {
+        "form": "defn dominant_band_delta(a, b) = do { let res = dominant_band_delta(a, b); res };",
+        "python": "def dominant_band_delta(a, b):\n    return dominant_band_delta(a, b)  # see form_native.py",
+        "typescript": "function dominant_band_delta(a: number[], b: number[]): number[] {\n    // implementation in host for parity\n    return [0, 0];\n}"
+      }
     }
   ]
 }

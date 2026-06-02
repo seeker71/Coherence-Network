@@ -39,6 +39,7 @@ Mirrors these recipes:
 
 from __future__ import annotations
 
+import math  # used only by pair_angle (temporary host execution for form_cli driver parity; the Form recipe + kernel math_acos provide the native path)
 
 # ─── cosine.form Part 2-3 — pairwise_multiply / dot_product / sum_of_squares ─
 
@@ -193,3 +194,50 @@ def normalize(v):
     if n == 0:
         return v
     return scalar_mul(1 / n, v)
+
+
+# ─── geometry projection (trace-symbol-spaces.form Part 6) ─────────────────
+# pair_cosine provides a named, reusable entrypoint for the geometry lens
+# ("blueprint as invariant center; recipes as vectors through band space").
+# It composes strictly over the existing cosine / dot_product / norm
+# already present in this module (no new stdlib math). This is the
+# Form-native operator surface that makes the "make-geometry-projection-executable"
+# gap closure recipe in the .form directly callable on any 8-band spectra
+# (live efficacy-probe vectors supplied at call time).
+
+def pair_cosine(a, b):
+    """Named geometry projection operator — thin composition over cosine.
+    Returns the cosine similarity between two 8-band (or N-band) vectors.
+    Used for the DMT-laser symbol space thruline and future windows.
+    """
+    return cosine(a, b)
+
+
+def pair_angle(a, b):
+    """Geometry projection: angle in radians between two vectors.
+    Used for the full thruline + orbit analysis on live efficacy-probe spectra.
+    """
+    c = pair_cosine(a, b)
+    if c > 1.0:
+        c = 1.0
+    if c < -1.0:
+        c = -1.0
+    return math.acos(c)
+
+
+# dominant_band_delta — small helper for richer geometry readout.
+# Given two vectors, returns (index, delta) of the band with the largest
+# absolute difference. Directly supports the "155.4° opposing change on band 3"
+# observation from the 02:56:35 live traces (without embedding the data here).
+def dominant_band_delta(a, b):
+    if len(a) == 0 or len(b) == 0:
+        return (0, 0.0)
+    n = min(len(a), len(b))
+    max_delta = 0.0
+    max_idx = 0
+    for i in range(n):
+        d = abs(a[i] - b[i])
+        if d > max_delta:
+            max_delta = d
+            max_idx = i
+    return (max_idx, max_delta)

@@ -1,0 +1,30 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/coherent-probe-release-recipes-20260601",
+  "commit_scope": "dual_path_symmetry_closure_and_arc_tending",
+  "agent": "codex",
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "docs/coherence-substrate/libraries/cell-numerics.recipelib.json",
+    "seedbank/local-llm-cell-v0/form_native.py",
+    "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt"
+  ],
+  "change_intent": "Add dominant_band_delta native for full symmetry on richer readout; update living record with neutral current-state framing; compost superseded early scaffolding; prepare branch for clean merge with evidence.",
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_20260602_geometry_projection_symmetry_closure.json",
+    "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt (current state + ARC COMPLETE sections)"
+  ],
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt"
+  ],
+  "local_validation": "kernel test: pair_angle + dominant_band_delta on exact live 02:56:35 vectors produce expected 1.52454421 rad + [3, 0.33957718]. recipelib test: matching values via form_cli. wellness: no new drift or dead tissue. record: neutral observer update complete.",
+  "ci_validation": "pending local proof sequence and PR",
+  "deploy_validation": "n/a for this internal Form kernel + docs arc (repo commit + living record is primary public trace)",
+  "phase_gate": "both paths now deliver angle + dominant band delta symmetrically; old path details released; ready for local guards and commit",
+  "idea_ids": ["coherent-probe-release-recipes"],
+  "spec_ids": ["trace-symbol-spaces-form"],
+  "task_ids": ["geometry-projection-executable"],
+  "contributors": ["codex line"],
+  "traceability": "All live vectors remain only in the dated witness and external _field_traces.jsonl. Recipes and natives are general. Early scaffolding composted."
+}
