@@ -1004,80 +1004,137 @@ func (v Value) String() string {
 	return "?"
 }
 
-var bmlNativeKeywords = map[string]bool{
-	"package": true, "import": true, "class": true, "interface": true, "template": true, "section": true,
-	"syntax": true, "const": true, "enum": true, "operator": true, "for": true, "while": true, "loop": true,
-	"switch": true, "select": true, "case": true, "default": true, "if": true, "else": true, "if_fail": true,
-	"while_success": true, "return": true, "break": true, "continue": true, "try": true, "catch": true,
-	"throw": true, "fail": true, "cut": true, "mark": true, "save": true, "restore": true, "discard": true,
-	"choice": true, "choose": true, "asm": true, "instanceof": true, "library": true, "naming": true,
-	"conventions": true, "DefaultMethods": true, "Nil": true, "Fail": true, "EndOfFile": true,
-	"EndOfLine": true, "Cut": true, "MultiMatch": true, "Primitive": true,
+type sourceNativeLexicon struct {
+	keywords     map[string]bool
+	properties   map[string]bool
+	keywordKind  string
+	propertyKind string
+	nameKind     string
+	intKind      string
+	floatKind    string
+	stringKind   string
+	charKind     string
+	opKind       string
+	ops          []string
+	lineComment  string
+	blockOpen    string
+	blockClose   string
 }
 
-var bmlNativeProperties = map[string]bool{
-	"public": true, "private": true, "protected": true, "abstract": true, "static": true, "final": true,
-	"default": true, "delegate": true, "shared": true, "get": true, "put": true, "strict": true, "relaxed": true,
-	"deferred": true, "native": true, "exception": true, "explicit": true, "extern": true, "library": true,
-	"name": true, "guid": true, "operator": true, "coercion": true, "reassign": true, "array": true,
-	"exclusive": true, "in": true, "out": true, "inout": true, "assign": true, "inline": true, "hidden": true,
-	"singleton": true, "unique": true, "struct": true, "noobject": true, "dynamic": true, "alias": true,
-	"outer": true, "nostate": true,
-}
-
-var bmlNativeOps = []string{
-	"<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>",
-	">>", "<<", "++", "--", "==", "!=", ">=", "<=", ":=", "*=", "/=",
-	"%=", "+=", "-=", "&=", "|=", "^=", "&&", "||", "..", "#(",
-	"{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/",
-	"%", "=", "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
-}
-
-func bmlNativeStr(value string) Value {
+func sourceNativeStr(value string) Value {
 	return Value{Kind: VStr, Str: value}
 }
 
-func bmlNativeEmptyList() Value {
+func sourceNativeEmptyList() Value {
 	return Value{Kind: VList, List: []Value{}}
 }
 
-func bmlNativeAtom(kind, value string) Value {
+func sourceNativeAtom(kind, value string) Value {
 	return Value{Kind: VList, List: []Value{
-		bmlNativeStr("cell"),
-		bmlNativeStr(kind),
-		bmlNativeStr(value),
-		bmlNativeEmptyList(),
+		sourceNativeStr("cell"),
+		sourceNativeStr(kind),
+		sourceNativeStr(value),
+		sourceNativeEmptyList(),
 		Value{Kind: VNull},
 	}}
 }
 
-func bmlNativeNameKind(value string) string {
-	if bmlNativeKeywords[value] {
-		return "bml-keyword"
+func sourceNativeStringSet(v Value, field string) map[string]bool {
+	if v.Kind != VList {
+		panic(fmt.Sprintf("source_scan_file: %s must be list", field))
 	}
-	if bmlNativeProperties[value] {
-		return "bml-property"
+	out := map[string]bool{}
+	for _, item := range v.List {
+		if item.Kind != VStr {
+			panic(fmt.Sprintf("source_scan_file: %s item must be string", field))
+		}
+		out[item.Str] = true
 	}
-	return "bml-name"
+	return out
 }
 
-func bmlNativeNameStart(b byte) bool {
+func sourceNativeStringList(v Value, field string) []string {
+	if v.Kind != VList {
+		panic(fmt.Sprintf("source_scan_file: %s must be list", field))
+	}
+	out := []string{}
+	for _, item := range v.List {
+		if item.Kind != VStr {
+			panic(fmt.Sprintf("source_scan_file: %s item must be string", field))
+		}
+		out = append(out, item.Str)
+	}
+	return out
+}
+
+func sourceNativeField(xs []Value, idx int, field string) Value {
+	if idx >= len(xs) {
+		panic(fmt.Sprintf("source_scan_file: lexicon missing %s", field))
+	}
+	return xs[idx]
+}
+
+func sourceNativeFieldStr(xs []Value, idx int, field string) string {
+	v := sourceNativeField(xs, idx, field)
+	if v.Kind != VStr {
+		panic(fmt.Sprintf("source_scan_file: lexicon %s must be string", field))
+	}
+	return v.Str
+}
+
+func sourceNativeLexiconFromValue(v Value) sourceNativeLexicon {
+	if v.Kind != VList {
+		panic("source_scan_file: lexicon must be a list")
+	}
+	xs := v.List
+	if len(xs) < 15 || sourceNativeFieldStr(xs, 0, "tag") != "source-lexicon" {
+		panic("source_scan_file: lexicon must be (source-lexicon ...)")
+	}
+	return sourceNativeLexicon{
+		keywords:     sourceNativeStringSet(sourceNativeField(xs, 1, "keywords"), "keywords"),
+		properties:   sourceNativeStringSet(sourceNativeField(xs, 2, "properties"), "properties"),
+		keywordKind:  sourceNativeFieldStr(xs, 3, "keyword-kind"),
+		propertyKind: sourceNativeFieldStr(xs, 4, "property-kind"),
+		nameKind:     sourceNativeFieldStr(xs, 5, "name-kind"),
+		intKind:      sourceNativeFieldStr(xs, 6, "int-kind"),
+		floatKind:    sourceNativeFieldStr(xs, 7, "float-kind"),
+		stringKind:   sourceNativeFieldStr(xs, 8, "string-kind"),
+		charKind:     sourceNativeFieldStr(xs, 9, "char-kind"),
+		opKind:       sourceNativeFieldStr(xs, 10, "op-kind"),
+		ops:          sourceNativeStringList(sourceNativeField(xs, 11, "ops"), "ops"),
+		lineComment:  sourceNativeFieldStr(xs, 12, "line-comment"),
+		blockOpen:    sourceNativeFieldStr(xs, 13, "block-open"),
+		blockClose:   sourceNativeFieldStr(xs, 14, "block-close"),
+	}
+}
+
+func sourceNativeNameKind(lex sourceNativeLexicon, value string) string {
+	if lex.keywords[value] {
+		return lex.keywordKind
+	}
+	if lex.properties[value] {
+		return lex.propertyKind
+	}
+	return lex.nameKind
+}
+
+func sourceNativeNameStart(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
 }
 
-func bmlNativeNameChar(b byte) bool {
-	return bmlNativeNameStart(b) || (b >= '0' && b <= '9')
+func sourceNativeNameChar(b byte) bool {
+	return sourceNativeNameStart(b) || (b >= '0' && b <= '9')
 }
 
-func bmlNativeHexDigit(b byte) bool {
+func sourceNativeHexDigit(b byte) bool {
 	return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')
 }
 
-func bmlNativeBinDigit(b byte) bool {
+func sourceNativeBinDigit(b byte) bool {
 	return b == '0' || b == '1'
 }
 
-func bmlNativeDecodeEscape(b byte) byte {
+func sourceNativeDecodeEscape(b byte) byte {
 	switch b {
 	case '\\':
 		return '\\'
@@ -1098,13 +1155,13 @@ func bmlNativeDecodeEscape(b byte) byte {
 	}
 }
 
-func bmlNativeScanQuoted(src string, i int, quote byte) (string, int) {
+func sourceNativeScanQuoted(src string, i int, quote byte) (string, int) {
 	j := i + 1
 	var b strings.Builder
 	for j < len(src) {
 		c := src[j]
 		if c == '\\' && j+1 < len(src) {
-			b.WriteByte(bmlNativeDecodeEscape(src[j+1]))
+			b.WriteByte(sourceNativeDecodeEscape(src[j+1]))
 			j += 2
 			continue
 		}
@@ -1117,52 +1174,64 @@ func bmlNativeScanQuoted(src string, i int, quote byte) (string, int) {
 	return b.String(), j
 }
 
-func bmlNativeScanText(src string) Value {
-	out := []Value{}
-	for i := 0; i < len(src); {
+func sourceNativeSkip(src string, i int, lex sourceNativeLexicon) int {
+	for i < len(src) {
 		c := src[i]
 		if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
 			i++
 			continue
 		}
-		if i+1 < len(src) && src[i:i+2] == "//" {
-			i += 2
+		if lex.lineComment != "" && strings.HasPrefix(src[i:], lex.lineComment) {
+			i += len(lex.lineComment)
 			for i < len(src) && src[i] != '\n' {
 				i++
 			}
 			continue
 		}
-		if i+1 < len(src) && src[i:i+2] == "/*" {
-			end := strings.Index(src[i+2:], "*/")
+		if lex.blockOpen != "" && lex.blockClose != "" && strings.HasPrefix(src[i:], lex.blockOpen) {
+			end := strings.Index(src[i+len(lex.blockOpen):], lex.blockClose)
 			if end < 0 {
-				break
+				return len(src)
 			}
-			i = i + 2 + end + 2
+			i = i + len(lex.blockOpen) + end + len(lex.blockClose)
 			continue
 		}
+		break
+	}
+	return i
+}
+
+func sourceNativeScanText(src string, lex sourceNativeLexicon) Value {
+	out := []Value{}
+	for i := 0; i < len(src); {
+		i = sourceNativeSkip(src, i, lex)
+		if i >= len(src) {
+			break
+		}
+		c := src[i]
 		if c == '"' {
-			value, next := bmlNativeScanQuoted(src, i, '"')
-			out = append(out, bmlNativeAtom("bml-string", value))
+			value, next := sourceNativeScanQuoted(src, i, '"')
+			out = append(out, sourceNativeAtom(lex.stringKind, value))
 			i = next
 			continue
 		}
 		if c == '\'' {
-			value, next := bmlNativeScanQuoted(src, i, '\'')
-			out = append(out, bmlNativeAtom("bml-char", value))
+			value, next := sourceNativeScanQuoted(src, i, '\'')
+			out = append(out, sourceNativeAtom(lex.charKind, value))
 			i = next
 			continue
 		}
 		if c >= '0' && c <= '9' {
 			j := i + 1
-			kind := "bml-int"
+			kind := lex.intKind
 			if c == '0' && j < len(src) && (src[j] == 'x' || src[j] == 'X') {
 				j++
-				for j < len(src) && bmlNativeHexDigit(src[j]) {
+				for j < len(src) && sourceNativeHexDigit(src[j]) {
 					j++
 				}
 			} else if c == '0' && j < len(src) && (src[j] == 'b' || src[j] == 'B') {
 				j++
-				for j < len(src) && bmlNativeBinDigit(src[j]) {
+				for j < len(src) && sourceNativeBinDigit(src[j]) {
 					j++
 				}
 			} else {
@@ -1170,7 +1239,7 @@ func bmlNativeScanText(src string) Value {
 					j++
 				}
 				if j < len(src) && src[j] == '.' && j+1 < len(src) && src[j+1] >= '0' && src[j+1] <= '9' {
-					kind = "bml-float"
+					kind = lex.floatKind
 					j++
 					for j < len(src) && src[j] >= '0' && src[j] <= '9' {
 						j++
@@ -1189,22 +1258,22 @@ func bmlNativeScanText(src string) Value {
 					}
 				}
 			}
-			out = append(out, bmlNativeAtom(kind, src[i:j]))
+			out = append(out, sourceNativeAtom(kind, src[i:j]))
 			i = j
 			continue
 		}
-		if bmlNativeNameStart(c) {
+		if sourceNativeNameStart(c) {
 			j := i + 1
-			for j < len(src) && bmlNativeNameChar(src[j]) {
+			for j < len(src) && sourceNativeNameChar(src[j]) {
 				j++
 			}
 			value := src[i:j]
-			out = append(out, bmlNativeAtom(bmlNativeNameKind(value), value))
+			out = append(out, sourceNativeAtom(sourceNativeNameKind(lex, value), value))
 			i = j
 			continue
 		}
 		matched := ""
-		for _, op := range bmlNativeOps {
+		for _, op := range lex.ops {
 			if strings.HasPrefix(src[i:], op) {
 				matched = op
 				break
@@ -1213,7 +1282,7 @@ func bmlNativeScanText(src string) Value {
 		if matched == "" {
 			matched = string(c)
 		}
-		out = append(out, bmlNativeAtom("bml-op", matched))
+		out = append(out, sourceNativeAtom(lex.opKind, matched))
 		i += len(matched)
 	}
 	return Value{Kind: VList, List: out}
@@ -1521,12 +1590,12 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
 	})
-	k.registerNative("bml_scan_file", catCall(), func(_ *Kernel, args []Value) Value {
+	k.registerNative("source_scan_file", catCall(), func(_ *Kernel, args []Value) Value {
 		body, err := os.ReadFile(args[0].Str)
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("source_scan_file: %v", err))
 		}
-		return bmlNativeScanText(string(body))
+		return sourceNativeScanText(string(body), sourceNativeLexiconFromValue(args[1]))
 	})
 	// pow — integer exponentiation in native code (no Form recursion).
 	// (pow base exp) → base**exp. Negative exponents return 0 (Python's

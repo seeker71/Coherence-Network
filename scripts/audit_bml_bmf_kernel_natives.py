@@ -2,8 +2,8 @@
 """Audit BML/BMF-specific host-native surfaces in sibling kernels.
 
 The clean BML/BMF architecture keeps language semantics in BML/Form source.
-This guard makes existing compatibility shims explicit and fails when new
-`bml_` or `bmf_` natives enter a host kernel without updating the boundary.
+This guard makes the remaining compatibility shim explicit and fails when
+language scanner semantics enter a host kernel instead of living in Form data.
 """
 
 from __future__ import annotations
@@ -29,15 +29,21 @@ REGISTER_PATTERNS = [
 ]
 
 ALLOWED_LANGUAGE_NATIVES = {
-    "bml_scan_file": {
-        "classification": "compatibility_scanner",
-        "migration": "Replace with BML/Form lexicon-driven scanner or generic scan_with_lexicon.",
-    },
     "bmf_apply_rule_native": {
         "classification": "deprecated_bmf_semantic_fast_path",
         "migration": "Replace with BML/Form compiled BMF automaton over generic VM/cursor steps.",
     },
 }
+
+REQUIRED_GENERIC_NATIVES = {"source_scan_file"}
+
+FORBIDDEN_SCANNER_PATTERNS = [
+    re.compile(r"BML_NATIVE_(KEYWORDS|PROPERTIES|OPS)"),
+    re.compile(r"\bbmlNative(Keywords|Properties|Ops)\b"),
+    re.compile(r"\bbml_native_(keyword|property|name_kind)\b"),
+    re.compile(r"\bregisterNative\(\s*\"bml_scan_file\""),
+    re.compile(r"\bregister_native\(\s*\"bml_scan_file\""),
+]
 
 
 def native_names(path: Path) -> list[str]:
@@ -46,6 +52,17 @@ def native_names(path: Path) -> list[str]:
     for pattern in REGISTER_PATTERNS:
         names.extend(pattern.findall(text))
     return sorted(set(names))
+
+
+def forbidden_scanner_hits(path: Path) -> list[str]:
+    text = path.read_text()
+    hits: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        for pattern in FORBIDDEN_SCANNER_PATTERNS:
+            if pattern.search(line):
+                hits.append(f"{path.relative_to(ROOT)}:{lineno}: {line.strip()}")
+                break
+    return hits
 
 
 def main() -> int:
@@ -59,6 +76,7 @@ def main() -> int:
         ]
 
     expected = sorted(ALLOWED_LANGUAGE_NATIVES)
+    all_natives = {kernel: native_names(path) for kernel, path in KERNELS.items()}
     unexpected = {
         kernel: [native for native in names if native not in ALLOWED_LANGUAGE_NATIVES]
         for kernel, names in by_kernel.items()
@@ -67,16 +85,32 @@ def main() -> int:
         kernel: [native for native in expected if native not in names]
         for kernel, names in by_kernel.items()
     }
+    missing_generic = {
+        kernel: [native for native in sorted(REQUIRED_GENERIC_NATIVES) if native not in names]
+        for kernel, names in all_natives.items()
+    }
+    forbidden_scanner_semantics = {
+        kernel: forbidden_scanner_hits(path)
+        for kernel, path in KERNELS.items()
+    }
 
     report = {
         "status": "pass",
         "allowed_language_natives": ALLOWED_LANGUAGE_NATIVES,
+        "required_generic_natives": sorted(REQUIRED_GENERIC_NATIVES),
         "by_kernel": by_kernel,
         "unexpected": unexpected,
         "missing": missing,
+        "missing_generic": missing_generic,
+        "forbidden_scanner_semantics": forbidden_scanner_semantics,
     }
 
-    if any(unexpected.values()) or any(missing.values()):
+    if (
+        any(unexpected.values())
+        or any(missing.values())
+        or any(missing_generic.values())
+        or any(forbidden_scanner_semantics.values())
+    ):
         report["status"] = "fail"
 
     print(json.dumps(report, indent=2, sort_keys=True))
