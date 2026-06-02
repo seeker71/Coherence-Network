@@ -1227,8 +1227,8 @@ export class Kernel {
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
-    this.registerNative("bml_scan_file", catCall(), (_k, args) =>
-      bmlNativeScanText(readFileSync(argStr(args, 0), "utf8")),
+    this.registerNative("source_scan_file", catCall(), (_k, args) =>
+      sourceNativeScanText(readFileSync(argStr(args, 0), "utf8"), sourceNativeLexiconFromValue(args[1]!)),
     );
     // pow — integer exponentiation in native code (no Form recursion).
     // (pow base exp) → base**exp. Negative exponents return 0 (Python's
@@ -3310,36 +3310,24 @@ export interface Record {
   fields: { name: NameID; val: Value }[];
 }
 
-const BML_NATIVE_KEYWORDS = new Set([
-  "package", "import", "class", "interface", "template", "section",
-  "syntax", "const", "enum", "operator", "for", "while", "loop",
-  "switch", "select", "case", "default", "if", "else", "if_fail",
-  "while_success", "return", "break", "continue", "try", "catch",
-  "throw", "fail", "cut", "mark", "save", "restore", "discard",
-  "choice", "choose", "asm", "instanceof", "library", "naming",
-  "conventions", "DefaultMethods", "Nil", "Fail", "EndOfFile",
-  "EndOfLine", "Cut", "MultiMatch", "Primitive",
-]);
+interface SourceNativeLexicon {
+  keywords: Set<string>;
+  properties: Set<string>;
+  keywordKind: string;
+  propertyKind: string;
+  nameKind: string;
+  intKind: string;
+  floatKind: string;
+  stringKind: string;
+  charKind: string;
+  opKind: string;
+  ops: string[];
+  lineComment: string;
+  blockOpen: string;
+  blockClose: string;
+}
 
-const BML_NATIVE_PROPERTIES = new Set([
-  "public", "private", "protected", "abstract", "static", "final",
-  "default", "delegate", "shared", "get", "put", "strict", "relaxed",
-  "deferred", "native", "exception", "explicit", "extern", "library",
-  "name", "guid", "operator", "coercion", "reassign", "array",
-  "exclusive", "in", "out", "inout", "assign", "inline", "hidden",
-  "singleton", "unique", "struct", "noobject", "dynamic", "alias",
-  "outer", "nostate",
-]);
-
-const BML_NATIVE_OPS = [
-  "<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>",
-  ">>", "<<", "++", "--", "==", "!=", ">=", "<=", ":=", "*=", "/=",
-  "%=", "+=", "-=", "&=", "|=", "^=", "&&", "||", "..", "#(",
-  "{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/",
-  "%", "=", "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
-];
-
-function bmlNativeAtom(kind: string, value: string): Value {
+function sourceNativeAtom(kind: string, value: string): Value {
   return {
     kind: "list",
     list: [
@@ -3352,29 +3340,73 @@ function bmlNativeAtom(kind: string, value: string): Value {
   };
 }
 
-function bmlNativeNameKind(value: string): string {
-  if (BML_NATIVE_KEYWORDS.has(value)) return "bml-keyword";
-  if (BML_NATIVE_PROPERTIES.has(value)) return "bml-property";
-  return "bml-name";
+function sourceNativeStringList(value: Value, field: string): string[] {
+  if (value.kind !== "list") throw new Error(`source_scan_file: ${field} must be list`);
+  return value.list.map((item) => {
+    if (item.kind !== "str") throw new Error(`source_scan_file: ${field} item must be string`);
+    return item.str;
+  });
 }
 
-function bmlNativeNameStart(code: number): boolean {
+function sourceNativeField(xs: Value[], idx: number, field: string): Value {
+  const value = xs[idx];
+  if (value === undefined) throw new Error(`source_scan_file: lexicon missing ${field}`);
+  return value;
+}
+
+function sourceNativeFieldStr(xs: Value[], idx: number, field: string): string {
+  const value = sourceNativeField(xs, idx, field);
+  if (value.kind !== "str") throw new Error(`source_scan_file: lexicon ${field} must be string`);
+  return value.str;
+}
+
+function sourceNativeLexiconFromValue(value: Value): SourceNativeLexicon {
+  if (value.kind !== "list") throw new Error("source_scan_file: lexicon must be a list");
+  const xs = value.list;
+  if (xs.length < 15 || sourceNativeFieldStr(xs, 0, "tag") !== "source-lexicon") {
+    throw new Error("source_scan_file: lexicon must be (source-lexicon ...)");
+  }
+  return {
+    keywords: new Set(sourceNativeStringList(sourceNativeField(xs, 1, "keywords"), "keywords")),
+    properties: new Set(sourceNativeStringList(sourceNativeField(xs, 2, "properties"), "properties")),
+    keywordKind: sourceNativeFieldStr(xs, 3, "keyword-kind"),
+    propertyKind: sourceNativeFieldStr(xs, 4, "property-kind"),
+    nameKind: sourceNativeFieldStr(xs, 5, "name-kind"),
+    intKind: sourceNativeFieldStr(xs, 6, "int-kind"),
+    floatKind: sourceNativeFieldStr(xs, 7, "float-kind"),
+    stringKind: sourceNativeFieldStr(xs, 8, "string-kind"),
+    charKind: sourceNativeFieldStr(xs, 9, "char-kind"),
+    opKind: sourceNativeFieldStr(xs, 10, "op-kind"),
+    ops: sourceNativeStringList(sourceNativeField(xs, 11, "ops"), "ops"),
+    lineComment: sourceNativeFieldStr(xs, 12, "line-comment"),
+    blockOpen: sourceNativeFieldStr(xs, 13, "block-open"),
+    blockClose: sourceNativeFieldStr(xs, 14, "block-close"),
+  };
+}
+
+function sourceNativeNameKind(lex: SourceNativeLexicon, value: string): string {
+  if (lex.keywords.has(value)) return lex.keywordKind;
+  if (lex.properties.has(value)) return lex.propertyKind;
+  return lex.nameKind;
+}
+
+function sourceNativeNameStart(code: number): boolean {
   return (code >= 97 && code <= 122) || (code >= 65 && code <= 90) || code === 95;
 }
 
-function bmlNativeNameChar(code: number): boolean {
-  return bmlNativeNameStart(code) || (code >= 48 && code <= 57);
+function sourceNativeNameChar(code: number): boolean {
+  return sourceNativeNameStart(code) || (code >= 48 && code <= 57);
 }
 
-function bmlNativeHexDigit(code: number): boolean {
+function sourceNativeHexDigit(code: number): boolean {
   return (code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102);
 }
 
-function bmlNativeBinDigit(code: number): boolean {
+function sourceNativeBinDigit(code: number): boolean {
   return code === 48 || code === 49;
 }
 
-function bmlNativeDecodeEscape(ch: string): string {
+function sourceNativeDecodeEscape(ch: string): string {
   if (ch === "\\") return "\\";
   if (ch === "'") return "'";
   if (ch === "\"") return "\"";
@@ -3385,13 +3417,13 @@ function bmlNativeDecodeEscape(ch: string): string {
   return ch;
 }
 
-function bmlNativeScanQuoted(src: string, i: number, quote: string): [string, number] {
+function sourceNativeScanQuoted(src: string, i: number, quote: string): [string, number] {
   let j = i + 1;
   let out = "";
   while (j < src.length) {
     const c = src[j]!;
     if (c === "\\" && j + 1 < src.length) {
-      out += bmlNativeDecodeEscape(src[j + 1]!);
+      out += sourceNativeDecodeEscape(src[j + 1]!);
       j += 2;
       continue;
     }
@@ -3402,47 +3434,57 @@ function bmlNativeScanQuoted(src: string, i: number, quote: string): [string, nu
   return [out, j];
 }
 
-function bmlNativeScanText(src: string): Value {
-  const out: Value[] = [];
-  let i = 0;
+function sourceNativeSkip(src: string, i: number, lex: SourceNativeLexicon): number {
   while (i < src.length) {
     const c = src.charCodeAt(i);
     if (c === 32 || c === 9 || c === 10 || c === 13) {
       i++;
       continue;
     }
-    if (src.startsWith("//", i)) {
-      i += 2;
+    if (lex.lineComment !== "" && src.startsWith(lex.lineComment, i)) {
+      i += lex.lineComment.length;
       while (i < src.length && src.charCodeAt(i) !== 10) i++;
       continue;
     }
-    if (src.startsWith("/*", i)) {
-      const end = src.indexOf("*/", i + 2);
-      if (end < 0) break;
-      i = end + 2;
+    if (lex.blockOpen !== "" && lex.blockClose !== "" && src.startsWith(lex.blockOpen, i)) {
+      const end = src.indexOf(lex.blockClose, i + lex.blockOpen.length);
+      if (end < 0) return src.length;
+      i = end + lex.blockClose.length;
       continue;
     }
+    break;
+  }
+  return i;
+}
+
+function sourceNativeScanText(src: string, lex: SourceNativeLexicon): Value {
+  const out: Value[] = [];
+  let i = 0;
+  while (i < src.length) {
+    i = sourceNativeSkip(src, i, lex);
+    if (i >= src.length) break;
+    const c = src.charCodeAt(i);
     if (src[i] === "\"") {
-      const [value, next] = bmlNativeScanQuoted(src, i, "\"");
-      out.push(bmlNativeAtom("bml-string", value));
+      const [value, next] = sourceNativeScanQuoted(src, i, "\"");
+      out.push(sourceNativeAtom(lex.stringKind, value));
       i = next;
       continue;
     }
     if (src[i] === "'") {
-      const [value, next] = bmlNativeScanQuoted(src, i, "'");
-      out.push(bmlNativeAtom("bml-char", value));
+      const [value, next] = sourceNativeScanQuoted(src, i, "'");
+      out.push(sourceNativeAtom(lex.charKind, value));
       i = next;
       continue;
     }
     if (c >= 48 && c <= 57) {
       let j = i + 1;
-      let kind = "bml-int";
+      let kind = lex.intKind;
       if (c === 48 && j < src.length && (src[j] === "x" || src[j] === "X")) {
         j++;
-        while (j < src.length && bmlNativeHexDigit(src.charCodeAt(j))) j++;
+        while (j < src.length && sourceNativeHexDigit(src.charCodeAt(j))) j++;
       } else if (c === 48 && j < src.length && (src[j] === "b" || src[j] === "B")) {
         j++;
-        while (j < src.length && bmlNativeBinDigit(src.charCodeAt(j))) j++;
+        while (j < src.length && sourceNativeBinDigit(src.charCodeAt(j))) j++;
       } else {
         while (j < src.length) {
           const code = src.charCodeAt(j);
@@ -3452,7 +3494,7 @@ function bmlNativeScanText(src: string): Value {
         if (j < src.length && src[j] === "." && j + 1 < src.length) {
           const afterDot = src.charCodeAt(j + 1);
           if (afterDot >= 48 && afterDot <= 57) {
-            kind = "bml-float";
+            kind = lex.floatKind;
             j++;
             while (j < src.length) {
               const code = src.charCodeAt(j);
@@ -3477,27 +3519,27 @@ function bmlNativeScanText(src: string): Value {
           }
         }
       }
-      out.push(bmlNativeAtom(kind, src.slice(i, j)));
+      out.push(sourceNativeAtom(kind, src.slice(i, j)));
       i = j;
       continue;
     }
-    if (bmlNativeNameStart(c)) {
+    if (sourceNativeNameStart(c)) {
       let j = i + 1;
-      while (j < src.length && bmlNativeNameChar(src.charCodeAt(j))) j++;
+      while (j < src.length && sourceNativeNameChar(src.charCodeAt(j))) j++;
       const value = src.slice(i, j);
-      out.push(bmlNativeAtom(bmlNativeNameKind(value), value));
+      out.push(sourceNativeAtom(sourceNativeNameKind(lex, value), value));
       i = j;
       continue;
     }
     let matched = "";
-    for (const op of BML_NATIVE_OPS) {
+    for (const op of lex.ops) {
       if (src.startsWith(op, i)) {
         matched = op;
         break;
       }
     }
     if (matched === "") matched = src[i] ?? "";
-    out.push(bmlNativeAtom("bml-op", matched));
+    out.push(sourceNativeAtom(lex.opKind, matched));
     i += matched.length || 1;
   }
   return { kind: "list", list: out };
