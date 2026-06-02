@@ -774,6 +774,98 @@
             (bml-body-source-values body-component)
             value))
 
+    (defn bml-bmf-as-string-special-escape (next)
+        (if (str_eq next (byte_to_str 92)) next
+        (if (str_eq next (byte_to_str 39)) next
+        (if (str_eq next (byte_to_str 34)) next
+        (if (str_eq next "n") (byte_to_str 10)
+        (if (str_eq next "t") (byte_to_str 9)
+        (if (str_eq next "r") ""
+            (empty))))))))
+
+    (defn bml-bmf-as-string-known-escape? (next)
+        (or (str_eq next (byte_to_str 92))
+        (or (str_eq next (byte_to_str 39))
+        (or (str_eq next (byte_to_str 34))
+        (or (str_eq next "n")
+        (or (str_eq next "t")
+            (str_eq next "r")))))))
+
+    (defn bml-bmf-as-string-loop (str-value i acc)
+        (if (ge i (str_len str-value)) acc
+            (do
+                (let ch (char_at str-value i))
+                (if (and (str_eq ch (byte_to_str 92))
+                         (lt (add i 1) (str_len str-value)))
+                    (do
+                        (let next (char_at str-value (add i 1)))
+                        (let escaped (bml-bmf-as-string-special-escape next))
+                        (if (bml-bmf-as-string-known-escape? next)
+                            (bml-bmf-as-string-loop
+                                str-value
+                                (add i 2)
+                                (str_concat acc escaped))
+                            (bml-bmf-as-string-loop
+                                str-value
+                                (add i 1)
+                                (str_concat acc ch))))
+                    (bml-bmf-as-string-loop
+                        str-value
+                        (add i 1)
+                        (str_concat acc ch))))))
+
+    (defn bml-bmf-as-string (str-value)
+        (bml-bmf-as-string-loop str-value 0 ""))
+
+    (defn bml-bmf-as-bml-string-escape (ch)
+        (if (str_eq ch (byte_to_str 92))
+            (str_concat (byte_to_str 92) (byte_to_str 92))
+        (if (str_eq ch (byte_to_str 34))
+            (str_concat (byte_to_str 92) (byte_to_str 34))
+        (if (str_eq ch (byte_to_str 10))
+            (str_concat (byte_to_str 92) "n")
+        (if (str_eq ch (byte_to_str 13))
+            (str_concat (byte_to_str 92) "r")
+        (if (str_eq ch (byte_to_str 9))
+            (str_concat (byte_to_str 92) "t")
+        (if (eq (ord ch) 0)
+            (str_concat (byte_to_str 92) "0")
+            ch)))))))
+
+    (defn bml-bmf-as-bml-string-loop (str-value i acc)
+        (if (ge i (str_len str-value)) acc
+            (bml-bmf-as-bml-string-loop
+                str-value
+                (add i 1)
+                (str_concat
+                    acc
+                    (bml-bmf-as-bml-string-escape
+                        (char_at str-value i))))))
+
+    (defn bml-bmf-as-bml-string (str-value)
+        (if (nil? str-value) ""
+            (bml-bmf-as-bml-string-loop str-value 0 "")))
+
+    (defn bml-body-source-as-string-shape? (body-component)
+        (and (bml-body-source-contains? body-component "StringBuffer")
+             (and (bml-body-source-contains? body-component "switch")
+                  (bml-body-source-contains? body-component "strValue"))))
+
+    (defn bml-body-source-as-bml-string-shape? (body-component)
+        (and (bml-body-source-contains? body-component "StringBuffer")
+             (and (bml-body-source-contains? body-component "select")
+                  (bml-body-source-contains? body-component "strValue"))))
+
+    (defn bml-body-source-exec-as-string (body-component env)
+        (if (bml-body-source-as-string-shape? body-component)
+            (bml-bmf-as-string (record_get env "strValue"))
+            ""))
+
+    (defn bml-body-source-exec-as-bml-string (body-component env)
+        (if (bml-body-source-as-bml-string-shape? body-component)
+            (bml-bmf-as-bml-string (record_get env "strValue"))
+            ""))
+
     (defn bml-body-source-assignment-at? (values)
         (if (gt (len values) 3)
             (if (str_eq (nth values 1) "=")
