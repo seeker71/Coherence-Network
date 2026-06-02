@@ -90,7 +90,9 @@ that increases vitality for the cell and the whole.
 Tend over produce. Default to body, not private cache. Coordinates before
 labels. Evidence before resonance. Keep direct experience, inference, measured
 claim, and mystery distinct. Add edges with content. Use Form, an existing
-route, or a port before creating parallel machinery. Return a trace: who/where,
+route, or a port before creating parallel machinery. Durable docs carry what is
+alive now: goals, current shape, and the smallest proof; path detail lives in
+evidence records unless it is still operational. Return a trace: who/where,
 observed, inferred, changed, proof, still tight.
 
 ## When Things Go Wrong

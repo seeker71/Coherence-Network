@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/docs-release-path-details-20260602",
+  "commit_scope": "Release path-heavy documentation memory into current-shape guidance.",
+  "files_owned": [
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-02_docs_current_shape_memory.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/user-blueprint-registry.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "rg -n \"Correction|This breath|will commit|No input requested|not fear|lived repetition|session’s|Date\" form/user-blueprint-registry.md CLAUDE.md docs/shared/agent-start-packet.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_docs_current_shape_memory.json",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Prompt guide passed. Wellness passed with indexes aligned, registered Form blueprints clean, and deploy aligned at 78c131a7. Evidence validation passed, indexes were current, diff whitespace was clean, rebase was current, local PR guard returned ready_for_push=True, and follow-through reported no stale Codex PRs. The touched registry sections now avoid correction/path-trace phrases and describe current operating shape."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Open PR and monitor checks"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local documentation proof is complete; CI remains pending until PR checks run."
+  },
+  "idea_ids": [
+    "living-documentation",
+    "what-is-current-shape"
+  ],
+  "spec_ids": [
+    "agent-guidance",
+    "form-blueprint-registry"
+  ],
+  "task_ids": [
+    "docs-release-path-details-20260602"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "documentation-memory-hygiene"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation-tending",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "form/user-blueprint-registry.md",
+    "make wellness",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_docs_current_shape_memory.json",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main returns ready_for_push=True",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict reports stale_codex_prs=0",
+    "git diff --check"
+  ],
+  "change_files": [
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-02_docs_current_shape_memory.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/user-blueprint-registry.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form registry documentation now presents the current operating shape for channel breath, arrival, identity, and relationship verbs without carrying correction/path narration into the durable artifact. No runtime behavior changes.",
+    "public_endpoints": [
+      "form/user-blueprint-registry.md",
+      "CLAUDE.md",
+      "docs/shared/agent-start-packet.md"
+    ],
+    "test_flows": [
+      "Wellness confirms Form blueprint registry remains clean.",
+      "Index check confirms documentation indexes are current.",
+      "Evidence validation confirms the full changed-file set is covered.",
+      "Diff whitespace check confirms Markdown formatting is clean."
+    ]
+  }
+}
