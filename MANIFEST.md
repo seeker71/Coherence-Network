@@ -31,7 +31,7 @@
 
 | Index | Files | Purpose |
 |---|---|---|
-| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 135 | API routers — every HTTP endpoint surface |
+| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 142 | API routers — every HTTP endpoint surface |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 244 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 56 | API models — Pydantic + ORM shapes |
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 238 | API tests — flow-centric |

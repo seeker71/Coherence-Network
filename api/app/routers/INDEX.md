@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 135
+**Total files**: 142
 
 | File | Purpose |
 |---|---|
@@ -85,6 +85,13 @@
 | [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |
 | [inventory.py](inventory.py) | Unified system inventory routes. |
 | [investments.py](investments.py) | Investment endpoints — preview, portfolio, history, time pledges. |
+| [kernel_breath.py](kernel_breath.py) | Transmuted /api/utils entropy / breath-balance endpoints (bodies run as Form recipes). |
+| [kernel_grounded_cv.py](kernel_grounded_cv.py) | Transmuted /api/utils grounded-cost and grounded-value endpoints (bodies run as Form recipes). |
+| [kernel_grounding.py](kernel_grounding.py) | Transmuted /api/utils grounding-summary + cost/value-vector endpoints (bodies run as Form recipes). |
+| [kernel_matching.py](kernel_matching.py) | Transmuted /api/utils concept/tag/worldview match-score endpoints (bodies run as Form recipes). |
+| [kernel_nodeid.py](kernel_nodeid.py) | Transmuted /api/utils NodeID + coherence-weight endpoints (bodies run as Form recipes). |
+| [kernel_scoring.py](kernel_scoring.py) | Transmuted /api/utils idea/score combinator endpoints (bodies run as Form recipes). |
+| [kernel_shared.py](kernel_shared.py) | Shared scaffolding for the transmuted kernel-served /api/utils endpoints. |
 | [lenses.py](lenses.py) | Worldview lens registry — spec-181. |
 | [locales.py](locales.py) | Locales router — list supported languages and their coverage. |
 | [marketplace.py](marketplace.py) | Marketplace router: OpenClaw Idea Marketplace endpoints (spec 121). |

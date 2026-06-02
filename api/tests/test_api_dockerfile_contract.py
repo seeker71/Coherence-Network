@@ -8,8 +8,8 @@ import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# The four transmuted-endpoint recipes the live API loads at request time
-# (api/app/routers/utils.py → serve_via_kernel). They are the deployable
+# The transmuted-endpoint recipes the live API loads at request time
+# (api/app/routers/kernel_*.py → serve_via_kernel). They are the deployable
 # artifact the prod kernel reads; if they are missing from the image,
 # load_recipe raises FileNotFoundError and the endpoints silently degrade to
 # python-fallback (correct values, but NOT kernel-served). These tests are the
