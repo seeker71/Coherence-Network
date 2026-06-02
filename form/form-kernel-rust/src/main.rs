@@ -6205,7 +6205,7 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
-  serve --port <p> --routes <file.fk>  HTTP/1.0 listener dispatching to Form recipes
+  serve --port <p> --routes <file.fk> [--upstream <base-url>]\n                                       kernel front-door ROUTER: native Form handlers\n                                       for listed paths, fan-out to the CPython upstream\n                                       for the rest (HTTP/1.0 proof-of-shape)
 
 Source adapter modes:
   <file.fk> [more.fk ...]              run .fk files
@@ -6247,6 +6247,13 @@ fn cli_serve(args: &[String]) -> i32 {
     // --port <p> --routes <file.fk>
     let mut port: u16 = 8001;
     let mut routes_path: Option<String> = None;
+    // --upstream <base-url> turns the listener into the front-door ROUTER:
+    // a path with a native Form handler is served entirely in the kernel
+    // (no CPython in the path); a path with no native handler FANS OUT to
+    // the CPython upstream (the running FastAPI app) over HTTP. Absent this
+    // flag an unmatched path is a 404 — the original proof-of-shape behavior,
+    // unchanged, so existing callers see no difference.
+    let mut upstream: Option<String> = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -6270,6 +6277,14 @@ fn cli_serve(args: &[String]) -> i32 {
                     return 2;
                 }
                 routes_path = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--upstream" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --upstream requires a base-url argument");
+                    return 2;
+                }
+                upstream = Some(args[i + 1].trim_end_matches('/').to_string());
                 i += 2;
             }
             other => {
@@ -6343,13 +6358,17 @@ fn cli_serve(args: &[String]) -> i32 {
         }
     };
     eprintln!(
-        "form-kernel-rust serve: listening on 127.0.0.1:{} ({} route{})",
+        "form-kernel-rust serve: listening on 127.0.0.1:{} ({} native route{})",
         port,
         route_pairs.len(),
         if route_pairs.len() == 1 { "" } else { "s" }
     );
     for r in &route_pairs {
-        eprintln!("  {}", r.0);
+        eprintln!("  {} -> native (Form handler)", r.0);
+    }
+    match &upstream {
+        Some(u) => eprintln!("  *  -> fan-out to CPython upstream {}", u),
+        None => eprintln!("  *  -> 404 (no --upstream; fan-out arm inactive)"),
     }
 
     for incoming in listener.incoming() {
@@ -6367,12 +6386,19 @@ fn cli_serve(args: &[String]) -> i32 {
         let req = String::from_utf8_lossy(&buf[..n]).to_string();
         let (method, path, query) = parse_request_line(&req);
 
+        // The router decision: a path with a native Form handler is served
+        // entirely in the kernel; a path with no handler fans out to the
+        // CPython upstream (if --upstream is set) or 404s.
         let body: String;
         let status: &str;
+        let router: &str;
         if method != "GET" {
+            // GET-only doorway today; non-idempotent verbs are a named build.
             status = "405 Method Not Allowed";
+            router = "native-kernel";
             body = format!("method not allowed: {}\n", method);
         } else if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
+            // NATIVE: served entirely in Form, no CPython in the path.
             // Build the query alist as Value::List of (key, value) pairs.
             let q_alist = Value::List(
                 query
@@ -6385,23 +6411,39 @@ fn cli_serve(args: &[String]) -> i32 {
             if cl.params.len() == 1 {
                 arena.bind(call_frame, cl.params[0], q_alist);
             } else if cl.params.len() != 0 {
-                status = "500 Internal Server Error";
-                body = format!(
-                    "handler for {} wants {} params; serve passes 0 or 1\n",
-                    path,
-                    cl.params.len()
+                let _ = stream.write_all(
+                    http_response_routed(
+                        "500 Internal Server Error",
+                        &format!(
+                            "handler for {} wants {} params; serve passes 0 or 1\n",
+                            path,
+                            cl.params.len()
+                        ),
+                        "native-kernel",
+                    )
+                    .as_bytes(),
                 );
-                let _ = stream.write_all(http_response(status, &body).as_bytes());
                 continue;
             }
             let result = walk(&mut k, &mut arena, cl.body, call_frame);
             status = "200 OK";
+            router = "native-kernel";
             body = result.display();
+        } else if let Some(base) = &upstream {
+            // FAN-OUT: no native handler — forward to the CPython upstream and
+            // relay its response. The kernel owns the front door; CPython is
+            // the upstream for the not-yet-native tail.
+            let (up_status, up_body) = fan_out_to_upstream(base, &path, &query);
+            let _ =
+                stream.write_all(http_response_routed(&up_status, &up_body, "fanout-python").as_bytes());
+            continue;
         } else {
+            // No native handler and no upstream configured.
             status = "404 Not Found";
-            body = format!("no route for {}\n", path);
+            router = "native-kernel";
+            body = format!("no route for {} (no --upstream; fan-out arm inactive)\n", path);
         }
-        let _ = stream.write_all(http_response(status, &body).as_bytes());
+        let _ = stream.write_all(http_response_routed(status, &body, router).as_bytes());
     }
     0
 }
@@ -6461,13 +6503,56 @@ fn url_decode(s: &str) -> String {
     out
 }
 
-fn http_response(status: &str, body: &str) -> String {
+// Build a response the kernel-router emits. The X-Form-Router header makes the
+// routing decision legible to clients — the inverted topology's analog of the
+// guest path's `runtime` field: the caller can see whether the kernel served
+// this in Form (no CPython hop) or fanned out. `router` is "native-kernel" for
+// Form-handled paths, "fanout-python" for proxied paths, or a status note.
+fn http_response_routed(status: &str, body: &str, router: &str) -> String {
     format!(
-        "HTTP/1.0 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        "HTTP/1.0 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nX-Form-Router: {}\r\nConnection: close\r\n\r\n{}",
         status,
         body.len(),
+        router,
         body
     )
+}
+
+// Fan-out arm: the kernel-router received a request for a path with NO native
+// Form handler, so it forwards to the CPython upstream (the running FastAPI
+// app) and relays the response. This is the real proxy hop, not a stub — the
+// kernel owns the front door and CPython is the upstream for the not-yet-native
+// tail. Proof-of-shape scope: GET only, status + body relayed as text/plain,
+// X-Form-Router: fanout-python stamped so the hop is visible. The production
+// build (named in KERNEL_AS_ROUTER.md) adds method/header/body passthrough,
+// streaming, and connection reuse.
+fn fan_out_to_upstream(base: &str, path: &str, query: &[(String, String)]) -> (String, String) {
+    let mut url = format!("{}{}", base, path);
+    if !query.is_empty() {
+        let qs: Vec<String> = query
+            .iter()
+            .map(|(k, v)| format!("{}={}", k, v))
+            .collect();
+        url.push('?');
+        url.push_str(&qs.join("&"));
+    }
+    match ureq::get(&url).call() {
+        Ok(resp) => {
+            let code = resp.status();
+            let reason = resp.status_text().to_string();
+            let body = resp.into_string().unwrap_or_default();
+            (format!("{} {}", code, reason), body)
+        }
+        Err(ureq::Error::Status(code, resp)) => {
+            let reason = resp.status_text().to_string();
+            let body = resp.into_string().unwrap_or_default();
+            (format!("{} {}", code, reason), body)
+        }
+        Err(e) => (
+            "502 Bad Gateway".to_string(),
+            format!("kernel-router: fan-out to upstream failed: {}\n", e),
+        ),
+    }
 }
 
 fn cli_list(args: &[String]) -> i32 {

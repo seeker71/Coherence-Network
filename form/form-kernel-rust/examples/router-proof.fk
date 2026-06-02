@@ -1,0 +1,67 @@
+; router-proof.fk — the kernel-as-router proof-of-shape manifest.
+;
+; Loaded by `form-kernel-rust serve` (see cli_serve). It proves the REVERSED
+; topology: the kernel is the front-door router, not a guest subroutine inside
+; a CPython request.
+;
+;   - NATIVE routes (listed below) are served ENTIRELY in Form — the kernel
+;     walks the handler recipe and returns the value as the HTTP body. NO
+;     CPython is in the path. X-Form-Router: native-kernel.
+;   - ANY OTHER path FANS OUT to the CPython upstream when serve is started
+;     with --upstream <base-url> (the running FastAPI app). The kernel owns
+;     the front door; CPython is the upstream for the not-yet-native tail.
+;     X-Form-Router: fanout-python.
+;
+; Authored as .fk S-expression Form — the kernel's native surface, NOT
+; Python-cross-compiled. (BML surface -> routes would need the Form surface
+; parser in Rust; named as a build in KERNEL_AS_ROUTER.md.)
+;
+;   curl :PORT/health                          -> "ok"        (native, Form)
+;   curl ':PORT/coherence_weight'              -> 0.8125      (native float math)
+;   curl ':PORT/count_signals?values=a,b,c'    -> "3"         (native, input-driven)
+;   curl :PORT/api/ideas                       -> fan-out -> CPython upstream
+
+; --- tiny alist helper: value for `key` in a list of (k v) string pairs ---
+(defn assoc (key pairs)
+  (if (eq (len pairs) 0)
+      ""
+      (if (str_eq (head (head pairs)) key)
+          (head (tail (head pairs)))
+          (assoc key (tail pairs)))))
+
+; --- NATIVE handler 1: liveness. Pure Form, zero inputs. ---
+(defn route_health ()
+  "ok")
+
+; --- NATIVE handler 2: a real coherence-score combinator in Form float math.
+; Mirrors /api/utils/weighted_average (the substrate's bread-and-butter
+; aggregator), but served HERE by the kernel-router with no CPython hop. The
+; weighted average of three coherence scores (0.5, 0.75, 1.0) against weights
+; (0.25, 0.25, 0.5) — the value-walk runs the whole arithmetic in the kernel
+; and the float result becomes the HTTP body.
+(defn route_coherence_weight ()
+  (div
+    (add (add (mul 0.5 0.25) (mul 0.75 0.25)) (mul 1.0 0.5))
+    (add (add 0.25 0.25) 0.5)))
+
+; --- NATIVE handler 3: input-driven Form compute. Counts comma-separated
+; signals in the `values` query arg by walking the string char-by-char in
+; the kernel (commas + 1). Proves a native handler that reads request input
+; and computes a non-trivial value entirely in Form.
+(defn count_commas (s i n)
+  (if (eq i (str_len s))
+      n
+      (count_commas s (add i 1)
+                    (if (str_eq (char_at s i) ",") (add n 1) n))))
+
+(defn route_count_signals (q)
+  (if (eq (str_len (assoc "values" q)) 0)
+      "0"
+      (int_to_str (add (count_commas (assoc "values" q) 0 0) 1))))
+
+; --- the route manifest: (path handler). Everything not here fans out. ---
+(let routes
+  (list
+    (list "/health"           route_health)
+    (list "/coherence_weight" route_coherence_weight)
+    (list "/count_signals"    route_count_signals)))
