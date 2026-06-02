@@ -304,6 +304,39 @@ healthy as it grows*, the activity view says *here is what's alive and what's
 inert*. Together they turn "serve everything through the kernel" from a leap
 into a walk — one route at a time, each one sensed and attributed.
 
+## Runtime awareness — usage and runtime-share are distinct axes
+
+The journey is from Python-runtime toward kernel-runtime, so the metric that
+matters is **how much execution runs Form-native**, not how many routes name the
+kernel. Two axes hide inside "kernel-served," and only naming both keeps the
+reading honest:
+
+- **Kernel USAGE** — how many routes call the kernel at all. ~22 of 784 routes
+  (~2.8%) serve their computational core through the kernel.
+- **Python RUNTIME-SHARE** — how much of a request's execution actually leaves
+  CPython. On every kernel-served route the kernel is a **called subroutine
+  inside a CPython request**: FastAPI routes, the params bind, Pydantic
+  validates, `serve_via_kernel` orchestrates (preload, parse, fallback), the
+  kernel walks the recipe, and Pydantic serializes the response — only the
+  recipe walk is Form-native. The request lifecycle stays CPython by design (the
+  eligibility seam above).
+
+These axes move independently, sometimes in opposite directions. Transmuting a
+route raises USAGE and can ADD CPython at the same time: each one lands a FastAPI
+handler, a Pydantic response model, and a value-identical `*_py` fallback, so net
+Python LOC can grow even as more routes touch the kernel. The honest baseline:
+the kernel is a **guest-subroutine, not the runtime or the router** — 0 routes
+are served kernel-FIRST. That zero is the ground the reversal (kernel as the
+front door) moves; runtime-share is the dial that reads the move.
+
+`scripts/runtime_surface_report.py` is the sensing instrument for this axis — it
+reports the route ratio, the per-route CPython-vs-kernel layering, the CPython
+weight in the kernel-router files, and where the body sits on the journey. The
+wellness probe carries the one-line version in its kernel-native vitality
+reading. The attribution view answers *which Blueprints fire*; the runtime-surface
+view answers *how much actually left CPython* — companion instruments, distinct
+questions.
+
 ## Running the evidence
 
 ```bash
@@ -316,6 +349,8 @@ python3 scripts/kernel_readiness_harness.py --json out.json       # machine-read
 python3 scripts/wellness_check.py                 # includes sense_kernel_api (quiet when healthy)
 python3 scripts/kernel_attribution_report.py      # ranked Blueprint/Recipe/native activity + inert list
 python3 scripts/kernel_attribution_report.py --json --top 5   # machine-readable, top-N per section
+python3 scripts/runtime_surface_report.py         # CPython-vs-kernel runtime share — usage vs runtime-share axes
+python3 scripts/runtime_surface_report.py --json  # machine-readable runtime-surface reading
 ```
 
 The readiness harness exits nonzero only on a value-parity failure — slowness is
