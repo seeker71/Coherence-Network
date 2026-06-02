@@ -1342,151 +1342,121 @@ impl Value {
     }
 }
 
-fn bml_native_str(value: &str) -> Value {
+#[derive(Clone)]
+struct SourceNativeLexicon {
+    keywords: HashSet<String>,
+    properties: HashSet<String>,
+    keyword_kind: String,
+    property_kind: String,
+    name_kind: String,
+    int_kind: String,
+    float_kind: String,
+    string_kind: String,
+    char_kind: String,
+    op_kind: String,
+    ops: Vec<String>,
+    line_comment: String,
+    block_open: String,
+    block_close: String,
+}
+
+fn source_native_str(value: &str) -> Value {
     Value::Str(value.to_string())
 }
 
-fn bml_native_empty_list() -> Value {
+fn source_native_empty_list() -> Value {
     Value::List(vec![])
 }
 
-fn bml_native_atom(kind: &str, value: &str) -> Value {
+fn source_native_atom(kind: &str, value: &str) -> Value {
     Value::List(vec![
-        bml_native_str("cell"),
-        bml_native_str(kind),
-        bml_native_str(value),
-        bml_native_empty_list(),
+        source_native_str("cell"),
+        source_native_str(kind),
+        source_native_str(value),
+        source_native_empty_list(),
         Value::Null,
     ])
 }
 
-fn bml_native_keyword(value: &str) -> bool {
-    matches!(
-        value,
-        "package"
-            | "import"
-            | "class"
-            | "interface"
-            | "template"
-            | "section"
-            | "syntax"
-            | "const"
-            | "enum"
-            | "operator"
-            | "for"
-            | "while"
-            | "loop"
-            | "switch"
-            | "select"
-            | "case"
-            | "default"
-            | "if"
-            | "else"
-            | "if_fail"
-            | "while_success"
-            | "return"
-            | "break"
-            | "continue"
-            | "try"
-            | "catch"
-            | "throw"
-            | "fail"
-            | "cut"
-            | "mark"
-            | "save"
-            | "restore"
-            | "discard"
-            | "choice"
-            | "choose"
-            | "asm"
-            | "instanceof"
-            | "library"
-            | "naming"
-            | "conventions"
-            | "DefaultMethods"
-            | "Nil"
-            | "Fail"
-            | "EndOfFile"
-            | "EndOfLine"
-            | "Cut"
-            | "MultiMatch"
-            | "Primitive"
-    )
-}
-
-fn bml_native_property(value: &str) -> bool {
-    matches!(
-        value,
-        "public"
-            | "private"
-            | "protected"
-            | "abstract"
-            | "static"
-            | "final"
-            | "default"
-            | "delegate"
-            | "shared"
-            | "get"
-            | "put"
-            | "strict"
-            | "relaxed"
-            | "deferred"
-            | "native"
-            | "exception"
-            | "explicit"
-            | "extern"
-            | "library"
-            | "name"
-            | "guid"
-            | "operator"
-            | "coercion"
-            | "reassign"
-            | "array"
-            | "exclusive"
-            | "in"
-            | "out"
-            | "inout"
-            | "assign"
-            | "inline"
-            | "hidden"
-            | "singleton"
-            | "unique"
-            | "struct"
-            | "noobject"
-            | "dynamic"
-            | "alias"
-            | "outer"
-            | "nostate"
-    )
-}
-
-fn bml_native_name_kind(value: &str) -> &'static str {
-    if bml_native_keyword(value) {
-        "bml-keyword"
-    } else if bml_native_property(value) {
-        "bml-property"
-    } else {
-        "bml-name"
+fn source_native_string_set(value: &Value, field: &str) -> HashSet<String> {
+    match value {
+        Value::List(xs) => xs.iter().map(|v| v.as_str().to_string()).collect(),
+        _ => panic!("source_scan_file: {} must be list", field),
     }
 }
 
-fn bml_native_name_start(b: u8) -> bool {
+fn source_native_string_list(value: &Value, field: &str) -> Vec<String> {
+    match value {
+        Value::List(xs) => xs.iter().map(|v| v.as_str().to_string()).collect(),
+        _ => panic!("source_scan_file: {} must be list", field),
+    }
+}
+
+fn source_native_field<'a>(xs: &'a [Value], idx: usize, field: &str) -> &'a Value {
+    xs.get(idx)
+        .unwrap_or_else(|| panic!("source_scan_file: lexicon missing {}", field))
+}
+
+fn source_native_field_str(xs: &[Value], idx: usize, field: &str) -> String {
+    source_native_field(xs, idx, field).as_str().to_string()
+}
+
+fn source_native_lexicon_from_value(value: &Value) -> SourceNativeLexicon {
+    let xs = match value {
+        Value::List(xs) => xs,
+        _ => panic!("source_scan_file: lexicon must be a list"),
+    };
+    if xs.len() < 15 || source_native_field_str(xs, 0, "tag") != "source-lexicon" {
+        panic!("source_scan_file: lexicon must be (source-lexicon ...)");
+    }
+    SourceNativeLexicon {
+        keywords: source_native_string_set(source_native_field(xs, 1, "keywords"), "keywords"),
+        properties: source_native_string_set(
+            source_native_field(xs, 2, "properties"),
+            "properties",
+        ),
+        keyword_kind: source_native_field_str(xs, 3, "keyword-kind"),
+        property_kind: source_native_field_str(xs, 4, "property-kind"),
+        name_kind: source_native_field_str(xs, 5, "name-kind"),
+        int_kind: source_native_field_str(xs, 6, "int-kind"),
+        float_kind: source_native_field_str(xs, 7, "float-kind"),
+        string_kind: source_native_field_str(xs, 8, "string-kind"),
+        char_kind: source_native_field_str(xs, 9, "char-kind"),
+        op_kind: source_native_field_str(xs, 10, "op-kind"),
+        ops: source_native_string_list(source_native_field(xs, 11, "ops"), "ops"),
+        line_comment: source_native_field_str(xs, 12, "line-comment"),
+        block_open: source_native_field_str(xs, 13, "block-open"),
+        block_close: source_native_field_str(xs, 14, "block-close"),
+    }
+}
+
+fn source_native_name_kind<'a>(lex: &'a SourceNativeLexicon, value: &str) -> &'a str {
+    if lex.keywords.contains(value) {
+        &lex.keyword_kind
+    } else if lex.properties.contains(value) {
+        &lex.property_kind
+    } else {
+        &lex.name_kind
+    }
+}
+
+fn source_native_name_start(b: u8) -> bool {
     b.is_ascii_alphabetic() || b == b'_'
 }
 
-fn bml_native_name_char(b: u8) -> bool {
-    bml_native_name_start(b) || b.is_ascii_digit()
+fn source_native_name_char(b: u8) -> bool {
+    source_native_name_start(b) || b.is_ascii_digit()
 }
 
-fn bml_native_hex_digit(b: u8) -> bool {
+fn source_native_hex_digit(b: u8) -> bool {
     b.is_ascii_hexdigit()
 }
 
-fn bml_native_bin_digit(b: u8) -> bool {
+fn source_native_bin_digit(b: u8) -> bool {
     matches!(b, b'0' | b'1')
 }
 
-fn bml_native_decode_escape(b: u8) -> u8 {
+fn source_native_decode_escape(b: u8) -> u8 {
     match b {
         b'\\' => b'\\',
         b'\'' => b'\'',
@@ -1499,14 +1469,14 @@ fn bml_native_decode_escape(b: u8) -> u8 {
     }
 }
 
-fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
+fn source_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
     let bytes = src.as_bytes();
     let mut j = i + 1;
     let mut out = String::new();
     while j < bytes.len() {
         let c = bytes[j];
         if c == b'\\' && j + 1 < bytes.len() {
-            out.push(bml_native_decode_escape(bytes[j + 1]) as char);
+            out.push(source_native_decode_escape(bytes[j + 1]) as char);
             j += 2;
             continue;
         }
@@ -1519,59 +1489,69 @@ fn bml_native_scan_quoted(src: &str, i: usize, quote: u8) -> (String, usize) {
     (out, j)
 }
 
-fn bml_native_scan_text(src: &str) -> Value {
+fn source_native_skip(src: &str, mut i: usize, lex: &SourceNativeLexicon) -> usize {
     let bytes = src.as_bytes();
-    let ops = [
-        "<<prim", ".*", "::=", "=>", "<=", ">>>=", ">>=", "<<=", ">>>", ">>", "<<", "++", "--",
-        "==", "!=", ">=", "<=", ":=", "*=", "/=", "%=", "+=", "-=", "&=", "|=", "^=", "&&", "||",
-        "..", "#(", "{", "}", "(", ")", "[", "]", ";", ",", ":", ".", "+", "-", "*", "/", "%", "=",
-        "'", "<", ">", "!", "~", "?", "|", "&", "^", "$", "#", "\\",
-    ];
-    let mut out: Vec<Value> = vec![];
-    let mut i = 0usize;
     while i < bytes.len() {
         let c = bytes[i];
         if matches!(c, b' ' | b'\t' | b'\n' | b'\r') {
             i += 1;
             continue;
         }
-        if i + 1 < bytes.len() && &src[i..i + 2] == "//" {
-            i += 2;
+        if !lex.line_comment.is_empty() && src[i..].starts_with(&lex.line_comment) {
+            i += lex.line_comment.len();
             while i < bytes.len() && bytes[i] != b'\n' {
                 i += 1;
             }
             continue;
         }
-        if i + 1 < bytes.len() && &src[i..i + 2] == "/*" {
-            if let Some(end) = src[i + 2..].find("*/") {
-                i = i + 2 + end + 2;
+        if !lex.block_open.is_empty()
+            && !lex.block_close.is_empty()
+            && src[i..].starts_with(&lex.block_open)
+        {
+            if let Some(end) = src[i + lex.block_open.len()..].find(&lex.block_close) {
+                i = i + lex.block_open.len() + end + lex.block_close.len();
                 continue;
             }
+            return bytes.len();
+        }
+        break;
+    }
+    i
+}
+
+fn source_native_scan_text(src: &str, lex: &SourceNativeLexicon) -> Value {
+    let bytes = src.as_bytes();
+    let mut out: Vec<Value> = vec![];
+    let mut i = 0usize;
+    while i < bytes.len() {
+        i = source_native_skip(src, i, lex);
+        if i >= bytes.len() {
             break;
         }
+        let c = bytes[i];
         if c == b'"' {
-            let (value, next) = bml_native_scan_quoted(src, i, b'"');
-            out.push(bml_native_atom("bml-string", &value));
+            let (value, next) = source_native_scan_quoted(src, i, b'"');
+            out.push(source_native_atom(&lex.string_kind, &value));
             i = next;
             continue;
         }
         if c == b'\'' {
-            let (value, next) = bml_native_scan_quoted(src, i, b'\'');
-            out.push(bml_native_atom("bml-char", &value));
+            let (value, next) = source_native_scan_quoted(src, i, b'\'');
+            out.push(source_native_atom(&lex.char_kind, &value));
             i = next;
             continue;
         }
         if c.is_ascii_digit() {
             let mut j = i + 1;
-            let mut kind = "bml-int";
+            let mut kind = lex.int_kind.as_str();
             if c == b'0' && j < bytes.len() && matches!(bytes[j], b'x' | b'X') {
                 j += 1;
-                while j < bytes.len() && bml_native_hex_digit(bytes[j]) {
+                while j < bytes.len() && source_native_hex_digit(bytes[j]) {
                     j += 1;
                 }
             } else if c == b'0' && j < bytes.len() && matches!(bytes[j], b'b' | b'B') {
                 j += 1;
-                while j < bytes.len() && bml_native_bin_digit(bytes[j]) {
+                while j < bytes.len() && source_native_bin_digit(bytes[j]) {
                     j += 1;
                 }
             } else {
@@ -1583,7 +1563,7 @@ fn bml_native_scan_text(src: &str) -> Value {
                     && j + 1 < bytes.len()
                     && bytes[j + 1].is_ascii_digit()
                 {
-                    kind = "bml-float";
+                    kind = lex.float_kind.as_str();
                     j += 1;
                     while j < bytes.len() && bytes[j].is_ascii_digit() {
                         j += 1;
@@ -1602,22 +1582,25 @@ fn bml_native_scan_text(src: &str) -> Value {
                     }
                 }
             }
-            out.push(bml_native_atom(kind, &src[i..j]));
+            out.push(source_native_atom(kind, &src[i..j]));
             i = j;
             continue;
         }
-        if bml_native_name_start(c) {
+        if source_native_name_start(c) {
             let mut j = i + 1;
-            while j < bytes.len() && bml_native_name_char(bytes[j]) {
+            while j < bytes.len() && source_native_name_char(bytes[j]) {
                 j += 1;
             }
             let value = &src[i..j];
-            out.push(bml_native_atom(bml_native_name_kind(value), value));
+            out.push(source_native_atom(
+                source_native_name_kind(lex, value),
+                value,
+            ));
             i = j;
             continue;
         }
         let mut matched = "";
-        for op in ops {
+        for op in &lex.ops {
             if src[i..].starts_with(op) {
                 matched = op;
                 break;
@@ -1626,7 +1609,7 @@ fn bml_native_scan_text(src: &str) -> Value {
         if matched.is_empty() {
             matched = &src[i..i + 1];
         }
-        out.push(bml_native_atom("bml-op", matched));
+        out.push(source_native_atom(&lex.op_kind, matched));
         i += matched.len();
     }
     Value::List(out)
@@ -2097,10 +2080,11 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
-        self.register_native("bml_scan_file", cat_call(), |_, _, args| {
+        self.register_native("source_scan_file", cat_call(), |_, _, args| {
             let body = fs::read_to_string(args[0].as_str())
-                .unwrap_or_else(|e| panic!("bml_scan_file: {}", e));
-            bml_native_scan_text(&body)
+                .unwrap_or_else(|e| panic!("source_scan_file: {}", e));
+            let lexicon = source_native_lexicon_from_value(&args[1]);
+            source_native_scan_text(&body, &lexicon)
         });
         // pow — integer exponentiation in native code (no Form recursion).
         // (pow base exp) → base**exp. Negative exponents return 0 (Python's

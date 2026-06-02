@@ -295,6 +295,23 @@
             "bml-eof"
             (bml-source-ops 0)))
 
+    (defn bml-source-lexicon (_x)
+        (list "source-lexicon"
+              (bml-source-keywords 0)
+              (bml-source-properties 0)
+              "bml-keyword"
+              "bml-property"
+              "bml-name"
+              "bml-int"
+              "bml-float"
+              "bml-string"
+              "bml-char"
+              "bml-op"
+              (bml-source-ops 0)
+              (bml-line-comment-prefix 0)
+              (bml-block-comment-open 0)
+              (bml-block-comment-close 0)))
+
     (defn bml-line-comment-prefix (_x) (str_concat "/" "/"))
     (defn bml-block-comment-open (_x) (str_concat "/" "*"))
     (defn bml-block-comment-close (_x) (str_concat "*" "/"))
@@ -367,7 +384,7 @@
             (empty)))
 
     (defn bml-source-scan-file (path)
-        (bml_scan_file path))
+        (source_scan_file path (bml-source-lexicon 0)))
 
     (defn bml-kw (value) (object-lit "bml-keyword" value))
     (defn bml-op (value) (object-lit "bml-op" value))
