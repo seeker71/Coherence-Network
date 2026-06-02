@@ -299,6 +299,31 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_tag_match_score_demo.fk",
         "expected_result": "0.5",
     },
+    {
+        # The WORLDVIEW-COSINE SCORING of belief_service._score_worldview_alignment
+        # — COSINE SIMILARITY over two parallel axis-vectors, dot(a,b) /
+        # (||a||*||b||), the geometric counterpart to tag_match_score's set-
+        # membership fold. The honest seam: the host projects both worldview-axes
+        # dicts into PARALLEL float vectors in the fixed BeliefAxis order
+        # (dict→vector projection, the filtering-adjacent host-side seam) + names
+        # matched_axes (cv>0.3 AND iv>0.3, a naming side-output), and the kernel
+        # SCORES the two parallel vectors: dot + both sums-of-squares in one
+        # parallel index walk, sqrt each norm (math_sqrt), guarded ratio (denom>0
+        # else 0.5), clamp [0,1] — _score_worldview_alignment's geometric shape
+        # verbatim (the empty-idea_axes → 0.5 branch and matched_axes stay host-side;
+        # the zero-denom → 0.5 guard is in the recipe). math_sqrt is IEEE-correct,
+        # three-way bit-identical (float-natives-band.fk → sqrt(16)==4.0 tolerance-
+        # free; the 1-ULP caveat is math_pow's, not math_sqrt's); the parallel
+        # _get-indexed while fold is Rust+TS value-exact == CPython (Go carries no
+        # _get/_iter fold, the same situation weighted_average ships under). Frozen
+        # sample (contributor [0.6,0,0.8,0,0,0], idea [0.8,0,0.6,0,0,0]) → dot 0.96
+        # / (1.0*1.0) = 0.96, an exact rational that prints identically; the
+        # irrational-cosine edge (1/sqrt(2) = 0.7071067811865475) is three-way
+        # bit-identical.
+        "route": "/api/utils/worldview_alignment",
+        "recipe": "endpoint_worldview_alignment_demo.fk",
+        "expected_result": "0.96",
+    },
 ]
 
 _EXAMPLES_DIR = (

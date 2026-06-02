@@ -2257,6 +2257,164 @@ async def tag_match_score(
     )
 
 
+# ---------------------------------------------------------------------------
+# Endpoint: /api/utils/worldview_alignment
+#
+# BELIEF-RESONANCE WORLDVIEW COSINE — the geometric core of
+# belief_service._score_worldview_alignment, transmuted to a Form recipe. This is
+# COSINE SIMILARITY over two parallel axis-vectors: dot(a, b) / (||a|| * ||b||),
+# clamped to [0.0, 1.0], with a 0.5 zero-denom guard. The geometric counterpart to
+# tag_match_score's set-membership fold — the two belief profiles are points in
+# axis-space and the score is the cosine of the angle between them.
+#
+# THE HONEST SEAM (mirrors how _score_worldview_alignment decomposes). The function
+# projects two dicts into the FIXED BeliefAxis order, then folds dot + norms:
+#   raw_idea_axes = idea_props.get("worldview_axes") or {}
+#   idea_axes = {k: float(v) for k,v in raw_idea_axes.items() if k in _DEFAULT_AXES}
+#   if not idea_axes: return 0.5, []
+#   for axis in BeliefAxis:
+#       cv = profile.worldview_axes.get(axis.value, 0.0)
+#       iv = idea_axes.get(axis.value, 0.0)
+#       dot += cv*iv; norm_contributor += cv*cv; norm_idea += iv*iv
+#       if cv > 0.3 and iv > 0.3: matched_axes.append(axis.value)
+#   denom = (norm_contributor ** 0.5) * (norm_idea ** 0.5)
+#   score = dot/denom if denom > 0 else 0.5
+#   return max(0.0, min(1.0, score)), matched_axes
+# Two capabilities welded:
+#   (a) DICT→VECTOR PROJECTION + matched_axes NAMING — BeliefAxis is a FIXED enum.
+#       The host projects both worldview-axes dicts into PARALLEL float vectors in that
+#       fixed axis order (dict-as-data, the filtering-adjacent seam). The
+#       empty-idea_axes guard (→0.5) and the matched_axes naming (cv>0.3 AND iv>0.3 →
+#       string axis name) stay host-side — matched_axes is a naming side-output, not the
+#       scalar score. The dict projection dissolves at the bridge; the recipe never sees
+#       a dict.
+#   (b) THE COSINE — given the two parallel float vectors, dot + both sums-of-squares in
+#       one parallel index walk, sqrt each norm (math_sqrt, IEEE-correct three-way),
+#       guarded ratio (denom>0 else 0.5), clamp [0,1]. This is what the recipe runs.
+#
+# How the inputs travel: contributor_vec / idea_vec marshal as FLOAT LISTS (equal
+# length, the fixed axis order) via _fk_literal's list arm (each element a float
+# literal). The recipe's parallel index walk lowers to the adapter's _get-indexed
+# while fold — the same shape weighted_average ships under (Rust+TS value-exact ==
+# CPython; Go carries no _get/_iter fold). math_sqrt is bit-identical across runtimes
+# (float-natives-band.fk → sqrt(16)==4.0 tolerance-free; the 1-ULP caveat is math_pow's,
+# not math_sqrt's). Cosine often lands on irrational floats (1/sqrt(2) =
+# 0.7071067811865475); these are three-way bit-identical, verified in the parity proof.
+# Kernel-or-fallback via serve_via_kernel; the _py fallback is the real
+# cosine_alignment_score (the host projects the vectors + names matched_axes either way).
+# ---------------------------------------------------------------------------
+
+
+class WorldviewAlignmentResponse(BaseModel):
+    """GET /api/utils/worldview_alignment response — the belief-resonance worldview cosine."""
+
+    model_config = ConfigDict(extra="forbid")
+    score: Annotated[
+        float,
+        Field(
+            description="Worldview-alignment score in [0.0, 1.0] = "
+            "max(0.0, min(1.0, dot(a,b) / (||a||*||b||))), 0.5 when either vector "
+            "has zero length"
+        ),
+    ]
+    matched_axes: Annotated[
+        list[str],
+        Field(
+            description="Axis names where BOTH vectors exceed 0.3 (cv>0.3 AND iv>0.3); "
+            "named host-side from the two vectors + axis names"
+        ),
+    ]
+    contributor_vec: Annotated[
+        list[float], Field(description="The contributor axis-vector the recipe folds, echoed back")
+    ]
+    idea_vec: Annotated[
+        list[float], Field(description="The idea axis-vector the recipe folds, echoed back")
+    ]
+    runtime: Annotated[
+        str,
+        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+    ]
+
+
+@router.get(
+    "/worldview_alignment",
+    response_model=WorldviewAlignmentResponse,
+    summary="Belief-resonance worldview cosine via parallel dot+norm fold (COSINE-SIMILARITY Form recipe)",
+    description=(
+        "Pure-computation endpoint, body transmuted to a Form recipe — the COSINE "
+        "SIMILARITY geometric core of belief_service._score_worldview_alignment, the "
+        "geometric counterpart to tag_match_score's set-membership fold. The host "
+        "projects the two worldview-axes dicts into PARALLEL float vectors in the fixed "
+        "BeliefAxis order (scientific, spiritual, pragmatic, holistic, relational, "
+        "systemic) — dict→vector projection, the host-side filtering-adjacent seam — and "
+        "the kernel SCORES the two parallel vectors: dot(a,b) / (||a||*||b||), with "
+        "norms via math_sqrt (IEEE-correct, three-way bit-identical), a 0.5 zero-denom "
+        "guard, clamped to [0,1]. matched_axes (axes where cv>0.3 AND iv>0.3) is named "
+        "host-side from the vectors + axis names — a naming side-output, not the scalar "
+        "score. The parallel index walk is Rust+TS value-exact == CPython; cosine's "
+        "irrational floats (e.g. 1/sqrt(2)) are bit-identical across runtimes. "
+        "Kernel-or-fallback via serve_via_kernel; the _py fallback is the real "
+        "cosine_alignment_score."
+    ),
+)
+async def worldview_alignment(
+    contributor_vec: Annotated[
+        str,
+        Query(description="Comma-separated contributor axis floats — fixed BeliefAxis order"),
+    ] = "0.6,0.0,0.8,0.0,0.0,0.0",
+    idea_vec: Annotated[
+        str,
+        Query(description="Comma-separated idea axis floats — same length / fixed order"),
+    ] = "0.8,0.0,0.6,0.0,0.0,0.0",
+    axis_names: Annotated[
+        str,
+        Query(
+            description="Comma-separated axis names for matched_axes naming — defaults to "
+            "the fixed BeliefAxis order"
+        ),
+    ] = "scientific,spiritual,pragmatic,holistic,relational,systemic",
+) -> WorldviewAlignmentResponse:
+    from app.services.belief_service import cosine_alignment_score
+
+    def _floats(raw: str) -> list[float]:
+        return [float(x.strip()) for x in raw.split(",") if x.strip()]
+
+    cv_list = _floats(contributor_vec)
+    iv_list = _floats(idea_vec)
+    if len(cv_list) != len(iv_list):
+        raise HTTPException(
+            status_code=400,
+            detail="contributor_vec and idea_vec must have equal length (parallel axis vectors)",
+        )
+
+    # Host-side matched_axes NAMING (cv>0.3 AND iv>0.3 → axis name). A naming
+    # side-output that mirrors _score_worldview_alignment's matched_axes; the kernel
+    # computes only the scalar cosine.
+    names = [a.strip() for a in axis_names.split(",") if a.strip()]
+    matched_axes = [
+        names[i]
+        for i in range(min(len(cv_list), len(names)))
+        if cv_list[i] > 0.3 and iv_list[i] > 0.3
+    ]
+
+    score, runtime = serve_via_kernel(
+        "endpoint_worldview_alignment_demo.fk",
+        bindings={
+            "contributor_vec": cv_list,
+            "idea_vec": iv_list,
+        },
+        fallback=lambda: cosine_alignment_score(cv_list, iv_list),
+        parse=float,
+    )
+    return WorldviewAlignmentResponse(
+        score=score,
+        matched_axes=matched_axes,
+        contributor_vec=cv_list,
+        idea_vec=iv_list,
+        runtime=runtime,
+    )
+
+
 @router.get(
     "/kernel_status",
     summary="Visibility into which Form-kernel surface is serving this container",
