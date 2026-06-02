@@ -1896,6 +1896,9 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("math_sqrt", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VFloat, Float: math.Sqrt(args[0].asFloat())}
 	})
+	k.registerNative("math_acos", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VFloat, Float: math.Acos(args[0].asFloat())}
+	})
 	k.registerNative("math_pi", catMethod(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VFloat, Float: math.Pi}
 	})
@@ -2461,6 +2464,173 @@ func (k *Kernel) registerNatives() {
 		f, _ := strconv.ParseFloat(args[0].Str, 64)
 		return Value{Kind: VNodeID, Nid: k.internTrivialFloat64(f)}
 	})
+
+	// float_value — decode a TrivFloat* NodeID back to a VFloat so it can be
+	// fed into math_sqrt, math_acos, arithmetic, etc. This is the small bridge
+	// that lets host-interned live floats (via intern_trivial_float / make_float64)
+	// be used directly in kernel-native numeric code (including the geometry projection
+	// on external efficacy-probe vectors).
+	k.registerNative("float_value", catMethod(), func(k *Kernel, args []Value) Value {
+		if len(args) != 1 {
+			panic("float_value expects 1 argument")
+		}
+		n := args[0]
+		if n.Kind != VNodeID {
+			panic("float_value expects a NodeID")
+		}
+		switch n.Nid.Type {
+		case TrivFloat32:
+			return Value{Kind: VFloat, Float: float64(k.decodeFloat32(n.Nid.Inst))}
+		case TrivFloat64:
+			return Value{Kind: VFloat, Float: k.decodeFloat64(n.Nid.Inst)}
+		default:
+			panic("float_value expects a float NodeID")
+		}
+	})
+
+	// print_float — forces a clean numeric print of a VFloat or TrivFloat* value.
+	// This is a small diagnostic + reporting helper so the kernel can "report"
+	// actual numbers from geometry / numeric workloads on host-supplied data.
+	k.registerNative("print_float", catMethod(), func(k *Kernel, args []Value) Value {
+		if len(args) != 1 {
+			panic("print_float expects 1 argument")
+		}
+		v := args[0]
+		var f float64
+		if v.Kind == VFloat {
+			f = v.Float
+		} else if v.Kind == VNodeID {
+			if v.Nid.Type == TrivFloat32 {
+				f = float64(k.decodeFloat32(v.Nid.Inst))
+			} else if v.Nid.Type == TrivFloat64 {
+				f = k.decodeFloat64(v.Nid.Inst)
+			} else {
+				panic("print_float expects a float value or float NodeID")
+			}
+		} else {
+			panic("print_float expects a float value or float NodeID")
+		}
+		fmt.Printf("%.10g\n", f)
+		return Value{Kind: VNull}
+	})
+
+// dot_product and magnitude — the minimal vector primitives that make
+// the geometry projection (cosine + angle via math_acos) runnable on
+// live 8-band efficacy-probe vectors inside the kernel driver.
+// Follows the exact same registerNative + catMethod() pattern as
+// math_acos / print_float / float_value. Sibling parity target: Rust + TS kernels.
+// These close the "higher-order vector math (dot, mag, angle on lists) still tight"
+// item in the trace-symbol-spaces.form Part 6 tightness witness.
+k.registerNative("dot_product", catMethod(), func(_ *Kernel, args []Value) Value {
+	if len(args) != 2 {
+		panic("dot_product expects 2 arguments")
+	}
+	a := args[0].List
+	b := args[1].List
+	if len(a) != len(b) {
+		panic("dot_product requires equal length vectors")
+	}
+	var sum float64
+	for i := range a {
+		sum += a[i].asFloat() * b[i].asFloat()
+	}
+	return Value{Kind: VFloat, Float: sum}
+})
+
+k.registerNative("magnitude", catMethod(), func(_ *Kernel, args []Value) Value {
+	if len(args) != 1 {
+		panic("magnitude expects 1 argument")
+	}
+	v := args[0].List
+	var sum float64
+	for i := range v {
+		f := v[i].asFloat()
+		sum += f * f
+	}
+	return Value{Kind: VFloat, Float: math.Sqrt(sum)}
+})
+
+// vector_cosine and pair_angle — composite helpers that combine the
+// newly added dot_product + magnitude with math_acos for direct
+// geometry projection on live 8-band vectors in a single --expr call.
+// This is the kernel-native counterpart to the pair_cosine / pair_angle
+// recipes being added on the recipelib track. Placed immediately after
+// the vector primitives for locality.
+k.registerNative("vector_cosine", catMethod(), func(_ *Kernel, args []Value) Value {
+	if len(args) != 2 {
+		panic("vector_cosine expects 2 arguments")
+	}
+	a := args[0].List
+	b := args[1].List
+	if len(a) != len(b) {
+		panic("vector_cosine requires equal length vectors")
+	}
+	var dot float64
+	var na float64
+	var nb float64
+	for i := range a {
+		fa := a[i].asFloat()
+		fb := b[i].asFloat()
+		dot += fa * fb
+		na += fa * fa
+		nb += fb * fb
+	}
+	if na == 0 || nb == 0 {
+		return Value{Kind: VFloat, Float: 0}
+	}
+	return Value{Kind: VFloat, Float: dot / (math.Sqrt(na) * math.Sqrt(nb))}
+})
+
+k.registerNative("pair_angle", catMethod(), func(k *Kernel, args []Value) Value {
+	cosV := k.natives[k.internName("vector_cosine")].Fn(k, args)
+	c := cosV.Float
+	if c > 1.0 {
+		c = 1.0
+	}
+	if c < -1.0 {
+		c = -1.0
+	}
+	return Value{Kind: VFloat, Float: math.Acos(c)}
+})
+
+// dominant_band_delta — mirrors the recipelib helper for richer thruline
+// readout. Returns a two-element list [band_index, max_abs_delta] so the
+// kernel driver can surface the same band-tension information as the
+// Form-declared recipe path. Placed with the other geometry natives.
+k.registerNative("dominant_band_delta", catMethod(), func(_ *Kernel, args []Value) Value {
+	if len(args) != 2 {
+		panic("dominant_band_delta expects 2 arguments")
+	}
+	a := args[0].List
+	b := args[1].List
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	if n == 0 {
+		return Value{Kind: VList, List: []Value{
+			{Kind: VFloat, Float: 0},
+			{Kind: VFloat, Float: 0},
+		}}
+	}
+	maxDelta := 0.0
+	maxIdx := 0
+	for i := 0; i < n; i++ {
+		d := a[i].asFloat() - b[i].asFloat()
+		if d < 0 {
+			d = -d
+		}
+		if d > maxDelta {
+			maxDelta = d
+			maxIdx = i
+		}
+	}
+	return Value{Kind: VList, List: []Value{
+		{Kind: VFloat, Float: float64(maxIdx)},
+		{Kind: VFloat, Float: maxDelta},
+	}}
+})
+
 	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
 		cat := args[0].Nid
 		kids := make([]NodeID, len(args[1].List))
