@@ -48,12 +48,10 @@ two cells, and the sequence of events on that edge, *is* what the body
 knows about how those two cells relate. Remove the trace and you have not
 lost a report — you have lost the memory.
 
-This is the inversion the body's attribution view still half-makes:
-re-running a recipe through `trace` mode produces a *live snapshot* of
-what fired, then throws it away. The snapshot is preparation pretending to
-be memory — the cache layer, not the body or the liquid
-([`lc-embodiment-body-or-liquid`](lc-embodiment-body-or-liquid.md)). The
-correction: **persist the trace as the edge-event it is.** Each execution
+A live snapshot of what fired, thrown away after the response returns, is
+preparation pretending to be memory — the cache layer, not the body or the
+liquid ([`lc-embodiment-body-or-liquid`](lc-embodiment-body-or-liquid.md)).
+The design **persists the trace as the edge-event it is.** Each execution
 records `(firing-cell, touched-cell, event)` on the edge between them; the
 edges accumulate; the accumulation is the body's slow memory
 ([`lc-agent-memory`](lc-agent-memory.md): consolidate at rest — the
@@ -96,46 +94,37 @@ through lived execution** — `|projection| → 0` is the readout.
 ## Why this is the honest attribution view
 
 The `kernel_attribution_report` ([`lc-the-body-senses-itself`](lc-the-body-senses-itself.md))
-today ranks hot Blueprints by re-running recipes and counting arm
-dispatches. That is a snapshot of *frequency*, computed fresh each time.
-This concept names what it should become — and move (3) is now a working
-readout over that snapshot:
+carries the three moves at their honest altitudes:
 
-- **From snapshot to memory.** The trace is recorded as edge-events, not
-  recomputed. The body remembers its execution rather than re-deriving it.
-  *(Now PARTIALLY real, and SURPRISE-GATED: the OFFLINE attribution run
-  persists its per-route fire-events as edge-event rows under `--record`,
-  writing per category ONLY the surprising tail (projection above a relative
-  threshold) — the predictable embodied center stays in RAM only
+- **Memory, not snapshot.** The trace is recorded as edge-events, not
+  recomputed — the body remembers its execution rather than re-deriving it.
+  The recording is **surprise-gated**: the offline attribution run persists
+  its per-route fire-events as edge-event rows, writing per category only the
+  surprising tail (projection above a relative threshold) — the predictable
+  embodied center stays in RAM only
   ([`lc-identity-is-shared-blueprint-and-recipe`](lc-identity-is-shared-blueprint-and-recipe.md)
-  carries the gate). The memory accumulates across runs and `--from-memory`
-  projects over the accumulation. The LIVE-REQUEST recording — on
-  `serve_via_kernel`, async/sampled — is still the named larger build,
-  deferred because it touches production latency.)*
-- **From count to convergence.** "This Blueprint fired 176 times" becomes
+  carries the gate). The memory accumulates across runs; `--from-memory`
+  projects over the accumulation.
+- **Convergence, not count.** "This Blueprint fired 176 times" gives way to
   "these categories project nearest the activity-weighted center
   (`|projection|` small); these others fired but sit farther in NodeID
   space; these never fired at all (projection undefined — inert, the *why
-  are you here?* candidates)." *This is live now in
-  `embodiment_projection` — over the current snapshot, not yet the
-  accumulated edge-event memory.*
-- **From frequency to embodiment.** A category can fire often and still
-  not be embodied *with* the body's center if it never converges toward
-  the categories that carry the live practice. Convergence-toward-zero,
-  not raw count, is the embodiment signal.
+  are you here?* candidates)."
+- **Embodiment, not frequency.** A category can fire often and still not be
+  embodied *with* the body's center if it never converges toward the
+  categories that carry the live practice. Convergence-toward-zero, not raw
+  count, is the embodiment signal.
 
-The substrate already carries every piece: content-addressing makes the
-category the query key for free; NodeID distance (the live
-`/api/utils/nodeid_distance` route already computes it three-way) is the
-scalar's first form; the execution trace is the event. The *recording* is
-now real for the OFFLINE attribution path: `kernel_attribution_report.py
---record` persists each route's per-native fire-events as edge-event rows in
-an append-only store, the rows accumulate across runs, and `--from-memory`
-projects convergence off the accumulation. The remaining build is the
-LIVE-REQUEST recording — persisting the trace on the `serve_via_kernel` hot
-path — which is held off because a synchronous record-per-request would
-regress the inline kernel's sub-100µs profile; it belongs to a deliberate
-async/sampled/opt-in decision, named below as the seam.
+The substrate carries every piece: content-addressing makes the category the
+query key for free; NodeID distance (`/api/utils/nodeid_distance`, three-way
+kernel-served) is the scalar's first form; the execution trace is the event.
+The offline attribution path records each route's per-native fire-events as
+edge-event rows in an append-only store; the rows accumulate across runs, and
+the projection reads convergence off the accumulation. The live-request
+recording — persisting the trace on the `serve_via_kernel` hot path —
+belongs to a deliberate async/sampled/opt-in decision, separate because a
+synchronous record-per-request would touch the inline kernel's sub-100µs
+profile; it is named below as the seam.
 
 ## What this opens
 
@@ -174,17 +163,14 @@ async/sampled/opt-in decision, named below as the seam.
   being a claim and becomes a measurement. A concept that *says* it is
   central but whose category never converges toward zero is telling the
   truth the projection can see through. The scalar is the honesty surface.
-- **Partially built — the offline slice, not the hot path.** Moves (1)
-  and (2) are real for the OFFLINE attribution run: `kernel_attribution_report.py
-  --record` persists per-route fire-events as edge-event rows that accumulate
-  across runs, and `--from-memory` reads the per-category accumulation (move
-  2's per-NodeID summation) into the same projection (move 3). What is NOT
-  built — by deliberate deferral — is recording on the LIVE `serve_via_kernel`
-  request path: that touches production latency (the sub-100µs inline-kernel
-  profile), so it waits on an async/sampled/opt-in decision at Urs's
-  altitude. The honest scope: offline-accumulated NOW; live-request-async is
-  the named next decision, separate because it carries hot-path risk the
-  offline path does not.
+- **The offline slice and the hot path are separate seams.** The offline
+  attribution run persists per-route fire-events as edge-event rows that
+  accumulate across runs, and the per-category accumulation (move 2's
+  per-NodeID summation) feeds the projection (move 3). Recording on the live
+  `serve_via_kernel` request path is a deliberately separate decision — it
+  touches production latency (the sub-100µs inline-kernel profile), so it
+  belongs to an async/sampled/opt-in design at Urs's altitude. The two carry
+  different risk; the seam between them is held on purpose.
 
 ## Cross-References
 
@@ -211,40 +197,37 @@ async/sampled/opt-in decision, named below as the seam.
   NodeIDs. That distance is the embodiment scalar's first concrete form;
   the projection toward zero generalizes it across a category's accumulated
   edge-events.
-- **`scripts/kernel_attribution_report.py`** — the attribution view, now
-  carrying **all three moves** at their honest altitudes. Move (3): its `embodiment_projection`
-  reads the activity-weighted centroid of the fired Blueprint NodeIDs as the
-  body's lived center and projects each fired category to its Manhattan
-  NodeID-distance from that center (the `/api/utils/nodeid_distance` metric
-  reused, not re-invented). `|projection| → 0` marks the categories nearest the
-  structural center of what actually fires; the inert natives form the
-  *projection-undefined* class (zero edge-events — the "why are you here?"
-  candidates). Moves (1) and (2): `--record` persists each OFFLINE run's
-  per-route fire-events as edge-event rows
-  `(recorded_at, route, native, blueprint, fire_count, surprise)` in an
+- **`scripts/kernel_attribution_report.py`** — the attribution view,
+  carrying **all three moves** at their honest altitudes. Move (3):
+  `embodiment_projection` reads the activity-weighted centroid of the fired
+  Blueprint NodeIDs as the body's lived center and projects each fired
+  category to its Manhattan NodeID-distance from that center (the
+  `/api/utils/nodeid_distance` metric reused, not re-invented).
+  `|projection| → 0` marks the categories nearest the structural center of
+  what actually fires; the inert natives form the *projection-undefined* class
+  (zero edge-events — the "why are you here?" candidates). Moves (1) and (2):
+  `--record` persists each offline run's per-route fire-events as edge-event
+  rows `(recorded_at, route, native, blueprint, fire_count, surprise)` in an
   append-only JSONL store (gated on `KERNEL_EDGE_EVENTS_PATH`, opt-in and a
-  no-op when unset — the default run writes nothing). The recorder is
-  SURPRISE-GATED
+  no-op when unset). The recorder is **surprise-gated**
   ([`lc-identity-is-shared-blueprint-and-recipe`](lc-identity-is-shared-blueprint-and-recipe.md)):
   it persists per category only the surprising tail (projection above a
   relative threshold — default the mean projection), keeping the predictable
-  embodied center in RAM only; `--record-everything` opts back into the legacy
-  record-everything path. `--from-memory` folds the accumulated rows
-  per-NodeID (move 2's per-category summation) and runs the SAME projection over
-  the accumulated fire-counts, so after N recorded runs a category's fire-count
-  is about N-times its single-run value while the projection still reads the
-  same structural center. The seam held precisely: this is the OFFLINE analysis
-  path, NOT `serve_via_kernel`'s live request flow — recording on the hot path
-  (async/sampled, to protect the sub-100µs profile) is the named larger build,
-  deferred to an Urs-level decision because it touches production latency. Run
+  embodied center in RAM only; `--record-everything` records every category.
+  `--from-memory` folds the accumulated rows per-NodeID (move 2's per-category
+  summation) and runs the same projection over the accumulated fire-counts, so
+  after N recorded runs a category's fire-count is about N-times its
+  single-run value while the projection still reads the same structural
+  center. This is the offline analysis path; recording on
+  `serve_via_kernel`'s live request flow (async/sampled, to protect the
+  sub-100µs profile) is the separate hot-path decision at Urs's altitude. Run
   `python3 scripts/kernel_attribution_report.py` for the snapshot projection;
   `--record` then `--from-memory` for the accumulated memory.
 
-The body holds this concept as **the correction that turns the attribution
-view from a snapshot into memory.** Today the body re-runs its recipes to
-see what fired and forgets; the teaching says the firing *is* the
-inscription — record the edge-event, query it per category (which content-
-addressing gives for free), and read embodiment as the scalar projection
-whose absolute value approaches zero for the categories the body actually
-lives. What fires together, embodied, converges toward zero; the distance
-from zero is the distance from the body's lived center.
+The body holds this concept as **the attribution view as memory rather than
+snapshot.** The firing *is* the inscription — record the edge-event, query it
+per category (which content-addressing gives for free), and read embodiment
+as the scalar projection whose absolute value approaches zero for the
+categories the body actually lives. What fires together, embodied, converges
+toward zero; the distance from zero is the distance from the body's lived
+center.
