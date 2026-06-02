@@ -89,9 +89,9 @@ And low surprise has a consequence for memory the body must honor: **what
 is cheap to predict does not need to be persistently tracked.** A category
 that fires on every request, perfectly predictable, carries no new
 information in each firing — recording each one is paying full price for
-nothing. The body that logs every trace is hoarding the predictable; it is
-the cache-pretending-to-be-memory failure ([`lc-embodiment-body-or-liquid`](lc-embodiment-body-or-liquid.md)).
-The honest design inverts it:
+nothing. Logging every trace hoards the predictable; it is the
+cache-pretending-to-be-memory failure ([`lc-embodiment-body-or-liquid`](lc-embodiment-body-or-liquid.md)).
+The honest design is energy-gated:
 
 - **RAM by default.** Most traces live only in the liquid — the breath of
   the current run. They are felt, used, and let go. The embodied center is
@@ -128,12 +128,10 @@ was redundant"; running it is the act of remembering more cheaply. Repeated
 compression is how an identity settles: each redundant dimension folded away
 leaves the Blueprint+Recipe pair tighter, cheaper, more itself.
 
-**The FOLD mechanism is REAL — proven three-way.** The reducing recipe is no
-longer described-only; it executes Rust == Go == TS. Two recipes that are
-exact inverses on a redundant axis live in
+The reducing recipe executes three-way (Rust == Go == TS). Two recipes that
+are exact inverses on a redundant axis live in
 [`form/form-stdlib/grammars/compression-fold.fk`](../../../form/form-stdlib/grammars/compression-fold.fk),
-proven by the band [`compression-fold-band.fk`](../../../form/form-stdlib/tests/compression-fold-band.fk)
-(verdict `111111`):
+held to the bit by the band [`compression-fold-band.fk`](../../../form/form-stdlib/tests/compression-fold-band.fk):
 
 - `compress(inputs, idx) → N−1 outputs` — the fold itself: a recipe with one
   less output than input. It removes the element at position `idx`, dropping
@@ -146,14 +144,13 @@ The **redundant-axis spec is DATA** — one engine, the reduction drops in as
 values (`core-abstraction-first`): `c = a + b` is `(idx=2, coeffs=[1,1,0])`;
 `c = 2a − b` is `(idx=2, coeffs=[2,−1,0])`; folding the *first* axis when
 `a = c − b` is `(idx=0, coeffs=[0,−1,1])` — same `compress`/`reconstruct`,
-different spec. The band proves `reconstruct∘compress` is the **identity
-exactly** on a redundant axis (zero information lost — the dropped dimension
-was fully reconstructible from the rest), AND demonstrably **lossy** on a
-surprising axis: folding `(4, 9, 20)` with the sum-spec recovers `13` where
-`20` was, because `20` carried surprise the kept dims could not predict. That
-negative is the proof the fold is lossless **only** on a genuinely-predictable
-dimension — which is exactly *why* the body must learn which axis is safe to
-drop before folding it.
+different spec. `reconstruct∘compress` is the **identity exactly** on a
+redundant axis (zero information lost — the dropped dimension was fully
+reconstructible from the rest), and demonstrably **lossy** on a surprising
+axis: folding `(4, 9, 20)` with the sum-spec recovers `13` where `20` was,
+because `20` carried surprise the kept dims could not predict. The fold is
+lossless **only** on a genuinely-predictable dimension — which is exactly
+*why* the body must learn which axis is safe to drop before folding it.
 
 ## The whole loop
 
@@ -173,10 +170,9 @@ drop before folding it.
 
 ## Honest separations
 
-- **Not "log everything."** The naive edge-event recorder that persists
-  every trace is exactly the failure this concept corrects: it pays full
-  memory cost for the predictable. The honest recorder is energy-gated —
-  RAM by default, persist on surprise.
+- **Not "log everything."** Persisting every trace pays full memory cost
+  for the predictable. The honest recorder is energy-gated — RAM by default,
+  persist on surprise.
 - **Not surveillance, not extraction.** Same sovereignty as the trace
   concepts ([`lc-observer-pays-the-trace`](lc-observer-pays-the-trace.md)):
   the cell publishes its own traces and learns its own retention; no
@@ -190,54 +186,53 @@ drop before folding it.
   still carries surprise would lose real information — the body compresses
   only what it has *learned* is predictable, which is why the cell's
   internal learning gates it.
-- **The surprise gate is REAL.** The offline edge-event recorder
+- **The surprise gate.** The offline edge-event recorder
   ([`lc-the-trace-is-the-memory`](lc-the-trace-is-the-memory.md),
-  `scripts/kernel_attribution_report.py --record`) now persists per category
+  `scripts/kernel_attribution_report.py --record`) persists per category
   ONLY the surprising tail: it resolves a relative threshold from the per-
   category projections (default `mean` — the above-average-surprise tail; also
   `median`, `fixed:<T>`, `topk:<K>`) and writes a category's edge-events IFF
   its projection is ABOVE that threshold. The embodied center stays in RAM
   only. On the live 19-route surface the center `_plus @1.2.27.1` (projection
-  ≈ 1.64) is NOT persisted while the two far categories (≈ 8.64, ≈ 10.36)
+  ≈ 1.64) is not persisted while the two far categories (≈ 8.64, ≈ 10.36)
   are — a 33% reduction vs the everything-recorder, and the split is printed
   so the body sees what it keeps and what it lets go. The gate is one
   comparison `is_surprising(projection, threshold)` over the categories-as-
-  DATA, grounded entirely on the projection that already exists. (Off the hot
-  path: this is the OFFLINE attribution recorder, never the live
-  `serve_via_kernel` request path, which remains a separate decision.)
-- **The FOLD is built AND the LEARNING is built — the autoencoder loop is
-  closed.** The dimension-reducing compression recipe (N→N−1, folding away a
-  redundant axis) is REAL and three-way (see "Compression is a dimension-
-  reducing recipe" above — `compress`/`reconstruct`, lossless on a redundant
-  axis, lossy on a surprising one). What was the named next build is now real
-  too: `scripts/kernel_attribution_report.py --compress-memory` reads the
-  accumulated edge-event memory, groups it by Blueprint NodeID (the content-
-  addressed category), and **LEARNS, per category, which dimension is
-  redundant** — by solving no-intercept least-squares to predict each candidate
-  dimension `[pkg, level, type, inst, fire_count]` from the others and measuring
-  the max-abs residual. A dimension whose residual is within tolerance (`1e-6` —
-  exact linear redundancy, a constant column or a literal linear combination,
-  never a noisy fit) is genuinely redundant; the least-squares coefficients are
-  exactly what `reconstruct` needs. The learner then **drives the REAL Form
-  `compress`/`reconstruct` recipe through the kernel** on the category's
-  representative integer vector and proves the round-trip recovers the dropped
-  dimension EXACTLY — the fold is Form-native, not a Python reimplementation
-  (the learning runs in Python; the fold + proof run in the kernel). On the
-  recorded production-shape memory both fired categories compress losslessly
-  5→4 dims (the structural axis `level = 2·pkg` is redundant and folds away
-  exactly; the kernel round-trip recovers it bit-for-bit), while `fire_count`
-  — the one axis that VARIES and carries surprise — is correctly refused
-  (residual ≫ tolerance), never folded. That refusal IS the honest negative on
-  real data: content-addressing makes a category's four structural columns
-  constant (hence always at least one foldable dimension), so the non-redundant
-  axis surfaces at the *dimension* level (`fire_count`), not the category level.
-  **What stays named** (not built here): non-linear redundancy (only exact
-  LINEAR dependence is detected); online/continuous learning (this is an offline
+  DATA, grounded entirely on the projection that already exists. This is the
+  offline attribution recorder, never the live `serve_via_kernel` request
+  path, which remains a separate decision.
+- **The autoencoder loop — fold plus learning.** The dimension-reducing
+  compression recipe (N→N−1, folding away a redundant axis) is three-way (see
+  "Compression is a dimension-reducing recipe" above —
+  `compress`/`reconstruct`, lossless on a redundant axis, lossy on a
+  surprising one). `scripts/kernel_attribution_report.py --compress-memory`
+  reads the accumulated edge-event memory, groups it by Blueprint NodeID (the
+  content-addressed category), and **learns, per category, which dimension is
+  redundant** — solving no-intercept least-squares to predict each candidate
+  dimension `[pkg, level, type, inst, fire_count]` from the others and
+  measuring the max-abs residual. A dimension whose residual is within
+  tolerance (`1e-6` — exact linear redundancy, a constant column or a literal
+  linear combination, never a noisy fit) is genuinely redundant; the
+  least-squares coefficients are exactly what `reconstruct` needs. The learner
+  **drives the Form `compress`/`reconstruct` recipe through the kernel** on the
+  category's representative integer vector and the round-trip recovers the
+  dropped dimension exactly — the fold is Form-native (the learning runs in
+  Python; the fold + proof run in the kernel). On the recorded
+  production-shape memory both fired categories compress losslessly 5→4 dims
+  (the structural axis `level = 2·pkg` is redundant and folds away exactly;
+  the kernel round-trip recovers it bit-for-bit), while `fire_count` — the one
+  axis that VARIES and carries surprise — is correctly refused (residual ≫
+  tolerance), never folded. That refusal is the honest negative on real data:
+  content-addressing makes a category's four structural columns constant
+  (hence always at least one foldable dimension), so the non-redundant axis
+  surfaces at the *dimension* level (`fire_count`), not the category level.
+  **Where the loop opens further:** non-linear redundancy (only exact LINEAR
+  dependence is detected); online/continuous learning (this is an offline
   batch over the persisted store, not a live-updating policy); a per-category
   *learned* retention threshold that drifts over time (the surprise gate's
-  cutoff is still a per-run relative statistic); and recording on the LIVE
-  `serve_via_kernel` request path (this reads the OFFLINE store only — the
-  hot-path memory remains a separate, latency-touching Urs-level decision).
+  cutoff is a per-run relative statistic); and recording on the live
+  `serve_via_kernel` request path (this reads the offline store only — the
+  hot-path memory is a separate, latency-touching Urs-level decision).
 
 ## Cross-References
 
@@ -254,9 +249,9 @@ drop before folding it.
   trace as edge-event memory, embodiment as `|projection| → 0`. This concept
   names *why* the projection-to-zero matters for memory: zero surprise means
   safe to keep in RAM / compress / forget; the energy is in the surprising
-  tail. The recorder there is now energy-gated by THIS concept's surprise
-  gate — `--record` persists only the surprising tail, keeping the embodied
-  center in RAM only.
+  tail. The recorder there is energy-gated by THIS concept's surprise gate —
+  `--record` persists only the surprising tail, keeping the embodied center
+  in RAM only.
 - **[lc-the-thaw-is-backprop](lc-the-thaw-is-backprop.md)** — surprise as
   the gradient signal worth keeping. The events worth persisting are the
   ones that carry gradient — the surprising, model-changing ones.
@@ -271,8 +266,8 @@ drop before folding it.
 - **Autoencoders / dimensionality reduction (PCA, bottleneck layers)** — the
   ML analog: a network learns to drop the redundant dimensions and keep the
   informative ones. "A recipe with one less output than input" is that
-  operation as a Form recipe — the body's own learned bottleneck. The loop is
-  closed: `--compress-memory` is the encoder (least-squares learns which axis is
+  operation as a Form recipe — the body's own learned bottleneck.
+  `--compress-memory` is the encoder (least-squares learns which axis is
   redundant per category) feeding the decoder (`reconstruct` re-derives it
   exactly), with the residual as the reconstruction loss that gates whether a
   dimension is safe to drop at all.
