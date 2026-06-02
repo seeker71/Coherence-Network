@@ -69,6 +69,12 @@ What is proven today:
   installs on a native blueprint and runs through `method_define` /
   `method_invoke`, mutating separate Rule record instances through the parsed
   BML body tokens.
+- Source-originated thesis backtracking control primitives now include
+  `if_fail` fallback and guarded `while_success` execution slices:
+  `bml-thesis-control-primitives-source-proof.fk` parses a `.bml` fixture,
+  lowers it into BMA ops, runs forward, and replays backward to the empty VM
+  state. General statement-body lowering for arbitrary `if_fail` /
+  `while_success` blocks remains a gap.
 - A BML class/interface/inheritance component model covers structural bases,
   delegated bases, inherited interfaces, default interface methods, section
   property inheritance, class/static flags, member lookup, access checks, and
@@ -126,8 +132,8 @@ is not complete rule-for-rule.
 | Lexical conventions: nested comments, keywords, identifiers, operators, int/hex/bin/float/char/string | `backtracking-model-languages.txt:243-253` | native-executed for focused file scanner subset | Current proofs cover line/block comments, keywords, properties, identifiers, operators, ints, strings, and large-file scanning through sibling-native BML scanners; complete hex/bin/float/char escape parity remains a gap. |
 | Binary types, structures, lvalue/rvalue | `backtracking-model-languages.txt:271-275` | grammar-manifest | No full binary layout/get-put code generation proof yet. |
 | Expressions, casts, member access, calls, `instanceof`, arrays, operators, assignment | `backtracking-model-languages.txt:292-594` | grammar-manifest with small executable expression subset | `method-return-add`, `char-lit`, and `array-int` execute. `bml-thesis-rule-body-execution-proof.fk` proves simple name assignment bodies from `container-Rule.bml` execute against native records. Full precedence, overload, cast, bitwise, logical, member dispatch, and general assignment lowering remain gaps. |
-| Statements: if/select/switch/while/do/loop/for/break/continue/return/choice/try/throw/fail/with | `backtracking-model-languages.txt:596-636` | native-executed for selected BMA subset; grammar-manifest for most source forms | return/break/continue/throw/try/fail/cut/mark/choice/choose execute in proof tests; full control-flow lowering remains a gap. |
-| Companion backtracking syntax: `choose`, `if_fail`, `while_success`, `cut`, `mark` | `companion/bml-search-algorithms.txt:49-78` | native-executed for choose/fail/cut/mark; grammar-manifest for if_fail/while_success | Need semantic lowering for full `if_fail` and `while_success`. |
+| Statements: if/select/switch/while/do/loop/for/break/continue/return/choice/try/throw/fail/with | `backtracking-model-languages.txt:596-636` | native-executed for selected BMA subset; grammar-manifest for most source forms | return/break/continue/throw/try/fail/cut/mark/choice/choose execute in proof tests. `bml-thesis-control-primitives-source-proof.fk` adds source-originated `if_fail` fallback and guarded `while_success` execution. Full arbitrary control-flow lowering remains a gap. |
+| Companion backtracking syntax: `choose`, `if_fail`, `while_success`, `cut`, `mark` | `companion/bml-search-algorithms.txt:49-78` | native-executed for focused source forms | `choose`, `fail`, `cut`, and `mark` execute in thesis exit proof; `if_fail` and `while_success` now parse from `.bml`, lower to BMA, run forward, and replay backward for the focused fallback/fail-loop forms. General block lowering remains incomplete. |
 | Local and anonymous functions / blocks with context | `companion/bml-search-algorithms.txt:81-89`, `:212-218`; `backtracking-model-languages.txt:234` | grammar-manifest | Closure capture and block execution semantics remain gaps. |
 | Properties and attributes | `backtracking-model-languages.txt:640-689` | component-proven for many helpers; thesis-deferred for several attrs | Tests prove access/class/default/final/deferred/delegate/shared/get/put/strict/relaxed flags as data. Runtime enforcement/codegen is incomplete; thesis itself defers unique, singleton, delegate, shared, strict/relaxed, nostate, const/cost/default/final/inline, out/inout/cast, and access enforcement in lines `651-685`. |
 | Classes, sections, syntax blocks, class interfaces | `backtracking-model-languages.txt:692-695` | component-proven; source-proven for focused companion declarations | `bml-thesis-companion-file-proof.fk` proves real `.bml` class sections, properties, fields, consts, and a simple method. Full arbitrary class block source compilation remains a gap. |
