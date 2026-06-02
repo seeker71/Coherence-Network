@@ -129,18 +129,17 @@ jobs:
         run: |
           python3 scripts/check_web_docker_context.py
 
-      - name: Check maintainability regression baseline (soft-fail)
+      - name: Check maintainability regression baseline
         if: steps.changed_surfaces.outputs.api_app == 'true'
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            BASE_SHA="$(git rev-parse HEAD~1)"
-          fi
-          # Soft-fail: many large files were added recently, baseline needs recalibration.
-          # TODO: Re-enable --fail-on-regression after baseline is updated.
+          # Hard regression gate: current-tree counts vs the committed baseline
+          # (docs/system_audit/maintainability_baseline.json). The baseline was
+          # refreshed to current reality on 2026-06-02 after confirming the prior
+          # "regression" was baseline-staleness against legitimate growth, so any
+          # NEW over-baseline drift here is a real signal and blocks the PR.
           python3 api/scripts/run_maintainability_audit.py \
-            --output maintainability_audit_report.json || true
+            --output maintainability_audit_report.json \
+            --fail-on-regression
           cat maintainability_audit_report.json
 
       - name: Run API tests

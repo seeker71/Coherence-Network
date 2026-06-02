@@ -1,8 +1,8 @@
 {
   "max_layer_violation_count": 3,
-  "max_large_module_count": 43,
+  "max_large_module_count": 44,
   "max_very_large_module_count": 15,
-  "max_long_function_count": 112,
+  "max_long_function_count": 113,
   "max_placeholder_count": 9,
-  "max_risk_score": 958
+  "max_risk_score": 968
 }
