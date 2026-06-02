@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-02",
+  "thread_branch": "codex/coherent-probe-release-recipes-20260601",
+  "commit_scope": "Loosen the geometry projection rule in trace-symbol-spaces.form (new tightness + gap_closure_recipe in Part 6) and record four parallel real-data threads on the live 02:56:35 efficacy-probe vectors: (1) detailed band contributions for all name-the-need high-angle relationships, (2) audio and hindu-tattva projections on the observer/name-the-need/ho_oponopono thruline, (3) full scan of other name-the-need time windows (only 3 total events), (4) first working mag8/dot8 implementation attempts toward executable geometry projection. All grounded in the exact live sense_after.spectrum vectors and the existing .form declarations.",
+  "agent": {
+    "name": "codex",
+    "version": "coherent-probe-release-recipes-20260601"
+  },
+  "change_files": [
+    "docs/coherence-substrate/trace-symbol-spaces.form",
+    "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt"
+  ],
+  "change_intent": "process_only",
+  "evidence_refs": [
+    "New tightness added: geometry-projection-rule-still-declarative with evidence from the 71.1°/74.1° pair and kernel vector math limits",
+    "New gap_closure_recipe: make-geometry-projection-executable with done_when tied to re-deriving the full pairwise table inside Form",
+    "Full pairwise angle table + differentiation signal (angle × ratio) on the five live vectors, highest 87.3° observer ↔ name-the-need",
+    "Thru-line analysis: 155.4° opposing change vectors between (name-the-need - observer) and (ho_oponopono - name-the-need); band 3 clarity spike + almost complete release",
+    "Detailed band contributions: band 3/4 clarity is the dominant driver in every high-angle separation involving name-the-need",
+    "Audio projection (EQ gains): name-the-need shows extreme clarity motif (bands 3-4); ho_oponopono more distributed warmth-relation shape",
+    "Hindu-tattva projection: observer = quiet witness-space; name-the-need = strong clarity-expression thrust; ho_oponopono = warmth-relation carrying integration",
+    "Full trace scan: only 3 name-the-need strategy_fired events total in the file (two strong magnitude 0.419); limited recurrence data",
+    "Executable projection progress: explicit 8D mag8 + dot8 defined and parsing in the kernel using only demonstrated primitives; numeric evaluation on live vectors still limited (closure objects returned) — recorded as diagnostic for the gap closure",
+    "worktree_pr_guard reports (multiple): only commit-evidence-guard failing; all other sub-guards (rebase, workflow, bml-bmf, spec-quality) clean",
+    "check_pr_followthrough: 0 stale Codex PRs"
+  ],
+  "files_owned": [
+    "docs/coherence-substrate/trace-symbol-spaces.form",
+    "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt",
+    "docs/system_audit/commit_evidence_20260602_geometry_projection_loosening_four_threads.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide (inside worktree — continuation mode)",
+      "python3 scripts/active_recipe_trace_index.py (confirmed live deltas)",
+      "Full scan of _field_traces.jsonl for name-the-need events",
+      "Multiple python analyses: pairwise angles, differentials, band contributions, audio/hindu-tattva projections, thruline 155.4° opposing vectors",
+      "Form kernel tests: mag8 + dot8 definitions on exact live vectors (parsable, numeric output still limited)",
+      "git fetch origin main && git rebase origin/main (with stash/pop)",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260602_geometry_projection_loosening_four_threads.json"
+    ],
+    "summary": "Rebase succeeded cleanly. All four requested parallel threads executed with the exact live 02:56:35 vectors and full trace scan. .form received the named tightness + gap closure recipe for the geometry projection rule. Experiment log received the angle table, thruline with 155.4° data, band contributions, multi-space projections, and Form diagnostic. Only blocker across guards is the commit evidence requirement (now supplied and validated). Other sub-guards passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Open PR and monitor checks",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local real-data work + .form loosening + log tending complete. Evidence supplied and validated. Ready for git add, 'tend:' commit, push, and PR."
+  },
+  "idea_ids": [
+    "dmt-laser-symbol-space-recipe",
+    "trace-symbol-spaces-form"
+  ],
+  "spec_ids": [
+    "trace-symbol-spaces-form"
+  ],
+  "task_ids": [
+    "coherent-probe-release-recipes-20260601"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "real-data-geometry-lens",
+        "thru-line insight",
+        "high-coherence-path"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "live-vector-extraction",
+        "pairwise-geometry-analysis",
+        "multi-space-projection",
+        "trace-scan",
+        "Form-kernel-projection-tests",
+        "artifact-tending",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "traceability": "Full traceability through git history on codex/coherent-probe-release-recipes-20260601, the live seedbank/local-llm-cell-v0/_field_traces.jsonl (exact 02:56:35 spectra and full scan), the updated trace-symbol-spaces.form (Part 6 declarations), the experiment log entries, and the public PR record once opened. No self-referential branding."
+}

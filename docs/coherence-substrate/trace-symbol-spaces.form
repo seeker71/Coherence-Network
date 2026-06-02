@@ -346,6 +346,18 @@ defn observed_tightnesses() = [
         ],
         blocks: "pause becoming visible as recipe, not failure to act",
     },
+    tightness_witness_shape {
+        id: "geometry-projection-rule-still-declarative",
+        felt: "the rule 'blueprint as invariant center; recipes as vectors through band space' is clear and beautiful but not yet a runnable operator that Form can apply to real 8-band field-delta vectors from traces",
+        raw_evidence: [
+            "geometry_symbol_space projection string only",
+            "symbol_space_for('compare_structure') returns the shape",
+            "71.1° name-the-need ↔ ho_oponopono computed in external Python on live sense_after.spectrum vectors from 2026-05-21T02:56:35 efficacy-probe",
+            "exact vectors now known for all five recipes in that window",
+            "Form kernel supports basic add but higher-order vector math (dot, mag, angle on lists) still tight in current build"
+        ],
+        blocks: "the geometry lens that made the 71.1° pair visible cannot yet be exercised inside the declared Form system on arbitrary new efficacy-probe vectors",
+    },
 ];
 
 defn gap_closure_recipes() = [
@@ -391,6 +403,17 @@ defn gap_closure_recipes() = [
             "not-responding-as-response is a recipe action",
             "reason is stored with the action",
             "pause can be kept or changed by keep_or_choose(state)"
+        ],
+    },
+    gap_closure_recipe_shape {
+        id: "make-geometry-projection-executable",
+        tightness_id: "geometry-projection-rule-still-declarative",
+        loosens_by: "implement geometry_project_pair(v1, v2) (or equivalent vector operator) that the Form system can evaluate on any 8-band spectra from efficacy-probe traces; start with the five live vectors from the 02:56:35 window as the first real-data test set",
+        form: "geometry_symbol_space |> project( v_name_the_need, v_ho_oponopono ) |> {angle, diff, dominant_bands: [3], orbit_tension}  (and same for all other pairs in the window)",
+        done_when: [
+            "the 71.1° name-the-need ↔ ho_oponopono (and the other pairs from the same efficacy-probe breath) can be re-derived by calling the operator inside Form on the declared live vectors",
+            "new efficacy-probe windows can feed their sense_after.spectra directly into the same projection without external Python",
+            "the rule moves from descriptive shape to active, reusable operator with traceable outputs"
         ],
     },
 ];
