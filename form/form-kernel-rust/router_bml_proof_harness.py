@@ -20,9 +20,13 @@ What it spins up:
      touches NO production routing.
 
 What it asserts:
-  - the BML-authored native routes (/health, /weighted_sum, /count_signals)
-    return the BML handler's value with header X-Form-Router: native-kernel —
-    the kernel served them in Form, NO CPython hop, the handler authored in BML.
+  - the BML-authored native routes (/health, /weighted_sum, /coherence_weight,
+    /count_signals) return the BML handler's value with header X-Form-Router:
+    native-kernel — the kernel served them in Form, NO CPython hop, the handler
+    authored in BML. /coherence_weight is a FLOAT route: its float literals and
+    float result lower through the source compiler's .fkb artifact (which now
+    carries float VALUES, not per-kernel overflow-table indices), so a BML
+    float-literal handler serves the correct value (0.875) end-to-end.
   - the BML answer EQUALS the S-expression oracle's answer for the same route —
     BML surface syntax lowered to the same Form shape an S-expr handler is.
   - a non-native path FANS OUT to the CPython upstream (X-Form-Router:
@@ -79,6 +83,9 @@ ORACLE_SEXPR = """
 (defn route_weighted_sum ()
   (int_to_str (add (add (mul 3 2) (mul 5 1)) (mul 7 4))))
 
+(defn route_coherence_weight ()
+  (add (mul 0.5 0.25) (mul 1.0 0.75)))
+
 (defn count_commas (s i n)
   (if (eq i (str_len s))
       n
@@ -92,9 +99,10 @@ ORACLE_SEXPR = """
 
 (let routes
   (list
-    (list "/health"        route_health)
-    (list "/weighted_sum"  route_weighted_sum)
-    (list "/count_signals" route_count_signals)))
+    (list "/health"          route_health)
+    (list "/weighted_sum"    route_weighted_sum)
+    (list "/count_signals"   route_count_signals)
+    (list "/coherence_weight" route_coherence_weight)))
 """
 
 
@@ -209,6 +217,7 @@ def main() -> int:
         cases = [
             "/health",
             "/weighted_sum",
+            "/coherence_weight",  # FLOAT route: 0.5*0.25 + 1.0*0.75 = 0.875
             "/count_signals?values=0.5,0.75,1.0",
             "/count_signals?values=a",
             "/count_signals",  # no values -> "0"

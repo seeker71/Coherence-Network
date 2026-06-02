@@ -1,0 +1,35 @@
+; float-artifact-roundtrip.fk — a float survives the .fkb artifact wire format.
+;
+; The .fkb wire format serializes a trivial node by walking its Recipe tree.
+; A float64 trivial node's `inst` is a per-kernel f64s-overflow-table INDEX —
+; meaningless in another kernel. So the wire format embeds the float VALUE: a
+; float64 node serializes as [FLOAT64-tag][8 bytes IEEE-754 little-endian], and
+; each kernel re-interns the value on read (a fresh LOCAL index). Values travel
+; in bytes; indices stay local. This band round-trips a float through
+; recipe_to_bytes -> bytes_to_recipe and confirms the value survives EXACTLY,
+; three-way (Rust == Go == TS, bit-identical), both as a bare leaf and nested
+; inside a composite Recipe — the shape a BML float-literal route lowers to.
+;
+; The proof command is the sibling gate: cd form && ./validate.sh
+;
+; Expected output: 0.8125 — the float recovered from the artifact, unchanged.
+; (A lost value would emit a different number or diverge across kernels; a
+; structurally-broken round-trip emits the -1.0 sentinel.)
+(do
+    ;; intern 0.8125 (binary-exact: 13/16, no rounding) and round-trip the bare
+    ;; float NODE through the artifact bytes.
+    (let original (intern_trivial_float "0.8125"))
+    (let leaf-back (bytes_to_recipe (recipe_to_bytes original)))
+
+    ;; nest the same float inside a composite Recipe and round-trip THAT — the
+    ;; realistic case (a float literal living in a route handler's tree). Pull
+    ;; the float child back out after the round-trip.
+    (let wrapped (intern_node (intern_trivial_string "weight") (list original)))
+    (let wrapped-back (bytes_to_recipe (recipe_to_bytes wrapped)))
+    (let nested-back (head (node_children wrapped-back)))
+
+    ;; both recoveries must content-address back to the ORIGINAL float (equal
+    ;; value -> equal local index under content-addressing -> node_eq true).
+    (if (and (node_eq leaf-back original) (node_eq nested-back original))
+        (float_value leaf-back)   ;; emit the recovered value: 0.8125
+        -1.0))                    ;; sentinel: the value did not survive

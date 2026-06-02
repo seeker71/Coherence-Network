@@ -254,6 +254,38 @@
                 (and (gt (str_len value) 1) (fsc-int-loop? value 1))
                 (fsc-int-loop? value 0)))))
 
+    ;; fsc-float? — a decimal float literal: optional leading "-", digits, one
+    ;; ".", digits (e.g. "0.5", "-1.25"). Digits on both sides of the dot, exactly
+    ;; one dot. The form.bml expr compiler interns these as trivial float nodes
+    ;; (intern_trivial_float); the wire format carries the f64 value through the
+    ;; .fkb artifact the router reconstitutes from, so a BML float route serves.
+    (defn fsc-float-dot-loop? (s i seen-dot)
+        (if (ge i (str_len s)) seen-dot
+            (do
+                (let ch (char_at s i))
+                (if (str_eq ch ".")
+                    (if seen-dot false (fsc-float-dot-loop? s (add i 1) true))
+                    (if (fsc-digit? ch)
+                        (fsc-float-dot-loop? s (add i 1) seen-dot)
+                        false)))))
+
+    (defn fsc-float-body? (body)
+        ;; need at least one digit before AND after the dot: shortest is "d.d"
+        ;; (len 3), first and last chars are digits, exactly one dot inside.
+        (if (lt (str_len body) 3) false
+        (if (fsc-digit? (char_at body 0))
+        (if (fsc-digit? (char_at body (sub (str_len body) 1)))
+            (fsc-float-dot-loop? body 0 false)
+            false) false)))
+
+    (defn fsc-float? (s)
+        (do
+            (let value (fsc-trim s))
+            (if (eq (str_len value) 0) false
+            (if (str_eq (char_at value 0) "-")
+                (fsc-float-body? (fsc-sub value 1 (str_len value)))
+                (fsc-float-body? value)))))
+
     (defn fsc-bml-find-comma-loop (s i depth quoted)
         (if (ge i (str_len s)) (sub 0 1)
             (do
@@ -657,11 +689,12 @@
             (if (str_eq expr "true")  (fsc-rec-true)
             (if (str_eq expr "false") (fsc-rec-false)
             (if (str_eq expr "null")  (fsc-rec-ident "null")
+            (if (fsc-float? expr) (intern_trivial_float expr)
             (if (fsc-int? expr) (intern_trivial_int (str_to_int expr))
             (if (str_eq (char_at expr 0) "\"")
                 (intern_trivial_string
                     (fsc-unescape-str (fsc-sub expr 1 (fsc-last-char-index expr))))
-                (fsc-rec-ident expr))))))))))))
+                (fsc-rec-ident expr)))))))))))))
 
     (defn fsc-compile-form-bml-def-recipe (line)
         (do

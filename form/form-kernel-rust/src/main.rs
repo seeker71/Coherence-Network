@@ -8376,8 +8376,23 @@ fn read_u32(bytes: &[u8], pos: usize) -> (u32, usize) {
     (v, pos + 4)
 }
 
+// read_f64_le — 8-byte IEEE-754 little-endian f64, the payload of a
+// FORM_BINARY_FLOAT64 node. Sibling parity with Go/TS little-endian readers.
+fn read_f64_le(bytes: &[u8], pos: usize) -> (f64, usize) {
+    let mut buf = [0u8; 8];
+    buf.copy_from_slice(&bytes[pos..pos + 8]);
+    (f64::from_le_bytes(buf), pos + 8)
+}
+
 const FORM_BINARY_LEAF: u32 = 0;
 const FORM_BINARY_COMPOSITE: u32 = 1;
+// FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
+// is a per-kernel f64s-table index — meaningless in another kernel. So a float
+// node serializes as [FORM_BINARY_FLOAT64][8 bytes IEEE-754 little-endian] and
+// each kernel re-interns the value on read (fresh local index). The dedicated
+// tag also sidesteps the divergent per-kernel float `ty` numbering (Rust 5,
+// Go/TS 7): the value, not the index nor the local type-tag, travels in bytes.
+const FORM_BINARY_FLOAT64: u32 = 2;
 
 fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     if let Some(recipe) = k.by_id.get(&nid) {
@@ -8387,6 +8402,9 @@ fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
         for &c in &recipe.children {
             serialize_nid(k, c, bytes);
         }
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_FLOAT64 {
+        push_u32(bytes, FORM_BINARY_FLOAT64);
+        bytes.extend_from_slice(&k.decode_float64(nid.inst).to_le_bytes());
     } else {
         push_u32(bytes, FORM_BINARY_LEAF);
         push_u32(bytes, nid.pkg);
@@ -8398,6 +8416,10 @@ fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
 
 fn deserialize_nid(k: &mut Kernel, bytes: &[u8], pos: usize, scope: u32) -> (NodeID, usize) {
     let (tag, p) = read_u32(bytes, pos);
+    if tag == FORM_BINARY_FLOAT64 {
+        let (value, p) = read_f64_le(bytes, p);
+        return (k.intern_trivial_float64(value), p);
+    }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);
         let (level, p) = read_u32(bytes, p);
@@ -8491,6 +8513,13 @@ fn deserialize_nid_with_strings(
     scope: u32,
 ) -> Result<(NodeID, usize), String> {
     let (tag, p) = read_u32(bytes, pos);
+    if tag == FORM_BINARY_FLOAT64 {
+        if p + 8 > bytes.len() {
+            return Err("form binary: truncated float64".to_string());
+        }
+        let (value, p) = read_f64_le(bytes, p);
+        return Ok((k.intern_trivial_float64(value), p));
+    }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);
         let (level, p) = read_u32(bytes, p);

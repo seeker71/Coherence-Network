@@ -265,20 +265,23 @@ S-expression — the BML surface lowered to the same Form shape. A raw
 S-expression manifest is unchanged: it has no `section [...]`, so it never
 touches the source-compiler and `read_root_from_source` reads it directly.
 
-Honest scope of the BML authoring path as it stands: the `form.bml` dialect
-lowers `def name(args) = expr;` (single-line), the block form `def name(args)
-{ ... }`, nested `if c then a else b`, `f(a, b)` calls, and integer/string
-literals — the proof's handlers (a multi-step integer aggregator, an
-input-driven counter, liveness) are authored in it and their values cross the
-source-compiler's `.fkb` artifact intact. A BML **float-literal** handler is the
-next breath: the compiler can lower a float in-process, but the `.fkb` artifact
-format carries a float as an overflow-table index, not the value, so a lowered
-float does not yet survive the cross-kernel round-trip (a float-value embedding
-across all three kernels' artifact (de)serializers is the named build).
-An S-expression manifest serves floats today — the kernel's `.fk` source reader
-reads float tokens directly (the existing `router-proof.fk`'s 0.8125
-coherence-weight is one) — so float routes have a path; only the BML→`.fkb` route
-waits on that artifact change.
+Honest scope of the BML authoring path: the `form.bml` dialect lowers `def
+name(args) = expr;` (single-line), the block form `def name(args) { ... }`,
+nested `if c then a else b`, `f(a, b)` calls, and integer, string, AND float
+literals. The proof's handlers — a multi-step integer aggregator, an
+input-driven counter, liveness, and a **float** route (`route_coherence_weight`,
+`0.5*0.25 + 1.0*0.75 = 0.875`) — are authored in it, and their values cross the
+source-compiler's `.fkb` artifact intact. A float trivial node carries its
+IEEE-754 value in the wire format (a dedicated `FORM_BINARY_FLOAT64` node tag
+followed by 8 little-endian bytes), so the value travels in the bytes and each
+kernel re-interns it into its own overflow table on read — the per-kernel table
+index never crosses the wire. The float-literal route therefore serves the
+correct value end-to-end (`router_bml_proof_harness.py` checks `/coherence_weight
+-> 0.875`, `native-kernel`), and the artifact round-trip is bit-identical across
+Rust, Go, and TS (`form-samples/float-artifact-roundtrip.fk`). An S-expression
+manifest serves floats the same way — the kernel's `.fk` source reader reads
+float tokens directly (the existing `router-proof.fk`'s 0.8125 coherence-weight
+is one).
 
 Either way the handler is Form, walked by the kernel — never a Python function
 the kernel calls. That is the point of the reversal: the front door speaks the

@@ -18,9 +18,10 @@
 ; ordinary Form before the kernel serves a request. In this dialect each
 ; `def name(args) = expr;` is a single line (the multi-line shape is the block
 ; form `def name(args) { ... }`); the expressions nest `if c then a else b` and
-; `f(a, b)` calls freely. The compute here is integer/string — the values cross
-; the source compiler's .fkb artifact intact; a BML float-literal handler is a
-; further breath (see KERNEL_AS_ROUTER.md "BML preference").
+; `f(a, b)` calls freely. Integer, string, AND float values cross the source
+; compiler's .fkb artifact intact: a float trivial node carries its IEEE-754
+; value in the wire format (not a per-kernel overflow-table index), so the
+; float-literal handler below serves the right value (see KERNEL_AS_ROUTER.md).
 
 section [form.bml] {
     ; tiny alist helper: value for `key` in a list of (k v) string pairs
@@ -44,8 +45,16 @@ section [form.bml] {
 
     def route_count_signals(q) = if eq(str_len(assoc("values", q)), 0) then "0" else int_to_str(add(count_commas(assoc("values", q), 0, 0), 1));
 
+    ; NATIVE handler 4: a FLOAT handler. Real float arithmetic in Form — the
+    ; weighted average (0.5*0.25 + 1.0*0.75) of two coherence weights, = 0.875.
+    ; The float literals and the float result lower through the source compiler's
+    ; .fkb artifact (the routes binding is reconstituted via read_form_binary), so
+    ; this route proves a BML float survives the artifact round-trip end-to-end:
+    ; the handler returns a Value::Float, the router renders it as the body.
+    def route_coherence_weight() = add(mul(0.5, 0.25), mul(1.0, 0.75));
+
     ; the route manifest: (path handler). Everything not here fans out. The
     ; kernel resolves this top-level `routes` binding exactly as it does for the
     ; S-expression manifest — the BML section lowered it to the same shape.
-    let routes = list(list("/health", route_health), list("/weighted_sum", route_weighted_sum), list("/count_signals", route_count_signals));
+    let routes = list(list("/health", route_health), list("/weighted_sum", route_weighted_sum), list("/count_signals", route_count_signals), list("/coherence_weight", route_coherence_weight));
 }
