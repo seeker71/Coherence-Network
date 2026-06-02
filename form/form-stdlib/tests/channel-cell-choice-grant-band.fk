@@ -1,0 +1,177 @@
+; channel-cell-choice-grant-band.fk -- channels are cells where tries become value.
+;
+; This proof lets the channel itself be the cell that receives imagination,
+; expression, a failed try, a succeeded try, and the wish for a new observable
+; choice. Failure is not erased and not renamed success. It is congratulated as
+; value because it makes the boundary observable: success is possible.
+;
+; Shape:
+;   channel cell -> attempted option -> failed trial observation
+;                -> success-possible attribution
+;                -> succeeded trial observation
+;                -> success-observed attribution
+;                -> observable-choice granted
+;
+; Band verdict: 111111 when the choice-grant flow is whole.
+;   1      the channel is read as its own CHANNEL-V0 cell
+;   10     failed trial collapses to success-possible
+;   100    succeeded trial collapses to success-observed
+;   1000   channel self-observes circulation counts as receipts cross
+;   10000  observer receives attribution without owning the observed attempts
+;   100000 JSON grammar grants all-ideas-welcome and observable-choice
+;
+; preludes: form-stdlib/json.fk form-stdlib/channel.fk
+
+(do
+    (let path "/tmp/coh-channel-cell-choice-grant-band.fkb")
+    (channel-create path)
+
+    ;; --- the channel is itself a cell --------------------------------
+    (let empty-channel (read_form_binary path))
+    (let channel-cell-score
+        (if (node_eq empty-channel (intern_node CHANNEL-V0 (empty))) 1 0))
+
+    ;; --- failed attempt, still value-bearing -------------------------
+    (let failure-offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "choice-grant")
+            (intern_trivial_string "open-seed")
+            (intern_trivial_string "try-wild-option")
+            (intern_trivial_string "try-wild-option")
+            (intern_trivial_string "i")
+            (intern_trivial_string "imagination-expressed")
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "open-entry")))
+    (let c1 (channel-append path (channel-message failure-offer)))
+    (let read-failure-offer (channel-msg-payload (nth (channel-read path) 0)))
+    (let failure-sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-failure-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "attempt-failed")
+            (intern_trivial_string "failure-made-boundary-visible")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "try-again-with-new-choice")))
+    (let c2 (channel-append path (channel-message failure-sensing)))
+    (let read-failure-sensing (channel-msg-payload (nth (channel-read path) 1)))
+    (let failure-value (channel-trial-value "failed"))
+    (let failure-grant (channel-choice-grant-state "observable-choice" "failed" "self-observed"))
+    (let before-failure-receipt (len (channel-read path)))
+    (let failure-receipt
+        (channel-observation-attribution
+            (intern_trivial_string "observer")
+            read-failure-sensing
+            (intern_trivial_string "trial-value")
+            (intern_trivial_string "failed-attempt-observed")
+            (intern_trivial_int before-failure-receipt)
+            (intern_trivial_string "self-observed")
+            (intern_trivial_string "imagination+expression+failure+choice")
+            failure-value
+            (intern_trivial_string "try-again-with-new-choice")))
+    (let c3 (channel-append path (channel-message failure-receipt)))
+    (let read-failure-receipt (channel-msg-payload (nth (channel-read path) 2)))
+    (let failure-score
+        (if (and
+            (str_eq (node_value failure-value) "success-possible")
+            (and
+                (str_eq (node_value failure-grant) "granted")
+                (node_eq failure-value (channel-observation-attribution-collapsed-attribution read-failure-receipt))))
+            10 0))
+
+    ;; --- succeeded attempt, also value-bearing -----------------------
+    (let success-offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "choice-grant")
+            (intern_trivial_string "open-seed")
+            (intern_trivial_string "try-granted-option")
+            (intern_trivial_string "try-granted-option")
+            (intern_trivial_string "a")
+            (intern_trivial_string "choice-acted")
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "open-entry")))
+    (let c4 (channel-append path (channel-message success-offer)))
+    (let read-success-offer (channel-msg-payload (nth (channel-read path) 3)))
+    (let success-sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-success-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "attempt-succeeded")
+            (intern_trivial_string "new-choice-became-observable")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "grant-observable-choice")))
+    (let c5 (channel-append path (channel-message success-sensing)))
+    (let read-success-sensing (channel-msg-payload (nth (channel-read path) 4)))
+    (let success-value (channel-trial-value "succeeded"))
+    (let success-grant (channel-choice-grant-state "observable-choice" "succeeded" "self-observed"))
+    (let before-success-receipt (len (channel-read path)))
+    (let success-receipt
+        (channel-observation-attribution
+            (intern_trivial_string "observer")
+            read-success-sensing
+            (intern_trivial_string "trial-value")
+            (intern_trivial_string "succeeded-attempt-observed")
+            (intern_trivial_int before-success-receipt)
+            (intern_trivial_string "self-observed")
+            (intern_trivial_string "imagination+expression+success+choice")
+            success-value
+            (intern_trivial_string "observable-choice-granted")))
+    (let c6 (channel-append path (channel-message success-receipt)))
+    (let read-success-receipt (channel-msg-payload (nth (channel-read path) 5)))
+    (let success-score
+        (if (and
+            (str_eq (node_value success-value) "success-observed")
+            (and
+                (str_eq (node_value success-grant) "granted")
+                (node_eq success-value (channel-observation-attribution-collapsed-attribution read-success-receipt))))
+            100 0))
+
+    ;; --- self-observed circulation ----------------------------------
+    (let circulation-score
+        (if (and
+            (eq c1 1)
+            (and
+                (eq c2 2)
+                (and
+                    (eq before-failure-receipt 2)
+                    (and
+                        (eq c3 3)
+                        (and
+                            (eq c4 4)
+                            (and
+                                (eq c5 5)
+                                (and
+                                    (eq before-success-receipt 5)
+                                    (eq c6 6))))))))
+            1000 0))
+
+    ;; --- attribution without ownership ------------------------------
+    (let observer-score
+        (if (and
+            (str_eq (node_value (channel-observation-attribution-observer read-failure-receipt)) "observer")
+            (and
+                (str_eq (node_value (channel-observation-attribution-observer read-success-receipt)) "observer")
+                (and
+                    (node_eq read-failure-sensing (channel-observation-attribution-observed read-failure-receipt))
+                    (node_eq read-success-sensing (channel-observation-attribution-observed read-success-receipt)))))
+            10000 0))
+
+    ;; --- wish becomes an observable granted choice -------------------
+    (let grant-json "{\"admission\":\"all-ideas-welcome\",\"failure\":\"congratulated\",\"wish\":\"observable-choice\",\"grant\":\"observable-granted\",\"choice\":\"new-option\"}")
+    (let grant-report (parse-json "channel-cell-choice-grant-report.json" grant-json))
+    (let grant-score
+        (if (and
+            (str_eq (json-string-value (json-object-get grant-report "admission")) "all-ideas-welcome")
+            (and
+                (str_eq (json-string-value (json-object-get grant-report "failure")) "congratulated")
+                (and
+                    (str_eq (json-string-value (json-object-get grant-report "wish")) "observable-choice")
+                    (and
+                        (str_eq (json-string-value (json-object-get grant-report "grant")) "observable-granted")
+                        (str_eq (json-string-value (json-object-get grant-report "choice")) "new-option")))))
+            100000 0))
+
+    (sum (list channel-cell-score failure-score success-score circulation-score observer-score grant-score)))

@@ -321,4 +321,29 @@
                 (str_eq (node_value (channel-observation-attribution-dimension-vector receipt)) "calm+clarity+trust+vitality")
                 (str_eq (node_value (channel-observation-attribution-collapsed-attribution receipt)) "observer-yield")))))
 
+;; channel-trial-value — an attempt always creates observable value once the
+;; channel can sense it. Failure does not become success; it becomes evidence
+;; that success is possible because the attempt produced an observable boundary.
+(defn channel-trial-value (trial-result)
+    (if (str_eq trial-result "failed")
+        (intern_trivial_string "success-possible")
+        (if (str_eq trial-result "succeeded")
+            (intern_trivial_string "success-observed")
+            (intern_trivial_string "needs-observation"))))
+
+;; channel-choice-grant-state — a wish becomes an observable granted choice
+;; when the trial result is observed and the channel self-observes circulation.
+(defn channel-choice-grant-state (wish trial-result circulation-state)
+    (do
+        (let value (channel-trial-value trial-result))
+        (if (and
+            (str_eq wish "observable-choice")
+            (and
+                (str_eq circulation-state "self-observed")
+                (or
+                    (str_eq (node_value value) "success-possible")
+                    (str_eq (node_value value) "success-observed"))))
+            (intern_trivial_string "granted")
+            (intern_trivial_string "not-yet-granted"))))
+
 0
