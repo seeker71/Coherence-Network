@@ -10,9 +10,29 @@ from pathlib import Path
 from typing import Any
 
 
+# Matches a shell function definition opening line, e.g.:
+#   run_validate() { ... }
+#   retry_remote() {
+#   c() {
+_FUNC_DEF_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\(\)\s*\{?\s*$")
+
+
 def _load_registry(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as f:
         return json.load(f)
+
+
+def _function_def_name(line: str) -> str | None:
+    """Return the function name if ``line`` opens a shell function definition.
+
+    A locally-defined function is not external tooling, so its name must be
+    excluded both as a definition and at every call site (``retry_remote scp ...``).
+    """
+    s = line.strip()
+    if s.startswith("- "):
+        s = s[2:].strip()
+    m = _FUNC_DEF_RE.match(s)
+    return m.group(1) if m else None
 
 
 def _discover_workflow_actions(workflows_dir: Path) -> set[str]:
@@ -44,7 +64,7 @@ def _extract_command(line: str) -> str | None:
     # Ignore shell function definitions like:
     #   run_validate() { ... }
     #   c() { ... }
-    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\s*\(\)\s*\{?\s*$", s):
+    if _FUNC_DEF_RE.match(s):
         return None
 
     # Handle command substitution assignments like:
@@ -106,6 +126,7 @@ def _extract_command(line: str) -> str | None:
         "break",
         "continue",
         "local",
+        "return",
     }
     if token in shell_keywords:
         return None
@@ -123,6 +144,9 @@ def _extract_command(line: str) -> str | None:
 
 def _discover_workflow_cli_tools(workflows_dir: Path) -> set[str]:
     tools: set[str] = set()
+    # Names defined as shell functions inside run blocks. Calls to these
+    # (e.g. ``retry_remote scp ...``) are local helpers, not external tools.
+    local_functions: set[str] = set()
     run_re = re.compile(r"^(\s*)run:\s*\|\s*$")
 
     for wf in sorted(workflows_dir.glob("*.yml")):
@@ -178,6 +202,10 @@ def _discover_workflow_cli_tools(workflows_dir: Path) -> set[str]:
                 if heredoc_start:
                     heredoc_end = heredoc_start.group(1)
 
+                func_name = _function_def_name(stripped)
+                if func_name:
+                    local_functions.add(func_name)
+
                 cmd = _extract_command(stripped)
                 if cmd:
                     tools.add(cmd)
@@ -188,7 +216,7 @@ def _discover_workflow_cli_tools(workflows_dir: Path) -> set[str]:
                 in_continuation = stripped.endswith("\\")
                 i += 1
 
-    return tools
+    return tools - local_functions
 
 
 def _discover_dependency_ecosystems(repo_root: Path) -> set[str]:
