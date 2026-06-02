@@ -182,12 +182,13 @@
                 (str_eq (node_value (channel-resonance-disturbance receipt)) "none")
                 (str_eq (node_value (channel-resonance-disturbance receipt)) "minimal")))))
 
-;; --- source-attributed symbol lens flow -------------------------------
+;; --- symbol lens flow --------------------------------------------------
 
 ;; channel-symbol-lens-offer — a voluntary external lens proposal carried
 ;; through the channel as data: lens id, source, phrase, sound cell,
 ;; vowel/modifier, claimed flow, choice, and attribution. The channel does not
-;; certify the claim; it preserves the source and lets observers sense it.
+;; certify the claim or require prior authority; it preserves provenance when
+;; available and lets observers sense what happens after the lens enters.
 (defn channel-symbol-lens-offer (lens-id source phrase sound-cell vowel-modifier claimed-flow choice attribution)
     (intern_node CHANNEL-SYMBOL-LENS-OFFER
         (list lens-id source phrase sound-cell vowel-modifier claimed-flow choice attribution)))
@@ -248,17 +249,16 @@
 (defn channel-symbol-lens-sensing-next-contact (sensing)
     (channel-nth-child sensing 7))
 
-;; channel-symbol-lens-flow-valid? — enough evidence that the lens entered as
-;; choice and attribution, then produced sensed circulation and vitality.
+;; channel-symbol-lens-flow-valid? — enough evidence that the lens entered by
+;; choice, then produced sensed circulation and vitality. Attribution remains
+;; recorded provenance, not an entry gate.
 (defn channel-symbol-lens-flow-valid? (sensing)
     (do
         (let offer (channel-symbol-lens-sensing-offer sensing))
         (and
-            (str_eq (node_value (channel-symbol-lens-offer-attribution offer)) "source-attributed")
+            (str_eq (node_value (channel-symbol-lens-offer-choice offer)) "chosen")
             (and
-                (str_eq (node_value (channel-symbol-lens-offer-choice offer)) "chosen")
-                (and
-                    (str_eq (node_value (channel-symbol-lens-sensing-flow-state sensing)) "circulating")
-                    (str_eq (node_value (channel-symbol-lens-sensing-vitality sensing)) "increased"))))))
+                (str_eq (node_value (channel-symbol-lens-sensing-flow-state sensing)) "circulating")
+                (str_eq (node_value (channel-symbol-lens-sensing-vitality sensing)) "increased")))))
 
 0

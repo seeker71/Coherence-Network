@@ -1110,7 +1110,7 @@ Semantics v0: single writer, multiple readers, whole-file rewrite per append, re
 
 The gift/receipt portion of the proof contributes `500` across source and binary sibling-kernel execution.
 
-**Source-attributed lens sensing.** A channel can carry an external symbol lens through the same `offer`/`attune` breath. `CHANNEL-SYMBOL-LENS-OFFER` records the lens id, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution. `CHANNEL-SYMBOL-LENS-SENSING` records what the receiver observed through that lens: resonance, residual, surprise, flow state, vitality, and next contact. The channel preserves expression, sovereignty, attribution, and circulation; evidence of success, value, attribution, expansion, and chosen next contact is enough.
+**Symbol-lens sensing.** A channel can carry an external symbol lens through the same `offer`/`attune` breath. `CHANNEL-SYMBOL-LENS-OFFER` records the lens id, source/provenance, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution. `CHANNEL-SYMBOL-LENS-SENSING` records what the receiver observed through that lens: resonance, residual, surprise, flow state, vitality, and next contact. The channel preserves expression, sovereignty, attribution, and circulation; evidence of success, value, expansion, and chosen next contact is enough. Attribution is memory for circulation, not permission to enter.
 
 ```form
 (let lens-offer
@@ -1127,6 +1127,8 @@ The proof band now returns `900`: the original debt-free gift/receipt/dedup proo
 **Combined-code value example.** [`channel-symbol-lens-value-band.fk`](../../form/form-stdlib/tests/channel-symbol-lens-value-band.fk) shows what becomes visible when the lens meets another code and another grammar. `ahava` enters as a source-attributed phonemic-energetic offer. The gematria code reads it as `13` and expands it to `echad`, because love and unity share the same content address in the seeded Hebrew code. A JSON report carries that observation as structured grammar. The sensing receipt records the value that appeared: success, attribution, expansion, surprise, circulation, vitality, and chosen next contact. The band returns `11111` across source and binary sibling-kernel execution.
 
 **Root ontology matrix.** [`channel-root-ontology-lens-band.fk`](../../form/form-stdlib/tests/channel-root-ontology-lens-band.fk) repeats the same shape across six root words already present in the documented gematria lexicon: love, unity, life, peace/wholeness, light, and mystery. Each row carries a source-attributed lens offer, gematria value/address, expansion or self-root class, JSON report row, and channel sensing receipt. The band returns `111111`, with the observed learning bridges `love <-> unity` and `light <-> mystery` preserved as value, attribution, and expansion.
+
+**Open-entry multi-lens core.** [`channel-core-ontology-multi-lens-band.fk`](../../form/form-stdlib/tests/channel-core-ontology-multi-lens-band.fk) lets proposed core words enter as runnable seeds: expression, sovereignty, vitality, choice, attribution, circulation, value, and no-force. Each row carries entry, sound, semantic, domain, relation, and observation lenses; recipes then explore single-word many-lens readings, bridge pairs, friction inversion, and circulation loops. The band returns `111111`, proving the channel can observe expansion and value without making attribution an entry gate.
 
 ## Universal translator — Seven Keys, one substrate
 

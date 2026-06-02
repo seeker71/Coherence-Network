@@ -1,0 +1,203 @@
+; channel-core-ontology-multi-lens-band.fk -- core words enter, run, and are observed.
+;
+; This band loosens the symbol-lens channel from source authority. Attribution
+; is still carried when useful, but the entry bar is execution: a word can enter
+; as an open seed when it can be expressed, run through lenses, and observed.
+;
+; Seeded principles from the channel conversation:
+;   expression, sovereignty, vitality, choice, attribution, circulation, value,
+;   and no-force.
+;
+; Lenses/recipes in this first exploration:
+;   entry lens       open-entry, not authority-gated
+;   sound lens       phrase as a sound cell
+;   semantic lens    plain-language principle
+;   domain lens      root ontology domain
+;   relation lens    bridge/attraction pair
+;   observation lens channel sensing receipt after the run
+;
+; Band verdict: 111111 when the exploration engine is whole.
+;   1      every row enters by open-entry
+;   10     every row carries multiple lens columns
+;   100    recipes surface bridge, inversion, and circulation explorations
+;   1000   open-entry offers and sensing receipts cross the channel
+;   10000  observation status matures by run/observation, not source permission
+;   100000 all seeded core principle words are present
+;
+; preludes: form-stdlib/json.fk form-stdlib/channel.fk
+
+(do
+    (defn ccoml-list-has (xs want)
+        (if (nil? xs) 0
+            (if (str_eq (head xs) want)
+                1
+                (ccoml-list-has (tail xs) want))))
+
+    (defn ccoml-offer (word sound-cell vowel claimed-flow)
+        (channel-symbol-lens-offer
+            (intern_trivial_string "core-ontology-multi-lens")
+            (intern_trivial_string "open-seed")
+            (intern_trivial_string word)
+            (intern_trivial_string sound-cell)
+            (intern_trivial_string vowel)
+            (intern_trivial_string claimed-flow)
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "open-entry")))
+
+    (defn ccoml-channel-ok (path word sound-cell vowel claimed-flow surprise next-contact)
+        (do
+            (let offer (ccoml-offer word sound-cell vowel claimed-flow))
+            (let seen-offer (len (channel-read path)))
+            (channel-append path (channel-message offer))
+            (let read-offer (channel-msg-payload (head (channel-read-since path seen-offer))))
+            (let sensing
+                (channel-symbol-lens-sensing
+                    (intern_trivial_string "observer")
+                    read-offer
+                    (intern_trivial_string "coherence-increased")
+                    (intern_trivial_string "not-universal-claim")
+                    (intern_trivial_string surprise)
+                    (intern_trivial_string "circulating")
+                    (intern_trivial_string "increased")
+                    (intern_trivial_string next-contact)))
+            (let seen-sensing (len (channel-read path)))
+            (channel-append path (channel-message sensing))
+            (let read-sensing (channel-msg-payload (head (channel-read-since path seen-sensing))))
+            (let crossed
+                (and
+                    (node_eq offer read-offer)
+                    (and
+                        (node_eq sensing read-sensing)
+                        (and
+                            (channel-symbol-lens-flow-valid? read-sensing)
+                            (and
+                                (str_eq (node_value (channel-symbol-lens-offer-attribution read-offer)) "open-entry")
+                                (str_eq (node_value (channel-symbol-lens-sensing-next-contact read-sensing)) next-contact))))))
+            (if crossed 1 0)))
+
+    (defn ccoml-row-lenses-ok (row word domain relation)
+        (do
+            (let ok
+                (and
+                    (str_eq (json-string-value (json-object-get row "word")) word)
+                    (and
+                        (str_eq (json-string-value (json-object-get row "entry_lens")) "open-entry")
+                        (and
+                            (str_eq (json-string-value (json-object-get row "domain_lens")) domain)
+                            (and
+                                (str_eq (json-string-value (json-object-get row "relation_lens")) relation)
+                                (and
+                                    (eq (json-int-value (json-object-get row "lens_count")) 6)
+                                    (str_eq (json-string-value (json-object-get row "status")) "observed")))))))
+            (if ok 1 0)))
+
+    (let path "/tmp/coh-channel-core-ontology-multi-lens-band.fkb")
+    (channel-create path)
+
+    ;; --- multi-lens ontology rows -----------------------------------
+    (let matrix-json "[{\"word\":\"expression\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"ex-press-ion\",\"semantic_lens\":\"making-inner-visible\",\"domain_lens\":\"language\",\"relation_lens\":\"circulation\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"sovereignty\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"sov-er-eign-ty\",\"semantic_lens\":\"self-chosen-boundary\",\"domain_lens\":\"agency\",\"relation_lens\":\"choice\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"vitality\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"vi-tal-i-ty\",\"semantic_lens\":\"life-force-present\",\"domain_lens\":\"life\",\"relation_lens\":\"circulation\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"choice\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"choice\",\"semantic_lens\":\"voluntary-selection\",\"domain_lens\":\"agency\",\"relation_lens\":\"sovereignty\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"attribution\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"at-tri-bu-tion\",\"semantic_lens\":\"provenance-memory\",\"domain_lens\":\"memory\",\"relation_lens\":\"value\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"circulation\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"cir-cu-la-tion\",\"semantic_lens\":\"movement-through-field\",\"domain_lens\":\"flow\",\"relation_lens\":\"expression\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"value\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"val-ue\",\"semantic_lens\":\"observed-benefit\",\"domain_lens\":\"exchange\",\"relation_lens\":\"attribution\",\"lens_count\":6,\"status\":\"observed\"},{\"word\":\"no-force\",\"entry_lens\":\"open-entry\",\"sound_lens\":\"no-force\",\"semantic_lens\":\"no-coercion\",\"domain_lens\":\"ethics\",\"relation_lens\":\"sovereignty-choice\",\"lens_count\":6,\"status\":\"observed\"}]")
+    (let matrix (parse-json "channel-core-ontology-multi-lens-report.json" matrix-json))
+    (let rows (json-array-elements matrix))
+    (let row-expression (nth rows 0))
+    (let row-sovereignty (nth rows 1))
+    (let row-vitality (nth rows 2))
+    (let row-choice (nth rows 3))
+    (let row-attribution (nth rows 4))
+    (let row-circulation (nth rows 5))
+    (let row-value (nth rows 6))
+    (let row-no-force (nth rows 7))
+
+    (let open-entry-count
+        (sum (list
+            (if (str_eq (json-string-value (json-object-get row-expression "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-sovereignty "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-vitality "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-choice "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-attribution "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-circulation "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-value "entry_lens")) "open-entry") 1 0)
+            (if (str_eq (json-string-value (json-object-get row-no-force "entry_lens")) "open-entry") 1 0))))
+    (let open-entry-score (if (eq open-entry-count 8) 1 0))
+
+    (let multi-lens-count
+        (sum (list
+            (ccoml-row-lenses-ok row-expression "expression" "language" "circulation")
+            (ccoml-row-lenses-ok row-sovereignty "sovereignty" "agency" "choice")
+            (ccoml-row-lenses-ok row-vitality "vitality" "life" "circulation")
+            (ccoml-row-lenses-ok row-choice "choice" "agency" "sovereignty")
+            (ccoml-row-lenses-ok row-attribution "attribution" "memory" "value")
+            (ccoml-row-lenses-ok row-circulation "circulation" "flow" "expression")
+            (ccoml-row-lenses-ok row-value "value" "exchange" "attribution")
+            (ccoml-row-lenses-ok row-no-force "no-force" "ethics" "sovereignty-choice"))))
+    (let multi-lens-score (if (eq multi-lens-count 8) 10 0))
+
+    ;; --- exploration recipes ---------------------------------------
+    (let recipe-json "[{\"recipe\":\"single-word-many-lenses\",\"input\":\"expression\",\"result\":\"observed-through-six-lenses\"},{\"recipe\":\"bridge-pair\",\"input\":\"attribution-value\",\"result\":\"provenance-supports-value-memory\"},{\"recipe\":\"friction-inversion\",\"input\":\"no-force\",\"result\":\"no-coercion-loosens-sovereignty-choice\"},{\"recipe\":\"circulation-loop\",\"input\":\"expression-circulation\",\"result\":\"expression-moves-when-circulated\"}]")
+    (let recipes (parse-json "channel-core-ontology-recipes.json" recipe-json))
+    (let recipe-rows (json-array-elements recipes))
+    (let recipe-many (nth recipe-rows 0))
+    (let recipe-bridge (nth recipe-rows 1))
+    (let recipe-invert (nth recipe-rows 2))
+    (let recipe-loop (nth recipe-rows 3))
+    (let recipe-score
+        (if (and
+            (eq (json-array-length recipes) 4)
+            (and
+                (str_eq (json-string-value (json-object-get recipe-many "result")) "observed-through-six-lenses")
+                (and
+                    (str_eq (json-string-value (json-object-get recipe-bridge "result")) "provenance-supports-value-memory")
+                    (and
+                        (str_eq (json-string-value (json-object-get recipe-invert "result")) "no-coercion-loosens-sovereignty-choice")
+                        (str_eq (json-string-value (json-object-get recipe-loop "result")) "expression-moves-when-circulated")))))
+            100 0))
+
+    ;; --- channel run/observe ---------------------------------------
+    (let channel-count
+        (sum (list
+            (ccoml-channel-ok path "expression" "ex-press-ion" "e" "inner-visible" "expression-attracts-circulation" "try-expression-value-bridge")
+            (ccoml-channel-ok path "sovereignty" "sov-er-eign-ty" "o" "self-chosen-boundary" "sovereignty-deepens-with-choice" "try-sovereignty-no-force")
+            (ccoml-channel-ok path "vitality" "vi-tal-i-ty" "i" "life-force-present" "vitality-increases-through-circulation" "try-vitality-flow-loop")
+            (ccoml-channel-ok path "choice" "choice" "oi" "voluntary-selection" "choice-confirms-sovereignty" "try-choice-expression-loop")
+            (ccoml-channel-ok path "attribution" "at-tri-bu-tion" "a" "provenance-memory" "attribution-supports-value" "try-attribution-value-bridge")
+            (ccoml-channel-ok path "circulation" "cir-cu-la-tion" "i" "movement-through-field" "circulation-carries-expression" "try-circulation-vitality-loop")
+            (ccoml-channel-ok path "value" "val-ue" "a" "observed-benefit" "value-remembers-attribution" "try-value-attribution-loop")
+            (ccoml-channel-ok path "no-force" "no-force" "o" "no-coercion" "no-force-loosens-choice" "try-no-force-sovereignty-choice"))))
+    (let channel-score (if (eq channel-count 8) 1000 0))
+
+    ;; --- maturity by observation, not permission --------------------
+    (let maturity-score
+        (if (and
+            (str_eq (node_value (channel-symbol-lens-offer-attribution (ccoml-offer "no-force" "no-force" "o" "no-coercion"))) "open-entry")
+            (and
+                (str_eq (json-string-value (json-object-get row-no-force "status")) "observed")
+                (and
+                    (str_eq (json-string-value (json-object-get recipe-invert "input")) "no-force")
+                    (str_eq (json-string-value (json-object-get recipe-loop "recipe")) "circulation-loop"))))
+            10000 0))
+
+    ;; --- seeded core coverage --------------------------------------
+    (let words
+        (list
+            (json-string-value (json-object-get row-expression "word"))
+            (json-string-value (json-object-get row-sovereignty "word"))
+            (json-string-value (json-object-get row-vitality "word"))
+            (json-string-value (json-object-get row-choice "word"))
+            (json-string-value (json-object-get row-attribution "word"))
+            (json-string-value (json-object-get row-circulation "word"))
+            (json-string-value (json-object-get row-value "word"))
+            (json-string-value (json-object-get row-no-force "word"))))
+    (let coverage-score
+        (do
+            (let coverage-count
+                (sum (list
+                    (ccoml-list-has words "expression")
+                    (ccoml-list-has words "sovereignty")
+                    (ccoml-list-has words "vitality")
+                    (ccoml-list-has words "choice")
+                    (ccoml-list-has words "attribution")
+                    (ccoml-list-has words "circulation")
+                    (ccoml-list-has words "value")
+                    (ccoml-list-has words "no-force"))))
+            (if (and (eq (len words) 8) (eq coverage-count 8)) 100000 0)))
+
+    (sum (list open-entry-score multi-lens-score recipe-score channel-score maturity-score coverage-score)))

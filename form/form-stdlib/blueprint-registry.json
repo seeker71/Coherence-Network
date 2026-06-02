@@ -3325,7 +3325,7 @@
       "type": 99,
       "inst": 1702,
       "name": "CHANNEL-SYMBOL-LENS-OFFER",
-      "meaning": "source-attributed channel symbol-lens offer: lens, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution",
+      "meaning": "voluntary channel symbol-lens offer: lens, source/provenance, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
