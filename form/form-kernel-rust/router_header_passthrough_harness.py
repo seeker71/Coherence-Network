@@ -238,7 +238,9 @@ def main() -> int:
             f"Accept: application/json\r\n"
             f"X-Probe: {PROBE_X}\r\n"
             f"User-Agent: header-passthrough-harness\r\n"
-            f"Connection: keep-alive\r\n"        # hop-by-hop -> must NOT reach upstream
+            f"Connection: close\r\n"             # client's hop-by-hop -> router does NOT relay it
+            f"Keep-Alive: timeout=99\r\n"        # hop-by-hop -> must NOT reach upstream
+            f"Proxy-Connection: close\r\n"       # Proxy-* hop-by-hop -> must NOT reach upstream
             f"Content-Length: 999\r\n"           # bogus framing -> router re-derives (0 here)
             f"\r\n"
         ).encode()
@@ -255,20 +257,35 @@ def main() -> int:
         up_xprobe = echoed.get("x-probe") == PROBE_X
         up_ua = echoed.get("user-agent") == "header-passthrough-harness"
         # UP hygiene: Host rewritten to upstream, client Content-Length NOT
-        # forwarded (no body -> router sends none), Connection NOT forwarded
+        # forwarded (no body -> router sends none), and the client's hop-by-hop
+        # connection-management headers NOT relayed. The router OWNS its
+        # upstream-hop framing: it does not pass the client's `Connection`
+        # verbatim — it writes its OWN `Connection: keep-alive` to reuse the
+        # upstream connection across fan-outs. So the proof of hygiene is (a) the
+        # client's distinctive hop-by-hop headers (`Keep-Alive`, `Proxy-Connection`)
+        # are absent upstream, and (b) the upstream's `Connection` is the router's
+        # own keep-alive (NOT the client's relayed `close`).
         host_rewritten = echoed.get("host", "").startswith("127.0.0.1")
         no_client_cl = echoed.get("content-length") in (None, "0")
-        no_conn_up = "connection" not in echoed or echoed.get("connection", "").lower() != "keep-alive"
+        no_keepalive_up = "keep-alive" not in echoed
+        no_proxyconn_up = "proxy-connection" not in echoed
+        # The client sent `Connection: close`; the router must NOT relay that —
+        # it writes its own keep-alive for upstream connection reuse.
+        router_owns_conn = echoed.get("connection", "").lower() == "keep-alive"
         ok_up = all([up_auth, up_cookie, up_accept, up_xprobe, up_ua,
-                     host_rewritten, no_client_cl, no_conn_up])
+                     host_rewritten, no_client_cl, no_keepalive_up,
+                     no_proxyconn_up, router_owns_conn])
         print(f"  [UP request hdrs ] upstream RECEIVED: "
               f"Authorization={up_auth} Cookie={up_cookie} Accept={up_accept} "
               f"X-Probe={up_xprobe} UA={up_ua}")
         print(f"                     hygiene: Host->upstream={host_rewritten} "
               f"client-Content-Length-dropped={no_client_cl} "
-              f"Connection-stripped={no_conn_up}  {'OK' if ok_up else 'FAIL'}")
+              f"client-hop-by-hop-stripped={no_keepalive_up and no_proxyconn_up} "
+              f"router-owns-Connection(keep-alive)={router_owns_conn}  "
+              f"{'OK' if ok_up else 'FAIL'}")
         print(f"                     (upstream saw Host={echoed.get('host')!r} "
-              f"Content-Length={echoed.get('content-length')!r})")
+              f"Content-Length={echoed.get('content-length')!r} "
+              f"Connection={echoed.get('connection')!r})")
         if not ok_up:
             failures.append(("UP request headers", echoed))
 
