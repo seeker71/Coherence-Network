@@ -131,7 +131,7 @@
     (let char-rt
         (bmf-roundtrip
             (bml-bmf-find-rule "char-lit" bml-bmf-rules)
-            (list (bml-src-op "'") (bml-src-string "x") (bml-src-op "'"))))
+            (list (bml-src-char "x"))))
     (let array-rt
         (bmf-roundtrip
             (bml-bmf-find-rule "array-int" bml-bmf-rules)
