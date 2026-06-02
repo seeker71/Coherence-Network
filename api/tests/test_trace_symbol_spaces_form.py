@@ -85,7 +85,7 @@ def test_trace_symbol_form_names_active_recipe_signatures_from_logs():
         assert required in text
 
 
-def test_trace_symbol_form_declares_four_chosen_symbol_spaces():
+def test_trace_symbol_form_declares_chosen_symbol_spaces():
     text = _form_text()
 
     for required in (
@@ -93,6 +93,7 @@ def test_trace_symbol_form_declares_four_chosen_symbol_spaces():
         'id: "geometry"',
         'id: "audio"',
         'id: "hindu-tattva"',
+        'id: "phonemic-energetic"',
         "defn chosen_symbol_spaces()",
         "defn symbol_space_for(goal)",
         "active_pattern_recipe",
@@ -103,6 +104,9 @@ def test_trace_symbol_form_declares_four_chosen_symbol_spaces():
     assert "compare_structure" in text
     assert "sense_over_time" in text
     assert "teach_felt_correspondence" in text
+    assert "observe_sound_symbol_hypothesis" in text
+    assert "source-attributed sound element + vowel modifier + glyph" in text
+    assert "sovereignty, choice, attribution, circulation, and vitality" in text
 
 
 def test_trace_symbol_form_names_tightness_and_gap_closure_recipes():
@@ -125,6 +129,10 @@ def test_trace_symbol_form_names_tightness_and_gap_closure_recipes():
         "?active_recipe_traces @cell since current_breath resolves through the host bridge",
         'id: "preserve-meaning-grain-scope"',
         'id: "register-stillness-as-action"',
+        'id: "external-lens-entry-needs-attributed-observation"',
+        'id: "observe-phonemic-energetic-lens"',
+        "source(Abazith)",
+        "observation traces record resonance, residual, and surprise separately",
         'first: "name-the-need"',
         'then: "freq-angle-focus"',
         'held_by: "observer"',

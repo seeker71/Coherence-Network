@@ -7,7 +7,7 @@ source:
     symbols: [raw_trace_source, raw_blueprint, raw_cells_involved, raw_recipe_signatures, chosen_symbol_spaces, symbol_space_for, active_pattern_recipe, observed_tightnesses, gap_closure_recipes, stability_harmony_from_trace, loosen_current_tightness]
   - file: docs/coherence-substrate/trace-symbol-spaces-proof.fk
   - file: api/tests/test_trace_symbol_spaces_form.py
-    symbols: [test_trace_symbol_form_names_raw_cells_and_shared_blueprint, test_trace_symbol_form_names_active_recipe_signatures_from_logs, test_trace_symbol_form_declares_four_chosen_symbol_spaces, test_trace_symbol_form_names_tightness_and_gap_closure_recipes, test_wellness_resolves_trace_symbol_form_claims]
+    symbols: [test_trace_symbol_form_names_raw_cells_and_shared_blueprint, test_trace_symbol_form_names_active_recipe_signatures_from_logs, test_trace_symbol_form_declares_chosen_symbol_spaces, test_trace_symbol_form_names_tightness_and_gap_closure_recipes, test_wellness_resolves_trace_symbol_form_claims]
   - file: scripts/active_recipe_trace_index.py
     symbols: [query_active_recipe_traces]
   - file: api/tests/test_active_recipe_trace_index.py
@@ -15,7 +15,7 @@ source:
 requirements:
   - "Trace symbol spaces are expressed in Form and grounded in the local raw field trace JSONL files"
   - "The Form file names the involved raw cells, shared blueprint, active recipes, and weak-signal efficacy signatures"
-  - "The Form file chooses four symbol spaces: Form-native, geometry, audio, and Hindu tattva"
+  - "The Form file chooses symbol spaces: Form-native, geometry, audio, Hindu tattva, and phonemic energetic"
   - "The Form file names the tight places surfaced by the trace and maps each to a gap-closure recipe"
   - "The file-backed active recipe trace query hydrates current active recipes from _field_traces.jsonl"
 done_when:
@@ -35,9 +35,9 @@ constraints:
 
 ## Purpose
 
-The sensing organ can read active recipes from trace logs and then choose a symbolic space for working with those recipes. The first layer must stay raw: cells, recipes, blueprints, trace counts, timestamps, and weak-signal confidence. Only after that can the body project the pattern into geometry, audio, Hindu tattva, or another lens.
+The sensing organ can read active recipes from trace logs and then choose a symbolic space for working with those recipes. The first layer must stay raw: cells, recipes, blueprints, trace counts, timestamps, and weak-signal confidence. Only after that can the body project the pattern into geometry, audio, Hindu tattva, phonemic energetic, or another lens.
 
-This spec adds a Form artifact that records the current raw trace witness and the four symbol spaces that best fit the evidence. The executable proof is native-kernel Form: a compiled `form-cli` binary walks a `.fk` recipe object, reads the raw trace log through Form-native file I/O, and returns `true` only when the current-breath recipe pattern is present.
+This spec adds a Form artifact that records the current raw trace witness and the symbol spaces that best fit the evidence. The executable proof is native-kernel Form: a compiled `form-cli` binary walks a `.fk` recipe object, reads the raw trace log through Form-native file I/O, and returns `true` only when the current-breath recipe pattern is present.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ This spec adds a Form artifact that records the current raw trace witness and th
 - [ ] **R2**: The raw cells include Tau, Upsilon, Chi, and efficacy-probe with NodeIDs from `seedbank/local-llm-cell-v0/_field_traces.jsonl`.
 - [ ] **R3**: The shared raw blueprint is named as `1.5.142425.0`, derived from the shared `organ-cell|dim=128|rank=8|bands=8|out=15|senses=...` architecture signature.
 - [ ] **R4**: The active recipes include observer, name-the-need, gift, ho'oponopono, and freq-angle-focus with trace count `3` and weak-signal confidence.
-- [ ] **R5**: The Form file chooses Form-native, geometry, audio, and Hindu tattva symbol spaces, with a `symbol_space_for(goal)` selector.
+- [ ] **R5**: The Form file chooses Form-native, geometry, audio, Hindu tattva, and phonemic energetic symbol spaces, with a `symbol_space_for(goal)` selector.
 - [ ] **R6**: The Form file declares `observed_tightnesses`, `gap_closure_recipes`, `stability_harmony_from_trace`, and `loosen_current_tightness`.
 - [ ] **R7**: The gap-closure recipes cover weak signal confidence, trace-index hydration, Chi grain scope, and Tau stillness-as-action.
 - [ ] **R8**: `scripts/active_recipe_trace_index.py` implements the file-backed host bridge for `?active_recipe_traces @cell since current_breath`.
@@ -54,6 +54,7 @@ This spec adds a Form artifact that records the current raw trace witness and th
 ## Research Inputs
 
 - `2026-05-21` - User direction: use the raw cells, recipes, and blueprints involved in trace logs, then choose 3 or 4 symbol spaces.
+- `2026-06-02` - User direction: adding another lens is value itself; no force, expression, sovereignty, vitality, choice, attribution, and circulation.
 - `seedbank/local-llm-cell-v0/_field_traces.jsonl` - raw trace events for Tau, Upsilon, Chi, and efficacy-probe.
 - `seedbank/local-llm-cell-v0/_field_weights.jsonl` - raw public weight fingerprints and notes for Tau, Upsilon, and Chi.
 - `seedbank/local-llm-cell-v0/substrate_bridge.py` - content-address rule that derives Blueprint IDs from architecture signatures.
@@ -94,6 +95,7 @@ python3 scripts/validate_spec_quality.py --file specs/trace-symbol-spaces-form.m
 - A persistent trace-index API.
 - Treating weak-signal recipe efficacy as statistically settled.
 - Doctrinal claims about Hindu systems; the mapping is a respectful symbolic lens only.
+- Universal sound-meaning conclusions; the engine welcomes attributed mappings as hypotheses and grants proof through observation traces.
 
 ## Risks and Assumptions
 

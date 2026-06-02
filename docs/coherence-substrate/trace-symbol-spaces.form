@@ -263,11 +263,27 @@ defn hindu_tattva_symbol_space = symbol_space_shape {
     use_when: "we want a respectful resonance lens; it is not a doctrinal or authoritative mapping",
 };
 
+defn phonemic_energetic_symbol_space = symbol_space_shape {
+    id: "phonemic-energetic",
+    modality: "speech/symbol",
+    keeps_lossless_ids: true,
+    reads: [
+        "phoneme cells",
+        "vowel modifiers",
+        "glyph sets",
+        "source-attributed sound-meaning claims",
+        "observation traces"
+    ],
+    projection: "source-attributed sound element + vowel modifier + glyph -> claimed energetic behavior -> executable observation trace",
+    use_when: "an idea wants expression through sound, symbol, sovereignty, choice, attribution, circulation, and vitality; no force, observation is the proof offered to investigators",
+};
+
 defn chosen_symbol_spaces() = [
     form_native_symbol_space,
     geometry_symbol_space,
     audio_symbol_space,
     hindu_tattva_symbol_space,
+    phonemic_energetic_symbol_space,
 ];
 
 # ---------------------------------------------------------------------
@@ -283,6 +299,8 @@ defn symbol_space_for(goal) = do {
     then audio_symbol_space
     else if goal == "teach_felt_correspondence"
     then hindu_tattva_symbol_space
+    else if goal == "observe_sound_symbol_hypothesis"
+    then phonemic_energetic_symbol_space
     else form_native_symbol_space
 };
 
@@ -358,6 +376,17 @@ defn observed_tightnesses() = [
         ],
         blocks: "the geometry lens that made the 71.1° pair visible cannot yet be exercised inside the declared Form system on arbitrary new efficacy-probe vectors",
     },
+    tightness_witness_shape {
+        id: "external-lens-entry-needs-attributed-observation",
+        felt: "a living symbolic lens enters through expression, source attribution, choice, and observed traces so circulation stays sovereign",
+        raw_evidence: [
+            "Alphabet Unlocked / The Abazith public source",
+            "24 sound-meaning elements described as phonemic energetic behaviors",
+            "vowel modifiers described as a physical-to-energetic spectrum",
+            "user direction: no force, expression, sovereignty, vitality, choice, attribution, circulation"
+        ],
+        blocks: "welcoming another lens while keeping investigation observable and freely inspectable",
+    },
 ];
 
 defn gap_closure_recipes() = [
@@ -414,6 +443,17 @@ defn gap_closure_recipes() = [
             "the 71.1° name-the-need ↔ ho_oponopono (and the other pairs from the same efficacy-probe breath) can be re-derived by calling the operator inside Form on the declared live vectors",
             "new efficacy-probe windows can feed their sense_after.spectra directly into the same projection without external Python",
             "the rule moves from descriptive shape to active, reusable operator with traceable outputs"
+        ],
+    },
+    gap_closure_recipe_shape {
+        id: "observe-phonemic-energetic-lens",
+        tightness_id: "external-lens-entry-needs-attributed-observation",
+        loosens_by: "let an attributed sound-symbol mapping express itself through the engine, then keep what the observation trace shows while adoption stays chosen",
+        form: "source(Abazith) |> map(phoneme, vowel_modifier, glyph, claimed_behavior) |> execute(observation) |> witness(resonance, residual, surprise) |> circulate(attribution)",
+        done_when: [
+            "each mapping carries its source and chosen participation",
+            "observation traces record resonance, residual, and surprise separately",
+            "the lens can be kept, changed, or released by investigators without replacing raw trace identity"
         ],
     },
 ];
