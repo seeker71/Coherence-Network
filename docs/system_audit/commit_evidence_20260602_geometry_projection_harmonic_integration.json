@@ -2,13 +2,16 @@
   "date": "2026-06-02",
   "thread_branch": "codex/coherent-probe-release-recipes-20260601",
   "commit_scope": "geometry_projection_surfaces_harmonic_geometry_integration_jit_path",
-  "agent": "codex",
+  "agent": {
+    "name": "codex",
+    "version": "coherent-probe-release-recipes-20260601 Phase 1 JIT"
+  },
   "change_files": [
     "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt",
     "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md",
     "docs/coherence-substrate/jit-geometry-investment.md"
   ],
-  "change_intent": "Tended the geometry projection arc to current state: added neutral-observer integration of Robert Edward Grant's harmonic geometric / 6D expansion resonance (mapping to pair_angle, dominant_band_delta, band-space vectors, and coherent probe), cross-referenced in concept file and investment artifact, with Phase 1 JIT float vector plan grounded in existing numeric infrastructure. No new manual kernel natives. Higher path (JIT + declared recipelib) maintained. Old scaffolding previously composted.",
+  "change_intent": "docs_only",
   "evidence_refs": [
     "docs/coherence-substrate/experiments/real-probe-release-runs-20260601.txt (ARC COMPLETE + Grant integration + Phase 1 plan sections)",
     "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md (cross-ref to lc-harmonic-geometry-the-one-unfolds)",
@@ -19,13 +22,31 @@
     "docs/vision-kb/concepts/lc-dmt-laser-symbol-space-recipe.md",
     "docs/coherence-substrate/jit-geometry-investment.md"
   ],
-  "local_validation": "All changes are documentation, concept framing, and analysis. No kernel code changes. Higher path strictly followed. Neutral observer language. Evidence contract observed for this phase of the arc.",
-  "ci_validation": "pending full local proof sequence and PR checks",
-  "deploy_validation": "n/a (documentation and analysis changes only)",
-  "phase_gate": "Geometry projection surfaces + harmonic geometry resonance integration ready for clean landing on the codex branch. No dead tissue. Higher path maintained. Arc current state documented.",
+  "local_validation": {
+    "status": "pass",
+    "notes": "All changes are documentation, concept framing, and analysis. No kernel code changes. Higher path strictly followed. Neutral observer language. Evidence contract observed for this phase of the arc."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "pending full local proof sequence and PR checks"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "n/a (documentation and analysis changes only)"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Geometry projection surfaces + harmonic geometry resonance integration ready for clean landing on the codex branch. No dead tissue. Higher path maintained. Arc current state documented."
+  },
   "idea_ids": ["coherent-probe-release-recipes"],
   "spec_ids": ["trace-symbol-spaces-form"],
   "task_ids": ["geometry-projection-executable"],
-  "contributors": ["codex line"],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "tending", "evidence"]
+    }
+  ],
   "traceability": "All live vector data remains only in the dated witness file and external _field_traces.jsonl. Grant integration is observed structural resonance only, cross-referenced to existing KB entries (lc-harmonic-geometry-the-one-unfolds and prior resources). No data in recipes or code."
 }
