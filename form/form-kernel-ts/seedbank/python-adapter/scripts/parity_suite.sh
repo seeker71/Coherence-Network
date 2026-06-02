@@ -168,6 +168,20 @@ PARITY_FILES=(
     # head/tail fold (Rust+TS — Go carries no _iter, the same situation
     # concept_match_score ships under). Frozen sample → 0.5 (matched 2 of 4).
     "examples/endpoint_tag_match_score_demo.py"
+    # endpoint_worldview_alignment — belief_service._score_worldview_alignment's
+    # geometric core: COSINE SIMILARITY over two parallel axis-vectors,
+    # dot(a,b) / (||a||*||b||), the geometric counterpart to tag_match_score's
+    # set-membership fold. The host projects both worldview-axes dicts into parallel
+    # float vectors (fixed BeliefAxis order) + names matched_axes; the kernel folds
+    # dot + both sums-of-squares in one parallel index walk, sqrt each norm (math_sqrt),
+    # guards denom>0 else 0.5, clamps [0,1]. math_sqrt is IEEE-correct, three-way
+    # bit-identical (float-natives-band.fk → sqrt(16)==4.0 tolerance-free; the 1-ULP
+    # caveat is math_pow's, not math_sqrt's). The parallel _get-indexed while fold is
+    # the same shape weighted_average ships under (Rust+TS value-exact == CPython; Go
+    # carries no _get/_iter fold). Frozen sample (contributor [0.6,0,0.8,0,0,0],
+    # idea [0.8,0,0.6,0,0,0]) → dot 0.96 / (1.0*1.0) = 0.96, an exact rational every
+    # kernel formats identically; the irrational-cosine edge (1/sqrt(2)) is bit-identical.
+    "examples/endpoint_worldview_alignment_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
     "examples/python_typing_compose_demo.py"

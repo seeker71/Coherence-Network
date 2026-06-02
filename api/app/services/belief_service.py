@@ -157,6 +157,34 @@ def _score_concept_overlap(
     return score, matched_concepts
 
 
+def cosine_alignment_score(
+    contributor_vec: List[float], idea_vec: List[float]
+) -> float:
+    """Pure worldview-cosine core: cosine similarity of two parallel float vectors.
+
+    The geometric scoring half of `_score_worldview_alignment`, extracted so it can
+    be served by the Form kernel (endpoint_worldview_alignment_demo.fk) and reused as
+    the `/api/utils/worldview_alignment` fallback without a BeliefProfile. The host
+    projects both worldview-axes dicts into PARALLEL float vectors in the fixed
+    BeliefAxis order (the dict→vector projection + matched_axes naming + the
+    empty-idea_axes guard stay in `_score_worldview_alignment`); this helper computes
+    only the scalar cosine: dot(a, b) / (||a|| * ||b||), with a 0.5 zero-denom guard,
+    clamped to [0.0, 1.0]. `** 0.5` is the sqrt; the recipe lowers it to math_sqrt
+    (IEEE-correct, bit-identical to `** 0.5` for these vectors).
+    """
+    dot = 0.0
+    norm_contributor = 0.0
+    norm_idea = 0.0
+    for cv, iv in zip(contributor_vec, idea_vec):
+        dot += cv * iv
+        norm_contributor += cv * cv
+        norm_idea += iv * iv
+
+    denom = (norm_contributor ** 0.5) * (norm_idea ** 0.5)
+    score = dot / denom if denom > 0 else 0.5
+    return max(0.0, min(1.0, score))
+
+
 def _score_worldview_alignment(
     profile: BeliefProfile,
     idea_props: dict[str, Any],
@@ -166,22 +194,22 @@ def _score_worldview_alignment(
     if not idea_axes:
         return 0.5, []
 
-    dot = 0.0
-    norm_contributor = 0.0
-    norm_idea = 0.0
+    # Host-side DICT→VECTOR PROJECTION (fixed BeliefAxis order) + matched_axes naming.
+    # The two parallel float vectors are the kernel's input; the scalar cosine is the
+    # kernel computation (cosine_alignment_score). matched_axes is a naming side-output
+    # (cv>0.3 AND iv>0.3 → axis name) that stays host-side.
+    contributor_vec: List[float] = []
+    idea_vec: List[float] = []
     matched_axes: List[str] = []
     for axis in BeliefAxis:
         cv = profile.worldview_axes.get(axis.value, 0.0)
         iv = idea_axes.get(axis.value, 0.0)
-        dot += cv * iv
-        norm_contributor += cv * cv
-        norm_idea += iv * iv
+        contributor_vec.append(cv)
+        idea_vec.append(iv)
         if cv > 0.3 and iv > 0.3:
             matched_axes.append(axis.value)
 
-    denom = (norm_contributor ** 0.5) * (norm_idea ** 0.5)
-    score = dot / denom if denom > 0 else 0.5
-    return max(0.0, min(1.0, score)), matched_axes
+    return cosine_alignment_score(contributor_vec, idea_vec), matched_axes
 
 
 def score_tag_match_lists(contributor_tags: List[str], idea_tags: List[str]) -> float:
