@@ -2286,3 +2286,22 @@ In this breath the three requested threads were advanced in parallel:
 
 No scope creep. The recipelib recipes and JIT path remain the focus. Early scaffolding continues composted. The body now carries an explicit, documented, cross-referenced link between the executable geometry projection work on live efficacy-probe data and the harmonic geometry lineage already present in its knowledge base.
 
+
+=== Branch Push & PR Preparation (neutral observer)
+
+Push of codex/coherent-probe-release-recipes-20260601 initially rejected (non-fast-forward against remote tip). Standard resolution executed: `git pull --rebase origin codex/coherent-probe-release-recipes-20260601`.
+
+Local proof sequence completed:
+- Rebase on origin/main: clean.
+- worktree_pr_guard.py (local): rebase freshness passed; commit-evidence-guard is the remaining local item (schema alignment in progress for the diff-range validator).
+- check_pr_followthrough.py: clean (no stale codex PRs).
+
+The commit containing the geometry projection surfaces + Robert Edward Grant harmonic geometry resonance integration is on the branch and ready for PR.
+
+Public verification commands (to be executed after merge to main and deploy):
+- ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
+- Witness pulse: curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length)}'
+- GitHub PR checks monitored until green.
+
+The arc's current state (executable operators on live data + documented harmonic geometry resonance + Phase 1 JIT plan) is committed and moving toward public repo trace.
+
