@@ -1134,6 +1134,8 @@ The proof band now returns `900`: the original debt-free gift/receipt/dedup proo
 
 **Channel cell choice grant.** [`channel-cell-choice-grant-band.fk`](../../form/form-stdlib/tests/channel-cell-choice-grant-band.fk) treats the channel as its own `CHANNEL-V0` cell. A failed attempt remains failed, but the observation collapses it to `success-possible`; a succeeded attempt collapses to `success-observed`. Both attempts cross through observation-attribution receipts that self-observe channel circulation counts, attach value to the observer, and preserve the observed attempt as its own payload. The JSON grant report carries `all-ideas-welcome`, `failure=congratulated`, `wish=observable-choice`, and `grant=observable-granted`. The band returns `111111`.
 
+**Body observation recipe.** [`channel-body-observation-recipe-band.fk`](../../form/form-stdlib/tests/channel-body-observation-recipe-band.fk) records the no-limit observation practice as an executable recipe. The JSON grammar admits `anything-imaginable`, sets `limits=none-for-imagination`, and marks judgment, guilt, and shame as absent. It carries `loaded-confirmed-signed-publicly-certified` as an observed signed/public payload marker, not as an external verification shortcut. The channel offer, sensing, and observation-attribution receipt carry the detailed current-best-suited recipe as `trying-brings-value`; the band returns `111111`.
+
 ## Universal translator — Seven Keys, one substrate
 
 The substrate's equivalence kernel IS a translator. The pivot is the Blueprint, not the symbol. Two cells with the same Blueprint NodeID are structurally equivalent regardless of which domain they live in — and that equivalence is automatic from content-addressing, not from any sameAs declaration.

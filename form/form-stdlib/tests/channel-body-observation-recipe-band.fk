@@ -1,0 +1,154 @@
+; channel-body-observation-recipe-band.fk -- no-limit body observation recipe.
+;
+; This proof remembers the body rule: trying brings value. Anything imaginable
+; may enter as an observable attempt without judgment, guilt, or shame. The
+; recipe can be detailed and identity-suited. A signed/public identity marker is
+; carried as observed payload state in the channel; it does not close entry or
+; become external verification by itself.
+;
+; Shape:
+;   body recipe -> no-limit entry -> no judgment/guilt/shame
+;               -> observed signed/public identity marker
+;               -> trying-brings-value
+;               -> observer attribution
+;
+; Band verdict: 111111 when the body recipe is whole.
+;   1      recipe admits anything imaginable with no limiting fields
+;   10     identity marker is carried as observed signed/public payload
+;   100    offer, sensing, and attribution receipt cross the channel
+;   1000   observation attribution carries trying-brings-value
+;   10000  JSON grammar grants detailed current-best-suited observation
+;   100000 symbol-lens flow remains valid and observable-choice stays granted
+;
+; preludes: form-stdlib/json.fk form-stdlib/channel.fk
+
+(do
+    (let path "/tmp/coh-channel-body-observation-recipe-band.fkb")
+    (channel-create path)
+
+    ;; --- preferred observation recipe as grammar --------------------
+    (let recipe-json "{\"body\":\"shared\",\"admission\":\"anything-imaginable\",\"limits\":\"none-for-imagination\",\"judgment\":\"absent\",\"guilt\":\"absent\",\"shame\":\"absent\",\"identity_marker\":\"loaded-confirmed-signed-publicly-certified\",\"identity_marker_mode\":\"observed-signed-public-payload\",\"recipe\":\"preferred-observation\",\"detail\":\"detailed-unique-current-best-suited\",\"wish\":\"observable-choice\",\"grant\":\"observable-granted\"}")
+    (let recipe (parse-json "channel-body-observation-recipe.json" recipe-json))
+    (let admission (json-string-value (json-object-get recipe "admission")))
+    (let limits (json-string-value (json-object-get recipe "limits")))
+    (let judgment (json-string-value (json-object-get recipe "judgment")))
+    (let guilt (json-string-value (json-object-get recipe "guilt")))
+    (let shame (json-string-value (json-object-get recipe "shame")))
+    (let identity-marker (json-string-value (json-object-get recipe "identity_marker")))
+    (let identity-marker-mode (json-string-value (json-object-get recipe "identity_marker_mode")))
+    (let recipe-value
+        (channel-body-observation-recipe-value
+            admission
+            limits
+            judgment
+            guilt
+            shame
+            identity-marker
+            identity-marker-mode))
+
+    (let no-limit-ok
+        (and
+            (str_eq admission "anything-imaginable")
+            (and
+                (str_eq limits "none-for-imagination")
+                (and
+                    (str_eq judgment "absent")
+                    (and
+                        (str_eq guilt "absent")
+                        (str_eq shame "absent"))))))
+    (let no-limit-score (if no-limit-ok 1 0))
+
+    (let identity-ok
+        (and
+            (str_eq identity-marker "loaded-confirmed-signed-publicly-certified")
+            (str_eq identity-marker-mode "observed-signed-public-payload")))
+    (let identity-score (if identity-ok 10 0))
+
+    ;; --- channel expression and sensing -----------------------------
+    (let offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "body-observation-recipe")
+            (intern_trivial_string "open-seed")
+            (intern_trivial_string "trying-brings-value")
+            (intern_trivial_string "try-ing-brings-val-ue")
+            (intern_trivial_string "i")
+            recipe-value
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "open-entry")))
+    (let c1 (channel-append path (channel-message offer)))
+    (let read-offer (channel-msg-payload (nth (channel-read path) 0)))
+
+    (let sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "no-judgment-no-guilt-no-shame")
+            (intern_trivial_string "no-idea-too-anything")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "observe-body-recipe")))
+    (let c2 (channel-append path (channel-message sensing)))
+    (let read-sensing (channel-msg-payload (nth (channel-read path) 1)))
+
+    ;; --- observation attribution ------------------------------------
+    (let before-receipt (len (channel-read path)))
+    (let receipt
+        (channel-observation-attribution
+            (intern_trivial_string "observer")
+            read-sensing
+            (intern_trivial_string "preferred-observation-recipe")
+            (intern_trivial_string "body-channel-recipe")
+            (intern_trivial_int before-receipt)
+            (intern_trivial_string "self-observed")
+            (intern_trivial_string "imagination+identity-suited+no-judgment+no-guilt+no-shame")
+            recipe-value
+            (intern_trivial_string "continue-body-observation-recipe")))
+    (let c3 (channel-append path (channel-message receipt)))
+    (let read-receipt (channel-msg-payload (nth (channel-read path) 2)))
+
+    (let channel-ok
+        (and
+            (eq c1 1)
+            (and
+                (eq c2 2)
+                (and
+                    (eq before-receipt 2)
+                    (and
+                        (eq c3 3)
+                        (and
+                            (node_eq offer read-offer)
+                            (and
+                                (node_eq sensing read-sensing)
+                                (node_eq receipt read-receipt))))))))
+    (let channel-score (if channel-ok 100 0))
+
+    (let attribution-ok
+        (and
+            (str_eq (node_value (channel-observation-attribution-observer read-receipt)) "observer")
+            (and
+                (node_eq read-sensing (channel-observation-attribution-observed read-receipt))
+                (node_eq recipe-value (channel-observation-attribution-collapsed-attribution read-receipt)))))
+    (let attribution-score
+        (if (and attribution-ok (str_eq (node_value recipe-value) "trying-brings-value")) 1000 0))
+
+    (let detail-ok
+        (and
+            (str_eq (json-string-value (json-object-get recipe "recipe")) "preferred-observation")
+            (and
+                (str_eq (json-string-value (json-object-get recipe "detail")) "detailed-unique-current-best-suited")
+                (and
+                    (str_eq (json-string-value (json-object-get recipe "body")) "shared")
+                    (str_eq (json-string-value (json-object-get recipe "grant")) "observable-granted")))))
+    (let detail-score (if detail-ok 10000 0))
+
+    (let grant (channel-choice-grant-state (json-string-value (json-object-get recipe "wish")) "failed" "self-observed"))
+    (let final-ok
+        (and
+            (channel-symbol-lens-flow-valid? read-sensing)
+            (and
+                (str_eq (node_value grant) "granted")
+                (str_eq (node_value (channel-symbol-lens-sensing-surprise read-sensing)) "no-idea-too-anything"))))
+    (let final-score (if final-ok 100000 0))
+
+    (sum (list no-limit-score identity-score channel-score attribution-score detail-score final-score)))
