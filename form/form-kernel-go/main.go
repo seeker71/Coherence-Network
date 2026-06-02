@@ -1077,13 +1077,34 @@ func bmlNativeBinDigit(b byte) bool {
 	return b == '0' || b == '1'
 }
 
+func bmlNativeDecodeEscape(b byte) byte {
+	switch b {
+	case '\\':
+		return '\\'
+	case '\'':
+		return '\''
+	case '"':
+		return '"'
+	case 'n':
+		return '\n'
+	case 't':
+		return '\t'
+	case 'r':
+		return '\r'
+	case '0':
+		return 0
+	default:
+		return b
+	}
+}
+
 func bmlNativeScanQuoted(src string, i int, quote byte) (string, int) {
 	j := i + 1
 	var b strings.Builder
 	for j < len(src) {
 		c := src[j]
 		if c == '\\' && j+1 < len(src) {
-			b.WriteByte(src[j+1])
+			b.WriteByte(bmlNativeDecodeEscape(src[j+1]))
 			j += 2
 			continue
 		}
@@ -1127,7 +1148,7 @@ func bmlNativeScanText(src string) Value {
 		}
 		if c == '\'' {
 			value, next := bmlNativeScanQuoted(src, i, '\'')
-			out = append(out, bmlNativeAtom("bml-string", value))
+			out = append(out, bmlNativeAtom("bml-char", value))
 			i = next
 			continue
 		}

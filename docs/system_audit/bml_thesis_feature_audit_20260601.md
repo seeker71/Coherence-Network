@@ -75,6 +75,11 @@ What is proven today:
   lowers it into BMA ops, runs forward, and replays backward to the empty VM
   state. General statement-body lowering for arbitrary `if_fail` /
   `while_success` blocks remains a gap.
+- BML character literals now scan as first-class `bml-char` source objects in
+  the Form scanner and sibling-native Go/Rust/TypeScript scanners. The thesis
+  escape set from `BMF-grammar.bml` is proven for `\\`, `\'`, `"`, `\n`, `\t`,
+  `\r`, and `\0` through `.bml` file scan, Form text scan, BML AST return
+  nodes, BMA execution, and backward replay.
 - A BML class/interface/inheritance component model covers structural bases,
   delegated bases, inherited interfaces, default interface methods, section
   property inheritance, class/static flags, member lookup, access checks, and
@@ -97,11 +102,12 @@ What is not proven yet:
 Current local counts from `form/form-stdlib/grammars/bml.fk`:
 
 - `bml-reference-rule-names`: 172 named thesis/reference grammar entries.
-- `section [bml.bmf]`: 172 BML BMF rule entries.
+- `section [bml.bmf]`: 173 BML BMF rule entries, including the focused
+  executable `return-char` proof rule.
 - `section [bml.bmf]` entries using generic `bml-emit-node-source`: 140.
-- BML BMF entries with semantic emitters other than `bml-emit-node-source`: 32.
+- BML BMF entries with semantic emitters other than `bml-emit-node-source`: 33.
 - Explicit reversible BML source rules with `<=` reverse emitters: 17.
-- Native BML recipe-section compiler rules exposed in `bml-recipe-section`: 19.
+- Native BML recipe-section compiler rules exposed in `bml-recipe-section`: 20.
 
 These counts mean the grammar surface is recorded, but full semantic lowering
 is not complete rule-for-rule.
@@ -129,9 +135,9 @@ is not complete rule-for-rule.
 | BMF terminals: char ranges and literals with whitespace control | `backtracking-model-languages.txt:171-174` | native-executed for existing Form BMF subset | `bmf-component-runtime-exec-band.fk` executes `comp-bmf-char-range` and `comp-bmf-char-chain` terminals. Full thesis whitespace/comment placement semantics remain a gap. |
 | Tags and semantic methods | `backtracking-model-languages.txt:176-182` | partial native-executed / gap | `bmf-component-runtime-exec-band.fk` proves BMF Tag capture over a repeated RuleCall. `bmf-source-rule-to-runtime-band.fk` proves the same shape through source-object compiler stages. Runtime method predicates with thesis ParseStack/Context API remain a gap. |
 | `.bml` files, packages, imports, program start | `backtracking-model-languages.txt:241-270` | native-executed for focused executable file; component/native-proven for companion-shaped declaration file | `bml-thesis-file-execution-proof.fk` proves executable file DO/UNDO; `bml-thesis-companion-file-proof.fk` proves real package/import/class/interface declarations and source-originated `Main` method body. Full link/load remains a gap. |
-| Lexical conventions: nested comments, keywords, identifiers, operators, int/hex/bin/float/char/string | `backtracking-model-languages.txt:243-253` | native-executed for focused file scanner subset | Current proofs cover line/block comments, keywords, properties, identifiers, operators, decimal/hex/bin ints, decimal/exponent floats, strings, and large-file scanning through sibling-native BML scanners. `bml-thesis-numeric-literals-source-proof.fk` proves `0x`, `0X`, `0b`, and `0B` integer spellings. `bml-thesis-float-literals-source-proof.fk` proves focused decimal/exponent float spellings from native file scan and Form text scan into BMA execution plus backward replay. Complete signed float and char escape parity remains a gap. |
+| Lexical conventions: nested comments, keywords, identifiers, operators, int/hex/bin/float/char/string | `backtracking-model-languages.txt:243-253`; `source-samples/BMF-grammar.bml:47-69` | native-executed for focused file scanner subset | Current proofs cover line/block comments, keywords, properties, identifiers, operators, decimal/hex/bin ints, decimal/exponent floats, thesis char escapes, strings, and large-file scanning through sibling-native BML scanners. `bml-thesis-numeric-literals-source-proof.fk` proves `0x`, `0X`, `0b`, and `0B` integer spellings. `bml-thesis-float-literals-source-proof.fk` proves focused decimal/exponent float spellings from native file scan and Form text scan into BMA execution plus backward replay. `bml-thesis-char-escapes-source-proof.fk` proves `\\`, `\'`, `"`, `\n`, `\t`, `\r`, and `\0` from native file scan and Form text scan into BMA execution plus backward replay. Complete signed float folding remains a gap. |
 | Binary types, structures, lvalue/rvalue | `backtracking-model-languages.txt:271-275` | grammar-manifest | No full binary layout/get-put code generation proof yet. |
-| Expressions, casts, member access, calls, `instanceof`, arrays, operators, assignment | `backtracking-model-languages.txt:292-594` | grammar-manifest with small executable expression subset | `method-return-add`, `char-lit`, and `array-int` execute. `bml-thesis-rule-body-execution-proof.fk` proves simple name assignment bodies from `container-Rule.bml` execute against native records. Full precedence, overload, cast, bitwise, logical, member dispatch, and general assignment lowering remain gaps. |
+| Expressions, casts, member access, calls, `instanceof`, arrays, operators, assignment | `backtracking-model-languages.txt:292-594` | grammar-manifest with small executable expression subset | `method-return-add`, `char-lit`, `return-char`, and `array-int` execute. `bml-thesis-char-escapes-source-proof.fk` proves char-literal return execution and backward replay. `bml-thesis-rule-body-execution-proof.fk` proves simple name assignment bodies from `container-Rule.bml` execute against native records. Full precedence, overload, cast, bitwise, logical, member dispatch, and general assignment lowering remain gaps. |
 | Statements: if/select/switch/while/do/loop/for/break/continue/return/choice/try/throw/fail/with | `backtracking-model-languages.txt:596-636` | native-executed for selected BMA subset; grammar-manifest for most source forms | return/break/continue/throw/try/fail/cut/mark/choice/choose execute in proof tests. `bml-thesis-control-primitives-source-proof.fk` adds source-originated `if_fail` fallback and guarded `while_success` execution. Full arbitrary control-flow lowering remains a gap. |
 | Companion backtracking syntax: `choose`, `if_fail`, `while_success`, `cut`, `mark` | `companion/bml-search-algorithms.txt:49-78` | native-executed for focused source forms | `choose`, `fail`, `cut`, and `mark` execute in thesis exit proof; `if_fail` and `while_success` now parse from `.bml`, lower to BMA, run forward, and replay backward for the focused fallback/fail-loop forms. General block lowering remains incomplete. |
 | Local and anonymous functions / blocks with context | `companion/bml-search-algorithms.txt:81-89`, `:212-218`; `backtracking-model-languages.txt:234` | grammar-manifest | Closure capture and block execution semantics remain gaps. |
@@ -224,6 +230,9 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cac
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-full-class-model-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-exit-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-numeric-literals-source-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-float-literals-source-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-char-escapes-source-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-companion-file-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-includes-source-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-primitive-cut-source-proof.fk

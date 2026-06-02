@@ -3374,13 +3374,24 @@ function bmlNativeBinDigit(code: number): boolean {
   return code === 48 || code === 49;
 }
 
+function bmlNativeDecodeEscape(ch: string): string {
+  if (ch === "\\") return "\\";
+  if (ch === "'") return "'";
+  if (ch === "\"") return "\"";
+  if (ch === "n") return "\n";
+  if (ch === "t") return "\t";
+  if (ch === "r") return "\r";
+  if (ch === "0") return "\0";
+  return ch;
+}
+
 function bmlNativeScanQuoted(src: string, i: number, quote: string): [string, number] {
   let j = i + 1;
   let out = "";
   while (j < src.length) {
     const c = src[j]!;
     if (c === "\\" && j + 1 < src.length) {
-      out += src[j + 1]!;
+      out += bmlNativeDecodeEscape(src[j + 1]!);
       j += 2;
       continue;
     }
@@ -3419,7 +3430,7 @@ function bmlNativeScanText(src: string): Value {
     }
     if (src[i] === "'") {
       const [value, next] = bmlNativeScanQuoted(src, i, "'");
-      out.push(bmlNativeAtom("bml-string", value));
+      out.push(bmlNativeAtom("bml-char", value));
       i = next;
       continue;
     }
