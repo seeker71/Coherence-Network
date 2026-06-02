@@ -1,11 +1,11 @@
 ; float-natives-band.fk — three-way sibling parity for IEEE 754 floats.
 ;
-; The kernels carry float64 trivials in distinct shapes (Rust uses TRIV
-; type tag 5, TypeScript uses 7, Go uses 7) but the .fk source sees one
-; surface: `1.5` is a float, `1` is an int. This band exercises that
-; surface across every operation Form code can perform on floats today
-; through paths that produce identical integer-aggregate output in all
-; three sibling kernels — Go, Rust, TypeScript.
+; The trivial type space is aligned three-way: FLOAT32 = 6, FLOAT64 = 7
+; across Rust, Go, and TypeScript. The .fk source sees one surface — `1.5`
+; is a float, `1` is an int — and the in-kernel NodeID type tag now agrees
+; too (asserted below). This band exercises that surface across every
+; operation Form code can perform on floats today through paths that
+; produce identical integer-aggregate output in all three sibling kernels.
 ;
 ; What's tested through three-way agreement:
 ;
@@ -34,15 +34,16 @@
 ;     The band scores integers (or non-integer floats) only — no integer-
 ;     valued float ever crosses the print boundary.
 ;
-;   • Binary artifact mode (--binary). Every kernel serializes FLOAT64
-;     trivials with its private overflow-table index in the leaf's
-;     `inst` slot; cross-kernel deserialization can't read the value
-;     back without the table. The format-recipe migration in
-;     numeric-types-plan.md resolves this by carrying the IEEE bits
-;     directly under the format-recipe. This band runs in source mode
-;     only; --binary remains a separate breath.
+;   • Binary artifact mode (--binary) carries floats too. A FLOAT64 trivial
+; serializes through a dedicated wire record (FORM_BINARY_FLOAT64) holding
+; the 8-byte IEEE value, not the per-kernel overflow-table index — each
+; kernel re-interns the value on read with a fresh local index. So the
+; float survives the .fkb round-trip three-way (proven in
+; float-artifact-roundtrip.fk under both source and --binary modes). The
+; in-kernel type tag stays off the wire for floats; portability rides on
+; the value, not the constant.
 ;
-; The aggregate score is 1 per passing check; full pass = 24.
+; The aggregate score is 1 per passing check; full pass = 26.
 ;
 ; In service of `numeric-types-plan` (kernels carry one current-epoch
 ; IEEE 754 path while the substrate moves toward format-recipes) and
@@ -127,11 +128,29 @@
     (let s24        (if (lt pow-sqrt-2 1.4142136)
                         (if (gt pow-sqrt-2 1.4142135) 1 0) 0))
 
+    ;; ── 8. Trivial type-tag alignment — three-way agreement ───────
+    ;; A float64 trivial's NodeID type tag is 7 in every kernel (Rust
+    ;; was 5 before alignment; Go and TS were already 7). node_type
+    ;; reads the raw tag; this check fails three-way if any kernel
+    ;; drifts the FLOAT64 constant.
+    (let s25 (if (eq (node_type (intern_trivial_float "0.8125")) 7) 1 0))
+
+    ;; A float32 trivial's type tag is 6 three-way, and a float32 leaf
+    ;; reads back its IEEE value in every kernel. Rust never PRODUCES a
+    ;; float32 (float literals parse as float64; make_float32 is a Go/TS
+    ;; native), but Rust READS one: a hand-built type-6 leaf carrying the
+    ;; IEEE bits of 0.5f32 (0x3F000000 = 1056964608) decodes to 0.5 via
+    ;; float_value in all three kernels. Before alignment Rust panicked
+    ;; on type 6; now it recognizes float32 for sibling read-parity.
+    (let f32-leaf (make_nodeid 1 1 6 1056964608))
+    (let s26 (if (and (eq (node_type f32-leaf) 6)
+                      (eq (float_value f32-leaf) 0.5)) 1 0))
+
     ;; ── Aggregate — int + int through MATH (no float in result) ───
     ;; Every sub-score is 1 or 0; the sum flows through the I32 path
-    ;; in every kernel and prints as a plain integer. Full pass = 24.
+    ;; in every kernel and prints as a plain integer. Full pass = 26.
     (add s1 (add s2 (add s3 (add s4 (add s5
     (add s6 (add s7 (add s8 (add s9 (add s10
     (add s11 (add s12 (add s13 (add s14 (add s15
     (add s16 (add s17 (add s18 (add s19 (add s20
-    (add s21 (add s22 (add s23 s24))))))))))))))))))))))))
+    (add s21 (add s22 (add s23 (add s24 (add s25 s26))))))))))))))))))))))))))

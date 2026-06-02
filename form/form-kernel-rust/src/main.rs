@@ -239,13 +239,20 @@ pub(crate) const TRIV_INT: u32 = 1;
 pub(crate) const TRIV_STRING: u32 = 2;
 const TRIV_BOOL: u32 = 3;
 const TRIV_NULL: u32 = 4;
-// FLOAT64 — value lives in the kernel's `f64s` overflow table; the inst
-// field carries the table index. Sibling TS kernel uses Triv.FLOAT64 = 7;
-// we use 5 here because the Rust kernel never shipped 8/16/32 variants and
-// FLOAT64 is the next number after NULL. Both kernels read .fk source where
-// the type tag is implicit in token shape (digits+dot vs digits), so the
-// numeric constants stay private to each side.
-pub(crate) const TRIV_FLOAT64: u32 = 5;
+// FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries the
+// IEEE bit pattern reinterpreted as u32. No overflow table needed (32 bits fit
+// the 32-bit inst slot). This kernel parses float literals only as float64, so
+// nothing here CREATES a float32; the type + intern + decode exist so a float32
+// leaf written by a sibling kernel reads back the same value. Aligned three-way:
+// FLOAT32 = 6 across Rust/Go/TS.
+pub(crate) const TRIV_FLOAT32: u32 = 6;
+// FLOAT64 — value lives in the kernel's `f64s` overflow table (64 bits exceed
+// the 32-bit inst slot); the inst field carries the table index. Aligned
+// three-way: FLOAT64 = 7 across Rust/Go/TS. The .fkb wire format never puts
+// this tag on the wire — a float64 node serializes via the dedicated
+// FORM_BINARY_FLOAT64 record carrying the 8-byte value, so cross-kernel
+// portability rides on the value, not the type constant.
+pub(crate) const TRIV_FLOAT64: u32 = 7;
 
 // Per-RBasic instance constants
 const RMATH_PLUS: u32 = 1;
@@ -791,6 +798,32 @@ impl Kernel {
             .unwrap_or_else(|| panic!("decode_float64: bad index {}", inst))
     }
 
+    // intern_trivial_float32 — IEEE 754 32-bit inline encoding. The float's bit
+    // pattern (via f32::to_bits) lives directly in the inst slot; no overflow
+    // table needed. Two f32 values with the same bit pattern share the same
+    // NodeID by construction. NaN bit patterns are NOT canonicalized here (f32
+    // NaNs are uncommon at the substrate boundary); a typed-numeric layer above
+    // collapses them if needed. Sibling parity with Go/TS internTrivialFloat32.
+    // This kernel never CREATES a float32 (float literals parse as float64); the
+    // primitive exists so a float32 leaf from a sibling kernel reads back here.
+    // Uncalled in Rust by design — the decode side (decode_float32, the
+    // TRIV_FLOAT32 dispatch arms) carries the read-parity; this is the symmetric
+    // constructor kept for sibling parity with Go/TS internTrivialFloat32.
+    #[allow(dead_code)]
+    pub(crate) fn intern_trivial_float32(&self, f: f32) -> NodeID {
+        NodeID {
+            pkg: 1,
+            level: LEVEL_TRIVIAL,
+            ty: TRIV_FLOAT32,
+            inst: f.to_bits(),
+        }
+    }
+
+    // decode_float32 — read back the IEEE bit pattern from the inst slot.
+    pub(crate) fn decode_float32(&self, inst: u32) -> f32 {
+        f32::from_bits(inst)
+    }
+
     pub(crate) fn intern_string(&mut self, s: &str) -> NodeID {
         if let Some(&idx) = self.str_idx.get(s) {
             return NodeID {
@@ -1096,6 +1129,7 @@ impl Kernel {
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone()),
             TRIV_BOOL => Value::Bool(n.inst != 0),
             TRIV_NULL => Value::Null,
+            TRIV_FLOAT32 => Value::Float(self.decode_float32(n.inst) as f64),
             TRIV_FLOAT64 => Value::Float(self.decode_float64(n.inst)),
             _ => panic!("trivial_value: unknown trivial type {}", n.ty),
         }
@@ -3843,6 +3877,7 @@ impl Kernel {
         self.register_native("float_value", cat_method(), |k, _, args| {
             let n = args[0].as_nid();
             match n.ty {
+                TRIV_FLOAT32 => Value::Float(k.decode_float32(n.inst) as f64),
                 TRIV_FLOAT64 => Value::Float(k.decode_float64(n.inst)),
                 _ => panic!("float_value expects a float NodeID"),
             }
@@ -4534,7 +4569,7 @@ fn emit_expr(k: &Kernel, n: NodeID, scope: &mut EmitScope<'_>) -> Option<Emitted
             } else {
                 "false".to_string()
             })),
-            // STRING / NULL / FLOAT64 — not on the JIT path.
+            // STRING / NULL / FLOAT32 / FLOAT64 — not on the JIT path.
             _ => None,
         };
     }
@@ -8389,9 +8424,10 @@ const FORM_BINARY_COMPOSITE: u32 = 1;
 // FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
 // is a per-kernel f64s-table index — meaningless in another kernel. So a float
 // node serializes as [FORM_BINARY_FLOAT64][8 bytes IEEE-754 little-endian] and
-// each kernel re-interns the value on read (fresh local index). The dedicated
-// tag also sidesteps the divergent per-kernel float `ty` numbering (Rust 5,
-// Go/TS 7): the value, not the index nor the local type-tag, travels in bytes.
+// each kernel re-interns the value on read (fresh local index). The trivial
+// float `ty` numbering is aligned three-way (FLOAT64 = 7 across Rust/Go/TS),
+// and it never rides the wire anyway: the value, not the index nor the local
+// type-tag, travels in bytes, so the .fkb stays portable by construction.
 const FORM_BINARY_FLOAT64: u32 = 2;
 
 fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
