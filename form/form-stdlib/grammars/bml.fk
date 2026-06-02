@@ -950,6 +950,41 @@
         (bml-body-source-return-member-add-loop?
             (bml-body-source-values body-component)))
 
+    (defn bml-body-source-return-member-eq-at? (values)
+        (if (gt (len values) 6)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) "==")
+                    (if (str_eq (nth values 4) ".")
+                        (str_eq (nth values 6) ";")
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-member-eq-loop? (values)
+        (if (nil? values) false
+            (if (bml-body-source-return-member-eq-at? values) true
+                (bml-body-source-return-member-eq-loop? (tail values)))))
+
+    (defn bml-body-source-return-member-eq? (body-component)
+        (bml-body-source-return-member-eq-loop?
+            (bml-body-source-values body-component)))
+
+    (defn bml-body-source-return-member-eq-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-member-eq-at? values)
+                (bml-body-source-return-member-eq-count-loop
+                    (drop 7 values)
+                    (add count 1))
+                (bml-body-source-return-member-eq-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-member-eq-count (body-component)
+        (bml-body-source-return-member-eq-count-loop
+            (bml-body-source-values body-component)
+            0))
+
     (defn bml-body-source-object-value (self env name)
         (if (str_eq name "null") (empty)
             (if (record_has self name)
@@ -1231,14 +1266,21 @@
                 (nth values 5)
                 (nth values 7))))
 
+    (defn bml-body-source-eval-return-member-eq-at (values self env)
+        (value_eq
+            (bml-body-source-object-value self env (nth values 1))
+            (bml-body-source-member-value self env (nth values 3) (nth values 5))))
+
     (defn bml-body-source-exec-return-loop (values self env)
         (if (nil? values) (empty)
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
+            (if (bml-body-source-return-member-eq-at? values)
+                (bml-body-source-eval-return-member-eq-at values self env)
                 (bml-body-source-exec-return-loop
                     (tail values)
                     self
-                    env))))
+                    env)))))
 
     (defn bml-body-source-exec-return (body-component self env)
         (bml-body-source-exec-return-loop
@@ -1568,6 +1610,8 @@
                         env))
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
+            (if (bml-body-source-return-member-eq-at? values)
+                (bml-body-source-eval-return-member-eq-at values self env)
             (if (bml-body-source-constructor-assignment-at? values)
                 (do
                     (record_set
@@ -1637,7 +1681,7 @@
                     (tail values)
                     (head values)
                     self
-                    env))))))))))))))
+                    env)))))))))))))))
 
     (defn bml-body-source-exec (body-component self env)
         (bml-body-source-exec-sequence-loop
