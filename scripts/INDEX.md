@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 140
+**Total files**: 141
 
 | File | Purpose |
 |---|---|
@@ -101,6 +101,7 @@
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | Run one Claude impl task (pinned spec), wait for terminal state, then write a report. |
 | [run_form_practice.py](run_form_practice.py) | Run any Form practice and record substrate cells plus witness ledger. |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
+| [runtime_surface_report.py](runtime_surface_report.py) | Runtime-surface report — how much of the API runs in CPython vs the Form kernel. |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | spec: full-code-traceability |
 | [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
 | [scan_dyad_candidates_word.py](scan_dyad_candidates_word.py) | WORD-domain prose-structural dyad-pair scan over Living Collective concepts. |
