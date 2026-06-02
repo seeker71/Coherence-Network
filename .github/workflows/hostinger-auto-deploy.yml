@@ -87,7 +87,14 @@ jobs:
         run: |
           retry_remote() {
             local attempt=1
-            local max_attempts=5
+            # 8 attempts × 20s backoff ≈ a ~5 min retry window (on top of each
+            # scp/ssh's own ConnectTimeout=20). Deploy failures were diagnosed as
+            # `connect ... port 22: Connection timed out` — real intermittent
+            # Hostinger-side VPS reachability blips lasting ~2.5 min, not a
+            # workflow bug. The prior 5×10s span (~2.5 min) exhausted right as the
+            # VPS recovered; the wider window lets a transient blip ride through
+            # WITHIN one run instead of failing and waiting for the next push.
+            local max_attempts=8
             while :; do
               if "$@"; then
                 return 0
@@ -98,8 +105,8 @@ jobs:
                 echo "::error::remote sync command failed after $attempt attempts (rc=$rc): $*"
                 return "$rc"
               fi
-              echo "::warning::remote sync command failed on attempt $attempt (rc=$rc); retrying in 10s: $*"
-              sleep 10
+              echo "::warning::remote sync command failed on attempt $attempt (rc=$rc); retrying in 20s: $*"
+              sleep 20
               attempt=$((attempt + 1))
             done
           }
