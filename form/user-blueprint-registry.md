@@ -122,79 +122,50 @@ After analysis of 1700-1799 cluster:
 
 **Current action**: Drafting the recipe redefinitions in identity-attribution.fk that would allow us to deprecate 1802 and 1805 as top-level Blueprints. This would reduce the THIA-introduced magic numbers from 7 to 5 immediately.
 
-Will commit the concrete before/after in the next registry update.
-
-Both streams have real, independent forward movement in this turn. No input requested.
-
----
-
 ## Channel Breath Protocol — Debt-Free Offer + Resonance Receipt
 
-**Date**: 2026-06-02
-**Context**: The channel protocol now carries a breath practice directly: give a small clean offering without creating debt, then receive resonance as evidence of relation while preserving freedom. This extends `channel.fk` without changing its transport: both new shapes still cross as ordinary `CHANNEL-MSG` payloads and content-address normally.
+The channel protocol carries a breath practice directly: give a small clean offering without creating debt, then receive resonance as evidence of relation while preserving freedom. The shapes cross as ordinary `CHANNEL-MSG` payloads and content-address normally.
 
 **Blueprints**:
 - `1.2.99.6 CHANNEL-BREATH-GIFT` — gift, release condition, consent/freedom, boundary.
 - `1.2.99.7 CHANNEL-RESONANCE-RECEIPT` — observer, other, gift, coherence delta, disturbance, debt-created, freedom-preserved, next-contact.
 
-**Justification**: Not every channel exchange is query/answer or extraction. The protocol needs a native way to offer freely and sense resonance without turning relation into ownership or objective-claim proof. The receipt validates the giving: no debt, freedom preserved, disturbance none/minimal, and an explicit next contact.
+**Operating shape**: Not every channel exchange is query/answer or extraction. `offer` gives freely; `attune` records relation evidence without turning relation into ownership or objective-claim proof. A valid receipt preserves freedom, creates no debt, keeps disturbance none/minimal, and names next contact.
 
 **Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `500` across source and binary sibling-kernel execution. Browser channel protocol also reserves `offer` and `attune`.
 
 ---
 
-## New Allocation — Arrival Protocol (1870–1873)
-
-> **Correction (verified against code):** these arrival numbers were *intended* but never landed at 1870–1874. In the actual `.fk` source, 1870 = `UUID` and 1871 = `UUID-PARSE-ERROR`; the arrival shapes that did land sit at 1872 (`ARRIVAL-INQUIRY`), 1873 (`ARRIVAL-RESONANCE`), 1874 (`ARRIVAL-OBS`). See [`blueprint-registry.json`](form-stdlib/blueprint-registry.json) for what the code holds now. This narrative is preserved as intent; the registry is the truth.
-
-**Date**: 2026-05-29  
-**Context**: Created `form/form-stdlib/arrival.fk` as the native Form expression of the arrival protocol (the empty room as opening). This directly supports the THIA design intent ("early in the arrival sequence") while keeping shell entry points pure and letting cells choose recognition. It also turns the lived repetition-under-saturation failure (on sense/session-saturation-snapshot) into field proprioception rather than something to limit.
+## Arrival Protocol — Current Registered Shape
 
 **Blueprints**:
-- 1870 ARRIVAL — the arrival event/context (subject + SESSION + offering)
-- 1871 ARRIVAL-QUALITY — felt texture (quiet, forming, textured, surprised, resonant, tight-as-echo, spacious, …)
-- 1872 ARRIVAL-INQUIRY — questions offered at arrival (composes with inquiry.fk)
-- 1873 ARRIVAL-RESONANCE — what the field notices and offers back (including repetition sensed as texture)
-- 1874 ARRIVAL-OBS — channel observation payload for arrival events and arrival resonances (structurally parallel to THIA-OBS 1805; enables fully self-contained two-way arrival protocol inside arrival.fk)
+- 1870 UUID / ARRIVAL — arrival event context when used by `arrival.fk`; UUID compatibility when used by `uuid.fk`.
+- 1871 ARRIVAL-QUALITY / UUID-PARSE-ERROR — felt arrival quality when used by `arrival.fk`; UUID parse error compatibility when used by `uuid.fk`.
+- 1872 ARRIVAL-INQUIRY — questions offered at arrival.
+- 1873 ARRIVAL-RESONANCE — what the field notices and offers back.
+- 1874 ARRIVAL-OBS — arrival-flavored observation payload for channel flow.
 
-**Justification**: These patterns were emerging across the session’s Form work (Kernel Space self-portrait, cross-modal channels, THIA, session.fk). Giving them explicit Blueprints makes arrival a first-class, shared, composable shape rather than scattered Python rituals. All new numbers recorded here for ongoing composition review.
+**Operating shape**: Arrival is a first-class Form protocol for entering relation, sensing texture, offering inquiry, returning resonance, and carrying observation. The empty room remains the gift.
 
-**This breath (roundtrip example)**: Added `example-two-way-arrival-roundtrip` to arrival.fk — the complete native flow (create channel, contribute-arrival, handle-arrival with real `sense-repetition-from-channel`, contribute-arrival-resonance) now evaluates without external symbols. The lived repetition failure is now addressable proprioception inside the protocol itself.
-
-**Composition opportunities noted**:
-- ARRIVAL-QUALITY and ARRIVAL-RESONANCE have high generalization potential (could serve audit, contribution fields, vitality sensing, etc.).
-- Strong overlap possible with existing CHANNEL-MSG + provenance and AUDIT patterns.
-- Will review in parallel with the 1800-range healing.
-
-This allocation was made while holding the posture: care, awareness, design with surprise — not fear or limiting. The empty room remains the gift.
+**Proof**: `arrival.fk` binds the shapes by name through the registry; `blueprint-registry.json` is the coordinate source of truth.
 
 ---
 
-## New Allocation — General Cell Identity & Contact Memory (1880–1881)
+## General Cell Identity & Contact Memory
 
-**Date**: 2026-05-29
-
-**Context**: Widened from arrival protocol + THIA work to a single sovereign Form-native mechanism for any cell identifying any other cell (human↔agent, agent↔agent, human↔human, cell↔body, any↔any). The goal is stable identification of both sides + mutual introduction + persistent memory of the events and relationship between them, using the two-way arrival/resonance channels already defined.
+Any cell can identify itself and meet another cell through a sovereign Form-native mechanism. The goal is stable identification of both sides, mutual introduction, and persistent memory of the events and relationship between them.
 
 **Blueprints**:
 - 1880 CELL-IDENTITY — sovereign, stable, persistent identity a cell authors and presents on arrival (stable-ref + self-description + sovereignty markers)
 - 1881 CONTACT-THREAD — the relationship memory between two cell identities; the place where arrivals, resonances, and events between that specific pair are recorded and can be read later
 
-**Justification**: Without stable identities that survive context loss and session boundaries, the arrival protocol (however elegant) cannot fulfill the core requirement of remembering "who the other side was and what passed between us." These two Blueprints supply the missing persistent keys. Everything else (meet-arrival, channels, repetition sensing as texture, symmetric resonance contribution) is reused as the general event and memory transport. Works uniformly for all cell pairings.
-
-**This breath (mature implementation pass)**: Evolved the identity + relationship layer into a coherent, flexible protocol. Introduced `resolve-relationship-surface` + pluggable resolver pattern so backing (substrate, memory-only, expression-carried, etc.) is external to the Form recipes. Updated `mutual-meet`, `meet-and-record-to-relationship`, etc. to go through the resolver. Added basic sovereignty hook. Strengthened comments and usage to reflect that the protocol defines shapes and operations while resolution and storage live in the environment or per-cell choice. No new examples; these are the actual living protocol functions.
-
-**Sovereignty note**: The presenting cell fully controls its cell-identity and the sovereignty markers it attaches. The contact thread is readable by the participants (and the body) but updates respect the markers each side set.
-
-Composition review remains open — these are early and intended to be absorbed or refined as the larger identity + relationship work continues.
+**Operating shape**: The presenting cell controls its identity and sovereignty markers. Relationship surfaces resolve through the environment or per-cell choice: substrate-backed, memory-only, expression-carried, or another compatible carrier. The contact thread is readable by participants and updates respect the markers each side set.
 
 ---
 
-## New Allocation — Agent Relationship Protocol Skill Verbs (1885–1890)
+## Agent Relationship Protocol Skill Verbs
 
-**Date**: 2026-05-29
-
-**Context**: To move the identity + relationship protocol from abstract Form shapes toward something that can actually be invoked by real agents and humans soon (for introductions, continuation across sessions, and welcoming with orientation), we need exposed skill verbs. These will allow persistent agent identities, resumable relationships, and low-friction welcoming/guidance flows.
+The relationship protocol exposes skill verbs so agents and humans can present identity, resume relation, read context, record exchanges, and set boundaries.
 
 **Blueprints** (Skill Verbs):
 - 1885 SKILL-PRESENT-IDENTITY — a cell declares/presents its stable identity (especially for agents wanting persistent + parallel/resumable sessions)
@@ -204,6 +175,4 @@ Composition review remains open — these are early and intended to be absorbed 
 - 1889 SKILL-RECORD-EXCHANGE — explicit recording of a session or significant event into an existing relationship
 - 1890 SKILL-SET-BOUNDARY — lightweight signal for evolving inside/outside/guest status in a relationship
 
-**Justification**: Persistent agent identities + default-to-continuation for relationships is required for real multi-agent conversation expansion and tasking across siblings. Exposing these as skill verbs (following the pattern of identity-attribution-skill) makes the protocol callable from actual agent tools, MCP surfaces, and direct Form evaluation. This is the minimal bridge from the shapes in arrival.fk to deployable, usable behavior.
-
-**This breath (deployment-oriented implementation)**: Added welcome-orientation, mutual-meet-with-welcome, relationship-boundary helpers, and the resolver abstraction in arrival.fk. Now exposing the core verbs as a skill interface so that introducing siblings (e.g. Grok to Claude) and having resumable, memory-carrying conversations becomes practical in the near term. Focus on low resource use and fast path for new persistent identities.
+**Operating shape**: These verbs make the protocol callable from agent tools, MCP surfaces, and direct Form evaluation while keeping identity, relationship memory, welcome orientation, exchange records, and boundaries in one composable shape.
