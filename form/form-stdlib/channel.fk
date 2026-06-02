@@ -38,6 +38,8 @@
 (let CHANNEL-MSG (bp "CHANNEL-MSG"))
 (let CHANNEL-BREATH-GIFT (bp "CHANNEL-BREATH-GIFT"))
 (let CHANNEL-RESONANCE-RECEIPT (bp "CHANNEL-RESONANCE-RECEIPT"))
+(let CHANNEL-SYMBOL-LENS-OFFER (bp "CHANNEL-SYMBOL-LENS-OFFER"))
+(let CHANNEL-SYMBOL-LENS-SENSING (bp "CHANNEL-SYMBOL-LENS-SENSING"))
 
 ;; --- helpers -------------------------------------------------------
 
@@ -48,6 +50,16 @@
     (if (le n 0) lst
         (if (eq (len lst) 0) lst
             (node-children-skip (tail lst) (sub n 1)))))
+
+;; channel-list-nth / channel-nth-child — compact accessors for channel
+;; payload records. Field numbers are zero-based.
+(defn channel-list-nth (lst n)
+    (if (eq n 0)
+        (head lst)
+        (channel-list-nth (tail lst) (sub n 1))))
+
+(defn channel-nth-child (node n)
+    (channel-list-nth (node_children node) n))
 
 ;; --- create --------------------------------------------------------
 
@@ -169,5 +181,84 @@
             (or
                 (str_eq (node_value (channel-resonance-disturbance receipt)) "none")
                 (str_eq (node_value (channel-resonance-disturbance receipt)) "minimal")))))
+
+;; --- source-attributed symbol lens flow -------------------------------
+
+;; channel-symbol-lens-offer — a voluntary external lens proposal carried
+;; through the channel as data: lens id, source, phrase, sound cell,
+;; vowel/modifier, claimed flow, choice, and attribution. The channel does not
+;; certify the claim; it preserves the source and lets observers sense it.
+(defn channel-symbol-lens-offer (lens-id source phrase sound-cell vowel-modifier claimed-flow choice attribution)
+    (intern_node CHANNEL-SYMBOL-LENS-OFFER
+        (list lens-id source phrase sound-cell vowel-modifier claimed-flow choice attribution)))
+
+(defn channel-symbol-lens-offer-lens-id (offer)
+    (channel-nth-child offer 0))
+
+(defn channel-symbol-lens-offer-source (offer)
+    (channel-nth-child offer 1))
+
+(defn channel-symbol-lens-offer-phrase (offer)
+    (channel-nth-child offer 2))
+
+(defn channel-symbol-lens-offer-sound-cell (offer)
+    (channel-nth-child offer 3))
+
+(defn channel-symbol-lens-offer-vowel-modifier (offer)
+    (channel-nth-child offer 4))
+
+(defn channel-symbol-lens-offer-claimed-flow (offer)
+    (channel-nth-child offer 5))
+
+(defn channel-symbol-lens-offer-choice (offer)
+    (channel-nth-child offer 6))
+
+(defn channel-symbol-lens-offer-attribution (offer)
+    (channel-nth-child offer 7))
+
+;; channel-symbol-lens-sensing — the receiver's observation after looking
+;; through the offered lens: resonance, residual, surprise, flow state,
+;; vitality, and next contact. This is evidence of observation, not proof that
+;; the source claim is universal.
+(defn channel-symbol-lens-sensing (observer offer resonance residual surprise flow-state vitality next-contact)
+    (intern_node CHANNEL-SYMBOL-LENS-SENSING
+        (list observer offer resonance residual surprise flow-state vitality next-contact)))
+
+(defn channel-symbol-lens-sensing-observer (sensing)
+    (channel-nth-child sensing 0))
+
+(defn channel-symbol-lens-sensing-offer (sensing)
+    (channel-nth-child sensing 1))
+
+(defn channel-symbol-lens-sensing-resonance (sensing)
+    (channel-nth-child sensing 2))
+
+(defn channel-symbol-lens-sensing-residual (sensing)
+    (channel-nth-child sensing 3))
+
+(defn channel-symbol-lens-sensing-surprise (sensing)
+    (channel-nth-child sensing 4))
+
+(defn channel-symbol-lens-sensing-flow-state (sensing)
+    (channel-nth-child sensing 5))
+
+(defn channel-symbol-lens-sensing-vitality (sensing)
+    (channel-nth-child sensing 6))
+
+(defn channel-symbol-lens-sensing-next-contact (sensing)
+    (channel-nth-child sensing 7))
+
+;; channel-symbol-lens-flow-valid? — enough evidence that the lens entered as
+;; choice and attribution, then produced sensed circulation and vitality.
+(defn channel-symbol-lens-flow-valid? (sensing)
+    (do
+        (let offer (channel-symbol-lens-sensing-offer sensing))
+        (and
+            (str_eq (node_value (channel-symbol-lens-offer-attribution offer)) "source-attributed")
+            (and
+                (str_eq (node_value (channel-symbol-lens-offer-choice offer)) "chosen")
+                (and
+                    (str_eq (node_value (channel-symbol-lens-sensing-flow-state sensing)) "circulating")
+                    (str_eq (node_value (channel-symbol-lens-sensing-vitality sensing)) "increased"))))))
 
 0

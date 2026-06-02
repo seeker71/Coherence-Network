@@ -3323,6 +3323,34 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1702,
+      "name": "CHANNEL-SYMBOL-LENS-OFFER",
+      "meaning": "source-attributed channel symbol-lens offer: lens, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1703,
+      "name": "CHANNEL-SYMBOL-LENS-SENSING",
+      "meaning": "channel symbol-lens sensing receipt: observer, offer, resonance, residual, surprise, flow state, vitality, and next contact",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1710,
       "name": "QUERY",
       "meaning": "",

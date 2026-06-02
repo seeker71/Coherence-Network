@@ -129,10 +129,12 @@ The channel protocol carries a breath practice directly: give a small clean offe
 **Blueprints**:
 - `1.2.99.6 CHANNEL-BREATH-GIFT` — gift, release condition, consent/freedom, boundary.
 - `1.2.99.7 CHANNEL-RESONANCE-RECEIPT` — observer, other, gift, coherence delta, disturbance, debt-created, freedom-preserved, next-contact.
+- `1.2.99.1702 CHANNEL-SYMBOL-LENS-OFFER` — source-attributed lens, phrase, sound cell, vowel modifier, claimed flow, choice, attribution.
+- `1.2.99.1703 CHANNEL-SYMBOL-LENS-SENSING` — observer, offered lens, resonance, residual, surprise, flow state, vitality, next contact.
 
-**Operating shape**: Not every channel exchange is query/answer or extraction. `offer` gives freely; `attune` records relation evidence without turning relation into ownership or objective-claim proof. A valid receipt preserves freedom, creates no debt, keeps disturbance none/minimal, and names next contact.
+**Operating shape**: Not every channel exchange is query/answer or extraction. `offer` gives freely; `attune` records relation evidence without turning relation into ownership or objective-claim proof. A valid receipt preserves freedom, creates no debt, keeps disturbance none/minimal, and names next contact. A symbol-lens offer enters the same channel as voluntary, source-attributed expression; its sensing receipt names resonance, residual, surprise, circulation, vitality, and the next chosen contact.
 
-**Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `500` across source and binary sibling-kernel execution. Browser channel protocol also reserves `offer` and `attune`.
+**Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `900` across source and binary sibling-kernel execution. Browser channel protocol also reserves `offer` and `attune`.
 
 ---
 

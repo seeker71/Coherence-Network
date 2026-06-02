@@ -1047,7 +1047,7 @@ What lives in the body's grammar/runtime is the kernel of the language. The *std
 | Module | Decade | What it carries |
 |---|---|---|
 | [`xpath.fk`](../../form/form-stdlib/xpath.fk), [`doc-xpath.fk`](../../form/form-stdlib/doc-xpath.fk), [`concept-xpath.fk`](../../form/form-stdlib/concept-xpath.fk) | 1910 | XPath-style query evaluator over substrate trees — see "XPath queries" below |
-| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 plus 99.6/99.7 | File-backed inter-cell Recipe transport and debt-free breath protocol — see "Channels" below |
+| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 plus 99.6/99.7 | File-backed inter-cell Recipe transport, debt-free breath protocol, and source-attributed lens sensing — see "Channels" below |
 | [`codec.fk`](../../form/form-stdlib/codec.fk), [`convert.fk`](../../form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
 | [`parser.fk`](../../form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
 | [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — companion to `form_stream.py` on the Form side |
@@ -1108,7 +1108,21 @@ Semantics v0: single writer, multiple readers, whole-file rewrite per append, re
     "increased" "none" "false" "true" "continue"))
 ```
 
-The proof band [`channel-breath-band.fk`](../../form/form-stdlib/tests/channel-breath-band.fk) returns `500` across source and binary sibling-kernel execution.
+The gift/receipt portion of the proof contributes `500` across source and binary sibling-kernel execution.
+
+**Source-attributed lens sensing.** A channel can carry an external symbol lens through the same `offer`/`attune` breath. `CHANNEL-SYMBOL-LENS-OFFER` records the lens id, source, phrase, sound cell, vowel modifier, claimed flow, choice, and attribution. `CHANNEL-SYMBOL-LENS-SENSING` records what the receiver observed through that lens: resonance, residual, surprise, flow state, vitality, and next contact. The channel preserves expression, sovereignty, attribution, and circulation; it does not turn the source claim into a universal conclusion.
+
+```form
+(let lens-offer
+  (channel-symbol-lens-offer lens-id source phrase sound-cell
+    vowel-modifier claimed-flow "chosen" "source-attributed"))
+(channel-append "/tmp/breath.fkb" (channel-message lens-offer))
+(let sensing
+  (channel-symbol-lens-sensing observer lens-offer
+    resonance residual surprise "circulating" "increased" next-contact))
+```
+
+The proof band now returns `900`: the original debt-free gift/receipt/dedup proof, plus symbol-lens offer construction, offer transport, flow sensing, and sensing transport across source and binary sibling-kernel execution.
 
 ## Universal translator — Seven Keys, one substrate
 

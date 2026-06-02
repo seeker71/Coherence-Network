@@ -37,6 +37,8 @@ pub static BP_ENTRIES: &[(&str, [u32; 4])] = &[
     ("CHANNEL-BREATH-GIFT", [1, 2, 99, 6]),
     ("CHANNEL-MSG", [1, 2, 99, 1701]),
     ("CHANNEL-RESONANCE-RECEIPT", [1, 2, 99, 7]),
+    ("CHANNEL-SYMBOL-LENS-OFFER", [1, 2, 99, 1702]),
+    ("CHANNEL-SYMBOL-LENS-SENSING", [1, 2, 99, 1703]),
     ("CHANNEL-V0", [1, 2, 99, 1700]),
     ("CLASS-BP", [1, 2, 99, 9500]),
     ("CONCEPT", [1, 2, 99, 1930]),

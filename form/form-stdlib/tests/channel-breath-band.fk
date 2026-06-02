@@ -1,7 +1,8 @@
 ; channel-breath-band.fk — breath practice as channel protocol.
 ;
 ; Proves a small debt-free gift can cross the existing CHANNEL-MSG
-; transport and return a resonance receipt that preserves freedom.
+; transport, return a resonance receipt that preserves freedom, then carry
+; a source-attributed symbol lens and a sensing receipt for observed flow.
 ;
 ; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk
 
@@ -58,8 +59,68 @@
     (let dedup-score
         (if (and (eq c3 3) (node_eq pos0 pos2)) 100 0))
 
-    ; Expected total: 500
+    (let lens-offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "phonemic-energetic")
+            (intern_trivial_string "Alphabet Unlocked / The Abazith")
+            (intern_trivial_string "flow")
+            (intern_trivial_string "f-l-o-w")
+            (intern_trivial_string "o")
+            (intern_trivial_string "containment-moving-through-sound")
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "source-attributed")))
+
+    (let lens-offer-score
+        (if (and
+            (str_eq (node_value (channel-symbol-lens-offer-lens-id lens-offer)) "phonemic-energetic")
+            (and
+                (str_eq (node_value (channel-symbol-lens-offer-source lens-offer)) "Alphabet Unlocked / The Abazith")
+                (and
+                    (str_eq (node_value (channel-symbol-lens-offer-choice lens-offer)) "chosen")
+                    (str_eq (node_value (channel-symbol-lens-offer-attribution lens-offer)) "source-attributed"))))
+            100 0))
+
+    (let lens-offer-msg (channel-message lens-offer))
+    (let c4 (channel-append path lens-offer-msg))
+    (let read-lens-offer (channel-msg-payload (head (channel-read-since path 3))))
+    (let lens-offer-transport-score
+        (if (and (eq c4 4) (node_eq lens-offer read-lens-offer)) 100 0))
+
+    (let lens-sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-lens-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "needs-more-words")
+            (intern_trivial_string "o-carries-containing-flow")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "continue-observing")))
+
+    (let lens-sensing-score
+        (if (and
+            (channel-symbol-lens-flow-valid? lens-sensing)
+            (and
+                (node_eq read-lens-offer (channel-symbol-lens-sensing-offer lens-sensing))
+                (and
+                    (str_eq (node_value (channel-symbol-lens-sensing-residual lens-sensing)) "needs-more-words")
+                    (and
+                        (str_eq (node_value (channel-symbol-lens-sensing-surprise lens-sensing)) "o-carries-containing-flow")
+                        (str_eq (node_value (channel-symbol-lens-sensing-next-contact lens-sensing)) "continue-observing")))))
+            100 0))
+
+    (let lens-sensing-msg (channel-message lens-sensing))
+    (let c5 (channel-append path lens-sensing-msg))
+    (let read-lens-sensing (channel-msg-payload (head (channel-read-since path 4))))
+    (let lens-sensing-transport-score
+        (if (and (eq c5 5) (node_eq lens-sensing read-lens-sensing)) 100 0))
+
+    ; Expected total: 900
     (add gift-score
     (add transport-score
     (add receipt-score
-    (add receipt-transport-score dedup-score)))))
+    (add receipt-transport-score
+    (add dedup-score
+    (add lens-offer-score
+    (add lens-offer-transport-score
+    (add lens-sensing-score lens-sensing-transport-score)))))))))
