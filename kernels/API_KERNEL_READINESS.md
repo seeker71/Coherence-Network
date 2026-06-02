@@ -178,6 +178,7 @@ kernel-served" is a sequence of capability builds.
 | String-membership scoring | `str_find` native (three-way ASCII-identical) folded `str_find(text, kw, 0) >= 0` over tokenized keyword lists + float-seeded hit counters | text-scoring routes counting keyword overlap (`concept_match_score`; keyword-overlap routes). Host tokenizes (regex), kernel scores. |
 | Exact-membership tag scoring | `str_eq` native (COMPARE.EQ, ASCII-identical) as a nested `for` (inner membership, outer match-count) + float hit counter + `max(0.0, min(1.0, matched/denom))` clamp under a 0.5 empty-guard | set-resonance routes scoring `len(a ∩ b) / len(a)` over two string lists (`tag_match_score`; tag/interest-overlap routes). Host extracts + dedups the lists; kernel folds membership + ratio + clamp. |
 | Worldview-cosine scoring | `math_sqrt` (IEEE-correct, three-way bit-identical) over a parallel two-vector index walk + guarded ratio + `max(0.0, min(1.0, _))` clamp | geometric resonance routes scoring `dot(a,b) / (‖a‖·‖b‖)` over two parallel float vectors (`worldview_alignment`; axis-vector / embedding-cosine routes). Host projects the axes into parallel vectors; kernel folds dot + both norms + sqrt + ratio + clamp. |
+| Guarded-ratio coverage scoring | guarded `div` over a count denominator (`if denom>0 else default`); a weighted coverage sum; a `task_count==0 -> 0.5` neutral guard; a `max(0.0, min(1.0, _))` clamp; `round_ndigits` per output | collective-health coverage routes scoring `sum(weight_i * count_i/total)` with a neutral empty-guard (`coherence_summary_score`; coverage/quality-ratio routes). Host walks the heterogeneous collection to extract the counts; kernel folds the ratios + score + round. |
 
 **Gates ahead (each blocks a named family; build in leverage order):**
 
@@ -263,6 +264,26 @@ the numeric families split:
 
 The same membership shape carries `frequency_scoring` and other keyword-overlap
 routes.
+
+### The collective-health family — guarded-ratio coverage scoring
+
+`collective_health_service._coherence_summary` serves at
+`/api/utils/coherence_summary_score`. The seam mirrors the numeric families:
+
+- **Host extracts the counts (dict-over-collection walk).** Walking the task
+  list and reading each heterogeneous `context` dict produces `task_count` and
+  the target-state / evidence / task-card counts plus the task-card scores sum +
+  len. The dict-over-collection extraction is host-side by design.
+- **Kernel folds the coverages + score + round.** Given the counts, the recipe
+  computes four guarded coverage ratios (each `count/total` under an `if total>0
+  else 0.0` guard, the quality over the scores len), a weighted-sum score
+  (weights `0.35/0.30/0.20/0.15`) under a `task_count==0 -> 0.5` neutral guard
+  and a `[0.0, 1.0]` clamp, and `round(_, 4)` on each output — guards, weights,
+  and clamp verbatim from `_safe_ratio` / `_score_with_neutral`. Pure arithmetic,
+  no record fold, so it runs three-way clean including Go.
+
+The same guarded-ratio coverage shape carries other collective-health
+coverage/quality routes.
 
 ### Honest coverage today
 

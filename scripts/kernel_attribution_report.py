@@ -324,6 +324,24 @@ KERNEL_SERVED_RECIPES: list[dict[str, object]] = [
         "recipe": "endpoint_worldview_alignment_demo.fk",
         "expected_result": "0.96",
     },
+    {
+        # The COVERAGE/SCORE REDUCTION of collective_health_service.
+        # _coherence_summary — four guarded coverage ratios + a weighted-sum
+        # score with the task_count==0 neutral guard (0.5) and a [0.0, 1.0]
+        # clamp, each output round(_, 4). Built entirely from banked
+        # capabilities: safe_ratio's `if denom>0 else default` (grounded_value),
+        # the neutral guard + two-sided clamp as max2/min2 branches, and
+        # round_ndigits. The honest seam: the host walks the heterogeneous task
+        # `context` dicts to produce the counts (the dict-over-collection
+        # extraction held host-side BY DESIGN); the kernel folds the ratios +
+        # score + round. Pure arithmetic, no _iter/_get fold, so three-way clean
+        # including Go. Frozen sample (task_count 10, target 7, evidence 5,
+        # task_card 6, scores_sum 4.5, scores_len 6) → [0.665, 0.7, 0.6, 0.75,
+        # 0.5], all NON-integer floats so no value crosses the print boundary.
+        "route": "/api/utils/coherence_summary_score",
+        "recipe": "endpoint_coherence_summary_score_demo.fk",
+        "expected_result": "[0.665, 0.7, 0.6, 0.75, 0.5]",
+    },
 ]
 
 _EXAMPLES_DIR = (
