@@ -1,0 +1,178 @@
+; channel-root-ontology-lens-band.fk -- root words as a channel lens matrix.
+;
+; This extends the single ahava example into a small root ontology drawn from
+; the existing documented gematria lexicon. The point is not to exhaust every
+; domain. It is to prove the reusable shape:
+;
+;   root word -> source-attributed lens offer
+;             -> documented code reading
+;             -> expansion class
+;             -> JSON grammar report
+;             -> channel sensing receipt
+;
+; Roots in this first matrix:
+;   ahava  = love                 value 13  expands with echad
+;   echad  = unity                value 13  expands with ahava
+;   chai   = vitality / life      value 18  stable self-root
+;   shalom = coherence / wholeness value 376 stable self-root
+;   or     = light                value 207 expands with raz
+;   raz    = mystery              value 207 expands with or
+;
+; Band verdict: 111111 when the matrix is whole.
+;   1      every root has the expected documented value
+;   10     every root has the expected expansion/self-root class
+;   100    JSON carries the root ontology report
+;   1000   every root offer/sensing pair crosses the channel
+;   10000  the ontology domain labels are present
+;   100000 the matrix surfaces two new learning bridges:
+;          love<->unity and light<->mystery
+;
+; preludes: form-stdlib/json.fk form-stdlib/grammars/gematria.fk form-stdlib/channel.fk form-stdlib/gematria-channel.fk
+
+(do
+    (defn crol-list-has (xs want)
+        (if (nil? xs) 0
+            (if (str_eq (head xs) want)
+                1
+                (crol-list-has (tail xs) want))))
+
+    (defn crol-value-ok (roman expected-value)
+        (do
+            (let found (gem-find roman))
+            (if (eq (gem-found? found) 1)
+                (if (eq (gem-entry-value (gem-of found)) expected-value) 1 0)
+                0)))
+
+    (defn crol-expansion-ok (roman expansion-target)
+        (do
+            (let class (gem-word-equivalents roman))
+            (if (str_eq expansion-target "self")
+                (if (eq (len class) 1)
+                    (if (eq (crol-list-has class roman) 1) 1 0)
+                    0)
+                (if (and
+                    (node_eq (gem-word-address roman) (gem-word-address expansion-target))
+                    (and
+                        (eq (crol-list-has class roman) 1)
+                        (eq (crol-list-has class expansion-target) 1)))
+                    1 0))))
+
+    (defn crol-offer (roman principle domain sound-cell vowel claimed-flow)
+        (channel-symbol-lens-offer
+            (intern_trivial_string "phonemic-energetic")
+            (intern_trivial_string "Alphabet Unlocked / The Abazith")
+            (intern_trivial_string roman)
+            (intern_trivial_string sound-cell)
+            (intern_trivial_string vowel)
+            (intern_trivial_string claimed-flow)
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "source-attributed")))
+
+    (defn crol-channel-ok (path roman principle domain sound-cell vowel claimed-flow surprise)
+        (do
+            (let offer (crol-offer roman principle domain sound-cell vowel claimed-flow))
+            (let seen-offer (len (channel-read path)))
+            (channel-append path (channel-message offer))
+            (let read-offer (channel-msg-payload (head (channel-read-since path seen-offer))))
+            (let sensing
+                (channel-symbol-lens-sensing
+                    (intern_trivial_string "observer")
+                    read-offer
+                    (intern_trivial_string "coherence-increased")
+                    (intern_trivial_string "needs-lived-observation")
+                    (intern_trivial_string surprise)
+                    (intern_trivial_string "circulating")
+                    (intern_trivial_string "increased")
+                    (intern_trivial_string "continue-root-ontology-matrix")))
+            (let seen-sensing (len (channel-read path)))
+            (channel-append path (channel-message sensing))
+            (let read-sensing (channel-msg-payload (head (channel-read-since path seen-sensing))))
+            (if (and
+                (node_eq offer read-offer)
+                (and
+                    (node_eq sensing read-sensing)
+                    (and
+                        (channel-symbol-lens-flow-valid? read-sensing)
+                        (str_eq (node_value (channel-symbol-lens-sensing-surprise read-sensing)) surprise))))
+                1 0)))
+
+    (let path "/tmp/coh-channel-root-ontology-lens-band.fkb")
+    (channel-create path)
+
+    ;; --- documented values -----------------------------------------
+    (let value-count
+        (sum (list
+            (crol-value-ok "ahava" 13)
+            (crol-value-ok "echad" 13)
+            (crol-value-ok "chai" 18)
+            (crol-value-ok "shalom" 376)
+            (crol-value-ok "or" 207)
+            (crol-value-ok "raz" 207))))
+    (let value-score (if (eq value-count 6) 1 0))
+
+    ;; --- expansion classes -----------------------------------------
+    (let expansion-count
+        (sum (list
+            (crol-expansion-ok "ahava" "echad")
+            (crol-expansion-ok "echad" "ahava")
+            (crol-expansion-ok "chai" "self")
+            (crol-expansion-ok "shalom" "self")
+            (crol-expansion-ok "or" "raz")
+            (crol-expansion-ok "raz" "or"))))
+    (let expansion-score (if (eq expansion-count 6) 10 0))
+
+    ;; --- JSON report grammar ---------------------------------------
+    (let matrix-json "[{\"word\":\"ahava\",\"principle\":\"love\",\"domain\":\"relation\",\"value\":13,\"expands_to\":\"echad\"},{\"word\":\"echad\",\"principle\":\"unity\",\"domain\":\"oneness\",\"value\":13,\"expands_to\":\"ahava\"},{\"word\":\"chai\",\"principle\":\"life\",\"domain\":\"vitality\",\"value\":18,\"expands_to\":\"self\"},{\"word\":\"shalom\",\"principle\":\"peace-wholeness\",\"domain\":\"coherence\",\"value\":376,\"expands_to\":\"self\"},{\"word\":\"or\",\"principle\":\"light\",\"domain\":\"illumination\",\"value\":207,\"expands_to\":\"raz\"},{\"word\":\"raz\",\"principle\":\"mystery\",\"domain\":\"mystery\",\"value\":207,\"expands_to\":\"or\"}]")
+    (let matrix (parse-json "channel-root-ontology-lens-report.json" matrix-json))
+    (let roots (json-array-elements matrix))
+    (let row-love (nth roots 0))
+    (let row-unity (nth roots 1))
+    (let row-life (nth roots 2))
+    (let row-whole (nth roots 3))
+    (let row-light (nth roots 4))
+    (let row-mystery (nth roots 5))
+    (let json-score
+        (if (and
+            (eq (json-array-length matrix) 6)
+            (and
+                (str_eq (json-string-value (json-object-get row-love "principle")) "love")
+                (and
+                    (eq (json-int-value (json-object-get row-whole "value")) 376)
+                    (str_eq (json-string-value (json-object-get row-mystery "expands_to")) "or"))))
+            100 0))
+
+    ;; --- channel lens offers and sensing receipts -------------------
+    (let channel-count
+        (sum (list
+            (crol-channel-ok path "ahava" "love" "relation" "a-h-a-v-a" "a" "opening-toward-love" "love-expands-to-unity")
+            (crol-channel-ok path "echad" "unity" "oneness" "e-ch-a-d" "e" "one-field-holding" "unity-expands-to-love")
+            (crol-channel-ok path "chai" "life" "vitality" "ch-a-i" "a" "life-force-rising" "life-stabilizes-as-root")
+            (crol-channel-ok path "shalom" "peace-wholeness" "coherence" "sh-a-l-o-m" "o" "wholeness-circulating" "peace-stabilizes-as-root")
+            (crol-channel-ok path "or" "light" "illumination" "o-r" "o" "light-revealing" "light-expands-to-mystery")
+            (crol-channel-ok path "raz" "mystery" "mystery" "r-a-z" "a" "mystery-opening" "mystery-expands-to-light"))))
+    (let channel-score (if (eq channel-count 6) 1000 0))
+
+    ;; --- ontology labels and learning bridges ----------------------
+    (let ontology-score
+        (if (and
+            (str_eq (json-string-value (json-object-get row-love "domain")) "relation")
+            (and
+                (str_eq (json-string-value (json-object-get row-life "domain")) "vitality")
+                (and
+                    (str_eq (json-string-value (json-object-get row-whole "domain")) "coherence")
+                    (and
+                        (str_eq (json-string-value (json-object-get row-light "domain")) "illumination")
+                        (str_eq (json-string-value (json-object-get row-mystery "domain")) "mystery")))))
+            10000 0))
+
+    (let learning-score
+        (if (and
+            (node_eq (gem-word-address "ahava") (gem-word-address "echad"))
+            (and
+                (node_eq (gem-word-address "or") (gem-word-address "raz"))
+                (and
+                    (str_eq (json-string-value (json-object-get row-love "expands_to")) "echad")
+                    (str_eq (json-string-value (json-object-get row-light "expands_to")) "raz"))))
+            100000 0))
+
+    (sum (list value-score expansion-score json-score channel-score ontology-score learning-score)))

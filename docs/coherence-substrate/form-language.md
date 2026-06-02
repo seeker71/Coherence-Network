@@ -1126,6 +1126,8 @@ The proof band now returns `900`: the original debt-free gift/receipt/dedup proo
 
 **Combined-code value example.** [`channel-symbol-lens-value-band.fk`](../../form/form-stdlib/tests/channel-symbol-lens-value-band.fk) shows what becomes visible when the lens meets another code and another grammar. `ahava` enters as a source-attributed phonemic-energetic offer. The gematria code reads it as `13` and expands it to `echad`, because love and unity share the same content address in the seeded Hebrew code. A JSON report carries that observation as structured grammar. The sensing receipt records the value that appeared: success, attribution, expansion, surprise, circulation, vitality, and chosen next contact. The band returns `11111` across source and binary sibling-kernel execution.
 
+**Root ontology matrix.** [`channel-root-ontology-lens-band.fk`](../../form/form-stdlib/tests/channel-root-ontology-lens-band.fk) repeats the same shape across six root words already present in the documented gematria lexicon: love, unity, life, peace/wholeness, light, and mystery. Each row carries a source-attributed lens offer, gematria value/address, expansion or self-root class, JSON report row, and channel sensing receipt. The band returns `111111`, with the observed learning bridges `love <-> unity` and `light <-> mystery` preserved as value, attribution, and expansion.
+
 ## Universal translator — Seven Keys, one substrate
 
 The substrate's equivalence kernel IS a translator. The pivot is the Blueprint, not the symbol. Two cells with the same Blueprint NodeID are structurally equivalent regardless of which domain they live in — and that equivalence is automatic from content-addressing, not from any sameAs declaration.
