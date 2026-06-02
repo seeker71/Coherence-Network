@@ -18,6 +18,7 @@ describe("live channel transport", () => {
     expect(a).toBe(b);
     // different protocol → different type slot in the NodeID
     expect(payloadNodeId("recipe", "x")).not.toBe(payloadNodeId("ask", "x"));
+    expect(payloadNodeId("offer", "x")).not.toBe(payloadNodeId("attune", "x"));
   });
 
   it("appends messages and surfaces recurring payloads as dedup", () => {
@@ -28,6 +29,18 @@ describe("live channel transport", () => {
     // the two identical asks share a payload NodeID; envelopes differ by position
     expect(ch[0]!.payloadNodeId).toBe(ch[1]!.payloadNodeId);
     expect(ch[0]!.msgNodeId).not.toBe(ch[1]!.msgNodeId);
+    expect(dedupCount(ch)).toBe(1);
+  });
+
+  it("carries breath practice as debt-free offer and resonance receipt", () => {
+    let ch = appendMessage([], "offer", "small useful artifact", "Urs");
+    ch = appendMessage(ch, "attune", "coherence increased; debt=false; freedom=true", "Coherence");
+    ch = appendMessage(ch, "offer", "small useful artifact", "Urs");
+
+    expect(ch).toHaveLength(3);
+    expect(ch[0]!.protocol).toBe("offer");
+    expect(ch[1]!.protocol).toBe("attune");
+    expect(ch[0]!.payloadNodeId).toBe(ch[2]!.payloadNodeId);
     expect(dedupCount(ch)).toBe(1);
   });
 });
