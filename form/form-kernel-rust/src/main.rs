@@ -26,7 +26,7 @@ use std::process::Command;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 mod bp_table;
 mod formats;
@@ -6334,32 +6334,49 @@ fn build_worker_kernel(
 
 // Handle ONE request on a worker's own kernel+arena. This is the single factored
 // serving shape (core-abstraction-first): the routing decision (native Form
-// handler vs fan-out to the Python upstream vs 404) lives here ONCE, and the
-// worker pool simply parallelizes calling it. Because `k` and `arena` belong to
-// the calling worker alone, concurrent requests on different workers never share
-// mutable kernel state — each request's value-walk is isolated.
+// handler vs fan-out to the Python upstream vs 404) lives here ONCE, and both the
+// worker pool (parallelism) and the keep-alive loop (multiple requests per
+// connection) simply call it. Because `k` and `arena` belong to the calling
+// worker alone, concurrent requests on different workers never share mutable
+// kernel state — each request's value-walk is isolated.
+//
+// Returns whether the connection should be KEPT ALIVE for the next request:
+// the client's intent (HTTP/1.1 default-keep-alive unless `Connection: close`;
+// HTTP/1.0 close-unless-`keep-alive`) AND no server-side reason to close. An
+// idle/EOF read, a 413 (body undrained — framing broken), and a handler error
+// all return `false` so the keep-alive loop ends and the stream is dropped.
+// `carry` holds bytes read past this request's end (pipelining) for the next
+// call on the same connection.
 fn handle_request(
-    mut stream: TcpStream,
+    stream: &mut TcpStream,
+    carry: &mut Vec<u8>,
     k: &mut Kernel,
     arena: &mut Arena,
     route_pairs: &RoutePairs,
     upstream: &Option<String>,
-) {
-    // Read the FULL request: the header block, then exactly Content-Length
-    // body bytes if present (read_request honors Content-Length across as many
-    // socket reads as the body needs — a body larger than one buffer is fully
-    // captured). Still HTTP/1.0, Connection: close; keep-alive and chunked
-    // transfer remain named breaths (KERNEL_AS_ROUTER.md request row).
-    let (head, body_bytes) = match read_request(&mut stream) {
+) -> bool {
+    // Read the FULL request: the header block, then exactly Content-Length body
+    // bytes if present (read_request honors Content-Length across as many socket
+    // reads as the body needs — a body larger than one buffer is fully captured —
+    // and carries any over-read bytes into `carry` for the next request on this
+    // persistent connection). HTTP/1.1 keep-alive with Content-Length framing;
+    // chunked transfer remains a named breath (KERNEL_AS_ROUTER.md request row).
+    let (head, body_bytes) = match read_request(stream, carry) {
         RequestRead::Ok(h, b) => (h, b),
         RequestRead::TooLarge => {
+            // Reject on the Content-Length header alone — the oversized body is
+            // never drained, so the connection's framing is broken: close it.
             let status = "413 Payload Too Large".to_string();
             let msg = format!("request body exceeds {} bytes\n", MAX_BODY_BYTES);
-            let _ = stream.write_all(http_response(&status, &msg, "local-control").as_bytes());
-            return;
+            let _ =
+                stream.write_all(http_response(&status, &msg, "local-control", false).as_bytes());
+            return false;
         }
-        RequestRead::Error => return,
+        RequestRead::Error => return false, // idle close / read-timeout / EOF — loop ends
     };
+    // The client's keep-alive intent for THIS connection (server may still close
+    // on an error below).
+    let keep_alive = head_keep_alive(&head);
     let (method, target, path, mut request_data) = parse_request_line(&head);
     // Parse the body by Content-Type and MERGE its fields into the same alist
     // the handler reads (core-abstraction-first: ONE request-data shape, whether
@@ -6398,9 +6415,9 @@ fn handle_request(
                 path,
                 cl.params.len()
             );
-            let _ =
-                stream.write_all(http_response(&status, &body, "native-kernel-error").as_bytes());
-            return;
+            let _ = stream
+                .write_all(http_response(&status, &body, "native-kernel-error", false).as_bytes());
+            return false; // close on error — keep the framing unambiguous
         }
         let result = walk(k, arena, cl.body, call_frame);
         status = "200 OK".to_string();
@@ -6424,12 +6441,62 @@ fn handle_request(
         body = format!("no route for {}\n", path);
         router = "local-control";
     }
-    let _ = stream.write_all(http_response(&status, &body, router).as_bytes());
+    // Frame the response with an accurate Content-Length and the keep-alive
+    // verdict. If the write fails the peer is gone — close the loop.
+    if stream
+        .write_all(http_response(&status, &body, router, keep_alive).as_bytes())
+        .is_err()
+    {
+        return false;
+    }
+    keep_alive
+}
+
+// How long an idle kept-alive connection may sit between requests before the
+// server closes it and frees the worker. HTTP/1.1 keep-alive holds the socket
+// open after a response so the next request reuses the same TCP connection
+// (saving a handshake each time); without a cap an idle client would pin a
+// worker forever and starve the pool (thread-per-connection: a worker serving
+// one keep-alive client is unavailable to others until the connection closes or
+// this timeout fires). 5s is a conservative default — long enough that a normal
+// client's back-to-back requests stay on one connection, short enough that an
+// abandoned connection frees its worker quickly. The production tuning knobs are
+// THIS value and the worker count (cli_serve --workers).
+const KEEPALIVE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
+
+// Serve a connection's full keep-alive LIFETIME: repeatedly handle requests on
+// the SAME TcpStream until the client closes it, an error/EOF arrives, the idle
+// read-timeout fires, or a response forces close (client `Connection: close`,
+// 413, handler error). This wraps the per-request handle_request in a loop —
+// the per-request serving shape stays ONE factored function (core-abstraction-
+// first); keep-alive is the loop around it, not a fork of the logic.
+//
+// An idle read-timeout (KEEPALIVE_IDLE_TIMEOUT) is set on the stream so a
+// connection that goes quiet between requests does not pin this worker forever:
+// the next read_request returns Error (the timeout surfaces as a read error),
+// the loop ends, the stream drops, and the worker returns to the queue free to
+// serve another connection.
+fn serve_connection(
+    mut stream: TcpStream,
+    k: &mut Kernel,
+    arena: &mut Arena,
+    route_pairs: &RoutePairs,
+    upstream: &Option<String>,
+) {
+    // Idle timeout so a held-open keep-alive connection cannot starve the pool.
+    let _ = stream.set_read_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
+    // Bytes already read past one request's end belong to the NEXT request on
+    // this connection (pipelining) — carried across loop iterations so no byte
+    // is dropped between requests.
+    let mut carry: Vec<u8> = Vec::new();
+    // Serve requests on this one connection until handle_request says to close.
+    while handle_request(&mut stream, &mut carry, k, arena, route_pairs, upstream) {}
 }
 
 // One kernel worker. Builds its OWN Kernel + Arena (the routes.fk loaded once
 // into it at startup — !Sync, never shared), then pulls accepted streams from
-// the shared work queue and serves each via the factored handle_request. N of
+// the shared work queue and serves each connection's full keep-alive lifetime
+// via serve_connection (which loops handle_request on the one stream). N of
 // these run concurrently behind the accept loop; because each owns its kernel,
 // concurrent requests never corrupt one another's state.
 fn worker_loop(
@@ -6458,7 +6525,7 @@ fn worker_loop(
             guard.recv()
         };
         match stream {
-            Ok(s) => handle_request(s, &mut k, &mut arena, &route_pairs, &upstream),
+            Ok(s) => serve_connection(s, &mut k, &mut arena, &route_pairs, &upstream),
             // Sender dropped (listener closed) — drain done, worker exits.
             Err(_) => return,
         }
@@ -6690,28 +6757,50 @@ enum RequestRead {
 // This replaces the old single 8 KiB read: it honors Content-Length across as
 // many `read` calls as the body needs, so a body larger than one buffer is
 // fully captured (the correctness property the single-buffer read failed).
-fn read_request(stream: &mut TcpStream) -> RequestRead {
-    let mut raw: Vec<u8> = Vec::with_capacity(8192);
+//
+// KEEP-ALIVE: `carry` holds bytes that arrived on this persistent connection
+// but belong to the NEXT request — the classic pipelining hazard. A single
+// `read` can pull the tail of request N AND the head (or all) of request N+1;
+// those extra bytes must NOT be dropped between requests. So this fn (1) seeds
+// its read buffer from `carry` before touching the socket, and (2) stashes any
+// bytes captured past this request's end (header terminator + Content-Length)
+// back into `carry` for the next call. The next iteration of the keep-alive
+// loop therefore starts exactly at the next request's first byte. A clean EOF
+// with no bytes buffered (idle connection closed or read-timeout fired) returns
+// `Error`, which the keep-alive loop reads as "connection done — stop looping."
+fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
+    // Seed from any leftover bytes carried in from the previous request on this
+    // same connection (drained out of `carry`), then read more as needed.
+    let mut raw: Vec<u8> = std::mem::take(carry);
     let mut buf = [0u8; 8192];
-    // Phase 1: read until the header terminator is seen (or EOF / cap).
-    let header_end: Option<usize> = loop {
-        match stream.read(&mut buf) {
-            Ok(0) => break find_header_end(&raw), // peer closed; use what we have
-            Ok(n) => {
-                raw.extend_from_slice(&buf[..n]);
-                if let Some(t) = find_header_end(&raw) {
-                    break Some(t);
+    // Phase 1: read until the header terminator is seen (or EOF / cap). The
+    // carried bytes may ALREADY contain the full header block, so check before
+    // the first socket read — otherwise a pipelined request would block on a
+    // read that never comes.
+    let header_end: Option<usize> = if let Some(t) = find_header_end(&raw) {
+        Some(t)
+    } else {
+        loop {
+            match stream.read(&mut buf) {
+                Ok(0) => break find_header_end(&raw), // peer closed; use what we have
+                Ok(n) => {
+                    raw.extend_from_slice(&buf[..n]);
+                    if let Some(t) = find_header_end(&raw) {
+                        break Some(t);
+                    }
+                    // Guard: the header block alone must not grow without bound.
+                    if raw.len() > MAX_BODY_BYTES {
+                        return RequestRead::TooLarge;
+                    }
                 }
-                // Guard: the header block alone must not grow without bound.
-                if raw.len() > MAX_BODY_BYTES {
-                    return RequestRead::TooLarge;
-                }
+                // A read error here also covers the idle read-timeout firing on
+                // a kept-alive connection (WouldBlock/TimedOut) — the loop ends.
+                Err(_) => return RequestRead::Error,
             }
-            Err(_) => return RequestRead::Error,
         }
     };
     if raw.is_empty() {
-        return RequestRead::Error; // nothing arrived at all
+        return RequestRead::Error; // nothing arrived at all (clean EOF / idle close)
     }
     // `header_end` is the index just past "\r\n\r\n" when found. The head text
     // (terminator excluded) is everything before it; if no terminator was seen
@@ -6723,20 +6812,32 @@ fn read_request(stream: &mut TcpStream) -> RequestRead {
     let head = String::from_utf8_lossy(&raw[..head_end_excl_term]).to_string();
 
     // Phase 2: if Content-Length says there's a body, read exactly that many
-    // bytes, counting whatever already arrived past the header terminator.
-    let mut body: Vec<u8> = raw[body_start..].to_vec();
-    if let Some(total) = parse_content_length(&head) {
-        if total > MAX_BODY_BYTES {
-            return RequestRead::TooLarge; // oversized — caller answers 413
-        }
-        while body.len() < total {
-            match stream.read(&mut buf) {
-                Ok(0) => break, // peer closed early; return the partial body honestly
-                Ok(n) => body.extend_from_slice(&buf[..n]),
-                Err(_) => break,
+    // bytes, counting whatever already arrived past the header terminator. With
+    // NO Content-Length there is no body — everything past the terminator
+    // belongs to the NEXT request and is carried forward (not mis-read as this
+    // request's body, which would corrupt a keep-alive connection).
+    let total = match parse_content_length(&head) {
+        Some(t) => {
+            if t > MAX_BODY_BYTES {
+                return RequestRead::TooLarge; // oversized — caller answers 413
             }
+            t
         }
-        body.truncate(total); // never hand back more than Content-Length promised
+        None => 0,
+    };
+    let mut body: Vec<u8> = raw[body_start..].to_vec();
+    while body.len() < total {
+        match stream.read(&mut buf) {
+            Ok(0) => break, // peer closed early; return the partial body honestly
+            Ok(n) => body.extend_from_slice(&buf[..n]),
+            Err(_) => break,
+        }
+    }
+    // Any bytes captured past this request's body belong to the NEXT request on
+    // the connection — carry them forward so the next read_request starts there.
+    if body.len() > total {
+        carry.extend_from_slice(&body[total..]);
+        body.truncate(total);
     }
     RequestRead::Ok(head, body)
 }
@@ -6774,6 +6875,40 @@ fn parse_content_type(head: &str) -> String {
         }
     }
     String::new()
+}
+
+// Decide whether the CLIENT wants the connection kept alive, per RFC 7230. The
+// request line's HTTP version sets the default; an explicit `Connection` header
+// overrides it:
+//   HTTP/1.1 (and higher) -> keep-alive by default; close only if the client
+//     sent `Connection: close`.
+//   HTTP/1.0 -> close by default; keep-alive only if the client sent the
+//     legacy `Connection: keep-alive`.
+// The server may still force-close on top of this (e.g. an error whose framing
+// is uncertain) — that is the caller's decision; this only reads client intent.
+fn head_keep_alive(head: &str) -> bool {
+    let request_line = head.lines().next().unwrap_or("");
+    let is_http11_or_higher = request_line
+        .rsplit(' ')
+        .next()
+        .map(|v| v == "HTTP/1.1" || (v.starts_with("HTTP/") && v > "HTTP/1.0"))
+        .unwrap_or(false);
+    // The Connection header value (lowercased) if present.
+    let mut connection: Option<String> = None;
+    for line in head.lines().skip(1) {
+        if let Some((name, value)) = line.split_once(':') {
+            if name.trim().eq_ignore_ascii_case("connection") {
+                connection = Some(value.trim().to_ascii_lowercase());
+                break;
+            }
+        }
+    }
+    match connection.as_deref() {
+        Some(v) if v.split(',').any(|t| t.trim() == "close") => false,
+        Some(v) if v.split(',').any(|t| t.trim() == "keep-alive") => true,
+        // No explicit token -> the HTTP version's default.
+        _ => is_http11_or_higher,
+    }
 }
 
 // Parse a request body into the SAME (key, value) alist shape the query string
@@ -6890,12 +7025,21 @@ fn fanout_request(
     }
 }
 
-fn http_response(status: &str, body: &str, router: &str) -> String {
+// Build an HTTP/1.1 response. Every response carries an ACCURATE Content-Length
+// (we hold the whole body, so we frame it exactly) — that is what makes
+// keep-alive work without chunked encoding: the client knows precisely where the
+// body ends and the next response begins. `keep_alive` sets the Connection
+// header: `keep-alive` when the connection will serve more requests, `close` on
+// the final response (client asked to close, idle timeout, EOF, or an error
+// whose framing is uncertain). Chunked transfer encoding is a named-later breath
+// (KERNEL_AS_ROUTER.md HTTP-version row).
+fn http_response(status: &str, body: &str, router: &str, keep_alive: bool) -> String {
     format!(
-        "HTTP/1.0 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nX-Form-Router: {}\r\nConnection: close\r\n\r\n{}",
+        "HTTP/1.1 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nX-Form-Router: {}\r\nConnection: {}\r\n\r\n{}",
         status,
         body.as_bytes().len(),
         router,
+        if keep_alive { "keep-alive" } else { "close" },
         body
     )
 }
