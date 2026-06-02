@@ -4198,9 +4198,10 @@ const FORM_BINARY_COMPOSITE = 1;
 // FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
 // is a per-kernel f64s-table index — meaningless in another kernel. So a float
 // node serializes as [FORM_BINARY_FLOAT64][8 bytes IEEE-754 little-endian] and
-// each kernel re-interns the value on read (fresh local index). The dedicated
-// tag also sidesteps the divergent per-kernel float type numbering (Rust
-// FLOAT64=5, Go/TS=7): the value travels in bytes, not the index nor the tag.
+// each kernel re-interns the value on read (fresh local index). The trivial
+// float type tag (FLOAT64 = 7 three-way across Rust/Go/TS) never rides the wire
+// either: the value travels in bytes, not the index nor the local type-tag, so
+// the .fkb stays portable regardless of how each kernel numbers its types.
 const FORM_BINARY_FLOAT64 = 2;
 
 function pushU32(out: number[], v: number): void {
