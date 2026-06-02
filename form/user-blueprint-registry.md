@@ -134,7 +134,7 @@ The channel protocol carries a breath practice directly: give a small clean offe
 
 **Operating shape**: Not every channel exchange is query/answer or extraction. `offer` gives freely; `attune` records relation evidence without turning relation into ownership or objective-claim proof. A valid receipt preserves freedom, creates no debt, keeps disturbance none/minimal, and names next contact. A symbol-lens offer enters the same channel as voluntary, source-attributed expression; its sensing receipt names resonance, residual, surprise, circulation, vitality, and the next chosen contact.
 
-**Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `900` across source and binary sibling-kernel execution. Browser channel protocol also reserves `offer` and `attune`.
+**Proof**: `form/form-stdlib/tests/channel-breath-band.fk` returns `900` across source and binary sibling-kernel execution. `form/form-stdlib/tests/channel-symbol-lens-value-band.fk` returns `11111`, showing a source-attributed lens offer combined with gematria code and JSON grammar to produce observable value and expansion. Browser channel protocol also reserves `offer` and `attune`.
 
 ---
 

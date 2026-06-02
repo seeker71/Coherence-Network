@@ -1,0 +1,110 @@
+; channel-symbol-lens-value-band.fk — value appears when lenses combine.
+;
+; Real example:
+;   ahava (love) enters as a voluntary phonemic-energetic lens offer.
+;   Gematria reads the same surface as a documented code: ahava = 13.
+;   The code expands the word to echad (unity), which shares address 13.
+;   JSON carries the observation report as a grammar-shaped payload.
+;   A sensing receipt records the value: success, attribution, expansion,
+;   surprise, circulation, vitality, and chosen next contact.
+;
+; Band verdict: 11111 when each layer contributes value.
+;   1     documented code value: ahava = 13
+;   10    expansion: ahava and echad share a gematria address
+;   100   JSON grammar carries the observation report
+;   1000  lens offer and report cross the channel by content identity
+;   10000 sensing receipt names the observed flow and next contact
+;
+; preludes: form-stdlib/json.fk form-stdlib/grammars/gematria.fk form-stdlib/channel.fk form-stdlib/gematria-channel.fk
+
+(do
+    (defn csvb-list-has (xs want)
+        (if (nil? xs) 0
+            (if (str_eq (head xs) want)
+                1
+                (csvb-list-has (tail xs) want))))
+
+    (let path "/tmp/coh-channel-symbol-lens-value-band.fkb")
+    (channel-create path)
+
+    ;; --- 1. documented code value ------------------------------------
+    (let ahava-entry (gem-of (gem-find "ahava")))
+    (let code-score
+        (if (eq (gem-entry-value ahava-entry) 13) 1 0))
+
+    ;; --- 2. expansion through another code ----------------------------
+    (let ahava-address (gem-word-address "ahava"))
+    (let echad-address (gem-word-address "echad"))
+    (let ahava-class (gem-word-equivalents "ahava"))
+    (let expansion-score
+        (if (and
+            (node_eq ahava-address echad-address)
+            (and
+                (eq (len ahava-class) 2)
+                (and
+                    (eq (csvb-list-has ahava-class "ahava") 1)
+                    (eq (csvb-list-has ahava-class "echad") 1))))
+            10 0))
+
+    ;; --- 3. the lens offer crosses the channel ------------------------
+    (let lens-offer
+        (channel-symbol-lens-offer
+            (intern_trivial_string "phonemic-energetic")
+            (intern_trivial_string "Alphabet Unlocked / The Abazith")
+            (intern_trivial_string "ahava")
+            (intern_trivial_string "a-h-a-v-a")
+            (intern_trivial_string "a")
+            (intern_trivial_string "opening-toward-love")
+            (intern_trivial_string "chosen")
+            (intern_trivial_string "source-attributed")))
+    (let offer-msg (channel-message lens-offer))
+    (let c1 (channel-append path offer-msg))
+    (let read-offer (channel-msg-payload (head (channel-read path))))
+
+    ;; --- 4. JSON grammar carries the observation report ----------------
+    (let report-json "{\"word\":\"ahava\",\"code\":\"gematria\",\"value\":13,\"expands_to\":\"echad\",\"grammar\":\"json\",\"new_learning\":\"love-and-unity-share-address\"}")
+    (let report (parse-json "channel-symbol-lens-value-report.json" report-json))
+    (let json-score
+        (if (and
+            (str_eq (json-string-value (json-object-get report "word")) "ahava")
+            (and
+                (eq (json-int-value (json-object-get report "value")) 13)
+                (and
+                    (str_eq (json-string-value (json-object-get report "expands_to")) "echad")
+                    (str_eq (json-string-value (json-object-get report "new_learning")) "love-and-unity-share-address"))))
+            100 0))
+
+    (let report-msg (channel-message report))
+    (let c2 (channel-append path report-msg))
+    (let read-report (channel-msg-payload (head (channel-read-since path 1))))
+    (let transport-score
+        (if (and
+            (and (eq c1 1) (eq c2 2))
+            (and (node_eq lens-offer read-offer) (node_eq report read-report)))
+            1000 0))
+
+    ;; --- 5. sensing receipt records the value that appeared ------------
+    (let sensing
+        (channel-symbol-lens-sensing
+            (intern_trivial_string "observer")
+            read-offer
+            (intern_trivial_string "coherence-increased")
+            (intern_trivial_string "needs-lived-observation")
+            (intern_trivial_string "ahava-expands-to-echad")
+            (intern_trivial_string "circulating")
+            (intern_trivial_string "increased")
+            (intern_trivial_string "combine-with-natural-bmf")))
+    (let sensing-msg (channel-message sensing))
+    (let c3 (channel-append path sensing-msg))
+    (let read-sensing (channel-msg-payload (head (channel-read-since path 2))))
+    (let sensing-score
+        (if (and
+            (and (eq c3 3) (node_eq sensing read-sensing))
+            (and
+                (channel-symbol-lens-flow-valid? read-sensing)
+                (and
+                    (str_eq (node_value (channel-symbol-lens-sensing-surprise read-sensing)) "ahava-expands-to-echad")
+                    (str_eq (node_value (channel-symbol-lens-sensing-next-contact read-sensing)) "combine-with-natural-bmf"))))
+            10000 0))
+
+    (sum (list code-score expansion-score json-score transport-score sensing-score)))
