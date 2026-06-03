@@ -1769,15 +1769,15 @@
         (if (str_eq type-name "ParseStack")
             (make_nodeid 1 2 99 9241)
         (if (str_eq type-name "BMLSourceDeclaration")
-            (make_nodeid 1 2 99 9261)
+            (bp "BML-SOURCE-DECLARATION")
         (if (str_eq type-name "BMLSourceCarrier")
-            (make_nodeid 1 2 99 9262)
+            (bp "BML-SOURCE-CARRIER")
         (if (str_eq type-name "BMLParsedSourceParser")
-            (make_nodeid 1 2 99 9263)
+            (bp "BML-PARSED-SOURCE-PARSER")
         (if (str_eq type-name "BMLCompilerDeclarationLoweringStage")
-            (make_nodeid 1 2 99 9264)
+            (bp "BML-COMPILER-DECLARATION-LOWERING-STAGE")
         (if (str_eq type-name "BMLCompilerSourceLoweringFlow")
-            (make_nodeid 1 2 99 9265)
+            (bp "BML-COMPILER-SOURCE-LOWERING-FLOW")
             (make_nodeid 1 2 99 9240))))))))
 
     (defn bml-body-source-construct0 (type-name)
@@ -4474,6 +4474,7 @@
                 "BMLSourceLoweringFlow" "SelfHostingPlan"
                 "BMLSourceDeclaration" "BMLParsedSourceParser"
                 "BMLCompilerBootstrapImage" "BMLBootstrapRatchet"
+                "BMLCompilerImageEmitter"
                 "BMLSourceCarrier"
                 "BMLCompilerDeclarationLoweringStage"
                 "BMLCompilerSourceLoweringFlow"

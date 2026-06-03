@@ -655,6 +655,42 @@ class BMLBootstrapRatchet [public, bootstrapBoundary, selfHosting] {
    }
 }
 
+class BMLCompilerImageEmitter [public, selfHosting, bootstrapBoundary] {
+   section [class, public] {
+      const String DefaultImageExtension = ".fkb";
+      const String DefaultImagePath = "form/.cache/bml/bml-compiler.fkb";
+      const String ImageSource = "BML compiler source";
+   }
+
+   section [public] {
+      BMLCompilerBootstrapImage BuildImage(
+         String strSourcePath,
+         String strImagePath,
+         String strCompilerVersion,
+         String strSourceHash ) {
+         return BMLCompilerBootstrapImage(
+            strSourcePath,
+            strImagePath,
+            strCompilerVersion,
+            strSourceHash );
+      }
+
+      bool ImageIsSourceProven(
+         BMLCompilerBootstrapImage hImage,
+         bool bSourceCompileProof,
+         bool bSiblingKernelProof ) {
+         if ( bSourceCompileProof == false ) return false;
+         if ( bSiblingKernelProof == false ) return false;
+
+         return true;
+      }
+
+      String ImagePath() [get] {
+         return DefaultImagePath;
+      }
+   }
+}
+
 class SelfHostingPlan [public, coherent, bootstrapBoundary] {
    section [class, public] {
       const String OwnerLanguage = "BML";

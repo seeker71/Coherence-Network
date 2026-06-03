@@ -178,6 +178,23 @@ cd form
 
 Expected result: `26` with `1 ok, 0 divergent`.
 
+## First Compiler Image
+
+The first `.fkb` checkpoint is now proven as a source-derived compiler image record. The image is deliberately modest: it does not yet execute as the self-hosted compiler. It carries BML compiler-source identity, image path, `.fkb` extension, source byte count, parsed declaration count, class count, template count, and interface count in a `BML-COMPILER-IMAGE` node. The proof writes that node to a `.fkb`, reads it back, and verifies NodeID identity plus the loaded fields across Go, Rust, and TypeScript.
+
+This matters because the ratchet now has a real binary checkpoint path. BML source is still authoritative; the `.fkb` is the recoverable image projection. The next promotion step is to replace metadata-only image payload with executable compiler payload, then prove that the image compiles the same BML source.
+
+The runtime record blueprints used by the concrete BML lowerer are now named in `form/form-stdlib/blueprint-registry.json` and regenerated into the kernel bp tables, so compiler image proofs do not depend on anonymous type-99 numbers.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk
+```
+
+Expected result: `24` with `1 ok, 0 divergent`.
+
 ## Bootstrap Boundary
 
 The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.
@@ -194,7 +211,7 @@ That means Form remains the witness substrate; BML owns the compiler language.
 
 ## Next Refinements
 
-1. Emit the first source-proven BML compiler `.fkb`, then prove that image compiles the same BML source.
+1. Replace the metadata-only BML compiler image with an executable compiler payload, then prove that image compiles the same BML source.
 2. Execute `BMLCompilerSourceLoweringFlow` through the BML compiler path, then retire the matching Form proof bridge.
 3. Move grammar ports into runtime registry capsules.
 4. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.

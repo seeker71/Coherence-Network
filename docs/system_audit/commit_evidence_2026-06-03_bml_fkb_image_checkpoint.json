@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/bml-fkb-image-emit-20260603",
+  "commit_scope": "Create the first source-derived BML compiler .fkb checkpoint and register the concrete BML lowerer runtime blueprints.",
+  "files_owned": [
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bml_fkb_image_checkpoint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check --json",
+      "python3 form/scripts/validate_form_ontology.py",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "git diff --check"
+    ],
+    "notes": "The first BML compiler image proof returns 24 across Go/Rust/TypeScript. It parses the real BML compiler source, builds a BML-COMPILER-IMAGE node with source/image metadata and parsed counts, writes it to /tmp/bml-compiler-source-image.fkb, reads it back, and proves NodeID identity plus loaded fields. Blueprint scanning reports no unregistered type-99 NodeIDs after registering BML lowerer records and BML-COMPILER-IMAGE. Adjacent BML compiler proofs remain green at 26, 34, 42, 31, and 68."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification. Hostinger auto-deploy is already externally blocked on SSH/SCP reachability to 187.77.152.42."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The BML compiler bootstrap ratchet now has a real source-derived .fkb checkpoint. The checkpoint is metadata-only and recoverable, not yet an executable self-hosted compiler image.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+      "python3 scripts/scan_form_blueprints.py --check --json",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The .fkb checkpoint is source-derived and proven but still metadata-only. The executable compiler payload, self-compile proof, and promoted image replacement remain open."
+  },
+  "idea_ids": [
+    "bmf-bml-compiler-picture",
+    "bootstrap-image-ratchet"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture"
+  ],
+  "task_ids": [
+    "bml-fkb-image-emit-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "bootstrap-ratchet-design"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk writes and reads /tmp/bml-compiler-source-image.fkb from the parsed BML compiler source metadata.",
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml now defines BMLCompilerImageEmitter in high-level BML source.",
+    "form/form-stdlib/blueprint-registry.json names the BML lowerer runtime record blueprints and BML-COMPILER-IMAGE; generated bp tables make those names resolvable in Go/Rust/TypeScript.",
+    "kernels/BMF_BML_COMPILER_PICTURE.md records the first checkpoint and the next refinement: replace metadata-only image payload with executable compiler payload."
+  ],
+  "change_files": [
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bml_fkb_image_checkpoint.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
