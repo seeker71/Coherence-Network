@@ -36,8 +36,12 @@ def _apply_spec_lang(items: list[SpecRegistryEntry], lang: str | None) -> list[S
     from app.services import translation_cache_service as _tcache
     if not lang or not translator_service.is_supported(lang) or lang == translator_service.DEFAULT_LOCALE:
         return items
+    # One batched query for the whole listing's canonical views instead of one
+    # SELECT per spec — the same N+1 shape /api/ideas?lang=xx had. Each spec
+    # resolves to the SAME record the per-spec canonical_view returned.
+    canon = _tcache.canonical_views("spec", [spec.spec_id for spec in items], lang)
     for spec in items:
-        rec = _tcache.canonical_view("spec", spec.spec_id, lang)
+        rec = canon.get(spec.spec_id)
         if rec and rec.content_title:
             spec.title = rec.content_title
         if rec and rec.content_description:
