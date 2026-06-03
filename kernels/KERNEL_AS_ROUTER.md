@@ -492,18 +492,36 @@ fronts everything (`traefik-traefik-1`), routing `Host(api.coherencycoin.com)`
 flip inserts the kernel-router *between* Traefik and api: Traefik routes
 `api.coherencycoin.com` → kernel-router → (fan-out) api:8000.
 
-**The honest readiness gap (sensed, not glossed):** the kernel-router is
-*proven* across the rungs above — but it is **not yet packaged as a deployable
-server**. The Rust binary ships inside the api container for the inline-PyO3
-path; there is **no standalone kernel-router container image / compose service**
-that runs `cli_serve` as a front door. So the flip is **not** "one Traefik
-label away" — the real first build is **package the kernel-router as a
-container** (a `form-kernel-rust serve --upstream http://api:8000` image + a
-compose service), *then* the Traefik re-point is one label. Claiming otherwise
-would be a false-green; this is the true next step and it is mine to build when
-the intent is set.
+**The deployable artifact (built — the shadow step is now one intent away):**
+the kernel-router is *proven* across the rungs above AND packaged as a standalone
+deployable server. The Rust binary still ships inside the api container for the
+inline-PyO3 path; alongside it there is now a **standalone kernel-router image +
+shadow manifest + compose service** that runs `cli_serve` as a front door:
 
-**The staged, reversible shape once the image exists:**
+- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — a multi-stage image
+  reusing `Dockerfile.api`'s proven `kernel-builder` (same `FROM
+  rust:1.86-slim-bookworm`, same `cargo build --release --bin form-kernel-rust &&
+  strip`), then a lean `debian-slim` runtime carrying ONLY the stripped binary,
+  the form-stdlib (so a BML manifest can be source-compiled later), and the
+  shadow manifest. No Rust toolchain in the final image.
+- [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk)
+  — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_pairs`
+  accepts an empty list (an empty list is a valid list, not an error), so ZERO
+  routes are native and EVERYTHING fans out to `--upstream`. Proven by
+  [`deploy/kernel-router/shadow_proof_harness.py`](../deploy/kernel-router/shadow_proof_harness.py):
+  every path fans out byte-identically to hitting the upstream directly, with
+  `X-Form-Router: fanout-python` on every response, and a POST body is forwarded.
+- [`deploy/kernel-router/docker-compose.kernel-router.yml`](../deploy/kernel-router/docker-compose.kernel-router.yml)
+  — a DEFINED-BUT-INACTIVE overlay service (build: `Dockerfile.kernel-router`,
+  `--upstream http://api:8000`). It is a SEPARATE overlay the production deploy
+  never includes, and its Traefik labels are **present but commented**, so
+  merging it changes nothing about production routing.
+
+So the flip is **not** a from-scratch build — the shadow image exists and serves.
+What remains is the Traefik re-point (uncomment one label set, drop the api
+service's own rule), which is Urs's **intent**.
+
+**The staged, reversible shape (the image now exists):**
 1. **Shadow** — kernel-router fans out *everything* to api, serves *zero* native
    routes. Traefik points at it. Behavior is byte-identical to today (every
    request still served by FastAPI, via one proxy hop), but now the
@@ -523,15 +541,16 @@ faster** than the CPython request lifecycle; the fan-out tail (the ~760
 not-yet-native routes) pays **~+6%** for the extra proxy hop. One new container
 in the hot path; the failure surface is that hop's uptime.
 
-**The division, corrected:** what is *mine* is to sense this to the bone (done:
-topology, insertion point, rollback, readiness gap, tradeoff, live-traffic
-reality) and to **build the kernel-router container image** so the shadow-step
-is actually deployable. What is *Urs's* is the **intent** — whether the body's
-front door should become the kernel now, accepting one hot-path container and a
-+6% tail cost for the 56× native gain and the runtime-share shift toward the
-kernel speaking the body's own tongue. That is a stakes-and-vision question, not
-a permission gate; the sensing under it is no longer a guess. Today's front door
-(FastAPI) is untouched until that intent is set.
+**The division:** the sensing (topology, insertion point, rollback, tradeoff,
+live-traffic reality) AND the **kernel-router container image** that makes the
+shadow step actually deployable are built — the image serves, the shadow manifest
+fans out transparently, the compose service is defined-but-inactive. What is
+*Urs's* is the **intent** — whether the body's front door should become the
+kernel now, accepting one hot-path container and a +6% tail cost for the 56×
+native gain and the runtime-share shift toward the kernel speaking the body's own
+tongue. That is a stakes-and-vision question, not a permission gate; the artifact
+under it is real, not a guess. Today's front door (FastAPI) is untouched until
+that intent is set.
 
 ## Cross-references
 
@@ -556,3 +575,11 @@ a permission gate; the sensing under it is no longer a guess. Today's front door
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
+
+### The deployable artifact (the kernel-router as a standalone server)
+
+- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib (for a future BML manifest's `--stdlib`), the shadow manifest, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
+- [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk) — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_pairs` accepts an empty list, so zero routes are native and EVERYTHING fans out — a transparent proxy with `X-Form-Router: fanout-python` as live evidence.
+- [`deploy/kernel-router/entrypoint.sh`](../deploy/kernel-router/entrypoint.sh) — resolves `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` (+ optional `STDLIB_DIR` / `KERNEL_ROUTER_WORKERS`) at run time and `exec`s `form-kernel-rust serve` — container-configurable without a rebuild.
+- [`deploy/kernel-router/docker-compose.kernel-router.yml`](../deploy/kernel-router/docker-compose.kernel-router.yml) — a DEFINED-BUT-INACTIVE overlay service (build: `Dockerfile.kernel-router`, `--upstream http://api:8000`). A SEPARATE overlay the production deploy never includes; its Traefik labels are present but COMMENTED, so merging it changes nothing about production routing. Uncommenting them (and dropping the api service's own rule) is the flip — Urs's intent.
+- [`deploy/kernel-router/shadow_proof_harness.py`](../deploy/kernel-router/shadow_proof_harness.py) — proves the shadow manifest is a transparent proxy: against a mock CPython upstream, every path (and a POST with a body) fans out byte-identically to hitting the upstream directly, every response carries `X-Form-Router: fanout-python`, and the empty routes list is accepted (the binary starts and serves). Mock upstream — no production routing.
