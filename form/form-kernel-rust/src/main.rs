@@ -7060,6 +7060,17 @@ fn cli_serve(args: &[String]) -> i32 {
 // streaming bodies are a named-later breath (KERNEL_AS_ROUTER.md request row).
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 
+// The cap for an UPSTREAM RESPONSE body (the fan-out hop), decoupled from the
+// request cap above. A request body is untrusted client input — 1 MiB is the
+// right ceiling there. But the upstream is the body's OWN FastAPI app, a trusted
+// peer that legitimately returns large JSON (the vision-KB concept lists run
+// ~1.7 MiB). Capping the response at the request's 1 MiB rejected real routes
+// with `upstream response body too large` (the blocker the live flip surfaced
+// 2026-06-03). 64 MiB is generous for any real API JSON while still bounding a
+// runaway upstream so the worker can't be made to OOM. True streaming
+// (unbounded, no buffering) is a named-later breath.
+const MAX_UPSTREAM_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
+
 // The outcome of reading a request: either the parsed (head, body), or a signal
 // that the body exceeded MAX_BODY_BYTES (the caller answers 413), or a read
 // error / empty peer (the caller drops the connection silently).
@@ -7515,7 +7526,7 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
                     if let Some(t) = find_header_end(&raw) {
                         break t;
                     }
-                    if raw.len() > MAX_BODY_BYTES {
+                    if raw.len() > MAX_UPSTREAM_RESPONSE_BYTES {
                         return Err(FanoutError::Other(
                             "upstream response head too large".to_string(),
                         ));
@@ -7552,7 +7563,7 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
 
     // Phase 2: frame the body. Content-Length is the path that allows reuse.
     if let Some(total) = parse_content_length(&head) {
-        if total > MAX_BODY_BYTES {
+        if total > MAX_UPSTREAM_RESPONSE_BYTES {
             return Err(FanoutError::Other(
                 "upstream response body too large".to_string(),
             ));
@@ -7608,7 +7619,7 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
             Ok(0) => break, // upstream closed — the unframed body is complete
             Ok(n) => {
                 body.extend_from_slice(&buf[..n]);
-                if body.len() > MAX_BODY_BYTES {
+                if body.len() > MAX_UPSTREAM_RESPONSE_BYTES {
                     return Err(FanoutError::Other(
                         "upstream response body too large".to_string(),
                     ));
