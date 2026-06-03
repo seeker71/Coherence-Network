@@ -1,0 +1,230 @@
+; tests/bml-concrete-source-lowerer-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the next source-lowering breath lives in BML: typed source
+; declarations, typed carriers, a concrete declaration-lowering stage, and a
+; concrete BML source-lowering flow. Form remains only the proof reader here.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn template-body-node (template-component)
+        (head (bml-template-body template-component)))
+
+    (defn template-body-name (template-component)
+        (do
+            (let node (template-body-node template-component))
+            (if (bml-component-kind? node "Class")
+                (bml-class-name node)
+                (if (bml-component-kind? node "Interface")
+                    (bml-interface-name node)
+                    ""))))
+
+    (defn find-template-body (templates name)
+        (if (nil? templates)
+            (empty)
+            (if (str_eq (template-body-name (head templates)) name)
+                (head templates)
+                (find-template-body (tail templates) name))))
+
+    (defn template-kind-score (templates name expected-kind)
+        (do
+            (let template-component (find-template-body templates name))
+            (if (nil? template-component)
+                0
+                (score-str
+                    (bml-template-kind template-component)
+                    expected-kind))))
+
+    (defn class-base-score (class-component expected-base)
+        (if (nil? class-component)
+            0
+            (score-str
+                (bml-class-structural-base-name class-component)
+                expected-base)))
+
+    (defn class-field-type-score (class-component field-name expected-type)
+        (if (nil? class-component)
+            0
+            (do
+                (let field
+                    (bml-find-field
+                        (bml-class-own-fields class-component)
+                        field-name))
+                (if (nil? field)
+                    0
+                    (score-str
+                        (bml-field-type field)
+                        expected-type)))))
+
+    (defn class-method-return-score (class-component method-name expected-return)
+        (if (nil? class-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-class-own-methods class-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (defn interface-method-return-score (interface-component method-name expected-return)
+        (if (nil? interface-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-interface-own-methods interface-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (let path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+    (let templates (bml-components-of-kind nodes "Template"))
+
+    (let parser-interface
+        (bml-model-find-interface
+            model
+            "BMLSourceParser"))
+    (let source-declaration
+        (bml-model-find-class
+            model
+            "BMLSourceDeclaration"))
+    (let source-carrier
+        (bml-model-find-class
+            model
+            "BMLSourceCarrier"))
+    (let concrete-stage
+        (bml-model-find-class
+            model
+            "BMLCompilerDeclarationLoweringStage"))
+    (let concrete-flow
+        (bml-model-find-class
+            model
+            "BMLCompilerSourceLoweringFlow"))
+    (let modern
+        (bml-model-find-class
+            model
+            "ModernBMLCompiler"))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-bool (not (nil? parser-interface)))
+            (interface-method-return-score
+                parser-interface
+                "ParseDeclarations"
+                "BMLSourceDeclaration[]")
+            (score-bool (not (nil? source-declaration)))
+            (class-field-type-score
+                source-declaration
+                "m_strKind"
+                "String")
+            (class-field-type-score
+                source-declaration
+                "m_strName"
+                "String")
+            (class-field-type-score
+                source-declaration
+                "m_hSyntaxNode"
+                "Object")
+            (class-method-return-score
+                source-declaration
+                "Kind"
+                "String")
+            (class-method-return-score
+                source-declaration
+                "Name"
+                "String")
+            (class-method-return-score
+                source-declaration
+                "SyntaxNode"
+                "Object")
+            (score-bool (not (nil? source-carrier)))
+            (class-base-score
+                source-carrier
+                "CompilerDeclaration<BMLSourceDeclaration>")
+            (score-bool (not (nil? concrete-stage)))
+            (class-base-score
+                concrete-stage
+                "BMLDeclarationLoweringStage<BMLSourceDeclaration,BMLSourceCarrier>")
+            (class-method-return-score
+                concrete-stage
+                "DeclarationKind"
+                "String")
+            (class-method-return-score
+                concrete-stage
+                "DeclarationName"
+                "String")
+            (class-method-return-score
+                concrete-stage
+                "BuildCarrier"
+                "BMLSourceCarrier")
+            (class-method-return-score
+                concrete-stage
+                "CarrierSource"
+                "BMLSourceDeclaration")
+            (score-bool (not (nil? concrete-flow)))
+            (class-base-score
+                concrete-flow
+                "BMLSourceLoweringFlow<String,BMLSourceDeclaration,BMLSourceCarrier>")
+            (class-field-type-score
+                concrete-flow
+                "m_hParser"
+                "BMLSourceParser")
+            (class-method-return-score
+                concrete-flow
+                "ParseDeclarations"
+                "BMLSourceDeclaration[]")
+            (class-method-return-score
+                concrete-flow
+                "IsTemplateDeclaration"
+                "bool")
+            (class-method-return-score
+                concrete-flow
+                "IsLanguagePortDeclaration"
+                "bool")
+            (class-method-return-score
+                concrete-flow
+                "IsBootstrapBoundaryDeclaration"
+                "bool")
+            (class-method-return-score
+                concrete-flow
+                "IsKnownLanguagePortName"
+                "bool")
+            (class-field-type-score
+                modern
+                "m_hSourceLowering"
+                "BMLCompilerSourceLoweringFlow")
+            (class-method-return-score
+                modern
+                "AttachSourceParser"
+                "void")
+            (class-method-return-score
+                modern
+                "CompileCompilerSource"
+                "CompilerUnitModel<Object>")
+            (template-kind-score
+                templates
+                "BMLSourceLoweringFlow"
+                "class"))))

@@ -4008,7 +4008,22 @@
                                         (nth body-parse 0))
                                     parameters))
                             (nth body-parse 1)))
-                    (bml-source-parse-step false "" (empty) objects)))
+                    (if (bml-source-token-value? (head after-properties) ";")
+                        (bml-source-parse-step
+                            true
+                            "file-method-signature"
+                            (comp-bml-component
+                                "Method"
+                                (list
+                                    return-type
+                                    method-name
+                                    properties
+                                    (bml-body-source-with-span
+                                        (empty)
+                                        (bml-token-span 0 0 (empty)))
+                                    parameters))
+                            (tail after-properties))
+                        (bml-source-parse-step false "" (empty) objects))))
             (bml-source-parse-step false "" (empty) objects)))
 
     (defn bml-source-parse-typed-member (class-name objects)
@@ -4196,9 +4211,18 @@
                 "CompilerDeclaration" "CompilerSectionModel"
                 "CompilerUnitModel" "BMLDeclarationLoweringStage"
                 "BMLSourceLoweringFlow" "SelfHostingPlan"
+                "BMLSourceDeclaration" "BMLSourceCarrier"
+                "BMLCompilerDeclarationLoweringStage"
+                "BMLCompilerSourceLoweringFlow"
                 "CSharpLanguage" "JavaLanguage" "TypeScriptLanguage"
                 "GoLanguage" "RustLanguage" "BMLLanguage"
                 "ModernBMLCompiler")
+            name))
+
+    (defn bml-source-interface-body-enabled? (name)
+        (bml-source-name-in-list?
+            (list
+                "BMLSourceParser")
             name))
 
     (defn bml-source-direct-class-parser? (objects)
@@ -4306,17 +4330,34 @@
                         (let parent (nth parent-parse 0))
                         (let body-start (nth parent-parse 1))
                         (if (bml-source-token-value? (head body-start) "{")
-                            (bml-source-parse-step
-                                true
-                                "file-interface-balanced-shell"
-                                (comp-bml-component
-                                    "Interface"
-                                    (list
-                                        interface-name
-                                        properties
-                                        parent
-                                        (empty)))
-                                (bml-source-skip-class-body body-start))
+                            (if (bml-source-interface-body-enabled? interface-name)
+                                (do
+                                    (let members
+                                        (bml-source-parse-class-members-until-close
+                                            interface-name
+                                            (tail body-start)))
+                                    (bml-source-parse-step
+                                        true
+                                        "file-interface-body"
+                                        (comp-bml-component
+                                            "Interface"
+                                            (list
+                                                interface-name
+                                                properties
+                                                parent
+                                                (nth members 0)))
+                                        (nth members 1)))
+                                (bml-source-parse-step
+                                    true
+                                    "file-interface-balanced-shell"
+                                    (comp-bml-component
+                                        "Interface"
+                                        (list
+                                            interface-name
+                                            properties
+                                            parent
+                                            (empty)))
+                                    (bml-source-skip-class-body body-start)))
                             (bml-source-parse-step false "" (empty) objects)))
                     (bml-source-parse-step false "" (empty) objects)))
             (bml-source-parse-step false "" (empty) objects)))

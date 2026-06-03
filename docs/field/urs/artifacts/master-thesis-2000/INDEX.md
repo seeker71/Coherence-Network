@@ -42,7 +42,7 @@ src/ tree with tests, Related Prolog/Jasmin/OldBMF, CD distribution).
 ## Drill paths
 
 - **"What does the system look like in source?"** → `companion/source-samples/BMF-grammar.bml` first; for the full tree see `~/Downloads/Angelic/src/`.
-- **"What does the modern compiler/compiler-compiler picture look like?"** → `../../../../../kernels/BMF_BML_COMPILER_PICTURE.md`; the BML source body is `../../../../../form/form-stdlib/bml/bmf-bml-compiler-picture.bml`, with source lowering proven by `../../../../../form/form-stdlib/tests/bml-source-lowering-carrier-proof.fk`.
+- **"What does the modern compiler/compiler-compiler picture look like?"** → `../../../../../kernels/BMF_BML_COMPILER_PICTURE.md`; the BML source body is `../../../../../form/form-stdlib/bml/bmf-bml-compiler-picture.bml`, with source lowering proven by `../../../../../form/form-stdlib/tests/bml-source-lowering-carrier-proof.fk` and the concrete BML-owned lowerer proven by `../../../../../form/form-stdlib/tests/bml-concrete-source-lowerer-proof.fk`.
 - **"What does Bjorg's side say about objects?"** → `companion/sgb-bml-objects.txt`.
 - **"Where does the word *Angelic* come from?"** → `companion/angelic-assembler.txt` ("degree of freedom" speculation phase).
 - **"What are the academic ancestors?"** → `EXTERNAL.md` § Academic ancestry.
