@@ -507,14 +507,15 @@ shown; chunked transfer and structural-JSON are the rest.
 The real-app proof above runs ONE native route returning a scalar value. The
 PRODUCTION manifest
 [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk)
-takes the next step the durable flip needs: it PROMOTES the four simplest
-`/api/utils` compute routes from the fan-out tail (served by CPython) to NATIVE
-(served entirely in Form), each returning the **full JSON response object** its
-FastAPI twin returns — byte-for-byte. These are the routes whose Form computation
-is already parity-proven against CPython by the three-way kernel suite
-(`endpoint_<name>_demo.fk`); promotion replicates their FULL HTTP contract — the
-exact query params with the exact FastAPI defaults, the arithmetic in Form, and
-the exact response document.
+takes the next step the durable flip needs: it PROMOTES the cleanly-promotable
+`/api/utils` compute routes (scalar/list-in → flat-JSON-out) from the fan-out tail
+(served by CPython) to NATIVE (served entirely in Form), each returning the **full
+JSON response object** its FastAPI twin returns — byte-for-byte. These are the
+routes whose Form computation is already parity-proven against CPython by the
+three-way kernel suite (`endpoint_<name>_demo.fk`); promotion replicates their FULL
+HTTP contract — the exact query params with the exact FastAPI defaults, the
+arithmetic in Form, and the exact response document. Ten routes are promoted today
+(the first four scalar/list computes, then six pure-numeric scoring/entropy routes).
 
 | Promoted route | params | response shape |
 |----------------|--------|----------------|
@@ -522,6 +523,12 @@ the exact response document.
 | `/api/utils/nodeid_distance` | 8 NodeID coords (ints) | `{"distance":<int>,"a":[…4],"b":[…4],"runtime":"inline"}` |
 | `/api/utils/nodeid_compatibility` | 8 NodeID coords (ints) | `{"compatibility":<0..4>,"a":[…4],"b":[…4],"runtime":"inline"}` |
 | `/api/utils/weighted_average` | `values`, `weights` (csv floats) | `{"average":<float>,"values":[…],"weights":[…],"runtime":"inline"}` |
+| `/api/utils/simpson_diversity` | `counts` (csv ints) | `{"diversity":<float>,"counts":[…],"runtime":"inline"}` |
+| `/api/utils/idea_score` | `potential_value` `confidence` `estimated_cost` `resistance_risk` (floats) | `{"score":<float>,…echoes,"runtime":"inline"}` |
+| `/api/utils/marginal_cc_return` | `pv` `av` `conf` `ec` `ac` `rr` (floats) | `{"marginal_return":<float>,…echoes,"runtime":"inline"}` |
+| `/api/utils/breath_balance` | `gas` `water` `ice` (ints) | `{"balance":<float>,"gas":<int>,"water":<int>,"ice":<int>,"runtime":"inline"}` (incl. `-0.0`) |
+| `/api/utils/shannon_entropy` | `gas` `water` `ice` (ints) | `{"entropy":<float>,"gas":<int>,"water":<int>,"ice":<int>,"runtime":"inline"}` (round 4) |
+| `/api/utils/softmax_weights` | `scores` (csv floats), `temperature` (float) | `{"weights":[…],"scores":[…],"temperature":<float>,"runtime":"inline"}` |
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -534,17 +541,21 @@ native-kernel`.
 [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
 proves the promotion two ways at once — boot the real local app as the CPython
 oracle, stand the kernel-router (production manifest) in front, and for each of
-the four routes over representative + edge params (15 cases):
+the ten routes over representative + edge params (41 cases):
 
 ```
 [native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
            value-contract == local CPython oracle: MATCH   (native runtime='inline', dev-app runtime='subprocess')
            FULL-BODY     == LIVE  https://api.coherencycoin.com: BYTE-IDENTICAL
-… all 15 cases, incl. adversarial floats (0.14000000000000004, 7.8100000000000005, 0.30000000000000004)
+[native  ] /api/utils/breath_balance?gas=5&water=0&ice=0 -> {"balance":-0.0,…}  FULL-BODY == LIVE: BYTE-IDENTICAL
+[native  ] /api/utils/softmax_weights?scores=0.1,0.2,0.3 -> {"weights":[0.3006096053557273,…]}  FULL-BODY == LIVE: BYTE-IDENTICAL
+… all 41 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
+  0.6666666666666667), CPython's -0.0 vs +0.0 on single-phase entropy, and
+  deterministic + uniform softmax
 
-native  (kernel-router, Form):   p50=0.255 ms  p99=0.361 ms
-CPython (app serve_via_kernel):  p50=11.05 ms  p99=16.31 ms
--> native p50 is 43.3x faster than the CPython-served route (a fan-out adds the proxy hop ON TOP)
+native  (kernel-router, Form):   p50=0.241 ms  p99=0.343 ms
+CPython (app serve_via_kernel):  p50=11.02 ms  p99=12.54 ms
+-> native p50 is 45.7x faster than the CPython-served route (a fan-out adds the proxy hop ON TOP)
 ```
 
 Two honest claims, kept distinct:
@@ -571,18 +582,22 @@ the same compute served through the CPython doorway (and a fan-out would add the
 proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
 Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
 
-**Promotability map.** The four promoted routes are scalar/list-in, scalar/list-out
-with a flat JSON response — the cleanly-promotable subset. The remaining 18
-kernel-served `/api/utils` routes split by handler capability: the other pure-numeric
-ones (`simpson_diversity`, `idea_score`, `marginal_cc_return`, `breath_balance`,
-`shannon_entropy`, `softmax_weights`, `cost_vector`, `value_vector`, …) are the SAME
-shape and promotable with the same handler primitives as their recipes already prove
-the math — the work per route is authoring the param-parse + JSON-emit, not new kernel
-capability. The routes that read a STRUCTURED record (`idea_marginal_from_record`,
-`idea_grounding_summary`, `coherence_summary_score`) or return nested objects need the
-request-side structural-JSON parse (still an open breath) before their full contract
-can be replicated natively. This manifest is the durable flip's native surface, ready
-for the cutover; it does NOT flip — the standing shadow still fans out every route.
+**Promotability map.** The ten promoted routes are scalar/list-in, scalar/list-out
+with a flat JSON response — the cleanly-promotable subset. The first four are the
+integer/float scalar+list computes; the next six (`simpson_diversity`, `idea_score`,
+`marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) are
+the pure-numeric scoring/entropy routes — same handler primitives plus the `math_log`
+/ `math_exp` / `round_ndigits` natives their recipes already exercise (`breath_balance`
+even reproduces CPython's `-0.0` on a single-phase distribution, byte-for-byte; the
+work per route was authoring the param-parse + JSON-emit, not new kernel capability).
+The routes that read a STRUCTURED record (`idea_marginal_from_record`,
+`idea_grounding_summary`, `coherence_summary_score`) or fold parallel arrays into
+records / return nested objects (`grounded_cost`, `grounded_value`, `cost_vector`,
+`value_vector`, `grounded_roi`) need the request-side structural-record marshalling
+in the native handler (still an open breath) before their full contract can be
+replicated natively — the flat-JSON helpers here parse only csv-of-scalars. This
+manifest is the durable flip's native surface, ready for the cutover; it does NOT
+flip — the standing shadow still fans out every route.
 
 ## The flip — sensed to the bone, the decision is intent not permission
 
@@ -718,8 +733,8 @@ door is FastAPI.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
-- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): four promoted `/api/utils` routes (`coherence_weight`, `nodeid_distance`, `nodeid_compatibility`, `weighted_average`) served NATIVELY in Form, each emitting the FULL JSON response object byte-identical to its FastAPI twin (params parsed from the request alist via `split_commas`, JSON built with `value_str` + `str_concat`, `runtime:"inline"` matching production); everything else fans out. Float accumulators are left-associated to match CPython's `sum()` bit-for-bit.
-- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and for all four routes over representative + edge params (15 cases, incl. adversarial floats) proves the native response value-identical to the local oracle (runtime provenance normalized out) AND — with `--live` — FULL-BODY byte-identical to the live production api; measures native (~0.25 ms) vs CPython-served (~11 ms) latency, the ~43x runtime-share win. Read-only against the live api; tears the local app + router down.
+- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): ten promoted `/api/utils` routes (`coherence_weight`, `nodeid_distance`, `nodeid_compatibility`, `weighted_average`, `simpson_diversity`, `idea_score`, `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) served NATIVELY in Form, each emitting the FULL JSON response object byte-identical to its FastAPI twin (params parsed from the request alist via `split_commas`, JSON built with `value_str` + `str_concat`, `runtime:"inline"` matching production); everything else fans out. Float accumulators are left-associated to match CPython's `sum()` bit-for-bit; the entropy routes carry `math_log`/`round_ndigits` and `breath_balance` reproduces CPython's `-0.0` exactly.
+- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and for all ten routes over representative + edge params (41 cases, incl. adversarial floats, `-0.0`, deterministic + uniform softmax) proves the native response value-identical to the local oracle (runtime provenance normalized out) AND — with `--live` — FULL-BODY byte-identical to the live production api; measures native (~0.24 ms) vs CPython-served (~11 ms) latency, the ~45x runtime-share win. Read-only against the live api; tears the local app + router down.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
 
 ### The deployable artifact (the kernel-router as a standalone server)

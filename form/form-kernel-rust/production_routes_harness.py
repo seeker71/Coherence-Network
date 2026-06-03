@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Promotion proof for the PRODUCTION kernel-router manifest.
 
-deploy/kernel-router/production-routes.fk promotes the four simplest /api/utils
-compute routes from FANNED-OUT (served by CPython) to NATIVE (served in Form by
-the kernel). This harness PROVES each promoted route serves a byte-identical
-JSON response to the route's CPython twin — the actual runtime-share move.
+deploy/kernel-router/production-routes.fk promotes the cleanly-promotable
+/api/utils compute routes (scalar/list-in → flat-JSON-out) from FANNED-OUT
+(served by CPython) to NATIVE (served in Form by the kernel). This harness PROVES
+each promoted route serves a byte-identical JSON response to the route's CPython
+twin — the actual runtime-share move. The PROMOTED list below is the source of
+truth for which routes + query strings are proven (extend it as routes promote).
 
 The oracle is the route's CPython implementation. By default the harness boots
 the REAL FastAPI app locally (uvicorn app.main:app, COH_ENV=dev / sqlite) and
@@ -74,6 +76,45 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?values=0.1,0.2,0.3&weights=0.7,0.2,0.1",               # float accumulation order
         "?values=1.1,2.2,3.3,4.4,5.5&weights=0.1,0.1,0.1,0.1,0.6",
         "?values=7.7,8.8&weights=0.9,0.1",                       # 7.8100000000000005
+    ]),
+    # ----- batch 2: scalar/list compute routes (this pass) -----
+    ("/api/utils/simpson_diversity", [
+        "",                              # defaults 2,1,1 -> 0.625
+        "?counts=5",                     # single category -> 0.0 (no diversity)
+        "?counts=1,1,1",                 # 1/3 squared float -> 0.6666666666666667
+        "?counts=3,2,1",                 # 0.6111111111111112
+        "?counts=0",                     # total<=0 guard -> 0.0
+    ]),
+    ("/api/utils/idea_score", [
+        "",                              # defaults -> 2.0
+        "?potential_value=0.1&confidence=0.2&estimated_cost=0.0&resistance_risk=0.0",  # floor + 0.04000000000000001
+        "?potential_value=1&confidence=1&estimated_cost=3&resistance_risk=0",          # denom=3 -> 0.3333333333333333
+        "?potential_value=10&confidence=0.5&estimated_cost=2&resistance_risk=2",       # denom=4
+    ]),
+    ("/api/utils/marginal_cc_return", [
+        "",                              # defaults -> 0.8
+        "?pv=2&av=5",                    # value_gap floor 0 -> 0.0
+        "?ec=1&ac=5&rr=0&pv=10&av=0&conf=1",  # remaining_cost floor 0.1 -> 100.0
+        "?pv=5&av=1&conf=0.5&ec=3&ac=1&rr=1", # mid-range floats
+    ]),
+    ("/api/utils/breath_balance", [
+        "",                              # defaults 1,1,1 -> 0.9999999999999998
+        "?gas=5&water=0&ice=0",          # single phase -> -0.0 (trailing negation)
+        "?gas=0&water=0&ice=0",          # total<=0 -> 0.0
+        "?gas=3&water=2&ice=1",          # 0.9206198357143047
+    ]),
+    ("/api/utils/shannon_entropy", [
+        "",                              # defaults 1,1,1 -> 1.0
+        "?gas=5&water=0&ice=0",          # single phase -> +0.0 (subtractive acc)
+        "?gas=0&water=0&ice=0",          # total==0 -> 0.0
+        "?gas=3&water=2&ice=1",          # rounded to 4 places
+    ]),
+    ("/api/utils/softmax_weights", [
+        "",                              # defaults 1,2,3 temp 1 -> distribution
+        "?scores=1.0,3.0,2.0&temperature=0",  # deterministic -> [0.0,1.0,0.0]
+        "?scores=0.1,0.2,0.3",           # adversarial floats
+        "?scores=5.0",                   # single element -> [1.0]
+        "?scores=2.0,2.0,2.0",           # all equal -> uniform thirds
     ]),
 ]
 
@@ -306,8 +347,8 @@ def main() -> int:
                      if args.live else "")
         print(f"\nok — all {n_checks} promoted-route checks value-identical to the local "
               f"CPython oracle{live_note} (native-kernel, application/json), fan-out still "
-              f"flows, native served {speedup:.1f}x faster than CPython. The four routes "
-              f"are promotion-ready: served in the body's own kernel, byte-for-byte the api.")
+              f"flows, native served {speedup:.1f}x faster than CPython. The {len(PROMOTED)} "
+              f"routes are promotion-ready: served in the body's own kernel, byte-for-byte the api.")
         return 0
     finally:
         if router_proc is not None:
