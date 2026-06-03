@@ -1,0 +1,153 @@
+; tests/bml-compiler-source-picture-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the modern compiler picture from actual BML source. The source uses
+; classes, templates, generic ports, compiler-compiler flow, dialect profiles,
+; and reversible choose/save/discard/fail control.
+
+(do
+    (defn bool-score (b bit)
+        (if b 1 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) 1 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) 1 0))
+
+    (defn gt-score (actual expected bit)
+        (if (gt actual expected) 1 0))
+
+    (defn token-count (objects value)
+        (if (nil? objects) 0
+            (add
+                (if (str_eq (bmf-object-value (head objects)) value) 1 0)
+                (token-count (tail objects) value))))
+
+    (defn template-body-node (template-component)
+        (head (bml-template-body template-component)))
+
+    (defn template-body-name (template-component)
+        (do
+            (let node (template-body-node template-component))
+            (if (bml-component-kind? node "Class")
+                (bml-class-name node)
+                (if (bml-component-kind? node "Interface")
+                    (bml-interface-name node)
+                    ""))))
+
+    (defn find-template-body (templates name)
+        (if (nil? templates) (empty)
+            (if (str_eq (template-body-name (head templates)) name)
+                (head templates)
+                (find-template-body (tail templates) name))))
+
+    (defn template-param-count-score (templates name count bit)
+        (do
+            (let template-component (find-template-body templates name))
+            (if (nil? template-component) 0
+                (int-score
+                    (len (bml-template-parameters template-component))
+                    count
+                    bit))))
+
+    (defn template-kind-score (templates name kind bit)
+        (do
+            (let template-component (find-template-body templates name))
+            (if (nil? template-component) 0
+                (if (str_eq (bml-template-kind template-component) kind) 1 0))))
+
+    (defn template-class (templates name)
+        (do
+            (let template-component (find-template-body templates name))
+            (if (nil? template-component) (empty)
+                (template-body-node template-component))))
+
+    (defn class-field-type-score (class-component field-name field-type bit)
+        (if (nil? class-component) 0
+            (do
+                (let field (bml-find-field (bml-class-own-fields class-component) field-name))
+                (if (nil? field) 0
+                    (str-score (bml-field-type field) field-type bit)))))
+
+    (let path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
+    (let source-objects (bml-source-scan-file path))
+    (let parsed (bml-source-file-parse-declarations path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+
+    (let packages (bml-components-of-kind nodes "Package"))
+    (let templates (bml-components-of-kind nodes "Template"))
+    (let classes (bml-model-classes model))
+    (let interfaces (bml-model-interfaces model))
+
+    (let compiler-stage (template-class templates "CompilerStage"))
+    (let grammar-capsule (template-class templates "GrammarCapsule"))
+    (let language-port (template-class templates "LanguagePort"))
+    (let compiler-flow (template-class templates "CompilerFlow"))
+    (let compiler-compiler (template-class templates "CompilerCompiler"))
+    (let modern (bml-model-find-class model "ModernBMLCompiler"))
+    (let csharp (bml-model-find-class model "CSharpLanguage"))
+    (let java (bml-model-find-class model "JavaLanguage"))
+    (let typescript (bml-model-find-class model "TypeScriptLanguage"))
+    (let go (bml-model-find-class model "GoLanguage"))
+    (let rust (bml-model-find-class model "RustLanguage"))
+    (let bml-language (bml-model-find-class model "BMLLanguage"))
+    (let trace-interface (bml-model-find-interface model "CompilerTrace"))
+
+    (let picture-const
+        (bml-find-const (bml-class-own-constants modern) "Picture"))
+    (let port-count-const
+        (bml-find-const (bml-class-own-constants modern) "PortCount"))
+    (let compiler-compiler-method
+        (bml-find-method
+            (bml-class-own-methods modern)
+            "CompilerCompiler"))
+    (let syntax-components
+        (bml-body-members-of-kind (bml-class-body modern) "Syntax"))
+
+    (sum
+        (list
+            (gt-score (len source-objects) 250 1)
+            (bool-score (bml-source-exec-parse-ok? parsed) 2)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 4)
+            (str-score (head (comp-bml-fields (head packages))) "BML.compiler" 8)
+            (gt-score (len templates) 6 16)
+            (gt-score (len classes) 6 32)
+            (gt-score (len interfaces) 0 64)
+            (bool-score (not (nil? trace-interface)) 128)
+            (template-kind-score templates "SourceScanner" "interface" 256)
+            (template-param-count-score templates "SourceScanner" 2 512)
+            (template-kind-score templates "ArtifactLens" "interface" 1024)
+            (template-param-count-score templates "ArtifactLens" 2 2048)
+            (template-kind-score templates "CompilerStage" "class" 4096)
+            (template-param-count-score templates "CompilerStage" 2 8192)
+            (template-param-count-score templates "GrammarCapsule" 2 16384)
+            (template-param-count-score templates "LanguagePort" 3 32768)
+            (template-param-count-score templates "CompilerFlow" 4 65536)
+            (template-param-count-score templates "CompilerCompiler" 3 131072)
+            (str-score (bml-class-structural-base-name compiler-compiler) "Application" 262144)
+            (class-field-type-score language-port "m_hScanner" "SourceScanner<TSource,TToken>" 524288)
+            (class-field-type-score language-port "m_hGrammar" "GrammarCapsule<TToken,TNode>" 1048576)
+            (class-field-type-score compiler-flow "m_hPort" "LanguagePort<TSource,TToken,TNode>" 2097152)
+            (class-field-type-score compiler-flow "m_hEmit" "CompilerStage<TNode,TArtifact>" 4194304)
+            (str-score (bml-class-structural-base-name modern) "Application" 8388608)
+            (bool-score (bml-properties-has? (bml-class-properties modern) "coherent") 16777216)
+            (str-score (bml-const-value picture-const) "BMF/BML compiler-compiler" 33554432)
+            (str-score (bml-const-value port-count-const) "6" 67108864)
+            (class-field-type-score modern "m_hLanguages" "LanguageProfile[]" 134217728)
+            (class-field-type-score modern "m_hCompilerCompiler" "CompilerCompiler<LanguageProfile,Object,Object>" 268435456)
+            (str-score (bml-method-return compiler-compiler-method) "CompilerCompiler<LanguageProfile,Object,Object>" 536870912)
+            (int-score (len syntax-components) 1 1073741824)
+            (str-score (head (comp-bml-fields (head syntax-components))) "CompilerModel" 2147483648)
+            (str-score (bml-class-structural-base-name csharp) "LanguageProfile" 4294967296)
+            (str-score (bml-class-structural-base-name java) "LanguageProfile" 8589934592)
+            (str-score (bml-class-structural-base-name typescript) "LanguageProfile" 17179869184)
+            (str-score (bml-class-structural-base-name go) "LanguageProfile" 34359738368)
+            (str-score (bml-class-structural-base-name rust) "LanguageProfile" 68719476736)
+            (str-score (bml-class-structural-base-name bml-language) "LanguageProfile" 137438953472)
+            (gt-score (token-count source-objects "choose") 2 274877906944)
+            (gt-score (token-count source-objects "save") 2 549755813888)
+            (gt-score (token-count source-objects "discard") 4 1099511627776)
+            (gt-score (token-count source-objects "fail") 0 2199023255552))))

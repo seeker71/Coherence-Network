@@ -1,0 +1,316 @@
+//////////////////////////////////////////////////////////////////////
+//
+// Modern BMF/BML compiler picture in BML source.
+//
+// This is a source artifact, not a generated fixture. It keeps the old
+// BMF bones: grammar objects, reversible parse flow, result stacks, and
+// choose/fail control, then makes the reusable compiler-compiler shape
+// explicit through classes, templates, generic ports, and dialect lenses.
+//
+//////////////////////////////////////////////////////////////////////
+
+package BML.compiler;
+
+import BMF.*;
+import BML.lang.*;
+
+interface CompilerTrace [public] {
+   section [public] {
+      String Name() [get];
+      String Summary() [get];
+      bool Verified() [get];
+   }
+}
+
+template<Object TSource, Object TToken> interface SourceScanner [public, reusable] {
+   section [public] {
+      TToken[] Scan( TSource hSource );
+      CompilerTrace Trace() [get];
+   }
+}
+
+template<Object TArtifact, Object TSource> interface ArtifactLens [public, reversible] {
+   section [public] {
+      TArtifact Forward( TSource hSource );
+      TSource Backward( TArtifact hArtifact );
+      bool RoundTrip( TSource hSource ) [witness];
+   }
+}
+
+template<Object TIn, Object TOut> class CompilerStage [public, abstract, reversible] {
+   section [protected] {
+      String m_strName;
+      CompilerStage<TOut,Object> m_hNext;
+   }
+
+   section [public] {
+      CompilerStage( String strName ) {
+         m_strName = strName;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      TOut Forward( TIn hInput ) [abstract] {}
+      TIn Backward( TOut hOutput ) [abstract] {}
+
+      bool RoundTrip( TIn hInput ) [witness] {
+         save;
+         choose {
+            TOut hOut = Forward( hInput );
+            TIn hBack = Backward( hOut );
+            discard;
+            return hBack == hInput;
+         }, {
+            discard;
+            fail;
+         }
+      }
+   }
+}
+
+template<Object TToken, Object TNode> class GrammarCapsule [public, immutable, witness="grammar"] {
+   section [private] {
+      String m_strName;
+      String m_strFileExtension;
+      HashTable<String, Rule> m_hRules = HashTable<String, Rule>();
+      HashTable<String, Method> m_hMethods = HashTable<String, Method>();
+      TNode m_hRoot;
+   }
+
+   section [public] {
+      GrammarCapsule( String strName, String strFileExtension ) {
+         m_strName = strName;
+         m_strFileExtension = strFileExtension;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      String FileExtension() [get] {
+         return m_strFileExtension;
+      }
+
+      void PutRule( String strName, Rule hRule ) {
+         m_hRules.Put( strName, hRule );
+      }
+
+      Rule GetRule( String strName ) {
+         return m_hRules.Get( strName );
+      }
+   }
+}
+
+template<Object TSource, Object TToken, Object TNode> class LanguagePort [public, port, reusable] {
+   section [private] {
+      String m_strLanguage;
+      String m_strExtension;
+      SourceScanner<TSource,TToken> m_hScanner;
+      GrammarCapsule<TToken,TNode> m_hGrammar;
+   }
+
+   section [public] {
+      LanguagePort( String strLanguage, String strExtension ) {
+         m_strLanguage = strLanguage;
+         m_strExtension = strExtension;
+      }
+
+      String Language() [get] {
+         return m_strLanguage;
+      }
+
+      String FileExtension() [get] {
+         return m_strExtension;
+      }
+
+      LanguagePort<TSource,TToken,TNode> WithScanner( SourceScanner<TSource,TToken> hScanner ) {
+         m_hScanner = hScanner;
+         return self;
+      }
+
+      LanguagePort<TSource,TToken,TNode> WithGrammar( GrammarCapsule<TToken,TNode> hGrammar ) {
+         m_hGrammar = hGrammar;
+         return self;
+      }
+   }
+}
+
+template<Object TSource, Object TToken, Object TNode, Object TArtifact> class CompilerFlow [public, flow, reversible] {
+   section [private] {
+      LanguagePort<TSource,TToken,TNode> m_hPort;
+      CompilerStage<TSource,TToken[]> m_hScan;
+      CompilerStage<TToken[],TNode> m_hParse;
+      CompilerStage<TNode,TNode> m_hResolve;
+      CompilerStage<TNode,TNode> m_hOptimize;
+      CompilerStage<TNode,TArtifact> m_hEmit;
+      ArtifactLens<TArtifact,TSource> m_hLens;
+   }
+
+   section [public] {
+      CompilerFlow( LanguagePort<TSource,TToken,TNode> hPort ) {
+         m_hPort = hPort;
+      }
+
+      TArtifact Compile( TSource hSource ) {
+         TToken[] hTokens = m_hScan.Forward( hSource );
+         TNode hParsed = m_hParse.Forward( hTokens );
+         TNode hTyped = m_hResolve.Forward( hParsed );
+         TNode hOptimized = m_hOptimize.Forward( hTyped );
+         return m_hEmit.Forward( hOptimized );
+      }
+
+      TSource Decompile( TArtifact hArtifact ) {
+         return m_hLens.Backward( hArtifact );
+      }
+
+      bool Accepts( TSource hSource ) {
+         save;
+         choose {
+            Compile( hSource );
+            discard;
+            return true;
+         }, {
+            discard;
+            return false;
+         }
+      }
+   }
+}
+
+template<Object TDialect, Object TGrammar, Object TCompiler> class CompilerCompiler [public, compilerCompiler, lens="grammar-to-compiler"] : Application {
+   section [private] {
+      TDialect m_hDialect;
+      TGrammar m_hGrammar;
+      CompilerFlow<TGrammar,Object,Object,TCompiler> m_hMetaFlow;
+   }
+
+   section [public] {
+      CompilerCompiler( TDialect hDialect, TGrammar hGrammar ) {
+         m_hDialect = hDialect;
+         m_hGrammar = hGrammar;
+      }
+
+      TCompiler GenerateCompiler() {
+         return m_hMetaFlow.Compile( m_hGrammar );
+      }
+
+      bool ProveRoundTrip( TGrammar hGrammar ) [witness, contract="source-ast-source"] {
+         save;
+         choose {
+            TCompiler hCompiler = m_hMetaFlow.Compile( hGrammar );
+            TGrammar hBack = m_hMetaFlow.Decompile( hCompiler );
+            discard;
+            return hBack == hGrammar;
+         }, {
+            discard;
+            return false;
+         }
+      }
+   }
+}
+
+class LanguageProfile [public, coherent, value] {
+   section [private] {
+      String m_strName;
+      String m_strExtension;
+      bool m_bCaseSensitive = true;
+   }
+
+   section [public] {
+      LanguageProfile( String strName, String strExtension ) {
+         m_strName = strName;
+         m_strExtension = strExtension;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      String FileExtension() [get] {
+         return m_strExtension;
+      }
+   }
+}
+
+class CSharpLanguage [public, port="csharp"] : LanguageProfile {
+   CSharpLanguage() [public] {
+      self( "CSharp", "cs" );
+   }
+}
+
+class JavaLanguage [public, port="java"] : LanguageProfile {
+   JavaLanguage() [public] {
+      self( "Java", "java" );
+   }
+}
+
+class TypeScriptLanguage [public, port="typescript"] : LanguageProfile {
+   TypeScriptLanguage() [public] {
+      self( "TypeScript", "ts" );
+   }
+}
+
+class GoLanguage [public, port="go"] : LanguageProfile {
+   GoLanguage() [public] {
+      self( "Go", "go" );
+   }
+}
+
+class RustLanguage [public, port="rust"] : LanguageProfile {
+   RustLanguage() [public] {
+      self( "Rust", "rs" );
+   }
+}
+
+class BMLLanguage [public, port="bml"] : LanguageProfile {
+   BMLLanguage() [public] {
+      self( "BML", "bml" );
+   }
+}
+
+class ModernBMLCompiler [public, coherent, compiler] : Application {
+   section [class, public] {
+      const String Picture = "BMF/BML compiler-compiler";
+      const int PortCount = 6;
+   }
+
+   section [private] {
+      LanguageProfile[] m_hLanguages = Array<LanguageProfile>();
+      CompilerCompiler<LanguageProfile,Object,Object> m_hCompilerCompiler;
+   }
+
+   syntax [CompilerModel] {
+      language ::= "language" $name:name $extension:string => build-language;
+      stage ::= "stage" $name:name "from" $input:name "to" $output:name => build-stage;
+      flow ::= language stage => build-flow;
+      compiler ::= flow => build-compiler;
+   }
+
+   section [public] {
+      void Main( String[] hArgs ) {
+         BuildDefaultLanguages();
+      }
+
+      void BuildDefaultLanguages() {
+         m_hLanguages.Append( BMLLanguage() );
+         m_hLanguages.Append( CSharpLanguage() );
+         m_hLanguages.Append( JavaLanguage() );
+         m_hLanguages.Append( TypeScriptLanguage() );
+         m_hLanguages.Append( GoLanguage() );
+         m_hLanguages.Append( RustLanguage() );
+      }
+
+      CompilerCompiler<LanguageProfile,Object,Object> CompilerCompiler() [get] {
+         return m_hCompilerCompiler;
+      }
+
+      bool Supports( String strLanguage ) {
+         for ( int i = 0; i < m_hLanguages.Count; ++i ) {
+            if ( m_hLanguages[i].Name == strLanguage ) return true;
+         }
+         return false;
+      }
+   }
+}
