@@ -1,0 +1,68 @@
+; tests/http-server-band.fk — sibling-witness band for http-server.fk.
+; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
+;
+; Iteration 3 of lifting the HTTP server into the BML class hierarchy: the
+; Server. Proves the full dispatch — a raw HTTP/1.1 request string flows
+; parse -> Router -> handler -> render -> wire — across every shape: two matched
+; routes (one whose handler reads the request and declares its own content-type),
+; an unmatched path (404 naming what missed), and a matched route whose handler
+; is unregistered (500, the wiring gap made visible).
+;
+; The handlers, routes, and registry are DEMO data this band supplies; the
+; Server names none of them — it is one generic flow over data. Emits a bit-sum
+; (31 when all pass). Identical across Go/Rust/TS proves the dispatch — including
+; the first-class handler call — is correct and portable.
+
+;; demo handlers : handler(kh-request) -> kh-response. A handler reads the
+;; request through the Request class and returns a Response; it never sees
+;; routing. demo-echo reads the path and declares application/json.
+(defn demo-health (request) (kh-response 200 (list) "ok"))
+(defn demo-echo (request)
+    (kh-response 200
+        (list (kh-header "Content-Type" "application/json"))
+        (str_concat "{\"path\":\"" (str_concat (kh-request-path request) "\"}"))))
+
+;; demo routes (DATA) + registry (name -> handler closure). "ghost" names a
+;; handler the registry does NOT hold — the wiring gap CHECK 5 exercises.
+(let demo-routes
+    (list (kh-route "health" "GET" "/health" 0 "health" "" 100)
+          (kh-route "echo"   "GET" "/echo"   0 "echo"   "" 100)
+          (kh-route "ghost"  "GET" "/ghost"  0 "ghost-handler" "" 100)))
+(let demo-registry
+    (list (list "health" demo-health)
+          (list "echo"   demo-echo)))
+
+;; CHECK 1 (bit 1) — GET /health dispatches to demo-health: a 200 whose body is
+;; "ok" and whose content-type is the text/plain default (the handler set none).
+(let r-health (kh-serve demo-routes demo-registry "GET /health HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-health
+    (if (str_eq r-health "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nX-Form-Router: native-kernel\r\n\r\nok")
+        1 0))
+
+;; CHECK 2 (bit 2) — GET /echo dispatches to demo-echo, which READS the request
+;; path and declares application/json. Body {"path":"/echo"} is 16 bytes; the
+;; handler's content-type is preserved, the framing headers added.
+(let r-echo (kh-serve demo-routes demo-registry "GET /echo HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-echo
+    (if (str_eq r-echo "HTTP/1.1 200 OK\r\nContent-Length: 16\r\nX-Form-Router: native-kernel\r\nContent-Type: application/json\r\n\r\n{\"path\":\"/echo\"}")
+        2 0))
+
+;; CHECK 3 (bit 4) — an unmatched path yields the Server's 404.
+(let r-404 (kh-serve demo-routes demo-registry "GET /nope HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-404 (if (ge (str_find r-404 "HTTP/1.1 404 Not Found\r\n" 0) 0) 4 0))
+
+;; CHECK 4 (bit 8) — the 404 body names the path that missed.
+(let ok-404-body (if (ge (str_find r-404 "no route for /nope" 0) 0) 8 0))
+
+;; CHECK 5 (bit 16) — GET /ghost MATCHES a route, but "ghost-handler" is not in
+;; the registry: the Server answers 500, the wiring gap made visible rather than
+;; crashing or silently 404-ing.
+(let r-ghost (kh-serve demo-routes demo-registry "GET /ghost HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-ghost (if (ge (str_find r-ghost "HTTP/1.1 500 Internal Server Error\r\n" 0) 0) 16 0))
+
+;; verdict — sum of the bit-weighted checks; 31 when all pass.
+(add ok-health
+(add ok-echo
+(add ok-404
+(add ok-404-body
+     ok-ghost))))
