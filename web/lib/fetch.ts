@@ -6,6 +6,11 @@ type FetchInput = Parameters<typeof fetch>[0];
 type FetchOptions = Omit<Parameters<typeof fetch>[1], "signal"> & {
   signal?: AbortSignal;
   cache?: RequestCache;
+  // Next.js's per-fetch caching config — declared explicitly because the base
+  // RequestInit augmentation isn't always carried through the Omit above (the
+  // production `next build` type check rejects it otherwise). Lets a caller opt
+  // into time-based revalidation, e.g. the home page's per-locale data cache.
+  next?: { revalidate?: number | false; tags?: string[] };
 };
 
 function withTimeout(signal: AbortSignal | null, timeoutMs: number): AbortSignal {
@@ -47,13 +52,22 @@ export async function fetchJsonOrNull<T>(
 ): Promise<T | null> {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : "(Request)";
 
+  // Force no-store ONLY when the caller asks for neither an explicit cache mode
+  // nor revalidation. A `next: { revalidate }` request (the per-locale data cache
+  // the home page uses to stop re-fetching slowly-changing aggregates on every
+  // dynamic render) must NOT be silently overridden to no-store — that would
+  // disable the very caching it asked for. Every existing caller passes neither,
+  // so they keep no-store unchanged; caching is strictly opt-in.
+  const wantsCaching =
+    options.cache !== undefined || Boolean(options.next?.revalidate);
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     const timeout = withTimeout(options.signal ?? null, timeoutMs);
     try {
       const response = await fetch(input, {
         ...options,
         signal: timeout,
-        cache: options.cache ?? "no-store",
+        ...(wantsCaching ? {} : { cache: "no-store" as RequestCache }),
       });
       if (!response.ok) {
         if (attempt < retries && isRetryable(response.status)) {
