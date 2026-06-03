@@ -1,0 +1,218 @@
+; language-model.fk - generic source-language class/template object model.
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
+;
+; BML, TypeScript, Go, C#, math, sound, and future grammars may all lower into
+; these same Form-native language objects. The grammar name belongs at the
+; parser/lens boundary; the runtime object model stays language-neutral.
+
+(do
+(let LANGUAGE-TEMPLATE-TAG 44001)
+
+(let LANGUAGE-TEMPLATE-MEMBER-TAG 44003)
+
+(let LANGUAGE-CLASS-TAG 44004)
+
+(let LANGUAGE-CLASS-MEMBER-TAG 44005)
+
+(let LANGUAGE-TEMPLATE-KIND-ROUTE-CLASS 44101)
+
+(let LANGUAGE-CLASS-MEMBER-KIND-FIELD 44201)
+
+(let LANGUAGE-CLASS-MEMBER-KIND-METHOD 44202)
+
+(let LANGUAGE-CLASS-MEMBER-KIND-ROUTE 44203)
+
+(defn language-template-member (name value-type)
+    (list LANGUAGE-TEMPLATE-MEMBER-TAG name value-type))
+
+(defn language-template-member? (value)
+    (if (eq (len value) 3)
+        (eq (nth value 0) LANGUAGE-TEMPLATE-MEMBER-TAG)
+        false))
+
+(defn language-template-member-name (member)
+    (nth member 1))
+
+(defn language-template-member-type (member)
+    (nth member 2))
+
+(defn language-template-member-valid? (member)
+    (if (language-template-member? member)
+        (and
+            (gt (str_len (language-template-member-name member)) 0)
+            (gt (str_len (language-template-member-type member)) 0))
+        false))
+
+(defn language-template-members-valid? (members)
+    (if (nil? members)
+        true
+        (and
+            (language-template-member-valid? (head members))
+            (language-template-members-valid? (tail members)))))
+
+(defn language-template (name parameters)
+    (list LANGUAGE-TEMPLATE-TAG name parameters LANGUAGE-TEMPLATE-KIND-ROUTE-CLASS empty))
+
+(defn language-template-with-members (name parameters members)
+    (list LANGUAGE-TEMPLATE-TAG name parameters LANGUAGE-TEMPLATE-KIND-ROUTE-CLASS members))
+
+(defn language-template? (value)
+    (if (eq (len value) 5)
+        (eq (nth value 0) LANGUAGE-TEMPLATE-TAG)
+        false))
+
+(defn language-template-name (template)
+    (nth template 1))
+
+(defn language-template-parameters (template)
+    (nth template 2))
+
+(defn language-template-kind (template)
+    (nth template 3))
+
+(defn language-template-members (template)
+    (nth template 4))
+
+(defn language-template-valid? (template)
+    (if (language-template? template)
+        (and
+            (gt (str_len (language-template-name template)) 0)
+            (and
+                (eq (language-template-kind template) LANGUAGE-TEMPLATE-KIND-ROUTE-CLASS)
+                (language-template-members-valid? (language-template-members template))))
+        false))
+
+(defn language-class-member (kind name value-type value)
+    (list LANGUAGE-CLASS-MEMBER-TAG kind name value-type value))
+
+(defn language-class-member-field (name value-type value)
+    (language-class-member LANGUAGE-CLASS-MEMBER-KIND-FIELD name value-type value))
+
+(defn language-class-member-method (name method)
+    (language-class-member LANGUAGE-CLASS-MEMBER-KIND-METHOD name "method" method))
+
+(defn language-class-member-route (name route)
+    (language-class-member LANGUAGE-CLASS-MEMBER-KIND-ROUTE name "KernelHTTPRoute" route))
+
+(defn language-class-member? (value)
+    (if (eq (len value) 5)
+        (eq (nth value 0) LANGUAGE-CLASS-MEMBER-TAG)
+        false))
+
+(defn language-class-member-kind (member)
+    (nth member 1))
+
+(defn language-class-member-name (member)
+    (nth member 2))
+
+(defn language-class-member-type (member)
+    (nth member 3))
+
+(defn language-class-member-value (member)
+    (nth member 4))
+
+(defn language-class-member-valid? (member)
+    (if (language-class-member? member)
+        (and
+            (gt (str_len (language-class-member-name member)) 0)
+            (gt (str_len (language-class-member-type member)) 0))
+        false))
+
+(defn language-class-members-valid? (members)
+    (if (nil? members)
+        true
+        (and
+            (language-class-member-valid? (head members))
+            (language-class-members-valid? (tail members)))))
+
+(defn language-class (class-name template type-arguments members)
+    (list LANGUAGE-CLASS-TAG class-name template type-arguments members))
+
+(defn language-class? (value)
+    (if (eq (len value) 5)
+        (eq (nth value 0) LANGUAGE-CLASS-TAG)
+        false))
+
+(defn language-class-name (class-value)
+    (nth class-value 1))
+
+(defn language-class-template (class-value)
+    (nth class-value 2))
+
+(defn language-class-type-arguments (class-value)
+    (nth class-value 3))
+
+(defn language-class-members (class-value)
+    (nth class-value 4))
+
+(defn language-class-member-named (members name)
+    (if (nil? members)
+        empty
+        (if (str_eq (language-class-member-name (head members)) name)
+            (head members)
+            (language-class-member-named (tail members) name))))
+
+(defn language-class-route-member (class-value)
+    (language-class-member-named (language-class-members class-value) "route"))
+
+(defn language-class-valid? (class-value)
+    (if (language-class? class-value)
+        (and
+            (gt (str_len (language-class-name class-value)) 0)
+            (and
+                (language-template-valid? (language-class-template class-value))
+                (and
+                    (eq
+                        (len (language-class-type-arguments class-value))
+                        (len (language-template-parameters (language-class-template class-value))))
+                    (language-class-members-valid? (language-class-members class-value)))))
+        false))
+
+(defn language-route-class
+    (class-name template type-arguments route-name method pattern priority handler required-header pressure-budget)
+    (language-class class-name template type-arguments
+        (list
+            (language-class-member-route
+                "route"
+                (kh-route route-name method pattern priority handler required-header pressure-budget)))))
+
+(defn language-route-class-route-data
+    (class-name template type-arguments route-id handler)
+    (language-class class-name template type-arguments
+        (list
+            (language-class-member-route
+                "route"
+                (kh-route-data-ref route-id handler)))))
+
+(defn language-route-class? (value)
+    (if (language-class? value)
+        (language-class-member? (language-class-route-member value))
+        false))
+
+(defn language-route-class-name (route-class)
+    (language-class-name route-class))
+
+(defn language-route-class-template (route-class)
+    (language-class-template route-class))
+
+(defn language-route-class-type-arguments (route-class)
+    (language-class-type-arguments route-class))
+
+(defn language-route-class-kernel-route (route-class)
+    (language-class-member-value (language-class-route-member route-class)))
+
+(defn language-route-class-valid? (route-class)
+    (if (language-route-class? route-class)
+        (and
+            (language-class-valid? route-class)
+            (and
+                (eq
+                    (language-class-member-kind (language-class-route-member route-class))
+                    LANGUAGE-CLASS-MEMBER-KIND-ROUTE)
+                (or
+                    (kh-route-valid? (language-route-class-kernel-route route-class))
+                    (kh-route-data-ref-valid? (language-route-class-kernel-route route-class)))))
+        false))
+
+0)

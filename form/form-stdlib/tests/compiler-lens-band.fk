@@ -1,0 +1,35 @@
+; compiler-lens-band.fk - BML-authored compiler lens band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/compiler-lens.fk
+
+section [form.bml] {
+    def cl-compiler-lens-band-score() {
+        let bml_surface = cl-surface("kernel-router-bml", "bml", 9, "Route classes, generics, templates, and route attention", "RouteCell, RequestCell, ResponseCell, SourceMap, DependencyEdge");
+        let form_surface = cl-surface("kernel-router-form", "form", 4, "Executable recipe cells and route closures", "routes binding, NodeID, closure, alist");
+        let map = cl-source-map(bml_surface, form_surface, "kernel.router.bml:Route<QueryJson>", "deploy/kernel-router/production-routes.fk:routes", 1000);
+        let dep_a = cl-dependency("QueryJson", "KernelHTTPRequest", "uses", 80);
+        let dep_b = cl-dependency("QueryJson", "KernelHTTPResponse", "emits", 70);
+        let translation = cl-translation(bml_surface, form_surface, "lower", "bidirectional-with-source-map", "lossless-structure");
+        let diagnostic = cl-diagnostic("info", "Route<QueryJson>", "kernel.router.bml:1", "route class lowers to route cell and closure", "inspect source map");
+        let lens = cl-lens(bml_surface, list(map), list(dep_a, dep_b), list(translation), list(diagnostic));
+        let flat_surface = cl-surface("flat-form-route", "form", 1, "path plus closure", "list(path, closure)");
+        let flat_lens = cl-lens(flat_surface, empty, empty, empty, empty);
+        let lens_score = cl-lens-structure-score(lens);
+        let flat_score = cl-lens-structure-score(flat_lens);
+        sum(list(
+            cl-bool-score(cl-surface-valid?(bml_surface), 1),
+            cl-bool-score(cl-surface-valid?(form_surface), 2),
+            cl-bool-score(cl-source-map-valid?(map), 4),
+            cl-bool-score(cl-dependency-valid?(dep_a), 8),
+            cl-bool-score(cl-dependency-valid?(dep_b), 16),
+            cl-bool-score(cl-translation-valid?(translation), 32),
+            cl-bool-score(cl-diagnostic-valid?(diagnostic), 64),
+            cl-bool-score(cl-lens-valid?(lens), 128),
+            cl-bool-score(gt(lens_score, flat_score), 256),
+            cl-bool-score(eq(cl-dependency-strength-total(cl-lens-dependencies(lens)), 150), 512),
+            lens_score
+        ));
+    }
+
+    cl-compiler-lens-band-score();
+}

@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/bml-support-overview-20260603",
+  "commit_scope": "Lift kernel-router source routes from BML-specific naming into a generic source-language object model, compile source-authored route classes into native Form recipe objects, and serve the production health route from the Rust kernel.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes-data.json",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/compost_register_2026-06-03.md",
+    "docs/system_audit/commit_evidence_20260603_source_language_kernel_router.json",
+    "form/form-kernel-rust/examples/router-bml-proof.bml",
+    "form/form-kernel-rust/examples/router-proof.fk",
+    "form/form-kernel-rust/router_bml_proof_harness.py",
+    "form/form-kernel-rust/src/formats.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/attention.fk",
+    "form/form-stdlib/compiler-lens.fk",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/language-model.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/attention-cluster-band.fk",
+    "form/form-stdlib/tests/channel-bml-band.fk",
+    "form/form-stdlib/tests/compiler-lens-band.fk",
+    "form/form-stdlib/tests/compiler-lens-bmf-alignment-band.fk",
+    "form/form-stdlib/tests/form-bml-maintenance-dialect.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/source-corpus-roundtrip-band.fk",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603 && git fetch origin main && git rebase --autostash origin/main",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603/form/form-kernel-rust && cargo fmt",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603/form && native prepared Go/Rust parity for kernel-http, source-language-route-class-template, form-bml-maintenance, and source-corpus-roundtrip",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603/form/form-kernel-rust && cargo test -- --test-threads=1",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-support-overview-20260603/form/form-kernel-rust && ./target/debug/form-kernel-rust serve --host 127.0.0.1 --port 19125 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl http://127.0.0.1:19125/health?probe=language"
+    ],
+    "notes": "Native prepared Go/Rust parity passed: kernel-http go=66690 rust=66690, source-language-route-class-template go=525377 rust=525377, form-bml-maintenance go=77 rust=77, source-corpus-roundtrip go=1566 rust=1566. Rust cargo test passed with 39 tests. Live router smoke returned HTTP 200, body ok, X-Form-Router: native-kernel, and the server log showed the production source manifest compiled via form-stdlib into a Form recipe object with 24 native routes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until the branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until PR checks pass, the branch is merged, deployment completes, and public verification runs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The kernel router can load a source-authored production manifest, lower a high-level generic source-language route class through form-stdlib into a native Form recipe object, and serve the selected route from the Rust kernel without a BML-specific proof harness.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "native prepared Go/Rust parity for kernel-http and source-language route-class template workloads",
+      "cargo test -- --test-threads=1 in form/form-kernel-rust",
+      "local form-kernel-rust serve against deploy/kernel-router/production-routes.fk and curl /health?probe=language",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local native proof and local HTTP proof are complete; CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "kernel-first-router",
+    "source-language-native-recipes"
+  ],
+  "spec_ids": [
+    "kernel-router-source-language-classes"
+  ],
+  "task_ids": [
+    "bml-support-overview-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "language-model.fk defines generic language template, class, class member, route class, and route-data-ref cells instead of BML-specific route aliases.",
+    "source-compiler.fk lowers form.bml template/class source syntax into generic language-* Form calls.",
+    "production-routes.fk includes a source-language RouteCell template and HealthRoute class whose route object is consumed by the kernel router.",
+    "form-kernel-rust source manifest loading compiles section-authored manifests through form-stdlib and imports the returned Form recipe object into worker kernels.",
+    "The obsolete router-bml proof source and Python proof harness were removed; the live production manifest and Rust router serve path now carry the proof.",
+    "Local HTTP smoke observed the real native route response rather than mock route data."
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes-data.json",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/compost_register_2026-06-03.md",
+    "form/form-kernel-rust/examples/router-bml-proof.bml",
+    "form/form-kernel-rust/examples/router-proof.fk",
+    "form/form-kernel-rust/router_bml_proof_harness.py",
+    "form/form-kernel-rust/src/formats.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/attention.fk",
+    "form/form-stdlib/compiler-lens.fk",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/language-model.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/attention-cluster-band.fk",
+    "form/form-stdlib/tests/channel-bml-band.fk",
+    "form/form-stdlib/tests/compiler-lens-band.fk",
+    "form/form-stdlib/tests/compiler-lens-bmf-alignment-band.fk",
+    "form/form-stdlib/tests/form-bml-maintenance-dialect.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/source-corpus-roundtrip-band.fk",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature"
+}

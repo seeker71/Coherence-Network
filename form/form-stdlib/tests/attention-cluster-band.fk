@@ -1,0 +1,45 @@
+; attention-cluster-band.fk — attention clusters as a matrix projection.
+;
+; preludes: form-stdlib/attention.fk
+
+(do
+    (let matrix (attention-default-steering-matrix 0))
+
+    ;; A low-trust, high-tightness, high-leverage cluster should project most
+    ;; strongly into the tight lane.
+    (let tight-axes (list 0.8 0.7 0.2 0.9 0.1 0.2 0.9))
+    (let tight-proj (attention-project-cluster tight-axes matrix))
+    (let tight-lane (head (tail tight-proj)))
+    (let tight-score
+        (if (gt tight-lane (head tight-proj))
+            (if (gt tight-lane (head (tail (tail tight-proj)))) 100 0)
+            0))
+
+    ;; A high-alignment, high-vitality, high-trust cluster should project as
+    ;; trusted.
+    (let trusted-axes (list 0.9 0.9 0.95 0.05 0.05 0.05 0.5))
+    (let trusted-proj (attention-project-cluster trusted-axes matrix))
+    (let trusted-lane (head trusted-proj))
+    (let trusted-score
+        (if (gt trusted-lane (head (tail trusted-proj)))
+            (if (gt trusted-lane (head (tail (tail trusted-proj)))) 200 0)
+            0))
+
+    ;; Projection keeps the full lane vector, not only a scalar.
+    (let shape-score
+        (if (eq (len tight-proj) 5)
+            (if (eq (len trusted-proj) 5) 300 0)
+            0))
+
+    ;; Clamp protects the matrix from impossible negative/over-1 lane values.
+    (let clamped (attention-project-cluster
+        (list 1.0 1.0 1.0 1.0 1.0 1.0 1.0)
+        matrix))
+    (let clamp-score
+        (if (le (head clamped) 1.0)
+            (if (ge (head clamped) 0.0) 400 0)
+            0))
+
+    (add tight-score
+    (add trusted-score
+    (add shape-score clamp-score))))

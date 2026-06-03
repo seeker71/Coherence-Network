@@ -241,14 +241,9 @@ pub struct ConformanceVector {
     pub expected: serde_json::Value,
 }
 
-// Resolve the canonical JSON path. Allow override via env var for tests, and
-// fall back to a stable in-repo path. The kernel finds the doc by walking up
-// from the executable until it sees the docs/ directory; if that fails (the
-// binary lives outside the repo tree), use CARGO_MANIFEST_DIR as the anchor.
+// Resolve the canonical JSON path from the repository layout. Configuration is
+// file-backed; the kernel does not take hidden environment fallbacks here.
 pub fn canonical_json_path() -> PathBuf {
-    if let Ok(p) = std::env::var("NUMERIC_CANONICAL_JSON") {
-        return PathBuf::from(p);
-    }
     // CARGO_MANIFEST_DIR points at form/form-kernel-rust at build time.
     let manifest = env!("CARGO_MANIFEST_DIR");
     let mut p = PathBuf::from(manifest);
