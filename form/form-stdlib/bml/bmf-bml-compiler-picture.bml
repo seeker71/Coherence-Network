@@ -449,6 +449,124 @@ template<Object TSource, Object TDeclaration, Object TCarrier> class BMLSourceLo
    }
 }
 
+class BMLSourceDeclaration [public, value, sourceModel] {
+   section [private] {
+      String m_strKind;
+      String m_strName;
+      Object m_hSyntaxNode;
+   }
+
+   section [public] {
+      BMLSourceDeclaration( String strKind, String strName, Object hSyntaxNode ) {
+         m_strKind = strKind;
+         m_strName = strName;
+         m_hSyntaxNode = hSyntaxNode;
+      }
+
+      String Kind() [get] {
+         return m_strKind;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      Object SyntaxNode() [get] {
+         return m_hSyntaxNode;
+      }
+   }
+}
+
+interface BMLSourceParser [public, parser, bootstrapBoundary] {
+   section [public] {
+      BMLSourceDeclaration[] ParseDeclarations( String strSourcePath );
+   }
+}
+
+class BMLSourceCarrier [public, value, carrier] : CompilerDeclaration<BMLSourceDeclaration> {
+   section [public] {
+      BMLSourceCarrier(
+         String strKind,
+         String strName,
+         BMLSourceDeclaration hDeclaration ) {
+         self(
+            strKind,
+            strName,
+            hDeclaration );
+      }
+   }
+}
+
+class BMLCompilerDeclarationLoweringStage [public, concrete, lowering] : BMLDeclarationLoweringStage<BMLSourceDeclaration,BMLSourceCarrier> {
+   section [public] {
+      BMLCompilerDeclarationLoweringStage() {
+         self();
+      }
+
+      String DeclarationKind( BMLSourceDeclaration hDeclaration ) [override] {
+         return hDeclaration.Kind();
+      }
+
+      String DeclarationName( BMLSourceDeclaration hDeclaration ) [override] {
+         return hDeclaration.Name();
+      }
+
+      BMLSourceCarrier BuildCarrier(
+         String strKind,
+         String strName,
+         BMLSourceDeclaration hDeclaration ) [override] {
+         return BMLSourceCarrier(
+            strKind,
+            strName,
+            hDeclaration );
+      }
+
+      BMLSourceDeclaration CarrierSource( BMLSourceCarrier hCarrier ) [override] {
+         return hCarrier.Source();
+      }
+   }
+}
+
+class BMLCompilerSourceLoweringFlow [public, concrete, lowering, selfHosting] : BMLSourceLoweringFlow<String,BMLSourceDeclaration,BMLSourceCarrier> {
+   section [private] {
+      BMLSourceParser m_hParser;
+   }
+
+   section [public] {
+      BMLCompilerSourceLoweringFlow( BMLSourceParser hParser ) {
+         self( BMLCompilerDeclarationLoweringStage() );
+         m_hParser = hParser;
+      }
+
+      BMLSourceDeclaration[] ParseDeclarations( String strSourcePath ) [override] {
+         return m_hParser.ParseDeclarations( strSourcePath );
+      }
+
+      bool IsTemplateDeclaration( BMLSourceDeclaration hDeclaration ) [override] {
+         return hDeclaration.Kind() == "Template";
+      }
+
+      bool IsLanguagePortDeclaration( BMLSourceDeclaration hDeclaration ) [override] {
+         return IsKnownLanguagePortName( hDeclaration.Name() );
+      }
+
+      bool IsBootstrapBoundaryDeclaration( BMLSourceDeclaration hDeclaration ) [override] {
+         return hDeclaration.Name() == "SelfHostingPlan";
+      }
+
+      bool IsKnownLanguagePortName( String strName ) {
+         if ( strName == "BMLLanguage" ) return true;
+         if ( strName == "CSharpLanguage" ) return true;
+         if ( strName == "JavaLanguage" ) return true;
+         if ( strName == "TypeScriptLanguage" ) return true;
+         if ( strName == "GoLanguage" ) return true;
+         if ( strName == "RustLanguage" ) return true;
+
+         return false;
+      }
+   }
+}
+
 class SelfHostingPlan [public, coherent, bootstrapBoundary] {
    section [class, public] {
       const String OwnerLanguage = "BML";
@@ -542,7 +660,7 @@ class ModernBMLCompiler [public, coherent, compiler] : Application {
    section [private] {
       LanguageProfile[] m_hLanguages = Array<LanguageProfile>();
       CompilerCompiler<LanguageProfile,Object,Object> m_hCompilerCompiler;
-      BMLSourceLoweringFlow<String,Object,Object> m_hSourceLowering;
+      BMLCompilerSourceLoweringFlow m_hSourceLowering;
       SelfHostingPlan m_hSelfHosting;
    }
 
@@ -569,6 +687,10 @@ class ModernBMLCompiler [public, coherent, compiler] : Application {
 
       CompilerCompiler<LanguageProfile,Object,Object> CompilerCompiler() [get] {
          return m_hCompilerCompiler;
+      }
+
+      void AttachSourceParser( BMLSourceParser hParser ) {
+         m_hSourceLowering = BMLCompilerSourceLoweringFlow( hParser );
       }
 
       CompilerUnitModel<Object> CompileCompilerSource( String strSourcePath ) {
