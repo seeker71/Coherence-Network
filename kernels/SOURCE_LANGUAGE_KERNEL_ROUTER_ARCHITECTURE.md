@@ -25,6 +25,30 @@ The durable public claim is simple: a route is authored in a source language,
 lowered through Form into content-addressed recipes and cells, and executed by
 the kernel. Rust only hosts the request boundary and walks the Form closure.
 
+## Realized — HTTP framing moved from Rust into Form (2026-06-04)
+
+The kernel-minimal correction landed: the HTTP framing the layer table assigns to
+Rust (parse, render, route, dispatch) now lives as a **BML class hierarchy in
+Form**, Rust holding only sockets + eval/JIT. The stack, merged and proven:
+
+- `http-parse.fk` (request lexer, CRLF-safe) · `kernel-http.fk` (the classes
+  `kh-request`/`kh-response`/`kh-route` + the pressure-scored Router) ·
+  `http-request.fk` (parse → `kh-request`) · `http-render.fk` (`kh-response` →
+  wire, data-driven) · `http-server.fk` (`kh-serve`: parse→route→dispatch→render)
+  · `http-socket.fk` (the Form-native accept-loop `kh-serve-listener`).
+
+A request flows parse → Request → Router → dispatch → Response → socket, every
+decision a named Form value; routes and handlers are DATA, the recipes pure flow.
+Three-way proven (Go/Rust/TS) for the pure layers — render 63, request 31, server
+31, parse 11 — and Go/Rust over a real socket (15). PRs #2453, #2454, #2455.
+
+So the `KernelHTTP*` shapes and framing described below now live as `kh-*` Form
+recipes — read the route-hierarchy, candidate-matrix, and HTTP-classes sections
+as that realization. The layer table's Rust-owned "HTTP framing" row and the
+gap-map still describe the pre-correction shape and reconcile on the next pass.
+The remaining build step is the flip: `cli_serve` calling `kh-serve-listener`,
+composting the Rust HTTP.
+
 ## Current runtime facts
 
 The live body already has the pieces:
