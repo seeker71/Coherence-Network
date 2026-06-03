@@ -890,3 +890,122 @@ def test_resonance_pair_to_out_batch_matches_per_call():
     assert batched.name_b == per_call.name_b
     # The absent id is simply not in the batch dict (mirrors canonical_view -> None).
     assert id_b not in canon
+
+
+def _count_write_view_for(entity_id: str):
+    """Wrap translation_cache_service.write_view with a call-counter that still
+    calls through to the real write (the attune flow depends on the writes
+    actually landing). Returns a context-manager-ish (patcher, counter) usable
+    inside a ``with`` block; ``counter['n']`` holds writes seen for ``entity_id``.
+    """
+    real = _cache.write_view
+    counter = {"n": 0}
+
+    def _spy(*args, **kwargs):
+        if kwargs.get("entity_id") == entity_id:
+            counter["n"] += 1
+        return real(*args, **kwargs)
+
+    return patch.object(_cache, "write_view", _spy), counter
+
+
+def test_edge_stub_batch_preserves_attune_write_count(stub_backend):
+    """A node with NO canonical view that appears in MULTIPLE edge stubs is
+    attuned-on-miss exactly ONCE — the batched ``view=`` + ``seen_attuned`` path
+    must produce the IDENTICAL number of ``write_view`` calls as the per-stub
+    path, and the IDENTICAL projected text on every stub.
+
+    This is the test that catches a subtle batch bug: with a pre-loop snapshot,
+    every stub of a missing node sees it absent. Without the ``seen_attuned``
+    guard the second stub would attune again (an extra ``write_view`` for the
+    translated view) — a silent write-count regression. We pin it by running
+    BOTH paths on equivalent fixtures and asserting equal write counts, plus
+    the strange edge that the second stub still renders translated (the snapshot
+    was refreshed from the freshly-written view, mirroring the per-call re-query).
+    """
+    from app.routers import edges as _edges
+
+    lang = "de"
+
+    def _stub(node_id: str) -> dict:
+        # A localizable node-stub shape (concept ∈ _LOCALIZABLE_NODE_TYPES) with
+        # NO canonical view yet — forces the attune-on-miss path.
+        return {"id": node_id, "type": "concept", "name": "Sourcebound"}
+
+    # ── Reference: the per-stub path (each call live-queries canonical_view). ──
+    ref_id = f"node-edgewc-ref-{uuid4().hex[:8]}"
+    patcher_ref, ref_counter = _count_write_view_for(ref_id)
+    s1, s2 = _stub(ref_id), _stub(ref_id)
+    with patcher_ref:
+        _edges._project_edge_stub(s1, lang)   # first occurrence: anchor + attune
+        _edges._project_edge_stub(s2, lang)   # second: view now present → skip
+    # First-occurrence attune wrote two views (EN anchor + DE translated); the
+    # second occurrence found the view present and wrote nothing.
+    assert ref_counter["n"] == 2, ref_counter["n"]
+    assert s1["name"] == "[de] Sourcebound"
+    assert s2["name"] == "[de] Sourcebound"  # second stub projected from the cache
+
+    # ── Batched path: one snapshot up front, seen-set across the two stubs. ──
+    bat_id = f"node-edgewc-bat-{uuid4().hex[:8]}"
+    patcher_bat, bat_counter = _count_write_view_for(bat_id)
+    b1, b2 = _stub(bat_id), _stub(bat_id)
+    # The snapshot the listing builds before the loop: bat_id has no view, so it
+    # is absent (canonical_views mirrors canonical_view -> None).
+    canon = _cache.canonical_views("node", [bat_id], lang)
+    assert bat_id not in canon
+    seen: set[str] = set()
+    with patcher_bat:
+        r1 = _edges._project_edge_stub(b1, lang, view=canon.get(bat_id), seen_attuned=seen)
+        if r1 is not None:
+            canon[bat_id] = r1
+        r2 = _edges._project_edge_stub(b2, lang, view=canon.get(bat_id), seen_attuned=seen)
+        if r2 is not None:
+            canon[bat_id] = r2
+
+    # Faithfulness: the batch writes EXACTLY as many times as the per-stub path.
+    assert bat_counter["n"] == ref_counter["n"] == 2
+    # And the node was attuned only once (seen-set held the second stub back).
+    assert seen == {bat_id}
+    # Output parity: both stubs render the SAME translated text the per-stub
+    # path produced — the second stub projected from the refreshed snapshot.
+    assert b1["name"] == "[de] Sourcebound"
+    assert b2["name"] == "[de] Sourcebound"
+
+
+@pytest.mark.asyncio
+async def test_list_edges_batches_views_and_attunes_shared_node_once(stub_backend):
+    """End-to-end through GET /api/edges, ONE page, TWO edges sharing one no-view
+    node: the shared node appears in two to_node stubs on the same page. It is
+    rendered in the caller's locale on BOTH stubs, and its translated view is
+    written exactly once across the page (the wired batch + seen-set path)."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        a = await _create_concept(c, "edge-a")
+        b = await _create_concept(c, "edge-b")
+        shared = await _create_concept(c, "edge-shared")  # the no-view node both edges point at
+
+        # A unique edge type so the listing page is EXACTLY these two edges —
+        # both to_node=shared, so the shared node is in two stubs on one page.
+        etype = f"wc-shares-{uuid4().hex[:8]}"
+        for src in (a, b):
+            r = await c.post("/api/edges", json={
+                "from_id": src, "to_id": shared, "type": etype,
+            })
+            assert r.status_code == 201, r.text
+
+        shared_id = shared  # _create_concept passes id=slug, so the node id IS the slug
+        patcher, counter = _count_write_view_for(shared_id)
+        with patcher:
+            r = await c.get(f"/api/edges?type={etype}&lang=de")
+            assert r.status_code == 200, r.text
+            page = r.json()
+
+        # Both edges share the same to_node; both stubs render translated.
+        to_stubs = [e["to_node"] for e in page["items"]]
+        assert len(to_stubs) == 2
+        assert all(s["id"] == shared_id for s in to_stubs)
+        assert all(s["name"].startswith("[de] ") for s in to_stubs), to_stubs
+        # The shared node's anchor + translated view were each written once on
+        # the first stub; the second stub found the view present (refreshed
+        # snapshot + seen-set) and wrote nothing. Without the seen-set the second
+        # stub would attune again — counter would exceed 2.
+        assert counter["n"] == 2, counter["n"]
