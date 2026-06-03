@@ -129,7 +129,7 @@ The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what 
 
 [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The parity suite's `PARITY_THIRD_RUNTIME` selector flips the third runtime atomically; `make wellness` surfaces the remaining bootstrap weight each breath.
 
-[`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, the executable Form proof, and the BML source body now carried at [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml).
+[`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, the executable Form proof, the BML source body at [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml), and the current source-lowering proof that carries parsed BML declarations into `compiler-object` sections.
 
 [`UNIVERSAL_TRANSLATOR_AUDIT.md`](UNIVERSAL_TRANSLATOR_AUDIT.md) walks the body's current artifacts against the highest goal (universal translator across media, recipe orchestration in pure numeric space, less ice / more gas, minimize bootstrap surface). It names where the body is heavy in ice, heavy in bootstrap, heavy in dependencies, already light, and the top-ten concrete next breaths.
 
