@@ -459,6 +459,15 @@ blackholed upstream returns a clean 504/502 rather than hanging; with N workers 
 hung fan-out occupies ONE worker for at most the connect+read timeout while the rest
 of the pool keeps serving 20 native requests in milliseconds — the pool is NOT
 starved; a read-timeout returns 504 ONCE, not reconnect+retried). What stays open:
+the fan-out response-body cap — the router buffers each upstream response whole
+and rejects bodies over a fixed size with `502 fan-out upstream error: upstream
+response body too large` (the response-side twin of the request-side `413` at
+CL≈1 MB). This is the blocker the 2026-06-03 live flip surfaced: large
+Content-Length-framed JSON routes (e.g. `/api/concepts/domain/living-collective`,
+≈1.7 MB) 502 through the router while serving 200 direct — so "byte-identical"
+holds only for responses under the cap. Raising/removing the response cap (or
+streaming large bodies through rather than buffering them) is the gate the flip
+waits on. Also open:
 chunked/streaming upstream response bodies (an upstream chunked response is
 read-to-close and not pooled), per-route timeout config + circuit-breaking and
 retries beyond the single stale-connection / connect-timeout retry, and the accept
@@ -552,8 +561,28 @@ fans out transparently, the compose service is defined-but-inactive. What is
 kernel now, accepting one hot-path container and a +6% tail cost for the 56×
 native gain and the runtime-share shift toward the kernel speaking the body's own
 tongue. That is a stakes-and-vision question, not a permission gate; the artifact
-under it is real, not a guess. Today's front door (FastAPI) is untouched until
-that intent is set.
+under it is real, not a guess.
+
+**Live flip attempted and rolled back — 2026-06-03 (the response-body cap is the gate).**
+The intent was set; the flip ran on the production VPS. A `kernel-router` compose
+service (image `kernel-router:shadow-host`, the proven shadow artifact) took over
+the `coherence-api` Traefik router pointing at port 8080; the api service's labels
+were commented to `traefik.enable=false` so api stayed up as the upstream. Traefik
+re-pointed within seconds: `https://api.coherencycoin.com` served **through the
+kernel** — `X-Form-Router: fanout-python` live on the public endpoint, `/api/health`
+/ `/api/version` / `/api/ideas` (370 KB) / `/api/spec-registry` all 200, the witness
+held with zero new silence across a 2–3 min watch, the container healthy with zero
+restarts. Then a large route exposed the blocker: **`/api/concepts/domain/living-collective`
+(≈1.7 MB Content-Length-framed JSON) returned `502 fan-out upstream error: upstream
+response body too large`** through the kernel while serving `200` direct on api.
+Per the rollback discipline (no debugging forward on the live front door), the
+one-command restore (`cp docker-compose.yml.pre-flip-… docker-compose.yml &&
+docker compose up -d api`) brought api's direct Traefik routing back — the
+`X-Form-Router` header gone, the 1.7 MB route 200 again, the witness back to
+breathing. **The flip is gated on raising/removing the fan-out response-body cap
+(or streaming large bodies through rather than buffering them whole)** — see the
+open-items note above. The shadow side-port proof and every measured property below
+stand; the cutover waits on that one fix. Today's front door is FastAPI.
 
 ## Cross-references
 
