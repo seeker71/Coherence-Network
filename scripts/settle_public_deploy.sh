@@ -127,7 +127,25 @@ while :; do
   if [[ -z "${run_id:-}" || "${run_id}" == "-" ]]; then
     echo "waiting: no Hostinger run visible yet for main"
   elif [[ "${run_sha}" != "${target_sha}" ]]; then
-    echo "waiting: latest Hostinger run targets ${run_sha}; main is ${target_sha}"
+    if [[
+      "$AUTO_DISPATCH" == "1" &&
+      "${dispatched_after_run_id}" != "${run_id}" &&
+      "$dispatch_count" -lt "$MAX_DISPATCHES"
+    ]]; then
+      echo "hostinger-run: latest targets ${run_sha}; main is ${target_sha}"
+      dispatch_hostinger_deploy "$target_sha"
+      dispatch_count=$((dispatch_count + 1))
+      dispatched_after_run_id="${run_id}"
+      dispatched_target_sha="${target_sha}"
+      last_run_id=""
+    elif [[
+      "${dispatched_after_run_id}" == "${run_id}" &&
+      "${dispatched_target_sha}" == "${target_sha}"
+    ]]; then
+      echo "waiting: deploy dispatch accepted for ${target_sha}; latest run list still shows older ${run_sha}"
+    else
+      echo "waiting: latest Hostinger run targets ${run_sha}; main is ${target_sha}"
+    fi
   elif [[ "${run_status}" == "completed" && "${run_conclusion}" == "success" ]]; then
     echo "hostinger-run: success for ${run_sha}; waiting for health SHA parity"
   elif [[ "${run_status}" == "completed" ]]; then
