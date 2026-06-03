@@ -408,6 +408,20 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 8,
+      "name": "BML-COMPILER-IMAGE",
+      "meaning": "Serialized BML compiler source image artifact",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 10,
       "name": "JSON-OBJECT",
       "meaning": "map: list of (key, value) pairs",
@@ -4340,6 +4354,76 @@
       "inst": 9241,
       "name": "BML-PARSE-STACK-CONSTRUCTOR",
       "meaning": "BML ParseStack constructor record for source-defined parse stack instances",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9261,
+      "name": "BML-SOURCE-DECLARATION",
+      "meaning": "BML compiler source declaration runtime record",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9262,
+      "name": "BML-SOURCE-CARRIER",
+      "meaning": "BML compiler source carrier runtime record",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9263,
+      "name": "BML-PARSED-SOURCE-PARSER",
+      "meaning": "BML parsed source parser adapter runtime record",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9264,
+      "name": "BML-COMPILER-DECLARATION-LOWERING-STAGE",
+      "meaning": "BML compiler declaration lowering stage runtime record",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/grammars/bml.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 9265,
+      "name": "BML-COMPILER-SOURCE-LOWERING-FLOW",
+      "meaning": "BML compiler source lowering flow runtime record",
       "aliases": [],
       "reuse": 1,
       "defined_in": [
