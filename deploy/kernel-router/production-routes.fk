@@ -518,6 +518,61 @@
         ",\"runtime\":\"inline\"}")))))))
 
 ; ===========================================================================
+; /api/utils/grounded_value
+;   the VALUE / REALIZATION / CONFIDENCE reduction of compute_idea_metrics.
+;   params (all scalar, host pre-derives the has_* boolean levels):
+;     lineage_measured_value(12.5) usage_revenue(0.007) spec_actual_value_sum(4.25)
+;     spec_estimated_cost_sum(6.75) lineage_estimated_cost(5.5)
+;     spec_potential_value_sum(20.0) runtime_event_count(7,int) commit_count(3,int)
+;     has_specs_with_data(1.0) has_lineage(1.0) has_friction(0.3)
+;   body: {"computed_actual_value","computed_estimated_cost",
+;          "value_realization_pct","computed_confidence","runtime":"inline"}
+;   math mirrors endpoint_grounded_value_demo.fk EXACTLY (min2/max2/_plus/mul/div,
+;   the guarded ratio + count→level zero-guards, the five-term weighted sum left-
+;   nested, the [0.05,0.95] clamp). int/float mixing (div count 10.0, gt count 0)
+;   promotes as the parity-proven recipe relies on.
+; ===========================================================================
+
+; min2 — the recipe's companion to max2 (max2 already defined above)
+(defn min2 (a b) (if (gt a b) b a))
+
+; value_realization_pct: guarded ratio with a 1.0 ceiling, 0.0 when no potential
+(defn gv_realization (cav spv)
+  (if (gt spv 0) (min2 (div cav spv) 1.0) 0.0))
+
+; has_runtime_data / has_commits: min(1.0, count/divisor), 0.0 when count==0
+(defn gv_level (cnt divisor)
+  (if (gt cnt 0) (min2 1.0 (div cnt divisor)) 0.0))
+
+(defn route_grounded_value (q)
+  (do (let lmv (str_to_float (param_or "lineage_measured_value" q "12.5")))
+  (do (let ur (str_to_float (param_or "usage_revenue" q "0.007")))
+  (do (let savs (str_to_float (param_or "spec_actual_value_sum" q "4.25")))
+  (do (let secs (str_to_float (param_or "spec_estimated_cost_sum" q "6.75")))
+  (do (let lec (str_to_float (param_or "lineage_estimated_cost" q "5.5")))
+  (do (let spvs (str_to_float (param_or "spec_potential_value_sum" q "20.0")))
+  (do (let rec (str_to_int (param_or "runtime_event_count" q "7")))
+  (do (let cc (str_to_int (param_or "commit_count" q "3")))
+  (do (let hsd (str_to_float (param_or "has_specs_with_data" q "1.0")))
+  (do (let hl (str_to_float (param_or "has_lineage" q "1.0")))
+  (do (let hf (str_to_float (param_or "has_friction" q "0.3")))
+  (do (let cav (max2 (max2 lmv ur) savs))
+  (do (let cec (max2 secs lec))
+  (do (let vrp (gv_realization cav spvs))
+  (do (let hrd (gv_level rec 10.0))
+  (do (let hcm (gv_level cc 5.0))
+  (do (let confraw (_plus (_plus (_plus (_plus (mul hsd 0.3) (mul hrd 0.25)) (mul hl 0.25)) (mul hcm 0.1)) (mul hf 0.1)))
+  (do (let conf (max2 0.05 (min2 0.95 confraw)))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat (str_concat "{\"computed_actual_value\":" (value_str cav))
+                        (str_concat ",\"computed_estimated_cost\":" (value_str cec)))
+            (str_concat ",\"value_realization_pct\":" (value_str vrp)))
+          (str_concat ",\"computed_confidence\":" (value_str conf)))
+        ",\"runtime\":\"inline\"}"))))))))))))))))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -538,4 +593,5 @@
     (list "/api/utils/marginal_cc_return"  route_marginal_cc_return)
     (list "/api/utils/breath_balance"      route_breath_balance)
     (list "/api/utils/shannon_entropy"     route_shannon_entropy)
-    (list "/api/utils/softmax_weights"     route_softmax_weights)))
+    (list "/api/utils/softmax_weights"     route_softmax_weights)
+    (list "/api/utils/grounded_value"      route_grounded_value)))
