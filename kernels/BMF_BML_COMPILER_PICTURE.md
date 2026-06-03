@@ -90,6 +90,7 @@ The picture also now lives as BML source:
 - [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml) is the compiler/compiler-compiler source body.
 - It uses BML classes, interfaces, class templates, generic fields and methods, sections, constants, constructors, property bags, a `syntax` block, and reversible `choose` / `fail` / `save` / `discard` control.
 - It names reusable ports for BML, CSharp, Java, TypeScript, Go, and Rust without changing the core flow.
+- It now declares the source-lowering architecture in BML: `CompilerCarrier`, `CompilerDeclaration<T>`, `CompilerSectionModel<T>`, `CompilerUnitModel<T>`, `SourceLowerer<TSource,TDeclaration,TCarrier>`, `BMLDeclarationLoweringStage<TDeclaration,TCarrier>`, `BMLSourceLoweringFlow<TSource,TDeclaration,TCarrier>`, and `SelfHostingPlan`.
 - [`form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
 
 Proof command:
@@ -100,6 +101,24 @@ cd form
 ```
 
 Expected result: `42` with `1 ok, 0 divergent`.
+
+## BML Source Lowering
+
+The BML source now carries its own lowering model. The proof bridge in Form is intentionally small: it parses the BML source, packages declarations into the shared `compiler-object` carrier, and proves that the unit has four sections:
+
+- `declarations`: every parsed top-level BML declaration.
+- `templates`: the generic compiler/source-lowering templates.
+- `language-ports`: BML, CSharp, Java, TypeScript, Go, and Rust.
+- `bootstrap-boundary`: `SelfHostingPlan`, which states that Form remains only the minimum bootstrap and proof carrier while non-bootstrap s-expression compiler logic is released.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk
+```
+
+Expected result: `41` with `1 ok, 0 divergent`.
 
 ## Bootstrap Boundary
 
@@ -116,7 +135,7 @@ That means Form remains the witness substrate; BML owns the compiler language.
 
 ## Next Refinements
 
-1. Lower the BML source body into canonical compiler objects, not only parsed declarations.
+1. Execute the BML-owned source-lowering flow from BML itself, then retire the Form proof bridge for that step.
 2. Move grammar ports into runtime registry capsules.
 3. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
 4. Lift the BML object model into canonical compiler objects.
