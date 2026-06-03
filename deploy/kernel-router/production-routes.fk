@@ -1,0 +1,262 @@
+; production-routes.fk — the PRODUCTION kernel-router manifest.
+;
+; Loaded by `form-kernel-rust serve --routes production-routes.fk --upstream
+; <real-api>`. This is the manifest the durable runtime-share flip will front
+; with: the routes listed here are served ENTIRELY in Form by the kernel (no
+; CPython in the path, X-Form-Router: native-kernel); EVERYTHING ELSE fans out
+; to the real FastAPI upstream (X-Form-Router: fanout-python). The kernel owns
+; the front door; CPython is the upstream for the not-yet-native tail.
+;
+; PROMOTED ROUTES (the simplest /api/utils computes — scalar-in, scalar/JSON-out,
+; their Form computation already parity-proven against CPython via the three-way
+; kernel suite):
+;
+;   /api/utils/coherence_weight       int weight + echoed int list/scalar
+;   /api/utils/nodeid_distance        int distance + two 4-int NodeID lists
+;   /api/utils/nodeid_compatibility   int 0..4 agreement + two 4-int lists
+;   /api/utils/weighted_average       float average + echoed float lists
+;
+; Each native handler replicates its live route's FULL contract:
+;   - parses the SAME query params FastAPI declares (with the SAME defaults),
+;   - runs the SAME arithmetic the endpoint_<name>_demo.fk recipe runs,
+;   - emits the EXACT response JSON the FastAPI route returns — byte-for-byte,
+;     including the "runtime" field, so the body is a true drop-in. The serve
+;     path stamps Content-Type: application/json (the body opens with `{`) and
+;     X-Form-Router: native-kernel — same body the client received, honest
+;     provenance header.
+;
+; The live api wraps every response with FastAPI/Cloudflare observability
+; headers (x-coherence-runtime-ms, cf-ray, …) added by middleware at the edge,
+; NOT by the route's value contract; the shadow runs behind localhost with no
+; such middleware, so the PROOF compares the JSON BODY byte-for-byte. The
+; "runtime" field the api reports as "inline" (the kernel ran inline inside the
+; CPython request) is echoed here as "inline" too, so the body is identical;
+; the X-Form-Router header is where native-vs-fanout truthfully shows.
+;
+;   curl ':PORT/api/utils/coherence_weight'              -> live-api JSON, byte-identical
+;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
+;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
+
+; ===========================================================================
+; shared helpers
+; ===========================================================================
+
+; --- alist: value for `key` in a list of (k v) string pairs, "" if absent ---
+(defn assoc (key pairs)
+  (if (eq (len pairs) 0)
+      ""
+      (if (str_eq (head (head pairs)) key)
+          (head (tail (head pairs)))
+          (assoc key (tail pairs)))))
+
+; --- param `key` from the query alist, or `dflt` when absent/empty ---
+(defn param_or (key q dflt)
+  (if (eq (str_len (assoc key q)) 0)
+      dflt
+      (assoc key q)))
+
+; --- split "a,b,c" on commas into a list of substrings. Walks via str_find +
+; substring (the kernel's native string ops), no char-by-char Form loop. An
+; empty string yields the empty list (so an absent param contributes nothing).
+(defn split_from (s start)
+  (if (eq (str_len s) start)
+      (list "")
+      (do (let comma (str_find s "," start))
+          (if (eq comma -1)
+              (list (substring s start (str_len s)))
+              (cons (substring s start comma)
+                    (split_from s (add comma 1)))))))
+
+(defn split_commas (s)
+  (if (eq (str_len s) 0)
+      (list)
+      (split_from s 0)))
+
+; --- map str_to_int / str_to_float over a list of strings ---
+(defn ints_of (xs)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (str_to_int (head xs)) (ints_of (tail xs)))))
+
+(defn floats_of (xs)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (str_to_float (head xs)) (floats_of (tail xs)))))
+
+; --- JSON array of numbers from a list: [a,b,c] with NO spaces (FastAPI's
+; JSONResponse uses separators=(",",":")). value_str renders each element
+; Python-style (ints as digits, floats via format_float_python: 0.5, 1.0).
+(defn json_elems (xs)
+  (if (eq (len xs) 0)
+      ""
+      (if (eq (len xs) 1)
+          (value_str (head xs))
+          (str_concat (str_concat (value_str (head xs)) ",")
+                      (json_elems (tail xs))))))
+
+(defn json_list (xs)
+  (str_concat (str_concat "[" (json_elems xs)) "]"))
+
+; --- comma-separated list of int params a_pkg a_lvl a_type a_inst as a JSON
+; array, reading each with its api default. Used for the echoed NodeID `a`/`b`.
+(defn nid_json (pkg lvl ty inst)
+  (json_list (list pkg lvl ty inst)))
+
+; ===========================================================================
+; /api/utils/coherence_weight
+;   params: values (csv ints, default "72,38,91,55,28,67,84,45,95,12"),
+;           threshold (int, default 50)
+;   body:   {"weight":<int>,"values":[...],"threshold":<int>,"runtime":"inline"}
+;   math:   above*100 + coherence_score   (endpoint_coherence_weight_demo.fk)
+; ===========================================================================
+
+(defn cw_weighted_score (value position)
+  (if (eq position 0) (mul value 100)
+    (if (eq position 1) (mul value 50)
+      (if (eq position 2) (mul value 25)
+        (mul value 10)))))
+
+; fold over values carrying (total position); only values >= threshold contribute
+(defn cw_score_go (vs threshold total position)
+  (if (eq (len vs) 0)
+      total
+      (if (ge (head vs) threshold)
+          (cw_score_go (tail vs) threshold
+                       (add total (cw_weighted_score (head vs) position))
+                       (add position 1))
+          (cw_score_go (tail vs) threshold total position))))
+
+(defn cw_count_above (vs threshold)
+  (if (eq (len vs) 0)
+      0
+      (if (ge (head vs) threshold)
+          (add 1 (cw_count_above (tail vs) threshold))
+          (cw_count_above (tail vs) threshold))))
+
+(defn route_coherence_weight (q)
+  (do (let vstr (param_or "values" q "72,38,91,55,28,67,84,45,95,12"))
+  (do (let threshold (str_to_int (param_or "threshold" q "50")))
+  (do (let values (ints_of (split_commas vstr)))
+  (do (let above (cw_count_above values threshold))
+  (do (let coherence (cw_score_go values threshold 0 0))
+  (do (let weight (add (mul above 100) coherence))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"weight\":" (value_str weight))
+                      (str_concat ",\"values\":" (json_list values)))
+          (str_concat ",\"threshold\":" (value_str threshold)))
+        ",\"runtime\":\"inline\"}"))))))))
+
+; ===========================================================================
+; /api/utils/nodeid_distance
+;   params: a_pkg a_lvl a_type a_inst b_pkg b_lvl b_type b_inst (ints,
+;           defaults 1 5 4 1 / 1 4 4 7)
+;   body:   {"distance":<int>,"a":[..4..],"b":[..4..],"runtime":"inline"}
+;   math:   sum |a_i - b_i|
+; ===========================================================================
+
+(defn route_nodeid_distance (q)
+  (do (let a_pkg (str_to_int (param_or "a_pkg" q "1")))
+  (do (let a_lvl (str_to_int (param_or "a_lvl" q "5")))
+  (do (let a_type (str_to_int (param_or "a_type" q "4")))
+  (do (let a_inst (str_to_int (param_or "a_inst" q "1")))
+  (do (let b_pkg (str_to_int (param_or "b_pkg" q "1")))
+  (do (let b_lvl (str_to_int (param_or "b_lvl" q "4")))
+  (do (let b_type (str_to_int (param_or "b_type" q "4")))
+  (do (let b_inst (str_to_int (param_or "b_inst" q "7")))
+  (do (let distance
+        (add (add (abs (sub a_pkg b_pkg)) (abs (sub a_lvl b_lvl)))
+             (add (abs (sub a_type b_type)) (abs (sub a_inst b_inst)))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"distance\":" (value_str distance))
+                      (str_concat ",\"a\":" (nid_json a_pkg a_lvl a_type a_inst)))
+          (str_concat ",\"b\":" (nid_json b_pkg b_lvl b_type b_inst)))
+        ",\"runtime\":\"inline\"}")))))))))))
+
+; ===========================================================================
+; /api/utils/nodeid_compatibility
+;   params: same 8 ints as nodeid_distance
+;   body:   {"compatibility":<0..4>,"a":[..4..],"b":[..4..],"runtime":"inline"}
+;   math:   count of matching coordinates
+; ===========================================================================
+
+(defn match1 (x y) (if (eq x y) 1 0))
+
+(defn route_nodeid_compatibility (q)
+  (do (let a_pkg (str_to_int (param_or "a_pkg" q "1")))
+  (do (let a_lvl (str_to_int (param_or "a_lvl" q "5")))
+  (do (let a_type (str_to_int (param_or "a_type" q "4")))
+  (do (let a_inst (str_to_int (param_or "a_inst" q "1")))
+  (do (let b_pkg (str_to_int (param_or "b_pkg" q "1")))
+  (do (let b_lvl (str_to_int (param_or "b_lvl" q "4")))
+  (do (let b_type (str_to_int (param_or "b_type" q "4")))
+  (do (let b_inst (str_to_int (param_or "b_inst" q "7")))
+  (do (let compatibility
+        (add (add (match1 a_pkg b_pkg) (match1 a_lvl b_lvl))
+             (add (match1 a_type b_type) (match1 a_inst b_inst))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"compatibility\":" (value_str compatibility))
+                      (str_concat ",\"a\":" (nid_json a_pkg a_lvl a_type a_inst)))
+          (str_concat ",\"b\":" (nid_json b_pkg b_lvl b_type b_inst)))
+        ",\"runtime\":\"inline\"}")))))))))))
+
+; ===========================================================================
+; /api/utils/weighted_average
+;   params: values (csv floats, default "0.5,0.75,1.0"),
+;           weights (csv floats, default "0.25,0.25,0.5")
+;   body:   {"average":<float>,"values":[...],"weights":[...],"runtime":"inline"}
+;   math:   sum(v*w) / sum(w)         (endpoint_weighted_average_demo.fk)
+; ===========================================================================
+
+; LEFT-associated accumulators, mirroring endpoint_weighted_average_demo.fk's
+; i=0..n while-loop AND Python's sum() (which folds left from 0): total starts at
+; 0.0 and each product is added on the LEFT. Float addition is not associative,
+; so the grouping must match CPython's bit-for-bit, not just the algebra. A
+; right-folding recursion (add x (rec rest)) groups the other way and diverges
+; on inputs like 0.1*0.7 + 0.2*0.2 + 0.3*0.1 (0.14 vs 0.14000000000000004).
+(defn wa_dot_go (vs ws total)
+  (if (eq (len vs) 0)
+      total
+      (wa_dot_go (tail vs) (tail ws)
+                 (add total (mul (head vs) (head ws))))))
+
+(defn wa_dot (vs ws) (wa_dot_go vs ws 0.0))
+
+(defn wa_sum_go (ws total)
+  (if (eq (len ws) 0)
+      total
+      (wa_sum_go (tail ws) (add total (head ws)))))
+
+(defn wa_sum (ws) (wa_sum_go ws 0.0))
+
+(defn route_weighted_average (q)
+  (do (let vstr (param_or "values" q "0.5,0.75,1.0"))
+  (do (let wstr (param_or "weights" q "0.25,0.25,0.5"))
+  (do (let values (floats_of (split_commas vstr)))
+  (do (let weights (floats_of (split_commas wstr)))
+  (do (let average (div (wa_dot values weights) (wa_sum weights)))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"average\":" (value_str average))
+                      (str_concat ",\"values\":" (json_list values)))
+          (str_concat ",\"weights\":" (json_list weights)))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
+; liveness — native, zero inputs (so the shadow answers /health without a hop)
+; ===========================================================================
+(defn route_health () "ok")
+
+; ===========================================================================
+; the route manifest: (path handler). EVERYTHING NOT HERE FANS OUT to --upstream.
+; Paths match the live api exactly so the kernel-router can front /api/utils/*.
+; ===========================================================================
+(let routes
+  (list
+    (list "/health"                        route_health)
+    (list "/api/utils/coherence_weight"    route_coherence_weight)
+    (list "/api/utils/nodeid_distance"     route_nodeid_distance)
+    (list "/api/utils/nodeid_compatibility" route_nodeid_compatibility)
+    (list "/api/utils/weighted_average"    route_weighted_average)))
