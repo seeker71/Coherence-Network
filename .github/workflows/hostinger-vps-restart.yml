@@ -1,0 +1,26 @@
+name: Hostinger VPS Restart
+
+on:
+  workflow_dispatch:
+    inputs:
+      virtual_machine_id:
+        description: "Hostinger VPS virtual machine id. Defaults to HOSTINGER_VIRTUAL_MACHINE_ID variable."
+        required: false
+        type: string
+
+jobs:
+  restart-hostinger-vps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HOSTINGER_API_TOKEN: ${{ secrets.HOSTINGER_API_TOKEN }}
+      HOSTINGER_VIRTUAL_MACHINE_ID: ${{ github.event.inputs.virtual_machine_id || vars.HOSTINGER_VIRTUAL_MACHINE_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Restart VPS through Hostinger API
+        run: |
+          test -n "$HOSTINGER_API_TOKEN"
+          test -n "$HOSTINGER_VIRTUAL_MACHINE_ID"
+          ./scripts/restart_hostinger_vps.sh "$HOSTINGER_VIRTUAL_MACHINE_ID"

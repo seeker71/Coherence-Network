@@ -7,6 +7,8 @@ API_URL="${1:-${PUBLIC_API_BASE_URL:-https://api.coherencycoin.com}}"
 WEB_URL="${2:-${PUBLIC_WEB_BASE_URL:-https://coherencycoin.com}}"
 TIMEOUT_SECONDS="${DEPLOY_SETTLE_TIMEOUT_SECONDS:-900}"
 POLL_SECONDS="${DEPLOY_SETTLE_POLL_SECONDS:-15}"
+AUTO_DISPATCH="${DEPLOY_SETTLE_AUTO_DISPATCH:-1}"
+MAX_DISPATCHES="${DEPLOY_SETTLE_MAX_DISPATCHES:-1}"
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -70,8 +72,20 @@ else:
 PY
 }
 
+dispatch_hostinger_deploy() {
+  local target_sha="$1"
+  echo "dispatching Hostinger deploy for ${target_sha}"
+  gh workflow run "$WORKFLOW" \
+    --repo "$REPO" \
+    -r main \
+    -f "sha=${target_sha}"
+}
+
 deadline=$(( $(date +%s) + TIMEOUT_SECONDS ))
 last_run_id=""
+dispatch_count=0
+dispatched_after_run_id=""
+dispatched_target_sha=""
 
 echo "Settling public deploy for ${REPO}"
 echo "API: ${API_URL}"
@@ -117,9 +131,28 @@ while :; do
   elif [[ "${run_status}" == "completed" && "${run_conclusion}" == "success" ]]; then
     echo "hostinger-run: success for ${run_sha}; waiting for health SHA parity"
   elif [[ "${run_status}" == "completed" ]]; then
-    echo "hostinger-run: ${run_conclusion} for current main ${run_sha}" >&2
-    echo "Run: gh run view ${run_id} --repo ${REPO} --log-failed" >&2
-    exit 1
+    if [[
+      "$AUTO_DISPATCH" == "1" &&
+      ( "${run_conclusion}" == "failure" || "${run_conclusion}" == "cancelled" ) &&
+      "${dispatched_after_run_id}" != "${run_id}" &&
+      "$dispatch_count" -lt "$MAX_DISPATCHES"
+    ]]; then
+      echo "hostinger-run: ${run_conclusion} for current main ${run_sha}"
+      dispatch_hostinger_deploy "$target_sha"
+      dispatch_count=$((dispatch_count + 1))
+      dispatched_after_run_id="${run_id}"
+      dispatched_target_sha="${target_sha}"
+      last_run_id=""
+    elif [[
+      "${dispatched_after_run_id}" == "${run_id}" &&
+      "${dispatched_target_sha}" == "${target_sha}"
+    ]]; then
+      echo "waiting: deploy dispatch accepted for ${target_sha}; latest run list still shows ${run_id}"
+    else
+      echo "hostinger-run: ${run_conclusion} for current main ${run_sha}" >&2
+      echo "Run: gh run view ${run_id} --repo ${REPO} --log-failed" >&2
+      exit 1
+    fi
   else
     echo "waiting: run ${run_id} ${run_status}; gates=${gates_sha:-unknown} live=${live_sha:-unknown} target=${target_sha}"
   fi
