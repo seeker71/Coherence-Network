@@ -1485,7 +1485,7 @@
 ; ===========================================================================
 ; Source-language route class surface lowered to KernelHTTPRoute.
 ; ===========================================================================
-section [form.bml] {
+section [form.route] {
     template RouteCell<TRequest, TResponse> {
         member request: TRequest;
         member response: TResponse;

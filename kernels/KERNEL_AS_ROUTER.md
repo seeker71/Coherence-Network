@@ -90,7 +90,7 @@ The manifest is the single source of routing truth. A route is **native** iff
 the manifest binds a Form handler for its path; **everything else fans out**.
 
 ```bml
-section [form.bml] {
+section [form.route] {
     template RouteCell<TRequest, TResponse> {
         member request: TRequest;
         member response: TResponse;
@@ -257,18 +257,18 @@ The remaining rows (chunked transfer, a structural JSON→Form parse on the REQU
 side, streaming, per-route timeout config + circuit-breaking, TLS/lifecycle,
 observability) are still open breaths.
 
-## The BML preference
+## The Source-Language Preference
 
 Native handlers and the routes manifest are **Form-native tissue, not
-Python-cross-compiled**. BML surface syntax (`def name(args) = expr;`) is the
-preferred authoring tongue because it exposes Form features directly — Python
-reaches Form only through the bolted-on adapter SDK. Once a manifest is loaded,
-there is no dialect-specific route class and no separate runtime: BML, Form, Python,
-TypeScript, Go, C#, and future language surfaces are entry tongues for
-Form-native recipes over Form-native cells.
+Python-cross-compiled**. The preferred route entry is now the route-language
+surface (`section [form.route]`) because it names the actual domain: route cells,
+request/response contracts, handlers, and selection data. Once a manifest is
+loaded, there is no dialect-specific route class and no separate runtime: BML,
+Form, Python, TypeScript, Go, C#, and future language surfaces are entry tongues
+for Form-native recipes over Form-native cells.
 
-The BML surface parser is not a Rust build — it already lives in Form-stdlib.
-`form-stdlib/source-compiler.fk`'s `form.bml` dialect lowers a `section [form.bml]
+The high-level route surface is not a Rust build — it already lives in
+Form-stdlib. `form-stdlib/source-compiler.fk` lowers a `section [form.route]
 { ... }` block into Form Recipe objects. The router reuses that compiler
 directly: `serve --routes <manifest> --stdlib
 form-stdlib` SOURCE-COMPILES a source manifest **at load** (the manifest needs
@@ -280,7 +280,7 @@ clone the compiled graph with `readonly_worker_clone()` and walk the same root
 `NodeID` in their own `Kernel + Arena`. No route-runtime serialization,
 deserialization, lowered route source, or sidecar is required. The remaining
 copy is the worker-local kernel graph, kept for isolated mutable execution state.
-For `/health`, the BML source is a `RouteCell<KernelHTTPRequest,
+For `/health`, the route source is a `RouteCell<KernelHTTPRequest,
 KernelHTTPResponse>` template/class hierarchy. `HealthRoute.handle(request)` is
 lowered to the executable Form closure, and `route = route_data(health,
 handle);` keeps method/path/priority/budget in
@@ -288,8 +288,8 @@ handle);` keeps method/path/priority/budget in
 A raw S-expression manifest is unchanged: it has no `section [...]`, so it never
 touches the source-compiler and `read_root_from_source` reads it directly.
 
-Honest scope of the BML authoring path: the `form.bml` dialect lowers readable
-`template` blocks with members, route `class` blocks with methods, `def
+Honest scope of the route authoring path: the `form.route` dialect lowers
+readable `template` blocks with members, route `class` blocks with methods, `def
 name(args) = expr;` (single-line), the block form `def name(args) { ... }`,
 nested `if c then a else b`, `f(a, b)` calls, and integer, string, AND float
 literals. Values cross the in-memory Recipe artifact intact. A float
