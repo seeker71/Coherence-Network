@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/kernel-http-response-native-20260603",
+  "commit_scope": "Let native Form handlers return first-class KernelHTTPResponse cells so the Rust kernel router emits exact status, headers, content type, and body instead of coercing every native response to 200.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_20260603_kernel_http_response_native.json",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-http-response-native-20260603 && make prompt-guide",
+      "cd form/form-kernel-rust && cargo fmt",
+      "cd form/form-kernel-rust && cargo test -- --test-threads=1",
+      "cd form/form-kernel-rust && cargo build --quiet",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "cd form && native prepared Go/Rust parity for kernel-http-band",
+      "cd form/form-kernel-rust && temporary form.route manifest returning kh-response(418, headers, body) served /teapot",
+      "cd form/form-kernel-rust && production manifest served /api/utils/grounded_cost mismatch as 422 via kh-response"
+    ],
+    "notes": "Rust cargo test passed with 41 tests, including KernelHTTPResponse parser coverage and compatibility for the older status tag. Native prepared Go/Rust parity for kernel-http-band passed with go=66690 rust=66690. Temporary manifest smoke returned HTTP 418, Content-Type application/problem+json, X-Kernel-Response native, body {\"detail\":\"teapot\"}, and X-Form-Router native-kernel. Production manifest smoke returned HTTP 422, Content-Type application/json, X-Form-Router native-kernel, and the grounded_cost mismatch body."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until the branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until PR checks pass, the branch is merged, deployment completes, and public verification runs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Native kernel-router handlers can return KernelHTTPResponse(status, headers, body) as a Form value, and the HTTP front door emits the exact status line, content type, filtered end-to-end headers, router provenance header, content length, and body.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "cargo test -- --test-threads=1 in form/form-kernel-rust",
+      "native prepared Go/Rust parity for kernel-http-band",
+      "temporary form.route local router smoke returning kh-response(418, headers, body)",
+      "production manifest local router smoke returning 422 from /api/utils/grounded_cost mismatch",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local native proof and local HTTP proof are complete; CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "kernel-first-router",
+    "source-language-native-recipes"
+  ],
+  "spec_ids": [
+    "kernel-router-native-response"
+  ],
+  "task_ids": [
+    "kernel-http-response-native-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Rust serve now parses kh-response tagged KernelHTTPResponse values before falling back to the older respond status tag.",
+    "Native response headers carry Content-Type through the dedicated response content-type slot and relay filtered end-to-end headers while the router keeps Content-Length, Connection, and X-Form-Router under host control.",
+    "The production respond helper now returns kh-response with application/json, so existing promoted 400/422 routes exercise the first-class response path.",
+    "The temporary form.route smoke proved a non-production route can emit 418 plus a custom header directly from a Form handler.",
+    "The production grounded_cost smoke proved a real promoted route now emits its 422 JSON error through KernelHTTPResponse."
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature"
+}

@@ -678,13 +678,12 @@ four are scalar/parallel-CSV-in, flat-out, from existing primitives — the work
 route was the param-parse + JSON-emit, not new kernel capability.
 
 `grounded_cost` is now PROMOTED — it was the first route to need an OBSERVABLE "no":
-a 422 on mismatched-length arrays, which the always-200 native serve had no expression
-for. Three small, reusable additions closed its gaps. A handler now signals a
-status-bearing "no" by returning the tagged shape `(respond <code> <body>)` — the
-awareness-shape carried from the router INTO the handler: a sensed 422, observable, with
-the exact FastAPI `{"detail":...}` body, `X-Form-Router: native-kernel` and
-`application/json` like any native response (the serve path reads the tag; a plain value
-is still a 200). `float_to_int` (truncate toward zero, exactly Python's `int(<float>)`)
+a 422 on mismatched-length arrays. Native handlers can now return the first-class
+`KernelHTTPResponse` cell via `kh-response(status, headers, body)`, so a handler
+can emit exact status, `Content-Type`, filtered end-to-end headers, and body while
+the router still owns `Content-Length`, `Connection`, and `X-Form-Router`. The older
+status-bearing `(respond <code> <body>)` projection remains supported for existing
+routes. `float_to_int` (truncate toward zero, exactly Python's `int(<float>)`)
 gives the `int(float(x))` commit-int parse `str_to_int` couldn't (`"3.0"`/`"3.5"` → `3`).
 `nonempty` skips empty segments (`if x.strip()`). Byte-identical on the happy path AND
 on both 422s (verified hand-computed: defaults → `computed_actual_cost:7.75`; mismatch →
