@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/bml-lowerer-exec-20260603",
+  "commit_scope": "Execute the concrete BML source lowerer from parsed BML method bodies and add the .fkb bootstrap-image ratchet contract.",
+  "files_owned": [
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+    "form/form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bml_lowerer_execution_ratchet.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-reference-compiler-runtime.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk"
+    ],
+    "notes": "The BML bootstrap-image ratchet proof returns 26. The executable BML lowerer proof returns 34 by dispatching parsed BML method bodies for source declarations, parser adapter, declaration stage, carrier source, and flow classifiers. Adjacent source/compiler proofs remain green at 31, 41, 42, 68, 524488, and 112251. Two runtime validations first failed with missing BML grammar functions when run without source-compiler.fk and grammars/bml.fk; rerunning with the full BML prelude passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification. The prior Hostinger deployment was already failing on SSH/scp to 187.77.152.42 and production was four commits behind during arrival wellness."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The compiler picture now has a BML-owned bootstrap ratchet: a previous proven .fkb can compile the BML compiler source until a newly compiled image proves itself, keeping new compiler features in BML source and shrinking s-expression bootstrap code to recovery/proof edges.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The ratchet contract and concrete lowerer execution are source/proof complete. The first emitted source-proven .fkb image, full BML parser ownership, emitter ownership, and self-compiled image promotion remain open."
+  },
+  "idea_ids": [
+    "bmf-bml-compiler-picture",
+    "bootstrap-image-ratchet"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture"
+  ],
+  "task_ids": [
+    "bml-lowerer-exec-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "bootstrap-ratchet-design"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml now defines BMLCompilerBootstrapImage and BMLBootstrapRatchet in high-level BML source.",
+    "form/form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk proves .fkb seed image, BML source authority, promotion rule, and recovery rule from parsed BML source.",
+    "form/form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk proves parsed BML source-lowerer method bodies execute through method dispatch.",
+    "kernels/BMF_BML_COMPILER_PICTURE.md documents the ratchet and the next phase: emit the first source-proven BML compiler .fkb."
+  ],
+  "change_files": [
+    "form/form-stdlib/bml/bmf-bml-compiler-picture.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+    "form/form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bml_lowerer_execution_ratchet.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
