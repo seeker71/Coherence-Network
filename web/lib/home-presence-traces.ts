@@ -67,9 +67,11 @@ type FieldStoryTraceResponse = {
 async function resolveLiveTraceMetric(traceHref: string): Promise<string | null> {
   if (!traceHref.startsWith("/api/field-stories/")) return null;
 
+  // Cached like the other home-page aggregates (the home render reuses this for
+  // ~a minute instead of re-fetching a trace metric per visitor). Keyed by URL.
   const trace = await fetchJsonOrNull<FieldStoryTraceResponse>(
     `${getApiBase()}${traceHref}`,
-    {},
+    { next: { revalidate: 60 } },
     3500,
     1,
   );

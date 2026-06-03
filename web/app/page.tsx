@@ -76,12 +76,25 @@ const STAT_LABEL_FALLBACKS = {
   coherence: "coherence",
 };
 
-export const revalidate = 90;
+// The home page renders per-locale dynamic — it reads cookies()/headers() to meet
+// the viewer in their language — so the ROUTE itself can't be statically cached
+// (a route-level `revalidate` would be silently ignored under force-dynamic). But
+// its DATA is slowly-changing aggregates (idea summary, resonance, coherence
+// score, node count, featured concept, presence cards), so each fetch caches via
+// `next: { revalidate }` — the same pattern app/substrate and app/wellness use
+// under force-dynamic. Every dynamic render then reuses cached data instead of
+// re-hitting six API endpoints: roughly one wave of fetches per locale per minute,
+// not one per visitor. Keyed by URL, so each locale's ?lang= variant caches apart.
 export const dynamic = "force-dynamic";
+const HOME_DATA_REVALIDATE_SECONDS = 60;
 
 async function loadIdeas(lang: LocaleCode): Promise<IdeasResponse | null> {
   const qs = lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`;
-  return fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas${qs}`, {}, 5000);
+  return fetchJsonOrNull<IdeasResponse>(
+    `${getApiBase()}/api/ideas${qs}`,
+    { next: { revalidate: HOME_DATA_REVALIDATE_SECONDS } },
+    5000,
+  );
 }
 
 async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
@@ -89,7 +102,7 @@ async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
   try {
     const data = await fetchJsonOrNull<ResonanceItem[] | { ideas?: ResonanceItem[]; items?: ResonanceItem[] }>(
       `${getApiBase()}/api/ideas/resonance?window_hours=72&limit=3${langParam}`,
-      {},
+      { next: { revalidate: HOME_DATA_REVALIDATE_SECONDS } },
       5000,
     );
     if (!data) return [];
@@ -101,7 +114,11 @@ async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
 }
 
 async function loadCoherenceScore(): Promise<CoherenceScoreResponse | null> {
-  return fetchJsonOrNull<CoherenceScoreResponse>(`${getApiBase()}/api/coherence/score`, {}, 5000);
+  return fetchJsonOrNull<CoherenceScoreResponse>(
+    `${getApiBase()}/api/coherence/score`,
+    { next: { revalidate: HOME_DATA_REVALIDATE_SECONDS } },
+    5000,
+  );
 }
 
 async function loadNodeCount(): Promise<number> {
@@ -111,7 +128,7 @@ async function loadNodeCount(): Promise<number> {
     // stat doesn't need. That list was the home page's slowest data fetch.
     const data = await fetchJsonOrNull<{ count: number }>(
       `${getApiBase()}/api/federation/nodes/count`,
-      {},
+      { next: { revalidate: HOME_DATA_REVALIDATE_SECONDS } },
       5000,
     );
     return typeof data?.count === "number" ? data.count : 1;
@@ -132,7 +149,7 @@ async function loadFeaturedConcept(lang: LocaleCode): Promise<Concept | null> {
   const qs = lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`;
   try {
     const response = await fetch(`${getApiBase()}/api/concepts/lc-pulse${qs}`, {
-      cache: "no-store",
+      next: { revalidate: HOME_DATA_REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return null;
