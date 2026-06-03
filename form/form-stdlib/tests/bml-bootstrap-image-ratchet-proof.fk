@@ -1,0 +1,152 @@
+; tests/bml-bootstrap-image-ratchet-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the bootstrap ratchet is BML-owned source: .fkb is the recoverable
+; compiler image, BML source is the authority, and promotion requires source
+; compile proof plus sibling image proof.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn class-field-type-score (class-component field-name expected-type)
+        (if (nil? class-component)
+            0
+            (do
+                (let field
+                    (bml-find-field
+                        (bml-class-own-fields class-component)
+                        field-name))
+                (if (nil? field)
+                    0
+                    (score-str
+                        (bml-field-type field)
+                        expected-type)))))
+
+    (defn class-method-return-score (class-component method-name expected-return)
+        (if (nil? class-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-class-own-methods class-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (defn class-const-value-score (class-component const-name expected-value)
+        (if (nil? class-component)
+            0
+            (do
+                (let const-component
+                    (bml-find-const
+                        (bml-class-own-constants class-component)
+                        const-name))
+                (if (nil? const-component)
+                    0
+                    (score-str
+                        (bml-const-value const-component)
+                        expected-value)))))
+
+    (let path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
+    (let parsed (bml-source-file-parse-declarations path))
+    (let model (bml-source-declaration-model parsed))
+
+    (let image-class
+        (bml-model-find-class
+            model
+            "BMLCompilerBootstrapImage"))
+    (let ratchet-class
+        (bml-model-find-class
+            model
+            "BMLBootstrapRatchet"))
+    (let self-hosting-class
+        (bml-model-find-class
+            model
+            "SelfHostingPlan"))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-bool (not (nil? image-class)))
+            (score-bool (not (nil? ratchet-class)))
+            (score-bool (not (nil? self-hosting-class)))
+            (score-bool
+                (bml-properties-has?
+                    (bml-class-properties image-class)
+                    "bootstrapBoundary"))
+            (score-bool
+                (bml-properties-has?
+                    (bml-class-properties ratchet-class)
+                    "bootstrapBoundary"))
+            (score-bool
+                (bml-properties-has?
+                    (bml-class-properties ratchet-class)
+                    "selfHosting"))
+            (class-field-type-score
+                image-class
+                "m_strSourcePath"
+                "String")
+            (class-field-type-score
+                image-class
+                "m_strImagePath"
+                "String")
+            (class-field-type-score
+                image-class
+                "m_strCompilerVersion"
+                "String")
+            (class-field-type-score
+                image-class
+                "m_strSourceHash"
+                "String")
+            (class-method-return-score image-class "SourcePath" "String")
+            (class-method-return-score image-class "ImagePath" "String")
+            (class-method-return-score image-class "CompilerVersion" "String")
+            (class-method-return-score image-class "SourceHash" "String")
+            (class-const-value-score
+                ratchet-class
+                "SeedImageExtension"
+                ".fkb")
+            (class-const-value-score
+                ratchet-class
+                "SourceAuthority"
+                "BML source")
+            (class-const-value-score
+                ratchet-class
+                "PromotionRule"
+                "promote a new .fkb only after source compile and sibling proof")
+            (class-const-value-score
+                ratchet-class
+                "RecoveryRule"
+                "compile BML source with the previous proven .fkb until the next image proves itself")
+            (class-method-return-score
+                ratchet-class
+                "CanCompileWithSeed"
+                "bool")
+            (class-method-return-score
+                ratchet-class
+                "CanPromote"
+                "bool")
+            (class-method-return-score ratchet-class "Authority" "String")
+            (class-method-return-score ratchet-class "Recovery" "String")
+            (class-const-value-score
+                self-hosting-class
+                "BootstrapImageExtension"
+                ".fkb")
+            (class-method-return-score
+                self-hosting-class
+                "BootstrapRatchetRule"
+                "String"))))
