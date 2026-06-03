@@ -15,6 +15,12 @@
 ;   /api/utils/nodeid_distance        int distance + two 4-int NodeID lists
 ;   /api/utils/nodeid_compatibility   int 0..4 agreement + two 4-int lists
 ;   /api/utils/weighted_average       float average + echoed float lists
+;   /api/utils/simpson_diversity      float 1-sum(p^2) + echoed int counts
+;   /api/utils/idea_score             float (pv*conf)/max(cost+rr,0.5) + echoes
+;   /api/utils/marginal_cc_return     float (gap*conf^2)/(rem+rr*0.5) + echoes
+;   /api/utils/breath_balance         float H/ln(3) (incl -0.0) + echoed ints
+;   /api/utils/shannon_entropy        float round(H/ln(3),4) + echoed ints
+;   /api/utils/softmax_weights        float-list softmax + echoed scores/temp
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -245,6 +251,273 @@
         ",\"runtime\":\"inline\"}")))))))
 
 ; ===========================================================================
+; /api/utils/simpson_diversity
+;   params: counts (csv ints, default "2,1,1")
+;   body:   {"diversity":<float>,"counts":[...],"runtime":"inline"}
+;   math:   1 - sum((c/total)^2); total<=0 -> 0.0
+;           (endpoint_simpson_diversity_demo.fk)
+; ===========================================================================
+
+; sum a list of ints
+(defn sum_ints_go (xs total)
+  (if (eq (len xs) 0)
+      total
+      (sum_ints_go (tail xs) (add total (head xs)))))
+
+; LEFT-folded sum of squared proportions: acc starts 0.0, each (c/total_f)^2
+; added on the LEFT, mirroring the recipe's i=0..n while-loop (and Python's
+; sum()). total_f is float so each division is float.
+(defn sd_sumsq_go (xs total_f acc)
+  (if (eq (len xs) 0)
+      acc
+      (do (let p (div (head xs) total_f))
+          (sd_sumsq_go (tail xs) total_f (add acc (mul p p))))))
+
+(defn route_simpson_diversity (q)
+  (do (let cstr (param_or "counts" q "2,1,1"))
+  (do (let counts (ints_of (split_commas cstr)))
+  (do (let total (sum_ints_go counts 0))
+  (do (let diversity
+        (if (le total 0)
+            0.0
+            (do (let total_f (add total 0.0))
+                (sub 1.0 (sd_sumsq_go counts total_f 0.0)))))
+      (str_concat
+        (str_concat (str_concat "{\"diversity\":" (value_str diversity))
+                    (str_concat ",\"counts\":" (json_list counts)))
+        ",\"runtime\":\"inline\"}"))))))
+
+; ===========================================================================
+; /api/utils/idea_score
+;   params: potential_value (8.0) confidence (0.75) estimated_cost (2.0)
+;           resistance_risk (1.0) — all floats
+;   body:   {"score":<f>,"potential_value":<f>,"confidence":<f>,
+;            "estimated_cost":<f>,"resistance_risk":<f>,"runtime":"inline"}
+;   math:   (pv*conf) / max2(ec+rr, 0.5)   (endpoint_idea_score_demo.fk)
+; ===========================================================================
+
+(defn max2 (a b) (if (gt a b) a b))
+
+(defn route_idea_score (q)
+  (do (let potential_value (str_to_float (param_or "potential_value" q "8.0")))
+  (do (let confidence (str_to_float (param_or "confidence" q "0.75")))
+  (do (let estimated_cost (str_to_float (param_or "estimated_cost" q "2.0")))
+  (do (let resistance_risk (str_to_float (param_or "resistance_risk" q "1.0")))
+  (do (let denom (max2 (add estimated_cost resistance_risk) 0.5))
+  (do (let score (div (mul potential_value confidence) denom))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat (str_concat "{\"score\":" (value_str score))
+                        (str_concat ",\"potential_value\":" (value_str potential_value)))
+            (str_concat ",\"confidence\":" (value_str confidence)))
+          (str_concat (str_concat ",\"estimated_cost\":" (value_str estimated_cost))
+                      (str_concat ",\"resistance_risk\":" (value_str resistance_risk))))
+        ",\"runtime\":\"inline\"}"))))))))
+
+; ===========================================================================
+; /api/utils/marginal_cc_return
+;   params: pv (8.0) av (3.0) conf (0.8) ec (4.0) ac (1.0) rr (2.0) — floats
+;   body:   {"marginal_return":<f>,"pv":<f>,"av":<f>,"conf":<f>,"ec":<f>,
+;            "ac":<f>,"rr":<f>,"runtime":"inline"}
+;   math:   (value_gap * conf * conf) / (remaining_cost + rr*0.5)
+;           value_gap = max2(pv-av, 0.0); remaining_cost = max2(ec-ac, 0.1)
+;           (endpoint_marginal_cc_return_demo.fk)
+; ===========================================================================
+
+(defn route_marginal_cc_return (q)
+  (do (let pv (str_to_float (param_or "pv" q "8.0")))
+  (do (let av (str_to_float (param_or "av" q "3.0")))
+  (do (let conf (str_to_float (param_or "conf" q "0.8")))
+  (do (let ec (str_to_float (param_or "ec" q "4.0")))
+  (do (let ac (str_to_float (param_or "ac" q "1.0")))
+  (do (let rr (str_to_float (param_or "rr" q "2.0")))
+  (do (let value_gap (max2 (sub pv av) 0.0))
+  (do (let remaining_cost (max2 (sub ec ac) 0.1))
+  (do (let marginal_return
+        (div (mul (mul value_gap conf) conf)
+             (add remaining_cost (mul rr 0.5))))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat
+              (str_concat (str_concat "{\"marginal_return\":" (value_str marginal_return))
+                          (str_concat ",\"pv\":" (value_str pv)))
+              (str_concat ",\"av\":" (value_str av)))
+            (str_concat (str_concat ",\"conf\":" (value_str conf))
+                        (str_concat ",\"ec\":" (value_str ec))))
+          (str_concat (str_concat ",\"ac\":" (value_str ac))
+                      (str_concat ",\"rr\":" (value_str rr))))
+        ",\"runtime\":\"inline\"}")))))))))))
+
+; ===========================================================================
+; entropy fold shared by breath_balance + shannon_entropy
+;   ent_acc folds p*ln(p) over the three proportions in gas->water->ice order,
+;   adding on the LEFT, guarding each term with p>0 (the log-of-zero guard).
+;   acc starts 0.0; a single-phase distribution leaves acc at 0.0 (ln(1.0)=0.0).
+;   This is exactly the recipes' nested-if accumulation, flattened: the present
+;   terms are summed in source order, absent terms (p<=0) contribute nothing.
+; ===========================================================================
+
+(defn ent_term (acc p)
+  (if (gt p 0.0) (add acc (mul p (math_log p))) acc))
+
+(defn ent_acc (p_gas p_water p_ice)
+  (ent_term (ent_term (ent_term 0.0 p_gas) p_water) p_ice))
+
+; ===========================================================================
+; /api/utils/breath_balance
+;   params: gas (1) water (1) ice (1) — ints
+;   body:   {"balance":<f>,"gas":<i>,"water":<i>,"ice":<i>,"runtime":"inline"}
+;   math:   H / ln(3); H = -1.0 * sum(p*ln(p)); total<=0 -> 0.0
+;           single phase -> -0.0 (the trailing single negation of acc=0.0)
+;           (endpoint_breath_balance_demo.fk)
+; ===========================================================================
+
+(defn route_breath_balance (q)
+  (do (let gas (str_to_int (param_or "gas" q "1")))
+  (do (let water (str_to_int (param_or "water" q "1")))
+  (do (let ice (str_to_int (param_or "ice" q "1")))
+  (do (let total (add (add gas water) ice))
+  (do (let balance
+        (if (le total 0)
+            0.0
+            (do (let total_f (add total 0.0))
+            (do (let p_gas (div gas total_f))
+            (do (let p_water (div water total_f))
+            (do (let p_ice (div ice total_f))
+            (do (let h (mul (sub 0 1.0) (ent_acc p_gas p_water p_ice)))
+            (do (let h_max (math_log 3.0))
+                (div h h_max)))))))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"balance\":" (value_str balance))
+                      (str_concat ",\"gas\":" (value_str gas)))
+          (str_concat (str_concat ",\"water\":" (value_str water))
+                      (str_concat ",\"ice\":" (value_str ice))))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
+; /api/utils/shannon_entropy
+;   params: gas (1) water (1) ice (1) — ints
+;   body:   {"entropy":<f>,"gas":<i>,"water":<i>,"ice":<i>,"runtime":"inline"}
+;   math:   round(H / ln(3), 4); H = sum(-(p*ln(p))) folded by SUBTRACTION
+;           (so single phase -> +0.0); total==0 -> 0.0; max_entropy<=0 -> 0.0
+;           (endpoint_shannon_entropy_demo.fk)
+; ===========================================================================
+
+; SUBTRACTIVE accumulator: entropy starts 0.0 and each present term is
+; SUBTRACTED (entropy - p*ln(p)) in gas->water->ice order. A single nonzero
+; phase yields +0.0 (0.0 - 0.0), distinct from breath_balance's -0.0.
+(defn sh_term (acc p)
+  (if (gt p 0.0) (sub acc (mul p (math_log p))) acc))
+
+(defn sh_acc (p_gas p_water p_ice)
+  (sh_term (sh_term (sh_term 0.0 p_gas) p_water) p_ice))
+
+(defn route_shannon_entropy (q)
+  (do (let gas (str_to_int (param_or "gas" q "1")))
+  (do (let water (str_to_int (param_or "water" q "1")))
+  (do (let ice (str_to_int (param_or "ice" q "1")))
+  (do (let total (add (add gas water) ice))
+  (do (let entropy
+        (if (eq total 0)
+            0.0
+            (do (let max_entropy (math_log 3))
+            (do (let total_f (add total 0.0))
+            (do (let p_gas (div gas total_f))
+            (do (let p_water (div water total_f))
+            (do (let p_ice (div ice total_f))
+            (do (let h (sh_acc p_gas p_water p_ice))
+                (if (gt max_entropy 0)
+                    (round_ndigits (div h max_entropy) 4)
+                    0.0)))))))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"entropy\":" (value_str entropy))
+                      (str_concat ",\"gas\":" (value_str gas)))
+          (str_concat (str_concat ",\"water\":" (value_str water))
+                      (str_concat ",\"ice\":" (value_str ice))))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
+; /api/utils/softmax_weights
+;   params: scores (csv floats, default "1.0,2.0,3.0"), temperature (1.0)
+;   body:   {"weights":[...],"scores":[...],"temperature":<f>,"runtime":"inline"}
+;   math:   softmax(scores / temperature). temperature<=0 -> deterministic
+;           (1.0 at the argmax positions, 0.0 elsewhere); if exp-sum==0 ->
+;           uniform 1/n. Mirrors endpoint_softmax_weights_demo.fk EXACTLY:
+;           subtract the running max, exp, LEFT-folded total, divide.
+; ===========================================================================
+
+; running max over a list (first element seeds; ties keep the earlier max,
+; matching the recipe's strict `>` update)
+(defn sm_max_go (xs m)
+  (if (eq (len xs) 0)
+      m
+      (sm_max_go (tail xs) (if (gt (head xs) m) (head xs) m))))
+
+(defn sm_max (xs) (sm_max_go (tail xs) (head xs)))
+
+; deterministic weights: 1.0 where score == max_s, else 0.0 (recipe's
+; temperature<=0 branch). Equality on floats mirrors the recipe's (eq ...).
+(defn sm_det_go (xs max_s)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (if (eq (head xs) max_s) 1.0 0.0)
+            (sm_det_go (tail xs) max_s))))
+
+; exps list: exp((score - max_s)/temperature), built in order
+(defn sm_exps_go (xs max_s temp)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (math_exp (div (sub (head xs) max_s) temp))
+            (sm_exps_go (tail xs) max_s temp))))
+
+; LEFT-folded sum of the exps (total starts 0.0, added left), mirroring the
+; recipe's i=0..n while-loop / Python sum()
+(defn sm_sum_go (xs total)
+  (if (eq (len xs) 0)
+      total
+      (sm_sum_go (tail xs) (add total (head xs)))))
+
+; divide each exp by the total (the normalized softmax weights)
+(defn sm_norm_go (xs total)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (div (head xs) total)
+            (sm_norm_go (tail xs) total))))
+
+; fill a list of length n with a constant (uniform fallback)
+(defn sm_fill_go (n v)
+  (if (eq n 0)
+      (list)
+      (cons v (sm_fill_go (sub n 1) v))))
+
+(defn route_softmax_weights (q)
+  (do (let sstr (param_or "scores" q "1.0,2.0,3.0"))
+  (do (let temperature (str_to_float (param_or "temperature" q "1.0")))
+  (do (let scores (floats_of (split_commas sstr)))
+  (do (let n (len scores))
+  (do (let weights
+        (if (eq n 0)
+            (list)
+            (do (let max_s (sm_max scores))
+                (if (le temperature 0.0)
+                    (sm_det_go scores max_s)
+                    (do (let exps (sm_exps_go scores max_s temperature))
+                    (do (let total (sm_sum_go exps 0.0))
+                        (if (eq total 0.0)
+                            (sm_fill_go n (div 1.0 n))
+                            (sm_norm_go exps total))))))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"weights\":" (json_list weights))
+                      (str_concat ",\"scores\":" (json_list scores)))
+          (str_concat ",\"temperature\":" (value_str temperature)))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -259,4 +532,10 @@
     (list "/api/utils/coherence_weight"    route_coherence_weight)
     (list "/api/utils/nodeid_distance"     route_nodeid_distance)
     (list "/api/utils/nodeid_compatibility" route_nodeid_compatibility)
-    (list "/api/utils/weighted_average"    route_weighted_average)))
+    (list "/api/utils/weighted_average"    route_weighted_average)
+    (list "/api/utils/simpson_diversity"   route_simpson_diversity)
+    (list "/api/utils/idea_score"          route_idea_score)
+    (list "/api/utils/marginal_cc_return"  route_marginal_cc_return)
+    (list "/api/utils/breath_balance"      route_breath_balance)
+    (list "/api/utils/shannon_entropy"     route_shannon_entropy)
+    (list "/api/utils/softmax_weights"     route_softmax_weights)))
