@@ -576,6 +576,9 @@ the grounded family: `cost_vector` / `value_vector` (CC decompositions via
 | `/api/utils/grounded_cost` | 5 csv arrays (spec/lineage floats, commit ints) + `runtime_cost`; paired arrays must match length | `{…6 cost floats, 3 counts, "runtime":"inline"}` on the happy path, or **422 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
 | `/api/utils/worldview_alignment` | `contributor_vec` `idea_vec` (parallel csv floats), `axis_names` (csv strings); the two vectors must match length | `{"score":<float>,"matched_axes":["…"],"contributor_vec":[…],"idea_vec":[…],"runtime":"inline"}` (cosine via `math_sqrt`), or **400 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
 | `/api/utils/tag_match_score` | `contributor_tags` `idea_tags` (csv strings) | `{"score":<float>,"contributor_tags":["…"],"idea_tags":["…"],"runtime":"inline"}` (`str_eq` membership ratio over first-seen-deduped lists; 0.5 empty-guard) |
+| `/api/utils/coherence_summary_score` | `task_count` `target_state_count` `evidence_count` `task_card_count` `task_card_scores_len` (ints), `task_card_scores_sum` (float) — all host-extracted scalars | `{"score":<float>,"task_count":<int>,"target_state_coverage":<float>,"task_card_coverage":<float>,"task_card_quality":<float>,"evidence_coverage":<float>,"runtime":"inline"}` (`safe_ratio` coverages + `clamp01` weighted score, each `round(_,4)`) |
+| `/api/utils/idea_marginal_from_record` | `pv` `av` `conf` `ec` `ac` `rr` (floats) — the 6 record fields pre-extracted by the host | `{"marginal_return":<float>,"idea":{…6 floats},"runtime":"inline"}` (Method-B marginal CC, `round(_,6)`; the echoed `idea` is a fixed-shape dict[str,float] built from the params) |
+| `/api/utils/idea_grounding_summary` | `event_counts` (csv ints via `int(float(x))`), `actual_values` (csv floats) — two parallel scalar-lists | `{"spec_count":<int>,"total_event_count":<int>,"specs_with_value_count":<int>,"max_event_count":<int>,"spec_count_in":<int>,"runtime":"inline"}`, or **422 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -588,7 +591,7 @@ native-kernel`.
 [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
 proves the promotion two ways at once — boot the real local app as the CPython
 oracle, stand the kernel-router (production manifest) in front, and for each of
-the eighteen routes over representative + edge params (86 cases):
+the twenty-one routes over representative + edge params (101 cases):
 
 ```
 [native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
@@ -600,7 +603,10 @@ the eighteen routes over representative + edge params (86 cases):
 [native  ] /api/utils/idea_grounded_cost_sum?actual_costs=0.1,0.2,0.3&… -> {"spec_actual_cost_sum":0.6000000000000001,…}  LEFT-fold matches CPython sum()
 [native  ] /api/utils/worldview_alignment?contributor_vec=1.0,1.0,0.0&idea_vec=1.0,0.0,0.0 -> {"score":0.7071067811865475,…}  cosine 1/sqrt(2), three-way bit-identical
 [native  ] /api/utils/tag_match_score?contributor_tags=a,b,c&idea_tags=a -> {"score":0.3333333333333333,…}  str_eq membership ratio, float÷int
-… all 86 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
+[native  ] /api/utils/coherence_summary_score -> {"score":0.665,"task_count":10,…,"task_card_quality":0.75,…}  safe_ratio coverages + clamp01 weighted score
+[native  ] /api/utils/idea_marginal_from_record?pv=10&av=0&conf=1&ec=1&ac=5&rr=0 -> {"marginal_return":100.0,"idea":{"potential_value":10.0,…},…}  remaining_cost floor 0.1, idea dict echoed
+[native  ] /api/utils/idea_grounding_summary?event_counts=3,0&actual_values=1.5 -> 422 {"detail":"event_counts and actual_values must have the same length"}  observable "no"
+… all 101 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
   0.6666666666666667, 0.9999999999999999), CPython's -0.0 vs +0.0 on single-phase
   entropy, the grounded_value confidence weighted-sum's float-assoc artifact
   (0.42000000000000004, 0.5800000000000001) and its [0.05, 0.95] clamp + zero-
@@ -639,7 +645,7 @@ the same compute served through the CPython doorway (and a fan-out would add the
 proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
 Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
 
-**Promotability map.** The eighteen promoted routes are scalar/list-in, scalar/list-out
+**Promotability map.** The twenty-one promoted routes are scalar/list-in, scalar/list-out
 with a flat JSON response — the cleanly-promotable subset. The first four are the
 integer/float scalar+list computes; the next six (`simpson_diversity`, `idea_score`,
 `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) are
@@ -680,11 +686,34 @@ gives the `int(float(x))` commit-int parse `str_to_int` couldn't (`"3.0"`/`"3.5"
 on both 422s (verified hand-computed: defaults → `computed_actual_cost:7.75`; mismatch →
 `422 {"detail":"…must have the same length"}`).
 
-The remaining routes still need genuinely new capability:
-- **Structured-record-in** (`idea_marginal_from_record`, `idea_grounding_summary`,
-  `coherence_summary_score`): these read a STRUCTURED record (a dict/object request
-  binding) and/or do host-side heterogeneous-collection walks — genuinely needing
-  request-side structural-record marshalling in the native handler (still an open breath).
+`coherence_summary_score`, `idea_marginal_from_record`, and `idea_grounding_summary`
+are now PROMOTED — three routes an earlier reading mislabeled as "structured-record-in."
+The *recipe twin* reaches into a record (`_get idea "field"`) or folds over a list of
+records (`_iter specs`), but the *route's wire contract* takes SCALAR query params: the
+host already pre-extracts the heterogeneous-collection walk into scalar counts/sums
+before the recipe runs. So the native serve is scalar-in — tractable exactly like
+`grounded_value`, NOT the structural-record problem (the same correction `grounded_value`
+needed: the recipe's internal shape is not the route's wire shape). No new kernel
+capability was needed — the natives (`safe_ratio`-via-`_plus`-float-promote, `clamp01` =
+`max2`/`min2`, `round_ndigits`, `float_to_int`, the LEFT-folds, `respond`, `str_concat_all`)
+already existed. `coherence_summary_score` runs `_coherence_summary`'s coverage/score
+reduction from the host-extracted counts: four guarded `safe_ratio` coverages, a LEFT-nested
+weighted sum (`0.35/0.30/0.20/0.15`) with the `task_count==0` neutral guard (`0.5`) and
+`[0,1]` clamp, each output `round(_,4)` (only `score` is clamped — a coverage may exceed
+`1.0`, rounded unclamped). `idea_marginal_from_record` runs the Method-B marginal CC from
+the six pre-extracted floats, `round(_,6)`, and echoes the `idea` as a fixed-shape
+`dict[str,float]` built by `str_concat_all` over `value_str` of each param (a known-key
+nested object, NOT a structural parse). `idea_grounding_summary` folds four integer
+grounding signals over two parallel CSV scalar-lists (`event_counts` via `int(float(x))` =
+`ifloats_of`, `actual_values` via `floats_of`) — `spec_count`, `total_event_count`,
+`specs_with_value_count` (the `>0` field predicate), `max_event_count` (seeded `0`) — with a
+**422** observable-"no" (via `respond`) on a length mismatch, the same parallel-CSV shape as
+`idea_grounded_cost_sum`. All three are byte-identical to the hand-computed CPython oracle
+across representative + edge params (defaults, the neutral/quality/clamp/floor guards, the
+`int(float)` truncation, the `1/3 = 0.3333` long-float, and the 422 path — verified against
+the kernel-router booted standalone, curl output diffed to the oracle; the local FastAPI
+app oracle does not boot in the degraded-network checkout, so the proof is hand-computed
+like grounded_cost's 422 / worldview's 400).
 
 `worldview_alignment` and `tag_match_score` are now PROMOTED — the two belief-resonance
 routes whose string-collection gaps closed with two small, reusable additions. The
