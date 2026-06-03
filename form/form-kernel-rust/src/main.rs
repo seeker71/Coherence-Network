@@ -6789,7 +6789,7 @@ fn sexp_string_literal(s: &str) -> String {
 }
 
 fn cli_serve(args: &[String]) -> i32 {
-    // --port <p> --routes <file.fk> [--upstream <http-base-url>]
+    // --port <p> --routes <file.fk> [--upstream <http-base-url>] [--host <addr>]
     let mut port: u16 = 8001;
     let mut routes_path: Option<String> = None;
     // --upstream <base-url> turns the listener into the front-door ROUTER:
@@ -6811,6 +6811,16 @@ fn cli_serve(args: &[String]) -> i32 {
     // S-expression manifest never touches it. Default: "form-stdlib" relative to
     // the cwd, the same relative path validate.sh uses.
     let mut stdlib_dir: String = "form-stdlib".to_string();
+    // --host <addr> is the interface the listener binds. Default 127.0.0.1 keeps
+    // the loopback-only behavior every existing caller relies on (a local proof
+    // harness curls the listener on the same loopback). A FRONT-DOOR deployment
+    // — the kernel-router image behind Docker/Traefik — must bind a routable
+    // interface (0.0.0.0), because Docker's host port-forward and Traefik reach
+    // a container over its bridge IP, NOT its loopback; a loopback-only listener
+    // is unreachable across the container boundary. The container entrypoint sets
+    // --host 0.0.0.0; isolation comes from Docker's `-p 127.0.0.1:<port>` host
+    // binding, not from the in-container bind address.
+    let mut host: String = "127.0.0.1".to_string();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -6856,6 +6866,14 @@ fn cli_serve(args: &[String]) -> i32 {
                         return 2;
                     }
                 };
+                i += 2;
+            }
+            "--host" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --host requires an address argument");
+                    return 2;
+                }
+                host = args[i + 1].clone();
                 i += 2;
             }
             "--stdlib" => {
@@ -6936,10 +6954,10 @@ fn cli_serve(args: &[String]) -> i32 {
         .unwrap_or(4);
     let n_workers = workers.unwrap_or(default_workers).clamp(1, 64);
 
-    let listener = match TcpListener::bind(("127.0.0.1", port)) {
+    let listener = match TcpListener::bind((host.as_str(), port)) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("serve: bind 127.0.0.1:{}: {}", port, e);
+            eprintln!("serve: bind {}:{}: {}", host, port, e);
             return 1;
         }
     };
@@ -6997,7 +7015,8 @@ fn cli_serve(args: &[String]) -> i32 {
     // purely to print the startup banner — the workers hold the live copies.
     if let Ok((_, _, route_pairs)) = build_worker_kernel(&src, &routes_path_arc) {
         eprintln!(
-            "form-kernel-rust serve: listening on 127.0.0.1:{} ({} worker{}, {} native route{})",
+            "form-kernel-rust serve: listening on {}:{} ({} worker{}, {} native route{})",
+            host,
             port,
             n_workers,
             if n_workers == 1 { "" } else { "s" },
