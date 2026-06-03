@@ -2113,6 +2113,18 @@ impl Kernel {
             s.push_str(args[1].as_str());
             Value::Str(s)
         });
+        // value_str — render ANY value as its canonical display string. The
+        // companion str_concat needs for building a response document: int_to_str
+        // truncates a Float to an int (its `_ => as_int()` arm), and str_concat's
+        // as_str() panics on a non-Str. value_str routes through Value::display(),
+        // so a Float renders Python-style (format_float_python: 0.8125, 1.0), an
+        // Int as its digits, a List as [a, b], a Bool as true/false. This is the
+        // float-correct leaf a JSON-emitting native handler concatenates into the
+        // response body (e.g. production-routes.fk's /api/utils handlers). One
+        // native, all leaf types — core-abstraction-first.
+        self.register_native("value_str", cat_method(), |_, _, args| {
+            Value::Str(args[0].display())
+        });
         self.register_native("source_scan_file", cat_call(), |_, _, args| {
             let body = fs::read_to_string(args[0].as_str())
                 .unwrap_or_else(|e| panic!("source_scan_file: {}", e));
@@ -6371,6 +6383,18 @@ fn handle_request(
         status = "200 OK".to_string();
         body = result.display();
         router = "native-kernel";
+        // A native handler that emits a JSON document (its rendered body opens
+        // with `{` or `[`) is served as application/json, so a route promoted
+        // from the CPython upstream returns the SAME Content-Type its FastAPI
+        // twin did — byte-identical body AND type. A scalar handler ("ok",
+        // "0.8125", "39") opens with neither, so it keeps the text/plain
+        // default. The router header (X-Form-Router: native-kernel) still tells
+        // the honest provenance: the kernel served this, not CPython.
+        if let Some(c) = body.trim_start().as_bytes().first() {
+            if *c == b'{' || *c == b'[' {
+                resp_content_type = "application/json".to_string();
+            }
+        }
     } else if let Some(upstream_base) = upstream {
         // FAN-OUT: no native handler — forward to the Python upstream and
         // relay its response. The kernel owns the front door; Python is the

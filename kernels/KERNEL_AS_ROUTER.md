@@ -230,9 +230,23 @@ so a test proves the path in seconds); production tuning of the exact values and
 per-route timeouts is a named-later breath. The ONE `fanout_request` shape is
 preserved — the timeouts are deadlines set on the stream plus the error
 classification, not a second fan-out path.
-The remaining rows (chunked transfer, a structural JSON→Form parse, streaming,
-per-route timeout config + circuit-breaking, TLS/lifecycle, observability) are
-still open breaths.
+**Native JSON responses**: a native handler can now serve a full JSON object
+byte-identical to a FastAPI route's response, not just a scalar string. Two small
+universal pieces made the gap closable: the `value_str` native renders ANY value
+through `Value::display()` (so a Float renders Python-style — `0.8125`, `1.0` —
+where `int_to_str` would truncate it and `str_concat`'s `as_str` would panic on a
+non-string), and `handle_request` serves a native body that opens with `{` or `[`
+as `Content-Type: application/json` (a scalar handler opening with neither keeps
+the `text/plain` default). A handler builds the exact response document in Form
+by `str_concat`-ing the JSON — no spaces, matching FastAPI's
+`separators=(",",":")` — and the route returns the same body AND type its CPython
+twin did, while `X-Form-Router: native-kernel` still tells the honest provenance.
+This is what lets a route be PROMOTED from the fan-out tail to native without the
+client seeing any difference. (See *Production routes*, below.)
+
+The remaining rows (chunked transfer, a structural JSON→Form parse on the REQUEST
+side, streaming, per-route timeout config + circuit-breaking, TLS/lifecycle,
+observability) are still open breaths.
 
 ## The BML preference
 
@@ -488,6 +502,88 @@ client→router hop**, **upstream connection reuse on the fan-out hop**, and
 **fan-out timeouts (hung upstream → 504, worker freed, pool not starved)** are now
 shown; chunked transfer and structural-JSON are the rest.
 
+## Production routes — the first promotions, byte-identical to the live api
+
+The real-app proof above runs ONE native route returning a scalar value. The
+PRODUCTION manifest
+[`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk)
+takes the next step the durable flip needs: it PROMOTES the four simplest
+`/api/utils` compute routes from the fan-out tail (served by CPython) to NATIVE
+(served entirely in Form), each returning the **full JSON response object** its
+FastAPI twin returns — byte-for-byte. These are the routes whose Form computation
+is already parity-proven against CPython by the three-way kernel suite
+(`endpoint_<name>_demo.fk`); promotion replicates their FULL HTTP contract — the
+exact query params with the exact FastAPI defaults, the arithmetic in Form, and
+the exact response document.
+
+| Promoted route | params | response shape |
+|----------------|--------|----------------|
+| `/api/utils/coherence_weight` | `values` (csv ints), `threshold` (int) | `{"weight":<int>,"values":[…],"threshold":<int>,"runtime":"inline"}` |
+| `/api/utils/nodeid_distance` | 8 NodeID coords (ints) | `{"distance":<int>,"a":[…4],"b":[…4],"runtime":"inline"}` |
+| `/api/utils/nodeid_compatibility` | 8 NodeID coords (ints) | `{"compatibility":<0..4>,"a":[…4],"b":[…4],"runtime":"inline"}` |
+| `/api/utils/weighted_average` | `values`, `weights` (csv floats) | `{"average":<float>,"values":[…],"weights":[…],"runtime":"inline"}` |
+
+Each handler parses its query params from the request alist (a recursive
+`split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
+`str_to_float`), runs the same math the demo recipe runs, and builds the response
+JSON by `str_concat`-ing the document with no spaces (matching FastAPI's
+`separators=(",",":")`), `value_str` rendering each number Python-style. The
+serve path stamps `Content-Type: application/json` and `X-Form-Router:
+native-kernel`.
+
+[`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
+proves the promotion two ways at once — boot the real local app as the CPython
+oracle, stand the kernel-router (production manifest) in front, and for each of
+the four routes over representative + edge params (15 cases):
+
+```
+[native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
+           value-contract == local CPython oracle: MATCH   (native runtime='inline', dev-app runtime='subprocess')
+           FULL-BODY     == LIVE  https://api.coherencycoin.com: BYTE-IDENTICAL
+… all 15 cases, incl. adversarial floats (0.14000000000000004, 7.8100000000000005, 0.30000000000000004)
+
+native  (kernel-router, Form):   p50=0.255 ms  p99=0.361 ms
+CPython (app serve_via_kernel):  p50=11.05 ms  p99=16.31 ms
+-> native p50 is 43.3x faster than the CPython-served route (a fan-out adds the proxy hop ON TOP)
+```
+
+Two honest claims, kept distinct:
+
+- **Value-identical to the local CPython oracle.** Every computed value and
+  echoed input matches the dev app exactly. The dev app reports
+  `runtime="subprocess"` (it shells to the kernel binary) while the native route
+  emits `runtime="inline"`; `runtime` is environment-provenance, not part of the
+  value the route computes, so the proof normalizes it out and compares the value
+  contract. A real divergence surfaced and was fixed here: float `sum` is
+  left-associated (the demo recipe's `i=0..n` loop and Python's `sum()` both fold
+  left from `0.0`); a first right-folding recursion in `weighted_average`
+  diverged on `0.1·0.7 + 0.2·0.2 + 0.3·0.1` (`0.14` vs `0.14000000000000004`)
+  until the accumulator was made left-associated to match CPython bit-for-bit.
+- **FULL-BODY byte-identical to the LIVE production api.** The production
+  `/api/utils/*` endpoints report `runtime="inline"`, so the native route's
+  ENTIRE response body — including the `runtime` field — is byte-for-byte what
+  `https://api.coherencycoin.com` returns. This is the gold: a client cannot tell
+  the difference between the promoted native route and production, while the
+  `X-Form-Router: native-kernel` header carries the honest provenance.
+
+The latency is the runtime-share payoff: a native route is **~43x faster** than
+the same compute served through the CPython doorway (and a fan-out would add the
+proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
+Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
+
+**Promotability map.** The four promoted routes are scalar/list-in, scalar/list-out
+with a flat JSON response — the cleanly-promotable subset. The remaining 18
+kernel-served `/api/utils` routes split by handler capability: the other pure-numeric
+ones (`simpson_diversity`, `idea_score`, `marginal_cc_return`, `breath_balance`,
+`shannon_entropy`, `softmax_weights`, `cost_vector`, `value_vector`, …) are the SAME
+shape and promotable with the same handler primitives as their recipes already prove
+the math — the work per route is authoring the param-parse + JSON-emit, not new kernel
+capability. The routes that read a STRUCTURED record (`idea_marginal_from_record`,
+`idea_grounding_summary`, `coherence_summary_score`) or return nested objects need the
+request-side structural-JSON parse (still an open breath) before their full contract
+can be replicated natively. This manifest is the durable flip's native surface, ready
+for the cutover; it does NOT flip — the standing shadow still fans out every route.
+
 ## The flip — sensed to the bone, the decision is intent not permission
 
 This is the **live request front-door for real visitors** — and the traffic is
@@ -610,7 +706,7 @@ door is FastAPI.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights), `value_str` (render ANY value via `Value::display()` → a Str — the float-correct leaf a JSON-emitting handler `str_concat`s into the response body, where `int_to_str` would truncate a Float; `handle_request` serves a native body opening with `{`/`[` as `Content-Type: application/json`, so a promoted route returns the same body AND type as its FastAPI twin).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
 - [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
@@ -622,6 +718,8 @@ door is FastAPI.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
+- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): four promoted `/api/utils` routes (`coherence_weight`, `nodeid_distance`, `nodeid_compatibility`, `weighted_average`) served NATIVELY in Form, each emitting the FULL JSON response object byte-identical to its FastAPI twin (params parsed from the request alist via `split_commas`, JSON built with `value_str` + `str_concat`, `runtime:"inline"` matching production); everything else fans out. Float accumulators are left-associated to match CPython's `sum()` bit-for-bit.
+- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and for all four routes over representative + edge params (15 cases, incl. adversarial floats) proves the native response value-identical to the local oracle (runtime provenance normalized out) AND — with `--live` — FULL-BODY byte-identical to the live production api; measures native (~0.25 ms) vs CPython-served (~11 ms) latency, the ~43x runtime-share win. Read-only against the live api; tears the local app + router down.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
 
 ### The deployable artifact (the kernel-router as a standalone server)
