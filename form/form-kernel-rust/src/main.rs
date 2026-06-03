@@ -7049,6 +7049,33 @@ fn handle_request(
             );
             return false; // close on error — keep the framing unambiguous
         }
+        // SECURITY: bound the eval input BEFORE running the handler. A native
+        // handler recurses once per element of a param it splits into a list (a
+        // `values=1,1,1,…` list), and the evaluator is not tail-call-optimized — so
+        // an oversized crafted param recurses deep enough to overflow the worker
+        // stack and abort the whole process (see NATIVE_HANDLER_INPUT_LIMIT). The
+        // deepest possible recursion is bounded by the LARGEST single user param's
+        // byte length (each param is a separate, sequential list walk; router
+        // context fields are not user-controlled and are excluded). Answer an
+        // oversized param with a 413 observably instead of evaluating it. A real
+        // native query's params are tiny.
+        let max_param_bytes: usize = request_data
+            .iter()
+            .map(|(_, v)| v.len())
+            .max()
+            .unwrap_or(0);
+        if max_param_bytes > NATIVE_HANDLER_INPUT_LIMIT {
+            let status = "413 Payload Too Large".to_string();
+            let body = format!(
+                "native handler param {} bytes exceeds the {}-byte limit\n",
+                max_param_bytes, NATIVE_HANDLER_INPUT_LIMIT
+            );
+            record_router_metrics(router_metrics, &path, "native-kernel-error");
+            let _ = stream.write_all(
+                http_response(&status, &body, "native-kernel-error", false, "", &[]).as_bytes(),
+            );
+            return false; // close — the oversized request was fully read; drop it
+        }
         let result = walk(k, arena, cl.body, call_frame);
         router = "native-kernel";
         // A native handler can return the first-class KernelHTTPResponse cell:
@@ -7207,6 +7234,21 @@ const MAX_REQUEST_READ_TIMEOUT_DEFAULT_MS: u64 = 30_000;
 fn max_request_read_timeout() -> Duration {
     Duration::from_millis(MAX_REQUEST_READ_TIMEOUT_DEFAULT_MS)
 }
+
+// SECURITY: the largest TOTAL input (query + body param bytes) a NATIVE Form
+// handler will evaluate. The Form evaluator is a tree-walker WITHOUT tail-call
+// optimization, and the native handlers recurse once per input list element
+// (`ints_of`, `split_commas`, the score folds, …). So a crafted param like
+// `values=1,1,1,…` with hundreds of thousands of elements — a few hundred KB,
+// still UNDER the request-body shape cap — recurses deep enough to OVERFLOW the
+// worker stack and ABORT THE WHOLE PROCESS (every worker dies): a one-request
+// remote kill, confirmed empirically (~200k elements aborts). A real native-route
+// query is a handful of small params; this caps the eval input far above any
+// legitimate use and far below the overflow, so an oversized input is answered
+// (413) instead of evaluated. (The proper fix — TCO in the evaluator — is a
+// separate, parity-bearing change; this serve-path bound makes native routes safe
+// to serve in the meantime.)
+const NATIVE_HANDLER_INPUT_LIMIT: usize = 16 * 1024;
 
 // A fan-out hop failure, classified so the caller knows whether to RETRY or 504:
 //   - Timeout: the upstream is reachable but SLOW/HUNG — connect, write, or read
