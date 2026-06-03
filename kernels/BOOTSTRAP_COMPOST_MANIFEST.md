@@ -19,11 +19,15 @@ kernels). The last demo (`python_typing_compose_demo`) closed when the
 annotated-parameter lift bug was fixed (see the dated row below). **The flip is
 taken (2026-06-01):** `PARITY_THIRD_RUNTIME` now defaults to `kernel-bmf` — the
 Form-native walker is the canonical Python runtime; `ts-eval` remains available
-via an explicit `PARITY_THIRD_RUNTIME=ts-eval`. With the flip taken, the named
-Phase-A Python-adapter files (`lang-python.ts` and siblings) become
-**COMPOST-ELIGIBLE** — the gate that held them ("default until Form-native
-compiles every PARITY_FILES demo") is now met. They are not yet composted;
-that is the next breath, after the flip proves stable.
+via an explicit `PARITY_THIRD_RUNTIME=ts-eval`. The flip retires the
+`evalPython`/`ts-eval` *third-runtime seam* — but a 2026-06-03 dependency walk
+(Phase A) found the Python-adapter parser + emitter + CLI still carry the parity
+suite's **Rust-bootstrap leg** (`python-compile` → `.fk` → Rust kernel, leg 2,
+unconditional) with four live consumers, plus a direct import from the kept
+`ctor-convergence.test.ts`. So `lang-python.ts` and siblings are **NOT residue
+on the flip alone** — they release only when the Rust-bootstrap leg is replaced
+by a Form-native `.py → .fk` path (the destination shape). See Phase A for the
+full graph and the gate that actually holds.
 
 This is the readiness map. The compost is downstream of green gates.
 
@@ -61,34 +65,80 @@ gate that earns the right to remove the Rust kernel from the bootstrap role
 
 ## Phase A — Bootstrap parsers + emitters
 
-These shipped the legacy third runtime (`ts-eval`). With the flip taken
-(2026-06-01) the Form-native walker is the default third runtime and every
-`PARITY_FILES` demo proves three-way green under it — so the Python-adapter
-files below are now **COMPOST-ELIGIBLE**. They compost in a sibling PR once the
-flip proves stable; this manifest records them as residue, not yet removed.
+These shipped two distinct roles. The `evalPython` tree-walker fills the
+**third-runtime seam** (`ts-eval`), and with the flip taken (2026-06-01) the
+Form-native walker is the default third runtime — so the `evalPython` sub-path
+is legacy. But the *same files* also carry the parser + emitter that runs the
+parity suite's **Rust-bootstrap leg** (`python-compile` → `.fk` → Rust kernel),
+which is leg 2 of the three-way gate and runs **unconditionally on every parity
+invocation regardless of `PARITY_THIRD_RUNTIME`**. That role is not residue —
+it is live tissue with live consumers (see the dependency walk below). The
+files do not compost until the Rust-bootstrap leg is itself replaced by a
+Form-native `.py → .fk` path (the destination shape at the top of this doc).
 
-**Gate per file (now met for the Python adapter):**
-`PARITY_THIRD_RUNTIME=kernel-bmf scripts/parity_suite.sh` reports green on every
-file — and it is now the default selector. The TS bootstrap is no longer the
-third runtime; the Form-native walker is. With every file in `PARITY_FILES`
-green, the Python-adapter bootstrap parser files are residue.
+**Dependency walk — 2026-06-03 (`claude/compost-python-adapter`).** A sibling
+PR set out to compost the Python adapter on the strength of the flip. The
+dependency graph said otherwise, and rigor kept the tree whole:
+
+- **`lang-python.ts` (`parsePython` + `buildPythonLanguage`) is live two ways.**
+  (1) `parity_suite.sh` line 315 calls `python-compile` (via `main.ts` →
+  `parsePython` → `emitFk`) for the **Rust-bootstrap leg** on every run — not
+  the `ts-eval` branch, the unconditional leg 2. (2) `ctor-convergence.test.ts`
+  (a KEEP file, paired with the ts-adapter-shared `ctor-convergence.ts`)
+  imports `buildPythonLanguage` + `parsePython` and exercises them in 28
+  passing assertions (cross-language CTOR convergence). Removing `lang-python.ts`
+  breaks both.
+- **`lang-python-fk.ts` (`emitFk`) is the Rust-bootstrap leg's emitter** —
+  consumed by `python-compile`/`python-run` in `main.ts`. Not residue while
+  leg 2 runs.
+- **`main.ts` exposes `python-compile`/`python-run`**, consumed live by FOUR
+  surfaces: `parity_suite.sh` (Rust-bootstrap leg), `perf_compare.sh`,
+  `form/form-kernel-ts/scripts/viz_kernel_trace.py` (the trace visualizer), and
+  `scripts/kernel_readiness_harness.py` (the API-kernel readiness harness, which
+  documents `python-compile` as "the deploy step"). `PYTHON_PIPELINE_STATUS.md`
+  lists `python-compile`/`python-run` in its active "How to run" section.
+- **`lang-python.test.ts`** covers the still-live `lang-python.ts` parser +
+  `evalPython`; removing it deletes coverage of live code.
+- **`ctor-convergence.ts` / `ctor-convergence.test.ts`** stay (shared with the
+  ts-adapter; compost when *it* does).
+
+What is genuinely legacy is the narrow `evalPython` → `python-eval` → the
+`ts-eval` branch of `parity_suite.sh` (lines 240-244). Even that is wired live
+into `main.ts` as one of four documented subcommands, so it does not compost in
+isolation — `lang-python.ts` (which holds `evalPython`) stays for the
+Rust-bootstrap leg and the convergence test regardless.
+
+**Gate that actually holds:** the Python-adapter parser + emitter + CLI compost
+when the parity suite's **Rust-bootstrap leg** is replaced by a Form-native
+`.py → .fk` path and the readiness harness + trace visualizer read that path
+instead of `python-compile` — i.e. when the destination shape (top of this doc:
+"No host parser. No TypeScript lowering.") is reached, not merely when the
+third-runtime *selector* flipped. The selector flip (2026-06-01) is a
+necessary earlier breath, not the compost gate.
 
 ### Python adapter
 
 | File | LOC | What it does today | Form-native replacement |
 |---|---|---|---|
-| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` | 2199 | TS hand-coded Python parser + tree-walking evaluator (the `evalPython` path the parity suite uses today) | `form-stdlib/grammars/python-bmf.fk` rules consuming BMF source objects emitted by the generic Form scanner |
+| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` | 2199 | TS hand-coded Python parser (`parsePython` — the Rust-bootstrap leg's parser, run on every parity invocation) + tree-walking evaluator (`evalPython` — the legacy `ts-eval` third runtime). **Also imported by the kept `ctor-convergence.test.ts`.** | `form-stdlib/grammars/python-bmf.fk` rules consuming BMF source objects emitted by the generic Form scanner |
 | `form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` | 674 | TS emitter — lowers parsed Python CTORs to `.fk` text the Rust kernel runs | Form-native rules emit reversible Form objects directly; no separate emitter layer — the parser output IS the recipe |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts` | 672 | TS-side CTOR vocabulary + convergence helpers (shared with TS adapter for Blueprint identity) | CTOR vocabulary moves into `form-stdlib/grammars/ctor-vocabulary.fk` as Form data; convergence is structural by content-addressing |
 | `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` | 342 | TS-side parser/eval unit tests | Form-side rule tests under `form-stdlib/tests/python-grammar-*.fk` (one per shipped construct) |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts` | 358 | TS-side convergence unit tests | Form-side equivalence tests asserting NodeID identity for cross-language structural twins |
 
-**Subtotal Phase A — Python adapter: 4245 LOC** — **COMPOST-ELIGIBLE
-(2026-06-01).** The flip to `kernel-bmf` is taken; all 20 `PARITY_FILES` prove
-three-way green under the Form-native walker, so `lang-python.ts` and its
-Phase-A siblings (`lang-python-fk.ts`, `ctor-convergence.ts`, and the two
-`*.test.ts` files) are residue. Not yet removed — composted in a sibling PR
-once the flip proves stable.
+**Subtotal Phase A — Python adapter: 4245 LOC** — **STILL LIVE (dependency walk
+2026-06-03).** The flip to `kernel-bmf` is taken and all 20 `PARITY_FILES` prove
+three-way green under the Form-native walker — but the dependency walk above
+found the parser + emitter + CLI (`lang-python.ts` parser, `lang-python-fk.ts`,
+`main.ts`) are the parity suite's Rust-bootstrap leg (leg 2, unconditional) with
+four live consumers, and `ctor-convergence.test.ts` imports `lang-python.ts`
+directly. **None of these compost yet** — they release when the Rust-bootstrap
+leg is replaced by a Form-native `.py → .fk` path (the destination shape), not
+on the selector flip. Only the narrow `evalPython`/`ts-eval` sub-path is legacy,
+and it cannot compost in isolation (it lives inside the still-live
+`lang-python.ts` + `main.ts`). The 2026-06-01 "COMPOST-ELIGIBLE" marking was
+based on an incomplete graph; the walk corrects it to the gate that actually
+holds.
 
 ### TypeScript adapter
 
@@ -271,10 +321,16 @@ confirm Shape 2 classification + LOC count.
 
 **The flip was one line** (the `${PARITY_THIRD_RUNTIME:-...}` fallback in
 `parity_suite.sh`), fully reversible, and changes no CI gate — no workflow runs
-the parity suite; the `form/**` gates run only `bash validate.sh`. With the flip
-taken, the Phase-A Python-adapter bootstrap files (`lang-python.ts` and friends)
-are **COMPOST-ELIGIBLE** — residue, compostable in a sibling PR once the flip
-proves stable.
+the parity suite; the `form/**` gates run only `bash validate.sh`. The flip
+retires the `evalPython`/`ts-eval` third-runtime seam. It does **not** retire the
+Phase-A parser + emitter + CLI: note that the parity guarantee above is
+`CPython == Rust-bootstrap == kernel-bmf` — the **Rust-bootstrap leg**
+(`python-compile` → `.fk`, via `lang-python.ts` + `lang-python-fk.ts` + `main.ts`)
+is a distinct, current leg that runs on every invocation. The 2026-06-03
+dependency walk (Phase A) found that leg plus four live consumers and a direct
+import from `ctor-convergence.test.ts`, so those files are **still live**, not
+residue. They release when the Rust-bootstrap leg is replaced by a Form-native
+`.py → .fk` path.
 
 The same selector shape can extend to the TS adapter parity gate
 (`PARITY_THIRD_RUNTIME` over `ts-eval` vs `kernel-bmf-ts`).
@@ -592,9 +648,24 @@ re-verified before the flip: freshly rebuilt Go + Rust kernels off main, the
 official `scripts/parity_suite.sh` run end-to-end under the new default reports
 **20 passing, 0 failing, exit 0**, exercising all 20 `PARITY_FILES` (no
 truncation). `ts-eval` remains available via an explicit
-`PARITY_THIRD_RUNTIME=ts-eval`. With the flip taken, the Phase-A Python-adapter
-bootstrap tissue (`lang-python.ts` and friends) is **COMPOST-ELIGIBLE** —
-residue, compostable in a sibling PR once the flip proves stable.
+`PARITY_THIRD_RUNTIME=ts-eval`. The flip retires the `evalPython`/`ts-eval`
+third-runtime seam.
+
+**Correction — what the flip does NOT make compostable (2026-06-03 dependency
+walk, `claude/compost-python-adapter`).** A sibling PR read "the flip is taken"
+as "the Phase-A Python-adapter tissue is residue" and set out to remove it. The
+dependency graph kept the tree whole: `lang-python.ts` (`parsePython`) +
+`lang-python-fk.ts` (`emitFk`) + `main.ts` (`python-compile`/`python-run`) are
+the parity suite's **Rust-bootstrap leg** — leg 2 of `CPython == Rust-bootstrap
+== kernel-bmf`, run unconditionally on every parity invocation, with four live
+consumers (`parity_suite.sh`, `perf_compare.sh`, `viz_kernel_trace.py`,
+`kernel_readiness_harness.py`) and a direct import from the kept
+`ctor-convergence.test.ts`. The flip retired the third-runtime seam, not the
+Rust-bootstrap leg or the `python-compile` deploy step. These files release only
+when the Rust-bootstrap leg is replaced by a Form-native `.py → .fk` path — the
+destination shape at the top of this doc. See Phase A for the full graph. No
+Phase-A file composted in that PR; the only change was this correction to the
+manifest's awareness.
 
 **What composts when a demo reaches COMPOST READY.** The `.py` input
 **stays** — the parity suite reads it on every run (it's the substrate the
