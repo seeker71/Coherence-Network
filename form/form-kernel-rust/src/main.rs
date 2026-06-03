@@ -401,6 +401,15 @@ pub(crate) struct Kernel {
     // counter — the only cost is the warm-up.
     jit_hits: HashMap<NodeID, u32>,
     jit_failed: HashSet<NodeID>,
+    // Content-addressed maps — the kernel's O(1) dispatch tables, keyed by the
+    // NodeID (content-address) of the key. A switch (status→phrase, name→handler,
+    // shape→route) becomes a direct NodeID lookup instead of a scan: two
+    // structurally-identical keys land in the same slot because they share a
+    // NodeID. Each (key→value) entry is a recorded edge — the dispatch table is a
+    // content-addressed graph, so the lookup that routes IS the trace that
+    // attests. Per-kernel (a worker builds its own at load).
+    maps: HashMap<i64, HashMap<NodeID, Value>>,
+    next_map: i64,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -711,6 +720,8 @@ impl Kernel {
             jit_compiled: HashMap::new(),
             jit_hits: HashMap::new(),
             jit_failed: HashSet::new(),
+            maps: HashMap::new(),
+            next_map: 0,
             active_roots: Vec::new(),
             trace: None,
         };
@@ -1114,6 +1125,10 @@ impl Kernel {
             // its own hot paths).
             jit_hits: HashMap::new(),
             jit_failed: self.jit_failed.clone(),
+            // Dispatch tables are content (built at load); each worker carries
+            // its own copy so routing needs no lock.
+            maps: self.maps.clone(),
+            next_map: self.next_map,
             active_roots: Vec::new(),
             trace: None,
         }
@@ -3506,6 +3521,47 @@ impl Kernel {
                     }
                 }
                 _ => Value::Int(0),
+            }
+        });
+        // ---- content-addressed maps : O(1) dispatch tables ------------------
+        // The substrate's intrinsic advantage made usable: a switch becomes a
+        // DIRECT lookup by the key's content-address (NodeID), not a scan. Two
+        // structurally-identical keys share a NodeID, so they land in the same
+        // slot — the precomputed structural hash a native compiler must re-pay at
+        // every dispatch. And each (key→value) entry is a recorded edge: the
+        // dispatch table is a content-addressed graph, so routing IS attesting.
+        //
+        // map_new → a fresh map handle (per-kernel).
+        self.register_native("map_new", cat_witness(), |k, _, _args| {
+            k.next_map += 1;
+            let h = k.next_map;
+            k.maps.insert(h, HashMap::new());
+            Value::Int(h)
+        });
+        // map_put h key value → 1 (0 if no such map). The key MUST be a NodeID —
+        // intern it first (intern_trivial_string for a name, intern_node for a
+        // shape); the key's CONTENT decides the slot, not its identity.
+        self.register_native("map_put", cat_witness(), |k, _, args| {
+            let h = args[0].as_int();
+            let key = args[1].as_nid();
+            let val = args[2].clone();
+            match k.maps.get_mut(&h) {
+                Some(m) => {
+                    m.insert(key, val);
+                    Value::Int(1)
+                }
+                None => Value::Int(0),
+            }
+        });
+        // map_get h key → value (or null). O(1) by the key's NodeID. No scan, no
+        // re-hash of the key's bytes — the content-address is the lookup. The
+        // traversal of this one edge is, itself, the trace of what was routed.
+        self.register_native("map_get", cat_witness(), |k, _, args| {
+            let h = args[0].as_int();
+            let key = args[1].as_nid();
+            match k.maps.get(&h).and_then(|m| m.get(&key)) {
+                Some(v) => v.clone(),
+                None => Value::Null,
             }
         });
         // seeded_bytes(seed, count) — deterministic LCG byte stream.
