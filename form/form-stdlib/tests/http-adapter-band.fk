@@ -1,0 +1,40 @@
+; tests/http-adapter-band.fk — sibling-witness band for http-adapter.fk.
+; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-adapter.fk
+;
+; Proves the adapter that brings parity-proven alist handlers into kh-serve: a
+; kh-request's query becomes the (name value) alist param_or/assoc read, and a
+; handler's JSON string wraps into a 200 application/json kh-response. Emits a
+; bit-sum (15 when all pass); identical Go/Rust/TS proves the bridge is portable.
+
+(let req (kh-request-from-raw "GET /api/utils/coherence_weight?values=72,38&threshold=50 HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let alist (kh-request-as-alist req))
+
+;; CHECK 1 (bit 1) — the query becomes a 2-pair alist.
+(let ok-len (if (eq (len alist) 2) 1 0))
+
+;; CHECK 2 (bit 2) — the first pair is ("values" "72,38") (comma stays in value).
+(let p1 (head alist))
+(let ok-values
+    (if (str_eq (head p1) "values")
+        (if (str_eq (head (tail p1)) "72,38") 2 0)
+        0))
+
+;; CHECK 3 (bit 4) — the second pair is ("threshold" "50").
+(let p2 (head (tail alist)))
+(let ok-threshold
+    (if (str_eq (head p2) "threshold")
+        (if (str_eq (head (tail p2)) "50") 4 0)
+        0))
+
+;; CHECK 4 (bit 8) — kh-ok-json wraps a JSON string in a 200 application/json
+;; kh-response that renders to the wire with the body intact.
+(let resp (kh-serve-response (kh-ok-json "{\"ok\":1}")))
+(let ok-json
+    (if (ge (str_find resp "HTTP/1.1 200 OK" 0) 0)
+        (if (ge (str_find resp "Content-Type: application/json" 0) 0)
+            (if (ge (str_find resp "{\"ok\":1}" 0) 0) 8 0)
+            0)
+        0))
+
+;; verdict — 15 when all pass.
+(add ok-len (add ok-values (add ok-threshold ok-json)))

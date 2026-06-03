@@ -1,0 +1,34 @@
+; http-adapter.fk — bridge the parity-proven alist handlers into kh-serve.
+;
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk
+;
+; THE PRINCIPLE (Urs): the /api/utils computes in
+; deploy/kernel-router/production-routes.fk were proven byte-identical to CPython
+; via the three-way kernel suite. We do NOT rewrite a proven formula to fit a new
+; request/response shape — that would risk the parity we already earned. Instead
+; this adapter lets kh-serve dispatch to those handlers UNCHANGED: it converts a
+; kh-request's query into the (k v) alist the handlers read (via param_or/assoc),
+; and wraps the handler's JSON string in a kh-response. The formula is untouched;
+; only the shells change. A native route's registry entry is then a thin wrapper:
+;
+;   (defn cw-native (request)
+;     (kh-ok-json (route_coherence_weight (kh-request-as-alist request))))
+;
+; — the proven handler verbatim inside the kh-serve shell, so the kernel-router's
+; response stays byte-for-byte the CPython response while the HTTP around it is
+; now traceable Form.
+
+section [form.bml] {
+
+    ;; a kh-request's query (a kh-field list) -> the (name value) alist the proven
+    ;; handlers read through param_or / assoc. One pair per field; names and
+    ;; values are carried through, never literals here.
+    def kh-fields-as-pairs(fields) = if nil?(fields) then list() else cons(list(kh-field-name(head(fields)), kh-field-value(head(fields))), kh-fields-as-pairs(tail(fields)));
+    def kh-request-as-alist(request) = kh-fields-as-pairs(kh-request-query(request));
+
+    ;; wrap a handler's JSON-string body in a 200 application/json kh-response.
+    ;; The handler returns the exact CPython JSON text; this only frames it.
+    def kh-ok-json(body) = kh-response(200, list(kh-header("Content-Type", "application/json")), body);
+
+    0;
+}
