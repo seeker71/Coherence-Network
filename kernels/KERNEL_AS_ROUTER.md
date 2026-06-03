@@ -539,7 +539,10 @@ service's own rule), which is Urs's **intent**.
 **The measured tradeoff** (from the real-app harness): native routes **~56×
 faster** than the CPython request lifecycle; the fan-out tail (the ~760
 not-yet-native routes) pays **~+6%** for the extra proxy hop. One new container
-in the hot path; the failure surface is that hop's uptime.
+in the hot path; the failure surface is that hop's uptime. *Measured again on the
+production VPS against the real api* (see "Shadow on the production VPS" below):
+the flip-shaped fan-out hop is at-or-below p50 noise — at or under that +6%
+estimate — the proxy cost lost in FastAPI's own latency variance.
 
 **The division:** the sensing (topology, insertion point, rollback, tradeoff,
 live-traffic reality) AND the **kernel-router container image** that makes the
@@ -562,7 +565,7 @@ that intent is set.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
 - [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
@@ -580,6 +583,93 @@ that intent is set.
 
 - [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib (for a future BML manifest's `--stdlib`), the shadow manifest, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
 - [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk) — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_pairs` accepts an empty list, so zero routes are native and EVERYTHING fans out — a transparent proxy with `X-Form-Router: fanout-python` as live evidence.
-- [`deploy/kernel-router/entrypoint.sh`](../deploy/kernel-router/entrypoint.sh) — resolves `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` (+ optional `STDLIB_DIR` / `KERNEL_ROUTER_WORKERS`) at run time and `exec`s `form-kernel-rust serve` — container-configurable without a rebuild.
+- [`deploy/kernel-router/entrypoint.sh`](../deploy/kernel-router/entrypoint.sh) — resolves `KERNEL_ROUTER_HOST` (default `0.0.0.0` in-container so the front door is reachable across the boundary) / `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` (+ optional `STDLIB_DIR` / `KERNEL_ROUTER_WORKERS`) at run time and `exec`s `form-kernel-rust serve` — container-configurable without a rebuild.
 - [`deploy/kernel-router/docker-compose.kernel-router.yml`](../deploy/kernel-router/docker-compose.kernel-router.yml) — a DEFINED-BUT-INACTIVE overlay service (build: `Dockerfile.kernel-router`, `--upstream http://api:8000`). A SEPARATE overlay the production deploy never includes; its Traefik labels are present but COMMENTED, so merging it changes nothing about production routing. Uncommenting them (and dropping the api service's own rule) is the flip — Urs's intent.
 - [`deploy/kernel-router/shadow_proof_harness.py`](../deploy/kernel-router/shadow_proof_harness.py) — proves the shadow manifest is a transparent proxy: against a mock CPython upstream, every path (and a POST with a body) fans out byte-identically to hitting the upstream directly, every response carries `X-Form-Router: fanout-python`, and the empty routes list is accepted (the binary starts and serves). Mock upstream — no production routing.
+
+## Shadow on the production VPS — proven against the REAL api, Traefik untouched
+
+The image is not only built; it **runs in shadow on the production VPS** (2026-06-03),
+transparently proxying the **real** api. This is the staged step *before* the flip:
+the kernel-router runs beside the live path, carries real production traffic
+transparently, and Traefik stays untouched — zero visitor-facing change.
+
+**The run.** The image builds cleanly on the VPS (`docker build -f
+Dockerfile.kernel-router` — the Rust release compile + `strip`, the in-image
+`--expr "(add 2 3)" → 5` smoke), and runs as a NEW additive container:
+
+```
+docker run -d --name kernel-router-shadow --network coherence-network_default \
+  -p 127.0.0.1:8090:8080 \
+  -e KERNEL_ROUTER_HOST=0.0.0.0 -e KERNEL_ROUTER_PORT=8080 \
+  -e UPSTREAM_URL=http://coherence-network-api-1:8000 \
+  -e ROUTES_FILE=/routes/shadow-routes.fk \
+  kernel-router:shadow-host
+```
+
+It binds the host forward to **127.0.0.1 only** — Traefik and the public internet
+cannot reach it; nothing is routed to it. The api/web/pulse/postgres/neo4j
+containers are never stopped or modified; the shadow is purely additive.
+
+**The transparency proof (from the VPS host, against the real api container).**
+Every path is byte-identical between the kernel-router (`127.0.0.1:8090`) and the
+real api direct, with `X-Form-Router: fanout-python` on every response:
+
+| path | router | direct | bytes | identical |
+|------|--------|--------|-------|-----------|
+| `/api/version` | 200 | 200 | 19 | yes |
+| `/api/ideas` | 200 | 200 | 370,215 | yes |
+| `/api/utils/nodeid_compatibility` | 200 | 200 | 66 | yes |
+| `/api/specs` | 404 | 404 | 22 | yes |
+| `/api/<nonexistent>` | 404 | 404 | — | yes |
+| `/api/health` | 200 | 200 | ~561 | yes¹ |
+
+¹ `/api/health` differs only in the upstream's *own* time-varying fields
+(`uptime_seconds`, `uptime_human`) when the two sequential calls straddle a
+clock-second; every other field — and the whole body when they land in the same
+second — is identical. The proxy alters nothing. A 370 KB body (`/api/ideas`) and
+faithfully-relayed 404s prove it is not a happy-path-only relay.
+
+**The measured overhead on real prod infra.** The fan-out proxy hop is
+negligible. Measured 200×, `/api/version` (a small stable body isolates the hop):
+the **flip-shaped** path (router → fan-out → api, in-container, the shape Traefik
+would use) runs at **p50 ≈ direct** (router 4.4 ms vs direct 5.7 ms — router at or
+below noise; one ~145 ms tail outlier across 200 samples, worker-pool warmup, not
+the median). The **host-forward** path (host → docker-proxy → container →
+fan-out, which the flip does NOT use — Traefik bypasses the docker-proxy) adds
+**~0.5 ms / +13 % at p50** (router 4.92 ms vs direct 4.35 ms), router p99 *lower*
+than direct (the worker pool smooths the tail). So the flip's real cost sits near
+the low end — at or below the dev-harness `~+6 %` estimate, the proxy hop lost in
+FastAPI's own latency variance.
+
+**Two deployability bugs the real infra surfaced (and the dev-env mock could
+not).** Running the image *across a container boundary* — not on the same loopback
+a local harness curls — exposed two real defects, now fixed:
+
+1. **`cli_serve` bound `127.0.0.1` (loopback) only.** A same-host harness curls the
+   listener on that same loopback, so the gap is invisible there — but Docker's
+   host port-forward and Traefik reach a container over its **bridge IP**, not its
+   loopback, so a loopback-only front door is unreachable across the boundary (the
+   host `-p 127.0.0.1:8090` forward returned connection-refused, and the flip would
+   fail the same way). Fix: a `--host` flag (default preserved as `127.0.0.1`, so
+   the harness and every existing caller are unchanged); the container entrypoint
+   passes `--host 0.0.0.0`, and the localhost-only isolation of a shadow run moves
+   to the host binding (`docker run -p 127.0.0.1:<port>`).
+2. **The HEALTHCHECK probed `/health`**, which fans out to FastAPI — but the api
+   404s on bare `/health` (its liveness route is `/api/health`), and `curl -fsS`
+   treats 404 as failure, so the container reported `unhealthy` while serving
+   perfectly (the proxy faithfully relaying the upstream's 404). Fix: probe
+   `/api/health` — the route the upstream serves; a 200 now proves both router
+   liveness and that the fan-out reaches the upstream. The container is `healthy`.
+
+**Standing shadow left running.** Clean and light (CPU ~0 %, MEM ~3 MiB,
+`healthy`, localhost-only), it gives ongoing transparent-proxy evidence at no
+visitor-facing cost, so it stays up beside the live path. Production stayed
+healthy throughout — `/api/health` ok, `deployed_sha` unchanged (production code
+never moved), the witness breathing with zero silences before and after every
+step; Traefik routing was never touched.
+
+**What remains is the flip** — pointing Traefik at the kernel-router (uncomment
+the one label set, drop the api service's own rule). That is the single move that
+touches live traffic; it is Urs's intent (given), staged carefully on top of this
+proven shadow.
