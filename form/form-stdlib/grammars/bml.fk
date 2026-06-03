@@ -4193,6 +4193,9 @@
                 "RuleProcess" "Rule" "BMF"
                 "LanguageProfile" "CompilerStage" "GrammarCapsule"
                 "LanguagePort" "CompilerFlow" "CompilerCompiler"
+                "CompilerDeclaration" "CompilerSectionModel"
+                "CompilerUnitModel" "BMLDeclarationLoweringStage"
+                "BMLSourceLoweringFlow" "SelfHostingPlan"
                 "CSharpLanguage" "JavaLanguage" "TypeScriptLanguage"
                 "GoLanguage" "RustLanguage" "BMLLanguage"
                 "ModernBMLCompiler")

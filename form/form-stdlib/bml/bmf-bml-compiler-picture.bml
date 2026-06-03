@@ -211,6 +211,269 @@ template<Object TDialect, Object TGrammar, Object TCompiler> class CompilerCompi
    }
 }
 
+interface CompilerCarrier [public, carrier] {
+   section [public] {
+      String Kind() [get];
+      String Name() [get];
+      Object Source() [get];
+      CompilerCarrier Undo();
+   }
+}
+
+template<Object TSource> class CompilerDeclaration [public, value, carrier] : CompilerCarrier {
+   section [private] {
+      String m_strKind;
+      String m_strName;
+      TSource m_hSource;
+   }
+
+   section [public] {
+      CompilerDeclaration( String strKind, String strName, TSource hSource ) {
+         m_strKind = strKind;
+         m_strName = strName;
+         m_hSource = hSource;
+      }
+
+      String Kind() [get] {
+         return m_strKind;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      Object Source() [get] {
+         return m_hSource;
+      }
+
+      CompilerCarrier Undo() {
+         return self;
+      }
+   }
+}
+
+template<Object TItem> class CompilerSectionModel [public, value, carrier] : CompilerCarrier {
+   section [private] {
+      String m_strLanguage;
+      String m_strName;
+      TItem[] m_hItems = Array<TItem>();
+   }
+
+   section [public] {
+      CompilerSectionModel( String strLanguage, String strName ) {
+         m_strLanguage = strLanguage;
+         m_strName = strName;
+      }
+
+      void Add( TItem hItem ) {
+         m_hItems.Append( hItem );
+      }
+
+      String Kind() [get] {
+         return "compiler-section";
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      Object Source() [get] {
+         return m_hItems;
+      }
+
+      CompilerCarrier Undo() {
+         return self;
+      }
+   }
+}
+
+template<Object TSection> class CompilerUnitModel [public, value, carrier] : CompilerCarrier {
+   section [private] {
+      String m_strLanguage;
+      String m_strName;
+      TSection[] m_hSections = Array<TSection>();
+   }
+
+   section [public] {
+      CompilerUnitModel( String strLanguage, String strName ) {
+         m_strLanguage = strLanguage;
+         m_strName = strName;
+      }
+
+      void AddSection( TSection hSection ) {
+         m_hSections.Append( hSection );
+      }
+
+      String Kind() [get] {
+         return "compiler-unit";
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      Object Source() [get] {
+         return m_hSections;
+      }
+
+      CompilerCarrier Undo() {
+         return self;
+      }
+   }
+}
+
+template<Object TSource, Object TDeclaration, Object TCarrier> interface SourceLowerer [public, reusable, lowering] {
+   section [public] {
+      TDeclaration[] ParseDeclarations( TSource hSource );
+      TCarrier LowerDeclaration( TDeclaration hDeclaration );
+      CompilerUnitModel<Object> LowerSource( TSource hSource );
+   }
+}
+
+template<Object TDeclaration, Object TCarrier> class BMLDeclarationLoweringStage [public, lowering, reversible] : CompilerStage<TDeclaration,TCarrier> {
+   section [public] {
+      BMLDeclarationLoweringStage() {
+         self( "BML declaration lowering" );
+      }
+
+      TCarrier Forward( TDeclaration hDeclaration ) [override] {
+         String strKind = DeclarationKind( hDeclaration );
+         String strName = DeclarationName( hDeclaration );
+
+         return BuildCarrier(
+            strKind,
+            strName,
+            hDeclaration );
+      }
+
+      TDeclaration Backward( TCarrier hCarrier ) [override] {
+         return CarrierSource( hCarrier );
+      }
+
+      String DeclarationKind( TDeclaration hDeclaration ) [abstract] {}
+      String DeclarationName( TDeclaration hDeclaration ) [abstract] {}
+
+      TCarrier BuildCarrier(
+         String strKind,
+         String strName,
+         TDeclaration hDeclaration ) [abstract] {}
+
+      TDeclaration CarrierSource( TCarrier hCarrier ) [abstract] {}
+   }
+}
+
+template<Object TSource, Object TDeclaration, Object TCarrier> class BMLSourceLoweringFlow [public, flow, lowering, selfHosting] : SourceLowerer<TSource,TDeclaration,TCarrier> {
+   section [private] {
+      BMLDeclarationLoweringStage<TDeclaration,TCarrier> m_hDeclarationStage;
+      CompilerSectionModel<TCarrier> m_hDeclarations;
+      CompilerSectionModel<TCarrier> m_hTemplates;
+      CompilerSectionModel<TCarrier> m_hLanguagePorts;
+      CompilerSectionModel<TCarrier> m_hBootstrapBoundary;
+   }
+
+   section [public] {
+      BMLSourceLoweringFlow( BMLDeclarationLoweringStage<TDeclaration,TCarrier> hDeclarationStage ) {
+         m_hDeclarationStage = hDeclarationStage;
+      }
+
+      CompilerUnitModel<Object> LowerSource( TSource hSource ) {
+         TDeclaration[] hDeclarations = ParseDeclarations( hSource );
+
+         m_hDeclarations = BuildSection( "declarations" );
+         m_hTemplates = BuildSection( "templates" );
+         m_hLanguagePorts = BuildSection( "language-ports" );
+         m_hBootstrapBoundary = BuildSection( "bootstrap-boundary" );
+
+         for ( int i = 0; i < hDeclarations.Count; ++i ) {
+            TDeclaration hDeclaration = hDeclarations[i];
+            TCarrier hCarrier = LowerDeclaration( hDeclaration );
+
+            m_hDeclarations.Add( hCarrier );
+
+            if ( IsTemplateDeclaration( hDeclaration ) ) {
+               m_hTemplates.Add( hCarrier );
+            }
+
+            if ( IsLanguagePortDeclaration( hDeclaration ) ) {
+               m_hLanguagePorts.Add( hCarrier );
+            }
+
+            if ( IsBootstrapBoundaryDeclaration( hDeclaration ) ) {
+               m_hBootstrapBoundary.Add( hCarrier );
+            }
+         }
+
+         return BuildUnit(
+            "bml",
+            "BML.compiler",
+            m_hDeclarations,
+            m_hTemplates,
+            m_hLanguagePorts,
+            m_hBootstrapBoundary );
+      }
+
+      TDeclaration[] ParseDeclarations( TSource hSource ) [abstract] {}
+
+      TCarrier LowerDeclaration( TDeclaration hDeclaration ) {
+         return m_hDeclarationStage.Forward( hDeclaration );
+      }
+
+      CompilerSectionModel<TCarrier> BuildSection( String strName ) {
+         return CompilerSectionModel<TCarrier>(
+            "bml",
+            strName );
+      }
+
+      CompilerUnitModel<Object> BuildUnit(
+         String strLanguage,
+         String strName,
+         CompilerSectionModel<TCarrier> hDeclarations,
+         CompilerSectionModel<TCarrier> hTemplates,
+         CompilerSectionModel<TCarrier> hLanguagePorts,
+         CompilerSectionModel<TCarrier> hBootstrapBoundary ) {
+         CompilerUnitModel<Object> hUnit = CompilerUnitModel<Object>(
+            strLanguage,
+            strName );
+
+         hUnit.AddSection( hDeclarations );
+         hUnit.AddSection( hTemplates );
+         hUnit.AddSection( hLanguagePorts );
+         hUnit.AddSection( hBootstrapBoundary );
+
+         return hUnit;
+      }
+
+      bool IsTemplateDeclaration( TDeclaration hDeclaration ) [abstract] {}
+      bool IsLanguagePortDeclaration( TDeclaration hDeclaration ) [abstract] {}
+      bool IsBootstrapBoundaryDeclaration( TDeclaration hDeclaration ) [abstract] {}
+   }
+}
+
+class SelfHostingPlan [public, coherent, bootstrapBoundary] {
+   section [class, public] {
+      const String OwnerLanguage = "BML";
+      const String FormRole = "minimum bootstrap and proof carrier";
+      const String ReleaseRule = "release non-bootstrap s-expression compiler logic";
+   }
+
+   section [public] {
+      bool KeepsFormAsBootstrapOnly( String strArtifactRole ) {
+         if ( strArtifactRole == "bootstrap" ) return true;
+         if ( strArtifactRole == "proof" ) return true;
+
+         return false;
+      }
+
+      bool RetiresNonBootstrapSExpressions() [witness] {
+         return true;
+      }
+
+      String NextRetirementTarget() [get] {
+         return ReleaseRule;
+      }
+   }
+}
+
 class LanguageProfile [public, coherent, value] {
    section [private] {
       String m_strName;
@@ -279,6 +542,8 @@ class ModernBMLCompiler [public, coherent, compiler] : Application {
    section [private] {
       LanguageProfile[] m_hLanguages = Array<LanguageProfile>();
       CompilerCompiler<LanguageProfile,Object,Object> m_hCompilerCompiler;
+      BMLSourceLoweringFlow<String,Object,Object> m_hSourceLowering;
+      SelfHostingPlan m_hSelfHosting;
    }
 
    syntax [CompilerModel] {
@@ -304,6 +569,14 @@ class ModernBMLCompiler [public, coherent, compiler] : Application {
 
       CompilerCompiler<LanguageProfile,Object,Object> CompilerCompiler() [get] {
          return m_hCompilerCompiler;
+      }
+
+      CompilerUnitModel<Object> CompileCompilerSource( String strSourcePath ) {
+         return m_hSourceLowering.LowerSource( strSourcePath );
+      }
+
+      bool OwnsCompilerArchitecture() [witness] {
+         return m_hSelfHosting.RetiresNonBootstrapSExpressions();
       }
 
       bool Supports( String strLanguage ) {
