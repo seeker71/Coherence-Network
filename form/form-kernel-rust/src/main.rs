@@ -6439,6 +6439,7 @@ fn record_router_metrics(metrics: &Arc<Mutex<RouterMetrics>>, path: &str, router
 
 const KH_TAG_HEADER: i64 = 43001;
 const KH_TAG_REQUEST: i64 = 43002;
+const KH_TAG_RESPONSE: i64 = 43003;
 const KH_TAG_ROUTE: i64 = 43004;
 const KH_TAG_PRESSURE_ROW: i64 = 43005;
 const KH_TAG_ROUTE_CANDIDATE: i64 = 43006;
@@ -6994,7 +6995,7 @@ fn handle_request(
     // stays empty on both buffered arms — native/404 relay no extra end-to-end
     // headers; the router owns all framing on those arms.
     let mut resp_content_type = String::new();
-    let resp_headers: Vec<(String, String)> = Vec::new();
+    let mut resp_headers: Vec<(String, String)> = Vec::new();
     if let Some(selection) = select_route_candidate(
         route_specs,
         &method,
@@ -7050,17 +7051,21 @@ fn handle_request(
         }
         let result = walk(k, arena, cl.body, call_frame);
         router = "native-kernel";
-        // A native handler signals an observable, status-bearing "no" by returning
-        // the tagged shape (respond <code> <body-str>) — a 3-element List
-        // [Str("__http_status__"), Int(code), Str(body)]. This carries the
-        // awareness-shape into the handler itself: a handler can say a SENSED "no"
-        // (a 422 on inconsistent input, say) observably — the same shape as the
-        // router's observable shape-threshold "no" — not only a 200 body. A plain
-        // value is a 200 whose rendered display is the body, exactly as before.
-        match handler_status_response(&result) {
-            Some((code, b)) => {
-                status = format!("{} {}", code, http_reason(code));
-                body = b;
+        // A native handler can return the first-class KernelHTTPResponse cell:
+        //   kh-response(status, list(kh-header(name, value)...), body)
+        // The router reads that Form value directly and emits exact
+        // status/header/body framing. The older `(respond code body)` shape stays
+        // accepted as a status-only compatibility projection.
+        match handler_native_response(&result) {
+            Some(native_response) => {
+                status = format!(
+                    "{} {}",
+                    native_response.status_code,
+                    http_reason(native_response.status_code)
+                );
+                body = native_response.body;
+                resp_content_type = native_response.content_type;
+                resp_headers = native_response.headers;
             }
             None => {
                 status = "200 OK".to_string();
@@ -7074,9 +7079,11 @@ fn handle_request(
         // "0.8125", "39") opens with neither, so it keeps the text/plain
         // default. The router header (X-Form-Router: native-kernel) still tells
         // the honest provenance: the kernel served this, not CPython.
-        if let Some(c) = body.trim_start().as_bytes().first() {
-            if *c == b'{' || *c == b'[' {
-                resp_content_type = "application/json".to_string();
+        if resp_content_type.trim().is_empty() {
+            if let Some(c) = body.trim_start().as_bytes().first() {
+                if *c == b'{' || *c == b'[' {
+                    resp_content_type = "application/json".to_string();
+                }
             }
         }
     } else if let Some(upstream_base) = upstream {
@@ -8060,29 +8067,104 @@ fn response_shape_limit() -> usize {
     DEFAULT_RESPONSE_SHAPE_BYTES
 }
 
-// A native handler's observable, status-bearing "no". A handler that wants a
-// non-200 returns the tagged shape (respond <code> <body>) — a 3-element List
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NativeHandlerResponse {
+    status_code: i64,
+    content_type: String,
+    headers: Vec<(String, String)>,
+    body: String,
+}
+
+fn response_body_string(value: &Value) -> String {
+    match value {
+        Value::Str(s) => s.clone(),
+        _ => value.display(),
+    }
+}
+
+fn kernel_http_header(value: &Value) -> Option<(String, String)> {
+    match value {
+        Value::List(items) if items.len() == 3 => {
+            if let (Value::Int(tag), Value::Str(name), Value::Str(header_value)) =
+                (&items[0], &items[1], &items[2])
+            {
+                if *tag == KH_TAG_HEADER && !name.trim().is_empty() {
+                    return Some((name.clone(), header_value.clone()));
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn kernel_http_headers(value: &Value) -> Option<(String, Vec<(String, String)>)> {
+    let mut content_type = String::new();
+    let mut relayed = Vec::new();
+    match value {
+        Value::List(items) => {
+            for item in items {
+                let (name, header_value) = kernel_http_header(item)?;
+                if name.trim().eq_ignore_ascii_case("content-type") {
+                    content_type = header_value;
+                } else if relay_response_header(&name) {
+                    relayed.push((name, header_value));
+                }
+            }
+            Some((content_type, relayed))
+        }
+        _ => None,
+    }
+}
+
+fn handler_kernel_http_response(result: &Value) -> Option<NativeHandlerResponse> {
+    if let Value::List(items) = result {
+        if items.len() == 4 {
+            if let (Value::Int(tag), Value::Int(status_code), headers, body) =
+                (&items[0], &items[1], &items[2], &items[3])
+            {
+                if *tag == KH_TAG_RESPONSE && (100..=599).contains(status_code) {
+                    let (content_type, headers) = kernel_http_headers(headers)?;
+                    return Some(NativeHandlerResponse {
+                        status_code: *status_code,
+                        content_type,
+                        headers,
+                        body: response_body_string(body),
+                    });
+                }
+            }
+        }
+    }
+    None
+}
+
+// A native handler's observable, status-bearing compatibility shape. Older
+// routes that want a non-200 return (respond <code> <body>) — a 3-element List
 // [Str("__http_status__"), Int(code), Str(body)] (the `respond` helper in the
-// routes manifest builds it). This carries the awareness-shape into the handler:
-// it can say a SENSED "no" (a 422 on inconsistent input, say) observably, the
-// same way the router answers an over-threshold shape observably — not only a
-// 200 body. Returns (status_code, body) when the result is that tagged shape;
-// None for any plain value (a 200 whose rendered display is the body). The tag +
-// the code-range check keep a handler's ordinary List result from being mistaken
-// for a status response.
-fn handler_status_response(result: &Value) -> Option<(i64, String)> {
+// routes manifest builds it). New typed routes should return KernelHTTPResponse:
+// kh-response(status, headers, body).
+fn handler_status_response(result: &Value) -> Option<NativeHandlerResponse> {
     if let Value::List(items) = result {
         if items.len() == 3 {
             if let (Value::Str(tag), Value::Int(code), Value::Str(body)) =
                 (&items[0], &items[1], &items[2])
             {
                 if tag == "__http_status__" && (100..=599).contains(code) {
-                    return Some((*code, body.clone()));
+                    return Some(NativeHandlerResponse {
+                        status_code: *code,
+                        content_type: String::new(),
+                        headers: Vec::new(),
+                        body: body.clone(),
+                    });
                 }
             }
         }
     }
     None
+}
+
+fn handler_native_response(result: &Value) -> Option<NativeHandlerResponse> {
+    handler_kernel_http_response(result).or_else(|| handler_status_response(result))
 }
 
 // The reason phrase for a status a native handler can emit. Only the codes we
@@ -8091,10 +8173,20 @@ fn handler_status_response(result: &Value) -> Option<(i64, String)> {
 fn http_reason(code: i64) -> &'static str {
     match code {
         200 => "OK",
+        201 => "Created",
+        204 => "No Content",
         400 => "Bad Request",
+        401 => "Unauthorized",
+        403 => "Forbidden",
         404 => "Not Found",
+        409 => "Conflict",
         422 => "Unprocessable Entity",
+        429 => "Too Many Requests",
+        418 => "I'm a Teapot",
         500 => "Internal Server Error",
+        502 => "Bad Gateway",
+        503 => "Service Unavailable",
+        504 => "Gateway Timeout",
         _ => "Status",
     }
 }
@@ -9051,6 +9143,56 @@ mod route_spec_tests {
             Some("/health")
         );
         assert!(select_route_spec(&routes, "GET", "/missing", &[]).is_none());
+    }
+
+    #[test]
+    fn kernel_http_response_result_carries_status_headers_and_body() {
+        let result = Value::List(vec![
+            Value::Int(KH_TAG_RESPONSE),
+            Value::Int(418),
+            Value::List(vec![
+                Value::List(vec![
+                    Value::Int(KH_TAG_HEADER),
+                    Value::Str("Content-Type".to_string()),
+                    Value::Str("application/problem+json".to_string()),
+                ]),
+                Value::List(vec![
+                    Value::Int(KH_TAG_HEADER),
+                    Value::Str("X-Kernel-Response".to_string()),
+                    Value::Str("native".to_string()),
+                ]),
+                Value::List(vec![
+                    Value::Int(KH_TAG_HEADER),
+                    Value::Str("Content-Length".to_string()),
+                    Value::Str("999".to_string()),
+                ]),
+            ]),
+            Value::Str("{\"detail\":\"teapot\"}".to_string()),
+        ]);
+
+        let parsed = handler_native_response(&result).expect("kh-response parses");
+        assert_eq!(parsed.status_code, 418);
+        assert_eq!(parsed.content_type, "application/problem+json");
+        assert_eq!(parsed.body, "{\"detail\":\"teapot\"}");
+        assert_eq!(
+            parsed.headers,
+            vec![("X-Kernel-Response".to_string(), "native".to_string())]
+        );
+    }
+
+    #[test]
+    fn status_response_tag_stays_compatible() {
+        let result = Value::List(vec![
+            Value::Str("__http_status__".to_string()),
+            Value::Int(422),
+            Value::Str("{\"detail\":\"invalid\"}".to_string()),
+        ]);
+
+        let parsed = handler_native_response(&result).expect("status tag parses");
+        assert_eq!(parsed.status_code, 422);
+        assert_eq!(parsed.content_type, "");
+        assert!(parsed.headers.is_empty());
+        assert_eq!(parsed.body, "{\"detail\":\"invalid\"}");
     }
 
     #[test]

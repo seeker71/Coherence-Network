@@ -378,10 +378,10 @@ Current gap map:
 | Source-language route authoring now has readable template/class blocks | Aligned | `section [form.route]` supports `template RouteCell<TRequest, TResponse> { member ... }` plus `class ... { def handle(...) { ... } route = route_data(...); }` and lowers that hierarchy to `LanguageTemplate`, `LanguageClass`, and executable handler closures. |
 | Router selection is `KernelHTTPRoute`-aware and exposes the selected candidate as Form tissue | Aligned | `serve` carries `KernelHTTPRoute` rows, honors method mismatch, wildcard path, priority, required headers, and pressure budget, and passes selected `KernelHTTPRouteCandidate` plus pressure rows into native handler context. |
 | Native handler input carries both compatibility alist and typed request tissue | Aligned | A native route receives `__kernel_request__` as `KernelHTTPRequest(method, path, headers, query, body)` with typed header and field rows while existing alist handlers keep serving current routes. |
-| Native handler output is always coerced to `200 OK` text/JSON | Aligned | A native handler can return `KernelHTTPResponse(status, headers, body)` and `serve` emits exact status/header/body parity for a non-200 route. |
+| Native handler output can return `KernelHTTPResponse(status, headers, body)` | Aligned | `serve` emits exact status/header/body for a non-200 native route, including `Content-Type` and filtered end-to-end headers, while preserving the older status-only `respond` shape. |
 | Native socket channels do not yet carry typed recipe bytes | Aligned | A BML/Form channel abstraction round-trips `recipe_to_bytes -> send -> recv -> bytes_to_recipe` without string loss. |
 | Router measurements are path-count only and process-local | Aligned | `/api/attention/kernel-runtime` reports per-path count, latency, status/error, bytes, native/fanout split, and candidate ranking from live traffic. |
-| Production route manifest is mixed: `/health` is BML `RouteCell`-authored, utility routes remain Form-authored | Temporary friction | Convert the next route only when a source pipeline returns the same Form-native route values and handlers and serves identical responses with source entry observability. |
+| Production route manifest is mixed: `/health` is `form.route` `RouteCell`-authored, utility routes remain Form-authored | Temporary friction | Convert the next route only when a source pipeline returns the same Form-native route values and handlers and serves identical responses with source entry observability. |
 | JIT/native optimization | Side-quest | Defer until endpoint promotion is blocked by recipe-walk speed rather than HTTP/request/response shape. |
 
 ## HTTP classes
@@ -593,7 +593,7 @@ Shrink candidates:
 | Rust `section [` scanning | Rust knows a source-grammar marker. | Move manifest section discovery into a Form/BMF loader that returns object roots and lens diagnostics. |
 | Rust route-language prelude list | The host decides which language support files define BML routing. | Make prelude dependencies part of a Form-visible compiler/lens registry loaded from config. |
 | Compatibility alist marshalling | The host still passes the old alist as the one handler argument, with `__kernel_request__` nested inside it. | Make `KernelHTTPRequest` the primary handler argument for typed routes and keep the alist only as an explicit projection. |
-| Native response coercion | The host assumes `200 OK` and infers JSON from rendered text. | Let handlers return `KernelHTTPResponse(status, headers, body)` directly. |
+| Native response body carrier | The host now honors `KernelHTTPResponse(status, headers, body)`, but the body is still a buffered string. | Add typed body cells and streaming body carriers while keeping router-owned framing explicit. |
 | Per-worker full graph clone | Correct and serialization-free, but duplicates read-only route graph memory. | Keep worker-local mutable state while sharing immutable recipe graph structure, or add copy-on-write graph overlays. |
 | Fanout policy constants | Host defaults are fixed and invisible to Form attention. | Move deadline and shape policy into `KernelRouterConfig` cells with host ceilings as last-resort guardrails. |
 
