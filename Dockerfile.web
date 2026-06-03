@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1.6
+
+FROM node:20-alpine AS deps
+
+WORKDIR /src/web
+
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+
+ARG DEPLOYED_SHA=unknown
+ARG NEXT_PUBLIC_API_URL=https://api.coherencycoin.com
+
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+WORKDIR /src
+
+COPY --from=deps /src/web/node_modules ./web/node_modules
+COPY web ./web
+COPY api/config ./api/config
+
+RUN node -e 'const fs = require("fs"); const path = "api/config/api.json"; const sha = process.env.DEPLOYED_SHA || "unknown"; const config = JSON.parse(fs.readFileSync(path, "utf8")); config.deployed_sha = sha; config.web = { ...(config.web || {}), deployed_sha: sha, updated_at: sha }; fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);'
+
+WORKDIR /src/web
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+WORKDIR /app
+
+COPY --from=builder /src/web/.next/standalone ./
+COPY --from=builder /src/api/config ./api/config
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
