@@ -794,9 +794,11 @@
           (nonempty (tail xs))
           (cons (head xs) (nonempty (tail xs))))))
 
-; (respond code body): the tagged status shape the serve path reads as a
-; handler-signaled, observable non-200 "no".
-(defn respond (code body) (list "__http_status__" code body))
+; (respond code body): production JSON error helper. It returns the first-class
+; KernelHTTPResponse shape; the old status-only tag remains supported in Rust for
+; already-authored manifests.
+(defn respond (code body)
+  (kh-response code (list (kh-header "Content-Type" "application/json")) body))
 
 ; fold str_concat over a list of strings — flat JSON building, no deep nesting.
 (defn str_concat_all (xs)
