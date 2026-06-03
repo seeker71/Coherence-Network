@@ -153,6 +153,18 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?actual_costs=1.5&actual_values=2.5",    # single element each
         "?actual_costs=10.0,20.0,30.0&actual_values=1.0,2.0,3.0",  # integer-valued float sums 60.0, 6.0
     ]),
+    # grounded_cost — the 200 (well-formed) cases. Its 422 observable-no on
+    # mismatched-length arrays is verified separately (the compare below asserts
+    # 200; the 422 proof — HTTP 422 + the exact FastAPI {"detail":...} body +
+    # X-Form-Router: native-kernel — is the hand-checks in KERNEL_AS_ROUTER.md).
+    ("/api/utils/grounded_cost", [
+        "",                              # defaults -> computed_actual_cost 7.75, commit_cost_sum 0.75
+        "?commit_change_files=2,3&commit_lines_added=50,100",  # multi-commit clamp-fold -> 1.25
+        "?commit_change_files=3.0&commit_lines_added=100",     # int(float("3.0"))=3 (float_to_int) -> 0.75
+        "?commit_change_files=3.5&commit_lines_added=100",     # int(float("3.5"))=3 truncate-toward-zero
+        "?spec_actual_costs=3.5,1.25,&spec_estimated_costs=4.25,2.5",  # trailing-comma empty-segment skip
+        "?spec_actual_costs=2,4,6&spec_estimated_costs=3,5,7&lineage_estimated_costs=1,1",
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.

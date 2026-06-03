@@ -707,6 +707,95 @@
         ",\"runtime\":\"inline\"}")))))))))
 
 ; ===========================================================================
+; /api/utils/grounded_cost  — the FIRST route to use the handler's observable "no"
+;   params: spec_actual_costs / spec_estimated_costs / lineage_estimated_costs
+;           (csv floats), commit_change_files / commit_lines_added (csv ints),
+;           runtime_cost (float). The paired arrays MUST match in length —
+;           a mismatch is answered with a 422 {"detail":...}, the same observable
+;           "no" the router gives an over-threshold shape, now in the handler.
+;   body:   {spec_actual_cost_sum, spec_estimated_cost_sum, runtime_cost,
+;            commit_cost_sum, lineage_estimated_cost, computed_actual_cost,
+;            spec_count_in, commit_count_in, lineage_count_in, runtime:"inline"}
+;   math:   sums LEFT-folded (CPython sum()); commit_cost per (cf,la) =
+;           max(0.05, min(10.0, 0.10 + cf*0.15 + la*0.002)); computed_actual_cost
+;           = spec_actual_cost_sum + runtime_cost + commit_cost_sum.
+; ===========================================================================
+
+; drop empty-string segments — Python's `if x.strip()` on a split (a trailing
+; comma yields "", which contributes no record).
+(defn nonempty (xs)
+  (if (eq (len xs) 0)
+      (list)
+      (if (eq (str_len (head xs)) 0)
+          (nonempty (tail xs))
+          (cons (head xs) (nonempty (tail xs))))))
+
+; (respond code body): the tagged status shape the serve path reads as a
+; handler-signaled, observable non-200 "no".
+(defn respond (code body) (list "__http_status__" code body))
+
+; fold str_concat over a list of strings — flat JSON building, no deep nesting.
+(defn str_concat_all (xs)
+  (if (eq (len xs) 0)
+      ""
+      (str_concat (head xs) (str_concat_all (tail xs)))))
+
+; parse each string as int(float(x)) — the commit-count parse: tolerate a
+; fractional form ("3.0") and truncate, where str_to_int alone gives 0.
+(defn ifloats_of (xs)
+  (if (eq (len xs) 0)
+      (list)
+      (cons (float_to_int (str_to_float (head xs))) (ifloats_of (tail xs)))))
+
+; per-commit cost: max(0.05, min(10.0, 0.10 + cf*0.15 + la*0.002))
+(defn gc_commit_cost (cf la)
+  (max2 0.05 (min2 10.0 (_plus (_plus 0.1 (mul cf 0.15)) (mul la 0.002)))))
+
+; zipped clamp-fold over (change_files, lines_added), left-accumulated from 0.0
+(defn gc_commit_go (cfs las total)
+  (if (eq (len cfs) 0)
+      total
+      (gc_commit_go (tail cfs) (tail las)
+                    (_plus total (gc_commit_cost (head cfs) (head las))))))
+
+; float sum, left-folded from 0.0 (matches CPython sum())
+(defn gc_sum_go (xs total)
+  (if (eq (len xs) 0) total (gc_sum_go (tail xs) (_plus total (head xs)))))
+(defn gc_sum (xs) (gc_sum_go xs 0.0))
+
+; the 200 body, fields in the GroundedCostResponse order
+(defn gc_body (sacs secs rc ccs lec cac sci cci lci)
+  (str_concat_all (list
+    "{\"spec_actual_cost_sum\":" (value_str sacs)
+    ",\"spec_estimated_cost_sum\":" (value_str secs)
+    ",\"runtime_cost\":" (value_str rc)
+    ",\"commit_cost_sum\":" (value_str ccs)
+    ",\"lineage_estimated_cost\":" (value_str lec)
+    ",\"computed_actual_cost\":" (value_str cac)
+    ",\"spec_count_in\":" (value_str sci)
+    ",\"commit_count_in\":" (value_str cci)
+    ",\"lineage_count_in\":" (value_str lci)
+    ",\"runtime\":\"inline\"}")))
+
+(defn route_grounded_cost (q)
+  (do (let sac (nonempty (split_commas (param_or "spec_actual_costs" q "3.5,1.25"))))
+  (do (let sec (nonempty (split_commas (param_or "spec_estimated_costs" q "4.25,2.5"))))
+  (do (let cf (nonempty (split_commas (param_or "commit_change_files" q "3"))))
+  (do (let la (nonempty (split_commas (param_or "commit_lines_added" q "100"))))
+  (do (let lec (nonempty (split_commas (param_or "lineage_estimated_costs" q "5.25,1.5"))))
+  (do (let rc (str_to_float (param_or "runtime_cost" q "2.25")))
+  (if (eq (len sac) (len sec))
+    (if (eq (len cf) (len la))
+      (do (let sacs (gc_sum (floats_of sac)))
+      (do (let secs (gc_sum (floats_of sec)))
+      (do (let ccs (gc_commit_go (ifloats_of cf) (ifloats_of la) 0.0))
+      (do (let lecs (gc_sum (floats_of lec)))
+      (do (let cac (_plus (_plus sacs rc) ccs))
+          (gc_body sacs secs rc ccs lecs cac (len sac) (len cf) (len lec)))))))
+      (respond 422 "{\"detail\":\"commit_change_files and commit_lines_added must have the same length\"}"))
+    (respond 422 "{\"detail\":\"spec_actual_costs and spec_estimated_costs must have the same length\"}")))))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -732,4 +821,5 @@
     (list "/api/utils/cost_vector"         route_cost_vector)
     (list "/api/utils/value_vector"        route_value_vector)
     (list "/api/utils/grounded_roi"        route_grounded_roi)
-    (list "/api/utils/idea_grounded_cost_sum" route_idea_grounded_cost_sum)))
+    (list "/api/utils/idea_grounded_cost_sum" route_idea_grounded_cost_sum)
+    (list "/api/utils/grounded_cost"        route_grounded_cost)))
