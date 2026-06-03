@@ -938,8 +938,11 @@ def sense_bootstrap_compost() -> list[str]:
         )
     elif third == "kernel-bmf":
         lines.append(
-            "  third runtime default: kernel-bmf (Form-native) — Phase A "
-            "files are COMPOST READY; check manifest RELEASED section"
+            "  third runtime default: kernel-bmf (Form-native) — the "
+            "evalPython/ts-eval seam is retired, but the Phase-A parser + "
+            "emitter + CLI remain LIVE (the parity suite's Rust-bootstrap leg, "
+            "+ readiness harness deploy step); they release when a Form-native "
+            ".py→.fk path replaces python-compile (see manifest Phase A)"
         )
     else:
         lines.append(f"  third runtime default: {third}")
