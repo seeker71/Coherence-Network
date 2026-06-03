@@ -116,6 +116,15 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?scores=5.0",                   # single element -> [1.0]
         "?scores=2.0,2.0,2.0",           # all equal -> uniform thirds
     ]),
+    ("/api/utils/grounded_value", [
+        "",                              # defaults -> realization 0.625, confidence 0.815
+        "?spec_potential_value_sum=0",   # realization zero-guard -> 0.0
+        "?runtime_event_count=0&commit_count=0",  # count zero-guards -> levels 0.0
+        "?lineage_measured_value=0&usage_revenue=0&spec_actual_value_sum=1&spec_potential_value_sum=3",  # 1/3 long float
+        "?has_specs_with_data=1&has_lineage=1&has_friction=1&runtime_event_count=100&commit_count=100",  # clamp high -> 0.95
+        "?has_specs_with_data=0&has_lineage=0&has_friction=0&runtime_event_count=0&commit_count=0",       # clamp low -> 0.05
+        "?runtime_event_count=3&commit_count=2&has_friction=0.3&has_specs_with_data=0.5&has_lineage=0.5",  # float-assoc artifact
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.
