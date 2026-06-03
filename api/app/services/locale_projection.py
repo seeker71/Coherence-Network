@@ -28,6 +28,13 @@ from app.services.localized_errors import (
 )
 
 
+# Sentinel distinguishing "caller passed no prefetched view, query the cache
+# internally" (the default, backward-compatible path) from "caller passed a
+# prefetched view, which may legitimately be ``None`` meaning known-absent".
+# A plain ``view=None`` default cannot tell those two apart.
+_UNSET: Any = object()
+
+
 # Re-export so routers have a single import point.
 __all__ = [
     "DEFAULT_LOCALE",
@@ -72,6 +79,7 @@ def project(
     *,
     title_field: str = "name",
     body_field: str = "description",
+    view: Any = _UNSET,
 ) -> Any:
     """Substitute ``title_field`` and ``body_field`` on ``obj`` from the canonical
     entity_view for ``(entity_type, entity_id, lang)``. Returns ``obj``.
@@ -79,13 +87,25 @@ def project(
     A missing view is a no-op — callers keep the anchor content. This lets the
     UI show a mix of fully-translated and not-yet-translated items without
     blocking on translation.
+
+    ``view`` is an optional escape from the per-call ``canonical_view`` query: a
+    listing surface that already fetched the whole page's views in one batched
+    ``canonical_views(...)`` query passes the record for this entity (or ``None``
+    if the batch found no view for it). When ``view`` is left unset, ``project``
+    queries the cache itself exactly as before — every existing caller is
+    unchanged. The prefetched record is the SAME row ``canonical_view`` would
+    return, so output is identical whichever path supplied it.
     """
     if not _should_project(lang):
         return obj
-    # Lazy import to avoid pulling the cache into cold boot.
-    from app.services import translation_cache_service as _tcache
+    if view is _UNSET:
+        # Lazy import to avoid pulling the cache into cold boot.
+        from app.services import translation_cache_service as _tcache
 
-    rec = _tcache.canonical_view(entity_type, entity_id, lang)
+        rec = _tcache.canonical_view(entity_type, entity_id, lang)
+    else:
+        # Caller supplied a prefetched view (possibly ``None`` = known-absent).
+        rec = view
     if not rec or not rec.content_hash:
         return obj
     if rec.content_title:
