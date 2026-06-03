@@ -802,3 +802,46 @@ async def test_resonance_cross_domain_substitutes_idea_names():
         assert "pairs" in body
         assert "min_coherence_used" in body
     translator_service.set_backend(None)
+
+
+def test_canonical_views_batch_matches_per_idea():
+    """canonical_views (the batch) returns, for each id, exactly the record the
+    per-idea canonical_view returns — one query for a whole listing instead of
+    one SELECT per idea (the N+1 /api/ideas?lang=xx fired over up to 200 ideas).
+
+    One strange-minimal fixture covers four boundaries: a present view, an absent
+    id (absent from the dict, mirroring canonical_view -> None), latest-by-
+    updated_at winning when an entity has two canonical writes, and empty input.
+    """
+    lang = "de"
+    ids = [f"idea-batch-{uuid4().hex[:8]}" for _ in range(3)]
+    for i in (0, 1):
+        _cache.write_view(
+            entity_type="idea", entity_id=ids[i], lang=lang,
+            content_title=f"Titel {i}", content_description=f"Beschreibung {i}",
+            content_markdown="", author_type="test",
+        )
+    # ids[0] gets a SECOND (newer) canonical write — the latest must win, the same
+    # way canonical_view sorts by updated_at and takes the newest.
+    _cache.write_view(
+        entity_type="idea", entity_id=ids[0], lang=lang,
+        content_title="Titel 0 neu", content_description="neu",
+        content_markdown="", author_type="test",
+    )
+
+    batch = _cache.canonical_views("idea", ids, lang)
+
+    # exactly the ids that have a canonical view; the third is absent
+    assert set(batch.keys()) == {ids[0], ids[1]}
+    assert ids[2] not in batch
+    assert _cache.canonical_view("idea", ids[2], lang) is None
+    # each batch record IS the per-idea canonical_view record (same row + title)
+    for i in (0, 1):
+        per = _cache.canonical_view("idea", ids[i], lang)
+        assert per is not None
+        assert batch[ids[i]].id == per.id
+        assert batch[ids[i]].content_title == per.content_title
+    # latest-wins: ids[0]'s batch record is the newer write
+    assert batch[ids[0]].content_title == "Titel 0 neu"
+    # empty input short-circuits to {} (no query)
+    assert _cache.canonical_views("idea", [], lang) == {}

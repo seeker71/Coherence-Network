@@ -214,6 +214,42 @@ def canonical_view(entity_type: str, entity_id: str, lang: str) -> EntityViewRec
         return rows[0]
 
 
+def canonical_views(
+    entity_type: str, entity_ids: list[str], lang: str
+) -> dict[str, EntityViewRecord]:
+    """The current canonical view for each of ``entity_ids`` in ``lang`` — the
+    N+1-free batch form of ``canonical_view``, one query for the whole list.
+
+    A listing surface (``/api/ideas?lang=xx`` projecting up to 200 ideas into a
+    language view) used to call ``canonical_view`` once per idea — one SELECT per
+    row. This issues a single ``entity_id IN (...)`` query and resolves each
+    entity to the SAME record ``canonical_view`` would return: filtered to
+    canonical status in this lang, the latest by ``updated_at`` winning per entity
+    (identical sort/tie-break). Keyed by entity_id; an entity with no canonical
+    view is simply absent (mirroring ``canonical_view`` returning ``None``).
+    """
+    if not entity_ids:
+        return {}
+    _ensure_schema()
+    with _session() as s:
+        rows = list(s.scalars(
+            select(EntityViewRecord).where(
+                EntityViewRecord.entity_type == entity_type,
+                EntityViewRecord.entity_id.in_(entity_ids),
+                EntityViewRecord.lang == lang,
+                EntityViewRecord.status == STATUS_CANONICAL,
+            )
+        ))
+    by_id: dict[str, list[EntityViewRecord]] = {}
+    for r in rows:
+        by_id.setdefault(r.entity_id, []).append(r)
+    result: dict[str, EntityViewRecord] = {}
+    for eid, recs in by_id.items():
+        recs.sort(key=lambda r: r.updated_at, reverse=True)
+        result[eid] = recs[0]
+    return result
+
+
 def all_canonical_views(entity_type: str, entity_id: str) -> list[EntityViewRecord]:
     """Every canonical view for an entity (one per language)."""
     _ensure_schema()
