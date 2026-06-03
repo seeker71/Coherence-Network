@@ -328,6 +328,54 @@ long tail of rarely-hit admin routes can stay CPython indefinitely with no cost.
 The honest measure is *fraction of requests (and of CPU-time) served natively*,
 which the `X-Form-Router` header makes directly countable from access logs.
 
+### COMPARE mode — the zero-risk shadow diff before any cutover
+
+Promoting a route from fan-out to native is reversible, but it is still a *change
+of who computes the answer*. COMPARE mode removes the leap entirely: the
+kernel-router runs in front with native routes active, but instead of a one-time
+flip from CPython to the kernel it **self-compares every native route against
+CPython on live traffic and returns CPython's (safe) response** — so divergence,
+latency, and downtime are measured against production traffic *before* the cutover.
+
+A **single env flag** — `COH_ROUTER_COMPARE`, read once at startup (`cli_serve`),
+threaded into `handle_request` like `upstream` — couples *compare* and
+*which-response-to-return*:
+
+- **`COH_ROUTER_COMPARE=1`** (validation): a native route serves from the kernel
+  (timed → `native_ms`), then the **same** request is shadow-fanned-out to the
+  CPython upstream over the same keep-alive `UpstreamPool` and its full response
+  **captured into memory** (timed → `cpython_ms`). The two are compared
+  byte-for-byte; one greppable `[compare]` line is logged to stdout (a bounded diff
+  snippet on a mismatch); and **CPython's response is returned** — zero behavior
+  change (the safety property). A shadow fan-out failure falls back to the native
+  response (a shadow hiccup must never 5xx the user) and logs `compare_fanout_failed`.
+  Every response carries **`X-Form-Compare: matched | mismatch | cpython_error`**
+  alongside `X-Form-Router: native-kernel`, so a monitor reads per-request verdicts
+  without parsing logs.
+- **`COH_ROUTER_COMPARE` unset** (the default *and* the post-validation cutover
+  state): the native arm is **unchanged** — serve native, return native, no fan-out,
+  no overhead. **The cutover is literally turning compare off.**
+
+The buffered capture (`fanout_capture` → `read_body_fully`) reuses the streaming
+fan-out's exact upstream hop (`parse_http_upstream`, the request build, the
+stale-pool reconnect+retry, `connect_upstream_with_timeout`, `read_upstream_head`)
+and differs only in the tail — it reads the whole (small, compute-route) body into
+memory instead of piping it. The chunked path shares the streaming relay's
+boundary-tracking `ChunkParser`, collecting the decoded payload through the same
+engine (`feed_collecting`).
+
+Reading divergence: the `X-Form-Compare` header per request, `grep [compare]` in
+`docker logs`, or [`deploy/kernel-router/compare_summary.py`](../deploy/kernel-router/compare_summary.py)
+to fold the log into a per-route table (count, mismatch, cpython_error, p50
+native_ms vs cpython_ms). The full design, the one-flag toggle, and the safe
+rollout live in [`deploy/kernel-router/COMPARE_MODE.md`](../deploy/kernel-router/COMPARE_MODE.md);
+the mechanics are proven by `production_routes_harness.py --compare` (stub verdicts,
+network-independent, + the real-app oracle).
+
+COMPARE mode and the Traefik flip are **independent** reversible steps: run compare
+behind a shadow port → watch the log clean → cut compare off → (separately) flip
+Traefik onto the router. Each rolls back on its own.
+
 ## Proof-of-shape — what is demonstrated, and what it is not
 
 A family of harnesses proves the shape against a mock CPython upstream — routing,

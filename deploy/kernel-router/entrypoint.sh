@@ -7,6 +7,13 @@
 #   KERNEL_ROUTER_HOST  the interface the router binds    (default 0.0.0.0)
 #   UPSTREAM_URL        the CPython fan-out target        (default http://api:8000)
 #   ROUTES_FILE         the routes manifest               (default /routes/shadow-routes.fk)
+#   COH_ROUTER_COMPARE  COMPARE mode: 1/true -> every NATIVE route is shadow-
+#                       compared against UPSTREAM_URL and CPython's (safe) response
+#                       is returned (zero behavior change; X-Form-Compare +
+#                       [compare] logs carry the verdict). Read by the binary from
+#                       the process env directly — passed through, not a CLI flag.
+#                       Unset -> native routes serve+return native (the cutover).
+#                       See deploy/kernel-router/COMPARE_MODE.md.
 #
 # HOST binding: the kernel's `serve` defaults to 127.0.0.1 (loopback) — correct
 # for a same-host proof harness, but UNREACHABLE across the container boundary
@@ -44,5 +51,14 @@ if [ -n "${KERNEL_ROUTER_WORKERS:-}" ]; then
   set -- "$@" --workers "$KERNEL_ROUTER_WORKERS"
 fi
 
-echo "kernel-router: serve --host $HOST --port $PORT --routes $ROUTES --upstream $UPSTREAM (shadow mode: empty routes -> all fan-out)"
+# COMPARE mode is read by the binary directly from the process env (not a CLI
+# flag), so it is already in scope for the exec below. Surface its state in the
+# launch line so an operator reading container logs knows the posture.
+COMPARE="${COH_ROUTER_COMPARE:-}"
+case "$(printf '%s' "$COMPARE" | tr '[:upper:]' '[:lower:]')" in
+  1|true) COMPARE_NOTE=" [COMPARE on: native routes shadow-compared vs $UPSTREAM, CPython returned]" ;;
+  *)      COMPARE_NOTE="" ;;
+esac
+
+echo "kernel-router: serve --host $HOST --port $PORT --routes $ROUTES --upstream $UPSTREAM (shadow mode: empty routes -> all fan-out)$COMPARE_NOTE"
 exec /app/bin/form-kernel-rust "$@"

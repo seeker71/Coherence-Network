@@ -33,12 +33,15 @@ Run from form/form-kernel-rust/ (after `cargo build --release`):
 from __future__ import annotations
 
 import argparse
+import http.server
 import json
 import os
 import socket
 import statistics
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -49,6 +52,11 @@ BIN = HERE / "target" / "release" / "form-kernel-rust"
 # form/form-kernel-rust -> form -> repo root
 REPO = HERE.parent.parent
 ROUTES = REPO / "deploy" / "kernel-router" / "production-routes.fk"
+# production-routes.fk opens a BML `section [...]` block, so it is source-compiled
+# at load and needs the form-stdlib. `serve --stdlib` defaults to "form-stdlib"
+# relative to cwd (which does not exist beside this harness), so we pass the
+# absolute path. Harmless for a raw S-expression manifest (only used on a section).
+STDLIB = REPO / "form" / "form-stdlib"
 API_DIR = REPO / "api"
 
 # The four promoted routes, each with representative + edge query strings. The
@@ -346,10 +354,240 @@ def measure(url: str, n: int) -> list[float]:
     return out
 
 
+# ----------------------------------------------------------------------------
+# COMPARE MODE proof.
+#
+# COMPARE mode (COH_ROUTER_COMPARE=1) is the zero-risk SHADOW step before the
+# cutover: the kernel-router serves a native route from the kernel, then issues
+# the SAME request to the CPython upstream, compares the two responses
+# byte-for-byte, LOGS one structured `[compare]` line (native_ms vs cpython_ms,
+# matched verdict), and RETURNS THE CPYTHON RESPONSE — so the user gets exactly
+# what direct-CPython would serve (the safety property; ZERO behavior change). The
+# cutover is literally turning compare OFF: then the native arm serves+returns
+# native with no fan-out. This proof exercises BOTH mechanics paths:
+#   * stub_mechanics_proof — network-independent: a tiny http.server stub upstream
+#     proves the matched / mismatch / cpython_error verdicts, the return-upstream
+#     property, the X-Form-Compare header, and the [compare] log line WITHOUT
+#     needing the real app (so it runs even in a degraded-net sandbox).
+#   * compare_oracle_proof — against the REAL CPython app: a promoted native route
+#     (byte-identical to its CPython twin, as the main harness proves) compared in
+#     compare mode returns the CPython body, carries X-Form-Compare: matched, and
+#     logs [compare] matched=true with both latencies. Runs only when the app booted.
+
+
+def read_compare_lines(proc: subprocess.Popen) -> tuple[list[str], str, str]:
+    """Terminate `proc` and return (its [compare] stdout lines, full stdout, stderr)."""
+    proc.terminate()
+    try:
+        out, err = proc.communicate(timeout=4)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        out, err = proc.communicate()
+    out = out or ""
+    err = err or ""
+    return [ln for ln in out.splitlines() if ln.startswith("[compare]")], out, err
+
+
+def boot_router_compare(routes_path: str, upstream: str, port: int) -> subprocess.Popen:
+    """Boot the kernel-router in COMPARE mode (COH_ROUTER_COMPARE=1) against `upstream`.
+
+    --stdlib is passed so a source-authored (BML `section`) manifest — like
+    production-routes.fk — source-compiles at load. It is a no-op for the raw
+    S-expression stub manifest.
+    """
+    env = dict(os.environ)
+    env["COH_ROUTER_COMPARE"] = "1"
+    proc = subprocess.Popen(
+        [str(BIN), "serve", "--port", str(port),
+         "--routes", routes_path, "--upstream", upstream,
+         "--stdlib", str(STDLIB)],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True,
+    )
+    wait_for_port(port)
+    time.sleep(0.3)  # let the worker pool finish loading routes
+    return proc
+
+
+def stub_mechanics_proof(failures: list) -> None:
+    """Network-independent proof of the compare-mode mechanics against a stub upstream.
+
+    A trivial native route (/ping -> "ping-native") + a tiny http.server whose body
+    we control lets us drive all three verdicts deterministically:
+      - mismatch: stub returns a DIFFERENT body -> X-Form-Compare: mismatch, user
+        gets the STUB (CPython) body, [compare] matched=false with diff snippets.
+      - matched: stub returns the SAME body -> X-Form-Compare: matched, [compare]
+        matched=true.
+      - cpython_error: a DEAD upstream -> the user still gets the NATIVE body with a
+        200 (NEVER a 5xx for a shadow hiccup), X-Form-Compare: cpython_error,
+        [compare] compare_fanout_failed returning=native.
+    """
+    print("\n=== COMPARE-MODE MECHANICS (stub upstream, network-independent) ===")
+    with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as f:
+        f.write('(defn route_ping () "ping-native")\n'
+                '(let routes (list (list "/ping" route_ping)))\n')
+        routes_path = f.name
+
+    def serve_stub(body: bytes) -> tuple[http.server.HTTPServer, int]:
+        class Stub(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):  # silence
+                pass
+
+        port = free_port()
+        httpd = http.server.HTTPServer(("127.0.0.1", port), Stub)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        wait_for_port(port)
+        return httpd, port
+
+    try:
+        # ---- MISMATCH: native "ping-native" vs stub "ping-cpython" ----
+        httpd, sport = serve_stub(b"ping-cpython")
+        kport = free_port()
+        proc = boot_router_compare(routes_path, f"http://127.0.0.1:{sport}", kport)
+        ks, kbody, khdrs = http_get(f"http://127.0.0.1:{kport}/ping")
+        cmp_hdr = khdrs.get("x-form-compare")
+        clines, _, cerr = read_compare_lines(proc)
+        httpd.shutdown()
+        got_upstream = kbody == "ping-cpython"          # safety: user gets CPython
+        mismatch_hdr = cmp_hdr == "mismatch"
+        mismatch_log = any("matched=false" in l and "native_ms=" in l and "cpython_ms=" in l
+                           for l in clines)
+        banner = any("COMPARE mode ON" in l for l in cerr.splitlines())
+        ok = ks == 200 and got_upstream and mismatch_hdr and mismatch_log and banner
+        print(f"  [{'OK' if ok else 'FAIL'}] MISMATCH: returned={kbody!r} "
+              f"X-Form-Compare={cmp_hdr!r} (user gets CPython body)")
+        for l in clines:
+            print(f"        {l}")
+        if not ok:
+            failures.append(("compare-stub-mismatch", ks, kbody, cmp_hdr, mismatch_log, banner))
+
+        # ---- MATCHED: native "ping-native" vs stub "ping-native" ----
+        httpd, sport = serve_stub(b"ping-native")
+        kport = free_port()
+        proc = boot_router_compare(routes_path, f"http://127.0.0.1:{sport}", kport)
+        ks, kbody, khdrs = http_get(f"http://127.0.0.1:{kport}/ping")
+        cmp_hdr = khdrs.get("x-form-compare")
+        clines, _, _ = read_compare_lines(proc)
+        httpd.shutdown()
+        matched_hdr = cmp_hdr == "matched"
+        matched_log = any("matched=true" in l and "body_match=true" in l
+                          and "native_ms=" in l and "cpython_ms=" in l for l in clines)
+        ok = ks == 200 and kbody == "ping-native" and matched_hdr and matched_log
+        print(f"  [{'OK' if ok else 'FAIL'}] MATCHED: returned={kbody!r} "
+              f"X-Form-Compare={cmp_hdr!r}")
+        for l in clines:
+            print(f"        {l}")
+        if not ok:
+            failures.append(("compare-stub-matched", ks, kbody, cmp_hdr, matched_log))
+
+        # ---- CPYTHON_ERROR: a DEAD upstream -> fall back to native, no 5xx ----
+        deadport = free_port()  # freed; nothing listens
+        kport = free_port()
+        proc = boot_router_compare(routes_path, f"http://127.0.0.1:{deadport}", kport)
+        ks, kbody, khdrs = http_get(f"http://127.0.0.1:{kport}/ping")
+        cmp_hdr = khdrs.get("x-form-compare")
+        clines, _, _ = read_compare_lines(proc)
+        err_hdr = cmp_hdr == "cpython_error"
+        err_log = any("compare_fanout_failed" in l and "returning=native" in l for l in clines)
+        # SAFETY: a shadow-upstream failure must NEVER 5xx the user — native body, 200.
+        ok = ks == 200 and kbody == "ping-native" and err_hdr and err_log
+        print(f"  [{'OK' if ok else 'FAIL'}] CPYTHON_ERROR (dead upstream): "
+              f"status={ks} returned={kbody!r} X-Form-Compare={cmp_hdr!r} "
+              f"(shadow failure -> NATIVE, no 5xx)")
+        for l in clines:
+            print(f"        {l}")
+        if not ok:
+            failures.append(("compare-stub-cpython-error", ks, kbody, cmp_hdr, err_log))
+
+        # ---- NORMAL MODE: compare UNSET -> native served+returned, no header/log ----
+        httpd, sport = serve_stub(b"would-be-cpython")
+        kport = free_port()
+        env = dict(os.environ)
+        env.pop("COH_ROUTER_COMPARE", None)
+        nproc = subprocess.Popen(
+            [str(BIN), "serve", "--port", str(kport), "--routes", routes_path,
+             "--upstream", f"http://127.0.0.1:{sport}"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True,
+        )
+        wait_for_port(kport)
+        time.sleep(0.3)
+        ks, kbody, khdrs = http_get(f"http://127.0.0.1:{kport}/ping")
+        cmp_hdr = khdrs.get("x-form-compare")
+        router_hdr = khdrs.get("x-form-router")
+        clines, _, nerr = read_compare_lines(nproc)
+        httpd.shutdown()
+        ok = (ks == 200 and kbody == "ping-native" and router_hdr == "native-kernel"
+              and cmp_hdr is None and not clines
+              and not any("COMPARE mode ON" in l for l in nerr.splitlines()))
+        print(f"  [{'OK' if ok else 'FAIL'}] NORMAL MODE (compare unset): returned={kbody!r} "
+              f"X-Form-Router={router_hdr!r} X-Form-Compare={cmp_hdr!r} "
+              f"(native unchanged; no [compare] logs={len(clines)})")
+        if not ok:
+            failures.append(("compare-normal-unchanged", ks, kbody, router_hdr, cmp_hdr, len(clines)))
+    finally:
+        try:
+            os.unlink(routes_path)
+        except OSError:
+            pass
+
+
+def compare_oracle_proof(app_base: str, failures: list) -> None:
+    """Compare-mode proof against the REAL CPython app oracle.
+
+    A promoted native route is byte-identical to its CPython twin (the main harness
+    proves this). In compare mode the kernel-router therefore: returns the CPython
+    body (== the native body here), carries X-Form-Compare: matched, and logs a
+    [compare] matched=true line with both native_ms and cpython_ms. This is the
+    return-CPython safety property + the structured log, proven on a REAL route.
+    """
+    print("\n=== COMPARE-MODE PROOF against the REAL CPython app oracle ===")
+    kport = free_port()
+    proc = boot_router_compare(str(ROUTES), app_base, kport)
+    kbase = f"http://127.0.0.1:{kport}"
+    routes = [
+        "/api/utils/coherence_weight?values=10,20,30&threshold=15",
+        "/api/utils/weighted_average?values=0.1,0.2,0.3&weights=0.7,0.2,0.1",
+        "/api/utils/softmax_weights?scores=1.0,3.0,2.0&temperature=0",
+    ]
+    results = []
+    for url in routes:
+        ks, kbody, khdrs = http_get(kbase + url)
+        cmp_hdr = khdrs.get("x-form-compare")
+        os_, obody, _ = http_get(app_base + url)  # the CPython oracle directly
+        results.append((url, ks, kbody, cmp_hdr, os_, obody))
+    clines, _, _ = read_compare_lines(proc)
+
+    for (url, ks, kbody, cmp_hdr, os_, obody) in results:
+        returned_cpython = value_contract(kbody) == value_contract(obody)  # user got CPython
+        matched_hdr = cmp_hdr == "matched"
+        route_path = url.split("?")[0]
+        has_log = any(route_path in l and "matched=true" in l
+                      and "native_ms=" in l and "cpython_ms=" in l for l in clines)
+        ok = ks == 200 and os_ == 200 and returned_cpython and matched_hdr and has_log
+        print(f"  [{'OK' if ok else 'FAIL'}] {url}")
+        print(f"        returned body == CPython oracle: {'YES' if returned_cpython else 'NO'}  "
+              f"X-Form-Compare={cmp_hdr!r}  [compare] matched=true logged: {'YES' if has_log else 'NO'}")
+        if not ok:
+            print(f"        router-body: {kbody}")
+            print(f"        oracle-body: {obody}")
+            failures.append((url, "compare-oracle", ks, os_, cmp_hdr, returned_cpython, has_log))
+    print(f"  ({len([l for l in clines if 'matched=true' in l])} [compare] matched=true lines captured)")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--live", default=None,
                     help="also compare native vs a running api base-url (read-only GET)")
+    ap.add_argument("--compare", action="store_true",
+                    help="run the COMPARE-MODE proof: stub mechanics (matched/mismatch/"
+                         "cpython_error/normal) network-independent + the real-app oracle "
+                         "(returns CPython body, X-Form-Compare: matched, [compare] log)")
     args = ap.parse_args()
 
     if not BIN.exists():
@@ -361,6 +599,58 @@ def main() -> int:
     if not (API_DIR / "app" / "main.py").exists():
         print(f"cannot find the real app at {API_DIR}/app/main.py", file=sys.stderr)
         return 2
+
+    # COMPARE-MODE proof path. The stub mechanics are network-independent (they run
+    # even in a degraded-net sandbox); the real-app oracle proof is attempted but
+    # gracefully SKIPPED if the app cannot boot here (it still runs on CI). This is
+    # a self-contained mode that does not run the full promotion harness.
+    if args.compare:
+        cfailures: list[tuple] = []
+        stub_mechanics_proof(cfailures)
+
+        # Best-effort: boot the REAL app and run the oracle proof. If it does not
+        # come up in this environment, say so and SKIP (CI's environment boots it).
+        app_port = free_port()
+        env = dict(os.environ)
+        env["COH_ENV"] = "dev"
+        (API_DIR / "data").mkdir(exist_ok=True)
+        app_proc = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "app.main:app",
+             "--host", "127.0.0.1", "--port", str(app_port), "--log-level", "warning"],
+            cwd=str(API_DIR), env=env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        app_base = f"http://127.0.0.1:{app_port}"
+        try:
+            try:
+                wait_for_port(app_port, timeout=30.0)
+                wait_for_http(app_base + FANOUT_PATH, timeout=30.0)
+                booted = True
+            except RuntimeError as e:
+                booted = False
+                print(f"\n=== COMPARE-MODE oracle proof SKIPPED: app did not boot here "
+                      f"({e}) — the stub mechanics above prove the compare/log/return-upstream/"
+                      f"header path; CI's Run-API-tests environment boots the app and runs the "
+                      f"oracle proof. ===")
+            if booted:
+                compare_oracle_proof(app_base, cfailures)
+        finally:
+            app_proc.terminate()
+            try:
+                app_proc.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                app_proc.kill()
+
+        if cfailures:
+            print(f"\nFAIL: {len(cfailures)} compare-mode check(s) did not hold", file=sys.stderr)
+            for f in cfailures:
+                print(f"   {f}", file=sys.stderr)
+            return 1
+        print("\nok — COMPARE MODE proven: matched/mismatch/cpython_error verdicts fire, "
+              "the user always gets the CPython response (or native on a shadow error, never a "
+              "5xx), X-Form-Compare carries the per-request verdict, [compare] logs both "
+              "latencies, and normal mode (compare unset) leaves the native arm unchanged.")
+        return 0
 
     failures: list[tuple] = []
     app_port = free_port()

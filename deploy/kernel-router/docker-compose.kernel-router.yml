@@ -58,10 +58,29 @@ services:
     restart: unless-stopped
     environment:
       # The fan-out target: the api service on the shared compose network. In
-      # shadow mode EVERY request goes here (empty routes manifest).
+      # shadow mode EVERY request goes here (empty routes manifest). In COMPARE
+      # mode the native routes are ALSO shadow-compared against this same upstream.
       UPSTREAM_URL: "http://api:8000"
       KERNEL_ROUTER_PORT: "8080"
-      ROUTES_FILE: "/routes/shadow-routes.fk"
+      # COMPARE mode wants a manifest WITH native routes so there is something to
+      # compare. production-routes.fk promotes the /api/utils compute routes; the
+      # router serves them from the kernel, compares each against CPython, and
+      # returns CPython's response (zero behavior change). The shadow-routes.fk
+      # manifest (empty -> all fan-out) is the COMPARE-off all-CPython baseline.
+      ROUTES_FILE: "/routes/production-routes.fk"
+      # production-routes.fk is a source-authored (BML `section [...]`) manifest, so
+      # it is source-compiled at load and NEEDS the form-stdlib. The image bakes it
+      # at /app/form/form-stdlib (see Dockerfile.kernel-router); the entrypoint
+      # passes --stdlib only when STDLIB_DIR is set, so it must be set here. (The
+      # empty shadow-routes.fk is raw S-expression and needs no stdlib — drop this
+      # line if you point ROUTES_FILE back at the shadow manifest.)
+      STDLIB_DIR: "/app/form/form-stdlib"
+      # COMPARE MODE — the zero-risk shadow step before the cutover. With "1" every
+      # NATIVE route is shadow-compared against UPSTREAM_URL and CPython's (safe)
+      # response is returned; X-Form-Compare + [compare] logs carry the per-request
+      # verdict. THE CUTOVER IS SETTING THIS TO "" (or removing it): then native
+      # routes serve+return native, no fan-out, no overhead. See COMPARE_MODE.md.
+      COH_ROUTER_COMPARE: "1"
       # KERNEL_ROUTER_WORKERS: "4"   # optional pool size; default = host parallelism
     depends_on:
       # The fan-out upstream must exist; the router proxies to it.

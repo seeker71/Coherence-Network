@@ -97,6 +97,14 @@ COPY form/form-stdlib/ /app/form/form-stdlib/
 # /routes/shadow-routes.fk to promote native routes.
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
 
+# The PRODUCTION routes manifest (+ its route-data registry): promotes the
+# /api/utils compute routes to NATIVE. COMPARE mode points ROUTES_FILE here so
+# there are native routes to shadow-compare against the CPython upstream (see
+# docker-compose.kernel-router.yml + COMPARE_MODE.md). The route-data file is
+# loaded alongside the manifest by the same convention validate.sh uses.
+COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
+COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
+
 # The entrypoint resolves env at RUN time so PORT / UPSTREAM_URL / ROUTES_FILE
 # are container-configurable (compose env, -e flags) without rebuilding.
 COPY deploy/kernel-router/entrypoint.sh /app/entrypoint.sh

@@ -6931,6 +6931,12 @@ fn handle_request(
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
     router_metrics: &Arc<Mutex<RouterMetrics>>,
+    // COMPARE mode: when true AND an upstream is configured, every NATIVE route is
+    // shadow-compared against the CPython upstream and the upstream's (safe)
+    // response is returned to the client. Read once at startup (cli_serve) and
+    // threaded here like `upstream` — never an env::var per request. The default
+    // (false) leaves the native arm UNCHANGED — the cutover is turning this off.
+    compare: bool,
 ) -> bool {
     // Read the FULL request: the header block, then exactly Content-Length body
     // bytes if present (read_request honors Content-Length across as many socket
@@ -6984,8 +6990,12 @@ fn handle_request(
     // The router decision: a path with a native Form handler is served
     // entirely in the kernel; a path with no handler fans out to the
     // Python upstream (if --upstream is set) or 404s.
-    let body: String;
-    let status: String;
+    // `body`/`status` are `mut` because COMPARE mode replaces the native response
+    // with the captured CPython response after the shadow comparison (the safety
+    // property: the user gets exactly what direct-CPython would serve). Without
+    // compare mode they are assigned exactly once per arm, as before.
+    let mut body: String;
+    let mut status: String;
     let router: &str;
     // The response's Content-Type for the BUFFERED arms (native / 404). The
     // fan-out arm streams and returns early — it relays the upstream's Content-Type
@@ -7076,6 +7086,12 @@ fn handle_request(
             );
             return false; // close — the oversized request was fully read; drop it
         }
+        // Time the native serve (the eval walk + the response build below) so
+        // compare mode can report native_ms vs cpython_ms on the SAME request.
+        // The timer is started even when compare is off — an Instant::now() is a
+        // few nanoseconds and keeps the timed region a single shape — but it is
+        // only READ inside the compare block.
+        let native_started = Instant::now();
         let result = walk(k, arena, cl.body, call_frame);
         router = "native-kernel";
         // A native handler can return the first-class KernelHTTPResponse cell:
@@ -7110,6 +7126,99 @@ fn handle_request(
             if let Some(c) = body.trim_start().as_bytes().first() {
                 if *c == b'{' || *c == b'[' {
                     resp_content_type = "application/json".to_string();
+                }
+            }
+        }
+        // COMPARE MODE: the native arm just served this route from the kernel. When
+        // compare is on AND an upstream is configured, shadow-fan-out the SAME
+        // request to the CPython upstream, compare the two responses byte-for-byte,
+        // LOG one structured line, and RETURN THE CPYTHON RESPONSE — so the user
+        // gets exactly what direct-CPython would serve (ZERO behavior change; this
+        // is the safety property that makes the front-door insertion risk-free). The
+        // cutover is literally turning compare off: then this whole block is skipped
+        // and the native response above is returned unchanged.
+        if compare {
+            if let Some(upstream_base) = upstream {
+                let native_ms = native_started.elapsed().as_secs_f64() * 1000.0;
+                let native_status = status.clone();
+                let native_body = body.clone();
+                let cpython_started = Instant::now();
+                match fanout_capture(
+                    upstream_base,
+                    &method,
+                    &target,
+                    &req_headers,
+                    &body_bytes,
+                    upstream_pool,
+                ) {
+                    Ok(captured) => {
+                        let cpython_ms = cpython_started.elapsed().as_secs_f64() * 1000.0;
+                        let status_match = native_status == captured.status;
+                        let body_match = native_body.as_bytes() == captured.body.as_slice();
+                        let matched = status_match && body_match;
+                        // ONE greppable structured line to stdout (docker logs
+                        // capture it). On a mismatch a bounded diff snippet follows
+                        // so a divergence is debuggable without flooding.
+                        println!(
+                            "[compare] route={} matched={} status_native={:?} status_cpython={:?} \
+                             status_match={} body_match={} native_ms={:.2} cpython_ms={:.2} \
+                             nbytes={} cbytes={}",
+                            path,
+                            matched,
+                            native_status,
+                            captured.status,
+                            status_match,
+                            body_match,
+                            native_ms,
+                            cpython_ms,
+                            native_body.as_bytes().len(),
+                            captured.body.len(),
+                        );
+                        if !matched {
+                            println!(
+                                "[compare] route={} mismatch_native_snippet={:?}",
+                                path,
+                                compare_snippet(native_body.as_bytes()),
+                            );
+                            println!(
+                                "[compare] route={} mismatch_cpython_snippet={:?}",
+                                path,
+                                compare_snippet(&captured.body),
+                            );
+                        }
+                        // RETURN CPYTHON'S RESPONSE (the safety property): replace
+                        // the native status/body with the captured upstream
+                        // response. The Content-Type is re-derived from the
+                        // returned body so a JSON body keeps application/json. The
+                        // X-Form-Compare header carries the verdict so an external
+                        // monitor can read it per-request without parsing logs.
+                        status = captured.status;
+                        body = String::from_utf8_lossy(&captured.body).to_string();
+                        resp_content_type = String::new();
+                        if let Some(c) = body.trim_start().as_bytes().first() {
+                            if *c == b'{' || *c == b'[' {
+                                resp_content_type = "application/json".to_string();
+                            }
+                        }
+                        resp_headers.push((
+                            "X-Form-Compare".to_string(),
+                            if matched { "matched" } else { "mismatch" }.to_string(),
+                        ));
+                    }
+                    Err(e) => {
+                        // The shadow upstream hiccuped. NEVER 5xx the user for a
+                        // shadow failure — fall back to the NATIVE response (already
+                        // in status/body) and log the failure. X-Form-Compare reports
+                        // cpython_error so a monitor sees the shadow gap.
+                        let (_status, msg) = fanout_error_response(&e);
+                        println!(
+                            "[compare] route={} compare_fanout_failed error={:?} \
+                             native_ms={:.2} returning=native",
+                            path, msg, native_ms,
+                        );
+                        resp_headers
+                            .push(("X-Form-Compare".to_string(), "cpython_error".to_string()));
+                    }
                 }
             }
         }
@@ -7311,6 +7420,7 @@ fn serve_connection(
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
     router_metrics: &Arc<Mutex<RouterMetrics>>,
+    compare: bool,
 ) {
     // Idle timeout so a held-open keep-alive connection cannot starve the pool.
     let _ = stream.set_read_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
@@ -7339,6 +7449,7 @@ fn serve_connection(
         upstream,
         upstream_pool,
         router_metrics,
+        compare,
     ) {}
 }
 
@@ -7356,6 +7467,9 @@ fn worker_loop(
     upstream: Arc<Option<String>>,
     rx: Arc<Mutex<mpsc::Receiver<TcpStream>>>,
     router_metrics: Arc<Mutex<RouterMetrics>>,
+    // COMPARE mode, decided once at startup (cli_serve reads COH_ROUTER_COMPARE) and
+    // copied into each worker. A plain bool — it does not change per request.
+    compare: bool,
 ) {
     let (mut k, mut arena, route_specs) =
         match build_worker_kernel_with_route_data(&program, &routes_path, &route_data) {
@@ -7392,6 +7506,7 @@ fn worker_loop(
                 &upstream,
                 &mut upstream_pool,
                 &router_metrics,
+                compare,
             ),
             // Sender dropped (listener closed) — drain done, worker exits.
             Err(_) => return,
@@ -7898,6 +8013,22 @@ fn cli_serve(args: &[String]) -> i32 {
             }
         }
     }
+    // COMPARE mode, read ONCE here at startup (never env::var per request). When
+    // COH_ROUTER_COMPARE is set ("1"/"true", case-insensitive) AND an upstream is
+    // configured, every NATIVE route is shadow-compared against the CPython upstream
+    // and the CPython (safe) response is returned to the client — divergence,
+    // latency, and downtime are measured on LIVE traffic before any cutover, with
+    // ZERO behavior change (the user always gets exactly CPython's response). The
+    // cutover is literally turning this off: unset COH_ROUTER_COMPARE and the native
+    // arm serves+returns native, no fan-out, no overhead. Compare mode with no
+    // upstream configured is inert (there is nothing to compare against).
+    let compare = match env::var("COH_ROUTER_COMPARE") {
+        Ok(v) => {
+            let v = v.trim().to_ascii_lowercase();
+            v == "1" || v == "true"
+        }
+        Err(_) => false,
+    };
     let routes_path = match routes_path {
         Some(p) => p,
         None => {
@@ -8013,6 +8144,7 @@ fn cli_serve(args: &[String]) -> i32 {
                 upstream,
                 rx,
                 router_metrics,
+                compare,
             );
         }) {
             Ok(h) => handles.push(h),
@@ -8053,6 +8185,24 @@ fn cli_serve(args: &[String]) -> i32 {
     match upstream_arc.as_ref() {
         Some(u) => eprintln!("  *  -> fan-out to Python upstream {}", u),
         None => eprintln!("  *  -> 404 (no --upstream; fan-out arm inactive)"),
+    }
+    // COMPARE-mode banner: make the shadow-comparison state visible at startup so an
+    // operator reading the logs knows whether native routes are being compared (and
+    // CPython returned) or served+returned natively. Compare needs an upstream to
+    // compare against; with none it is inert.
+    if compare {
+        match upstream_arc.as_ref() {
+            Some(u) => eprintln!(
+                "  COMPARE mode ON: native routes shadow-compared against {} and CPython's \
+                 response returned (X-Form-Compare: matched|mismatch|cpython_error; grep [compare] \
+                 in the logs). Cutover = unset COH_ROUTER_COMPARE.",
+                u
+            ),
+            None => eprintln!(
+                "  COMPARE mode requested but INERT: COH_ROUTER_COMPARE is set with no --upstream \
+                 to compare against; native routes serve+return native."
+            ),
+        }
     }
 
     // The accept loop is now thin: it only hands each accepted stream to the
@@ -9373,6 +9523,43 @@ mod route_spec_tests {
     }
 }
 
+#[cfg(test)]
+mod compare_mode_tests {
+    use super::*;
+
+    // The strange-minimal de-chunk case: a two-chunk body whose stream is SPLIT mid
+    // chunk-size-line across two feeds (the over-read hazard the streaming relay
+    // also faces). One assertion proves feed_collecting decodes the payload (size
+    // lines + CRLFs dropped), stops at the terminating 0-chunk, and survives the
+    // boundary split — the same ChunkParser engine the streaming relay uses, now
+    // collecting the decoded body for the buffered compare capture.
+    #[test]
+    fn feed_collecting_dechunks_across_a_split_boundary() {
+        // "5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n" decodes to "hello world".
+        let full = b"5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n";
+        // Split mid-stream — partway through the second chunk's size line — so the
+        // parser must carry partial framing across the two feeds.
+        let split = 11; // inside "6\r\n world" framing
+        let mut parser = ChunkParser::new();
+        let mut body = Vec::new();
+        assert_eq!(parser.feed_collecting(&full[..split], &mut body).unwrap(), false);
+        assert_eq!(parser.feed_collecting(&full[split..], &mut body).unwrap(), true);
+        assert_eq!(body, b"hello world");
+    }
+
+    // compare_snippet bounds the mismatch diff: a body under the cap returns whole,
+    // a body over it is truncated with a marker — so a divergence log never floods.
+    #[test]
+    fn compare_snippet_bounds_the_diff() {
+        assert_eq!(compare_snippet(b"short body"), "short body");
+        let big = vec![b'x'; 500];
+        let snip = compare_snippet(&big);
+        assert!(snip.starts_with(&"x".repeat(200)));
+        assert!(snip.ends_with("…(truncated)"));
+        assert!(snip.len() < 500); // bounded, not the whole 500-byte body
+    }
+}
+
 fn url_decode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let bytes = s.as_bytes();
@@ -9800,10 +9987,33 @@ impl ChunkParser {
         }
     }
 
-    // Feed the next slice of relayed bytes. Returns Ok(true) when the terminating
-    // 0-length chunk + trailer have been fully consumed (the body is complete), else
-    // Ok(false) (more bytes expected). A malformed size line is an Other error.
-    fn feed(&mut self, mut data: &[u8]) -> Result<bool, FanoutError> {
+    // Feed the next slice of relayed bytes for BOUNDARY tracking only (the streaming
+    // relay path: the bytes are written to the client raw, this parser just finds
+    // where the terminating 0-chunk is). Returns Ok(true) when the body is complete.
+    fn feed(&mut self, data: &[u8]) -> Result<bool, FanoutError> {
+        self.feed_inner(data, None)
+    }
+
+    // Feed the next slice and COLLECT the decoded DATA bytes into `sink` (the
+    // buffered de-chunk path: compare mode reads the whole body into memory). The
+    // chunk size-lines, CRLFs, and trailer are consumed but NOT appended — only the
+    // payload bytes — so the result is the decoded body, byte-for-byte comparable to
+    // a Content-Length body. Same engine as `feed`; collection is a parameter, not a
+    // parallel parser (core-abstraction-first).
+    fn feed_collecting(&mut self, data: &[u8], sink: &mut Vec<u8>) -> Result<bool, FanoutError> {
+        self.feed_inner(data, Some(sink))
+    }
+
+    // The ONE chunked-framing engine. Tracks chunk boundaries to the true
+    // terminating 0-length chunk; when `sink` is Some, appends the DATA-phase bytes
+    // it walks over (the decoded payload) to it. Returns Ok(true) when the
+    // terminating 0-length chunk + trailer have been fully consumed, else Ok(false).
+    // A malformed size line is an Other error.
+    fn feed_inner(
+        &mut self,
+        mut data: &[u8],
+        mut sink: Option<&mut Vec<u8>>,
+    ) -> Result<bool, FanoutError> {
         // A chunk-size / trailer line longer than this is treated as malformed — a
         // real size line is a handful of bytes; this only guards against a runaway
         // upstream, it is not a body-size limit (the body itself never lands here).
@@ -9835,6 +10045,10 @@ impl ChunkParser {
                 }
                 ChunkPhase::Data { remaining } => {
                     let take = remaining.min(data.len());
+                    // Collect the decoded payload bytes when a sink is present.
+                    if let Some(s) = sink.as_deref_mut() {
+                        s.extend_from_slice(&data[..take]);
+                    }
                     data = &data[take..];
                     let left = remaining - take;
                     self.phase = if left == 0 {
@@ -10320,6 +10534,258 @@ fn fanout_stream_to_client(
         // outcome. The upstream connection is dropped (not pooled).
         Err(_) => false,
     }
+}
+
+// A bounded, lossy-UTF-8 view of the FIRST ~200 bytes of a body, for the compare
+// mismatch diff. The {:?} debug of the returned String escapes control bytes, so a
+// divergence is legible in one log line without flooding (a large body's tail is
+// dropped) and without raw control characters breaking the log stream.
+fn compare_snippet(bytes: &[u8]) -> String {
+    const SNIPPET_BYTES: usize = 200;
+    let take = bytes.len().min(SNIPPET_BYTES);
+    let mut s = String::from_utf8_lossy(&bytes[..take]).to_string();
+    if bytes.len() > take {
+        s.push_str("…(truncated)");
+    }
+    s
+}
+
+// The fully-BUFFERED capture of one upstream response — status line + body bytes,
+// held whole in memory. This is the COMPARE-mode shadow read: the native arm has
+// already served the request from the kernel; compare mode then issues the SAME
+// request to the CPython upstream and captures its complete response so the two
+// can be compared byte-for-byte AND the (safe) CPython body returned to the
+// client. Unlike `fanout_stream_to_client`, this NEVER touches the client socket
+// — it only reads the upstream — and it holds the body whole (the compute routes
+// return tiny bodies, so buffering is the right shape here; streaming is for the
+// unbounded fan-out tail). The status string is the upstream's exact status line
+// (e.g. "200 OK"); body is the raw bytes for an exact `==` compare against the
+// native body.
+struct CapturedResp {
+    status: String,
+    body: Vec<u8>,
+}
+
+// Read the FULL body of one upstream response into memory, given the head's
+// framing. This is the buffered twin of `stream_body_to_client`: same framing
+// decisions (Length reads exactly `n` bytes; Chunked de-chunks to the true
+// terminating 0-length chunk; Close reads to EOF), but it ACCUMULATES the body
+// into a Vec instead of piping it to a client. `body_prefix` is the leading body
+// bytes that arrived alongside the head terminator (the head read's natural
+// over-read) — they seed the buffer. The response shape limit bounds the held
+// body so a runaway upstream cannot exhaust the worker. The de-chunked body is
+// the DECODED payload (chunk size-lines and CRLFs removed), so it compares
+// byte-for-byte against a native body the same way a Content-Length body does.
+//
+// Returns `(body, leftover)`. `leftover` is any prefix bytes past the framed end
+// of a Length-framed body — the NEXT response on a reused connection — mirroring
+// the streaming path's `BodyOutcome.leftover`, so the pooled connection's carry
+// stays correct even if the head read over-read into a pipelined next response.
+// (Compare mode is strictly serial, so this is normally empty; carrying it keeps
+// the buffered path as correct as the streaming one rather than relying on that.)
+// Chunked and Close bodies pool nothing, so their leftover is always empty.
+fn read_body_fully(
+    stream: &mut TcpStream,
+    framing: &ResponseFraming,
+    body_prefix: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>), FanoutError> {
+    let limit = response_shape_limit();
+    let mut buf = [0u8; 65536];
+    match *framing {
+        ResponseFraming::Length(total) => {
+            let mut body = Vec::with_capacity(total.min(limit));
+            let from_prefix = body_prefix.len().min(total);
+            body.extend_from_slice(&body_prefix[..from_prefix]);
+            // Any prefix bytes past `total` are the NEXT response (over-read by the
+            // head read) — carried, never part of this body.
+            let leftover: Vec<u8> = if body_prefix.len() > total {
+                body_prefix[total..].to_vec()
+            } else {
+                Vec::new()
+            };
+            while body.len() < total {
+                let want = (total - body.len()).min(buf.len());
+                match stream.read(&mut buf[..want]) {
+                    Ok(0) => {
+                        return Err(FanoutError::Other(
+                            "upstream closed mid-body (short Content-Length read)".to_string(),
+                        ))
+                    }
+                    Ok(n) => body.extend_from_slice(&buf[..n]),
+                    Err(e) => return Err(classify_io_error(&e, "read upstream response body")),
+                }
+            }
+            Ok((body, leftover))
+        }
+        ResponseFraming::Chunked => {
+            // De-chunk into the decoded payload: feed every byte (prefix first,
+            // then socket reads) through the same boundary-tracking ChunkParser the
+            // streaming relay uses, but collect the DATA bytes it reports instead of
+            // relaying them raw. Stops at the true terminating 0-length chunk.
+            let mut parser = ChunkParser::new();
+            let mut body: Vec<u8> = Vec::new();
+            let mut feed = |bytes: &[u8], body: &mut Vec<u8>| -> Result<bool, FanoutError> {
+                let done = parser.feed_collecting(bytes, body)?;
+                if body.len() > limit {
+                    return Err(FanoutError::Other(format!(
+                        "upstream chunked body is larger than we can hold right now \
+                         ({} bytes observed, threshold {})",
+                        body.len(),
+                        limit,
+                    )));
+                }
+                Ok(done)
+            };
+            if !body_prefix.is_empty() && feed(body_prefix, &mut body)? {
+                return Ok((body, Vec::new()));
+            }
+            loop {
+                match stream.read(&mut buf) {
+                    Ok(0) => break, // upstream closed — best-effort end of relay
+                    Ok(n) => {
+                        if feed(&buf[..n], &mut body)? {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        return Err(classify_io_error(&e, "read upstream chunked response body"))
+                    }
+                }
+            }
+            // Chunked connections are never pooled (matching the streaming path), so
+            // no leftover needs carrying.
+            Ok((body, Vec::new()))
+        }
+        ResponseFraming::Close => {
+            let mut body: Vec<u8> = body_prefix.to_vec();
+            loop {
+                match stream.read(&mut buf) {
+                    Ok(0) => break, // EOF marks the end of an unframed body
+                    Ok(n) => {
+                        body.extend_from_slice(&buf[..n]);
+                        if body.len() > limit {
+                            return Err(FanoutError::Other(format!(
+                                "upstream unframed body is larger than we can hold right now \
+                                 ({} bytes observed, threshold {})",
+                                body.len(),
+                                limit,
+                            )));
+                        }
+                    }
+                    Err(e) => {
+                        return Err(classify_io_error(
+                            &e,
+                            "read upstream response body (to close)",
+                        ))
+                    }
+                }
+            }
+            // A close-framed connection ends at EOF and is never pooled, so there
+            // is no next-response leftover to carry.
+            Ok((body, Vec::new()))
+        }
+    }
+}
+
+// COMPARE-mode fan-out: issue the SAME request the native arm just served to the
+// CPython upstream and CAPTURE its full response (status + body bytes) into
+// memory, WITHOUT touching the client socket. This reuses the exact upstream-hop
+// machinery `fanout_stream_to_client` uses — `parse_http_upstream`, the request
+// build (Host rewrite + client end-to-end headers forwarded), the per-worker
+// `UpstreamPool` keep-alive connection with the stale-pool reconnect+retry-once,
+// `connect_upstream_with_timeout`'s bounded connect/read/write deadlines,
+// `read_upstream_head` — so the shadow read is the SAME hop the cutover will use,
+// not a second code path (core-abstraction-first). The difference is the tail: it
+// READS the whole body into memory (`read_body_fully`) instead of piping it to a
+// client. On any upstream error it returns the FanoutError so the caller can fall
+// back to the native response (the shadow upstream hiccuping must never 5xx the
+// user). The captured connection is pooled IFF the upstream kept it alive AND the
+// body was Length-framed (the same reuse rule the streaming path applies).
+fn fanout_capture(
+    upstream: &str,
+    method: &str,
+    target: &str,
+    req_headers: &[(String, String)],
+    body: &[u8],
+    pool: &mut UpstreamPool,
+) -> Result<CapturedResp, FanoutError> {
+    let (host, port, base_path) = parse_http_upstream(upstream).map_err(FanoutError::Other)?;
+    let request_target = format!(
+        "{}{}",
+        base_path,
+        if target.starts_with('/') { target } else { "/" }
+    );
+    // Build the upstream request ONCE — reused verbatim for the stale-pool retry.
+    // Identical framing to the streaming path: Host rewritten to the upstream;
+    // Connection: keep-alive so the NEXT hop reuses the connection; the client's
+    // end-to-end headers forwarded (hop-by-hop / router-owned filtered out).
+    let mut head = format!(
+        "{} {} HTTP/1.1\r\nHost: {}\r\nConnection: keep-alive\r\n",
+        method, request_target, host
+    );
+    for (name, value) in req_headers {
+        if forward_request_header(name) {
+            head.push_str(&format!("{}: {}\r\n", name, value));
+        }
+    }
+    if !body.is_empty() {
+        head.push_str(&format!("Content-Length: {}\r\n", body.len()));
+    }
+    head.push_str("\r\n");
+    let mut request: Vec<u8> = head.into_bytes();
+    request.extend_from_slice(body);
+
+    // Get-or-create the pooled connection + read the HEAD, with the stale-pool
+    // retry living in the error CLASSIFICATION exactly as the streaming path does:
+    // a Closed pooled connection reconnects and retries the SAME request ONCE; a
+    // Timeout/Other propagates to the caller (which falls back to native).
+    let (mut upstream_stream, head) = match pool.take(&host, port) {
+        Some(mut pooled) => {
+            let carry = std::mem::take(&mut pooled.carry);
+            match send_and_read_head(&mut pooled.stream, &request, carry) {
+                Ok(h) => (pooled.stream, h),
+                Err(FanoutError::Closed(_)) => {
+                    drop(pooled);
+                    let mut fresh = connect_upstream_with_timeout(&host, port)?;
+                    let h = send_and_read_head(&mut fresh, &request, Vec::new())?;
+                    (fresh, h)
+                }
+                Err(e) => {
+                    drop(pooled);
+                    return Err(e);
+                }
+            }
+        }
+        None => {
+            let mut fresh = connect_upstream_with_timeout(&host, port)?;
+            let h = send_and_read_head(&mut fresh, &request, Vec::new())?;
+            (fresh, h)
+        }
+    };
+
+    // Read the full body into memory, then pool the connection IFF it was
+    // Length-framed AND the upstream kept it alive (the same reuse rule the
+    // streaming path applies after the body has moved). A chunked/unframed body is
+    // read correctly but its connection is dropped (never pooled). Any read error
+    // drops the connection and propagates (caller falls back to native).
+    let reusable = matches!(head.framing, ResponseFraming::Length(_));
+    let upstream_kept = head.upstream_keep_alive;
+    let (body_bytes, leftover) =
+        read_body_fully(&mut upstream_stream, &head.framing, &head.body_prefix)?;
+    if reusable && upstream_kept {
+        pool.store(
+            &host,
+            port,
+            PooledConn {
+                stream: upstream_stream,
+                carry: leftover,
+            },
+        );
+    }
+    Ok(CapturedResp {
+        status: head.status,
+        body: body_bytes,
+    })
 }
 
 // Emit a small BUFFERED 504/502 to the client through the ONE emit shape, then
