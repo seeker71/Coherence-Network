@@ -8250,7 +8250,20 @@ fn parse_headers(head: &str) -> Vec<(String, String)> {
             continue;
         }
         if let Some((name, value)) = line.split_once(':') {
-            out.push((name.trim().to_string(), value.trim().to_string()));
+            let (name, value) = (name.trim(), value.trim());
+            // Drop any header carrying a raw CR, LF, or NUL in its name or value.
+            // `head.lines()` splits on `\n` and strips a trailing `\r`, but a LONE
+            // CR (a `\r` not followed by `\n`) survives INSIDE a value — a header /
+            // request-injection (smuggling) and response-splitting vector when this
+            // header is relayed verbatim to the next hop (the upstream on the
+            // request hop, the client on the response hop). A legitimate header
+            // never contains these control bytes; dropping such a header forwards
+            // no control character to either hop, regardless of how lenient the
+            // far end's parser is.
+            if name.bytes().chain(value.bytes()).any(|b| b == b'\r' || b == b'\n' || b == 0) {
+                continue;
+            }
+            out.push((name.to_string(), value.to_string()));
         }
     }
     out
@@ -8727,6 +8740,36 @@ mod router_context_tests {
             Value::Int(i) => i.to_string(),
             v => v.display(),
         }
+    }
+
+    #[test]
+    fn parse_headers_drops_control_char_injection() {
+        // A lone CR inside a value (the request-smuggling / response-splitting
+        // vector) survives head.lines() — which splits on \n and strips only a
+        // TRAILING \r — so "X-Smuggle: v\rContent-Length: 0" arrives as one line
+        // with a raw \r in the value. parse_headers MUST drop it, not relay it
+        // verbatim to the next hop.
+        let head = "GET / HTTP/1.1\nHost: x\nX-Smuggle: v\rContent-Length: 0\nAccept: text/html\n";
+        let hs = parse_headers(head);
+        let names: Vec<&str> = hs.iter().map(|(n, _)| n.as_str()).collect();
+        assert!(names.contains(&"Host") && names.contains(&"Accept"), "legit header dropped: {:?}", hs);
+        assert!(!names.contains(&"X-Smuggle"), "CR-injected header was relayed: {:?}", hs);
+        // NO relayed header carries ANY control byte (CR / LF / NUL).
+        for (n, v) in &hs {
+            assert!(
+                !n.bytes().chain(v.bytes()).any(|b| b == b'\r' || b == b'\n' || b == 0),
+                "control byte survived in header {:?}: {:?}",
+                n, v
+            );
+        }
+        // A NUL in a value is likewise dropped; a clean header beside it survives.
+        let hs2 = parse_headers("GET / HTTP/1.1\nX-Nul: a\0b\nOk: yes\n");
+        assert_eq!(
+            hs2.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(),
+            vec!["Ok"],
+            "{:?}",
+            hs2
+        );
     }
 
     #[test]
