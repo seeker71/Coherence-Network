@@ -125,6 +125,34 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?has_specs_with_data=0&has_lineage=0&has_friction=0&runtime_event_count=0&commit_count=0",       # clamp low -> 0.05
         "?runtime_event_count=3&commit_count=2&has_friction=0.3&has_specs_with_data=0.5&has_lineage=0.5",  # float-assoc artifact
     ]),
+    # ----- batch 3: the grounded family (round_ndigits + guarded div + float fold) -----
+    ("/api/utils/cost_vector", [
+        "",                              # defaults 33.333 -> compute 19.9998, human 8.3333 (half-to-even at 4)
+        "?estimated_cost=0",             # all-zero components -> 0.0
+        "?estimated_cost=100",           # 60.0 / 15.0 / 25.0 / 100.0 integer-valued floats
+        "?estimated_cost=33.333",        # the round_ndigits half-to-even case (ec*0.25=8.33325 -> 8.3332)
+        "?estimated_cost=9.205",         # cross-check vs value_vector's default scale
+    ]),
+    ("/api/utils/value_vector", [
+        "",                              # defaults 9.205 -> adoption 4.6025, lineage 2.7615, friction 1.841
+        "?potential_value=0",            # all-zero -> 0.0
+        "?potential_value=10",           # 5.0 / 3.0 / 2.0 / 10.0 integer-valued floats
+        "?potential_value=33.335",       # 33.335*0.5=16.6675 -> round half-to-even at 4 (16.6675 stays / banker's)
+    ]),
+    ("/api/utils/grounded_roi", [
+        "",                              # defaults -> remaining 48.0, gap 25.333, roi round(25.333/48.0,4)
+        "?estimated_cost=12&actual_cost=12&potential_value=5&actual_value=1",  # remaining 0.0 -> roi guard 0.0
+        "?potential_value=2&actual_value=5",  # value_gap floor 0.0 -> gap_cc 0.0, roi 0.0
+        "?estimated_cost=10&actual_cost=3&potential_value=20&actual_value=4",  # remaining 7.0, gap 16.0, roi 2.2857
+        "?estimated_cost=1&actual_cost=0&potential_value=1&actual_value=0",    # remaining 1.0, gap 1.0, roi 1.0
+    ]),
+    ("/api/utils/idea_grounded_cost_sum", [
+        "",                              # defaults 3.5,1.25,0.5 / 1.5,0.0,2.25 -> 5.25, 3.75
+        "?actual_costs=0&actual_values=0",        # single zero each -> 0.0, 0.0
+        "?actual_costs=0.1,0.2,0.3&actual_values=0.7,0.2,0.1",  # float-accumulation order (left fold)
+        "?actual_costs=1.5&actual_values=2.5",    # single element each
+        "?actual_costs=10.0,20.0,30.0&actual_values=1.0,2.0,3.0",  # integer-valued float sums 60.0, 6.0
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.

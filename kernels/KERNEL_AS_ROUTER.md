@@ -548,10 +548,13 @@ JSON response object** its FastAPI twin returns — byte-for-byte. These are the
 routes whose Form computation is already parity-proven against CPython by the
 three-way kernel suite (`endpoint_<name>_demo.fk`); promotion replicates their FULL
 HTTP contract — the exact query params with the exact FastAPI defaults, the
-arithmetic in Form, and the exact response document. Eleven routes are promoted
+arithmetic in Form, and the exact response document. Fifteen routes are promoted
 today (the first four scalar/list computes, six pure-numeric scoring/entropy
-routes, then `grounded_value` — the value/realization/confidence reduction of
-`compute_idea_metrics`, eleven host-derived scalars folded to four floats).
+routes, `grounded_value` — the value/realization/confidence reduction of
+`compute_idea_metrics`, eleven host-derived scalars folded to four floats — then
+the grounded family: `cost_vector` / `value_vector` (CC decompositions via
+`round_ndigits`), `grounded_roi` (max-as-comparison + guarded division), and
+`idea_grounded_cost_sum` (the LEFT-folded float-field sum over parallel arrays)).
 
 | Promoted route | params | response shape |
 |----------------|--------|----------------|
@@ -566,6 +569,10 @@ routes, then `grounded_value` — the value/realization/confidence reduction of
 | `/api/utils/shannon_entropy` | `gas` `water` `ice` (ints) | `{"entropy":<float>,"gas":<int>,"water":<int>,"ice":<int>,"runtime":"inline"}` (round 4) |
 | `/api/utils/softmax_weights` | `scores` (csv floats), `temperature` (float) | `{"weights":[…],"scores":[…],"temperature":<float>,"runtime":"inline"}` |
 | `/api/utils/grounded_value` | 11 scalars (`lineage_measured_value`, `usage_revenue`, `spec_*`, `*_count` ints, `has_*` levels) | `{"computed_actual_value":<float>,"computed_estimated_cost":<float>,"value_realization_pct":<float>,"computed_confidence":<float>,"runtime":"inline"}` |
+| `/api/utils/cost_vector` | `estimated_cost` (float) | `{"compute_cc":<float>,"infrastructure_cc":<float>,"human_attention_cc":<float>,"opportunity_cc":0.0,"external_cc":0.0,"total_cc":<float>,"estimated_cost":<float>,"runtime":"inline"}` (each `round(_,4)`) |
+| `/api/utils/value_vector` | `potential_value` (float) | `{"adoption_cc":<float>,"lineage_cc":<float>,"friction_avoided_cc":<float>,"revenue_cc":0.0,"total_cc":<float>,"potential_value":<float>,"runtime":"inline"}` (each `round(_,4)`) |
+| `/api/utils/grounded_roi` | `estimated_cost` `actual_cost` `potential_value` `actual_value` (floats) | `{"remaining_cost_cc":<float>,"value_gap_cc":<float>,"roi_cc":<float>,…echoes,"runtime":"inline"}` (guarded division) |
+| `/api/utils/idea_grounded_cost_sum` | `actual_costs` `actual_values` (parallel csv floats) | `{"spec_actual_cost_sum":<float>,"spec_actual_value_sum":<float>,"spec_count_in":<int>,"runtime":"inline"}` (LEFT-fold) |
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -578,7 +585,7 @@ native-kernel`.
 [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
 proves the promotion two ways at once — boot the real local app as the CPython
 oracle, stand the kernel-router (production manifest) in front, and for each of
-the eleven routes over representative + edge params (48 cases):
+the fifteen routes over representative + edge params (67 cases):
 
 ```
 [native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
@@ -586,11 +593,15 @@ the eleven routes over representative + edge params (48 cases):
            FULL-BODY     == LIVE  https://api.coherencycoin.com: BYTE-IDENTICAL
 [native  ] /api/utils/breath_balance?gas=5&water=0&ice=0 -> {"balance":-0.0,…}  FULL-BODY == LIVE: BYTE-IDENTICAL
 [native  ] /api/utils/softmax_weights?scores=0.1,0.2,0.3 -> {"weights":[0.3006096053557273,…]}  FULL-BODY == LIVE: BYTE-IDENTICAL
-… all 48 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
-  0.6666666666666667), CPython's -0.0 vs +0.0 on single-phase entropy, the
-  grounded_value confidence weighted-sum's float-assoc artifact
+[native  ] /api/utils/cost_vector?estimated_cost=33.333 -> {"human_attention_cc":8.3332,…}  round_ndigits half-to-even (NOT 8.3333)
+[native  ] /api/utils/idea_grounded_cost_sum?actual_costs=0.1,0.2,0.3&… -> {"spec_actual_cost_sum":0.6000000000000001,…}  LEFT-fold matches CPython sum()
+… all 67 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
+  0.6666666666666667, 0.9999999999999999), CPython's -0.0 vs +0.0 on single-phase
+  entropy, the grounded_value confidence weighted-sum's float-assoc artifact
   (0.42000000000000004, 0.5800000000000001) and its [0.05, 0.95] clamp + zero-
-  guards, and deterministic + uniform softmax
+  guards, deterministic + uniform softmax, the grounded family's round_ndigits
+  half-to-even (8.3332, 16.6675), grounded_roi's guarded division + max-as-
+  comparison, and idea_grounded_cost_sum's LEFT-folded float-field sum
 
 native  (kernel-router, Form):   p50=0.241 ms  p99=0.343 ms
 CPython (app serve_via_kernel):  p50=11.02 ms  p99=12.54 ms
@@ -621,7 +632,7 @@ the same compute served through the CPython doorway (and a fan-out would add the
 proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
 Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
 
-**Promotability map.** The eleven promoted routes are scalar/list-in, scalar/list-out
+**Promotability map.** The fifteen promoted routes are scalar/list-in, scalar/list-out
 with a flat JSON response — the cleanly-promotable subset. The first four are the
 integer/float scalar+list computes; the next six (`simpson_diversity`, `idea_score`,
 `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) are
@@ -637,19 +648,44 @@ all from existing primitives. Its wire contract is all-scalar-in / flat-out, so 
 needed NO structural marshalling (an earlier reading mislabeled it as nested — many
 flat fields is not a nested object).
 
-The remaining grounded routes split into two honest tiers, NOT one:
-- **Parallel-CSV-in, flat-multi-field-out** (`grounded_cost`, and the `cost_vector`
-  / `value_vector` / `grounded_roi` family): the GET surface is parallel csv arrays
-  and the response is flat (no nesting) — their numeric COMPUTATION is promotable
-  with the existing list-fold helpers plus a two-list clamp-fold (`mul` already
-  promotes int×float as the recipe relies on). What `grounded_cost` still needs
-  before it is a clean drop-in is **input fidelity**, not new response capability:
-  the `int(float(x))` commit-int parse, the empty-segment skip (`if x.strip()`), and
-  the 422 on mismatched-length arrays. Named, bounded, the next breath.
+The next four — the grounded family — are the same flat shape. `cost_vector` and
+`value_vector` decompose a single float into CC components, each `round(_,4)` via the
+`round_ndigits` native (CPython-exact half-to-even — `ec=33.333` → `human_attention_cc
+8.3332`, NOT 8.3333). `grounded_roi` folds three unlocks into one handler: max-as-
+comparison (`max2`), `round_ndigits`, and a guarded division (`if remaining>0 …
+else 0.0`, so the kernel never divides by zero). `idea_grounded_cost_sum` sums a float
+field over two parallel CSV arrays with a LEFT-folded `_plus` accumulator seeded `0.0`
+— the grouping that matches CPython's `sum()` to the bit (`0.1+0.2+0.3` →
+`0.6000000000000001`, the adversarial-float proof that a right fold would fail). All
+four are scalar/parallel-CSV-in, flat-out, from existing primitives — the work per
+route was the param-parse + JSON-emit, not new kernel capability.
+
+The remaining grounded routes split into two honest tiers, NOT one — each DEFERRED for
+a named capability gap:
+- **Parallel-CSV-in needing input fidelity** (`grounded_cost`): the GET surface is
+  parallel csv arrays and the response is flat — its numeric COMPUTATION is promotable
+  with the existing list-fold + `min2`/`max2` clamp helpers. What it still needs before
+  it is a clean drop-in is **input fidelity** the native serve doesn't carry: the
+  `int(float(x))` commit-int parse (parsing `"3.0"` → int `3`, which `str_to_int`
+  rejects), the empty-segment skip (`if x.strip()`), and a 422 on mismatched-length
+  arrays — an error-status path the always-200 native serve has no expression for.
+  (`idea_grounded_cost_sum` PROMOTED above shares the empty-skip / 422 host concerns,
+  but its happy path is `float(x)`-only and equal-length — the native is byte-identical
+  on every well-formed call, so it promotes cleanly where `grounded_cost`'s `int(float(x))`
+  blocks it.) Named, bounded, the next breath.
 - **Structured-record-in** (`idea_marginal_from_record`, `idea_grounding_summary`,
   `coherence_summary_score`): these read a STRUCTURED record (a dict/object request
-  binding) — genuinely needing request-side structural-record marshalling in the
-  native handler (still an open breath).
+  binding) and/or do host-side heterogeneous-collection walks — genuinely needing
+  request-side structural-record marshalling in the native handler (still an open breath).
+
+The three belief/concept matching routes (`concept_match_score`, `tag_match_score`,
+`worldview_alignment`) are also DEFERRED, each for a named string-collection gap the
+flat-numeric helpers don't carry: `concept_match_score` echoes regex-tokenized keywords
+(`re.findall` + stopword filter — host text preprocessing the kernel-router can't
+reproduce); `tag_match_score` needs string-list dedup + a `str_eq` membership fold;
+`worldview_alignment`'s scalar cosine IS replicable (`math_sqrt`), but its `matched_axes`
+output zips float predicates with axis-name strings into a string list — string-collection
+construction the helpers lack.
 
 This manifest is the durable flip's native surface, ready for the cutover; it does
 NOT flip — the standing shadow still fans out every route.
