@@ -483,6 +483,22 @@ interface BMLSourceParser [public, parser, bootstrapBoundary] {
    }
 }
 
+class BMLParsedSourceParser [public, parser, bootstrapBoundary] : BMLSourceParser {
+   section [private] {
+      BMLSourceDeclaration[] m_hDeclarations;
+   }
+
+   section [public] {
+      BMLParsedSourceParser( BMLSourceDeclaration[] hDeclarations ) {
+         m_hDeclarations = hDeclarations;
+      }
+
+      BMLSourceDeclaration[] ParseDeclarations( String strSourcePath ) [override] {
+         return m_hDeclarations;
+      }
+   }
+}
+
 class BMLSourceCarrier [public, value, carrier] : CompilerDeclaration<BMLSourceDeclaration> {
    section [public] {
       BMLSourceCarrier(
@@ -567,11 +583,84 @@ class BMLCompilerSourceLoweringFlow [public, concrete, lowering, selfHosting] : 
    }
 }
 
+class BMLCompilerBootstrapImage [public, value, bootstrapBoundary] {
+   section [private] {
+      String m_strSourcePath;
+      String m_strImagePath;
+      String m_strCompilerVersion;
+      String m_strSourceHash;
+   }
+
+   section [public] {
+      BMLCompilerBootstrapImage(
+         String strSourcePath,
+         String strImagePath,
+         String strCompilerVersion,
+         String strSourceHash ) {
+         m_strSourcePath = strSourcePath;
+         m_strImagePath = strImagePath;
+         m_strCompilerVersion = strCompilerVersion;
+         m_strSourceHash = strSourceHash;
+      }
+
+      String SourcePath() [get] {
+         return m_strSourcePath;
+      }
+
+      String ImagePath() [get] {
+         return m_strImagePath;
+      }
+
+      String CompilerVersion() [get] {
+         return m_strCompilerVersion;
+      }
+
+      String SourceHash() [get] {
+         return m_strSourceHash;
+      }
+   }
+}
+
+class BMLBootstrapRatchet [public, bootstrapBoundary, selfHosting] {
+   section [class, public] {
+      const String SeedImageExtension = ".fkb";
+      const String SourceAuthority = "BML source";
+      const String PromotionRule = "promote a new .fkb only after source compile and sibling proof";
+      const String RecoveryRule = "compile BML source with the previous proven .fkb until the next image proves itself";
+   }
+
+   section [public] {
+      bool CanCompileWithSeed( BMLCompilerBootstrapImage hSeedImage ) {
+         return true;
+      }
+
+      bool CanPromote(
+         BMLCompilerBootstrapImage hOldImage,
+         BMLCompilerBootstrapImage hNewImage,
+         bool bSourceProof,
+         bool bSiblingProof ) {
+         if ( bSourceProof == false ) return false;
+         if ( bSiblingProof == false ) return false;
+
+         return true;
+      }
+
+      String Authority() [get] {
+         return SourceAuthority;
+      }
+
+      String Recovery() [get] {
+         return RecoveryRule;
+      }
+   }
+}
+
 class SelfHostingPlan [public, coherent, bootstrapBoundary] {
    section [class, public] {
       const String OwnerLanguage = "BML";
       const String FormRole = "minimum bootstrap and proof carrier";
       const String ReleaseRule = "release non-bootstrap s-expression compiler logic";
+      const String BootstrapImageExtension = ".fkb";
    }
 
    section [public] {
@@ -588,6 +677,10 @@ class SelfHostingPlan [public, coherent, bootstrapBoundary] {
 
       String NextRetirementTarget() [get] {
          return ReleaseRule;
+      }
+
+      String BootstrapRatchetRule() [get] {
+         return "source-proven BML compiler image replaces previous .fkb";
       }
    }
 }

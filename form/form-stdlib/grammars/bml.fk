@@ -985,6 +985,28 @@
             (bml-body-source-values body-component)
             0))
 
+    (defn bml-body-source-return-object-at? (values)
+        (if (gt (len values) 2)
+            (if (str_eq (head values) "return")
+                (str_eq (nth values 2) ";")
+                false)
+            false))
+
+    (defn bml-body-source-return-object-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-object-at? values)
+                (bml-body-source-return-object-count-loop
+                    (drop 3 values)
+                    (add count 1))
+                (bml-body-source-return-object-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-object-count (body-component)
+        (bml-body-source-return-object-count-loop
+            (bml-body-source-values body-component)
+            0))
+
     (defn bml-body-source-object-value (self env name)
         (if (str_eq name "null") (empty)
             (if (record_has self name)
@@ -995,6 +1017,158 @@
         (record_get
             (bml-body-source-object-value self env object-name)
             member-name))
+
+    (defn bml-body-source-return-receiver-call0-at? (values)
+        (if (gt (len values) 6)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) ".")
+                    (if (str_eq (nth values 4) "(")
+                        (if (str_eq (nth values 5) ")")
+                            (str_eq (nth values 6) ";")
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-receiver-call0-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-receiver-call0-at? values)
+                (bml-body-source-return-receiver-call0-count-loop
+                    (drop 7 values)
+                    (add count 1))
+                (bml-body-source-return-receiver-call0-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-receiver-call0-count (body-component)
+        (bml-body-source-return-receiver-call0-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-return-receiver-call0-eq-string-at? (values)
+        (if (gt (len values) 8)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) ".")
+                    (if (str_eq (nth values 4) "(")
+                        (if (str_eq (nth values 5) ")")
+                            (if (str_eq (nth values 6) "==")
+                                (str_eq (nth values 8) ";")
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-receiver-call0-eq-string-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-receiver-call0-eq-string-at? values)
+                (bml-body-source-return-receiver-call0-eq-string-count-loop
+                    (drop 9 values)
+                    (add count 1))
+                (bml-body-source-return-receiver-call0-eq-string-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-receiver-call0-eq-string-count (body-component)
+        (bml-body-source-return-receiver-call0-eq-string-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-return-implicit-call1-receiver-call0-at? (values)
+        (if (gt (len values) 9)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) "(")
+                    (if (str_eq (nth values 4) ".")
+                        (if (str_eq (nth values 6) "(")
+                            (if (str_eq (nth values 7) ")")
+                                (if (str_eq (nth values 8) ")")
+                                    (str_eq (nth values 9) ";")
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-implicit-call1-receiver-call0-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-implicit-call1-receiver-call0-at? values)
+                (bml-body-source-return-implicit-call1-receiver-call0-count-loop
+                    (drop 10 values)
+                    (add count 1))
+                (bml-body-source-return-implicit-call1-receiver-call0-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-implicit-call1-receiver-call0-count (body-component)
+        (bml-body-source-return-implicit-call1-receiver-call0-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-return-constructor3-at? (values)
+        (if (gt (len values) 9)
+            (if (str_eq (head values) "return")
+                (if (str_eq (nth values 2) "(")
+                    (if (str_eq (nth values 4) ",")
+                        (if (str_eq (nth values 6) ",")
+                            (if (str_eq (nth values 8) ")")
+                                (str_eq (nth values 9) ";")
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-return-constructor3-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-return-constructor3-at? values)
+                (bml-body-source-return-constructor3-count-loop
+                    (drop 10 values)
+                    (add count 1))
+                (bml-body-source-return-constructor3-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-return-constructor3-count (body-component)
+        (bml-body-source-return-constructor3-count-loop
+            (bml-body-source-values body-component)
+            0))
+
+    (defn bml-body-source-if-local-eq-string-return-true-at? (values)
+        (if (gt (len values) 8)
+            (if (str_eq (head values) "if")
+                (if (str_eq (nth values 1) "(")
+                    (if (str_eq (nth values 3) "==")
+                        (if (str_eq (nth values 5) ")")
+                            (if (str_eq (nth values 6) "return")
+                                (if (str_eq (nth values 7) "true")
+                                    (str_eq (nth values 8) ";")
+                                    false)
+                                false)
+                            false)
+                        false)
+                    false)
+                false)
+            false))
+
+    (defn bml-body-source-if-local-eq-string-return-true-count-loop (values count)
+        (if (nil? values) count
+            (if (bml-body-source-if-local-eq-string-return-true-at? values)
+                (bml-body-source-if-local-eq-string-return-true-count-loop
+                    (drop 9 values)
+                    (add count 1))
+                (bml-body-source-if-local-eq-string-return-true-count-loop
+                    (tail values)
+                    count))))
+
+    (defn bml-body-source-if-local-eq-string-return-true-count (body-component)
+        (bml-body-source-if-local-eq-string-return-true-count-loop
+            (bml-body-source-values body-component)
+            0))
 
     (defn bml-body-source-instanceof? (value class-name)
         (if (record? value)
@@ -1271,16 +1445,93 @@
             (bml-body-source-object-value self env (nth values 1))
             (bml-body-source-member-value self env (nth values 3) (nth values 5))))
 
+    (defn bml-body-source-eval-return-object-at (values self env)
+        (bml-body-source-object-value self env (nth values 1)))
+
+    (defn bml-body-source-eval-return-receiver-call0-at (values self env)
+        (method_invoke
+            (bml-body-source-object-value self env (nth values 1))
+            (nth values 3)))
+
+    (defn bml-body-source-eval-return-receiver-call0-eq-string-at (values self env)
+        (str_eq
+            (bml-body-source-eval-return-receiver-call0-at values self env)
+            (nth values 7)))
+
+    (defn bml-body-source-eval-return-implicit-call1-receiver-call0-at (values self env)
+        (method_invoke
+            self
+            (nth values 1)
+            (method_invoke
+                (bml-body-source-object-value self env (nth values 3))
+                (nth values 5))))
+
+    (defn bml-body-source-construct3 (type-name first second third)
+        (if (str_eq type-name "BMLSourceCarrier")
+            (record_new
+                (bml-body-source-constructor-blueprint type-name)
+                "bmlClass"
+                type-name
+                "m_strKind"
+                first
+                "m_strName"
+                second
+                "m_hSource"
+                third)
+            (record_new
+                (bml-body-source-constructor-blueprint type-name)
+                "bmlClass"
+                type-name
+                "arg0"
+                first
+                "arg1"
+                second
+                "arg2"
+                third)))
+
+    (defn bml-body-source-eval-return-constructor3-at (values self env)
+        (bml-body-source-construct3
+            (nth values 1)
+            (bml-body-source-object-value self env (nth values 3))
+            (bml-body-source-object-value self env (nth values 5))
+            (bml-body-source-object-value self env (nth values 7))))
+
+    (defn bml-body-source-exec-if-local-eq-string-return-true-loop (values self env)
+        (if (nil? values) false
+            (if (bml-body-source-if-local-eq-string-return-true-at? values)
+                (if (str_eq
+                        (bml-body-source-object-value self env (nth values 2))
+                        (nth values 4))
+                    true
+                    (bml-body-source-exec-if-local-eq-string-return-true-loop
+                        (drop 9 values)
+                        self
+                        env))
+                (bml-body-source-exec-if-local-eq-string-return-true-loop
+                    (tail values)
+                    self
+                    env))))
+
     (defn bml-body-source-exec-return-loop (values self env)
         (if (nil? values) (empty)
             (if (bml-body-source-return-member-add-at? values)
                 (bml-body-source-eval-return-member-add-at values self env)
             (if (bml-body-source-return-member-eq-at? values)
                 (bml-body-source-eval-return-member-eq-at values self env)
+            (if (bml-body-source-return-object-at? values)
+                (bml-body-source-eval-return-object-at values self env)
+            (if (bml-body-source-return-receiver-call0-at? values)
+                (bml-body-source-eval-return-receiver-call0-at values self env)
+            (if (bml-body-source-return-receiver-call0-eq-string-at? values)
+                (bml-body-source-eval-return-receiver-call0-eq-string-at values self env)
+            (if (bml-body-source-return-implicit-call1-receiver-call0-at? values)
+                (bml-body-source-eval-return-implicit-call1-receiver-call0-at values self env)
+            (if (bml-body-source-return-constructor3-at? values)
+                (bml-body-source-eval-return-constructor3-at values self env)
                 (bml-body-source-exec-return-loop
                     (tail values)
                     self
-                    env)))))
+                    env))))))))))
 
     (defn bml-body-source-exec-return (body-component self env)
         (bml-body-source-exec-return-loop
@@ -1517,7 +1768,17 @@
     (defn bml-body-source-constructor-blueprint (type-name)
         (if (str_eq type-name "ParseStack")
             (make_nodeid 1 2 99 9241)
-            (make_nodeid 1 2 99 9240)))
+        (if (str_eq type-name "BMLSourceDeclaration")
+            (make_nodeid 1 2 99 9261)
+        (if (str_eq type-name "BMLSourceCarrier")
+            (make_nodeid 1 2 99 9262)
+        (if (str_eq type-name "BMLParsedSourceParser")
+            (make_nodeid 1 2 99 9263)
+        (if (str_eq type-name "BMLCompilerDeclarationLoweringStage")
+            (make_nodeid 1 2 99 9264)
+        (if (str_eq type-name "BMLCompilerSourceLoweringFlow")
+            (make_nodeid 1 2 99 9265)
+            (make_nodeid 1 2 99 9240))))))))
 
     (defn bml-body-source-construct0 (type-name)
         (record_new
@@ -4211,7 +4472,9 @@
                 "CompilerDeclaration" "CompilerSectionModel"
                 "CompilerUnitModel" "BMLDeclarationLoweringStage"
                 "BMLSourceLoweringFlow" "SelfHostingPlan"
-                "BMLSourceDeclaration" "BMLSourceCarrier"
+                "BMLSourceDeclaration" "BMLParsedSourceParser"
+                "BMLCompilerBootstrapImage" "BMLBootstrapRatchet"
+                "BMLSourceCarrier"
                 "BMLCompilerDeclarationLoweringStage"
                 "BMLCompilerSourceLoweringFlow"
                 "CSharpLanguage" "JavaLanguage" "TypeScriptLanguage"

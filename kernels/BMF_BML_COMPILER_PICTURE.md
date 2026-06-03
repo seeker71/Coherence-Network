@@ -92,6 +92,7 @@ The picture also now lives as BML source:
 - It names reusable ports for BML, CSharp, Java, TypeScript, Go, and Rust without changing the core flow.
 - It now declares the source-lowering architecture in BML: `CompilerCarrier`, `CompilerDeclaration<T>`, `CompilerSectionModel<T>`, `CompilerUnitModel<T>`, `SourceLowerer<TSource,TDeclaration,TCarrier>`, `BMLDeclarationLoweringStage<TDeclaration,TCarrier>`, `BMLSourceLoweringFlow<TSource,TDeclaration,TCarrier>`, and `SelfHostingPlan`.
 - It also declares the concrete BML compiler lowerer in BML: `BMLSourceDeclaration`, `BMLSourceParser`, `BMLSourceCarrier`, `BMLCompilerDeclarationLoweringStage`, and `BMLCompilerSourceLoweringFlow`. The parser adapter is the named bootstrap boundary; declaration classification, carrier construction, and source-unit lowering are high-level BML class/template code.
+- It names the bootstrap-image ratchet in BML: `BMLCompilerBootstrapImage` records the source path, `.fkb` image path, compiler version, and source hash; `BMLBootstrapRatchet` states that BML source is the authority and that a new `.fkb` promotes only after source compile proof plus sibling proof.
 - [`form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
 
 Proof command:
@@ -143,6 +144,40 @@ cd form
 
 Expected result: `31` with `1 ok, 0 divergent`.
 
+The current executable proof goes one step further than structure: it parses the BML source method bodies and dispatches them through the runtime record model. It proves the parser adapter, declaration stage, typed carrier, and language/bootstrap classifiers execute from BML method bodies.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk
+```
+
+Expected result: `34` with `1 ok, 0 divergent`.
+
+## Bootstrap Image Ratchet
+
+The bootstrap image is a recoverable compiler body, not a competing source language. The BML source owns compiler architecture and behavior; `.fkb` stores a proven image that can compile that source when the newest source is not yet trusted.
+
+The ratchet is:
+
+1. Keep the previous proven `.fkb` as the seed compiler image.
+2. Write compiler improvements in high-level BML classes, templates, generics, sections, and multiline methods.
+3. Compile the BML compiler source with the previous `.fkb`.
+4. Promote the new `.fkb` only when source compile proof and sibling kernel proof both pass.
+5. Recover by compiling BML source with the previous proven `.fkb` until the next image proves itself.
+
+This lets the bootstrap surface become archival. Once a working `.fkb` can compile the BML compiler, new compiler features should land in BML source first; Form and s-expression code remain minimum loaders, primitive kernel edges, and proof harnesses.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk
+```
+
+Expected result: `26` with `1 ok, 0 divergent`.
+
 ## Bootstrap Boundary
 
 The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.
@@ -152,17 +187,19 @@ The release direction is:
 1. Keep the BML compiler/compiler-compiler body in high-level BML class and template source.
 2. Shrink Form/s-expression compiler logic to bootstrap loaders, primitive kernel edges, and sibling proof harnesses.
 3. Move parser, model, flow, registry, emitter, and compiler-compiler behavior into BML.
-4. Retire non-bootstrap s-expression compiler code once the BML source proves the same behavior through self-hosted compilation.
+4. Store the last proven compiler image as `.fkb` so recovery never requires expanding bootstrap code again.
+5. Retire non-bootstrap s-expression compiler code once the BML source proves the same behavior through self-hosted compilation.
 
 That means Form remains the witness substrate; BML owns the compiler language.
 
 ## Next Refinements
 
-1. Execute `BMLCompilerSourceLoweringFlow` through the BML compiler path, then retire the matching Form proof bridge.
-2. Move grammar ports into runtime registry capsules.
-3. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
-4. Lift the BML object model into canonical compiler objects.
-5. Extend Python, TypeScript, Go, and Rust grammar ports through the same contract.
-6. Add Java and CSharp ports without changing the core flow.
+1. Emit the first source-proven BML compiler `.fkb`, then prove that image compiles the same BML source.
+2. Execute `BMLCompilerSourceLoweringFlow` through the BML compiler path, then retire the matching Form proof bridge.
+3. Move grammar ports into runtime registry capsules.
+4. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
+5. Lift the BML object model into canonical compiler objects.
+6. Extend Python, TypeScript, Go, and Rust grammar ports through the same contract.
+7. Add Java and CSharp ports without changing the core flow.
 
 The picture gets more abstract by finding common ground, not by hiding the evidence.
