@@ -1145,6 +1145,179 @@
     (respond 422 "{\"detail\":\"event_counts and actual_values must have the same length\"}")))))))
 
 ; ===========================================================================
+; /api/utils/concept_match_score  — the WHOLE-LIFECYCLE-native counterpart of
+;   concept_auto_tagger._extract_keywords + _score_concept. The serve_via_kernel
+;   route (kernel_matching.concept_match_score) keeps the regex TOKENIZER host-side
+;   and runs only the score on the kernel; THIS native handler folds BOTH halves —
+;   the tokenizer AND the score — in Form, so the entire request (params → tokenize
+;   → assemble → score → JSON) runs native, no CPython in the path. This is the
+;   LAST /api/utils compute route, the 22nd native handler — the runtime-share
+;   compute spine, complete.
+;
+;   params (FastAPI defaults verbatim):
+;     idea_name ("energy flow") idea_description ("coherence xyz")
+;     concept_name ("Energy Flow")
+;     concept_description ("energy flows as coherence through the body field")
+;     concept_keywords ("Energy,Tissue", CSV)
+;   body:   {"score":<f>,"keywords":["..."],"concept_keywords":["..."],
+;            "runtime":"inline"}  (ConceptMatchScoreResponse field order)
+;
+;   THE TOKENIZER, native + byte-identical. _extract_keywords is
+;     re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())  then stopword-drop + first-seen
+;   dedup. The kernel-native form: scan_run class 2 (is_ascii_alphabetic) yields each
+;   MAXIMAL run of ASCII letters; a run qualifies iff len>=3 AND the byte BEFORE and
+;   the byte AFTER are not ASCII word bytes [A-Za-z0-9_] — that is exactly what the
+;   `\b` anchors mean (a letter-run touching a digit or `_` carries no word-boundary
+;   and is REJECTED ENTIRELY, not truncated: "abc123" -> [], "abc_def" -> []). Each
+;   qualifying run is lowercased (A-Z+32 via ord/byte_to_str). Then stopword-drop
+;   (the 67-word set, hardcoded) + first-seen dedup (str_eq membership). Proven
+;   byte-identical to re.findall over a 200k-string ASCII fuzz (0 mismatches) and
+;   against the live _extract_keywords on representative inputs.
+;
+;   THE ASCII BOUNDARY (the honest scope). `\b` is defined against Python's UNICODE
+;   \w: a non-ASCII LETTER (é, ï, 中) IS \w (so "abcé" -> [], the run touches a word
+;   char), while non-ASCII PUNCTUATION (—, €) is NOT \w (so "abc—def" -> [abc,def]).
+;   Both encode as bytes >=0x80 in UTF-8, indistinguishable to a byte scanner without
+;   a full Unicode word-property table — a disproportionate build for one route. So
+;   the native handler is byte-identical for ASCII input, the SAME ASCII assumption
+;   every native handler here already makes (tag_match_score's plain-token tags,
+;   split_commas). The proven/CAPABLE surface — and the harness — is ASCII; non-ASCII
+;   idea/concept text falls to the serve_via_kernel route + CPython upstream.
+;
+;   THE SCORE (endpoint_concept_match_score_demo.fk EXACTLY, _score_concept verbatim):
+;     concept_text = lower(name + " " + description + " " + join(ckw))
+;     idea_text    = join(keywords)   ;; keywords already lowercased
+;     forward = (count of keywords whose str_find in concept_text >= 0) / len(keywords)
+;     reverse = ckw nonempty ? (count of lower(ckw) found in idea_text)/len(ckw) : 0.0
+;     name_bonus = lower(concept_name) in idea_text ? 0.3 : 0.0
+;     score = round(min(0.5*forward + 0.3*reverse + name_bonus, 1.0), 4)
+;   keywords empty (all-stopword/short idea) -> the host guard: score 0.0, keywords [].
+;   concept_keywords echoed lowercased (the reverse-fold needles + the response field).
+;   Score float repr proven byte-identical to json.dumps over a 400-case fuzz.
+; ===========================================================================
+
+; reverse a list (cms_-local so this block has no definition-order dependency)
+(defn cms_rev_go (xs acc) (if (eq (len xs) 0) acc (cms_rev_go (tail xs) (cons (head xs) acc))))
+
+; ASCII lowercase: A-Z (65..90) -> a-z (+32), every other byte unchanged. Built
+; byte-by-byte via ord (byte value of char_at) + byte_to_str. The exact ASCII
+; restriction of Python str.lower() (which only remaps A-Z among ASCII).
+(defn cms_lc_go (s i n acc)
+  (if (eq i n) acc
+      (do (let b (ord (char_at s i)))
+          (if (if (ge b 65) (le b 90) false)
+              (cms_lc_go s (add i 1) n (str_concat acc (byte_to_str (add b 32))))
+              (cms_lc_go s (add i 1) n (str_concat acc (char_at s i)))))))
+(defn cms_to_lower (s) (cms_lc_go s 0 (str_len s) ""))
+
+; ASCII str.strip(): drop leading/trailing whitespace bytes — the set Python's
+; str.strip() removes within ASCII: tab(9) LF(10) VT(11) FF(12) CR(13),
+; FS/GS/RS/US(28..31), space(32). lstrip finds the first non-ws index; rstrip the
+; last; substring between (empty when all-ws).
+(defn cms_is_ws (b)
+  (if (eq b 32) true (if (if (ge b 9) (le b 13) false) true (if (ge b 28) (le b 31) false))))
+(defn cms_lstrip_i (s i n) (if (ge i n) i (if (cms_is_ws (ord (char_at s i))) (cms_lstrip_i s (add i 1) n) i)))
+(defn cms_rstrip_j (s j) (if (le j 0) 0 (if (cms_is_ws (ord (char_at s (sub j 1)))) (cms_rstrip_j s (sub j 1)) j)))
+(defn cms_strip (s)
+  (do (let n (str_len s))
+  (do (let i (cms_lstrip_i s 0 n))
+  (do (let j (cms_rstrip_j s n))
+      (if (ge i j) "" (substring s i j))))))
+
+; concept keyword bag = [k.strip() for k in concept_keywords.split(",") if k.strip()]
+(defn cms_ckw_go (xs)
+  (if (eq (len xs) 0) (list)
+      (do (let t (cms_strip (head xs)))
+          (if (eq (str_len t) 0) (cms_ckw_go (tail xs)) (cons t (cms_ckw_go (tail xs)))))))
+(defn cms_ckw_list (s) (cms_ckw_go (split_commas s)))
+
+; word-byte test for the `\b` boundary: ASCII \w = [A-Za-z0-9_]
+(defn cms_is_alpha_b (b) (if (if (ge b 65) (le b 90) false) true (if (ge b 97) (le b 122) false)))
+(defn cms_is_word_b (b) (if (cms_is_alpha_b b) true (if (if (ge b 48) (le b 57) false) true (eq b 95))))
+
+; raw tokens (reversed): each maximal ASCII-alpha run (scan_run class 2) that is
+; >=3 chars AND bounded by non-word bytes on both sides, lowercased. Conses onto
+; the front, so the caller reverses to first-seen order.
+(defn cms_tok_go (s i n acc)
+  (if (ge i n) acc
+      (do (let end (scan_run s i 2))
+          (if (gt end i)
+              (do (let runlen (sub end i))
+              (do (let before_ok (if (eq i 0) true (if (cms_is_word_b (ord (char_at s (sub i 1)))) false true)))
+              (do (let after_ok (if (eq end n) true (if (cms_is_word_b (ord (char_at s end))) false true)))
+                  (if (if (ge runlen 3) (if before_ok after_ok false) false)
+                      (cms_tok_go s end n (cons (cms_to_lower (substring s i end)) acc))
+                      (cms_tok_go s end n acc)))))
+              (cms_tok_go s (add i 1) n acc)))))
+
+; str_eq membership of `needle` in a string list
+(defn cms_member (needle xs)
+  (if (eq (len xs) 0) false (if (str_eq (head xs) needle) true (cms_member needle (tail xs)))))
+
+; _extract_keywords' stopword set (67 words; the 1-2 char ones can never reach the
+; filter since tokens are already >=3, but the set is carried verbatim for fidelity)
+(let cms_stopwords (list "a" "about" "an" "and" "are" "as" "at" "be" "been" "being" "but" "by" "can" "could" "did" "do" "does" "for" "from" "had" "has" "have" "he" "her" "his" "how" "i" "if" "in" "into" "is" "it" "its" "may" "might" "my" "no" "not" "of" "on" "or" "our" "she" "should" "so" "that" "the" "their" "then" "they" "this" "through" "to" "up" "was" "we" "were" "what" "when" "where" "which" "who" "will" "with" "would" "you" "your"))
+
+; _extract_keywords' filter over the (in-order) raw tokens: drop stopwords, drop
+; already-kept (first-seen dedup). `kept` accumulates reversed; reverse at the end.
+(defn cms_ek_go (toks kept)
+  (if (eq (len toks) 0) kept
+      (do (let w (head toks))
+          (if (cms_member w cms_stopwords) (cms_ek_go (tail toks) kept)
+              (if (cms_member w kept) (cms_ek_go (tail toks) kept)
+                  (cms_ek_go (tail toks) (cons w kept)))))))
+(defn cms_extract_keywords (text)
+  (cms_rev_go (cms_ek_go (cms_rev_go (cms_tok_go text 0 (str_len text) (list)) (list)) (list)) (list)))
+
+; lowercase every element of a string list (the concept_keywords echo + reverse needles)
+(defn cms_lc_list (xs) (if (eq (len xs) 0) (list) (cons (cms_to_lower (head xs)) (cms_lc_list (tail xs)))))
+
+; join a string list with single spaces (Python " ".join)
+(defn cms_join_go (xs)
+  (if (eq (len xs) 0) ""
+      (if (eq (len xs) 1) (head xs)
+          (str_concat (str_concat (head xs) " ") (cms_join_go (tail xs))))))
+
+; float count of `needles` whose str_find in `haystack` >= 0 (substring membership,
+; the forward/reverse fold; hits 0.0 +1.0 to match _score_concept's int/len float div)
+(defn cms_subcount_go (needles haystack hits)
+  (if (eq (len needles) 0) hits
+      (if (ge (str_find haystack (head needles) 0) 0)
+          (cms_subcount_go (tail needles) haystack (add hits 1.0))
+          (cms_subcount_go (tail needles) haystack hits))))
+
+(defn route_concept_match_score (q)
+  (do (let idea_name (param_present "idea_name" q "energy flow"))
+  (do (let idea_description (param_present "idea_description" q "coherence xyz"))
+  (do (let concept_name (param_present "concept_name" q "Energy Flow"))
+  (do (let concept_description (param_present "concept_description" q "energy flows as coherence through the body field"))
+  (do (let concept_keywords (param_present "concept_keywords" q "Energy,Tissue"))
+  (do (let ckw_list (cms_ckw_list concept_keywords))
+  (do (let ckw_lower (cms_lc_list ckw_list))
+  (do (let keywords (cms_extract_keywords (str_concat (str_concat idea_name " ") idea_description)))
+  (if (eq (len keywords) 0)
+      (str_concat_all (list
+        "{\"score\":0.0,\"keywords\":[],\"concept_keywords\":" (json_str_list ckw_lower)
+        ",\"runtime\":\"inline\"}"))
+      (do (let concept_text (cms_to_lower (cms_join_go (list concept_name concept_description (cms_join_go ckw_list)))))
+      (do (let idea_text (cms_join_go keywords))
+      (do (let name_lower (cms_to_lower concept_name))
+      (do (let forward_hits (cms_subcount_go keywords concept_text 0.0))
+      (do (let forward_score (div forward_hits (len keywords)))
+      (do (let reverse_score
+            (if (gt (len ckw_lower) 0)
+                (div (cms_subcount_go ckw_lower idea_text 0.0) (len ckw_lower))
+                0.0))
+      (do (let name_bonus (if (ge (str_find idea_text name_lower 0) 0) 0.3 0.0))
+      (do (let raw (_plus (_plus (mul 0.5 forward_score) (mul 0.3 reverse_score)) name_bonus))
+      (do (let score (round_ndigits (min2 raw 1.0) 4))
+          (str_concat_all (list
+            "{\"score\":" (value_str score)
+            ",\"keywords\":" (json_str_list keywords)
+            ",\"concept_keywords\":" (json_str_list ckw_lower)
+            ",\"runtime\":\"inline\"}")))))))))))))))))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -1176,4 +1349,5 @@
     (list "/api/utils/tag_match_score"      route_tag_match_score)
     (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
     (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
-    (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)))
+    (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
+    (list "/api/utils/concept_match_score"     route_concept_match_score)))

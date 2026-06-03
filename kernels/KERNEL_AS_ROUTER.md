@@ -579,6 +579,7 @@ the grounded family: `cost_vector` / `value_vector` (CC decompositions via
 | `/api/utils/coherence_summary_score` | `task_count` `target_state_count` `evidence_count` `task_card_count` `task_card_scores_len` (ints), `task_card_scores_sum` (float) — all host-extracted scalars | `{"score":<float>,"task_count":<int>,"target_state_coverage":<float>,"task_card_coverage":<float>,"task_card_quality":<float>,"evidence_coverage":<float>,"runtime":"inline"}` (`safe_ratio` coverages + `clamp01` weighted score, each `round(_,4)`) |
 | `/api/utils/idea_marginal_from_record` | `pv` `av` `conf` `ec` `ac` `rr` (floats) — the 6 record fields pre-extracted by the host | `{"marginal_return":<float>,"idea":{…6 floats},"runtime":"inline"}` (Method-B marginal CC, `round(_,6)`; the echoed `idea` is a fixed-shape dict[str,float] built from the params) |
 | `/api/utils/idea_grounding_summary` | `event_counts` (csv ints via `int(float(x))`), `actual_values` (csv floats) — two parallel scalar-lists | `{"spec_count":<int>,"total_event_count":<int>,"specs_with_value_count":<int>,"max_event_count":<int>,"spec_count_in":<int>,"runtime":"inline"}`, or **422 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
+| `/api/utils/concept_match_score` | `idea_name` `idea_description` `concept_name` `concept_description` (strings), `concept_keywords` (csv strings) — ASCII text | `{"score":<float>,"keywords":["…"],"concept_keywords":["…"],"runtime":"inline"}` (the WHOLE pipeline native: the `re.findall(r"\b[a-zA-Z]{3,}\b", …)` tokenizer via `scan_run`+boundary test, 67-word stopword drop + first-seen dedup, then `_score_concept`'s bidirectional `str_find` membership fold; empty-keyword bag → `score 0.0, keywords []`) |
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -591,7 +592,7 @@ native-kernel`.
 [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
 proves the promotion two ways at once — boot the real local app as the CPython
 oracle, stand the kernel-router (production manifest) in front, and for each of
-the twenty-one routes over representative + edge params (101 cases):
+the twenty-two routes over representative + edge params (109 cases):
 
 ```
 [native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
@@ -606,15 +607,18 @@ the twenty-one routes over representative + edge params (101 cases):
 [native  ] /api/utils/coherence_summary_score -> {"score":0.665,"task_count":10,…,"task_card_quality":0.75,…}  safe_ratio coverages + clamp01 weighted score
 [native  ] /api/utils/idea_marginal_from_record?pv=10&av=0&conf=1&ec=1&ac=5&rr=0 -> {"marginal_return":100.0,"idea":{"potential_value":10.0,…},…}  remaining_cost floor 0.1, idea dict echoed
 [native  ] /api/utils/idea_grounding_summary?event_counts=3,0&actual_values=1.5 -> 422 {"detail":"event_counts and actual_values must have the same length"}  observable "no"
-… all 101 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
+[native  ] /api/utils/concept_match_score?idea_name=Energy%20FLOW%20energy&idea_description=Coherence%20coherence -> {"score":0.95,"keywords":["energy","flow","coherence"],…}  in-Form tokenizer (lowercase + first-seen dedup), byte-identical to re.findall
+… all 109 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
   0.6666666666666667, 0.9999999999999999), CPython's -0.0 vs +0.0 on single-phase
   entropy, the grounded_value confidence weighted-sum's float-assoc artifact
   (0.42000000000000004, 0.5800000000000001) and its [0.05, 0.95] clamp + zero-
   guards, deterministic + uniform softmax, the grounded family's round_ndigits
   half-to-even (8.3332, 16.6675), grounded_roi's guarded division + max-as-
   comparison, idea_grounded_cost_sum's LEFT-folded float-field sum, worldview_alignment's
-  cosine (irrational 0.7071067811865475 + present-empty-vector → 0.5 zero-denom) and
-  tag_match_score's first-seen dedup + str_eq membership ratio (1/3 = 0.3333333333333333)
+  cosine (irrational 0.7071067811865475 + present-empty-vector → 0.5 zero-denom),
+  tag_match_score's first-seen dedup + str_eq membership ratio (1/3 = 0.3333333333333333),
+  and concept_match_score's in-Form tokenizer (scan_run alpha-runs + \b-boundary test +
+  stopword/dedup, byte-identical to re.findall for ASCII) + bidirectional str_find score
 
 native  (kernel-router, Form):   p50=0.241 ms  p99=0.343 ms
 CPython (app serve_via_kernel):  p50=11.02 ms  p99=12.54 ms
@@ -645,7 +649,7 @@ the same compute served through the CPython doorway (and a fan-out would add the
 proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
 Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
 
-**Promotability map.** The twenty-one promoted routes are scalar/list-in, scalar/list-out
+**Promotability map.** The twenty-two promoted routes are scalar/list-in, scalar/list-out
 with a flat JSON response — the cleanly-promotable subset. The first four are the
 integer/float scalar+list computes; the next six (`simpson_diversity`, `idea_score`,
 `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) are
@@ -733,13 +737,39 @@ order-deduped lists (the `tm_dedup` + `tm_member` fold), with the `0.5` empty-gu
 CPython oracle across representative + edge params (verified by the harness against the
 real app; the 400 hand-checked like grounded_cost's 422).
 
-`concept_match_score` stays DEFERRED for a genuine host-preprocessing gap the kernel-router
-can't reproduce: it echoes regex-tokenized `keywords` (`_extract_keywords`'s
-`re.findall(r"\b[a-zA-Z]{3,}\b", …)` + a stopword set + dedup) and `concept_keywords` in
-its response, so the WIRE BODY — not just the score — depends on a regex tokenizer +
-stopword list living in `concept_auto_tagger`. Forcing regex tokenization into the kernel
-is the wrong build; the score's str_find membership fold is replicable, but the echoed
-host-tokenized arrays are not, so the route is not cleanly byte-identical natively.
+`concept_match_score` is now PROMOTED — the LAST `/api/utils` compute route, the
+twenty-second native handler, completing the runtime-share compute spine. It is the
+first route to fold a TEXT TOKENIZER into Form: the WIRE BODY echoes the tokenized
+`keywords` (and the lowercased `concept_keywords`), so unlike `tag_match_score` — which
+took already-host-tokenized tags — the whole pipeline (tokenize → assemble → score →
+JSON) had to run native. The tokenizer is `_extract_keywords`'s
+`re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())` + a 67-word stopword drop + first-seen
+dedup; its kernel-native form needs NO new native — `scan_run` class 2
+(`is_ascii_alphabetic`) yields each MAXIMAL ASCII-letter run, and a run qualifies iff
+`len>=3` AND the byte BEFORE and the byte AFTER are not ASCII word bytes `[A-Za-z0-9_]`,
+which is exactly what the `\b` anchors mean (a letter-run touching a digit or `_` carries
+no word-boundary and is REJECTED ENTIRELY, not truncated: `"abc123"` → `[]`, `"abc_def"`
+→ `[]`). Each run is lowercased via `ord`/`byte_to_str` (A-Z+32); the stopword drop +
+dedup fold with `str_eq` membership. The score is `_score_concept` verbatim (the
+bidirectional `str_find` membership fold, `0.5*forward + 0.3*reverse + name_bonus`,
+`round(min(_,1.0),4)`), with the host's empty-keyword guard reproduced (all-stopword/short
+idea → `score 0.0, keywords []`).
+
+The honest scope is **ASCII**. `\b` is defined against Python's UNICODE `\w`: a non-ASCII
+LETTER (`é`, `中`) IS `\w` (so `"abcé"` → `[]`), while non-ASCII PUNCTUATION (`—`, `€`) is
+NOT `\w` (so `"abc—def"` → `[abc,def]`) — both encode as bytes `>=0x80` in UTF-8,
+indistinguishable to a byte scanner without a full Unicode word-property table, a
+disproportionate build for one route. So the native handler is byte-identical for ASCII
+input — the SAME ASCII assumption every native handler here already makes
+(`tag_match_score`'s plain-token tags, `split_commas`); non-ASCII idea/concept text falls
+to the `serve_via_kernel` route + CPython upstream. The tokenizer was proven byte-identical
+to `re.findall` over a **200,000-string ASCII fuzz** (0 mismatches) and the score float
+repr to `json.dumps` over a **400-case fuzz** (0 mismatches); end-to-end the route is
+byte-identical to the live `_extract_keywords` + `_score_concept` across the harness's 8
+representative cases (defaults, no-overlap zero, the empty-keyword guard, mixed case +
+dedup, the `>=3`-char filter + digit-adjacency rejection, name_bonus + the `1.0` ceiling
+clamp, present-empty `concept_keywords`, long-float scores `0.95`/`0.9333`/`0.675`) —
+verified by the harness against the real booted app.
 
 This manifest is the durable flip's native surface, ready for the cutover; it does
 NOT flip — the standing shadow still fans out every route.

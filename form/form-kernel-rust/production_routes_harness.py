@@ -230,6 +230,28 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?event_counts=3.0,7.9&actual_values=1.0,2.0",    # int(float) truncation 7.9->7 -> total 10, max 7
         "?event_counts=3,0,7,&actual_values=1.5,0.0,2.25",  # trailing-comma empty-segment skip -> 3,10,2,7
     ]),
+    # ----- batch 5: the LAST /api/utils compute route — the whole-lifecycle-native
+    # concept_match_score (the 22nd native handler; completes the compute spine). The
+    # tokenizer (re.findall(r"\b[a-zA-Z]{3,}\b", text.lower()) + 67-word stopword drop +
+    # first-seen dedup) AND _score_concept both run in Form, byte-identical for ASCII
+    # input (proven against re.findall over a 200k fuzz and against json.dumps of the
+    # score over a 400-case fuzz). All cases are 200 (the empty-keyword bag is a 0.0
+    # BODY via the host guard, not a non-200). The cases exercise: defaults; no-overlap
+    # zero; the all-stopword/short idea -> empty-keyword guard (score 0.0, keywords []);
+    # mixed case + first-seen dedup; the >=3-char filter AND digit-adjacency rejection
+    # ("energy123" -> dropped, "ab"/"cd" -> dropped); name_bonus + the 1.0 ceiling clamp;
+    # present-empty concept_keywords -> [] (reverse 0, the float repr 0.675); a long-float
+    # score (0.9333, 0.95) that pins round_ndigits + value_str == json.dumps.
+    ("/api/utils/concept_match_score", [
+        "",                                              # defaults -> 0.825
+        "?idea_name=quantum%20gravity&idea_description=spacetime%20curvature",  # no overlap -> 0.0
+        "?idea_name=the%20and%20of%20a&idea_description=is%20to%20be",          # all stopword/short -> empty-kw guard 0.0, keywords []
+        "?idea_name=Energy%20FLOW%20energy&idea_description=Coherence%20coherence",  # mixed case + dedup -> [energy,flow,coherence], 0.95
+        "?idea_name=ab%20cd%20xyz&idea_description=energy123%20flow",           # <3 filter + digit-adjacency reject -> [xyz,flow], 0.25
+        "?idea_name=energy%20flow&idea_description=coherence&concept_name=energy%20flow&concept_description=energy&concept_keywords=energy,flow",  # name_bonus + clamp -> 0.9333
+        "?concept_keywords=",                            # present-empty ckw -> [] reverse 0 -> 0.675
+        "?idea_name=love%20truth%20care&idea_description=mind%20heart&concept_keywords=Stone,Metal,Wood",  # no overlap, lowercased ckw echo -> 0.0
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.
