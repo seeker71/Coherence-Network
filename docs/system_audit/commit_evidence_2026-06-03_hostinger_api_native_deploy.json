@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/hostinger-api-native-deploy-20260603",
+  "commit_scope": "Add a Hostinger API-native deploy carrier that avoids GitHub-runner SSH/SCP by deploying the existing Docker project through Hostinger's Docker API.",
+  "files_owned": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.web",
+    "docs/system_audit/commit_evidence_2026-06-03_hostinger_api_native_deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/test_hostinger_api_native_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/hostinger_api_native_deploy.sh scripts/test_hostinger_api_native_deploy.sh",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-api-native-deploy.yml\"); puts \"yaml ok\"'",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_hostinger_api_native_deploy.sh",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "git diff --check"
+    ],
+    "notes": "The focused test proves the deploy request reads existing Hostinger project content/environment, preserves provider-side environment values, rewrites build contexts to an immutable Git SHA, adds the web DEPLOYED_SHA build arg, and posts to the Hostinger Docker API without SSH/SCP."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Current public production remains at deployed_sha 5dad3d6f0d7f48495b9644fde0e8d26572962ae1. Hostinger Auto Deploy run 26894162844 for 70cbbec4314c7b8845596e661869b8d9ed478402 failed before roll-forward at GitHub-runner SSH/SCP to root@187.77.152.42. The new API-native deploy carrier is not yet merged or executed against production."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "After merge, the manual Hostinger API Native Deploy workflow can deploy the current SHA through Hostinger's Docker project API using the source-owned Dockerfile.web and Git SHA build contexts, avoiding the failing inbound SSH transport.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "reference_failures": [
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26894162844"
+    ],
+    "test_flows": [
+      "scripts/test_hostinger_api_native_deploy.sh",
+      "After merge: gh workflow run hostinger-api-native-deploy.yml --repo seeker71/Coherence-Network -r main -f sha=<main-sha>"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The API-native carrier is locally proven but still needs PR merge and a live Hostinger API deployment run before production SHA parity is restored."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "production-deploy-proof"
+  ],
+  "task_ids": [
+    "hostinger-api-native-deploy-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "operations-credential"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/hostinger_api_native_deploy.sh reads the live Hostinger project, transforms only source build contexts, updates SHA values in provider environment, and posts back through /api/vps/v1/virtual-machines/{id}/docker.",
+    "scripts/test_hostinger_api_native_deploy.sh proves the generated request preserves provider environment values and targets Git SHA contexts.",
+    "Dockerfile.web makes the web image build source-owned and bakes deployed_sha into api/config/api.json for web health-proxy SHA parity.",
+    "Local Docker daemon was unavailable, so Docker image build proof is deferred to the Hostinger API Native Deploy workflow."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.web",
+    "docs/system_audit/commit_evidence_2026-06-03_hostinger_api_native_deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/test_hostinger_api_native_deploy.sh"
+  ],
+  "change_intent": "process_only"
+}
