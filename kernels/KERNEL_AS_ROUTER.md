@@ -145,7 +145,7 @@ gap, named precisely:
 |-----|-----------------|-----------------------------|
 | **HTTP version** | serves HTTP/1.1 with keep-alive on BOTH hops — on the client hop a worker holds the accepted connection and serves multiple requests on it (one TCP handshake amortized across the connection), and on the fan-out hop each worker reuses a per-worker keep-alive connection to the upstream (the router→upstream handshake amortized across requests, the symmetric saving); every response is Content-Length-framed so the reader knows exactly where one ends and the next begins; the client's intent is honored (HTTP/1.1 default-keep-alive unless `Connection: close`, HTTP/1.0 close-unless-`keep-alive`); a 5s idle read-timeout closes a quiet client connection so it cannot pin a worker; over-read bytes (pipelining) are carried into the next request on both hops, never dropped | chunked transfer encoding (today every response is Content-Length-framed; a streamed/unknown-length body would need chunked — and an upstream chunked response is read-to-close and not pooled), HTTP/2 behind Traefik |
 | **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
-| **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; 1 MiB body cap rejected with 413; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
+| **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; a generous request shape-threshold (64 MiB default, `COH_ROUTER_REQUEST_SHAPE_BYTES`) observed and answered observably when a body is larger than a worker can hold; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
 | **Fan-out proxy** | reuses a per-worker keep-alive connection to the upstream, framing each response by Content-Length, reconnecting transparently on a stale pooled connection — repeated fan-outs amortize the upstream TCP handshake instead of opening a fresh connection per request. Bounds each fan-out with a connect timeout (~5s) and a read/write timeout (~30s) so a hung upstream returns a 504 and frees the worker rather than pinning it; a read-timeout is not retried (the upstream is hung — a retry would only re-hang and double the latency), a connect-timeout may retry once (in case a pooled-addr was bad), distinct from the stale-close path which reconnects+retries once on an idle-closed pooled connection. Forwards the original method, the request body, and the client's end-to-end request headers (Authorization, Cookie, Accept\*, User-Agent, Content-Type, X-\*, …) — hop-by-hop headers (Connection, Keep-Alive, Transfer-Encoding, Upgrade, Proxy-\*, Proxy-Connection, TE, Trailer) stripped, Host rewritten to the upstream, Content-Length re-derived from the captured body, the router writing its OWN `Connection: keep-alive` to the upstream — and relays the upstream's response headers back (Content-Type so a JSON/HTML route survives the proxy, Set-Cookie, Cache-Control, Location, ETag, X-\*, …), with the router owning the client-hop framing (its own Content-Length + Connection; the upstream's hop-by-hop/framing headers are not relayed) | chunked/streaming response bodies (an upstream chunked response is read-to-close and its connection not pooled), per-route timeout config and circuit-breaking, retries beyond the single stale-connection / connect-timeout retry |
 | **Handler inputs** | 0 or 1 arg — the request alist, carrying query params AND parsed body fields uniformly (form-urlencoded merged in; JSON/other body under `__body__`), so a handler reads a field the same way regardless of how it arrived | path params and headers marshalled into the handler frame; a richer body shape than a flat alist (e.g. structural JSON) |
 | **Errors / observability** | 404/413/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
@@ -385,7 +385,8 @@ just GET tails:
 [native GET       ] /health                -> 200 'ok'    router=native-kernel  OK
 [fanout GET       ] /api/whatever          -> 200 via CPython router=fanout-python OK
 [fanout POST body ] /api/echo (body fwd)   -> 200 via CPython router=fanout-python OK
-[over-cap 413     ] declared CL=1053576    -> 413 Payload Too Large  OK
+[flows past old cap] payload 1.2 MiB (>1 MiB) -> 200 'len=1248568' router=native OK
+[shape > recipe    ] declared CL=72 MiB       -> 413, body names shape+recipe   OK
 ```
 
 **Also shown (measured):** a native POST handler reads form-urlencoded body
@@ -396,8 +397,12 @@ is fully captured across multiple reads honoring Content-Length (a 20 KB field
 value returns its exact length — the correctness property the old single-buffer
 read failed); GET is unchanged on both the native and fan-out arms; a POST that
 fans out carries its body to the upstream (the mock CPython echoes the forwarded
-`hello=world&n=7`); and an over-cap body is rejected with 413 on the
-Content-Length header alone, never buffered.
+`hello=world&n=7`); a body past the OLD 1 MiB cap now FLOWS under the generous
+default shape (a 1.2 MiB field returns its exact length — circulation welcomed,
+not walled); and a shape past the current threshold is answered OBSERVABLY — a
+~69 MiB declared Content-Length gets a 413 whose body names the bytes seen, the
+threshold we hold this moment, and the changeable `COH_ROUTER_REQUEST_SHAPE_BYTES`
+recipe — sensed on the Content-Length header alone, never buffered.
 
 ## Proof against the REAL FastAPI app — not a mock
 
@@ -473,12 +478,18 @@ blackholed upstream returns a clean 504/502 rather than hanging; with N workers 
 hung fan-out occupies ONE worker for at most the connect+read timeout while the rest
 of the pool keeps serving 20 native requests in milliseconds — the pool is NOT
 starved; a read-timeout returns 504 ONCE, not reconnect+retried). The fan-out
-response-body cap is now decoupled from the request cap: the router buffers each
-upstream response whole and bounds it at `MAX_UPSTREAM_RESPONSE_BYTES` = 64 MiB —
-distinct from the 1 MiB `MAX_BODY_BYTES` that rejects oversized *request* bodies
-with 413. A request body is untrusted client input; the upstream is the body's own
-FastAPI, a trusted peer that legitimately returns large JSON. The 1 MiB symmetry
-was wrong: it 502'd the real `/api/concepts/domain/living-collective`
+path still buffers each upstream response whole; request and response now share one
+**awareness-shape** for that buffer — the largest shape a worker holds in memory,
+a generous default (64 MiB each) named as a common recipe and changeable at any time
+via `COH_ROUTER_REQUEST_SHAPE_BYTES` / `COH_ROUTER_RESPONSE_SHAPE_BYTES`. This is
+awareness, not prevention: the shape is observed first, and one larger than we can
+hold right now is answered *observably* — the response names the bytes seen, the
+threshold we hold this moment, and that it is a recipe we can change together —
+never a silent wall. The earlier 1 MiB-request / 64 MiB-response split carried the
+inherited fear posture ("a request body is untrusted client input"), untrue in this
+space where the sender is us and circulation is welcome the moment its shape can be
+observed. That old asymmetry's 1 MiB ceiling on the *response* side had 502'd the real
+`/api/concepts/domain/living-collective`
 (≈1.7 MB Content-Length-framed JSON) with `upstream response body too large` while
 api served it 200 direct — the blocker the 2026-06-03 live flip surfaced. The fix
 (PR #2413, on main at 32d1cadd) is verified on the production VPS: the cap-fixed
@@ -718,9 +729,11 @@ docker compose up -d api`) brought api's direct Traefik routing back — the
 `X-Form-Router` header gone, the 1.7 MB route 200 again, the witness back to
 breathing.
 
-**The cap fix is verified on real prod — 2026-06-03.** PR #2413 (on main at
-32d1cadd) decoupled `MAX_UPSTREAM_RESPONSE_BYTES` (64 MiB) from `MAX_BODY_BYTES`
-(1 MiB). The cap-fixed image was rebuilt from main and run as a localhost-bound
+**The large-response path is verified on real prod — 2026-06-03.** PR #2413 (on
+main at 32d1cadd) first gave the upstream response its own generous 64 MiB shape;
+that has since folded into one request/response awareness-shape — a single
+threshold, named and changeable (`COH_ROUTER_*_SHAPE_BYTES`). The image was rebuilt
+from main and run as a localhost-bound
 shadow on the production VPS *beside* the live path — Traefik untouched, FastAPI
 still the front door, the shadow routing zero visitor traffic. Through that shadow
 the formerly-502'ing `/api/concepts/domain/living-collective` relays **200,
@@ -745,7 +758,7 @@ door is FastAPI.
 - [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_request` / `fanout_request_result` (the proxy arm, forwarding method + body over a pooled keep-alive upstream connection, mapping a `FanoutError::Timeout` → 504 and `Closed`/`Other` → 502), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_response` / `send_and_read_one` / `upstream_response_keep_alive` / `head_is_chunked` (the Content-Length-framed one-response read that no longer relies on connection-close, with read/write deadlines classified as timeouts, the stale-connection reconnect+retry, and the reuse-vs-drop verdict), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights), `value_str` (render ANY value via `Value::display()` → a Str — the float-correct leaf a JSON-emitting handler `str_concat`s into the response body, where `int_to_str` would truncate a Float; `handle_request` serves a native body opening with `{`/`[` as `Content-Type: application/json`, so a promoted route returns the same body AND type as its FastAPI twin).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
-- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, and over-cap 413 (mock upstream).
+- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, a body past the OLD 1 MiB cap now flowing under the generous default shape, and a shape past the current threshold answered with an observable, named "no" (the bytes seen + the changeable `COH_ROUTER_REQUEST_SHAPE_BYTES` recipe) (mock upstream).
 - [`form/form-kernel-rust/examples/router-body-proof.fk`](../form/form-kernel-rust/examples/router-body-proof.fk) — the body-reading native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
 - [`form/form-kernel-rust/router_keepalive_harness.py`](../form/form-kernel-rust/router_keepalive_harness.py) — the HTTP/1.1 keep-alive proof (CLIENT→router hop): N sequential requests on ONE connection (Content-Length framed, distinct inputs, each correct), pipelined two-in-one-send (leftover bytes carried, none dropped), `Connection: close` honored, HTTP/1.0 default-close back-compat, idle-timeout reaping the connection (worker freed), an idle connection NOT starving the pool, and the per-request handshake saving (reused vs fresh connection). Mock upstream — no production routing.

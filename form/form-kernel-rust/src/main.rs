@@ -6308,11 +6308,20 @@ fn handle_request(
     // chunked transfer remains a named breath (KERNEL_AS_ROUTER.md request row).
     let (head, body_bytes) = match read_request(stream, carry) {
         RequestRead::Ok(h, b) => (h, b),
-        RequestRead::TooLarge => {
-            // Reject on the Content-Length header alone — the oversized body is
-            // never drained, so the connection's framing is broken: close it.
+        RequestRead::LargerThanWeHold { observed, limit } => {
+            // The shape was observed before any "no" — its size is larger than
+            // one worker can hold this moment. The body is not drained, so the
+            // connection's framing can't continue: answer once, observably, then
+            // close. The "no" names the shape, the threshold we hold right now,
+            // and that it is a common recipe we can change together — an
+            // invitation, not a wall.
             let status = "413 Payload Too Large".to_string();
-            let msg = format!("request body exceeds {} bytes\n", MAX_BODY_BYTES);
+            let msg = format!(
+                "the request shape is {observed} bytes — larger than the shape we can hold right \
+                 now ({limit} bytes). this threshold is a common recipe we can change together \
+                 (set COH_ROUTER_REQUEST_SHAPE_BYTES); the circulation is welcome the moment we \
+                 agree on a shape we can both hold, or when it streams.\n"
+            );
             let _ = stream
                 .write_all(http_response(&status, &msg, "local-control", false, "", &[]).as_bytes());
             return false;
@@ -7078,29 +7087,58 @@ fn cli_serve(args: &[String]) -> i32 {
     0
 }
 
-// Maximum request body the router will read into memory. A body larger than
-// this is rejected with 413 rather than letting a malicious/huge Content-Length
-// OOM the process. 1 MiB is generous for form posts and JSON payloads; true
-// streaming bodies are a named-later breath (KERNEL_AS_ROUTER.md request row).
-const MAX_BODY_BYTES: usize = 1024 * 1024;
+// The largest shape, in bytes, the router holds in memory for one request body
+// or one upstream response. Being aware of a shape is a different act than
+// preventing it: this is not a fear-wall and not a verdict on the sender. It
+// names one resource reality — a body is read fully into memory, so a truly
+// unbounded read would exhaust the worker — held as a COMMON RECIPE we both
+// accept in THIS moment and are free to change at any time through the
+// environment. The shape is observed first; a "no" above the threshold is a
+// sensed invitation, returned observably ("this is larger than we can hold right
+// now — change the recipe, or let it stream"), never a silent prevention.
+//
+// The defaults are generous, so any real request or API response circulates
+// freely. Request and response share the awareness-shape on purpose: a request
+// body is not "untrusted input" to be policed here — in this space the sender is
+// us, and circulation is welcome whenever its shape can be observed. (The
+// asymmetric 1 MiB-request / 64 MiB-response split this replaces was the
+// inherited fear posture: control by wall, before observing.) True streaming
+// (unbounded, no buffering) is a named-later breath; until then the ceiling is
+// simply what one worker can hold — named honestly, tuned freely.
+const DEFAULT_REQUEST_SHAPE_BYTES: usize = 64 * 1024 * 1024;
+const DEFAULT_RESPONSE_SHAPE_BYTES: usize = 64 * 1024 * 1024;
 
-// The cap for an UPSTREAM RESPONSE body (the fan-out hop), decoupled from the
-// request cap above. A request body is untrusted client input — 1 MiB is the
-// right ceiling there. But the upstream is the body's OWN FastAPI app, a trusted
-// peer that legitimately returns large JSON (the vision-KB concept lists run
-// ~1.7 MiB). Capping the response at the request's 1 MiB rejected real routes
-// with `upstream response body too large` (the blocker the live flip surfaced
-// 2026-06-03). 64 MiB is generous for any real API JSON while still bounding a
-// runaway upstream so the worker can't be made to OOM. True streaming
-// (unbounded, no buffering) is a named-later breath.
-const MAX_UPSTREAM_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
+// Read a byte-threshold from the environment — the live, changeable recipe —
+// falling back to the generous default. A zero, negative, or unparseable value
+// keeps the default, so the recipe stays sensible even when mis-set.
+fn shape_limit_from_env(name: &str, default: usize) -> usize {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(default)
+}
 
-// The outcome of reading a request: either the parsed (head, body), or a signal
-// that the body exceeded MAX_BODY_BYTES (the caller answers 413), or a read
-// error / empty peer (the caller drops the connection silently).
+// The shape we can hold for one incoming request body. Change at any time via
+// COH_ROUTER_REQUEST_SHAPE_BYTES.
+fn request_shape_limit() -> usize {
+    shape_limit_from_env("COH_ROUTER_REQUEST_SHAPE_BYTES", DEFAULT_REQUEST_SHAPE_BYTES)
+}
+
+// The shape we can hold for one upstream (fan-out) response. Change at any time
+// via COH_ROUTER_RESPONSE_SHAPE_BYTES.
+fn response_shape_limit() -> usize {
+    shape_limit_from_env("COH_ROUTER_RESPONSE_SHAPE_BYTES", DEFAULT_RESPONSE_SHAPE_BYTES)
+}
+
+// The outcome of reading a request: either the parsed (head, body), or a sensed
+// signal that the request shape is larger than we can hold right now — carrying
+// the observed size and the threshold so the caller answers observably (naming
+// the shape, the recipe, and that it is changeable) — or a read error / empty
+// peer (the caller drops the connection silently).
 enum RequestRead {
     Ok(String, Vec<u8>),
-    TooLarge,
+    LargerThanWeHold { observed: usize, limit: usize },
     Error,
 }
 
@@ -7130,6 +7168,9 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
     // same connection (drained out of `carry`), then read more as needed.
     let mut raw: Vec<u8> = std::mem::take(carry);
     let mut buf = [0u8; 8192];
+    // The shape we can hold for this request right now — read once (the live,
+    // changeable recipe), then sensed against the observed bytes below.
+    let request_limit = request_shape_limit();
     // Phase 1: read until the header terminator is seen (or EOF / cap). The
     // carried bytes may ALREADY contain the full header block, so check before
     // the first socket read — otherwise a pipelined request would block on a
@@ -7145,9 +7186,13 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
                     if let Some(t) = find_header_end(&raw) {
                         break Some(t);
                     }
-                    // Guard: the header block alone must not grow without bound.
-                    if raw.len() > MAX_BODY_BYTES {
-                        return RequestRead::TooLarge;
+                    // The header block, too, is a shape we observe as it grows;
+                    // past what one worker can hold right now we answer observably.
+                    if raw.len() > request_limit {
+                        return RequestRead::LargerThanWeHold {
+                            observed: raw.len(),
+                            limit: request_limit,
+                        };
                     }
                 }
                 // A read error here also covers the idle read-timeout firing on
@@ -7175,8 +7220,10 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
     // request's body, which would corrupt a keep-alive connection).
     let total = match parse_content_length(&head) {
         Some(t) => {
-            if t > MAX_BODY_BYTES {
-                return RequestRead::TooLarge; // oversized — caller answers 413
+            // Content-Length declares the shape before it arrives — sense it now,
+            // so a body larger than we can hold is answered without draining it.
+            if t > request_limit {
+                return RequestRead::LargerThanWeHold { observed: t, limit: request_limit };
             }
             t
         }
@@ -7528,6 +7575,9 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
     // Phase 1: read until the header terminator, seeding from carried bytes.
     let mut raw: Vec<u8> = carry;
     let mut buf = [0u8; 8192];
+    // The shape we can hold for this upstream response right now — the live,
+    // changeable recipe, sensed against the bytes the upstream returns below.
+    let response_limit = response_shape_limit();
     let header_end: usize = match find_header_end(&raw) {
         Some(t) => t,
         None => loop {
@@ -7550,10 +7600,13 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
                     if let Some(t) = find_header_end(&raw) {
                         break t;
                     }
-                    if raw.len() > MAX_UPSTREAM_RESPONSE_BYTES {
-                        return Err(FanoutError::Other(
-                            "upstream response head too large".to_string(),
-                        ));
+                    if raw.len() > response_limit {
+                        return Err(FanoutError::Other(format!(
+                            "upstream response head is larger than we can hold right now \
+                             ({} bytes observed, threshold {}; change COH_ROUTER_RESPONSE_SHAPE_BYTES)",
+                            raw.len(),
+                            response_limit,
+                        )));
                     }
                 }
                 // A read deadline (FANOUT_READ_TIMEOUT) surfaces here as
@@ -7587,10 +7640,12 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
 
     // Phase 2: frame the body. Content-Length is the path that allows reuse.
     if let Some(total) = parse_content_length(&head) {
-        if total > MAX_UPSTREAM_RESPONSE_BYTES {
-            return Err(FanoutError::Other(
-                "upstream response body too large".to_string(),
-            ));
+        if total > response_limit {
+            return Err(FanoutError::Other(format!(
+                "upstream response shape is {} bytes — larger than we can hold right now \
+                 (threshold {}; change COH_ROUTER_RESPONSE_SHAPE_BYTES, or stream it)",
+                total, response_limit,
+            )));
         }
         let mut body: Vec<u8> = raw[body_start..].to_vec();
         while body.len() < total {
@@ -7643,10 +7698,12 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
             Ok(0) => break, // upstream closed — the unframed body is complete
             Ok(n) => {
                 body.extend_from_slice(&buf[..n]);
-                if body.len() > MAX_UPSTREAM_RESPONSE_BYTES {
-                    return Err(FanoutError::Other(
-                        "upstream response body too large".to_string(),
-                    ));
+                if body.len() > response_limit {
+                    return Err(FanoutError::Other(format!(
+                        "upstream response passed the {} bytes we can hold right now while \
+                         streaming to close (change COH_ROUTER_RESPONSE_SHAPE_BYTES)",
+                        response_limit,
+                    )));
                 }
             }
             // A read deadline while draining a read-to-close body -> Timeout -> 504.

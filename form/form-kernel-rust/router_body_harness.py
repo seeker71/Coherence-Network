@@ -40,8 +40,13 @@ BIN = HERE / "target" / "release" / "form-kernel-rust"
 ROUTES = HERE / "examples" / "router-body-proof.fk"
 
 UPSTREAM_MARKER = "UPSTREAM-CPYTHON-FASTAPI-STANDIN"
-# Mirrors the kernel's MAX_BODY_BYTES (form-kernel-rust src/main.rs).
-MAX_BODY_BYTES = 1024 * 1024
+# The router's request shape-threshold (form-kernel-rust src/main.rs): a generous
+# 64 MiB default, changeable via COH_ROUTER_REQUEST_SHAPE_BYTES. The inherited
+# fear-cap was 1 MiB; this harness proves a body past that OLD cap now FLOWS
+# (circulation welcomed under the generous default) and a shape past the CURRENT
+# threshold gets an OBSERVABLE, NAMED "no" — awareness, not prevention.
+OLD_REQUEST_CAP = 1024 * 1024
+DEFAULT_REQUEST_SHAPE = 64 * 1024 * 1024
 
 
 class _UpstreamHandler(http.server.BaseHTTPRequestHandler):
@@ -126,11 +131,13 @@ def raw_request(port: int, method: str, path: str,
 
 
 def oversize_probe(port: int, declared: int, timeout: float = 5.0):
-    """Advertise a Content-Length over the cap but send only a tiny body prefix.
+    """Advertise a Content-Length past the threshold, send only a tiny prefix.
 
-    The server must reject on the header alone (it must not block waiting for a
-    body it will never read) and answer 413. Returns the status line. Tolerates
-    the connection reset that can follow the server closing mid-send.
+    The shape is sensed on the header alone — the server must not block waiting
+    for a body it will never read — and answered observably (413, with a body
+    that NAMES the bytes seen, the threshold we hold now, and the changeable
+    recipe). Returns (status_line, body) so the caller can check the "no" is
+    named, not just statused. Tolerates the reset that can follow a mid-send close.
     """
     head = (
         f"POST /payload_len HTTP/1.0\r\nHost: 127.0.0.1\r\n"
@@ -157,7 +164,9 @@ def oversize_probe(port: int, declared: int, timeout: float = 5.0):
     finally:
         s.close()
     txt = resp.decode("utf-8", "replace")
-    return txt.splitlines()[0] if txt else "<empty>"
+    status_line = txt.splitlines()[0] if txt else "<empty>"
+    body = txt.split("\r\n\r\n", 1)[1] if "\r\n\r\n" in txt else ""
+    return status_line, body
 
 
 def main() -> int:
@@ -253,15 +262,38 @@ def main() -> int:
         if not ok:
             failures.append(("POST /api/echo fanout", status, body, router))
 
-        # --- 7. over-cap body rejected with 413 on the Content-Length header
-        #         alone (the OOM guard: a huge declared body is never buffered) ---
-        declared = MAX_BODY_BYTES + 5000
-        status_line = oversize_probe(kport, declared)
-        ok = "413" in status_line
-        print(f"  [over-cap 413     ] declared CL={declared} (> {MAX_BODY_BYTES} "
-              f"cap) -> {status_line!r}  {'OK' if ok else 'FAIL'}")
+        # --- 7a. a body PAST THE OLD 1 MiB cap now FLOWS — observed and welcomed
+        #          under the generous default shape, not prevented at an old wall ---
+        past_old = OLD_REQUEST_CAP + 200_000  # ~1.2 MiB: over the OLD cap, under default
+        flow_val = "y" * (past_old - len("payload="))
+        flow_body = ("payload=" + flow_val).encode()
+        status, body, router = raw_request(
+            kport, "POST", "/payload_len", flow_body,
+            "application/x-www-form-urlencoded")
+        ok = (status == "200 OK" and body == str(len(flow_val))
+              and router == "native-kernel")
+        print(f"  [flows past old cap] /payload_len ({len(flow_body)}B, > {OLD_REQUEST_CAP} "
+              f"old cap) -> {status} len={body}  {'OK' if ok else 'FAIL'}")
         if not ok:
-            failures.append(("over-cap 413", status_line, "", None))
+            failures.append(("body past old cap flows", status, body, router))
+
+        # --- 7b. a shape PAST THE CURRENT threshold gets an OBSERVABLE, NAMED "no",
+        #          sensed on the Content-Length header alone (the body never sent):
+        #          the response names the bytes seen, names the changeable recipe
+        #          (COH_ROUTER_REQUEST_SHAPE_BYTES), and invites a change — not a
+        #          silent wall and not a bare status code ---
+        declared = DEFAULT_REQUEST_SHAPE + 5_000_000  # ~69 MiB declared, body never sent
+        status_line, no_body = oversize_probe(kport, declared)
+        names_shape = (
+            "413" in status_line
+            and str(declared) in no_body
+            and "COH_ROUTER_REQUEST_SHAPE_BYTES" in no_body
+            and "change" in no_body.lower()
+        )
+        print(f"  [shape > recipe   ] declared CL={declared} -> {status_line!r}, "
+              f"names shape+recipe={names_shape}  {'OK' if names_shape else 'FAIL'}")
+        if not names_shape:
+            failures.append(("observable named no", status_line, no_body[:160], None))
 
         if failures:
             print(f"\nFAIL: {len(failures)} case(s) did not match", file=sys.stderr)
@@ -271,7 +303,11 @@ def main() -> int:
         print("\nok — kernel-router READ REQUEST BODIES: form-urlencoded fields "
               "merged into the handler alist, JSON captured raw, a >8 KiB body "
               "fully captured (Content-Length honored), GET unchanged, POST "
-              "fan-out forwarded its body to CPython.")
+              "fan-out forwarded its body to CPython; a body past the OLD 1 MiB "
+              "cap now FLOWS under the generous default shape, and a shape past "
+              "the current threshold gets an OBSERVABLE, NAMED no (the bytes seen "
+              "+ the changeable COH_ROUTER_REQUEST_SHAPE_BYTES recipe) — awareness, "
+              "not prevention.")
         return 0
     finally:
         proc.terminate()
