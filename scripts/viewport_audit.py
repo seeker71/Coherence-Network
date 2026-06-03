@@ -39,6 +39,9 @@ from pathlib import Path
 DEFAULT_PATHS = [
     "/",
     "/come-in",
+    "/vision",   # the concept list — where the living KB reaches visitors
+    "/people",   # the presences / contributors index
+    "/ideas",    # the ideas index
     "/one-sheet",
     "/silence",
     "/silence/built",
