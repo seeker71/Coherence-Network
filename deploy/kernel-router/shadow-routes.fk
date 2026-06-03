@@ -1,0 +1,33 @@
+; shadow-routes.fk — the kernel-router SHADOW-MODE manifest.
+;
+; Loaded by `form-kernel-rust serve --routes shadow-routes.fk --upstream <api>`
+; (see cli_serve / build_route_pairs in form/form-kernel-rust/src/main.rs).
+;
+; SHADOW MODE: the `routes` list is EMPTY. build_route_pairs maps over the list
+; and yields ZERO native (path closure) pairs — an empty list is accepted, it is
+; not an error (the binding must EXIST and be a list; an empty list is a valid
+; list). With no native routes, EVERY request misses the native lookup and FANS
+; OUT to --upstream. The response carries `X-Form-Router: fanout-python` — live
+; evidence the kernel-router is in the path while behaving byte-identically to
+; hitting the upstream directly (one proxy hop, same body, same status, the
+; upstream's Content-Type/Set-Cookie/… relayed back).
+;
+; This is the deployable shadow step of the flip described in
+; kernels/KERNEL_AS_ROUTER.md: the kernel owns the front door, serves nothing
+; natively yet, and proxies the whole surface to the unchanged FastAPI app.
+;
+; To PROMOTE a route to native (a separate, incremental, reversible step): add a
+; Form handler (defn) above and a (path handler) line to the list below. Example
+; (the proven weighted-average native route from router-real-app-proof.fk):
+;
+;   (defn route_health () "ok")
+;   (let routes
+;     (list
+;       (list "/health" route_health)))
+;
+; Authored as raw S-expression Form — the kernel's native surface. It opens NO
+; `section [...]` block, so it never touches the source-compiler; the kernel's
+; .fk reader loads it directly (no --stdlib needed for this manifest).
+
+(let routes
+  (list))
