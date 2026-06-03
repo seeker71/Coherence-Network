@@ -24,6 +24,12 @@
 ;   /api/utils/worldview_alignment    float cosine of two parallel vectors +
 ;                                       matched-axis string list (400 on len mismatch)
 ;   /api/utils/tag_match_score        float str_eq-membership ratio + deduped tag lists
+;   /api/utils/coherence_summary_score float coverage/score reduction from host-
+;                                       extracted scalar counts (safe_ratio + clamp01)
+;   /api/utils/idea_marginal_from_record float Method-B marginal CC return from 6
+;                                       scalar params + the echoed fixed-shape idea dict
+;   /api/utils/idea_grounding_summary  int grounding signals over two parallel CSV
+;                                       scalar-lists (422 on len mismatch)
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -977,6 +983,168 @@
         ",\"runtime\":\"inline\"}")))))))
 
 ; ===========================================================================
+; /api/utils/coherence_summary_score  — COVERAGE/SCORE REDUCTION of
+;   collective_health_service._coherence_summary, from HOST-EXTRACTED counts.
+;   The dict-walk over the task collection that produces the counts (the
+;   heterogeneous `context` presence-conditions) stays CPython BY DESIGN; the
+;   route receives the SCALAR counts/sums and runs the numeric reduction —
+;   tractable exactly like grounded_value, NOT the structural-record problem.
+;   params (all scalar Query with defaults):
+;     task_count(10,int) target_state_count(7,int) evidence_count(5,int)
+;     task_card_count(6,int) task_card_scores_sum(4.5,float) task_card_scores_len(6,int)
+;   body:   {"score":<f>,"task_count":<i>,"target_state_coverage":<f>,
+;            "task_card_coverage":<f>,"task_card_quality":<f>,"evidence_coverage":<f>,
+;            "runtime":"inline"}  (CoherenceSummaryScoreResponse field order)
+;   math (endpoint_coherence_summary_score_demo.fk EXACTLY):
+;     safe_ratio(num,denom) = denom>0 ? (num+0.0)/(denom+0.0) : 0.0  (float-promote)
+;     target_state_coverage = safe_ratio(target_state_count, task_count)
+;     evidence_coverage      = safe_ratio(evidence_count, task_count)
+;     task_card_coverage     = safe_ratio(task_card_count, task_count)
+;     task_card_quality      = safe_ratio(task_card_scores_sum, task_card_scores_len)
+;     combination = LEFT-nested (((0.35*tsc + 0.30*tcq) + 0.20*tcc) + 0.15*ec)
+;     score = task_count>0 ? clamp01(combination) : 0.5   (clamp01 = max(0,min(x,1)))
+;     EACH echoed coverage round(_,4); score round(_,4). Only score is clamped;
+;     a coverage may exceed 1.0 (e.g. target/1) and is rounded UNclamped, matching
+;     the recipe's per-output round of the raw ratio.
+; ===========================================================================
+
+; safe_ratio: guard denom>0, float-promote both sides (the recipe's _plus _ 0.0),
+; 0.0 when denom<=0 (the (gt denom 0) false branch)
+(defn css_safe_ratio (num denom)
+  (if (gt denom 0)
+      (div (_plus num 0.0) (_plus denom 0.0))
+      0.0))
+
+; clamp01 — max(0.0, min(x, 1.0)), the recipe's two-sided clamp (min2/max2 above)
+(defn css_clamp01 (x) (max2 0.0 (min2 x 1.0)))
+
+(defn route_coherence_summary_score (q)
+  (do (let task_count (str_to_int (param_or "task_count" q "10")))
+  (do (let target_state_count (str_to_int (param_or "target_state_count" q "7")))
+  (do (let evidence_count (str_to_int (param_or "evidence_count" q "5")))
+  (do (let task_card_count (str_to_int (param_or "task_card_count" q "6")))
+  (do (let task_card_scores_sum (str_to_float (param_or "task_card_scores_sum" q "4.5")))
+  (do (let task_card_scores_len (str_to_int (param_or "task_card_scores_len" q "6")))
+  (do (let tsc (css_safe_ratio target_state_count task_count))
+  (do (let ec (css_safe_ratio evidence_count task_count))
+  (do (let tcc (css_safe_ratio task_card_count task_count))
+  (do (let tcq (css_safe_ratio task_card_scores_sum task_card_scores_len))
+  (do (let combination
+        (_plus (_plus (_plus (mul 0.35 tsc) (mul 0.3 tcq)) (mul 0.2 tcc)) (mul 0.15 ec)))
+  (do (let score (if (gt task_count 0) (css_clamp01 combination) 0.5))
+      (str_concat_all (list
+        "{\"score\":" (value_str (round_ndigits score 4))
+        ",\"task_count\":" (value_str task_count)
+        ",\"target_state_coverage\":" (value_str (round_ndigits tsc 4))
+        ",\"task_card_coverage\":" (value_str (round_ndigits tcc 4))
+        ",\"task_card_quality\":" (value_str (round_ndigits tcq 4))
+        ",\"evidence_coverage\":" (value_str (round_ndigits ec 4))
+        ",\"runtime\":\"inline\"}")))))))))))))))
+
+; ===========================================================================
+; /api/utils/idea_marginal_from_record  — Method-B marginal CC return read from a
+;   structured idea record. The recipe pulls 6 fields off ONE record via _get; the
+;   ROUTE receives those 6 fields PRE-EXTRACTED as scalar float Query params (the
+;   host marshals them into the `idea` dict it echoes). So the kernel-router serve
+;   is scalar-in — tractable like marginal_cc_return; the only twist is the echoed
+;   `idea` is a FIXED-SHAPE nested object of the 6 known float fields (no structural
+;   parse — str_concat_all builds it from value_str of each echoed param).
+;   params (all scalar float Query): pv(8.0) av(3.0) conf(0.8) ec(4.0) ac(1.0) rr(2.0)
+;   body:   {"marginal_return":<f>,"idea":{"potential_value":<f>,"actual_value":<f>,
+;            "confidence":<f>,"estimated_cost":<f>,"actual_cost":<f>,
+;            "resistance_risk":<f>},"runtime":"inline"}  (response field + dict order)
+;   math (endpoint_idea_marginal_from_record_demo.fk EXACTLY):
+;     value_gap = pv-av; if value_gap < 0.0 -> 0.0
+;     remaining_cost = ec-ac; if remaining_cost < 0.1 -> 0.1
+;     marginal = round((value_gap * conf * conf) / (remaining_cost + rr*0.5), 6)
+;       — note round to 6 (NOT 4), and (mul (mul value_gap conf) conf) LEFT-grouped.
+;   The idea echo is a Pydantic dict[str,float] (JSONResponse separators (",",":")),
+;   the 6 keys in insertion order; each value renders Python-float (value_str).
+; ===========================================================================
+
+(defn route_idea_marginal_from_record (q)
+  (do (let pv (str_to_float (param_or "pv" q "8.0")))
+  (do (let av (str_to_float (param_or "av" q "3.0")))
+  (do (let conf (str_to_float (param_or "conf" q "0.8")))
+  (do (let ec (str_to_float (param_or "ec" q "4.0")))
+  (do (let ac (str_to_float (param_or "ac" q "1.0")))
+  (do (let rr (str_to_float (param_or "rr" q "2.0")))
+  (do (let value_gap (max2 (sub pv av) 0.0))
+  (do (let remaining_cost (max2 (sub ec ac) 0.1))
+  (do (let marginal
+        (round_ndigits (div (mul (mul value_gap conf) conf)
+                            (_plus remaining_cost (mul rr 0.5))) 6))
+      (str_concat_all (list
+        "{\"marginal_return\":" (value_str marginal)
+        ",\"idea\":{\"potential_value\":" (value_str pv)
+        ",\"actual_value\":" (value_str av)
+        ",\"confidence\":" (value_str conf)
+        ",\"estimated_cost\":" (value_str ec)
+        ",\"actual_cost\":" (value_str ac)
+        ",\"resistance_risk\":" (value_str rr)
+        "},\"runtime\":\"inline\"}"))))))))))))
+
+; ===========================================================================
+; /api/utils/idea_grounding_summary  — INTEGER grounding signals reduced over the
+;   per-idea spec list. The recipe iterates a LIST OF RECORDS via _get/_iter; the
+;   ROUTE receives the two parallel scalar-lists (event_counts CSV ints,
+;   actual_values CSV floats) the host zips into spec dicts — same parallel-CSV
+;   shape as idea_grounded_cost_sum, tractable as scalar-list-in (the host
+;   pre-extracts the heterogeneous walk; NOT the structural-record problem).
+;   params: event_counts ("3,0,7") actual_values ("1.5,0.0,2.25")
+;   body:   {"spec_count":<i>,"total_event_count":<i>,"specs_with_value_count":<i>,
+;            "max_event_count":<i>,"spec_count_in":<i>,"runtime":"inline"}
+;            (IdeaGroundingSummaryResponse field order)
+;   422 (observable "no" via respond) when len(event_counts) != len(actual_values),
+;     body {"detail":"event_counts and actual_values must have the same length"}.
+;   math (endpoint_idea_grounding_summary_demo.fk EXACTLY):
+;     event_counts parse int(float(x)) (ifloats_of); actual_values float(x) (floats_of);
+;     empty-segment skip (nonempty, Python `if x.strip()`).
+;     spec_count = len(event_counts)
+;     total_event_count = sum(event_counts)   (int fold, seeded 0)
+;     specs_with_value_count = count(actual_value > 0)  (field predicate over the floats)
+;     max_event_count = max(event_counts), seeded 0
+; ===========================================================================
+
+; int fold, seeded 0 (the recipe's total_event_count _for loop)
+(defn igs_sum_go (xs total)
+  (if (eq (len xs) 0) total (igs_sum_go (tail xs) (_plus total (head xs)))))
+
+; count of actual_values strictly > 0 — the specs_with_value_count predicate fold
+(defn igs_value_go (vs c)
+  (if (eq (len vs) 0)
+      c
+      (if (gt (head vs) 0)
+          (igs_value_go (tail vs) (add c 1))
+          (igs_value_go (tail vs) c))))
+
+; running max over the int event_counts, seeded 0 (the recipe's mx=0 _for loop,
+; strict `>` update — ties keep the earlier max, which for a max seeded 0 is moot)
+(defn igs_max_go (xs mx)
+  (if (eq (len xs) 0)
+      mx
+      (igs_max_go (tail xs) (if (gt (head xs) mx) (head xs) mx))))
+
+(defn route_idea_grounding_summary (q)
+  (do (let ecstr (param_or "event_counts" q "3,0,7"))
+  (do (let avstr (param_or "actual_values" q "1.5,0.0,2.25"))
+  (do (let ecs (ifloats_of (nonempty (split_commas ecstr))))
+  (do (let avs (floats_of (nonempty (split_commas avstr))))
+  (if (eq (len ecs) (len avs))
+    (do (let spec_count (len ecs))
+    (do (let total_event_count (igs_sum_go ecs 0))
+    (do (let specs_with_value_count (igs_value_go avs 0))
+    (do (let max_event_count (igs_max_go ecs 0))
+        (str_concat_all (list
+          "{\"spec_count\":" (value_str spec_count)
+          ",\"total_event_count\":" (value_str total_event_count)
+          ",\"specs_with_value_count\":" (value_str specs_with_value_count)
+          ",\"max_event_count\":" (value_str max_event_count)
+          ",\"spec_count_in\":" (value_str spec_count)
+          ",\"runtime\":\"inline\"}"))))))
+    (respond 422 "{\"detail\":\"event_counts and actual_values must have the same length\"}")))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -1005,4 +1173,7 @@
     (list "/api/utils/idea_grounded_cost_sum" route_idea_grounded_cost_sum)
     (list "/api/utils/grounded_cost"        route_grounded_cost)
     (list "/api/utils/worldview_alignment"  route_worldview_alignment)
-    (list "/api/utils/tag_match_score"      route_tag_match_score)))
+    (list "/api/utils/tag_match_score"      route_tag_match_score)
+    (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
+    (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
+    (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)))

@@ -194,6 +194,42 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?contributor_tags=a,b,c&idea_tags=a",        # 1/3 -> 0.3333333333333333
         "?contributor_tags=a,b,&idea_tags=a",         # trailing-comma empty-segment skip -> [a,b]
     ]),
+    # ----- batch 4: the scalar-records (host pre-extracts the heterogeneous walk
+    # into scalar query params — tractable like grounded_value, NOT the structural
+    # -record problem the recipe's _get/_iter shape suggested). -----
+    # coherence_summary_score — _coherence_summary's coverage/score reduction from
+    # host-extracted scalar counts. All cases 200 (the task_count==0 neutral guard
+    # and the safe_ratio denom<=0 guard are BODY values, not non-200). Only `score`
+    # clamps to [0,1]; a coverage may exceed 1.0 (target/1) and rounds unclamped.
+    ("/api/utils/coherence_summary_score", [
+        "",                              # defaults (10,7,5,6,4.5,6) -> score 0.665
+        "?task_count=0&target_state_count=0&evidence_count=0&task_card_count=0&task_card_scores_sum=0.0&task_card_scores_len=0",  # task_count==0 neutral -> 0.5
+        "?task_count=5&target_state_count=5&evidence_count=5&task_card_count=5&task_card_scores_sum=4.5&task_card_scores_len=0",  # scores_len==0 quality safe_ratio guard -> 0.0
+        "?task_count=1&target_state_count=5&evidence_count=5&task_card_count=5&task_card_scores_sum=100.0&task_card_scores_len=1",  # combination>1 -> score clamp 1.0, coverages 5.0/100.0 unclamped
+        "?task_count=3&target_state_count=1&evidence_count=1&task_card_count=1&task_card_scores_sum=1.0&task_card_scores_len=3",  # 1/3 long-float coverage -> 0.3333
+    ]),
+    # idea_marginal_from_record — Method-B marginal CC from 6 pre-extracted floats,
+    # round(_,6). The echoed `idea` is a fixed-shape dict[str,float] (a known-key
+    # nested object str_concat_all builds from value_str, NOT a structural parse).
+    ("/api/utils/idea_marginal_from_record", [
+        "",                              # defaults (8,3,0.8,4,1,2) -> 0.8
+        "?pv=2&av=5",                    # value_gap floor 0.0 -> 0.0
+        "?pv=10&av=0&conf=1&ec=1&ac=5&rr=0",  # remaining_cost floor 0.1 -> 100.0
+        "?pv=5&av=1&conf=0.5&ec=3&ac=1&rr=1", # mid-range floats -> 0.4
+    ]),
+    # idea_grounding_summary — four INT grounding signals folded over two parallel
+    # CSV scalar-lists. The 200 (equal-length) cases; its 422 observable-no on a
+    # length mismatch is verified separately (the compare below asserts 200; the 422
+    # proof — HTTP 422 + the exact FastAPI {"detail":...} body + X-Form-Router:
+    # native-kernel — is hand-checked, like grounded_cost's 422 / worldview's 400).
+    ("/api/utils/idea_grounding_summary", [
+        "",                              # defaults (3,0,7 / 1.5,0.0,2.25) -> 3,10,2,7
+        "?event_counts=0&actual_values=0.0",            # single zero each -> 1,0,0,0
+        "?event_counts=2,5,1&actual_values=0.1,0.2,0.3",  # all values>0 -> 3,8,3,5
+        "?event_counts=1,9,3&actual_values=1.0,0.0,2.0",  # max-in-middle, value 0 there -> max 9, with-value 2
+        "?event_counts=3.0,7.9&actual_values=1.0,2.0",    # int(float) truncation 7.9->7 -> total 10, max 7
+        "?event_counts=3,0,7,&actual_values=1.5,0.0,2.25",  # trailing-comma empty-segment skip -> 3,10,2,7
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.
