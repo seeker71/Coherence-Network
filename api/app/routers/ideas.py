@@ -99,8 +99,14 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
 
     if not lang or not translator_service.is_supported(lang):
         return resp
+    # One batched query for the whole listing's canonical views, instead of one
+    # SELECT per idea — the N+1 that made /api/ideas?lang=xx fire up to ~200
+    # queries (limit defaults to 200). Each idea resolves to the SAME record the
+    # per-idea canonical_view returned; the per-idea translate_snippet fallback
+    # below (for ideas without a canonical view) is in-process cached, unchanged.
+    canon = _tcache.canonical_views("idea", [idea.id for idea in resp.ideas], lang)
     for idea in resp.ideas:
-        rec = _tcache.canonical_view("idea", idea.id, lang)
+        rec = canon.get(idea.id)
         if rec and rec.content_hash:
             if rec.content_title:
                 idea.name = rec.content_title
