@@ -83,12 +83,44 @@ cd form
 
 Expected result: `112251` with `1 ok, 0 divergent`.
 
+## BML Source Body
+
+The picture also now lives as BML source:
+
+- [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml) is the compiler/compiler-compiler source body.
+- It uses BML classes, interfaces, class templates, generic fields and methods, sections, constants, constructors, property bags, a `syntax` block, and reversible `choose` / `fail` / `save` / `discard` control.
+- It names reusable ports for BML, CSharp, Java, TypeScript, Go, and Rust without changing the core flow.
+- [`form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk
+```
+
+Expected result: `42` with `1 ok, 0 divergent`.
+
+## Bootstrap Boundary
+
+The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.
+
+The release direction is:
+
+1. Keep the BML compiler/compiler-compiler body in high-level BML class and template source.
+2. Shrink Form/s-expression compiler logic to bootstrap loaders, primitive kernel edges, and sibling proof harnesses.
+3. Move parser, model, flow, registry, emitter, and compiler-compiler behavior into BML.
+4. Retire non-bootstrap s-expression compiler code once the BML source proves the same behavior through self-hosted compilation.
+
+That means Form remains the witness substrate; BML owns the compiler language.
+
 ## Next Refinements
 
-1. Move grammar ports into runtime registry capsules.
-2. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
-3. Lift the BML object model into canonical compiler objects.
-4. Extend Python, TypeScript, Go, and Rust grammar ports through the same contract.
-5. Add Java and C# ports without changing the core flow.
+1. Lower the BML source body into canonical compiler objects, not only parsed declarations.
+2. Move grammar ports into runtime registry capsules.
+3. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
+4. Lift the BML object model into canonical compiler objects.
+5. Extend Python, TypeScript, Go, and Rust grammar ports through the same contract.
+6. Add Java and CSharp ports without changing the core flow.
 
 The picture gets more abstract by finding common ground, not by hiding the evidence.
