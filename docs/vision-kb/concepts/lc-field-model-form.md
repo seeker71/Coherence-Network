@@ -1,8 +1,8 @@
 ---
-id: field-model-form
+id: lc-field-model-form
 hz: 963
 status: seed
-updated: 2026-06-02
+updated: 2026-06-03
 geometry:
   arity: 3
   form: triad
@@ -49,4 +49,4 @@ FMF is the natural home for coherent probes, auto-research loops, perceptual fie
 
 ## Cross-References
 
-lc-dmt-laser-symbol-space-recipe, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-field-sensing, lc-instruments, lc-discovery, trace-symbol-spaces
+→ lc-dmt-laser-symbol-space-recipe, lc-the-geometry-seen-is-the-geometry-of-seeing, lc-field-sensing, lc-instruments, lc-discovery

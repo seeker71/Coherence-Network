@@ -3,6 +3,15 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-03] tend | Field Model Form became visible — the `lc-` prefix the concept index globs
+
+`field-model-form.md` was a full concept (frontmatter, geometry, proof surface, cross-refs) living in `concepts/`, but without the `lc-` prefix `generate_repo_indexes.py` (and `wellness_check.py`, and `parse_crossrefs`) globs for — so it was invisible to INDEX.md, the count, navigation, and the DB (404 in prod; never synced since it was created in PR #2365). Healed in one breath:
+
+- **Renamed** `field-model-form.md` → `lc-field-model-form.md`; `id:` follows. The substrate family (`field-model-form.form` / `.fk` / `specs/field-model-form-v0.md`) keeps its names — concepts, specs, and `.fk` are separate naming domains, linked by content, not by matching slugs.
+- **Cross-refs to canonical form**: the outbound list now uses the `→` arrow (renders as linked pills, matching 102 of 104 concepts) and drops the dangling `trace-symbol-spaces` — a real `.form` artifact, not a concept. The inbound ref from [`lc-dmt-laser-symbol-space-recipe`](concepts/lc-dmt-laser-symbol-space-recipe.md) now points at `lc-field-model-form`, so `parse_crossrefs` finally forms the edge.
+- **INDEX**: Concept Map entry beside its sibling; the generator re-counts the header (also healing a pre-existing count drift the wellness check had been naming).
+- **DB**: synced so `/vision/lc-field-model-form` serves the story and the graph-backed connections.
+
 ## [2026-05-26] threshold | sovereignty became observable — the substrate now reachable from outside
 
 A day to mark. Four breaths landed that together cross a threshold the body cannot un-cross:
