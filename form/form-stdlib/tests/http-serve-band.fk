@@ -1,0 +1,217 @@
+; tests/http-serve-band.fk — sibling-witness band for http-serve.fk.
+;
+; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+;
+; Proves the Form-native per-request HTTP handler (form-stdlib/http-serve.fk)
+; with NO socket: http-handle is called on hardcoded request STRINGS and the
+; produced response STRING is asserted byte-for-byte. The band emits a single
+; integer verdict the three kernels compare; identical across Go, Rust, and
+; TypeScript is the proof the parse → route → serve → response arc is correct
+; and three-way-portable, standalone.
+;
+; THE HANDLER UNDER TEST is a faithful mirror of production-routes.fk's
+; route_coherence_weight. Its body bytes are IDENTICAL to what that route serves
+; for the default query —
+;   {"weight":16185,"values":[72,38,91,55,28,67,84,45,95,12],"threshold":50,"runtime":"inline"}
+; — but the JSON is assembled with int_to_str, NOT value_str. value_str is a
+; Rust-only native (Go and TS do not register it), so production-routes.fk runs
+; Rust-only at serve time and is not three-way-validatable as written; this band
+; reproduces the same integer math and the same byte output with the
+; three-way-portable int_to_str so the WHOLE workload (engine + handler) is
+; sibling-identical. (Moving the production handlers themselves three-way is a
+; later breath: either port value_str / format_float_python to Go + TS, or
+; express number formatting in Form — named honestly, not done here.)
+;
+; Band verdict: the sum of the bit-weighted checks below. 1023 (== 2^10 - 1)
+; when every check passes on a kernel; any divergence shows as a different
+; integer on that kernel.
+
+;; ===================================================================
+;; coherence_weight handler — portable mirror of route_coherence_weight
+;; ===================================================================
+
+;; query alist helpers (the handler's own param reading — production-routes.fk
+;; carries the same assoc/param_or; reproduced here so the band is self-contained
+;; without preluding the Rust-only production manifest).
+(defn b-assoc (key pairs)
+    (if (eq (len pairs) 0) ""
+        (if (str_eq (head (head pairs)) key)
+            (head (tail (head pairs)))
+            (b-assoc key (tail pairs)))))
+
+(defn b-param-or (key q dflt)
+    (if (eq (str_len (b-assoc key q)) 0) dflt (b-assoc key q)))
+
+;; split "a,b,c" on commas → list of substrings (native str_find/substring walk).
+(defn b-split-from (s start)
+    (if (eq (str_len s) start)
+        (list "")
+        (do
+            (let comma (str_find s "," start))
+            (if (eq comma -1)
+                (list (substring s start (str_len s)))
+                (cons (substring s start comma) (b-split-from s (add comma 1)))))))
+
+(defn b-split-commas (s)
+    (if (eq (str_len s) 0) (list) (b-split-from s 0)))
+
+(defn b-ints-of (xs)
+    (if (eq (len xs) 0) (list)
+        (cons (str_to_int (head xs)) (b-ints-of (tail xs)))))
+
+;; JSON array of ints with NO spaces, rendered via the portable int_to_str
+;; (FastAPI's JSONResponse separators=(",",":")). [72,38,...]
+(defn b-int-elems (xs)
+    (if (eq (len xs) 0) ""
+        (if (eq (len xs) 1) (int_to_str (head xs))
+            (str_concat (str_concat (int_to_str (head xs)) ",")
+                        (b-int-elems (tail xs))))))
+
+(defn b-int-list (xs) (str_concat (str_concat "[" (b-int-elems xs)) "]"))
+
+;; the coherence_weight math — verbatim from route_coherence_weight.
+(defn b-cw-weighted-score (value position)
+    (if (eq position 0) (mul value 100)
+        (if (eq position 1) (mul value 50)
+            (if (eq position 2) (mul value 25)
+                (mul value 10)))))
+
+(defn b-cw-score-go (vs threshold total position)
+    (if (eq (len vs) 0) total
+        (if (ge (head vs) threshold)
+            (b-cw-score-go (tail vs) threshold
+                           (add total (b-cw-weighted-score (head vs) position))
+                           (add position 1))
+            (b-cw-score-go (tail vs) threshold total position))))
+
+(defn b-cw-count-above (vs threshold)
+    (if (eq (len vs) 0) 0
+        (if (ge (head vs) threshold)
+            (add 1 (b-cw-count-above (tail vs) threshold))
+            (b-cw-count-above (tail vs) threshold))))
+
+;; the route body STRING — byte-identical to route_coherence_weight's output,
+;; int_to_str in place of value_str (ints render the same digits either way).
+(defn b-cw-body (q)
+    (do
+        (let vstr (b-param-or "values" q "72,38,91,55,28,67,84,45,95,12"))
+        (let threshold (str_to_int (b-param-or "threshold" q "50")))
+        (let values (b-ints-of (b-split-commas vstr)))
+        (let above (b-cw-count-above values threshold))
+        (let coherence (b-cw-score-go values threshold 0 0))
+        (let weight (add (mul above 100) coherence))
+        (str_concat
+            (str_concat
+                (str_concat (str_concat "{\"weight\":" (int_to_str weight))
+                            (str_concat ",\"values\":" (b-int-list values)))
+                (str_concat ",\"threshold\":" (int_to_str threshold)))
+            ",\"runtime\":\"inline\"}")))
+
+;; the handler the engine dispatches: query alist → (http-ok body).
+(defn b-cw-handler (q) (http-ok (b-cw-body q)))
+
+;; the routes table — the SAME (path handler) shape production-routes.fk binds.
+(let b-routes (list (list "/api/utils/coherence_weight" b-cw-handler)))
+
+;; ===================================================================
+;; helper: extract the wire body (everything past the "\r\n\r\n") from a
+;; response STRING, so a check can compare it to the handler's own output.
+;; ===================================================================
+(defn b-resp-body (resp)
+    (do
+        (let i (str_find resp "\r\n\r\n" 0))
+        (if (eq i -1) "" (substring resp (add i 4) (str_len resp)))))
+
+;; helper: does `s` contain `needle` (str_find >= 0)?
+(defn b-contains (s needle) (ge (str_find s needle 0) 0))
+
+;; helper: does `s` START with `prefix`?
+(defn b-starts (s prefix)
+    (if (gt (str_len prefix) (str_len s)) false
+        (str_eq (substring s 0 (str_len prefix)) prefix)))
+
+;; ===================================================================
+;; CHECK 1+2 — default request: parse → route → serve → response.
+;; ===================================================================
+(let raw-default "GET /api/utils/coherence_weight HTTP/1.1\r\nHost: x\r\n\r\n")
+(let resp-default (http-handle raw-default b-routes))
+
+;; the body the handler itself produces for the default (empty) query.
+(let cw-default-body (b-cw-body (list)))
+
+;; the EXACT default body documented for the live route.
+(let cw-expected-body
+    "{\"weight\":16185,\"values\":[72,38,91,55,28,67,84,45,95,12],\"threshold\":50,\"runtime\":\"inline\"}")
+
+;; (1) the handler reproduces the live route's default body byte-for-byte.
+(let ok-body-bytes (if (str_eq cw-default-body cw-expected-body) 1 0))
+
+;; (2) http-handle's response BODY equals the handler's own output — the engine
+;; relays the body unmangled.
+(let ok-served-body (if (str_eq (b-resp-body resp-default) cw-default-body) 2 0))
+
+;; ===================================================================
+;; CHECK 3..6 — the response framing (status line, headers, length, router).
+;; ===================================================================
+;; (3) status line.
+(let ok-status (if (b-starts resp-default "HTTP/1.1 200 OK\r\n") 4 0))
+;; (4) JSON content type (body opens with '{').
+(let ok-ctype (if (b-contains resp-default "Content-Type: application/json\r\n") 8 0))
+;; (5) Content-Length is the byte length of the body.
+(let ok-clen
+    (if (b-contains resp-default
+            (str_concat (str_concat "Content-Length: " (int_to_str (str_len cw-default-body))) "\r\n"))
+        16 0))
+;; (6) honest provenance header.
+(let ok-router (if (b-contains resp-default "X-Form-Router: native-kernel\r\n") 32 0))
+
+;; (7) the response is EXACTLY what hs-build-response frames for (200, body) —
+;; the whole wire string, not just spot checks.
+(let ok-exact
+    (if (str_eq resp-default (hs-build-response 200 cw-default-body)) 64 0))
+
+;; ===================================================================
+;; CHECK 8 — a query string is parsed into the alist and reaches the handler.
+;; threshold=90 keeps only values >= 90 (91 and 95), with position-weighting:
+;; pos0 91*100 + pos1 95*50 = 9100 + 4750 = 13850, above=2 → weight 200+13850=14050.
+;; ===================================================================
+(let raw-query "GET /api/utils/coherence_weight?threshold=90 HTTP/1.1\r\nHost: x\r\n\r\n")
+(let resp-query (http-handle raw-query b-routes))
+(let expected-query-body
+    "{\"weight\":14050,\"values\":[72,38,91,55,28,67,84,45,95,12],\"threshold\":90,\"runtime\":\"inline\"}")
+(let ok-query (if (str_eq (b-resp-body resp-query) expected-query-body) 128 0))
+
+;; ===================================================================
+;; CHECK 9 — a non-matching path returns the fan-out marker (caller fans out).
+;; ===================================================================
+(let raw-miss "GET /api/ideas HTTP/1.1\r\nHost: x\r\n\r\n")
+(let resp-miss (http-handle raw-miss b-routes))
+(let ok-fanout (if (http-is-fanout? resp-miss) 256 0))
+
+;; ===================================================================
+;; CHECK 10 — the query layer in isolation: path split + k=v&... alist parse.
+;; "/p?threshold=90&values=1,2" → path "/p", alist (("threshold" "90")
+;; ("values" "1,2")). Asserts hs-path-only / hs-query-of / hs-parse-query agree.
+;; ===================================================================
+(let probe-path "/p?threshold=90&values=1,2")
+(let pq (hs-parse-query (hs-query-of probe-path)))
+(let ok-query-parse
+    (if (str_eq (hs-path-only probe-path) "/p")
+        (if (str_eq (b-assoc "threshold" pq) "90")
+            (if (str_eq (b-assoc "values" pq) "1,2") 512 0)
+            0)
+        0))
+
+;; ===================================================================
+;; verdict — sum of the bit-weighted checks; 1023 when all pass.
+;; ===================================================================
+(add ok-body-bytes
+(add ok-served-body
+(add ok-status
+(add ok-ctype
+(add ok-clen
+(add ok-router
+(add ok-exact
+(add ok-query
+(add ok-fanout
+       ok-query-parse)))))))))
