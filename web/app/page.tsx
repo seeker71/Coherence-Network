@@ -182,9 +182,15 @@ export default async function Home() {
     title: t(step.titleKey) || step.title,
     description: t(step.descKey) || step.description,
   }));
-  const homePresenceCards = await getHomePresenceTraceCards(lang);
-
-  const [ideasData, resonanceItems, coherenceScore, nodeCount, featuredConcept] = await Promise.all([
+  // All server-side data the home render needs, fetched in ONE parallel wave.
+  // getHomePresenceTraceCards fans out its own /api/field-stories calls, so
+  // awaiting it ahead of the others used to add a whole sequential network
+  // phase to every dynamic (per-locale) render — the home page's cold-render
+  // latency. It depends only on `lang` (resolved above) and is independent of
+  // the other loaders, so it joins the same Promise.all: total render-blocking
+  // fetch time becomes max(6) instead of getHomePresenceTraceCards + max(5).
+  const [homePresenceCards, ideasData, resonanceItems, coherenceScore, nodeCount, featuredConcept] = await Promise.all([
+    getHomePresenceTraceCards(lang),
     loadIdeas(lang),
     loadResonance(lang),
     loadCoherenceScore(),
