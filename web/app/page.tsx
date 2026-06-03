@@ -106,12 +106,15 @@ async function loadCoherenceScore(): Promise<CoherenceScoreResponse | null> {
 
 async function loadNodeCount(): Promise<number> {
   try {
-    const data = await fetchJsonOrNull<Array<{ node_id: string }>>(
-      `${getApiBase()}/api/federation/nodes`,
+    // The lightweight count endpoint — a single COUNT(*) — instead of the full
+    // /api/federation/nodes list, which builds per-node streak aggregation this
+    // stat doesn't need. That list was the home page's slowest data fetch.
+    const data = await fetchJsonOrNull<{ count: number }>(
+      `${getApiBase()}/api/federation/nodes/count`,
       {},
       5000,
     );
-    return Array.isArray(data) ? data.length : 1;
+    return typeof data?.count === "number" ? data.count : 1;
   } catch {
     return 1;
   }
