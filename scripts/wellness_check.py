@@ -1610,13 +1610,35 @@ def sense_kernel_api() -> list[str]:
         # The honest runtime-share nuance: route-COUNT is kernel USAGE, not the
         # runtime-SHARE that actually left CPython. Even kernel-served routes run
         # the kernel as a guest-subroutine — routing/binding/validation/response
-        # stay CPython; 0 routes are served kernel-FIRST. Track runtime-share,
-        # not route-count (scripts/runtime_surface_report.py).
-        lines.append(
-            "  vitality: runtime-share — those routes run the kernel as a "
-            "guest-subroutine inside CPython (0 kernel-first); usage and "
-            "runtime-share are distinct axes (scripts/runtime_surface_report.py)"
-        )
+        # stay CPython; 0 routes are served kernel-FIRST at the live front door.
+        # But the kernel-router manifest now holds native handlers that serve the
+        # WHOLE lifecycle in Form, proven byte-identical in shadow — the CAPABLE
+        # surface, read from the one source (runtime_surface_report, no duplicated
+        # parse). Track runtime-share, not route-count.
+        n_capable = None
+        rsr_path = ROOT / "scripts" / "runtime_surface_report.py"
+        if rsr_path.is_file():
+            try:
+                _spec = importlib.util.spec_from_file_location("runtime_surface_report", rsr_path)
+                _rsr = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+                _spec.loader.exec_module(_rsr)  # type: ignore[union-attr]
+                n_capable = len(_rsr.kernel_first_capable_routes())
+            except Exception:
+                n_capable = None
+        if n_capable:
+            lines.append(
+                f"  vitality: runtime-share — 0 routes served kernel-FIRST at the front "
+                f"door (those {n_served} run the kernel as a guest-subroutine inside "
+                f"CPython), but {n_capable} are kernel-first CAPABLE: native handlers "
+                "proven byte-identical in shadow, whole lifecycle in Form, awaiting the "
+                "front-door flip (scripts/runtime_surface_report.py)"
+            )
+        else:
+            lines.append(
+                "  vitality: runtime-share — those routes run the kernel as a "
+                "guest-subroutine inside CPython (0 kernel-first); usage and "
+                "runtime-share are distinct axes (scripts/runtime_surface_report.py)"
+            )
     else:
         lines.append(
             f"  vitality: {n_served} routes kernel-served (total-route count unread)"
