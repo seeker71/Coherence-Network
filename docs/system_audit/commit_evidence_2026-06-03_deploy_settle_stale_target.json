@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/deploy-settle-stale-target-20260603",
+  "commit_scope": "Teach deploy settling to dispatch the current main SHA when the latest Hostinger run targets an older main SHA.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-03_deploy_settle_stale_target.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_settle_public_deploy_stale_target_dispatch.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "curl -fsS -H 'Authorization: Bearer <redacted>' https://developers.hostinger.com/api/vps/v1/virtual-machines",
+      "curl -fsS -H 'Authorization: Bearer <redacted>' https://developers.hostinger.com/api/vps/v1/virtual-machines/1482815/docker",
+      "gh variable set HOSTINGER_VIRTUAL_MACHINE_ID --repo seeker71/Coherence-Network --body 1482815",
+      "gh secret set HOSTINGER_API_TOKEN --repo seeker71/Coherence-Network",
+      "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh"
+    ],
+    "notes": "The stale-target test proves that when main is e2e0645a56a982b9460754f90b6755e47e348d8e and the latest Hostinger run targets older e1283a7f7c237fd07e156127754b1b7b7b03c000, the settle command dispatches a deploy for the current target once and then waits. Hostinger API observation found VM 1482815 running at 187.77.152.42, project coherence-network alive with api/web/pulse/db containers up, and no managed public keys reported by the provider API."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "fail",
+    "notes": "Manual current-main Hostinger deploy run 26892572855 for e2e0645a56a982b9460754f90b6755e47e348d8e failed at Sync tracked deploy script to VPS after ssh-keyscan failed five times and eight scp attempts to root@187.77.152.42 timed out. After the VPS reboot, Hostinger action 97434868 ct_restart succeeded at 2026-06-03T14:29:33Z and public health restarted at 2026-06-03T14:29:48Z, but still reports deployed_sha 5dad3d6f0d7f48495b9644fde0e8d26572962ae1. Local TCP to 187.77.152.42:22 succeeds while ssh-keyscan returns rc=1 with no host key."
+  },
+  "e2e_validation": {
+    "status": "blocked",
+    "expected_behavior_delta": "Deploy settling no longer waits forever on an older Hostinger run when main advances outside the Hostinger Auto Deploy path filter; it dispatches the current main SHA once.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "reference_failures": [
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26892572855"
+    ],
+    "test_flows": [
+      "scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "After Hostinger SSH accepts GitHub-runner connections: scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The stale-target dispatch behavior is locally proven, but public production remains behind main until Hostinger SSH/SCP succeeds."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "production-deploy-proof"
+  ],
+  "task_ids": [
+    "deploy-settle-stale-target-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "operations-decision"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/settle_public_deploy.sh dispatches the current main SHA when the latest Hostinger run targets an older SHA.",
+    "scripts/test_settle_public_deploy_stale_target_dispatch.sh locks the stale-target dispatch behavior.",
+    "Hostinger Auto Deploy run 26892572855 failed at the same ssh-keyscan/scp timeout gate as the earlier e1283a7f runs.",
+    "Hostinger API reports VM 1482815 running, Docker project coherence-network alive, and no provider-managed public keys attached."
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-03_deploy_settle_stale_target.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_settle_public_deploy_stale_target_dispatch.sh"
+  ],
+  "change_intent": "process_only"
+}
