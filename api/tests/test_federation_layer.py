@@ -129,6 +129,34 @@ async def test_list_nodes():
         assert nid in node_ids
 
 
+@pytest.mark.asyncio
+async def test_count_nodes_matches_list_length():
+    """The lightweight count endpoint returns the same total as the full list.
+
+    The home page reads ``/api/federation/nodes/count`` (a single COUNT) for its
+    node-count stat instead of fetching the full ``/api/federation/nodes`` list,
+    which builds per-node streak aggregation the count doesn't need. This pins
+    that the cheap path is a faithful substitute: its value equals the list's
+    length and reflects a just-registered node.
+    """
+    nid = _node_id()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await c.post("/api/federation/nodes", json={
+            "node_id": nid,
+            "hostname": "count-test.local",
+            "os_type": "linux",
+        })
+
+        r = await c.get("/api/federation/nodes/count")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert isinstance(body.get("count"), int)
+
+        nodes = (await c.get("/api/federation/nodes")).json()
+        assert body["count"] == len(nodes)  # cheap path == expensive path
+        assert body["count"] >= 1           # the registered node is counted
+
+
 # ---------------------------------------------------------------------------
 # 4. GET /api/federation/strategies returns list
 # ---------------------------------------------------------------------------
