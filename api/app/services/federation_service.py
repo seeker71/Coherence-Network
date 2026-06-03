@@ -857,6 +857,20 @@ def list_nodes() -> list[dict]:
         return nodes
 
 
+def count_nodes() -> int:
+    """Return the number of registered federation nodes.
+
+    A lightweight COUNT for callers that only need the size of the fleet — the
+    home page shows a node-count stat and discards the rest. ``list_nodes`` runs
+    ``_build_node_streaks`` (a per-node execution-history aggregation) to build
+    the full directory; that was the dominant cost of every uncached home render.
+    This path skips it: a single ``COUNT(*)`` over the node table.
+    """
+    _ensure_schema()
+    with _session() as s:
+        return s.query(FederationNodeRecord).count()
+
+
 def delete_node(node_id: str) -> bool:
     """Remove a federation node by ID. Returns True if deleted."""
     _ensure_schema()

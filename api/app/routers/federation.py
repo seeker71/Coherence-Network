@@ -142,6 +142,19 @@ async def list_nodes():
     return federation_service.list_nodes()
 
 
+@router.get("/federation/nodes/count", summary="Count registered federation nodes (lightweight)")
+async def count_nodes():
+    """Return just the number of registered federation nodes.
+
+    The home page shows a node-count stat; it used to fetch the full
+    ``/federation/nodes`` list, which builds per-node streak aggregation the
+    count doesn't need — the dominant cost of every uncached home render. This
+    serves a single ``COUNT(*)`` so the most-visited page's data path stays cheap.
+    Defined before the ``{node_id}`` routes so the literal path can't be shadowed.
+    """
+    return {"count": federation_service.count_nodes()}
+
+
 @router.delete("/federation/nodes/{node_id}", status_code=204, summary="Remove a stale or duplicate federation node")
 async def delete_node(node_id: str):
     """Remove a stale or duplicate federation node."""
