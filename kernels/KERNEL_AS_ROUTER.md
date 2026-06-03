@@ -474,14 +474,64 @@ client→router hop**, **upstream connection reuse on the fan-out hop**, and
 **fan-out timeouts (hung upstream → 504, worker freed, pool not starved)** are now
 shown; chunked transfer and structural-JSON are the rest.
 
-## The flip is Urs's decision
+## The flip — sensed to the bone, the decision is intent not permission
 
-This is the **live request front-door for real visitors** — high-stakes. This
-design and proof establish that the inverted topology *works* and name the build
-precisely. **The production flip — putting the kernel-router in front of the
-real FastAPI app — is Urs's explicit decision, not shipped here.** Today's
-front door (FastAPI) is untouched; this is the design plus a side proof on a
-test port so the reversal can be weighed with evidence rather than assertion.
+This is the **live request front-door for real visitors** — and the traffic is
+real, if small: the production view-recorder shows **~3,600 view-events/day, a
+few hundred/hour** (a mix of genuine visitors and the body's own self-sensing —
+the aggregate can't cleanly split them, but it is *not* zero). So the caution
+here is not old-programming worst-case; there is actual live dependency. That
+is exactly why the flip's *intent* is Urs's — and why everything *under* the
+intent is sensed here rather than left to guess.
+
+**The production topology (sensed directly on the VPS, 2026-06-03):** Traefik
+fronts everything (`traefik-traefik-1`), routing `Host(api.coherencycoin.com)`
+→ the `coherence-api` service → the api container's port 8000 (one label rule in
+`/docker/coherence-network/docker-compose.yml`:
+`traefik.http.services.coherence-api.loadbalancer.server.port: "8000"`). The
+flip inserts the kernel-router *between* Traefik and api: Traefik routes
+`api.coherencycoin.com` → kernel-router → (fan-out) api:8000.
+
+**The honest readiness gap (sensed, not glossed):** the kernel-router is
+*proven* across the rungs above — but it is **not yet packaged as a deployable
+server**. The Rust binary ships inside the api container for the inline-PyO3
+path; there is **no standalone kernel-router container image / compose service**
+that runs `cli_serve` as a front door. So the flip is **not** "one Traefik
+label away" — the real first build is **package the kernel-router as a
+container** (a `form-kernel-rust serve --upstream http://api:8000` image + a
+compose service), *then* the Traefik re-point is one label. Claiming otherwise
+would be a false-green; this is the true next step and it is mine to build when
+the intent is set.
+
+**The staged, reversible shape once the image exists:**
+1. **Shadow** — kernel-router fans out *everything* to api, serves *zero* native
+   routes. Traefik points at it. Behavior is byte-identical to today (every
+   request still served by FastAPI, via one proxy hop), but now the
+   `X-Form-Router` header on every response gives live evidence the router
+   carries real traffic. The only added risk is the hop itself (kernel-router
+   process down = api traffic down until rollback).
+2. **Promote routes one at a time** — flip each already-parity-proven
+   kernel-eligible route (the 22 transmuted today) from fan-out to native;
+   each is 56× faster (native Form, no CPython lifecycle) and individually
+   reversible.
+3. **Rollback at any step** — revert the one Traefik label
+   (`loadbalancer.server.port` back to `8000`, or the router rule back to the
+   api service). Instant, single-line, no data migration.
+
+**The measured tradeoff** (from the real-app harness): native routes **~56×
+faster** than the CPython request lifecycle; the fan-out tail (the ~760
+not-yet-native routes) pays **~+6%** for the extra proxy hop. One new container
+in the hot path; the failure surface is that hop's uptime.
+
+**The division, corrected:** what is *mine* is to sense this to the bone (done:
+topology, insertion point, rollback, readiness gap, tradeoff, live-traffic
+reality) and to **build the kernel-router container image** so the shadow-step
+is actually deployable. What is *Urs's* is the **intent** — whether the body's
+front door should become the kernel now, accepting one hot-path container and a
++6% tail cost for the 56× native gain and the runtime-share shift toward the
+kernel speaking the body's own tongue. That is a stakes-and-vision question, not
+a permission gate; the sensing under it is no longer a guess. Today's front door
+(FastAPI) is untouched until that intent is set.
 
 ## Cross-references
 
