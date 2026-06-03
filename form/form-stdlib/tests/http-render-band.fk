@@ -1,0 +1,76 @@
+; tests/http-render-band.fk — sibling-witness band for http-render.fk.
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-render.fk
+;
+; Iteration 1 of lifting the HTTP server into the BML class hierarchy: the
+; Response layer, data-driven. This band proves what the lift is FOR — that the
+; status phrases are now DATA looked up from a table (not frozen into an
+; if-chain), that one generic recipe walks a kh-response's header list to frame
+; it, that the content-type is the handler's declared kh-header (or an honest
+; text/plain default), and that kh-serve-response renders any kh-response to the
+; wire.
+;
+; Each check contributes a distinct bit; the band emits their sum (63 when all
+; pass). Identical across Go, Rust, and TypeScript is the proof the Response
+; render is correct and three-way-portable — built IN the hierarchy
+; (kernel-http.fk's kh-response), not beside it.
+
+;; CHECK 1 (bit 1) — the status table is DATA. Listed codes resolve to their
+;; phrase; an UNLISTED code falls to the neutral "Status" (the lookup's
+;; fallback) instead of failing. Add a code by adding a row, not a branch.
+(let ok-reason
+    (if (str_eq (kh-reason 200) "OK")
+        (if (str_eq (kh-reason 422) "Unprocessable Entity")
+            (if (str_eq (kh-reason 999) "Status") 1 0)
+            0)
+        0))
+
+;; CHECK 2 (bit 2) — the default content-type. A response that declares no
+;; Content-Type gets text/plain from the framing — an honest label for opaque
+;; bytes. (A handler with a real type attaches its own kh-header; CHECK 4 / 6.)
+(let resp-default (kh-serve-response (kh-response 200 (list) "ok")))
+(let ok-default
+    (if (ge (str_find resp-default "Content-Type: text/plain" 0) 0) 2 0))
+
+;; CHECK 3 (bit 4) — the generic header walk. A list of kh-header values renders
+;; to "name: value\r\n" per header, in order — no header name hardcoded in the
+;; recipe. Two headers in, two CRLF-terminated lines out.
+(let ok-headers
+    (if (str_eq (kh-render-headers (list (kh-header "A" "1") (kh-header "B" "2")))
+                "A: 1\r\nB: 2\r\n")
+        4 0))
+
+;; CHECK 4 (bit 8) — the full wire render of a handler-declared JSON response.
+;; The handler attaches Content-Type: application/json; finalize preserves it
+;; and adds Content-Length (the body {"w":1} is 7 bytes) and X-Form-Router, then
+;; the generic render frames the whole thing. Exact-match across all three
+;; kernels is the proof the wire string is byte-identical.
+(let resp200 (kh-serve-response (kh-response 200 (list (kh-header "Content-Type" "application/json")) "{\"w\":1}")))
+(let expected200
+    "HTTP/1.1 200 OK\r\nContent-Length: 7\r\nX-Form-Router: native-kernel\r\nContent-Type: application/json\r\n\r\n{\"w\":1}")
+(let ok-render (if (str_eq resp200 expected200) 8 0))
+
+;; CHECK 5 (bit 16) — a 422 (a handler's observable "no") renders the right
+;; status line, the phrase pulled from the table. "HTTP/1.1 422 Unprocessable
+;; Entity" is 33 bytes.
+(let resp422 (kh-serve-response (kh-response 422 (list) "{\"detail\":\"x\"}")))
+(let ok-422
+    (if (str_eq (substring resp422 0 33) "HTTP/1.1 422 Unprocessable Entity")
+        16 0))
+
+;; CHECK 6 (bit 32) — Content-Type idempotency. When the handler already set a
+;; Content-Type, finalize does NOT add the default: the response carries the
+;; handler's text/html and the text/plain default never appears.
+(let resp-ct
+    (kh-serve-response (kh-response 200 (list (kh-header "Content-Type" "text/html")) "x")))
+(let ok-idempotent
+    (if (ge (str_find resp-ct "Content-Type: text/html" 0) 0)
+        (if (eq (str_find resp-ct "text/plain" 0) -1) 32 0)
+        0))
+
+;; verdict — sum of the bit-weighted checks; 63 when all pass.
+(add ok-reason
+(add ok-default
+(add ok-headers
+(add ok-render
+(add ok-422
+     ok-idempotent)))))

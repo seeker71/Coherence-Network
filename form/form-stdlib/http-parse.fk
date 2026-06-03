@@ -26,8 +26,9 @@
 ;     (http-headers  req-node)  → list of HEADER recipes
 ;     (http-body     req-node)  → string
 ;
-; Input shape (lines separated by \n; real HTTP uses \r\n but for
-; simplicity we accept \n):
+; Input shape (lines separated by \r\n or \n; real HTTP uses CRLF, whose
+; trailing \r the parser strips at each line end, so a bare-\n request
+; parses identically):
 ;
 ;   GET /api/health HTTP/1.1\n
 ;   Host: example.com\n
@@ -68,6 +69,18 @@
 ;; http-find-char — index of `needle` (a single-char string) starting
 ;; at `from`, or -1 if absent. Thin wrapper for readability.
 (defn http-find-char (s needle from) (str_find s needle from))
+
+;; http-line-end — the CONTENT end of a line whose terminating '\n' is at
+;; index `nl`, content starting at `i`. Real HTTP separates lines with CRLF;
+;; if the byte just before the '\n' is '\r' (ASCII 13), the content ends one
+;; earlier, so the '\r' never leaks into a method/version/header token and a
+;; CRLF blank line reads as genuinely empty. A bare '\n' line is unchanged —
+;; the parser accepts both wire shapes. The `(lt i nl)` guard keeps us from
+;; reading before the line's own start on an empty line.
+(defn http-line-end (s i nl)
+    (if (lt i nl)
+        (if (eq (ord (char_at s (sub nl 1))) 13) (sub nl 1) nl)
+        nl))
 
 ;; http-skip-space-once — when char at index `i` is ASCII space (32),
 ;; advance one position; otherwise return i. The HTTP header grammar
@@ -138,12 +151,16 @@
 (defn http-collect-headers-loop (s i acc)
     (do
         (let nl (http-find-newline s i))
-        (if (eq nl i)
-            ;; blank line — headers done; body starts after this \n.
+        (let ce (http-line-end s i nl))
+        (if (eq ce i)
+            ;; blank line (empty content — bare \n or a lone \r before \n);
+            ;; headers done; body starts after this \n.
             (list (http-headers-from-list (http-reverse acc))
                   (if (lt nl (str_len s)) (add nl 1) nl))
             (do
-                (let header (http-parse-header-line s i nl))
+                ;; parse to the CONTENT end (ce), so a trailing \r is excluded
+                ;; from the header value rather than collected as part of it.
+                (let header (http-parse-header-line s i ce))
                 (let next-i (if (lt nl (str_len s)) (add nl 1) nl))
                 (if (eq nl (str_len s))
                     ;; reached end-of-input with no blank line —
@@ -173,7 +190,10 @@
         (if (eq line1-end 0)
             (http-error)
             (do
-                (let parts (http-parse-request-line s line1-end))
+                ;; parse the request line to its CONTENT end, so a CRLF
+                ;; version token ("HTTP/1.1\r") sheds its trailing \r.
+                (let line1-ce (http-line-end s 0 line1-end))
+                (let parts (http-parse-request-line s line1-ce))
                 (if (eq (len parts) 0)
                     ;; request-line parser already returned an error sentinel.
                     parts

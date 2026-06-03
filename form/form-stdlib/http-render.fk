@@ -1,0 +1,113 @@
+; http-render.fk — render a kh-response value into an HTTP/1.1 wire string.
+;
+; preludes: form-stdlib/kernel-http.fk
+;
+; THE PRINCIPLE (Urs): data and strings do not belong in recipes; only flow
+; and choice do. This file is the Response-layer proof of that principle. The
+; thing it replaces — http-serve.fk's hs-build-response / hs-reason /
+; hs-content-type — froze the data INTO the control flow: status phrases as a
+; nested if-chain, MIME types as a nested if-chain, the wire format as a
+; ten-deep str_concat with the header strings welded in. To add a status code
+; you edited code; to add a content-type you edited code; the framing could not
+; be inspected or extended without rewriting it.
+;
+; Here the data is DATA — a token-efficient lookup table — and ONE generic
+; recipe renders any kh-response by walking its header list. Adding a status
+; phrase or a MIME rule is appending a row. Changing the framing is changing
+; the render recipe, which contains no domain strings, only structure.
+;
+; Layering: a kh-response (kernel-http.fk) carries (status, headers, body),
+; where headers is a list of kh-header (name, value). The render walks that
+; list — Content-Type / Content-Length / X-Form-Router are kh-header DATA the
+; caller attaches, NOT literals baked into the framing. The status line pulls
+; its reason phrase from the status table. The result is the wire string.
+;
+; What stays a recipe (flow/choice): the status line shape "HTTP/1.1 c r\r\n",
+; the per-header "name: value\r\n" shape, the blank-line terminator, the lookup
+; walks. What is data: every status code↔phrase, the body-prefix↔MIME rules,
+; and the headers themselves (as kh-header values on the response).
+
+section [form.bml] {
+
+    ;; ---- the status table : code -> reason phrase (DATA) -------------
+    ;; A list of (code phrase) rows. To teach the server a new status, add a
+    ;; row — no recipe changes. The phrase is courtesy; the integer carries the
+    ;; meaning, so an unlisted code still renders (with a neutral phrase) rather
+    ;; than failing. Ordered by how often these handlers actually answer.
+    ;; (Single-line: the local source-compiler compiles calls that span lines
+    ;; wrong — `list(` + newline becomes `list()` with the rows left raw. So the
+    ;; rows live on one line, the body's proven idiom; iteration #7 — teaching
+    ;; the compiler multi-line calls — is what lets this table breathe vertically.)
+    let kh-status-table = list(list(200, "OK"), list(400, "Bad Request"), list(404, "Not Found"), list(422, "Unprocessable Entity"), list(500, "Internal Server Error"));
+
+    ;; generic table lookup: first row whose head equals `key` -> its second
+    ;; element; `fallback` when no row matches — the status table's lookup walk.
+    ;; (Keyed by eq on integer status codes; string-keyed lookup would need
+    ;; str_eq, since the kernels disagree on eq over strings — which is why the
+    ;; content-type default below is a constant, not a sniffed table.)
+    def kh-lookup(table, key, fallback) = if nil?(table) then fallback else if eq(nth(head(table), 0), key) then nth(head(table), 1) else kh-lookup(tail(table), key, fallback);
+
+    ;; reason phrase for a status code, from the table. Unlisted -> "Status"
+    ;; (neutral, honest — the code is what the client keys on).
+    def kh-reason(code) = kh-lookup(kh-status-table, code, "Status");
+
+    ;; ---- the default content-type (DATA) -----------------------------
+    ;; The framing supplies a Content-Type ONLY when the handler declared none.
+    ;; The handler knows its body's type — JSON, html, an image — and says so by
+    ;; attaching a kh-header; the render walks whatever it attached. Sniffing the
+    ;; body's first byte to guess the type was a fragile heuristic (a JSON string
+    ;; body opens with '"', a number with a digit) AND leaned on eq over string
+    ;; keys, where the sibling kernels disagree. So the default is one honest
+    ;; constant: when no type is declared the bytes are opaque, and text/plain is
+    ;; the safe, non-executable label a browser will not run.
+    let kh-default-content-type = "text/plain";
+
+    ;; ---- render : kh-response -> wire string (generic) ---------------
+    ;; Walk the header list, emitting "name: value\r\n" per kh-header. No header
+    ;; name is hardcoded here — the caller decides which headers the response
+    ;; carries by building them as kh-header DATA. This is the whole reason the
+    ;; framing is now extensible: a new header is a value, not an edit.
+    def kh-render-headers(headers) = if nil?(headers) then "" else str_concat(str_concat(kh-header-name(head(headers)), str_concat(": ", str_concat(kh-header-value(head(headers)), "\r\n"))), kh-render-headers(tail(headers)));
+
+    ;; the status line: "HTTP/1.1 <code> <reason>\r\n". int_to_str renders the
+    ;; code as portable digits (no Rust-only value_str on the framing path).
+    def kh-status-line(code) = str_concat("HTTP/1.1 ", str_concat(int_to_str(code), str_concat(" ", str_concat(kh-reason(code), "\r\n"))));
+
+    ;; (kh-response-render response) -> the full HTTP/1.1 wire STRING.
+    ;; status line + rendered headers + blank line + body. The response's
+    ;; headers list IS the wire header block — Content-Type/Content-Length/
+    ;; X-Form-Router are expected to be present on it as kh-header data (see
+    ;; kh-response-finalize, which attaches the framing headers a handler did
+    ;; not). Pure: a value in, a string out; no I/O, three-way-identical.
+    def kh-response-render(response) = str_concat(kh-status-line(kh-response-status(response)), str_concat(kh-render-headers(kh-response-headers(response)), str_concat("\r\n", kh-response-body(response))));
+
+    ;; (kh-response-finalize response) -> a kh-response with the transport
+    ;; framing headers attached: Content-Type (the default, unless the response
+    ;; already declares one), Content-Length (the body's byte length), and
+    ;; X-Form-Router: native-kernel (honest provenance). A handler builds a
+    ;; kh-response with its OWN semantic headers (or none); finalize adds the
+    ;; framing the wire requires, so the handler never concerns itself with
+    ;; Content-Length. Idempotent on Content-Type: if the handler set one,
+    ;; kh-header-present? leaves it.
+    def kh-response-finalize(response) {
+        let status = kh-response-status(response);
+        let headers = kh-response-headers(response);
+        let body = kh-response-body(response);
+        ;; cons builds a stack — to render in the order Content-Type,
+        ;; Content-Length, X-Form-Router (then the handler's own headers), cons
+        ;; in reverse: X-Form-Router first (innermost), Content-Type last
+        ;; (outermost). Content-Type is left to the handler if it already set one.
+        let with_router = cons(kh-header("X-Form-Router", "native-kernel"), headers);
+        let with_cl = cons(kh-header("Content-Length", int_to_str(str_len(body))), with_router);
+        let with_ct = if kh-header-present?(with_cl, "Content-Type") then with_cl else cons(kh-header("Content-Type", kh-default-content-type), with_cl);
+        kh-response(status, with_ct, body);
+    }
+
+    ;; (kh-serve-response response) -> the wire string for a handler response:
+    ;; finalize (attach framing headers) then render. This is the Response
+    ;; layer's single public entry — a handler returns a kh-response, this is
+    ;; what reaches the socket.
+    def kh-serve-response(response) = kh-response-render(kh-response-finalize(response));
+
+    0;
+}
