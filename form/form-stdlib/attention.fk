@@ -69,4 +69,56 @@
             (attention-argmin
                 (attention-distances query keys-list))))
 
+    ;; --- attention clusters -----------------------------------------
+    ;;
+    ;; A cluster is read as an axis vector, not only as one scalar:
+    ;;   [alignment vitality trust tightness unknown surprise leverage]
+    ;;
+    ;; The steering matrix projects that vector into named lanes:
+    ;;   [trusted tight unknown surprising leverage]
+    ;;
+    ;; A UI may still sort by one derived priority, but the body keeps
+    ;; the whole projection so attention can turn by category rather than
+    ;; chasing individual events.
+
+    (defn attention-clamp01 (v)
+        (if (lt v 0) 0 (if (gt v 1) 1 v)))
+
+    (defn attention-dot-loop (a b acc)
+        (if (eq (len a) 0) acc
+            (attention-dot-loop
+                (tail a)
+                (tail b)
+                (add acc (mul (head a) (head b))))))
+
+    (defn attention-dot (a b)
+        (attention-dot-loop a b 0.0))
+
+    (defn attention-project-loop (matrix axes acc)
+        (if (eq (len matrix) 0)
+            (attention-reverse acc)
+            (attention-project-loop
+                (tail matrix)
+                axes
+                (cons
+                    (attention-clamp01
+                        (attention-dot (head matrix) axes))
+                    acc))))
+
+    (defn attention-project-cluster (axes matrix)
+        (attention-project-loop matrix axes (empty)))
+
+    (defn attention-default-steering-matrix (_x)
+        (list
+            ;; trusted: alignment + vitality + trust, softened by tightness
+            (list 0.30 0.25 0.35 -0.10 -0.05 -0.05 0.10)
+            ;; tight: known resistance, stronger when leverage is high
+            (list 0.00 0.00 -0.10 0.45 0.10 0.10 0.15)
+            ;; unknown: low trust + unknown + surprise
+            (list 0.00 0.00 -0.10 0.10 0.45 0.20 0.15)
+            ;; surprising: baseline change and novelty
+            (list 0.05 0.05 0.00 0.10 0.10 0.45 0.20)
+            ;; leverage: aligned work that unlocks downstream movement
+            (list 0.25 0.10 0.10 0.10 0.05 0.10 0.40)))
+
     0)

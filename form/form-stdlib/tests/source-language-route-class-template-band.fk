@@ -1,0 +1,36 @@
+; source-language-route-class-template-band.fk - source-language class/template band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk
+; form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
+; form-stdlib/kernel-http.fk form-stdlib/language-model.fk
+;
+; Band verdict: 525377 when BML template/class source syntax lowers to generic
+; LanguageClass values, including a direct KernelHTTPRoute and a route-data ref,
+; with a valid candidate matrix for the direct route.
+
+(defn route_runtime_health () "ok")
+
+section [form.bml] {
+    template RouteCell<TRequest, TResponse> {
+        member request: TRequest;
+        member response: TResponse;
+        member route: KernelHTTPRoute;
+    }
+    class RuntimeHealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("runtime-health", "GET", "/api/runtime/health", 9, "route_runtime_health", "Accept", 0);
+    class RuntimeDataRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
+        def handle(request) {
+            route_runtime_health();
+        }
+
+        route = route_data(runtime-data, handle);
+    }
+
+    let runtime_route = language-route-class-kernel-route(RuntimeHealthRoute);
+    let runtime_data_ref = language-route-class-kernel-route(RuntimeDataRoute);
+    let runtime_method_member = language-class-member-named(language-class-members(RuntimeDataRoute), "handle");
+    let runtime_route_member = language-class-member-named(language-class-members(RuntimeDataRoute), "route");
+    let runtime_request = kh-request("GET", "/api/runtime/health", list(kh-header("Accept", "application/json")), empty, "");
+    let runtime_candidate = kh-route-candidate(runtime_route, runtime_request);
+
+    sum(list(kh-bool-score(language-template-valid?(RouteCell), 1), kh-bool-score(language-route-class-valid?(RuntimeHealthRoute), 2), kh-bool-score(str_eq(language-route-class-name(RuntimeHealthRoute), "RuntimeHealthRoute"), 4), kh-bool-score(eq(len(language-route-class-type-arguments(RuntimeHealthRoute)), 2), 8), kh-bool-score(str_eq(nth(language-template-parameters(RouteCell), 0), "TRequest"), 16), kh-bool-score(str_eq(nth(language-route-class-type-arguments(RuntimeHealthRoute), 1), "KernelHTTPResponse"), 32), kh-bool-score(kh-route-valid?(runtime_route), 64), kh-bool-score(str_eq(kh-route-name(runtime_route), "runtime-health"), 128), kh-bool-score(str_eq(kh-route-pattern(runtime_route), "/api/runtime/health"), 256), kh-bool-score(kh-route-candidate-valid?(runtime_candidate), 512), kh-bool-score(eq(kh-route-candidate-pressure(runtime_candidate), 0), 1024), kh-bool-score(eq(len(kh-route-candidate-matrix(runtime_candidate)), 4), 2048), kh-bool-score(eq(kh-route-candidate-score(runtime_candidate), 1090), 4096), kh-bool-score(kh-route-data-ref-valid?(runtime_data_ref), 8192), kh-bool-score(str_eq(kh-route-data-ref-id(runtime_data_ref), "runtime-data"), 16384), kh-bool-score(eq(len(language-template-members(RouteCell)), 3), 32768), kh-bool-score(language-class-valid?(RuntimeDataRoute), 65536), kh-bool-score(eq(language-class-member-kind(runtime_method_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 131072), kh-bool-score(eq(language-class-member-kind(runtime_route_member), LANGUAGE-CLASS-MEMBER-KIND-ROUTE), 262144), kh-route-candidate-score(runtime_candidate)));
+}

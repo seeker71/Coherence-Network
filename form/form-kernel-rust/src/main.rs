@@ -6174,7 +6174,7 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
-  serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a BML-authored `section [form.bml]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
+  serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a source-authored `section [...]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
 
 Source adapter modes:
   <file.fk> [more.fk ...]              run .fk files
@@ -6218,25 +6218,638 @@ Source adapter modes:
 // least the recursion depth the single-threaded serve path did before the pool.
 const WORKER_STACK_SIZE: usize = 16 * 1024 * 1024;
 
-// The route manifest a worker resolves from its own kernel+arena: a list of
-// (path, handler-closure). Each closure's `env` is a frame index INTO THAT
-// worker's arena, so route_pairs are NOT shareable across workers — every
-// worker re-loads routes.fk into its own Kernel+Arena and resolves its own
-// copy. This is the !Sync constraint the pool answers (lc-native-kernel-binary:
-// the per-process intern table means a pool of kernel workers, not one shared
-// mutable kernel).
-type RoutePairs = Vec<(String, Arc<Closure>)>;
+// The route manifest a worker resolves from its own kernel+arena. Path rows are
+// `(path handler-closure)`. KernelHTTPRoute rows are
+// `(KernelHTTPRoute name method pattern priority handler required_header budget)`,
+// the lowered BML/Form HTTP surface carried by form-stdlib/kernel-http.fk.
+// KernelHTTPRoute rows resolve `handler` through the already-walked manifest
+// environment. Each closure's `env` is a frame index INTO THAT worker's arena,
+// so route specs are NOT shareable across workers — every worker re-loads
+// routes.fk into its own Kernel+Arena and resolves its own copy. This is the
+// !Sync constraint the pool answers (lc-native-kernel-binary: the per-process
+// intern table means a pool of kernel workers, not one shared mutable kernel).
+#[derive(Clone, Debug)]
+struct RouteSpec {
+    name: String,
+    method: String,
+    pattern: String,
+    priority: i64,
+    handler_name: String,
+    required_header: String,
+    pressure_budget: i64,
+    handler: Arc<Closure>,
+}
+
+type RouteSpecs = Vec<RouteSpec>;
+
+#[derive(Clone, Debug, Default)]
+struct RouteDataRegistry {
+    routes: HashMap<String, RouteData>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+struct RouteDataFile {
+    routes: HashMap<String, RouteData>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+struct RouteData {
+    name: String,
+    method: String,
+    pattern: String,
+    priority: i64,
+    #[serde(default)]
+    required_header: String,
+    pressure_budget: i64,
+}
+
+#[derive(Clone, Debug)]
+struct RoutePressureRow {
+    axis: String,
+    observed: Value,
+    expected: Value,
+    pressure: i64,
+}
+
+#[derive(Clone, Debug)]
+struct RouteCandidateValue {
+    route_name: String,
+    route_method: String,
+    route_pattern: String,
+    route_priority: i64,
+    route_handler_name: String,
+    route_required_header: String,
+    route_pressure_budget: i64,
+    request_method: String,
+    request_path: String,
+    request_headers: Vec<(String, String)>,
+    request_query: Vec<(String, String)>,
+    request_body: String,
+    pressure_matrix: Vec<RoutePressureRow>,
+    pressure: i64,
+    score: i64,
+}
+
+#[derive(Debug)]
+struct RouteSelection<'a> {
+    route: &'a RouteSpec,
+    candidate: RouteCandidateValue,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct RouterFanoutPathCount {
+    path: String,
+    count: u64,
+    source: String,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+struct RouterBmlCandidate {
+    path: String,
+    count: u64,
+    source: String,
+}
+
+#[derive(Default)]
+struct RouterMetrics {
+    total_requests: u64,
+    native_requests: u64,
+    fanout_requests: u64,
+    local_control_requests: u64,
+    native_error_requests: u64,
+    observed_paths: HashSet<String>,
+    observed_native_paths: HashSet<String>,
+    observed_fanout_paths: HashSet<String>,
+    observed_fanout_path_requests: HashMap<String, u64>,
+}
+
+#[derive(Default)]
+struct RouterMetricsSnapshot {
+    native_route_count: usize,
+    total_requests: u64,
+    native_requests: u64,
+    fanout_requests: u64,
+    local_control_requests: u64,
+    native_error_requests: u64,
+    observed_path_count: usize,
+    observed_native_route_count: usize,
+    observed_fanout_path_count: usize,
+    fanout_path_counts: Vec<RouterFanoutPathCount>,
+    next_bml_candidate: RouterBmlCandidate,
+    next_bml_candidate_path: String,
+    next_bml_candidate_requests: u64,
+    next_bml_candidate_source: String,
+}
+
+impl RouterMetrics {
+    fn record(&mut self, path: &str, router: &str) {
+        self.total_requests += 1;
+        self.observed_paths.insert(path.to_string());
+        match router {
+            "native-kernel" => {
+                self.native_requests += 1;
+                self.observed_native_paths.insert(path.to_string());
+            }
+            "fanout-python" => {
+                self.fanout_requests += 1;
+                self.observed_fanout_paths.insert(path.to_string());
+                *self
+                    .observed_fanout_path_requests
+                    .entry(path.to_string())
+                    .or_insert(0) += 1;
+            }
+            "native-kernel-error" => {
+                self.native_error_requests += 1;
+                self.observed_native_paths.insert(path.to_string());
+            }
+            _ => {
+                self.local_control_requests += 1;
+            }
+        }
+    }
+
+    fn fanout_path_counts(&self) -> Vec<RouterFanoutPathCount> {
+        let mut counts: Vec<RouterFanoutPathCount> = self
+            .observed_fanout_path_requests
+            .iter()
+            .map(|(path, count)| RouterFanoutPathCount {
+                path: path.clone(),
+                count: *count,
+                source: "observed-fanout-path".to_string(),
+            })
+            .collect();
+        counts.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.path.cmp(&b.path)));
+        counts
+    }
+
+    fn next_bml_candidate(counts: &[RouterFanoutPathCount]) -> RouterBmlCandidate {
+        match counts.first() {
+            Some(row) => RouterBmlCandidate {
+                path: row.path.clone(),
+                count: row.count,
+                source: row.source.clone(),
+            },
+            None => RouterBmlCandidate::default(),
+        }
+    }
+
+    fn snapshot(&self, native_route_count: usize) -> RouterMetricsSnapshot {
+        let fanout_path_counts = self.fanout_path_counts();
+        let next_bml_candidate = Self::next_bml_candidate(&fanout_path_counts);
+        let next_bml_candidate_path = next_bml_candidate.path.clone();
+        let next_bml_candidate_requests = next_bml_candidate.count;
+        let next_bml_candidate_source = next_bml_candidate.source.clone();
+        RouterMetricsSnapshot {
+            native_route_count,
+            total_requests: self.total_requests,
+            native_requests: self.native_requests,
+            fanout_requests: self.fanout_requests,
+            local_control_requests: self.local_control_requests,
+            native_error_requests: self.native_error_requests,
+            observed_path_count: self.observed_paths.len(),
+            observed_native_route_count: self.observed_native_paths.len(),
+            observed_fanout_path_count: self.observed_fanout_paths.len(),
+            fanout_path_counts,
+            next_bml_candidate,
+            next_bml_candidate_path,
+            next_bml_candidate_requests,
+            next_bml_candidate_source,
+        }
+    }
+}
+
+fn router_metrics_snapshot(
+    metrics: &Arc<Mutex<RouterMetrics>>,
+    native_route_count: usize,
+) -> RouterMetricsSnapshot {
+    match metrics.lock() {
+        Ok(guard) => guard.snapshot(native_route_count),
+        Err(_) => RouterMetricsSnapshot {
+            native_route_count,
+            ..RouterMetricsSnapshot::default()
+        },
+    }
+}
+
+fn record_router_metrics(metrics: &Arc<Mutex<RouterMetrics>>, path: &str, router: &str) {
+    if let Ok(mut guard) = metrics.lock() {
+        guard.record(path, router);
+    }
+}
+
+const KH_TAG_HEADER: i64 = 43001;
+const KH_TAG_REQUEST: i64 = 43002;
+const KH_TAG_ROUTE: i64 = 43004;
+const KH_TAG_PRESSURE_ROW: i64 = 43005;
+const KH_TAG_ROUTE_CANDIDATE: i64 = 43006;
+const KH_TAG_ROUTE_DATA_REF: i64 = 43007;
+const KH_TAG_FIELD: i64 = 43008;
+
+fn route_value_string(value: &Value, field: &str) -> Result<String, String> {
+    match value {
+        Value::Str(s) => Ok(s.clone()),
+        _ => Err(format!("KernelHTTPRoute {} must be a string", field)),
+    }
+}
+
+fn route_value_i64(value: &Value, field: &str) -> Result<i64, String> {
+    match value {
+        Value::Int(n) => Ok(*n),
+        _ => Err(format!("KernelHTTPRoute {} must be an integer", field)),
+    }
+}
+
+fn route_value_closure(value: &Value, route: &str) -> Result<Arc<Closure>, String> {
+    match value {
+        Value::Closure(c) => Ok(c.clone()),
+        _ => Err(format!("route value for {} must be a closure", route)),
+    }
+}
+
+fn kernel_http_route_tagged(meta: &[Value]) -> bool {
+    matches!(meta.first(), Some(Value::Int(tag)) if *tag == KH_TAG_ROUTE)
+}
+
+fn kernel_http_route_data_ref_tagged(meta: &[Value]) -> bool {
+    matches!(meta.first(), Some(Value::Int(tag)) if *tag == KH_TAG_ROUTE_DATA_REF)
+}
+
+fn validate_route_spec(spec: RouteSpec) -> Result<RouteSpec, String> {
+    if spec.name.is_empty() {
+        return Err("KernelHTTPRoute name must not be empty".to_string());
+    }
+    if spec.pattern.is_empty() || !spec.pattern.starts_with('/') {
+        return Err(format!(
+            "KernelHTTPRoute {} pattern must start with /",
+            spec.name
+        ));
+    }
+    if !matches!(
+        spec.method.as_str(),
+        "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "ANY"
+    ) {
+        return Err(format!(
+            "KernelHTTPRoute {} method must be a known HTTP method or ANY",
+            spec.name
+        ));
+    }
+    if spec.priority < 0 {
+        return Err(format!(
+            "KernelHTTPRoute {} priority must be non-negative",
+            spec.name
+        ));
+    }
+    if spec.handler_name.is_empty() {
+        return Err(format!(
+            "KernelHTTPRoute {} handler metadata must not be empty",
+            spec.name
+        ));
+    }
+    if spec.pressure_budget < 0 {
+        return Err(format!(
+            "KernelHTTPRoute {} pressure_budget must be non-negative",
+            spec.name
+        ));
+    }
+    Ok(spec)
+}
+
+fn resolve_route_handler(
+    k: &mut Kernel,
+    arena: &Arena,
+    root_env: FrameId,
+    route_name: &str,
+    handler_name: &str,
+) -> Result<Arc<Closure>, String> {
+    let handler_id = k.intern_string(handler_name).inst;
+    match arena.lookup(root_env, handler_id) {
+        Some(Value::Closure(c)) => Ok(c),
+        Some(_) => Err(format!(
+            "KernelHTTPRoute {} handler {} must resolve to a closure",
+            route_name, handler_name
+        )),
+        None => Err(format!(
+            "KernelHTTPRoute {} handler {} is not bound",
+            route_name, handler_name
+        )),
+    }
+}
+
+fn parse_kernel_http_route_meta(
+    meta: &[Value],
+    handler: Arc<Closure>,
+) -> Result<RouteSpec, String> {
+    if meta.len() != 8 {
+        return Err("KernelHTTPRoute must have 8 fields".to_string());
+    }
+    if !kernel_http_route_tagged(meta) {
+        return Err("route metadata must be KernelHTTPRoute".to_string());
+    }
+    let name = route_value_string(&meta[1], "name")?;
+    let method = route_value_string(&meta[2], "method")?;
+    let pattern = route_value_string(&meta[3], "pattern")?;
+    let priority = route_value_i64(&meta[4], "priority")?;
+    let handler_name = route_value_string(&meta[5], "handler")?;
+    let required_header = route_value_string(&meta[6], "required_header")?;
+    let pressure_budget = route_value_i64(&meta[7], "pressure_budget")?;
+    validate_route_spec(RouteSpec {
+        name,
+        method,
+        pattern,
+        priority,
+        handler_name,
+        required_header,
+        pressure_budget,
+        handler,
+    })
+}
+
+fn parse_kernel_http_route_data_ref(
+    meta: &[Value],
+    route_data: &RouteDataRegistry,
+    k: &Kernel,
+) -> Result<RouteSpec, String> {
+    if meta.len() != 3 {
+        return Err("KernelHTTPRouteDataRef must have 3 fields".to_string());
+    }
+    if !kernel_http_route_data_ref_tagged(meta) {
+        return Err("route metadata must be KernelHTTPRouteDataRef".to_string());
+    }
+    let route_id = route_value_string(&meta[1], "route_id")?;
+    let handler = route_value_closure(&meta[2], &route_id)?;
+    let data = route_data.routes.get(&route_id).ok_or_else(|| {
+        format!(
+            "KernelHTTPRouteDataRef {} is not present in route data",
+            route_id
+        )
+    })?;
+    validate_route_spec(RouteSpec {
+        name: data.name.clone(),
+        method: data.method.clone(),
+        pattern: data.pattern.clone(),
+        priority: data.priority,
+        handler_name: k.name_str(handler.name).to_string(),
+        required_header: data.required_header.clone(),
+        pressure_budget: data.pressure_budget,
+        handler,
+    })
+}
+
+fn parse_route_spec(
+    k: &mut Kernel,
+    arena: &Arena,
+    root_env: FrameId,
+    row: &Value,
+    route_data: &RouteDataRegistry,
+) -> Result<RouteSpec, String> {
+    match row {
+        Value::List(meta) if kernel_http_route_tagged(meta) => {
+            if meta.len() != 8 {
+                return Err("KernelHTTPRoute must have 8 fields".to_string());
+            }
+            let name = route_value_string(&meta[1], "name")?;
+            let handler_name = route_value_string(&meta[5], "handler")?;
+            let handler = resolve_route_handler(k, arena, root_env, &name, &handler_name)?;
+            parse_kernel_http_route_meta(meta, handler)
+        }
+        Value::List(meta) if kernel_http_route_data_ref_tagged(meta) => {
+            parse_kernel_http_route_data_ref(meta, route_data, k)
+        }
+        Value::List(ys) if ys.len() == 2 => match &ys[0] {
+            Value::Str(path) => {
+                let handler = route_value_closure(&ys[1], path)?;
+                let handler_name = k.name_str(handler.name).to_string();
+                Ok(RouteSpec {
+                    name: path.clone(),
+                    method: "ANY".to_string(),
+                    pattern: path.clone(),
+                    priority: 0,
+                    handler_name,
+                    required_header: String::new(),
+                    pressure_budget: 40,
+                    handler,
+                })
+            }
+            _ => Err("route key must be a string path".to_string()),
+        },
+        _ => Err(
+            "each route must be a path/closure row, KernelHTTPRoute row, or KernelHTTPRouteDataRef row"
+                .to_string(),
+        ),
+    }
+}
+
+fn route_pattern_wildcard(pattern: &str) -> bool {
+    pattern.ends_with('*')
+}
+
+fn route_pattern_prefix(pattern: &str) -> &str {
+    if route_pattern_wildcard(pattern) {
+        &pattern[..pattern.len().saturating_sub(1)]
+    } else {
+        pattern
+    }
+}
+
+fn route_method_pressure(route: &RouteSpec, method: &str) -> i64 {
+    if route.method == method {
+        0
+    } else if route.method == "ANY" {
+        40
+    } else {
+        400
+    }
+}
+
+fn route_path_pressure(route: &RouteSpec, path: &str) -> i64 {
+    if route.pattern == path {
+        0
+    } else if route_pattern_wildcard(&route.pattern)
+        && path.starts_with(route_pattern_prefix(&route.pattern))
+    {
+        25
+    } else {
+        500
+    }
+}
+
+fn route_header_present(headers: &[(String, String)], name: &str) -> bool {
+    headers.iter().any(|(h, _)| h.eq_ignore_ascii_case(name))
+}
+
+fn route_header_pressure(route: &RouteSpec, headers: &[(String, String)]) -> i64 {
+    if route.required_header.is_empty() || route_header_present(headers, &route.required_header) {
+        0
+    } else {
+        120
+    }
+}
+
+fn route_header_observation(route: &RouteSpec, headers: &[(String, String)]) -> String {
+    if route.required_header.is_empty() {
+        "not-required".to_string()
+    } else if route_header_present(headers, &route.required_header) {
+        "present".to_string()
+    } else {
+        "missing".to_string()
+    }
+}
+
+fn route_base_pressure(
+    route: &RouteSpec,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+) -> i64 {
+    route_method_pressure(route, method)
+        + route_path_pressure(route, path)
+        + route_header_pressure(route, headers)
+}
+
+fn route_budget_pressure(base_pressure: i64, pressure_budget: i64) -> i64 {
+    if base_pressure <= pressure_budget {
+        0
+    } else {
+        base_pressure - pressure_budget
+    }
+}
+
+fn route_candidate_pressure_matrix(
+    route: &RouteSpec,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+) -> Vec<RoutePressureRow> {
+    let method_pressure = route_method_pressure(route, method);
+    let path_pressure = route_path_pressure(route, path);
+    let header_pressure = route_header_pressure(route, headers);
+    let base_pressure = method_pressure + path_pressure + header_pressure;
+    let budget_pressure = route_budget_pressure(base_pressure, route.pressure_budget);
+    vec![
+        RoutePressureRow {
+            axis: "method".to_string(),
+            observed: Value::Str(method.to_string()),
+            expected: Value::Str(route.method.clone()),
+            pressure: method_pressure,
+        },
+        RoutePressureRow {
+            axis: "path".to_string(),
+            observed: Value::Str(path.to_string()),
+            expected: Value::Str(route.pattern.clone()),
+            pressure: path_pressure,
+        },
+        RoutePressureRow {
+            axis: "header".to_string(),
+            observed: Value::Str(route_header_observation(route, headers)),
+            expected: Value::Str(route.required_header.clone()),
+            pressure: header_pressure,
+        },
+        RoutePressureRow {
+            axis: "budget".to_string(),
+            observed: Value::Int(base_pressure),
+            expected: Value::Int(route.pressure_budget),
+            pressure: budget_pressure,
+        },
+    ]
+}
+
+fn route_pressure_matrix_total(matrix: &[RoutePressureRow]) -> i64 {
+    matrix.iter().map(|row| row.pressure).sum()
+}
+
+fn route_candidate_score(route: &RouteSpec, pressure: i64) -> i64 {
+    1000 + (route.priority * 10) - pressure
+}
+
+fn route_candidate_eligible(route: &RouteSpec, pressure: i64) -> bool {
+    pressure <= route.pressure_budget
+}
+
+fn route_candidate_value_for_request(
+    route: &RouteSpec,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+    query: &[(String, String)],
+    body: &str,
+) -> RouteCandidateValue {
+    let pressure_matrix = route_candidate_pressure_matrix(route, method, path, headers);
+    let pressure = route_pressure_matrix_total(&pressure_matrix);
+    let score = route_candidate_score(route, pressure);
+    RouteCandidateValue {
+        route_name: route.name.clone(),
+        route_method: route.method.clone(),
+        route_pattern: route.pattern.clone(),
+        route_priority: route.priority,
+        route_handler_name: route.handler_name.clone(),
+        route_required_header: route.required_header.clone(),
+        route_pressure_budget: route.pressure_budget,
+        request_method: method.to_string(),
+        request_path: path.to_string(),
+        request_headers: headers.to_vec(),
+        request_query: query.to_vec(),
+        request_body: body.to_string(),
+        pressure_matrix,
+        pressure,
+        score,
+    }
+}
+
+fn select_route_candidate<'a>(
+    route_specs: &'a RouteSpecs,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+    query: &[(String, String)],
+    body: &str,
+) -> Option<RouteSelection<'a>> {
+    let mut best: Option<RouteSelection<'a>> = None;
+    for route in route_specs {
+        let base_pressure = route_base_pressure(route, method, path, headers);
+        let budget_pressure = route_budget_pressure(base_pressure, route.pressure_budget);
+        let pressure = base_pressure + budget_pressure;
+        if !route_candidate_eligible(route, pressure) {
+            continue;
+        }
+        let candidate =
+            route_candidate_value_for_request(route, method, path, headers, query, body);
+        let replace = match best {
+            None => true,
+            Some(ref current) => {
+                candidate.score > current.candidate.score
+                    || (candidate.score == current.candidate.score
+                        && route.priority > current.route.priority)
+            }
+        };
+        if replace {
+            best = Some(RouteSelection { route, candidate });
+        }
+    }
+    best
+}
+
+#[cfg(test)]
+fn select_route_spec<'a>(
+    route_specs: &'a RouteSpecs,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+) -> Option<&'a RouteSpec> {
+    select_route_candidate(route_specs, method, path, headers, &[], "")
+        .map(|selection| selection.route)
+}
 
 // Resolve the top-level `routes` binding from a kernel+arena that has already
 // walked the manifest source. Pulled out of cli_serve so BOTH the single-path
 // load and each worker's per-thread load run the SAME resolution shape. Returns
-// the (path, closure) pairs, or an error string for the caller to report.
-fn build_route_pairs(
+// the route specs, or an error string for the caller to report.
+fn build_route_specs(
     k: &mut Kernel,
     arena: &Arena,
     root_env: FrameId,
     routes_path: &str,
-) -> Result<RoutePairs, String> {
+    route_data: &RouteDataRegistry,
+) -> Result<RouteSpecs, String> {
     let routes_name = k.intern_string("routes").inst;
     let routes_val = match arena.lookup(root_env, routes_name) {
         Some(v) => v,
@@ -6248,46 +6861,49 @@ fn build_route_pairs(
         }
     };
     match &routes_val {
-        Value::List(xs) => xs
-            .iter()
-            .map(|row| match row {
-                Value::List(ys) if ys.len() == 2 => {
-                    let path = match &ys[0] {
-                        Value::Str(s) => s.clone(),
-                        _ => return Err("route key must be a string".to_string()),
-                    };
-                    let cl = match &ys[1] {
-                        Value::Closure(c) => c.clone(),
-                        _ => {
-                            return Err(format!("route value for {} must be a closure", path))
-                        }
-                    };
-                    Ok((path, cl))
-                }
-                _ => Err("each route must be (path closure)".to_string()),
-            })
-            .collect(),
-        _ => Err("`routes` must be a list of (path closure) pairs".to_string()),
+        Value::List(xs) => {
+            let mut specs = Vec::with_capacity(xs.len());
+            for row in xs {
+                specs.push(parse_route_spec(k, arena, root_env, row, route_data)?);
+            }
+            Ok(specs)
+        }
+        _ => Err("`routes` must be a list of route specs".to_string()),
     }
 }
 
-// Build a worker's OWN Kernel + Arena from the manifest source, resolve its own
-// route_pairs, and return all three. Called once per worker at startup (loading
-// the source N times is fine — it is once-per-worker, not per-request). The
-// returned arena owns the frames the route closures capture, so it must stay
-// alive alongside the kernel for the worker's lifetime.
+// Build a worker's OWN Kernel + Arena from the route program, resolve its own
+// route specs, and return all three. Raw Form manifests still enter as source;
+// Source-authored manifests enter as compiled Form Recipe object graphs produced
+// once by the main thread. The returned arena owns the frames the route closures
+// capture, so it must stay alive alongside the kernel for the worker's lifetime.
+#[cfg(test)]
 fn build_worker_kernel(
-    src: &str,
+    program: &RouteProgram,
     routes_path: &str,
-) -> Result<(Kernel, Arena, RoutePairs), String> {
+) -> Result<(Kernel, Arena, RouteSpecs), String> {
+    build_worker_kernel_with_route_data(program, routes_path, &RouteDataRegistry::default())
+}
+
+fn build_worker_kernel_with_route_data(
+    program: &RouteProgram,
+    routes_path: &str,
+    route_data: &RouteDataRegistry,
+) -> Result<(Kernel, Arena, RouteSpecs), String> {
     let mut k = Kernel::new();
-    let root = read_root_from_source(&mut k, src);
+    let root = match program {
+        RouteProgram::Source(src) => read_root_from_source(&mut k, src),
+        RouteProgram::RecipeObject(compiled) => {
+            k = compiled.kernel.readonly_worker_clone();
+            compiled.root
+        }
+    };
     let mut arena = Arena::new();
     let root_env = arena.new_frame(None);
     k.active_roots = vec![root];
     let _ = walk(&mut k, &mut arena, root, root_env);
-    let route_pairs = build_route_pairs(&mut k, &arena, root_env, routes_path)?;
-    Ok((k, arena, route_pairs))
+    let route_specs = build_route_specs(&mut k, &arena, root_env, routes_path, route_data)?;
+    Ok((k, arena, route_specs))
 }
 
 // Handle ONE request on a worker's own kernel+arena. This is the single factored
@@ -6310,9 +6926,10 @@ fn handle_request(
     carry: &mut Vec<u8>,
     k: &mut Kernel,
     arena: &mut Arena,
-    route_pairs: &RoutePairs,
+    route_specs: &RouteSpecs,
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
+    router_metrics: &Arc<Mutex<RouterMetrics>>,
 ) -> bool {
     // Read the FULL request: the header block, then exactly Content-Length body
     // bytes if present (read_request honors Content-Length across as many socket
@@ -6332,12 +6949,13 @@ fn handle_request(
             let status = "413 Payload Too Large".to_string();
             let msg = format!(
                 "the request shape is {observed} bytes — larger than the shape we can hold right \
-                 now ({limit} bytes). this threshold is a common recipe we can change together \
-                 (set COH_ROUTER_REQUEST_SHAPE_BYTES); the circulation is welcome the moment we \
-                 agree on a shape we can both hold, or when it streams.\n"
+                 now ({limit} bytes). this threshold belongs in the router configuration recipe; \
+                 the circulation is welcome the moment we agree on a shape we can both hold, or \
+                 when it streams.\n"
             );
-            let _ = stream
-                .write_all(http_response(&status, &msg, "local-control", false, "", &[]).as_bytes());
+            let _ = stream.write_all(
+                http_response(&status, &msg, "local-control", false, "", &[]).as_bytes(),
+            );
             return false;
         }
         RequestRead::Error => return false, // idle close / read-timeout / EOF — loop ends
@@ -6345,7 +6963,8 @@ fn handle_request(
     // The client's keep-alive intent for THIS connection (server may still close
     // on an error below).
     let keep_alive = head_keep_alive(&head);
-    let (method, target, path, mut request_data) = parse_request_line(&head);
+    let (method, target, path, query_data) = parse_request_line(&head);
+    let mut request_data = query_data.clone();
     // Parse the body by Content-Type and MERGE its fields into the same alist
     // the handler reads (core-abstraction-first: ONE request-data shape, whether
     // a field arrived as a query param or a body field). Query fields come
@@ -6353,11 +6972,12 @@ fn handle_request(
     // (k v) pairs; a JSON / other body lands as a single ("__body__", raw) pair.
     let content_type = parse_content_type(&head);
     request_data.extend(parse_request_body(&content_type, &body_bytes));
+    let request_body = String::from_utf8_lossy(&body_bytes).to_string();
     // The full client request header list (request line excluded), captured once
     // so the fan-out arm can forward the client's end-to-end headers
     // (Authorization, Cookie, Accept*, …) to the upstream. Native handlers don't
-    // read headers yet (a named-later breath — KERNEL_AS_ROUTER.md handler-inputs
-    // row), but the fan-out arm needs them now to front authenticated routes.
+    // read headers from a typed KernelHTTPRequest now; the fan-out arm also needs
+    // them to front authenticated routes.
     let req_headers = parse_headers(&head);
 
     // The router decision: a path with a native Form handler is served
@@ -6375,19 +6995,43 @@ fn handle_request(
     // headers; the router owns all framing on those arms.
     let mut resp_content_type = String::new();
     let resp_headers: Vec<(String, String)> = Vec::new();
-    if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
+    if let Some(selection) = select_route_candidate(
+        route_specs,
+        &method,
+        &path,
+        &req_headers,
+        &query_data,
+        &request_body,
+    ) {
+        let route = selection.route;
         // NATIVE: served entirely in Form, no Python in the path.
-        // Build the request alist as Value::List of (key, value) pairs — query
-        // params AND body fields, uniformly (form-urlencoded merged in;
-        // JSON/other captured under "__body__"). The handler reads them the same
-        // way regardless of how each field arrived.
-        let q_alist = Value::List(
+        // Build the compatibility handler alist as Value::List of (key, value)
+        // pairs. Router context is prepended so reserved router facts win over any
+        // same-named client field; query params AND body fields follow uniformly
+        // (form-urlencoded merged in; JSON/other captured under "__body__"). The
+        // typed KernelHTTPRequest in router context preserves method/path/headers,
+        // query fields, and raw body without flattening them into this projection.
+        let metrics_snapshot = router_metrics_snapshot(router_metrics, route_specs.len());
+        let mut handler_data = router_context_data(
+            &method,
+            &target,
+            &path,
+            upstream,
+            &metrics_snapshot,
+            Some(&selection.candidate),
+        );
+        handler_data.extend(
             request_data
                 .iter()
-                .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), Value::Str(v.clone())]))
+                .map(|(k, v)| (k.clone(), Value::Str(v.clone()))),
+        );
+        let q_alist = Value::List(
+            handler_data
+                .iter()
+                .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), v.clone()]))
                 .collect(),
         );
-        let cl = cl.clone();
+        let cl = route.handler.clone();
         let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
         if cl.params.len() == 1 {
             arena.bind(call_frame, cl.params[0], q_alist);
@@ -6395,9 +7039,10 @@ fn handle_request(
             let status = "500 Internal Server Error".to_string();
             let body = format!(
                 "handler for {} wants {} params; serve passes 0 or 1\n",
-                path,
+                route.name,
                 cl.params.len()
             );
+            record_router_metrics(router_metrics, &path, "native-kernel-error");
             let _ = stream.write_all(
                 http_response(&status, &body, "native-kernel-error", false, "", &[]).as_bytes(),
             );
@@ -6470,6 +7115,7 @@ fn handle_request(
         body = format!("no route for {}\n", path);
         router = "local-control";
     }
+    record_router_metrics(router_metrics, &path, router);
     // Frame the response with an accurate Content-Length and the keep-alive
     // verdict, the upstream's Content-Type + relayed end-to-end headers on a
     // fan-out (empty -> text/plain + no extra headers on native/404). The router
@@ -6526,29 +7172,18 @@ const KEEPALIVE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 //   - WRITE (~30s): so a stuck write (an upstream that accepts but never drains
 //     its receive buffer) cannot hang the worker either.
 //
-// These are sane DEFAULTS; production tuning of the exact values (and per-route
-// timeouts) is a later breath. Overridable for testing/ops via the env vars
-// COH_FANOUT_CONNECT_TIMEOUT_MS / COH_FANOUT_READ_TIMEOUT_MS (the write timeout
-// tracks the read one) so a harness can prove the timeout path in seconds without
-// a separate build; unset -> the production defaults below.
+// These are host-boundary defaults. Route-specific timeout policy belongs in
+// Form-visible router configuration, not environment variables; until that
+// config cell exists, the kernel surface stays explicit and fixed here.
 const FANOUT_CONNECT_TIMEOUT_DEFAULT_MS: u64 = 5_000;
 const FANOUT_READ_TIMEOUT_DEFAULT_MS: u64 = 30_000;
 
-fn fanout_timeout_ms(env_key: &str, default_ms: u64) -> Duration {
-    let ms = env::var(env_key)
-        .ok()
-        .and_then(|v| v.trim().parse::<u64>().ok())
-        .filter(|&v| v > 0)
-        .unwrap_or(default_ms);
-    Duration::from_millis(ms)
-}
-
 fn fanout_connect_timeout() -> Duration {
-    fanout_timeout_ms("COH_FANOUT_CONNECT_TIMEOUT_MS", FANOUT_CONNECT_TIMEOUT_DEFAULT_MS)
+    Duration::from_millis(FANOUT_CONNECT_TIMEOUT_DEFAULT_MS)
 }
 
 fn fanout_read_timeout() -> Duration {
-    fanout_timeout_ms("COH_FANOUT_READ_TIMEOUT_MS", FANOUT_READ_TIMEOUT_DEFAULT_MS)
+    Duration::from_millis(FANOUT_READ_TIMEOUT_DEFAULT_MS)
 }
 
 // A fan-out hop failure, classified so the caller knows whether to RETRY or 504:
@@ -6608,9 +7243,10 @@ fn serve_connection(
     mut stream: TcpStream,
     k: &mut Kernel,
     arena: &mut Arena,
-    route_pairs: &RoutePairs,
+    route_specs: &RouteSpecs,
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
+    router_metrics: &Arc<Mutex<RouterMetrics>>,
 ) {
     // Idle timeout so a held-open keep-alive connection cannot starve the pool.
     let _ = stream.set_read_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
@@ -6623,7 +7259,16 @@ fn serve_connection(
     // client connection — it is owned by the worker and threaded through every
     // connection it serves, so a keep-alive upstream connection opened while
     // serving client A is reused for client B on the same worker.
-    while handle_request(&mut stream, &mut carry, k, arena, route_pairs, upstream, upstream_pool) {}
+    while handle_request(
+        &mut stream,
+        &mut carry,
+        k,
+        arena,
+        route_specs,
+        upstream,
+        upstream_pool,
+        router_metrics,
+    ) {}
 }
 
 // One kernel worker. Builds its OWN Kernel + Arena (the routes.fk loaded once
@@ -6634,18 +7279,21 @@ fn serve_connection(
 // concurrent requests never corrupt one another's state.
 fn worker_loop(
     id: usize,
-    src: Arc<String>,
+    program: Arc<RouteProgram>,
     routes_path: Arc<String>,
+    route_data: Arc<RouteDataRegistry>,
     upstream: Arc<Option<String>>,
     rx: Arc<Mutex<mpsc::Receiver<TcpStream>>>,
+    router_metrics: Arc<Mutex<RouterMetrics>>,
 ) {
-    let (mut k, mut arena, route_pairs) = match build_worker_kernel(&src, &routes_path) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("serve: worker {} failed to load routes: {}", id, e);
-            return;
-        }
-    };
+    let (mut k, mut arena, route_specs) =
+        match build_worker_kernel_with_route_data(&program, &routes_path, &route_data) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("serve: worker {} failed to load routes: {}", id, e);
+                return;
+            }
+        };
     // This worker's OWN upstream connection pool — keep-alive connections to the
     // fan-out upstream, reused across every client connection this worker serves.
     // No locking: the worker is serial (it serves one client connection at a
@@ -6669,9 +7317,10 @@ fn worker_loop(
                 s,
                 &mut k,
                 &mut arena,
-                &route_pairs,
+                &route_specs,
                 &upstream,
                 &mut upstream_pool,
+                &router_metrics,
             ),
             // Sender dropped (listener closed) — drain done, worker exits.
             Err(_) => return,
@@ -6679,12 +7328,12 @@ fn worker_loop(
     }
 }
 
-// The form-stdlib preludes a BML manifest is source-compiled through, in load
+// The form-stdlib preludes a source manifest is source-compiled through, in load
 // order: json.fk + cache.fk feed the ontology loader, which binds the Form
 // category/primitive tables source-compiler.fk lowers a `section [...]` against.
 // This is the SAME prelude set + lowering `form/validate.sh prepare_sources`
 // runs to source-compile a `section [...]` file — the router reuses the body's
-// own compiler, not a Rust reimplementation of the BML surface parser.
+// own compiler, not a Rust reimplementation of a source-language parser.
 const SOURCE_COMPILE_PRELUDES: [&str; 4] = [
     "json.fk",
     "cache.fk",
@@ -6692,45 +7341,250 @@ const SOURCE_COMPILE_PRELUDES: [&str; 4] = [
     "source-compiler.fk",
 ];
 
-// A routes manifest is BML-authored (vs raw S-expression) iff it opens a
+// Source-language model that must be present in the worker kernels whenever a
+// route manifest uses high-level classes/templates. These are compiled into the
+// same Form Recipe object as the manifest in this order. That keeps the runtime
+// carrier explicit: source entry plus Form stdlib language model yields one
+// executable Recipe object whose walk binds KernelHTTPRoute cells.
+const SOURCE_ROUTE_LANGUAGE_PRELUDES: [&str; 3] =
+    ["core.fk", "kernel-http.fk", "language-model.fk"];
+
+// A routes manifest is source-authored (vs raw S-expression) iff it opens a
 // `section [...]` block — the source-compiler's own section marker. The check
 // is the same `section [` line-prefix scan form-source-compile-loop uses to
 // find sections, so "needs lowering" and "has a section" are the one judgement.
-fn manifest_is_bml(src: &str) -> bool {
-    src.lines().any(|line| line.trim_start().starts_with("section ["))
+fn manifest_has_source_sections(src: &str) -> bool {
+    src.lines()
+        .any(|line| line.trim_start().starts_with("section ["))
 }
 
-// Source-compile a BML-authored routes manifest to the S-expression Form the
-// kernel walks, returning the lowered source. This is PATH A — source-compile
-// AT LOAD: the router accepts a BML manifest directly, lowering it through the
-// body's own form-stdlib source-compiler (the same `form-source-compile-file`
-// the validate path uses) before `read_root_from_source` reads it. The compile
-// writes a `.fkb` Recipe sidecar next to the lowered `.fk` (the compiled output
-// references it via `walk_recipe_here (read_form_binary "...")`), so both files
-// live in `work_dir`, which the caller keeps alive for the server's lifetime.
-//
-// Reuse, not reinvention: the 4 preludes + driver are concatenated and walked
-// by a fresh kernel exactly as `validate.sh` loads them — the BML surface parser
-// (form.bml dialect in source-compiler.fk) is Form-stdlib tissue, run here, never
-// duplicated in Rust. Called ONCE in the main thread before workers spawn, so the
-// lowering cost is paid once at startup, not per-worker and not per-request; each
-// worker then loads the lowered `.fk` exactly as it loads a raw S-expression one.
-fn source_compile_bml_manifest(
+fn source_compile_cwd_lock() -> &'static Mutex<()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+}
+
+#[derive(Clone)]
+enum RouteProgram {
+    Source(Arc<String>),
+    RecipeObject(Arc<CompiledRouteProgram>),
+}
+
+struct CompiledRouteProgram {
+    kernel: Kernel,
+    root: NodeID,
+}
+
+fn run_source_on_form_stack(name: &str, src: String) -> Result<(Kernel, Value), String> {
+    std::thread::Builder::new()
+        .name(name.to_string())
+        .stack_size(FORM_KERNEL_STACK_BYTES)
+        .spawn(move || {
+            let mut k = Kernel::new();
+            let root = read_root_from_source(&mut k, &src);
+            let value = execute_root(&mut k, root);
+            (k, value)
+        })
+        .map_err(|e| format!("source-compile: spawn {} thread: {}", name, e))?
+        .join()
+        .map_err(|_| format!("source-compile: {} panicked", name))
+}
+
+fn source_compile_driver(stdlib_abs: &std::path::Path, body: &str) -> Result<String, String> {
+    let mut parts: Vec<String> = Vec::with_capacity(SOURCE_COMPILE_PRELUDES.len() + 1);
+    for name in SOURCE_COMPILE_PRELUDES {
+        let p = stdlib_abs.join(name);
+        match fs::read_to_string(&p) {
+            Ok(s) => parts.push(s),
+            Err(e) => {
+                return Err(format!(
+                    "source-compile: read prelude {}: {} (is --stdlib {} correct?)",
+                    p.display(),
+                    e,
+                    stdlib_abs.display()
+                ))
+            }
+        }
+    }
+    parts.push(body.to_string());
+    Ok(parts.join("\n"))
+}
+
+fn compile_bml_section_to_recipe_node(
+    dialect_name: &str,
+    body: &str,
+    stdlib_abs: &std::path::Path,
+) -> Result<(Kernel, NodeID), String> {
+    let driver_body = format!(
+        "(fsc-compile-section-recipe {} {})",
+        sexp_string_literal(dialect_name),
+        sexp_string_literal(body)
+    );
+    let driver_src = source_compile_driver(stdlib_abs, &driver_body)?;
+    let (kernel, value) = run_source_on_form_stack("bml-section-compile", driver_src)?;
+    match value {
+        Value::Nid(root) => Ok((kernel, root)),
+        _ => Err("source-compile: fsc-compile-section-recipe did not return a recipe".to_string()),
+    }
+}
+
+fn import_recipe_leaf(dst: &mut Kernel, src: &Kernel, nid: NodeID) -> NodeID {
+    if nid.level == LEVEL_TRIVIAL {
+        return match nid.ty {
+            TRIV_INT => dst.intern_trivial_int((nid.inst as i32) as i64),
+            TRIV_STRING => dst.intern_string(src.name_str(nid.inst)),
+            TRIV_BOOL | TRIV_NULL => nid,
+            TRIV_FLOAT32 => dst.intern_trivial_float32(src.decode_float32(nid.inst)),
+            TRIV_FLOAT64 => dst.intern_trivial_float64(src.decode_float64(nid.inst)),
+            _ => nid,
+        };
+    }
+    nid
+}
+
+fn import_recipe_node(
+    dst: &mut Kernel,
+    src: &Kernel,
+    nid: NodeID,
+    memo: &mut HashMap<NodeID, NodeID>,
+) -> NodeID {
+    if let Some(imported) = memo.get(&nid) {
+        return *imported;
+    }
+    let imported = match src.by_id.get(&nid) {
+        Some(recipe) => {
+            let category = import_recipe_node(dst, src, recipe.category, memo);
+            let children = recipe
+                .children
+                .iter()
+                .map(|child| import_recipe_node(dst, src, *child, memo))
+                .collect();
+            dst.intern(category, children)
+        }
+        None => import_recipe_leaf(dst, src, nid),
+    };
+    memo.insert(nid, imported);
+    imported
+}
+
+fn import_recipe_from(dst: &mut Kernel, src: &Kernel, root: NodeID) -> NodeID {
+    let mut memo = HashMap::new();
+    import_recipe_node(dst, src, root, &mut memo)
+}
+
+fn line_next(src: &str, i: usize) -> usize {
+    match src[i..].find('\n') {
+        Some(offset) => i + offset + 1,
+        None => src.len(),
+    }
+}
+
+fn line_end(src: &str, i: usize) -> usize {
+    match src[i..].find('\n') {
+        Some(offset) => i + offset,
+        None => src.len(),
+    }
+}
+
+fn find_section_from(src: &str, mut i: usize) -> Option<usize> {
+    while i < src.len() {
+        let end = line_end(src, i);
+        let line = &src[i..end];
+        let leading = line.len() - line.trim_start().len();
+        if line.trim_start().starts_with("section [") {
+            return Some(i + leading);
+        }
+        i = line_next(src, i);
+    }
+    None
+}
+
+fn find_section_close(src: &str, body_start: usize) -> Result<usize, String> {
+    let mut i = body_start;
+    let mut depth: i64 = 0;
+    while i < src.len() {
+        let end = line_end(src, i);
+        let line = src[i..end].trim();
+        if line == "}" {
+            if depth == 0 {
+                return Ok(i);
+            }
+            depth -= 1;
+        } else if line.ends_with('{') {
+            depth += 1;
+        }
+        i = line_next(src, i);
+    }
+    Err("source-compile: unterminated section block".to_string())
+}
+
+fn parse_raw_route_segment(k: &mut Kernel, roots: &mut Vec<NodeID>, src: &str) {
+    let toks = tokenize_sexp(src);
+    if toks.is_empty() {
+        return;
+    }
+    let root = if count_top_level(&toks) == 1 {
+        let (root, _) = read_sexp(k, &toks, 0);
+        root
+    } else {
+        let wrapped = format!("(do {})", src);
+        read_root_from_source(k, &wrapped)
+    };
+    roots.push(root);
+}
+
+fn compile_route_source_into_recipe(
+    k: &mut Kernel,
+    roots: &mut Vec<NodeID>,
+    source_label: &str,
+    src: &str,
+    stdlib_abs: &std::path::Path,
+) -> Result<(), String> {
+    let mut cursor = 0;
+    while let Some(section_pos) = find_section_from(src, cursor) {
+        parse_raw_route_segment(k, roots, &src[cursor..section_pos]);
+
+        let dialect_start = section_pos + "section [".len();
+        let dialect_end = src[dialect_start..]
+            .find(']')
+            .map(|offset| dialect_start + offset)
+            .ok_or_else(|| format!("source-compile: {} section missing ]", source_label))?;
+        let open = src[dialect_end..]
+            .find('{')
+            .map(|offset| dialect_end + offset)
+            .ok_or_else(|| format!("source-compile: {} section missing {{", source_label))?;
+        let close = find_section_close(src, open + 1)?;
+        let dialect_name = src[dialect_start..dialect_end].trim();
+        let body = &src[open + 1..close];
+        let (section_kernel, section_root) =
+            compile_bml_section_to_recipe_node(dialect_name, body, stdlib_abs)?;
+        let section_root = import_recipe_from(k, &section_kernel, section_root);
+        roots.push(section_root);
+        cursor = line_next(src, close);
+    }
+    parse_raw_route_segment(k, roots, &src[cursor..]);
+    Ok(())
+}
+
+// Source-compile a routes manifest to one in-memory Form Recipe object. This is
+// PATH A: source-compile AT LOAD. The router accepts a source manifest directly,
+// lowers it through the body's own form-stdlib
+// source-compiler, and gives worker kernels an object graph to clone/import from
+// directly. No worker reparses lowered source; no route-runtime serialization or
+// sidecar is required. Source text remains the human entry point, while Form
+// objects are the runtime carrier.
+fn source_compile_manifest_recipe_object(
     routes_path: &str,
     stdlib_dir: &str,
-    work_dir: &std::path::Path,
-) -> Result<String, String> {
-    // work_dir is absolute (env::temp_dir()); out_path therefore is too.
-    let out_path = work_dir.join("routes-compiled.fk");
-    let out_str = out_path.to_string_lossy().to_string();
+) -> Result<CompiledRouteProgram, String> {
+    let _cwd_guard = source_compile_cwd_lock()
+        .lock()
+        .map_err(|_| "source-compile: cwd lock poisoned".to_string())?;
 
     // The source-compiler's ontology loader reads its data files by paths
     // RELATIVE to "form-stdlib/" (e.g. read_with_cache "form-stdlib/form-ontology.json")
-    // — exactly as validate.sh runs it with cwd = form/. So the compile must run
-    // with the working directory set to the PARENT of the stdlib dir, where
-    // "form-stdlib/..." resolves. We set cwd for the (single-threaded, pre-worker)
-    // compile and restore it after. Because cwd changes, routes_path and out_path
-    // are made ABSOLUTE before they go into the driver, so they resolve regardless.
+    // — exactly as validate.sh runs it with cwd = form/. So object compilation
+    // temporarily runs from the PARENT of the stdlib dir, where
+    // "form-stdlib/..." resolves, then restores the previous cwd.
     let stdlib_path = std::path::Path::new(stdlib_dir);
     let stdlib_abs = stdlib_path
         .canonicalize()
@@ -6749,41 +7603,10 @@ fn source_compile_bml_manifest(
         .to_string_lossy()
         .to_string();
 
-    // Concatenate the form-stdlib preludes (read from stdlib_dir) and a one-line
-    // driver that calls the source-compiler over the BML manifest. The kernel's
-    // multi-file load joins files with "\n"; we build the same joined source so
-    // the driver sees every prelude's bindings.
-    let mut parts: Vec<String> = Vec::with_capacity(SOURCE_COMPILE_PRELUDES.len() + 1);
-    for name in SOURCE_COMPILE_PRELUDES {
-        let p = stdlib_abs.join(name);
-        match fs::read_to_string(&p) {
-            Ok(s) => parts.push(s),
-            Err(e) => {
-                return Err(format!(
-                    "source-compile: read prelude {}: {} (is --stdlib {} correct?)",
-                    p.display(),
-                    e,
-                    stdlib_dir
-                ))
-            }
-        }
-    }
-    // The driver runs the existing form-source-compile-file: lower every
-    // `section [...]` in routes_path into Recipe + .fkb sidecar, emit the
-    // S-expression Form (with walk_recipe_here drivers) to out_path. Absolute
-    // paths so they resolve under the changed cwd.
-    parts.push(format!(
-        "(do (form-source-compile-file {} {}))",
-        sexp_string_literal(&routes_abs),
-        sexp_string_literal(&out_str)
-    ));
-    let driver_src = parts.join("\n");
-
     // Set cwd to the stdlib's parent so the ontology loader's "form-stdlib/..."
     // relative reads resolve, run the compile, then restore cwd. Restoring is
     // important: the rest of cli_serve (and the workers) expect the original cwd.
-    let prev_cwd = env::current_dir()
-        .map_err(|e| format!("source-compile: read cwd: {}", e))?;
+    let prev_cwd = env::current_dir().map_err(|e| format!("source-compile: read cwd: {}", e))?;
     // Guard against a surprising layout where the stdlib's parent isn't named to
     // match the loader's hardcoded "form-stdlib/" prefix — if the dir name isn't
     // "form-stdlib", the relative reads would still miss. Name it explicitly.
@@ -6798,41 +7621,48 @@ fn source_compile_bml_manifest(
     env::set_current_dir(&stdlib_parent)
         .map_err(|e| format!("source-compile: chdir {}: {}", stdlib_parent.display(), e))?;
 
-    // Walk the compile in a throwaway kernel — its only purpose is the file
-    // side-effects (out_path + .fkb sidecar). run_source already builds a fresh
-    // Kernel + Arena and walks the source; a parse/lowering failure surfaces as a
-    // kernel panic, which the spawned worker thread in main() turns into a clean
-    // process message. We run it on a generous-stack thread because the BML
-    // lowering is deeply recursive (the source-compiler walks the section body).
-    let compile_result = std::thread::Builder::new()
-        .name("bml-source-compile".to_string())
-        .stack_size(FORM_KERNEL_STACK_BYTES)
-        .spawn(move || {
-            let _ = run_source(&driver_src);
-        })
-        .map_err(|e| format!("source-compile: spawn compile thread: {}", e))
-        .and_then(|h| {
-            h.join().map_err(|_| {
-                "source-compile: lowering the BML manifest panicked (see message above)"
-                    .to_string()
-            })
-        });
+    let compile_result = (|| {
+        let mut k = Kernel::new();
+        let mut roots = Vec::new();
+        for name in SOURCE_ROUTE_LANGUAGE_PRELUDES {
+            let source_path = stdlib_abs.join(name);
+            let source = fs::read_to_string(&source_path).map_err(|e| {
+                format!(
+                    "source-compile: route-language prelude {}: {} (is --stdlib {} correct?)",
+                    source_path.display(),
+                    e,
+                    stdlib_dir
+                )
+            })?;
+            compile_route_source_into_recipe(
+                &mut k,
+                &mut roots,
+                &source_path.to_string_lossy(),
+                &source,
+                &stdlib_abs,
+            )?;
+        }
+        let route_source = fs::read_to_string(&routes_abs)
+            .map_err(|e| format!("source-compile: read routes {}: {}", routes_abs, e))?;
+        compile_route_source_into_recipe(
+            &mut k,
+            &mut roots,
+            &routes_abs,
+            &route_source,
+            &stdlib_abs,
+        )?;
+        let root = if roots.len() == 1 {
+            roots[0]
+        } else {
+            k.intern(cat_block(RBLK_DO), roots)
+        };
+        Ok(CompiledRouteProgram { kernel: k, root })
+    })();
 
     // Restore cwd before propagating any compile error, so a failed compile never
     // leaves the process in the stdlib's parent.
     let _ = env::set_current_dir(&prev_cwd);
-    compile_result?;
-
-    // Read the lowered S-expression Form back as the manifest source the router
-    // loads. If it is absent, the section never lowered (a malformed manifest).
-    fs::read_to_string(&out_path).map_err(|e| {
-        format!(
-            "source-compile: lowered manifest {} not produced: {} (does {} contain a `section [...]` block?)",
-            out_path.display(),
-            e,
-            routes_path
-        )
-    })
+    compile_result
 }
 
 // Quote a path/string as an S-expression string literal for the compile driver:
@@ -6852,10 +7682,45 @@ fn sexp_string_literal(s: &str) -> String {
     out
 }
 
+fn default_route_data_path(routes_path: &str) -> PathBuf {
+    let mut path = PathBuf::from(routes_path);
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "routes".to_string());
+    path.set_file_name(format!("{}-data.json", stem));
+    path
+}
+
+fn load_route_data_registry(
+    routes_path: &str,
+    route_data_path: Option<&str>,
+) -> Result<RouteDataRegistry, String> {
+    let path = match route_data_path {
+        Some(path) => PathBuf::from(path),
+        None => {
+            let default_path = default_route_data_path(routes_path);
+            if default_path.exists() {
+                default_path
+            } else {
+                return Ok(RouteDataRegistry::default());
+            }
+        }
+    };
+    let body = fs::read_to_string(&path)
+        .map_err(|e| format!("serve: read route data {}: {}", path.display(), e))?;
+    let parsed: RouteDataFile = serde_json::from_str(&body)
+        .map_err(|e| format!("serve: parse route data {}: {}", path.display(), e))?;
+    Ok(RouteDataRegistry {
+        routes: parsed.routes,
+    })
+}
+
 fn cli_serve(args: &[String]) -> i32 {
     // --port <p> --routes <file.fk> [--upstream <http-base-url>] [--host <addr>]
     let mut port: u16 = 8001;
     let mut routes_path: Option<String> = None;
+    let mut route_data_path: Option<String> = None;
     // --upstream <base-url> turns the listener into the front-door ROUTER:
     // a path with a native Form handler is served entirely in the kernel
     // (no Python in the path); a path with no native handler fans out to
@@ -6870,7 +7735,7 @@ fn cli_serve(args: &[String]) -> i32 {
     // cores are used out of the box; 0 or unset falls back to the default.
     let mut workers: Option<usize> = None;
     // --stdlib <dir> points at the form-stdlib directory whose source-compiler a
-    // BML-authored manifest is lowered through (PATH A — source-compile at load).
+    // source-authored manifest is lowered through (PATH A — source-compile at load).
     // It is used ONLY when the manifest opens a `section [...]` block; a raw
     // S-expression manifest never touches it. Default: "form-stdlib" relative to
     // the cwd, the same relative path validate.sh uses.
@@ -6908,6 +7773,14 @@ fn cli_serve(args: &[String]) -> i32 {
                     return 2;
                 }
                 routes_path = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--route-data" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --route-data requires a file argument");
+                    return 2;
+                }
+                route_data_path = Some(args[i + 1].clone());
                 i += 2;
             }
             "--upstream" => {
@@ -6968,44 +7841,41 @@ fn cli_serve(args: &[String]) -> i32 {
             return 1;
         }
     };
-
-    // PATH A — source-compile at load. If the manifest is BML-authored (opens a
-    // `section [...]` block), lower it ONCE here in the main thread through the
-    // body's own form-stdlib source-compiler into the S-expression Form the
-    // kernel walks; the workers then load that lowered source exactly as they
-    // load a raw S-expression manifest. `_compile_work_dir` holds the temp dir
-    // (the lowered .fk + its .fkb Recipe sidecar) alive for the server's life —
-    // dropping it would unlink the .fkb a worker's `walk_recipe_here` reads.
-    let mut _compile_work_dir: Option<PathBuf> = None;
-    let src = if manifest_is_bml(&raw_src) {
-        let dir = env::temp_dir().join(format!("form-router-bml-{}", std::process::id()));
-        if let Err(e) = fs::create_dir_all(&dir) {
-            eprintln!("serve: create source-compile work dir {}: {}", dir.display(), e);
+    let route_data = match load_route_data_registry(&routes_path, route_data_path.as_deref()) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("{}", e);
             return 1;
         }
-        match source_compile_bml_manifest(&routes_path, &stdlib_dir, &dir) {
-            Ok(lowered) => {
+    };
+
+    // PATH A — source-compile at load. If the manifest is source-authored (opens a
+    // `section [...]` block), lower it ONCE here in the main thread through the
+    // body's own form-stdlib source-compiler into one Form Recipe object. Worker
+    // kernels clone/import from that object graph directly; raw S-expression
+    // manifests keep the existing source reader path.
+    let program = if manifest_has_source_sections(&raw_src) {
+        match source_compile_manifest_recipe_object(&routes_path, &stdlib_dir) {
+            Ok(compiled) => {
                 eprintln!(
-                    "form-kernel-rust serve: BML manifest {} source-compiled via {} (form.bml dialect)",
+                    "form-kernel-rust serve: source manifest {} compiled via {} to Form recipe object",
                     routes_path, stdlib_dir
                 );
-                _compile_work_dir = Some(dir);
-                lowered
+                RouteProgram::RecipeObject(Arc::new(compiled))
             }
             Err(e) => {
                 eprintln!("serve: {}", e);
-                let _ = fs::remove_dir_all(&dir);
                 return 1;
             }
         }
     } else {
-        raw_src
+        RouteProgram::Source(Arc::new(raw_src))
     };
 
     // Validate the manifest ONCE up front (in the main thread) so a broken
     // routes.fk fails fast with a clear message before any worker spins up.
-    // Each worker re-loads the same source into its OWN kernel+arena below.
-    if let Err(e) = build_worker_kernel(&src, &routes_path) {
+    // Each worker re-loads the same program into its OWN kernel+arena below.
+    if let Err(e) = build_worker_kernel_with_route_data(&program, &routes_path, &route_data) {
         eprintln!("serve: {}", e);
         return 1;
     }
@@ -7033,12 +7903,15 @@ fn cli_serve(args: &[String]) -> i32 {
     // so N workers serve N requests truly in parallel.
     let (tx, rx) = mpsc::channel::<TcpStream>();
     let rx = Arc::new(Mutex::new(rx));
-    let src = Arc::new(src);
+    let program = Arc::new(program);
+    let route_data = Arc::new(route_data);
     let routes_path_arc = Arc::new(routes_path);
     let upstream_arc = Arc::new(upstream);
+    let router_metrics = Arc::new(Mutex::new(RouterMetrics::default()));
 
-    // Spawn the pool. Each worker builds its OWN Kernel + Arena from the source
-    // (routes.fk loaded once per worker at startup), then drains the queue.
+    // Spawn the pool. Each worker builds its OWN Kernel + Arena from the route
+    // program (source for raw Form, Recipe object graph for source-authored manifests),
+    // then drains the queue.
     // Workers get an EXPLICIT generous stack: the kernel's value-walk is a
     // recursive tree-walker, so a deeply self-recursive native handler needs
     // real stack depth. A spawned thread's default stack (~2 MiB on many
@@ -7051,15 +7924,25 @@ fn cli_serve(args: &[String]) -> i32 {
     // generous stack matches the prior behavior rather than promising infinity.)
     let mut handles = Vec::with_capacity(n_workers);
     for id in 0..n_workers {
-        let src = Arc::clone(&src);
+        let program = Arc::clone(&program);
+        let route_data = Arc::clone(&route_data);
         let routes_path = Arc::clone(&routes_path_arc);
         let upstream = Arc::clone(&upstream_arc);
         let rx = Arc::clone(&rx);
+        let router_metrics = Arc::clone(&router_metrics);
         let builder = thread::Builder::new()
             .name(format!("kernel-worker-{}", id))
             .stack_size(WORKER_STACK_SIZE);
         match builder.spawn(move || {
-            worker_loop(id, src, routes_path, upstream, rx);
+            worker_loop(
+                id,
+                program,
+                routes_path,
+                route_data,
+                upstream,
+                rx,
+                router_metrics,
+            );
         }) {
             Ok(h) => handles.push(h),
             Err(e) => {
@@ -7077,18 +7960,23 @@ fn cli_serve(args: &[String]) -> i32 {
 
     // Re-resolve the route list once (in the main thread, throwaway kernel)
     // purely to print the startup banner — the workers hold the live copies.
-    if let Ok((_, _, route_pairs)) = build_worker_kernel(&src, &routes_path_arc) {
+    if let Ok((_, _, route_specs)) =
+        build_worker_kernel_with_route_data(&program, &routes_path_arc, &route_data)
+    {
         eprintln!(
             "form-kernel-rust serve: listening on {}:{} ({} worker{}, {} native route{})",
             host,
             port,
             n_workers,
             if n_workers == 1 { "" } else { "s" },
-            route_pairs.len(),
-            if route_pairs.len() == 1 { "" } else { "s" }
+            route_specs.len(),
+            if route_specs.len() == 1 { "" } else { "s" }
         );
-        for r in &route_pairs {
-            eprintln!("  {} -> native (Form handler)", r.0);
+        for r in &route_specs {
+            eprintln!(
+                "  {} {} -> native (Form handler {})",
+                r.method, r.pattern, r.name
+            );
         }
     }
     match upstream_arc.as_ref() {
@@ -7123,10 +8011,10 @@ fn cli_serve(args: &[String]) -> i32 {
 // preventing it: this is not a fear-wall and not a verdict on the sender. It
 // names one resource reality — a body is read fully into memory, so a truly
 // unbounded read would exhaust the worker — held as a COMMON RECIPE we both
-// accept in THIS moment and are free to change at any time through the
-// environment. The shape is observed first; a "no" above the threshold is a
-// sensed invitation, returned observably ("this is larger than we can hold right
-// now — change the recipe, or let it stream"), never a silent prevention.
+// accept in THIS moment. The shape is observed first; a "no" above the threshold
+// is a sensed invitation, returned observably ("this is larger than we can hold
+// right now — change the router configuration recipe, or let it stream"), never
+// a silent prevention.
 //
 // The defaults are generous, so any real request or API response circulates
 // freely. Request and response share the awareness-shape on purpose: a request
@@ -7135,31 +8023,19 @@ fn cli_serve(args: &[String]) -> i32 {
 // asymmetric 1 MiB-request / 64 MiB-response split this replaces was the
 // inherited fear posture: control by wall, before observing.) True streaming
 // (unbounded, no buffering) is a named-later breath; until then the ceiling is
-// simply what one worker can hold — named honestly, tuned freely.
+// simply what one worker can hold — named honestly, then lifted into
+// Form-visible router configuration when runtime tuning is needed.
 const DEFAULT_REQUEST_SHAPE_BYTES: usize = 64 * 1024 * 1024;
 const DEFAULT_RESPONSE_SHAPE_BYTES: usize = 64 * 1024 * 1024;
 
-// Read a byte-threshold from the environment — the live, changeable recipe —
-// falling back to the generous default. A zero, negative, or unparseable value
-// keeps the default, so the recipe stays sensible even when mis-set.
-fn shape_limit_from_env(name: &str, default: usize) -> usize {
-    std::env::var(name)
-        .ok()
-        .and_then(|v| v.trim().parse::<usize>().ok())
-        .filter(|&n| n > 0)
-        .unwrap_or(default)
-}
-
-// The shape we can hold for one incoming request body. Change at any time via
-// COH_ROUTER_REQUEST_SHAPE_BYTES.
+// The shape we can hold for one incoming request body.
 fn request_shape_limit() -> usize {
-    shape_limit_from_env("COH_ROUTER_REQUEST_SHAPE_BYTES", DEFAULT_REQUEST_SHAPE_BYTES)
+    DEFAULT_REQUEST_SHAPE_BYTES
 }
 
-// The shape we can hold for one upstream (fan-out) response. Change at any time
-// via COH_ROUTER_RESPONSE_SHAPE_BYTES.
+// The shape we can hold for one upstream (fan-out) response.
 fn response_shape_limit() -> usize {
-    shape_limit_from_env("COH_ROUTER_RESPONSE_SHAPE_BYTES", DEFAULT_RESPONSE_SHAPE_BYTES)
+    DEFAULT_RESPONSE_SHAPE_BYTES
 }
 
 // A native handler's observable, status-bearing "no". A handler that wants a
@@ -7293,7 +8169,10 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
             // Content-Length declares the shape before it arrives — sense it now,
             // so a body larger than we can hold is answered without draining it.
             if t > request_limit {
-                return RequestRead::LargerThanWeHold { observed: t, limit: request_limit };
+                return RequestRead::LargerThanWeHold {
+                    observed: t,
+                    limit: request_limit,
+                };
             }
             t
         }
@@ -7318,9 +8197,7 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
 
 // Find the index just past the first "\r\n\r\n" header terminator, if present.
 fn find_header_end(raw: &[u8]) -> Option<usize> {
-    raw.windows(4)
-        .position(|w| w == b"\r\n\r\n")
-        .map(|i| i + 4)
+    raw.windows(4).position(|w| w == b"\r\n\r\n").map(|i| i + 4)
 }
 
 // Parse a raw header block (the lines AFTER the request/status line, terminator
@@ -7429,8 +8306,8 @@ fn parse_content_type(head: &str) -> String {
 // overrides it:
 //   HTTP/1.1 (and higher) -> keep-alive by default; close only if the client
 //     sent `Connection: close`.
-//   HTTP/1.0 -> close by default; keep-alive only if the client sent the
-//     legacy `Connection: keep-alive`.
+//   HTTP/1.0 -> close by default; keep-alive only if the client sent
+//     `Connection: keep-alive`.
 // The server may still force-close on top of this (e.g. an error whose framing
 // is uncertain) — that is the caller's decision; this only reads client intent.
 fn head_keep_alive(head: &str) -> bool {
@@ -7524,6 +8401,714 @@ fn parse_request_line(req: &str) -> (String, String, String, Vec<(String, String
         }
     }
     (method, target, path, query)
+}
+
+fn router_count_value(count: u64) -> Value {
+    Value::Int(count.min(i64::MAX as u64) as i64)
+}
+
+fn router_dict_value(entries: Vec<(&str, Value)>) -> Value {
+    let mut values = vec![Value::Str("__dict__".to_string())];
+    for (key, value) in entries {
+        values.push(Value::Str(key.to_string()));
+        values.push(value);
+    }
+    Value::List(values)
+}
+
+fn router_fanout_path_count_value(row: &RouterFanoutPathCount) -> Value {
+    router_dict_value(vec![
+        ("path", Value::Str(row.path.clone())),
+        ("count", router_count_value(row.count)),
+        ("source", Value::Str(row.source.clone())),
+    ])
+}
+
+fn router_bml_candidate_value(candidate: &RouterBmlCandidate) -> Value {
+    router_dict_value(vec![
+        ("path", Value::Str(candidate.path.clone())),
+        ("count", router_count_value(candidate.count)),
+        ("source", Value::Str(candidate.source.clone())),
+    ])
+}
+
+fn router_http_header_value(name: &str, value: &str) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_HEADER),
+        Value::Str(name.to_string()),
+        Value::Str(value.to_string()),
+    ])
+}
+
+fn router_http_field_value(name: &str, value: &str) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_FIELD),
+        Value::Str(name.to_string()),
+        Value::Str(value.to_string()),
+    ])
+}
+
+fn router_http_route_value(candidate: &RouteCandidateValue) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_ROUTE),
+        Value::Str(candidate.route_name.clone()),
+        Value::Str(candidate.route_method.clone()),
+        Value::Str(candidate.route_pattern.clone()),
+        Value::Int(candidate.route_priority),
+        Value::Str(candidate.route_handler_name.clone()),
+        Value::Str(candidate.route_required_header.clone()),
+        Value::Int(candidate.route_pressure_budget),
+    ])
+}
+
+fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_REQUEST),
+        Value::Str(candidate.request_method.clone()),
+        Value::Str(candidate.request_path.clone()),
+        Value::List(
+            candidate
+                .request_headers
+                .iter()
+                .map(|(name, value)| router_http_header_value(name, value))
+                .collect(),
+        ),
+        Value::List(
+            candidate
+                .request_query
+                .iter()
+                .map(|(name, value)| router_http_field_value(name, value))
+                .collect(),
+        ),
+        Value::Str(candidate.request_body.clone()),
+    ])
+}
+
+fn router_pressure_row_value(row: &RoutePressureRow) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_PRESSURE_ROW),
+        Value::Str(row.axis.clone()),
+        row.observed.clone(),
+        row.expected.clone(),
+        Value::Int(row.pressure),
+    ])
+}
+
+fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
+    Value::List(vec![
+        Value::Int(KH_TAG_ROUTE_CANDIDATE),
+        router_http_route_value(candidate),
+        router_http_request_value(candidate),
+        Value::List(
+            candidate
+                .pressure_matrix
+                .iter()
+                .map(router_pressure_row_value)
+                .collect(),
+        ),
+        Value::Int(candidate.pressure),
+        Value::Int(candidate.score),
+    ])
+}
+
+fn router_route_candidate_matrix_value(candidate: &RouteCandidateValue) -> Value {
+    Value::List(
+        candidate
+            .pressure_matrix
+            .iter()
+            .map(router_pressure_row_value)
+            .collect(),
+    )
+}
+
+fn router_observation_value(metrics: &RouterMetricsSnapshot) -> Value {
+    router_dict_value(vec![
+        (
+            "fanout_path_counts",
+            Value::List(
+                metrics
+                    .fanout_path_counts
+                    .iter()
+                    .map(router_fanout_path_count_value)
+                    .collect(),
+            ),
+        ),
+        (
+            "next_bml_candidate",
+            router_bml_candidate_value(&metrics.next_bml_candidate),
+        ),
+    ])
+}
+
+// Router-owned request context for native handlers. These pairs are prepended
+// to the handler alist, so client query/body fields cannot override reserved
+// router facts when a Form/BML handler uses the ordinary assoc helper.
+fn router_context_data(
+    method: &str,
+    target: &str,
+    path: &str,
+    upstream: &Option<String>,
+    metrics: &RouterMetricsSnapshot,
+    route_candidate: Option<&RouteCandidateValue>,
+) -> Vec<(String, Value)> {
+    let mut pairs = vec![
+        (
+            "__request_method__".to_string(),
+            Value::Str(method.to_string()),
+        ),
+        (
+            "__request_target__".to_string(),
+            Value::Str(target.to_string()),
+        ),
+        ("__request_path__".to_string(), Value::Str(path.to_string())),
+        (
+            "__router_native_route_count__".to_string(),
+            Value::Str(metrics.native_route_count.to_string()),
+        ),
+        (
+            "__router_observed_path_count__".to_string(),
+            Value::Str(metrics.observed_path_count.to_string()),
+        ),
+        (
+            "__router_observed_native_route_count__".to_string(),
+            Value::Str(metrics.observed_native_route_count.to_string()),
+        ),
+        (
+            "__router_observed_fanout_path_count__".to_string(),
+            Value::Str(metrics.observed_fanout_path_count.to_string()),
+        ),
+        (
+            "__router_total_requests__".to_string(),
+            Value::Str(metrics.total_requests.to_string()),
+        ),
+        (
+            "__router_native_requests__".to_string(),
+            Value::Str(metrics.native_requests.to_string()),
+        ),
+        (
+            "__router_fanout_requests__".to_string(),
+            Value::Str(metrics.fanout_requests.to_string()),
+        ),
+        (
+            "__router_local_control_requests__".to_string(),
+            Value::Str(metrics.local_control_requests.to_string()),
+        ),
+        (
+            "__router_native_error_requests__".to_string(),
+            Value::Str(metrics.native_error_requests.to_string()),
+        ),
+        (
+            "__router_observation__".to_string(),
+            router_observation_value(metrics),
+        ),
+        (
+            "__router_next_bml_candidate_path__".to_string(),
+            Value::Str(metrics.next_bml_candidate_path.clone()),
+        ),
+        (
+            "__router_next_bml_candidate_requests__".to_string(),
+            Value::Str(metrics.next_bml_candidate_requests.to_string()),
+        ),
+        (
+            "__router_next_bml_candidate_source__".to_string(),
+            Value::Str(metrics.next_bml_candidate_source.clone()),
+        ),
+    ];
+    if let Some(candidate) = route_candidate {
+        pairs.push((
+            "__kernel_request__".to_string(),
+            router_http_request_value(candidate),
+        ));
+        pairs.push((
+            "__router_route_candidate__".to_string(),
+            router_route_candidate_value(candidate),
+        ));
+        pairs.push((
+            "__router_route_candidate_matrix__".to_string(),
+            router_route_candidate_matrix_value(candidate),
+        ));
+    }
+    if let Some(upstream_base) = upstream {
+        pairs.push((
+            "__router_upstream__".to_string(),
+            Value::Str(upstream_base.clone()),
+        ));
+        match parse_http_upstream(upstream_base) {
+            Ok((host, port, base_path)) => {
+                pairs.push(("__router_upstream_host__".to_string(), Value::Str(host)));
+                pairs.push((
+                    "__router_upstream_port__".to_string(),
+                    Value::Str(port.to_string()),
+                ));
+                pairs.push((
+                    "__router_upstream_base_path__".to_string(),
+                    Value::Str(base_path),
+                ));
+            }
+            Err(e) => {
+                pairs.push(("__router_upstream_parse_error__".to_string(), Value::Str(e)));
+            }
+        }
+    }
+    pairs
+}
+
+#[cfg(test)]
+mod router_context_tests {
+    use super::*;
+
+    fn value_for<'a>(pairs: &'a [(String, Value)], key: &str) -> &'a Value {
+        pairs
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v)
+            .unwrap_or(&Value::Null)
+    }
+
+    fn str_for(pairs: &[(String, Value)], key: &str) -> String {
+        match value_for(pairs, key) {
+            Value::Str(s) => s.clone(),
+            Value::Int(i) => i.to_string(),
+            v => v.display(),
+        }
+    }
+
+    fn dict_get<'a>(dict: &'a Value, key: &str) -> &'a Value {
+        if let Value::List(xs) = dict {
+            let mut i = 1;
+            while i + 1 < xs.len() {
+                if matches!(&xs[i], Value::Str(k) if k == key) {
+                    return &xs[i + 1];
+                }
+                i += 2;
+            }
+        }
+        &Value::Null
+    }
+
+    fn dict_str(dict: &Value, key: &str) -> String {
+        match dict_get(dict, key) {
+            Value::Str(s) => s.clone(),
+            Value::Int(i) => i.to_string(),
+            v => v.display(),
+        }
+    }
+
+    #[test]
+    fn router_context_carries_configured_upstream_parts() {
+        let upstream = Some("http://api:8000/base".to_string());
+        let metrics = RouterMetricsSnapshot {
+            native_route_count: 13,
+            total_requests: 21,
+            native_requests: 17,
+            fanout_requests: 3,
+            local_control_requests: 1,
+            native_error_requests: 0,
+            observed_path_count: 5,
+            observed_native_route_count: 4,
+            observed_fanout_path_count: 1,
+            fanout_path_counts: vec![RouterFanoutPathCount {
+                path: "/api/ideas".to_string(),
+                count: 3,
+                source: "observed-fanout-path".to_string(),
+            }],
+            next_bml_candidate: RouterBmlCandidate {
+                path: "/api/ideas".to_string(),
+                count: 3,
+                source: "observed-fanout-path".to_string(),
+            },
+            next_bml_candidate_path: "/api/ideas".to_string(),
+            next_bml_candidate_requests: 3,
+            next_bml_candidate_source: "observed-fanout-path".to_string(),
+        };
+        let pairs = router_context_data("GET", "/native?x=1", "/native", &upstream, &metrics, None);
+
+        assert_eq!(str_for(&pairs, "__request_method__"), "GET");
+        assert_eq!(str_for(&pairs, "__request_target__"), "/native?x=1");
+        assert_eq!(str_for(&pairs, "__request_path__"), "/native");
+        assert_eq!(
+            str_for(&pairs, "__router_upstream__"),
+            "http://api:8000/base"
+        );
+        assert_eq!(str_for(&pairs, "__router_upstream_host__"), "api");
+        assert_eq!(str_for(&pairs, "__router_upstream_port__"), "8000");
+        assert_eq!(str_for(&pairs, "__router_upstream_base_path__"), "/base");
+        assert_eq!(str_for(&pairs, "__router_native_route_count__"), "13");
+        assert_eq!(str_for(&pairs, "__router_total_requests__"), "21");
+        assert_eq!(str_for(&pairs, "__router_native_requests__"), "17");
+        assert_eq!(str_for(&pairs, "__router_fanout_requests__"), "3");
+        assert_eq!(str_for(&pairs, "__router_local_control_requests__"), "1");
+        assert_eq!(str_for(&pairs, "__router_observed_path_count__"), "5");
+        assert_eq!(
+            str_for(&pairs, "__router_observed_native_route_count__"),
+            "4"
+        );
+        assert_eq!(
+            str_for(&pairs, "__router_observed_fanout_path_count__"),
+            "1"
+        );
+        assert_eq!(
+            str_for(&pairs, "__router_next_bml_candidate_path__"),
+            "/api/ideas"
+        );
+        assert_eq!(
+            str_for(&pairs, "__router_next_bml_candidate_requests__"),
+            "3"
+        );
+        assert_eq!(
+            str_for(&pairs, "__router_next_bml_candidate_source__"),
+            "observed-fanout-path"
+        );
+        let observation = value_for(&pairs, "__router_observation__");
+        let rows = dict_get(observation, "fanout_path_counts");
+        assert!(matches!(rows, Value::List(xs) if xs.len() == 1));
+        let first_row = match rows {
+            Value::List(xs) => &xs[0],
+            _ => &Value::Null,
+        };
+        assert_eq!(dict_str(first_row, "path"), "/api/ideas");
+        assert_eq!(dict_str(first_row, "count"), "3");
+        assert_eq!(dict_str(first_row, "source"), "observed-fanout-path");
+        let candidate = dict_get(observation, "next_bml_candidate");
+        assert_eq!(dict_str(candidate, "path"), "/api/ideas");
+        assert_eq!(dict_str(candidate, "count"), "3");
+        assert_eq!(dict_str(candidate, "source"), "observed-fanout-path");
+    }
+
+    fn test_closure(inst: u32) -> Arc<Closure> {
+        Arc::new(Closure {
+            name: inst,
+            params: Vec::new(),
+            body: NodeID {
+                pkg: 0,
+                level: 0,
+                ty: 0,
+                inst,
+            },
+            env: 0,
+        })
+    }
+
+    fn route(
+        name: &str,
+        method: &str,
+        pattern: &str,
+        priority: i64,
+        handler_name: &str,
+        required_header: &str,
+        pressure_budget: i64,
+    ) -> RouteSpec {
+        RouteSpec {
+            name: name.to_string(),
+            method: method.to_string(),
+            pattern: pattern.to_string(),
+            priority,
+            handler_name: handler_name.to_string(),
+            required_header: required_header.to_string(),
+            pressure_budget,
+            handler: test_closure(priority as u32 + 1),
+        }
+    }
+
+    fn list_tag(value: &Value) -> i64 {
+        match value {
+            Value::List(xs) => match xs.first() {
+                Some(Value::Int(tag)) => *tag,
+                _ => 0,
+            },
+            _ => 0,
+        }
+    }
+
+    #[test]
+    fn router_context_carries_selected_route_candidate_form_value() {
+        let upstream = None;
+        let metrics = RouterMetricsSnapshot {
+            native_route_count: 1,
+            ..RouterMetricsSnapshot::default()
+        };
+        let headers = vec![("Accept".to_string(), "application/json".to_string())];
+        let route = route(
+            "runtime-health",
+            "GET",
+            "/api/runtime/health",
+            9,
+            "route_runtime_health",
+            "Accept",
+            0,
+        );
+        let query = vec![("limit".to_string(), "20".to_string())];
+        let candidate = route_candidate_value_for_request(
+            &route,
+            "GET",
+            "/api/runtime/health",
+            &headers,
+            &query,
+            "{\"alive\":true}",
+        );
+        let pairs = router_context_data(
+            "GET",
+            "/api/runtime/health",
+            "/api/runtime/health",
+            &upstream,
+            &metrics,
+            Some(&candidate),
+        );
+
+        let candidate_value = value_for(&pairs, "__router_route_candidate__");
+        assert_eq!(list_tag(candidate_value), KH_TAG_ROUTE_CANDIDATE);
+        let request_value = value_for(&pairs, "__kernel_request__");
+        assert_eq!(list_tag(request_value), KH_TAG_REQUEST);
+        let matrix_value = value_for(&pairs, "__router_route_candidate_matrix__");
+        assert!(matches!(matrix_value, Value::List(xs) if xs.len() == 4));
+        let request_rows = match request_value {
+            Value::List(xs) => xs,
+            _ => panic!("kernel request must be a Form list value"),
+        };
+        assert!(matches!(&request_rows[1], Value::Str(method) if method == "GET"));
+        assert!(matches!(&request_rows[2], Value::Str(path) if path == "/api/runtime/health"));
+        let request_headers = match &request_rows[3] {
+            Value::List(xs) => xs,
+            _ => panic!("kernel request headers must be a Form list value"),
+        };
+        assert_eq!(list_tag(&request_headers[0]), KH_TAG_HEADER);
+        let request_query = match &request_rows[4] {
+            Value::List(xs) => xs,
+            _ => panic!("kernel request query must be a Form list value"),
+        };
+        assert_eq!(list_tag(&request_query[0]), KH_TAG_FIELD);
+        assert!(matches!(&request_rows[5], Value::Str(body) if body == "{\"alive\":true}"));
+        let rows = match candidate_value {
+            Value::List(xs) => xs,
+            _ => panic!("route candidate must be a Form list value"),
+        };
+        assert_eq!(list_tag(&rows[1]), KH_TAG_ROUTE);
+        assert_eq!(list_tag(&rows[2]), KH_TAG_REQUEST);
+        let candidate_request = match &rows[2] {
+            Value::List(xs) => xs,
+            _ => panic!("candidate request must be a Form list value"),
+        };
+        let candidate_query = match &candidate_request[4] {
+            Value::List(xs) => xs,
+            _ => panic!("candidate request query must be a Form list value"),
+        };
+        assert_eq!(list_tag(&candidate_query[0]), KH_TAG_FIELD);
+        let candidate_matrix = match &rows[3] {
+            Value::List(xs) => xs,
+            _ => panic!("route candidate matrix must be a Form list value"),
+        };
+        assert_eq!(candidate_matrix.len(), 4);
+        assert_eq!(list_tag(&candidate_matrix[0]), KH_TAG_PRESSURE_ROW);
+        assert_eq!(str_for(&pairs, "__request_method__"), "GET");
+        assert!(matches!(&rows[4], Value::Int(0)));
+        assert!(matches!(&rows[5], Value::Int(1090)));
+    }
+}
+
+#[cfg(test)]
+mod route_spec_tests {
+    use super::*;
+
+    fn test_closure(inst: u32) -> Arc<Closure> {
+        Arc::new(Closure {
+            name: inst,
+            params: Vec::new(),
+            body: NodeID {
+                pkg: 0,
+                level: 0,
+                ty: 0,
+                inst,
+            },
+            env: 0,
+        })
+    }
+
+    fn route(
+        name: &str,
+        method: &str,
+        pattern: &str,
+        priority: i64,
+        required_header: &str,
+        pressure_budget: i64,
+    ) -> RouteSpec {
+        RouteSpec {
+            name: name.to_string(),
+            method: method.to_string(),
+            pattern: pattern.to_string(),
+            priority,
+            handler_name: format!("route_{}", name),
+            required_header: required_header.to_string(),
+            pressure_budget,
+            handler: test_closure(priority as u32 + 1),
+        }
+    }
+
+    fn build_worker_kernel_from_source(
+        src: &str,
+        routes_path: &str,
+    ) -> Result<(Kernel, Arena, RouteSpecs), String> {
+        let program = RouteProgram::Source(Arc::new(src.to_string()));
+        build_worker_kernel(&program, routes_path)
+    }
+
+    #[test]
+    fn path_closure_row_remains_path_only_native_route() {
+        let src = r#"
+            (defn route_health () "ok")
+            (let routes (list (list "/health" route_health)))
+        "#;
+        let (_, _, routes) = build_worker_kernel_from_source(src, "path-row-routes.fk")
+            .expect("path/closure route manifest loads");
+        let spec = &routes[0];
+
+        assert_eq!(spec.name, "/health");
+        assert_eq!(spec.method, "ANY");
+        assert_eq!(spec.pattern, "/health");
+        assert_eq!(spec.priority, 0);
+        assert_eq!(spec.handler_name, "route_health");
+        assert_eq!(spec.pressure_budget, 40);
+
+        assert_eq!(
+            select_route_spec(&routes, "POST", "/health", &[]).map(|r| r.name.as_str()),
+            Some("/health")
+        );
+        assert!(select_route_spec(&routes, "GET", "/missing", &[]).is_none());
+    }
+
+    #[test]
+    fn kernel_http_route_row_resolves_handler_from_manifest() {
+        let src = r#"
+            (defn route_weighted_average () "ok")
+            (let routes
+              (list
+                (list 43004 "weighted-average" "GET"
+                      "/api/utils/weighted_average" 7
+                      "route_weighted_average" "Accept" 0)))
+        "#;
+        let (_, _, routes) = build_worker_kernel_from_source(src, "kernel-http-route.fk")
+            .expect("KernelHTTPRoute manifest loads");
+        let spec = &routes[0];
+
+        assert_eq!(spec.name, "weighted-average");
+        assert_eq!(spec.method, "GET");
+        assert_eq!(spec.pattern, "/api/utils/weighted_average");
+        assert_eq!(spec.priority, 7);
+        assert_eq!(spec.handler_name, "route_weighted_average");
+        assert_eq!(spec.required_header, "Accept");
+        assert_eq!(spec.pressure_budget, 0);
+    }
+
+    #[test]
+    fn source_route_manifest_compiles_to_recipe_object_program() {
+        let manifest = r#"
+            section [form.bml] {
+                template RouteCell<TRequest, TResponse> {
+                    member request: TRequest;
+                    member response: TResponse;
+                    member route: KernelHTTPRoute;
+                }
+
+                class HealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
+                    def handle(request) {
+                        "ok";
+                    }
+
+                    route = route_data(health, handle);
+                }
+
+                let health_route_from_class = language-route-class-kernel-route(HealthRoute);
+            }
+
+            (let routes (list health_route_from_class))
+        "#;
+        let path = env::temp_dir().join(format!(
+            "form-router-source-route-object-{}.fk",
+            std::process::id()
+        ));
+        fs::write(&path, manifest).expect("write source route manifest");
+        let path_str = path.to_string_lossy().to_string();
+        let compiled = source_compile_manifest_recipe_object(&path_str, "../form-stdlib")
+            .expect("source route manifest compiles to recipe object");
+        assert!(compiled.kernel.by_id.contains_key(&compiled.root));
+
+        let program = RouteProgram::RecipeObject(Arc::new(compiled));
+        let route_data = RouteDataRegistry {
+            routes: HashMap::from([(
+                "health".to_string(),
+                RouteData {
+                    name: "health".to_string(),
+                    method: "ANY".to_string(),
+                    pattern: "/health".to_string(),
+                    priority: 0,
+                    required_header: String::new(),
+                    pressure_budget: 40,
+                },
+            )]),
+        };
+        let (_, _, routes) = build_worker_kernel_with_route_data(&program, &path_str, &route_data)
+            .expect("recipe-object route program loads");
+        let spec = &routes[0];
+        assert_eq!(spec.name, "health");
+        assert_eq!(spec.method, "ANY");
+        assert_eq!(spec.pattern, "/health");
+        assert_eq!(spec.handler_name, "HealthRoute_handle");
+        assert_eq!(spec.pressure_budget, 40);
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn kernel_http_route_row_requires_bound_handler_closure() {
+        let src = r#"
+            (let routes
+              (list
+                (list 43004 "missing" "GET"
+                      "/api/missing" 0 "route_missing" "" 0)))
+        "#;
+        let err = match build_worker_kernel_from_source(src, "kernel-http-missing-handler.fk") {
+            Ok(_) => panic!("missing handler should fail manifest loading"),
+            Err(e) => e,
+        };
+
+        assert!(err.contains("KernelHTTPRoute missing handler route_missing is not bound"));
+    }
+
+    #[test]
+    fn kernel_http_route_selection_rejects_method_mismatch() {
+        let routes = vec![route("get-only", "GET", "/api/items", 0, "", 0)];
+
+        assert!(select_route_spec(&routes, "POST", "/api/items", &[]).is_none());
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items", &[]).map(|r| r.name.as_str()),
+            Some("get-only")
+        );
+    }
+
+    #[test]
+    fn kernel_http_route_selection_uses_priority_after_pressure_budget() {
+        let routes = vec![
+            route("low", "GET", "/api/items", 1, "", 0),
+            route("high", "GET", "/api/items", 5, "", 0),
+        ];
+
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items", &[]).map(|r| r.name.as_str()),
+            Some("high")
+        );
+    }
+
+    #[test]
+    fn kernel_http_route_selection_honors_wildcard_budget_and_required_header() {
+        let routes = vec![route("tail", "GET", "/api/items/*", 0, "X-Form", 25)];
+        let headers = vec![("x-form".to_string(), "yes".to_string())];
+
+        assert!(select_route_spec(&routes, "GET", "/api/items/42", &[]).is_none());
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items/42", &headers).map(|r| r.name.as_str()),
+            Some("tail")
+        );
+        assert!(select_route_spec(&routes, "GET", "/api/other", &headers).is_none());
+    }
 }
 
 fn url_decode(s: &str) -> String {
@@ -7695,7 +9280,7 @@ fn read_upstream_head(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upstream
                     if raw.len() > response_limit {
                         return Err(FanoutError::Other(format!(
                             "upstream response head is larger than we can hold right now \
-                             ({} bytes observed, threshold {}; change COH_ROUTER_RESPONSE_SHAPE_BYTES)",
+                             ({} bytes observed, threshold {}; change the router configuration recipe)",
                             raw.len(),
                             response_limit,
                         )));
@@ -7834,7 +9419,10 @@ fn stream_body_to_client(
             // this with the upstream's keep-alive intent (from the head) before
             // pooling. The leftover is meaningful only on a reused connection, but
             // the caller drops it if it decides not to pool — so it is returned as-is.
-            Ok(BodyOutcome { reusable: true, leftover })
+            Ok(BodyOutcome {
+                reusable: true,
+                leftover,
+            })
         }
         ResponseFraming::Chunked => {
             // Relay the raw chunk framing straight through (NOT de-chunked) to the
@@ -7855,7 +9443,10 @@ fn stream_body_to_client(
                 if parser.feed(body_prefix)? {
                     // The whole chunked body (through the terminating 0-chunk) already
                     // arrived with the head.
-                    return Ok(BodyOutcome { reusable: false, leftover: Vec::new() });
+                    return Ok(BodyOutcome {
+                        reusable: false,
+                        leftover: Vec::new(),
+                    });
                 }
             }
             loop {
@@ -7875,7 +9466,10 @@ fn stream_body_to_client(
                 }
             }
             // Chunked is relayed raw and the connection is never pooled.
-            Ok(BodyOutcome { reusable: false, leftover: Vec::new() })
+            Ok(BodyOutcome {
+                reusable: false,
+                leftover: Vec::new(),
+            })
         }
         ResponseFraming::Close => {
             // No Content-Length, no chunked: the body ends when the upstream closes.
@@ -7901,7 +9495,10 @@ fn stream_body_to_client(
                     }
                 }
             }
-            Ok(BodyOutcome { reusable: false, leftover: Vec::new() })
+            Ok(BodyOutcome {
+                reusable: false,
+                leftover: Vec::new(),
+            })
         }
     }
 }
@@ -7935,7 +9532,10 @@ struct ChunkParser {
 
 impl ChunkParser {
     fn new() -> Self {
-        ChunkParser { phase: ChunkPhase::Size, line: Vec::new() }
+        ChunkParser {
+            phase: ChunkPhase::Size,
+            line: Vec::new(),
+        }
     }
 
     // Feed the next slice of relayed bytes. Returns Ok(true) when the terminating
@@ -8375,15 +9975,11 @@ fn fanout_stream_to_client(
                     drop(pooled);
                     let mut fresh = match connect_upstream_with_timeout(&host, port) {
                         Ok(s) => s,
-                        Err(e) => {
-                            return emit_buffered_fanout_error(client, client_keep_alive, &e)
-                        }
+                        Err(e) => return emit_buffered_fanout_error(client, client_keep_alive, &e),
                     };
                     match send_and_read_head(&mut fresh, &request, Vec::new()) {
                         Ok(h) => (fresh, h),
-                        Err(e) => {
-                            return emit_buffered_fanout_error(client, client_keep_alive, &e)
-                        }
+                        Err(e) => return emit_buffered_fanout_error(client, client_keep_alive, &e),
                     }
                 }
                 // Timeout (hung upstream) or Other (bad head) — drop the connection
@@ -8434,7 +10030,12 @@ fn fanout_stream_to_client(
     // PIPE the body straight from the upstream to the client. The body never lands
     // in a buffer; only a fixed 64 KiB chunk moves at a time.
     let upstream_kept = head.upstream_keep_alive;
-    match stream_body_to_client(&mut upstream_stream, client, &head.framing, &head.body_prefix) {
+    match stream_body_to_client(
+        &mut upstream_stream,
+        client,
+        &head.framing,
+        &head.body_prefix,
+    ) {
         Ok(outcome) => {
             // Pool the upstream connection IFF the body was Length-framed AND the
             // upstream kept it alive — exactly the old reuse rule, now decided after
@@ -8471,7 +10072,9 @@ fn emit_buffered_fanout_error(
 ) -> ClientKeepAlive {
     let (status, body) = fanout_error_response(err);
     if client
-        .write_all(http_response(&status, &body, "fanout-python", client_keep_alive, "", &[]).as_bytes())
+        .write_all(
+            http_response(&status, &body, "fanout-python", client_keep_alive, "", &[]).as_bytes(),
+        )
         .is_err()
     {
         return false;

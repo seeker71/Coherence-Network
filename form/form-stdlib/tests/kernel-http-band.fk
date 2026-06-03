@@ -1,0 +1,47 @@
+; kernel-http-band.fk - BML-authored kernel HTTP/router value band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
+;
+; Band verdict: 66690 when constructors/accessors, validation, pressure
+; matrices, route candidates, and highest-score selection all agree.
+
+section [form.bml] {
+    def kh-kernel-http-band-score() {
+        let query = list(kh-field("limit", "20"), kh-field("source", "router"));
+        let request = kh-request("GET", "/api/runtime/health", list(kh-header("Host", "api.coherencycoin.com"), kh-header("Accept", "application/json")), query, "");
+        let response = kh-response(200, list(kh-header("Content-Type", "application/json")), "body-ok");
+        let exact_route = kh-route("runtime-health", "GET", "/api/runtime/health", 9, "kh-runtime-health", "Accept", 25);
+        let tail_route = kh-route("api-tail", "ANY", "/api/*", 3, "kh-api-tail", "", 80);
+        let wrong_route = kh-route("post-echo", "POST", "/api/echo", 7, "kh-post-echo", "Content-Type", 20);
+        let exact_candidate = kh-route-candidate(exact_route, request);
+        let tail_candidate = kh-route-candidate(tail_route, request);
+        let wrong_candidate = kh-route-candidate(wrong_route, request);
+        let stale_candidate = list(kh_tag_route_candidate, exact_route, request, kh-route-candidate-matrix(exact_candidate), 5, kh-candidate-score-from(exact_route, 5));
+        let routes = list(wrong_route, tail_route, exact_route);
+        let selected = kh-select-route-candidate-for-request(routes, request);
+        let selected_score = kh-select-route-score(routes, request);
+        let selected_name = kh-route-name(kh-route-candidate-route(selected));
+        sum(list(
+            kh-bool-score(kh-request-valid?(request), 1),
+            kh-bool-score(kh-response-valid?(response), 2),
+            kh-bool-score(kh-route-valid?(exact_route), 4),
+            kh-bool-score(kh-route-valid?(tail_route), 8),
+            kh-bool-score(kh-route-valid?(wrong_route), 16),
+            kh-bool-score(kh-route-candidate-valid?(exact_candidate), 32),
+            kh-bool-score(eq(kh-route-candidate-pressure(tail_candidate), 65), 64),
+            kh-bool-score(eq(len(kh-route-candidate-matrix(exact_candidate)), 4), 128),
+            kh-bool-score(eq(kh-route-candidate-pressure(exact_candidate), 0), 256),
+            kh-bool-score(eq(selected_score, 1090), 512),
+            kh-bool-score(str_eq(selected_name, "runtime-health"), 1024),
+            kh-bool-score(and(eq(kh-response-status(response), 200), str_eq(kh-response-body(response), "body-ok")), 2048),
+            kh-bool-score(and(gt(kh-route-candidate-score(exact_candidate), kh-route-candidate-score(tail_candidate)), gt(kh-route-candidate-score(tail_candidate), kh-route-candidate-score(wrong_candidate))), 4096),
+            kh-bool-score(if kh-route-candidate-valid?(stale_candidate) then false else true, 8192),
+            kh-bool-score(kh-field-present?(kh-request-query(request), "limit"), 16384),
+            kh-bool-score(str_eq(kh-field-value(head(kh-request-query(request))), "20"), 32768),
+            kh-route-candidate-score(selected),
+            kh-route-candidate-pressure(tail_candidate)
+        ));
+    }
+
+    kh-kernel-http-band-score();
+}

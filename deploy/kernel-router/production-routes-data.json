@@ -1,0 +1,12 @@
+{
+  "routes": {
+    "health": {
+      "name": "health",
+      "method": "ANY",
+      "pattern": "/health",
+      "priority": 0,
+      "required_header": "",
+      "pressure_budget": 40
+    }
+  }
+}

@@ -1,0 +1,127 @@
+; kernel-http.fk - BML-authored HTTP/router value surface.
+;
+; preludes: form-stdlib/core.fk
+;
+; This surface is value-shaped: requests, responses, routes, pressure rows,
+; and route candidates are plain Form/BML data with real validation and
+; scoring recipes. Kernel adapters can carry these values without owning the
+; routing decision.
+
+section [form.bml] {
+    let kh_tag_header = 43001;
+    let kh_tag_request = 43002;
+    let kh_tag_response = 43003;
+    let kh_tag_route = 43004;
+    let kh_tag_pressure_row = 43005;
+    let kh_tag_route_candidate = 43006;
+    let kh_tag_route_data_ref = 43007;
+    let kh_tag_field = 43008;
+
+    def kh-bool-score(ok, score) = if ok then score else 0;
+    def kh-tagged?(value, tag, arity) = if eq(len(value), arity) then eq(nth(value, 0), tag) else false;
+    def kh-nonempty-string?(value) = gt(str_len(value), 0);
+    def kh-path-valid?(path) = if gt(str_len(path), 0) then str_eq(char_at(path, 0), "/") else false;
+    def kh-prefix?(text, prefix) = if gt(str_len(prefix), str_len(text)) then false else str_eq(substring(text, 0, str_len(prefix)), prefix);
+    def kh-method-known?(method) = or(str_eq(method, "GET"), or(str_eq(method, "POST"), or(str_eq(method, "PUT"), or(str_eq(method, "PATCH"), str_eq(method, "DELETE")))));
+    def kh-route-method-valid?(method) = or(kh-method-known?(method), str_eq(method, "ANY"));
+
+    def kh-header(name, value) = list(kh_tag_header, name, value);
+    def kh-header?(header) = kh-tagged?(header, kh_tag_header, 3);
+    def kh-header-name(header) = nth(header, 1);
+    def kh-header-value(header) = nth(header, 2);
+    def kh-headers-valid?(headers) = if nil?(headers) then true else if kh-header?(head(headers)) then kh-headers-valid?(tail(headers)) else false;
+    def kh-header-present?(headers, name) = if nil?(headers) then false else if str_eq(kh-header-name(head(headers)), name) then true else kh-header-present?(tail(headers), name);
+    def kh-header-observation(headers, name) = if str_eq(name, "") then "not-required" else if kh-header-present?(headers, name) then "present" else "missing";
+
+    def kh-field(name, value) = list(kh_tag_field, name, value);
+    def kh-field?(field) = kh-tagged?(field, kh_tag_field, 3);
+    def kh-field-name(field) = nth(field, 1);
+    def kh-field-value(field) = nth(field, 2);
+    def kh-fields-valid?(fields) = if nil?(fields) then true else if kh-field?(head(fields)) then kh-fields-valid?(tail(fields)) else false;
+    def kh-field-present?(fields, name) = if nil?(fields) then false else if str_eq(kh-field-name(head(fields)), name) then true else kh-field-present?(tail(fields), name);
+
+    def kh-request(method, path, headers, query, body) = list(kh_tag_request, method, path, headers, query, body);
+    def kh-request?(request) = kh-tagged?(request, kh_tag_request, 6);
+    def kh-request-method(request) = nth(request, 1);
+    def kh-request-path(request) = nth(request, 2);
+    def kh-request-headers(request) = nth(request, 3);
+    def kh-request-query(request) = nth(request, 4);
+    def kh-request-body(request) = nth(request, 5);
+    def kh-request-valid?(request) = if kh-request?(request) then and(kh-method-known?(kh-request-method(request)), and(kh-path-valid?(kh-request-path(request)), and(kh-headers-valid?(kh-request-headers(request)), kh-fields-valid?(kh-request-query(request))))) else false;
+
+    def kh-response(status, headers, body) = list(kh_tag_response, status, headers, body);
+    def kh-response?(response) = kh-tagged?(response, kh_tag_response, 4);
+    def kh-response-status(response) = nth(response, 1);
+    def kh-response-headers(response) = nth(response, 2);
+    def kh-response-body(response) = nth(response, 3);
+    def kh-response-valid?(response) = if kh-response?(response) then and(ge(kh-response-status(response), 100), and(le(kh-response-status(response), 599), kh-headers-valid?(kh-response-headers(response)))) else false;
+
+    def kh-route(name, method, pattern, priority, handler, required_header, pressure_budget) = list(kh_tag_route, name, method, pattern, priority, handler, required_header, pressure_budget);
+    def kh-route?(route) = kh-tagged?(route, kh_tag_route, 8);
+    def kh-route-name(route) = nth(route, 1);
+    def kh-route-method(route) = nth(route, 2);
+    def kh-route-pattern(route) = nth(route, 3);
+    def kh-route-priority(route) = nth(route, 4);
+    def kh-route-handler(route) = nth(route, 5);
+    def kh-route-required-header(route) = nth(route, 6);
+    def kh-route-pressure-budget(route) = nth(route, 7);
+    def kh-route-valid?(route) = if kh-route?(route) then and(kh-route-method-valid?(kh-route-method(route)), and(kh-path-valid?(kh-route-pattern(route)), and(ge(kh-route-priority(route), 0), and(kh-nonempty-string?(kh-route-handler(route)), ge(kh-route-pressure-budget(route), 0))))) else false;
+
+    def kh-route-data-ref(route_id, handler) = list(kh_tag_route_data_ref, route_id, handler);
+    def kh-route-data-ref?(ref) = kh-tagged?(ref, kh_tag_route_data_ref, 3);
+    def kh-route-data-ref-id(ref) = nth(ref, 1);
+    def kh-route-data-ref-handler(ref) = nth(ref, 2);
+    def kh-route-data-ref-valid?(ref) = if kh-route-data-ref?(ref) then kh-nonempty-string?(kh-route-data-ref-id(ref)) else false;
+
+    def kh-pattern-wildcard?(pattern) = if gt(str_len(pattern), 0) then str_eq(char_at(pattern, sub(str_len(pattern), 1)), "*") else false;
+    def kh-pattern-prefix(pattern) = if kh-pattern-wildcard?(pattern) then substring(pattern, 0, sub(str_len(pattern), 1)) else pattern;
+    def kh-method-pressure(route, request) = if str_eq(kh-route-method(route), kh-request-method(request)) then 0 else if str_eq(kh-route-method(route), "ANY") then 40 else 400;
+    def kh-path-pressure(route, request) = if str_eq(kh-route-pattern(route), kh-request-path(request)) then 0 else if and(kh-pattern-wildcard?(kh-route-pattern(route)), kh-prefix?(kh-request-path(request), kh-pattern-prefix(kh-route-pattern(route)))) then 25 else 500;
+    def kh-header-pressure(route, request) = if str_eq(kh-route-required-header(route), "") then 0 else if kh-header-present?(kh-request-headers(request), kh-route-required-header(route)) then 0 else 120;
+    def kh-budget-pressure(total, budget) = if le(total, budget) then 0 else sub(total, budget);
+
+    def kh-pressure-row(axis, observed, expected, pressure) = list(kh_tag_pressure_row, axis, observed, expected, pressure);
+    def kh-pressure-row?(row) = kh-tagged?(row, kh_tag_pressure_row, 5);
+    def kh-pressure-row-axis(row) = nth(row, 1);
+    def kh-pressure-row-observed(row) = nth(row, 2);
+    def kh-pressure-row-expected(row) = nth(row, 3);
+    def kh-pressure-row-pressure(row) = nth(row, 4);
+    def kh-pressure-matrix-total(matrix) = if nil?(matrix) then 0 else add(kh-pressure-row-pressure(head(matrix)), kh-pressure-matrix-total(tail(matrix)));
+
+    def kh-candidate-pressure-matrix(route, request) {
+        let method_pressure = kh-method-pressure(route, request);
+        let path_pressure = kh-path-pressure(route, request);
+        let header_pressure = kh-header-pressure(route, request);
+        let base_pressure = sum(list(method_pressure, path_pressure, header_pressure));
+        let budget_pressure = kh-budget-pressure(base_pressure, kh-route-pressure-budget(route));
+        list(
+            kh-pressure-row("method", kh-request-method(request), kh-route-method(route), method_pressure),
+            kh-pressure-row("path", kh-request-path(request), kh-route-pattern(route), path_pressure),
+            kh-pressure-row("header", kh-header-observation(kh-request-headers(request), kh-route-required-header(route)), kh-route-required-header(route), header_pressure),
+            kh-pressure-row("budget", base_pressure, kh-route-pressure-budget(route), budget_pressure)
+        );
+    }
+
+    def kh-candidate-score-from(route, pressure) = sub(add(1000, mul(kh-route-priority(route), 10)), pressure);
+    def kh-route-candidate(route, request) {
+        let matrix = kh-candidate-pressure-matrix(route, request);
+        let pressure = kh-pressure-matrix-total(matrix);
+        list(kh_tag_route_candidate, route, request, matrix, pressure, kh-candidate-score-from(route, pressure));
+    }
+    def kh-route-candidate?(candidate) = kh-tagged?(candidate, kh_tag_route_candidate, 6);
+    def kh-route-candidate-route(candidate) = nth(candidate, 1);
+    def kh-route-candidate-request(candidate) = nth(candidate, 2);
+    def kh-route-candidate-matrix(candidate) = nth(candidate, 3);
+    def kh-route-candidate-pressure(candidate) = nth(candidate, 4);
+    def kh-route-candidate-score(candidate) = nth(candidate, 5);
+    def kh-route-candidate-valid?(candidate) = if kh-route-candidate?(candidate) then and(kh-route-valid?(kh-route-candidate-route(candidate)), and(kh-request-valid?(kh-route-candidate-request(candidate)), and(eq(kh-route-candidate-pressure(candidate), kh-pressure-matrix-total(kh-route-candidate-matrix(candidate))), eq(kh-route-candidate-score(candidate), kh-candidate-score-from(kh-route-candidate-route(candidate), kh-route-candidate-pressure(candidate)))))) else false;
+
+    def kh-route-candidates(routes, request) = if nil?(routes) then empty else cons(kh-route-candidate(head(routes), request), kh-route-candidates(tail(routes), request));
+    def kh-better-candidate(left, right) = if gt(kh-route-candidate-score(left), kh-route-candidate-score(right)) then left else if eq(kh-route-candidate-score(left), kh-route-candidate-score(right)) then if ge(kh-route-priority(kh-route-candidate-route(left)), kh-route-priority(kh-route-candidate-route(right))) then left else right else right;
+    def kh-select-route-candidate-loop(candidates, best) = if nil?(candidates) then best else kh-select-route-candidate-loop(tail(candidates), kh-better-candidate(best, head(candidates)));
+    def kh-select-route-candidate(candidates) = if nil?(candidates) then empty else kh-select-route-candidate-loop(tail(candidates), head(candidates));
+    def kh-select-route-candidate-for-request(routes, request) = kh-select-route-candidate(kh-route-candidates(routes, request));
+    def kh-select-route-score(routes, request) = if nil?(routes) then 0 else kh-route-candidate-score(kh-select-route-candidate-for-request(routes, request));
+
+    0;
+}

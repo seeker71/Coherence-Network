@@ -89,18 +89,22 @@ proxies it to the same FastAPI app that serves it today — unchanged.
 The manifest is the single source of routing truth. A route is **native** iff
 the manifest binds a Form handler for its path; **everything else fans out**.
 
-```lisp
-; routes.fk — the front-door manifest (S-expression Form, the kernel's
-; native surface). Native handlers are Form recipes; the tail is implicit.
-(defn route_coherence_weight (q) ...)   ; a native compute core, in Form
-(defn route_health () "ok")
+```bml
+section [form.bml] {
+    template RouteCell<TRequest, TResponse> {
+        member request: TRequest;
+        member response: TResponse;
+        member route: KernelHTTPRoute;
+    }
 
-(let routes
-  (list
-    (list "/health"           route_health)            ; native
-    (list "/coherence_weight" route_coherence_weight)  ; native
-    ; /api/ideas, /api/contributors, … — NOT listed → fan out to CPython
-    ))
+    class HealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
+        def handle(request) {
+            "ok";
+        }
+
+        route = route_data(health, handle);
+    }
+}
 ```
 
 Classification is **closed-world by presence**: listed ⇒ native, absent ⇒
@@ -145,9 +149,9 @@ gap, named precisely:
 |-----|-----------------|-----------------------------|
 | **HTTP version** | serves HTTP/1.1 with keep-alive on BOTH hops — on the client hop a worker holds the accepted connection and serves multiple requests on it (one TCP handshake amortized across the connection), and on the fan-out hop each worker reuses a per-worker keep-alive connection to the upstream (the router→upstream handshake amortized across requests, the symmetric saving); a native/error response is Content-Length-framed, and a fan-out STREAMS the upstream's framing through (Content-Length echoed, or `Transfer-Encoding: chunked` relayed, or close-framed) so the client always knows where the body ends; the client's intent is honored (HTTP/1.1 default-keep-alive unless `Connection: close`, HTTP/1.0 close-unless-`keep-alive`); a 5s idle read-timeout closes a quiet client connection so it cannot pin a worker; over-read bytes (pipelining) are carried into the next request on both hops, never dropped | HTTP/2 behind Traefik (a chunked upstream response now relays through but its connection is not pooled — chunked-body pool reuse is a named-later breath) |
 | **Concurrency** | the accept loop dispatches each accepted stream to a POOL of kernel workers (`--workers`, default the host's available parallelism), each owning its own `Kernel + Arena` (the `!Sync` constraint) with `routes.fk` loaded once per worker; concurrent requests run lock-free on isolated kernels — measured ~3–5x throughput over a single worker under 50-way concurrent CPU-bearing load, with no cross-request state bleed | an async/work-stealing accept loop (the thread-per-request-blocked model caps at the worker count); shared read-only routing structure to drop the per-worker re-parse |
-| **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses `application/x-www-form-urlencoded` bodies into the same `(key value)` alist the query string uses, captures `application/json` (and any other body) raw under the reserved key `__body__`; a generous request shape-threshold (64 MiB default, `COH_ROUTER_REQUEST_SHAPE_BYTES`) observed and answered observably when a body is larger than a worker can hold; any method (POST/PUT/PATCH/GET) | full header map exposed to handlers; a structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies |
+| **Request parsing** | reads the full request honoring Content-Length (a body larger than the initial 8 KiB read is captured across as many socket reads as it needs); parses query fields and `application/x-www-form-urlencoded` bodies into compatibility field pairs, captures `application/json` (and any other body) raw under the reserved key `__body__`; builds a typed `KernelHTTPRequest(method,path,headers,query,body)` value for native handler context; a generous fixed request shape threshold (64 MiB default) is observed and answered observably when a body is larger than a worker can hold; any method (POST/PUT/PATCH/GET) | structural JSON→Form-value parse (today JSON is raw-captured, not parsed); larger/streamed/chunked bodies; Form-visible router configuration for shape policy |
 | **Fan-out proxy** | STREAMS the upstream response body straight to the client — the body is NEVER held whole; only the small response head is buffered (to parse status + framing + relayed headers), then the body is piped in a fixed 64 KiB chunk reused across reads. A Content-Length body is relayed with the SAME length (both hops stay framed, the connection pools IFF the upstream kept it alive); a chunked body has its raw chunk framing relayed through to the TRUE terminating 0-length chunk (a chunk-BOUNDARY parser tracks where chunks end so a `0\r\n\r\n` byte run inside chunk data never truncates the relay), self-delimiting so the client stays framed, the connection not pooled; an unframed (read-to-close) body is piped to EOF and the client connection then closes. Reuses a per-worker keep-alive connection to the upstream, reconnecting transparently on a stale pooled connection — repeated fan-outs amortize the upstream TCP handshake instead of opening a fresh connection per request. Bounds each fan-out with a connect timeout (~5s) and a read/write timeout (~30s) so a hung upstream returns a 504 and frees the worker rather than pinning it; a read-timeout is not retried (the upstream is hung — a retry would only re-hang and double the latency), a connect-timeout may retry once (in case a pooled-addr was bad), distinct from the stale-close path which reconnects+retries once on an idle-closed pooled connection. The retry lives at the HEAD read (before any body byte reaches the client), so it stays safe; a stall mid-body after the head is sent closes the client connection (a truncated body — the honest outcome of an upstream that died mid-stream), since the status was already written. Forwards the original method, the request body, and the client's end-to-end request headers (Authorization, Cookie, Accept\*, User-Agent, Content-Type, X-\*, …) — hop-by-hop headers (Connection, Keep-Alive, Transfer-Encoding, Upgrade, Proxy-\*, Proxy-Connection, TE, Trailer) stripped, Host rewritten to the upstream, Content-Length re-derived from the captured body, the router writing its OWN `Connection: keep-alive` to the upstream — and relays the upstream's response headers back (Content-Type so a JSON/HTML route survives the proxy, Set-Cookie, Cache-Control, Location, ETag, X-\*, …), with the router owning the client-hop framing (its own Content-Length / Transfer-Encoding / Connection; the upstream's hop-by-hop/framing headers are not relayed) | STREAMING the REQUEST body (today the request body is still buffered before the fan-out; the response streams), per-route timeout config and circuit-breaking, retries beyond the single stale-connection / connect-timeout retry |
-| **Handler inputs** | 0 or 1 arg — the request alist, carrying query params AND parsed body fields uniformly (form-urlencoded merged in; JSON/other body under `__body__`), so a handler reads a field the same way regardless of how it arrived | path params and headers marshalled into the handler frame; a richer body shape than a flat alist (e.g. structural JSON) |
+| **Handler inputs** | 0 or 1 arg — existing handlers receive the compatibility request alist, carrying query params AND parsed body fields uniformly, plus direct `__kernel_request__` typed request tissue with headers/query/body preserved as Form values | typed routes should receive `KernelHTTPRequest` directly, with the alist available only as an explicit projection; path params and structural JSON body values |
 | **Errors / observability** | 404/413/500 as plain text | structured errors, access logs, the trace surface wired to the witness, metrics |
 | **TLS / lifecycle** | plain TCP on 127.0.0.1, runs until killed | TLS termination (or behind Traefik), graceful shutdown, health/readiness, config reload |
 
@@ -227,10 +231,10 @@ would only re-hang and double the latency), a connect-timeout may retry once on 
 fresh connection (the pooled addr may have been bad), and the stale-CLOSE path
 (EOF/broken pipe on a pooled connection the upstream idle-closed) reconnects+retries
 once — a timeout is deliberately NOT the stale-close path, so a timeout never
-becomes an infinite (or even doubled) retry loop. The timeout values are sane
-defaults (overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`
-so a test proves the path in seconds); production tuning of the exact values and
-per-route timeouts is a named-later breath. The ONE `fanout_stream_to_client` shape
+becomes an infinite (or even doubled) retry loop. The timeout values are fixed
+host defaults right now: about 5s connect and about 30s read/write. Production
+tuning of exact values and per-route timeouts belongs in Form-visible router
+configuration. The ONE `fanout_stream_to_client` shape
 is preserved — the timeouts are deadlines set on the stream plus the error
 classification, not a second fan-out path; a timeout on the HEAD read becomes a
 buffered 504 (the client head is still unwritten), and the head-read retry stays the
@@ -258,49 +262,45 @@ observability) are still open breaths.
 Native handlers and the routes manifest are **Form-native tissue, not
 Python-cross-compiled**. BML surface syntax (`def name(args) = expr;`) is the
 preferred authoring tongue because it exposes Form features directly — Python
-reaches Form only through the bolted-on adapter SDK — and the router serves a
-BML-authored manifest today.
+reaches Form only through the bolted-on adapter SDK. Once a manifest is loaded,
+there is no dialect-specific route class and no separate runtime: BML, Form, Python,
+TypeScript, Go, C#, and future language surfaces are entry tongues for
+Form-native recipes over Form-native cells.
 
 The BML surface parser is not a Rust build — it already lives in Form-stdlib.
 `form-stdlib/source-compiler.fk`'s `form.bml` dialect lowers a `section [form.bml]
-{ ... }` block into ordinary Form, the same `form-source-compile-file` lowering
-`form/validate.sh prepare_sources` runs to source-compile any section file. The
-router reuses that compiler directly: `serve --routes <manifest> --stdlib
-form-stdlib` SOURCE-COMPILES a BML manifest **at load** (the manifest is BML iff
-it opens a `section [...]` block), in the main thread before any worker spawns,
+{ ... }` block into Form Recipe objects. The router reuses that compiler
+directly: `serve --routes <manifest> --stdlib
+form-stdlib` SOURCE-COMPILES a source manifest **at load** (the manifest needs
+source lowering iff it opens a `section [...]` block), in the main thread before any worker spawns,
 through the four form-stdlib preludes (`json.fk` + `cache.fk` +
-`form-ontology-loader.fk` + `source-compiler.fk`) — then loads the lowered
-S-expression with the SAME `read_root_from_source` an S-expression manifest uses.
-The lowering writes a `.fkb` Recipe sidecar the lowered manifest reads via
-`walk_recipe_here`; both live in a temp dir held for the server's lifetime. The
-cost is paid once at startup, not per-worker and not per-request: a worker loads
-the lowered `.fk` exactly as it loads a raw S-expression one.
-[`examples/router-bml-proof.bml`](../form/form-kernel-rust/examples/router-bml-proof.bml)
-is a working BML-authored manifest;
-[`router_bml_proof_harness.py`](../form/form-kernel-rust/router_bml_proof_harness.py)
-proves each BML route serves the correct value in Form (`X-Form-Router:
-native-kernel`, no CPython) and EQUAL to the same handler authored in
-S-expression — the BML surface lowered to the same Form shape. A raw
-S-expression manifest is unchanged: it has no `section [...]`, so it never
+`form-ontology-loader.fk` + `source-compiler.fk`) into one in-memory Form Recipe
+object graph. The router carries `RouteProgram::RecipeObject` by `Arc`; workers
+clone the compiled graph with `readonly_worker_clone()` and walk the same root
+`NodeID` in their own `Kernel + Arena`. No route-runtime serialization,
+deserialization, lowered route source, or sidecar is required. The remaining
+copy is the worker-local kernel graph, kept for isolated mutable execution state.
+For `/health`, the BML source is a `RouteCell<KernelHTTPRequest,
+KernelHTTPResponse>` template/class hierarchy. `HealthRoute.handle(request)` is
+lowered to the executable Form closure, and `route = route_data(health,
+handle);` keeps method/path/priority/budget in
+`deploy/kernel-router/production-routes-data.json`.
+A raw S-expression manifest is unchanged: it has no `section [...]`, so it never
 touches the source-compiler and `read_root_from_source` reads it directly.
 
-Honest scope of the BML authoring path: the `form.bml` dialect lowers `def
+Honest scope of the BML authoring path: the `form.bml` dialect lowers readable
+`template` blocks with members, route `class` blocks with methods, `def
 name(args) = expr;` (single-line), the block form `def name(args) { ... }`,
 nested `if c then a else b`, `f(a, b)` calls, and integer, string, AND float
-literals. The proof's handlers — a multi-step integer aggregator, an
-input-driven counter, liveness, and a **float** route (`route_coherence_weight`,
-`0.5*0.25 + 1.0*0.75 = 0.875`) — are authored in it, and their values cross the
-source-compiler's `.fkb` artifact intact. A float trivial node carries its
-IEEE-754 value in the wire format (a dedicated `FORM_BINARY_FLOAT64` node tag
-followed by 8 little-endian bytes), so the value travels in the bytes and each
-kernel re-interns it into its own overflow table on read — the per-kernel table
-index never crosses the wire. The float-literal route therefore serves the
-correct value end-to-end (`router_bml_proof_harness.py` checks `/coherence_weight
--> 0.875`, `native-kernel`), and the artifact round-trip is bit-identical across
-Rust, Go, and TS (`form-samples/float-artifact-roundtrip.fk`). An S-expression
-manifest serves floats the same way — the kernel's `.fk` source reader reads
-float tokens directly (the existing `router-proof.fk`'s 0.8125 coherence-weight
-is one).
+literals. Values cross the in-memory Recipe artifact intact. A float
+trivial node carries its IEEE-754 value in the wire format (a dedicated
+`FORM_BINARY_FLOAT64` node tag followed by 8 little-endian bytes), so the value
+travels in the bytes and each kernel re-interns it into its own overflow table
+on read — the per-kernel table index never crosses the wire. The artifact
+round-trip is bit-identical across Rust, Go, and TS
+(`form-samples/float-artifact-roundtrip.fk`). An S-expression manifest serves
+floats the same way — the kernel's `.fk` source reader reads float tokens
+directly (the existing `router-proof.fk`'s 0.8125 coherence-weight is one).
 
 Either way the handler is Form, walked by the kernel — never a Python function
 the kernel calls. That is the point of the reversal: the front door speaks the
@@ -406,8 +406,8 @@ fans out carries its body to the upstream (the mock CPython echoes the forwarded
 default shape (a 1.2 MiB field returns its exact length — circulation welcomed,
 not walled); and a shape past the current threshold is answered OBSERVABLY — a
 ~69 MiB declared Content-Length gets a 413 whose body names the bytes seen, the
-threshold we hold this moment, and the changeable `COH_ROUTER_REQUEST_SHAPE_BYTES`
-recipe — sensed on the Content-Length header alone, never buffered.
+threshold we hold this moment, and the router configuration recipe that must grow
+or stream — sensed on the Content-Length header alone, never buffered.
 
 ## Proof against the REAL FastAPI app — not a mock
 
@@ -500,9 +500,9 @@ body never occupies a worker-memory buffer, so its length is no longer a ceiling
 The REQUEST body is still buffered before the fan-out (a named-next breath — request
 streaming); on that request side, and for the small response head, the
 **awareness-shape** still governs — the largest shape a worker holds in memory, a
-generous default (64 MiB) named as a common recipe and changeable at any time via
-`COH_ROUTER_REQUEST_SHAPE_BYTES` / `COH_ROUTER_RESPONSE_SHAPE_BYTES` (the response
-threshold now bounds the HEAD alone). This is awareness, not prevention: the shape
+generous fixed default (64 MiB) named as a common recipe that should next move
+into Form-visible router configuration (the response threshold now bounds the
+HEAD alone). This is awareness, not prevention: the shape
 is observed first, and one larger than we can hold right now is answered
 *observably* — the response names the bytes seen, the threshold we hold this moment,
 and that it is a recipe we can change together — never a silent wall. The earlier
@@ -802,10 +802,10 @@ shadow manifest + compose service** that runs `cli_serve` as a front door:
   reusing `Dockerfile.api`'s proven `kernel-builder` (same `FROM
   rust:1.86-slim-bookworm`, same `cargo build --release --bin form-kernel-rust &&
   strip`), then a lean `debian-slim` runtime carrying ONLY the stripped binary,
-  the form-stdlib (so a BML manifest can be source-compiled later), and the
+  the form-stdlib (so a source manifest can be source-compiled later), and the
   shadow manifest. No Rust toolchain in the final image.
 - [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk)
-  — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_pairs`
+  — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_specs`
   accepts an empty list (an empty list is a valid list, not an error), so ZERO
   routes are native and EVERYTHING fans out to `--upstream`. Proven by
   [`deploy/kernel-router/shadow_proof_harness.py`](../deploy/kernel-router/shadow_proof_harness.py):
@@ -875,7 +875,8 @@ breathing.
 **The large-response path is verified on real prod — 2026-06-03.** PR #2413 (on
 main at 32d1cadd) first gave the upstream response its own generous 64 MiB shape;
 that has since folded into one request/response awareness-shape — a single
-threshold, named and changeable (`COH_ROUTER_*_SHAPE_BYTES`). The image was rebuilt
+threshold, now fixed in the host until a Form-visible router configuration cell
+owns it. The image was rebuilt
 from main and run as a localhost-bound
 shadow on the production VPS *beside* the live path — Traefik untouched, FastAPI
 still the front door, the shadow routing zero visitor traffic. Through that shadow
@@ -898,15 +899,15 @@ door is FastAPI.
 
 ## Sources
 
-- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with `routes.fk` loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_stream_to_client` (the STREAMING proxy arm — builds the upstream request, gets-or-creates the pooled connection, reads the response HEAD with the stale-pool reconnect+retry, writes the client response head, then PIPES the body straight to the client; pools the upstream connection IFF Length-framed and kept alive; on a pre-body failure emits a buffered 504/502, on a mid-body failure closes the client connection), `emit_buffered_fanout_error` + `fanout_error_response` (the pre-body fan-out failure → buffered 504/502 mapping, reachable only while the client head is unwritten), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock → Timeout → 504 never retried, BrokenPipe/Reset/EOF → Closed → stale-pool reconnect+retry once, else Other → 502), `fanout_connect_timeout` / `fanout_read_timeout` (the ~5s connect / ~30s read+write deadlines, env-overridable via `COH_FANOUT_CONNECT_TIMEOUT_MS` / `COH_FANOUT_READ_TIMEOUT_MS`), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` → `handle_request`), `read_upstream_head` / `send_and_read_head` / `UpstreamHead` / `ResponseFraming` / `upstream_response_keep_alive` / `head_is_chunked` (read ONLY the response head — small, buffered to parse — and decide the body framing Length/Chunked/Close; the body is NOT read here, it streams), `stream_body_to_client` / `BodyOutcome` (pipe the body in a fixed 64 KiB chunk reused across reads, never holding it whole — Content-Length echoed and relayed exactly with over-read carried forward, chunked relayed raw through the true 0-chunk, unframed piped to EOF), `ChunkParser` + `parse_chunk_size` (the incremental chunk-BOUNDARY parser that finds the TRUE terminating 0-length chunk so a `0\r\n\r\n` run inside chunk data never truncates the relay), `is_hop_by_hop` (RFC 7230 §6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (the BUFFERED emit for native/404/error — HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers) / `write_response_head` (the STREAMING client head — same router-owned framing, with Content-Length / Transfer-Encoding: chunked / close-framing per the body that follows), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights), `value_str` (render ANY value via `Value::display()` → a Str — the float-correct leaf a JSON-emitting handler `str_concat`s into the response body, where `int_to_str` would truncate a Float; `handle_request` serves a native body opening with `{`/`[` as `Content-Type: application/json`, so a promoted route returns the same body AND type as its FastAPI twin).
+- [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs) — `cli_serve` (the front-door listener, dispatching to the worker pool; binds `--host` × `--port`, default host `127.0.0.1` so a same-host harness is unchanged while a containerized front door binds `0.0.0.0` to be reachable across the boundary), `worker_loop` + `build_worker_kernel` (a worker's own `Kernel + Arena` with a raw Form source program or compiled source-language/Form Recipe object graph loaded per worker), `serve_connection` (the keep-alive loop — runs `handle_request` repeatedly on one `TcpStream` until close/EOF/idle-timeout, sets the `KEEPALIVE_IDLE_TIMEOUT` read-timeout, carries pipelined leftover bytes), `handle_request` (the single factored per-request serving shape, reading the full request + body and returning the keep-alive verdict), `head_keep_alive` (the `Connection`-header + HTTP-version keep-alive decision), `read_request` / `parse_content_length` / `parse_content_type` / `parse_request_body` (the Content-Length-honored read that carries over-read bytes forward, and the content-type body parse), `fanout_stream_to_client` (the STREAMING proxy arm — builds the upstream request, gets-or-creates the pooled connection, reads the response HEAD with the stale-pool reconnect+retry, writes the client response head, then PIPES the body straight to the client; pools the upstream connection IFF Length-framed and kept alive; on a pre-body failure emits a buffered 504/502, on a mid-body failure closes the client connection), `emit_buffered_fanout_error` + `fanout_error_response` (the pre-body fan-out failure -> buffered 504/502 mapping, reachable only while the client head is unwritten), `connect_upstream_with_timeout` (resolve the SocketAddr + `connect_timeout` + set the per-use read/write deadlines on the fan-out stream), `FanoutError` + `classify_io_error` (the retry-vs-504 classification: TimedOut/WouldBlock -> Timeout -> 504 never retried, BrokenPipe/Reset/EOF -> Closed -> stale-pool reconnect+retry once, else Other -> 502), `fanout_connect_timeout` / `fanout_read_timeout` (the fixed ~5s connect / ~30s read+write host defaults), `UpstreamPool` + `PooledConn` (the per-worker, lock-free upstream connection cache owned by `worker_loop` and threaded through `serve_connection` -> `handle_request`), `read_upstream_head` / `send_and_read_head` / `UpstreamHead` / `ResponseFraming` / `upstream_response_keep_alive` / `head_is_chunked` (read ONLY the response head — small, buffered to parse — and decide the body framing Length/Chunked/Close; the body is NOT read here, it streams), `stream_body_to_client` / `BodyOutcome` (pipe the body in a fixed 64 KiB chunk reused across reads, never holding it whole — Content-Length echoed and relayed exactly with over-read carried forward, chunked relayed raw through the true 0-chunk, unframed piped to EOF), `ChunkParser` + `parse_chunk_size` (the incremental chunk-boundary parser that finds the true terminating 0-length chunk so a `0\r\n\r\n` run inside chunk data never truncates the relay), `is_hop_by_hop` (RFC 7230 section 6.1 hop-by-hop set, now incl. `Proxy-Connection`), `http_response` (the buffered emit for native/404/error — HTTP/1.1 with accurate Content-Length, the `Connection` + X-Form-Router headers) / `write_response_head` (the streaming client head — same router-owned framing, with Content-Length / Transfer-Encoding: chunked / close-framing per the body that follows), `str_to_float` (the float-parsing leaf native that lets a native handler parse float query args, e.g. weighted_average's values/weights), `value_str` (render ANY value via `Value::display()` -> a Str — the float-correct leaf a JSON-emitting handler `str_concat`s into the response body, where `int_to_str` would truncate a Float; `handle_request` serves a native body opening with `{`/`[` as `Content-Type: application/json`, so a promoted route returns the same body AND type as its FastAPI twin).
 - [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk) — the native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_proof_harness.py`](../form/form-kernel-rust/router_proof_harness.py) — the end-to-end topology proof + native-latency measurement (mock upstream).
-- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body + RESPONSE-STREAMING proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, a body past the OLD 1 MiB cap now flowing under the generous default shape, and a shape past the current threshold answered with an observable, named "no" (the bytes seen + the changeable `COH_ROUTER_REQUEST_SHAPE_BYTES` recipe); then the streaming proofs — a 16 MiB Content-Length fan-out body relayed BYTE-IDENTICAL (sha256 over all 256 byte values), the SAME body relayed 200 byte-identical through a router whose response shape is only 1 MiB (THE BUFFER IS GONE — size no longer the gate), a chunked response relayed through with its de-chunked body matching, an adversarial chunked body with `0\r\n\r\n` INSIDE chunk data NOT truncated (the boundary parser finds the real 0-chunk), and an unframed read-to-close response piped to EOF byte-identical (mock upstream).
+- [`form/form-kernel-rust/router_body_harness.py`](../form/form-kernel-rust/router_body_harness.py) — the request-body + response-streaming proof: a native POST handler reading form-urlencoded fields, a raw JSON capture, a >8 KiB body captured across reads, POST fan-out body forwarding, a body past the old 1 MiB cap now flowing under the generous fixed default shape, and a shape past the current threshold answered with an observable, named "no" (the bytes seen + the router configuration recipe that must grow or stream); then the streaming proofs — a 16 MiB Content-Length fan-out body relayed byte-identical, the same body relayed 200 byte-identical through a router whose response shape is only 1 MiB, a chunked response relayed through with its de-chunked body matching, an adversarial chunked body with `0\r\n\r\n` inside chunk data not truncated, and an unframed read-to-close response piped to EOF byte-identical (mock upstream).
 - [`form/form-kernel-rust/examples/router-body-proof.fk`](../form/form-kernel-rust/examples/router-body-proof.fk) — the body-reading native-handler manifest (Form, not cross-compiled).
 - [`form/form-kernel-rust/router_concurrency_harness.py`](../form/form-kernel-rust/router_concurrency_harness.py) — the worker-pool concurrency proof: 50 parallel clients, no cross-request state bleed, 1-worker vs N-worker throughput.
 - [`form/form-kernel-rust/router_keepalive_harness.py`](../form/form-kernel-rust/router_keepalive_harness.py) — the HTTP/1.1 keep-alive proof (CLIENT→router hop): N sequential requests on ONE connection (Content-Length framed, distinct inputs, each correct), pipelined two-in-one-send (leftover bytes carried, none dropped), `Connection: close` honored, HTTP/1.0 default-close back-compat, idle-timeout reaping the connection (worker freed), an idle connection NOT starving the pool, and the per-request handshake saving (reused vs fresh connection). Mock upstream — no production routing.
 - [`form/form-kernel-rust/router_upstream_reuse_harness.py`](../form/form-kernel-rust/router_upstream_reuse_harness.py) — the upstream connection reuse proof (router→UPSTREAM hop): against a connection-COUNTING mock upstream with `--workers 1`, N fan-outs land on ONE reused upstream connection (connections << requests — the handshake amortized); each of N DISTINCT requests on the reused connection reads its OWN correct Content-Length-framed response (no response-framing bleed, the classic proxy keep-alive bug proven absent); reused-vs-fresh-connect latency (the reused path opens 1 connection where close-each opens N); and a stale POOLED keep-alive connection (the upstream silently drops it after N requests) triggers a transparent reconnect+retry, never a client-facing error. Mock upstream — no production routing.
-- [`form/form-kernel-rust/router_fanout_timeout_harness.py`](../form/form-kernel-rust/router_fanout_timeout_harness.py) — the fan-out TIMEOUT proof (router→UPSTREAM hop): against a deliberately-HUNG upstream that accepts the connection but never responds, the router returns a clean 504 Gateway Timeout at ~one read deadline (measured) and frees the worker — never an indefinite hang; an unreachable / blackholed upstream returns a clean 504/502 (connect-timeout) rather than blocking; with N workers a hung fan-out occupies ONE worker for at most the connect+read timeout while the pool keeps serving 20 native requests in milliseconds (the pool is NOT starved); a read-timeout returns 504 ONCE, not reconnect+retried (latency ~1x the read-timeout, not 2x — distinct from the stale-close retry path); and the happy path (native + responsive-upstream fan-out) is unaffected. Uses short env-set timeouts (`COH_FANOUT_READ_TIMEOUT_MS`/`COH_FANOUT_CONNECT_TIMEOUT_MS`) for a seconds-fast proof. Mock upstreams — no production routing.
+- [`form/form-kernel-rust/router_fanout_timeout_harness.py`](../form/form-kernel-rust/router_fanout_timeout_harness.py) — the fan-out TIMEOUT proof (router→UPSTREAM hop): against a deliberately-HUNG upstream that accepts the connection but never responds, the router returns a clean 504 Gateway Timeout at ~one read deadline (measured) and frees the worker — never an indefinite hang; an unreachable / blackholed upstream returns a clean 504/502 (connect-timeout) rather than blocking; with N workers a hung fan-out occupies ONE worker for at most the connect+read timeout while the pool keeps serving 20 native requests in milliseconds (the pool is NOT starved); a read-timeout returns 504 ONCE, not reconnect+retried (latency ~1x the read-timeout, not 2x — distinct from the stale-close retry path); and the happy path (native + responsive-upstream fan-out) is unaffected. The harness still reflects an older short-timeout testing hook; the live kernel now uses fixed host defaults until Form-visible router configuration owns those limits. Mock upstreams — no production routing.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
@@ -916,8 +917,8 @@ door is FastAPI.
 
 ### The deployable artifact (the kernel-router as a standalone server)
 
-- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib (for a future BML manifest's `--stdlib`), the shadow manifest, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
-- [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk) — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_pairs` accepts an empty list, so zero routes are native and EVERYTHING fans out — a transparent proxy with `X-Form-Router: fanout-python` as live evidence.
+- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib (for a future source manifest's `--stdlib`), the shadow manifest, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
+- [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk) — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_specs` accepts an empty list, so zero routes are native and EVERYTHING fans out — a transparent proxy with `X-Form-Router: fanout-python` as live evidence.
 - [`deploy/kernel-router/entrypoint.sh`](../deploy/kernel-router/entrypoint.sh) — resolves `KERNEL_ROUTER_HOST` (default `0.0.0.0` in-container so the front door is reachable across the boundary) / `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` (+ optional `STDLIB_DIR` / `KERNEL_ROUTER_WORKERS`) at run time and `exec`s `form-kernel-rust serve` — container-configurable without a rebuild.
 - [`deploy/kernel-router/docker-compose.kernel-router.yml`](../deploy/kernel-router/docker-compose.kernel-router.yml) — a DEFINED-BUT-INACTIVE overlay service (build: `Dockerfile.kernel-router`, `--upstream http://api:8000`). A SEPARATE overlay the production deploy never includes; its Traefik labels are present but COMMENTED, so merging it changes nothing about production routing. Uncommenting them (and dropping the api service's own rule) is the flip — Urs's intent.
 - [`deploy/kernel-router/shadow_proof_harness.py`](../deploy/kernel-router/shadow_proof_harness.py) — proves the shadow manifest is a transparent proxy: against a mock CPython upstream, every path (and a POST with a body) fans out byte-identically to hitting the upstream directly, every response carries `X-Form-Router: fanout-python`, and the empty routes list is accepted (the binary starts and serves). Mock upstream — no production routing.

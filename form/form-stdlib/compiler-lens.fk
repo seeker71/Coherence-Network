@@ -1,0 +1,108 @@
+; compiler-lens.fk - BML-authored compiler lens values.
+;
+; preludes: form-stdlib/core.fk
+;
+; The compiler is a reasoning instrument, not only a lowering step. These values
+; keep a source surface's human expression, machine expression, source maps,
+; dependency edges, translations, and diagnostics visible to Form recipes.
+
+section [form.bml] {
+    def cl-bool-score(ok, score) = if ok then score else 0;
+    def cl-tagged?(value, tag, arity) = if eq(len(value), arity) then str_eq(nth(value, 0), tag) else false;
+    def cl-nonempty-string?(value) = gt(str_len(value), 0);
+
+    def cl-surface(name, grammar, level, human_component, machine_component) = list("CompilerLensSurface", name, grammar, level, human_component, machine_component);
+    def cl-surface?(surface) = cl-tagged?(surface, "CompilerLensSurface", 6);
+    def cl-surface-name(surface) = nth(surface, 1);
+    def cl-surface-grammar(surface) = nth(surface, 2);
+    def cl-surface-level(surface) = nth(surface, 3);
+    def cl-surface-human(surface) = nth(surface, 4);
+    def cl-surface-machine(surface) = nth(surface, 5);
+    def cl-surface-valid?(surface) = if cl-surface?(surface) then and(cl-nonempty-string?(cl-surface-name(surface)), and(cl-nonempty-string?(cl-surface-grammar(surface)), ge(cl-surface-level(surface), 0))) else false;
+    def cl-surface-density(surface) = add(add(str_len(cl-surface-human(surface)), str_len(cl-surface-machine(surface))), cl-surface-level(surface));
+
+    def cl-source-map(source_surface, target_surface, source_span, target_node, fidelity) = list("CompilerLensSourceMap", source_surface, target_surface, source_span, target_node, fidelity);
+    def cl-source-map?(source_map) = cl-tagged?(source_map, "CompilerLensSourceMap", 6);
+    def cl-source-map-source(source_map) = nth(source_map, 1);
+    def cl-source-map-target(source_map) = nth(source_map, 2);
+    def cl-source-map-source-span(source_map) = nth(source_map, 3);
+    def cl-source-map-target-node(source_map) = nth(source_map, 4);
+    def cl-source-map-fidelity(source_map) = nth(source_map, 5);
+    def cl-source-map-valid?(source_map) = if cl-source-map?(source_map) then and(cl-surface-valid?(cl-source-map-source(source_map)), and(cl-surface-valid?(cl-source-map-target(source_map)), and(cl-nonempty-string?(cl-source-map-source-span(source_map)), ge(cl-source-map-fidelity(source_map), 0)))) else false;
+
+    def cl-dependency(owner, target, relation, strength) = list("CompilerLensDependency", owner, target, relation, strength);
+    def cl-dependency?(dependency) = cl-tagged?(dependency, "CompilerLensDependency", 5);
+    def cl-dependency-owner(dependency) = nth(dependency, 1);
+    def cl-dependency-target(dependency) = nth(dependency, 2);
+    def cl-dependency-relation(dependency) = nth(dependency, 3);
+    def cl-dependency-strength(dependency) = nth(dependency, 4);
+    def cl-dependency-valid?(dependency) = if cl-dependency?(dependency) then and(cl-nonempty-string?(cl-dependency-owner(dependency)), and(cl-nonempty-string?(cl-dependency-target(dependency)), and(cl-nonempty-string?(cl-dependency-relation(dependency)), ge(cl-dependency-strength(dependency), 0)))) else false;
+    def cl-dependency-strength-total(dependencies) = if nil?(dependencies) then 0 else add(cl-dependency-strength(head(dependencies)), cl-dependency-strength-total(tail(dependencies)));
+
+    def cl-translation(source_surface, target_surface, direction, reversibility, lossiness) = list("CompilerLensTranslation", source_surface, target_surface, direction, reversibility, lossiness);
+    def cl-translation?(translation) = cl-tagged?(translation, "CompilerLensTranslation", 6);
+    def cl-translation-source(translation) = nth(translation, 1);
+    def cl-translation-target(translation) = nth(translation, 2);
+    def cl-translation-direction(translation) = nth(translation, 3);
+    def cl-translation-reversibility(translation) = nth(translation, 4);
+    def cl-translation-lossiness(translation) = nth(translation, 5);
+    def cl-translation-valid?(translation) = if cl-translation?(translation) then and(cl-surface-valid?(cl-translation-source(translation)), and(cl-surface-valid?(cl-translation-target(translation)), and(cl-nonempty-string?(cl-translation-direction(translation)), and(cl-nonempty-string?(cl-translation-reversibility(translation)), cl-nonempty-string?(cl-translation-lossiness(translation)))))) else false;
+
+    def cl-diagnostic(severity, concept, source_span, message, repair) = list("CompilerLensDiagnostic", severity, concept, source_span, message, repair);
+    def cl-diagnostic?(diagnostic) = cl-tagged?(diagnostic, "CompilerLensDiagnostic", 6);
+    def cl-diagnostic-severity(diagnostic) = nth(diagnostic, 1);
+    def cl-diagnostic-concept(diagnostic) = nth(diagnostic, 2);
+    def cl-diagnostic-source-span(diagnostic) = nth(diagnostic, 3);
+    def cl-diagnostic-message(diagnostic) = nth(diagnostic, 4);
+    def cl-diagnostic-repair(diagnostic) = nth(diagnostic, 5);
+    def cl-diagnostic-valid?(diagnostic) = if cl-diagnostic?(diagnostic) then and(cl-nonempty-string?(cl-diagnostic-severity(diagnostic)), and(cl-nonempty-string?(cl-diagnostic-concept(diagnostic)), and(cl-nonempty-string?(cl-diagnostic-source-span(diagnostic)), cl-nonempty-string?(cl-diagnostic-message(diagnostic))))) else false;
+    def cl-diagnostic-pressure(diagnostic) = if str_eq(cl-diagnostic-severity(diagnostic), "error") then 100 else if str_eq(cl-diagnostic-severity(diagnostic), "warning") then 25 else 5;
+    def cl-diagnostic-pressure-total(diagnostics) = if nil?(diagnostics) then 0 else add(cl-diagnostic-pressure(head(diagnostics)), cl-diagnostic-pressure-total(tail(diagnostics)));
+
+    def cl-lens(surface, source_maps, dependencies, translations, diagnostics) = list("CompilerLens", surface, source_maps, dependencies, translations, diagnostics);
+    def cl-lens?(lens) = cl-tagged?(lens, "CompilerLens", 6);
+    def cl-lens-surface(lens) = nth(lens, 1);
+    def cl-lens-source-maps(lens) = nth(lens, 2);
+    def cl-lens-dependencies(lens) = nth(lens, 3);
+    def cl-lens-translations(lens) = nth(lens, 4);
+    def cl-lens-diagnostics(lens) = nth(lens, 5);
+    def cl-lens-structure-score(lens) = add(cl-surface-density(cl-lens-surface(lens)), add(mul(len(cl-lens-source-maps(lens)), 100), add(cl-dependency-strength-total(cl-lens-dependencies(lens)), add(mul(len(cl-lens-translations(lens)), 80), cl-diagnostic-pressure-total(cl-lens-diagnostics(lens))))));
+    def cl-lens-valid?(lens) = if cl-lens?(lens) then cl-surface-valid?(cl-lens-surface(lens)) else false;
+
+    def cl-bmf-surface-link(bmf_surface_contract, compiler_surface, role, fidelity) = list("CompilerLensBmfSurfaceLink", bmf_surface_contract, compiler_surface, role, fidelity);
+    def cl-bmf-surface-link?(link) = cl-tagged?(link, "CompilerLensBmfSurfaceLink", 5);
+    def cl-bmf-surface-link-contract(link) = nth(link, 1);
+    def cl-bmf-surface-link-compiler-surface(link) = nth(link, 2);
+    def cl-bmf-surface-link-role(link) = nth(link, 3);
+    def cl-bmf-surface-link-fidelity(link) = nth(link, 4);
+    def cl-bmf-surface-link-valid?(link) = if cl-bmf-surface-link?(link) then and(cl-surface-valid?(cl-bmf-surface-link-compiler-surface(link)), and(cl-nonempty-string?(cl-bmf-surface-link-role(link)), ge(cl-bmf-surface-link-fidelity(link), 0))) else false;
+    def cl-bmf-surface-link-domain(link) = bmf-surface-contract-domain(cl-bmf-surface-link-contract(link));
+    def cl-bmf-surface-link-lens(link) = bmf-surface-contract-lens(cl-bmf-surface-link-contract(link));
+    def cl-bmf-surface-link-structural-valid?(link, expected_domain, expected_lens) = if cl-bmf-surface-link-valid?(link) then and(value_eq(cl-bmf-surface-link-domain(link), expected_domain), value_eq(cl-bmf-surface-link-lens(link), expected_lens)) else false;
+
+    def cl-bmf-lens-link(bmf_lens_contract, compiler_lens, translation, coverage) = list("CompilerLensBmfLensLink", bmf_lens_contract, compiler_lens, translation, coverage);
+    def cl-bmf-lens-link?(link) = cl-tagged?(link, "CompilerLensBmfLensLink", 5);
+    def cl-bmf-lens-link-contract(link) = nth(link, 1);
+    def cl-bmf-lens-link-compiler-lens(link) = nth(link, 2);
+    def cl-bmf-lens-link-translation(link) = nth(link, 3);
+    def cl-bmf-lens-link-coverage(link) = nth(link, 4);
+    def cl-bmf-lens-link-valid?(link) = if cl-bmf-lens-link?(link) then and(cl-lens-valid?(cl-bmf-lens-link-compiler-lens(link)), and(cl-translation-valid?(cl-bmf-lens-link-translation(link)), ge(cl-bmf-lens-link-coverage(link), 0))) else false;
+    def cl-bmf-lens-link-surface(link) = bmf-lens-contract-surface(cl-bmf-lens-link-contract(link));
+    def cl-bmf-lens-link-structural-valid?(link, expected_surface, expected_domain, expected_lens) = if cl-bmf-lens-link-valid?(link) then and(value_eq(cl-bmf-lens-link-surface(link), expected_surface), and(value_eq(bmf-surface-contract-domain(expected_surface), expected_domain), value_eq(bmf-surface-contract-lens(expected_surface), expected_lens))) else false;
+
+    def cl-bmf-surface-link-score(link) = if cl-bmf-surface-link-valid?(link) then add(cl-bmf-surface-link-fidelity(link), cl-surface-density(cl-bmf-surface-link-compiler-surface(link))) else 0;
+    def cl-bmf-lens-link-score(link) = if cl-bmf-lens-link-valid?(link) then add(cl-bmf-lens-link-coverage(link), cl-lens-structure-score(cl-bmf-lens-link-compiler-lens(link))) else 0;
+    def cl-bmf-surface-links-score(links) = if nil?(links) then 0 else add(cl-bmf-surface-link-score(head(links)), cl-bmf-surface-links-score(tail(links)));
+    def cl-bmf-lens-links-score(links) = if nil?(links) then 0 else add(cl-bmf-lens-link-score(head(links)), cl-bmf-lens-links-score(tail(links)));
+    def cl-bmf-alignment(surface_links, lens_links, translation_space) = list("CompilerLensBmfAlignment", surface_links, lens_links, translation_space);
+    def cl-bmf-alignment?(alignment) = cl-tagged?(alignment, "CompilerLensBmfAlignment", 4);
+    def cl-bmf-alignment-surface-links(alignment) = nth(alignment, 1);
+    def cl-bmf-alignment-lens-links(alignment) = nth(alignment, 2);
+    def cl-bmf-alignment-translation-space(alignment) = nth(alignment, 3);
+    def cl-bmf-alignment-score(alignment) = if cl-bmf-alignment?(alignment) then add(cl-bmf-surface-links-score(cl-bmf-alignment-surface-links(alignment)), cl-bmf-lens-links-score(cl-bmf-alignment-lens-links(alignment))) else 0;
+    def cl-bmf-surface-links-structural-score(links, expected_domain, expected_lens) = if nil?(links) then 0 else add(cl-bool-score(cl-bmf-surface-link-structural-valid?(head(links), expected_domain, expected_lens), 1000), cl-bmf-surface-links-structural-score(tail(links), expected_domain, expected_lens));
+    def cl-bmf-lens-links-structural-score(links, expected_surface, expected_domain, expected_lens) = if nil?(links) then 0 else add(cl-bool-score(cl-bmf-lens-link-structural-valid?(head(links), expected_surface, expected_domain, expected_lens), 1000), cl-bmf-lens-links-structural-score(tail(links), expected_surface, expected_domain, expected_lens));
+    def cl-bmf-alignment-structural-score(alignment, expected_surface, expected_domain, expected_lens) = if cl-bmf-alignment?(alignment) then add(cl-bmf-surface-links-structural-score(cl-bmf-alignment-surface-links(alignment), expected_domain, expected_lens), cl-bmf-lens-links-structural-score(cl-bmf-alignment-lens-links(alignment), expected_surface, expected_domain, expected_lens)) else 0;
+
+    0;
+}

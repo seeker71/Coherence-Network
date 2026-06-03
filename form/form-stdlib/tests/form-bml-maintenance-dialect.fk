@@ -7,6 +7,10 @@ section [form.bml] {
     def bml_inc(n) = add(n, 1);
     def bml_pair(a, b) = list(a, b);
     def bml_choose(n) = if gt(n, 3) then bml_square(n) else bml_inc(n);
+    def bml_nested_yes(n) = if gt(n, 0) then if gt(n, 2) then 30 else 20 else 10;
+    def bml_json_text() = str_concat("{\"kind\":\"bml\",\"values\":[1,2]}", "");
 }
 
-(add (bml_choose 4) (len (bml_pair 1 2)))
+(add
+    (add (add (bml_choose 4) (len (bml_pair 1 2))) (bml_nested_yes 3))
+    (str_len (bml_json_text)))

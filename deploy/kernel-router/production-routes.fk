@@ -1,11 +1,14 @@
-; production-routes.fk — the PRODUCTION kernel-router manifest.
+; production-routes.fk — deployment route manifest, authored in Form.
 ;
 ; Loaded by `form-kernel-rust serve --routes production-routes.fk --upstream
 ; <real-api>`. This is the manifest the durable runtime-share flip will front
-; with: the routes listed here are served ENTIRELY in Form by the kernel (no
-; CPython in the path, X-Form-Router: native-kernel); EVERYTHING ELSE fans out
-; to the real FastAPI upstream (X-Form-Router: fanout-python). The kernel owns
-; the front door; CPython is the upstream for the not-yet-native tail.
+; with: the routes listed here are source-language authored cells whose recipes
+; the kernel walks natively (X-Form-Router: native-kernel). This file happens to
+; author them in Form syntax; sibling manifests may author equivalent cells in
+; BML, TypeScript, Go, C#, or languages we invent. Once loaded, all handlers are
+; ordinary Form-native recipes over Form-native cells. Paths not listed here fan
+; out to the configured upstream (X-Form-Router: fanout-python) until they also
+; have native recipe cells.
 ;
 ; PROMOTED ROUTES (the simplest /api/utils computes — scalar-in, scalar/JSON-out,
 ; their Form computation already parity-proven against CPython via the three-way
@@ -30,10 +33,11 @@
 ;                                       scalar params + the echoed fixed-shape idea dict
 ;   /api/utils/idea_grounding_summary  int grounding signals over two parallel CSV
 ;                                       scalar-lists (422 on len mismatch)
+;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
-;   - runs the SAME arithmetic the endpoint_<name>_demo.fk recipe runs,
+;   - runs the SAME arithmetic as the corresponding endpoint recipe,
 ;   - emits the EXACT response JSON the FastAPI route returns — byte-for-byte,
 ;     including the "runtime" field, so the body is a true drop-in. The serve
 ;     path stamps Content-Type: application/json (the body opens with `{`) and
@@ -43,7 +47,7 @@
 ; The live api wraps every response with FastAPI/Cloudflare observability
 ; headers (x-coherence-runtime-ms, cf-ray, …) added by middleware at the edge,
 ; NOT by the route's value contract; the shadow runs behind localhost with no
-; such middleware, so the PROOF compares the JSON BODY byte-for-byte. The
+; such middleware, so the route contract compares the JSON BODY byte-for-byte. The
 ; "runtime" field the api reports as "inline" (the kernel ran inline inside the
 ; CPython request) is echoed here as "inline" too, so the body is identical;
 ; the X-Form-Router header is where native-vs-fanout truthfully shows.
@@ -147,6 +151,26 @@
 (defn json_str_list (xs)
   (str_concat (str_concat "[" (json_str_elems xs)) "]"))
 
+(defn json_string_escape_loop (s i)
+  (if (ge i (str_len s))
+      ""
+      (do (let ch (char_at s i))
+          (do (let rest (json_string_escape_loop s (add i 1)))
+              (if (str_eq ch "\\")
+                  (str_concat "\\\\" rest)
+                  (if (str_eq ch "\"")
+                      (str_concat "\\\"" rest)
+                      (if (eq (ord ch) 10)
+                          (str_concat "\\n" rest)
+                          (if (eq (ord ch) 13)
+                              (str_concat "\\r" rest)
+                              (if (eq (ord ch) 9)
+                                  (str_concat "\\t" rest)
+                                  (str_concat ch rest))))))))))
+
+(defn json_string (s)
+  (str_concat "\"" (str_concat (json_string_escape_loop s 0) "\"")))
+
 ; --- comma-separated list of int params a_pkg a_lvl a_type a_inst as a JSON
 ; array, reading each with its api default. Used for the echoed NodeID `a`/`b`.
 (defn nid_json (pkg lvl ty inst)
@@ -157,7 +181,7 @@
 ;   params: values (csv ints, default "72,38,91,55,28,67,84,45,95,12"),
 ;           threshold (int, default 50)
 ;   body:   {"weight":<int>,"values":[...],"threshold":<int>,"runtime":"inline"}
-;   math:   above*100 + coherence_score   (endpoint_coherence_weight_demo.fk)
+;   math:   above*100 + coherence_score
 ; ===========================================================================
 
 (defn cw_weighted_score (value position)
@@ -257,11 +281,11 @@
 ;   params: values (csv floats, default "0.5,0.75,1.0"),
 ;           weights (csv floats, default "0.25,0.25,0.5")
 ;   body:   {"average":<float>,"values":[...],"weights":[...],"runtime":"inline"}
-;   math:   sum(v*w) / sum(w)         (endpoint_weighted_average_demo.fk)
+;   math:   sum(v*w) / sum(w)
 ; ===========================================================================
 
-; LEFT-associated accumulators, mirroring endpoint_weighted_average_demo.fk's
-; i=0..n while-loop AND Python's sum() (which folds left from 0): total starts at
+; LEFT-associated accumulators, mirroring the endpoint recipe's i=0..n while-loop
+; AND Python's sum() (which folds left from 0): total starts at
 ; 0.0 and each product is added on the LEFT. Float addition is not associative,
 ; so the grouping must match CPython's bit-for-bit, not just the algebra. A
 ; right-folding recursion (add x (rec rest)) groups the other way and diverges
@@ -299,7 +323,6 @@
 ;   params: counts (csv ints, default "2,1,1")
 ;   body:   {"diversity":<float>,"counts":[...],"runtime":"inline"}
 ;   math:   1 - sum((c/total)^2); total<=0 -> 0.0
-;           (endpoint_simpson_diversity_demo.fk)
 ; ===========================================================================
 
 ; sum a list of ints
@@ -337,7 +360,7 @@
 ;           resistance_risk (1.0) — all floats
 ;   body:   {"score":<f>,"potential_value":<f>,"confidence":<f>,
 ;            "estimated_cost":<f>,"resistance_risk":<f>,"runtime":"inline"}
-;   math:   (pv*conf) / max2(ec+rr, 0.5)   (endpoint_idea_score_demo.fk)
+;   math:   (pv*conf) / max2(ec+rr, 0.5)
 ; ===========================================================================
 
 (defn max2 (a b) (if (gt a b) a b))
@@ -366,7 +389,6 @@
 ;            "ac":<f>,"rr":<f>,"runtime":"inline"}
 ;   math:   (value_gap * conf * conf) / (remaining_cost + rr*0.5)
 ;           value_gap = max2(pv-av, 0.0); remaining_cost = max2(ec-ac, 0.1)
-;           (endpoint_marginal_cc_return_demo.fk)
 ; ===========================================================================
 
 (defn route_marginal_cc_return (q)
@@ -415,7 +437,6 @@
 ;   body:   {"balance":<f>,"gas":<i>,"water":<i>,"ice":<i>,"runtime":"inline"}
 ;   math:   H / ln(3); H = -1.0 * sum(p*ln(p)); total<=0 -> 0.0
 ;           single phase -> -0.0 (the trailing single negation of acc=0.0)
-;           (endpoint_breath_balance_demo.fk)
 ; ===========================================================================
 
 (defn route_breath_balance (q)
@@ -447,7 +468,6 @@
 ;   body:   {"entropy":<f>,"gas":<i>,"water":<i>,"ice":<i>,"runtime":"inline"}
 ;   math:   round(H / ln(3), 4); H = sum(-(p*ln(p))) folded by SUBTRACTION
 ;           (so single phase -> +0.0); total==0 -> 0.0; max_entropy<=0 -> 0.0
-;           (endpoint_shannon_entropy_demo.fk)
 ; ===========================================================================
 
 ; SUBTRACTIVE accumulator: entropy starts 0.0 and each present term is
@@ -490,7 +510,7 @@
 ;   body:   {"weights":[...],"scores":[...],"temperature":<f>,"runtime":"inline"}
 ;   math:   softmax(scores / temperature). temperature<=0 -> deterministic
 ;           (1.0 at the argmax positions, 0.0 elsewhere); if exp-sum==0 ->
-;           uniform 1/n. Mirrors endpoint_softmax_weights_demo.fk EXACTLY:
+;           uniform 1/n. Mirrors the endpoint recipe EXACTLY:
 ;           subtract the running max, exp, LEFT-folded total, divide.
 ; ===========================================================================
 
@@ -532,7 +552,7 @@
       (cons (div (head xs) total)
             (sm_norm_go (tail xs) total))))
 
-; fill a list of length n with a constant (uniform fallback)
+; fill a list of length n with a constant (uniform zero-temperature value)
 (defn sm_fill_go (n v)
   (if (eq n 0)
       (list)
@@ -571,7 +591,7 @@
 ;     has_specs_with_data(1.0) has_lineage(1.0) has_friction(0.3)
 ;   body: {"computed_actual_value","computed_estimated_cost",
 ;          "value_realization_pct","computed_confidence","runtime":"inline"}
-;   math mirrors endpoint_grounded_value_demo.fk EXACTLY (min2/max2/_plus/mul/div,
+;   math mirrors the endpoint recipe EXACTLY (min2/max2/_plus/mul/div,
 ;   the guarded ratio + count→level zero-guards, the five-term weighted sum left-
 ;   nested, the [0.05,0.95] clamp). int/float mixing (div count 10.0, gt count 0)
 ;   promotes as the parity-proven recipe relies on.
@@ -1318,17 +1338,179 @@
             ",\"runtime\":\"inline\"}")))))))))))))))))))))
 
 ; ===========================================================================
-; liveness — native, zero inputs (so the shadow answers /health without a hop)
+; /api/attention/kernel-runtime
+;   native handler with live kernel-router metrics carried as request data.
+;   body: source, raw native/fanout measurements, and a 2x2 attention matrix.
+;   The handler performs the projection in Form from router-owned measurements.
 ; ===========================================================================
-(defn route_health () "ok")
+
+(defn attention_clamp01 (v)
+  (if (lt v 0.0) 0.0 (if (gt v 1.0) 1.0 v)))
+
+(defn attention_ratio (numerator denominator)
+  (if (gt denominator 0)
+      (attention_clamp01 (div (add numerator 0.0) denominator))
+      0.0))
+
+(defn route_attention_fanout_path_count_json (row)
+  (str_concat
+    (str_concat
+      (str_concat
+        (str_concat "{\"path\":" (json_string (_dict_get row "path")))
+        (str_concat ",\"count\":" (value_str (_dict_get row "count"))))
+      (str_concat ",\"source\":" (json_string (_dict_get row "source"))))
+    "}"))
+
+(defn route_attention_fanout_path_counts_elems_json (rows)
+  (if (eq (len rows) 0)
+      ""
+      (if (eq (len rows) 1)
+          (route_attention_fanout_path_count_json (head rows))
+          (str_concat
+            (str_concat (route_attention_fanout_path_count_json (head rows)) ",")
+            (route_attention_fanout_path_counts_elems_json (tail rows))))))
+
+(defn route_attention_fanout_path_counts_json (rows)
+  (str_concat
+    (str_concat "[" (route_attention_fanout_path_counts_elems_json rows))
+    "]"))
+
+(defn route_attention_measurements_json
+  (native_route_count observed_native_route_count observed_path_count total_requests native_requests fanout_requests fanout_path_counts)
+  (str_concat
+    (str_concat
+      (str_concat
+        (str_concat
+          (str_concat "{\"native_route_count\":" (value_str native_route_count))
+          (str_concat ",\"observed_native_route_count\":"
+                      (value_str observed_native_route_count)))
+        (str_concat ",\"observed_path_count\":"
+                    (value_str observed_path_count)))
+      (str_concat ",\"total_requests\":" (value_str total_requests)))
+    (str_concat
+      (str_concat
+        (str_concat ",\"native_requests\":" (value_str native_requests))
+        (str_concat ",\"fanout_requests\":" (value_str fanout_requests)))
+      (str_concat
+        ",\"fanout_path_counts\":"
+        (str_concat (route_attention_fanout_path_counts_json fanout_path_counts) "}")))))
+
+(defn route_attention_matrix_json
+  (native_coverage fanout_pressure unobserved_native_pressure native_pressure)
+  (str_concat
+    (str_concat
+      (str_concat
+        (str_concat "[[" (value_str native_coverage))
+        (str_concat "," (value_str fanout_pressure)))
+      (str_concat "],[" (value_str unobserved_native_pressure)))
+    (str_concat
+      (str_concat "," (value_str native_pressure))
+      "]]")))
+
+(defn route_attention_candidate_json
+  (candidate_path candidate_requests candidate_source candidate_pressure)
+  (str_concat
+    (str_concat
+      (str_concat
+        (str_concat
+          (str_concat "{\"path\":" (json_string candidate_path))
+          (str_concat ",\"requests\":" (value_str candidate_requests)))
+        (str_concat ",\"source\":" (json_string candidate_source)))
+      (str_concat ",\"pressure\":" (value_str candidate_pressure)))
+    "}"))
+
+(defn route_attention_kernel_runtime (q)
+  (do (let native_route_count
+        (str_to_int (assoc "__router_native_route_count__" q)))
+  (do (let observed_native_route_count
+        (str_to_int (assoc "__router_observed_native_route_count__" q)))
+  (do (let observed_path_count
+        (str_to_int (assoc "__router_observed_path_count__" q)))
+  (do (let total_requests
+        (str_to_int (assoc "__router_total_requests__" q)))
+  (do (let native_requests
+        (str_to_int (assoc "__router_native_requests__" q)))
+  (do (let fanout_requests
+        (str_to_int (assoc "__router_fanout_requests__" q)))
+  (do (let router_observation
+        (assoc "__router_observation__" q))
+  (do (let fanout_path_counts
+        (_dict_get router_observation "fanout_path_counts"))
+  (do (let candidate
+        (_dict_get router_observation "next_bml_candidate"))
+  (do (let candidate_path
+        (_dict_get candidate "path"))
+  (do (let candidate_requests
+        (_dict_get candidate "count"))
+  (do (let candidate_source
+        (_dict_get candidate "source"))
+  (do (let native_coverage
+        (attention_ratio observed_native_route_count native_route_count))
+  (do (let fanout_pressure
+        (attention_ratio fanout_requests total_requests))
+  (do (let unobserved_native_pressure
+        (attention_clamp01 (sub 1.0 native_coverage)))
+  (do (let native_pressure
+        (attention_ratio native_requests total_requests))
+  (do (let candidate_pressure
+        (attention_ratio candidate_requests total_requests))
+      (str_concat
+        (str_concat
+          (str_concat "{\"source\":\"kernel-router:live-metrics\",\"measurements\":"
+                      (route_attention_measurements_json
+                        native_route_count
+                        observed_native_route_count
+                        observed_path_count
+                        total_requests
+                        native_requests
+                        fanout_requests
+                        fanout_path_counts))
+          (str_concat
+            ",\"matrix\":"
+            (route_attention_matrix_json
+              native_coverage
+              fanout_pressure
+              unobserved_native_pressure
+              native_pressure)))
+        (str_concat
+          ",\"next_bml_candidate\":"
+          (str_concat
+            (route_attention_candidate_json
+              candidate_path
+              candidate_requests
+              candidate_source
+              candidate_pressure)
+            "}")))))))))))))))))))))
 
 ; ===========================================================================
-; the route manifest: (path handler). EVERYTHING NOT HERE FANS OUT to --upstream.
+; Source-language route class surface lowered to KernelHTTPRoute.
+; ===========================================================================
+section [form.bml] {
+    template RouteCell<TRequest, TResponse> {
+        member request: TRequest;
+        member response: TResponse;
+        member route: KernelHTTPRoute;
+    }
+
+    class HealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
+        def handle(request) {
+            "ok";
+        }
+
+        route = route_data(health, handle);
+    }
+
+    let health_route_from_class = language-route-class-kernel-route(HealthRoute);
+}
+
+; ===========================================================================
+; the route manifest: path/handler rows and source-authored KernelHTTPRoute rows.
+; EVERYTHING NOT HERE FANS OUT to --upstream.
 ; Paths match the live api exactly so the kernel-router can front /api/utils/*.
 ; ===========================================================================
 (let routes
   (list
-    (list "/health"                        route_health)
+    health_route_from_class
     (list "/api/utils/coherence_weight"    route_coherence_weight)
     (list "/api/utils/nodeid_distance"     route_nodeid_distance)
     (list "/api/utils/nodeid_compatibility" route_nodeid_compatibility)
@@ -1350,4 +1532,5 @@
     (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
     (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
-    (list "/api/utils/concept_match_score"     route_concept_match_score)))
+    (list "/api/utils/concept_match_score"     route_concept_match_score)
+    (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)))
