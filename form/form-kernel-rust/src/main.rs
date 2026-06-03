@@ -392,6 +392,15 @@ pub(crate) struct Kernel {
     // Arc lets the kernel be cloned cheaply for parallel workers; the
     // Library handle inside is shared, not duplicated.
     jit_compiled: HashMap<NodeID, Arc<JitCompiled>>,
+    // Measured repetition — the kernel SENSES its own hot recipes instead of
+    // waiting for a manual jit_compile. jit_hits counts calls to UNDECIDED
+    // closures (neither compiled nor proven un-compilable); at JIT_HOT_THRESHOLD
+    // the kernel attempts the same compile jit_compile does. jit_failed marks a
+    // shape outside the JIT subset (strings/lists) so a hot recipe the compiler
+    // can't take is tried ONCE, never on every call. A decided recipe carries no
+    // counter — the only cost is the warm-up.
+    jit_hits: HashMap<NodeID, u32>,
+    jit_failed: HashSet<NodeID>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -700,6 +709,8 @@ impl Kernel {
             methods: HashMap::new(),
             jit_aliases: HashMap::new(),
             jit_compiled: HashMap::new(),
+            jit_hits: HashMap::new(),
+            jit_failed: HashSet::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -1098,6 +1109,11 @@ impl Kernel {
             // Arc clones — Library handles stay shared across the kernel and
             // its workers; the .so stays mapped for the duration.
             jit_compiled: self.jit_compiled.clone(),
+            // Workers share the known-failed set (don't re-attempt a shape the
+            // compiler already refused) but count heat independently (each senses
+            // its own hot paths).
+            jit_hits: HashMap::new(),
+            jit_failed: self.jit_failed.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -1285,6 +1301,11 @@ impl Drop for JitCompiled {
 // match instead of dynamic generation. Form recipes with more parameters
 // fall back to recipe-walk; the recipe stays canonical truth.
 const JIT_MAX_ARITY: usize = 8;
+// How many calls to an undecided recipe before measured repetition attempts a
+// host-native compile. High enough that the rustc compile cost amortizes over
+// the native calls that follow; low enough that a genuinely hot loop promotes
+// quickly. The trigger is heat, not a hand-placed annotation.
+const JIT_HOT_THRESHOLD: u32 = 2000;
 
 impl Value {
     pub(crate) fn display(&self) -> String {
@@ -3471,6 +3492,22 @@ impl Kernel {
                 Value::Int(0)
             }
         });
+        // jit_compiled? form-name-str → 1 if the recipe's body has been compiled
+        // to host-native (by jit_compile OR by measured repetition), else 0. Lets
+        // Form code and a benchmark observe the kernel's own promotion decisions.
+        self.register_env_native("jit_compiled?", cat_compare(RCMP_EQ), |k, a, env, args| {
+            let form_id = k.intern_string(args[0].as_str()).inst;
+            match a.lookup(env, form_id) {
+                Some(Value::Closure(c)) => {
+                    if k.jit_compiled.contains_key(&c.body) {
+                        Value::Int(1)
+                    } else {
+                        Value::Int(0)
+                    }
+                }
+                _ => Value::Int(0),
+            }
+        });
         // seeded_bytes(seed, count) — deterministic LCG byte stream.
         // Same (seed, count) → byte-identical output across Go / Rust / TS.
         // Used by the private-channel protocol to transmit megabytes of
@@ -5385,6 +5422,31 @@ pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Va
                 // This preserves Form semantics for closures over non-int
                 // values (lists, strings, closures) even after jit_compile
                 // succeeded for the integer-only path.
+            } else if !k.jit_failed.contains(&cl.body) {
+                // MEASURED REPETITION: no manual jit_compile needed. Count calls
+                // to this undecided recipe; at the threshold, attempt the SAME
+                // compile jit_compile does. Success → every later call dispatches
+                // native (the branch above). Failure (a shape outside the JIT
+                // subset, e.g. strings/lists) → mark it failed so it is tried
+                // once, never on every call. A decided recipe carries no counter.
+                let hits = {
+                    let c = k.jit_hits.entry(cl.body).or_insert(0u32);
+                    *c += 1;
+                    *c
+                };
+                if hits >= JIT_HOT_THRESHOLD {
+                    let compiled = emit_rust_source(k, cl.name, &cl.params, cl.body)
+                        .and_then(|src| compile_rust_cdylib(&src, cl.params.len()));
+                    match compiled {
+                        Some(jc) => {
+                            k.jit_compiled.insert(cl.body, Arc::new(jc));
+                        }
+                        None => {
+                            k.jit_failed.insert(cl.body);
+                        }
+                    }
+                    k.jit_hits.remove(&cl.body);
+                }
             }
             walk(k, a, cl.body, call_frame)
         }
