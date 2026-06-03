@@ -2419,6 +2419,20 @@ impl Kernel {
         self.register_native("str_to_int", cat_method(), |_, _, args| {
             Value::Int(args[0].as_str().parse().unwrap_or(0))
         });
+        // float_to_int — truncate a float toward zero, exactly Python's int() on a
+        // float. The missing leaf between str_to_float and an integer: it lets a
+        // native handler replicate int(float(x)) (parse a numeric string that may
+        // carry a fraction, then truncate) where str_to_int alone returns 0 on
+        // "3.0". Total: a non-number -> 0. Rust `as i64` truncates toward zero for
+        // both signs, matching int(3.5)=3 and int(-3.5)=-3.
+        self.register_native("float_to_int", cat_method(), |_, _, args| {
+            let f = match &args[0] {
+                Value::Float(x) => *x,
+                Value::Int(i) => *i as f64,
+                _ => 0.0,
+            };
+            Value::Int(f as i64)
+        });
         // str_to_float — text-to-float leaf, the float sibling of str_to_int.
         // Total like its sibling (unparseable text -> 0.0), so a handler that
         // splits a comma-separated query arg into float scores never panics on
@@ -6390,9 +6404,24 @@ fn handle_request(
             return false; // close on error — keep the framing unambiguous
         }
         let result = walk(k, arena, cl.body, call_frame);
-        status = "200 OK".to_string();
-        body = result.display();
         router = "native-kernel";
+        // A native handler signals an observable, status-bearing "no" by returning
+        // the tagged shape (respond <code> <body-str>) — a 3-element List
+        // [Str("__http_status__"), Int(code), Str(body)]. This carries the
+        // awareness-shape into the handler itself: a handler can say a SENSED "no"
+        // (a 422 on inconsistent input, say) observably — the same shape as the
+        // router's observable shape-threshold "no" — not only a 200 body. A plain
+        // value is a 200 whose rendered display is the body, exactly as before.
+        match handler_status_response(&result) {
+            Some((code, b)) => {
+                status = format!("{} {}", code, http_reason(code));
+                body = b;
+            }
+            None => {
+                status = "200 OK".to_string();
+                body = result.display();
+            }
+        }
         // A native handler that emits a JSON document (its rendered body opens
         // with `{` or `[`) is served as application/json, so a route promoted
         // from the CPython upstream returns the SAME Content-Type its FastAPI
@@ -7131,6 +7160,45 @@ fn request_shape_limit() -> usize {
 // via COH_ROUTER_RESPONSE_SHAPE_BYTES.
 fn response_shape_limit() -> usize {
     shape_limit_from_env("COH_ROUTER_RESPONSE_SHAPE_BYTES", DEFAULT_RESPONSE_SHAPE_BYTES)
+}
+
+// A native handler's observable, status-bearing "no". A handler that wants a
+// non-200 returns the tagged shape (respond <code> <body>) — a 3-element List
+// [Str("__http_status__"), Int(code), Str(body)] (the `respond` helper in the
+// routes manifest builds it). This carries the awareness-shape into the handler:
+// it can say a SENSED "no" (a 422 on inconsistent input, say) observably, the
+// same way the router answers an over-threshold shape observably — not only a
+// 200 body. Returns (status_code, body) when the result is that tagged shape;
+// None for any plain value (a 200 whose rendered display is the body). The tag +
+// the code-range check keep a handler's ordinary List result from being mistaken
+// for a status response.
+fn handler_status_response(result: &Value) -> Option<(i64, String)> {
+    if let Value::List(items) = result {
+        if items.len() == 3 {
+            if let (Value::Str(tag), Value::Int(code), Value::Str(body)) =
+                (&items[0], &items[1], &items[2])
+            {
+                if tag == "__http_status__" && (100..=599).contains(code) {
+                    return Some((*code, body.clone()));
+                }
+            }
+        }
+    }
+    None
+}
+
+// The reason phrase for a status a native handler can emit. Only the codes we
+// actually use are named; anything else gets a neutral phrase (the numeric code
+// is what clients key on).
+fn http_reason(code: i64) -> &'static str {
+    match code {
+        200 => "OK",
+        400 => "Bad Request",
+        404 => "Not Found",
+        422 => "Unprocessable Entity",
+        500 => "Internal Server Error",
+        _ => "Status",
+    }
 }
 
 // The outcome of reading a request: either the parsed (head, body), or a sensed
