@@ -6,6 +6,11 @@ type FetchInput = Parameters<typeof fetch>[0];
 type FetchOptions = Omit<Parameters<typeof fetch>[1], "signal"> & {
   signal?: AbortSignal;
   cache?: RequestCache;
+  // Next.js's per-fetch caching config — declared explicitly because the base
+  // RequestInit augmentation isn't always carried through the Omit above (the
+  // production `next build` type check rejects it otherwise). Lets a caller opt
+  // into time-based revalidation, e.g. the home page's per-locale data cache.
+  next?: { revalidate?: number | false; tags?: string[] };
 };
 
 function withTimeout(signal: AbortSignal | null, timeoutMs: number): AbortSignal {
@@ -54,8 +59,7 @@ export async function fetchJsonOrNull<T>(
   // disable the very caching it asked for. Every existing caller passes neither,
   // so they keep no-store unchanged; caching is strictly opt-in.
   const wantsCaching =
-    options.cache !== undefined ||
-    Boolean((options as { next?: { revalidate?: number } }).next?.revalidate);
+    options.cache !== undefined || Boolean(options.next?.revalidate);
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const timeout = withTimeout(options.signal ?? null, timeoutMs);
