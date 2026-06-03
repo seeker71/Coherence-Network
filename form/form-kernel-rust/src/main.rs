@@ -7186,6 +7186,21 @@ fn fanout_read_timeout() -> Duration {
     Duration::from_millis(FANOUT_READ_TIMEOUT_DEFAULT_MS)
 }
 
+// The TOTAL wall-clock a client gets to deliver one whole request (request line +
+// headers + body). KEEPALIVE_IDLE_TIMEOUT bounds a single stalled read, but it is
+// a per-read IDLE timer: a slowloris that trickles one byte every few seconds
+// resets it forever and never finishes the request, pinning a worker. This is the
+// symmetric client-hop bound to the fan-out read timeout above — a deadline
+// checked across ALL reads of one request, so a request not fully received within
+// it is dropped and the worker freed. 30s is far longer than a legitimate client
+// needs to send a (small, mostly-GET) request even on a slow link, short enough
+// that a trickle attacker cannot hold a worker indefinitely.
+const MAX_REQUEST_READ_TIMEOUT_DEFAULT_MS: u64 = 30_000;
+
+fn max_request_read_timeout() -> Duration {
+    Duration::from_millis(MAX_REQUEST_READ_TIMEOUT_DEFAULT_MS)
+}
+
 // A fan-out hop failure, classified so the caller knows whether to RETRY or 504:
 //   - Timeout: the upstream is reachable but SLOW/HUNG — connect, write, or read
 //     hit its deadline (TimedOut / WouldBlock). Retrying does NOT help (the
@@ -7250,6 +7265,13 @@ fn serve_connection(
 ) {
     // Idle timeout so a held-open keep-alive connection cannot starve the pool.
     let _ = stream.set_read_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
+    // WRITE timeout too: a client that stops READING its response (a slow-read
+    // attack, or one that opened the connection only to stall) would otherwise
+    // block the worker in `write_all` on TCP backpressure indefinitely. Each write
+    // must make progress within this or the connection is dropped, freeing the
+    // worker. Per-write (not a total), so a legitimate client on a slow link that
+    // keeps accepting chunks is unaffected.
+    let _ = stream.set_write_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
     // Bytes already read past one request's end belong to the NEXT request on
     // this connection (pipelining) — carried across loop iterations so no byte
     // is dropped between requests.
@@ -8117,6 +8139,13 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
     // The shape we can hold for this request right now — read once (the live,
     // changeable recipe), then sensed against the observed bytes below.
     let request_limit = request_shape_limit();
+    // The whole request must arrive within this wall-clock deadline. The 5s idle
+    // read-timeout reaps a single stalled read, but a slowloris that trickles one
+    // byte every few seconds resets that idle timer forever and never completes;
+    // this total deadline, checked before every read of THIS request, reaps such a
+    // connection so it cannot pin a worker. (A pipelined request whose bytes were
+    // already carried in skips the read loops entirely and is unaffected.)
+    let read_deadline = Instant::now() + max_request_read_timeout();
     // Phase 1: read until the header terminator is seen (or EOF / cap). The
     // carried bytes may ALREADY contain the full header block, so check before
     // the first socket read — otherwise a pipelined request would block on a
@@ -8125,6 +8154,9 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
         Some(t)
     } else {
         loop {
+            if Instant::now() >= read_deadline {
+                return RequestRead::Error; // slow client never finished the head
+            }
             match stream.read(&mut buf) {
                 Ok(0) => break find_header_end(&raw), // peer closed; use what we have
                 Ok(n) => {
@@ -8180,6 +8212,9 @@ fn read_request(stream: &mut TcpStream, carry: &mut Vec<u8>) -> RequestRead {
     };
     let mut body: Vec<u8> = raw[body_start..].to_vec();
     while body.len() < total {
+        if Instant::now() >= read_deadline {
+            return RequestRead::Error; // slow client never finished the body
+        }
         match stream.read(&mut buf) {
             Ok(0) => break, // peer closed early; return the partial body honestly
             Ok(n) => body.extend_from_slice(&buf[..n]),
