@@ -1,0 +1,24 @@
+; tests/bmf-bml-compiler-picture-band.fk - executable compiler/compiler-compiler picture
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk
+
+(do
+    (let picture (bmf-bml-compiler-picture 0))
+    (let compiler-compiler-flow (compiler-picture-compiler-compiler-flow picture))
+    (let main-flow (compiler-picture-compiler-flow picture))
+    (let ports (compiler-picture-language-ports picture))
+    (let first-stage (head (compiler-flow-stages compiler-compiler-flow)))
+    (let bmf-port (compiler-find-language-port ports "BMF"))
+    (let java-port (compiler-find-language-port ports "Java"))
+    (let csharp-port (compiler-find-language-port ports "CSharp"))
+
+    (add (bmf-bml-compiler-picture-score 0)
+    (add (if (eq (compiler-picture-total-stages picture) 10) 100 0)
+    (add (if (eq (len ports) 8) 1000 0)
+    (add (if (eq (compiler-picture-shared-port-count picture) 8) 10000 0)
+    (add (if (eq (compiler-picture-proven-port-count picture) 2) 100000 0)
+    (add (if (str_eq (compiler-stage-name first-stage) "grammar-source") 1 0)
+    (add (if (str_eq (compiler-language-port-status bmf-port) "proven") 10 0)
+    (add (if (str_eq (compiler-language-port-status java-port) "legacy-source") 100 0)
+         (if (str_eq (compiler-language-port-status csharp-port) "target") 1000 0)))))))))
+)

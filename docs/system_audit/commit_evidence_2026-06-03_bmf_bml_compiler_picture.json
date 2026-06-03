@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/bmf-bml-compiler-picture",
+  "commit_scope": "Add an executable BMF/BML compiler and compiler-compiler picture with a sibling-kernel proof and circulation edges.",
+  "files_owned": [
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bmf_bml_compiler_picture.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "git fetch origin main",
+      "git stash push -u -m codex-bmf-bml-compiler-picture-pre-rebase",
+      "git rebase origin/main",
+      "git stash pop",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-03_bmf_bml_compiler_picture.json",
+      "git diff --check"
+    ],
+    "notes": "The new compiler-picture band returns 112251 across Go/Rust/TypeScript, proving ten stages, eight language ports, all ports on the shared carrier/runtime, and two currently proven ports. Existing BMF and BML compiler runtime bands remain green."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The BMF/BML compiler-compiler north-star is now both readable documentation and executable Form model data. Language-port reuse for BMF, BML, Python, TypeScript, Go, Rust, Java, and C# is explicit without changing the core compiler flow.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk",
+      "./scripts/verify_web_api_deploy.sh after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "This lands the picture and first executable model. Full BMF source body semantic lowering, BML object-model lowering, runtime grammar capsule registration, and additional Java/C# ports remain open."
+  },
+  "idea_ids": [
+    "bml-thesis-parity",
+    "universal-translator"
+  ],
+  "spec_ids": [
+    "bml-full-support",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "bmf-bml-compiler-picture-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/compiler.fk now carries compiler-stage, compiler-flow, compiler-language-port, compiler-picture, and bmf-bml-compiler-picture model cells.",
+    "form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk proves the picture invariants across sibling kernels.",
+    "kernels/BMF_BML_COMPILER_PICTURE.md shows the compiler/compiler-compiler model, flow, and reusable language-port contract with links back to the legacy archive and kernel docs."
+  ],
+  "change_files": [
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/tests/bmf-bml-compiler-picture-band.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/README.md",
+    "docs/field/urs/artifacts/master-thesis-2000/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-03_bmf_bml_compiler_picture.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
