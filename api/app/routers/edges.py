@@ -28,24 +28,55 @@ _LOCALIZABLE_NODE_TYPES = {
 }
 
 
-def _project_edge_stub(stub: dict, lang: str) -> None:
+_UNSET: Any = object()
+
+
+def _project_edge_stub(
+    stub: dict,
+    lang: str,
+    *,
+    view: Any = _UNSET,
+    seen_attuned: set[str] | None = None,
+) -> Any:
     """Project an embedded from_node/to_node stub on an edge response.
 
     Mirrors graph._project_node but operates on the lighter node-stub
     shape the edges endpoint returns (id + type + name + image_url + slug,
     no description). Title-only projection is the common case for chips.
+
+    ``view`` lets ``list_edges`` thread the page's one-query
+    ``canonical_views`` snapshot in (the record for this node, or ``None`` if
+    the batch found none) so the cache-hit path costs zero per-stub SELECTs.
+    Left unset, the function queries ``canonical_view`` itself (single-stub
+    callers / tests stay unchanged).
+
+    ``seen_attuned`` preserves the per-call write count when a node_id appears
+    in several stubs: the per-call path attunes a missing node only on its
+    FIRST occurrence (later occurrences find the view now present and skip),
+    so a node already in ``seen_attuned`` is not re-attuned here. Returns the
+    record now backing this node (the freshly-attuned one after a miss, else
+    the prefetched ``view``) so the caller can refresh its snapshot for the
+    node's remaining stubs.
     """
     node_id = stub.get("id")
     node_type = stub.get("type")
     if not node_id or node_type not in _LOCALIZABLE_NODE_TYPES:
-        return
-    project(stub, "node", node_id, lang, title_field="name", body_field="description")
+        return view if view is not _UNSET else None
+    project(stub, "node", node_id, lang, title_field="name", body_field="description", **({"view": view} if view is not _UNSET else {}))
     # If the cache had no view for this lang yet, attune-on-miss so the
     # next chip-render lands in the cached path. Best-effort.
     try:
         from app.services import translation_cache_service as _tcache
         from app.services import translator_service as _ts
-        if _tcache.canonical_view("node", node_id, lang) is None and _ts.has_backend():
+        # Cache-miss check: prefer the prefetched snapshot (``view``) so we
+        # don't re-query per stub; fall back to a live read when no snapshot
+        # was threaded in. A node already attuned this request is present
+        # now — skip it so the write count matches the per-call path exactly.
+        missing = (view is None) if view is not _UNSET else (
+            _tcache.canonical_view("node", node_id, lang) is None
+        )
+        already = seen_attuned is not None and node_id in seen_attuned
+        if missing and not already and _ts.has_backend():
             anchors = _tcache.all_canonical_views("node", node_id)
             if not _tcache.find_anchor(anchors):
                 _tcache.write_view(
@@ -60,9 +91,17 @@ def _project_edge_stub(stub: dict, lang: str) -> None:
             _ts.attune_from_anchor(
                 entity_type="node", entity_id=node_id, target_lang=lang,
             )
-            project(stub, "node", node_id, lang, title_field="name", body_field="description")
+            if seen_attuned is not None:
+                seen_attuned.add(node_id)
+            # Re-read the now-present view so this stub AND the node's later
+            # stubs project from it (mirrors the per-call re-project, which
+            # reads the freshly-written view back from the cache).
+            fresh = _tcache.canonical_view("node", node_id, lang)
+            project(stub, "node", node_id, lang, title_field="name", body_field="description", view=fresh)
+            return fresh
     except Exception as e:  # pragma: no cover
         log.debug("edges._project_edge_stub attune-on-miss skipped: %s", e)
+    return view if view is not _UNSET else None
 
 
 # ── Request models ────────────────────────────────────────────────────
@@ -137,11 +176,39 @@ async def list_edges(
     target_lang = resolve_caller_lang(request, lang)
     if target_lang and target_lang != DEFAULT_LOCALE and target_lang in SUPPORTED_LOCALES:
         items = result.get("items", []) if isinstance(result, dict) else []
+        # One batched canonical-view query over every localizable node referenced
+        # by every stub on the page, instead of a canonical_view SELECT per stub.
+        # The snapshot is the SAME record canonical_view would return per id; a
+        # node with no view is simply absent (mirrors canonical_view -> None).
+        stub_node_ids = {
+            sid
+            for edge in items if isinstance(edge, dict)
+            for stub_key in ("from_node", "to_node")
+            for stub in (edge.get(stub_key),)
+            if isinstance(stub, dict)
+            and (sid := stub.get("id"))
+            and stub.get("type") in _LOCALIZABLE_NODE_TYPES
+        }
+        from app.services import translation_cache_service as _tcache
+        canon = _tcache.canonical_views("node", list(stub_node_ids), target_lang)
+        # ``seen_attuned`` makes the attune-on-miss write count identical to the
+        # per-stub path: a node missing on the page is attuned only once, on its
+        # first stub; later stubs read the now-present view from the refreshed
+        # snapshot and skip the write (just as the per-call version's live
+        # re-query would find the view present and skip).
+        seen_attuned: set[str] = set()
         for edge in items:
             for stub_key in ("from_node", "to_node"):
                 stub = edge.get(stub_key) if isinstance(edge, dict) else None
                 if stub:
-                    _project_edge_stub(stub, target_lang)
+                    refreshed = _project_edge_stub(
+                        stub, target_lang,
+                        view=canon.get(stub.get("id")),
+                        seen_attuned=seen_attuned,
+                    )
+                    sid = stub.get("id")
+                    if sid is not None and refreshed is not None:
+                        canon[sid] = refreshed
     return result
 
 
