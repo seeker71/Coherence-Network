@@ -4,13 +4,13 @@
 ; form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
 ; form-stdlib/kernel-http.fk form-stdlib/language-model.fk
 ;
-; Band verdict: 525377 when BML template/class source syntax lowers to generic
+; Band verdict: 525377 when route-language template/class source syntax lowers to generic
 ; LanguageClass values, including a direct KernelHTTPRoute and a route-data ref,
 ; with a valid candidate matrix for the direct route.
 
 (defn route_runtime_health () "ok")
 
-section [form.bml] {
+section [form.route] {
     template RouteCell<TRequest, TResponse> {
         member request: TRequest;
         member response: TResponse;

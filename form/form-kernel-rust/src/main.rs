@@ -7409,7 +7409,7 @@ fn source_compile_driver(stdlib_abs: &std::path::Path, body: &str) -> Result<Str
     Ok(parts.join("\n"))
 }
 
-fn compile_bml_section_to_recipe_node(
+fn compile_source_section_to_recipe_node(
     dialect_name: &str,
     body: &str,
     stdlib_abs: &std::path::Path,
@@ -7420,7 +7420,7 @@ fn compile_bml_section_to_recipe_node(
         sexp_string_literal(body)
     );
     let driver_src = source_compile_driver(stdlib_abs, &driver_body)?;
-    let (kernel, value) = run_source_on_form_stack("bml-section-compile", driver_src)?;
+    let (kernel, value) = run_source_on_form_stack("route-section-compile", driver_src)?;
     match value {
         Value::Nid(root) => Ok((kernel, root)),
         _ => Err("source-compile: fsc-compile-section-recipe did not return a recipe".to_string()),
@@ -7556,7 +7556,7 @@ fn compile_route_source_into_recipe(
         let dialect_name = src[dialect_start..dialect_end].trim();
         let body = &src[open + 1..close];
         let (section_kernel, section_root) =
-            compile_bml_section_to_recipe_node(dialect_name, body, stdlib_abs)?;
+            compile_source_section_to_recipe_node(dialect_name, body, stdlib_abs)?;
         let section_root = import_recipe_from(k, &section_kernel, section_root);
         roots.push(section_root);
         cursor = line_next(src, close);
@@ -9001,7 +9001,7 @@ mod route_spec_tests {
     #[test]
     fn source_route_manifest_compiles_to_recipe_object_program() {
         let manifest = r#"
-            section [form.bml] {
+            section [form.route] {
                 template RouteCell<TRequest, TResponse> {
                     member request: TRequest;
                     member response: TResponse;
