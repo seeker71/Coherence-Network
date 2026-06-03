@@ -1,0 +1,27 @@
+; channel-bml-band.fk — BML-authored native channel proof.
+;
+; Proves the form.bml authoring surface can call the existing native channel
+; transport functions. This is not a durability/concurrency proof; channel.fk
+; still owns those v0 limits.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk
+
+section [form.bml] {
+    def bml_channel_roundtrip(path) {
+        let bytes = channel-create(path);
+        let payload = intern_trivial_string("bml-channel");
+        let msg = channel-message(payload);
+        let count = channel-append(path, msg);
+        let all = channel-read(path);
+        let first = head(all);
+        let back = channel-msg-payload(first);
+        let create_score = if gt(bytes, 0) then 100 else 0;
+        let append_score = if eq(count, 1) then 100 else 0;
+        let read_score = if eq(len(all), 1) then 100 else 0;
+        let value_score = if str_eq(node_value(back), "bml-channel") then 100 else 0;
+        let identity_score = if node_eq(msg, first) then 100 else 0;
+        add(add(add(add(create_score, append_score), read_score), value_score), identity_score)
+    }
+}
+
+(bml_channel_roundtrip "/tmp/coh-channel-bml-band.fkb")

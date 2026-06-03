@@ -1,0 +1,47 @@
+; compiler-lens-bmf-alignment-band.fk - BML compiler-lens alignment with BMF contracts.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler-lens.fk
+
+section [form.bml] {
+    def cl-bmf-alignment-band-score() {
+        let domain_id = bp("BMF-DOMAIN-REF");
+        let domain_kind = bp("BMF-DOMAIN-KIND-REF");
+        let lens_id = bp("BMF-LENS-REF");
+        let surface_id = bp("BMF-SURFACE-REF");
+        let domain = bmf-domain-contract(domain_id, domain_kind, empty);
+        let bmf_surface = bmf-surface-contract(surface_id, domain_id, lens_id, "application/x-bml", empty, list("classes", "generics", "templates"), list("route", "request", "response"));
+        let bmf_lens = bmf-lens-contract(bmf_surface, "emit-route-cell", "parse-route-source", "route-source-map");
+        let space = bmf-translation-space(list(domain), list(bmf_surface), list(bmf_lens));
+        let bml_surface = cl-surface("kernel-router-bml", "bml", 9, "Route<TRequest,TResponse> with templates and typed fields", "BMF surface contract plus Form route cells");
+        let form_surface = cl-surface("kernel-router-form", "form", 5, "Executable route recipe cells", "routes binding and native handler closures");
+        let source_map = cl-source-map(bml_surface, form_surface, "kernel.router.bml:Route<QueryJson>", "deploy/kernel-router/production-routes.fk:routes", 1000);
+        let dependency = cl-dependency("BMF-SURFACE-CONTRACT", "CompilerLensSurface", "preserved-by-link", 1000);
+        let translation = cl-translation(bml_surface, form_surface, "lower-and-recover", "bidirectional-with-source-map", "lossless-contract");
+        let diagnostic = cl-diagnostic("info", "BMF surface contract", "compiler-lens-bmf-alignment-band.fk:surface", "BMF contract is preserved inside compiler-lens alignment", "inspect cl-bmf-surface-link-contract");
+        let lens = cl-lens(bml_surface, list(source_map), list(dependency), list(translation), list(diagnostic));
+        let surface_link = cl-bmf-surface-link(bmf_surface, bml_surface, "source-surface-contract", 1000);
+        let lens_link = cl-bmf-lens-link(bmf_lens, lens, translation, 1000);
+        let alignment = cl-bmf-alignment(list(surface_link), list(lens_link), space);
+        let wrong_lens = surface_id;
+        sum(list(
+            cl-bool-score(value_eq(bmf-domain-contract-id(domain), domain_id), 1),
+            cl-bool-score(value_eq(bmf-surface-contract-domain(bmf_surface), domain_id), 2),
+            cl-bool-score(value_eq(bmf-surface-contract-lens(bmf_surface), lens_id), 4),
+            cl-bool-score(eq(len(bmf-translation-space-surfaces(space)), 1), 8),
+            cl-bool-score(eq(len(bmf-translation-space-contracts(space)), 1), 16),
+            cl-bool-score(cl-bmf-surface-link-valid?(surface_link), 32),
+            cl-bool-score(cl-bmf-lens-link-valid?(lens_link), 64),
+            cl-bool-score(value_eq(cl-bmf-surface-link-contract(surface_link), bmf_surface), 128),
+            cl-bool-score(value_eq(cl-bmf-lens-link-contract(lens_link), bmf_lens), 256),
+            cl-bool-score(gt(cl-bmf-alignment-score(alignment), cl-lens-structure-score(lens)), 512),
+            cl-bool-score(cl-bmf-surface-link-structural-valid?(surface_link, domain_id, lens_id), 1024),
+            cl-bool-score(cl-bmf-lens-link-structural-valid?(lens_link, bmf_surface, domain_id, lens_id), 2048),
+            cl-bool-score(eq(cl-bmf-alignment-structural-score(alignment, bmf_surface, domain_id, lens_id), 2000), 4096),
+            cl-bool-score(if cl-bmf-surface-link-structural-valid?(surface_link, domain_id, wrong_lens) then false else true, 8192),
+            cl-bool-score(if cl-bmf-lens-link-structural-valid?(lens_link, bmf_surface, domain_id, wrong_lens) then false else true, 16384),
+            cl-bmf-alignment-score(alignment)
+        ));
+    }
+
+    cl-bmf-alignment-band-score();
+}
