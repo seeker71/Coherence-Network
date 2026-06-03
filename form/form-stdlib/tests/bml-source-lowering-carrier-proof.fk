@@ -427,7 +427,7 @@
             (class-field-type-score
                 modern
                 "m_hSourceLowering"
-                "BMLSourceLoweringFlow<String,Object,Object>")
+                "BMLCompilerSourceLoweringFlow")
             (class-field-type-score
                 modern
                 "m_hSelfHosting"

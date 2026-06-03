@@ -91,6 +91,7 @@ The picture also now lives as BML source:
 - It uses BML classes, interfaces, class templates, generic fields and methods, sections, constants, constructors, property bags, a `syntax` block, and reversible `choose` / `fail` / `save` / `discard` control.
 - It names reusable ports for BML, CSharp, Java, TypeScript, Go, and Rust without changing the core flow.
 - It now declares the source-lowering architecture in BML: `CompilerCarrier`, `CompilerDeclaration<T>`, `CompilerSectionModel<T>`, `CompilerUnitModel<T>`, `SourceLowerer<TSource,TDeclaration,TCarrier>`, `BMLDeclarationLoweringStage<TDeclaration,TCarrier>`, `BMLSourceLoweringFlow<TSource,TDeclaration,TCarrier>`, and `SelfHostingPlan`.
+- It also declares the concrete BML compiler lowerer in BML: `BMLSourceDeclaration`, `BMLSourceParser`, `BMLSourceCarrier`, `BMLCompilerDeclarationLoweringStage`, and `BMLCompilerSourceLoweringFlow`. The parser adapter is the named bootstrap boundary; declaration classification, carrier construction, and source-unit lowering are high-level BML class/template code.
 - [`form/form-stdlib/tests/bml-compiler-source-picture-proof.fk`](../form/form-stdlib/tests/bml-compiler-source-picture-proof.fk) parses the BML file and proves 42 structural checks across the Go, Rust, and TypeScript kernels.
 
 Proof command:
@@ -120,6 +121,28 @@ cd form
 
 Expected result: `41` with `1 ok, 0 divergent`.
 
+## Concrete BML Source Lowerer
+
+The next refinement is now explicit in BML source, not only in the Form proof bridge:
+
+- `BMLSourceDeclaration` is the typed declaration model exposed by the source parser.
+- `BMLSourceParser` is the bootstrap adapter interface that reads BML source until the BML compiler can parse itself.
+- `BMLSourceCarrier` specializes `CompilerDeclaration<BMLSourceDeclaration>`.
+- `BMLCompilerDeclarationLoweringStage` specializes `BMLDeclarationLoweringStage<BMLSourceDeclaration,BMLSourceCarrier>`.
+- `BMLCompilerSourceLoweringFlow` specializes `BMLSourceLoweringFlow<String,BMLSourceDeclaration,BMLSourceCarrier>` and owns template/language-port/bootstrap-boundary classification.
+- `ModernBMLCompiler.AttachSourceParser` wires the bootstrap parser into the concrete BML-owned flow.
+
+Form only reads and proves this shape. The compiler architecture it verifies is now in BML classes, templates, generics, and multiline methods.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk
+```
+
+Expected result: `31` with `1 ok, 0 divergent`.
+
 ## Bootstrap Boundary
 
 The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.
@@ -135,7 +158,7 @@ That means Form remains the witness substrate; BML owns the compiler language.
 
 ## Next Refinements
 
-1. Execute the BML-owned source-lowering flow from BML itself, then retire the Form proof bridge for that step.
+1. Execute `BMLCompilerSourceLoweringFlow` through the BML compiler path, then retire the matching Form proof bridge.
 2. Move grammar ports into runtime registry capsules.
 3. Complete BMF source body semantic lowering against the original `BMF-grammar.bml`.
 4. Lift the BML object model into canonical compiler objects.
