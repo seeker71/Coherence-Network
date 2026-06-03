@@ -212,10 +212,11 @@
     ;; fsc-literal-expr / fsc-capture-expr / fsc-rule-ref-expr were the
     ;; text formatters for the old path; their Recipe equivalents live in
     ;; fsc-pattern-item-recipe + fsc-rec-* helpers (further down). fsc-q
-    ;; (defined above near fsc-quote-loop) still serves form.bml/form.action
+    ;; (defined above near fsc-quote-loop) still serves the high-level Form
+    ;; source dialects: form.bml, form.action, and form.route.
     ;; until that path also gets the Recipe treatment.
 
-    ;; --- form.bml / form.action maintenance dialect ------------------
+    ;; --- high-level Form source dialect maintenance ------------------
     ;; These dialects are deliberately above the kernel. They give stdlib,
     ;; compiler, and rule-action code a smaller BML-shaped authoring surface,
     ;; then lower to ordinary Form source before sibling kernels execute
@@ -256,7 +257,7 @@
 
     ;; fsc-float? — a decimal float literal: optional leading "-", digits, one
     ;; ".", digits (e.g. "0.5", "-1.25"). Digits on both sides of the dot, exactly
-    ;; one dot. The form.bml expr compiler interns these as trivial float nodes
+    ;; one dot. The high-level Form expr compiler interns these as trivial float nodes
     ;; (intern_trivial_float); the artifact byte carrier preserves the f64 value
     ;; when a compiled Recipe object crosses into another kernel.
     (defn fsc-float-dot-loop? (s i seen-dot)
@@ -372,9 +373,10 @@
     (defn fsc-bml-stmt-end (body i end)
         (fsc-bml-stmt-end-loop body i end 0 false))
 
-    (defn fsc-form-action-dialect? (dialect-name)
+    (defn fsc-high-level-form-dialect? (dialect-name)
         (or (str_eq dialect-name "form.bml")
-            (str_eq dialect-name "form.action")))
+            (or (str_eq dialect-name "form.action")
+                (str_eq dialect-name "form.route"))))
 
     ;; Local list-reverse — bounded by rule count (~200), not body length.
     ;; engine.fk's `reverse-list` isn't in scope during source-compile pre-pass.
@@ -570,7 +572,7 @@
                 (fsc-rec-let rules-name rules-list-recipe)
                 (fsc-rec-let second-name second-value-recipe)))))
 
-    ;; --- form.bml / form.action section as Recipe -------------------
+    ;; --- high-level Form source section as Recipe -------------------
     ;;
     ;; Old (string path): line by line emit Form source text while compiling.
     ;; Recipe path: each line becomes a Recipe node directly. The section is a
@@ -1267,7 +1269,7 @@
     ;; --- compile section as executable Form source -------------------
 
     (defn fsc-compile-section-recipe (dialect-name body)
-        (if (fsc-form-action-dialect? dialect-name)
+        (if (fsc-high-level-form-dialect? dialect-name)
             (fsc-compile-form-bml-section-recipe body)
             (fsc-bmf-section-recipe dialect-name body)))
 

@@ -35,9 +35,10 @@ The live body already has the pieces:
 - `deploy/kernel-router/production-routes.fk` is the current production native
   route manifest. It binds `/health`, eleven `/api/utils/*` routes, and
   `/api/attention/kernel-runtime`.
-- `form/form-stdlib/source-compiler.fk` owns `section [form.bml]` lowering.
-  Rust can invoke it at load time, but the BML grammar and lowering live in
-  Form-stdlib.
+- `form/form-stdlib/source-compiler.fk` owns `section [form.route]` lowering
+  beside the existing `form.bml` and `form.action` high-level source dialects.
+  Rust can invoke it at load time, but the grammar and lowering live in
+  Form-stdlib, not in the router host.
 - `scripts/runtime_surface_report.py --json` currently reads:
   - 785 API routes total.
   - 22 routes call the kernel from FastAPI, 2.8 percent of the API surface.
@@ -100,7 +101,7 @@ Authoring/loading axis:
 - A raw Form manifest is read as `.fk`, walked, and resolved into route values
   plus handler closures.
 - A source-authored manifest runs through a source pipeline first. The current
-  `section [form.bml]` path uses the Form source compiler, but the requirement
+  `section [form.route]` path uses the Form source compiler, but the requirement
   is only that the pipeline returns Form-native route values and handler
   recipes/closures.
 - A text-first route can arrive as `.fk` source that the kernel reads and walks.
@@ -135,8 +136,8 @@ classDiagram
     path
     sections
   }
-  class BMLSection {
-    dialect form.bml
+  class RouteSection {
+    dialect form.route
     source_span
   }
   class LanguageTemplate {
@@ -206,7 +207,7 @@ classDiagram
 Current implementation anchors:
 
 - `form/form-stdlib/source-compiler.fk` parses `template` and `class` lines in
-  `section [form.bml]` and returns Recipe objects through
+  `section [form.route]` and returns Recipe objects through
   `fsc-compile-section-recipe`.
 - `form/form-stdlib/language-model.fk` defines `LanguageTemplate`,
   `LanguageClass`, and `language-route-class-kernel-route`. Their runtime type
@@ -234,7 +235,7 @@ Current implementation anchors:
 End-to-end request proof shape:
 
 1. `serve --routes deploy/kernel-router/production-routes.fk --stdlib form-stdlib`
-   sees a `section [form.bml]` source entry.
+   sees a `section [form.route]` source entry.
 2. The main thread calls the Form source compiler and receives a Recipe object
    `NodeID`, not lowered route text.
 3. The compiled section object is imported into one `CompiledRouteProgram`
@@ -374,7 +375,7 @@ Current gap map:
 |---|---|---|
 | Runtime grammar discovery does not emit compiler-lens evidence | Aligned | Loading a runtime grammar plugin derives one `CompilerLensBmfAlignment` with source/form surface links and parse/emit translations from the resolved binding. |
 | Source compiler writes lowered output without compiler-lens source maps | Aligned | Each compiled section yields a `CompilerLensSourceMap` whose span matches the source range and whose target node matches the compiled section node. |
-| Source-language route authoring now has readable template/class blocks | Aligned | `section [form.bml]` supports `template RouteCell<TRequest, TResponse> { member ... }` plus `class ... { def handle(...) { ... } route = route_data(...); }` and lowers that hierarchy to `LanguageTemplate`, `LanguageClass`, and executable handler closures. |
+| Source-language route authoring now has readable template/class blocks | Aligned | `section [form.route]` supports `template RouteCell<TRequest, TResponse> { member ... }` plus `class ... { def handle(...) { ... } route = route_data(...); }` and lowers that hierarchy to `LanguageTemplate`, `LanguageClass`, and executable handler closures. |
 | Router selection is `KernelHTTPRoute`-aware and exposes the selected candidate as Form tissue | Aligned | `serve` carries `KernelHTTPRoute` rows, honors method mismatch, wildcard path, priority, required headers, and pressure budget, and passes selected `KernelHTTPRouteCandidate` plus pressure rows into native handler context. |
 | Native handler input carries both compatibility alist and typed request tissue | Aligned | A native route receives `__kernel_request__` as `KernelHTTPRequest(method, path, headers, query, body)` with typed header and field rows while existing alist handlers keep serving current routes. |
 | Native handler output is always coerced to `200 OK` text/JSON | Aligned | A native handler can return `KernelHTTPResponse(status, headers, body)` and `serve` emits exact status/header/body parity for a non-200 route. |
@@ -404,9 +405,10 @@ not reasons to keep all routing in Python.
 
 ## Router generics and templates
 
-BML owns reusable route shapes. The minimum template set is:
+The route source language owns reusable route shapes. Other dialects can emit
+the same route template cells. The minimum template set is:
 
-| BML template | Lowers to | Use |
+| Route template | Lowers to | Use |
 |---|---|---|
 | `Route<Method, Path, Request, Response>` | `RouteCell` plus `(path, handler)` | Base route identity |
 | `QueryJson<Path, QueryCell, ResponseCell>` | `Route<Query.GET, Path, QueryCell, JsonResponse>` | `/api/utils/*` family |
@@ -563,7 +565,7 @@ Current configuration lives in three places:
 | Config | Current format | How the kernel reads it | Target |
 |---|---|---|---|
 | Listener and front-door wiring | CLI args: `--host`, `--port`, `--workers`, `--routes`, `--stdlib`, `--upstream` | `cli_serve` parses arguments before binding sockets or compiling routes | Keep host/process wiring at the Rust boundary, but allow a single Form router config cell to own semantic policy. |
-| Route surface | `.fk` manifest with optional `section [form.bml]` blocks | Raw Form manifests go through `read_root_from_source`; source sections call `fsc-compile-section-recipe` and become `CompiledRouteProgram` object graphs | Route config is source-language/Form cells: classes, templates, request/response contracts, handlers, and source maps. |
+| Route surface | `.fk` manifest with optional `section [form.route]` blocks | Raw Form manifests go through `read_root_from_source`; source sections call `fsc-compile-section-recipe` and become `CompiledRouteProgram` object graphs | Route config is source-language/Form cells: classes, templates, request/response contracts, handlers, and source maps. |
 | Host defaults | Rust constants for keep-alive, fanout deadlines, and request/response shape limits | Functions such as `fanout_connect_timeout`, `fanout_read_timeout`, `request_shape_limit`, and `response_shape_limit` return constants | Lift tunable policy into `KernelRouterConfig` as a Form value; keep only emergency host ceilings in Rust. |
 | Canonical numeric formats | Repository JSON file at `docs/coherence-substrate/numeric-formats.canonical.json` | `form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
 

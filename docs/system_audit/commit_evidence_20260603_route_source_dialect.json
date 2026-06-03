@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/source-language-route-dialect-20260603",
+  "commit_scope": "Move kernel-router route class authoring from the BML-named section entry point to a route-specific high-level source dialect while preserving generic Form-native route objects.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_20260603_route_source_dialect.json",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/source-language-route-dialect-20260603 && make prompt-guide",
+      "cd form/form-kernel-rust && cargo fmt",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "cd form/form-kernel-rust && cargo build --quiet",
+      "cd form && native prepared Go/Rust parity for source-language-route-class-template",
+      "cd form/form-kernel-rust && cargo test -- --test-threads=1",
+      "cd form/form-kernel-rust && ./target/debug/form-kernel-rust serve --host 127.0.0.1 --port 19126 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl http://127.0.0.1:19126/health?probe=route-dialect"
+    ],
+    "notes": "Native prepared Go/Rust parity for source-language-route-class-template passed with go=525377 rust=525377. Rust cargo test passed with 39 tests. Local router smoke returned HTTP 200, body ok, X-Form-Router: native-kernel, and the server log showed the production manifest compiled via form-stdlib into a Form recipe object with 24 native routes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until the branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until PR checks pass, the branch is merged, deployment completes, and public verification runs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The production kernel-router manifest can author route classes in section [form.route], a route-specific high-level source dialect, while still lowering to the same generic LanguageTemplate, LanguageClass, KernelHTTPRouteDataRef, and native Form recipe objects.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://api.coherencycoin.com"
+    ],
+    "test_flows": [
+      "native prepared Go/Rust parity for source-language-route-class-template",
+      "cargo test -- --test-threads=1 in form/form-kernel-rust",
+      "local form-kernel-rust serve against deploy/kernel-router/production-routes.fk and curl /health?probe=route-dialect",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local native proof and local HTTP proof are complete; CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "kernel-first-router",
+    "source-language-native-recipes"
+  ],
+  "spec_ids": [
+    "kernel-router-source-language-classes"
+  ],
+  "task_ids": [
+    "source-language-route-dialect-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "source-compiler.fk now treats form.route as a high-level Form source dialect beside form.bml and form.action.",
+    "production-routes.fk authors the HealthRoute class in section [form.route] while preserving the same language-route-class-kernel-route output.",
+    "The Rust route-manifest unit test now proves section [form.route] compiles into a RecipeObject route program.",
+    "The focused Go/Rust native parity band proves route-language template/class syntax still lowers to the same generic route cells.",
+    "The local HTTP smoke proves the production route manifest still serves /health from the native kernel."
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature"
+}
