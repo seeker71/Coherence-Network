@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-03",
+  "thread_branch": "codex/deploy-settle-rerun-20260603",
+  "commit_scope": "Let deploy settling dispatch one bounded Hostinger deploy rerun for the current main SHA and add an explicit Hostinger API VPS restart surface for SSH transport outages.",
+  "files_owned": [
+    ".github/workflows/hostinger-vps-restart.yml",
+    "docs/system_audit/commit_evidence_2026-06-03_deploy_settle_reboot_control.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/restart_hostinger_vps.sh",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_restart_hostinger_vps.sh",
+    "scripts/test_settle_public_deploy_dispatch.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/restart_hostinger_vps.sh scripts/test_restart_hostinger_vps.sh",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-vps-restart.yml\"); puts \"yaml ok\"'",
+      "bash scripts/test_restart_hostinger_vps.sh && bash scripts/test_settle_public_deploy_dispatch.sh"
+    ],
+    "notes": "The focused shell tests prove the Hostinger restart request shape and that settle_public_deploy dispatches one bounded deploy rerun after a failed current-main Hostinger run."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "fail",
+    "notes": "Public deploy is still blocked by Hostinger SSH transport. Current main e1283a7f7c237fd07e156127754b1b7b7b03c000 failed in Hostinger Auto Deploy runs 26890420437, 26890807855, and post-reboot run 26891641642 at Sync tracked deploy script to VPS after eight scp attempts to root@187.77.152.42 timed out. Public health still reports deployed_sha 5dad3d6f0d7f48495b9644fde0e8d26572962ae1."
+  },
+  "e2e_validation": {
+    "status": "blocked",
+    "expected_behavior_delta": "The deploy settle command observes live main SHA, live deployed SHA, and Hostinger run status together; it dispatches at most one replacement Hostinger deploy for a failed/cancelled current-main run. A human or workflow can restart the VPS through the Hostinger API before another deploy attempt.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com",
+      "https://coherencycoin.com"
+    ],
+    "reference_failures": [
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26890420437",
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26890807855",
+      "https://github.com/seeker71/Coherence-Network/actions/runs/26891641642"
+    ],
+    "test_flows": [
+      "DEPLOY_SETTLE_TIMEOUT_SECONDS=720 DEPLOY_SETTLE_POLL_SECONDS=15 DEPLOY_SETTLE_MAX_DISPATCHES=1 VERIFY_REQUIRE_API_HEALTH_SHA=1 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "After Hostinger VPS restart: scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The deploy recovery code is locally proven, but production remains behind main until the Hostinger VPS SSH service accepts GitHub-runner SSH/SCP connections and the Hostinger deploy succeeds."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "production-deploy-proof"
+  ],
+  "task_ids": [
+    "deploy-settle-rerun-20260603"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "operations-decision"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/settle_public_deploy.sh now dispatches one replacement Hostinger Auto Deploy run for a failed or cancelled current-main run.",
+    "scripts/restart_hostinger_vps.sh calls the Hostinger VPS restart API path POST /api/vps/v1/virtual-machines/{virtualMachineId}/restart with bearer-token authorization.",
+    "Hostinger Auto Deploy runs 26890420437, 26890807855, and post-reboot run 26891641642 all failed at the same scp timeout gate against 187.77.152.42:22."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-vps-restart.yml",
+    "docs/system_audit/commit_evidence_2026-06-03_deploy_settle_reboot_control.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/restart_hostinger_vps.sh",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_restart_hostinger_vps.sh",
+    "scripts/test_settle_public_deploy_dispatch.sh"
+  ],
+  "change_intent": "process_only"
+}
