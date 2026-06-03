@@ -104,11 +104,14 @@ RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 
-# Liveness: in shadow mode /health has no native handler, so it fans out to the
-# upstream. If the upstream is up the proxy answers; if the kernel-router process
-# is down the check fails. (A future native /health would answer without the
-# upstream — a one-line manifest addition.)
+# Liveness: probe /api/health — the route the CPython upstream actually serves
+# (bare /health 404s on FastAPI). In shadow mode this path has no native handler,
+# so it fans out to the upstream: a 200 proves BOTH that the kernel-router process
+# is up AND that its fan-out reaches the upstream. If the router process is down,
+# curl can't connect; if the upstream is down, the proxy relays its error — either
+# way the check fails. (A future native /health would answer without the upstream
+# — a one-line manifest addition; the probe would then move back to /health.)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${KERNEL_ROUTER_PORT}/health" || exit 1
+    CMD curl -fsS "http://127.0.0.1:${KERNEL_ROUTER_PORT}/api/health" || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
