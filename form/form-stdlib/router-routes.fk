@@ -1,0 +1,31 @@
+; router-routes.fk — the native route layer for the Form-native kernel-router
+; (form-kernel-rust serve --form). Concatenated AFTER the HTTP stack (http-parse
+; + kernel-http + http-request + http-render + http-server) into the --routes
+; manifest at deploy time; its `routes` + `registry` are what kh-serve dispatches
+; over. Adding a native route is a kh-route row + a registry entry + a handler —
+; never a kernel change.
+;
+; A kh-route's handler field is the handler's FUNCTION name, so BOTH the existing
+; route_specs resolver and kh-serve's registry find it; the route NAME is a label.
+; A handler is handler(kh-request) -> kh-response, reading the request through the
+; Request class and returning a Response.
+;
+; PLACEHOLDER BODIES: these prove the dispatch end to end. Each becomes REAL (its
+; response byte-identical to the Python twin) before its path is load-balanced
+; here and its Python implementation removed — the observe-then-remove arc.
+
+(defn health-handler (request) (kh-response 200 (list) "ok"))
+
+(defn weight-handler (request)
+    (kh-response 200 (list (kh-header "Content-Type" "application/json"))
+        "{\"weight\":42,\"native\":true,\"router\":\"form-kernel\"}"))
+
+(let routes
+    (list (kh-route "health" "GET" "/health"                      0 "health-handler" "" 100)
+          (kh-route "weight" "GET" "/api/utils/coherence_weight"  0 "weight-handler" "" 100)))
+
+(let registry
+    (list (list "health-handler" health-handler)
+          (list "weight-handler" weight-handler)))
+
+0
