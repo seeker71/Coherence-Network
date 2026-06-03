@@ -1,0 +1,141 @@
+; tests/http-serve-socket-band.fk — REAL single-process TCP end-to-end for
+; the Form-native HTTP handler (form-stdlib/http-serve.fk).
+;
+; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+;
+; The http-serve-band proves http-handle with NO socket (request-string in,
+; response-string out). THIS band closes the loop over a REAL TCP socket on
+; 127.0.0.1, all three kernels: a client connects and sends a real
+; "GET /api/utils/coherence_weight HTTP/1.1\r\n\r\n" over the wire; the server
+; accepts the connection and runs http-serve-conn (recv → http-handle → send →
+; close) — the SAME per-connection recipe a kernel accept-loop will call; the
+; client recvs the response off the wire and asserts the body matches the
+; route's output and the framing is correct. Real socket_listen / connect /
+; accept / send / recv / close, no mock.
+;
+; The backlog trick (from socket-loopback-band.fk) makes single-process
+; loopback work without threads: connect() completes the TCP handshake into the
+; listener's backlog and returns; accept() then returns that connection
+; immediately. The client sends BEFORE the server accepts, so the request bytes
+; are buffered in the socket and http-serve-conn's recv reads them.
+;
+; The handler is the same portable coherence_weight mirror the http-serve-band
+; uses (int_to_str, not the Rust-only value_str), so the WHOLE workload is
+; sibling-identical across Go, Rust, and TypeScript.
+;
+; Band verdict: 63 (== 2^6 - 1) when every step agrees across all three kernels.
+
+;; --- the coherence_weight handler (portable mirror; see http-serve-band) ----
+(defn sb-assoc (key pairs)
+    (if (eq (len pairs) 0) ""
+        (if (str_eq (head (head pairs)) key)
+            (head (tail (head pairs)))
+            (sb-assoc key (tail pairs)))))
+(defn sb-param-or (key q dflt)
+    (if (eq (str_len (sb-assoc key q)) 0) dflt (sb-assoc key q)))
+(defn sb-split-from (s start)
+    (if (eq (str_len s) start) (list "")
+        (do (let comma (str_find s "," start))
+            (if (eq comma -1) (list (substring s start (str_len s)))
+                (cons (substring s start comma) (sb-split-from s (add comma 1)))))))
+(defn sb-split-commas (s) (if (eq (str_len s) 0) (list) (sb-split-from s 0)))
+(defn sb-ints-of (xs)
+    (if (eq (len xs) 0) (list) (cons (str_to_int (head xs)) (sb-ints-of (tail xs)))))
+(defn sb-int-elems (xs)
+    (if (eq (len xs) 0) ""
+        (if (eq (len xs) 1) (int_to_str (head xs))
+            (str_concat (str_concat (int_to_str (head xs)) ",") (sb-int-elems (tail xs))))))
+(defn sb-int-list (xs) (str_concat (str_concat "[" (sb-int-elems xs)) "]"))
+(defn sb-cw-weighted-score (value position)
+    (if (eq position 0) (mul value 100)
+        (if (eq position 1) (mul value 50)
+            (if (eq position 2) (mul value 25) (mul value 10)))))
+(defn sb-cw-score-go (vs threshold total position)
+    (if (eq (len vs) 0) total
+        (if (ge (head vs) threshold)
+            (sb-cw-score-go (tail vs) threshold
+                            (add total (sb-cw-weighted-score (head vs) position)) (add position 1))
+            (sb-cw-score-go (tail vs) threshold total position))))
+(defn sb-cw-count-above (vs threshold)
+    (if (eq (len vs) 0) 0
+        (if (ge (head vs) threshold)
+            (add 1 (sb-cw-count-above (tail vs) threshold))
+            (sb-cw-count-above (tail vs) threshold))))
+(defn sb-cw-body (q)
+    (do
+        (let vstr (sb-param-or "values" q "72,38,91,55,28,67,84,45,95,12"))
+        (let threshold (str_to_int (sb-param-or "threshold" q "50")))
+        (let values (sb-ints-of (sb-split-commas vstr)))
+        (let above (sb-cw-count-above values threshold))
+        (let coherence (sb-cw-score-go values threshold 0 0))
+        (let weight (add (mul above 100) coherence))
+        (str_concat
+            (str_concat
+                (str_concat (str_concat "{\"weight\":" (int_to_str weight))
+                            (str_concat ",\"values\":" (sb-int-list values)))
+                (str_concat ",\"threshold\":" (int_to_str threshold)))
+            ",\"runtime\":\"inline\"}")))
+(defn sb-cw-handler (q) (http-ok (sb-cw-body q)))
+
+;; helper: wire body (past the "\r\n\r\n") of a response STRING.
+(defn sb-resp-body (resp)
+    (do (let i (str_find resp "\r\n\r\n" 0))
+        (if (eq i -1) "" (substring resp (add i 4) (str_len resp)))))
+(defn sb-contains (s needle) (ge (str_find s needle 0) 0))
+(defn sb-starts (s prefix)
+    (if (gt (str_len prefix) (str_len s)) false
+        (str_eq (substring s 0 (str_len prefix)) prefix)))
+
+;; ===================================================================
+;; the real socket round-trip
+;; ===================================================================
+(do
+    (let routes (list (list "/api/utils/coherence_weight" sb-cw-handler)))
+    (let request "GET /api/utils/coherence_weight HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+    (let expected-body
+        "{\"weight\":16185,\"values\":[72,38,91,55,28,67,84,45,95,12],\"threshold\":50,\"runtime\":\"inline\"}")
+
+    ;; listen on an ephemeral port.
+    (let srv (socket_listen 0))
+    (let listen-ok (if (ge srv 0) 1 0))
+    (let port (socket_port srv))
+    (let port-ok (if (gt port 0) 2 0))
+
+    ;; client connects (handshake → backlog) and sends the request BEFORE the
+    ;; server accepts; the bytes buffer in the socket for the server's recv.
+    (let cli (socket_connect "127.0.0.1" port))
+    (let conn (socket_accept srv))
+    (let pair-ok (if (ge cli 0) (if (ge conn 0) 4 0) 0))
+    (let sent (socket_send cli request))
+
+    ;; the server handles ONE connection in Form: recv → http-handle → send →
+    ;; close. upstream host/port are unused here (the path matches a native
+    ;; route, so no fan-out); pass loopback placeholders.
+    (let server-resp (http-serve-conn conn routes "127.0.0.1" port))
+    ;; http-serve-conn returns the response string it sent — it should be a
+    ;; native 200 (not the fan-out marker), framed by hs-build-response.
+    (let served-ok
+        (if (str_eq server-resp (hs-build-response 200 (sb-cw-body (list)))) 8 0))
+
+    ;; the client reads the response off the wire (http-serve-conn closed the
+    ;; conn after sending, so one recv gets the whole framed response).
+    (let wire (socket_recv cli 65536))
+    (socket_close cli)
+    (socket_close srv)
+
+    ;; the wire body equals the route's output.
+    (let body-ok (if (str_eq (sb-resp-body wire) expected-body) 16 0))
+    ;; the wire framing is a native 200 with the honest provenance header.
+    (let frame-ok
+        (if (sb-starts wire "HTTP/1.1 200 OK\r\n")
+            (if (sb-contains wire "X-Form-Router: native-kernel\r\n") 32 0)
+            0))
+
+    ;; verdict: 63 when listen, port, connect+accept, server-sent framing,
+    ;; client-received body, and client-received framing all agree.
+    (add listen-ok
+    (add port-ok
+    (add pair-ok
+    (add served-ok
+    (add body-ok
+         frame-ok))))))
