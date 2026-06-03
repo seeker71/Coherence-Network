@@ -573,6 +573,140 @@
         ",\"runtime\":\"inline\"}"))))))))))))))))))))
 
 ; ===========================================================================
+; /api/utils/cost_vector
+;   params: estimated_cost (float, default 33.333, route declares ge=0.0)
+;   body:   {"compute_cc","infrastructure_cc","human_attention_cc",
+;            "opportunity_cc","external_cc","total_cc","estimated_cost",
+;            "runtime":"inline"}
+;   math:   compute=round(ec*0.60,4) infra=round(ec*0.15,4)
+;           human=round(ec*0.25,4) opportunity=0.0 external=0.0
+;           total=round(ec,4)   (endpoint_cost_vector_demo.fk EXACTLY)
+;   round_ndigits replicates CPython round(x,4) — half-to-even at 4 places.
+; ===========================================================================
+
+(defn route_cost_vector (q)
+  (do (let ec (str_to_float (param_or "estimated_cost" q "33.333")))
+  (do (let compute_cc (round_ndigits (mul ec 0.6) 4))
+  (do (let infrastructure_cc (round_ndigits (mul ec 0.15) 4))
+  (do (let human_attention_cc (round_ndigits (mul ec 0.25) 4))
+  (do (let total_cc (round_ndigits ec 4))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat
+              (str_concat (str_concat "{\"compute_cc\":" (value_str compute_cc))
+                          (str_concat ",\"infrastructure_cc\":" (value_str infrastructure_cc)))
+              (str_concat ",\"human_attention_cc\":" (value_str human_attention_cc)))
+            (str_concat ",\"opportunity_cc\":0.0,\"external_cc\":0.0,\"total_cc\":" (value_str total_cc)))
+          (str_concat ",\"estimated_cost\":" (value_str ec)))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
+; /api/utils/value_vector
+;   params: potential_value (float, default 9.205, route declares ge=0.0)
+;   body:   {"adoption_cc","lineage_cc","friction_avoided_cc","revenue_cc",
+;            "total_cc","potential_value","runtime":"inline"}
+;   math:   adoption=round(pv*0.50,4) lineage=round(pv*0.30,4)
+;           friction_avoided=round(pv*0.20,4) revenue=0.0 total=round(pv,4)
+;           (endpoint_value_vector_demo.fk EXACTLY)
+; ===========================================================================
+
+(defn route_value_vector (q)
+  (do (let pv (str_to_float (param_or "potential_value" q "9.205")))
+  (do (let adoption_cc (round_ndigits (mul pv 0.5) 4))
+  (do (let lineage_cc (round_ndigits (mul pv 0.3) 4))
+  (do (let friction_avoided_cc (round_ndigits (mul pv 0.2) 4))
+  (do (let total_cc (round_ndigits pv 4))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat (str_concat "{\"adoption_cc\":" (value_str adoption_cc))
+                        (str_concat ",\"lineage_cc\":" (value_str lineage_cc)))
+            (str_concat ",\"friction_avoided_cc\":" (value_str friction_avoided_cc)))
+          (str_concat ",\"revenue_cc\":0.0,\"total_cc\":" (value_str total_cc)))
+        (str_concat (str_concat ",\"potential_value\":" (value_str pv))
+                    ",\"runtime\":\"inline\"}"))))))))
+
+; ===========================================================================
+; /api/utils/grounded_roi
+;   params: estimated_cost(60.0) actual_cost(12.0) potential_value(33.333)
+;           actual_value(8.0) — floats, route declares ge=0.0
+;   body:   {"remaining_cost_cc","value_gap_cc","roi_cc","estimated_cost",
+;            "actual_cost","potential_value","actual_value","runtime":"inline"}
+;   math:   value_gap = max2(pv-av, 0.0)
+;           remaining_cost_cc = round(max2(ec-ac, 0.0), 4)
+;           value_gap_cc      = round(value_gap, 4)
+;           roi_cc = round(value_gap_cc/remaining_cost_cc, 4)
+;                      if remaining_cost_cc > 0 else 0.0  (guarded division)
+;           (endpoint_grounded_roi_demo.fk EXACTLY — max2 already defined above)
+; ===========================================================================
+
+(defn route_grounded_roi (q)
+  (do (let ec (str_to_float (param_or "estimated_cost" q "60.0")))
+  (do (let ac (str_to_float (param_or "actual_cost" q "12.0")))
+  (do (let pv (str_to_float (param_or "potential_value" q "33.333")))
+  (do (let av (str_to_float (param_or "actual_value" q "8.0")))
+  (do (let value_gap (max2 (sub pv av) 0.0))
+  (do (let remaining_cost_cc (round_ndigits (max2 (sub ec ac) 0.0) 4))
+  (do (let value_gap_cc (round_ndigits value_gap 4))
+  (do (let roi_cc
+        (if (gt remaining_cost_cc 0)
+            (round_ndigits (div value_gap_cc remaining_cost_cc) 4)
+            0.0))
+      (str_concat
+        (str_concat
+          (str_concat
+            (str_concat (str_concat "{\"remaining_cost_cc\":" (value_str remaining_cost_cc))
+                        (str_concat ",\"value_gap_cc\":" (value_str value_gap_cc)))
+            (str_concat ",\"roi_cc\":" (value_str roi_cc)))
+          (str_concat (str_concat ",\"estimated_cost\":" (value_str ec))
+                      (str_concat ",\"actual_cost\":" (value_str ac))))
+        (str_concat
+          (str_concat ",\"potential_value\":" (value_str pv))
+          (str_concat (str_concat ",\"actual_value\":" (value_str av))
+                      ",\"runtime\":\"inline\"}"))))))))))))
+
+; ===========================================================================
+; /api/utils/idea_grounded_cost_sum
+;   params: actual_costs (csv floats, default "3.5,1.25,0.5"),
+;           actual_values (csv floats, default "1.5,0.0,2.25")
+;   body:   {"spec_actual_cost_sum","spec_actual_value_sum","spec_count_in",
+;            "runtime":"inline"}
+;   math:   cost_sum  = sum(actual_costs)   value_sum = sum(actual_values)
+;           spec_count_in = len(actual_costs)
+;           (endpoint_idea_grounded_cost_sum_demo.fk: the over-records float
+;           fold via _plus, seeded 0.0, LEFT-associated to match CPython sum()).
+;   The recipe folds two PARALLEL float lists; the kernel-router receives them
+;   as the route's parallel CSV params. _plus matches the recipe's accumulator
+;   exactly (int↔float promoting); a LEFT fold mirrors CPython's sum().
+;   The route's 422-on-mismatch and empty-segment skip are CPython host-side
+;   input fidelity, NOT part of the well-formed equal-length happy path the
+;   native serve replicates byte-for-byte; the harness exercises only that path.
+; ===========================================================================
+
+; LEFT-folded float sum via _plus (matches the recipe's `(_plus total x)`
+; accumulator seeded 0.0 — same grouping as CPython sum()).
+(defn igcs_sum_go (xs total)
+  (if (eq (len xs) 0)
+      total
+      (igcs_sum_go (tail xs) (_plus total (head xs)))))
+
+(defn route_idea_grounded_cost_sum (q)
+  (do (let cstr (param_or "actual_costs" q "3.5,1.25,0.5"))
+  (do (let vstr (param_or "actual_values" q "1.5,0.0,2.25"))
+  (do (let costs (floats_of (split_commas cstr)))
+  (do (let values (floats_of (split_commas vstr)))
+  (do (let cost_sum (igcs_sum_go costs 0.0))
+  (do (let value_sum (igcs_sum_go values 0.0))
+  (do (let spec_count_in (len costs))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"spec_actual_cost_sum\":" (value_str cost_sum))
+                      (str_concat ",\"spec_actual_value_sum\":" (value_str value_sum)))
+          (str_concat ",\"spec_count_in\":" (value_str spec_count_in)))
+        ",\"runtime\":\"inline\"}")))))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -594,4 +728,8 @@
     (list "/api/utils/breath_balance"      route_breath_balance)
     (list "/api/utils/shannon_entropy"     route_shannon_entropy)
     (list "/api/utils/softmax_weights"     route_softmax_weights)
-    (list "/api/utils/grounded_value"      route_grounded_value)))
+    (list "/api/utils/grounded_value"      route_grounded_value)
+    (list "/api/utils/cost_vector"         route_cost_vector)
+    (list "/api/utils/value_vector"        route_value_vector)
+    (list "/api/utils/grounded_roi"        route_grounded_roi)
+    (list "/api/utils/idea_grounded_cost_sum" route_idea_grounded_cost_sum)))
