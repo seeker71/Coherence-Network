@@ -6352,14 +6352,15 @@ fn handle_request(
     let body: String;
     let status: String;
     let router: &str;
-    // The response's Content-Type and other relayed headers: a fan-out fills
-    // these from the UPSTREAM's real response (so a JSON/HTML route survives the
-    // proxy and its Set-Cookie/Cache-Control reach the client); native/404
-    // responses leave them empty, so the ONE emit shape (http_response) defaults
-    // the type to text/plain and relays no extra headers — the router owns all
-    // framing on those arms.
+    // The response's Content-Type for the BUFFERED arms (native / 404). The
+    // fan-out arm streams and returns early — it relays the upstream's Content-Type
+    // and end-to-end headers itself, so they never reach this buffered emit. A
+    // native handler emitting JSON sets the type below; a 404 leaves it empty, so
+    // the ONE emit shape (http_response) defaults to text/plain. `resp_headers`
+    // stays empty on both buffered arms — native/404 relay no extra end-to-end
+    // headers; the router owns all framing on those arms.
     let mut resp_content_type = String::new();
-    let mut resp_headers: Vec<(String, String)> = Vec::new();
+    let resp_headers: Vec<(String, String)> = Vec::new();
     if let Some((_, cl)) = route_pairs.iter().find(|(p, _)| *p == path) {
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the request alist as Value::List of (key, value) pairs — query
@@ -6405,22 +6406,28 @@ fn handle_request(
             }
         }
     } else if let Some(upstream_base) = upstream {
-        // FAN-OUT: no native handler — forward to the Python upstream and
-        // relay its response. The kernel owns the front door; Python is the
-        // upstream for the not-yet-native tail. Each worker issues its own
-        // independent fan-out hop over its OWN per-worker upstream connection
-        // pool (no locking — the worker is serial and owns the pool the way it
-        // owns its Kernel + Arena), so repeated fan-outs REUSE one keep-alive
-        // connection to the upstream and amortize the TCP handshake. The client's
-        // METHOD, BODY, and end-to-end request headers (Authorization, Cookie,
-        // Accept*, …) are forwarded so an authenticated/content-typed route is
-        // fronted truthfully; the UPSTREAM's response Content-Type + end-to-end
-        // headers (Set-Cookie, Cache-Control, Location, …) are relayed back so
-        // the client receives the upstream's real type and cookies, not a
-        // flattened text/plain. Hop-by-hop headers are stripped both ways; the
-        // router owns the framing on its client hop (Content-Length, Connection —
-        // http_response writes those, the relayed set cannot clobber them).
-        let fanout = fanout_request(
+        // FAN-OUT (STREAMING): no native handler — forward to the Python upstream
+        // and PIPE its response body straight back to the client, with the whole
+        // body NEVER held in one buffer. The kernel owns the front door; Python is
+        // the upstream for the not-yet-native tail. Each worker issues its own
+        // independent fan-out hop over its OWN per-worker upstream connection pool
+        // (no locking — the worker is serial and owns the pool the way it owns its
+        // Kernel + Arena), so repeated fan-outs REUSE one keep-alive connection to
+        // the upstream and amortize the TCP handshake. The client's METHOD, BODY,
+        // and end-to-end request headers (Authorization, Cookie, Accept*, …) are
+        // forwarded so an authenticated/content-typed route is fronted truthfully;
+        // the UPSTREAM's response status, Content-Type, and end-to-end headers
+        // (Set-Cookie, Cache-Control, Location, …) are relayed back, then the body
+        // is streamed byte-identical (raw bytes, no UTF-8 round-trip) in fixed 64
+        // KiB chunks. Hop-by-hop headers are stripped both ways; the router owns
+        // the client-hop framing (Content-Length echoed for a Length body,
+        // Transfer-Encoding: chunked relayed for a chunked body, close-framing for
+        // an unframed one; Connection per the client's intent). This arm does its
+        // OWN client write (head + streamed body) and returns the client keep-alive
+        // verdict directly — it does NOT fall through to the buffered emit below.
+        return fanout_stream_to_client(
+            stream,
+            keep_alive,
             upstream_base,
             &method,
             &target,
@@ -6428,11 +6435,6 @@ fn handle_request(
             &body_bytes,
             upstream_pool,
         );
-        status = fanout.status;
-        body = fanout.body;
-        resp_content_type = fanout.content_type;
-        resp_headers = fanout.headers;
-        router = "fanout-python";
     } else {
         // No native handler and no upstream configured.
         status = "404 Not Found".to_string();
@@ -7535,48 +7537,70 @@ impl UpstreamPool {
     }
 }
 
-// The framing outcome of reading ONE upstream response, plus whether the
-// connection may be REUSED. With the upstream keep-alive (no `Connection: close`
-// on its side) the upstream does NOT close after the body, so the response can
-// no longer be read with `read_to_end` (that only terminates on close). The
-// response must be framed:
-//   - Content-Length present  -> read exactly that many body bytes; any surplus
-//     read past them is the NEXT response's bytes, carried forward; the
-//     connection is REUSABLE (unless the upstream sent `Connection: close`).
-//   - Transfer-Encoding: chunked -> not yet decoded; read to close and do NOT
-//     reuse (named-later breath). Falls into the close path below.
-//   - neither, and the upstream keeps the connection open -> length is unknown;
-//     this cannot be safely framed for reuse, so read to close and do NOT reuse.
-struct UpstreamResponse {
+// How the upstream framed its response body, which decides how the router frames
+// the SAME body to the client and whether the body can be PIPED chunk-by-chunk
+// without ever holding it whole. The router never buffers the body — it observes
+// it AS IT FLOWS — so the framing is all the router needs to relay byte-identical:
+//   - Length(n)  -> Content-Length present: pipe exactly `n` body bytes upstream
+//     →client. The client gets the SAME Content-Length; both connections stay
+//     framed (the client knows precisely where the body ends), so the upstream
+//     connection is REUSABLE (unless it signalled close) and the client's
+//     keep-alive intent is honored.
+//   - Chunked    -> Transfer-Encoding: chunked: relay the raw chunk framing
+//     straight through to the client (NOT de-chunked) until the terminating
+//     0-length chunk. Chunked is self-delimiting, so the client stays framed and
+//     its keep-alive intent is honored; the upstream connection is NOT pooled
+//     (chunked-body reuse is a named-later breath).
+//   - Close      -> neither Content-Length nor chunked: the body's length is only
+//     knowable by the upstream closing. Pipe upstream→client until EOF, then the
+//     client connection MUST close too (no other way to mark the body's end), so
+//     keep-alive is forced off on this hop.
+enum ResponseFraming {
+    Length(usize),
+    Chunked,
+    Close,
+}
+
+// The PARSED HEAD of one upstream response — everything the router needs to write
+// the client response head and decide how to pipe the body — WITHOUT the body. The
+// body never lands in a buffer; only the small head is read whole (it must be, to
+// parse status + framing + relayed headers). `body_prefix` is the leading body
+// bytes that arrived in the SAME read as the head terminator (the head read always
+// over-reads a little); they are written to the client first, then the rest of the
+// body is piped straight from the socket.
+struct UpstreamHead {
     status: String,
     content_type: String,
     headers: Vec<(String, String)>,
-    body: String,
-    // The keep-alive verdict for the UPSTREAM connection: true iff the response
-    // was Content-Length-framed (so we know exactly where it ended) AND the
-    // upstream did not signal `Connection: close`. Only then may the connection
-    // return to the pool; otherwise it is dropped.
-    reusable: bool,
-    // Bytes read past this response's framed end — the next response's head/body
-    // on a reused connection. Carried back into the PooledConn so the next read
-    // starts exactly there. Empty when the connection won't be reused.
-    leftover: Vec<u8>,
+    // The upstream connection's keep-alive intent (false on `Connection: close`
+    // or HTTP/1.0 default). Combined with Length framing to decide pooling.
+    upstream_keep_alive: bool,
+    framing: ResponseFraming,
+    // Body bytes already read past the head terminator (the head read's natural
+    // over-read). Piped to the client before the rest of the body is streamed.
+    body_prefix: Vec<u8>,
 }
 
-// Read exactly ONE HTTP response from a (possibly reused) upstream connection,
-// framing it by Content-Length so the read does not depend on the upstream
-// closing — the property that makes connection reuse possible. `carry` seeds the
-// read with any bytes left over from the PREVIOUS response on this same
-// connection (the over-read hazard, mirrored from the client hop's read_request).
+// Read ONLY the HEAD of one upstream response from a (possibly reused) connection,
+// framing it so the BODY can be piped chunk-by-chunk afterward without ever being
+// held whole. `carry` seeds the read with any bytes left over from the PREVIOUS
+// response on this same connection (the over-read hazard, mirrored from the client
+// hop's read_request). The head is small and must be buffered to parse; the body
+// is NOT read here — it streams in `stream_body_to_client` after the client head
+// is written. This split is what lets the stale-pooled-connection retry stay safe:
+// a `Closed` (EOF before any byte) is detectable HERE, before a single body byte
+// has been relayed to the client, so the caller can transparently reconnect+retry.
 //
 // Errors (a broken pipe, an immediate EOF before any byte) propagate up so the
 // caller can transparently reconnect+retry on a stale pooled connection.
-fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<UpstreamResponse, FanoutError> {
-    // Phase 1: read until the header terminator, seeding from carried bytes.
+fn read_upstream_head(stream: &mut TcpStream, carry: Vec<u8>) -> Result<UpstreamHead, FanoutError> {
+    // Read until the header terminator, seeding from carried bytes. Only the head
+    // accumulates in `raw`; the body is streamed afterward, never buffered.
     let mut raw: Vec<u8> = carry;
     let mut buf = [0u8; 8192];
-    // The shape we can hold for this upstream response right now — the live,
-    // changeable recipe, sensed against the bytes the upstream returns below.
+    // The HEAD is the only thing we hold whole; the shape-threshold here bounds the
+    // head alone (a runaway header block), never the body — the body streams, so
+    // its size is no longer a memory gate.
     let response_limit = response_shape_limit();
     let header_end: usize = match find_header_end(&raw) {
         Some(t) => t,
@@ -7636,89 +7660,319 @@ fn read_upstream_response(stream: &mut TcpStream, carry: Vec<u8>) -> Result<Upst
     // Does the UPSTREAM intend to keep this connection alive? It is an HTTP/1.x
     // peer; honor an explicit `Connection: close` (and HTTP/1.0's close default).
     let upstream_keep_alive = upstream_response_keep_alive(&head);
-    let is_chunked = head_is_chunked(&head);
-
-    // Phase 2: frame the body. Content-Length is the path that allows reuse.
-    if let Some(total) = parse_content_length(&head) {
-        if total > response_limit {
-            return Err(FanoutError::Other(format!(
-                "upstream response shape is {} bytes — larger than we can hold right now \
-                 (threshold {}; change COH_ROUTER_RESPONSE_SHAPE_BYTES, or stream it)",
-                total, response_limit,
-            )));
-        }
-        let mut body: Vec<u8> = raw[body_start..].to_vec();
-        while body.len() < total {
-            match stream.read(&mut buf) {
-                Ok(0) => {
-                    // Upstream closed before the full framed body — the response
-                    // is incomplete; cannot be trusted or reused. NOT retried (we
-                    // already got the head, the request may have side-effected).
-                    return Err(FanoutError::Other(
-                        "upstream closed mid-body (short Content-Length read)".to_string(),
-                    ));
-                }
-                Ok(n) => body.extend_from_slice(&buf[..n]),
-                // A read deadline mid-body on a stalled upstream -> Timeout -> 504.
-                Err(e) => return Err(classify_io_error(&e, "read upstream response body")),
-            }
-        }
-        // Any bytes past the framed body are the NEXT response's — carry forward.
-        let leftover: Vec<u8> = if body.len() > total {
-            let extra = body[total..].to_vec();
-            body.truncate(total);
-            extra
-        } else {
-            Vec::new()
-        };
-        let body_text = String::from_utf8_lossy(&body).to_string();
-        // REUSABLE only when Content-Length-framed AND the upstream kept it alive.
-        let reusable = upstream_keep_alive;
-        return Ok(UpstreamResponse {
-            status,
-            content_type,
-            headers,
-            body: body_text,
-            reusable,
-            leftover: if reusable { leftover } else { Vec::new() },
-        });
-    }
-
-    // No Content-Length: chunked OR unframed. Neither is safely reusable here
-    // (chunked decode is a named-later breath; unframed length is only knowable
-    // by the upstream closing). Read to close and DROP this connection. Note for
-    // honesty: a chunked body is returned with its raw chunk framing intact (not
-    // de-chunked) — correct enough to relay the bytes, but the connection is not
-    // pooled, so the next request opens a fresh one. `is_chunked` is captured so
-    // the fall-through is a conscious decision, not an accident.
-    let _ = is_chunked;
-    let mut body: Vec<u8> = raw[body_start..].to_vec();
-    loop {
-        match stream.read(&mut buf) {
-            Ok(0) => break, // upstream closed — the unframed body is complete
-            Ok(n) => {
-                body.extend_from_slice(&buf[..n]);
-                if body.len() > response_limit {
-                    return Err(FanoutError::Other(format!(
-                        "upstream response passed the {} bytes we can hold right now while \
-                         streaming to close (change COH_ROUTER_RESPONSE_SHAPE_BYTES)",
-                        response_limit,
-                    )));
-                }
-            }
-            // A read deadline while draining a read-to-close body -> Timeout -> 504.
-            Err(e) => return Err(classify_io_error(&e, "read upstream response body (to close)")),
-        }
-    }
-    let body_text = String::from_utf8_lossy(&body).to_string();
-    Ok(UpstreamResponse {
+    // The framing decides how the body is piped (and whether the connection pools).
+    // Content-Length wins; else chunked (self-delimiting, relayed raw); else close.
+    let framing = if let Some(total) = parse_content_length(&head) {
+        ResponseFraming::Length(total)
+    } else if head_is_chunked(&head) {
+        ResponseFraming::Chunked
+    } else {
+        ResponseFraming::Close
+    };
+    // The leading body bytes that arrived alongside the head terminator. Piped to
+    // the client first; the head itself is dropped (the client gets the router's
+    // own framed head, not the upstream's raw one).
+    let body_prefix = raw[body_start..].to_vec();
+    Ok(UpstreamHead {
         status,
         content_type,
         headers,
-        body: body_text,
-        reusable: false, // read-to-close / chunked: never pool this connection
-        leftover: Vec::new(),
+        upstream_keep_alive,
+        framing,
+        body_prefix,
     })
+}
+
+// The outcome of piping ONE response body upstream→client: whether the upstream
+// connection may be REUSED (pooled) and any bytes read past this response's framed
+// end (the next response's head/body on a reused connection, carried forward so the
+// next read starts exactly there). Mirrors the old UpstreamResponse's reuse verdict,
+// but the BODY itself never appears here — it has already flowed to the client.
+struct BodyOutcome {
+    reusable: bool,
+    leftover: Vec<u8>,
+}
+
+// PIPE one response body from the upstream stream straight to the client stream,
+// in fixed-size chunks reused across reads — the whole body is NEVER held in one
+// buffer. `body_prefix` is the leading body bytes already read with the head; they
+// go to the client first, then the rest streams from the socket. The framing tells
+// us where the body ends:
+//   - Length(total): write exactly `total` body bytes (prefix counted), then any
+//     surplus read past them is the NEXT response's bytes -> leftover; the
+//     connection is REUSABLE iff the upstream kept it alive.
+//   - Chunked: relay the raw chunk framing through until the terminating 0-length
+//     chunk (`0\r\n\r\n`); the client stays framed, the connection is NOT pooled.
+//   - Close: relay until the upstream closes (EOF); the connection is dropped and
+//     the client connection must close too.
+//
+// Honest mid-stream failure: once the client head is written (the caller's job,
+// BEFORE calling this), a stall or close mid-body can no longer become a clean 504
+// — the head already went out. A read deadline / upstream close mid-body surfaces
+// as an Err here; the caller closes the client connection, and the client sees a
+// truncated body — the truthful outcome of an upstream that died mid-stream.
+fn stream_body_to_client(
+    upstream: &mut TcpStream,
+    client: &mut TcpStream,
+    framing: &ResponseFraming,
+    body_prefix: &[u8],
+) -> Result<BodyOutcome, FanoutError> {
+    // 64 KiB pipe buffer, reused across every read — the only body-sized memory the
+    // router ever holds is this one fixed chunk, regardless of the body's length.
+    let mut buf = [0u8; 65536];
+    match *framing {
+        ResponseFraming::Length(total) => {
+            // Write the prefix first, but only up to `total` (a prefix can over-read
+            // into the NEXT response on a reused connection — that surplus is the
+            // leftover, never written to this client).
+            let from_prefix = body_prefix.len().min(total);
+            if from_prefix > 0 {
+                client
+                    .write_all(&body_prefix[..from_prefix])
+                    .map_err(|e| classify_io_error(&e, "write response body prefix to client"))?;
+            }
+            let mut written = from_prefix;
+            // The leftover is any prefix bytes past `total` (the next response).
+            let leftover: Vec<u8> = if body_prefix.len() > total {
+                body_prefix[total..].to_vec()
+            } else {
+                Vec::new()
+            };
+            // Pipe the remaining body bytes straight from the upstream socket.
+            while written < total {
+                let want = (total - written).min(buf.len());
+                match upstream.read(&mut buf[..want]) {
+                    Ok(0) => {
+                        // Upstream closed before the full framed body — the response
+                        // is incomplete and the client head already went out, so the
+                        // client sees a truncated body. NOT a clean error path.
+                        return Err(FanoutError::Other(
+                            "upstream closed mid-body (short Content-Length read)".to_string(),
+                        ));
+                    }
+                    Ok(n) => {
+                        client
+                            .write_all(&buf[..n])
+                            .map_err(|e| classify_io_error(&e, "write response body to client"))?;
+                        written += n;
+                    }
+                    // A read deadline mid-body on a stalled upstream. The head is
+                    // already sent, so this can't be a 504; it propagates and the
+                    // caller closes the client connection.
+                    Err(e) => return Err(classify_io_error(&e, "read upstream response body")),
+                }
+            }
+            // Content-Length framing is the precondition for reuse; the caller ANDs
+            // this with the upstream's keep-alive intent (from the head) before
+            // pooling. The leftover is meaningful only on a reused connection, but
+            // the caller drops it if it decides not to pool — so it is returned as-is.
+            Ok(BodyOutcome { reusable: true, leftover })
+        }
+        ResponseFraming::Chunked => {
+            // Relay the raw chunk framing straight through (NOT de-chunked) to the
+            // client, while a small incremental PARSER tracks the chunk boundaries so
+            // we stop at the TRUE terminating 0-length chunk — never at a `0\r\n\r\n`
+            // byte sequence that merely happens to appear inside chunk DATA (the
+            // hazard a naive byte-scan has). The parser consumes the same bytes it
+            // relays; it never accumulates the body, only the current chunk's
+            // size-line and a tiny amount of framing. The connection is never pooled.
+            let mut parser = ChunkParser::new();
+            // The prefix (chunk framing that arrived with the head) is relayed first
+            // and fed through the parser — the body may have started, or even fully
+            // arrived, in the same read as the head.
+            if !body_prefix.is_empty() {
+                client
+                    .write_all(body_prefix)
+                    .map_err(|e| classify_io_error(&e, "write chunked body prefix to client"))?;
+                if parser.feed(body_prefix)? {
+                    // The whole chunked body (through the terminating 0-chunk) already
+                    // arrived with the head.
+                    return Ok(BodyOutcome { reusable: false, leftover: Vec::new() });
+                }
+            }
+            loop {
+                match upstream.read(&mut buf) {
+                    Ok(0) => break, // upstream closed — relay ends (best-effort)
+                    Ok(n) => {
+                        client
+                            .write_all(&buf[..n])
+                            .map_err(|e| classify_io_error(&e, "write chunked body to client"))?;
+                        if parser.feed(&buf[..n])? {
+                            break; // terminating 0-length chunk relayed — body done
+                        }
+                    }
+                    Err(e) => {
+                        return Err(classify_io_error(&e, "read upstream chunked response body"))
+                    }
+                }
+            }
+            // Chunked is relayed raw and the connection is never pooled.
+            Ok(BodyOutcome { reusable: false, leftover: Vec::new() })
+        }
+        ResponseFraming::Close => {
+            // No Content-Length, no chunked: the body ends when the upstream closes.
+            // Pipe the prefix, then everything until EOF; the connection is dropped.
+            if !body_prefix.is_empty() {
+                client
+                    .write_all(body_prefix)
+                    .map_err(|e| classify_io_error(&e, "write unframed body prefix to client"))?;
+            }
+            loop {
+                match upstream.read(&mut buf) {
+                    Ok(0) => break, // upstream closed — the unframed body is complete
+                    Ok(n) => {
+                        client
+                            .write_all(&buf[..n])
+                            .map_err(|e| classify_io_error(&e, "write unframed body to client"))?;
+                    }
+                    Err(e) => {
+                        return Err(classify_io_error(
+                            &e,
+                            "read upstream response body (to close)",
+                        ))
+                    }
+                }
+            }
+            Ok(BodyOutcome { reusable: false, leftover: Vec::new() })
+        }
+    }
+}
+
+// An incremental HTTP/1.1 chunked-transfer parser that tracks chunk BOUNDARIES so
+// the streaming relay stops at the TRUE terminating 0-length chunk — not at a
+// `0\r\n\r\n` byte run that merely appears inside chunk DATA. It is fed the same
+// bytes the relay writes to the client and never accumulates the body: it holds
+// only the current size/trailer LINE (tiny) and the remaining-bytes counter for the
+// chunk currently being skipped over. `feed` returns true once the terminating
+// 0-length chunk (and its trailer section) has been consumed. This is FRAMING
+// tracking, not de-chunking — the bytes still relay raw and verbatim.
+enum ChunkPhase {
+    // Reading a chunk-size line (hex digits + optional `;extension`) up to CRLF.
+    Size,
+    // Skipping `remaining` data bytes of the current chunk.
+    Data { remaining: usize },
+    // Consuming the 2-byte CRLF that follows a chunk's data (`have` seen so far).
+    DataCrlf { have: u8 },
+    // After the 0-length chunk: consuming the trailer section line-by-line until the
+    // terminating empty line.
+    Trailer,
+}
+
+struct ChunkParser {
+    phase: ChunkPhase,
+    // The current size or trailer LINE being accumulated until its CRLF. Bounded by
+    // a sanity cap so a malformed upstream can't grow it without limit.
+    line: Vec<u8>,
+}
+
+impl ChunkParser {
+    fn new() -> Self {
+        ChunkParser { phase: ChunkPhase::Size, line: Vec::new() }
+    }
+
+    // Feed the next slice of relayed bytes. Returns Ok(true) when the terminating
+    // 0-length chunk + trailer have been fully consumed (the body is complete), else
+    // Ok(false) (more bytes expected). A malformed size line is an Other error.
+    fn feed(&mut self, mut data: &[u8]) -> Result<bool, FanoutError> {
+        // A chunk-size / trailer line longer than this is treated as malformed — a
+        // real size line is a handful of bytes; this only guards against a runaway
+        // upstream, it is not a body-size limit (the body itself never lands here).
+        const MAX_LINE: usize = 16 * 1024;
+        while !data.is_empty() {
+            match self.phase {
+                ChunkPhase::Size => {
+                    // Accumulate up to and including the CRLF that ends the size line.
+                    if let Some(pos) = data.iter().position(|&b| b == b'\n') {
+                        self.line.extend_from_slice(&data[..pos]); // up to (excl) \n
+                        data = &data[pos + 1..];
+                        // The size is the hex prefix before any `;` extension or CR.
+                        let line = std::mem::take(&mut self.line);
+                        let size = parse_chunk_size(&line)?;
+                        if size == 0 {
+                            self.phase = ChunkPhase::Trailer;
+                        } else {
+                            self.phase = ChunkPhase::Data { remaining: size };
+                        }
+                    } else {
+                        self.line.extend_from_slice(data);
+                        data = &[];
+                        if self.line.len() > MAX_LINE {
+                            return Err(FanoutError::Other(
+                                "chunked size line too long (malformed upstream)".to_string(),
+                            ));
+                        }
+                    }
+                }
+                ChunkPhase::Data { remaining } => {
+                    let take = remaining.min(data.len());
+                    data = &data[take..];
+                    let left = remaining - take;
+                    self.phase = if left == 0 {
+                        ChunkPhase::DataCrlf { have: 0 }
+                    } else {
+                        ChunkPhase::Data { remaining: left }
+                    };
+                }
+                ChunkPhase::DataCrlf { have } => {
+                    // Consume exactly two bytes (CR LF) following the chunk data.
+                    let need = 2 - have as usize;
+                    let take = need.min(data.len());
+                    data = &data[take..];
+                    let now = have + take as u8;
+                    self.phase = if now >= 2 {
+                        ChunkPhase::Size
+                    } else {
+                        ChunkPhase::DataCrlf { have: now }
+                    };
+                }
+                ChunkPhase::Trailer => {
+                    // Consume trailer lines until the terminating empty line. Each
+                    // line ends at `\n`; an empty line (just CR before it, or nothing)
+                    // ends the body.
+                    if let Some(pos) = data.iter().position(|&b| b == b'\n') {
+                        self.line.extend_from_slice(&data[..pos]);
+                        data = &data[pos + 1..];
+                        let line = std::mem::take(&mut self.line);
+                        // Empty (after trimming a trailing CR) => end of body.
+                        let trimmed: &[u8] = if line.last() == Some(&b'\r') {
+                            &line[..line.len() - 1]
+                        } else {
+                            &line
+                        };
+                        if trimmed.is_empty() {
+                            return Ok(true);
+                        }
+                        // A non-empty trailer header line — keep consuming.
+                    } else {
+                        self.line.extend_from_slice(data);
+                        data = &[];
+                        if self.line.len() > MAX_LINE {
+                            return Err(FanoutError::Other(
+                                "chunked trailer line too long (malformed upstream)".to_string(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
+}
+
+// Parse a chunk-size line's hex value — the digits BEFORE any `;extension` or CR.
+// e.g. `1a3f`, `1a3f;name=val`, `0`. An empty or non-hex prefix is malformed.
+fn parse_chunk_size(line: &[u8]) -> Result<usize, FanoutError> {
+    // Cut at the first `;` (chunk extension) or CR, whichever comes first.
+    let end = line
+        .iter()
+        .position(|&b| b == b';' || b == b'\r')
+        .unwrap_or(line.len());
+    let hex = &line[..end];
+    let s = std::str::from_utf8(hex)
+        .map_err(|_| FanoutError::Other("chunked size not UTF-8 (malformed)".to_string()))?
+        .trim();
+    usize::from_str_radix(s, 16)
+        .map_err(|_| FanoutError::Other(format!("bad chunked size line: {:?}", s)))
 }
 
 // Whether the UPSTREAM signalled it will keep its connection open after this
@@ -7764,34 +8018,25 @@ fn head_is_chunked(head: &str) -> bool {
     false
 }
 
-fn fanout_request(
-    upstream: &str,
-    method: &str,
-    target: &str,
-    req_headers: &[(String, String)],
-    body: &[u8],
-    pool: &mut UpstreamPool,
-) -> FanoutResult {
-    match fanout_request_result(upstream, method, target, req_headers, body, pool) {
-        Ok(v) => v,
-        // A TIMEOUT (hung/slow upstream: connect, write, or read deadline expired)
-        // becomes a clean 504 Gateway Timeout — the client gets a definite answer
-        // instead of a hang, and the worker is already free (the stale connection
-        // was dropped on the error path, never returned to the pool). A Closed or
-        // Other failure is a 502 Bad Gateway (the upstream is reachable but the
-        // hop failed). This is the single place the fan-out error maps to a status.
-        Err(FanoutError::Timeout(e)) => FanoutResult {
-            status: "504 Gateway Timeout".to_string(),
-            content_type: String::new(),
-            headers: Vec::new(),
-            body: format!("upstream timeout: {}\n", e),
-        },
-        Err(FanoutError::Closed(e)) | Err(FanoutError::Other(e)) => FanoutResult {
-            status: "502 Bad Gateway".to_string(),
-            content_type: String::new(),
-            headers: Vec::new(),
-            body: format!("fan-out upstream error: {}\n", e),
-        },
+// Map a fan-out hop failure that happened BEFORE any body byte reached the client
+// (connect/write failed, the head read failed, the stale-pool retry failed) into a
+// small BUFFERED error response written through the ONE emit shape. A TIMEOUT
+// (hung/slow upstream: connect, write, or head-read deadline expired) becomes a
+// clean 504 Gateway Timeout; a Closed or Other failure is a 502 Bad Gateway. This
+// is the single place the fan-out error maps to a status — and it is only reachable
+// while the client head is UNWRITTEN, so a clean framed error is still possible
+// (once the head is out and the body is streaming, a mid-stream failure can no
+// longer become a status — it closes the client connection instead).
+fn fanout_error_response(err: &FanoutError) -> (String, String) {
+    match err {
+        FanoutError::Timeout(e) => (
+            "504 Gateway Timeout".to_string(),
+            format!("upstream timeout: {}\n", e),
+        ),
+        FanoutError::Closed(e) | FanoutError::Other(e) => (
+            "502 Bad Gateway".to_string(),
+            format!("fan-out upstream error: {}\n", e),
+        ),
     }
 }
 
@@ -7882,31 +8127,78 @@ fn http_response(
     out
 }
 
-// The fan-out hop's full result: the upstream's status line, its CONTENT-TYPE
-// (so the client gets a JSON/HTML route's real type, not a flattened
-// text/plain), its other RELAYABLE end-to-end response headers (Set-Cookie,
-// Cache-Control, Location, …), and the body. Hop-by-hop and router-owned framing
-// headers are already filtered out of `headers` (and Content-Type lifted into
-// its own slot) so the caller relays them safely beside the router's own
-// framing.
-struct FanoutResult {
-    status: String,
-    content_type: String,
-    headers: Vec<(String, String)>,
-    body: String,
+// Write ONLY the client response HEAD for a STREAMING fan-out, then the body is
+// piped separately (so the body never lands in a buffer). The framing the router
+// owns is authored here exactly as `http_response` authors it, except the
+// body-length line varies with how the body will be streamed:
+//   - Length(n): `Content-Length: n` — the SAME length the upstream declared, so
+//     the client knows precisely where the body ends; both connections stay framed.
+//   - Chunked: `Transfer-Encoding: chunked` (NO Content-Length) — the raw chunk
+//     framing is relayed through, self-delimiting, so the client stays framed.
+//   - Close: neither line — the body's end is the connection close itself, so the
+//     client reads to close (and `keep_alive` must already be false here).
+// X-Form-Router and the relayed end-to-end headers (Set-Cookie, Cache-Control, …)
+// are written the same as the buffered path; a relayed upstream header can NEVER
+// clobber the router-owned framing (Content-Length/Content-Type/Connection +
+// Transfer-Encoding are filtered out of `relayed` by relay_response_header /
+// is_hop_by_hop before they reach here).
+fn write_response_head(
+    client: &mut TcpStream,
+    status: &str,
+    router: &str,
+    keep_alive: bool,
+    content_type: &str,
+    relayed: &[(String, String)],
+    framing: &ResponseFraming,
+) -> Result<(), FanoutError> {
+    let ct = if content_type.trim().is_empty() {
+        "text/plain; charset=utf-8"
+    } else {
+        content_type.trim()
+    };
+    let mut out = format!("HTTP/1.1 {}\r\nContent-Type: {}\r\n", status, ct);
+    match *framing {
+        ResponseFraming::Length(n) => {
+            out.push_str(&format!("Content-Length: {}\r\n", n));
+        }
+        ResponseFraming::Chunked => {
+            // The router relays the upstream's chunk framing verbatim, so the
+            // client hop is chunked too — it owns this Transfer-Encoding (the
+            // upstream's was stripped as hop-by-hop on the way in).
+            out.push_str("Transfer-Encoding: chunked\r\n");
+        }
+        ResponseFraming::Close => {
+            // No length line: the body ends at connection close. keep_alive is
+            // forced false by the caller on this framing.
+        }
+    }
+    out.push_str(&format!(
+        "X-Form-Router: {}\r\nConnection: {}\r\n",
+        router,
+        if keep_alive { "keep-alive" } else { "close" },
+    ));
+    for (name, value) in relayed {
+        out.push_str(&format!("{}: {}\r\n", name, value));
+    }
+    out.push_str("\r\n");
+    client
+        .write_all(out.as_bytes())
+        .map_err(|e| classify_io_error(&e, "write response head to client"))
 }
 
-// Send a fully-built request on `stream` and read exactly ONE Content-Length-
-// framed response back, seeding the read with `carry` (bytes left over from a
-// PRIOR response on this same reused connection). Factored out so the stale-
-// pooled-connection RETRY path runs the identical send+read shape — one fan-out
-// hop logic, used for both the first attempt and the retry (core-abstraction-
-// first: the retry is not a fork, it is the same shape on a fresh socket).
-fn send_and_read_one(
+// Send a fully-built request on `stream` and read exactly ONE response HEAD back,
+// seeding the read with `carry` (bytes left over from a PRIOR response on this same
+// reused connection). The BODY is NOT read here — it streams afterward, straight to
+// the client, never buffered. Factored out so the stale-pooled-connection RETRY
+// path runs the identical send+read-head shape — one fan-out hop logic, used for
+// both the first attempt and the retry (core-abstraction-first: the retry is not a
+// fork, it is the same shape on a fresh socket). The retry is SAFE precisely because
+// it ends at the head: a `Closed` here means no body byte has reached the client.
+fn send_and_read_head(
     stream: &mut TcpStream,
     request: &[u8],
     carry: Vec<u8>,
-) -> Result<UpstreamResponse, FanoutError> {
+) -> Result<UpstreamHead, FanoutError> {
     // A write deadline (FANOUT_READ_TIMEOUT, set as the write timeout too) surfaces
     // here as Timeout if the upstream accepts but never drains its receive buffer.
     // A broken pipe / reset on a POOLED connection the upstream already closed is
@@ -7917,36 +8209,71 @@ fn send_and_read_one(
     stream
         .write_all(request)
         .map_err(|e| classify_io_error(&e, "write request"))?;
-    read_upstream_response(stream, carry)
+    read_upstream_head(stream, carry)
 }
 
-fn fanout_request_result(
+// The verdict a streaming fan-out returns to the keep-alive serve loop: whether the
+// CLIENT connection may serve another request. `true` keeps it open; `false` closes
+// it (the client asked to close, the response was close-framed/unframed, OR a
+// mid-stream failure left the connection in an uncertain state — the only honest
+// move is to close). It is the same bool `handle_request` returns on its other arms,
+// named for intent at the streaming boundary.
+type ClientKeepAlive = bool;
+
+// STREAM a fan-out: forward the client's request to the upstream and PIPE the
+// upstream's response body straight back to the client, with the whole body NEVER
+// held in one buffer. This replaces the old buffer-then-emit fan-out: the router
+// observes the circulation AS IT FLOWS.
+//
+// The shape, end to end:
+//   1. Build the upstream request ONCE (reused verbatim for the stale-pool retry).
+//   2. Get-or-create the pooled upstream connection; send the request and read the
+//      response HEAD (small, buffered to parse). A `Closed` here — and ONLY here,
+//      before any body byte has reached the client — triggers a transparent
+//      reconnect+retry (the stale-pool path), exactly as before. A Timeout/Other
+//      before the head propagates to a buffered 504/502 written to the client.
+//   3. Once the head is parsed, decide the CLIENT framing (Length echoes the
+//      upstream's Content-Length; Chunked relays the chunk framing; Close means the
+//      body ends at connection close so the client connection must close too), write
+//      the client response head, then PIPE the body upstream→client in fixed chunks.
+//   4. On a Length-framed response the upstream connection is pooled IFF the upstream
+//      kept it alive; chunked/unframed connections are dropped (never pooled).
+//
+// Honest mid-stream truncation: after the client head is written, a stall or close
+// mid-body can no longer become a clean 504 — the head already went out. Such a
+// failure closes the client connection (returns false); the client sees a truncated
+// body, the truthful outcome of an upstream that died mid-stream.
+fn fanout_stream_to_client(
+    client: &mut TcpStream,
+    client_keep_alive: ClientKeepAlive,
     upstream: &str,
     method: &str,
     target: &str,
     req_headers: &[(String, String)],
     body: &[u8],
     pool: &mut UpstreamPool,
-) -> Result<FanoutResult, FanoutError> {
-    let (host, port, base_path) = parse_http_upstream(upstream).map_err(FanoutError::Other)?;
+) -> ClientKeepAlive {
+    // Parse the upstream + build the request bytes. A bad upstream URL is an Other
+    // error -> a buffered 502 (the head is unwritten, so a clean status is possible).
+    let (host, port, base_path) = match parse_http_upstream(upstream) {
+        Ok(v) => v,
+        Err(e) => {
+            return emit_buffered_fanout_error(client, client_keep_alive, &FanoutError::Other(e))
+        }
+    };
     let request_target = format!(
         "{}{}",
         base_path,
         if target.starts_with('/') { target } else { "/" }
     );
-    // Build the request bytes ONCE — reused verbatim for the first attempt and
-    // for the stale-connection retry. The router owns the upstream-hop framing:
-    // `Host` is rewritten to the upstream; `Connection: keep-alive` asks the
-    // upstream to hold the connection open so the NEXT fan-out reuses it (the
-    // handshake amortized across requests — the symmetric saving to the client
-    // hop's keep-alive); HTTP/1.1 so keep-alive is the default and the response
-    // can be Content-Length-framed (the framing that lets us read exactly one
-    // response without relying on the upstream closing). Content-Length is set
-    // from the body the router actually captured. The CLIENT's end-to-end headers
-    // (Authorization, Cookie, Accept*, User-Agent, Content-Type, X-*, …) are
-    // forwarded verbatim so an authenticated/content-typed route is fronted
-    // truthfully; hop-by-hop and router-owned framing headers are filtered by
-    // forward_request_header.
+    // Build the request bytes ONCE — reused verbatim for the first attempt and the
+    // stale-connection retry. The router owns the upstream-hop framing: `Host` is
+    // rewritten to the upstream; `Connection: keep-alive` asks the upstream to hold
+    // the connection open so the NEXT fan-out reuses it; HTTP/1.1 so keep-alive is
+    // the default and the response can be Content-Length-framed. Content-Length is
+    // set from the body the router actually captured. The CLIENT's end-to-end
+    // headers (Authorization, Cookie, Accept*, …) are forwarded verbatim; hop-by-hop
+    // and router-owned framing headers are filtered by forward_request_header.
     let mut head = format!(
         "{} {} HTTP/1.1\r\nHost: {}\r\nConnection: keep-alive\r\n",
         method, request_target, host
@@ -7956,9 +8283,6 @@ fn fanout_request_result(
             head.push_str(&format!("{}: {}\r\n", name, value));
         }
     }
-    // Content-Length from the captured body's TRUE length (never the client's
-    // forwarded one, which could disagree with the bytes we hold). GET/HEAD with
-    // no body send no Content-Length.
     if !body.is_empty() {
         head.push_str(&format!("Content-Length: {}\r\n", body.len()));
     }
@@ -7966,98 +8290,125 @@ fn fanout_request_result(
     let mut request: Vec<u8> = head.into_bytes();
     request.extend_from_slice(body);
 
-    // GET-OR-CREATE FROM POOL, wrapping the connect step (core-abstraction-first:
-    // the only thing the pool changes is connection lifecycle — fresh vs reused;
-    // the request build + response framing are identical either way). If a live
-    // connection is pooled for this upstream, try it first.
-    //
-    // The retry-vs-504 discipline lives in the error CLASSIFICATION, not in a
-    // fork of the fan-out shape:
-    //   - Closed: the pooled connection was idle-closed by the upstream (EOF /
-    //     broken pipe on reuse). This is EXPECTED for a keep-alive pool — drop it,
-    //     open a FRESH connection, retry the SAME request ONCE. Standard stale-pool
-    //     behavior, never surfaced to the client.
-    //   - Timeout: the upstream is reachable but HUNG (connect/write/read deadline
-    //     expired). Retrying does NOT help — the upstream is hung, a retry only
-    //     doubles the latency before the same deadline — so a Timeout PROPAGATES
-    //     immediately to a 504. This is what keeps a timeout from becoming an
-    //     infinite (or even doubled) retry loop.
-    //   - Other: a malformed/oversized response — propagates to a 502.
-    // The connection is taken OUT of the pool before use, so any error path simply
-    // drops it (it is never returned to the pool) and the worker is freed.
-    let response = if let Some(mut pooled) = pool.take(&host, port) {
-        let carry = std::mem::take(&mut pooled.carry);
-        match send_and_read_one(&mut pooled.stream, &request, carry) {
-            Ok(resp) => {
-                // Reused connection served the response. Return it to the pool
-                // iff the upstream kept it alive and we framed it cleanly.
-                if resp.reusable {
-                    pool.store(
-                        &host,
-                        port,
-                        PooledConn {
-                            stream: pooled.stream,
-                            carry: resp.leftover.clone(),
-                        },
-                    );
+    // GET-OR-CREATE FROM POOL + read the HEAD, with the stale-pool retry living in
+    // the error CLASSIFICATION (not a fork): a Closed pooled connection reconnects
+    // and retries the SAME request ONCE; a Timeout/Other propagates. The connection
+    // is taken OUT of the pool before use, so any error path drops it (never pooled)
+    // and the worker is freed. This whole step ends at the HEAD — no body byte has
+    // reached the client yet — so a retry here is safe and an error here can still
+    // be a clean buffered 504/502.
+    let (mut upstream_stream, head) = match pool.take(&host, port) {
+        Some(mut pooled) => {
+            let carry = std::mem::take(&mut pooled.carry);
+            match send_and_read_head(&mut pooled.stream, &request, carry) {
+                Ok(h) => (pooled.stream, h),
+                // ONLY a Closed (stale pooled connection) reconnects+retries once.
+                Err(FanoutError::Closed(_)) => {
+                    drop(pooled);
+                    let mut fresh = match connect_upstream_with_timeout(&host, port) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            return emit_buffered_fanout_error(client, client_keep_alive, &e)
+                        }
+                    };
+                    match send_and_read_head(&mut fresh, &request, Vec::new()) {
+                        Ok(h) => (fresh, h),
+                        Err(e) => {
+                            return emit_buffered_fanout_error(client, client_keep_alive, &e)
+                        }
+                    }
                 }
-                resp
-            }
-            // ONLY a Closed (stale pooled connection) reconnects+retries once. A
-            // Timeout or Other on the pooled connection propagates unchanged — a
-            // hung upstream must not be retried (it would just hang again).
-            Err(FanoutError::Closed(_)) => {
-                drop(pooled);
-                let mut fresh = connect_upstream_with_timeout(&host, port)?;
-                // A failure on the FRESH connection is a real upstream error and
-                // propagates (Timeout -> 504, else 502) — the retry is at most ONCE.
-                let resp = send_and_read_one(&mut fresh, &request, Vec::new())?;
-                if resp.reusable {
-                    pool.store(
-                        &host,
-                        port,
-                        PooledConn {
-                            stream: fresh,
-                            carry: resp.leftover.clone(),
-                        },
-                    );
+                // Timeout (hung upstream) or Other (bad head) — drop the connection
+                // and emit a buffered 504/502; the client head is still unwritten.
+                Err(e) => {
+                    drop(pooled);
+                    return emit_buffered_fanout_error(client, client_keep_alive, &e);
                 }
-                resp
-            }
-            Err(other) => {
-                // Timeout (hung upstream) or Other (bad response) — drop the
-                // connection (already taken from the pool) and propagate; the
-                // worker is freed and the client gets a 504/502, not a hang.
-                drop(pooled);
-                return Err(other);
             }
         }
-    } else {
-        // No pooled connection — open a fresh one (the first fan-out, or after a
-        // non-reusable response dropped the previous connection). A connect-timeout
-        // here (unreachable/blackholed upstream) is a Timeout -> 504; a resolve
-        // failure is Other -> 502.
-        let mut fresh = connect_upstream_with_timeout(&host, port)?;
-        let resp = send_and_read_one(&mut fresh, &request, Vec::new())?;
-        if resp.reusable {
-            pool.store(
-                &host,
-                port,
-                PooledConn {
-                    stream: fresh,
-                    carry: resp.leftover.clone(),
-                },
-            );
+        None => {
+            // No pooled connection — open a fresh one (the first fan-out, or after a
+            // non-reusable response dropped the previous connection).
+            let mut fresh = match connect_upstream_with_timeout(&host, port) {
+                Ok(s) => s,
+                Err(e) => return emit_buffered_fanout_error(client, client_keep_alive, &e),
+            };
+            match send_and_read_head(&mut fresh, &request, Vec::new()) {
+                Ok(h) => (fresh, h),
+                Err(e) => return emit_buffered_fanout_error(client, client_keep_alive, &e),
+            }
         }
-        resp
     };
 
-    Ok(FanoutResult {
-        status: response.status,
-        content_type: response.content_type,
-        headers: response.headers,
-        body: response.body,
-    })
+    // The head is in hand. Decide the CLIENT-hop framing + keep-alive, write the
+    // client head, then PIPE the body. Close-framed/unframed bodies force the client
+    // connection closed (no body-end marker but the close itself); Length/Chunked
+    // self-delimit, so the client's own keep-alive intent is honored.
+    let client_kept = match head.framing {
+        ResponseFraming::Close => false,
+        _ => client_keep_alive,
+    };
+    if write_response_head(
+        client,
+        &head.status,
+        "fanout-python",
+        client_kept,
+        &head.content_type,
+        &head.headers,
+        &head.framing,
+    )
+    .is_err()
+    {
+        // The client is gone before the body even started — close the connection.
+        return false;
+    }
+
+    // PIPE the body straight from the upstream to the client. The body never lands
+    // in a buffer; only a fixed 64 KiB chunk moves at a time.
+    let upstream_kept = head.upstream_keep_alive;
+    match stream_body_to_client(&mut upstream_stream, client, &head.framing, &head.body_prefix) {
+        Ok(outcome) => {
+            // Pool the upstream connection IFF the body was Length-framed AND the
+            // upstream kept it alive — exactly the old reuse rule, now decided after
+            // the body has streamed rather than after it was buffered.
+            if outcome.reusable && upstream_kept {
+                pool.store(
+                    &host,
+                    port,
+                    PooledConn {
+                        stream: upstream_stream,
+                        carry: outcome.leftover,
+                    },
+                );
+            }
+            client_kept
+        }
+        // A mid-body failure (upstream stalled/closed after the head went out). The
+        // client head is already written, so this can't be a clean status — the
+        // client connection closes and the client sees a truncated body, the honest
+        // outcome. The upstream connection is dropped (not pooled).
+        Err(_) => false,
+    }
+}
+
+// Emit a small BUFFERED 504/502 to the client through the ONE emit shape, then
+// return the client keep-alive verdict. Reachable ONLY while the client head is
+// unwritten (a pre-body fan-out failure), so a clean framed error is still possible.
+// A successful write keeps the client connection's intent (a 502 is a complete,
+// framed response — the connection can serve more); a failed write closes it.
+fn emit_buffered_fanout_error(
+    client: &mut TcpStream,
+    client_keep_alive: ClientKeepAlive,
+    err: &FanoutError,
+) -> ClientKeepAlive {
+    let (status, body) = fanout_error_response(err);
+    if client
+        .write_all(http_response(&status, &body, "fanout-python", client_keep_alive, "", &[]).as_bytes())
+        .is_err()
+    {
+        return false;
+    }
+    client_keep_alive
 }
 
 fn parse_http_upstream(upstream: &str) -> Result<(String, u16, String), String> {
