@@ -1,0 +1,48 @@
+; http-socket.fk — bind the Server to a real socket: the Form-native accept-loop.
+;
+; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
+;
+; THE BOUNDARY (Urs): kh-serve (http-server.fk) is PURE — a request string in, a
+; wire string out, no I/O, three-way-identical. This file is the ONLY place the
+; Server touches a socket. The kernel's job shrinks to one native call —
+; socket_listen opens the port — and hands the listener to Form; everything
+; after (accept, recv, parse, route, dispatch, render, send) is Form. That is
+; "the kernel minimal, the rest Form" made literal: the front door is a recipe.
+;
+;   kh-serve-conn(conn, routes, registry)      one connection: recv -> serve -> send -> close
+;   kh-serve-listener(listener, …, count)      the accept-loop over the listener
+;
+; The socket natives (socket_recv/send/close/accept) are the kernel's minimal
+; surface; the loop and the serving are Form. Proven over a real TCP round-trip
+; (Go/Rust; the TS kernel's socket worker hangs the harness, so it sits out the
+; socket bands — the pure kh-serve is already TS-proven in http-server-band).
+
+section [form.bml] {
+
+    ;; serve ONE connection through the pure Server: read the request bytes, run
+    ;; them through kh-serve, write the wire response, close. Returns what was
+    ;; sent so a witness can assert the round-trip. 65536 is the recv buffer for
+    ;; a single read of the request line + headers (a streamed body would loop
+    ;; the recv — a later refinement; the front-door requests we route fit one).
+    def kh-serve-conn(conn, routes, registry) {
+        let request_bytes = socket_recv(conn, 65536);
+        let response = kh-serve(routes, registry, request_bytes);
+        let sent = socket_send(conn, response);
+        let closed = socket_close(conn);
+        response;
+    }
+
+    ;; the accept-loop: accept and serve `count` connections, then stop. The
+    ;; kernel opens the port (socket_listen) and hands the listener in; Form runs
+    ;; the loop. A live server passes a large count (or this recurses until the
+    ;; listener closes); a witness passes the exact number it will send so the
+    ;; loop terminates deterministically. The recursion advances on `count`, not
+    ;; on any unbounded input — it is the loop, named.
+    def kh-serve-listener(listener, routes, registry, count) = if le(count, 0) then 0 else kh-serve-listener-step(listener, routes, registry, count);
+    def kh-serve-listener-step(listener, routes, registry, count) {
+        let served = kh-serve-conn(socket_accept(listener), routes, registry);
+        kh-serve-listener(listener, routes, registry, sub(count, 1));
+    }
+
+    0;
+}

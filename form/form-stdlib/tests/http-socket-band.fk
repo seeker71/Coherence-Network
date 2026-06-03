@@ -1,0 +1,61 @@
+; tests/http-socket-band.fk — real-socket witness for http-socket.fk.
+; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk
+;
+; Iteration 4 of lifting the HTTP server into the BML hierarchy: the Form-native
+; accept-loop. Proves the WHOLE stack serves over a real TCP socket end-to-end —
+; a client sends a raw HTTP request; kh-serve-listener accepts it, runs it
+; through kh-serve (parse -> route -> dispatch -> render), sends the wire
+; response, closes; the client reads the response off the wire and it is the
+; handler's 200 with native provenance. This is the proof the live flip is safe:
+; the data-driven hierarchy serves a real request over a real socket.
+;
+; Single-threaded backlog pattern (as the sibling http-serve-socket-band): the
+; client connects and sends BEFORE the server accepts, so the bytes buffer in
+; the socket for kh-serve-listener's recv. Emits a bit-sum (15 when all pass).
+; Go/Rust only — the TS socket worker hangs the harness; the pure kh-serve is
+; TS-proven in http-server-band.
+
+;; a demo handler + the string helpers the assertions need.
+(defn demo-cw (request)
+    (kh-response 200 (list (kh-header "Content-Type" "application/json")) "{\"ok\":true}"))
+(defn sb-starts (s prefix)
+    (if (lt (str_len s) (str_len prefix)) false (str_eq (substring s 0 (str_len prefix)) prefix)))
+(defn sb-contains (s needle) (ge (str_find s needle 0) 0))
+
+(let demo-routes (list (kh-route "cw" "GET" "/cw" 0 "cw" "" 100)))
+(let demo-registry (list (list "cw" demo-cw)))
+
+(do
+    (let request "GET /cw HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+
+    ;; the kernel's one native step: open the port. Everything after is Form.
+    (let srv (socket_listen 0))
+    (let listen-ok (if (ge srv 0) 1 0))
+    (let port (socket_port srv))
+    (let port-ok (if (gt port 0) 2 0))
+
+    ;; client connects (handshake -> backlog) and sends BEFORE the server
+    ;; accepts; the bytes buffer for kh-serve-listener's recv.
+    (let cli (socket_connect "127.0.0.1" port))
+    (let sent (socket_send cli request))
+
+    ;; Form runs the accept-loop for exactly one connection: accept the buffered
+    ;; client, recv -> kh-serve -> send -> close, then stop.
+    (let served (kh-serve-listener srv demo-routes demo-registry 1))
+
+    ;; the client reads the response off the wire (the conn was closed after the
+    ;; send, so one recv gets the whole framed response).
+    (let wire (socket_recv cli 65536))
+    (socket_close cli)
+    (socket_close srv)
+
+    ;; CHECK 3 (bit 4) — the wire carries the handler's body.
+    (let body-ok (if (sb-contains wire "{\"ok\":true}") 4 0))
+    ;; CHECK 4 (bit 8) — the wire framing is a native 200 with honest provenance.
+    (let frame-ok
+        (if (sb-starts wire "HTTP/1.1 200 OK\r\n")
+            (if (sb-contains wire "X-Form-Router: native-kernel\r\n") 8 0)
+            0))
+
+    ;; verdict — 15 when listen, port, the served body, and the framing agree.
+    (add listen-ok (add port-ok (add body-ok frame-ok))))
