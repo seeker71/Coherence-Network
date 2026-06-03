@@ -6890,7 +6890,7 @@ fn build_worker_kernel_with_route_data(
     program: &RouteProgram,
     routes_path: &str,
     route_data: &RouteDataRegistry,
-) -> Result<(Kernel, Arena, RouteSpecs), String> {
+) -> Result<(Kernel, Arena, RouteSpecs, FrameId), String> {
     let mut k = Kernel::new();
     let root = match program {
         RouteProgram::Source(src) => read_root_from_source(&mut k, src),
@@ -6904,7 +6904,9 @@ fn build_worker_kernel_with_route_data(
     k.active_roots = vec![root];
     let _ = walk(&mut k, &mut arena, root, root_env);
     let route_specs = build_route_specs(&mut k, &arena, root_env, routes_path, route_data)?;
-    Ok((k, arena, route_specs))
+    // root_env is returned so the --form serve path can resolve kh-serve / routes
+    // / registry globals from it (the same global frame build_route_specs reads).
+    Ok((k, arena, route_specs, root_env))
 }
 
 // Handle ONE request on a worker's own kernel+arena. This is the single factored
@@ -7356,8 +7358,9 @@ fn worker_loop(
     upstream: Arc<Option<String>>,
     rx: Arc<Mutex<mpsc::Receiver<TcpStream>>>,
     router_metrics: Arc<Mutex<RouterMetrics>>,
+    form_mode: bool,
 ) {
-    let (mut k, mut arena, route_specs) =
+    let (mut k, mut arena, route_specs, root_env) =
         match build_worker_kernel_with_route_data(&program, &routes_path, &route_data) {
             Ok(t) => t,
             Err(e) => {
@@ -7365,6 +7368,32 @@ fn worker_loop(
                 return;
             }
         };
+    // --form: resolve the kh-serve closure + routes + registry globals ONCE, so
+    // every connection runs the Form serve pipeline directly — Form does parse,
+    // route, dispatch, render; the kernel only opens the socket and walks it.
+    let form_serve: Option<(Arc<Closure>, Value, Value)> = if form_mode {
+        let kh_id = k.intern_string("kh-serve").inst;
+        match arena.lookup(root_env, kh_id) {
+            Some(Value::Closure(c)) => {
+                let routes_id = k.intern_string("routes").inst;
+                let registry_id = k.intern_string("registry").inst;
+                let routes_val =
+                    arena.lookup(root_env, routes_id).unwrap_or(Value::List(vec![]));
+                let registry_val =
+                    arena.lookup(root_env, registry_id).unwrap_or(Value::List(vec![]));
+                Some((c, routes_val, registry_val))
+            }
+            _ => {
+                eprintln!(
+                    "serve --form: worker {} could not resolve kh-serve as a closure",
+                    id
+                );
+                return;
+            }
+        }
+    } else {
+        None
+    };
     // This worker's OWN upstream connection pool — keep-alive connections to the
     // fan-out upstream, reused across every client connection this worker serves.
     // No locking: the worker is serial (it serves one client connection at a
@@ -7384,15 +7413,21 @@ fn worker_loop(
             guard.recv()
         };
         match stream {
-            Ok(s) => serve_connection(
-                s,
-                &mut k,
-                &mut arena,
-                &route_specs,
-                &upstream,
-                &mut upstream_pool,
-                &router_metrics,
-            ),
+            Ok(s) => {
+                if let Some((ref cl, ref routes_val, ref registry_val)) = form_serve {
+                    serve_connection_form(s, &mut k, &mut arena, cl, routes_val, registry_val);
+                } else {
+                    serve_connection(
+                        s,
+                        &mut k,
+                        &mut arena,
+                        &route_specs,
+                        &upstream,
+                        &mut upstream_pool,
+                        &router_metrics,
+                    );
+                }
+            }
             // Sender dropped (listener closed) — drain done, worker exits.
             Err(_) => return,
         }
@@ -7787,6 +7822,47 @@ fn load_route_data_registry(
     })
 }
 
+// serve_connection_form — the Form-native serve path. Read the raw request and
+// hand it to kh-serve; Form does parse, route, dispatch, and render; write the
+// wire string it returns. No Rust parse/route/render, no fear-cap on the way in:
+// the HTTP IS the recipe (kernel-http.fk + http-*.fk), and the kernel only opens
+// the socket and walks the closure. One request per connection for now (the load
+// balancer / client reconnects); keep-alive is a later breath. Because the load
+// balancer routes only native paths here, a 404 from kh-serve means a path the
+// balancer should not have sent — honest, not a fan-out concern.
+fn serve_connection_form(
+    mut stream: TcpStream,
+    k: &mut Kernel,
+    arena: &mut Arena,
+    kh_serve: &Arc<Closure>,
+    routes_val: &Value,
+    registry_val: &Value,
+) {
+    use std::io::Read;
+    let mut buf = vec![0u8; 65536];
+    let n = match stream.read(&mut buf) {
+        Ok(n) if n > 0 => n,
+        _ => return, // EOF / error — close
+    };
+    let raw = String::from_utf8_lossy(&buf[..n]).to_string();
+    if kh_serve.params.len() != 3 {
+        let _ = stream
+            .write_all(b"HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
+        return;
+    }
+    // apply (kh-serve routes registry raw): bind the three params, walk the body.
+    let frame = arena.new_frame_with_capacity(Some(kh_serve.env), 3);
+    arena.bind(frame, kh_serve.params[0], routes_val.clone());
+    arena.bind(frame, kh_serve.params[1], registry_val.clone());
+    arena.bind(frame, kh_serve.params[2], Value::Str(raw));
+    let result = walk(k, arena, kh_serve.body, frame);
+    let wire = match result {
+        Value::Str(s) => s,
+        other => other.display(),
+    };
+    let _ = stream.write_all(wire.as_bytes());
+}
+
 fn cli_serve(args: &[String]) -> i32 {
     // --port <p> --routes <file.fk> [--upstream <http-base-url>] [--host <addr>]
     let mut port: u16 = 8001;
@@ -7821,6 +7897,12 @@ fn cli_serve(args: &[String]) -> i32 {
     // --host 0.0.0.0; isolation comes from Docker's `-p 127.0.0.1:<port>` host
     // binding, not from the in-container bind address.
     let mut host: String = "127.0.0.1".to_string();
+    // --form routes EVERY request through the Form HTTP stack (kh-serve in
+    // http-server.fk) instead of the Rust parse/route/render path: the manifest
+    // defines `routes` + `registry` + handlers and preludes kernel-http.fk /
+    // http-*.fk. The kernel only opens the socket and walks the recipe — the
+    // 11.5K-line Rust HTTP and its fear-caps are out of this path entirely.
+    let mut form_mode = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -7837,6 +7919,10 @@ fn cli_serve(args: &[String]) -> i32 {
                     }
                 };
                 i += 2;
+            }
+            "--form" => {
+                form_mode = true;
+                i += 1;
             }
             "--routes" => {
                 if i + 1 >= args.len() {
@@ -8013,6 +8099,7 @@ fn cli_serve(args: &[String]) -> i32 {
                 upstream,
                 rx,
                 router_metrics,
+                form_mode,
             );
         }) {
             Ok(h) => handles.push(h),
@@ -8031,7 +8118,7 @@ fn cli_serve(args: &[String]) -> i32 {
 
     // Re-resolve the route list once (in the main thread, throwaway kernel)
     // purely to print the startup banner — the workers hold the live copies.
-    if let Ok((_, _, route_specs)) =
+    if let Ok((_, _, route_specs, _)) =
         build_worker_kernel_with_route_data(&program, &routes_path_arc, &route_data)
     {
         eprintln!(
