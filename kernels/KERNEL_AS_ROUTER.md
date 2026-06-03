@@ -574,6 +574,8 @@ the grounded family: `cost_vector` / `value_vector` (CC decompositions via
 | `/api/utils/grounded_roi` | `estimated_cost` `actual_cost` `potential_value` `actual_value` (floats) | `{"remaining_cost_cc":<float>,"value_gap_cc":<float>,"roi_cc":<float>,…echoes,"runtime":"inline"}` (guarded division) |
 | `/api/utils/idea_grounded_cost_sum` | `actual_costs` `actual_values` (parallel csv floats) | `{"spec_actual_cost_sum":<float>,"spec_actual_value_sum":<float>,"spec_count_in":<int>,"runtime":"inline"}` (LEFT-fold) |
 | `/api/utils/grounded_cost` | 5 csv arrays (spec/lineage floats, commit ints) + `runtime_cost`; paired arrays must match length | `{…6 cost floats, 3 counts, "runtime":"inline"}` on the happy path, or **422 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
+| `/api/utils/worldview_alignment` | `contributor_vec` `idea_vec` (parallel csv floats), `axis_names` (csv strings); the two vectors must match length | `{"score":<float>,"matched_axes":["…"],"contributor_vec":[…],"idea_vec":[…],"runtime":"inline"}` (cosine via `math_sqrt`), or **400 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
+| `/api/utils/tag_match_score` | `contributor_tags` `idea_tags` (csv strings) | `{"score":<float>,"contributor_tags":["…"],"idea_tags":["…"],"runtime":"inline"}` (`str_eq` membership ratio over first-seen-deduped lists; 0.5 empty-guard) |
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -586,7 +588,7 @@ native-kernel`.
 [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py)
 proves the promotion two ways at once — boot the real local app as the CPython
 oracle, stand the kernel-router (production manifest) in front, and for each of
-the sixteen routes over representative + edge params (73 cases):
+the eighteen routes over representative + edge params (86 cases):
 
 ```
 [native  ] /api/utils/coherence_weight -> {"weight":16185,…,"runtime":"inline"}  X-Form-Router=native-kernel  application/json
@@ -596,13 +598,17 @@ the sixteen routes over representative + edge params (73 cases):
 [native  ] /api/utils/softmax_weights?scores=0.1,0.2,0.3 -> {"weights":[0.3006096053557273,…]}  FULL-BODY == LIVE: BYTE-IDENTICAL
 [native  ] /api/utils/cost_vector?estimated_cost=33.333 -> {"human_attention_cc":8.3332,…}  round_ndigits half-to-even (NOT 8.3333)
 [native  ] /api/utils/idea_grounded_cost_sum?actual_costs=0.1,0.2,0.3&… -> {"spec_actual_cost_sum":0.6000000000000001,…}  LEFT-fold matches CPython sum()
-… all 67 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
+[native  ] /api/utils/worldview_alignment?contributor_vec=1.0,1.0,0.0&idea_vec=1.0,0.0,0.0 -> {"score":0.7071067811865475,…}  cosine 1/sqrt(2), three-way bit-identical
+[native  ] /api/utils/tag_match_score?contributor_tags=a,b,c&idea_tags=a -> {"score":0.3333333333333333,…}  str_eq membership ratio, float÷int
+… all 86 cases, incl. adversarial floats (0.14000000000000004, 0.04000000000000001,
   0.6666666666666667, 0.9999999999999999), CPython's -0.0 vs +0.0 on single-phase
   entropy, the grounded_value confidence weighted-sum's float-assoc artifact
   (0.42000000000000004, 0.5800000000000001) and its [0.05, 0.95] clamp + zero-
   guards, deterministic + uniform softmax, the grounded family's round_ndigits
   half-to-even (8.3332, 16.6675), grounded_roi's guarded division + max-as-
-  comparison, and idea_grounded_cost_sum's LEFT-folded float-field sum
+  comparison, idea_grounded_cost_sum's LEFT-folded float-field sum, worldview_alignment's
+  cosine (irrational 0.7071067811865475 + present-empty-vector → 0.5 zero-denom) and
+  tag_match_score's first-seen dedup + str_eq membership ratio (1/3 = 0.3333333333333333)
 
 native  (kernel-router, Form):   p50=0.241 ms  p99=0.343 ms
 CPython (app serve_via_kernel):  p50=11.02 ms  p99=12.54 ms
@@ -633,7 +639,7 @@ the same compute served through the CPython doorway (and a fan-out would add the
 proxy hop on top of that CPython cost). Skipping the entire uvicorn → routing →
 Pydantic-bind → `serve_via_kernel`-subprocess lifecycle is where the win lives.
 
-**Promotability map.** The sixteen promoted routes are scalar/list-in, scalar/list-out
+**Promotability map.** The eighteen promoted routes are scalar/list-in, scalar/list-out
 with a flat JSON response — the cleanly-promotable subset. The first four are the
 integer/float scalar+list computes; the next six (`simpson_diversity`, `idea_score`,
 `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`) are
@@ -680,14 +686,31 @@ The remaining routes still need genuinely new capability:
   binding) and/or do host-side heterogeneous-collection walks — genuinely needing
   request-side structural-record marshalling in the native handler (still an open breath).
 
-The three belief/concept matching routes (`concept_match_score`, `tag_match_score`,
-`worldview_alignment`) are also DEFERRED, each for a named string-collection gap the
-flat-numeric helpers don't carry: `concept_match_score` echoes regex-tokenized keywords
-(`re.findall` + stopword filter — host text preprocessing the kernel-router can't
-reproduce); `tag_match_score` needs string-list dedup + a `str_eq` membership fold;
-`worldview_alignment`'s scalar cosine IS replicable (`math_sqrt`), but its `matched_axes`
-output zips float predicates with axis-name strings into a string list — string-collection
-construction the helpers lack.
+`worldview_alignment` and `tag_match_score` are now PROMOTED — the two belief-resonance
+routes whose string-collection gaps closed with two small, reusable additions. The
+`json_str_list` helper renders a `list[str]` as a JSON string array (`["a","b"]`, no
+spaces, each element quoted) — the echo shape both routes (and any future string-list
+route) need. The `param_present`/`has_key` helpers mirror FastAPI's "default only when
+the param is ABSENT": a `?k=` present-empty query value routes to the empty list (a
+meaningful empty), NOT to the default — the distinction `param_or`'s empty→default
+coalescing erased, observable on the empty-vector / empty-tag-list cases. With those,
+`worldview_alignment` runs the COSINE in Form (the parallel dot+norm fold, `math_sqrt`
+norms, guarded ratio, `[0,1]` clamp — irrational cosines like `1/sqrt(2)` three-way
+bit-identical) and names `matched_axes` host-side-equivalently (the `cv>0.3 AND iv>0.3`
+zip over `min(len(vec),len(names))`), with a **400** observable-"no" (via `respond`) on
+a length mismatch; `tag_match_score` runs the `str_eq` membership ratio over first-seen-
+order-deduped lists (the `tm_dedup` + `tm_member` fold), with the `0.5` empty-guard
+(`1/3 = 0.3333333333333333`, float÷int, bit-exact). Both are byte-identical to the
+CPython oracle across representative + edge params (verified by the harness against the
+real app; the 400 hand-checked like grounded_cost's 422).
+
+`concept_match_score` stays DEFERRED for a genuine host-preprocessing gap the kernel-router
+can't reproduce: it echoes regex-tokenized `keywords` (`_extract_keywords`'s
+`re.findall(r"\b[a-zA-Z]{3,}\b", …)` + a stopword set + dedup) and `concept_keywords` in
+its response, so the WIRE BODY — not just the score — depends on a regex tokenizer +
+stopword list living in `concept_auto_tagger`. Forcing regex tokenization into the kernel
+is the wrong build; the score's str_find membership fold is replicable, but the echoed
+host-tokenized arrays are not, so the route is not cleanly byte-identical natively.
 
 This manifest is the durable flip's native surface, ready for the cutover; it does
 NOT flip — the standing shadow still fans out every route.

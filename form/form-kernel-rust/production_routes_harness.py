@@ -165,6 +165,35 @@ PROMOTED: list[tuple[str, list[str]]] = [
         "?spec_actual_costs=3.5,1.25,&spec_estimated_costs=4.25,2.5",  # trailing-comma empty-segment skip
         "?spec_actual_costs=2,4,6&spec_estimated_costs=3,5,7&lineage_estimated_costs=1,1",
     ]),
+    # worldview_alignment — COSINE of two parallel float vectors. The 200 (equal-
+    # length) cases. Its 400 observable-no on mismatched-length vectors is verified
+    # separately (the compare below asserts 200; the 400 proof — HTTP 400 + the exact
+    # FastAPI {"detail":...} body + X-Form-Router: native-kernel — is hand-checked,
+    # like grounded_cost's 422). Defaults land on 0.96; the irrational case lands on
+    # 1/sqrt(2)=0.7071067811865475 (three-way bit-identical); the both-empty case is
+    # the present-empty -> [] path (param_present, not the default) -> 0.5 zero-denom.
+    ("/api/utils/worldview_alignment", [
+        "",                              # defaults -> 0.96, matched ["scientific","pragmatic"]
+        "?contributor_vec=1.0,1.0,0.0&idea_vec=1.0,0.0,0.0&axis_names=a,b,c",  # 1/sqrt(2) irrational cosine
+        "?contributor_vec=0.0,0.0&idea_vec=0.5,0.5&axis_names=x,y",  # zero-denom guard -> 0.5, matched []
+        "?contributor_vec=&idea_vec=&axis_names=",  # present-empty vectors -> [], 0.5 (NOT the default)
+        "?contributor_vec=0.5,0.4,0.2&idea_vec=0.4,0.5,0.9&axis_names=p,q,r",  # partial cosine + matched ["p","q"]
+        "?contributor_vec=0.6,0.8&idea_vec=0.6,0.8&axis_names=only_one",  # names shorter than vec -> matched ["only_one"]
+    ]),
+    # tag_match_score — EXACT str_eq membership ratio over deduped tag lists.
+    # All cases are 200 (the empty-list guard is a 0.5 BODY, not a non-200). The
+    # present-empty params route through param_present to [] (the 0.5 guard), NOT
+    # to the defaults; dedup is first-seen-order; matched/len(contributor) is a
+    # float÷int (1/3 = 0.3333333333333333, bit-identical to CPython).
+    ("/api/utils/tag_match_score", [
+        "",                              # defaults -> 0.5 (energy,flow ⊂ contributor; 2/4)
+        "?contributor_tags=a,b&idea_tags=a,b",        # full overlap -> 1.0
+        "?contributor_tags=&idea_tags=energy",        # present-empty contributor -> [], 0.5 guard
+        "?contributor_tags=energy&idea_tags=",        # present-empty idea -> [], 0.5 guard
+        "?contributor_tags=a,a,b&idea_tags=a",        # dedup [a,b], matched 1/2 -> 0.5
+        "?contributor_tags=a,b,c&idea_tags=a",        # 1/3 -> 0.3333333333333333
+        "?contributor_tags=a,b,&idea_tags=a",         # trailing-comma empty-segment skip -> [a,b]
+    ]),
 ]
 
 # A path the manifest does NOT promote -> must fan out to CPython.

@@ -21,6 +21,9 @@
 ;   /api/utils/breath_balance         float H/ln(3) (incl -0.0) + echoed ints
 ;   /api/utils/shannon_entropy        float round(H/ln(3),4) + echoed ints
 ;   /api/utils/softmax_weights        float-list softmax + echoed scores/temp
+;   /api/utils/worldview_alignment    float cosine of two parallel vectors +
+;                                       matched-axis string list (400 on len mismatch)
+;   /api/utils/tag_match_score        float str_eq-membership ratio + deduped tag lists
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -60,6 +63,25 @@
   (if (eq (str_len (assoc key q)) 0)
       dflt
       (assoc key q)))
+
+; --- is `key` PRESENT in the alist (regardless of its value, "" included)? ---
+; The query-string `?k=` arrives as the present pair ("k" ""); a truly absent
+; param has no pair at all. has_key distinguishes the two, where assoc alone
+; cannot (both yield "").
+(defn has_key (key pairs)
+  (if (eq (len pairs) 0)
+      false
+      (if (str_eq (head (head pairs)) key)
+          true
+          (has_key key (tail pairs)))))
+
+; --- param `key` from the alist when PRESENT (its value, even ""), else `dflt`.
+; This mirrors FastAPI EXACTLY for a `str = "<default>"` query param: the default
+; applies ONLY when the param is absent; `?k=` is a present empty string, NOT the
+; default. (param_or coalesces empty→default, which is right for the numeric
+; routes but wrong for a list param whose empty IS a meaningful empty list.)
+(defn param_present (key q dflt)
+  (if (has_key key q) (assoc key q) dflt))
 
 ; --- split "a,b,c" on commas into a list of substrings. Walks via str_find +
 ; substring (the kernel's native string ops), no char-by-char Form loop. An
@@ -102,6 +124,22 @@
 
 (defn json_list (xs)
   (str_concat (str_concat "[" (json_elems xs)) "]"))
+
+; --- JSON array of STRINGS from a list: ["a","b","c"] with NO spaces, each
+; element double-quoted (FastAPI's JSONResponse renders a list[str] this way).
+; The empty list renders as []. Used for the echoed string fields (matched_axes,
+; the deduped tag lists). ASCII tag/axis names need no escaping — they carry no
+; quotes/backslashes, the same plain-token assumption split_commas already makes.
+(defn json_str_elems (xs)
+  (if (eq (len xs) 0)
+      ""
+      (if (eq (len xs) 1)
+          (str_concat (str_concat "\"" (head xs)) "\"")
+          (str_concat (str_concat (str_concat "\"" (head xs)) "\",")
+                      (json_str_elems (tail xs))))))
+
+(defn json_str_list (xs)
+  (str_concat (str_concat "[" (json_str_elems xs)) "]"))
 
 ; --- comma-separated list of int params a_pkg a_lvl a_type a_inst as a JSON
 ; array, reading each with its api default. Used for the echoed NodeID `a`/`b`.
@@ -796,6 +834,149 @@
     (respond 422 "{\"detail\":\"spec_actual_costs and spec_estimated_costs must have the same length\"}")))))))))
 
 ; ===========================================================================
+; /api/utils/worldview_alignment  — COSINE SIMILARITY, the FIRST kernel-native
+;   route to fold a parallel float-vector dot+norm (belief_service.cosine_alignment_score).
+;   params: contributor_vec (csv floats, default "0.6,0.0,0.8,0.0,0.0,0.0"),
+;           idea_vec (csv floats, default "0.8,0.0,0.6,0.0,0.0,0.0"),
+;           axis_names (csv strings, default the fixed BeliefAxis order).
+;   400 (observable "no" via respond) when len(cv) != len(iv).
+;   body:   {"score":<f>,"matched_axes":["..."],"contributor_vec":[<f>],
+;            "idea_vec":[<f>],"runtime":"inline"}  (WorldviewAlignmentResponse order)
+;   math (endpoint_worldview_alignment_demo.fk EXACTLY): a SINGLE i=0..n loop folds
+;     dot += a_i*b_i, norm_a += a_i*a_i, norm_b += b_i*b_i — each accumulator
+;     LEFT-associated from 0.0 (mirrors CPython `dot += ...`). Three independent
+;     left-folds give the SAME per-accumulator grouping as the one-loop `+=`.
+;     denom = sqrt(norm_a)*sqrt(norm_b) (math_sqrt, IEEE-correct three-way);
+;     score = (denom>0 ? dot/denom : 0.5); then clamp max(0.0,min(1.0,score)).
+;   matched_axes: HOST-side naming in the recipe-twin, replicated here — the
+;     axis-name strings where cv[i]>0.3 AND iv[i]>0.3, walked in parallel over
+;     min(len(cv),len(names)) (the route's range(min(len(cv),len(names)))).
+; ===========================================================================
+
+; left-folded dot over two parallel float lists (total seeded 0.0, added LEFT)
+(defn wv_dot_go (a b total)
+  (if (eq (len a) 0)
+      total
+      (wv_dot_go (tail a) (tail b) (add total (mul (head a) (head b))))))
+
+; left-folded sum-of-squares over one float list (each x*x added LEFT from 0.0)
+(defn wv_normsq_go (xs total)
+  (if (eq (len xs) 0)
+      total
+      (wv_normsq_go (tail xs) (add total (mul (head xs) (head xs))))))
+
+; clamp to [0.0, 1.0] — max(0.0, min(1.0, s)), mirroring the recipe's nested ifs
+(defn wv_clamp (s) (max2 0.0 (min2 1.0 s)))
+
+; matched_axes: the axis names at positions where cv>0.3 AND iv>0.3, walked in
+; parallel and stopping when EITHER the names or the vectors run out — the
+; native of range(min(len(cv),len(names))). cv/iv are equal-length (the 400 guard
+; already fired otherwise), so cv running out == iv running out == the min bound.
+(defn wv_matched_go (cv iv names)
+  (if (eq (len names) 0)
+      (list)
+      (if (eq (len cv) 0)
+          (list)
+          (if (if (gt (head cv) 0.3) (gt (head iv) 0.3) false)
+              (cons (head names) (wv_matched_go (tail cv) (tail iv) (tail names)))
+              (wv_matched_go (tail cv) (tail iv) (tail names))))))
+
+(defn route_worldview_alignment (q)
+  (do (let cvstr (param_present "contributor_vec" q "0.6,0.0,0.8,0.0,0.0,0.0"))
+  (do (let ivstr (param_present "idea_vec" q "0.8,0.0,0.6,0.0,0.0,0.0"))
+  (do (let nstr (param_present "axis_names" q "scientific,spiritual,pragmatic,holistic,relational,systemic"))
+  (do (let cv (floats_of (nonempty (split_commas cvstr))))
+  (do (let iv (floats_of (nonempty (split_commas ivstr))))
+  (if (eq (len cv) (len iv))
+    (do (let names (nonempty (split_commas nstr)))
+    (do (let dot (wv_dot_go cv iv 0.0))
+    (do (let norm_c (wv_normsq_go cv 0.0))
+    (do (let norm_i (wv_normsq_go iv 0.0))
+    (do (let denom (mul (math_sqrt norm_c) (math_sqrt norm_i)))
+    (do (let score (wv_clamp (if (gt denom 0.0) (div dot denom) 0.5)))
+    (do (let matched (wv_matched_go cv iv names))
+        (str_concat
+          (str_concat
+            (str_concat
+              (str_concat (str_concat "{\"score\":" (value_str score))
+                          (str_concat ",\"matched_axes\":" (json_str_list matched)))
+              (str_concat ",\"contributor_vec\":" (json_list cv)))
+            (str_concat ",\"idea_vec\":" (json_list iv)))
+          ",\"runtime\":\"inline\"}"))))))))
+    (respond 400 "{\"detail\":\"contributor_vec and idea_vec must have equal length (parallel axis vectors)\"}"))))))))
+
+; ===========================================================================
+; /api/utils/tag_match_score  — EXACT STRING MEMBERSHIP (str_eq over a list),
+;   belief_service.score_tag_match_lists. Equality counterpart to the substring
+;   fold concept_match_score uses on the CPython side.
+;   params: contributor_tags (csv strings, default "energy,flow,coherence,field"),
+;           idea_tags (csv strings, default "energy,flow").
+;   body:   {"score":<f>,"contributor_tags":["..."],"idea_tags":["..."],
+;            "runtime":"inline"}  (TagMatchScoreResponse order)
+;   math:   the host dedups BOTH lists first-seen-order (Python set() collapses
+;     duplicates; the route keeps a stable order for the echo). matched = how many
+;     UNIQUE contributor tags appear in idea_tags (str_eq membership fold). Since
+;     contributor is deduped, this equals |contributor_set & idea_set|. score =
+;     0.5 when EITHER deduped list is empty, else max(0.0,min(1.0, matched/|contributor|)).
+;     matched is a FLOAT count (0.0, +1.0 per hit) over an int denominator — the
+;     recipe's (div matched (len contributor)), float÷int promoting (1.0/3 ==
+;     0.3333333333333333, bit-identical to CPython).
+; ===========================================================================
+
+; member? — is `needle` str_eq any element of `xs` (the inner contains_exact fold)
+(defn tm_member (needle xs)
+  (if (eq (len xs) 0)
+      false
+      (if (str_eq (head xs) needle)
+          true
+          (tm_member needle (tail xs)))))
+
+; first-seen-order dedup: keep each element the FIRST time it appears, drop later
+; repeats — the native of the route's _dedup (Python set()-with-stable-order).
+; `seen` accumulates the kept prefix; membership tests it with str_eq.
+(defn tm_dedup_go (xs seen)
+  (if (eq (len xs) 0)
+      seen
+      (if (tm_member (head xs) seen)
+          (tm_dedup_go (tail xs) seen)
+          (tm_dedup_go (tail xs) (cons (head xs) seen)))))
+
+; tm_dedup_go builds `seen` by consing onto the FRONT (reversed order); rebuild
+; the original first-seen order by reversing once at the end.
+(defn tm_reverse_go (xs acc)
+  (if (eq (len xs) 0) acc (tm_reverse_go (tail xs) (cons (head xs) acc))))
+
+(defn tm_dedup (xs) (tm_reverse_go (tm_dedup_go xs (list)) (list)))
+
+; matched = float count of `needles` (deduped contributor) present in `hay`
+; (deduped idea), via str_eq membership — the recipe's match_count, hits 0.0 +1.0
+(defn tm_match_go (needles hay hits)
+  (if (eq (len needles) 0)
+      hits
+      (if (tm_member (head needles) hay)
+          (tm_match_go (tail needles) hay (add hits 1.0))
+          (tm_match_go (tail needles) hay hits))))
+
+(defn route_tag_match_score (q)
+  (do (let cstr (param_present "contributor_tags" q "energy,flow,coherence,field"))
+  (do (let istr (param_present "idea_tags" q "energy,flow"))
+  (do (let ct (tm_dedup (nonempty (split_commas cstr))))
+  (do (let it (tm_dedup (nonempty (split_commas istr))))
+  (do (let score
+        (if (eq (len ct) 0)
+            0.5
+            (if (eq (len it) 0)
+                0.5
+                (do (let matched (tm_match_go ct it 0.0))
+                    (max2 0.0 (min2 1.0 (div matched (len ct))))))))
+      (str_concat
+        (str_concat
+          (str_concat (str_concat "{\"score\":" (value_str score))
+                      (str_concat ",\"contributor_tags\":" (json_str_list ct)))
+          (str_concat ",\"idea_tags\":" (json_str_list it)))
+        ",\"runtime\":\"inline\"}")))))))
+
+; ===========================================================================
 ; liveness — native, zero inputs (so the shadow answers /health without a hop)
 ; ===========================================================================
 (defn route_health () "ok")
@@ -822,4 +1003,6 @@
     (list "/api/utils/value_vector"        route_value_vector)
     (list "/api/utils/grounded_roi"        route_grounded_roi)
     (list "/api/utils/idea_grounded_cost_sum" route_idea_grounded_cost_sum)
-    (list "/api/utils/grounded_cost"        route_grounded_cost)))
+    (list "/api/utils/grounded_cost"        route_grounded_cost)
+    (list "/api/utils/worldview_alignment"  route_worldview_alignment)
+    (list "/api/utils/tag_match_score"      route_tag_match_score)))
