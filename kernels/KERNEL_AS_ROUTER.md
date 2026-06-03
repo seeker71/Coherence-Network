@@ -458,16 +458,21 @@ upstream that accepts the connection but never responds — the router returns a
 blackholed upstream returns a clean 504/502 rather than hanging; with N workers a
 hung fan-out occupies ONE worker for at most the connect+read timeout while the rest
 of the pool keeps serving 20 native requests in milliseconds — the pool is NOT
-starved; a read-timeout returns 504 ONCE, not reconnect+retried). What stays open:
-the fan-out response-body cap — the router buffers each upstream response whole
-and rejects bodies over a fixed size with `502 fan-out upstream error: upstream
-response body too large` (the response-side twin of the request-side `413` at
-CL≈1 MB). This is the blocker the 2026-06-03 live flip surfaced: large
-Content-Length-framed JSON routes (e.g. `/api/concepts/domain/living-collective`,
-≈1.7 MB) 502 through the router while serving 200 direct — so "byte-identical"
-holds only for responses under the cap. Raising/removing the response cap (or
-streaming large bodies through rather than buffering them) is the gate the flip
-waits on. Also open:
+starved; a read-timeout returns 504 ONCE, not reconnect+retried). The fan-out
+response-body cap is now decoupled from the request cap: the router buffers each
+upstream response whole and bounds it at `MAX_UPSTREAM_RESPONSE_BYTES` = 64 MiB —
+distinct from the 1 MiB `MAX_BODY_BYTES` that rejects oversized *request* bodies
+with 413. A request body is untrusted client input; the upstream is the body's own
+FastAPI, a trusted peer that legitimately returns large JSON. The 1 MiB symmetry
+was wrong: it 502'd the real `/api/concepts/domain/living-collective`
+(≈1.7 MB Content-Length-framed JSON) with `upstream response body too large` while
+api served it 200 direct — the blocker the 2026-06-03 live flip surfaced. The fix
+(PR #2413, on main at 32d1cadd) is verified on the production VPS: the cap-fixed
+kernel-router in shadow relays that 1.7 MB route at `200`, byte-identical to the
+upstream (sha256 of the 1,704,424-byte body matches direct, X-Form-Router:
+fanout-python on the response), the proxy hop adding ~2–4 ms over direct on a body
+that size. "Byte-identical" now holds for the real large routes, not only the
+small ones. Still open:
 chunked/streaming upstream response bodies (an upstream chunked response is
 read-to-close and not pooled), per-route timeout config + circuit-breaking and
 retries beyond the single stale-connection / connect-timeout retry, and the accept
@@ -579,10 +584,21 @@ Per the rollback discipline (no debugging forward on the live front door), the
 one-command restore (`cp docker-compose.yml.pre-flip-… docker-compose.yml &&
 docker compose up -d api`) brought api's direct Traefik routing back — the
 `X-Form-Router` header gone, the 1.7 MB route 200 again, the witness back to
-breathing. **The flip is gated on raising/removing the fan-out response-body cap
-(or streaming large bodies through rather than buffering them whole)** — see the
-open-items note above. The shadow side-port proof and every measured property below
-stand; the cutover waits on that one fix. Today's front door is FastAPI.
+breathing.
+
+**The cap fix is verified on real prod — 2026-06-03.** PR #2413 (on main at
+32d1cadd) decoupled `MAX_UPSTREAM_RESPONSE_BYTES` (64 MiB) from `MAX_BODY_BYTES`
+(1 MiB). The cap-fixed image was rebuilt from main and run as a localhost-bound
+shadow on the production VPS *beside* the live path — Traefik untouched, FastAPI
+still the front door, the shadow routing zero visitor traffic. Through that shadow
+the formerly-502'ing `/api/concepts/domain/living-collective` relays **200,
+1,704,424 bytes, byte-identical to the upstream** (sha256 of the body matches
+direct; `X-Form-Router: fanout-python` on the response), the proxy hop adding
+~2–4 ms over direct on a body that size; the normal routes (health, version, ideas
+at 370 KB) still relay with the router header. The 1.7 MB blocker that gated the
+live flip is closed. The durable cutover is now gated only on the **re-flip
+itself** — Urs's go, with presence — not on any remaining code fix. Today's front
+door is FastAPI.
 
 ## Cross-references
 
