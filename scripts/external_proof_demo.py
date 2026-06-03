@@ -38,7 +38,7 @@ from typing import Any, Dict, Optional
 
 
 AUTH_FAILED_EXIT = 2
-TRANSIENT_FAILED_EXIT = 3  # 5xx / gateway / connection — not a code regression
+TRANSIENT_FAILED_EXIT = 3  # 5xx gateway / Cloudflare 52x origin-unreachable / connection — not a code regression
 
 
 def _idea_create_payload() -> Dict[str, Any]:
@@ -141,10 +141,13 @@ class ProofRunner:
                     file=sys.stderr,
                 )
                 raise SystemExit(TRANSIENT_FAILED_EXIT)
-            if response.status_code in (502, 503, 504):
+            if response.status_code in (502, 503, 504, 520, 521, 522, 523, 524):
                 print(
-                    f"[TRANSIENT] HTTP {response.status_code} — gateway/upstream blip, "
-                    "not a code regression. Workflow will treat as advisory.",
+                    f"[TRANSIENT] HTTP {response.status_code} — gateway/upstream blip "
+                    "or Cloudflare origin unreachable (the api answers 52x while it "
+                    "restarts mid-deploy, until it is back). The witness tracks api "
+                    "up/down; this proof verifies the lifecycle only when the api "
+                    "answers. Not a code regression — workflow retries, then advisory.",
                     file=sys.stderr,
                 )
                 print(
