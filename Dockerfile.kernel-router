@@ -1,0 +1,114 @@
+# syntax=docker/dockerfile:1.6
+#
+# Coherence Network kernel-router image — the kernel as the request FRONT DOOR.
+#
+# This packages `form-kernel-rust serve` (cli_serve in
+# form/form-kernel-rust/src/main.rs) as a STANDALONE deployable server. It is the
+# inversion described in kernels/KERNEL_AS_ROUTER.md: the Form kernel owns the
+# listening socket and is the router; CPython (the api container) becomes the
+# fan-out UPSTREAM for the routes the kernel does not yet serve natively.
+#
+# The same Rust binary already ships INSIDE the api image (Dockerfile.api) for
+# the inline-PyO3 guest path. This image ships it as a FRONT-DOOR SERVER instead
+# — the missing deployable artifact named in KERNEL_AS_ROUTER.md.
+#
+# Two stages, mirroring Dockerfile.api's proven build:
+#   1. kernel-builder — compiles form/form-kernel-rust → release binary, stripped
+#      (the SAME load-bearing build Dockerfile.api runs; no PyO3 wheel needed here
+#      because this image serves, it is not imported by Python).
+#   2. runtime — a lean debian-slim with ONLY the stripped binary, the form-stdlib
+#      (so a BML-authored manifest can be source-compiled at load via --stdlib),
+#      and the shadow routes manifest. No Rust toolchain in the final image.
+#
+# SHADOW MODE BY DEFAULT: the baked manifest (deploy/kernel-router/shadow-routes.fk)
+# binds an EMPTY routes list, so EVERY request fans out to ${UPSTREAM_URL}
+# (default http://api:8000) — byte-identical to today's behavior, one proxy hop,
+# with the X-Form-Router: fanout-python header as live evidence the router carries
+# the traffic. Promoting a route to native = adding a (path handler) line to the
+# manifest; nothing else in the topology changes.
+#
+# THIS IMAGE DOES NOT FLIP PRODUCTION. Building and even running this container
+# changes nothing about what fronts api.coherencycoin.com — that is a Traefik
+# re-point (one label), Urs's intent, a SEPARATE step. See
+# deploy/kernel-router/docker-compose.kernel-router.yml and KERNEL_AS_ROUTER.md.
+
+# -----------------------------------------------------------------------------
+# Stage 1 — build form-kernel-rust: the native binary (the front-door server)
+# -----------------------------------------------------------------------------
+FROM rust:1.86-slim-bookworm AS kernel-builder
+
+WORKDIR /build
+
+# Copy the kernel crate. The crate is self-contained — no workspace, no
+# repo-relative path deps — so this is all the source it needs. This is the
+# SAME source set Dockerfile.api's kernel-builder copies.
+COPY form/form-kernel-rust/Cargo.toml form/form-kernel-rust/Cargo.lock ./
+COPY form/form-kernel-rust/src ./src
+COPY form/form-kernel-rust/libraries ./libraries
+COPY form/form-kernel-rust/recipes ./recipes
+
+# Build the release binary and strip it — the SAME load-bearing build step
+# Dockerfile.api runs (cargo build --release --bin form-kernel-rust && strip).
+# This binary IS the kernel-router server: `form-kernel-rust serve` is cli_serve.
+RUN cargo build --release --bin form-kernel-rust \
+ && strip target/release/form-kernel-rust \
+ && ls -la target/release/form-kernel-rust
+
+
+# -----------------------------------------------------------------------------
+# Stage 2 — lean runtime: just the binary + form-stdlib + the shadow manifest
+# -----------------------------------------------------------------------------
+FROM debian:bookworm-slim AS runtime
+
+LABEL org.opencontainers.image.title="coherence-network-kernel-router"
+LABEL org.opencontainers.image.description="Coherence Network kernel-router — form-kernel-rust serve as the request front door (shadow mode: all fan-out to the CPython upstream)"
+LABEL org.opencontainers.image.source="https://github.com/seeker71/Coherence-Network"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    KERNEL_ROUTER_PORT=8080 \
+    UPSTREAM_URL=http://api:8000 \
+    ROUTES_FILE=/routes/shadow-routes.fk
+
+# Minimal runtime deps: ca-certificates for TLS-capable upstreams, curl only for
+# the healthcheck. The kernel binary is statically-linked-enough Rust; no Python,
+# no Rust toolchain, no app source.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# The stripped kernel binary from the builder stage — the ONLY artifact this
+# image needs from the Rust build. /app/bin is created by the COPY.
+COPY --from=kernel-builder /build/target/release/form-kernel-rust /app/bin/form-kernel-rust
+RUN chmod +x /app/bin/form-kernel-rust \
+ && /app/bin/form-kernel-rust --expr "(add 2 3)"
+
+# Form stdlib sources: needed only if a BML-authored manifest is used (it is
+# source-compiled at load via --stdlib). The default shadow manifest is raw
+# S-expression Form and does NOT touch the source-compiler, but baking the
+# stdlib in lets a BML manifest work later without rebuilding the image.
+COPY form/form-stdlib/ /app/form/form-stdlib/
+
+# The shadow routes manifest: an EMPTY routes list -> every path fans out to the
+# upstream. This is the deployable shadow-mode default; mount/replace
+# /routes/shadow-routes.fk to promote native routes.
+COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
+
+# The entrypoint resolves env at RUN time so PORT / UPSTREAM_URL / ROUTES_FILE
+# are container-configurable (compose env, -e flags) without rebuilding.
+COPY deploy/kernel-router/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8080
+
+# Liveness: in shadow mode /health has no native handler, so it fans out to the
+# upstream. If the upstream is up the proxy answers; if the kernel-router process
+# is down the check fails. (A future native /health would answer without the
+# upstream — a one-line manifest addition.)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${KERNEL_ROUTER_PORT}/health" || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]
