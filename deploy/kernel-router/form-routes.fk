@@ -1,0 +1,24 @@
+; form-routes.fk — the --form route layer for the kernel-router. Each handler is
+; a thin wrapper (http-adapter.fk: kh-request-as-alist + kh-ok-json) around the
+; parity-proven alist handler in production-routes.fk, so kh-serve dispatches to
+; the CPython-proven formula UNCHANGED — byte-identical to Python, with the HTTP
+; around it now traceable Form.
+;
+; Deploy manifest = HTTP stack + http-adapter.fk + production-routes.fk + this.
+; As more routes are wrapped here, the load balancer routes their paths to the
+; kernel-router and their Python implementations are removed, one proven route
+; at a time.
+
+(defn cw-native       (request) (kh-ok-json (route_coherence_weight    (kh-request-as-alist request))))
+(defn ndist-native    (request) (kh-ok-json (route_nodeid_distance     (kh-request-as-alist request))))
+(defn ncompat-native  (request) (kh-ok-json (route_nodeid_compatibility (kh-request-as-alist request))))
+
+(let routes
+  (list (kh-route "coherence_weight"     "GET" "/api/utils/coherence_weight"     0 "cw-native"      "" 100)
+        (kh-route "nodeid_distance"       "GET" "/api/utils/nodeid_distance"       0 "ndist-native"   "" 100)
+        (kh-route "nodeid_compatibility"  "GET" "/api/utils/nodeid_compatibility"  0 "ncompat-native" "" 100)))
+(let registry
+  (list (list "cw-native" cw-native)
+        (list "ndist-native" ndist-native)
+        (list "ncompat-native" ncompat-native)))
+0
