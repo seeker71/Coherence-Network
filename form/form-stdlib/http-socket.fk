@@ -19,17 +19,35 @@
 
 section [form.bml] {
 
-    ;; serve ONE connection through the pure Server: read the request bytes, run
-    ;; them through kh-serve, write the wire response, close. Returns what was
-    ;; sent so a witness can assert the round-trip. 65536 is the recv buffer for
-    ;; a single read of the request line + headers (a streamed body would loop
-    ;; the recv — a later refinement; the front-door requests we route fit one).
+    ;; ---- streaming read : loop recv until the request is framed -------
+    ;; socket_recv returns up to `max` bytes per call; the kernel does NOT assume
+    ;; one read holds the whole request. Loop until the request line + headers are
+    ;; complete (the \r\n\r\n terminator). An empty recv (EOF / peer closed) ends
+    ;; the read with what arrived — kh-serve answers an incomplete request rather
+    ;; than hanging. (A Content-Length body is read the same way — a later breath;
+    ;; the /api/utils GETs the router fronts carry none.) The recursion is bounded
+    ;; by request-size / 64 KiB — a handful of frames, NOT the unbounded accept
+    ;; loop, so it never approaches the stack ceiling.
+    def kh-headers-complete?(s) = ge(str_find(s, "\r\n\r\n", 0), 0);
+    def kh-recv-more(conn, acc, chunk) = if eq(str_len(chunk), 0) then acc else kh-recv-request(conn, str_concat(acc, chunk));
+    def kh-recv-request(conn, acc) = if kh-headers-complete?(acc) then acc else kh-recv-more(conn, acc, socket_recv(conn, 65536));
+
+    ;; ---- streaming write : loop send until every byte is on the wire --
+    ;; socket_send may write fewer bytes than asked; loop from the unsent offset
+    ;; so a large response is never assumed to leave in one send. (Chunked
+    ;; PRODUCTION — a handler yielding the body in pieces — is a later breath;
+    ;; this streams the transport, kh-serve renders the body whole for now.)
+    def kh-send-all(conn, s, from) = if ge(from, str_len(s)) then 0 else kh-send-all(conn, s, add(from, socket_send(conn, substring(s, from, str_len(s)))));
+
+    ;; serve ONE connection by STREAMING. The kernel hands this recipe the socket
+    ;; HANDLE; the recipe owns all the I/O — the kernel never pre-reads a buffer,
+    ;; the bytes flow through Form. Loop-recv the request, run it through the pure
+    ;; kh-serve, loop-send the response, close.
     def kh-serve-conn(conn, routes, registry) {
-        let request_bytes = socket_recv(conn, 65536);
-        let response = kh-serve(routes, registry, request_bytes);
-        let sent = socket_send(conn, response);
-        let closed = socket_close(conn);
-        response;
+        let request = kh-recv-request(conn, "");
+        let response = kh-serve(routes, registry, request);
+        let sent = kh-send-all(conn, response, 0);
+        socket_close(conn);
     }
 
     ;; the accept-loop: accept and serve `count` connections, then stop. The

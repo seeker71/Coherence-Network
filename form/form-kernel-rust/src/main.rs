@@ -7372,7 +7372,10 @@ fn worker_loop(
     // every connection runs the Form serve pipeline directly — Form does parse,
     // route, dispatch, render; the kernel only opens the socket and walks it.
     let form_serve: Option<(Arc<Closure>, Value, Value)> = if form_mode {
-        let kh_id = k.intern_string("kh-serve").inst;
+        // kh-serve-conn (http-socket.fk) is the STREAMING entry: it takes the
+        // socket handle and owns the I/O. (kh-serve, the pure string-in/string-out
+        // core, is what kh-serve-conn calls between the recv and send loops.)
+        let kh_id = k.intern_string("kh-serve-conn").inst;
         match arena.lookup(root_env, kh_id) {
             Some(Value::Closure(c)) => {
                 let routes_id = k.intern_string("routes").inst;
@@ -7385,7 +7388,8 @@ fn worker_loop(
             }
             _ => {
                 eprintln!(
-                    "serve --form: worker {} could not resolve kh-serve as a closure",
+                    "serve --form: worker {} could not resolve kh-serve-conn as a closure \
+                     (the manifest must prelude http-socket.fk)",
                     id
                 );
                 return;
@@ -7831,36 +7835,31 @@ fn load_route_data_registry(
 // balancer routes only native paths here, a 404 from kh-serve means a path the
 // balancer should not have sent — honest, not a fan-out concern.
 fn serve_connection_form(
-    mut stream: TcpStream,
+    stream: TcpStream,
     k: &mut Kernel,
     arena: &mut Arena,
-    kh_serve: &Arc<Closure>,
+    kh_serve_conn: &Arc<Closure>,
     routes_val: &Value,
     registry_val: &Value,
 ) {
-    use std::io::Read;
-    let mut buf = vec![0u8; 65536];
-    let n = match stream.read(&mut buf) {
-        Ok(n) if n > 0 => n,
-        _ => return, // EOF / error — close
-    };
-    let raw = String::from_utf8_lossy(&buf[..n]).to_string();
-    if kh_serve.params.len() != 3 {
-        let _ = stream
-            .write_all(b"HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n");
+    // STREAMING: the kernel does NOT pre-read a buffer. It registers the accepted
+    // connection as a Form socket handle and hands that handle to the recipe;
+    // kh-serve-conn (http-socket.fk) owns ALL the I/O — loop-recv the request
+    // (socket_recv until framed), run kh-serve, loop-send the response
+    // (socket_send until drained), close. The bytes flow through Form, not a Rust
+    // buffer. kh-serve-conn(conn, routes, registry).
+    if kh_serve_conn.params.len() != 3 {
         return;
     }
-    // apply (kh-serve routes registry raw): bind the three params, walk the body.
-    let frame = arena.new_frame_with_capacity(Some(kh_serve.env), 3);
-    arena.bind(frame, kh_serve.params[0], routes_val.clone());
-    arena.bind(frame, kh_serve.params[1], registry_val.clone());
-    arena.bind(frame, kh_serve.params[2], Value::Str(raw));
-    let result = walk(k, arena, kh_serve.body, frame);
-    let wire = match result {
-        Value::Str(s) => s,
-        other => other.display(),
-    };
-    let _ = stream.write_all(wire.as_bytes());
+    let h = socket_register(SocketKind::Stream(Mutex::new(stream)));
+    let frame = arena.new_frame_with_capacity(Some(kh_serve_conn.env), 3);
+    arena.bind(frame, kh_serve_conn.params[0], Value::Int(h));
+    arena.bind(frame, kh_serve_conn.params[1], routes_val.clone());
+    arena.bind(frame, kh_serve_conn.params[2], registry_val.clone());
+    let _ = walk(k, arena, kh_serve_conn.body, frame);
+    // The recipe closes the handle (socket_close); drop it here too so a recipe
+    // that returned early never leaks a handle per connection.
+    socket_drop(h);
 }
 
 fn cli_serve(args: &[String]) -> i32 {
