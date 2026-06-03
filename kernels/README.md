@@ -129,6 +129,8 @@ The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what 
 
 [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The parity suite's `PARITY_THIRD_RUNTIME` selector flips the third runtime atomically; `make wellness` surfaces the remaining bootstrap weight each breath.
 
+[`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, and the executable Form proof that the picture is now model data.
+
 [`UNIVERSAL_TRANSLATOR_AUDIT.md`](UNIVERSAL_TRANSLATOR_AUDIT.md) walks the body's current artifacts against the highest goal (universal translator across media, recipe orchestration in pure numeric space, less ice / more gas, minimize bootstrap surface). It names where the body is heavy in ice, heavy in bootstrap, heavy in dependencies, already light, and the top-ten concrete next breaths.
 
 [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) names the closing shapes for the audit's finding #4 — *one Blueprint per shape across all source languages*. Three shapes (A: rules emit MATH directly; B: lift maps BINOP→MATH at recipe time; C: BINOP as Blueprint-view on MATH); Shape B is the smallest closing breath.

@@ -54,6 +54,157 @@
     (defn compiler-rule-pattern (x) (nth (cell-value x) 2))
     (defn compiler-rule-action (x) (nth (cell-value x) 3))
 
+    ;; --- compiler picture cells ------------------------------------
+    ;; The picture is executable model data: flows, stages, language ports,
+    ;; evidence, and next breaths all use the same compiler-object carrier.
+
+    (defn compiler-stage (name intent carrier artifact proof)
+        (compiler-object "compiler-stage"
+                         (list name intent carrier artifact proof)
+                         (list carrier artifact proof)
+                         compiler-identity-inverse))
+
+    (defn compiler-stage-name (x) (nth (cell-value x) 0))
+    (defn compiler-stage-intent (x) (nth (cell-value x) 1))
+    (defn compiler-stage-carrier (x) (nth (cell-value x) 2))
+    (defn compiler-stage-artifact (x) (nth (cell-value x) 3))
+    (defn compiler-stage-proof (x) (nth (cell-value x) 4))
+
+    (defn compiler-flow (name stages)
+        (compiler-object "compiler-flow"
+                         (list name stages)
+                         stages
+                         compiler-identity-inverse))
+
+    (defn compiler-flow-name (x) (nth (cell-value x) 0))
+    (defn compiler-flow-stages (x) (nth (cell-value x) 1))
+    (defn compiler-flow-stage-count (x) (len (compiler-flow-stages x)))
+
+    (defn compiler-language-port (language source_surface grammar_surface lowerer emitter runtime shared_carrier status gaps proof)
+        (compiler-object "compiler-language-port"
+                         (list language source_surface grammar_surface lowerer emitter runtime shared_carrier status gaps proof)
+                         (list grammar_surface lowerer emitter runtime proof)
+                         compiler-identity-inverse))
+
+    (defn compiler-language-port-language (x) (nth (cell-value x) 0))
+    (defn compiler-language-port-source-surface (x) (nth (cell-value x) 1))
+    (defn compiler-language-port-grammar-surface (x) (nth (cell-value x) 2))
+    (defn compiler-language-port-lowerer (x) (nth (cell-value x) 3))
+    (defn compiler-language-port-emitter (x) (nth (cell-value x) 4))
+    (defn compiler-language-port-runtime (x) (nth (cell-value x) 5))
+    (defn compiler-language-port-shared-carrier (x) (nth (cell-value x) 6))
+    (defn compiler-language-port-status (x) (nth (cell-value x) 7))
+    (defn compiler-language-port-gaps (x) (nth (cell-value x) 8))
+    (defn compiler-language-port-proof (x) (nth (cell-value x) 9))
+
+    (defn compiler-language-port-shared? (port)
+        (if (str_eq (compiler-language-port-shared-carrier port) "compiler-object")
+            (if (str_eq (compiler-language-port-runtime port) "form-kernel") true false)
+            false))
+
+    (defn compiler-language-port-proven? (port)
+        (str_eq (compiler-language-port-status port) "proven"))
+
+    (defn compiler-shared-port-count (ports)
+        (if (nil? ports) 0
+            (add (if (compiler-language-port-shared? (head ports)) 1 0)
+                 (compiler-shared-port-count (tail ports)))))
+
+    (defn compiler-proven-port-count (ports)
+        (if (nil? ports) 0
+            (add (if (compiler-language-port-proven? (head ports)) 1 0)
+                 (compiler-proven-port-count (tail ports)))))
+
+    (defn compiler-find-language-port (ports language)
+        (if (nil? ports) empty
+            (if (str_eq (compiler-language-port-language (head ports)) language)
+                (head ports)
+                (compiler-find-language-port (tail ports) language))))
+
+    (defn compiler-picture (name compiler_compiler_flow compiler_flow language_ports evidence next_breaths)
+        (compiler-object "compiler-picture"
+                         (list name compiler_compiler_flow compiler_flow language_ports evidence next_breaths)
+                         (list compiler_compiler_flow compiler_flow language_ports evidence next_breaths)
+                         compiler-identity-inverse))
+
+    (defn compiler-picture-name (x) (nth (cell-value x) 0))
+    (defn compiler-picture-compiler-compiler-flow (x) (nth (cell-value x) 1))
+    (defn compiler-picture-compiler-flow (x) (nth (cell-value x) 2))
+    (defn compiler-picture-language-ports (x) (nth (cell-value x) 3))
+    (defn compiler-picture-evidence (x) (nth (cell-value x) 4))
+    (defn compiler-picture-next-breaths (x) (nth (cell-value x) 5))
+
+    (defn compiler-picture-total-stages (picture)
+        (add (compiler-flow-stage-count (compiler-picture-compiler-compiler-flow picture))
+             (compiler-flow-stage-count (compiler-picture-compiler-flow picture))))
+
+    (defn compiler-picture-shared-port-count (picture)
+        (compiler-shared-port-count (compiler-picture-language-ports picture)))
+
+    (defn compiler-picture-proven-port-count (picture)
+        (compiler-proven-port-count (compiler-picture-language-ports picture)))
+
+    (defn compiler-picture-score (picture)
+        (add (compiler-picture-total-stages picture)
+        (add (len (compiler-picture-language-ports picture))
+        (add (compiler-picture-shared-port-count picture)
+        (add (compiler-picture-proven-port-count picture)
+        (add (len (compiler-picture-evidence picture))
+             (len (compiler-picture-next-breaths picture))))))))
+
+    (defn bmf-bml-compiler-compiler-flow (_x)
+        (compiler-flow "compiler-compiler"
+            (list
+                (compiler-stage "grammar-source" "A grammar is source, not metadata." "BMF or BNF or Form grammar text" "source grammar objects" "BMF-grammar.bml and compiler.fk")
+                (compiler-stage "grammar-parse" "The grammar parses itself into objects." "BMF object runtime" "Rule or Branch or Sequence or Repeat objects" "bmf-compiler-runtime.fk")
+                (compiler-stage "grammar-compile" "Source grammar objects lower into reusable compiler objects." "compiler-object" "compiler-rule and comp-bmf-* cells" "apply-bmf-compiler-rule")
+                (compiler-stage "dialect-capsule" "A grammar becomes a runtime port by selector." "runtime-grammar registry" "parse and emit capsule" "runtime-real-grammar-capsules-band.fk")
+                (compiler-stage "sibling-proof" "The same grammar carrier walks on each kernel." "Go/Rust/TypeScript kernels" "identical result" "form/validate.sh"))))
+
+    (defn bmf-bml-compiler-flow (_x)
+        (compiler-flow "compiler"
+            (list
+                (compiler-stage "source-scan" "Read source bytes into dialect source objects." "grammar surface" "tokens or source cells" "python-bmf and bml bands")
+                (compiler-stage "lift" "Lower dialect source objects into shared compiler objects." "compiler-object" "compiler-program or Form recipe cells" "compiler.fk and language lift bands")
+                (compiler-stage "normalize" "Map equivalent language shapes to the same NodeID family." "Form CTORs" "RBasic or language-view recipes" "CTOR unification and parity bands")
+                (compiler-stage "emit" "Write a runnable artifact or a reversible target surface." "emitter" ".fk or .fkb or native target text" "source-compiler and emit bands")
+                (compiler-stage "run-observe" "Execute with trace and provenance visible." "form-kernel" "value plus trace/framebuffer evidence" "sibling kernels and witness trace"))))
+
+    (defn bmf-bml-language-ports (_x)
+        (list
+            (compiler-language-port "BMF" "BMF grammar text" "compiler.fk bmf second" "bmf-compiler-rules" "comp-bmf-runtime" "form-kernel" "compiler-object" "proven" "full original source body semantic lowering remains growing" "bmf-compiler-runtime.fk")
+            (compiler-language-port "BML" "BML object/runtime source" "grammars/bml.fk" "apply-bml-bmf-rule" "bml-compile-program" "form-kernel" "compiler-object" "proven" "complete thesis corpus execution remains growing" "bml-compiler-runtime.fk")
+            (compiler-language-port "Python" "Python source" "grammars/python-bmf.fk" "python-bmf-lift.fk" "python-bmf-eval.fk" "form-kernel" "compiler-object" "in-motion" "f-strings, decorators, try/catch, modules, ORM runtime" "PYTHON_BMF_CONTRACT.md")
+            (compiler-language-port "TypeScript" "TypeScript source" "grammars/typescript-bmf.fk" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "seed" "full TS grammar and semantic lift" "source-compiler-multi-dialect-band.fk")
+            (compiler-language-port "Go" "Go source" "grammars/go-bmf.fk" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "seed" "full Go grammar and semantic lift" "source-compiler-multi-dialect-band.fk")
+            (compiler-language-port "Rust" "Rust source" "grammars/rust-bmf.fk" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "seed" "full Rust grammar and semantic lift" "source-compiler-multi-dialect-band.fk")
+            (compiler-language-port "Java" "legacy JBMF and future Java source" "legacy-jbmf plus future java-bmf" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "legacy-source" "import Java grammar from Angelic/JBMF into Form" "Downloads/Angelic/CD/Source/Java/JBMF")
+            (compiler-language-port "CSharp" "future CSharp source" "future csharp-bmf" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "target" "author CSharp grammar and semantic lift on the same port contract" "compiler-picture")))
+
+    (defn bmf-bml-compiler-picture (_x)
+        (compiler-picture
+            "BMF/BML modern compiler and compiler-compiler"
+            (bmf-bml-compiler-compiler-flow 0)
+            (bmf-bml-compiler-flow 0)
+            (bmf-bml-language-ports 0)
+            (list
+                "Downloads/Angelic/src/BMF class hierarchy"
+                "Downloads/Angelic/src/BML/lang object model"
+                "docs/field/urs/artifacts/master-thesis-2000"
+                "form/form-stdlib/compiler.fk"
+                "form/form-stdlib/runtime-grammar.fk"
+                "kernels/PYTHON_PIPELINE_STATUS.md"
+                "form/validate.sh sibling-kernel parity")
+            (list
+                "move grammar ports into runtime registry capsules"
+                "complete BMF source body semantic lowering"
+                "lift BML object model into canonical compiler objects"
+                "extend Python/TS/Go/Rust grammar ports by same contract"
+                "add Java and CSharp ports without changing the core flow")))
+
+    (defn bmf-bml-compiler-picture-score (_x)
+        (compiler-picture-score (bmf-bml-compiler-picture 0)))
+
     ;; --- multi-section Form source objects --------------------------
     ;; A source file can carry several dialect sections as Form objects:
     ;; a readable BMF second, a recipe section, serialized objects, or any
