@@ -1,0 +1,47 @@
+; tests/http-request-band.fk — sibling-witness band for http-request.fk.
+; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk
+;
+; Iteration 2 of lifting the HTTP server into the BML class hierarchy: the
+; Request class. Proves kh-request-from-raw lifts a raw HTTP/1.1 request string
+; into a kh-request value — method, path-only (query stripped), the query parsed
+; to kh-field, the headers to kh-header, the body — and that the assembled value
+; is kh-request-valid?. The engine now speaks the class the Router consumes.
+;
+; Each check contributes a distinct bit; the band emits their sum (31 when all
+; pass). Identical across Go/Rust/TS proves the lift is correct and portable.
+
+(let raw "GET /api/utils/coherence_weight?threshold=90 HTTP/1.1\r\nHost: x\r\n\r\n")
+(let req (kh-request-from-raw raw))
+
+;; CHECK 1 (bit 1) — the method, lifted off the request line.
+(let ok-method (if (str_eq (kh-request-method req) "GET") 1 0))
+
+;; CHECK 2 (bit 2) — the path is the path-ONLY form: the "?threshold=90" query
+;; is split off, so a handler routes on "/api/utils/coherence_weight".
+(let ok-path (if (str_eq (kh-request-path req) "/api/utils/coherence_weight") 2 0))
+
+;; CHECK 3 (bit 4) — the query string parsed into the Field class: one
+;; kh-field whose name is "threshold" and value "90". Typed data, not a string.
+(let query (kh-request-query req))
+(let ok-query
+    (if (eq (len query) 1)
+        (if (str_eq (kh-field-name (head query)) "threshold")
+            (if (str_eq (kh-field-value (head query)) "90") 4 0)
+            0)
+        0))
+
+;; CHECK 4 (bit 8) — the Host header lifted into the Header class, found by
+;; name through kernel-http.fk's own kh-header-present?.
+(let ok-header (if (kh-header-present? (kh-request-headers req) "Host") 8 0))
+
+;; CHECK 5 (bit 16) — the assembled request satisfies kh-request-valid?: a
+;; known method, a rooted path, every header a kh-header, every field a
+;; kh-field. The class validates itself.
+(let ok-valid (if (kh-request-valid? req) 16 0))
+
+;; verdict — sum of the bit-weighted checks; 31 when all pass.
+(add ok-method
+(add ok-path
+(add ok-query
+(add ok-header
+     ok-valid))))
