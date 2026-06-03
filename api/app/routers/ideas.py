@@ -309,11 +309,17 @@ async def get_resonance(
 
     items, total = get_resonance_feed_page(window_hours=window_hours, limit=limit, offset=offset)
     if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
+        # One batched query for the whole feed's canonical views instead of one
+        # SELECT per idea — the same N+1 shape /api/ideas?lang=xx had. Each idea
+        # resolves to the SAME record the per-idea canonical_view returned.
+        canon = _tcache.canonical_views(
+            "idea", [it.get("idea_id") or it.get("id") for it in items if (it.get("idea_id") or it.get("id"))], lang
+        )
         for it in items:
             iid = it.get("idea_id") or it.get("id")
             if not iid:
                 continue
-            rec = _tcache.canonical_view("idea", iid, lang)
+            rec = canon.get(iid)
             if rec and rec.content_title:
                 it["name"] = rec.content_title
                 if rec.content_description and "description" in it:

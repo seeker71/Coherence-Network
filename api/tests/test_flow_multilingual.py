@@ -845,3 +845,48 @@ def test_canonical_views_batch_matches_per_idea():
     assert batch[ids[0]].content_title == "Titel 0 neu"
     # empty input short-circuits to {} (no query)
     assert _cache.canonical_views("idea", [], lang) == {}
+
+
+def test_resonance_pair_to_out_batch_matches_per_call():
+    """resonance._pair_to_out projects the SAME names whether it reads each view
+    via a per-idea canonical_view (canon=None) or from a pre-batched dict (canon
+    supplied) — the batch threaded into the listing must be a faithful substitute
+    for the two-SELECTs-per-pair it replaces.
+
+    Strange-minimal: one pair where side A has a German canonical view and side B
+    has none. That single pair exercises the title override (A), the absent-view
+    None branch (B keeps its anchor name), and batch-vs-per-call agreement at once.
+    """
+    from app.routers import resonance as _res
+    from app.services import idea_resonance_service as _rs
+
+    lang = "de"
+    id_a = f"idea-pair-a-{uuid4().hex[:8]}"
+    id_b = f"idea-pair-b-{uuid4().hex[:8]}"  # deliberately gets NO view
+    _cache.write_view(
+        entity_type="idea", entity_id=id_a, lang=lang,
+        content_title="Symbiose", content_description="",
+        content_markdown="", author_type="test",
+    )
+
+    pair = _rs.ResonancePair(
+        idea_id_a=id_a, name_a="Symbiosis", domain_a=["biology"],
+        idea_id_b=id_b, name_b="Microservices", domain_b=["software"],
+        crk_score=0.9, ot_distance=0.1, coherence=0.85, d_codex=0.2,
+        cross_domain=True, strong=True, discovered_at="2026-06-03T00:00:00Z",
+    )
+
+    # The batch the listing would build (collecting both pair ids in one query).
+    canon = _cache.canonical_views("idea", [id_a, id_b], lang)
+
+    per_call = _res._pair_to_out(pair, lang)            # canon=None → per-idea SELECTs
+    batched = _res._pair_to_out(pair, lang, canon)      # reads from the pre-batched dict
+
+    # A's name comes from the German view; B has no view so keeps its anchor name.
+    assert per_call.name_a == "Symbiose"
+    assert per_call.name_b == "Microservices"
+    # Faithful substitute: batched output is identical to the per-call output.
+    assert batched.name_a == per_call.name_a
+    assert batched.name_b == per_call.name_b
+    # The absent id is simply not in the batch dict (mirrors canonical_view -> None).
+    assert id_b not in canon

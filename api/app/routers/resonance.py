@@ -95,14 +95,27 @@ def _idea_to_dict(idea) -> dict:
     }
 
 
-def _pair_to_out(pair: "resonance_svc.ResonancePair", lang: str | None = None) -> ResonancePairOut:
+def _pair_to_out(
+    pair: "resonance_svc.ResonancePair",
+    lang: str | None = None,
+    canon: dict | None = None,
+) -> ResonancePairOut:
     name_a = pair.name_a
     name_b = pair.name_b
     if lang and lang in SUPPORTED_LOCALES and lang != DEFAULT_LOCALE:
-        view_a = _tcache.canonical_view("idea", pair.idea_id_a, lang)
+        # ``canon`` is the listing's canonical views fetched in ONE batched query
+        # by the caller (collecting every pair's a+b idea_id), so a page of pairs
+        # is one SELECT instead of two-per-pair. Each lookup resolves to the SAME
+        # record the per-idea canonical_view returned; when no batch is supplied
+        # (other callers) fall back to the per-idea query, identical behavior.
+        if canon is None:
+            view_a = _tcache.canonical_view("idea", pair.idea_id_a, lang)
+            view_b = _tcache.canonical_view("idea", pair.idea_id_b, lang)
+        else:
+            view_a = canon.get(pair.idea_id_a)
+            view_b = canon.get(pair.idea_id_b)
         if view_a and view_a.content_title:
             name_a = view_a.content_title
-        view_b = _tcache.canonical_view("idea", pair.idea_id_b, lang)
         if view_b and view_b.content_title:
             name_b = view_b.content_title
     return ResonancePairOut(
@@ -153,8 +166,14 @@ async def get_cross_domain_resonances(
         min_coherence=min_coherence,
     )
     effective_min = max(min_coherence, resonance_svc.CROSS_DOMAIN_MIN_COHERENCE)
+    # One batched canonical-view query over every pair's a+b idea_id instead of
+    # two SELECTs per pair (the N+1 _pair_to_out otherwise fired per pair).
+    canon = None
+    if target_lang and target_lang in SUPPORTED_LOCALES and target_lang != DEFAULT_LOCALE:
+        _ids = [pid for p in pairs for pid in (p.idea_id_a, p.idea_id_b) if pid]
+        canon = _tcache.canonical_views("idea", _ids, target_lang)
     return CrossDomainResponse(
-        pairs=[_pair_to_out(p, target_lang) for p in pairs],
+        pairs=[_pair_to_out(p, target_lang, canon) for p in pairs],
         total=len(pairs),
         min_coherence_used=effective_min,
     )
@@ -198,8 +217,14 @@ async def get_resonance_for_idea(
     )
 
     source_name = source_dict.get("name", idea_id)
+    canon = None
     if target_lang and target_lang in SUPPORTED_LOCALES and target_lang != DEFAULT_LOCALE:
-        src_view = _tcache.canonical_view("idea", idea_id, target_lang)
+        # One batched canonical-view query over the source idea plus every
+        # match pair's a+b idea_id, instead of one SELECT for the source name
+        # and two per match (the N+1 _pair_to_out otherwise fired per match).
+        _ids = [idea_id] + [pid for p in matches for pid in (p.idea_id_a, p.idea_id_b) if pid]
+        canon = _tcache.canonical_views("idea", _ids, target_lang)
+        src_view = canon.get(idea_id)
         if src_view and src_view.content_title:
             source_name = src_view.content_title
 
@@ -207,7 +232,7 @@ async def get_resonance_for_idea(
         idea_id=idea_id,
         name=source_name,
         domain=domain,
-        matches=[_pair_to_out(p, target_lang) for p in matches],
+        matches=[_pair_to_out(p, target_lang, canon) for p in matches],
         total=len(matches),
     )
 

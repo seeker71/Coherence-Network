@@ -333,11 +333,15 @@ async def list_concepts(
     result = concept_service.list_concepts(limit=limit, offset=offset)
     if target_lang and translator_service.is_supported(target_lang) and target_lang != translator_service.DEFAULT_LOCALE:
         items = result.get("items") or result.get("concepts") or []
+        # One batched query for the whole listing's canonical views instead of
+        # one SELECT per concept — the same N+1 shape /api/ideas?lang=xx had.
+        _cids = [c.get("id") for c in items if isinstance(c, dict) and c.get("id")]
+        canon = translation_cache.canonical_views("concept", _cids, target_lang)
         for c in items:
             cid = c.get("id") if isinstance(c, dict) else None
             if not cid:
                 continue
-            rec = translation_cache.canonical_view("concept", cid, target_lang)
+            rec = canon.get(cid)
             if rec:
                 if rec.content_title:
                     c["name"] = rec.content_title
@@ -411,11 +415,15 @@ async def list_concepts_by_domain(
     result = concept_service.list_concepts_by_domain(domain, limit=limit)
     if target_lang and translator_service.is_supported(target_lang) and target_lang != translator_service.DEFAULT_LOCALE:
         items = result.get("items") or result.get("concepts") or []
+        # One batched query for the whole listing's canonical views instead of
+        # one SELECT per concept — the same N+1 shape /api/ideas?lang=xx had.
+        _cids = [c.get("id") for c in items if isinstance(c, dict) and c.get("id")]
+        canon = translation_cache.canonical_views("concept", _cids, target_lang)
         for c in items:
             cid = c.get("id") if isinstance(c, dict) else None
             if not cid:
                 continue
-            rec = translation_cache.canonical_view("concept", cid, target_lang)
+            rec = canon.get(cid)
             if rec:
                 if rec.content_title:
                     c["name"] = rec.content_title
