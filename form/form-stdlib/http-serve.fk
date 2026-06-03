@@ -1,0 +1,415 @@
+; http-serve.fk — per-request HTTP/1.1 handling as a Form recipe.
+;
+; preludes: form-stdlib/http-parse.fk
+;
+; This is the FIRST stone of moving the kernel-router's HTTP off the Rust
+; kernel and into Form. The Rust kernel grew an HTTP server — handle_request,
+; read_request, parse_request_line, http_response, the fan-out loop, plus the
+; bound/cap machinery — that DUPLICATES what belongs in the body's own
+; inspectable senses. HTTP framing, path routing, query parsing, response
+; building, and fan-out are not kernel concerns; they are recipes. The kernel
+; stays minimal (socket_* natives + eval + JIT + string/node natives); the
+; per-request shape lives here where it is traceable, observable, and rebuildable.
+;
+; What this recipe MEANS: "given a raw HTTP/1.1 request string and a routes
+; table, parse the request, route the path to a native handler (serving its
+; response) or signal fan-out, and produce the wire response string." The same
+; meaning a kernel's handle_request carries — but as Form, on the socket
+; primitives and the existing parse/route modules, sibling-verified across the
+; three kernels.
+;
+; The three entry points, each pure and bounded:
+;
+;   (http-handle raw routes)
+;       raw HTTP request STRING + routes table
+;       → full HTTP/1.1 response STRING  (native handler matched), or
+;       → fan-out marker (list "__fanout__" raw)  (no handler — caller fans out)
+;     http-handle is PURE: request-string + routes → response-string|marker.
+;     No socket, no upstream. This is the half that proves three-way-identical
+;     with no I/O.
+;
+;   (http-fanout raw upstream-host upstream-port)
+;       → upstream response STRING, relayed verbatim. socket_connect, send the
+;     raw request, recv until the response is Content-Length-complete (read-to-
+;     close fallback), close. The fan-out half — real socket, no caps.
+;
+;   (http-serve-conn conn routes upstream-host upstream-port)
+;       ties ONE connection: recv the request, http-handle it, fan out if the
+;     marker came back, send the response, close. ONE connection, bounded — the
+;     accept-loop that calls this per-conn is a later (minimal-Rust or TCO-Form)
+;     step, not this recipe's concern.
+;
+; routes table shape — the SAME shape deploy/kernel-router/production-routes.fk
+; binds: a list of (path-string handler-closure) pairs. The handler is an
+; ordinary Form closure taking the query alist `q` and returning a response
+; shape built by (http-respond code body) — a (list "__http_status__" code body)
+; tagged triple. (http-ok body) is the 200 sugar. Paths not in the table fan
+; out. (production-routes.fk's first row is a source-authored KernelHTTPRoute
+; cell; http-find-route reads (path handler) pairs and skips shapes it doesn't
+; recognize, so a mixed manifest is safe.)
+;
+; WHY a uniform response shape, not "string body OR status list". A handler
+; could in principle return a bare body STRING for 200 and a tagged LIST for a
+; non-200, letting the engine sniff which it got. But Form has no portable
+; string-vs-list predicate: head / nth / str_len each DIVERGE across the three
+; kernels when handed the wrong type (Go coerces or returns 0; Rust and TS raise
+; an uncatchable error), so the engine cannot safely inspect an ambiguous
+; string-or-list. The honest resolution — and the cleaner abstraction — is ONE
+; response shape every handler returns. http-respond builds exactly the
+; (list "__http_status__" code body) triple the Rust serve path's
+; handler_status_response ALREADY recognizes, so a handler authored against this
+; engine is also a valid native handler for the kernel's existing serve loop. A
+; bare-string production handler (route_coherence_weight returns a String) is
+; adapted at the route table with a one-line wrap: (http-ok (route_... q)). A
+; future step may add a three-way `list?` native and restore bare-string
+; sniffing; that is the one honest minimal kernel addition this boundary would
+; want, deferred here to keep the step pure Form.
+;
+; The query layer (split a path on `?`, parse `k=v&...` into an alist) lives
+; here because it is an HTTP-transport concern — the engine builds the alist it
+; hands the handler. Handlers read it with their own assoc/param_or helpers.
+;
+; Cost is O(n) in the request size — each str_find/substring walks the native
+; string once; recursion is on cursors and list tails advancing, never on
+; string length re-scanned from 0.
+
+;; The engine's value shapes are plain Form data — the fan-out marker is a
+;; string-tagged list (list "__fanout__" raw); a handler's response is the
+;; (list "__http_status__" code body) triple; the wire response is a STRING. No
+;; engine-owned Blueprint NodeID is needed: http-parse.fk already registers the
+;; request shape, and a string-tagged list needs no substrate name. This keeps
+;; the engine portable without a bp-table registration of its own.
+;;
+;; The status tag is the SAME "__http_status__" the kernel-router's existing
+;; compatibility shape uses (form-kernel-rust handler_status_response), so a
+;; handler authored here is a valid native handler for the kernel's serve loop.
+(let HS-STATUS-TAG "__http_status__")
+
+;; ===================================================================
+;; query layer — path/query split and k=v&... alist parse
+;; ===================================================================
+
+;; (hs-path-only path) → the path up to the first '?', or the whole path
+;; when there is no query string. "/a/b?x=1" → "/a/b"; "/a/b" → "/a/b".
+(defn hs-path-only (path)
+    (do
+        (let q (str_find path "?" 0))
+        (if (eq q -1) path (substring path 0 q))))
+
+;; (hs-query-of path) → the query string after the first '?', or "" when
+;; absent. "/a/b?x=1&y=2" → "x=1&y=2"; "/a/b" → "".
+(defn hs-query-of (path)
+    (do
+        (let q (str_find path "?" 0))
+        (if (eq q -1) "" (substring path (add q 1) (str_len path)))))
+
+;; (hs-kv pair) → (key value) from a "k=v" segment. No '=' → (segment "").
+;; Splits on the FIRST '=' so a value containing '=' stays intact.
+(defn hs-kv (pair)
+    (do
+        (let eqi (str_find pair "=" 0))
+        (if (eq eqi -1)
+            (list pair "")
+            (list (substring pair 0 eqi)
+                  (substring pair (add eqi 1) (str_len pair))))))
+
+;; (hs-parse-query qs) → alist of (k v) pairs. Splits the query string on
+;; '&', then each segment on '='. "" → (). "x=1&y=2" → (("x" "1") ("y" "2")).
+;; Walks via str_find/substring (native string ops); recursion advances the
+;; cursor past each '&', never re-scanning from 0.
+(defn hs-parse-query-loop (s start)
+    (do
+        (let amp (str_find s "&" start))
+        (if (eq amp -1)
+            (list (hs-kv (substring s start (str_len s))))
+            (cons (hs-kv (substring s start amp))
+                  (hs-parse-query-loop s (add amp 1))))))
+
+(defn hs-parse-query (qs)
+    (if (eq (str_len qs) 0)
+        (list)
+        (hs-parse-query-loop qs 0)))
+
+;; ===================================================================
+;; routing — find the handler entry for a path
+;; ===================================================================
+
+;; A routes row this engine dispatches is a 2-element list (path-string
+;; handler-closure). A manifest may also carry source-authored route cells
+;; (production-routes.fk's first row); hs-row-dispatchable? keeps the scan
+;; safe by matching only the (path handler) shape and skipping the rest.
+(defn hs-row-dispatchable? (row)
+    (if (eq (len row) 2)
+        (str_eq (substring (head row) 0 1) "/")
+        false))
+
+;; (hs-find-route routes path) → the matching (path handler) row, or the
+;; empty list when no row's path equals the request path (the fan-out case).
+;; Path compared is the path-only form (query string already stripped by the
+;; caller). First-match wins, mirroring the kernel's route lookup.
+(defn hs-find-route (routes path)
+    (if (eq (len routes) 0)
+        (list)
+        (do
+            (let row (head routes))
+            (if (hs-row-dispatchable? row)
+                (if (str_eq (head row) path)
+                    row
+                    (hs-find-route (tail routes) path))
+                (hs-find-route (tail routes) path)))))
+
+;; (hs-route-handler row) → the handler closure of a (path handler) row.
+(defn hs-route-handler (row) (head (tail row)))
+
+;; ===================================================================
+;; response building — body string + status → wire response
+;; ===================================================================
+
+;; (hs-content-type body) → "application/json" when the body opens with '{'
+;; or '[' (a JSON object/array — what every /api/utils handler returns),
+;; else "text/plain". The same content-type the kernel's http_response
+;; stamps from the body's first byte.
+(defn hs-content-type (body)
+    (if (eq (str_len body) 0)
+        "text/plain"
+        (do
+            (let c0 (substring body 0 1))
+            (if (str_eq c0 "{")
+                "application/json"
+                (if (str_eq c0 "[")
+                    "application/json"
+                    "text/plain")))))
+
+;; (hs-reason code) → the HTTP/1.1 reason phrase for the status codes the
+;; native handlers actually return (200 happy path; 400/422 the observable
+;; "no" via respond; 404 a path-level miss; 500 a handler fault). Unknown
+;; codes fall to "OK" — the status integer is what carries meaning, the
+;; phrase is courtesy.
+(defn hs-reason (code)
+    (if (eq code 200) "OK"
+        (if (eq code 400) "Bad Request"
+            (if (eq code 404) "Not Found"
+                (if (eq code 422) "Unprocessable Entity"
+                    (if (eq code 500) "Internal Server Error"
+                        "OK"))))))
+
+;; (hs-build-response code body) → the full HTTP/1.1 response STRING:
+;;   HTTP/1.1 <code> <reason>\r\n
+;;   Content-Type: <type>\r\n
+;;   Content-Length: <byte length of body>\r\n
+;;   X-Form-Router: native-kernel\r\n
+;;   \r\n
+;;   <body>
+;; Content-Length is str_len(body): the kernel's str_len returns the UTF-8
+;; BYTE length, which for the ASCII JSON these handlers emit equals the byte
+;; count the wire requires. X-Form-Router: native-kernel is the honest
+;; provenance header — this response was served by a native Form handler,
+;; not fanned out. int_to_str renders the status and length as plain digits
+;; (three-way-portable; no Rust-only value_str on the framing path).
+(defn hs-build-response (code body)
+    (str_concat "HTTP/1.1 "
+    (str_concat (int_to_str code)
+    (str_concat " "
+    (str_concat (hs-reason code)
+    (str_concat "\r\nContent-Type: "
+    (str_concat (hs-content-type body)
+    (str_concat "\r\nContent-Length: "
+    (str_concat (int_to_str (str_len body))
+    (str_concat "\r\nX-Form-Router: native-kernel\r\n\r\n"
+                body))))))))))
+
+;; ===================================================================
+;; handler response shape — the uniform (http-respond code body) triple
+;; ===================================================================
+
+;; (http-respond code body) → the handler response shape: the tagged triple
+;; (list "__http_status__" code body). EVERY handler returns one of these (use
+;; http-ok for the 200 case). This is the SAME shape the kernel-router's
+;; handler_status_response recognizes, so the contract is shared with the
+;; existing serve path. Because it is ALWAYS a 3-element list, the engine reads
+;; it with head/tail — never sniffing string-vs-list, which Form cannot do
+;; portably (see the header note).
+(defn http-respond (code body) (list HS-STATUS-TAG code body))
+
+;; (http-ok body) → 200 sugar: (http-respond 200 body).
+(defn http-ok (body) (http-respond 200 body))
+
+;; accessors over the (list "__http_status__" code body) triple — head/tail
+;; chains, safe on every kernel since the value is always this 3-list.
+(defn hs-status-code (r) (head (tail r)))
+(defn hs-status-body (r) (head (tail (tail r))))
+
+;; (hs-serve-result r) → the wire response STRING for a handler response. Reads
+;; the status code and body off the triple and frames them. This is where a
+;; handler's observable "no" (http-respond 422 detail) becomes a 422 on the
+;; wire, exactly as the kernel's handle_request honors the status-bearing shape.
+(defn hs-serve-result (r)
+    (hs-build-response (hs-status-code r) (hs-status-body r)))
+
+;; ===================================================================
+;; http-handle — the core: parse → route → serve, or fan-out marker
+;; ===================================================================
+
+;; (http-fanout-marker raw) → the sentinel the caller checks to decide it
+;; must fan out: (list "__fanout__" raw). A 2-list whose head is the
+;; "__fanout__" tag and whose tail carries the original request to relay.
+(defn http-fanout-marker (raw) (list "__fanout__" raw))
+
+;; (http-is-fanout? r) → 1 when r is the fan-out marker, else 0. The caller
+;; (http-serve-conn, or a kernel accept-loop) tests this to choose between
+;; sending the native response and fanning out to the upstream.
+(defn http-is-fanout? (r)
+    (if (eq (len r) 2)
+        (str_eq (head r) "__fanout__")
+        false))
+
+;; (http-handle raw routes) — parse the request, strip the query string off
+;; the path, find the handler row, and either serve the handler's response or
+;; return the fan-out marker. PURE: request-string + routes → response-string
+;; | marker. No socket, no upstream — the half that proves three-way-identical
+;; with no I/O.
+(defn http-handle (raw routes)
+    (do
+        (let req (http-parse-request raw))
+        (let raw-path (http-path req))
+        (let path (hs-path-only raw-path))
+        (let row (hs-find-route routes path))
+        (if (eq (len row) 0)
+            (http-fanout-marker raw)
+            (do
+                (let q (hs-parse-query (hs-query-of raw-path)))
+                (let handler (hs-route-handler row))
+                (hs-serve-result (handler q))))))
+
+;; ===================================================================
+;; http-fanout — relay the request to the upstream, return its response
+;; ===================================================================
+
+;; Reading a Content-Length-framed response: we recv the head until the
+;; "\r\n\r\n" terminator is present, parse Content-Length from the headers,
+;; then recv until total received == header-end + declared body length. A
+;; response without Content-Length (or a parse miss) falls back to read-to-
+;; close: recv until the socket returns "" (peer closed). No caps, no
+;; timeouts — connect, send, recv, relay.
+
+;; (hs-header-value-ci headers name-lower) → the value string of the first
+;; header whose name, lowercased, equals name-lower; "" when absent. HTTP
+;; header names are case-insensitive, so we compare on a lowercased name.
+(defn hs-ascii-lower-go (s i n acc)
+    (if (eq i n) acc
+        (do
+            (let b (ord (char_at s i)))
+            (if (if (ge b 65) (le b 90) false)
+                (hs-ascii-lower-go s (add i 1) n (str_concat acc (byte_to_str (add b 32))))
+                (hs-ascii-lower-go s (add i 1) n (str_concat acc (char_at s i)))))))
+(defn hs-ascii-lower (s) (hs-ascii-lower-go s 0 (str_len s) ""))
+
+(defn hs-header-value-ci (headers name-lower)
+    (if (eq (len headers) 0)
+        ""
+        (do
+            (let h (head headers))
+            (if (str_eq (hs-ascii-lower (http-header-name h)) name-lower)
+                (http-header-value h)
+                (hs-header-value-ci (tail headers) name-lower)))))
+
+;; (hs-content-length-of head-str) → the declared Content-Length as an int,
+;; or -1 when the header is absent/empty (signals read-to-close). head-str is
+;; the bytes received so far (head + maybe some body); we parse it as an HTTP
+;; response by reusing http-parse-request's header machinery — the response
+;; status-line has the SAME three-token shape the request-line parser splits,
+;; so http-headers reads the response headers, and we pull Content-Length.
+(defn hs-content-length-of (head-str)
+    (do
+        (let parsed (http-parse-request head-str))
+        (let cl (hs-header-value-ci (http-headers parsed) "content-length"))
+        (if (eq (str_len cl) 0) -1 (str_to_int cl))))
+
+;; (hs-header-end s) → index just past the "\r\n\r\n" that ends the headers,
+;; or -1 when the terminator has not arrived yet. The body begins here.
+(defn hs-header-end (s)
+    (do
+        (let i (str_find s "\r\n\r\n" 0))
+        (if (eq i -1) -1 (add i 4))))
+
+;; recv until the header terminator "\r\n\r\n" is present, accumulating bytes.
+;; Returns the accumulated string (head + whatever body bytes rode along). A
+;; recv of "" (peer closed) stops the loop with what we have.
+(defn hs-recv-head-loop (h acc)
+    (if (ge (hs-header-end acc) 0)
+        acc
+        (do
+            (let chunk (socket_recv h 65536))
+            (if (eq (str_len chunk) 0)
+                acc
+                (hs-recv-head-loop h (str_concat acc chunk))))))
+
+;; recv until the accumulated length reaches `target`, or the peer closes.
+;; `target` is header-end + Content-Length (the full framed message size).
+(defn hs-recv-to-length-loop (h acc target)
+    (if (ge (str_len acc) target)
+        acc
+        (do
+            (let chunk (socket_recv h 65536))
+            (if (eq (str_len chunk) 0)
+                acc
+                (hs-recv-to-length-loop h (str_concat acc chunk) target)))))
+
+;; recv until the peer closes (read-to-close fallback for an unframed body).
+(defn hs-recv-to-close-loop (h acc)
+    (do
+        (let chunk (socket_recv h 65536))
+        (if (eq (str_len chunk) 0)
+            acc
+            (hs-recv-to-close-loop h (str_concat acc chunk)))))
+
+;; (hs-recv-response h) → the full upstream response STRING. Read the head to
+;; the "\r\n\r\n", parse Content-Length; if present, read to header-end+length;
+;; otherwise read to close. Correct for the Content-Length-framed responses the
+;; CPython upstream returns, with a read-to-close safety net.
+(defn hs-recv-response (h)
+    (do
+        (let head (hs-recv-head-loop h ""))
+        (let hend (hs-header-end head))
+        (if (lt hend 0)
+            head
+            (do
+                (let cl (hs-content-length-of head))
+                (if (lt cl 0)
+                    (hs-recv-to-close-loop h head)
+                    (hs-recv-to-length-loop h head (add hend cl)))))))
+
+;; (http-fanout raw upstream-host upstream-port) → the upstream response
+;; STRING to relay. socket_connect, send the raw request, recv the framed
+;; response, close. NO caps, NO timeouts — the honest minimal relay.
+(defn http-fanout (raw upstream-host upstream-port)
+    (do
+        (let up (socket_connect upstream-host upstream-port))
+        (let sent (socket_send up raw))
+        (let resp (hs-recv-response up))
+        (let closed (socket_close up))
+        resp))
+
+;; ===================================================================
+;; http-serve-conn — tie it for ONE connection
+;; ===================================================================
+
+;; (http-serve-conn conn routes upstream-host upstream-port) — recv the
+;; request off this connection, http-handle it; if the fan-out marker came
+;; back, fan out to the upstream; send the response and close. ONE connection,
+;; bounded — no loop, no recursion. Returns the response string sent (so a
+;; caller/test can witness it). The accept-loop that calls this per-conn is a
+;; later step (a minimal-Rust accept loop, or a Form loop where TCO allows).
+(defn http-serve-conn (conn routes upstream-host upstream-port)
+    (do
+        (let raw (socket_recv conn 65536))
+        (let handled (http-handle raw routes))
+        (let resp
+            (if (http-is-fanout? handled)
+                (http-fanout raw upstream-host upstream-port)
+                handled))
+        (let sent (socket_send conn resp))
+        (let closed (socket_close conn))
+        resp))
+
+0
