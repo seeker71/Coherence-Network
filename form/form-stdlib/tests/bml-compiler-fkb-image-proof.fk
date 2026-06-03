@@ -1,0 +1,135 @@
+; tests/bml-compiler-fkb-image-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the first BML compiler image artifact in the bootstrap ratchet path.
+; The image is not the final self-hosted compiler yet; it is a source-proven
+; .fkb checkpoint of parsed BML compiler-source metadata, with BML source
+; remaining authoritative and the binary serving as recoverable image.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-gt (actual expected)
+        (if (gt actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn class-const-value-score (class-component const-name expected-value)
+        (if (nil? class-component)
+            0
+            (do
+                (let const-component
+                    (bml-find-const
+                        (bml-class-own-constants class-component)
+                        const-name))
+                (if (nil? const-component)
+                    0
+                    (score-str
+                        (bml-const-value const-component)
+                        expected-value)))))
+
+    (defn class-method-return-score (class-component method-name expected-return)
+        (if (nil? class-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-class-own-methods class-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (let source-path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
+    (let image-path "/tmp/bml-compiler-source-image.fkb")
+    (let parsed (bml-source-file-parse-declarations source-path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+    (let classes (bml-model-classes model))
+    (let interfaces (bml-model-interfaces model))
+    (let templates (bml-components-of-kind nodes "Template"))
+
+    (let bootstrap-image-class
+        (bml-model-find-class
+            model
+            "BMLCompilerBootstrapImage"))
+    (let ratchet-class
+        (bml-model-find-class
+            model
+            "BMLBootstrapRatchet"))
+    (let image-emitter-class
+        (bml-model-find-class
+            model
+            "BMLCompilerImageEmitter"))
+
+    (let image-blueprint (bp "BML-COMPILER-IMAGE"))
+    (let image
+        (intern_node
+            image-blueprint
+            (list
+                (intern_trivial_string source-path)
+                (intern_trivial_string image-path)
+                (intern_trivial_string ".fkb")
+                (intern_trivial_int (file_size source-path))
+                (intern_trivial_int (len nodes))
+                (intern_trivial_int (len classes))
+                (intern_trivial_int (len templates))
+                (intern_trivial_int (len interfaces)))))
+    (let bytes-written (write_form_binary image-path image))
+    (let loaded (read_form_binary image-path))
+    (let loaded-kids (node_children loaded))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-bool (not (nil? bootstrap-image-class)))
+            (score-bool (not (nil? ratchet-class)))
+            (score-bool (not (nil? image-emitter-class)))
+            (class-const-value-score
+                image-emitter-class
+                "DefaultImageExtension"
+                ".fkb")
+            (class-const-value-score
+                image-emitter-class
+                "DefaultImagePath"
+                "form/.cache/bml/bml-compiler.fkb")
+            (class-const-value-score
+                image-emitter-class
+                "ImageSource"
+                "BML compiler source")
+            (class-method-return-score
+                image-emitter-class
+                "BuildImage"
+                "BMLCompilerBootstrapImage")
+            (class-method-return-score
+                image-emitter-class
+                "ImageIsSourceProven"
+                "bool")
+            (class-method-return-score
+                image-emitter-class
+                "ImagePath"
+                "String")
+            (score-bool (node_eq (node_category image) image-blueprint))
+            (score-gt bytes-written 0)
+            (score-gt (file_size image-path) 0)
+            (score-bool (node_eq loaded image))
+            (score-bool (node_eq (node_category loaded) image-blueprint))
+            (score-str (node_value (nth loaded-kids 0)) source-path)
+            (score-str (node_value (nth loaded-kids 1)) image-path)
+            (score-str (node_value (nth loaded-kids 2)) ".fkb")
+            (score-int (node_value (nth loaded-kids 3)) (file_size source-path))
+            (score-int (node_value (nth loaded-kids 4)) (len nodes))
+            (score-int (node_value (nth loaded-kids 5)) (len classes))
+            (score-int (node_value (nth loaded-kids 6)) (len templates))
+            (score-int (node_value (nth loaded-kids 7)) (len interfaces)))))
