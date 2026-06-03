@@ -324,10 +324,15 @@ reading honest:
 These axes move independently, sometimes in opposite directions. Transmuting a
 route raises USAGE and can ADD CPython at the same time: each one lands a FastAPI
 handler, a Pydantic response model, and a value-identical `*_py` fallback, so net
-Python LOC can grow even as more routes touch the kernel. The honest baseline:
-the kernel is a **guest-subroutine, not the runtime or the router** — 0 routes
-are served kernel-FIRST. That zero is the ground the reversal (kernel as the
-front door) moves; runtime-share is the dial that reads the move.
+Python LOC can grow even as more routes touch the kernel. The honest baseline at
+the live front door: the kernel is a **guest-subroutine, not the runtime or the
+router** — 0 routes are served kernel-FIRST (Traefik routes every live request to
+CPython). But the reversal is no longer hypothetical: the kernel-router manifest
+(`deploy/kernel-router/production-routes.fk`) now binds native handlers that serve
+the **whole request lifecycle** in Form, proven byte-identical to the live api in
+shadow — kernel-first **CAPABLE** routes awaiting the front-door flip. Runtime-
+share is the dial that reads the move, and it has two honest readings now: SERVED
+(0, the live front door) and CAPABLE (the proven native surface, ready to front).
 
 `scripts/runtime_surface_report.py` is the sensing instrument for this axis — it
 reports the route ratio, the per-route CPython-vs-kernel layering, the CPython

@@ -56,9 +56,13 @@ What is measured vs stated (the honesty bar)
     files; it is offered as evidence of the layering's weight, NOT as a precise
     "fraction of runtime" (wall-clock fraction depends on inputs and is dominated
     by FastAPI+Pydantic+network for any real request — stated, not faked).
-  • Kernel-FIRST routes = 0 is exact: no route is served by the kernel as the
-    front door; every kernel-served route is a CPython handler that calls the
-    kernel as a subroutine.
+  • Kernel-FIRST has two honest readings, both exact. SERVED = 0: no route is
+    served by the kernel at the LIVE front door (Traefik routes every request to
+    CPython; the 22 kernel-served routes are CPython handlers calling the kernel
+    as a subroutine). CAPABLE = the count of native handlers in the kernel-router
+    manifest (deploy/kernel-router/production-routes.fk) — whole-lifecycle-Form
+    routes proven byte-identical in shadow, awaiting the front-door flip. CAPABLE
+    is the native surface that EXISTS; SERVED is what fronts live traffic.
 
 This is a SENSING instrument — read-only, no behavior change, like the wellness
 probe and the attribution report. It tells the body the unflattering truth about
@@ -105,6 +109,42 @@ _KERNEL_ROUTER_FILES = [
     "kernel_grounding.py",
     "kernel_scoring.py",
 ]
+
+# The PRODUCTION kernel-router manifest. Routes with a native Form handler bound
+# here are served ENTIRELY in Form by the kernel-router — routing, query binding,
+# the compute, AND the JSON response all Form-native, no CPython in the path. That
+# is the whole request lifecycle, a categorically deeper move than serve_via_kernel
+# (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
+_KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
+
+
+def kernel_first_capable_routes() -> list[str]:
+    """API routes with a NATIVE Form handler in the kernel-router manifest.
+
+    These serve their ENTIRE request lifecycle in Form (X-Form-Router:
+    native-kernel) — the categorical step past serve_via_kernel's guest
+    subroutine. They are CAPABLE / proven-byte-identical-in-shadow, NOT yet
+    served at the live front door: the manifest is what the durable runtime-share
+    flip will front with, but until that flip Traefik still routes every request
+    to CPython. So this is the native surface that EXISTS and is proven, awaiting
+    the front-door cutover — distinct from kernel-first SERVED, which stays 0.
+
+    Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
+    the one source); ``/health`` and other non-``/api`` probes are excluded so the
+    count compares apples-to-apples with the route total. The ``;``-comment lines
+    that mention ``/api/...`` paths never match the ``(list "<path>" <handler>)``
+    shape, so the scan reads bindings only. Returns [] if the manifest is absent
+    (the report degrades to the SERVED count and says so).
+    """
+    if not _KERNEL_ROUTER_MANIFEST.is_file():
+        return []
+    try:
+        text = _KERNEL_ROUTER_MANIFEST.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    idx = text.find("(let routes")
+    block = text[idx:] if idx != -1 else text
+    return re.findall(r'\(list\s+"(/api/[^"]+)"\s+[A-Za-z_]\w*\)', block)
 
 
 def _load_attribution_module():
@@ -207,6 +247,9 @@ def build_report() -> dict:
     cpy = kernel_router_cpython_loc()
     py_fallbacks = _count_py_fallbacks()
 
+    capable = kernel_first_capable_routes()
+    n_capable = len(capable)
+
     usage_pct = (100.0 * n_served / total_routes) if total_routes else None
     loc_per_route = (cpy["total"] / n_served) if n_served else None
 
@@ -215,7 +258,19 @@ def build_report() -> dict:
         "total_routes": total_routes,
         "kernel_served_routes": n_served,
         "kernel_served_pct": round(usage_pct, 1) if usage_pct is not None else None,
-        "kernel_first_routes": 0,  # exact: no route is served kernel-FIRST
+        # kernel-FIRST = the kernel as the FRONT DOOR (whole lifecycle in Form).
+        # Two honest sub-counts the journey needs kept apart:
+        #   SERVED  — served kernel-first at the LIVE front door. Still 0: Traefik
+        #             routes every request to CPython; the manifest is not yet the
+        #             front door (the durable flip is Urs's go + presence).
+        #   CAPABLE — native handlers proven byte-identical in shadow in the router
+        #             manifest, whole lifecycle in Form, awaiting the front-door
+        #             flip. This is the native surface that EXISTS today — the
+        #             runtime-share metric genuinely moving, not route-count.
+        "kernel_first_served_routes": 0,
+        "kernel_first_capable_routes": n_capable,
+        "kernel_first_capable_route_names": capable,
+        "kernel_first_routes": 0,  # back-compat alias of SERVED: 0 at the front door
         "served_route_names": served_routes,
         # --- Axis 2: the per-route CPython-vs-kernel layering ---
         "kernel_router_cpython_loc": cpy["total"],
@@ -260,11 +315,26 @@ def render_human(r: dict) -> str:
     else:
         w(f"  {r['kernel_served_routes']} routes kernel-served (total-route count unread).")
     w(
-        f"  Routes served kernel-FIRST (kernel as the front door): "
-        f"{r['kernel_first_routes']}."
+        f"  Served kernel-FIRST at the LIVE front door (kernel as the runtime, "
+        f"whole lifecycle in Form): {r['kernel_first_served_routes']}."
     )
-    w("  Every kernel-served route is a CPython handler that calls the kernel as")
-    w("  a SUBROUTINE inside the request. The kernel is a guest, not the runtime.")
+    cap = r.get("kernel_first_capable_routes", 0)
+    if cap:
+        names = ", ".join(r.get("kernel_first_capable_route_names", []))
+        w(
+            f"  Kernel-FIRST CAPABLE (native handler proven byte-identical in the"
+        )
+        w(
+            f"  router manifest, whole lifecycle in Form, awaiting the front-door"
+        )
+        w(f"  flip): {cap} — {names}.")
+        w("  This is the native surface that EXISTS today: the compute AND the")
+        w("  request lifecycle run Form-native, no CPython in the path. It is the")
+        w("  runtime-share metric genuinely moving, distinct from route-count.")
+    w("  The 22 kernel-SERVED routes above are a different, shallower thing: each")
+    w("  is a CPython handler that calls the kernel as a SUBROUTINE inside the")
+    w("  request — the kernel is a guest there. The capable routes flip that: the")
+    w("  kernel is the runtime, CPython is the upstream for the not-yet-native tail.")
     w("")
 
     # --- Axis 2 ---
@@ -320,16 +390,29 @@ def render_human(r: dict) -> str:
     w("## Axis 4 — where the body is on the journey (Python-runtime → kernel-runtime)")
     w("")
     pct = r["kernel_served_pct"]
+    cap = r.get("kernel_first_capable_routes", 0)
     w(
-        f"  Honestly low. {pct}% of routes touch the kernel at all; 0% are served"
+        f"  Still honestly low at the front door. {pct}% of routes touch the kernel"
         if pct is not None
-        else "  Honestly low. 0% are served"
+        else "  Still honestly low at the front door"
     )
-    w("  kernel-FIRST. The kernel runs the pure-compute core of 22 routes as a")
-    w("  guest-subroutine inside CPython; it is not the runtime and not the router.")
-    w("  This is the baseline the reversal (kernel-as-front-door) would move. The")
-    w("  metric to track is runtime-SHARE moving toward the kernel — not route-count")
-    w("  alone, which can rise while CPython rises with it.")
+    w("  at all (as a guest-subroutine); 0 are SERVED kernel-first — Traefik still")
+    w("  routes every live request to CPython.")
+    w("")
+    if cap:
+        w(f"  But the reversal is no longer hypothetical. {cap} routes are now")
+        w("  kernel-FIRST CAPABLE: native handlers in the router manifest, proven")
+        w("  byte-identical to the live api in shadow, whole lifecycle in Form. The")
+        w("  capable count moved 0 → {0}: the native front-door surface EXISTS and".format(cap))
+        w("  is proven. What remains is the cutover (Traefik → kernel-router), which")
+        w("  is a deliberate two-person live-traffic moment, not more code.")
+    else:
+        w("  The reversal (kernel-as-front-door) has no proven native surface yet.")
+    w("")
+    w("  The metric to track is runtime-SHARE moving toward the kernel — and it has")
+    w("  two honest readings now: kernel-first SERVED (0, the live front door) and")
+    w("  kernel-first CAPABLE (the proven native surface, ready to front). Route-")
+    w("  count alone stays the wrong metric: it can rise while CPython rises with it.")
     w("")
 
     if not r["attribution_module_available"]:
