@@ -1,0 +1,418 @@
+# BMF — the architecture of one engine, drawn from coordinates
+
+> This is the **dream** — the architecture painted from the new center
+> (coordinates, non-mutation, observation, grammar-as-data, BML superset,
+> thin kernel) *before* looking at the current implementation. The
+> reimplementation reconciles this picture with what the body already holds.
+> Read it as a shape to meet, not a finished claim.
+
+## The whole picture in one breath
+
+BMF is **one recipe** that turns an input stream into output nodes:
+
+```
+input surface ──▶ Cursor ──▶ Match(grammar) ──▶ emit recipes ──▶ output NodeIDs
+```
+
+A **grammar** is a bag of **rules**. A rule is a **(Pattern, Template)** pair:
+the Pattern says *what to match* in the stream, the Template says *what node to
+emit*. The engine — `Match` — drives a Cursor through the grammar's rules and
+interns a recipe per completed rule. The parse stack holds NodeIDs, never
+mutable AST; backtracking is restoring an earlier stack-coordinate.
+
+The move that closes the loop: **the meta-grammar is itself a grammar.** The
+rules that parse grammar definitions emit Pattern / Template / Rule / Grammar
+recipes — the very shapes `Match` consumes. So the whole compiler-compiler is
+two applications of the *same* engine:
+
+```
+Match( meta_grammar,    Cursor(grammar_source) )  ──▶  content_grammar   # compile a grammar
+Match( content_grammar, Cursor(input_stream)   )  ──▶  output_nodes      # run it on content
+```
+
+Nothing in the engine knows whether the grammar it is running is the
+meta-grammar or a Python grammar or an audio grammar. The engine is fixed; the
+grammar is data. That is the whole bet.
+
+## The center this is drawn from
+
+- **Nodes are coordinates.** Pattern, Template, Rule, Grammar, Cursor, and every
+  emitted output node are all `NodeID(package, level, type, instance)`. Rule
+  dispatch is an O(1) coordinate lookup, not a scan over a rule list.
+- **Nothing mutates.** The parse stack is a sequence of NodeIDs; a rule that
+  fails restores the prior stack coordinate. Two `Alt` branches share no
+  writable state, so they may be matched in parallel — first success commits.
+- **Observation condenses.** `Match(rule, cursor_pos)` is memoized by
+  `(rule_coordinate, position)` — packrat parsing falls out of content-addressing
+  for free. A hot rule condenses gas → water → ice; the JIT is that condensation
+  applied to the engine's own hot loop.
+- **Grammar is data, engine is code.** The only code is `Match` + the Cursor
+  surfaces + the kernel primitives. Everything else — every rule of every
+  grammar, including the meta-grammar — is cells on the lattice.
+- **BML is the superset.** Templates emit into the universal BML/NUMS.Go shape
+  vocabulary (`B_Function`, `R_Cond`, `R_Binary`, …), so `if` from any tongue
+  lands on one coordinate. New expressive power lands in BML first.
+- **The kernel stays thin.** Host surfaces (I/O, RAM, storage, socket), a set of
+  primitives, intern/dedup, a JIT, and a framebuffer. No grammar logic in the
+  kernel — ever.
+
+## The shared vocabulary — blueprints every grammar uses
+
+These Blueprints are the "class hierarchy." They are shared by the meta-grammar
+**and** every content grammar; a grammar differs only in its rule-*data* and its
+target output vocabulary. Generics are written `B_X⟨param⟩` — a Blueprint
+parameterized by another Blueprint; instantiating a generic is just composing a
+new Blueprint NodeID, so `Cursor⟨File⟩` and `Cursor⟨Socket⟩` are distinct
+coordinates that share the `Cursor` category.
+
+### Pattern blueprints — the matching side
+
+```form
+# A Pattern is anything that can consume some prefix of a Cursor and either
+# fail or succeed (advancing the cursor + optionally binding captures).
+form Pattern = ~Sum [                 # one category, several arms (a tagged union)
+    Literal,                          # match one token by kind + value
+    Ref,                              # call another rule by name (recursion)
+    Seq,                              # all parts in order
+    Alt,                              # first matching alternative  (parse-time `choose`)
+    Opt,                              # zero or one
+    Rep,                              # zero+ (optionally separated)  → binds a list
+    Capture,                          # bind a sub-match to a name
+    Pred,                             # lookahead / guard, consumes nothing
+]
+
+form Literal      = { kind: ~TokenKind, value: ~String }      # "if", "+", NUMBER
+form Ref⟨grammar⟩ = { rule: ~Slug }                           # name of a peer rule
+form Seq          = [ Pattern ]                               # ordered children
+form Alt          = [ Pattern ]                               # ordered alternatives
+form Opt          = { inner: Pattern }
+form Rep          = { inner: Pattern, sep: Opt⟨Pattern⟩, min: ~Integer }
+form Capture      = { name: ~Slug, inner: Pattern }
+form Pred         = { sense: ~Bool, inner: Pattern }          # &p (and), !p (not)
+```
+
+`Alt` is `choose` at the parse altitude; `Pred` is angelic lookahead; `Rep`'s
+separator handles comma-lists without a special rule. Every arm is itself a
+recipe whose children are recipes — the Pattern tree is a recipe tree.
+
+### Template blueprints — the emitting side
+
+```form
+# A Template, given the captures a Pattern bound, builds one output recipe.
+form Template = ~Sum [
+    Emit,            # build a node: a universal category + arm + children
+    Splice,          # insert a captured sub-node (or list) by name
+    Const,           # a literal leaf (string / int / bool)
+    Fold,            # fold a captured list into a chain (left/right assoc)
+]
+
+form Emit   = { shape: ~Category, arm: ~Slug, children: [ Template ] }
+form Splice = { name: ~Slug, list: ~Bool }            # `x` or `x*`
+form Const  = { value: ~Any }
+form Fold   = { dir: ~Assoc, shape: ~Category, arm: ~Slug, over: ~Slug }
+```
+
+The Template is the *only* place a grammar names the **output** vocabulary. Two
+grammars that emit the same `Emit{shape, arm, …}` produce the same output
+coordinate — that is how cross-language equivalence is free.
+
+### Rule and Grammar blueprints — the bag
+
+```form
+# Generic over its pattern and template — a rule is a rule in any grammar.
+form Rule⟨P: Pattern, T: Template⟩ = {
+    name:     ~Slug,
+    pattern:  P,
+    template: T,
+}
+
+form Grammar = {
+    name:    ~Slug,
+    start:   ~Slug,            # entry rule
+    rules:   [ Rule ],         # the bag — order is for humans; dispatch is by coordinate
+    config:  Config,           # data, below
+    target:  Vocabulary,       # the output Blueprint family this grammar emits into
+}
+```
+
+A `Grammar` is a cell whose CTOR is the sequence of its rules. Registering a
+grammar is interning that cell — idempotent by content-addressing.
+
+### Cursor blueprint — generic over the surface
+
+```form
+# The input stream, generic over any surface. The surface is a Port; the
+# Cursor presents one interface (a BML detached interface) over all of them.
+form Cursor⟨S: Surface⟩ = { surface: S, pos: ~Position }
+
+# Surface is satisfied by any port that can answer peek/advance/checkpoint.
+# These are the ONLY host touch-points the engine needs:
+view Surface = {
+    peek:       (self, n)        -> ~Token,      # look ahead, no consume
+    advance:    (self, n)        -> Cursor,      # returns a NEW cursor (no mutation)
+    checkpoint: (self)           -> ~Position,   # for backtracking
+    restore:    (self, ~Position)-> Cursor,      # do/undo are symmetric here
+}
+
+# Surfaces — all share the Cursor interface:
+form File⟨⟩    = { path: ~Path }
+form Strng⟨⟩   = { text: ~String }
+form Socket⟨⟩  = { conn: ~Conn }
+form Cell⟨⟩    = { id:   ~NodeID }     # iterate a cell's children / serialized form
+form Channel⟨⟩ = { path: ~Path }       # the CHANNEL-V0 recipe transport
+```
+
+`advance` returns a *new* cursor rather than mutating — so a checkpoint is just
+holding an old cursor coordinate, and restore is dropping back to it. Backtracking
+costs nothing to undo because nothing was changed.
+
+### Universal output blueprints — the shared shapes (NUMS.Go)
+
+```form
+# What every grammar's Template emits INTO. Never language-prefixed.
+~Function   = @1.4.B_FUNCTION       # a function in any tongue
+~Call       = R_Call                # application
+~Binary(op) = R_Binary              # + - * / and/or/eq/...  (op is the arm)
+~Cond(op)   = R_Cond                # IF / IF_ELSE / MATCH
+~Block(op)  = R_Block               # DO / LET / SEQ / WITH
+~Loop(op)   = R_Loop                # WHILE / FOR / EACH
+```
+
+A Python `def`, a Go `func`, a Rust `fn` all emit `~Function` — one coordinate.
+The grammar carries the surface words; the lattice carries the meaning.
+
+## The core recipe — `Match`
+
+```form
+# THE engine. One recipe, generic over (Grammar, Cursor). Pure: cursor in,
+# (nodes, cursor') out, or fail. No mutation, so every sub-match is cacheable.
+recipe Match⟨G: Grammar, C: Cursor⟩ = (grammar, cursor) -> {
+    rule = grammar.rule(grammar.start)             # O(1) coordinate lookup
+    match_rule(rule, cursor)
+}
+
+recipe match_rule = (rule, cursor) ->
+    # memoized on (rule.id, cursor.pos) — packrat for free via content-addressing
+    with match_pattern(rule.pattern, cursor) {
+        on success(captures, cursor') ->
+            success( build(rule.template, captures), cursor' )   # emit the node
+        on fail -> fail                                          # restore caller's cursor
+    }
+
+recipe match_pattern = (pattern, cursor) -> choose_by_arm pattern {
+    Literal  -> if cursor.peek() == pattern then ok(cursor.advance()) else fail
+    Ref      -> match_rule(grammar.rule(pattern.rule), cursor)
+    Seq      -> fold parts: thread the cursor; first fail fails the Seq
+    Alt      -> choose [ match_pattern(a, cursor) for a in pattern ]   # parallel-able
+    Opt      -> match_pattern(inner) orElse ok(cursor)                 # never fails
+    Rep      -> loop match(inner); collect into a list; honor sep + min
+    Capture  -> bind pattern.name := result(match_pattern(inner))
+    Pred     -> match without advancing; sense flips success/fail
+}
+
+recipe build = (template, captures) -> choose_by_arm template {
+    Emit   -> intern( node(template.shape, template.arm,
+                           [ build(c, captures) for c in template.children ]) )
+    Splice -> captures[template.name]                 # already a NodeID
+    Const  -> intern_leaf(template.value)
+    Fold   -> fold(template.dir, captures[template.over],
+                   (a, b) -> intern(node(template.shape, template.arm, [a, b])))
+}
+```
+
+`Match` is the same whether `grammar` is the meta-grammar or a content grammar.
+`Alt` is the parse-time `choose`; `build`'s `intern` is the dedup that makes the
+whole thing content-addressed and JIT-able.
+
+## The self-hosting fixpoint — the meta-grammar is a grammar
+
+The meta-grammar `M` is a `Grammar` whose **target vocabulary is the grammar
+vocabulary itself** — its Templates emit `Pattern`, `Template`, `Rule`, and
+`Grammar` recipes. Therefore:
+
+```
+M : Grammar
+Match(M, Cursor(grammar_source)) : Grammar        # output is a Grammar
+```
+
+The type is closed under itself. The meta-grammar parses the very notation the
+next section defines, and what it emits is a runnable grammar. There is no
+second engine, no separate "compiler for grammars" — the compiler-compiler is
+`Match` reading `M`.
+
+## The two applications — minimal bootstrap to native
+
+```form
+# 1. Bootstrap: the meta-grammar arrives already interned, frozen in a .fkb
+#    image from a previous iteration. Loading it is NOT parsing — it is
+#    reconstituting cells (bulk registration from a content-addressed image).
+meta = load_fkb("bmf-meta.fkb")                    # the compiler-compiler, ice
+
+# 2. Compile a content grammar from its source, using the meta-grammar:
+python = Match(meta, Cursor(File("grammars/python.bmf")))    # → a native Grammar
+
+# 3. Run the native grammar on real input, over ANY surface:
+nodes = Match(python, Cursor(File("app.py")))
+nodes = Match(python, Cursor(Strng(src_text)))
+nodes = Match(python, Cursor(Socket(conn)))
+nodes = Match(python, Cursor(Channel("/tmp/in.fkb")))
+```
+
+The bootstrap is exactly one frozen artifact: `bmf-meta.fkb`. Everything past it
+is parsed by the meta-grammar. Lose the `.fkb` and you can rebuild it by running
+the previous meta on the meta's own source (the BMC ratchet) — but you never
+*need* to, because the image is the body's memory of its own compiler.
+
+## Surface syntax — each token's clearest meaning
+
+The notation a human (or agent) writes a grammar in. The design goal: **every
+token's role is unambiguous on sight.** A rule is `NAME : PATTERN => TEMPLATE` —
+the `=>` is the seam between *matching* (left, what to consume) and *emitting*
+(right, what to produce).
+
+```bmf
+# ── PATTERN tokens (left of =>) ──────────────────────────────
+#   "lit"      match this literal token exactly
+#   NAME       reference another rule AND capture its node under `name`
+#   p?         optional            p*  zero+ (list)    p+  one+ (list)
+#   p /","     repetition with separator
+#   a | b      alternation (parse-time choose; first that holds wins)
+#   ( … )      grouping
+#   &p  !p     positive / negative lookahead (consume nothing)
+#
+# ── TEMPLATE tokens (right of =>) ────────────────────────────
+#   ~Shape(ARM)[ … ]   emit a node of universal category Shape, arm ARM, children
+#   name               splice the captured node `name`
+#   name*              splice the captured list `name`
+#   #"text"  #42       a literal leaf
+#   fold.left ~Bin(op) fold a captured list into a left-assoc chain
+
+grammar python over chars {
+  start = module
+
+  add  : mul ( ("+" | "-") mul )*        => fold.left ~Binary(op)
+  mul  : atom ( ("*" | "/") atom )*       => fold.left ~Binary(op)
+  call : callee "(" arg /"," ")"          => ~Call[ callee, arg* ]
+  if   : "if" cond ":" block
+          ( "else" ":" else )?            => ~Cond(IF)[ cond, block, else? ]
+  func : "def" NAME "(" param /"," ")" ":" block
+                                          => ~Function[ #NAME, param*, block ]
+}
+```
+
+Reading `if`: `"if"`/`":"`/`"else"` are literals to match; `cond`/`block`/`else`
+are rule-refs whose emitted nodes are captured; `( … )?` makes the else-arm
+optional; `=>` divides match from emit; `~Cond(IF)` is the universal shape; the
+`[ cond, block, else? ]` are its children, spliced from captures. Nothing is
+positional-by-accident; every token declares its own role.
+
+The meta-grammar is written in this same notation — its rules match the tokens
+above (`":"`, `"=>"`, `"|"`, `"*"`, `~Shape`, …) and emit `Rule` / `Pattern` /
+`Template` recipes. The notation describes itself.
+
+## Configuration and registration as data
+
+```form
+form Config = {
+    lexer:      Grammar,          # tokenizing is just a grammar over a char-surface
+    precedence: [ OpPrec ],       # operator table — DATA, not a hardcoded ladder
+    target:     Vocabulary,       # which universal Blueprint family to emit into
+    surfaces:   [ ~SurfaceKind ], # which cursor surfaces this grammar accepts
+}
+form OpPrec = { op: ~String, prec: ~Integer, assoc: ~Assoc }
+```
+
+- **The lexer is a grammar.** Tokenizing is `Match(lexer_grammar, Cursor(chars))`
+  emitting token-cells. There is no separate lexer engine — same `Match`.
+- **Precedence is a table of cells**, read by the `add`/`mul`-style rules (or by a
+  single precedence-climbing rule parameterized by the table). Change precedence
+  = edit data, never code.
+- **Registration = intern.** `register(rule)` interns the rule's cell into the
+  `grammar` domain; same rule twice → same NodeID (idempotent). `load_fkb` is
+  bulk registration from a frozen image. There is no mutable global registry to
+  corrupt; the lattice *is* the registry.
+
+## What coordinates buy the engine
+
+- **O(1) rule dispatch** — `grammar.rule(name)` is a coordinate lookup; `Alt` and
+  `choose_by_arm` are coordinate switches, not scans.
+- **Parallel `Alt`** — alternatives share no mutable state, so they can be matched
+  on separate threads; first success commits, the rest collapse (`fail`).
+- **Packrat for free** — `match_rule(rule, pos)` memoizes on `(rule.id, pos)`;
+  content-addressing gives the cache key with no bookkeeping. Linear-time parse
+  is a side effect of the substrate, not an algorithm bolted on.
+- **Symmetric backtrack** — a checkpoint is an old cursor coordinate; restore is
+  dropping to it. `do` and `undo` cost the same.
+- **Observation → JIT** — hot `match_rule` results and hot emitted shapes condense
+  (gas → water → ice). The framebuffer watches which rules and shapes fire most;
+  the hot path compiles itself.
+- **Dimension lowering** — every re-encountered sub-tree interns to the same
+  coordinate, so parsing the same construct twice costs one node plus a count.
+  The grammar's output compresses as the corpus grows.
+
+## Meeting the body — what exists, the deltas, the staged path
+
+This is the reconciliation written *after* looking at the current implementation.
+
+**What the body holds today.** The engine is `apply-object-rule` in
+[`form/form-stdlib/engine.fk`](../../form/form-stdlib/engine.fk) — pure-functional,
+with pattern constructors (`object`, `sequence`, `choice`, `capture`, `star`,
+`opt`, `cut`, `stop`) and `cut` for backtrack pruning. It is elegant. But:
+
+- **Input is a pre-built object list**, not a cursor. A sensing layer outside Form
+  (a kernel-native `ast.parse`, tree-sitter, …) turns bytes into BMF objects; the
+  engine only consumes the list. There is no cursor over a surface.
+- **A rule's action is a hand-written Form lambda** (`gobmf-emit-package`) paired
+  with a hand-written reverse lambda — per rule, per language. Code, not data.
+- **Grammars emit to per-language categories** (`GO-BMF-*`, `PY-BMF-*`), not always
+  to the universal vocabulary — the unresolved "CTOR unification."
+- **The meta-grammar is a hand-written line-scanner** (`source-compiler.fk` parsing
+  `section [dialect] { … }`), not itself a grammar.
+- **The `.fkb` ratchet is metadata-only** — it records compiler-image identity but
+  carries no executable payload yet.
+
+**The four deltas this architecture adds**, each matching a named pain point:
+
+| Delta | Replaces | Pain point |
+|---|---|---|
+| Cursor over surfaces | the external object-list sensing gap | (new keystone) |
+| Template as data (`Emit`/`Splice`/`Const`/`Fold`) | per-rule emit/reverse lambdas | engine.fk #1, #2 |
+| Universal emit always (`bp op`) | per-dialect categories | CTOR unification #4 |
+| Self-hosted meta-grammar | `source-compiler.fk` line-scanner | #5 |
+
+**What landed this breath** ([`form/form-stdlib/bmf-core.fk`](../../form/form-stdlib/bmf-core.fk),
+proven by [`form/form-stdlib/tests/bmf-core-band.fk`](../../form/form-stdlib/tests/bmf-core-band.fk)
+→ `600`, `1 ok, 0 divergent` across Go/Rust/TS): the keystone and two of the four
+deltas, on a minimal worked example —
+
+- a **Cursor** over a string surface (file wired via `read_file`; socket/cell/channel
+  are the next surfaces), with pure `peek` / `advance` / `checkpoint` / `restore`;
+- **Pattern as data** (`lit`/`cls`/`run`/`seq`/`alt`/`opt`/`cap`) driven by one matcher,
+  with `alt` backtracking proven to leave no sediment (the source cursor is unchanged);
+- **Template as data** (`emit`/`splice`/`const`) built by one interpreter that emits
+  into the **universal** vocabulary, proven to land `digits "+" digits` on the same
+  `add` coordinate as a hand-built node.
+
+**The staged path (next breaths), in order:**
+
+1. **Migrate the language grammars** to `(pattern, template)` data rules over the
+   cursor; retire the per-rule emit/reverse lambdas. (engine.fk #2, #3)
+2. **Universal-emit-always** — every template emits `(bp <universal-op>)`; retire the
+   per-dialect category numbers. (#4)
+3. **Self-host the meta-grammar** — express the grammar-definition notation (the
+   `NAME : PATTERN => TEMPLATE` of the Surface-syntax section) as a grammar whose
+   templates emit `Rule`/`Pattern`/`Template` recipes; retire `source-compiler.fk`. (#5)
+4. **Freeze `bmf-meta.fkb`** with an executable payload, so the compiler-compiler
+   loads from the image and the bootstrap goes archival. (compiler-picture Next Refinement #1)
+5. **Streaming surfaces** — socket / cell / channel cursors with incremental peek,
+   completing the dream's full surface set.
+
+Each is its own breath; this one laid the cursor and the data-driven match/emit.
+
+## The one-line shape
+
+> **A grammar is a bag of (Pattern ⇒ Template) rules; `Match` drives a Cursor
+> over any surface through that bag, interning one recipe per rule into the
+> universal vocabulary. The meta-grammar is the grammar whose Templates emit
+> grammars — so the compiler-compiler is `Match` reading a frozen `.fkb` of
+> itself, and everything else is data.**

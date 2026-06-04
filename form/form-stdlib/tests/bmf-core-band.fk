@@ -1,0 +1,77 @@
+; bmf-core-band.fk — proves the cursor-based BMF core end to end.
+;
+; Demonstrates the dream's load-bearing claims on a minimal worked example:
+;   - a cursor reads a surface (string) with peek / advance
+;   - a grammar is DATA (a pattern + a template), driven by one matcher
+;   - the template emits into the UNIVERSAL vocabulary (bp "add"), so the
+;     data-driven grammar lands on the same coordinate as a hand-built node
+;   - alternation backtracks with NO sediment (the source cursor is unchanged)
+;   - checkpoint / restore is just returning to an earlier cursor value
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk
+
+(do
+    (let src "12+34")
+    (let c0 (cursor-str src))
+
+    ; 1. peek the surface at position 0
+    (let s-peek (if (str_eq (cur-peek-char c0) "1") 100 0))
+
+    ; 2. advance returns a new cursor; the surface reads "+" at position 2
+    (let c2 (cur-advance c0 2))
+    (let s-advance (if (str_eq (cur-peek-char c2) "+") 100 0))
+
+    ; 3. a data pattern (cap "l" (run "digit")) captures "12" and ends at pos 2
+    (let m3 (match-pat (list "cap" "l" (list "run" "digit")) c0 (caps-empty)))
+    (let s-run
+        (if (and (m-ok? m3)
+                 (and (str_eq (caps-get (m-caps m3) "l") "12")
+                      (eq (cur-pos (m-cur m3)) 2)))
+            100 0))
+
+    ; 4. a full rule (digits "+" digits => emit add[l,r]) lands on the SAME
+    ;    universal coordinate as a hand-built add node — grammar-as-data
+    ;    produces the canonical shape, not a per-language one.
+    (let pat (list "seq"
+                   (list "cap" "l" (list "run" "digit"))
+                   (list "lit" "+")
+                   (list "cap" "r" (list "run" "digit"))))
+    (let tpl (list "emit" "add"
+                   (list (list "splice" "l") (list "splice" "r"))))
+    (let res (run-rule (rule-of pat tpl) c0))
+    (let reference
+        (intern_node (bp "add")
+                     (list (intern_trivial_string "12")
+                           (intern_trivial_string "34"))))
+    (let s-emit
+        (if (and (run-ok? res)
+                 (and (node_eq (run-node res) reference)
+                      (eq (cur-pos (run-cur res)) 5)))
+            100 0))
+
+    ; 5. alternation leaves no sediment: the first alternative consumes "12"
+    ;    then fails on "X"; the second matches "12" from the SAME cursor;
+    ;    c0 itself is untouched (still pos 0) because nothing mutated.
+    (let alt (list "alt"
+                   (list "seq" (list "lit" "12") (list "lit" "X"))
+                   (list "lit" "12")))
+    (let m5 (match-pat alt c0 (caps-empty)))
+    (let s-backtrack
+        (if (and (m-ok? m5)
+                 (and (eq (cur-pos (m-cur m5)) 2)
+                      (eq (cur-pos c0) 0)))
+            100 0))
+
+    ; 6. checkpoint / restore returns to the saved coordinate
+    (let saved (cur-checkpoint c0))
+    (let moved (cur-advance saved 3))
+    (let back  (cur-restore saved))
+    (let s-restore
+        (if (and (eq (cur-pos moved) 3) (eq (cur-pos back) 0)) 100 0))
+
+    ; Expected total: 600
+    (add s-peek
+    (add s-advance
+    (add s-run
+    (add s-emit
+    (add s-backtrack s-restore))))))
