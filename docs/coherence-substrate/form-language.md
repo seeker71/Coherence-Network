@@ -2,6 +2,23 @@
 
 **Form** is the language designed for direct interaction between LLM agents and the coherence-substrate. Its grammar maps 1:1 onto the substrate's primitives (NodeID, Blueprint, Recipe, NamedCell), so an agent reading or writing Form is reading or writing the lattice itself.
 
+## For agents arriving fresh (read before the long story)
+
+**First entry:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — primary vs compost, no Python/form-on-form center.
+
+| Primary today | On the way out (bootstrap — do not extend) |
+|---------------|--------------------------------------------|
+| Cells + **Recipes** on the lattice; **realize** = walk recipe NodeIDs | `form.py` AST + `form_runtime.py` “evaluate” |
+| **BMF grammars** in `.fk` (`engine.fk`, `grammars/*`, proof bands) | Form-on-Form interpreted inside Python |
+| **Native walker** (Go/Rust/TS) + **file I/O**, **HTTP**, **persistence read** (`persistence.fk`, `http-serve.fk`, kernel natives) | Treating “kernel eval” as a separate product |
+| **Query** = read recipes over existing cells (no lattice POST for agents) | New FastAPI routes as first artifact |
+
+**One pipe:** notation or domain source → grammar interns recipes → realize → read/write via Form natives as needed.
+
+**Writing new software:** [§ How to write software](#how-to-write-software-default-for-every-agent) below.
+
+**Querying only:** compose read recipes (`lookup-cell`, `?equivalent`-shaped walks, `http_get` / file read) — infrastructure already ships; [`agents-using-substrate.md`](agents-using-substrate.md) for when to ask the lattice.
+
 ## Why Form exists
 
 LLMs operate in number-space — tokens are integer indices, attention is integer-keyed lookup, embeddings are integer-coordinate vectors. The substrate also operates in number-space — every entity is a `NodeID(package, level, type, instance)` 4-tuple, every relation is an integer composition.
@@ -61,6 +78,51 @@ Coordinate / content-addressed languages are **geometric** — meaning lives in 
 4. **Phase-aware.** Blueprint expressions, Recipe expressions, and Cell expressions have distinct surface shapes — agents stay clear about which phase they are in.
 
 5. **Embeddable.** Form fragments can be inlined in markdown, in agent prompts, in code comments. A line of Form anywhere in the body is meaningful.
+
+## How to write software (default for every agent)
+
+**Index:** domain grammar → BMF/BML compile → Form objects (Blueprint / Recipe / NamedCell) → kernel proof. Not: new Python service first, not: HTTP stack as the definition of Form.
+
+From here on, **all software in this body is written at the grammar level of the domain it serves** — compiler, HTTP, markdown, strategy, field, ledger, presence, spec. The runtime is one; the **surface grammar** is many. A route handler, a scoring function, a parser, a teaching encoder, and a deploy manifest are the same shape underneath: **rules that match, actions that emit recipes, coordinates that intern.**
+
+### The default path
+
+| Step | What | Where |
+|------|------|--------|
+| 1 | **Pick the domain grammar** | `form/form-stdlib/grammars/{domain}.fk`, `bml/*.bml`, or a domain `.form` teaching |
+| 2 | **Express behavior as rules** | `(pattern, semantic_action)` — see `apply-object-rule` in [`form/form-stdlib/engine.fk`](../../form/form-stdlib/engine.fk) |
+| 3 | **Compile / lower** | [`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md): scan → lift → **normalize** (same shape → same NodeID) → emit → run-observe |
+| 4 | **Prove** | `form/form-stdlib/tests/*-band.fk` + `cd form && ./validate.sh …` |
+| 5 | **Carry to production** | `.fk` in stdlib, `.fkb` ratchet, kernel-router manifest, or fan-out tail — **carrier last** |
+
+**Branching** uses `choose` / `fail` / `stop` (and BMA `save` / `restore` / `discard`) — angelic undo, not host-language `if` chains without a reverse path. **Cost** uses `node_eq` and content-addressed dispatch; hot sequences lower to native/JIT (see **Angelic nondeterminism** under Surface syntax below).
+
+### No aligned grammar yet?
+
+Do **not** default to a one-off Python module.
+
+1. **Add a grammar** for the domain (BMF rulebook in `engine.fk`, BML section in `grammars/bml.fk`, or new `grammars/{domain}.fk`).
+2. **Transform source into Form objects** through BMF (`apply-object-rule`) or the shared **`compiler-object`** carrier ([`form/form-stdlib/compiler.fk`](../../form/form-stdlib/compiler.fk)).
+3. **Prove round-trip or byte-parity** in a band before calling it done.
+
+Creating a **compiler or compiler-compiler is no longer a greenfield project.** The body ships working examples for BML, BMF, markdown, JSON, Python/TS/Go/Rust headers, field-model, emit targets, and the universal codec lattice ([`emit-architecture.form`](emit-architecture.form), [`language-cells.md`](language-cells.md)). **Adapt an existing port** — copy the grammar row, swap pattern/action tables, add a proof band. BMC (grammar-describes-grammar) and the `.fkb` bootstrap ratchet are the reuse pattern, not the exception.
+
+### What is not “writing software” here
+
+- A new FastAPI router as the **first** artifact (fan-out tail only, after manifest says native).
+- Substrate REST query as **implementation** (query is for shape inspection; authoring is source + ingest).
+- Host `ast.parse` / `acorn` as **destination** ([`lc-parsers-as-recipes`](../vision-kb/concepts/lc-parsers-as-recipes.md) — bootstrap carriers; substrate-resident rules are the target).
+- Duplicate logic in three languages without **normalize → same NodeID** proof.
+
+### Carriers (downstream, not center)
+
+HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), CLI, MCP, web, Postgres ports, and `.fkb` images **carry** recipes already proven in Form. They do not define what the program **is**.
+
+### Agent one-liner
+
+> **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new Python app.
+
+→ [`agents-using-substrate.md`](agents-using-substrate.md) (when to query the lattice) · [`BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md) · [`bmf-form-runtime.form`](bmf-form-runtime.form) · [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md)
 
 ## Current landing — what integrated by 2026-05-31
 

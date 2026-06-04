@@ -6,6 +6,9 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 
 | Reader | Read first |
 |---|---|
+| **Any new agent (start here)** | [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — primary Form/native runtime vs Python bootstrap compost |
+| **Any agent writing software** | [`form-language.md` → How to write software](form-language.md#how-to-write-software-default-for-every-agent) — **domain grammar first**, BMF/BML → Form objects, adapt existing compilers |
+| **Any agent querying the lattice** | Same packet § Form And Substrate — realize + read (`persistence.fk`, HTTP/file natives); [`agents-using-substrate.md`](agents-using-substrate.md) for practice |
 | Agent operating on this body | [`agents-using-substrate.md`](agents-using-substrate.md) — when to reach for the substrate, how to ground reasoning structurally |
 | Designing a Form fragment | [`form-language.md`](form-language.md) — the substrate-native language |
 | Choosing or changing category numbers | [`numeric-schema.md`](numeric-schema.md) — intentional bands for domain and recipe vocabulary |
@@ -23,7 +26,8 @@ The body's content-addressed numeric lattice. Cells from every memory file, spec
 | `api/app/services/substrate/resonance.py` | Dimensional vocabulary (Spectrum / Harmonic / GeometricForm / Polarity / Topology) + `author_geometry_signature()` — receives the 15D `geometry:` blocks vision-kb concepts carry, authors resonance edges so the substrate sees cross-discipline shape equivalence |
 | `scripts/coh_substrate.py` | Unified CLI: `ingest`, `stats`, `equivalent`, `annotate`, `form`, `ingest-paths`, `kb-sync-audit` |
 | `api/tests/test_substrate.py` | Flow-centric tests (registered in `core_suite.txt`) |
-| `docs/coherence-substrate/form-language.md` | Form — the substrate-native language design |
+| `docs/coherence-substrate/form-language.md` | Form — substrate-native language; **§ How to write software** = agent default (grammar-level, all domains) |
+| `kernels/BMF_BML_COMPILER_PICTURE.md` | BMF/BML compiler-compiler + language flow (scan → lift → normalize → emit) |
 | `docs/coherence-substrate/field-model-form.form` | Field Model Form — BMF generalized from character streams to typed fields of cells; names the freeze/match/choose/delta/commit/receipt execution contract |
 | `docs/coherence-substrate/field-domain-grammars.form` | Domain grammars for DNA/RNA, chemistry, bioelectricity, cell signaling, plant communication, electricity/magnetism, interspecies/conversation, and quantum rain as FMF recipes over cells |
 | `docs/coherence-substrate/field-lineage-grammars.form` | Lineage lenses for Donald Hoffman, Michael Levin, Robert Edward Grant, and Stephen Wolfram as FMF recipes with evidence labels, claim boundaries, executable proof functions, receipts, and residuals |

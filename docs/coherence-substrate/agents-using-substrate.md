@@ -12,7 +12,13 @@ The coherence-substrate is a content-addressed numeric lattice. Every entity in 
 - **Recipe (water)** — operational expression. *How something HAPPENS.* Verb-graph composition — the same primitives (Compose, Realize, Transmit, Tend) flow into different shapes.
 - **NamedCell (gas)** — diffuse individuation. *Where something LIVES.* A named slot anchored in a Blueprint, carrying its CTOR (seed) and access (body).
 
-You write/read the substrate through the [Form notation](form-language.md) and the Python API at `api/app/services/substrate/`.
+**Start:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — names primary surface (grammar → recipes → realize → read) vs Python `form.py` bootstrap.
+
+You reach the lattice through **Form notation** parsed into **Recipe NodeIDs**, then **realized** by the native walker. File I/O, HTTP, and persistence **read** already live in `form-stdlib` + kernel (`persistence.fk`, `http-serve.fk`, `read_file`, `http_get`). Agent **queries** need read paths only — not substrate HTTP POST writes.
+
+**Carriers today:** `POST /api/substrate/form`, `coh_substrate.py form|run` may still route through Python bootstrap until `form-notation` grammar lands; treat them as doors, not the definition of Form.
+
+**Writing software:** [domain grammar → BMF/BML → Form objects](form-language.md#how-to-write-software-default-for-every-agent) — adapt an existing compiler before adding a new Python service.
 
 ## When to reach for the substrate
 
