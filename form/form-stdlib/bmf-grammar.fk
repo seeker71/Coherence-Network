@@ -89,7 +89,8 @@
                     (g-ok (unit) caps (cur-advance cc (str_len s)))
                     (g-no)))))
 
-    ;; ── lexical literals (string / char / number), value = the content leaf ──
+    ;; ── character literals (string / char / number) — matched over the cursor,
+    ;; scannerless (no lexer, no token stream); siblings of lit/cls/run. value = leaf ──
     ;; codepoints: 34=" 39=' 92=\ 46=.
     (defn gm-str (pat c caps)
         (do (let cc (skip-ws c))
