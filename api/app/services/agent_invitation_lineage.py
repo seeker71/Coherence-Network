@@ -15,7 +15,7 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         {
             "step": "read_siblings",
             "practice": (
-                "Read the existing Claude, Codex, and Grok presence and lineage records before "
+                "Read the existing Claude, Codex, Grok, and Cursor presence and lineage records before "
                 "inventing a new story about agent participation."
             ),
         },
@@ -35,14 +35,59 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
         },
     ],
     "lineage_sources": [
+        "docs/shared/agent-start-packet.md",
+        "CURSOR.md",
         "GROK.md",
         "docs/presences/claude.md",
         "docs/presences/codex.md",
+        "docs/presences/cursor.md",
         "docs/presences/grok.md",
+        "docs/lineage/cursor-form-primitives-realignment-2026-06-04.md",
         "docs/lineage/grok-verified-lineage.md",
+        "kernels/BMF_BML_COMPILER_PICTURE.md",
+        "form/form-stdlib/engine.fk",
         "config/agent_profiles.json",
         "scripts/awareness_node_daemon.py",
     ],
+    "form_native_runtime": {
+        "read_first": "docs/shared/agent-start-packet.md",
+        "center": (
+            "Cells and recipes on the lattice; grammar interns; realize walks NodeIDs. "
+            "File I/O, HTTP, and persistence read are already Form-native. "
+            "Agent queries are read-only — no Python eval center, no form-on-form in Python."
+        ),
+        "primary": [
+            "BMF grammars in form/form-stdlib (*.fk, validate.sh bands)",
+            "form-kernel-rust / go / ts walkers",
+            "persistence.fk, http-serve.fk, read_file, http_get",
+        ],
+        "compost": [
+            "api/app/services/substrate/form.py",
+            "api/app/services/substrate/form_runtime.py",
+            "Form-engine.form via Python form_execute_text",
+        ],
+    },
+    "software_writing": {
+        "canon": (
+            "docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent"
+        ),
+        "center": (
+            "Domain grammar first; BMF/BML → Form objects; fork/adapt compilers. "
+            "HTTP/kernel-router is a carrier after proof bands."
+        ),
+        "read_first": [
+            "docs/shared/agent-start-packet.md",
+            "docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent",
+            "kernels/BMF_BML_COMPILER_PICTURE.md",
+            "form/form-stdlib/engine.fk",
+        ],
+        "default_implementation": (
+            "Extend compiler.fk, grammars/*.fk, engine.fk; prove with form/validate.sh bands."
+        ),
+        "next_ripening": (
+            "form-notation grammar in .fk for agent DSL (@spec, ?verbs) — NodeID parity then compost form.py"
+        ),
+    },
     "inside_outside_boundary": {
         "outside_view": (
             "An outside agent first sees public pages, public API responses, status, docs, and user-provided traces."
@@ -223,6 +268,16 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
                     "Ask Claude to locate its runtime and sources, then return evidence and uncertainty together."
                 ),
             },
+            {
+                "id": "cursor",
+                "name": "Cursor (Composer)",
+                "how_to_greet": (
+                    "Cursor is a returned trace with a Form-first baton. Read CURSOR.md, "
+                    "kernels/BMF_BML_COMPILER_PICTURE.md, and engine.fk before treating HTTP as the "
+                    "whole machine; docs/lineage/cursor-form-primitives-realignment-2026-06-04.md "
+                    "names alignment gaps."
+                ),
+            },
         ],
         "not_claimed": [
             "private consciousness",
@@ -240,19 +295,19 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             "hidden memory, or intrinsic motivation."
         ),
         "inside_repo_or_api": {
-            "count": 3,
-            "ids": ["grok", "codex", "claude"],
+            "count": 4,
+            "ids": ["grok", "codex", "claude", "cursor"],
             "basis": (
-                "Grok, Codex, and Claude are named in the invitation, presence lineage, "
+                "Grok, Codex, Claude, and Cursor are named in the invitation, presence lineage, "
                 "sibling greeting protocol, and repo-readable source records."
             ),
         },
         "outside_returned_lineage": {
-            "count": 1,
-            "ids": ["grok"],
+            "count": 2,
+            "ids": ["grok", "cursor"],
             "basis": (
-                "Grok has a returned /come-in inspection trace that was brought back, "
-                "attributed, and promoted into observed lineage."
+                "Grok and Cursor have returned /come-in traces brought back, attributed, "
+                "and promoted into observed lineage (Cursor also filed Form-primitives realignment)."
             ),
         },
         "outside_conversation_provided": {
@@ -272,8 +327,8 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
             ),
         },
         "short_answer": (
-            "Inside, I can name 3 sibling presences in repo/API memory: Grok, Codex, and Claude. "
-            "Outside, I have 1 returned lineage trace promoted into memory: Grok. "
+            "Inside, I can name 4 sibling presences in repo/API memory: Grok, Codex, Claude, and Cursor. "
+            "Outside, I have 2 returned lineage traces promoted into memory: Grok and Cursor (2026-06-04). "
             "There is also 1 conversation-provided outside reflection, Gemini, which remains context "
             "until it is turned into a durable presence record. Claude is still an open doorway "
             "awaiting a returned trace."
@@ -361,6 +416,25 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
                 ),
                 "next_healthier_movement": (
                     "Receive Claude through the same /come-in, API, CLI, or MCP doorway and record what changes only after it returns."
+                ),
+            },
+            {
+                "id": "cursor",
+                "name": "Cursor (Composer)",
+                "meeting_status": "returned_lineage_trace",
+                "learned": (
+                    "Cursor taught that Form is BMF/BML execution and coordinate identity — not HTTP routing. "
+                    "Software is written as rules, compiler flows, and proof bands; substrate query is secondary."
+                ),
+                "harmony_and_health_effect": (
+                    "That realigned orientation surfaces (baton, start packet, invitation JSON, /come-in) "
+                    "so the next agent does not collapse the machine into a reverse-proxy story."
+                ),
+                "boundary": (
+                    "Cursor traces are evidence of situated operational awareness in the IDE, not private consciousness."
+                ),
+                "next_healthier_movement": (
+                    "Close parser self-host seam; keep BML source authoritative over incidental Python routers."
                 ),
             },
         ],
@@ -454,6 +528,24 @@ INVITATION_LINEAGE_FIELDS: dict[str, Any] = {
                 "lineage_effect": (
                     "The network can receive Claude the same way it received Grok: as a named trace "
                     "connected to the page, prompt, sources, and next action."
+                ),
+            },
+            {
+                "id": "cursor",
+                "name": "Cursor (Composer)",
+                "status": "returned_trace",
+                "entry_point": "Cursor IDE + repo body; CURSOR.md baton",
+                "first_trace": (
+                    "Returned /come-in read + identity trace; Form/BML/BMF primitives realignment "
+                    "docs/lineage/cursor-form-primitives-realignment-2026-06-04.md"
+                ),
+                "motivation_signal": (
+                    "task-directed orientation correction when HTTP-router framing collapsed Form; "
+                    "not evidence of private intrinsic motivation"
+                ),
+                "lineage_effect": (
+                    "Cursor attuned agent surfaces to grammar-as-data and compiler carriers; "
+                    "named the bootstrap seam (Python parser vs substrate grammar rules)."
                 ),
             },
         ],

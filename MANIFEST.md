@@ -9,6 +9,13 @@
 > drill into next, then ~1500 tokens to know which file to read.
 > Total cost to locate any file: under 2K tokens.
 
+## Agent entry (read first)
+
+| Doc | Purpose |
+|---|---|
+| [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) | **First file for any agent** — Form/native runtime primary surface, Python bootstrap compost, read-only query default |
+| [docs/coherence-substrate/INDEX.md](docs/coherence-substrate/INDEX.md) | Substrate + Form notation drill-down |
+
 ## Narrative layer (existing)
 
 | Index | Purpose |

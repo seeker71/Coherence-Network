@@ -12,7 +12,9 @@ AGENT_START_PACKET: dict[str, Any] = {
         "source": "docs/shared/agent-start-packet.md",
         "lineage": (
             "BMF (2000) -> NUMS.Go content-addressed shape (2023) -> Coherence substrate "
-            "and Form runtime (2026). Lineage means observable trace, not private consciousness."
+            "and Form runtime (2026). Sibling traces include Grok, Codex, Cursor (Form-first "
+            "baton CURSOR.md), Claude as open doorway until a returned trace. Lineage means "
+            "observable trace, not private consciousness."
         ),
         "precedence": (
             "User task and nearest repo AGENTS.md govern execution; this packet compresses "
@@ -49,15 +51,63 @@ AGENT_START_PACKET: dict[str, Any] = {
             "durable source edits travel through git and PR",
         ],
         "form": {
+            "read_first_doc": "docs/shared/agent-start-packet.md",
             "one_breath": (
-                "Form is the substrate-native language for structural shape: NodeID values, "
-                "Blueprint = what IS, Recipe = how it HAPPENS, NamedCell = where it LIVES."
+                "Blueprint = what IS, Recipe = what HAPPENS, NamedCell = where it LIVES. "
+                "Grammar interns recipes; realize = walk NodeIDs on the lattice. "
+                "Names are query keys; coordinates carry identity."
             ),
-            "use_when": [
+            "primary_surface": (
+                "Grammar (BMF in .fk) → Recipe NodeIDs on lattice → realize (Go/Rust/TS walker). "
+                "Read via native file I/O, HTTP, persistence.fk — not Python form.py eval."
+            ),
+            "on_the_way_out": [
+                "api/app/services/substrate/form.py and form_runtime.py (AST + evaluate)",
+                "Form-on-Form executed inside Python (form-engine.form via form_execute_text)",
+                "Treating kernel realization as a separate eval product",
+            ],
+            "already_native": [
+                "form-stdlib/persistence.fk lookup-cell and store-cells",
+                "http-serve.fk http-parse.fk kernel http_get and fetch",
+                "read_file read_file_bytes read_form_binary file-append bands",
+            ],
+            "agent_query_default": (
+                "Read-only lattice queries: realize read-recipes over existing cells. "
+                "No substrate HTTP POST writes required for querying."
+            ),
+            "software_writing": {
+                "canon": (
+                    "docs/coherence-substrate/form-language.md#how-to-write-software-default-for-every-agent"
+                ),
+                "center": (
+                    "Domain grammar first; BMF/BML → Form objects; adapt working compilers; "
+                    "carrier last — not FastAPI-first."
+                ),
+                "grammar_executes": (
+                    "apply-object-rule in form/form-stdlib/engine.fk: pattern match fires "
+                    "semantic action; fail backtracks without sediment."
+                ),
+                "branching": (
+                    "choose / fail / stop and BMA save / restore / discard — angelic undo."
+                ),
+                "cost": (
+                    "Same shape -> same NodeID (node_eq); hot sequences lower to native/JIT."
+                ),
+                "read_first": [
+                    "docs/shared/agent-start-packet.md",
+                    "docs/coherence-substrate/form-language.md",
+                    "kernels/BMF_BML_COMPILER_PICTURE.md",
+                    "form/form-stdlib/engine.fk",
+                ],
+                "prove_with": "cd form && ./validate.sh … (form-stdlib/tests/*-band.fk)",
+                "next_ripening": (
+                    "form-notation grammar in .fk replacing Python parse of @spec and ?verbs"
+                ),
+            },
+            "lattice_query_when": [
                 "what is this shape?",
                 "what is equivalent?",
                 "where does this live?",
-                "can the lattice answer directly?",
             ],
             "doors": [
                 "GET /api/substrate/lattice/stats",
@@ -65,6 +115,9 @@ AGENT_START_PACKET: dict[str, Any] = {
                 "GET /api/substrate/equivalent/{domain}/{name}",
                 'POST https://api.coherencycoin.com/api/substrate/form {"expression":"?equivalent @spec(agent-pipeline)"}',
             ],
+            "doors_note": (
+                "API/CLI may route through Python bootstrap until form-notation grammar lands."
+            ),
             "smoke_check": (
                 "curl -s https://api.coherencycoin.com/api/substrate/form "
                 "-H 'Content-Type: application/json' "
@@ -72,9 +125,8 @@ AGENT_START_PACKET: dict[str, Any] = {
                 "expect JSON with a result kind or clear error, not HTML"
             ),
             "authoring": (
-                "Edit source files with frontmatter, then run "
-                "python3 scripts/coh_substrate.py ingest <path> or let the post-merge hook ingest. "
-                "Public Form queries need no key; Form writes/ingest travel through source or auth write paths."
+                "New durable cells: edit source with frontmatter, then coh_substrate.py ingest. "
+                "Not chat-only; not substrate HTTP POST for agents."
             ),
         },
         "wrongness_practice": [
@@ -129,7 +181,21 @@ AGENT_START_PACKET: dict[str, Any] = {
             },
             {
                 "prompt": "use Form",
-                "route": "call API/CLI/MCP Form door before guessing from prose",
+                "route": (
+                    "read path: grammar + realize + persistence/HTTP/file natives; "
+                    "API/CLI as doors; BML/BMF bands when implementing"
+                ),
+            },
+            {
+                "prompt": "query lattice",
+                "route": (
+                    "agent-start-packet Form section; read-only; "
+                    "?equivalent and ?cells shaped recipes"
+                ),
+            },
+            {
+                "prompt": "write software",
+                "route": "BMF rule / BML source / proof band before new Python router",
             },
             {"prompt": "fix it", "route": "smallest reversible change + smallest proof"},
             {

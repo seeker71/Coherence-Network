@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-04",
+  "thread_branch": "codex/agent-form-native-entry-docs-2026-06-04",
+  "commit_scope": "Align first-agent entry docs and invitation packet with Form-native runtime primary surface.",
+  "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CURSOR.md",
+    "MANIFEST.md",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_start_packet.py",
+    "api/tests/test_agent_invitation.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/agents-using-substrate.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-04_agent_form_native_entry_docs.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/python -m pytest tests/test_agent_invitation.py -q",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-04_agent_form_native_entry_docs.json"
+    ],
+    "summary": "Invitation tests pass; evidence validates."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": ["Open PR and monitor checks"]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI pending until PR checks complete."
+  },
+  "idea_ids": ["living-documentation"],
+  "spec_ids": ["agent-guidance"],
+  "task_ids": ["agent-form-native-entry-docs-2026-06-04"],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": ["documentation-tending", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "Composer"
+  },
+  "evidence_refs": [
+    "docs/shared/agent-start-packet.md",
+    "cd api && .venv/bin/python -m pytest tests/test_agent_invitation.py -q"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CURSOR.md",
+    "MANIFEST.md",
+    "api/app/services/agent_invitation_lineage.py",
+    "api/app/services/agent_start_packet.py",
+    "api/tests/test_agent_invitation.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/agents-using-substrate.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "web/app/come-in/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-04_agent_form_native_entry_docs.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/agent/invitation and agent-start-packet expose form_native_runtime and compost guidance; no API runtime path change.",
+    "public_endpoints": ["GET /api/agent/invitation"],
+    "test_flows": [
+      "test_agent_invitation.py confirms packet shape and routing strings."
+    ]
+  }
+}
