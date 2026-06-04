@@ -130,5 +130,8 @@ The statement + expression rules live once in
 [`lang-common.fk`](../../form/form-stdlib/lang-common.fk); each language supplies
 only the few rules where its surface genuinely differs (method, param, if). That is
 the core-abstraction-first shape: one engine, one shared core, languages as the thin
-diff. Remaining surface (Python / Rust / C# full grammars, BML templates/generics,
-the full statement set, class-as-`B_Class`) is more rule-data, not more engine.
+diff. **BML templates + generics are in** — generic types are type-applications
+(`Name<A,B>` → `~fncall`, nested), and template classes + generic methods capture
+their type parameters: [`bml-generics-band.fk`](../../form/form-stdlib/tests/bml-generics-band.fk)
+`→ 300`. Remaining surface (Python / Rust / C# full grammars, the full statement
+set, class-as-`B_Class`) is more rule-data, not more engine.

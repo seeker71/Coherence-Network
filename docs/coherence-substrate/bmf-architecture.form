@@ -463,8 +463,10 @@ deltas, on a minimal worked example —
    (the two primitives the slice once lacked). Full **BML**, **Go**, and **Java**
    method grammars now parse real source into universal trees and converge on one
    `~fndef` — [`grammars-from-the-cursor.form`](grammars-from-the-cursor.form)
-   (`bmf-grammar-band`/`bml-band`/`lang-convergence-band` each → 300). Remaining:
-   Python/Rust/C# full grammars + BML templates/generics — rule-data, not engine.
+   (`bmf-grammar-band`/`bml-band`/`lang-convergence-band` each → 300). BML templates
+   + generics are in too (`bml-generics-band → 300`: generic types as `~fncall`,
+   template classes + generic methods capture type params). Remaining: Python/Rust/C#
+   full grammars — rule-data, not engine.
 2. **Universal-emit-always** — every template emits `(bp <universal-op>)`; retire the
    per-dialect category numbers. (#4)
 3. **Self-host the meta-grammar** — express the grammar-definition notation (the
