@@ -1,0 +1,49 @@
+; lang-convergence-band.fk — Go, Java, and BML full method grammars converge.
+;
+; The same method, written in three surfaces (Go's `func`+name-type+no-if-parens,
+; Java's type-name+if-parens, BML's type-name+no-if-parens), parsed from the cursor
+; by three grammars that share lang-common, all emit the SAME universal Form tree.
+; Different surfaces, one coordinate — at full-grammar depth (recursion, precedence,
+; calls, control flow), not just a fixed slice.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk form-stdlib/bml.fk form-stdlib/go.fk form-stdlib/java.fk
+
+(do
+    (let bg (bml-grammar))
+    (let gg (go-grammar))
+    (let jg (java-grammar))
+    (defn L (s) (intern_trivial_string s))
+    (defn N (op kids) (intern_node (bp op) kids))
+
+    ;; method f(x) { y = a + b ; return y ; }  — one param, assignment, binary, return
+    (let want-f
+        (N "fndef" (list (L "f")
+                         (N "do" (list (L "x")))
+                         (N "do" (list
+                            (N "let" (list (L "y") (N "add" (list (L "a") (L "b")))))
+                            (N "UE-JUMP-RETURN" (list (L "y"))))))))
+    (let s-f
+        (if (and (node_eq (g-parse gg "func f ( x int ) { y = a + b ; return y ; }") want-f)
+            (and (node_eq (g-parse jg "int f ( int x ) { y = a + b ; return y ; }") want-f)
+                 (node_eq (g-parse bg "int f ( int x ) { y = a + b ; return y ; }") want-f)))
+            100 0))
+
+    ;; method g() { if a { h(x) ; } return a ; }  — no params, if (Java has parens), call
+    (let want-g
+        (N "fndef" (list (L "g")
+                         (N "do" (empty))
+                         (N "do" (list
+                            (N "if-then" (list (L "a")
+                                               (N "do" (list (N "fncall" (list (L "h") (L "x")))))))
+                            (N "UE-JUMP-RETURN" (list (L "a"))))))))
+    (let s-g
+        (if (and (node_eq (g-parse gg "func g ( ) { if a { h ( x ) ; } return a ; }") want-g)
+            (and (node_eq (g-parse jg "int g ( ) { if ( a ) { h ( x ) ; } return a ; }") want-g)
+                 (node_eq (g-parse bg "int g ( ) { if a { h ( x ) ; } return a ; }") want-g)))
+            100 0))
+
+    ;; distinct methods land on distinct coordinates
+    (let s-d (if (node_eq want-f want-g) 0 100))
+
+    ; Expected total: 300
+    (add s-f (add s-g s-d)))
