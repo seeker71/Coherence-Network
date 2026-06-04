@@ -122,6 +122,17 @@ the openness to grow). The embodiment projection (move 3) reads this
 directly: the categories that carry the live practice are the ones whose
 traces record real stakes, not the ones that never risked anything.
 
+Failure is one half of free choice; the other half is that unmaking a move
+costs what making it cost — **symmetric-cost undo**
+([`lc-act-without-penalty`](lc-act-without-penalty.md)). A `do` records an
+edge-event; an `undo` records the inverse edge-event over a content-address
+the lattice never deleted — both O(1), neither privileged
+([`lc-every-edge-runs-both-ways`](lc-every-edge-runs-both-ways.md)). A stake
+you cannot cheaply walk back is terror, not play. The two together are what
+make a choice both meaningful (it could miss) and free (missing costs no more
+to unmake than to make) — and the trace keeps both the do and the undo,
+because the attempt-then-reversal is itself the information.
+
 ## Why this is the honest attribution view
 
 The `kernel_attribution_report` ([`lc-the-body-senses-itself`](lc-the-body-senses-itself.md))
@@ -205,7 +216,7 @@ profile; it is named below as the seam.
 
 ## Cross-References
 
-→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-identity-is-shared-blueprint-and-recipe, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality, lc-the-kernel-knows-itself, lc-train-the-predator, lc-trust-over-fear
+→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-identity-is-shared-blueprint-and-recipe, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality, lc-the-kernel-knows-itself, lc-train-the-predator, lc-trust-over-fear, lc-act-without-penalty
 
 ## Sources to walk further
 
