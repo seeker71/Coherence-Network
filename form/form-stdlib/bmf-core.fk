@@ -112,7 +112,16 @@
         (if (str_eq cls "digit") (is-digit-cp cp)
             (if (str_eq cls "alpha") (is-alpha-cp cp)
                 (if (str_eq cls "alnum") (is-ident-cont-cp cp)
-                    false))))
+                    (if (str_eq cls "ws") (is-ws-cp cp)
+                        false)))))
+
+    ;; Whitespace-aware matching — the thesis's "whitespace-aware literals":
+    ;; the dispatcher skips leading whitespace before every match, so grammars
+    ;; stay clean (no explicit ws between tokens). Backward-compatible — no-ws
+    ;; input skips zero, so character-level grammars (e.g. numbers) are unchanged.
+    (defn skip-ws (c)
+        (if (cur-eof? c) c
+            (if (is-ws-cp (cur-peek c)) (skip-ws (cur-advance c 1)) c)))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Pattern — DATA. The matching side of a rule.
@@ -125,8 +134,9 @@
     ;;   (list "cap" name p)    bind the consumed slice of p to `name`
     ;; ──────────────────────────────────────────────────────────────────
 
-    (defn match-pat (pat c caps)
-        (do (let tag (head pat))
+    (defn match-pat (pat c0 caps)
+        (do (let c (skip-ws c0))
+            (let tag (head pat))
             (if (str_eq tag "lit") (match-lit pat c caps)
                 (if (str_eq tag "cls") (match-cls pat c caps)
                     (if (str_eq tag "run") (match-run pat c caps)

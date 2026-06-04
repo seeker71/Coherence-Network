@@ -457,7 +457,11 @@ deltas, on a minimal worked example —
 **The staged path (next breaths), in order:**
 
 1. **Migrate the language grammars** to `(pattern, template)` data rules over the
-   cursor; retire the per-rule emit/reverse lambdas. (engine.fk #2, #3)
+   cursor; retire the per-rule emit/reverse lambdas. (engine.fk #2, #3) — *begun:*
+   [`grammars-from-the-cursor.form`](grammars-from-the-cursor.form) proves the
+   convergence law (BML / Python / Go / Rust / C# / Java → one `~Function`, one
+   `~Cond`) in `bmf-langs-band.fk → 300`; the remaining work is general repetition
+   + separator-list capture so the full grammars run verbatim.
 2. **Universal-emit-always** — every template emits `(bp <universal-op>)`; retire the
    per-dialect category numbers. (#4)
 3. **Self-host the meta-grammar** — express the grammar-definition notation (the
