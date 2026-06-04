@@ -46,7 +46,7 @@
     "postcss": "^8.5.10",
     "tailwindcss": "^4.3.0",
     "typescript": "^5",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   },
   "overrides": {
     "postcss": "$postcss",
