@@ -14,6 +14,7 @@
     "docs/coherence-substrate/agents-using-substrate.md",
     "docs/coherence-substrate/form-language.md",
     "docs/shared/agent-start-packet.md",
+    "web/app/come-in/page.tsx",
     "docs/system_audit/commit_evidence_2026-06-04_agent_form_native_entry_docs.json"
   ],
   "local_validation": {
@@ -71,6 +72,7 @@
     "docs/coherence-substrate/agents-using-substrate.md",
     "docs/coherence-substrate/form-language.md",
     "docs/shared/agent-start-packet.md",
+    "web/app/come-in/page.tsx",
     "docs/system_audit/commit_evidence_2026-06-04_agent_form_native_entry_docs.json"
   ],
   "change_intent": "runtime_feature",
