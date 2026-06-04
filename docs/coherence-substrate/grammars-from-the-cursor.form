@@ -105,15 +105,30 @@ coordinates, zero divergence across three kernels.
   content-addressing collapses equivalent constructs to one NodeID with no sameAs
   table and no normalize pass.
 
-## What is proven vs. the staged path
+## The recursive engine — shipped, and full grammars on it
 
-Proven now (in the band, cross-kernel): the **convergence law** — six languages'
-function and `if` rules, run from the cursor, land on one universal coordinate each.
+The two primitives the fixed-arity slice sidestepped are now in
+[`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk): a **grammar** of named
+rules with `ref` + recursion, general `rep` / `sep` repetition that captures a
+**list of sub-rule nodes**, and templates that `splice` one node or `splice*` a
+list. With it, the grammars above are no longer a sketch — they parse real source
+into universal trees, cross-kernel:
 
-The staged path (named, not yet shipped): the full grammars need two core
-primitives the band sidesteps — general `{ p }` repetition of sub-patterns and the
-`\\` separator-list capturing into a child list (today `bmf-core.fk` repeats only
-character classes via `run`, and the band uses fixed arity). Those are the next
-breath; with them, `$param:ID \\ ","` captures a real argument list and the
-grammars above run verbatim. The law is what mattered to prove first: the surfaces
-converge. The rest is filling the bag of rules.
+- the **engine** itself — [`bmf-grammar-band.fk`](../../form/form-stdlib/tests/bmf-grammar-band.fk)
+  `→ 300`: recursion, operator precedence, parenthesized nesting, separator-lists.
+- **full BML** ([`bml.fk`](../../form/form-stdlib/bml.fk)) —
+  [`bml-band.fk`](../../form/form-stdlib/tests/bml-band.fk) `→ 300`: class › section ›
+  method › statements (`let` / `if` / `return` / expr) › expressions (binary
+  precedence, calls) parse a real BML class into universal nodes.
+- **Go + Java + BML converge at depth** ([`go.fk`](../../form/form-stdlib/go.fk),
+  [`java.fk`](../../form/form-stdlib/java.fk)) —
+  [`lang-convergence-band.fk`](../../form/form-stdlib/tests/lang-convergence-band.fk)
+  `→ 300`: the same method in three surfaces (Go `func`+name-type+`if a {`, Java
+  type-name+`if (a) {`, BML type-name+`if a {`) emits one identical `~fndef` tree.
+
+The statement + expression rules live once in
+[`lang-common.fk`](../../form/form-stdlib/lang-common.fk); each language supplies
+only the few rules where its surface genuinely differs (method, param, if). That is
+the core-abstraction-first shape: one engine, one shared core, languages as the thin
+diff. Remaining surface (Python / Rust / C# full grammars, BML templates/generics,
+the full statement set, class-as-`B_Class`) is more rule-data, not more engine.

@@ -1,0 +1,49 @@
+; bml-band.fk — full BML core parses real BML into universal Form nodes.
+;
+; Three real BML snippets — a method with assignment+binary+return, a method with
+; if+call, and a class>section>method nest — each parsed by bml.fk's grammar from
+; the cursor and asserted equal (node_eq) to the hand-built universal tree.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk
+
+(do
+    (let g (bml-grammar))
+    (defn L (s) (intern_trivial_string s))
+    (defn N (op kids) (intern_node (bp op) kids))
+
+    ;; A — method + assignment + binary + return
+    ;;   int f ( int x ) { y = a + b ; return y ; }
+    (let a-want
+        (N "fndef" (list (L "f")
+                         (N "do" (list (L "x")))
+                         (N "do" (list
+                            (N "let" (list (L "y") (N "add" (list (L "a") (L "b")))))
+                            (N "UE-JUMP-RETURN" (list (L "y"))))))))
+    (let a-got (g-parse g "int f ( int x ) { y = a + b ; return y ; }"))
+    (let s-a (if (node_eq a-got a-want) 100 0))
+
+    ;; B — method + if + call (empty params)
+    ;;   int g ( ) { if a { h ( x ) ; } return a ; }
+    (let b-want
+        (N "fndef" (list (L "g")
+                         (N "do" (empty))
+                         (N "do" (list
+                            (N "if-then" (list (L "a")
+                                               (N "do" (list (N "fncall" (list (L "h") (L "x")))))))
+                            (N "UE-JUMP-RETURN" (list (L "a"))))))))
+    (let b-got (g-parse g "int g ( ) { if a { h ( x ) ; } return a ; }"))
+    (let s-b (if (node_eq b-got b-want) 100 0))
+
+    ;; C — class > section [props] > method nesting
+    ;;   class C { section [ public ] { int m ( ) { return x ; } } }
+    (let c-want
+        (N "do" (list (L "C")
+                      (N "do" (list
+                         (N "fndef" (list (L "m")
+                                          (N "do" (empty))
+                                          (N "do" (list (N "UE-JUMP-RETURN" (list (L "x"))))))))))))
+    (let c-got (g-parse g "class C { section [ public ] { int m ( ) { return x ; } } }"))
+    (let s-c (if (node_eq c-got c-want) 100 0))
+
+    ; Expected total: 300
+    (add s-a (add s-b s-c)))
