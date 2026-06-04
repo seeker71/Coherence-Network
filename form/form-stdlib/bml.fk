@@ -1,128 +1,126 @@
 ; bml.fk — the BML grammar (the thesis's high-level superset) as cursor rules
 ; emitting universal Form nodes, over the recursive engine in bmf-grammar.fk.
+; Self-contained: declarations, statements, and a full expression ladder
+; (member access `.`, index `[]`, calls, binary precedence, generics). The
+; cursor + character matchers (str/char/num + comment-skip) carry the lexical
+; level scannerlessly; this file is the grammar over it.
 ;
-; Covers class / section / method / params / statements / expressions AND BML's
-; templates + generics:
-;   - generic type application   Name<A, B>  (nested: HashTable<String, Stack<X>>)
-;       → ~fncall[ Name, A, B ]   (a parameterized type IS application)
-;   - template / generic class   class Name<T, U> { ... }
-;       → ~do[ name, ~do[type-params], member... ]
-;   - generic method             RetType name<T>( params ) { body }
-;       → ~fndef[ name, ~do[type-params], ~do[params], ~do[body] ]   (4 children)
-;   - generic instantiation      Name<A, B>( args )
-;       → ~fncall[ <type-application>, args... ]
+; Universal emit: class/section/block → ~do ; method → ~fndef ; call → ~fncall ;
+; member `a.b` → ~UE-ACCESS-MEMBER ; index `a[i]` → ~UE-ACCESS-INDEX ;
+; return → ~UE-JUMP-RETURN ; assignment/field → ~let ; if → ~if-then ;
+; binary/compare/logic → ~add/sub/mul/div / ~eq/ne/lt/le/gt/ge / ~and/or.
+; Types and property modifiers are parsed (so real BML doesn't break) and erased
+; from output where incidental; generic type-params are captured.
 ;
-; The statement + expression core is shared via lang-common.fk; BML supplies its
-; own class/method/param/if and overrides `factor` to add generic instantiation.
-; Types are parsed (so generic-typed methods/params don't break) and erased from
-; method/param output (a method is a function in any tongue); the generic structure
-; itself is captured wherever it is the point — type apps, class/method type-params.
-; Containers without a universal NUMS shape (class, section) map to ~Block (`do`)
-; until a B_Class shape lands.
-;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
 
 (do
-    (defn bml-grammar () (grammar "unit" (append (list
+    (defn bml-grammar () (grammar "unit" (list
 
-        ;; top: generic class | class | generic method | method  (generic first)
+        ;; ── compilation unit: package? import* decl* ──────────────────────
         (rule3 "unit"
-            (p-cap "v" (list "alt" (p-ref "gclass") (p-ref "class") (p-ref "gmethod") (p-ref "method")))
-            (t-splice "v"))
+            (list "seq" (p-rep (p-ref "prelude")) (p-cap "ds" (p-rep (p-ref "topdecl"))))
+            (t-emit "do" (list (t-splices "ds"))))
+        (rule3 "prelude" (p-cap "v" (list "alt" (p-ref "package") (p-ref "import") (p-ref "inc"))) (t-const "prelude"))
+        (rule3 "inc" (list "seq" (p-lit "#include") (p-str)) (t-const "include"))
+        (rule3 "package" (list "seq" (p-lit "package") (p-ref "dotted") (p-lit ";")) (t-const "package"))
+        (rule3 "import"  (list "seq" (p-lit "import") (p-ref "importpath") (p-lit ";")) (t-const "import"))
+        (rule3 "dotted"  (list "seq" (p-run "alpha") (p-rep (list "seq" (p-lit ".") (p-run "alpha")))) (t-const "dotted"))
+        (rule3 "importpath" (list "seq" (p-run "alpha") (p-rep (list "seq" (p-lit ".") (list "alt" (p-run "alpha") (p-lit "*"))))) (t-const "import"))
+        (rule3 "topdecl" (p-cap "v" (list "alt" (p-ref "gclass") (p-ref "class") (p-ref "gmethod") (p-ref "method"))) (t-splice "v"))
 
-        ;; class Name { members }                          → ~do[ name, member... ]
+        ;; ── class / generic class ─────────────────────────────────────────
         (rule3 "class"
-            (list "seq" (p-lit "class") (p-cap "name" (p-run "alpha")) (p-lit "{")
-                  (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}"))
+            (list "seq" (p-lit "class") (p-cap "name" (p-run "alpha")) (p-opt (p-ref "props")) (p-opt (p-ref "bases"))
+                  (p-lit "{") (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}"))
             (t-emit "do" (list (t-splice "name") (t-splices "ms"))))
-
-        ;; class Name < T , U > [props] { members }   (template / generic class)
-        ;;                                            → ~do[ name, ~do[T,U], member... ]
         (rule3 "gclass"
             (list "seq" (p-lit "class") (p-cap "name" (p-run "alpha"))
                   (p-lit "<") (p-cap "tps" (p-sep (p-run "alpha") (p-lit ","))) (p-lit ">")
-                  (p-opt (p-ref "props")) (p-lit "{")
-                  (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}"))
-            (t-emit "do" (list (t-splice "name")
-                               (t-emit "do" (list (t-splices "tps")))
-                               (t-splices "ms"))))
+                  (p-opt (p-ref "props")) (p-opt (p-ref "bases"))
+                  (p-lit "{") (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}"))
+            (t-emit "do" (list (t-splice "name") (t-emit "do" (list (t-splices "tps"))) (t-splices "ms"))))
+        (rule3 "bases" (list "seq" (p-lit ":") (p-sep (p-ref "typeref") (p-lit ","))) (t-const "bases"))
 
-        ;; member: section | generic method | method
-        (rule3 "member"
-            (p-cap "v" (list "alt" (p-ref "section") (p-ref "gmethod") (p-ref "method")))
-            (t-splice "v"))
+        ;; ── property modifiers [ a , b=c , ... ] (parsed, erased) ─────────
+        (rule3 "props" (list "seq" (p-lit "[") (p-sep (p-ref "propitem") (p-lit ",")) (p-lit "]")) (t-const "props"))
+        (rule3 "propitem" (list "seq" (p-run "alpha") (p-opt (list "seq" (p-lit "=") (p-cap "x" (list "alt" (p-str) (p-ref "typeref") (p-run "alnum")))))) (t-const "prop"))
 
-        ;; section [props] { members }                     → ~do[ member... ]
-        (rule3 "section"
-            (list "seq" (p-lit "section") (p-opt (p-ref "props")) (p-lit "{")
-                  (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}"))
-            (t-emit "do" (list (t-splices "ms"))))
-
-        ;; [ ident , ident ... ]                           property modifiers, erased
-        (rule3 "props"
-            (list "seq" (p-lit "[") (p-sep (p-run "alpha") (p-lit ",")) (p-lit "]"))
-            (t-const "props"))
-
-        ;; type name ( params ) { body }   (ret type may be generic; erased)
-        ;;                                  → ~fndef[ name, ~do[params], ~do[body] ]
+        ;; ── members ───────────────────────────────────────────────────────
+        (rule3 "member" (p-cap "v" (list "alt" (p-ref "section") (p-ref "opmethod") (p-ref "gmethod") (p-ref "method") (p-ref "ctor") (p-ref "fieldinit") (p-ref "fielddecl"))) (t-splice "v"))
+        (rule3 "section" (list "seq" (p-lit "section") (p-opt (p-ref "props")) (p-lit "{") (p-cap "ms" (p-rep (p-ref "member"))) (p-lit "}")) (t-emit "do" (list (t-splices "ms"))))
+        ;; operator overload: `bool operator == ( params ) { body }` → fndef named "operator"
+        (rule3 "opmethod"
+            (list "seq" (p-ref "typeref") (p-lit "operator")
+                  (list "alt" (p-lit "==") (p-lit "!=") (p-lit "<=") (p-lit ">=") (p-lit "[]") (p-lit "<") (p-lit ">") (p-lit "+") (p-lit "-") (p-lit "*") (p-lit "/"))
+                  (p-lit "(") (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")") (p-opt (p-ref "props"))
+                  (p-lit "{") (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
+            (t-emit "fndef" (list (t-const "operator") (t-emit "do" (list (t-splices "ps"))) (t-emit "do" (list (t-splices "body"))))))
         (rule3 "method"
-            (list "seq" (p-ref "type") (p-cap "name" (p-run "alpha")) (p-lit "(")
-                  (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")")
+            (list "seq" (p-ref "typeref") (p-cap "name" (p-run "alpha")) (p-lit "(") (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")") (p-opt (p-ref "props"))
                   (p-lit "{") (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
-            (t-emit "fndef" (list (t-splice "name")
-                                  (t-emit "do" (list (t-splices "ps")))
-                                  (t-emit "do" (list (t-splices "body"))))))
-
-        ;; type name < T , U > ( params ) { body }   (generic method)
-        ;;                          → ~fndef[ name, ~do[T,U], ~do[params], ~do[body] ]
+            (t-emit "fndef" (list (t-splice "name") (t-emit "do" (list (t-splices "ps"))) (t-emit "do" (list (t-splices "body"))))))
         (rule3 "gmethod"
-            (list "seq" (p-ref "type") (p-cap "name" (p-run "alpha"))
-                  (p-lit "<") (p-cap "tps" (p-sep (p-run "alpha") (p-lit ","))) (p-lit ">")
-                  (p-lit "(") (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")")
+            (list "seq" (p-ref "typeref") (p-cap "name" (p-run "alpha")) (p-lit "<") (p-cap "tps" (p-sep (p-run "alpha") (p-lit ","))) (p-lit ">")
+                  (p-lit "(") (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")") (p-opt (p-ref "props"))
                   (p-lit "{") (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
-            (t-emit "fndef" (list (t-splice "name")
-                                  (t-emit "do" (list (t-splices "tps")))
-                                  (t-emit "do" (list (t-splices "ps")))
-                                  (t-emit "do" (list (t-splices "body"))))))
+            (t-emit "fndef" (list (t-splice "name") (t-emit "do" (list (t-splices "tps"))) (t-emit "do" (list (t-splices "ps"))) (t-emit "do" (list (t-splices "body"))))))
+        (rule3 "ctor"
+            (list "seq" (p-cap "name" (p-run "alpha")) (p-lit "(") (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")") (p-opt (p-ref "props"))
+                  (p-lit "{") (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
+            (t-emit "fndef" (list (t-splice "name") (t-emit "do" (list (t-splices "ps"))) (t-emit "do" (list (t-splices "body"))))))
+        (rule3 "fieldinit" (list "seq" (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-opt (p-ref "props")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "let" (list (t-splice "n") (t-splice "e"))))
+        (rule3 "fielddecl" (list "seq" (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-opt (p-ref "props")) (p-lit ";")) (t-emit "let" (list (t-splice "n"))))
+        (rule3 "param" (list "seq" (p-opt (p-ref "props")) (p-ref "typeref") (p-cap "n" (p-run "alpha"))) (t-splice "n"))
 
-        ;; type name   (type may be generic; parsed then erased)  → name leaf
-        (rule3 "param"
-            (list "seq" (p-ref "type") (p-cap "n" (p-run "alpha")))
-            (t-splice "n"))
+        ;; ── types (generic / dotted) ──────────────────────────────────────
+        (rule3 "typeref" (p-cap "v" (list "alt" (p-ref "gentype") (p-ref "dottedtype"))) (t-splice "v"))
+        (rule3 "gentype" (list "seq" (p-cap "n" (p-run "alpha")) (p-lit "<") (p-cap "targs" (p-sep (p-ref "typeref") (p-lit ","))) (p-lit ">") (p-opt (list "seq" (p-lit "[") (p-lit "]")))) (t-emit "fncall" (list (t-splice "n") (t-splices "targs"))))
+        (rule3 "dottedtype" (list "seq" (p-cap "v" (p-run "alpha")) (p-rep (list "seq" (p-lit ".") (p-run "alpha"))) (p-opt (list "seq" (p-lit "[") (p-lit "]")))) (t-splice "v"))
 
-        ;; if cond { body }   (BML/Go style — no parens)  → ~if-then[ cond, ~do[body] ]
-        (rule3 "ifs"
-            (list "seq" (p-lit "if") (p-cap "c" (p-ref "expr")) (p-lit "{")
-                  (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
-            (t-emit "if-then" (list (t-splice "c") (t-emit "do" (list (t-splices "body"))))))
+        ;; ── statements ────────────────────────────────────────────────────
+        (rule3 "stmt" (p-cap "v" (list "alt" (p-ref "retv") (p-ref "retz") (p-ref "ifs") (p-ref "block") (p-ref "typedlocal") (p-ref "assign") (p-ref "exprs"))) (t-splice "v"))
+        (rule3 "retv" (list "seq" (p-lit "return") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "UE-JUMP-RETURN" (list (t-splice "e"))))
+        (rule3 "retz" (list "seq" (p-lit "return") (p-lit ";")) (t-emit "UE-JUMP-RETURN" (list)))
+        (rule3 "ifs" (list "seq" (p-lit "if") (p-lit "(") (p-cap "c" (p-ref "expr")) (p-lit ")") (p-cap "t" (p-ref "stmt")) (p-opt (list "seq" (p-lit "else") (p-ref "stmt")))) (t-emit "if-then" (list (t-splice "c") (t-splice "t"))))
+        (rule3 "block" (list "seq" (p-lit "{") (p-cap "ss" (p-rep (p-ref "stmt"))) (p-lit "}")) (t-emit "do" (list (t-splices "ss"))))
+        (rule3 "typedlocal" (list "seq" (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "let" (list (t-splice "n") (t-splice "e"))))
+        (rule3 "assign" (list "seq" (p-cap "n" (p-run "alpha")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "let" (list (t-splice "n") (t-splice "e"))))
+        (rule3 "exprs" (list "seq" (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-splice "e"))
 
-        ;; ── types (generics) ──────────────────────────────────────────────
-        ;; a type is generic or simple; the generic form is recursive (nested).
-        (rule3 "type"
-            (p-cap "v" (list "alt" (p-ref "gentype") (p-ref "simpletype")))
-            (t-splice "v"))
-        ;; Name < A , B >   → ~fncall[ Name, A, B ]   (type application; A/B are types)
-        (rule3 "gentype"
-            (list "seq" (p-cap "n" (p-run "alpha")) (p-lit "<")
-                  (p-cap "targs" (p-sep (p-ref "type") (p-lit ","))) (p-lit ">"))
-            (t-emit "fncall" (list (t-splice "n") (t-splices "targs"))))
-        (rule3 "simpletype"
-            (p-cap "v" (p-run "alpha"))
-            (t-splice "v"))
+        ;; ── expression ladder ─────────────────────────────────────────────
+        ;; one data-driven precedence ladder — operators are DATA, the engine's
+        ;; p-infix matcher folds them (operand = postfix, parsed once per term).
+        ;; longest ops listed before their prefixes (<= before <, == before =).
+        (rule3 "expr" (p-cap "v" (p-infix (p-ref "unary") (list
+            (list "||" "or" 1) (list "&&" "and" 2)
+            (list "==" "eq" 3) (list "!=" "ne" 3)
+            (list "instanceof" "eq" 4)
+            (list "<=" "le" 4) (list ">=" "ge" 4) (list "<" "lt" 4) (list ">" "gt" 4)
+            (list "+" "add" 5) (list "-" "sub" 5) (list "*" "mul" 6) (list "/" "div" 6)))) (t-splice "v"))
 
-        ;; ── factor override: generic instantiation before call / atom ──────
-        (rule3 "factor"
-            (list "alt"
-                (list "seq" (p-lit "(") (p-cap "v" (p-ref "expr")) (p-lit ")"))
-                (p-cap "v" (p-ref "gcall"))
-                (p-cap "v" (p-ref "call"))
-                (p-cap "v" (p-ref "atom")))
-            (t-splice "v"))
-        ;; Name < A , B > ( args )   → ~fncall[ <type-application>, args... ]
-        (rule3 "gcall"
-            (list "seq" (p-cap "c" (p-ref "gentype")) (p-lit "(")
-                  (p-cap "args" (p-sep (p-ref "expr") (p-lit ","))) (p-lit ")"))
-            (t-emit "fncall" (list (t-splice "c") (t-splices "args"))))
+        ;; unary prefix. `!e` → not. cast `(Type) e` erases the type to its value.
+        ;; cast is tried before paren-primary; it fails back to grouping when what
+        ;; follows the `)` isn't a unary (so `(a + b)` and `(0)` stay grouping).
+        (rule3 "unary" (p-cap "v" (list "alt" (p-ref "notx") (p-ref "castx") (p-ref "postfix"))) (t-splice "v"))
+        (rule3 "notx" (list "seq" (p-lit "!") (p-cap "e" (p-ref "unary"))) (t-emit "not" (list (t-splice "e"))))
+        (rule3 "castx" (list "seq" (p-lit "(") (p-ref "typeref") (p-lit ")") (p-cap "e" (p-ref "unary"))) (t-splice "e"))
 
-        ) (common-rules))))
+        ;; ── postfix: member-call / member / index / call / primary ────────
+        (rule3 "postfix" (p-cap "v" (list "alt" (p-ref "membercall") (p-ref "dotacc") (p-ref "indexed") (p-ref "call") (p-ref "primary"))) (t-splice "v"))
+        (rule3 "membercall" (list "seq" (p-cap "a" (p-run "alpha")) (p-lit ".") (p-cap "b" (p-run "alpha")) (p-lit "(") (p-cap "args" (p-sep (p-ref "expr") (p-lit ","))) (p-lit ")")) (t-emit "fncall" (list (t-emit "UE-ACCESS-MEMBER" (list (t-splice "a") (t-splice "b"))) (t-splices "args"))))
+        (rule3 "dotacc" (list "seq" (p-cap "a" (p-run "alpha")) (p-lit ".") (p-cap "b" (p-run "alpha"))) (t-emit "UE-ACCESS-MEMBER" (list (t-splice "a") (t-splice "b"))))
+        (rule3 "indexed" (list "seq" (p-cap "a" (p-run "alpha")) (p-lit "[") (p-cap "i" (p-ref "expr")) (p-lit "]")) (t-emit "UE-ACCESS-INDEX" (list (t-splice "a") (t-splice "i"))))
+        (rule3 "call" (list "seq" (p-cap "f" (p-run "alpha")) (p-lit "(") (p-cap "args" (p-sep (p-ref "expr") (p-lit ","))) (p-lit ")")) (t-emit "fncall" (list (t-splice "f") (t-splices "args"))))
+
+        ;; ── primary: ( expr ) | string | char | number | identifier ───────
+        ;; each alt is its own rule (a ref) so the captured value is always a
+        ;; real node — never a seq's unit, which Rust/TS reject as a child.
+        (rule3 "primary" (p-cap "v" (list "alt" (p-ref "paren") (p-ref "litstr") (p-ref "litchr") (p-ref "litnum") (p-ref "ident"))) (t-splice "v"))
+        (rule3 "paren" (list "seq" (p-lit "(") (p-cap "e" (p-ref "expr")) (p-lit ")")) (t-splice "e"))
+        (rule3 "litstr" (p-cap "v" (p-str)) (t-splice "v"))
+        (rule3 "litchr" (p-cap "v" (p-char)) (t-splice "v"))
+        (rule3 "litnum" (p-cap "v" (p-num)) (t-splice "v"))
+        (rule3 "ident" (p-cap "v" (p-run "alnum")) (t-splice "v"))
+        )))
 )
