@@ -1,0 +1,82 @@
+; channel-negotiation.fk — agree on recipe + payload referents without
+; transmitting either referent.
+;
+; This extends 15-private-channel's one hidden referent and
+; 16-megabyte-channel's parameter transport into a useful negotiation
+; opening: the sender privately selects an encoding recipe and a payload
+; blueprint; the receiver identifies both from shared substrate catalogs; the
+; receiver acknowledges the pair without sending the pair back.
+;
+; Channel bytes:
+;   sender -> receiver: (recipe_nonce, recipe_fp, payload_nonce, payload_fp)
+;   receiver -> sender: (ack_nonce, ack_fp)
+;
+; No recipe value and no payload value crosses the channel. The stable result
+; below is 341:
+;   recipe index 3, payload index 4, ack verified = 1.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    (defn hash-fold (bytes acc)
+        (if (nil? bytes) acc
+            (hash-fold (tail bytes)
+                       (mod (add (mul acc 31) (head bytes)) 1000003))))
+
+    (defn fingerprint (nonce value)
+        (mod (add (hash-fold nonce 0) (mul value 7919)) 1000003))
+
+    (defn find-match (cat nonce target-fp idx)
+        (if (nil? cat) (sub 0 1)
+            (do
+                (let candidate (head cat))
+                (let test-fp (fingerprint nonce candidate))
+                (if (eq test-fp target-fp)
+                    idx
+                    (find-match (tail cat) nonce target-fp (add idx 1))))))
+
+    (defn pair-code (a b)
+        (add (mul a 1000) b))
+
+    ;; SHARED SUBSTRATE CATALOGS.
+    ;; Integers stand in for content-addressed NodeIDs:
+    ;; - recipe_catalog: encoding/orchestration recipes
+    ;; - payload_catalog: novel payload blueprints or external references
+    (let recipe_catalog (list 110 220 330 440 550 660))
+    (let payload_catalog (list 1001 1002 1003 1004 1005 1006 1007))
+
+    ;; SENDER privately selects:
+    ;;   recipe index 3 -> value 440
+    ;;   payload index 4 -> value 1005
+    (let recipe_idx 3)
+    (let payload_idx 4)
+    (let recipe_value (nth recipe_catalog recipe_idx))
+    (let payload_value (nth payload_catalog payload_idx))
+
+    ;; Two independent doorway openings keep recipe and payload references
+    ;; unlinkable at the byte layer.
+    (let recipe_nonce (random_bytes 8))
+    (let payload_nonce (random_bytes 8))
+    (let recipe_fp (fingerprint recipe_nonce recipe_value))
+    (let payload_fp (fingerprint payload_nonce payload_value))
+
+    ;; RECEIVER resolves both referents using only its own substrate catalogs.
+    (let received_recipe_idx
+        (find-match recipe_catalog recipe_nonce recipe_fp 0))
+    (let received_payload_idx
+        (find-match payload_catalog payload_nonce payload_fp 0))
+
+    ;; RECEIVER acknowledges the pair as a pair, still without sending the
+    ;; pair. The sender verifies that the ack matches its intended pair.
+    (let ack_nonce (random_bytes 8))
+    (let ack_value (pair-code received_recipe_idx received_payload_idx))
+    (let ack_fp (fingerprint ack_nonce ack_value))
+    (let expected_ack_fp (fingerprint ack_nonce (pair-code recipe_idx payload_idx)))
+    (let ack_ok (if (eq ack_fp expected_ack_fp) 1 0))
+
+    ;; Compact stable attestation: 3, 4, 1 -> 341.
+    (add (add (mul received_recipe_idx 100)
+              (mul received_payload_idx 10))
+         ack_ok))
