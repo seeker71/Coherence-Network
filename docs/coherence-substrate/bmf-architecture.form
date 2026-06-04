@@ -71,17 +71,21 @@ coordinates that share the `Cursor` category.
 # A Pattern is anything that can consume some prefix of a Cursor and either
 # fail or succeed (advancing the cursor + optionally binding captures).
 form Pattern = ~Sum [                 # one category, several arms (a tagged union)
-    Literal,                          # match one token by kind + value
+    Literal,                          # match an exact run of characters ("if", "+")
+    Class,                            # match ONE character of a named class (digit, alpha)
+    Run,                              # match a RUN of a class — what a lexer would scan, inline
     Ref,                              # call another rule by name (recursion)
     Seq,                              # all parts in order
     Alt,                              # first matching alternative  (parse-time `choose`)
     Opt,                              # zero or one
     Rep,                              # zero+ (optionally separated)  → binds a list
-    Capture,                          # bind a sub-match to a name
+    Capture,                          # bind the consumed slice to a name
     Pred,                             # lookahead / guard, consumes nothing
 ]
 
-form Literal      = { kind: ~TokenKind, value: ~String }      # "if", "+", NUMBER
+form Literal      = { chars: ~String }                        # an exact string of characters
+form Class        = { name: ~Slug }                           # digit | alpha | alnum | ws | ...
+form Run          = { name: ~Slug }                           # one-or-more of a class → a slice
 form Ref⟨grammar⟩ = { rule: ~Slug }                           # name of a peer rule
 form Seq          = [ Pattern ]                               # ordered children
 form Alt          = [ Pattern ]                               # ordered alternatives
@@ -200,7 +204,9 @@ recipe match_rule = (rule, cursor) ->
     }
 
 recipe match_pattern = (pattern, cursor) -> choose_by_arm pattern {
-    Literal  -> if cursor.peek() == pattern then ok(cursor.advance()) else fail
+    Literal  -> if cursor.starts_with(pattern.chars) then ok(cursor.advance(len)) else fail
+    Class    -> if class_has(pattern.name, cursor.peek()) then ok(cursor.advance(1)) else fail
+    Run      -> consume while class_has(pattern.name, cursor.peek())   # ≥1 char, else fail
     Ref      -> match_rule(grammar.rule(pattern.rule), cursor)
     Seq      -> fold parts: thread the cursor; first fail fails the Seq
     Alt      -> choose [ match_pattern(a, cursor) for a in pattern ]   # parallel-able
@@ -314,7 +320,6 @@ above (`":"`, `"=>"`, `"|"`, `"*"`, `~Shape`, …) and emit `Rule` / `Pattern` /
 
 ```form
 form Config = {
-    lexer:      Grammar,          # tokenizing is just a grammar over a char-surface
     precedence: [ OpPrec ],       # operator table — DATA, not a hardcoded ladder
     target:     Vocabulary,       # which universal Blueprint family to emit into
     surfaces:   [ ~SurfaceKind ], # which cursor surfaces this grammar accepts
@@ -322,8 +327,13 @@ form Config = {
 form OpPrec = { op: ~String, prec: ~Integer, assoc: ~Assoc }
 ```
 
-- **The lexer is a grammar.** Tokenizing is `Match(lexer_grammar, Cursor(chars))`
-  emitting token-cells. There is no separate lexer engine — same `Match`.
+- **There is no lexer — the grammar is scannerless.** Patterns match *characters*
+  directly over the cursor: `Class` / `Run` consume character classes, `Literal`
+  matches an exact string, all through `peek` / `advance`. What a lexer would do is
+  just ordinary patterns in the one grammar — no token stream, no tokenize phase.
+  (A token *layer* is an optional optimization, not a component: if you ever want
+  shared tokens, run the same `Match` over a char-cursor to emit token-cells that a
+  second `Match` consumes. Same engine, never a special phase.)
 - **Precedence is a table of cells**, read by the `add`/`mul`-style rules (or by a
   single precedence-climbing rule parameterized by the table). Change precedence
   = edit data, never code.
