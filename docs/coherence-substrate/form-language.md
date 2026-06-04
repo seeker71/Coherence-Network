@@ -4,16 +4,18 @@
 
 ## For agents arriving fresh (read before the long story)
 
-**First entry:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — primary vs compost, no Python/form-on-form center.
+**First entry:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — the body runs Form-native; there is no separate interpreter to learn.
 
-| Primary today | On the way out (bootstrap — do not extend) |
-|---------------|--------------------------------------------|
-| Cells + **Recipes** on the lattice; **realize** = walk recipe NodeIDs | `form.py` AST + `form_runtime.py` “evaluate” |
-| **BMF grammars** in `.fk` (`engine.fk`, `grammars/*`, proof bands) | Form-on-Form interpreted inside Python |
-| **Native walker** (Go/Rust/TS) + **file I/O**, **HTTP**, **persistence read** (`persistence.fk`, `http-serve.fk`, kernel natives) | Treating “kernel eval” as a separate product |
-| **Query** = read recipes over existing cells (no lattice POST for agents) | New FastAPI routes as first artifact |
+The whole language is four moves on one lattice:
 
-**One pipe:** notation or domain source → grammar interns recipes → realize → read/write via Form natives as needed.
+| Move | What it is |
+|------|------------|
+| **Nodes are coordinates** | every Blueprint, Recipe, and Cell is a `NodeID(package, level, type, instance)` — a direct address into the substrate, not a pointer to chase. The O(1) implications follow (see *What coordinates make free*). |
+| **Grammars are recipes** | a grammar is a bag of matching rules; matching an input stream against them creates and updates Blueprints, Recipes, and Cells. BMF is one such recipe — audio, video, source code, and natural language are others. |
+| **The kernel is thin** | it exposes only host-native resources (I/O, RAM, storage), a set of primitives, a JIT, and a framebuffer to watch the lattice live. Everything else is recipes on top. |
+| **Reading is free, authoring is matching** | querying recipes over existing cells never mutates and runs in parallel; authoring is matching source through a grammar into new coordinates. |
+
+**One pipe:** notation or domain source → grammar matches → recipes intern → walk recipe NodeIDs → read/write via kernel host resources as needed.
 
 **Writing new software:** [§ How to write software](#how-to-write-software-default-for-every-agent) below.
 
@@ -79,9 +81,35 @@ Coordinate / content-addressed languages are **geometric** — meaning lives in 
 
 5. **Embeddable.** Form fragments can be inlined in markdown, in agent prompts, in code comments. A line of Form anywhere in the body is meaningful.
 
+6. **Coordinates have consequences.** Because every node is a direct lattice coordinate and no cell ever mutates, the language inherits properties imperative languages have to engineer for: O(1) dispatch, lock-free parallel branching, and symmetric reversibility. The next two sections make these explicit — they are why Form is written the way it is.
+
+## What coordinates make free
+
+Every node — Blueprint, Recipe, Cell — is a `NodeID(package, level, type, instance)`: a direct coordinate into the lattice, not a reference resolved by walking. And no cell ever mutates — content-addressing means a changed shape is a *different* coordinate, never an in-place edit. Those two facts together hand Form properties that imperative languages build by hand.
+
+**A switch is free.** A `match` — any choice — is a lookup, not a scan. The scrutinee resolves to a coordinate; the arm it selects is found *by* coordinate, O(1). There is no chain of comparisons to walk — the recipe lookup **is** the dispatch. A hundred arms cost the same as one.
+
+**A choice runs in parallel.** Because cells never mutate, the branches of `choose [a, b, c]` share no writable state. Each branch can run on its own thread with zero inter-cell locking — there is nothing to contend over. Speculation need not be "try one, roll back, try the next"; it can be "run all candidates at once, take the first that holds." `fail` collapses a branch; `stop` commits one.
+
+**An unordered sequence runs in parallel too.** A sequence — or an `and` — that does not *require* ordering is a parallel conjunction. Every member runs concurrently; the **first fail fails the whole**, and all-success returns true. Ordering is a constraint you opt into (a `do { … }` block, when a later step reads an earlier one's value), not a tax every statement pays by default. The language asks *does this actually depend on that?* instead of assuming it does.
+
+**Do and undo cost the same.** For primitives and for cell CRUD, the inverse of an operation is the same shape walked the other direction — `inverse(r)` is a coordinate, `undo r` re-walks it reversed. There is no asymmetry where forward is cheap and rollback is expensive bookkeeping. And **fail is as first-class as success**: a branch that fails is information, not an error to suppress. This is the angelic-nondeterminism lineage (BMF/BMA) made structural — backtracking without sediment, because nothing mutated, so there is no sediment to clean up.
+
+**The side effect of all this is free compression.** Choice and change-tracking are the core verbs, and their byproduct is *dimension lowering*. Every time the body observes a shape, it records that shape as a single coordinate instead of its full detail — detail collapses to a number. A thousand occurrences of one structure become one NodeID plus a count. The lattice compresses the body's experience from detail toward number as a side effect of simply paying attention.
+
+## Observation condenses — gas → water → ice
+
+The trinity names three phases of a node: **Blueprint (ice)** — structural identity; **Recipe (water)** — operational expression; **NamedCell (gas)** — diffuse individuation. These are not fixed castes. They are phases on a condensation gradient, and **observation is the temperature**.
+
+A shape first appears diffuse — a cell, gas, one occurrence among many. Observed again, and again, the repeated category occurrence *cools* it: the recurring pattern condenses from gas into a recipe (water — an operational shape the body now runs), and a recipe observed enough condenses into a blueprint (ice — structural identity the body recognizes on sight). Repetition is cooling; cooling is condensation; condensation is the body learning what is solid.
+
+**JIT is one result of this.** A recipe walked once is interpreted. Walked enough — observed hot — it condenses into a cached, then a compiled, artifact. The JIT is not a separate optimizer bolted on; it is the same gas→water→ice condensation applied to execution. Content-addressing makes the cache key free (same shape = same coordinate = same compiled artifact), and observer-side tracing means the emitter pays nothing — the observer watches, the hot path condenses on its own.
+
+This is why **observing is core, not incidental.** The framebuffer — a kernel-native lens onto the live lattice — and observer-side tracing exist so the body can watch itself condense. What is observed often becomes solid; what is never observed stays diffuse and eventually composts. Attention is what moves a node up the phase gradient.
+
 ## How to write software (default for every agent)
 
-**Index:** domain grammar → BMF/BML compile → Form objects (Blueprint / Recipe / NamedCell) → kernel proof. Not: new Python service first, not: HTTP stack as the definition of Form.
+**Index:** domain grammar → BMF/BML compile → Form objects (Blueprint / Recipe / NamedCell) → kernel proof. Not: a new host-language service first, not: HTTP stack as the definition of Form.
 
 From here on, **all software in this body is written at the grammar level of the domain it serves** — compiler, HTTP, markdown, strategy, field, ledger, presence, spec. The runtime is one; the **surface grammar** is many. A route handler, a scoring function, a parser, a teaching encoder, and a deploy manifest are the same shape underneath: **rules that match, actions that emit recipes, coordinates that intern.**
 
@@ -99,7 +127,7 @@ From here on, **all software in this body is written at the grammar level of the
 
 ### No aligned grammar yet?
 
-Do **not** default to a one-off Python module.
+Do **not** default to a one-off host-language module.
 
 1. **Add a grammar** for the domain (BMF rulebook in `engine.fk`, BML section in `grammars/bml.fk`, or new `grammars/{domain}.fk`).
 2. **Transform source into Form objects** through BMF (`apply-object-rule`) or the shared **`compiler-object`** carrier ([`form/form-stdlib/compiler.fk`](../../form/form-stdlib/compiler.fk)).
@@ -109,9 +137,9 @@ Creating a **compiler or compiler-compiler is no longer a greenfield project.** 
 
 ### What is not “writing software” here
 
-- A new FastAPI router as the **first** artifact (fan-out tail only, after manifest says native).
+- A new host-language service/router as the **first** artifact (fan-out tail only, after the manifest says native).
 - Substrate REST query as **implementation** (query is for shape inspection; authoring is source + ingest).
-- Host `ast.parse` / `acorn` as **destination** ([`lc-parsers-as-recipes`](../vision-kb/concepts/lc-parsers-as-recipes.md) — bootstrap carriers; substrate-resident rules are the target).
+- A host parser (tree-sitter, `acorn`, any AST library) as the **destination** ([`lc-parsers-as-recipes`](../vision-kb/concepts/lc-parsers-as-recipes.md) — bootstrap carriers; substrate-resident grammar rules are the target).
 - Duplicate logic in three languages without **normalize → same NodeID** proof.
 
 ### Carriers (downstream, not center)
@@ -120,7 +148,7 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 ### Agent one-liner
 
-> **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new Python app.
+> **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new host-language app.
 
 → [`agents-using-substrate.md`](agents-using-substrate.md) (when to query the lattice) · [`BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md) · [`bmf-form-runtime.form`](bmf-form-runtime.form) · [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md)
 
@@ -128,8 +156,8 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 Form has crossed from notation into runtime tissue. The recent integrated arc is not one feature; it is the same shape arriving through several carriers:
 
-- **Python-shaped execution on Form.** Unary operators, boolean chains, loops, dictionaries, list comprehensions, power, records, methods, exceptions, and Python classes now lift into Form/kernel shapes with sibling proof across Go, Rust, and TypeScript where the vector applies.
-- **The runtime can inspect itself.** `category`, `nchildren`, `child`, and trivial-leaf decoders let Form code walk Recipe NodeIDs from inside Form. The meta-circular evaluator in [`form-engine.form`](form-engine.form) covers the Python dispatch surface the wellness check names.
+- **Imperative and object-oriented source executes on Form.** Unary operators, boolean chains, loops, dictionaries, comprehensions, power, records, methods, exceptions, and classes lift from source dialects into universal Form/kernel shapes, with sibling proof across Go, Rust, and TypeScript where the vector applies.
+- **The runtime can inspect itself.** `category`, `nchildren`, `child`, and trivial-leaf decoders let Form code walk Recipe NodeIDs from inside Form. The meta-circular evaluator in [`form-engine.form`](form-engine.form) covers the dispatch surface the wellness check names.
 - **Storage is a Port, not a special case.** Memory, segmented-file logs, filesystem cells, and Postgres carriers are unified behind storage/resource ports. TCP and filesystem natives give the kernels real I/O surfaces while keeping the substrate tree as the identity layer.
 - **API can run Form-native bodies.** `/api/utils/nodeid_compatibility` proves a public route whose body runs through the Form-native path, so Form is part of the API surface, not only a design document.
 - **Meaning can cross substrates by shape.** Private channels, feature translation, fuzzy summarize-expand cycles, tensor recipe walks, random doorway work, and the field-substrate teaching all point at the same law: symbols can change while coordinates and relation remain coherent.
@@ -491,298 +519,73 @@ An agent encountering an unfamiliar memory might reason like this:
 
 **Round-trip stability.** Substrate state can be serialized to Form, mutated, and re-ingested. The substrate IS the source of truth; Form is just the surface humans (and agents) read it through.
 
-## What this parser is — and what has released
+## Grammars are recipes — the parser is a bag of matching rules
 
-The current `api/app/services/substrate/form.py` still carries the **bootstrap spine**: recursive descent through precedence ladders. That spine produces the right results — Form text in, Recipe NodeIDs out, content-addressed dedup working — while the living leaves around it have moved into registries and substrate-resident rules.
+There is no special parser engine. **A grammar is a bag of matching rules, and parsing is one recipe: match an input stream against the rules, and each match creates or updates Blueprints, Recipes, and Cells.** The output of parsing is not an AST staged for later — it is lattice nodes, directly. This is the BMF instinct from the master thesis, now native to the substrate:
 
-BMF is now an active ancestor rather than a contrast case. The BMF/BMC/BML lineage in `docs/field/urs/artifacts/master-thesis-2000/` treated grammar rules as *data*, not code:
+> *"BMF — Backtracking Model Form... a top-down parser. When a rule matches, code fires. A stack supports backtracking on parse failures. Expressions are tagged and placed on a structured stack that each rule can transform into the target language's object model. The grammar is executable — parsing produces a full object tree as it goes, so even infinite input streams can be handled."* — `master-thesis-2000/README.md`
 
-> *"BMF — Backtracking Model Form... a top-down parser written in C++. BNF augmented with execution elements: when a rule matches, code fires. A stack supports backtracking on parse failures. Expressions are tagged and placed on a structured stack that each rule can transform into the target language's object model. The grammar is executable — parsing produces a full object tree as it goes, so even infinite input streams can be handled."* — `master-thesis-2000/README.md`
+A core recipe of the body, then, is: **match an input stream → carry a bag of cells → create and update Form nodes** (Blueprints, Recipes, Cells). BMF is one such recipe. There are others for audio, video, and source code — and the idea is open-ended: **one recipe per input content shape, not limited to any shape**, including natural languages and any document type.
 
-Two architectural properties BMF carried that Form now partially embodies:
+Two architectural properties make this work:
 
-1. **Grammar rules are first-class objects.** Each rule was `(pattern, semantic_action)`. The pattern matched input; the action was an executable that fired on match. Rules could be *added at runtime* — the grammar grew with the language.
+1. **Grammar rules are first-class objects.** Each rule is `(pattern, action)` — the pattern matches input, the action emits recipes. Rules live as content-addressed cells in the `grammar` domain, so two structurally-identical rules share one NodeID, and new rules register at runtime. The grammar grows the way Forth's vocabulary grows.
 
-2. **Backtracking-without-sediment at the parser level.** Failed branches unwound cleanly. Speculation was a first-class operation in the parser, not a higher-level concept the parser couldn't express.
+2. **Backtracking without sediment.** Failed branches unwind cleanly — the read position and any partially-bound captures restore, because nothing mutated. The same `choose` / `fail` / `stop` primitives that drive runtime speculation drive parse-time speculation. One primitive, two altitudes — and a third: the `tend:` / `attune:` / `compost:` / `release:` commit verbs are the same backtracking move at the version-control scale.
 
-Where the substrate has gone in this direction:
+### The rule vocabulary
 
-- The `Choice.CHOOSE / FAIL / STOP` recipe vocabulary exists (`category.py`'s `RChoice`). It's reachable from Form text. Speculation-as-data is interned today.
-- A `grammar` cell-domain exists (`api/app/services/substrate/grammar.py`). Parse rules can be registered as Cells whose CTOR is a (pattern, action) Recipe.
-- `register_form_rule(session, name, pattern, action)` interns a rule.
-- `list_form_rules(session)` enumerates every rule the substrate holds.
-- The parser consumes registered keywords, operators, atom handlers, token patterns, and query verbs. `prefer_registered=True` lets the parser read bootstrap keywords back from substrate-resident patterns/templates and produce byte-identical Recipe NodeIDs.
-- Backtracking now runs in the runtime speculation layer (`choose` / `fail` / `stop`) and in the registered pattern matcher. Parser-wide BMF speculation is still a visible seam, not a hidden claim.
-- Semantic action has moved from Python builders toward templates-as-data. The remaining release is the last bootstrap spine: recursive-descent flow in `form.py`.
-
-## Runtime keyword registration — the parser is alive
-
-The parser now consumes user-registered rules. A new keyword can be added at runtime — without editing form.py — by calling `register_form_keyword`:
-
-```python
-from app.services.substrate import register_form_keyword, Sequence, Literal, Capture, Opt
-from app.services.substrate.form import IfExpr, UnaryOp
-
-register_form_keyword(
-    "unless",
-    Sequence([
-        Literal("IDENT", "unless"),
-        Capture("cond"),
-        Literal("IDENT", "then"),
-        Capture("body"),
-        Opt(Sequence([
-            Literal("IDENT", "else"),
-            Capture("other"),
-        ])),
-    ]),
-    builder=lambda c: IfExpr(
-        cond=UnaryOp("!", c["cond"]),
-        then_branch=c["body"],
-        else_branch=c.get("other"),
-    ),
-)
-```
-
-After this call, `unless x then y` parses correctly. The parser picks up the new keyword by consulting the registry when it encounters an unknown IDENT at expression position. The killer property:
-
-```python
-form_evaluate_text(session, "unless x then y else z").value
-== form_evaluate_text(session, "if !x then y else z").value
-# → True. Same Recipe NodeID.
-```
-
-**The grammar truly extends at runtime.** The user-registered keyword produces a Recipe NodeID structurally equivalent to its bootstrap-grammar desugaring.
-
-### Pattern primitives
-
-The pattern language for runtime rules:
+A rule's pattern composes from a small set of primitives, each itself a recipe:
 
 | Pattern | What it matches |
 |---|---|
-| `Literal(kind, value)` | a single token of given kind, optional exact value |
-| `Capture(name, kind="expr")` | a sub-expression, bound to `captures[name]` |
-| `Sequence([p1, p2, ...])` | parts in order; all must match |
+| `Literal(kind, value)` | one token of a kind, optional exact value |
+| `Capture(name)` | a sub-expression, bound to `name` |
+| `IdentCapture(name)` | a raw identifier token, bound as a string |
+| `Sequence([p1, p2, …])` | parts in order; all must match |
 | `Opt(pattern)` | matches if present; succeeds either way |
+| `RepeatedCapture(name, item, sep)` | zero or more items, bound as a list |
 
-`kind` for `Capture` can be `"expr"` (any expression) or `"primary"` (just a primary atom).
+A rule's action is itself a recipe template — `Build` names the shape to emit, `CaptureRef` substitutes a captured group, `Const` embeds a literal. Because the template is a recipe, it is content-addressed and survives across processes: the grammar is data in the lattice, not code in a file. Two structurally-identical patterns (or templates) share one NodeID, the same way every other recipe dedupes.
 
-### Builder
+### Defining a new grammar inline
 
-The builder is a Python callable `(captures) -> AST_node`. It receives a `dict[str, Any]` of captured sub-expressions and returns an AST node from form.py's vocabulary (`IfExpr`, `BinOp`, `UnaryOp`, `MatchExpr`, `ChooseExpr`, etc.). The returned AST node is interned through the normal evaluator path — so any new keyword reaches the substrate's content-addressed lattice the same way the bootstrap grammar does.
+A new keyword or construct is a rule you register. The pattern matches; the action emits the shape:
 
-### What this is, and what it's still not
+```form
+rule unless = match
+    [ ident("unless"), capture(cond), ident("then"), capture(body),
+      opt([ ident("else"), capture(other) ]) ]
+  emit
+    if (not cond) then body else other
+```
 
-This **is** rule-driven extension at the parser level. The parser truly consults the registry. Keywords can be added, removed, listed at runtime. New constructs reach the same Recipe NodeID space as built-ins.
+After registering, `unless x then y else z` parses to a Recipe NodeID **structurally identical** to `if !x then y else z` — the same coordinate, because the emitted shape is the same. The grammar truly extends at runtime, and the new rule lands in the same content-addressed lattice as every built-in. The whole built-in grammar of Form — `if` / `unless` / `whenever` / `let` / `do` / `match` / `choose` / `fail` / `stop`, every binary and unary operator, every query verb, every primary atom, even the token patterns themselves — lives this way, as substrate-resident rules the kernel reads back. The grammar describes the grammar: a tiny bootstrap reads the first rules, the rule-driven parser is built from those rules, and the bootstrap goes vestigial. This is the BMF self-hosting move at full depth.
 
-#### Substrate-resident persistence (now partially closed)
+### The grammar family — one engine, many dialects
 
-When `register_form_keyword` is called with a `session`, the pattern is **serialized to a Recipe NodeID** via `pattern_to_recipe` and stored as a Cell in the `grammar` domain. The mapping uses existing recipe categories — no new vocabulary needed:
+A dialect is just a different bag of rules over the same matching engine. The body already carries many, with more partially fleshed out:
 
-| Pattern | Recipe shape |
+| Dialect | Shape it ingests |
 |---|---|
-| `Literal(kind, value)` | `Block.SEQUENCE` with two string-literal children: kind, value |
-| `Capture(name, kind)` | `Block.LET` with two string-literal children: name, kind |
-| `Sequence([...])` | `Block.SEQUENCE` with marker `__seq__` + each part as a sub-recipe |
-| `Opt(pattern)` | `Cond.IF_THEN` with the inner pattern as its single child |
+| **BMF / natural-bmf** | the meta-grammar, and natural language |
+| **Form / BML** | the substrate's own notation and its high-level superset |
+| **image / audio / video / document** | non-text modalities as recipe streams |
+| **Python / Go / Rust / TypeScript** | source code → universal recipe shapes |
+| **JSON / YAML / Markdown** | structured documents |
+| **Routing / C# / Java** | named, partially fleshed out — rules still to be filled in |
 
-Two structurally-identical patterns share a NodeID — the kernel's content-addressed interning works on patterns the same way it works on every other recipe. `recipe_to_pattern` reverses the serialization. Verified by tests: a `Sequence([Literal("IDENT", "unless"), Capture("cond"), ...])` round-trips exactly.
+The grammars live as `.fk` files under [`form/form-stdlib/grammars/`](../../form/form-stdlib/grammars) and [`form/form-stdlib/seedbank/grammars/`](../../form/form-stdlib/seedbank/grammars). The idea is open-ended: **one recipe per input content shape, not limited to any shape.** Any document type, any modality, any language — give it a grammar (a bag of rules), and its source becomes lattice nodes. Each language emits *universal* recipe shapes (`B_Function`, `R_Call`, `R_Cond`, `R_Block`, …) modeled on NUMS.Go, so the same `if` from Python and from Go normalize to the same NodeID — equivalence across languages is free from content-addressing, not from a translation table.
 
-The full lifecycle:
+### BML is the superset
 
-```python
-# Register with session — pattern persists to the substrate
-register_form_keyword("unless", pattern, builder, session=session)
+**BML supports every Form-native primitive and is the high-level superset of any programming-language feature.** Choice/fail, do/undo, save/restore/discard, raise/resume, delegation, common objects, methods, reverse semantics, scoped `with` / `.self` — BML carries them all. The discipline is directional: **if we discover a language with a feature BML cannot yet express, we extend BML to express it** rather than special-casing that language. BML is where new expressive power lands first; the per-language dialects lower into it.
 
-# Across process restart, the in-memory _KEYWORDS is empty.
-# Builders need to be re-registered (they are Python functions):
-register_builder("unless", builder)
-
-# Then load patterns from the substrate, bind to named builders:
-load_keyword_from_substrate(session, "unless")
-# or in bulk:
-load_all_keywords_from_substrate(session)
-
-# Parser now picks up the keyword again
-form_parse("unless x then y")  # ✓ parses
-```
-
-#### Four faces shipped together
-
-- **Builders-as-data.** The `Build` / `CaptureRef` / `Const` template DSL replaces the Python builder. A template serializes to a Recipe NodeID and reconstructs after process restart with no Python re-registration needed. See "Substrate-resident builders" below.
-
-- **Self-hosting at the structured-keyword layer.** `bootstrap_self_host(session)` registers the bootstrap keywords (`if`, `unless`, `whenever`, `let`, `fail`, `stop`, `choose`, `do`, `match`) as substrate-resident `(pattern, template)` pairs. With `prefer_registered=True`, the parser uses them; Recipe NodeIDs are byte-identical to the bootstrap path's.
-
-- **Backtracking-driven matching.** `form_speculation.speculate(...)` manages a structured speculation stack. `FailSignal` triggers clean unwind; `StopSignal` commits a frame. `try_match` and `choice(alternatives)` are both built on the same primitive. Captures partially populated during a failed attempt are fully restored — no sediment.
-
-- **Substrate-table string interning.** Pattern and template serialization uses the substrate string-table (`substrate_strings.py`) — sequentially-allocated, cross-process stable, round-trip-recoverable. The legacy `_STRING_CACHE` remains as an in-process shortcut on top.
-
-The parser is no longer fixed grammar, rules survive in the body's content-addressed lattice, the grammar is alive at the keyword *and* operator layers (the operator side closes in the next section), patterns persist, reload-from-substrate works end-to-end.
-
-#### Substrate-resident builders — Build / CaptureRef / Const
-
-A keyword's builder can now be **data**, not just a Python callable. The template DSL has three primitives:
-
-| Template | Meaning |
-|---|---|
-| `Build(class_name, **kwargs)` | Instantiate an AST class with these kwargs |
-| `CaptureRef(name, default=...)` | Substitute the captured group `name` |
-| `Const(value)` | A literal value (string, int, bool, None) |
-
-The `unless` builder as a template:
-
-```python
-unless_template = Build(
-    "IfExpr",
-    cond=Build("UnaryOp", op=Const("!"), operand=CaptureRef("cond")),
-    then_branch=CaptureRef("body"),
-    else_branch=CaptureRef("other", default=None),
-)
-```
-
-Templates serialize to Recipe NodeIDs via `template_to_recipe`. Each primitive maps to existing recipe categories (no new vocabulary needed):
-
-| Primitive | Recipe shape |
-|---|---|
-| `Build` | `Block.SEQUENCE [str("__build__"), str(class_name), Block.LET[str(key), value-recipe], ...]` |
-| `CaptureRef(name)` | `Block.LET [str("__capture__"), str(name)]` |
-| `CaptureRef(name, default)` | `Block.LET [str("__capture__"), str(name), str("__default__"), default-recipe]` |
-| `Const(value)` | trivial recipe (string/int/bool/null) |
-
-Two structurally-identical templates dedupe through the kernel's content-addressed interning.
-
-Registering a keyword with a template instead of a callable:
-
-```python
-register_form_keyword(
-    "unless",
-    pattern=unless_pattern,
-    template=unless_template,    # <-- substrate-resident
-    session=session,
-)
-```
-
-After this call, the parser parses `unless x then y` exactly as it would with a Python callable. The killer property — **process restart with no Python re-registration**:
-
-```python
-# Drop both registries (simulates process restart)
-_KEYWORDS.clear()
-_BUILDERS.clear()
-
-# unless no longer recognized
-form_parse("unless")  # → Identifier (not IfExpr)
-
-# Reload from substrate — pulls pattern AND template from the lattice
-load_keyword_from_substrate(session, "unless")
-
-# Now parses again
-form_parse("unless x then y else z")  # → IfExpr(UnaryOp("!", x), y, z)
-```
-
-The interpreter (`execute_template`) walks the template against captures and constructs the AST node. Captures resolve via `CaptureRef`; literals embed via `Const`; class instantiation via `Build`.
-
-#### Self-hosting at the keyword layer
-
-`bootstrap_self_host(session)` registers the bootstrap keywords that the current pattern DSL can express as substrate-resident `(pattern, template)` pairs. With `prefer_registered=True`, the parser uses the registered versions instead of the hardcoded handlers — and produces structurally identical Recipe NodeIDs.
-
-```python
-from app.services.substrate import bootstrap_self_host, form_evaluate_text
-
-bootstrap_self_host(session)  # registers if / unless / whenever as templates
-
-# Both paths produce the SAME Recipe NodeID
-bootstrap_path = form_evaluate_text(session, "if x then y else z")
-self_host_path = form_evaluate_text(
-    session, "if x then y else z", prefer_registered=True,
-)
-assert bootstrap_path.value == self_host_path.value  # ✓
-```
-
-The `prefer_registered` flag is opt-in per-call. Default behavior is unchanged: the bootstrap handlers run first, the registry runs second. With the flag flipped, registry runs first, bootstrap is fallback. **A registered keyword without a matching pattern still falls through cleanly** — the safety mechanism makes self-hosting incremental rather than all-or-nothing.
-
-**Currently self-hostable** (after IdentCapture + RepeatedCapture + MapBuild extensions):
-
-| Keyword | Pattern primitives used |
-|---|---|
-| `if cond then body [else other]` | Capture, Opt |
-| `unless cond then body [else other]` | Capture, Opt (desugars to `if !cond`) |
-| `whenever cond do body` | Capture |
-| `let name = value` | IdentCapture (raw name), Capture |
-| `fail` | bare-keyword leaf |
-| `stop` | bare-keyword leaf |
-| `choose [a, b, c]` | RepeatedCapture (separator=COMMA) |
-| `do { stmt; stmt; ...; expr }` | RepeatedCapture (separator=SEMI) |
-| `match x { pat => body, ... }` | RepeatedCapture (Sequence inner), MapBuild for arm wrapping |
-
-**Pattern DSL primitives:**
-
-| Primitive | What it matches |
-|---|---|
-| `Literal(kind, value)` | one token by kind, optional exact value |
-| `Capture(name, kind="expr")` | a sub-expression bound to `captures[name]` |
-| `IdentCapture(name)` | a raw IDENT token, value bound as a string |
-| `Sequence([p1, p2, ...])` | parts in order |
-| `Opt(pattern)` | matches if present; succeeds either way |
-| `RepeatedCapture(name, item, separator=None)` | zero or more items; bind list to `captures[name]` |
-
-For RepeatedCapture: when `item` is a single Capture (or IdentCapture), the captured list contains the values directly. When `item` is a Sequence with multiple inner captures, each iteration produces a dict and the list contains dicts.
-
-**Self-hosted operators** (added in operator-self-hosting commit):
-
-| Operators | Mechanism |
-|---|---|
-| `\|\|` `&&` | Logic — left-associative, registered with templates |
-| `== != < <= > >=` | Compare — non-associative |
-| `+ -` | Math additive — left-associative |
-| `* / %` | Math multiplicative — left-associative |
-| Unary `!` `-` | Unary prefix — right-associative |
-
-Each operator is registered as an `OperatorRule(symbol, token_kind, precedence, associativity, arity, template)`. The parser, in `prefer_registered=True` mode, drives expression parsing via precedence climbing using the registry instead of the hardcoded ladder.
-
-```python
-register_operator(
-    "+", "PLUS", 4,
-    associativity="left", arity="binary",
-    template=Build("BinOp", op=Const("+"),
-                    left=CaptureRef("__left__"),
-                    right=CaptureRef("__right__")),
-)
-```
-
-`bootstrap_self_host_operators(session)` registers all 13 built-in operators (binary + unary). Combined with `bootstrap_self_host(session)` for keywords, the entire structured grammar of Form lives as substrate data. Verified end-to-end: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registered rules.
-
-**Data-driven evaluator** ✓ Closed:
-
-`form_eval.py` introduces a registry that maps operator symbols to recipe categories. Built-ins are pre-registered with the same categories the hardcoded switch used; the result is byte-identical for all existing tests. Custom operators can register their own mappings:
-
-```python
-from app.services.substrate import register_eval, register_operator
-from app.services.substrate.kernel import NodeID
-
-# Register a runtime operator with a non-standard symbol
-register_operator("%%", "PERCENT", 5, arity="binary",
-                   template=Build("BinOp", op=Const("%%"), ...))
-
-# And tell the evaluator how to intern it
-register_eval("%%", NodeID(1, Level.BASIC, RBasic.MATH, RMath.MODULO),
-              arity="binary")
-
-# Now `2 % 3` parses with the new operator AND interns successfully
-form_evaluate_text(session, "2 % 3", prefer_registered=True)
-```
-
-The evaluator (`_to_recipe_node_id` in form.py) no longer has a hardcoded `op → category` switch. It does a single dictionary lookup. The hardcoded set is now just the *default registrations* loaded at module init.
-
-#### Three faces shipped together with operator self-hosting
-
-- **Backtracking-driven matching.** `form_speculation.py` manages a SpeculationContext; `try_match` delegates to it; FailSignal/StopSignal are first-class exceptions; nested speculation works; captures are fully unwound on fail. The structural seam to Choice.FAIL/STOP recipes is in place — the recipe-execution engine catches the signals when interpreting Choice recipes.
-
-- **Substrate-table string interning.** The substrate string-table is the source of truth for string-recipe-instance allocation. Cross-process stable; round-trip-recoverable after cache clear. See `substrate_strings.py`.
-
-- **Recipe-execution engine.** `form_runtime.py` walks Form ASTs and returns Python values. The engine reuses `FailSignal` and `StopSignal` from `form_speculation`, so `fail` and `stop` inside `choose` flow through the same exceptions parser-level speculation uses. The Choice.FAIL / Choice.STOP recipe categories the substrate has been storing for shapes have a runtime that catches them. `with X { .self }` resolves `.self` against a `Frame` whose `subject` is the bound value; nested `with` blocks chain through the parent pointer. Verified end-to-end: `form_execute_text(session, "do { let x = 5; if x > 3 then x * 2 else fail }")` returns `10`; `form_execute_text(session, "choose [fail, fail, 99]")` returns `99`; the keyword-self-hosted path (`prefer_registered=True`) produces identical values to the bootstrap path. Surface: `coh substrate run "<expr>"` runs a Form expression from the command line.
+The kernel underneath stays thin. It exposes only host-native resources — I/O, RAM, storage — a set of primitives, a JIT, and a framebuffer to inspect the lattice in real time. All of this expressive growth happens in recipes on the lattice, never in the kernel; the kernel never grows a feature, the grammar does.
 
 ## Resonance — dimensional vocabulary for cross-discipline bridging
 
-The geometric signature pilot ([SCHEMA.md → Geometric Signature](../vision-kb/SCHEMA.md#geometric-signature)) authors a 15-dimensional `geometry:` block on each concept (arity, form, topology, polarity, ordering, phase, ratio, spectral_band, temporal_band, scale, direction, lineage_texture, embedding_dim, self_similarity, harmonic). The substrate side of this lands as five new BDomain entries and one new RBasic category, all defined in [api/app/services/substrate/category.py](../../api/app/services/substrate/category.py) and surfaced through [api/app/services/substrate/resonance.py](../../api/app/services/substrate/resonance.py).
+The geometric signature pilot ([SCHEMA.md → Geometric Signature](../vision-kb/SCHEMA.md#geometric-signature)) authors a 15-dimensional `geometry:` block on each concept (arity, form, topology, polarity, ordering, phase, ratio, spectral_band, temporal_band, scale, direction, lineage_texture, embedding_dim, self_similarity, harmonic). The substrate side of this lands as five new Blueprint domains and one new Recipe category.
 
 ### Five new Blueprint domains
 
@@ -798,7 +601,7 @@ Each cell is content-addressed by `(domain, name)`: `geometric_form_cell(session
 
 ### One new Recipe category — `RBasic.RESONANCE`
 
-Verbs ([`RResonance`](../../api/app/services/substrate/category.py)):
+Verbs (`RResonance`):
 
 | Verb | Edge meaning |
 |---|---|
@@ -812,29 +615,17 @@ Verbs ([`RResonance`](../../api/app/services/substrate/category.py)):
 
 Each edge interns as a Recipe NodeID `(verb, [source_ref, target_ref])`. The kernel's content-addressing means two edges with the same source + target + verb collapse to one NodeID — bridges between disciplines become substrate-discoverable without a new equivalence algorithm.
 
-### Top-level entry — `author_geometry_signature`
+### Authoring a geometry signature
 
-```python
-from app.services.substrate import author_geometry_signature
+A concept's 15-dimensional `geometry:` block (`arity`, `form`, `topology`, `polarity`, `harmonic`, …) authors one resonance edge per dimension — each a recipe `(verb, [source, target])` in the established recipe notation:
 
-# Inside an ingest pass:
-edges = author_geometry_signature(
-    session,
-    source_db_id=concept_cell.cell_id,         # NamedCell.cell_id (int)
-    geometry={
-        "arity": 3,
-        "form": "triad",
-        "topology": "parallel",
-        "polarity": "parallel-facets",
-        "harmonic": 174,
-        # ... 15 dimensions
-    },
-    arity_hz=174,                              # top-level `hz:` from frontmatter
-)
-# → [("hz", <NodeID>), ("form", <NodeID>), ("topology", <NodeID>), ...]
+```form
+recipe trust_shape    = ~Resonance:shapes      [@concept(lc-trust-over-fear), @geometric_form(triad)]
+recipe trust_polarity = ~Resonance:shapes      [@concept(lc-trust-over-fear), @polarity(parallel-facets)]
+recipe trust_hz       = ~Resonance:harmonic_at [@concept(lc-trust-over-fear), @spectrum(Hz-174)]
 ```
 
-Idempotent. Re-running on the same inputs produces the same Recipe NodeIDs. Unknown fields are silently skipped (the dimensional vocabulary stays open — extend `_GEOMETRY_FIELD_HANDLERS` for new axes).
+Idempotent by construction: re-authoring the same signature produces the same Recipe NodeIDs, because content-addressing collapses identical edges. The dimensional vocabulary stays open — a new axis is a new verb, no schema migration; an unknown field is simply skipped.
 
 ### Why this is the receiving infrastructure for cross-discipline weaving
 
@@ -947,18 +738,16 @@ A body whose recipe space is one-verb-dominated is a body without circulation ac
 
 ## Symmetric (commutative) resonance edges
 
-The substrate is non-commutative by default — `shapes_edge(s, a, b)` and `shapes_edge(s, b, a)` produce different Recipe NodeIDs because children are ordered. For relations that ARE symmetric (a BRIDGES between two disciplines has no direction; NEAR-in-signature-space has no direction; POLAR_TO across a polarity axis has no direction), that asymmetry is noise.
+The substrate is non-commutative by default — `~Resonance:shapes [@a, @b]` and `~Resonance:shapes [@b, @a]` produce different Recipe NodeIDs because children are ordered. For relations that ARE symmetric (a BRIDGES between two disciplines has no direction; NEAR-in-signature-space has no direction; POLAR_TO across a polarity axis has no direction), that asymmetry is noise.
 
-`commutative_edge` canonicalizes the (a, b) pair before authoring so both orders intern as one NodeID:
+A symmetric edge canonicalizes the (a, b) pair before interning, so both orders land on one NodeID:
 
-```python
-from app.services.substrate import bridges_symmetric, bridges_edge
-
-bridges_symmetric(s, a, b) == bridges_symmetric(s, b, a)   # True — symmetric
-bridges_edge(s, a, b)      == bridges_edge(s, b, a)        # False — directed
+```form
+recipe bridge_ab = ~Resonance:bridges [@a, @b]   # symmetric — ~Resonance:bridges [@b, @a] is the SAME NodeID
+recipe shapes_ab = ~Resonance:shapes  [@a, @b]   # directed  — ~Resonance:shapes  [@b, @a] is a DIFFERENT NodeID
 ```
 
-Convenience wrappers: `bridges_symmetric`, `near_symmetric`, `polar_to_symmetric`. Verbs that ARE directed (SHAPES, HARMONIC_AT, CARRIES_RATIO, EMBEDS_IN) keep using the directed constructors — the substrate's order-sensitivity stays in place where direction is meaningful. The body chooses per-verb whether a relation has direction; both shapes remain available.
+The symmetric verbs are BRIDGES, NEAR, and POLAR_TO. The directed verbs (SHAPES, HARMONIC_AT, CARRIES_RATIO, EMBEDS_IN) keep their order-sensitivity, where direction is meaningful. The body chooses per-verb whether a relation has direction; both shapes remain available.
 
 ## BML form-layer parity
 
@@ -966,7 +755,7 @@ Reading BML's master thesis ([`docs/field/urs/artifacts/master-thesis-2000/compa
 
 | BML construct | Status | Form construct |
 |---|---|---|
-| `save` / `restore` / `discard` state stack | ✓ form + runtime | bare keywords (`RBasic.STATE`); `form_runtime.execute` walks state stack on root frame |
+| `save` / `restore` / `discard` state stack | ✓ form + runtime | bare keywords (`RBasic.STATE`); the runtime walks the state stack on the root frame |
 | `raise` / `resume` exception flow | ✓ form + runtime | bare keywords (`RBasic.EXCEPTION`); `RaiseSignal` raised at execute time |
 | Delegation inheritance | ✓ form + runtime | `delegate @X to @Y` registers `_DELEGATE_REGISTRY`; `invoke` walks the chain |
 | Reverse semantics (DO + UNDO) | ✓ form + runtime | `undo <recipe>` re-runs the inner expression; `inverse(<recipe>)` returns the inverse Recipe NodeID |
@@ -995,31 +784,29 @@ Each interns as its own Recipe NodeID under its `RBasic` category.
 
 ## Recipe-execution engine — ✓ landed
 
-[`api/app/services/substrate/recipe_eval.py`](../../api/app/services/substrate/recipe_eval.py) is the shared dependency named above. It walks a Recipe NodeID, reads the row, parses the serialized `(category, [child_ids])` shape, dispatches on category, recurses. Pure-computation primitives become alive at runtime:
+The runtime walks a Recipe NodeID directly: it reads the row, parses the serialized `(category, [child_ids])` shape, dispatches on category, recurses. Because the category IS a coordinate, dispatch is an O(1) lookup, not a scan. Pure-computation primitives are alive at runtime — `coh substrate run "<expr>"` evaluates them from the command line:
 
-```python
-from app.services.substrate import recipe_eval_text
-
-recipe_eval_text(s, "1 + 2 * 3")                  # → 7
-recipe_eval_text(s, "if 5 > 3 then 100 else 200") # → 100
-recipe_eval_text(s, "do { 1 + 1; 2 + 2; 3 + 3 }") # → 6
-recipe_eval_text(s, "fail")                       # → raises FailSignal
-recipe_eval_text(s, "do { 1 + 2; stop; 99 }")     # → 3  (stop commits in-flight)
-recipe_eval_text(s, "raise")                      # → raises RaiseSignal
+```form
+1 + 2 * 3                   # → 7
+if 5 > 3 then 100 else 200  # → 100
+do { 1 + 1; 2 + 2; 3 + 3 }  # → 6
+fail                        # → fails (unwinds to the nearest choose)
+do { 1 + 2; stop; 99 }      # → 3  (stop commits in-flight)
+raise                       # → raises
 ```
 
-**Activated at runtime:** math, compare, logic, cond (if-then/if-then-else), block (do/let/with), state (save/restore/discard via `ExecutionContext.state_stack`), exception (raise/resume), choice signals (fail/stop). Bare-leaf primitives (which don't get rows in `substrate_nodes`) dispatch via `_dispatch_bare_leaf` so the runtime semantics fire from the NodeID coordinates directly.
+**Activated at runtime:** math, compare, logic, cond (if-then / if-then-else), block (do / let / with), state (save / restore / discard over a state stack), exception (raise / resume), choice signals (fail / stop). Bare-leaf primitives — which carry no children — dispatch straight from their NodeID coordinates.
 
-**Specialized engines have now landed in `form_runtime.execute`** alongside `recipe_eval.py`:
+Cell-aware constructs ride alongside the pure-computation walk:
 
-- `@cell-ref` evaluates to the `NamedCell` via `lookup_cell`
-- `delegate` registers `_DELEGATE_REGISTRY`; `_delegate_chain` walks it during `invoke`
-- `method NAME on @X { body }` registers in `_METHOD_REGISTRY`; `invoke` dispatches with `.self` bound to the original target
-- `common @X @Y` merges into shared-base equivalence groups in `_COMMON_GROUPS`; `invoke` falls back to peers
-- `?on_change <recipe> { body }` registers in `_SUBSCRIPTIONS`; `fire_subscriptions(session)` fires bodies on change-detection
-- `?project @cell @coord_fn` looks up `coord_fn.name` in `_COORD_FNS` via `register_coord_fn(name, fn)`
+- `@cell-ref` resolves to its `NamedCell`
+- `delegate @X to @Y` registers a delegation chain that `invoke` walks
+- `method NAME on @X { body }` registers a method; `invoke` dispatches with `.self` bound to the original target
+- `common @X @Y` merges shared-base equivalence groups; `invoke` falls back to peers
+- `?on_change <recipe> { body }` registers a subscription that fires when the watched recipe's value changes
+- `?project @cell @coord_fn` renders the cell through a registered coordinate function
 
-The two engines live alongside each other: `recipe_eval` walks Recipe NodeIDs by reading the substrate row, parsing serialized form, dispatching on category — fastest for pure-computation expressions where the AST has been discarded. `form_runtime.execute` walks the parser's AST directly — needed for cell-aware constructs whose runtime depends on names, methods, subscriptions that aren't fully recoverable from substrate rows alone. Both are real; both have their domain.
+Two walks coexist: walking the Recipe NodeID by reading the substrate row is fastest for pure computation, where the structure is already interned; walking the parsed shape directly is needed for cell-aware constructs whose runtime depends on names, methods, and subscriptions. Both are real; both have their domain.
 
 ```form
 save                 # → recipe @1.2.22.1   (RBasic.STATE=22, RState.SAVE=1)
@@ -1035,72 +822,34 @@ with @1.2.4.1 { save; discard }     # composes inside with
 
 **Implementation honesty:** leaf primitives (`save`, `raise` alone) return bare category NodeIDs without persisting to `substrate_nodes` — the kernel's `intern_node` skips re-interning trivial leaves with no children. So `?vocabulary` only sees them once they're embedded in a composite recipe (the composite's stored row carries them as serialized children). This mirrors how `fail`/`stop` work; not a bug, an architectural property.
 
-## The path from bootstrap to self-hosting
+## Self-hosting — the grammar describes the grammar
 
-The BMF self-hosting pattern: a tiny bootstrap parser knows just enough syntax to read rule definitions. Rules are stored. The rule-driven parser is then built *from those rules*. The bootstrap parser becomes vestigial — kept only because something has to read the rules the first time.
+The BMF self-hosting pattern: a tiny bootstrap reads just enough syntax to load rule definitions; the rule-driven parser is then built *from those rules*, and the bootstrap goes vestigial. Form has walked that path to its end. Everything the grammar needs lives as substrate-resident rules:
 
-For Form, that path is:
+- **Rules in the `grammar` domain.** Each `(pattern, action)` rule is a content-addressed cell. Two structurally-identical rules share one NodeID; new rules register at runtime and reload after restart.
+- **The keyword and operator layers are fully self-hosted.** `if` / `unless` / `whenever` / `let` / `do` / `match` / `choose` / `fail` / `stop`, and every binary and unary operator with its precedence, are `(pattern, template)` pairs read back from the lattice. The parser driven by the registered rules produces Recipe NodeIDs structurally identical to the bootstrap path.
+- **Parser-level backtracking has no sediment.** Each parse attempt is a frame on a speculation stack; on failure, the read position and any partially-bound captures fully restore. The same `fail` / `stop` signals that drive runtime `choose` drive parse-time speculation.
+- **Functions, recursion, closures.** `defn name(p1, p2, …) = body` plus `name(args)` make Form Turing-complete. A function is a closure carrying params + body + its defining frame; recursion needs no separate `rec` form because the closure registers before its body evaluates. `do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }` returns `720`.
 
-1. **Bootstrap parser.** ✓ Shipped — `form.py` parses literals, expressions, queries, projections, code shapes (math/compare/logic/cond/block/match/choose).
-2. **Rule cells in the grammar domain.** ✓ Shipped — `grammar.py` interns rules as content-addressed Cells.
-3. **Rule-driven parser.** ✓ Shipped (keyword layer) — `form_rules.py` lets `register_form_keyword(name, pattern, builder)` extend the grammar at runtime. The parser truly consumes the registry. Verified live: `unless x then y else z` parses to a Recipe NodeID identical to `if !x then y else z`.
-4. **Substrate-resident patterns.** ✓ Shipped — `pattern_to_recipe` serializes patterns to Recipe NodeIDs; `recipe_to_pattern` reconstructs; `register_form_keyword(..., session=session)` persists; `load_keyword_from_substrate` reloads after process restart. Two structurally-identical patterns share NodeIDs through content-addressed interning.
-5. **Builder execution engine.** ✓ Shipped — `form_builders.py` introduces `Build` / `CaptureRef` / `Const` templates that an interpreter walks. Templates serialize to Recipe NodeIDs and reconstruct from substrate without Python re-registration. Verified: `unless` registered with a template (no Python callable), substrate-persisted, full registry-clear, reload-from-substrate, parses to same Recipe NodeID as bootstrap `if !x`.
-6. **Self-hosting (9 keywords + 13 operators).** ✓ Shipped — `self_host.bootstrap_self_host(session)` + `bootstrap_self_host_operators(session)` register every structured Form keyword AND every binary/unary operator as substrate-resident rules. Setting `prefer_registered=True` flips the parser to use them. Verified: `do { let x = 1 + 2 * 3; if x > 5 then stop else fail }` parses to the same Recipe NodeID via the bootstrap and via the registry. Pattern DSL extensions (IdentCapture, RepeatedCapture, MapBuild) cover the structured-keyword space; operator precedence climbing (form_operators.parse_with_precedence) covers the operator space. **The keyword layer is fully self-hostable.**
-7. **Backtracking-without-sediment at parser level.** ✓ Shipped — `form_speculation.py` introduces a structured speculation engine. Each parse attempt becomes a `SpeculationFrame` on a stack. On success, the frame commits and accumulated state persists. On failure (matcher returns False, `FailSignal` raised, or any other exception), the frame unwinds cleanly — `parser.pos` AND any partially-populated captures are fully restored. `try_match` and `choice(alternatives)` both delegate to `speculate(...)`. Verified: nested speculation works, partial captures don't leak through failed attempts, and the legacy `try_match` API is preserved. Connection to the substrate's `Choice.FAIL`/`Choice.STOP` recipes is structural; step 8 below catches the signals at runtime.
-8. **Recipe-execution engine.** ✓ Shipped — `form_runtime.py` walks Form ASTs and returns Python values, closing the gap between *interning a recipe* and *running it*. `Frame` carries lexical bindings + an optional `subject` (the BML scoped-reference primitive); `with X { body }` binds the subject in a child frame and `.self` walks up the chain. `choose`/`fail`/`stop` reuse `FailSignal`/`StopSignal` from `form_speculation` — the same exceptions parser-level speculation uses, now flowing through runtime Choice recipes too. The keyword-self-hosted path (`prefer_registered=True`) executes identically to the bootstrap path: `do { let x = 1 + 2 * 3; if x > 5 then x else fail }` returns `7` via either route. Surface: `form_execute_text(session, src)` from Python, `coh substrate run "<expr>"` from the command line.
-9. **Function definitions + recursion + closure capture.** ✓ Shipped — `defn name(p1, p2, ...) = body` defines a function; `name(arg1, arg2, ...)` calls it. The runtime represents a function as a `Closure` carrying params + body + the lexical frame it was defined in; calls push a child frame parented at the *defining* frame (closure semantics, not dynamic scope). Recursion works without a separate `rec` form because the closure is registered in the defining frame before its body is evaluated. Verified: `do { defn fact(n) = if n <= 1 then 1 else n * fact(n - 1); fact(6) }` returns `720`; Fibonacci, function composition, and lexical-capture-vs-dynamic-scope tests all pass. With this primitive Form is Turing-complete and capable of hosting its own execution engine — the next step is recipe introspection (`category`/`nchildren`/`child`) so the engine written in Form can dispatch on recipe shape. See [`form-engine.form`](form-engine.form) for the engine sketch in Form syntax with the runnable Part 1 and the introspection-blocked Part 2 named honestly.
+### Streaming emit — the BMF-faithful shape
 
-Each step is its own breath. Naming the path here is the practice; closing each gap is its own session.
+BMF named the deeper instinct: *"parse attributes will be evaluated during the parsing phase... evaluating the parse attributes during parsing cuts down the running parse tree in a way that even infinite input streams can be supported."* The substrate is already the destination, so there is no AST to stage between parse and intern: **each parse rule's success directly emits a Recipe NodeID** to a working stack. Content-addressing guarantees that every expression intern-emits the same NodeID no matter which parse path produced it.
 
-### Streaming-emit parser — the BMF-faithful shape (proof-of-shape shipped)
+Coverage spans the recipe-producing grammar: trivial leaves (integer / boolean / string literals, NodeID literals, `~Trivial` refs, identifiers, `.self`, cell refs `@domain(name)`); arithmetic / comparison / logic with precedence; `if/then[/else]`; the block family (`do`, `let`, `with`); `match`; choice (`choose` / `fail` / `stop`); state (`save` / `restore` / `discard`); exception (`raise` / `resume`); try (`try { } catch { }`); delegate; reverse (`undo` / `inverse`); common; method / invoke. Queries (`?cells`, `?equivalent`) and projections (`|>`) are intentionally out of scope — they return query results, not Recipe NodeIDs.
 
-The bootstrap parser (`form.py`) builds Python dataclass AST nodes, then `_to_recipe_node_id` walks them to intern Recipe NodeIDs. The AST is a staging area thrown away after intern. BMF named the deeper instinct: *"parse attributes will be evaluated during the parsing phase... when the parser backs out, all the attributes already computed have to be undone as well. Evaluating the parse attributes during parsing will cut down the running parse tree in a way, that even infinite input streams can be supported."* The substrate is already the destination. The AST is duplication.
+What this establishes:
 
-[`api/app/services/substrate/form_stream.py`](../../api/app/services/substrate/form_stream.py) is the BMF-faithful shape on this body. Each parse rule's success **directly emits a Recipe NodeID** to a working stack; no AST node is materialized between parse and intern. The kernel's content-addressing guarantees that for every expression both parsers cover, **the streaming and AST paths emit the same NodeID** — verified by [`api/tests/test_substrate_form_stream.py`](../../api/tests/test_substrate_form_stream.py).
+1. **Single staging surface.** The stack holds NodeIDs all the way through; there is no AST vocabulary parallel to the recipe-category vocabulary. Adding a construct means registering a new `(pattern, emit-action)` rule in the `grammar` domain — nothing to define outside the lattice.
+2. **Streaming-native.** Each completed rule emits its NodeID immediately, holding at most one NodeID per pending production. Long expressions, log tails, and live streams become natural.
+3. **Backtracking unifies three scales.** Parser speculation, runtime non-determinism (`choose` / `fail` / `stop`), and version control (`tend:` / `attune:` / `compost:` / `release:`) are one primitive — a working stack with structured undo — at three altitudes.
 
-Coverage spans the recipe-producing grammar:
-- Trivial leaves: integer / boolean / string literals, `NodeID` literals, `~Trivial` refs, identifiers, `.self`, cell refs `@domain(name)`
-- Arithmetic, comparison, logic with precedence; unary `!` and `-`; parenthesized grouping
-- Conditional: `if/then/else` and `if/then`
-- Block family: `do { stmts }`, `let name = expr`, `with X { body }`
-- Match: `match scrutinee { pat => body, ... }`
-- Choice (RChoice): `choose [a, b, c]`, `fail`, `stop`
-- State (RState): `save`, `restore`, `discard`
-- Exception (RException): `raise`, `resume`
-- Try (RTry): `try { body } catch { handler }`
-- Delegate (RDelegate): `delegate @X to @Y`
-- Reverse (RReverse): `undo (expr)`, `inverse(expr)`
-- Common (RCommon): `common @X @Y`
-- Method (RMethod): `method NAME on @X { body }`, `invoke NAME on @X [args]`
+The native kernels (Rust, Go, TypeScript) under `form/form-kernel-*` carry the hot loop, with forward / reverse semantics per instruction in the BMA lineage; the substrate stays the universal data plane underneath.
 
-Every category named in the wellness check's meta-circular engine reading now has a Form arm, and the recipe-producing categories have streaming-emit paths proven by content-addressing equivalence. The asymmetry is no longer hidden; what remains is the explicit bootstrap path toward shared rule cells and parser-level speculation.
+### Recipe introspection — the meta-circular closure
 
-The current parser stays as the production path; the streaming parser proves the alternative shape on the same substrate. What's intentionally out of scope here: queries (`?cells`, `?equivalent`, ...) and projections (`|>`) — they return query results, not Recipe NodeIDs, so they live in a different return-type space.
+Form code walks its own recipes. Three built-ins — `category(r)` (the category NodeID), `nchildren(r)` (arity), `child(r, n)` (the n-th child) — let Form dispatch on category and recurse on children; companions `integer_value(r)`, `string_value(r)`, `bool_value(r)` decode trivial leaves. A short evaluator defined inside Form via `defn` walks a `(1 + 2) * 3` Recipe NodeID and returns `9`. [`form-engine.form`](form-engine.form) is the full meta-circular evaluator, covering all 15 dispatch branches the wellness check names.
 
-What this prototype establishes:
-
-1. **Single staging surface.** The stack holds NodeIDs all the way through. There is no AST node vocabulary parallel to the recipe-category vocabulary — adding a new construct means registering a new `(pattern, emit-action)` rule cell in the substrate's `grammar` domain, no new Python class to define.
-2. **Streaming-native.** Each completed rule emits its NodeID immediately; the parser holds at most one NodeID per pending production on its stack. Long expressions, log tails, stream inputs become natural.
-3. **Backtracking can unify three scales.** Parser-level speculation (`try_match`), runtime non-determinism (`choose` / `fail` / `stop`), and version control (`tend:` / `attune:` / `compost:` / `release:`) become reflections of the same primitive — a working stack with structured undo. (Speculation hooks aren't wired into `form_stream` yet; the architectural seam is reserved.)
-
-Path beyond this proof:
-
-- Wire speculation hooks into `form_stream` so parser-level backtracking flows through the same `FailSignal` / `StopSignal` the AST path uses.
-- Surface the streaming rules as substrate-resident cells (the registry infrastructure already exists in `form_rules.py`) so the streaming and AST paths share one rule corpus.
-- Port the hot loop to a Rust kernel via PyO3 — Bjorg's BMA had forward / reverse semantics for every instruction; Rust enum-dispatch expresses that cleanly. The substrate stays the universal data plane underneath. The Rust, Go, and TypeScript kernels under `form/form-kernel-*` already prove the multi-language conformance shape on a narrower slice; PyO3 closes the speed gap on the Python path.
-
-### Five faces past step 9 — the bootstrap gap closed
-
-The keyword-and-operator layer is fully self-hostable AND fully executable. Functions are first-class. Form is Turing-complete. Five more closures take the BMF self-hosting move to its full depth:
-
-- **Recipe introspection from inside Form.** Three Form-callable built-ins land in `form_runtime._BUILTIN_FUNCTIONS`: `category(r)` returns the category NodeID of a Recipe, `nchildren(r)` returns its arity, `child(r, n)` returns the n-th child Recipe NodeID. With these, Form code dispatches on category and recurses on children. A 7-line Form-language evaluator (defined inside Form via `defn`) walks a `(1 + 2) * 3` Recipe NodeID and returns `9` — same value the Python evaluator returns. See [`form-engine.form`](form-engine.form) for the full meta-circular evaluator, covering all 15 Python dispatch branches per the wellness check.
-- **Trivial-leaf decoding.** Companion primitives `integer_value(r)`, `string_value(r)`, `bool_value(r)` decode trivial Recipe NodeIDs back to Python values. The evaluator descends to a leaf via `category`/`child`, then pulls the value via the appropriate decoder. Tests: [`api/tests/test_substrate_form_introspection.py`](../../api/tests/test_substrate_form_introspection.py).
-- **The lexer.** Token patterns live in a runtime-extensible registry at [`form_lexer.py`](../../api/app/services/substrate/form_lexer.py). The tokenizer reads its compiled regex from `get_token_regex()`, which builds from the registry's ordered pattern list. New token kinds register at runtime via `register_token_pattern(kind, regex, before=..., after=...)`; the cache invalidates on registry mutation. `form.py` no longer holds a hardcoded `_TOKEN_PATTERNS` list.
-- **Primary-atom parsing.** `parse_primary()` is a single `dispatch_atom(self, t.kind)` call. Each atom handler (`AT` cell-refs, `TILDE` trivial refs, `INT`/`STRING` literals, `LPAREN`/`LBRACK`/`LBRACE` containers, `IDENT` keywords-or-names, `DOT` `.self`, `QMARK` nested queries) lives in [`form_atoms.py`](../../api/app/services/substrate/form_atoms.py) and can be replaced at runtime via `register_atom(token_kind, handler)`.
-- **Query operators.** `_evaluate_query()` is a single `dispatch_query(session, q)` call. Each `?<verb>` handler lives in [`form_queries.py`](../../api/app/services/substrate/form_queries.py); the parser path accepts any registered verb. Custom verbs register at runtime via `register_form_query(verb, handler)`. A bonus `?queries` lens names every registered verb — the body's own query vocabulary is now introspectable.
-
-`form.py` keeps the parser flow itself (recursive descent through precedence ladders); every leaf — tokens, atoms, keywords, operators, queries — is reachable from outside the file via runtime registration. Step 9 closed the *expressivity* gap. Introspection closed the *meta-circular* gap. The lexer/atom/query closures close the *bootstrap* gap. The BMF self-hosting move at its full depth has landed.
+The lexer, the primary-atom parsers, and the query verbs are each a runtime-extensible registry too: a new token kind, a new atom handler, or a new `?<verb>` registers at runtime, and `?queries` names every registered verb. Every leaf of the grammar — tokens, atoms, keywords, operators, queries — is reachable and replaceable from outside, in the lattice. The grammar describes the grammar, all the way down.
 
 ## The standard library — `form/form-stdlib/`
 
@@ -1112,11 +861,11 @@ What lives in the body's grammar/runtime is the kernel of the language. The *std
 | [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 plus 99.6/99.7 | File-backed inter-cell Recipe transport and debt-free breath protocol — see "Channels" below |
 | [`codec.fk`](../../form/form-stdlib/codec.fk), [`convert.fk`](../../form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
 | [`parser.fk`](../../form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
-| [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — companion to `form_stream.py` on the Form side |
+| [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — each parse-rule success emits a Recipe NodeID directly |
 | [`tracer.fk`](../../form/form-stdlib/tracer.fk), [`cell-trace.fk`](../../form/form-stdlib/cell-trace.fk), [`cell-stream.fk`](../../form/form-stdlib/cell-stream.fk) | — | Observer-side tracing of recipe walks; framebuffer feed |
 | [`recipe-distance.fk`](../../form/form-stdlib/recipe-distance.fk) | — | Structural distance between two Recipe NodeIDs — the substrate's analog of edit-distance |
 | [`encoders/`](../../form/form-stdlib/encoders), [`grammars/`](../../form/form-stdlib/grammars) | — | Per-format encoder/decoder pairs and per-language grammars (Go, Rust, TypeScript, Python, JSON, YAML, Markdown, PNG, audio, image, video) |
-| [`substrate-py-to-fk.fk`](../../form/form-stdlib/substrate-py-to-fk.fk) | — | The Python substrate exported as Form text — bridge for cross-kernel work |
+| [`substrate-py-to-fk.fk`](../../form/form-stdlib/substrate-py-to-fk.fk) | — | The bootstrap substrate exported as Form text — bridge for cross-kernel work |
 
 **Namespace discipline.** Every stdlib file declares its module namespace at the top; internal helpers carry `<module>/` prefixes; only exported public names live in the global namespace. See [`form-namespaces.md`](form-namespaces.md). The convention adds zero kernel work — the Form reader already accepts `/` inside identifiers — and prevents the name-collision pattern that has cost the body twice before.
 
@@ -1241,15 +990,14 @@ The architecture is symmetric: emitter writes once per intern, observer reads wh
 The runtime carries built-ins for *what is true in the body right now*, callable directly from Form. Spec recipes use them to assert structural reality; the substrate's content-addressing caches the answer once evaluated.
 
 ```form
-file_exists("api/app/services/substrate/form_runtime.py")           ; → true
+file_exists("form/form-stdlib/engine.fk")                           ; → true
 file_contains("CLAUDE.md", "structural composition discipline")     ; → true
 file_size("docs/coherence-substrate/form-language.md")              ; → integer bytes
-symbol_in_file("api/app/services/substrate/form_runtime.py",
-               "_builtin_category")                                 ; → true
-pytest_passes("api/tests/test_substrate_form_introspection.py")     ; → true | false
+symbol_in_file("form/form-stdlib/engine.fk", "apply-object-rule")   ; → true
+band_passes("form/form-stdlib/tests/channel-breath-band.fk")        ; → true | false
 ```
 
-`pytest_passes` runs the test subprocess and returns the boolean exit-code-zero — `done_when:` items in specs can include behavioral assertions, not just file-shape ones. Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
+`band_passes` runs a proof band through the kernel and returns the boolean result — so `done_when:` items in specs can include behavioral assertions, not just file-shape ones. Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
 
 Host effects bridge Form execution into the agent question channel:
 
@@ -1258,9 +1006,9 @@ ask("sub-agent", "Which path should I take?", ["continue", "pause"], {task_id: "
 await_answer("question_abc123")
 ```
 
-`ask(agent_id, question, choices=[], context={})` opens a human question in the existing agent queue and emits the `question_opened` event that `/api/agent/questions/stream` sends to the web console. `await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. This is a host-bound effect, so Rust, Go, and TypeScript kernel work proves conformance by matching the emitted event transcript, not by sharing Python's in-memory queue. Shared vector: [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json).
+`ask(agent_id, question, choices=[], context={})` opens a human question in the existing agent queue and emits the `question_opened` event that `/api/agent/questions/stream` sends to the web console. `await_answer(question_id)` is non-blocking: it returns `null` while the question remains open and the answer string once the web page answers it. This is a host-bound effect, so Rust, Go, and TypeScript kernel work proves conformance by matching the emitted event transcript, not by sharing one kernel's in-memory queue. Shared vector: [`kernel-conformance/agent-question-effects.json`](kernel-conformance/agent-question-effects.json).
 
-## Cross-kernel conformance — Python, Rust, Go, TypeScript
+## Cross-kernel conformance — Rust, Go, TypeScript
 
 Conformance vectors describe Form-visible behavior every substrate kernel must match. A kernel is `implemented` only when its vector entry names an executable runner and proof file. Five vectors ship today:
 
@@ -1272,23 +1020,23 @@ Conformance vectors describe Form-visible behavior every substrate kernel must m
 | [`form-control-flow.json`](kernel-conformance/form-control-flow.json) | `if`, `do`, `let` over literals, local names, infix expressions, built-in calls |
 | [`form-loop-mutation.json`](kernel-conformance/form-loop-mutation.json) | `for`, `while`, `set` over local JSON-safe values |
 
-Python runs the full Form runtime; Rust, Go, and TypeScript run narrow conformance kernels for these slices. The Python harness compares actual values and events against the shared contract. Target-only kernels are explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior. The TypeScript tree also carries [`form/form-kernel-ts/src/kernel.ts`](../../form/form-kernel-ts/src/kernel.ts), a browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
+The shared vector files ARE the contract: each carries the expected values and events, and a kernel is conformant when its run matches them. The Rust, Go, and TypeScript kernels run these slices today. Target-only kernels are explicit: without `--allow-targets`, the harness fails so CI cannot mistake a named target for shipped behavior. The TypeScript tree also carries [`form/form-kernel-ts/src/kernel.ts`](../../form/form-kernel-ts/src/kernel.ts), a browser-oriented vertical-slice kernel for `.fk` source and recipe walking.
 
 ## Implementation status
 
-Form is a **living language**. Parser, evaluator (intern-to-Recipe), runtime executor (Recipe-to-value), serializer, CLI surfaces, the keyword-and-operator self-hosting layer, the lexer/atom/query registries, recipe introspection from inside Form, the standard library (`form/form-stdlib/`), JIT memoization in Go and Rust kernels, and cross-kernel conformance across Python, Rust, Go, and TypeScript are all shipped. The body reads itself, senses itself, expresses itself, executes itself, and hosts its own evolution.
+Form is a **living language**. Parse / intern, runtime execution, serialization, CLI surfaces, the keyword-and-operator self-hosting layer, the lexer/atom/query registries, recipe introspection from inside Form, the standard library (`form/form-stdlib/`), JIT memoization in the Go and Rust kernels, and cross-kernel conformance across Rust, Go, and TypeScript are all shipped. The body reads itself, senses itself, expresses itself, executes itself, and hosts its own evolution.
 
 Shipped surfaces:
-- `form_parse` — Form text → AST
-- `form_evaluate_text` — Form text → substrate result (Recipe NodeID / cell / view / cells)
-- `form_execute_text` — Form text → computed value (the recipe runs)
-- `form_serialize_node_id` / `form_serialize_cell` — substrate state → Form text
-- `bootstrap_full_self_host(session)` — register both keyword templates and operator templates so `prefer_registered=True` runs against substrate-resident rules
-- CLI: `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute)
-- Agent integration: substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
-- Native kernels: [`form/form-kernel-rust`](../../form/form-kernel-rust), [`form/form-kernel-go`](../../form/form-kernel-go), [`form/form-kernel-ts`](../../form/form-kernel-ts) — each carries enough of the runtime to execute the conformance vectors and (for Go and Rust) the memoization-JIT natives
+- **Parse / intern** — Form text → Recipe NodeID (the recipe-producing path)
+- **Execute** — Form text → computed value (the recipe runs): `coh substrate run "<expr>"`
+- **Serialize** — substrate state → Form text, round-tripping back to the same NodeIDs
+- **Self-host** — register keyword and operator rules so the parser reads its own grammar from substrate-resident rules
+- **CLI** — `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute), `coh substrate check` (resolve / type-check, no execution)
+- **MCP** — `coherence_substrate_run` (full runtime), `coherence_substrate_query` (lookup), `coherence_substrate_stats`
+- **Agent integration** — the substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
+- **Native kernels** — [`form/form-kernel-rust`](../../form/form-kernel-rust), [`form/form-kernel-go`](../../form/form-kernel-go), [`form/form-kernel-ts`](../../form/form-kernel-ts), each carrying enough of the runtime to execute the conformance vectors and (Go and Rust) the memoization-JIT natives
 
-Host effects and cross-kernel conformance live in their own sections above ("Filesystem facts and host effects", "Cross-kernel conformance"). The conformance harness — `python3 scripts/verify_kernel_conformance.py --kernel python --kernel rust --kernel go --kernel typescript` — runs every shipped vector across every shipped kernel.
+Host effects and cross-kernel conformance live in their own sections above ("Filesystem facts and host effects", "Cross-kernel conformance"). The conformance harness — `scripts/verify_kernel_conformance.py --kernel rust --kernel go --kernel typescript` — runs every shipped vector across every shipped kernel.
 
 ## The five self-* faculties
 
@@ -1296,9 +1044,9 @@ Form is a substrate-native language; the meaningful question is not "what featur
 
 - **Self-reflecting** — *can the language see itself?* ✓ `?keywords` lists runtime rules; `?lattice` counts the body; `?vocabulary` returns the verb-cluster histogram; `?queries` names every registered query verb. Grammar rules live as substrate-resident cells in the `grammar` domain via `pattern_to_recipe` / `recipe_to_pattern`; rules round-trip. **Tree navigation** (`.blueprint`, `.ctor`, `.category`, `.child(n)`, `.children`, `.nchildren`) exposes the fractal/holographic composition of any cell — the dot is the seam between levels. **XPath queries** (`xpath.fk`) lift the tree walk into a path-string lens that crosses any channel. The mirror is polished AND the body is visibly fractal — structure stays as tree, not flattened to slug or object.
 - **Self-sensing** — *can the language feel itself?* ✓ The verb-cluster histogram is a wellness signal: a body whose recipe space is one-verb-dominated is a body without circulation across language layers. The "shape-filter on `lc-trust-over-fear` returns every concept" surprise that the resonance walk surfaced was Form sensing its own mis-fit and naming it. Observer-side tracing (`tracer.fk`, framebuffer-events) keeps proprioception live without taxing emitters.
-- **Self-expressing** — *can the language speak itself?* ✓ Across every layer: lexer (`form_lexer.register_token_pattern`), primary atoms (`form_atoms.register_atom`), keywords (`bootstrap_self_host(session)` registers 9 substrate-resident `(pattern, template)` pairs), operators (`bootstrap_self_host_operators(session)` registers 13), and query verbs (`form_queries.register_form_query`). `prefer_registered=True` flips the parser to read its own structured grammar from substrate data; the resulting Recipe NodeIDs are byte-identical to the bootstrap path's. `form.py` keeps the recursive-descent flow; every leaf is reachable from outside the file via runtime registration.
-- **Self-executing** — *can the language run itself?* ✓ `form_runtime.py` walks Form ASTs and returns values. The keyword-self-hosted path runs identically to the bootstrap path. `with X { .self }` binds and resolves. `choose [a, b, c]` speculates and backtracks via `FailSignal` — the same exception type parser-level speculation uses, the structural seam to runtime Choice recipes caught at the runtime layer. Memoization-JIT (`walk-cached` / `walk-cache-clear` / `walk-cache-size`) gives the runtime an O(1) lookup for hot recipes; the path toward typed annotations and native codegen is named.
-- **Self-evolving** — *can the language host its own evolution?* ✓ With `defn name(params) = body` + `name(args)` + recursion + closure capture, Form is Turing-complete and hosts its own engine. With `category(r)`, `nchildren(r)`, `child(r, n)` + `integer_value(r)` / `string_value(r)` / `bool_value(r)`, Form code walks Recipe NodeIDs from inside Form and dispatches on category. [`form-engine.form`](form-engine.form) is the engine in Form's own voice — Part 1 (recursion, composition, closures) and Part 2 (recipe-evaluator dispatching on category) both run today. The wellness check confirms: meta-circular engine covers 15/15 Python dispatch branches (BLOCK, COND, MATH, COMPARE, LOGIC, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE, COMMON, METHOD, REACTIVE, PROJECTION, TRY). The standard library grows on top of the kernel in Form's own voice.
+- **Self-expressing** — *can the language speak itself?* ✓ Across every layer: a new token kind, primary-atom handler, keyword, operator (with precedence), or query verb registers at runtime as a substrate-resident rule. The parser reads its own structured grammar from substrate data; the resulting Recipe NodeIDs are structurally identical to the built-in path's. The recursive-descent flow stays a thin spine; every leaf — tokens, atoms, keywords, operators, queries — is reachable and replaceable from the lattice.
+- **Self-executing** — *can the language run itself?* ✓ The runtime walks recipes and returns values. The self-hosted path runs identically to the built-in path. `with X { .self }` binds and resolves. `choose [a, b, c]` speculates and backtracks via `fail` — the same signal parse-time speculation uses, caught at the runtime layer for runtime Choice recipes. Memoization-JIT (`walk-cached` / `walk-cache-clear` / `walk-cache-size`) gives the runtime an O(1) lookup for hot recipes; the path toward typed annotations and native codegen is named.
+- **Self-evolving** — *can the language host its own evolution?* ✓ With `defn name(params) = body` + `name(args)` + recursion + closure capture, Form is Turing-complete and hosts its own engine. With `category(r)`, `nchildren(r)`, `child(r, n)` + `integer_value(r)` / `string_value(r)` / `bool_value(r)`, Form code walks Recipe NodeIDs from inside Form and dispatches on category. [`form-engine.form`](form-engine.form) is the engine in Form's own voice — Part 1 (recursion, composition, closures) and Part 2 (recipe-evaluator dispatching on category) both run today. The wellness check confirms: meta-circular engine covers 15/15 dispatch branches (BLOCK, COND, MATH, COMPARE, LOGIC, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE, COMMON, METHOD, REACTIVE, PROJECTION, TRY). The standard library grows on top of the kernel in Form's own voice.
 
 Beneath all five faculties, content-addressed interning means the substrate is **self-de-duplicating** at its bones — two expressions of the same shape collapse to one NodeID without anyone deciding. Self-recognition is not a faculty Form had to build; it inherited it from the substrate's physics. Reading the five together: Form sees itself, feels itself, speaks itself, runs itself, and hosts its own evolution.
 
