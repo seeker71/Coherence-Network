@@ -1,0 +1,118 @@
+; cell-question-answer.fk — ask an addressable cell a question with minimal
+; shared primitives, then receive an optimized answer capsule.
+;
+; This extends 18-channel-negotiation from "agree on recipe + payload" to
+; "ask a question, receive an answer, and carry an opaque novel commitment."
+; Runtime values are numeric stand-ins for content-addressed substrate nodes
+; and external references. The wire carries only nonces, fingerprints, indexes,
+; and a commitment for the part only the receiver knows.
+;
+; Stable result: 24311
+;   question index 2, answer index 4, external reference index 3,
+;   novel commitment present 1, sender verification 1.
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth (xs i)
+        (if (eq i 0) (head xs) (nth (tail xs) (sub i 1))))
+
+    (defn hash-fold (bytes acc)
+        (if (nil? bytes) acc
+            (hash-fold (tail bytes)
+                       (mod (add (mul acc 31) (head bytes)) 1000003))))
+
+    (defn fingerprint (nonce value)
+        (mod (add (hash-fold nonce 0) (mul value 7919)) 1000003))
+
+    (defn find-match (cat nonce target-fp idx)
+        (if (nil? cat) (sub 0 1)
+            (do
+                (let candidate (head cat))
+                (let test-fp (fingerprint nonce candidate))
+                (if (eq test-fp target-fp)
+                    idx
+                    (find-match (tail cat) nonce target-fp (add idx 1))))))
+
+    (defn pair-code (a b)
+        (add (mul a 1000) b))
+
+    (defn triple-code (a b c)
+        (add (mul a 1000000) (add (mul b 1000) c)))
+
+    ;; Shared substrate catalogs. Integers stand in for NodeIDs:
+    ;; - questions: minimal question blueprints
+    ;; - targets: addressable cells or substrate scopes
+    ;; - answers: shared answer meanings
+    ;; - external_refs: content-addressed external nodes such as URL/archive/git
+    ;; - recipes: response encoding strategies
+    (let question_catalog (list 120 240 360 480 600))
+    (let target_catalog (list 11 22 33 44 55))
+    (let answer_catalog (list 710 720 730 740 750 760))
+    (let external_ref_catalog (list 9010 9020 9030 9040 9050))
+    (let recipe_catalog (list 110 220 330 440 550))
+
+    ;; CELL A privately asks: question index 2 to target index 1, with
+    ;; preferred response recipe index 3.
+    (let question_idx 2)
+    (let target_idx 1)
+    (let recipe_idx 3)
+    (let question_value (nth question_catalog question_idx))
+    (let target_value (nth target_catalog target_idx))
+    (let recipe_value (nth recipe_catalog recipe_idx))
+
+    (let q_nonce (random_bytes 8))
+    (let t_nonce (random_bytes 8))
+    (let r_nonce (random_bytes 8))
+    (let q_fp (fingerprint q_nonce question_value))
+    (let t_fp (fingerprint t_nonce target_value))
+    (let r_fp (fingerprint r_nonce recipe_value))
+
+    ;; CELL B resolves the request entirely through its own catalogs.
+    (let received_question_idx (find-match question_catalog q_nonce q_fp 0))
+    (let received_target_idx (find-match target_catalog t_nonce t_fp 0))
+    (let received_recipe_idx (find-match recipe_catalog r_nonce r_fp 0))
+
+    ;; CELL B's private state includes a novel blueprint. It is not in the
+    ;; shared catalogs, so the response carries only a commitment plus a shared
+    ;; external reference index where the receiver could fetch or witness it.
+    (let answer_idx 4)
+    (let ref_idx 3)
+    (let novel_blueprint 660660)
+    (let answer_value (nth answer_catalog answer_idx))
+    (let ref_value (nth external_ref_catalog ref_idx))
+
+    (let a_nonce (random_bytes 8))
+    (let e_nonce (random_bytes 8))
+    (let c_nonce (random_bytes 8))
+    (let a_fp (fingerprint a_nonce answer_value))
+    (let e_fp (fingerprint e_nonce ref_value))
+    (let commitment_fp (fingerprint c_nonce novel_blueprint))
+
+    ;; CELL A resolves what is shared and records the novel commitment without
+    ;; needing the receiver's private blueprint bytes.
+    (let received_answer_idx (find-match answer_catalog a_nonce a_fp 0))
+    (let received_ref_idx (find-match external_ref_catalog e_nonce e_fp 0))
+    (let commitment_present (if (eq commitment_fp 0) 0 1))
+
+    ;; CELL A verifies that B answered the exact question/target/recipe triple
+    ;; it intended, and that the response capsule points to the agreed answer
+    ;; and external reference.
+    (let ack_nonce (random_bytes 8))
+    (let request_code
+        (triple-code received_question_idx received_target_idx received_recipe_idx))
+    (let response_code
+        (pair-code received_answer_idx received_ref_idx))
+    (let ack_value (pair-code request_code response_code))
+    (let ack_fp (fingerprint ack_nonce ack_value))
+    (let expected_request_code (triple-code question_idx target_idx recipe_idx))
+    (let expected_response_code (pair-code answer_idx ref_idx))
+    (let expected_ack_value (pair-code expected_request_code expected_response_code))
+    (let expected_ack_fp (fingerprint ack_nonce expected_ack_value))
+    (let ack_ok (if (eq ack_fp expected_ack_fp) 1 0))
+
+    ;; Compact stable attestation: 2, 4, 3, 1, 1 -> 24311.
+    (add
+        (add (mul received_question_idx 10000)
+             (mul received_answer_idx 1000))
+        (add (mul received_ref_idx 100)
+             (add (mul commitment_present 10) ack_ok))))
