@@ -1,0 +1,229 @@
+; bmf-core.fk — the cursor-based BMF core, code/data separated.
+;
+; This is the first breath of the BMF reimplementation drawn in
+; docs/coherence-substrate/bmf-architecture.form. It adds the keystone the
+; current engine.fk lacks: an INPUT CURSOR over a surface, plus a grammar
+; expressed entirely as DATA (patterns + templates), driven by one matcher.
+;
+;   surface ──▶ cursor ──▶ match(pattern) ──▶ build(template) ──▶ NodeID
+;
+; What is new vs engine.fk:
+;   1. Input is a cursor over a surface (string today; file reads into a
+;      string surface; socket/cell/channel are the next surfaces) — not a
+;      pre-built object list from an external sensing layer.
+;   2. A rule's ACTION is a template (data: emit/splice/const), not a
+;      hand-written Form lambda. The same template interpreter serves every
+;      grammar, so emit logic stops being per-language code.
+;   3. Templates emit into the UNIVERSAL vocabulary via (bp "<op>"), so
+;      `add` from any tongue lands on one coordinate.
+;
+; Pure-functional: every advance returns a NEW cursor. A checkpoint is just
+; an earlier cursor value; restore is returning to it. Backtracking leaves
+; no sediment because nothing was mutated.
+;
+; Raw s-expression form (no section[] compile step) so the core boots with
+; only core.fk + line-grammar.fk + the ontology loader as preludes.
+
+(do
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Surface — the thing a cursor reads. Generic over kind.
+    ;;   surface = (list "surface" kind payload)
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn surface-string (s) (list "surface" "string" s))
+    ;; file is read once into a string surface — a real second surface today;
+    ;; socket / cell / channel are the next surfaces (streaming peek).
+    (defn surface-file (path) (surface-string (read_file path)))
+
+    (defn surf-kind    (sf) (nth sf 1))
+    (defn surf-payload (sf) (nth sf 2))
+
+    (defn surf-len (sf)
+        (if (str_eq (surf-kind sf) "string") (str_len (surf-payload sf))
+            0))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Cursor — (list "cursor" surface pos). Immutable; advance returns new.
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn cursor-of   (sf)   (list "cursor" sf 0))
+    (defn cursor-str  (s)    (cursor-of (surface-string s)))
+    (defn cursor-file (path) (cursor-of (surface-file path)))
+
+    (defn cur-surface (c) (nth c 1))
+    (defn cur-pos     (c) (nth c 2))
+
+    (defn cur-eof? (c) (ge (cur-pos c) (surf-len (cur-surface c))))
+
+    ;; codepoint at the cursor, or -1 at end
+    (defn cur-peek (c)
+        (do (let sf (cur-surface c)) (let p (cur-pos c))
+            (if (ge p (surf-len sf)) (sub 0 1)
+                (if (str_eq (surf-kind sf) "string") (ord (char_at (surf-payload sf) p))
+                    (sub 0 1)))))
+
+    ;; one-char string at the cursor, or "" at end
+    (defn cur-peek-char (c)
+        (do (let sf (cur-surface c)) (let p (cur-pos c))
+            (if (ge p (surf-len sf)) ""
+                (if (str_eq (surf-kind sf) "string") (substring (surf-payload sf) p (add p 1))
+                    ""))))
+
+    ;; advance n positions → NEW cursor (no mutation)
+    (defn cur-advance (c n) (list "cursor" (cur-surface c) (add (cur-pos c) n)))
+
+    ;; the slice consumed between cursor c and a later position end-pos
+    (defn cur-slice (c end-pos)
+        (do (let sf (cur-surface c))
+            (if (str_eq (surf-kind sf) "string")
+                (substring (surf-payload sf) (cur-pos c) end-pos)
+                "")))
+
+    ;; checkpoint IS the cursor (a coordinate); restore returns to it.
+    (defn cur-checkpoint (c) c)
+    (defn cur-restore (saved) saved)
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Captures — ordered alist of (name text).
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn caps-empty () (empty))
+    (defn caps-add (caps name val) (cons (list name val) caps))
+    (defn caps-get (caps name)
+        (if (nil? caps) ""
+            (if (str_eq (head (head caps)) name) (head (tail (head caps)))
+                (caps-get (tail caps) name))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Match result — (list "ok" caps cursor') or (list "no").
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn m-ok   (caps c) (list "ok" caps c))
+    (defn m-no   ()       (list "no"))
+    (defn m-ok?  (m)      (str_eq (head m) "ok"))
+    (defn m-caps (m)      (nth m 1))
+    (defn m-cur  (m)      (nth m 2))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Char classes (named, so the pattern stays data).
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn cp-in-class? (cp cls)
+        (if (str_eq cls "digit") (is-digit-cp cp)
+            (if (str_eq cls "alpha") (is-alpha-cp cp)
+                (if (str_eq cls "alnum") (is-ident-cont-cp cp)
+                    false))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Pattern — DATA. The matching side of a rule.
+    ;;   (list "lit" s)         match the literal string s
+    ;;   (list "cls" name)      match one char of a named class
+    ;;   (list "run" name)      match one-or-more chars of a class
+    ;;   (list "seq" p ...)     all parts in order
+    ;;   (list "alt" p ...)     first alternative that holds (no-sediment backtrack)
+    ;;   (list "opt" p)         zero or one
+    ;;   (list "cap" name p)    bind the consumed slice of p to `name`
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn match-pat (pat c caps)
+        (do (let tag (head pat))
+            (if (str_eq tag "lit") (match-lit pat c caps)
+                (if (str_eq tag "cls") (match-cls pat c caps)
+                    (if (str_eq tag "run") (match-run pat c caps)
+                        (if (str_eq tag "seq") (match-seq (tail pat) c caps)
+                            (if (str_eq tag "alt") (match-alt (tail pat) c caps)
+                                (if (str_eq tag "opt") (match-opt pat c caps)
+                                    (if (str_eq tag "cap") (match-cap pat c caps)
+                                        (m-no))))))))))
+
+    (defn match-lit (pat c caps)
+        (do (let s (nth pat 1)) (let sf (cur-surface c)) (let p (cur-pos c))
+            (if (gt (add p (str_len s)) (surf-len sf)) (m-no)
+                (if (str_eq (substring (surf-payload sf) p (add p (str_len s))) s)
+                    (m-ok caps (cur-advance c (str_len s)))
+                    (m-no)))))
+
+    (defn match-cls (pat c caps)
+        (if (cur-eof? c) (m-no)
+            (if (cp-in-class? (cur-peek c) (nth pat 1))
+                (m-ok caps (cur-advance c 1))
+                (m-no))))
+
+    (defn match-run (pat c caps)
+        (if (cur-eof? c) (m-no)
+            (if (cp-in-class? (cur-peek c) (nth pat 1))
+                (match-run-loop pat (cur-advance c 1) caps)
+                (m-no))))
+    (defn match-run-loop (pat c caps)
+        (if (cur-eof? c) (m-ok caps c)
+            (if (cp-in-class? (cur-peek c) (nth pat 1))
+                (match-run-loop pat (cur-advance c 1) caps)
+                (m-ok caps c))))
+
+    (defn match-seq (parts c caps)
+        (if (nil? parts) (m-ok caps c)
+            (do (let m (match-pat (head parts) c caps))
+                (if (m-ok? m)
+                    (match-seq (tail parts) (m-cur m) (m-caps m))
+                    (m-no)))))
+
+    ;; alt tries each alternative from the SAME cursor c — c was never
+    ;; mutated, so a failed alternative costs nothing to undo.
+    (defn match-alt (alts c caps)
+        (if (nil? alts) (m-no)
+            (do (let m (match-pat (head alts) c caps))
+                (if (m-ok? m) m (match-alt (tail alts) c caps)))))
+
+    (defn match-opt (pat c caps)
+        (do (let m (match-pat (nth pat 1) c caps))
+            (if (m-ok? m) m (m-ok caps c))))
+
+    (defn match-cap (pat c caps)
+        (do (let name (nth pat 1)) (let inner (nth pat 2))
+            (let m (match-pat inner c caps))
+            (if (m-ok? m)
+                (m-ok (caps-add (m-caps m) name (cur-slice c (cur-pos (m-cur m)))) (m-cur m))
+                (m-no))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Template — DATA. The emitting side of a rule. One interpreter for
+    ;; every grammar; emits into the universal vocabulary via (bp op).
+    ;;   (list "emit" op kids)   intern_node (bp op) [built kids]
+    ;;   (list "splice" name)    the captured text → a string leaf
+    ;;   (list "const" s)        a literal string leaf
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn build-tpl (tpl caps)
+        (do (let tag (head tpl))
+            (if (str_eq tag "emit") (build-emit tpl caps)
+                (if (str_eq tag "splice") (intern_trivial_string (caps-get caps (nth tpl 1)))
+                    (if (str_eq tag "const") (intern_trivial_string (nth tpl 1))
+                        (intern_trivial_string "?"))))))
+
+    (defn build-emit (tpl caps)
+        (intern_node (bp (nth tpl 1)) (build-kids (nth tpl 2) caps)))
+
+    (defn build-kids (kids caps)
+        (if (nil? kids) (empty)
+            (cons (build-tpl (head kids) caps) (build-kids (tail kids) caps))))
+
+    ;; ──────────────────────────────────────────────────────────────────
+    ;; Rule = (pattern, template). run-rule is the whole arc for one rule:
+    ;; match the cursor, then build one universal recipe from the captures.
+    ;;   → (list "ok" node cursor')  or  (list "no")
+    ;; ──────────────────────────────────────────────────────────────────
+
+    (defn rule-of  (pattern template) (list "rule" pattern template))
+    (defn rule-pat (r) (nth r 1))
+    (defn rule-tpl (r) (nth r 2))
+
+    (defn run-rule (r c)
+        (do (let m (match-pat (rule-pat r) c (caps-empty)))
+            (if (m-ok? m)
+                (list "ok" (build-tpl (rule-tpl r) (m-caps m)) (m-cur m))
+                (list "no"))))
+
+    (defn run-ok?  (res) (str_eq (head res) "ok"))
+    (defn run-node (res) (nth res 1))
+    (defn run-cur  (res) (nth res 2))
+)

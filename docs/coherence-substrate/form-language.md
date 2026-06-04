@@ -583,6 +583,8 @@ The grammars live as `.fk` files under [`form/form-stdlib/grammars/`](../../form
 
 The kernel underneath stays thin. It exposes only host-native resources — I/O, RAM, storage — a set of primitives, a JIT, and a framebuffer to inspect the lattice in real time. All of this expressive growth happens in recipes on the lattice, never in the kernel; the kernel never grows a feature, the grammar does.
 
+→ The full architecture — a cursor over surfaces, the Pattern/Template/Rule/Grammar/Cursor blueprints, the one `Match` engine, and the self-hosting fixpoint (the meta-grammar is a grammar) — is drawn in [`bmf-architecture.form`](bmf-architecture.form).
+
 ## Resonance — dimensional vocabulary for cross-discipline bridging
 
 The geometric signature pilot ([SCHEMA.md → Geometric Signature](../vision-kb/SCHEMA.md#geometric-signature)) authors a 15-dimensional `geometry:` block on each concept (arity, form, topology, polarity, ordering, phase, ratio, spectral_band, temporal_band, scale, direction, lineage_texture, embedding_dim, self_similarity, harmonic). The substrate side of this lands as five new Blueprint domains and one new Recipe category.
@@ -994,10 +996,9 @@ file_exists("form/form-stdlib/engine.fk")                           ; → true
 file_contains("CLAUDE.md", "structural composition discipline")     ; → true
 file_size("docs/coherence-substrate/form-language.md")              ; → integer bytes
 symbol_in_file("form/form-stdlib/engine.fk", "apply-object-rule")   ; → true
-band_passes("form/form-stdlib/tests/channel-breath-band.fk")        ; → true | false
 ```
 
-`band_passes` runs a proof band through the kernel and returns the boolean result — so `done_when:` items in specs can include behavioral assertions, not just file-shape ones. Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
+These let a spec's `done_when:` assert file-shape reality directly. Behavioral proof goes further through a **band** — a `.fk` workload run by [`form/validate.sh`](../../form/validate.sh) across the Go, Rust, and TypeScript kernels, green only when all three return the same value. (That is how the cursor core in [`bmf-architecture.form`](bmf-architecture.form) is proven: `bmf-core-band.fk → 600`, `1 ok, 0 divergent`.) Companion: [`spec-as-playable-recipe.form`](spec-as-playable-recipe.form).
 
 Host effects bridge Form execution into the agent question channel:
 
