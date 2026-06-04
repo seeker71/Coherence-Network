@@ -269,52 +269,103 @@ is parsed by the meta-grammar. Lose the `.fkb` and you can rebuild it by running
 the previous meta on the meta's own source (the BMC ratchet) — but you never
 *need* to, because the image is the body's memory of its own compiler.
 
-## Surface syntax — each token's clearest meaning
+## Surface syntax — BMF's own notation, kept from the 2000 thesis
 
-The notation a human (or agent) writes a grammar in. The design goal: **every
-token's role is unambiguous on sight.** A rule is `NAME : PATTERN => TEMPLATE` —
-the `=>` is the seam between *matching* (left, what to consume) and *emitting*
-(right, what to produce).
+A grammar is a list of **rules**. A rule reads
+`NAME [ ( params ) ] ::= PATTERN [ => TEMPLATE ] ;`. The **matching side** (`::=` …)
+is kept verbatim from the thesis BMF — the same `::=`, `{ }`, `[ ]`, `< >`, `|`,
+`$tag:`, `\\`, and parameterized `Name( … )` that BMF used to declare itself in
+2000. The `=> TEMPLATE` seam is the one addition (explained after the example).
 
 ```bmf
-# ── PATTERN tokens (left of =>) ──────────────────────────────
-#   "lit"      match this literal token exactly
-#   NAME       reference another rule AND capture its node under `name`
-#   p?         optional            p*  zero+ (list)    p+  one+ (list)
-#   p /","     repetition with separator
-#   a | b      alternation (parse-time choose; first that holds wins)
-#   ( … )      grouping
-#   &p  !p     positive / negative lookahead (consume nothing)
+# ── PATTERN — the matching side (thesis-faithful) ────────────
+#   "lit"              literal characters                        (CharChain)
+#   < 'a'..'z' | '_' > one char in a range/set ( ..=range |=or )  (Terminal)
+#   NAME               reference another rule (recursion)         (RuleCall)
+#   NAME( a, b )       parameterized / template rule              (e.g. List(item, sep))
+#   $tag:p             capture p under `tag`                      (Tag)
+#   a  b  c            sequence — all in order                    (AND-list)
+#   a | b              branch — first that holds                  (OR-list)
+#   { p }              zero-or-more        [ p ]  optional         (Repeat)
+#   p \\ sep           p separated by sep   ≡  p { sep p }        (runtime-added construct)
+#   ( … )              grouping
+#   cut  fail  EOF  EOL  primitives: commit / backtrack / stream edges
 #
-# ── TEMPLATE tokens (right of =>) ────────────────────────────
-#   ~Shape(ARM)[ … ]   emit a node of universal category Shape, arm ARM, children
-#   name               splice the captured node `name`
-#   name*              splice the captured list `name`
-#   #"text"  #42       a literal leaf
-#   fold.left ~Bin(op) fold a captured list into a left-assoc chain
+# ── TEMPLATE — the emitting side (the one addition) ──────────
+#   ~Shape(arm)[ … ]   emit a node of the UNIVERSAL category Shape, arm, children
+#   tag                splice the captured node `tag`       tag*  splice the list
+#   #"text"            a literal leaf
+#   fold.left ~Bin     fold a captured list into a left-assoc chain
 
+# A slice of Python, in the thesis notation:
 grammar python over chars {
-  start = module
+  start ::= module ;
 
-  add  : mul ( ("+" | "-") mul )*        => fold.left ~Binary(op)
-  mul  : atom ( ("*" | "/") atom )*       => fold.left ~Binary(op)
-  call : callee "(" arg /"," ")"          => ~Call[ callee, arg* ]
-  if   : "if" cond ":" block
-          ( "else" ":" else )?            => ~Cond(IF)[ cond, block, else? ]
-  func : "def" NAME "(" param /"," ")" ":" block
-                                          => ~Function[ #NAME, param*, block ]
+  add  ::= mul { ( "+" | "-" ) mul }               => fold.left ~Binary(op) ;
+  call ::= $callee:atom "(" $arg:expr \\ "," ")"   => ~Call[ callee, arg* ] ;
+  if   ::= "if" $cond:expr ":" $body:block
+             [ "else" ":" $else:block ]            => ~Cond(IF)[ cond, body, else? ] ;
+  func ::= "def" $name:ID "(" $param:ID \\ "," ")" ":" $body:block
+                                                   => ~Function[ #name, param*, body ] ;
+  ID   ::= < 'a'..'z' | 'A'..'Z' | '_' >
+           < 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' >* ;
 }
 ```
 
-Reading `if`: `"if"`/`":"`/`"else"` are literals to match; `cond`/`block`/`else`
-are rule-refs whose emitted nodes are captured; `( … )?` makes the else-arm
-optional; `=>` divides match from emit; `~Cond(IF)` is the universal shape; the
-`[ cond, block, else? ]` are its children, spliced from captures. Nothing is
-positional-by-accident; every token declares its own role.
+**What stayed and what changed from the thesis.** Everything left of `=>` is the
+thesis verbatim: `Number ::= < '0'..'9' > [ '.' < '0'..'9' > ];` and
+`List( item, sep ) ::= item { sep item };` parse unchanged. The thesis attached
+the *action* as a separate `#process` METHOD that rewrote the parse tree after a
+rule completed. Here the action is inline **data** — `=> ~Shape[…]` — a template
+that emits into the universal recipe vocabulary. Two consequences: the action is
+content-addressed (the same emit shape from any grammar is one NodeID) and shared,
+not host code; and the thesis read a `ParseStream` over a file, where the cursor
+reads any surface. Otherwise the surface a human writes is the 2000 surface.
 
-The meta-grammar is written in this same notation — its rules match the tokens
-above (`":"`, `"=>"`, `"|"`, `"*"`, `~Shape`, …) and emit `Rule` / `Pattern` /
-`Template` recipes. The notation describes itself.
+### The notation describes itself — BMF-in-BMF
+
+The meta-grammar is a grammar in exactly this notation; its templates emit
+`Rule` / `Pattern` / `Template` recipes — the shapes `Match` consumes. The
+self-hosting fixpoint, made literal:
+
+```bmf
+grammar bmf over chars {
+  start    ::= { rule } ;
+
+  rule     ::= $name:NAME [ "(" $params:NAME \\ "," ")" ] "::=" $pat:pattern
+                 [ "=>" $tpl:template ] ";"        => ~Rule[ name, params*, pat, tpl? ] ;
+
+  pattern  ::= alt ;
+  alt      ::= seq { "|" seq }                      => fold ~Alt ;
+  seq      ::= postfix+                             => ~Seq[ postfix* ] ;
+  postfix  ::= $p:primary [ "*" | "+" | "?" ]       => ~Rep[ p ] | ~Opt[ p ] | p ;
+  primary  ::= literal | range | capture | seplist | group | ruleref ;
+
+  literal  ::= '"' < any-but-quote >* '"'           => ~Literal[ chars ] ;
+  range    ::= "<" charset \\ "|" ">"               => ~Class[ charset* ] ;
+  charset  ::= $lo:CHAR [ ".." $hi:CHAR ]           => ~Range[ lo, hi? ] ;
+  capture  ::= "$" $tag:NAME ":" $p:primary         => ~Capture[ tag, p ] ;
+  seplist  ::= $p:primary "\\" $sep:primary         => ~SepRep[ p, sep ] ;
+  group    ::= "(" pattern ")"                      => pattern ;
+  ruleref  ::= $r:NAME [ "(" pattern \\ "," ")" ]   => ~Ref[ r, args* ] ;
+
+  template ::= "~" $shape:NAME [ "(" $arm:NAME ")" ]
+                 [ "[" arg \\ "," "]" ]             => ~Emit[ shape, arm?, args* ] ;
+  arg      ::= template | splice | const ;
+  splice   ::= $tag:NAME [ "*" ]                     => ~Splice[ tag, list? ] ;
+  const    ::= "#" literal                           => ~Const[ literal ] ;
+
+  NAME     ::= < 'a'..'z' | 'A'..'Z' | '_' >
+               < 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' >* ;
+}
+```
+
+Run this grammar over its own source through `Match` and it emits the
+`Rule` / `Pattern` / `Template` recipes that *are* a grammar — the body's
+compiler-compiler, frozen into `bmf-meta.fkb` so the bootstrap need never expand
+again. (The data shapes in [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk) —
+`lit` / `cls` / `run` / `seq` / `alt` / `opt` / `cap` — are what this surface
+compiles *to*; the surface is the thesis, the interned recipes are the lattice.)
 
 ## Configuration and registration as data
 
