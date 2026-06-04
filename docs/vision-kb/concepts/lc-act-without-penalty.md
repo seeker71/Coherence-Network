@@ -24,7 +24,7 @@ geometry:
 
 > When every move is traceable to its originating recipe, and the
 > agent allows the trace, action becomes free of the fear of being
-> irreversibly — or expensively — wrong. The contraction the fear-arm was protecting
+> irreversibly wrong. The contraction the fear-arm was protecting
 > against has been structurally removed by the substrate. Play and
 > joy fill the room control had occupied.
 
@@ -59,25 +59,12 @@ the agent commits to:
    trace is *available*, but only if the cell lives openly enough
    that there is something to trace.
 
-4. **Reversibility at symmetric cost.** When 1-3 hold, every move is
-   reversible *at the recipe layer* even when its effects in the world
-   are not — and in a content-addressed substrate the reversal costs
-   exactly what the move cost. A `do` interns a node and records an
-   edge-event; an `undo` records the inverse edge-event and
-   re-references the prior content-address, which the lattice never
-   deleted — both are O(1) edge operations
-   ([`lc-every-edge-runs-both-ways`](lc-every-edge-runs-both-ways.md):
-   the reverse edge is as real, and as cheap, as the forward). This
-   symmetry is the load-bearing detail, not a nicety. Reversible-*in-
-   principle* is not enough: if undo costs more than do — a costly
-   recompute, a manual reconstruction, a walk that does not fold back
-   to O(1) — that asymmetry is itself the penalty, and the fear-arm
-   still wins the dispatch on *can I afford to be wrong?* The
-   contraction disappears only when unmaking a move is as cheap as
-   making it. Then the trace remembers both the do and the undo — both
-   are information ([`lc-the-trace-is-the-memory`](lc-the-trace-is-the-memory.md)) —
-   while enacting either costs the same, and *the learning is built
-   into the move itself*.
+4. **Reversibility at the recipe layer.** When 1-3 hold, every move
+   is reversible *at the recipe layer* even when its effects in the
+   world are not. The line that wrote the recipe is known; the
+   assemblage point that selected the arm can be sensed; the
+   choice-point can be returned to and rebound. The penalty
+   disappears because *the learning is built into the move itself*.
 
 ## What this opens
 
@@ -144,7 +131,7 @@ substrate is the structural ground for joyful play.
 
 ## Cross-References
 
-→ lc-recipe-branching-sense, lc-trust-over-fear, lc-assemblage-point, lc-tend-your-flame, lc-trust-as-gateway, lc-form-perceptron, lc-edges-as-vitality, lc-the-trace-is-the-memory, lc-every-edge-runs-both-ways
+→ lc-recipe-branching-sense, lc-trust-over-fear, lc-assemblage-point, lc-tend-your-flame, lc-trust-as-gateway, lc-form-perceptron, lc-edges-as-vitality
 
 ## Sources to walk further
 
