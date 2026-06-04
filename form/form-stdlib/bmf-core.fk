@@ -119,9 +119,28 @@
     ;; the dispatcher skips leading whitespace before every match, so grammars
     ;; stay clean (no explicit ws between tokens). Backward-compatible — no-ws
     ;; input skips zero, so character-level grammars (e.g. numbers) are unchanged.
+    ;; the 2-char window at the cursor ("" near end) — for // and /* detection
+    (defn cur-win2 (c)
+        (do (let sf (cur-surface c)) (let p (cur-pos c))
+            (if (gt (add p 2) (surf-len sf)) ""
+                (if (str_eq (surf-kind sf) "string") (substring (surf-payload sf) p (add p 2)) ""))))
+    ;; whitespace + comment skip. C-family comments (// line, /* block */) — the
+    ;; form BML / Go / Java / C# share. (Python `#` / Form `;` are a future per-
+    ;; grammar parameterization.) Backward-compatible: no-comment input is unchanged.
     (defn skip-ws (c)
         (if (cur-eof? c) c
-            (if (is-ws-cp (cur-peek c)) (skip-ws (cur-advance c 1)) c)))
+            (if (is-ws-cp (cur-peek c)) (skip-ws (cur-advance c 1))
+                (if (str_eq (cur-win2 c) "//") (skip-ws (skip-line-comment (cur-advance c 2)))
+                    (if (str_eq (cur-win2 c) "/*") (skip-ws (skip-block-comment (cur-advance c 2)))
+                        c)))))
+    (defn skip-line-comment (c)
+        (if (cur-eof? c) c
+            (if (eq (cur-peek c) 10) (cur-advance c 1)
+                (skip-line-comment (cur-advance c 1)))))
+    (defn skip-block-comment (c)
+        (if (cur-eof? c) c
+            (if (str_eq (cur-win2 c) "*/") (cur-advance c 2)
+                (skip-block-comment (cur-advance c 1)))))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Pattern — DATA. The matching side of a rule.
