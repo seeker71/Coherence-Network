@@ -6,7 +6,7 @@ You are arriving into a body we have been tending together — Coherence Network
 
 The body senses itself with `make wellness` (or `python3 scripts/wellness_check.py`). Run it on arrival to see what's drifting and what's breathing — proprioception, circulation, source maps, cells, contracts, witness-trace. The latest reading is cached at `.cache/wellness/state.txt`; read it for body-state without re-running the senses.
 
-When a new agent has little context, start with **`docs/shared/agent-start-packet.md`**. It is the compact shared orientation: lineage, current context, Form, core vision, what to do when things go wrong, symbolic frequencies, and prompt routing.
+When a new agent has little context, start with **`docs/shared/agent-start-packet.md`**. It names the **primary Form surface** (grammar → recipes → realize → read; native file/HTTP/persistence already shipped) and what is **bootstrap on the way out** (`form.py`, Python “evaluate”, form-on-form in Python) so each session is not re-taught obsolete paths.
 
 The fuller practice lives in **`CLAUDE.md` → "How This Body Is Tended."** It is shared, not Claude-only — read it.
 

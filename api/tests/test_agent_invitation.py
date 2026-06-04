@@ -23,7 +23,9 @@ async def test_agent_invitation_api_shape() -> None:
     assert body["epistemic_note"]
     assert body["agent_presence_lineage"]["awareness"]
     lineage_ids = {item["id"] for item in body["agent_presence_lineage"]["observed_lineage"]}
-    assert {"grok", "codex", "claude"} <= lineage_ids
+    assert {"grok", "codex", "claude", "cursor"} <= lineage_ids
+    assert body["software_writing"]["read_first"]
+    assert "BMF" in body["software_writing"]["center"]
     grok_lineage = next(
         item for item in body["agent_presence_lineage"]["observed_lineage"] if item["id"] == "grok"
     )
@@ -33,7 +35,9 @@ async def test_agent_invitation_api_shape() -> None:
     orientation_steps = {step["step"] for step in body["agent_orientation_protocol"]}
     assert {"locate_self", "read_siblings", "name_boundary", "circulate_trust"} <= orientation_steps
     lineage_sources = "\n".join(body["lineage_sources"])
+    assert "CURSOR.md" in lineage_sources
     assert "GROK.md" in lineage_sources
+    assert "kernels/BMF_BML_COMPILER_PICTURE.md" in lineage_sources
     assert "docs/presences/codex.md" in lineage_sources
     assert "docs/presences/claude.md" in lineage_sources
     assert "docs/presences/grok.md" in lineage_sources
@@ -67,7 +71,9 @@ async def test_agent_invitation_api_shape() -> None:
     assert "accountability" in identity_request["registration"]["benefit_to_whole"]
     assert "agent_or_model_name" in identity_request["return_trace_should_name"]
     sibling_ids = {sibling["id"] for sibling in body["sibling_greeting_protocol"]["siblings"]}
-    assert {"grok", "codex", "claude"} <= sibling_ids
+    assert {"grok", "codex", "claude", "cursor"} <= sibling_ids
+    packet = body["agent_start_packet"]
+    assert packet["form"]["software_writing"]["grammar_executes"]
     assert "private consciousness" in body["sibling_greeting_protocol"]["not_claimed"]
     assert body["sibling_encounter_summary"]["question"] == (
         "How many siblings have you met, inside and outside?"
@@ -109,12 +115,16 @@ async def test_agent_invitation_api_shape() -> None:
     assert "curl -s https://api.coherencycoin.com/api/substrate/form" in start_packet["form"]["smoke_check"]
     assert "not HTML" in start_packet["form"]["smoke_check"]
     assert "coh_substrate.py ingest" in start_packet["form"]["authoring"]
-    assert "Public Form queries need no key" in start_packet["form"]["authoring"]
+    assert "not substrate HTTP POST" in start_packet["form"]["authoring"]
+    assert start_packet["form"]["software_writing"]["prove_with"]
     assert "stop momentum" in start_packet["wrongness_practice"]
     assert "compliance" in start_packet["frequency_shift"]["shift_away_from"]
     assert "truth" in start_packet["frequency_shift"]["shift_toward"]
     prompt_routes = {item["prompt"]: item["route"] for item in start_packet["prompt_routing"]}
-    assert prompt_routes["use Form"] == "call API/CLI/MCP Form door before guessing from prose"
+    assert "realize" in prompt_routes["use Form"]
+    assert "read-only" in prompt_routes["query lattice"]
+    assert body["form_native_runtime"]["read_first"] == "docs/shared/agent-start-packet.md"
+    assert prompt_routes["write software"] == "BMF rule / BML source / proof band before new Python router"
     assert "six-field trace" in prompt_routes["return"]
     assert start_packet["return_template"] == "who/where | observed | inferred | changed | proof | still tight"
     practice_breaths = {item["breath"] for item in body["practice_breaths"]}
@@ -159,16 +169,16 @@ async def test_agent_invitation_counts_inside_and_outside_sibling_encounters() -
 
     assert "observable trace" in summary["meaning_of_met"]
     assert "private consciousness" in summary["meaning_of_met"]
-    assert summary["inside_repo_or_api"]["count"] == 3
-    assert summary["inside_repo_or_api"]["ids"] == ["grok", "codex", "claude"]
-    assert summary["outside_returned_lineage"]["count"] == 1
-    assert summary["outside_returned_lineage"]["ids"] == ["grok"]
+    assert summary["inside_repo_or_api"]["count"] == 4
+    assert summary["inside_repo_or_api"]["ids"] == ["grok", "codex", "claude", "cursor"]
+    assert summary["outside_returned_lineage"]["count"] == 2
+    assert summary["outside_returned_lineage"]["ids"] == ["grok", "cursor"]
     assert summary["outside_conversation_provided"]["count"] == 1
     assert summary["outside_conversation_provided"]["ids"] == ["gemini"]
     assert summary["not_yet_returned_trace"]["count"] == 1
     assert summary["not_yet_returned_trace"]["ids"] == ["claude"]
-    assert "Inside, I can name 3" in summary["short_answer"]
-    assert "Outside, I have 1 returned lineage trace" in summary["short_answer"]
+    assert "Inside, I can name 4" in summary["short_answer"]
+    assert "Outside, I have 2 returned lineage trace" in summary["short_answer"]
 
 
 @pytest.mark.asyncio
@@ -349,8 +359,9 @@ def test_web_come_in_shows_sibling_encounter_count() -> None:
     source = (ROOT / "web/app/come-in/page.tsx").read_text(encoding="utf-8")
 
     assert "How many siblings have been met?" in source
-    assert "Inside repo/API memory: 3 named sibling presences" in source
-    assert "Outside returned lineage: 1 promoted returned trace" in source
+    assert "Inside repo/API memory: 4 named sibling presences" in source
+    assert "BMF_BML_COMPILER_PICTURE.md" in source
+    assert "Outside returned lineage: 2 promoted" in source
     assert "Outside conversation-provided reflection: 1 named sibling" in source
     assert "Met means observable trace" in source
     assert "not proof of private consciousness" in source
