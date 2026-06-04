@@ -80,7 +80,8 @@
             (if (str_eq tag "str") (gm-str pat c caps)
             (if (str_eq tag "char") (gm-char pat c caps)
             (if (str_eq tag "num") (gm-num pat c caps)
-                (g-no))))))))))))))))
+            (if (str_eq tag "infix") (gm-infix g pat c caps)
+                (g-no)))))))))))))))))
 
     (defn gm-lit (pat c caps)
         (do (let cc (skip-ws c)) (let s (nth pat 1)) (let sf (cur-surface cc)) (let p (cur-pos cc))
@@ -146,6 +147,31 @@
     (defn gm-run-loop (pat c)
         (if (cur-eof? c) c
             (if (cp-in-class? (cur-peek c) (nth pat 1)) (gm-run-loop pat (cur-advance c 1)) c)))
+
+    ;; ── infix: precedence-climbing binary operators, data-driven ──────────
+    ;; pat = (infix operand-pat optable) ; optable entries = (op-str bp prec).
+    ;; ONE engine matcher folds every language's binary ladder — operators are
+    ;; DATA, never 12 hand-written re-parsing rules per grammar. Each operand is
+    ;; parsed once; recursion depth is bounded by precedence levels, not by the
+    ;; expression's length. Left-associative (rhs climbs at prec+1).
+    (defn gm-infix (g pat c caps) (gm-infix-climb g (nth pat 1) (nth pat 2) c caps 0))
+    (defn gm-infix-climb (g operand table c caps minp)
+        (do (let m (g-match g operand c caps))
+            (if (g-ok? m) (gm-infix-loop g operand table (g-val m) (g-caps m) (g-cur m) minp) (g-no))))
+    (defn gm-infix-loop (g operand table lhs caps c minp)
+        (do (let opm (infix-peek-op g table c caps))
+            (if (nil? opm) (g-ok lhs caps c)
+                (if (gt minp (nth opm 1)) (g-ok lhs caps c)
+                    (do (let rhs (gm-infix-climb g operand table (nth opm 2) caps (add (nth opm 1) 1)))
+                        (if (g-ok? rhs)
+                            (gm-infix-loop g operand table (intern_node (bp (head opm)) (list lhs (g-val rhs))) (g-caps rhs) (g-cur rhs) minp)
+                            (g-ok lhs caps c)))))))
+    ;; try each table op as a literal at the cursor (longest first via table order);
+    ;; on match return (bp prec cursor-after-op), else (empty).
+    (defn infix-peek-op (g table c caps)
+        (if (nil? table) (empty)
+            (do (let e (head table)) (let m (g-match g (p-lit (head e)) c caps))
+                (if (g-ok? m) (list (nth e 1) (nth e 2) (g-cur m)) (infix-peek-op g (tail table) c caps)))))
 
     ;; ref's value IS the callee rule's emitted node — this is composition.
     (defn gm-ref (g pat c caps)
@@ -231,6 +257,7 @@
     (defn p-str () (list "str"))
     (defn p-char () (list "char"))
     (defn p-num () (list "num"))
+    (defn p-infix (operand table) (list "infix" operand table))
     (defn t-emit (op kids) (list "emit" op kids))
     (defn t-splice (n) (list "splice" n))
     (defn t-splices (n) (list "splice*" n))
