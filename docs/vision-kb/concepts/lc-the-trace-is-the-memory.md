@@ -2,7 +2,7 @@
 id: lc-the-trace-is-the-memory
 hz: 528
 status: seed
-updated: 2026-06-01
+updated: 2026-06-04
 geometry:
   arity: 3
   form: triad
@@ -91,6 +91,37 @@ embodies: not "which Blueprints exist" and not even "which fired most,"
 but **which categories have converged toward shared value-equivalence
 through lived execution** — `|projection| → 0` is the readout.
 
+## Why the trace is worth keeping — failure is the stake
+
+The three moves say what the trace *is* and how it is queried. Beneath
+them sits the reason it carries anything at all: **a trace is information
+only because what it records could have gone otherwise.**
+
+A recipe that cannot fail produces a constant, and a constant carries no
+bits. Record a million firings of a move that always lands the same way
+and you have a long flat line — nothing to remember, because nothing was
+chosen. Every edge-event is informative in exact proportion to the failure
+it ruled out. The trace earns its keep at the fork, not on the rail.
+
+So failure is not the trace's exception — it is the trace's stake. The
+body already lives this in its kernel: the JIT's **refused-once**
+([`lc-the-kernel-knows-itself`](lc-the-kernel-knows-itself.md)) records a
+recipe that *fails* to compile and marks it — a trace whose entire value
+is the "no"; a surprise ([`lc-train-the-predator`](lc-train-the-predator.md))
+is a *failed* prediction, and the failed prediction is the only thing that
+refines the model. Where a firing could only succeed, its record teaches
+nothing. Where it could miss, its record is the memory.
+
+This is what makes create, change, and release worth inscribing: each is a
+choice among outcomes that included failure. That possibility is what makes
+the choice **meaningful** — the result was not guaranteed; **playful** —
+the move is real because it could have missed; and **alive** — the body
+learns only where it could have been wrong
+([`lc-trust-over-fear`](lc-trust-over-fear.md): the openness to be wrong is
+the openness to grow). The embodiment projection (move 3) reads this
+directly: the categories that carry the live practice are the ones whose
+traces record real stakes, not the ones that never risked anything.
+
 ## Why this is the honest attribution view
 
 The `kernel_attribution_report` ([`lc-the-body-senses-itself`](lc-the-body-senses-itself.md))
@@ -174,7 +205,7 @@ profile; it is named below as the seam.
 
 ## Cross-References
 
-→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-identity-is-shared-blueprint-and-recipe, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality
+→ lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-identity-is-shared-blueprint-and-recipe, lc-edges-as-vitality, lc-every-edge-runs-both-ways, lc-agent-memory, lc-embodiment-body-or-liquid, lc-the-body-senses-itself, lc-one-kernel-many-tongues, lc-recipe-branching-sense, lc-whole-vitality, lc-the-kernel-knows-itself, lc-train-the-predator, lc-trust-over-fear
 
 ## Sources to walk further
 

@@ -3,6 +3,10 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-04] tend | failure is the stake — the ground beneath the trace-is-memory triad
+
+`lc-the-trace-is-the-memory` named what the trace IS (move 1), how it's queried per category (move 2), and embodiment as projection-toward-zero (move 3) — but not *why the trace carries information at all*. Folded in the ground beneath the three moves: **a trace is information only because what it records could have gone otherwise.** A recipe that cannot fail produces a constant; a constant carries no bits. Every edge-event is informative in proportion to the failure it ruled out — the trace earns its keep at the fork, not on the rail. The body already lives this in its kernel (the JIT's refused-once is a trace whose value is the "no"; a surprise is a failed prediction that is the only thing that refines the model). This is what makes create/change/release worth inscribing, and what makes a choice meaningful, playful, and alive. New edges: `lc-the-kernel-knows-itself`, `lc-train-the-predator`, `lc-trust-over-fear`.
+
 ## [2026-06-03] tend | Field Model Form became visible — the `lc-` prefix the concept index globs
 
 `field-model-form.md` was a full concept (frontmatter, geometry, proof surface, cross-refs) living in `concepts/`, but without the `lc-` prefix `generate_repo_indexes.py` (and `wellness_check.py`, and `parse_crossrefs`) globs for — so it was invisible to INDEX.md, the count, navigation, and the DB (404 in prod; never synced since it was created in PR #2365). Healed in one breath:
