@@ -1,0 +1,74 @@
+; bmf-langs-band.fk — six surfaces, one coordinate.
+;
+; The dream from bmf-architecture.form, proven: Python, Go, Rust, C#, Java, and
+; BML each declare a function and an `if` as cursor-driven (pattern => template)
+; rules — pure DATA over the same `Match` engine — and ALL emit the SAME
+; universal Form node. Different keywords (def / func / fn / void / public void),
+; different punctuation (`:` / `{` / `( )`), one interned coordinate.
+;
+; No parse stack, no per-language emit code — the only thing that differs between
+; languages is the bag of pattern-rules; the template emits universal shapes
+; (bp "fndef", bp "if-then") so content-addressing collapses them to one NodeID.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk
+
+(do
+    ;; The two universal templates every language's rule emits into.
+    (let func-tpl (list "emit" "fndef"   (list (list "splice" "name") (list "splice" "p"))))
+    (let if-tpl   (list "emit" "if-then" (list (list "splice" "c"))))
+
+    ;; Reference nodes — what a hand-built `add(x)` function and `if ready`
+    ;; SHOULD intern to. Convergence == every language matching these.
+    (let ref-func (intern_node (bp "fndef")
+                     (list (intern_trivial_string "add") (intern_trivial_string "x"))))
+    (let ref-if   (intern_node (bp "if-then")
+                     (list (intern_trivial_string "ready"))))
+
+    ;; Shorthands for the repeated pattern atoms.
+    (defn kw  (s) (list "lit" s))
+    (defn id  (n) (list "cap" n (list "run" "alpha")))
+    (defn run-on (rule src)
+        (do (let res (run-rule rule (cursor-str src)))
+            (if (run-ok? res) (run-node res) (intern_trivial_string "PARSE-FAIL"))))
+
+    ;; ── function declaration — one param — per language ──────────────────
+    ;;   surface differs (keyword); template is identical → one coordinate.
+    (let py-func   (rule-of (list "seq" (kw "def")  (id "name") (kw "(") (id "p") (kw ")") (kw ":")) func-tpl))
+    (let go-func   (rule-of (list "seq" (kw "func") (id "name") (kw "(") (id "p") (kw ")"))          func-tpl))
+    (let rs-func   (rule-of (list "seq" (kw "fn")   (id "name") (kw "(") (id "p") (kw ")"))          func-tpl))
+    (let cs-func   (rule-of (list "seq" (kw "void") (id "name") (kw "(") (id "p") (kw ")"))          func-tpl))
+    (let java-func (rule-of (list "seq" (kw "public") (kw "void") (id "name") (kw "(") (id "p") (kw ")")) func-tpl))
+    (let bml-func  (rule-of (list "seq" (kw "void") (id "name") (kw "(") (id "p") (kw ")"))          func-tpl))
+
+    (let func-converges
+        (if (and (node_eq (run-on py-func   "def add ( x ) :")        ref-func)
+            (and (node_eq (run-on go-func   "func add ( x )")          ref-func)
+            (and (node_eq (run-on rs-func   "fn add ( x )")            ref-func)
+            (and (node_eq (run-on cs-func   "void add ( x )")          ref-func)
+            (and (node_eq (run-on java-func "public void add ( x )")   ref-func)
+                 (node_eq (run-on bml-func  "void add ( x )")          ref-func))))))
+            100 0))
+
+    ;; ── if statement — per language ──────────────────────────────────────
+    ;;   Python `cond :`, Go/Rust `cond {`, C#/Java/BML `( cond )` → one node.
+    (let py-if   (rule-of (list "seq" (kw "if") (id "c") (kw ":"))            if-tpl))
+    (let go-if   (rule-of (list "seq" (kw "if") (id "c") (kw "{"))            if-tpl))
+    (let rs-if   (rule-of (list "seq" (kw "if") (id "c") (kw "{"))            if-tpl))
+    (let cs-if   (rule-of (list "seq" (kw "if") (kw "(") (id "c") (kw ")"))   if-tpl))
+    (let java-if (rule-of (list "seq" (kw "if") (kw "(") (id "c") (kw ")"))   if-tpl))
+    (let bml-if  (rule-of (list "seq" (kw "if") (kw "(") (id "c") (kw ")"))   if-tpl))
+
+    (let if-converges
+        (if (and (node_eq (run-on py-if   "if ready :")     ref-if)
+            (and (node_eq (run-on go-if   "if ready {")     ref-if)
+            (and (node_eq (run-on rs-if   "if ready {")     ref-if)
+            (and (node_eq (run-on cs-if   "if ( ready )")   ref-if)
+            (and (node_eq (run-on java-if "if ( ready )")   ref-if)
+                 (node_eq (run-on bml-if  "if ( ready )")   ref-if))))))
+            100 0))
+
+    ;; Distinct constructs land on distinct coordinates (no accidental collapse).
+    (let shapes-distinct (if (node_eq ref-func ref-if) 0 100))
+
+    ; Expected total: 300  (6 langs → 1 fndef node, 6 langs → 1 if node, the two distinct)
+    (add func-converges (add if-converges shapes-distinct)))

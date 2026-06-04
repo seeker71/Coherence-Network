@@ -1,0 +1,119 @@
+# Six tongues, one lattice — language grammars from the cursor
+
+> The dream of [`bmf-architecture.form`](bmf-architecture.form), carried to the
+> languages: BML, Python, Go, Rust, C#, and Java each expressed as a small bag of
+> **(pattern ⇒ template)** rules over the cursor — no parse stack, no per-language
+> emit code — all generating the **same universal Form nodes** directly. Proven by
+> [`form/form-stdlib/tests/bmf-langs-band.fk`](../../form/form-stdlib/tests/bmf-langs-band.fk)
+> → `300`, `1 ok, 0 divergent` across Go/Rust/TS.
+
+## The one move
+
+Everything left of `=>` is the language's surface — its keywords and punctuation.
+Everything right of `=>` is the **universal** shape it emits. The surfaces diverge;
+the coordinates converge. A `def`, a `func`, an `fn`, a `void` are four words for
+one thing — and the lattice interns them to one NodeID, because the template names
+the *meaning* (`~Function`), not the *spelling*.
+
+```
+input surface ──▶ Cursor ──▶ Match(grammar) ──▶ ~Universal[…] ──▶ one NodeID
+```
+
+The kernel never learns a language. A new language is a new bag of rules; the emit
+vocabulary (`~Function`, `~Cond`, `~Binary`, `~Call`, `~Block`, `~Loop`) is shared
+by all of them. That sharing is what makes cross-language equivalence *free* — not
+declared, not mapped, just the consequence of two grammars emitting the same shape.
+
+## The grammars (a representative slice)
+
+The `::=` / `{ }` / `[ ]` / `< >` / `$tag:` / `\\` are the thesis BMF notation
+(see [`bmf-architecture.form`](bmf-architecture.form)); `=> ~Shape[…]` is the
+universal emit.
+
+```bmf
+grammar python over chars {
+  func ::= "def" $name:ID "(" $param:ID \\ "," ")" ":" $body:block       => ~Function[ #name, param*, body ] ;
+  if   ::= "if" $cond:expr ":" $then:block [ "else" ":" $else:block ]    => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                           => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                     => fold.left ~Binary(op) ;
+}
+
+grammar go over chars {
+  func ::= "func" $name:ID "(" $param:ID \\ "," ")" type? "{" $body:block "}"  => ~Function[ #name, param*, body ] ;
+  if   ::= "if" $cond:expr "{" $then:block "}" [ "else" "{" $else:block "}" ]  => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                                 => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                           => fold.left ~Binary(op) ;
+}
+
+grammar rust over chars {
+  func ::= "fn" $name:ID "(" $param:ID \\ "," ")" [ "->" type ] "{" $body:block "}" => ~Function[ #name, param*, body ] ;
+  if   ::= "if" $cond:expr "{" $then:block "}" [ "else" "{" $else:block "}" ]       => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                                      => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                                => fold.left ~Binary(op) ;
+}
+
+grammar csharp over chars {
+  func ::= modifier* type $name:ID "(" $param:param \\ "," ")" "{" $body:block "}" => ~Function[ #name, param*, body ] ;
+  if   ::= "if" "(" $cond:expr ")" $then:block [ "else" $else:block ]              => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                                     => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                               => fold.left ~Binary(op) ;
+}
+
+grammar java over chars {
+  func ::= modifier* type $name:ID "(" $param:param \\ "," ")" "{" $body:block "}" => ~Function[ #name, param*, body ] ;
+  if   ::= "if" "(" $cond:expr ")" $then:block [ "else" $else:block ]              => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                                     => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                               => fold.left ~Binary(op) ;
+}
+
+grammar bml over chars {
+  func ::= section_props? type $name:ID "(" $param:param \\ "," ")" "{" $body:block "}" => ~Function[ #name, param*, body ] ;
+  if   ::= "if" "(" $cond:expr ")" $then:block [ "else" $else:block ]                   => ~Cond(IF)[ cond, then, else? ] ;
+  call ::= $callee:ID "(" $arg:expr \\ "," ")"                                          => ~Call[ callee, arg* ] ;
+  add  ::= mul { ( "+" | "-" ) mul }                                                    => fold.left ~Binary(op) ;
+  choice ::= "choice" $branch:block \\ ","                                             => ~Choice[ branch* ] ;
+}
+```
+
+Read the right-hand columns top to bottom: they are **identical**. The only thing
+that changed down the page is the surface. BML carries one extra rule (`choice`,
+its angelic-nondeterminism construct) because BML is the superset — when a language
+has a feature the others lack, it lands in BML; it never changes the engine.
+
+## Convergence — the same construct, the same coordinate
+
+| Construct | Python | Go | Rust | C# / Java | BML | → emits |
+|---|---|---|---|---|---|---|
+| function | `def add(x):` | `func add(x){}` | `fn add(x){}` | `void add(x){}` | `void add(x){}` | **`~Function`** |
+| if | `if c:` | `if c {}` | `if c {}` | `if (c) {}` | `if (c) {}` | **`~Cond(IF)`** |
+| call | `add(x)` | `add(x)` | `add(x)` | `add(x)` | `add(x)` | **`~Call`** |
+| add | `a + b` | `a + b` | `a + b` | `a + b` | `a + b` | **`~Binary(add)`** |
+
+What the proof asserts: parse `add`'s function declaration in all six surfaces, and
+every one interns to the *same* `~Function[add, x]` NodeID; parse the `if` in all
+six, and every one interns to the same `~Cond(IF)[ready]` NodeID; and the two
+shapes stay distinct from each other. That is `300` in the band — six tongues, two
+coordinates, zero divergence across three kernels.
+
+## What carries it
+
+- **The cursor reads any surface** — file, string, socket, cell, channel — and is
+  whitespace-aware, so the grammars stay clean (no `ws` litter between tokens).
+- **Patterns are data** (`lit` / `cls` / `run` / `seq` / `alt` / `opt` / `cap` in
+  [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk)); a language is rule-data, not code.
+- **Templates emit universal shapes** via `(bp "fndef")`, `(bp "if-then")`, … so
+  content-addressing collapses equivalent constructs to one NodeID with no sameAs
+  table and no normalize pass.
+
+## What is proven vs. the staged path
+
+Proven now (in the band, cross-kernel): the **convergence law** — six languages'
+function and `if` rules, run from the cursor, land on one universal coordinate each.
+
+The staged path (named, not yet shipped): the full grammars need two core
+primitives the band sidesteps — general `{ p }` repetition of sub-patterns and the
+`\\` separator-list capturing into a child list (today `bmf-core.fk` repeats only
+character classes via `run`, and the band uses fixed arity). Those are the next
+breath; with them, `$param:ID \\ ","` captures a real argument list and the
+grammars above run verbatim. The law is what mattered to prove first: the surfaces
+converge. The rest is filling the bag of rules.
