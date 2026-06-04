@@ -1,0 +1,192 @@
+; bmf-grammar.fk — the recursive grammar engine.
+;
+; bmf-core.fk gave the cursor + leaf matching. This adds what full grammars need:
+;   - a GRAMMAR: a named set of rules + a start rule.
+;   - `ref` + recursion: a rule calls another rule by name; the call returns the
+;     callee's EMITTED node, so rules compose their children from sub-rule output.
+;   - `rep` / `sep`: zero-or-more and separator-lists, capturing a LIST of nodes.
+;   - node-captures: a capture holds the value its sub-pattern produced (a node, a
+;     leaf, or a node-list), not just text — so templates splice real sub-trees.
+;   - templates with `splice` (one node) and `splice*` (flatten a node-list).
+;
+; This is the `Match` engine of bmf-architecture.form. Grammars (BML, Java, Go…)
+; are pure data over it; the kernel never learns a language.
+;
+; Reuses bmf-core.fk's whitespace-aware cursor (cursor-str, cur-*, skip-ws,
+; cp-in-class?, surf-*). Emits universal Form nodes via (bp op).
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk
+
+(do
+    ;; ── match result: (ok val caps cur) | (no) ───────────────────────────
+    (defn g-ok (v caps c) (list "ok" v caps c))
+    (defn g-no () (list "no"))
+    (defn g-ok? (m) (str_eq (head m) "ok"))
+    (defn g-val  (m) (nth m 1))
+    (defn g-caps (m) (nth m 2))
+    (defn g-cur  (m) (nth m 3))
+
+    ;; ── pattern values: a node, OR a node-list, OR unit (no value) ────────
+    (defn unit () (list "U"))
+    (defn nlist (xs) (cons "L" xs))
+    (defn nlist-items (v) (tail v))
+
+    ;; ── captures: alist name -> value ────────────────────────────────────
+    (defn gc-empty () (empty))
+    (defn gc-put (caps name v) (cons (list name v) caps))
+    (defn gc-get (caps name)
+        (if (nil? caps) (intern_trivial_string "")
+            (if (str_eq (head (head caps)) name) (head (tail (head caps)))
+                (gc-get (tail caps) name))))
+
+    ;; ── grammar: (G start rules); rule: (name pattern template) ───────────
+    (defn grammar (start rules) (list "G" start rules))
+    (defn g-start (g) (nth g 1))
+    (defn g-rules (g) (nth g 2))
+    (defn rule3 (name pat tpl) (list name pat tpl))
+    (defn r3-pat (r) (nth r 1))
+    (defn r3-tpl (r) (nth r 2))
+    (defn g-rule (g name) (g-rule-find (g-rules g) name))
+    (defn g-rule-find (rs name)
+        (if (nil? rs) (empty)
+            (if (str_eq (head (head rs)) name) (head rs)
+                (g-rule-find (tail rs) name))))
+
+    ;; ── match a named rule -> (rok node cur) | (rno) ──────────────────────
+    (defn g-match-rule (g name c)
+        (do (let r (g-rule g name))
+            (if (nil? r) (list "rno")
+                (do (let m (g-match g (r3-pat r) c (gc-empty)))
+                    (if (g-ok? m)
+                        (list "rok" (g-build g (r3-tpl r) (g-caps m)) (g-cur m))
+                        (list "rno"))))))
+    (defn rok? (rr) (str_eq (head rr) "rok"))
+    (defn rok-node (rr) (nth rr 1))
+    (defn rok-cur (rr) (nth rr 2))
+
+    ;; ── match a pattern -> (ok val caps cur) | (no) ───────────────────────
+    (defn g-match (g pat c caps)
+        (do (let tag (head pat))
+            (if (str_eq tag "lit") (gm-lit pat c caps)
+            (if (str_eq tag "cls") (gm-cls pat c caps)
+            (if (str_eq tag "run") (gm-run pat c caps)
+            (if (str_eq tag "ref") (gm-ref g pat c caps)
+            (if (str_eq tag "seq") (gm-seq g (tail pat) c caps)
+            (if (str_eq tag "alt") (gm-alt g (tail pat) c caps)
+            (if (str_eq tag "opt") (gm-opt g pat c caps)
+            (if (str_eq tag "cap") (gm-cap g pat c caps)
+            (if (str_eq tag "rep") (gm-rep g pat c caps)
+            (if (str_eq tag "sep") (gm-sep g pat c caps)
+                (g-no)))))))))))))
+
+    (defn gm-lit (pat c caps)
+        (do (let cc (skip-ws c)) (let s (nth pat 1)) (let sf (cur-surface cc)) (let p (cur-pos cc))
+            (if (gt (add p (str_len s)) (surf-len sf)) (g-no)
+                (if (str_eq (substring (surf-payload sf) p (add p (str_len s))) s)
+                    (g-ok (unit) caps (cur-advance cc (str_len s)))
+                    (g-no)))))
+
+    (defn gm-cls (pat c caps)
+        (do (let cc (skip-ws c))
+            (if (cur-eof? cc) (g-no)
+                (if (cp-in-class? (cur-peek cc) (nth pat 1))
+                    (g-ok (intern_trivial_string (cur-slice cc (add (cur-pos cc) 1))) caps (cur-advance cc 1))
+                    (g-no)))))
+
+    (defn gm-run (pat c caps)
+        (do (let cc (skip-ws c))
+            (if (cur-eof? cc) (g-no)
+                (if (cp-in-class? (cur-peek cc) (nth pat 1))
+                    (do (let c2 (gm-run-loop pat (cur-advance cc 1)))
+                        (g-ok (intern_trivial_string (cur-slice cc (cur-pos c2))) caps c2))
+                    (g-no)))))
+    (defn gm-run-loop (pat c)
+        (if (cur-eof? c) c
+            (if (cp-in-class? (cur-peek c) (nth pat 1)) (gm-run-loop pat (cur-advance c 1)) c)))
+
+    ;; ref's value IS the callee rule's emitted node — this is composition.
+    (defn gm-ref (g pat c caps)
+        (do (let rr (g-match-rule g (nth pat 1) c))
+            (if (rok? rr) (g-ok (rok-node rr) caps (rok-cur rr)) (g-no))))
+
+    (defn gm-seq (g parts c caps)
+        (if (nil? parts) (g-ok (unit) caps c)
+            (do (let m (g-match g (head parts) c caps))
+                (if (g-ok? m) (gm-seq g (tail parts) (g-cur m) (g-caps m)) (g-no)))))
+
+    ;; alt tries each from the SAME cursor — no-sediment backtracking.
+    (defn gm-alt (g alts c caps)
+        (if (nil? alts) (g-no)
+            (do (let m (g-match g (head alts) c caps))
+                (if (g-ok? m) m (gm-alt g (tail alts) c caps)))))
+
+    (defn gm-opt (g pat c caps)
+        (do (let m (g-match g (nth pat 1) c caps))
+            (if (g-ok? m) m (g-ok (unit) caps c))))
+
+    ;; cap stores the value the inner pattern produced (node / list / unit).
+    (defn gm-cap (g pat c caps)
+        (do (let name (nth pat 1)) (let inner (nth pat 2))
+            (let m (g-match g inner c caps))
+            (if (g-ok? m)
+                (g-ok (unit) (gc-put (g-caps m) name (g-val m)) (g-cur m))
+                (g-no))))
+
+    ;; rep: zero+ of inner; value is the node-list of inner results.
+    (defn gm-rep (g pat c caps)
+        (gm-rep-loop g (nth pat 1) c caps (empty)))
+    (defn gm-rep-loop (g inner c caps acc)
+        (do (let m (g-match g inner c caps))
+            (if (g-ok? m)
+                (gm-rep-loop g inner (g-cur m) (g-caps m) (cons (g-val m) acc))
+                (g-ok (nlist (reverse-acc acc)) caps c))))
+
+    ;; sep: inner (sepp inner)* ; value is the node-list of inner results.
+    (defn gm-sep (g pat c caps)
+        (do (let inner (nth pat 1)) (let sepp (nth pat 2))
+            (let m (g-match g inner c caps))
+            (if (g-ok? m)
+                (gm-sep-loop g inner sepp (g-cur m) (g-caps m) (cons (g-val m) (empty)))
+                (g-ok (nlist (empty)) caps c))))
+    (defn gm-sep-loop (g inner sepp c caps acc)
+        (do (let ms (g-match g sepp c caps))
+            (if (g-ok? ms)
+                (do (let mi (g-match g inner (g-cur ms) (g-caps ms)))
+                    (if (g-ok? mi)
+                        (gm-sep-loop g inner sepp (g-cur mi) (g-caps mi) (cons (g-val mi) acc))
+                        (g-ok (nlist (reverse-acc acc)) caps c)))
+                (g-ok (nlist (reverse-acc acc)) caps c))))
+
+    ;; ── templates -> node ────────────────────────────────────────────────
+    (defn g-build (g tpl caps)
+        (do (let tag (head tpl))
+            (if (str_eq tag "emit")   (intern_node (bp (nth tpl 1)) (g-kids g (nth tpl 2) caps))
+            (if (str_eq tag "splice") (gc-get caps (nth tpl 1))
+            (if (str_eq tag "const")  (intern_trivial_string (nth tpl 1))
+                (intern_trivial_string "?"))))))
+    ;; kids: a `splice*` kid flattens a captured node-list into the children.
+    (defn g-kids (g kids caps)
+        (if (nil? kids) (empty)
+            (do (let k (head kids))
+                (if (str_eq (head k) "splice*")
+                    (append (nlist-items (gc-get caps (nth k 1))) (g-kids g (tail kids) caps))
+                    (cons (g-build g k caps) (g-kids g (tail kids) caps))))))
+
+    ;; ── top: parse a string from the grammar's start rule -> node ─────────
+    (defn g-parse (g src)
+        (do (let rr (g-match-rule g (g-start g) (cursor-str src)))
+            (if (rok? rr) (rok-node rr) (intern_trivial_string "PARSE-FAIL"))))
+
+    ;; pattern-builder shorthands (keep grammars readable as data)
+    (defn p-lit (s) (list "lit" s))
+    (defn p-ref (n) (list "ref" n))
+    (defn p-run (cls) (list "run" cls))
+    (defn p-cap (n p) (list "cap" n p))
+    (defn p-opt (p) (list "opt" p))
+    (defn p-rep (p) (list "rep" p))
+    (defn p-sep (p s) (list "sep" p s))
+    (defn t-emit (op kids) (list "emit" op kids))
+    (defn t-splice (n) (list "splice" n))
+    (defn t-splices (n) (list "splice*" n))
+    (defn t-const (s) (list "const" s))
+)

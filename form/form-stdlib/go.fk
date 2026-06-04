@@ -1,0 +1,32 @@
+; go.fk — the Go grammar (bare method slice) as cursor rules emitting universal
+; Form nodes. Go differs from BML/Java only in three rules: `func` keyword,
+; param order (name then type), and if-without-parens. Everything else is the
+; shared lang-common core.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/lang-common.fk
+
+(do
+    (defn go-grammar () (grammar "method" (append (list
+
+        ;; func name ( params ) { body }     → ~fndef[ name, ~do[params], ~do[body] ]
+        (rule3 "method"
+            (list "seq" (p-lit "func") (p-cap "name" (p-run "alpha")) (p-lit "(")
+                  (p-cap "ps" (p-sep (p-ref "param") (p-lit ","))) (p-lit ")")
+                  (p-lit "{") (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
+            (t-emit "fndef" (list (t-splice "name")
+                                  (t-emit "do" (list (t-splices "ps")))
+                                  (t-emit "do" (list (t-splices "body"))))))
+
+        ;; name type   (Go puts the name first)            → name leaf
+        (rule3 "param"
+            (list "seq" (p-cap "n" (p-run "alpha")) (p-run "alpha"))
+            (t-splice "n"))
+
+        ;; if cond { body }   (no parens)                  → ~if-then[ cond, ~do[body] ]
+        (rule3 "ifs"
+            (list "seq" (p-lit "if") (p-cap "c" (p-ref "expr")) (p-lit "{")
+                  (p-cap "body" (p-rep (p-ref "stmt"))) (p-lit "}"))
+            (t-emit "if-then" (list (t-splice "c") (t-emit "do" (list (t-splices "body"))))))
+
+        ) (common-rules))))
+)
