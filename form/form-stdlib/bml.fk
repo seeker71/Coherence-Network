@@ -88,13 +88,14 @@
         (rule3 "exprs" (list "seq" (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-splice "e"))
 
         ;; ── expression: ternary over the precedence ladder over unary ─────
-        (rule3 "expr" (p-cap "v" (p-ternary (p-ref "orexpr") (p-ref "expr"))) (t-splice "v"))
-        (rule3 "orexpr" (p-cap "v" (p-infix (p-ref "unary") (list
+        ;; expr = ternary over the precedence ladder over unary — the orexpr
+        ;; wrapper is inlined (one fewer rule-dispatch per operand).
+        (rule3 "expr" (p-cap "v" (p-ternary (p-infix (p-ref "unary") (list
             (list "||" "or" 1) (list "&&" "and" 2)
             (list "==" "eq" 3) (list "!=" "ne" 3)
             (list "instanceof" "eq" 4)
             (list "<=" "le" 4) (list ">=" "ge" 4) (list "<" "lt" 4) (list ">" "gt" 4)
-            (list "+" "add" 5) (list "-" "sub" 5) (list "*" "mul" 6) (list "/" "div" 6) (list "%" "mod" 6)))) (t-splice "v"))
+            (list "+" "add" 5) (list "-" "sub" 5) (list "*" "mul" 6) (list "/" "div" 6) (list "%" "mod" 6))) (p-ref "expr"))) (t-splice "v"))
 
         ;; ── unary prefix: ++ -- ! - and cast (Type)e (type erased) ────────
         (rule3 "unary" (p-cap "v" (list "alt" (p-ref "preinc") (p-ref "predec") (p-ref "notx") (p-ref "negx") (p-ref "castx") (p-ref "postfix"))) (t-splice "v"))
@@ -108,7 +109,10 @@
         (rule3 "postfix" (p-cap "v" (p-chain (p-ref "primary") (p-ref "expr"))) (t-splice "v"))
 
         ;; ── primary: ( expr ) | string | char | number | identifier ───────
-        (rule3 "primary" (p-cap "v" (list "alt" (p-ref "paren") (p-ref "litstr") (p-ref "litchr") (p-ref "litnum") (p-ref "ident"))) (t-splice "v"))
+        ;; primary order: litnum BEFORE ident (ident's alnum-run also matches
+        ;; digits, so numbers must be tried first), then ident (the common case)
+        ;; — idents now match in 2 tries instead of 5, numbers in 1, safely.
+        (rule3 "primary" (p-cap "v" (list "alt" (p-ref "litnum") (p-ref "ident") (p-ref "litstr") (p-ref "paren") (p-ref "litchr"))) (t-splice "v"))
         (rule3 "paren" (list "seq" (p-lit "(") (p-cap "e" (p-ref "expr")) (p-lit ")")) (t-splice "e"))
         (rule3 "litstr" (p-cap "v" (p-str)) (t-splice "v"))
         (rule3 "litchr" (p-cap "v" (p-char)) (t-splice "v"))
