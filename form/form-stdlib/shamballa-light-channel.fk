@@ -90,7 +90,18 @@
         (slv-binding "56-65"             "unity"         "lc-cross-modal-unity")
         (slv-binding "555"               "heart"         "lc-v-comfort-joy")
         (slv-binding "000"               "source"        "lc-harmonic-geometry-the-one-unfolds")
-        (slv-binding "777 123"           "light"         "lc-observable-resonance-flow")))
+        (slv-binding "777 123"           "light"         "lc-observable-resonance-flow")
+        ;; --- gaps closed by a deeper look (existing cells we'd missed) ---
+        (slv-binding "888"               "spiral"        "lc-spiraling")
+        (slv-binding "1618"              "geometry"      "lc-harmonic-geometry-the-one-unfolds")
+        (slv-binding "774"               "emanation"     "lc-observable-resonance-flow")
+        ;; 11111's "a light you may or may not remember" is anamnesis = default-to-body,
+        ;; not the cache we compost - it resolves the apparent anti-cache tension.
+        (slv-binding "11111"             "remembrance"   "lc-embodiment-body-or-liquid")
+        ;; --- gaps closed by allowing new cells IN (concepts born from the gap) ---
+        (slv-binding "1212"              "gratitude"     "lc-gratitude")
+        (slv-binding "333"               "calling-in"    "lc-calling-the-kindred")
+        (slv-binding "333 172"           "calling-in"    "lc-calling-the-kindred")))
 
 (defn slv-resolve-loop (bs code)
     (if (nil? bs) (empty)
