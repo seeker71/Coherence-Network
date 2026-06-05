@@ -1,0 +1,73 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/agent-doc-updates-20260605",
+  "commit_scope": "Update onboarding and form language core documentation with JIT gaps, observability gaps, data folding paradigms, and the BML vs Form-BML Dialect syntactic constraints distinction.",
+  "files_owned": [
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/system_audit/commit_evidence_2026-06-05_onboarding_and_core_form_docs.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness"
+    ],
+    "results": {
+      "wellness": "passed with zero errors and perfect composition hygiene"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions/runs/00000000000",
+    "notes": "Local preflight validation completed successfully."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "Local sibling kernels (Go, Rust, TypeScript)",
+    "required_command": "make wellness",
+    "notes": "Verified locally on 2026-06-05."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:making-ideas-real"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "antigravity",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Antigravity",
+    "version": "1.0"
+  },
+  "evidence_refs": [
+    "https://api.coherencycoin.com/api/automation/usage"
+  ],
+  "change_files": [
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md"
+  ],
+  "change_intent": "docs_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Update onboarding documents with JIT/observability telemetry gaps and data folding practices.",
+    "public_endpoints": [],
+    "test_flows": [
+      "Verify that wellness check passes and no circulation discrepancies are introduced"
+    ]
+  }
+}
