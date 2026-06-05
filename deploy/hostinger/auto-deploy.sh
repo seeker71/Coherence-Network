@@ -350,12 +350,33 @@ else
   # 5h+; we never again trust compose's "no config change detected" verdict.
   # If --wait is unsupported by the installed compose version, fall back to
   # plain `up -d --force-recreate`.
+  # Clear leftover hash-prefixed containers from a prior interrupted recreate
+  # (e.g. `998358986afb_coherence-network-api-1`). --force-recreate builds a
+  # temp-named container then renames it onto the canonical name; if an earlier
+  # run died mid-swap, the orphan keeps the name and every later recreate fails
+  # with "container name ... already in use". Removing only the hash-prefixed
+  # strays leaves the live container running — no downtime in the common case.
+  orphans="$(docker ps -a --format '{{.Names}}' | grep -E '^[0-9a-f]{6,}_coherence-network-[a-z0-9-]+-1$' || true)"
+  if [[ -n "$orphans" ]]; then
+    log "clearing recreate orphans: $(echo "$orphans" | tr '\n' ' ')"
+    echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
+  fi
   log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
   # shellcheck disable=SC2086 -- intentional word-splitting on service list
   if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
     log "docker compose up --wait failed or unsupported; falling back to plain up -d --force-recreate"
     # shellcheck disable=SC2086
-    docker compose up -d --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+    if ! docker compose up -d --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
+      # Last resort for the name-swap conflict: stop+remove the services
+      # outright (compose-aware), then bring them up clean. Costs a few seconds
+      # of downtime per service but never wedges on a held name. This is the
+      # manual recovery (`compose rm -fs` + `up -d`) that resolved it by hand.
+      log "force-recreate still conflicted; stop+remove then clean up -d"
+      # shellcheck disable=SC2086
+      docker compose rm -fsv ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE" || true
+      # shellcheck disable=SC2086
+      docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
+    fi
   fi
   up_ended="$(date +%s)"
   up_elapsed=$((up_ended - up_started))
