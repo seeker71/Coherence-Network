@@ -156,24 +156,37 @@ Two design notes the proving exposed:
   Linear parsing is what lets the 4th file complete on every kernel and lets the
   furthest-reach cell run always-on without cost.
 
-**What condensation needs from the kernel — measured, not guessed.** A fk-level
-memo was built (opt-in, fresh per parse, keyed `name@pos`) and it did *not* make
-the parse fast: the kernel's `record` is a linear-scan slice (`get`/`set` walk
-all fields), so a memo of thousands of `(rule,pos)` entries is **O(n²)** — the
-store itself becomes the cost. And there is no hash/dict native: the only O(1)
-mechanism the kernel exposes is content-addressed **interning** (`intern_node`,
-content → NodeID), which gives node *identity*, not a key→value cache. So the
-real foundational step is one kernel primitive: an **O(1) content-addressed
-condensation store** — either a hash map, or (more in-grain) a result-cache
-keyed by the interned NodeID of the observation `(surface, rule, pos)`. That is
-the substrate's O(1) promise — already true for node identity — extended to
-parse-state. Until it exists, packrat at fk-level can't beat the backtracking;
-with it, condensation is linear and *switch is free* and *observing has no
-penalty* become literally true. The deeper horizon past packrat is a streaming,
-stackless matcher (derivatives / a chart): the cursor advances once, `Alt` is
-parallel item-advance, recursion lives in the data, and the frontier is the
-furthest live item — but even that rests on O(1) condensation underneath. The
-kernel store is the stone the whole arch is waiting on.
+**The bottleneck is the interpreter, not re-parsing — measured, and it corrects
+the earlier guess.** I built a *real* O(1) content-addressed parse-cache (a Go
+`map[NodeID]Value` native, `cache_new`/`cache_get`/`cache_set` — not the linear
+`record`), wired packrat into `g-match-rule` (fresh cache per parse, key =
+interned `(rule, pos)` NodeID), and pointed it at the four thesis files. The
+result overturns the condensation story:
+
+```
+Go, all four files (decl-noinit on):  no cache 18.2s   with O(1) cache 17.8s
+```
+
+Packrat makes **no difference**. The cost is not the same `(rule, pos)` being
+re-parsed across `Alt` branches — so caching it saves nothing. A CPU sample says
+why: **~all time is in `main.(*Kernel).walk`** — the fk interpreter's tree-walk.
+The grammar runs as *interpreted fk*; every `g-match`, every `str_eq` tag test,
+every `cons`/`if`/`let` is a `walk` step, and there are millions of them. (Rust
+hung where Go finished in 18s for the same reason: a slower per-op interpreter,
+not a different algorithm.)
+
+So the lever is not condensation. It is the architecture's own claim, not yet
+honored: *"the only code is Match + Cursor + primitives; everything else is
+data."* Right now **Match itself is data** — interpreted fk — which is the
+inversion. The fix is to make the **Match engine native** (Go/Rust/TS code that
+runs the rule-table over the cursor), while grammars stay data. The kernel
+already has the hook: `register_jit` aliases a Form name to an existing native,
+so a native `g-match` can be dropped in under the same fk surface. Native Match
+is O(1)-dispatch and no interpreter overhead — that is what turns 18s into
+milliseconds and lets Rust complete. Packrat/condensation may still matter for a
+genuinely ambiguous grammar, but for BML it was the wrong stone; the interpreter
+was. Next experiment: a native Match inner loop, aliased in, benchmarked the
+same way.
 
 ### Template blueprints — the emitting side
 
