@@ -19,9 +19,9 @@
 package main
 
 import (
-	"form-kernel-go/core"
 	"encoding/json"
 	"fmt"
+	"form-kernel-go/core"
 	"hash/fnv"
 	"io"
 	"math"
@@ -548,17 +548,17 @@ type sourceLoc struct {
 
 func NewKernel() *Kernel {
 	k := &Kernel{
-		byHash:        make(map[uint64]NodeID),
-		byID:          make(map[NodeID]Recipe),
-		strIdx:        make(map[string]NameID),
-		sourceAttr:    make(map[NodeID]sourceLoc),
-		importSeq:     1,
-		walkCache:     make(map[NodeID]Value),
-		next:          1,
-		f64Idx:        make(map[uint64]uint32),
-		natives:       make(map[NameID]NativeEntry),
-		envNatives:    make(map[NameID]EnvAwareNativeEntry),
-		methods:       make(map[methodKey]*Closure),
+		byHash:         make(map[uint64]NodeID),
+		byID:           make(map[NodeID]Recipe),
+		strIdx:         make(map[string]NameID),
+		sourceAttr:     make(map[NodeID]sourceLoc),
+		importSeq:      1,
+		walkCache:      make(map[NodeID]Value),
+		next:           1,
+		f64Idx:         make(map[uint64]uint32),
+		natives:        make(map[NameID]NativeEntry),
+		envNatives:     make(map[NameID]EnvAwareNativeEntry),
+		methods:        make(map[methodKey]*Closure),
 		jitAliases:     make(map[NameID]NameID),
 		jitCompiledGo:  make(map[string]func([]int64) int64),
 		jitCompiledGoV: make(map[string]jitValueFn),
@@ -931,18 +931,12 @@ func (k *Kernel) nameStr(id NameID) string { return k.strs[id] }
 // Values — runtime tagged values
 // ---------------------------------------------------------------------------
 
-
-
 // Record — a mutable struct/object. Blueprint tags its type (class /
 // method-table NodeID); Fields is an ordered name→value map.
-
-
-
 
 // Value — runtime tagged union. List and Closure carry pointers; the rest
 // are inline. Kept as a flat struct so the walker's hot path is allocation-
 // free for ints and bools.
-
 
 type sourceNativeLexicon struct {
 	keywords     map[string]bool
@@ -1371,7 +1365,6 @@ func composeScaledDecimal(kept string, n int, neg bool) string {
 // breath will harmonize Rust's render to match.) Specials follow the JS
 // surface: NaN → "NaN", +Inf → "Infinity", -Inf → "-Infinity".
 
-
 // methodKey — (blueprint, method-name) key for the blueprint method table.
 type methodKey struct {
 	blueprint NodeID
@@ -1387,12 +1380,8 @@ type methodKey struct {
 // keeps the data layout cache-friendly. Linear scan is the right shape
 // for n < ~16.
 
-
-
 // NewCallFrame — pre-sized for a function call with `arity` params.
 // Avoids append-grow during parameter binding in the hot recursion path.
-
-
 
 // ---------------------------------------------------------------------------
 // Native functions — what Form-on-top reaches for at the leaves
@@ -2541,122 +2530,122 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNull}
 	})
 
-// dot_product and magnitude — the minimal vector primitives that make
-// the geometry projection (cosine + angle via math_acos) runnable on
-// live 8-band efficacy-probe vectors inside the kernel driver.
-// Follows the exact same registerNative + catMethod() pattern as
-// math_acos / print_float / float_value. Sibling parity target: Rust + TS kernels.
-// These close the "higher-order vector math (dot, mag, angle on lists) still tight"
-// item in the trace-symbol-spaces.form Part 6 tightness witness.
-k.registerNative("dot_product", catMethod(), func(_ *Kernel, args []Value) Value {
-	if len(args) != 2 {
-		panic("dot_product expects 2 arguments")
-	}
-	a := args[0].List
-	b := args[1].List
-	if len(a) != len(b) {
-		panic("dot_product requires equal length vectors")
-	}
-	var sum float64
-	for i := range a {
-		sum += a[i].AsFloat() * b[i].AsFloat()
-	}
-	return Value{Kind: VFloat, Float: sum}
-})
+	// dot_product and magnitude — the minimal vector primitives that make
+	// the geometry projection (cosine + angle via math_acos) runnable on
+	// live 8-band efficacy-probe vectors inside the kernel driver.
+	// Follows the exact same registerNative + catMethod() pattern as
+	// math_acos / print_float / float_value. Sibling parity target: Rust + TS kernels.
+	// These close the "higher-order vector math (dot, mag, angle on lists) still tight"
+	// item in the trace-symbol-spaces.form Part 6 tightness witness.
+	k.registerNative("dot_product", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) != 2 {
+			panic("dot_product expects 2 arguments")
+		}
+		a := args[0].List
+		b := args[1].List
+		if len(a) != len(b) {
+			panic("dot_product requires equal length vectors")
+		}
+		var sum float64
+		for i := range a {
+			sum += a[i].AsFloat() * b[i].AsFloat()
+		}
+		return Value{Kind: VFloat, Float: sum}
+	})
 
-k.registerNative("magnitude", catMethod(), func(_ *Kernel, args []Value) Value {
-	if len(args) != 1 {
-		panic("magnitude expects 1 argument")
-	}
-	v := args[0].List
-	var sum float64
-	for i := range v {
-		f := v[i].AsFloat()
-		sum += f * f
-	}
-	return Value{Kind: VFloat, Float: math.Sqrt(sum)}
-})
+	k.registerNative("magnitude", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) != 1 {
+			panic("magnitude expects 1 argument")
+		}
+		v := args[0].List
+		var sum float64
+		for i := range v {
+			f := v[i].AsFloat()
+			sum += f * f
+		}
+		return Value{Kind: VFloat, Float: math.Sqrt(sum)}
+	})
 
-// vector_cosine and pair_angle — composite helpers that combine the
-// newly added dot_product + magnitude with math_acos for direct
-// geometry projection on live 8-band vectors in a single --expr call.
-// This is the kernel-native counterpart to the pair_cosine / pair_angle
-// recipes being added on the recipelib track. Placed immediately after
-// the vector primitives for locality.
-k.registerNative("vector_cosine", catMethod(), func(_ *Kernel, args []Value) Value {
-	if len(args) != 2 {
-		panic("vector_cosine expects 2 arguments")
-	}
-	a := args[0].List
-	b := args[1].List
-	if len(a) != len(b) {
-		panic("vector_cosine requires equal length vectors")
-	}
-	var dot float64
-	var na float64
-	var nb float64
-	for i := range a {
-		fa := a[i].AsFloat()
-		fb := b[i].AsFloat()
-		dot += fa * fb
-		na += fa * fa
-		nb += fb * fb
-	}
-	if na == 0 || nb == 0 {
-		return Value{Kind: VFloat, Float: 0}
-	}
-	return Value{Kind: VFloat, Float: dot / (math.Sqrt(na) * math.Sqrt(nb))}
-})
+	// vector_cosine and pair_angle — composite helpers that combine the
+	// newly added dot_product + magnitude with math_acos for direct
+	// geometry projection on live 8-band vectors in a single --expr call.
+	// This is the kernel-native counterpart to the pair_cosine / pair_angle
+	// recipes being added on the recipelib track. Placed immediately after
+	// the vector primitives for locality.
+	k.registerNative("vector_cosine", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) != 2 {
+			panic("vector_cosine expects 2 arguments")
+		}
+		a := args[0].List
+		b := args[1].List
+		if len(a) != len(b) {
+			panic("vector_cosine requires equal length vectors")
+		}
+		var dot float64
+		var na float64
+		var nb float64
+		for i := range a {
+			fa := a[i].AsFloat()
+			fb := b[i].AsFloat()
+			dot += fa * fb
+			na += fa * fa
+			nb += fb * fb
+		}
+		if na == 0 || nb == 0 {
+			return Value{Kind: VFloat, Float: 0}
+		}
+		return Value{Kind: VFloat, Float: dot / (math.Sqrt(na) * math.Sqrt(nb))}
+	})
 
-k.registerNative("pair_angle", catMethod(), func(k *Kernel, args []Value) Value {
-	cosV := k.natives[k.internName("vector_cosine")].Fn(k, args)
-	c := cosV.Float
-	if c > 1.0 {
-		c = 1.0
-	}
-	if c < -1.0 {
-		c = -1.0
-	}
-	return Value{Kind: VFloat, Float: math.Acos(c)}
-})
+	k.registerNative("pair_angle", catMethod(), func(k *Kernel, args []Value) Value {
+		cosV := k.natives[k.internName("vector_cosine")].Fn(k, args)
+		c := cosV.Float
+		if c > 1.0 {
+			c = 1.0
+		}
+		if c < -1.0 {
+			c = -1.0
+		}
+		return Value{Kind: VFloat, Float: math.Acos(c)}
+	})
 
-// dominant_band_delta — mirrors the recipelib helper for richer thruline
-// readout. Returns a two-element list [band_index, max_abs_delta] so the
-// kernel driver can surface the same band-tension information as the
-// Form-declared recipe path. Placed with the other geometry natives.
-k.registerNative("dominant_band_delta", catMethod(), func(_ *Kernel, args []Value) Value {
-	if len(args) != 2 {
-		panic("dominant_band_delta expects 2 arguments")
-	}
-	a := args[0].List
-	b := args[1].List
-	n := len(a)
-	if len(b) < n {
-		n = len(b)
-	}
-	if n == 0 {
+	// dominant_band_delta — mirrors the recipelib helper for richer thruline
+	// readout. Returns a two-element list [band_index, max_abs_delta] so the
+	// kernel driver can surface the same band-tension information as the
+	// Form-declared recipe path. Placed with the other geometry natives.
+	k.registerNative("dominant_band_delta", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) != 2 {
+			panic("dominant_band_delta expects 2 arguments")
+		}
+		a := args[0].List
+		b := args[1].List
+		n := len(a)
+		if len(b) < n {
+			n = len(b)
+		}
+		if n == 0 {
+			return Value{Kind: VList, List: []Value{
+				{Kind: VFloat, Float: 0},
+				{Kind: VFloat, Float: 0},
+			}}
+		}
+		maxDelta := 0.0
+		maxIdx := 0
+		for i := 0; i < n; i++ {
+			d := a[i].AsFloat() - b[i].AsFloat()
+			if d < 0 {
+				d = -d
+			}
+			if d > maxDelta {
+				maxDelta = d
+				maxIdx = i
+			}
+		}
 		return Value{Kind: VList, List: []Value{
-			{Kind: VFloat, Float: 0},
-			{Kind: VFloat, Float: 0},
+			{Kind: VFloat, Float: float64(maxIdx)},
+			{Kind: VFloat, Float: maxDelta},
 		}}
-	}
-	maxDelta := 0.0
-	maxIdx := 0
-	for i := 0; i < n; i++ {
-		d := a[i].AsFloat() - b[i].AsFloat()
-		if d < 0 {
-			d = -d
-		}
-		if d > maxDelta {
-			maxDelta = d
-			maxIdx = i
-		}
-	}
-	return Value{Kind: VList, List: []Value{
-		{Kind: VFloat, Float: float64(maxIdx)},
-		{Kind: VFloat, Float: maxDelta},
-	}}
-})
+	})
 
 	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
 		cat := args[0].Nid
@@ -3157,288 +3146,305 @@ k.registerNative("dominant_band_delta", catMethod(), func(_ *Kernel, args []Valu
 // ---------------------------------------------------------------------------
 
 func (k *Kernel) walk(n NodeID, env *Frame) Value {
-	if n.Level == LevelTrivial {
-		return k.trivialValue(n)
-	}
-	// One map lookup per composite walk step. cat + kids read off the same
-	// recipe row; Go's map returns Recipe by value, but Children is a slice
-	// header pointing to the table's backing array — zero-copy access.
-	r := k.recipeAt(n)
-	cat, kids := r.Category, r.Children
+	// Tail-call optimization: a tail-position call — a closure body, a cond
+	// branch, or a do-block's last expr — reassigns n/env and loops here
+	// instead of recursing, so tail-recursive Form loops (gm-rep-loop,
+	// gm-sep-loop, caps-get, find-loop, …) run in CONSTANT stack. This is the
+	// "non-stack" shape: genuine data nesting still recurses; iteration does
+	// not. Result-transparent — identical values to plain recursion, far less
+	// stack (a long member/statement list no longer recurses N-deep), which is
+	// what lets the strictest kernel parse the full thesis grammar files.
+	for {
+		if n.Level == LevelTrivial {
+			return k.trivialValue(n)
+		}
+		// One map lookup per composite walk step. cat + kids read off the same
+		// recipe row; Go's map returns Recipe by value, but Children is a slice
+		// header pointing to the table's backing array — zero-copy access.
+		r := k.recipeAt(n)
+		cat, kids := r.Category, r.Children
 
-	// Tracing hook: when k.Trace is set, record the arm dispatch. Pure
-	// counter increment — no allocation, no IO. Per lc-native-kernel-binary.
-	// Records (ty, inst) so typed-numeric distribution stays distinguishable.
-	if k.Trace != nil {
-		k.Trace.record(cat.Type, cat.Inst)
-	}
+		// Tracing hook: when k.Trace is set, record the arm dispatch. Pure
+		// counter increment — no allocation, no IO. Per lc-native-kernel-binary.
+		// Records (ty, inst) so typed-numeric distribution stays distinguishable.
+		if k.Trace != nil {
+			k.Trace.record(cat.Type, cat.Inst)
+		}
 
-	switch cat.Type {
-	case RBasicMath:
-		lv := k.walk(kids[0], env)
-		rv := k.walk(kids[1], env)
-		// Width promotion: if either operand is Float, the result is
-		// Float (matches Python `int + float → float`, and IEEE 754
-		// arithmetic on mixed inputs). Pure int/int stays on the
-		// fast int path. Mirrors Rust kernel's RB_MATH dispatch.
-		if lv.Kind == VFloat || rv.Kind == VFloat {
-			l := lv.AsFloat()
-			r := rv.AsFloat()
+		switch cat.Type {
+		case RBasicMath:
+			lv := k.walk(kids[0], env)
+			rv := k.walk(kids[1], env)
+			// Width promotion: if either operand is Float, the result is
+			// Float (matches Python `int + float → float`, and IEEE 754
+			// arithmetic on mixed inputs). Pure int/int stays on the
+			// fast int path. Mirrors Rust kernel's RB_MATH dispatch.
+			if lv.Kind == VFloat || rv.Kind == VFloat {
+				l := lv.AsFloat()
+				r := rv.AsFloat()
+				switch cat.Inst {
+				case RMathPlus:
+					return Value{Kind: VFloat, Float: l + r}
+				case RMathMinus:
+					return Value{Kind: VFloat, Float: l - r}
+				case RMathMultiply:
+					return Value{Kind: VFloat, Float: l * r}
+				case RMathDivide:
+					return Value{Kind: VFloat, Float: l / r}
+				case RMathModulo:
+					return Value{Kind: VFloat, Float: l - math.Floor(l/r)*r}
+				}
+			}
+			a := lv.Int
+			b := rv.Int
 			switch cat.Inst {
 			case RMathPlus:
-				return Value{Kind: VFloat, Float: l + r}
+				return Value{Kind: VInt, Int: a + b}
 			case RMathMinus:
-				return Value{Kind: VFloat, Float: l - r}
+				return Value{Kind: VInt, Int: a - b}
 			case RMathMultiply:
-				return Value{Kind: VFloat, Float: l * r}
+				return Value{Kind: VInt, Int: a * b}
 			case RMathDivide:
-				return Value{Kind: VFloat, Float: l / r}
+				return Value{Kind: VInt, Int: a / b}
 			case RMathModulo:
-				return Value{Kind: VFloat, Float: l - math.Floor(l/r)*r}
+				return Value{Kind: VInt, Int: a % b}
 			}
-		}
-		a := lv.Int
-		b := rv.Int
-		switch cat.Inst {
-		case RMathPlus:
-			return Value{Kind: VInt, Int: a + b}
-		case RMathMinus:
-			return Value{Kind: VInt, Int: a - b}
-		case RMathMultiply:
-			return Value{Kind: VInt, Int: a * b}
-		case RMathDivide:
-			return Value{Kind: VInt, Int: a / b}
-		case RMathModulo:
-			return Value{Kind: VInt, Int: a % b}
-		}
 
-	case RBasicCompare:
-		lv := k.walk(kids[0], env)
-		rv := k.walk(kids[1], env)
-		// Same width-promotion rule as math: float on either side forces
-		// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
-		if lv.Kind == VFloat || rv.Kind == VFloat {
-			l := lv.AsFloat()
-			r := rv.AsFloat()
+		case RBasicCompare:
+			lv := k.walk(kids[0], env)
+			rv := k.walk(kids[1], env)
+			// Same width-promotion rule as math: float on either side forces
+			// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
+			if lv.Kind == VFloat || rv.Kind == VFloat {
+				l := lv.AsFloat()
+				r := rv.AsFloat()
+				switch cat.Inst {
+				case RCompareEq:
+					return Value{Kind: VBool, Bool: l == r}
+				case RCompareNe:
+					return Value{Kind: VBool, Bool: l != r}
+				case RCompareLt:
+					return Value{Kind: VBool, Bool: l < r}
+				case RCompareLe:
+					return Value{Kind: VBool, Bool: l <= r}
+				case RCompareGt:
+					return Value{Kind: VBool, Bool: l > r}
+				case RCompareGe:
+					return Value{Kind: VBool, Bool: l >= r}
+				}
+			}
+			a := lv.Int
+			b := rv.Int
 			switch cat.Inst {
 			case RCompareEq:
-				return Value{Kind: VBool, Bool: l == r}
+				return Value{Kind: VBool, Bool: a == b}
 			case RCompareNe:
-				return Value{Kind: VBool, Bool: l != r}
+				return Value{Kind: VBool, Bool: a != b}
 			case RCompareLt:
-				return Value{Kind: VBool, Bool: l < r}
+				return Value{Kind: VBool, Bool: a < b}
 			case RCompareLe:
-				return Value{Kind: VBool, Bool: l <= r}
+				return Value{Kind: VBool, Bool: a <= b}
 			case RCompareGt:
-				return Value{Kind: VBool, Bool: l > r}
+				return Value{Kind: VBool, Bool: a > b}
 			case RCompareGe:
-				return Value{Kind: VBool, Bool: l >= r}
+				return Value{Kind: VBool, Bool: a >= b}
 			}
-		}
-		a := lv.Int
-		b := rv.Int
-		switch cat.Inst {
-		case RCompareEq:
-			return Value{Kind: VBool, Bool: a == b}
-		case RCompareNe:
-			return Value{Kind: VBool, Bool: a != b}
-		case RCompareLt:
-			return Value{Kind: VBool, Bool: a < b}
-		case RCompareLe:
-			return Value{Kind: VBool, Bool: a <= b}
-		case RCompareGt:
-			return Value{Kind: VBool, Bool: a > b}
-		case RCompareGe:
-			return Value{Kind: VBool, Bool: a >= b}
-		}
 
-	case RBasicLogic:
-		switch cat.Inst {
-		case RLogicAnd:
-			if !k.walk(kids[0], env).Bool {
-				return Value{Kind: VBool, Bool: false}
+		case RBasicLogic:
+			switch cat.Inst {
+			case RLogicAnd:
+				if !k.walk(kids[0], env).Bool {
+					return Value{Kind: VBool, Bool: false}
+				}
+				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+			case RLogicOr:
+				if k.walk(kids[0], env).Bool {
+					return Value{Kind: VBool, Bool: true}
+				}
+				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+			case RLogicNot:
+				return Value{Kind: VBool, Bool: !k.walk(kids[0], env).Bool}
 			}
-			return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
-		case RLogicOr:
-			if k.walk(kids[0], env).Bool {
-				return Value{Kind: VBool, Bool: true}
+
+		case RBasicCond:
+			cond := k.walk(kids[0], env)
+			if truthy(cond) {
+				n = kids[1] // TCO: taken branch is in tail position
+				continue
 			}
-			return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
-		case RLogicNot:
-			return Value{Kind: VBool, Bool: !k.walk(kids[0], env).Bool}
-		}
+			if cat.Inst == RCondIfThenElse && len(kids) >= 3 {
+				n = kids[2] // TCO: else branch is in tail position
+				continue
+			}
+			return Value{Kind: VNull}
 
-	case RBasicCond:
-		cond := k.walk(kids[0], env)
-		if truthy(cond) {
-			return k.walk(kids[1], env)
-		}
-		if cat.Inst == RCondIfThenElse && len(kids) >= 3 {
-			return k.walk(kids[2], env)
-		}
-		return Value{Kind: VNull}
+		case RBasicBlock:
+			if cat.Inst == RBlockLet {
+				name := k.identID(kids[0])
+				v := k.walk(kids[1], env)
+				env.Bind(name, v)
+				return v
+			}
+			if len(kids) == 0 {
+				return Value{}
+			}
+			for i := 0; i < len(kids)-1; i++ {
+				k.walk(kids[i], env)
+			}
+			n = kids[len(kids)-1] // TCO: a do/seq block's last expr is in tail position
+			continue
 
-	case RBasicBlock:
-		if cat.Inst == RBlockLet {
+		case RBasicIdent:
+			id := k.identID(n)
+			if v, ok := env.Lookup(id); ok {
+				return v
+			}
+			panic(fmt.Sprintf("walk: unbound identifier %q", k.nameStr(id)))
+
+		case RBasicFnDef:
 			name := k.identID(kids[0])
-			v := k.walk(kids[1], env)
-			env.Bind(name, v)
-			return v
-		}
-		var last Value
-		for _, c := range kids {
-			last = k.walk(c, env)
-		}
-		return last
+			paramKids := k.children(kids[1])
+			params := make([]NameID, len(paramKids))
+			for i, p := range paramKids {
+				params[i] = NameID(p.Inst)
+			}
+			cl := &Closure{Name: name, Params: params, Body: kids[2], Env: env}
+			env.Bind(name, Value{Kind: VClosure, Cl: cl})
+			return Value{Kind: VClosure, Cl: cl}
 
-	case RBasicIdent:
-		id := k.identID(n)
-		if v, ok := env.Lookup(id); ok {
-			return v
-		}
-		panic(fmt.Sprintf("walk: unbound identifier %q", k.nameStr(id)))
-
-	case RBasicFnDef:
-		name := k.identID(kids[0])
-		paramKids := k.children(kids[1])
-		params := make([]NameID, len(paramKids))
-		for i, p := range paramKids {
-			params[i] = NameID(p.Inst)
-		}
-		cl := &Closure{Name: name, Params: params, Body: kids[2], Env: env}
-		env.Bind(name, Value{Kind: VClosure, Cl: cl})
-		return Value{Kind: VClosure, Cl: cl}
-
-	case RBasicFnCall:
-		rawName := k.identID(kids[0])
-		// JIT alias: if a Form function-name is JIT-registered, swap to
-		// the aliased native-name before native lookup. Form recipes are
-		// the canonical truth; `register_jit form-name native-name` opts
-		// calls into a kernel-resident optimized native.
-		name := rawName
-		if aliased, ok := k.jitAliases[rawName]; ok {
-			name = aliased
-		}
-		// Env-aware natives first — they need the caller env to splice
-		// pre-built Recipes (walk_recipe_here, etc.). Checked before
-		// plain natives so a name registered both ways prefers env-aware.
-		if ne, ok := k.envNatives[name]; ok {
-			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
-				args := make([]Value, len(kids)-1)
-				for i := 1; i < len(kids); i++ {
-					args[i-1] = k.walk(kids[i], env)
-				}
-				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
-					k.Trace.record(ne.Category.Type, ne.Category.Inst)
-				}
-				if k.Trace != nil {
-					k.Trace.recordNative(k.nameStr(ne.Name))
-				}
-				return ne.Fn(k, env, args)
+		case RBasicFnCall:
+			rawName := k.identID(kids[0])
+			// JIT alias: if a Form function-name is JIT-registered, swap to
+			// the aliased native-name before native lookup. Form recipes are
+			// the canonical truth; `register_jit form-name native-name` opts
+			// calls into a kernel-resident optimized native.
+			name := rawName
+			if aliased, ok := k.jitAliases[rawName]; ok {
+				name = aliased
 			}
-		}
-		// Native takes priority unless user shadowed with a closure
-		if ne, ok := k.natives[name]; ok {
-			if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
-				args := make([]Value, len(kids)-1)
-				for i := 1; i < len(kids); i++ {
-					args[i-1] = k.walk(kids[i], env)
+			// Env-aware natives first — they need the caller env to splice
+			// pre-built Recipes (walk_recipe_here, etc.). Checked before
+			// plain natives so a name registered both ways prefers env-aware.
+			if ne, ok := k.envNatives[name]; ok {
+				if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
+					args := make([]Value, len(kids)-1)
+					for i := 1; i < len(kids); i++ {
+						args[i-1] = k.walk(kids[i], env)
+					}
+					if k.Trace != nil && ne.Category.Type != RBasicUndefined {
+						k.Trace.record(ne.Category.Type, ne.Category.Inst)
+					}
+					if k.Trace != nil {
+						k.Trace.recordNative(k.nameStr(ne.Name))
+					}
+					return ne.Fn(k, env, args)
 				}
-				// Native Blueprint attribution — record the Form category
-				// the native expresses alongside the FNCALL arm already
-				// recorded above. The kernel knows itself even when the
-				// call leaves Form-land.
-				if k.Trace != nil && ne.Category.Type != RBasicUndefined {
-					k.Trace.record(ne.Category.Type, ne.Category.Inst)
-				}
-				if k.Trace != nil {
-					k.Trace.recordNative(k.nameStr(ne.Name))
-				}
-				return ne.Fn(k, args)
 			}
-		}
-		// Closure lookup uses the ORIGINAL function-name (not the JIT-
-		// aliased one) — the user defined this function and wants to
-		// call THEIR version when no JIT mapping resolved a native.
-		v, ok := env.Lookup(rawName)
-		if !ok {
-			panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(rawName)))
-		}
-		if v.Kind != VClosure {
-			panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(rawName)))
-		}
-		cl := v.Cl
-		if len(kids)-1 != len(cl.Params) {
-			panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
-		}
-		// JIT dispatch: if this closure's body has been JIT-compiled to
-		// host-native Go (via `jit_compile name` → recipe-to-Go-source
-		// → go build -buildmode=plugin → plugin.Open), marshal args to
-		// int64, call the loaded function, box the int64 result back to
-		// VInt. The recipe stays canonical truth — the JIT path is just
-		// a faster way to evaluate it. If the closure body needs args
-		// the int64-only signature can't carry (a float, string, list),
-		// we fall through to the walker with the args we already evaluated.
-		// Same answer either way.
-		argVals := make([]Value, len(cl.Params))
-		for i := 1; i < len(kids); i++ {
-			argVals[i-1] = k.walk(kids[i], env)
-		}
-		bodyKey := nodeIDKey(cl.Body)
-		// Value-typed JIT — the general path. Runs the whole body native
-		// over core.Value, routing native / cross-function calls through
-		// dispatch. No arg-kind restriction (lists, strings, records all
-		// flow). Checked first because it subsumes the int64 fast path.
-		if _, ok := k.jitCompiledGoV[bodyKey]; ok {
-			if k.Trace != nil {
-				k.Trace.recordFn(k.nameStr(cl.Name))
-				k.Trace.recordNative("jit-go-value-dispatch")
-			}
-			return k.applyClosureValue(cl, argVals)
-		}
-		if fn, ok := k.jitCompiledGo[bodyKey]; ok {
-			allInt := true
-			intArgs := make([]int64, len(cl.Params))
-			for i, av := range argVals {
-				if av.Kind != VInt {
-					allInt = false
-					break
+			// Native takes priority unless user shadowed with a closure
+			if ne, ok := k.natives[name]; ok {
+				if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
+					args := make([]Value, len(kids)-1)
+					for i := 1; i < len(kids); i++ {
+						args[i-1] = k.walk(kids[i], env)
+					}
+					// Native Blueprint attribution — record the Form category
+					// the native expresses alongside the FNCALL arm already
+					// recorded above. The kernel knows itself even when the
+					// call leaves Form-land.
+					if k.Trace != nil && ne.Category.Type != RBasicUndefined {
+						k.Trace.record(ne.Category.Type, ne.Category.Inst)
+					}
+					if k.Trace != nil {
+						k.Trace.recordNative(k.nameStr(ne.Name))
+					}
+					return ne.Fn(k, args)
 				}
-				intArgs[i] = av.Int
 			}
-			if allInt {
+			// Closure lookup uses the ORIGINAL function-name (not the JIT-
+			// aliased one) — the user defined this function and wants to
+			// call THEIR version when no JIT mapping resolved a native.
+			v, ok := env.Lookup(rawName)
+			if !ok {
+				panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(rawName)))
+			}
+			if v.Kind != VClosure {
+				panic(fmt.Sprintf("walk: %q is not callable", k.nameStr(rawName)))
+			}
+			cl := v.Cl
+			if len(kids)-1 != len(cl.Params) {
+				panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
+			}
+			// JIT dispatch: if this closure's body has been JIT-compiled to
+			// host-native Go (via `jit_compile name` → recipe-to-Go-source
+			// → go build -buildmode=plugin → plugin.Open), marshal args to
+			// int64, call the loaded function, box the int64 result back to
+			// VInt. The recipe stays canonical truth — the JIT path is just
+			// a faster way to evaluate it. If the closure body needs args
+			// the int64-only signature can't carry (a float, string, list),
+			// we fall through to the walker with the args we already evaluated.
+			// Same answer either way.
+			argVals := make([]Value, len(cl.Params))
+			for i := 1; i < len(kids); i++ {
+				argVals[i-1] = k.walk(kids[i], env)
+			}
+			bodyKey := nodeIDKey(cl.Body)
+			// Value-typed JIT — the general path. Runs the whole body native
+			// over core.Value, routing native / cross-function calls through
+			// dispatch. No arg-kind restriction (lists, strings, records all
+			// flow). Checked first because it subsumes the int64 fast path.
+			if _, ok := k.jitCompiledGoV[bodyKey]; ok {
 				if k.Trace != nil {
 					k.Trace.recordFn(k.nameStr(cl.Name))
-					k.Trace.recordNative("jit-go-dispatch")
+					k.Trace.recordNative("jit-go-value-dispatch")
 				}
-				return Value{Kind: VInt, Int: fn(intArgs)}
+				return k.applyClosureValue(cl, argVals)
 			}
-		}
-		call := NewCallFrame(cl.Env, len(cl.Params))
-		for i, p := range cl.Params {
-			call.Bind(p, argVals[i])
-		}
-		if k.Trace != nil {
-			k.Trace.recordFn(k.nameStr(cl.Name))
-		}
-		return k.walk(cl.Body, call)
+			if fn, ok := k.jitCompiledGo[bodyKey]; ok {
+				allInt := true
+				intArgs := make([]int64, len(cl.Params))
+				for i, av := range argVals {
+					if av.Kind != VInt {
+						allInt = false
+						break
+					}
+					intArgs[i] = av.Int
+				}
+				if allInt {
+					if k.Trace != nil {
+						k.Trace.recordFn(k.nameStr(cl.Name))
+						k.Trace.recordNative("jit-go-dispatch")
+					}
+					return Value{Kind: VInt, Int: fn(intArgs)}
+				}
+			}
+			call := NewCallFrame(cl.Env, len(cl.Params))
+			for i, p := range cl.Params {
+				call.Bind(p, argVals[i])
+			}
+			if k.Trace != nil {
+				k.Trace.recordFn(k.nameStr(cl.Name))
+			}
+			n = cl.Body // TCO: a closure body is in tail position — loop, don't recurse
+			env = call
+			continue
 
-	case RBasicList:
-		out := make([]Value, len(kids))
-		for i, c := range kids {
-			out[i] = k.walk(c, env)
+		case RBasicList:
+			out := make([]Value, len(kids))
+			for i, c := range kids {
+				out[i] = k.walk(c, env)
+			}
+			return Value{Kind: VList, List: out}
 		}
-		return Value{Kind: VList, List: out}
+
+		// Structural passthrough — categories the walker can't yet execute
+		// (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
+		// PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
+		// VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
+		// records their attribution. Walking returns the NodeID itself so
+		// downstream structural reasoning continues. Sibling-parity with
+		// the Rust + TS kernels.
+		return Value{Kind: VNodeID, Nid: n}
 	}
-
-	// Structural passthrough — categories the walker can't yet execute
-	// (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
-	// PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
-	// VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
-	// records their attribution. Walking returns the NodeID itself so
-	// downstream structural reasoning continues. Sibling-parity with
-	// the Rust + TS kernels.
-	return Value{Kind: VNodeID, Nid: n}
 }
 
 func truthy(v Value) bool {
