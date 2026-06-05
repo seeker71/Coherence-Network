@@ -34,10 +34,16 @@ type PublicMember = {
 type Kind = "food" | "laundry" | "cleaning" | "ride" | "repair" | "room" | "supplies" | "other";
 type Status = "open" | "acknowledged" | "in_progress" | "completed" | "cancelled";
 
+// One market line, stored structurally so the board re-renders in EACH
+// viewer's tongue: id is language-free; label/unit are snapshots used as a
+// fallback when the catalog doesn't know the id (custom items).
+type RequestItem = { id: string; qty: number; unit?: string; label?: string };
+
 type ServiceRequest = {
   id: string;
   kind: Kind;
   detail: string;
+  items?: RequestItem[];
   location?: string | null;
   when_text?: string | null;
   status: Status;
@@ -65,7 +71,83 @@ const KINDS: { key: Kind; emoji: string }[] = [
   { key: "other", emoji: "✨" },
 ];
 
+// ── The market near Hati Suci ───────────────────────────────────────
+// A projection of the catalog whose shape + proportions live in the body:
+// docs/coherence-substrate/household-membrane.form (market). Each item
+// carries its label in every tongue, so the board renders in the VIEWER's
+// language — the resident reads "rice", the staff who shops reads "beras",
+// from one cell. Amounts use the pasar's own measures (kg, ikat = bunch,
+// sisir = comb, ons = 100 g, butir = each), never bare counts. (g4 will
+// serve this from /api/household/market so there is a single source.)
+type Lang = "en" | "id" | "de" | "es";
+type L = { en: string; id: string; de?: string; es?: string };
+type MarketGroup = "fruit" | "veg" | "bumbu" | "pokok";
+type MarketItem = { id: string; e: string; g: MarketGroup; l: L; u: L; step: number; start: number };
+
+const U = {
+  comb: { en: "comb", id: "sisir" },
+  bunch: { en: "bunch", id: "ikat" },
+  kg: { en: "kg", id: "kg" },
+  ons: { en: "100g", id: "ons" },
+  pcs: { en: "pcs", id: "buah" },
+  butir: { en: "pcs", id: "butir" },
+  potong: { en: "pcs", id: "potong" },
+  pack: { en: "pack", id: "bungkus" },
+  bottle: { en: "bottle", id: "botol" },
+} as const;
+
+const MARKET: MarketItem[] = [
+  // fruit (buah)
+  { id: "pisang", e: "🍌", g: "fruit", l: { en: "banana", id: "pisang" }, u: U.comb, step: 1, start: 1 },
+  { id: "pepaya", e: "🍈", g: "fruit", l: { en: "papaya", id: "pepaya" }, u: U.pcs, step: 1, start: 1 },
+  { id: "mangga", e: "🥭", g: "fruit", l: { en: "mango", id: "mangga" }, u: U.pcs, step: 1, start: 3 },
+  { id: "alpukat", e: "🥑", g: "fruit", l: { en: "avocado", id: "alpukat" }, u: U.pcs, step: 1, start: 3 },
+  { id: "nanas", e: "🍍", g: "fruit", l: { en: "pineapple", id: "nanas" }, u: U.pcs, step: 1, start: 1 },
+  { id: "semangka", e: "🍉", g: "fruit", l: { en: "watermelon", id: "semangka" }, u: U.pcs, step: 1, start: 1 },
+  { id: "naga", e: "🐉", g: "fruit", l: { en: "dragonfruit", id: "buah naga" }, u: U.pcs, step: 1, start: 2 },
+  { id: "kelapa", e: "🥥", g: "fruit", l: { en: "coconut", id: "kelapa" }, u: U.butir, step: 1, start: 2 },
+  { id: "jeruk", e: "🍊", g: "fruit", l: { en: "orange", id: "jeruk" }, u: U.kg, step: 1, start: 1 },
+  { id: "nipis", e: "🍋", g: "fruit", l: { en: "lime", id: "jeruk nipis" }, u: U.ons, step: 1, start: 1 },
+  { id: "salak", e: "🟤", g: "fruit", l: { en: "snakefruit", id: "salak" }, u: U.ons, step: 1, start: 2 },
+  // veg (sayur)
+  { id: "kangkung", e: "🥬", g: "veg", l: { en: "water spinach", id: "kangkung" }, u: U.bunch, step: 1, start: 2 },
+  { id: "bayam", e: "🌿", g: "veg", l: { en: "spinach", id: "bayam" }, u: U.bunch, step: 1, start: 2 },
+  { id: "kacang-panjang", e: "🫛", g: "veg", l: { en: "long beans", id: "kacang panjang" }, u: U.bunch, step: 1, start: 1 },
+  { id: "terong", e: "🍆", g: "veg", l: { en: "eggplant", id: "terong" }, u: U.kg, step: 1, start: 1 },
+  { id: "tomat", e: "🍅", g: "veg", l: { en: "tomato", id: "tomat" }, u: U.kg, step: 1, start: 1 },
+  { id: "timun", e: "🥒", g: "veg", l: { en: "cucumber", id: "timun" }, u: U.kg, step: 1, start: 1 },
+  { id: "jagung", e: "🌽", g: "veg", l: { en: "corn", id: "jagung" }, u: U.pcs, step: 1, start: 4 },
+  { id: "wortel", e: "🥕", g: "veg", l: { en: "carrot", id: "wortel" }, u: U.kg, step: 1, start: 1 },
+  { id: "kentang", e: "🥔", g: "veg", l: { en: "potato", id: "kentang" }, u: U.kg, step: 1, start: 1 },
+  { id: "ubi", e: "🍠", g: "veg", l: { en: "sweet potato", id: "ubi" }, u: U.kg, step: 1, start: 1 },
+  { id: "labu", e: "🎃", g: "veg", l: { en: "pumpkin", id: "labu" }, u: U.potong, step: 1, start: 1 },
+  { id: "jamur", e: "🍄", g: "veg", l: { en: "mushroom", id: "jamur" }, u: U.ons, step: 1, start: 2 },
+  { id: "kol", e: "🥬", g: "veg", l: { en: "cabbage", id: "kol" }, u: U.pcs, step: 1, start: 1 },
+  // aromatics (bumbu)
+  { id: "cabai", e: "🌶️", g: "bumbu", l: { en: "chili", id: "cabai" }, u: U.ons, step: 1, start: 1 },
+  { id: "bawang-merah", e: "🧅", g: "bumbu", l: { en: "shallot", id: "bawang merah" }, u: U.ons, step: 1, start: 2 },
+  { id: "bawang-putih", e: "🧄", g: "bumbu", l: { en: "garlic", id: "bawang putih" }, u: U.ons, step: 1, start: 1 },
+  { id: "jahe", e: "🫚", g: "bumbu", l: { en: "ginger", id: "jahe" }, u: U.ons, step: 1, start: 1 },
+  { id: "sereh", e: "🌾", g: "bumbu", l: { en: "lemongrass", id: "sereh" }, u: U.bunch, step: 1, start: 1 },
+  // staples (pokok)
+  { id: "beras", e: "🍚", g: "pokok", l: { en: "rice", id: "beras" }, u: U.kg, step: 1, start: 5 },
+  { id: "telur", e: "🥚", g: "pokok", l: { en: "eggs", id: "telur" }, u: U.butir, step: 5, start: 10 },
+  { id: "tahu", e: "⬜", g: "pokok", l: { en: "tofu", id: "tahu" }, u: U.potong, step: 1, start: 5 },
+  { id: "tempe", e: "🟫", g: "pokok", l: { en: "tempeh", id: "tempe" }, u: U.potong, step: 1, start: 2 },
+  { id: "garam", e: "🧂", g: "pokok", l: { en: "salt", id: "garam" }, u: U.pack, step: 1, start: 1 },
+  { id: "gula-merah", e: "🍯", g: "pokok", l: { en: "palm sugar", id: "gula merah" }, u: U.kg, step: 1, start: 1 },
+  { id: "kacang", e: "🥜", g: "pokok", l: { en: "peanuts", id: "kacang" }, u: U.ons, step: 1, start: 2 },
+  { id: "minyak", e: "🫗", g: "pokok", l: { en: "cooking oil", id: "minyak" }, u: U.bottle, step: 1, start: 1 },
+  { id: "mie", e: "🍜", g: "pokok", l: { en: "noodles", id: "mie" }, u: U.pack, step: 1, start: 5 },
+];
+
+const MARKET_BY_ID: Record<string, MarketItem> = Object.fromEntries(MARKET.map((m) => [m.id, m]));
+const MARKET_GROUPS: MarketGroup[] = ["fruit", "veg", "bumbu", "pokok"];
+
+type CustomItem = { id: string; label: string; e: string };
+
 const TOKEN_KEY = "hatiSuci.token";
+const CUSTOM_KEY = "hatiSuci.customItems";
 
 async function postJSON<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
@@ -121,6 +203,12 @@ export default function HatiSuciPage() {
   const [whenText, setWhenText] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Market cart (itemId → amount) + custom items remembered across visits.
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+  const [customInput, setCustomInput] = useState("");
+  const [lang, setLang] = useState<Lang>("en");
+
   const [invRole, setInvRole] = useState<Role>("member");
   const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string; qr: string } | null>(null);
   const [contactPickerOk, setContactPickerOk] = useState(false);
@@ -163,6 +251,29 @@ export default function HatiSuciPage() {
     })();
   }, []);
 
+  // Active tongue (drives the market labels + the board re-render).
+  useEffect(() => {
+    const dl = document.documentElement.lang;
+    if (dl === "en" || dl === "id" || dl === "de" || dl === "es") setLang(dl);
+  }, []);
+
+  // Custom items the requester typed once — remembered as their own tiles.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CUSTOM_KEY);
+      if (raw) setCustomItems(JSON.parse(raw) as CustomItem[]);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(customItems));
+    } catch {
+      /* ignore */
+    }
+  }, [customItems]);
+
   const load = useCallback(async () => {
     const r = await getJSON<ServiceRequest[]>("/api/household/requests?limit=200");
     if (r) setRequests(r);
@@ -197,28 +308,76 @@ export default function HatiSuciPage() {
   const token = member?.token ?? "";
   const canWrite = !!member?.write_access;
   const isResident = member?.role === "resident";
+  const marketKind = kind === "food" || kind === "supplies";
+
+  const pick = useCallback((x: L) => x[lang] ?? x.en, [lang]);
+
+  const toggleItem = useCallback((id: string, start: number) => {
+    setCart((c) => {
+      const next = { ...c };
+      if (next[id]) delete next[id];
+      else next[id] = start;
+      return next;
+    });
+  }, []);
+
+  const bumpItem = useCallback((id: string, delta: number) => {
+    setCart((c) => {
+      const q = (c[id] ?? 0) + delta;
+      const next = { ...c };
+      if (q <= 0) delete next[id];
+      else next[id] = q;
+      return next;
+    });
+  }, []);
+
+  const addCustom = useCallback(() => {
+    const label = customInput.trim();
+    if (!label) return;
+    const id = `custom:${label.toLowerCase().replace(/\s+/g, "-").slice(0, 40)}`;
+    setCustomItems((list) => (list.some((c) => c.id === id) ? list : [...list, { id, label, e: "🛒" }]));
+    setCart((c) => ({ ...c, [id]: c[id] ?? 1 }));
+    setCustomInput("");
+  }, [customInput]);
 
   const submitRequest = useCallback(async () => {
-    if (!token || !detail.trim()) return;
+    if (!token) return;
+    // For food / supplies the request IS the picked list (structured, so it
+    // re-renders in each viewer's tongue). Other kinds use the free note.
+    const lines: RequestItem[] = Object.entries(cart)
+      .filter(([, q]) => q > 0)
+      .map(([id, q]) => {
+        const it = MARKET_BY_ID[id];
+        if (it) return { id, qty: q, unit: pick(it.u), label: pick(it.l) };
+        const ci = customItems.find((c) => c.id === id);
+        return { id, qty: q, label: ci?.label ?? id };
+      });
+    const composed = lines
+      .map((li) => `${li.qty}${li.unit ? ` ${li.unit}` : ""} ${li.label}`)
+      .join(", ");
+    const finalDetail = marketKind ? composed : detail.trim();
+    if (!finalDetail) return;
     setBusy(true);
     try {
       await postJSON("/api/household/requests", {
         actor_token: token,
         kind,
-        detail: detail.trim(),
+        detail: finalDetail,
+        items: marketKind ? lines : [],
         location: location.trim() || null,
         when_text: whenText.trim() || null,
       });
       setDetail("");
       setLocation("");
       setWhenText("");
+      setCart({});
       await load();
     } catch {
       /* ignore */
     } finally {
       setBusy(false);
     }
-  }, [token, detail, kind, location, whenText, load]);
+  }, [token, cart, customItems, pick, detail, kind, marketKind, location, whenText, load]);
 
   const act = useCallback(
     async (id: string, verb: string, extra: Record<string, unknown> = {}) => {
@@ -524,13 +683,123 @@ export default function HatiSuciPage() {
                 </button>
               ))}
             </div>
-            <textarea
-              value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-              placeholder={t("hatiSuci.add.detailPlaceholder")}
-              rows={2}
-              className="w-full rounded-xl border border-border/40 bg-background px-3 py-2 text-base outline-none focus:border-primary/60"
-            />
+            {marketKind ? (
+              <div className="space-y-3">
+                {MARKET_GROUPS.map((g) => (
+                  <div key={g} className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">{t(`hatiSuci.market.${g}`)}</p>
+                    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                      {MARKET.filter((m) => m.g === g).map((m) => {
+                        const on = !!cart[m.id];
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => toggleItem(m.id, m.start)}
+                            title={pick(m.l)}
+                            className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 transition-colors ${
+                              on ? "border-primary/60 bg-primary/10" : "border-border/40 hover:bg-accent/40"
+                            }`}
+                          >
+                            <span className="text-xl leading-none">{m.e}</span>
+                            <span className="line-clamp-2 text-center text-[10px] leading-tight text-muted-foreground">{pick(m.l)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {customItems.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">{t("hatiSuci.market.yourList")}</p>
+                    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                      {customItems.map((m) => {
+                        const on = !!cart[m.id];
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => toggleItem(m.id, 1)}
+                            title={m.label}
+                            className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 transition-colors ${
+                              on ? "border-primary/60 bg-primary/10" : "border-border/40 hover:bg-accent/40"
+                            }`}
+                          >
+                            <span className="text-xl leading-none">{m.e}</span>
+                            <span className="line-clamp-2 text-center text-[10px] leading-tight text-muted-foreground">{m.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addCustom();
+                    }}
+                    placeholder={t("hatiSuci.market.custom")}
+                    className="flex-1 rounded-xl border border-border/40 bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
+                  />
+                  <button
+                    onClick={addCustom}
+                    disabled={!customInput.trim()}
+                    className="rounded-xl border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    {t("hatiSuci.market.customAdd")}
+                  </button>
+                </div>
+
+                {Object.keys(cart).length > 0 && (
+                  <div className="space-y-1.5 rounded-xl border border-primary/20 bg-primary/5 p-2.5">
+                    {Object.entries(cart).map(([id, q]) => {
+                      const it = MARKET_BY_ID[id];
+                      const ci = customItems.find((c) => c.id === id);
+                      const label = it ? pick(it.l) : ci?.label ?? id;
+                      const unit = it ? pick(it.u) : "";
+                      const emoji = it ? it.e : ci?.e ?? "🛒";
+                      const step = it ? it.step : 1;
+                      return (
+                        <div key={id} className="flex items-center gap-2 text-sm">
+                          <span className="text-lg leading-none">{emoji}</span>
+                          <span className="min-w-0 flex-1 truncate text-foreground">{label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => bumpItem(id, -step)}
+                              className="h-7 w-7 rounded-lg border border-border/40 text-base leading-none text-muted-foreground hover:bg-accent/40"
+                            >
+                              −
+                            </button>
+                            <span className="min-w-[3.5rem] text-center tabular-nums text-foreground">
+                              {q}
+                              {unit ? ` ${unit}` : ""}
+                            </span>
+                            <button
+                              onClick={() => bumpItem(id, step)}
+                              className="h-7 w-7 rounded-lg border border-border/40 text-base leading-none text-muted-foreground hover:bg-accent/40"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="text-center text-[11px] text-muted-foreground">{t("hatiSuci.market.hint")}</p>
+              </div>
+            ) : (
+              <textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                placeholder={t("hatiSuci.add.detailPlaceholder")}
+                rows={2}
+                className="w-full rounded-xl border border-border/40 bg-background px-3 py-2 text-base outline-none focus:border-primary/60"
+              />
+            )}
             <div className="grid grid-cols-2 gap-2">
               <input
                 value={location}
@@ -547,7 +816,7 @@ export default function HatiSuciPage() {
             </div>
             <button
               onClick={submitRequest}
-              disabled={busy || !detail.trim()}
+              disabled={busy || (marketKind ? Object.keys(cart).length === 0 : !detail.trim())}
               className="w-full rounded-xl bg-primary px-4 py-3 text-base font-medium text-primary-foreground disabled:opacity-50"
             >
               {t("hatiSuci.add.button")}
@@ -584,7 +853,18 @@ export default function HatiSuciPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl leading-none">{emoji}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground break-words">{r.detail}</p>
+                    <p className="text-sm text-foreground break-words">
+                      {r.items && r.items.length > 0
+                        ? r.items
+                            .map((it) => {
+                              const cat = MARKET_BY_ID[it.id];
+                              const label = cat ? pick(cat.l) : it.label ?? it.id;
+                              const unit = cat ? pick(cat.u) : it.unit ?? "";
+                              return `${it.qty}${unit ? ` ${unit}` : ""} ${label}`;
+                            })
+                            .join(", ")
+                        : r.detail}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {t("hatiSuci.meta.requestedBy")} {r.requester_name}
                       {r.location ? ` · ${r.location}` : ""}
