@@ -213,6 +213,7 @@ export default function HatiSuciPage() {
   const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string; qr: string } | null>(null);
   const [contactPickerOk, setContactPickerOk] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [claimInput, setClaimInput] = useState("");
 
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [costAmount, setCostAmount] = useState("");
@@ -309,6 +310,7 @@ export default function HatiSuciPage() {
   const canWrite = !!member?.write_access;
   const isResident = member?.role === "resident";
   const marketKind = kind === "food" || kind === "supplies";
+  const needsName = !!member && /^New (resident|staff|member)$/i.test(member.name);
 
   const pick = useCallback((x: L) => x[lang] ?? x.en, [lang]);
 
@@ -451,6 +453,40 @@ export default function HatiSuciPage() {
     }
   }, [makeInvite]);
 
+  // Share the invite via the OS share sheet (iOS + Android) — the newcomer's
+  // contact is chosen inside WhatsApp/Messages, never typed here. Falls back
+  // to WhatsApp's own picker where the share sheet isn't available (desktop).
+  const shareInvite = useCallback(
+    async (url: string) => {
+      const text = t("hatiSuci.invite.shareText");
+      const nav = navigator as Navigator & {
+        share?: (d: { title?: string; text?: string; url?: string }) => Promise<void>;
+      };
+      if (nav.share) {
+        try {
+          await nav.share({ title: "Hati Suci", text, url });
+          return;
+        } catch {
+          /* cancelled */
+        }
+      }
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener");
+    },
+    [t],
+  );
+
+  // The self-name half of bind: a newcomer claims their own name on arrival
+  // (the invite carried only a role). No one ever types another's name.
+  const claimName = useCallback(async () => {
+    const nm = claimInput.trim();
+    if (!nm || !token) return;
+    const me = await getJSON<Member>(
+      `/api/household/me?token=${encodeURIComponent(token)}&name=${encodeURIComponent(nm)}`,
+    );
+    if (me) setMember(me);
+    setClaimInput("");
+  }, [claimInput, token]);
+
   useEffect(() => {
     setContactPickerOk("contacts" in navigator && "ContactsManager" in window);
   }, []);
@@ -577,6 +613,31 @@ export default function HatiSuciPage() {
           {langToggle}
         </header>
 
+        {/* New arrival names themselves (the invite carried only a role) */}
+        {needsName && (
+          <section className="space-y-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+            <p className="text-sm text-foreground">{t("hatiSuci.claim.prompt")}</p>
+            <div className="flex gap-2">
+              <input
+                value={claimInput}
+                onChange={(e) => setClaimInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") claimName();
+                }}
+                placeholder={t("hatiSuci.reg.namePlaceholder")}
+                className="flex-1 rounded-xl border border-border/40 bg-background px-3 py-2 text-base outline-none focus:border-primary/60"
+              />
+              <button
+                onClick={claimName}
+                disabled={!claimInput.trim()}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              >
+                {t("hatiSuci.claim.button")}
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* Invite (residents only) */}
         {isResident && (
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
@@ -625,14 +686,12 @@ export default function HatiSuciPage() {
                 </div>
                 <p className="break-all rounded-lg bg-background/60 px-2 py-1.5 text-[11px] text-muted-foreground">{inviteLink.url}</p>
                 <div className="flex gap-2">
-                  <a
-                    href={inviteLink.whatsapp}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => shareInvite(inviteLink.url)}
                     className="flex-1 rounded-lg border border-emerald-500/40 px-3 py-2 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400"
                   >
-                    {t("hatiSuci.invite.shareWhatsApp")}
-                  </a>
+                    {t("hatiSuci.invite.share")}
+                  </button>
                   <button
                     onClick={() => copyLink(inviteLink.url)}
                     className="rounded-lg border border-border/40 px-3 py-2 text-sm text-muted-foreground hover:bg-accent/40"

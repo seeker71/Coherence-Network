@@ -32,7 +32,9 @@
       "scanToJoin": "Arahkan kamera ke sini untuk bergabung sebagai {name}",
       "pickContact": "Dari kontak",
       "makeQr": "Buat QR gabung",
-      "noTyping": "Pilih kontak atau tunjukkan QR — tanpa mengetik."
+      "noTyping": "Pilih kontak atau tunjukkan QR — tanpa mengetik.",
+      "share": "Bagikan undangan",
+      "shareText": "Gabung ke papan rumah Hati Suci"
     },
     "people": {
       "heading": "Menunggu persetujuan",
@@ -97,6 +99,10 @@
       "customAdd": "Tambah",
       "hint": "Ketuk untuk menambah — atur jumlah setelah",
       "yourList": "Daftar kamu"
+    },
+    "claim": {
+      "prompt": "Selamat datang! Siapa nama kamu?",
+      "button": "Itu saya"
     }
   },
   "_attunement": {

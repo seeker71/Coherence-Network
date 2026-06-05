@@ -32,7 +32,9 @@
       "scanToJoin": "Point a camera here to join as {name}",
       "pickContact": "From contacts",
       "makeQr": "Make join QR",
-      "noTyping": "Pick a contact or show the QR — no typing."
+      "noTyping": "Pick a contact or show the QR — no typing.",
+      "share": "Share invite",
+      "shareText": "Join the Hati Suci household board"
     },
     "people": {
       "heading": "Waiting for a vouch",
@@ -97,6 +99,10 @@
       "customAdd": "Add",
       "hint": "Tap to add — set the amount after",
       "yourList": "Your list"
+    },
+    "claim": {
+      "prompt": "Welcome! What should we call you?",
+      "button": "That's me"
     }
   },
   "_attunement": {
