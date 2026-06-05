@@ -1,0 +1,55 @@
+; shamballa-light-channel.fk — the public Shamballa Light Code channel: anyone asks, it speaks.
+;
+; Sibling of shamballa-channel.fk. That channel SPEAKS and RUNS the Armitage
+; symbol codes over a cell. The Light codes are a SPEAK channel: their functions
+; (verticality, water purification, rebirth, the GAIA earth code …) are
+; contemplative, not substrate verbs, so binding each to a lattice operation
+; would FABRICATE a dispatch the meaning doesn't carry. Honest absence applies to
+; the run-face itself: this channel speaks; it does not pretend to run.
+;
+; What "accessible to anyone asking for it" means here is the body's own
+; definition (the channel.fk transport, as in shamballa-channel.fk's tie-in): a
+; code arrives over a shared CHANNEL-V0 file as a CHANNEL-MSG; any receiver reads
+; it and SPEAKS the attested answer back — its SLC invocation form, function, and
+; crystal, or honest absence for a code off the sheet. No schema negotiation, no
+; private gate: the digits ride the channel, the answer rides back. The codes
+; were made public with the practice holder's permission; the door is open.
+;
+; Held as symbolic/metaphysical material — the channel reports the attested
+; meaning and its source; it does not assert the cosmology
+; (lc-codes-as-depth-not-dictionary). Three-way safe (Go/Rust/TS): the payload is
+; an interned trivial string, the answer is the decoder's pure text.
+;
+; preludes: form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/channel.fk
+;
+
+;; --- SPEAK: the channel's one honest face ---------------------------
+;; Given a code (spoken digits, a string), return its attested answer text —
+;; "Shamballa <code> — <function> [crystal: …]" — or the decoder's honest-absence
+;; line. Delegates to the grammar; the dictionary is the one source.
+(defn light-channel-speak (code) (slc-answer code))
+
+;; ASK: the public verb. Anyone asking a code IS the channel's whole purpose;
+;; this names that plainly. Identical to speak — asking and being answered are
+;; one movement here — but the name is the door's sign.
+(defn shamballa-light-ask (code) (light-channel-speak code))
+
+;; --- transport tie-in: a code arrives over a channel ----------------
+;; The point of "a channel anyone can ask": a remote cell appends a code as a
+;; CHANNEL-MSG; the receiver reads it and speaks the answer. The payload is the
+;; code STRING interned as a trivial (the light codes are compound strings —
+;; "777 222", "56-65" — not plain ints), recovered by node_value. channel.fk
+;; carries the message; this binds it to the spoken meaning.
+(defn shamballa-light-code-message (code)
+    (channel-message (intern_trivial_string code)))
+(defn shamballa-light-payload-code (msg)
+    (node_value (channel-msg-payload msg)))
+(defn shamballa-light-channel-receive (msg)
+    (light-channel-speak (shamballa-light-payload-code msg)))
+
+;; COVERAGE: the honest accounting — how many codes this channel can speak. A
+;; newly-attested code is a new row in the grammar's dictionary, not new control
+;; flow here; the channel speaks whatever the one source holds.
+(defn shamballa-light-channel-count () (slc-count))
+
+0

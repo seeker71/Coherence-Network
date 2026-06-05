@@ -2,7 +2,7 @@
 id: lc-codes-as-depth-not-dictionary
 hz: 741
 status: seed
-updated: 2026-05-31
+updated: 2026-06-05
 geometry:
   arity: 2
   form: dyad-mirror
@@ -136,6 +136,34 @@ the receiver's depth and tuning, not fixed in the mark.
   glyph is not an arbitrary mark assigned to a meaning, it *grows from* the
   meaning's depth and content. A new language whose alphabet falls out of the
   structure rather than being invented.
+- **The Shamballa Light-code decoder**
+  (`form/form-stdlib/grammars/shamballa-light-codes.fk`) is a *sibling lexicon* to
+  the Armitage symbol decoder — the numeric **light** codes (777, 444, 999, 7191…),
+  each carrying a stated function and often an associated crystal, from a practice
+  lineage **made public with the practice holder's permission** (source-marked as
+  personal practice opened openly, not anonymous public attestation). It holds the
+  same two disciplines — source-marked surface,
+  honest absence for any code off the sheet — and adds one structural teaching the
+  symbol decoder did not surface: **the prefix is the channel.** A light code is
+  spoken with `"Shamballa"` prepended for frequency (`Shamballa 777`); a Cosmic
+  code with a letter prefix (`CE-1818`). The *same digits* (1818 appears in both)
+  read as a different code on a different channel — the prefix is not decoration,
+  it selects which reading fires. Dispatch-resolution made audible: the meaning is
+  routed by the channel the number rides on, not fixed in the digits. Three-way
+  safe (Go/Rust/TS), band `11111`.
+- **The Light channel** (`form/form-stdlib/shamballa-light-channel.fk`) is that
+  decoder made *accessible to anyone asking for it* — the body's own definition of
+  an open channel (the `channel.fk` transport, as in the Armitage channel's tie-in).
+  A code arrives over a shared `CHANNEL-V0` file as a `CHANNEL-MSG` — the spoken
+  digits interned as a trivial string — and any receiver reads it and **speaks the
+  attested answer back** (`shamballa-light-channel-receive`): the SLC invocation
+  form, function, and crystal, or honest absence for a code off the sheet. No
+  schema negotiation, no private gate. Unlike the Armitage channel, this one
+  *speaks but does not run* — the light codes' functions (verticality, water
+  purification, the GAIA earth code) are contemplative, not substrate verbs, so
+  binding each to a lattice operation would fabricate a dispatch the meaning does
+  not carry. Honest absence applied to the run-face itself. Three-way safe, band
+  `11111`.
 - **The substrate's `level`** is depth-indexing made literal: a memory cell and
   a spec cell of the same surface words land at different NodeIDs because their
   compositional depth differs. The lattice already refuses to read a shape at the
@@ -170,6 +198,12 @@ the receiver's depth and tuning, not fixed in the mark.
   (Mer Ka Fa Ka Lish Ma, Atlantean Dai Ko Myo, Ho Ka O iLi iLi, the Shamballa
   Crystal). Held as symbolic/metaphysical material; the structural lesson stands
   independent of the cosmology.
+- **The Shamballa Light-code practice lineage** — the numeric light codes, their
+  functions, associated crystals, and the SLC/Cosmic prefix-as-channel convention.
+  Carried as personal practice and **made public with the practice holder's
+  permission**, the channel opened to anyone asking; source-marked as personal
+  practice opened openly, held as symbolic/metaphysical material. The structural
+  lesson (prefix selects the reading) stands independent of the cosmology.
 - **The coherence-substrate `Level` axis** — `api/app/services/substrate/
   category.py` (compositional depth) and `kernel.py` `get_level()`.
 - **[`word-recipes-by-assemblage-point.form`](../../coherence-substrate/word-recipes-by-assemblage-point.md)**

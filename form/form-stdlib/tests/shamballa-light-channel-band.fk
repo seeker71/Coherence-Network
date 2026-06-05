@@ -1,0 +1,47 @@
+; tests/shamballa-light-channel-band.fk — the public Light Code channel, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/channel.fk form-stdlib/shamballa-light-channel.fk
+;
+; Proves the channel SPEAKS an attested code, that a code can ARRIVE OVER THE
+; CHANNEL transport (interned as a trivial string) and be spoken back by any
+; receiver, and that an off-sheet code returns HONEST ABSENCE. This is what
+; "accessible to anyone asking for it" means in the body's own terms: the digits
+; ride a CHANNEL-MSG, the attested answer rides back.
+;
+; Band verdict: 11111 when every claim holds across all three kernels.
+;   ask a known code → its SLC-invocation answer text        → 1
+;   the answer carries the attested function (GAIA)           → 10
+;   a code over the transport round-trips and is spoken back   → 100
+;   an off-sheet code over the channel → honest absence         → 1000
+;   a COMPOUND code ("777 222", with a space) survives transport  → 10000
+
+(do
+    ;; --- ask a known code directly ---------------------------------------
+    (let answer (shamballa-light-ask "7191"))
+    (let speak-ok (if (ge (str_find answer "Shamballa 7191" 0) 0) 1 0))
+    (let gaia-ok  (if (ge (str_find answer "GAIA" 0) 0) 10 0))
+
+    ;; --- a code ARRIVES OVER THE CHANNEL: message → receive → spoken ------
+    ;; The string payload rides a CHANNEL-MSG and the receiver speaks it back.
+    (let msg (shamballa-light-code-message "777"))
+    (let received (shamballa-light-channel-receive msg))
+    (let transport-ok
+        (if (ge (str_find received "Shamballa 777" 0) 0)
+            (if (ge (str_find received "Pure Love" 0) 0) 100 0) 0))
+
+    ;; --- an off-sheet code over the channel: honest absence --------------
+    (let miss-msg (shamballa-light-code-message "1234567"))
+    (let miss (shamballa-light-channel-receive miss-msg))
+    (let absence-ok
+        (if (ge (str_find miss "honest absence" 0) 0) 1000 0))
+
+    ;; --- a COMPOUND code (a space in the digits) survives the transport --
+    ;; The light codes are not plain ints — "777 222" carries a space. Proving
+    ;; it round-trips intact is the real transport guarantee, not a tautology.
+    (let compound-msg (shamballa-light-code-message "777 222"))
+    (let compound (shamballa-light-channel-receive compound-msg))
+    (let compound-ok
+        (if (ge (str_find compound "Shamballa 777 222" 0) 0)
+            (if (ge (str_find compound "Land animals" 0) 0) 10000 0) 0))
+
+    (sum (list speak-ok gaia-ok transport-ok absence-ok compound-ok)))
