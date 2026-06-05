@@ -32,6 +32,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services import graph_service
+from app.services.form_kernel_bridge import serve_via_kernel
 
 router = APIRouter()
 
@@ -402,6 +403,46 @@ def _apply(request_id: str, updates: dict[str, Any]) -> RequestResponse:
     return _node_to_request(node)
 
 
+# ── The request lifecycle, as a Form recipe ───────────────────────────
+# advance(status, verb) — the membrane's state machine — runs on the Form
+# kernel (endpoint_household_advance_demo.fk) with a value-identical Python
+# fallback. This is the first household rule to leave the Python if-tree and
+# execute as Form; the carrier here only encodes/decodes and does the I/O.
+# (household-membrane.form, recipes: acknowledge / tend / complete.)
+_STATUS_CODE = {"open": 0, "acknowledged": 1, "in_progress": 2, "completed": 3, "cancelled": 4}
+_CODE_STATUS = {v: k for k, v in _STATUS_CODE.items()}
+_VERB_CODE = {"acknowledge": 0, "start": 1, "complete": 2, "cancel": 3}
+
+
+def _advance_py(status: int, verb: int) -> int:
+    """Value-identical fallback for endpoint_household_advance_demo.fk."""
+    if verb == 0:
+        return 1 if status == 0 else -1
+    if verb == 1:
+        return 2 if status < 2 else -1
+    if verb == 2:
+        return 3 if status < 3 else -1
+    if verb == 3:
+        return 4 if status < 3 else -1
+    return -1
+
+
+def _advance_status(current: str, verb: str) -> str:
+    """Next lifecycle status, computed by the Form recipe on the kernel."""
+    s = _STATUS_CODE.get(current, 0)
+    v = _VERB_CODE[verb]
+    code, _runtime = serve_via_kernel(
+        "endpoint_household_advance_demo.fk",
+        bindings={"status": s, "verb": v},
+        fallback=lambda: _advance_py(s, v),
+        parse=int,
+    )
+    nxt = _CODE_STATUS.get(int(code))
+    if nxt is None:
+        raise HTTPException(status_code=409, detail=f"cannot {verb} a {current} request")
+    return nxt
+
+
 @router.post(
     "/household/requests",
     response_model=RequestResponse,
@@ -473,9 +514,9 @@ async def get_request(request_id: str) -> RequestResponse:
 )
 async def acknowledge_request(request_id: str, body: ActorBody) -> RequestResponse:
     actor = _require_writer(body.actor_token)
-    _load_request(request_id)
+    node = _load_request(request_id)
     return _apply(request_id, {
-        "status": "acknowledged",
+        "status": _advance_status(node.get("status", "open"), "acknowledge"),
         "acknowledged_by": actor.get("id", ""),
         "acknowledged_by_name": actor.get("name", ""),
         "acknowledged_at": _now(),
@@ -490,7 +531,7 @@ async def acknowledge_request(request_id: str, body: ActorBody) -> RequestRespon
 async def start_request(request_id: str, body: ActorBody) -> RequestResponse:
     actor = _require_writer(body.actor_token)
     node = _load_request(request_id)
-    updates: dict[str, Any] = {"status": "in_progress", "started_at": _now()}
+    updates: dict[str, Any] = {"status": _advance_status(node.get("status", "open"), "start"), "started_at": _now()}
     if not _s(node.get("acknowledged_by")):
         updates["acknowledged_by"] = actor.get("id", "")
         updates["acknowledged_by_name"] = actor.get("name", "")
@@ -505,9 +546,9 @@ async def start_request(request_id: str, body: ActorBody) -> RequestResponse:
 )
 async def complete_request(request_id: str, body: CompleteBody) -> RequestResponse:
     actor = _require_writer(body.actor_token)
-    _load_request(request_id)
+    node = _load_request(request_id)
     updates: dict[str, Any] = {
-        "status": "completed",
+        "status": _advance_status(node.get("status", "open"), "complete"),
         "completed_by": actor.get("id", ""),
         "completed_by_name": actor.get("name", ""),
         "completed_at": _now(),
@@ -527,8 +568,8 @@ async def complete_request(request_id: str, body: CompleteBody) -> RequestRespon
 )
 async def cancel_request(request_id: str, body: ActorBody) -> RequestResponse:
     _require_writer(body.actor_token)
-    _load_request(request_id)
-    return _apply(request_id, {"status": "cancelled", "cancelled_at": _now()})
+    node = _load_request(request_id)
+    return _apply(request_id, {"status": _advance_status(node.get("status", "open"), "cancel"), "cancelled_at": _now()})
 
 
 @router.post(
