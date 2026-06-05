@@ -19,6 +19,7 @@
 package main
 
 import (
+	"form-kernel-go/core"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -31,6 +32,33 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
+
+// --- core types extracted to package core (so JIT plugins can import them) ---
+type NodeID = core.NodeID
+type NameID = core.NameID
+type ValueKind = core.ValueKind
+type Value = core.Value
+type Record = core.Record
+type Closure = core.Closure
+type Frame = core.Frame
+
+const (
+	VNull    = core.VNull
+	VInt     = core.VInt
+	VStr     = core.VStr
+	VBool    = core.VBool
+	VList    = core.VList
+	VClosure = core.VClosure
+	VNodeID  = core.VNodeID
+	VFloat   = core.VFloat
+	VRecord  = core.VRecord
+)
+
+var (
+	NewFrame      = core.NewFrame
+	NewCallFrame  = core.NewCallFrame
+	formatFloatJS = core.FormatFloatJS
 )
 
 // --- Socket natives — L1 physical layer (TCP) ---------------------------
@@ -73,7 +101,6 @@ func socketDrop(h int64) {
 // Runtime-interned composites use pkg=0 so temporary recipe ids cannot collide
 // with registered/basic categories across an execution context boundary.
 // Trivials encode their value in `Inst`.
-type NodeID struct{ Pkg, Level, Type, Inst uint32 }
 
 const (
 	LevelTrivial uint32 = 1
@@ -175,7 +202,6 @@ type Recipe struct {
 // name trivial's NodeID instance is what every runtime name-lookup
 // compares. String comparison happens once at parse time, never in the
 // hot path.
-type NameID uint32
 
 // NativeEntry — a native's function plus the Form category it expresses.
 // Carries Blueprint attribution into the kernel: when the walker dispatches
@@ -735,14 +761,14 @@ func (k *Kernel) markValue(v Value, liveNodes map[NodeID]bool, liveStrings map[N
 }
 
 func (k *Kernel) markFrame(frame *Frame, liveNodes map[NodeID]bool, liveStrings map[NameID]bool, liveFrames map[*Frame]bool) {
-	for cur := frame; cur != nil; cur = cur.parent {
+	for cur := frame; cur != nil; cur = cur.Parent {
 		if liveFrames[cur] {
 			return
 		}
 		liveFrames[cur] = true
-		for _, binding := range cur.bindings {
-			liveStrings[binding.name] = true
-			k.markValue(binding.val, liveNodes, liveStrings, liveFrames)
+		for _, binding := range cur.Bindings {
+			liveStrings[binding.Name] = true
+			k.markValue(binding.Val, liveNodes, liveStrings, liveFrames)
 		}
 	}
 }
@@ -895,114 +921,18 @@ func (k *Kernel) nameStr(id NameID) string { return k.strs[id] }
 // Values — runtime tagged values
 // ---------------------------------------------------------------------------
 
-type ValueKind int
 
-const (
-	VNull ValueKind = iota
-	VInt
-	VStr
-	VBool
-	VList
-	VClosure
-	// VNodeID — Form code holds substrate NodeIDs as values once the
-	// substrate-write natives expose them. Adding this variant is the
-	// foundational step that lets Form construct recipes, not just walk
-	// them. Without it, templates (Breath 2) literally cannot exist.
-	VNodeID
-	// VFloat — IEEE 754 64-bit float at the value level. Both f32 (decoded
-	// inline from the inst bits) and f64 (read from the overflow table)
-	// surface as VFloat at runtime; the trivial's Type tag preserves the
-	// width identity at the substrate, the walker treats them uniformly.
-	// Mirrors Rust's Value::Float; TS keeps f32/f64 distinct at the value
-	// level via Math.fround, which the Rust+Go kernels don't do because
-	// host-language hardware always promotes to 64-bit in arithmetic.
-	VFloat
-	// VRecord — a mutable struct/object with identity (BML reference, rung 2).
-	// The first mutable Value the kernel carries; required for `self.x = v`.
-	// The Rec pointer gives shared mutable identity — two bindings to the same
-	// record see each other's mutations (object semantics, not value-copy).
-	VRecord
-)
 
 // Record — a mutable struct/object. Blueprint tags its type (class /
 // method-table NodeID); Fields is an ordered name→value map.
-type Record struct {
-	Blueprint NodeID
-	Fields    []recField
-}
 
-type recField struct {
-	name NameID
-	val  Value
-}
 
-func (r *Record) get(name NameID) (Value, bool) {
-	for i := len(r.Fields) - 1; i >= 0; i-- {
-		if r.Fields[i].name == name {
-			return r.Fields[i].val, true
-		}
-	}
-	return Value{Kind: VNull}, false
-}
 
-func (r *Record) set(name NameID, val Value) {
-	for i := range r.Fields {
-		if r.Fields[i].name == name {
-			r.Fields[i].val = val
-			return
-		}
-	}
-	r.Fields = append(r.Fields, recField{name: name, val: val})
-}
 
 // Value — runtime tagged union. List and Closure carry pointers; the rest
 // are inline. Kept as a flat struct so the walker's hot path is allocation-
 // free for ints and bools.
-type Value struct {
-	Kind  ValueKind
-	Int   int64
-	Float float64
-	Str   string
-	Bool  bool
-	List  []Value
-	Cl    *Closure
-	Nid   NodeID
-	Rec   *Record
-}
 
-func (v Value) String() string {
-	switch v.Kind {
-	case VNull:
-		return "null"
-	case VInt:
-		return strconv.FormatInt(v.Int, 10)
-	case VFloat:
-		return formatFloatJS(v.Float)
-	case VStr:
-		return v.Str
-	case VBool:
-		if v.Bool {
-			return "true"
-		}
-		return "false"
-	case VList:
-		parts := make([]string, len(v.List))
-		for i, x := range v.List {
-			parts[i] = x.String()
-		}
-		return "[" + strings.Join(parts, ", ") + "]"
-	case VClosure:
-		return "<closure #" + strconv.FormatUint(uint64(v.Cl.Name), 10) + ">"
-	case VNodeID:
-		// Canonical substrate notation: @pkg.level.type.instance
-		return fmt.Sprintf("@%d.%d.%d.%d", v.Nid.Pkg, v.Nid.Level, v.Nid.Type, v.Nid.Inst)
-	case VRecord:
-		return fmt.Sprintf("<record @%d.%d.%d.%d #%dfields>",
-			v.Rec.Blueprint.Pkg, v.Rec.Blueprint.Level, v.Rec.Blueprint.Type,
-			v.Rec.Blueprint.Inst, len(v.Rec.Fields))
-	}
-	return "?"
-}
 
 type sourceNativeLexicon struct {
 	keywords     map[string]bool
@@ -1292,20 +1222,6 @@ func sourceNativeScanText(src string, lex sourceNativeLexicon) Value {
 // passes through; VInt and VBool widen by Go's standard conversion. Other
 // kinds panic — float arithmetic on a string or list is a Form-author
 // bug, not a kernel fallback. Mirrors Rust's Value::as_float.
-func (v Value) asFloat() float64 {
-	switch v.Kind {
-	case VFloat:
-		return v.Float
-	case VInt:
-		return float64(v.Int)
-	case VBool:
-		if v.Bool {
-			return 1.0
-		}
-		return 0.0
-	}
-	panic(fmt.Sprintf("asFloat: %v", v))
-}
 
 // roundNdigitsDecimal — CPython `round(x, n)` for a finite double, n >= 0.
 //
@@ -1444,33 +1360,7 @@ func composeScaledDecimal(kept string, n int, neg bool) string {
 // This Go kernel follows TS — the bootstrap reference — and a future
 // breath will harmonize Rust's render to match.) Specials follow the JS
 // surface: NaN → "NaN", +Inf → "Infinity", -Inf → "-Infinity".
-func formatFloatJS(f float64) string {
-	if math.IsNaN(f) {
-		return "NaN"
-	}
-	if math.IsInf(f, 1) {
-		return "Infinity"
-	}
-	if math.IsInf(f, -1) {
-		return "-Infinity"
-	}
-	// JS's String(number) uses the shortest round-trippable representation.
-	// strconv.FormatFloat(f, 'g', -1, 64) is Go's equivalent — minimum digits
-	// for exact round-trip, scientific notation only when shorter, no trailing
-	// ".0" on integer-valued floats.
-	s := strconv.FormatFloat(f, 'g', -1, 64)
-	// JS uses "e+N" / "e-N"; Go's 'g' verb already uses "e+N"/"e-N" with
-	// signs, so the only remaining gap is JS's "1e+21" vs Go's "1e+21" —
-	// already identical. No further adjustment needed for the common case.
-	return s
-}
 
-type Closure struct {
-	Name   NameID // display only — runtime lookup uses Params/Body/Env
-	Params []NameID
-	Body   NodeID
-	Env    *Frame
-}
 
 // methodKey — (blueprint, method-name) key for the blueprint method table.
 type methodKey struct {
@@ -1486,44 +1376,13 @@ type methodKey struct {
 // case (function call with 1-3 args) beats a hash map at this size and
 // keeps the data layout cache-friendly. Linear scan is the right shape
 // for n < ~16.
-type Frame struct {
-	parent   *Frame
-	bindings []binding
-}
 
-type binding struct {
-	name NameID
-	val  Value
-}
 
-func NewFrame(parent *Frame) *Frame { return &Frame{parent: parent} }
 
 // NewCallFrame — pre-sized for a function call with `arity` params.
 // Avoids append-grow during parameter binding in the hot recursion path.
-func NewCallFrame(parent *Frame, arity int) *Frame {
-	return &Frame{parent: parent, bindings: make([]binding, 0, arity)}
-}
 
-func (f *Frame) Bind(name NameID, v Value) {
-	for i := range f.bindings {
-		if f.bindings[i].name == name {
-			f.bindings[i].val = v
-			return
-		}
-	}
-	f.bindings = append(f.bindings, binding{name, v})
-}
 
-func (f *Frame) Lookup(name NameID) (Value, bool) {
-	for cur := f; cur != nil; cur = cur.parent {
-		for i := range cur.bindings {
-			if cur.bindings[i].name == name {
-				return cur.bindings[i].val, true
-			}
-		}
-	}
-	return Value{}, false
-}
 
 // ---------------------------------------------------------------------------
 // Native functions — what Form-on-top reaches for at the leaves
@@ -1622,25 +1481,25 @@ func (k *Kernel) registerNatives() {
 		rec := &Record{Blueprint: args[0].Nid}
 		i := 1
 		for i+1 < len(args) {
-			rec.set(k.internName(args[i].Str), args[i+1])
+			rec.Set(k.internName(args[i].Str), args[i+1])
 			i += 2
 		}
 		return Value{Kind: VRecord, Rec: rec}
 	})
 	// record_get — (record_get rec "field") → value, or null if absent.
 	k.registerNative("record_get", catAccess(), func(k *Kernel, args []Value) Value {
-		v, _ := args[0].Rec.get(k.internName(args[1].Str))
+		v, _ := args[0].Rec.Get(k.internName(args[1].Str))
 		return v
 	})
 	// record_set — (record_set rec "field" value) → the record (mutated in
 	// place; shared identity means all holders see it). BML's `self.x = v`.
 	k.registerNative("record_set", catMethod(), func(k *Kernel, args []Value) Value {
-		args[0].Rec.set(k.internName(args[1].Str), args[2])
+		args[0].Rec.Set(k.internName(args[1].Str), args[2])
 		return args[0]
 	})
 	// record_has — (record_has rec "field") → bool.
 	k.registerNative("record_has", catAccess(), func(k *Kernel, args []Value) Value {
-		_, ok := args[0].Rec.get(k.internName(args[1].Str))
+		_, ok := args[0].Rec.Get(k.internName(args[1].Str))
 		return Value{Kind: VBool, Bool: ok}
 	})
 	// record_blueprint — (record_blueprint rec) → the blueprint NodeID.
@@ -1654,7 +1513,7 @@ func (k *Kernel) registerNatives() {
 		fields := args[0].Rec.Fields
 		out := make([]Value, len(fields))
 		for i, f := range fields {
-			out[i] = Value{Kind: VStr, Str: k.strs[f.name]}
+			out[i] = Value{Kind: VStr, Str: k.strs[f.Name]}
 		}
 		return Value{Kind: VList, List: out}
 	})
@@ -1985,7 +1844,7 @@ func (k *Kernel) registerNatives() {
 		// all return float. Mirrors Rust's _plus dispatch.
 		if (a.Kind == VFloat || a.Kind == VInt) && (b.Kind == VFloat || b.Kind == VInt) {
 			if a.Kind == VFloat || b.Kind == VFloat {
-				return Value{Kind: VFloat, Float: a.asFloat() + b.asFloat()}
+				return Value{Kind: VFloat, Float: a.AsFloat() + b.AsFloat()}
 			}
 		}
 		if a.Kind == VStr && b.Kind == VStr {
@@ -2024,28 +1883,28 @@ func (k *Kernel) registerNatives() {
 	// CPython's return-type convention: sqrt/pi/pow → float; floor/ceil
 	// → int (CPython 3 behaviour).
 	k.registerNative("math_sqrt", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: math.Sqrt(args[0].asFloat())}
+		return Value{Kind: VFloat, Float: math.Sqrt(args[0].AsFloat())}
 	})
 	k.registerNative("math_acos", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: math.Acos(args[0].asFloat())}
+		return Value{Kind: VFloat, Float: math.Acos(args[0].AsFloat())}
 	})
 	k.registerNative("math_pi", catMethod(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VFloat, Float: math.Pi}
 	})
 	k.registerNative("math_floor", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(math.Floor(args[0].asFloat()))}
+		return Value{Kind: VInt, Int: int64(math.Floor(args[0].AsFloat()))}
 	})
 	k.registerNative("math_ceil", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(math.Ceil(args[0].asFloat()))}
+		return Value{Kind: VInt, Int: int64(math.Ceil(args[0].AsFloat()))}
 	})
 	k.registerNative("math_pow", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: math.Pow(args[0].asFloat(), args[1].asFloat())}
+		return Value{Kind: VFloat, Float: math.Pow(args[0].AsFloat(), args[1].AsFloat())}
 	})
 	k.registerNative("math_log", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: math.Log(args[0].asFloat())}
+		return Value{Kind: VFloat, Float: math.Log(args[0].AsFloat())}
 	})
 	k.registerNative("math_exp", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: math.Exp(args[0].asFloat())}
+		return Value{Kind: VFloat, Float: math.Exp(args[0].AsFloat())}
 	})
 	// round_ndigits(x, n) — CPython `round(x, n)` for floats, EXACTLY.
 	// The Python adapter lowers `round(x, n)` → `(round_ndigits x n)`. Rounds
@@ -2053,7 +1912,7 @@ func (k *Kernel) registerNatives() {
 	// places (n >= 0), matching CPython bit-for-bit. Sibling-parity with the
 	// Rust + TS kernels. See roundNdigitsDecimal above.
 	k.registerNative("round_ndigits", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: roundNdigitsDecimal(args[0].asFloat(), args[1].Int)}
+		return Value{Kind: VFloat, Float: roundNdigitsDecimal(args[0].AsFloat(), args[1].Int)}
 	})
 
 	// ── Float construction + introspection — sibling-parity with the
@@ -2067,10 +1926,10 @@ func (k *Kernel) registerNatives() {
 	// make_uint* — used when Form code wants to hold the substrate
 	// identity rather than the value.
 	k.registerNative("make_float32", catWitness(), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VNodeID, Nid: k.internTrivialFloat32(float32(args[0].asFloat()))}
+		return Value{Kind: VNodeID, Nid: k.internTrivialFloat32(float32(args[0].AsFloat()))}
 	})
 	k.registerNative("make_float64", catWitness(), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VNodeID, Nid: k.internTrivialFloat64(args[0].asFloat())}
+		return Value{Kind: VNodeID, Nid: k.internTrivialFloat64(args[0].AsFloat())}
 	})
 
 	// File I/O
@@ -2662,7 +2521,7 @@ k.registerNative("dot_product", catMethod(), func(_ *Kernel, args []Value) Value
 	}
 	var sum float64
 	for i := range a {
-		sum += a[i].asFloat() * b[i].asFloat()
+		sum += a[i].AsFloat() * b[i].AsFloat()
 	}
 	return Value{Kind: VFloat, Float: sum}
 })
@@ -2674,7 +2533,7 @@ k.registerNative("magnitude", catMethod(), func(_ *Kernel, args []Value) Value {
 	v := args[0].List
 	var sum float64
 	for i := range v {
-		f := v[i].asFloat()
+		f := v[i].AsFloat()
 		sum += f * f
 	}
 	return Value{Kind: VFloat, Float: math.Sqrt(sum)}
@@ -2699,8 +2558,8 @@ k.registerNative("vector_cosine", catMethod(), func(_ *Kernel, args []Value) Val
 	var na float64
 	var nb float64
 	for i := range a {
-		fa := a[i].asFloat()
-		fb := b[i].asFloat()
+		fa := a[i].AsFloat()
+		fb := b[i].AsFloat()
 		dot += fa * fb
 		na += fa * fa
 		nb += fb * fb
@@ -2746,7 +2605,7 @@ k.registerNative("dominant_band_delta", catMethod(), func(_ *Kernel, args []Valu
 	maxDelta := 0.0
 	maxIdx := 0
 	for i := 0; i < n; i++ {
-		d := a[i].asFloat() - b[i].asFloat()
+		d := a[i].AsFloat() - b[i].AsFloat()
 		if d < 0 {
 			d = -d
 		}
@@ -3285,8 +3144,8 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		// arithmetic on mixed inputs). Pure int/int stays on the
 		// fast int path. Mirrors Rust kernel's RB_MATH dispatch.
 		if lv.Kind == VFloat || rv.Kind == VFloat {
-			l := lv.asFloat()
-			r := rv.asFloat()
+			l := lv.AsFloat()
+			r := rv.AsFloat()
 			switch cat.Inst {
 			case RMathPlus:
 				return Value{Kind: VFloat, Float: l + r}
@@ -3321,8 +3180,8 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		// Same width-promotion rule as math: float on either side forces
 		// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
 		if lv.Kind == VFloat || rv.Kind == VFloat {
-			l := lv.asFloat()
-			r := rv.asFloat()
+			l := lv.AsFloat()
+			r := rv.AsFloat()
 			switch cat.Inst {
 			case RCompareEq:
 				return Value{Kind: VBool, Bool: l == r}
