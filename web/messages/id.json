@@ -25,7 +25,10 @@
       "copy": "Salin tautan",
       "copied": "Tersalin!",
       "linkFor": "Tautan undangan untuk {name} — bagikan di WhatsApp:",
-      "scanToJoin": "Arahkan kamera ke sini untuk bergabung sebagai {name}"
+      "scanToJoin": "Arahkan kamera ke sini untuk bergabung sebagai {name}",
+      "pickContact": "Dari kontak",
+      "makeQr": "Buat QR gabung",
+      "noTyping": "Pilih kontak atau tunjukkan QR — tanpa mengetik."
     },
     "people": {
       "heading": "Menunggu persetujuan",

@@ -25,7 +25,10 @@
       "copy": "Link kopieren",
       "copied": "Kopiert!",
       "linkFor": "Einladungslink für {name} — teile ihn auf WhatsApp:",
-      "scanToJoin": "Kamera hierauf richten, um als {name} beizutreten"
+      "scanToJoin": "Kamera hierauf richten, um als {name} beizutreten",
+      "pickContact": "Aus Kontakten",
+      "makeQr": "Beitritts-QR erstellen",
+      "noTyping": "Kontakt wählen oder QR zeigen — kein Tippen."
     },
     "people": {
       "heading": "Wartet auf Freigabe",

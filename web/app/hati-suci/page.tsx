@@ -121,10 +121,9 @@ export default function HatiSuciPage() {
   const [whenText, setWhenText] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const [invName, setInvName] = useState("");
   const [invRole, setInvRole] = useState<Role>("member");
-  const [invPhone, setInvPhone] = useState("");
   const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string; qr: string } | null>(null);
+  const [contactPickerOk, setContactPickerOk] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -249,34 +248,53 @@ export default function HatiSuciPage() {
     [act, costAmount, costNote],
   );
 
-  const makeInvite = useCallback(async () => {
+  const makeInvite = useCallback(async (nameArg?: string, phoneArg?: string) => {
     if (!token) return;
+    const nm = (nameArg ?? "").trim();
+    const ph = (phoneArg ?? "").trim();
     setBusy(true);
     try {
       const inv = await postJSON<Member>("/api/household/invites", {
         inviter_token: token,
-        name: invName.trim() || null,
+        name: nm || null,
         role: invRole,
-        phone: invPhone.trim() || null,
+        phone: ph || null,
       });
       const url = `${window.location.origin}/hati-suci?token=${encodeURIComponent(inv.token)}`;
-      const dispName = invName.trim() || t(`hatiSuci.role.${invRole}`);
+      const dispName = nm || t(`hatiSuci.role.${invRole}`);
       const msg = `${t("hatiSuci.whatsappMsg", { name: dispName })} ${url}`;
-      const digits = invPhone.replace(/[^0-9]/g, "");
+      const digits = ph.replace(/[^0-9]/g, "");
       const whatsapp = digits
         ? `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       const qr = await QRCode.toDataURL(url, { width: 240, margin: 1 });
       setInviteLink({ name: dispName, url, whatsapp, qr });
-      setInvName("");
-      setInvPhone("");
       await load();
     } catch {
       /* ignore */
     } finally {
       setBusy(false);
     }
-  }, [token, invName, invRole, invPhone, t, load]);
+  }, [token, invRole, t, load]);
+
+  // Pull a name + number from the device address book (Android Chrome) — zero typing.
+  const pickContact = useCallback(async () => {
+    const cm = (navigator as unknown as {
+      contacts?: { select?: (props: string[], opts?: { multiple?: boolean }) => Promise<Array<{ name?: string[]; tel?: string[] }>> };
+    }).contacts;
+    if (!cm?.select) return;
+    try {
+      const picked = await cm.select(["name", "tel"], { multiple: false });
+      const c = picked?.[0];
+      await makeInvite(c?.name?.[0] ?? "", c?.tel?.[0] ?? "");
+    } catch {
+      /* cancelled / unsupported */
+    }
+  }, [makeInvite]);
+
+  useEffect(() => {
+    setContactPickerOk("contacts" in navigator && "ContactsManager" in window);
+  }, []);
 
   const grantWrite = useCallback(
     async (memberId: string) => {
@@ -420,27 +438,24 @@ export default function HatiSuciPage() {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input
-                value={invName}
-                onChange={(e) => setInvName(e.target.value)}
-                placeholder={t("hatiSuci.invite.namePlaceholder")}
-                className="rounded-xl border border-border/40 bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
-              />
-              <input
-                value={invPhone}
-                onChange={(e) => setInvPhone(e.target.value)}
-                inputMode="tel"
-                placeholder={t("hatiSuci.invite.phonePlaceholder")}
-                className="rounded-xl border border-border/40 bg-background px-3 py-2 text-sm outline-none focus:border-primary/60"
-              />
+              {contactPickerOk && (
+                <button
+                  onClick={pickContact}
+                  disabled={busy}
+                  className="rounded-xl border border-primary/40 bg-primary/5 px-3 py-2.5 text-sm font-medium text-foreground disabled:opacity-50"
+                >
+                  {t("hatiSuci.invite.pickContact")}
+                </button>
+              )}
+              <button
+                onClick={() => makeInvite()}
+                disabled={busy}
+                className={`rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50 ${contactPickerOk ? "" : "col-span-2"}`}
+              >
+                {t("hatiSuci.invite.makeQr")}
+              </button>
             </div>
-            <button
-              onClick={makeInvite}
-              disabled={busy}
-              className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
-              {t("hatiSuci.invite.create")}
-            </button>
+            <p className="text-center text-[11px] text-muted-foreground">{t("hatiSuci.invite.noTyping")}</p>
 
             {inviteLink && (
               <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">

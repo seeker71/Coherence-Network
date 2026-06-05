@@ -25,7 +25,10 @@
       "copy": "Copiar enlace",
       "copied": "¡Copiado!",
       "linkFor": "Enlace de invitación para {name} — compártelo por WhatsApp:",
-      "scanToJoin": "Apunta una cámara aquí para unirte como {name}"
+      "scanToJoin": "Apunta una cámara aquí para unirte como {name}",
+      "pickContact": "De contactos",
+      "makeQr": "Crear QR de acceso",
+      "noTyping": "Elige un contacto o muestra el QR — sin escribir."
     },
     "people": {
       "heading": "Esperando aprobación",
