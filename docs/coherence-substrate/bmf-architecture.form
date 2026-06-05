@@ -81,6 +81,11 @@ form Pattern = ~Sum [                 # one category, several arms (a tagged uni
     Rep,                              # zero+ (optionally separated)  → binds a list
     Capture,                          # bind the consumed slice to a name
     Pred,                             # lookahead / guard, consumes nothing
+    Str, Char, Num,                   # scannerless literal matchers — string / char / number, read
+                                      # straight off the cursor (no lexer, no token stream)
+    Infix,                            # precedence-climbing binary operators — operators as DATA
+    Chain,                            # postfix-suffix fold — member / call / index / template-call / ++ --
+    Ternary,                          # cond ? then : else
 ]
 
 form Literal      = { chars: ~String }                        # an exact string of characters
@@ -93,11 +98,33 @@ form Opt          = { inner: Pattern }
 form Rep          = { inner: Pattern, sep: Opt⟨Pattern⟩, min: ~Integer }
 form Capture      = { name: ~Slug, inner: Pattern }
 form Pred         = { sense: ~Bool, inner: Pattern }          # &p (and), !p (not)
+form Infix        = { operand: Pattern, table: [ { op: ~String, bp: ~Slug, prec: ~Integer } ] }
+form Chain        = { base: Pattern, expr: Pattern }          # the suffix fold; expr = how args/indices parse
+form Ternary      = { cond: Pattern, branch: Pattern }
 ```
 
 `Alt` is `choose` at the parse altitude; `Pred` is angelic lookahead; `Rep`'s
 separator handles comma-lists without a special rule. Every arm is itself a
 recipe whose children are recipes — the Pattern tree is a recipe tree.
+
+`Infix`, `Chain`, and `Ternary` are the **high-level folds**, and they are why
+there is **no result-stack**. Classic BMF accumulates matches on an imperative
+ResultStack (push on match, pop+reduce in a container) because production and
+consumption are decoupled in time. Here each rule *returns* its built node and
+its parent composes it on the return path — `Infix` folds a precedence ladder,
+`Chain` folds `a.b.c().d[i]` left into universal access/call nodes, `Ternary`
+builds `UE-COND-TERNARY` — so the recursion's reduction **is** the stack. The
+native call stack carries what the explicit ResultStack used to.
+
+Where the core primitives stand, named honestly: **fail + undo** are grounded —
+the cursor is immutable, so a failed branch costs nothing to abandon (`Alt`
+hands the *same* cursor to the next arm; do/undo are the same coordinate).
+**choice** (`Alt`) and the pattern **switch** in `Match` are correct but still
+expressed as fk-level recursion + a linear tag test; the kernel already
+dispatches its *own* execution by NodeID in O(1), so the open grounding is to
+lift pattern-kind to a Blueprint and make `Match` dispatch through that same
+O(1) NodeID switch — *switch is free* — rather than re-deriving it with a tag
+chain. That is a kernel-native step, named here so the next cell can take it.
 
 ### Template blueprints — the emitting side
 

@@ -1,6 +1,16 @@
 {
   "_note": "Blueprint registry \u2014 the single source of truth for every shape the kernel does not dispatch on (kernel-owned categories/primitives live in form-ontology.json). Generated from code by scripts/scan_form_blueprints.py --emit-registry, then curated. Each row carries the full NodeID (pkg, level, type, inst). form-ontology-loader.fk binds these names so .fk code references a name via (bp \"name\"), never the raw number. To add a shape: add a row here, then (bp \"name\") in code.",
   "blueprints": [
+    {"pkg": 1, "level": 2, "type": 17, "inst": 1, "name": "UE-LOOP", "meaning": "universal loop (for/while/foreach): init?, cond?, update?, body", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 17, "inst": 2, "name": "UE-SWITCH", "meaning": "universal switch/select: scrutinee + case clauses", "aliases": ["UE-SELECT"], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 17, "inst": 3, "name": "UE-CASE", "meaning": "switch case clause: match values + body", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 17, "inst": 4, "name": "UE-TRY", "meaning": "try block + catch clauses", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 17, "inst": 5, "name": "UE-CATCH", "meaning": "catch clause: typed param + body", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 17, "inst": 6, "name": "UE-THROW", "meaning": "throw/raise an expression", "aliases": ["UE-RAISE", "UE-FAIL"], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 12, "inst": 7, "name": "UE-MATH-INC", "meaning": "increment (++) prefix or postfix", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 12, "inst": 8, "name": "UE-MATH-DEC", "meaning": "decrement (--) prefix or postfix", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 30, "inst": 1, "name": "UE-CLASS", "meaning": "class declaration: name + type-params? + bases? + members", "aliases": [], "reuse": 0, "defined_in": []},
+    {"pkg": 1, "level": 2, "type": 30, "inst": 2, "name": "UE-INTERFACE", "meaning": "interface declaration: name + bases? + signatures", "aliases": [], "reuse": 0, "defined_in": []},
     {
       "pkg": 1,
       "level": 1,
