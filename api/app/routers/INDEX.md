@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 142
+**Total files**: 143
 
 | File | Purpose |
 |---|---|
@@ -80,6 +80,7 @@
 | [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
 | [graph_zoom.py](graph_zoom.py) | Fractal zoom navigation router (Spec 182). |
 | [health.py](health.py) | Health check endpoint (spec 001). |
+| [household.py](household.py) | Household — the resident-service nervous system for a Light Hub. |
 | [ideas.py](ideas.py) | Idea portfolio API routes. |
 | [inspired_by.py](inspired_by.py) | Inspired-by router — post a name, a subgraph appears. |
 | [interest.py](interest.py) | Interest registration API — privacy-first community gathering. |

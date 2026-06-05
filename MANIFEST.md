@@ -9,13 +9,6 @@
 > drill into next, then ~1500 tokens to know which file to read.
 > Total cost to locate any file: under 2K tokens.
 
-## Agent entry (read first)
-
-| Doc | Purpose |
-|---|---|
-| [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) | **First file for any agent** — Form/native runtime primary surface, Python bootstrap compost, read-only query default |
-| [docs/coherence-substrate/INDEX.md](docs/coherence-substrate/INDEX.md) | Substrate + Form notation drill-down |
-
 ## Narrative layer (existing)
 
 | Index | Purpose |
@@ -33,20 +26,19 @@
 | [docs/vision-kb/stories/INDEX.md](docs/vision-kb/stories/INDEX.md) | Field vignettes — scenes from the future |
 | [docs/lineage/INDEX.md](docs/lineage/INDEX.md) | Teaching lineages and presences |
 | [docs/presences/INDEX.md](docs/presences/INDEX.md) | Specific presences in the field |
-| [docs/hati-suci/INDEX.md](docs/hati-suci/INDEX.md) | Hati Suci organ ledger — the first Light Hub sensing its own electricity, water, food |
 
 ## Code layer (auto-generated)
 
 | Index | Files | Purpose |
 |---|---|---|
-| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 142 | API routers — every HTTP endpoint surface |
+| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 143 | API routers — every HTTP endpoint surface |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 244 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 56 | API models — Pydantic + ORM shapes |
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 239 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 34 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 52 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 160 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 141 | Scripts — operational tools, generators, syncers |
+| [web/app/INDEX.md](web/app/INDEX.md) | 161 | Web routes — every visible page in the app |
+| [scripts/INDEX.md](scripts/INDEX.md) | 142 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 
