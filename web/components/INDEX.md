@@ -4,13 +4,14 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 52
+**Total files**: 53
 
 | File | Purpose |
 |---|---|
 | [AnonymousMeetingTrace.tsx](AnonymousMeetingTrace.tsx) | _no top-of-file purpose_ |
 | [AskingThread.tsx](AskingThread.tsx) | _no top-of-file purpose_ |
 | [AssetRenderer.tsx](AssetRenderer.tsx) | _no top-of-file purpose_ |
+| [ChromeGate.tsx](ChromeGate.tsx) | ChromeGate — hides the site-wide chrome (header, bottom nav, badge) on |
 | [EnablePush.tsx](EnablePush.tsx) | _no top-of-file purpose_ |
 | [ExplorePager.tsx](ExplorePager.tsx) | _no top-of-file purpose_ |
 | [FeedTabs.tsx](FeedTabs.tsx) | _no top-of-file purpose_ |

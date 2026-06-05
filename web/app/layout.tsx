@@ -12,6 +12,7 @@ import { RouteReadPing } from "@/components/content/RouteReadPing";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import ChromeGate from "@/components/ChromeGate";
 import { MessagesProvider } from "@/components/MessagesProvider";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
@@ -124,14 +125,16 @@ export default async function RootLayout({
           <RouteReadPing />
           <ThemeProvider>
             <ExpertModeProvider>
-              <SiteHeader />
+              <ChromeGate><SiteHeader /></ChromeGate>
               <LiveUpdatesController />
               <main id="main-content" className="pb-16 md:pb-0">
                 {children}
                 <RouteEditablePageContent />
               </main>
-              <MobileBottomNav />
-              <SubstrateBadge />
+              <ChromeGate>
+                <MobileBottomNav />
+                <SubstrateBadge />
+              </ChromeGate>
             </ExpertModeProvider>
           </ThemeProvider>
         </MessagesProvider>
