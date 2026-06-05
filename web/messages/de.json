@@ -1,4 +1,64 @@
 {
+  "hatiSuci": {
+    "title": "Hati Suci",
+    "tagline": "Die Haus-Tafel — bitte darum, und das Feld kümmert sich. Alle sehen es, nichts ist verborgen.",
+    "you": "Du",
+    "switchUser": "wechseln",
+    "reg": {
+      "prompt": "Willkommen. Wer bist du im Haus?",
+      "namePlaceholder": "Dein Name",
+      "enter": "Ins Haus eintreten"
+    },
+    "role": { "resident": "Bewohner", "staff": "Personal" },
+    "add": {
+      "heading": "Das Feld bitten",
+      "detailPlaceholder": "Was brauchst du?",
+      "locationPlaceholder": "Wo? (welches Haus, Garten…)",
+      "whenPlaceholder": "Wann?",
+      "button": "An die Tafel senden"
+    },
+    "kind": {
+      "food": "Essen",
+      "laundry": "Wäsche",
+      "cleaning": "Reinigung",
+      "ride": "Fahrt",
+      "repair": "Reparatur",
+      "room": "Zimmer",
+      "supplies": "Vorräte",
+      "other": "Sonstiges"
+    },
+    "board": {
+      "heading": "Die Tafel",
+      "everyoneSees": "alle sehen",
+      "empty": "Die Tafel ist leer. Nichts wartet."
+    },
+    "status": {
+      "open": "Offen",
+      "acknowledged": "Gesehen",
+      "in_progress": "In Arbeit",
+      "completed": "Fertig",
+      "cancelled": "Abgebrochen"
+    },
+    "meta": {
+      "requestedBy": "erbeten von",
+      "acknowledgedBy": "übernommen von",
+      "completedBy": "erledigt von"
+    },
+    "act": {
+      "acknowledge": "Ich übernehme",
+      "start": "Beginnen",
+      "complete": "Fertig",
+      "cancel": "Abbrechen",
+      "cancelAction": "Abbrechen",
+      "markPaid": "Als bezahlt markieren"
+    },
+    "cost": {
+      "heading": "Wurde Geld für externe Mittel gebraucht? (optional)",
+      "amountPlaceholder": "Betrag (IDR)",
+      "notePlaceholder": "Wofür?",
+      "paid": "Bezahlt"
+    }
+  },
   "_attunement": {
     "lang": "de",
     "notes": "First-pass attunement from the en anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",

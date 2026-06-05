@@ -54,6 +54,7 @@ DEFAULT_PATHS = [
     "/people/contributor%3Aactualize-earth-4d812a0238eb",
     "/substrate",
     "/portfolio/investments",
+    "/hati-suci",   # the resident-service nervous system (first Light Hub membrane)
 ]
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output" / "viewport-audit"

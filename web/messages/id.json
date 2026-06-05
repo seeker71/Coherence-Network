@@ -1,4 +1,64 @@
 {
+  "hatiSuci": {
+    "title": "Hati Suci",
+    "tagline": "Papan rumah — minta, dan kami merawatnya bersama. Semua terlihat, tidak ada yang disembunyikan.",
+    "you": "Anda",
+    "switchUser": "ganti",
+    "reg": {
+      "prompt": "Selamat datang. Siapa Anda di rumah ini?",
+      "namePlaceholder": "Nama Anda",
+      "enter": "Masuk ke rumah"
+    },
+    "role": { "resident": "Penghuni", "staff": "Staf" },
+    "add": {
+      "heading": "Minta bantuan",
+      "detailPlaceholder": "Apa yang Anda butuhkan?",
+      "locationPlaceholder": "Di mana? (rumah mana, kebun…)",
+      "whenPlaceholder": "Kapan?",
+      "button": "Kirim ke papan"
+    },
+    "kind": {
+      "food": "Makanan",
+      "laundry": "Cucian",
+      "cleaning": "Bersih-bersih",
+      "ride": "Antar-jemput",
+      "repair": "Perbaikan",
+      "room": "Kamar",
+      "supplies": "Perlengkapan",
+      "other": "Lainnya"
+    },
+    "board": {
+      "heading": "Papan",
+      "everyoneSees": "semua melihat",
+      "empty": "Papan kosong. Tidak ada yang menunggu."
+    },
+    "status": {
+      "open": "Terbuka",
+      "acknowledged": "Dilihat",
+      "in_progress": "Sedang dikerjakan",
+      "completed": "Selesai",
+      "cancelled": "Dibatalkan"
+    },
+    "meta": {
+      "requestedBy": "diminta oleh",
+      "acknowledgedBy": "diambil oleh",
+      "completedBy": "diselesaikan oleh"
+    },
+    "act": {
+      "acknowledge": "Saya ambil",
+      "start": "Mulai",
+      "complete": "Selesai",
+      "cancel": "Batal",
+      "cancelAction": "Batal",
+      "markPaid": "Tandai lunas"
+    },
+    "cost": {
+      "heading": "Apakah ini perlu uang untuk sumber daya luar? (opsional)",
+      "amountPlaceholder": "Jumlah (IDR)",
+      "notePlaceholder": "Untuk apa?",
+      "paid": "Lunas"
+    }
+  },
   "_attunement": {
     "lang": "id",
     "notes": "First-pass attunement from the en anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
