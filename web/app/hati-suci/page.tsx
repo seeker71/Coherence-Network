@@ -5,6 +5,7 @@
 // cell; writing (asking, tending, settling) needs a resident's vouch.
 "use client";
 
+import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useT } from "@/components/MessagesProvider";
@@ -123,7 +124,7 @@ export default function HatiSuciPage() {
   const [invName, setInvName] = useState("");
   const [invRole, setInvRole] = useState<Role>("member");
   const [invPhone, setInvPhone] = useState("");
-  const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string } | null>(null);
+  const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string; qr: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -249,22 +250,24 @@ export default function HatiSuciPage() {
   );
 
   const makeInvite = useCallback(async () => {
-    if (!token || !invName.trim()) return;
+    if (!token) return;
     setBusy(true);
     try {
       const inv = await postJSON<Member>("/api/household/invites", {
         inviter_token: token,
-        name: invName.trim(),
+        name: invName.trim() || null,
         role: invRole,
         phone: invPhone.trim() || null,
       });
       const url = `${window.location.origin}/hati-suci?token=${encodeURIComponent(inv.token)}`;
-      const msg = `${t("hatiSuci.whatsappMsg", { name: invName.trim() })} ${url}`;
+      const dispName = invName.trim() || t(`hatiSuci.role.${invRole}`);
+      const msg = `${t("hatiSuci.whatsappMsg", { name: dispName })} ${url}`;
       const digits = invPhone.replace(/[^0-9]/g, "");
       const whatsapp = digits
         ? `https://wa.me/${digits}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      setInviteLink({ name: invName.trim(), url, whatsapp });
+      const qr = await QRCode.toDataURL(url, { width: 240, margin: 1 });
+      setInviteLink({ name: dispName, url, whatsapp, qr });
       setInvName("");
       setInvPhone("");
       await load();
@@ -433,24 +436,26 @@ export default function HatiSuciPage() {
             </div>
             <button
               onClick={makeInvite}
-              disabled={busy || !invName.trim()}
+              disabled={busy}
               className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {t("hatiSuci.invite.create")}
             </button>
 
             {inviteLink && (
-              <div className="space-y-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("hatiSuci.invite.linkFor", { name: inviteLink.name })}
-                </p>
-                <p className="break-all rounded-lg bg-background/60 px-2 py-1.5 text-xs text-foreground">{inviteLink.url}</p>
+              <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                <div className="flex flex-col items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={inviteLink.qr} alt="Join QR" width={200} height={200} className="rounded-lg bg-white p-2" />
+                  <p className="text-center text-xs text-muted-foreground">{t("hatiSuci.invite.scanToJoin", { name: inviteLink.name })}</p>
+                </div>
+                <p className="break-all rounded-lg bg-background/60 px-2 py-1.5 text-[11px] text-muted-foreground">{inviteLink.url}</p>
                 <div className="flex gap-2">
                   <a
                     href={inviteLink.whatsapp}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 rounded-lg bg-emerald-500 px-3 py-2 text-center text-sm font-medium text-white"
+                    className="flex-1 rounded-lg border border-emerald-500/40 px-3 py-2 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400"
                   >
                     {t("hatiSuci.invite.shareWhatsApp")}
                   </a>

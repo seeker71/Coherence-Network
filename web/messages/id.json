@@ -24,7 +24,8 @@
       "shareWhatsApp": "Bagikan di WhatsApp",
       "copy": "Salin tautan",
       "copied": "Tersalin!",
-      "linkFor": "Tautan undangan untuk {name} — bagikan di WhatsApp:"
+      "linkFor": "Tautan undangan untuk {name} — bagikan di WhatsApp:",
+      "scanToJoin": "Arahkan kamera ke sini untuk bergabung sebagai {name}"
     },
     "people": {
       "heading": "Menunggu persetujuan",

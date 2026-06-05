@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────────────
+# household-membrane.form — the Hati Suci membrane as a Field-Model-Form
+# domain. Body in Form; the HTTP route and the web QR/scan are carrier,
+# authored last (carrier never defines what the program IS).
+# ─────────────────────────────────────────────────────────────────────
+#
+# A residence is an attention-field. Cells (members) hold a token-identity
+# and a role; signals (requests, offers) flow across the field; trust
+# propagates by a resident's vouch. Seeing is open to any bound cell;
+# writing needs write-capability — residents/staff by construction, a
+# plain member once a resident vouches.
+#
+# JOINING is a CODEC round-trip, not data entry. The encode arm renders an
+# invite-token as a QR (link → matrix); the decode arm is the newcomer's
+# camera reading it back (matrix → link → bound member). Scan-to-join IS
+# the decoder. No name typed about another, no number guessed — the
+# round-trip carries identity; the human only points a camera.
+#
+# Companions:
+#   - field-domain-grammars.form       (carrier-kin: interspecies-and-conversation / attention-graph)
+#   - encoder-decoder-as-recipe.form   (codec-kin: invite ⇄ scan is one R_Codec)
+#   - lc-light-hubs, lc-offering, lc-economy  (why the membrane exists)
+
+(household-membrane
+
+  (lineage
+    (extends field-domain-grammars.form)
+    (carrier-kin interspecies-and-conversation)
+    (codec-kin encoder-decoder-as-recipe.form))
+
+  # ── The domain: a residence as an attention-field ───────────────────
+  (domain household-field
+    (carrier attention-graph)
+
+    (fiber
+      (cell   member)
+      (site   token)          # device credential — opaque (~192-bit), the lock
+      (site   role)           # resident | staff | member
+      (site   write)          # bool: resident/staff by construction; member by vouch
+      (site   phone)          # held private; never on the open board
+      (edge   vouched-by)     # resident → member  : the trust edge
+      (edge   requested-by)   # member → signal
+      (edge   tended-by))     # writer → signal
+
+    (patterns
+      (founding-empty  ?field)    # no resident yet → bootstrap is open
+      (invited         ?member)   # token minted, not yet scanned
+      (active          ?member)   # scanned / opened — bound to a device
+      (write-capable   ?member)   # role in {resident,staff} or vouched
+      (open-signal     ?signal)   # a request awaiting a tender
+      (recorded-cost   ?signal))  # an outside-resource cost to settle
+
+    (recipes
+      # identity / trust
+      (bootstrap  ?name -> founding-resident)     # only when founding-empty
+      (invite     ?resident ?role -> invite-token) # role only — NO name, NO number
+      (bind       ?token ?self-name -> active-member) # the decode of a scan
+      (vouch      ?resident ?member -> write-capable)  # the one-tap grant
+      # signals (the board)
+      (ask        ?writer ?kind ?detail -> open-signal)
+      (acknowledge ?writer ?signal -> seen)
+      (tend       ?writer ?signal -> in-progress)
+      (complete   ?writer ?signal ?cost -> done)
+      (settle     ?writer ?signal -> paid)
+      (reverse-from-receipt ?receipt -> prior-state))  # do/undo — BML backtracking
+
+    (lock
+      (see   open-to  active-member)     # registered → sees the board
+      (write requires write-capable)))   # vouched → writes / asks / tends
+
+  # ── The join codec: invite ⇄ scan, one R_Codec ─────────────────────
+  #
+  # encode : invite-token → QR matrix (the link rendered scannable)
+  # decode : phone camera reads QR → link → bind → active-member
+  # the round-trip the human performs is one gesture: point the camera.
+
+  (join-codec
+    (name          household.join)
+    (source-domain invite-token)
+    (target-domain qr-matrix)
+
+    (encode-arm                                   # R_Encode : token → QR
+      (source  (invite-token ?t))
+      (grammar qr-grammar)                        # version / ecc / mask as DATA, not code
+      (yield   (qr-matrix (of (join-link ?t)))))  # join-link = {origin}/hati-suci?token=?t
+
+    (decode-arm                                   # R_Decode : QR → bound member
+      (source  (qr-matrix ?m))                    # read by the phone's native camera
+      (recover (join-link -> token ?t))
+      (yield   (bind ?t ?self-name)))             # → active-member
+
+    (round-trip                                   # the proof shape (a band, see gaps)
+      (source        (invite-token ?t))
+      (via           (qr-matrix (of (join-link ?t))))
+      (reconstructed (active-member (token ?t)))
+      (fidelity      blueprint-equal)             # the token survives the loop intact
+      (human-cost    (point-camera))))            # the whole UX, in one gesture
+
+  # ── Carrier (downstream — named so it stays thin) ──────────────────
+  (carrier
+    (route     /api/household/*)        # HTTP fan-out over the recipes above
+    (qr-render web qrcode-lib)          # reuse web/.../flyer QR encoder — no new code
+    (scan      native-camera)          # the decoder is the phone itself; no scanner code
+    (note "the carrier realizes recipes already named here; it does not define them"))
+
+  # ── Honest gaps (the next breaths, each a real movement) ───────────
+  (gaps
+    (g1 "executable .fk recipes in form/form-stdlib + a household.join round-trip band — proven via validate.sh three-way on CI, not a local single-kernel claim")
+    (g2 "household.py is the CURRENT carrier but still holds the logic; it thins to serve_via_kernel over these recipes once g1 lands")
+    (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")))

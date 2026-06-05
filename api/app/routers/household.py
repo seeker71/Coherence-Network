@@ -93,7 +93,7 @@ class BootstrapBody(BaseModel):
 
 class InviteBody(BaseModel):
     inviter_token: str = Field(min_length=1)
-    name: str = Field(min_length=1, max_length=120)
+    name: str | None = Field(default=None, max_length=120)  # optional — role-only invites carry no typed name
     role: MemberRole = "member"
     phone: str | None = Field(default=None, max_length=40)
 
@@ -199,8 +199,11 @@ async def create_invite(body: InviteBody) -> MemberPrivate:
         raise HTTPException(status_code=403, detail="only a resident can invite")
     role = body.role
     write_access = role in _WRITE_ROLES
+    # Role-only invite: when no name is typed, the cell carries a placeholder
+    # until the newcomer claims it with their own name on first scan/open.
+    invite_name = (body.name or "").strip() or f"New {role}"
     node = _create_member(
-        body.name, role, write_access=write_access, status="invited",
+        invite_name, role, write_access=write_access, status="invited",
         phone=body.phone, invited_by=inviter.get("id", ""),
         invited_by_name=inviter.get("name", ""),
     )
