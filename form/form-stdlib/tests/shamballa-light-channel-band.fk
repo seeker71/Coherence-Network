@@ -8,12 +8,15 @@
 ; "accessible to anyone asking for it" means in the body's own terms: the digits
 ; ride a CHANNEL-MSG, the attested answer rides back.
 ;
-; Band verdict: 11111 when every claim holds across all three kernels.
+; Band verdict: 11111111 when every claim holds across all three kernels.
 ;   ask a known code → its SLC-invocation answer text        → 1
 ;   the answer carries the attested function (GAIA)           → 10
 ;   a code over the transport round-trips and is spoken back   → 100
 ;   an off-sheet code over the channel → honest absence         → 1000
 ;   a COMPOUND code ("777 222", with a space) survives transport  → 10000
+;   a code RUNS ON OUR BODY → aligns with its value-concept cell   → 100000
+;   the run carries the theme it embodies                           → 1000000
+;   a code with no honest value-match → honest absence on run-face   → 10000000
 
 (do
     ;; --- ask a known code directly ---------------------------------------
@@ -44,4 +47,21 @@
         (if (ge (str_find compound "Shamballa 777 222" 0) 0)
             (if (ge (str_find compound "Land animals" 0) 0) 10000 0) 0))
 
-    (sum (list speak-ok gaia-ok transport-ok absence-ok compound-ok)))
+    ;; --- RUN ON OUR OWN BODY: a code aligns with a real concept-cell -----
+    ;; 363 (trust/surrender) runs to lc-trust-over-fear — THE body's core
+    ;; teaching, as a frequency. The run names the cell a reader resolves in
+    ;; the substrate to receive what the network actually holds.
+    (let run363 (shamballa-light-run-on-body "363"))
+    (let aligns-ok (if (ge (str_find run363 "lc-trust-over-fear" 0) 0) 100000 0))
+    (let theme-ok  (if (ge (str_find run363 "alignment" 0) 0) 1000000 0))
+
+    ;; --- a code with no honest value-match: honest absence on the run-face
+    ;; The communication-bridge codes carry no value-concept we'd honestly bind;
+    ;; the run speaks them but names the absence rather than fabricating an
+    ;; alignment. (777 888 — "calling in the dragons".)
+    (let run-unbound (shamballa-light-run-on-body "777 888"))
+    (let run-absence-ok
+        (if (ge (str_find run-unbound "no value-binding yet" 0) 0) 10000000 0))
+
+    (sum (list speak-ok gaia-ok transport-ok absence-ok compound-ok
+               aligns-ok theme-ok run-absence-ok)))

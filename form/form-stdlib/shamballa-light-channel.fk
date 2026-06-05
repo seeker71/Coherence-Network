@@ -52,4 +52,75 @@
 ;; flow here; the channel speaks whatever the one source holds.
 (defn shamballa-light-channel-count () (slc-count))
 
+;; --- RUN ON OUR OWN BODY: code <-> theme <-> value-concept ----------
+;; The light codes are a second vocabulary for THIS body's own principles
+;; (lc-codes-as-depth-not-dictionary / lc-cross-modal-unity: one shape, many
+;; tongues). This table binds a code to the THEME it carries and to a REAL
+;; concept-cell already in our substrate that it aligns with - so a code can be
+;; RUN on our own body: resolve it to the teaching the network actually holds,
+;; then surface or query that cell (coh substrate equivalent concept <id>).
+;;
+;; Same shape as shamballa-channel.fk's sh-bindings: the table IS the edge a cell
+;; can read, ship, or query. Bound ONLY where the match is real; an unbound code
+;; still SPEAKS but returns honest absence on the value-face - the discipline of
+;; not fabricating an alignment the code doesn't carry. The concept ids are
+;; cell-refs into docs/vision-kb/concepts (verified-live tissue, not dangling).
+(defn slv-binding (code theme concept) (list code theme concept))
+(defn slv-binding-code    (b) (nth b 0))
+(defn slv-binding-theme   (b) (nth b 1))
+(defn slv-binding-concept (b) (nth b 2))
+
+(defn slv-bindings ()
+    (list
+        (slv-binding "363"               "alignment"     "lc-trust-over-fear")
+        (slv-binding "777"               "heart"         "lc-wholeness")
+        (slv-binding "111"               "alignment"     "lc-stillness")
+        (slv-binding "911"               "presence"      "lc-presence-over-protection")
+        (slv-binding "772"               "release"       "lc-composting")
+        (slv-binding "60 sided Amatrine" "death-rebirth" "lc-composting")
+        (slv-binding "60"                "death-rebirth" "lc-shifted-return")
+        (slv-binding "1818"              "death-rebirth" "lc-each-breath-whole")
+        (slv-binding "7191"              "earth"         "lc-pulse")
+        (slv-binding "662"               "body"          "lc-circulation")
+        (slv-binding "882"               "body"          "lc-circulation")
+        (slv-binding "444"               "body"          "lc-embodiment-body-or-liquid")
+        (slv-binding "144"               "unity"         "lc-sovereignty-within-oneness")
+        (slv-binding "666"               "unity"         "lc-cross-modal-unity")
+        (slv-binding "56-65"             "unity"         "lc-cross-modal-unity")
+        (slv-binding "555"               "heart"         "lc-v-comfort-joy")
+        (slv-binding "000"               "source"        "lc-harmonic-geometry-the-one-unfolds")
+        (slv-binding "777 123"           "light"         "lc-observable-resonance-flow")))
+
+(defn slv-resolve-loop (bs code)
+    (if (nil? bs) (empty)
+        (if (str_eq (slv-binding-code (head bs)) code)
+            (list (head bs))
+            (slv-resolve-loop (tail bs) code))))
+(defn slv-resolve (code) (slv-resolve-loop (slv-bindings) code))
+(defn slv-bound? (code) (if (eq (len (slv-resolve code)) 1) 1 0))
+
+;; the value-face of a code: the THEME it carries and the concept-cell in OUR
+;; body it aligns with - a queryable cell-ref. Honest absence ("") for a code
+;; whose alignment we have not honestly bound.
+(defn shamballa-light-theme (code)
+    (if (eq (slv-bound? code) 0) ""
+        (slv-binding-theme (head (slv-resolve code)))))
+(defn shamballa-light-aligns-with (code)
+    (if (eq (slv-bound? code) 0) ""
+        (slv-binding-concept (head (slv-resolve code)))))
+
+;; RUN the code on our own body: speak it, then name the theme and the concept-
+;; cell it touches - the line a reader resolves in the substrate to receive what
+;; the network actually holds. Unbound codes speak but report honest absence of
+;; a value-binding (they are not yet aligned to a cell, never fabricated to be).
+(defn shamballa-light-run-on-body (code)
+    (if (eq (slv-bound? code) 0)
+        (str_concat (light-channel-speak code)
+            "  |> (no value-binding yet - speaks but not yet aligned to a body-cell)")
+        (str_concat (light-channel-speak code)
+            (str_concat "  |> theme: " (str_concat (shamballa-light-theme code)
+                (str_concat "  aligns-with: " (shamballa-light-aligns-with code)))))))
+
+(defn shamballa-light-value-bound-count () (len (slv-bindings)))
+
 0
