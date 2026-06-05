@@ -152,6 +152,25 @@ else
   log "Dockerfile.api: not present in repo (legacy image path in use)"
 fi
 
+# Bump the compose build-context SHAs to TARGET before building. Each service's
+# build context is a pinned GitHub URL (context: ...Coherence-Network.git#<sha>
+# [:subdir]); `docker compose build` fetches THAT commit, ignoring the local
+# repo we just `git reset --hard`'d to TARGET. Without this rewrite every
+# rebuild builds the OLD pinned commit while .env DEPLOYED_SHA and /api/health
+# report TARGET — the silent stale-code trap that stranded the household router
+# and the /hati-suci route on a day-old image (build logged "success", code was
+# a day behind, post-deploy verify passed because it reads the env stamp, not
+# the actual code). Rewrite every pinned context (api, web, pulse, ...) so the
+# build uses the code we are actually deploying. The `:subdir` suffix
+# (e.g. #<sha>:pulse) is preserved — only the 7-40 hex SHA after `.git#`
+# is replaced.
+if grep -qE 'Coherence-Network\.git#[0-9a-f]{7,40}' "$COMPOSE_ROOT/docker-compose.yml"; then
+  sed -i -E "s|(Coherence-Network\.git#)[0-9a-f]{7,40}|\1${TARGET_SHA}|g" "$COMPOSE_ROOT/docker-compose.yml"
+  log "compose build contexts bumped to ${TARGET_SHA:0:12}"
+else
+  log "compose build contexts: no pinned github SHA found (local-context build?) — skipped"
+fi
+
 # api + web + pulse share the same repo and SHA. Rebuilding all three
 # on every push keeps the witness in step with what it's probing —
 # when the web page's marker vocabulary drifts (as it did when locale
