@@ -333,7 +333,7 @@ fn read_string_trivial(k: &Kernel, n: NodeID) -> Option<String> {
     // table directly; the clone is cheap relative to a canonicalize call.
     let v = k.trivial_value(n);
     match v {
-        crate::Value::Str(s) => Some(s),
+        crate::Value::Str(s) => Some(s.to_string()),
         _ => None,
     }
 }
