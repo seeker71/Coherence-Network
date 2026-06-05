@@ -218,6 +218,33 @@ target is **native engine + cut + a left-factored grammar** together — each wa
 one leg of why the thesis was fast, and we'd been missing all three. Next
 experiment: a native Match inner loop, aliased in, benchmarked the same way.
 
+**Third experiment — reshape the grammar itself (full freedom granted).** With
+license to change any grammar shape for efficiency, I flattened: inlined the thin
+`orexpr` wrapper into `expr` (one fewer rule-dispatch per operand) and reordered
+`primary` so the common operand — an identifier — matches in 2 alt-tries instead
+of 5 (with `litnum` kept first, since `ident`'s alnum-run also matches digits —
+a reorder that looked free but would have silently parsed numbers as identifiers,
+and the consume-metric wouldn't have caught it). Measured, same coverage:
+
+```
+Go, BMF-grammar prefix workload:   baseline 8.45s    flattened 7.80s   (~8%)
+```
+
+So grammar reshape is **real but small (~8%)**, and the packrat result already
+told us why: the cost isn't re-parsing or wide alt-exploration — it's the *single*
+deep parse of every operand, interpreted. The ladder's loops already live in
+engine combinators (`infix`/`chain`/`ternary`); the fk-rule overhead that's left
+is a handful of dispatches per token, and shaving them buys ~8%, not 8×.
+
+**The settled conclusion, evidenced across four experiments** (packrat 0 %, cut
+~2× but coverage-confounded, flatten ~8 %, profile = ~all in `walk`): *the BML
+grammar is not the bottleneck — the interpreter is.* The grammar is already
+about as token- and shape-efficient as interpretation rewards; the multiplier is
+to stop interpreting `Match` and run it as native code (the thesis's compiled
+engine), with cut and a left-factored grammar as second-order gains on top. Each
+grammar experiment was honest and cheap; together they rule out the grammar as
+the lever and point, with evidence, at the engine.
+
 ### Template blueprints — the emitting side
 
 ```form
