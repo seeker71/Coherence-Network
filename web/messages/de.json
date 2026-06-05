@@ -32,7 +32,9 @@
       "scanToJoin": "Kamera hierauf richten, um als {name} beizutreten",
       "pickContact": "Aus Kontakten",
       "makeQr": "Beitritts-QR erstellen",
-      "noTyping": "Kontakt wählen oder QR zeigen — kein Tippen."
+      "noTyping": "Kontakt wählen oder QR zeigen — kein Tippen.",
+      "share": "Einladung teilen",
+      "shareText": "Tritt dem Hati-Suci-Haushaltsbrett bei"
     },
     "people": {
       "heading": "Wartet auf Freigabe",
@@ -97,6 +99,10 @@
       "customAdd": "Hinzufügen",
       "hint": "Zum Hinzufügen tippen — Menge danach setzen",
       "yourList": "Deine Liste"
+    },
+    "claim": {
+      "prompt": "Willkommen! Wie sollen wir dich nennen?",
+      "button": "Das bin ich"
     }
   },
   "_attunement": {
