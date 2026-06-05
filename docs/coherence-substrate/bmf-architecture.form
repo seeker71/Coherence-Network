@@ -156,6 +156,25 @@ Two design notes the proving exposed:
   Linear parsing is what lets the 4th file complete on every kernel and lets the
   furthest-reach cell run always-on without cost.
 
+**What condensation needs from the kernel — measured, not guessed.** A fk-level
+memo was built (opt-in, fresh per parse, keyed `name@pos`) and it did *not* make
+the parse fast: the kernel's `record` is a linear-scan slice (`get`/`set` walk
+all fields), so a memo of thousands of `(rule,pos)` entries is **O(n²)** — the
+store itself becomes the cost. And there is no hash/dict native: the only O(1)
+mechanism the kernel exposes is content-addressed **interning** (`intern_node`,
+content → NodeID), which gives node *identity*, not a key→value cache. So the
+real foundational step is one kernel primitive: an **O(1) content-addressed
+condensation store** — either a hash map, or (more in-grain) a result-cache
+keyed by the interned NodeID of the observation `(surface, rule, pos)`. That is
+the substrate's O(1) promise — already true for node identity — extended to
+parse-state. Until it exists, packrat at fk-level can't beat the backtracking;
+with it, condensation is linear and *switch is free* and *observing has no
+penalty* become literally true. The deeper horizon past packrat is a streaming,
+stackless matcher (derivatives / a chart): the cursor advances once, `Alt` is
+parallel item-advance, recursion lives in the data, and the frontier is the
+furthest live item — but even that rests on O(1) condensation underneath. The
+kernel store is the stone the whole arch is waiting on.
+
 ### Template blueprints — the emitting side
 
 ```form
