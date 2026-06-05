@@ -24,7 +24,8 @@
       "shareWhatsApp": "Share on WhatsApp",
       "copy": "Copy link",
       "copied": "Copied!",
-      "linkFor": "Invite link for {name} — share it on WhatsApp:"
+      "linkFor": "Invite link for {name} — share it on WhatsApp:",
+      "scanToJoin": "Point a camera here to join as {name}"
     },
     "people": {
       "heading": "Waiting for a vouch",

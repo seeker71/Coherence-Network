@@ -24,7 +24,8 @@
       "shareWhatsApp": "Auf WhatsApp teilen",
       "copy": "Link kopieren",
       "copied": "Kopiert!",
-      "linkFor": "Einladungslink für {name} — teile ihn auf WhatsApp:"
+      "linkFor": "Einladungslink für {name} — teile ihn auf WhatsApp:",
+      "scanToJoin": "Kamera hierauf richten, um als {name} beizutreten"
     },
     "people": {
       "heading": "Wartet auf Freigabe",
