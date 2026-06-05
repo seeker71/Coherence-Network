@@ -138,6 +138,13 @@ def _member_by_token(token: str | None) -> dict | None:
     return None
 
 
+def _is_placeholder_name(name: str) -> bool:
+    """A role-only invite carries 'New {role}' until the newcomer claims it
+    with their own name on first open — the self-name half of `bind` in
+    docs/coherence-substrate/household-membrane.form."""
+    return not name or name.startswith("New ")
+
+
 def _create_member(name: str, role: str, *, write_access: bool, status: str,
                    phone: str | None, locale: str = "en",
                    invited_by: str = "", invited_by_name: str = "") -> dict:
@@ -218,12 +225,23 @@ async def create_invite(body: InviteBody) -> MemberPrivate:
     response_model=MemberPrivate,
     summary="Resolve your identity by device token (activates an invite on first open)",
 )
-async def whoami(token: str = Query(min_length=1)) -> MemberPrivate:
+async def whoami(
+    token: str = Query(min_length=1),
+    name: str | None = Query(default=None),
+) -> MemberPrivate:
     node = _member_by_token(token)
     if not node:
         raise HTTPException(status_code=404, detail="unknown token")
+    # bind: activate an invited cell, and let the newcomer claim their own
+    # name (only over a placeholder — never clobber a real one).
+    kwargs: dict[str, Any] = {}
     if node.get("status") == "invited":
-        node = graph_service.update_node(node["id"], properties={"status": "active"}) or node
+        kwargs["properties"] = {"status": "active"}
+    claimed = (name or "").strip()
+    if claimed and _is_placeholder_name(node.get("name", "")):
+        kwargs["name"] = claimed[:80]
+    if kwargs:
+        node = graph_service.update_node(node["id"], **kwargs) or node
     return _member_private(node)
 
 
@@ -233,7 +251,9 @@ async def whoami(token: str = Query(min_length=1)) -> MemberPrivate:
     summary="Everyone in the household — public view, no tokens or phones",
 )
 async def list_members(role: str | None = Query(default=None)) -> list[MemberPublic]:
-    members = _all_members()
+    # The roster is the people actually here (Form: `see open-to active-member`).
+    # Pending invites stay off it until the newcomer opens their link.
+    members = [m for m in _all_members() if m.get("status") == "active"]
     if role:
         members = [m for m in members if m.get("role") == role]
     members.sort(key=lambda n: n.get("created_at", ""))

@@ -32,7 +32,9 @@
       "scanToJoin": "Apunta una cámara aquí para unirte como {name}",
       "pickContact": "De contactos",
       "makeQr": "Crear QR de acceso",
-      "noTyping": "Elige un contacto o muestra el QR — sin escribir."
+      "noTyping": "Elige un contacto o muestra el QR — sin escribir.",
+      "share": "Compartir invitación",
+      "shareText": "Únete al tablero del hogar Hati Suci"
     },
     "people": {
       "heading": "Esperando aprobación",
@@ -97,6 +99,10 @@
       "customAdd": "Añadir",
       "hint": "Toca para añadir — ajusta la cantidad",
       "yourList": "Tu lista"
+    },
+    "claim": {
+      "prompt": "¡Bienvenido! ¿Cómo te llamas?",
+      "button": "Soy yo"
     }
   },
   "_attunement": {
