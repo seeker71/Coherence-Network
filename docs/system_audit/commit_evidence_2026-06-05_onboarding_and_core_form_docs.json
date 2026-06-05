@@ -1,7 +1,7 @@
 {
   "date": "2026-06-05",
   "thread_branch": "codex/agent-doc-updates-20260605",
-  "commit_scope": "Update onboarding and form language core documentation with JIT gaps, observability gaps, data folding paradigms, and syntactic parser constraints.",
+  "commit_scope": "Update onboarding and form language core documentation with JIT gaps, observability gaps, data folding paradigms, and the BML vs Form-BML Dialect syntactic constraints distinction.",
   "files_owned": [
     "docs/shared/agent-start-packet.md",
     "docs/coherence-substrate/form-language.md",
