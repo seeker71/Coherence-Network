@@ -137,6 +137,34 @@ grammar + kernel realization; treat Python path as bootstrap fallback.
 
 Deeper substrate practice: [`agents-using-substrate.md`](../coherence-substrate/agents-using-substrate.md)
 
+## Shifting the Mind: How to Think and Code Differently
+
+Imperative software models train developers to reason about instructions mutating memory state, querying databases via symbol strings, and handling control flow via statistical rules. 
+In the Coherence substrate, you must redirect this programming into **coordinates** and **relations**:
+
+1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
+2. **Angelic Speculation (Choose, Fail, Stop)**: Replace complex, brittle branching conditions with logical relation. Speculative paths (`choose`, `fail`, `stop`) allow the execution engine to navigate branch points natively without leaving state mutation sediment, because nothing mutates.
+3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (compiled, cached JIT execution plans).
+4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, and TypeScript have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
+
+## JIT Engine Reality & Gaps
+
+The JIT compiler (`form-kernel-go/jit.go`) is an active optimization layer that compiles Form closures to Go shared libraries dynamically. However, you must design with its current gaps in mind:
+
+* **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
+* **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
+* **No Outer Scope Capture / Nested Defs**: The JIT refuses compiles if a recipe contains nested function definitions (`RBasicFnDef`) or references free variables from an outer lexical scope.
+* **No String or Map Support**: Trivial strings (`TrivString`) and complex object mappings are completely unsupported inside JIT compiled bodies.
+* **No Sibling Parity**: The JIT is specific to the Go kernel. Rust and TypeScript run pure interpreter loops or native host optimization (V8), meaning optimization is asymmetric.
+
+## Observability Gaps: Possible vs. Present
+
+To sense the body honestly, we must acknowledge the gap between what is possible and what is currently present:
+
+* **Possible Telemetry**: Full lineage-level tracing of every cell-state transition, precise token-range source provenance of every node, and real-time execution heatmaps.
+* **Actually Present**: Coarse latency metrics, static wellness checks (`make wellness`), and offline analysis. The remote production observability routes (`/api/substrate/shape_health`, `/api/views/health`) often fail with 404s when queried locally, creating a gap between local development and VPS telemetry.
+* **Closing the Gap**: Telemetry must be compiled directly into the native runtime rather than relying on external Python host-framework wrappers. Telemetry should write directly to native edge-event ledgers and post-heal witness logs on the substrate, served through native routes in `http-serve.fk`.
+
 ## Core Vision
 
 Coherence Network is an open intelligence organism where ideas, people, agents,

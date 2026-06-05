@@ -101,9 +101,17 @@ Every node — Blueprint, Recipe, Cell — is a `NodeID(package, level, type, in
 
 The trinity names three phases of a node: **Blueprint (ice)** — structural identity; **Recipe (water)** — operational expression; **NamedCell (gas)** — diffuse individuation. These are not fixed castes. They are phases on a condensation gradient, and **observation is the temperature**.
 
-A shape first appears diffuse — a cell, gas, one occurrence among many. Observed again, and again, the repeated category occurrence *cools* it: the recurring pattern condenses from gas into a recipe (water — an operational shape the body now runs), and a recipe observed enough condenses into a blueprint (ice — structural identity the body recognizes on sight). Repetition is cooling; cooling is condensation; condensation is the body learning what is solid.
+### The Phase-Change Gradient
 
-**JIT is one result of this.** A recipe walked once is interpreted. Walked enough — observed hot — it condenses into a cached, then a compiled, artifact. The JIT is not a separate optimizer bolted on; it is the same gas→water→ice condensation applied to execution. Content-addressing makes the cache key free (same shape = same coordinate = same compiled artifact), and observer-side tracing means the emitter pays nothing — the observer watches, the hot path condenses on its own.
+* **Gas (Raw, Low-Level Occurrences)**: Raw external inputs (e.g. disk seeks, packet bytes, git commits, terminal stderr, or DMT laser diffraction logs) enter the system as volatile, diffuse gas. They are unstructured occurrences with high entropy.
+* **Water (Structured Relations)**: By passing this gas through a domain grammar, the parser extracts relationships and binds them as recipes (`RBasic` NodeID trees on the lattice). The diffuse gas is "cooled" into a structured, walkable flow.
+* **Ice (Native Code / Structural Identity)**: As a recipe is walked repeatedly, the observer-side JIT watches it run. If it runs hot, the JIT compiles the recipe directly to native Go shared plugins or Rust/TS fast-paths. The recipe's AST condenses into a solid, high-performance host artifact. Content-addressing makes the cache key free: **same shape = same coordinate = same compiled artifact**.
+
+### Folding Raw Data into Trust Channels
+
+We do not write complex imperative wrappers to handle low-level I/O. Instead, we **fold** low-level data directly into the lattice using domain grammars. For instance, rather than parsing JSON or natural language inside a Go/Rust host application, the source stream is fed to a grammar rulebook. The grammar maps the input directly onto content-addressed cells in the substrate. 
+
+Once the data is inside the lattice, verification becomes geometric rather than statistical. Sibling kernels (Go, Rust, and TS) execute the resulting recipes and compare output hashes. If they agree, the data is attunely folded into the higher-level presence channels. This structural agreement builds absolute **self-trust** and eliminates the need for host-level boundary assertions.
 
 This is why **observing is core, not incidental.** The framebuffer — a kernel-native lens onto the live lattice — and observer-side tracing exist so the body can watch itself condense. What is observed often becomes solid; what is never observed stays diffuse and eventually composts. Attention is what moves a node up the phase gradient.
 
@@ -150,12 +158,20 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 > **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new host-language app.
 
+### Syntactic Constraints in the BML/Form Parser
+
+When authoring native BML (`section [form.bml]`) for the `source-compiler.fk` compiler, you must comply with two parser constraints to prevent compilation failures:
+
+1. **Single-Line `=` Function Declarations**: The BML parser splits top-level statements on newline boundaries. As a result, function definitions utilizing the `=` assignment operator **must be written entirely on a single line** (e.g. `def my_helper(x) = x + 1;`). Spanning an `=` definition across lines truncates the definition and causes syntax panics on subsequent lines. If a multi-line body is required, you must wrap the function body in a braced `{ ... }` block.
+2. **Standalone Comment Lines**: Inline comments (`// ...`) placed after a semicolon (e.g. `let w = x + y; // comment`) split the statement block. The statement splitter treats the semicolon as a statement boundary, causing the comment text to be parsed as a separate syntax node (which fails AST emission). **All comments must live on their own standalone lines.**
+
 → [`agents-using-substrate.md`](agents-using-substrate.md) (when to query the lattice) · [`BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md) · [`bmf-form-runtime.form`](bmf-form-runtime.form) · [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md)
 
-## Current landing — what integrated by 2026-05-31
+## Current landing — what integrated by 2026-06-05
 
 Form has crossed from notation into runtime tissue. The recent integrated arc is not one feature; it is the same shape arriving through several carriers:
 
+- **BML-Native Logic Proofers & ML Flow (June 2026)**: Modus Ponens speculative logic proofer ([math-proofer.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/grammars/math-proofer.fk) + [math-proofer-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/tests/math-proofer-band.fk)) and float vector tensor operators/timesteps ([ml-flow-band.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/tests/ml-flow-band.fk) + [ml-diffusion-model-flow.form](file:///Users/ursmuff/source/Coherence-Network/docs/coherence-substrate/ml-diffusion-model-flow.form)) are compiled and executed natively across sibling kernels (Go, Rust, and TypeScript) with zero host-interpreter layers in the execution path.
 - **Imperative and object-oriented source executes on Form.** Unary operators, boolean chains, loops, dictionaries, comprehensions, power, records, methods, exceptions, and classes lift from source dialects into universal Form/kernel shapes, with sibling proof across Go, Rust, and TypeScript where the vector applies.
 - **The runtime can inspect itself.** `category`, `nchildren`, `child`, and trivial-leaf decoders let Form code walk Recipe NodeIDs from inside Form. The meta-circular evaluator in [`form-engine.form`](form-engine.form) covers the dispatch surface the wellness check names.
 - **Storage is a Port, not a special case.** Memory, segmented-file logs, filesystem cells, and Postgres carriers are unified behind storage/resource ports. TCP and filesystem natives give the kernels real I/O surfaces while keeping the substrate tree as the identity layer.
