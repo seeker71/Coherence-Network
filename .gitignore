@@ -33,6 +33,9 @@ out/
 .env.*
 !.env.example
 
+# Local MCP server config — commonly embeds API tokens; keep out of git
+mcp.json
+
 # Test / coverage
 .coverage
 htmlcov/
