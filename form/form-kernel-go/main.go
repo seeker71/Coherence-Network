@@ -526,9 +526,18 @@ type Kernel struct {
 	// machinery wired into the `jit_compile` env-aware native). Read on
 	// every FNCALL closure dispatch: when present, marshal Form int args
 	// to int64, call the loaded function, box the int64 result back to
-	// VInt. Same shape as TS kernel's k.jitCompiled. Linux-only by design
-	// — Go's `plugin` package only loads ELF .so on Linux.
+	// VInt. Same shape as TS kernel's k.jitCompiled. Go's `plugin` package
+	// loads native shared objects on linux, darwin, and freebsd — verified
+	// working on darwin/arm64 (the build-id match comes from the plugin
+	// sharing the kernel's go.mod toolchain via readHostGoVersion).
 	jitCompiledGo map[string]func([]int64) int64
+	// jitCompiledGoV — body-NodeID-key → Value-typed native function. The
+	// general JIT path (jit_value.go): compiles ANY recipe to a plugin that
+	// operates on core.Value and routes native / cross-function calls back
+	// through a kernel-supplied dispatch. Read on FNCALL closure dispatch
+	// before the int64 fast path; when present, runs the body native with no
+	// walk-interpreter overhead. Falls back to walk when a shape can't lower.
+	jitCompiledGoV map[string]jitValueFn
 }
 
 type sourceLoc struct {
@@ -550,8 +559,9 @@ func NewKernel() *Kernel {
 		natives:       make(map[NameID]NativeEntry),
 		envNatives:    make(map[NameID]EnvAwareNativeEntry),
 		methods:       make(map[methodKey]*Closure),
-		jitAliases:    make(map[NameID]NameID),
-		jitCompiledGo: make(map[string]func([]int64) int64),
+		jitAliases:     make(map[NameID]NameID),
+		jitCompiledGo:  make(map[string]func([]int64) int64),
+		jitCompiledGoV: make(map[string]jitValueFn),
 	}
 	k.registerNatives()
 	return k
@@ -2119,6 +2129,34 @@ func (k *Kernel) registerNatives() {
 		k.jitCompiledGo[bodyKey] = fn
 		return Value{Kind: VInt, Int: 1}
 	})
+	// jit_compile_value form-name-str → 1 if the Value-typed JIT compiled
+	//   the named closure to a native plugin, 0 on honest fallback (source
+	//   root unavailable, or a recipe shape the emitter can't lower yet),
+	//   -1 if the name isn't bound to a closure. The general path: compiles
+	//   ANY recipe (lists, strings, native calls, cross-function calls) to a
+	//   plugin operating on core.Value, with calls routed through dispatch.
+	//   The recipe stays canonical truth; this just runs it native.
+	k.registerEnvNative("jit_compile_value", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 1 || args[0].Kind != VStr {
+			return Value{Kind: VInt, Int: -1}
+		}
+		nameID := k.internName(args[0].Str)
+		v, ok := env.Lookup(nameID)
+		if !ok || v.Kind != VClosure {
+			return Value{Kind: VInt, Int: -1}
+		}
+		cl := v.Cl
+		bodyKey := nodeIDKey(cl.Body)
+		if _, exists := k.jitCompiledGoV[bodyKey]; exists {
+			return Value{Kind: VInt, Int: 1}
+		}
+		fnv, err := jitCompileClosureValueGo(k, cl)
+		if err != nil {
+			return Value{Kind: VInt, Int: 0}
+		}
+		k.jitCompiledGoV[bodyKey] = fnv
+		return Value{Kind: VInt, Int: 1}
+	})
 	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
 	// for this name, else 0. Lets Form code introspect dispatch routing.
 	k.registerNative("jit_aliased?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
@@ -3347,6 +3385,17 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			argVals[i-1] = k.walk(kids[i], env)
 		}
 		bodyKey := nodeIDKey(cl.Body)
+		// Value-typed JIT — the general path. Runs the whole body native
+		// over core.Value, routing native / cross-function calls through
+		// dispatch. No arg-kind restriction (lists, strings, records all
+		// flow). Checked first because it subsumes the int64 fast path.
+		if _, ok := k.jitCompiledGoV[bodyKey]; ok {
+			if k.Trace != nil {
+				k.Trace.recordFn(k.nameStr(cl.Name))
+				k.Trace.recordNative("jit-go-value-dispatch")
+			}
+			return k.applyClosureValue(cl, argVals)
+		}
 		if fn, ok := k.jitCompiledGo[bodyKey]; ok {
 			allInt := true
 			intArgs := make([]int64, len(cl.Params))
