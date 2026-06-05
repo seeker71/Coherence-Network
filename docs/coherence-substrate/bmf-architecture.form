@@ -147,7 +147,7 @@ Two design notes the proving exposed:
 - **It surfaces the real frontier: backtracking cost.** With the deep parse
   unlocked, the grammar's PEG backtracking is the wall — the same `(rule, pos)`
   is re-parsed across `Alt` branches and `Chain` arg-exprs, multiplying through
-  expression depth. Rust hangs on the full 456-line file. This is the twin of
+  expression depth. This is the twin of
   the O(1)-switch grounding: **packrat memoization** — cache `(rule, pos) →
   result`, turning exponential re-descent into linear. It IS the body's own
   teaching that *repeated observation condenses to one result* (gas→water→ice,
@@ -171,9 +171,25 @@ Packrat makes **no difference**. The cost is not the same `(rule, pos)` being
 re-parsed across `Alt` branches — so caching it saves nothing. A CPU sample says
 why: **~all time is in `main.(*Kernel).walk`** — the fk interpreter's tree-walk.
 The grammar runs as *interpreted fk*; every `g-match`, every `str_eq` tag test,
-every `cons`/`if`/`let` is a `walk` step, and there are millions of them. (Rust
-hung where Go finished in 18s for the same reason: a slower per-op interpreter,
-not a different algorithm.)
+every `cons`/`if`/`let` is a `walk` step, and there are millions of them.
+
+**The Rust wall was memory, not speed — fixed (cross-kernel 2222 shipped, #2514).**
+Rust did not hang on a slow interpreter; it OOM'd at 242 GB on the 15 KB file
+where Go used ~10 MB. Two carrier bugs, both *holding the past you no longer
+need*: (1) `Value::Str`/`List` deep-cloned on every `clone()`, and the cursor —
+which embeds the whole source string — is threaded through every call, so each
+parse step deep-copied the file (fix: `Arc<str>` / `Arc<Vec<Value>>`, so clone is
+a refcount bump, matching Go's shared slice/string backing); (2) the arena pushed
+a `Frame` per call and never reclaimed it *during* eval, where Go's GC frees
+`*Frame`s the moment they go unreachable (fix: the `walk` wrapper truncates frames
+on return, guarded by *no closure was created during the call* — a closure is the
+only `Value` that captures a `FrameId`, so otherwise every frame above the entry
+mark is provably dead). Result: **18–21 MB flat regardless of input; the full
+file parses to EOF in 19 MB**, and the realfiles band is Go = Rust = TS = 2222.
+This is the body's own teaching made literal in the carrier — *hold only now (the
+cursor) and the trusted result, release the derivation*. The interpreter speed
+below is real and orthogonal: it is now a *speed* lever (the JIT), no longer a
+*completion* wall.
 
 So the lever is not condensation, and it is *not* hand-porting a native Match
 into Go/Rust/TS — that would fork the engine out of Form and break *"the only
