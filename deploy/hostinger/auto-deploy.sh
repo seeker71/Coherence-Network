@@ -381,6 +381,28 @@ else
   up_ended="$(date +%s)"
   up_elapsed=$((up_ended - up_started))
   log "TIMING: docker compose up took ${up_elapsed}s"
+
+  # Post-condition: every targeted service MUST end up running. The recreate
+  # dance — and its rm-then-up recovery — can silently leave a service down.
+  # That took the whole site offline once: api came back, web + pulse did not,
+  # and nothing noticed for ~an hour. Never declare a deploy done with a
+  # service missing; clear orphans for it, recreate, and fail loudly if it
+  # still won't start. This only touches services that are NOT running, so it
+  # can't disturb a healthy one.
+  # shellcheck disable=SC2086 -- intentional word-splitting on service list
+  for svc in ${REBUILD_SERVICES}; do
+    if ! docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
+      log "post-deploy: ${svc} is NOT running — clearing orphans and forcing a clean recreate"
+      docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${svc}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      docker compose up -d "${svc}" 2>&1 | tee -a "$LOG_FILE" || true
+      sleep 3
+      if docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
+        log "post-deploy: ${svc} recovered"
+      else
+        log "FATAL post-deploy: ${svc} STILL not running after clean recreate — site may be degraded"
+      fi
+    fi
+  done
 fi
 
 
