@@ -9,7 +9,11 @@
       "namePlaceholder": "Dein Name",
       "enter": "Ins Haus eintreten"
     },
-    "role": { "resident": "Bewohner", "staff": "Personal", "member": "Mitglied" },
+    "role": {
+      "resident": "Bewohner",
+      "staff": "Personal",
+      "member": "Mitglied"
+    },
     "seeOnly": "nur-lesen",
     "noWriteNote": "Ein Bewohner kann dir Schreibzugriff geben, um Anfragen zu stellen und zu betreuen.",
     "join": {
@@ -82,6 +86,17 @@
       "amountPlaceholder": "Betrag (IDR)",
       "notePlaceholder": "Wofür?",
       "paid": "Bezahlt"
+    },
+    "market": {
+      "heading": "Vom Markt",
+      "fruit": "Obst",
+      "veg": "Gemüse",
+      "bumbu": "Gewürze",
+      "pokok": "Grundnahrung",
+      "custom": "Etwas anderes…",
+      "customAdd": "Hinzufügen",
+      "hint": "Zum Hinzufügen tippen — Menge danach setzen",
+      "yourList": "Deine Liste"
     }
   },
   "_attunement": {

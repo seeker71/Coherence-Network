@@ -22,6 +22,7 @@ vouch. Backed by the same living graph that holds offerings and contributors.
 
 from __future__ import annotations
 
+import json
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -274,12 +275,24 @@ async def grant_write(member_id: str, body: GrantBody) -> MemberPublic:
 # --------------------------------------------------------------------------
 
 
+# A market line: a language-free item id, an amount in the pasar's own
+# proportion (kg / ikat / sisir / ons / …), and a snapshot of the label +
+# unit so the board can re-render in EACH viewer's tongue. The substrate
+# shape lives in docs/coherence-substrate/household-membrane.form (market).
+class RequestItem(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    qty: float = Field(gt=0)
+    unit: str | None = Field(default=None, max_length=24)
+    label: str | None = Field(default=None, max_length=120)
+
+
 class RequestCreate(BaseModel):
     actor_token: str = Field(min_length=1)
     kind: RequestKind
     detail: str = Field(min_length=1, max_length=2000)
     location: str | None = Field(default=None, max_length=200)
     when_text: str | None = Field(default=None, max_length=200)
+    items: list[RequestItem] = Field(default_factory=list)
 
 
 class ActorBody(BaseModel):
@@ -296,6 +309,7 @@ class RequestResponse(BaseModel):
     id: str
     kind: str
     detail: str
+    items: list[dict[str, Any]] = Field(default_factory=list)
     location: str | None = None
     when_text: str | None = None
     status: str
@@ -317,6 +331,17 @@ def _s(v: Any) -> str | None:
     return s or None
 
 
+def _decode_items(node: dict) -> list[dict[str, Any]]:
+    raw = node.get("items_json")
+    if not isinstance(raw, str) or not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return []
+    return [i for i in parsed if isinstance(i, dict)] if isinstance(parsed, list) else []
+
+
 def _node_to_request(node: dict) -> RequestResponse:
     raw_cost = node.get("cost_amount")
     cost_amount = float(raw_cost) if isinstance(raw_cost, (int, float)) else None
@@ -324,6 +349,7 @@ def _node_to_request(node: dict) -> RequestResponse:
         id=node.get("id", ""),
         kind=node.get("kind", "other"),
         detail=node.get("detail", "") or node.get("description", ""),
+        items=_decode_items(node),
         location=_s(node.get("location")),
         when_text=_s(node.get("when_text")),
         status=node.get("status", "open"),
@@ -379,6 +405,10 @@ async def create_request(body: RequestCreate) -> RequestResponse:
         "created_at": created_at,
         "updated_at": created_at,
     }
+    if body.items:
+        properties["items_json"] = json.dumps(
+            [i.model_dump(exclude_none=True) for i in body.items]
+        )
     node = graph_service.create_node(
         id=request_id, type=_REQUEST_TYPE, name=body.detail[:120],
         description=body.detail, properties=properties,
