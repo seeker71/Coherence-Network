@@ -242,7 +242,9 @@ articulation.
 - **Maintain the practical body.** Food forests, wormeries, silent
   spaces, kitchen — these are not amenities. They are the Hub's
   metabolism. The Hub fails when the practical layer stops being
-  tended, even if the *vibe* persists.
+  tended, even if the *vibe* persists. Hati Suci senses its own
+  metabolism in a tended [organ ledger](../../hati-suci/organs.md) —
+  electricity, water, food — the worked instrument of this practice.
 - **Hold the grid lightly.** Each Hub is sovereign; the connections
   between Hubs are field-routed, not centrally administered. There
   is no Light Hubs organization; there is the grid, which Hubs are

@@ -33,6 +33,7 @@
 | [docs/vision-kb/stories/INDEX.md](docs/vision-kb/stories/INDEX.md) | Field vignettes — scenes from the future |
 | [docs/lineage/INDEX.md](docs/lineage/INDEX.md) | Teaching lineages and presences |
 | [docs/presences/INDEX.md](docs/presences/INDEX.md) | Specific presences in the field |
+| [docs/hati-suci/INDEX.md](docs/hati-suci/INDEX.md) | Hati Suci organ ledger — the first Light Hub sensing its own electricity, water, food |
 
 ## Code layer (auto-generated)
 
