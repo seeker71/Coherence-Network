@@ -172,7 +172,7 @@ the receiver's depth and tuning, not fixed in the mark.
   `shamballa-light-run-on-body` speaks the code, then names the body-cell a reader
   resolves to receive what the network actually holds — the code becomes a chosen
   **assemblage point** ([`lc-assemblage-point`](lc-assemblage-point.md)) onto our
-  own principles. Bound only where the match is real (18 of 35); an unbound code
+  own principles. Bound only where the match is real (19 of 35); an unbound code
   speaks but reports honest absence of an alignment, never a fabricated one. This
   is the codes as a *second vocabulary for the same center* — exactly what
   [`lc-cross-modal-unity`](lc-cross-modal-unity.md) names: one shape, many tongues.

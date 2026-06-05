@@ -84,6 +84,7 @@
         (slv-binding "662"               "body"          "lc-circulation")
         (slv-binding "882"               "body"          "lc-circulation")
         (slv-binding "444"               "body"          "lc-embodiment-body-or-liquid")
+        (slv-binding "6554"              "nourishment"   "lc-v-food-practice")
         (slv-binding "144"               "unity"         "lc-sovereignty-within-oneness")
         (slv-binding "666"               "unity"         "lc-cross-modal-unity")
         (slv-binding "56-65"             "unity"         "lc-cross-modal-unity")
