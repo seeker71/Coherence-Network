@@ -1,0 +1,53 @@
+; tests/shamballa-light-codes-band.fk — the Shamballa LIGHT code decoder, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-light-codes.fk
+;
+; Proves the light-code decoder answers each code with its attested function +
+; crystal, encodes the INVOCATION GRAMMAR (SLC prefix "Shamballa", Cosmic letter
+; prefix), and — load-bearing — returns HONEST ABSENCE for a code not on the
+; shared sheet rather than fabricating one. Source-marked material: the decoder
+; reports the personal sheet, it does not assert the cosmology.
+;
+; Band verdict: 111111 when every claim holds across all three kernels.
+;   a known code decodes to its entry                     → 1
+;   the entry carries the attested function text           → 10
+;   the SLC invocation prepends "Shamballa" (frequency)     → 100
+;   the Cosmic invocation is the letter-prefixed form        → 1000
+;   an off-sheet code → honest absence (not faked)            → 10000
+;   the stated slc-count matches the actual dictionary rows    → 100000
+
+(do
+    ;; --- a known code: 7191, the earth code (spells GAIA) -----------------
+    (let r (slc-decode "7191"))
+    (let known-ok (if (eq (slc-known? r) 1) 1 0))
+
+    ;; the function text mentions "GAIA" — the attested function.
+    (let function-has-gaia
+        (if (ge (str_find (slc-entry-function (slc-of r)) "GAIA" 0) 0) 10 0))
+
+    ;; --- the SLC invocation grammar: "Shamballa <code>" ------------------
+    (let slc-ok
+        (if (str_eq (slc-invoke "777") "Shamballa 777") 100 0))
+
+    ;; --- the Cosmic invocation grammar: "CE-1818" ------------------------
+    (let cosmic-ok
+        (if (str_eq (cosmic-invoke "CE" "1818") "CE-1818") 1000 0))
+
+    ;; --- an off-sheet code: honest absence, not fabrication --------------
+    (let miss (slc-decode "1234567"))
+    (let absence-ok
+        (if (eq (slc-known? miss) 0)
+            (if (ge (str_find (slc-answer "1234567") "honest absence" 0) 0) 10000 0) 0))
+
+    ;; --- the stated count guards against table drift --------------------
+    ;; slc-count is hardcoded; assert it equals the actual dictionary length so a
+    ;; new row that forgets to bump the count is caught here, not silently.
+    (let count-ok
+        (if (eq (len (slc-dictionary)) (slc-count)) 100000 0))
+
+    (sum (list (if (eq known-ok 1) 1 0)
+               function-has-gaia
+               slc-ok
+               cosmic-ok
+               absence-ok
+               count-ok)))
