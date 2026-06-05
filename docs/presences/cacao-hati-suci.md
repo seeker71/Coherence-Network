@@ -26,7 +26,7 @@ The land itself carries the practical body of a Light Hub already in form:
 
 The name carries the cacao stream directly. Cacao Hati Suci is not a place that happens to have chocolate; it is a place where the cacao plant itself is one of the land's tenders, and the relationship to it is part of what the visitor enters. The Mesoamerican plant-medicine lineage threads here without being announced — a quiet presence among the gladaks, the gardens, the river.
 
-The land is held practically by **Ita**, whose WhatsApp number (+62 859-3617-7827) is the contact for booking and questions. The naming-frame *the sister land of the Hati Suci Community* keeps the relation to the parent Hub explicit: this is not a separate venture; it is one node in a constellation that includes the original sanctuary at Banjar Bayad and (per Giles's transmission of 2026-05-14) Nacpan Beach on Palawan and a European Hub yet to be shown.
+The land is held practically by **Ita**, the contact for booking and questions within the Hati Suci community. The naming-frame *the sister land of the Hati Suci Community* keeps the relation to the parent Hub explicit: this is not a separate venture; it is one node in a constellation that includes the original sanctuary at Banjar Bayad and (per Giles's transmission of 2026-05-14) Nacpan Beach on Palawan and a European Hub yet to be shown.
 
 Offerings as of arrival into the body's awareness: **250,000 IDR per night**, minimum two nights, with **long-term rentals also available** — a rate priced for residence, not for tourism. The *special rate for Hati Suci friends* register signals that the constellation between the Hubs is already operating as a held community of cells who move between the nodes.
 
