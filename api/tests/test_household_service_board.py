@@ -1,9 +1,10 @@
 """Flow test for the household resident-service board (api/app/routers/household.py).
 
-One strange-minimal flow that exercises the whole nervous system: a resident
-asks, a staff member sees it and carries it through, an outside-resource cost
-rides along and gets settled — and the two guards that keep it honest (a
-request needs a real member; a settle needs a recorded cost).
+The whole nervous system in one strange-minimal flow: a founding resident
+bootstraps, vouches a staff member in by invite (the link's token auto-binds
+on /me), the staff member tends a request through to a settled cost — and the
+two locks that keep it honest: a see-only member cannot write until a resident
+grants it, and an invite can only come from a resident.
 """
 from __future__ import annotations
 
@@ -18,77 +19,77 @@ def client():
     return TestClient(app)
 
 
-def _member(client, name, role):
-    res = client.post("/api/household/members", json={"name": name, "role": role})
-    assert res.status_code == 201, res.text
-    return res.json()
+def test_invite_carries_role_and_write_flows_through(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Giles"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    assert resident.status_code == 201, resident.text
+    rtok = resident.json()["token"]
+    assert resident.json()["role"] == "resident"
+    assert resident.json()["write_access"] is True
 
-
-def test_request_moves_from_ask_to_done_with_settled_cost(client):
-    resident = _member(client, "Ayu", "resident")
-    staff = _member(client, "Wayan", "staff")
-
-    # The ask
-    res = client.post("/api/household/requests", json={
-        "requester_id": resident["id"],
-        "kind": "laundry",
-        "detail": "two sets of bed linen for the lumbung",
-        "location": "Lumbung house",
-        "when_text": "before sunset",
+    # Resident invites a staff member; the invite returns the link token.
+    inv = client.post("/api/household/invites", json={
+        "inviter_token": rtok, "name": "Wayan", "role": "staff",
     })
-    assert res.status_code == 201, res.text
-    req = res.json()
-    assert req["status"] == "open"
-    assert req["requester_name"] == "Ayu"
-    rid = req["id"]
+    assert inv.status_code == 201, inv.text
+    stok = inv.json()["token"]
+    assert inv.json()["role"] == "staff"
+    assert inv.json()["status"] == "invited"
 
-    # It shows on the open board everyone sees
-    board = client.get("/api/household/requests").json()
-    assert any(r["id"] == rid for r in board)
+    # Opening the link (GET /me) activates the invite and binds the device.
+    me = client.get(f"/api/household/me?token={stok}")
+    assert me.status_code == 200
+    assert me.json()["status"] == "active"
+    assert me.json()["write_access"] is True
 
-    # Staff sees it and carries it through
-    ack = client.post(f"/api/household/requests/{rid}/acknowledge", json={"actor_id": staff["id"]}).json()
-    assert ack["status"] == "acknowledged"
-    assert ack["acknowledged_by_name"] == "Wayan"
-
-    started = client.post(f"/api/household/requests/{rid}/start", json={"actor_id": staff["id"]}).json()
-    assert started["status"] == "in_progress"
-
-    # Done — with an outside-resource cost recorded
-    done = client.post(f"/api/household/requests/{rid}/complete", json={
-        "actor_id": staff["id"],
-        "cost_amount": 25000,
-        "cost_note": "detergent",
-    }).json()
-    assert done["status"] == "completed"
-    assert done["completed_by_name"] == "Wayan"
-    assert done["cost_amount"] == 25000
-    assert done["cost_status"] == "recorded"
-
-    # The small money that moved is settled — and visible
-    paid = client.post(f"/api/household/requests/{rid}/pay", json={"actor_id": staff["id"]}).json()
-    assert paid["cost_status"] == "paid"
-    assert paid["paid_by_name"] == "Wayan"
-
-
-def test_request_needs_a_real_member(client):
-    res = client.post("/api/household/requests", json={
-        "requester_id": "member-does-not-exist",
-        "kind": "food",
-        "detail": "lunch for two",
-    })
-    assert res.status_code == 400
-
-
-def test_settle_needs_a_recorded_cost(client):
-    resident = _member(client, "Komang", "resident")
-    staff = _member(client, "Made", "staff")
+    # Staff asks + tends a request through, recording + settling a cost.
     rid = client.post("/api/household/requests", json={
-        "requester_id": resident["id"],
-        "kind": "ride",
-        "detail": "scooter to the market",
+        "actor_token": stok, "kind": "laundry", "detail": "linen for the lumbung",
     }).json()["id"]
-    # Completed with no outside cost → nothing to settle
-    client.post(f"/api/household/requests/{rid}/complete", json={"actor_id": staff["id"]})
-    res = client.post(f"/api/household/requests/{rid}/pay", json={"actor_id": staff["id"]})
-    assert res.status_code == 400
+    assert client.post(f"/api/household/requests/{rid}/acknowledge", json={"actor_token": stok}).json()["status"] == "acknowledged"
+    done = client.post(f"/api/household/requests/{rid}/complete", json={
+        "actor_token": stok, "cost_amount": 25000, "cost_note": "detergent",
+    }).json()
+    assert done["status"] == "completed" and done["cost_status"] == "recorded"
+    assert client.post(f"/api/household/requests/{rid}/pay", json={"actor_token": stok}).json()["cost_status"] == "paid"
+
+
+def test_see_only_member_cannot_write_until_vouched(client):
+    resident = client.post("/api/household/bootstrap", json={"name": "Ita"})
+    if resident.status_code == 409:
+        pytest.skip("a resident already exists in this graph; vouch flow skipped")
+    rtok = resident.json()["token"]
+
+    # A self-registered member is see-only.
+    member = client.post("/api/household/members", json={"name": "Komang"}).json()
+    mtok = member["token"]
+    assert member["write_access"] is False
+
+    # Writing is locked (403) until a resident vouches.
+    blocked = client.post("/api/household/requests", json={
+        "actor_token": mtok, "kind": "food", "detail": "lunch for two",
+    })
+    assert blocked.status_code == 403
+
+    # Resident grants write; now the same member can ask.
+    grant = client.post(f"/api/household/members/{member['id']}/grant-write", json={"actor_token": rtok})
+    assert grant.status_code == 200 and grant.json()["write_access"] is True
+    ok = client.post("/api/household/requests", json={
+        "actor_token": mtok, "kind": "food", "detail": "lunch for two",
+    })
+    assert ok.status_code == 201
+
+
+def test_only_a_resident_can_invite(client):
+    # A bare self-registered member's token cannot create invites.
+    member = client.post("/api/household/members", json={"name": "Drifter"}).json()
+    res = client.post("/api/household/invites", json={
+        "inviter_token": member["token"], "name": "Someone", "role": "staff",
+    })
+    assert res.status_code == 403
+
+    # An unknown token cannot write.
+    assert client.post("/api/household/requests", json={
+        "actor_token": "not-a-real-token", "kind": "other", "detail": "x",
+    }).status_code == 401

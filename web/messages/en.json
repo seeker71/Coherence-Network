@@ -9,7 +9,28 @@
       "namePlaceholder": "Your name",
       "enter": "Enter the house"
     },
-    "role": { "resident": "Resident", "staff": "Staff" },
+    "role": { "resident": "Resident", "staff": "Staff", "member": "Member" },
+    "seeOnly": "see-only",
+    "noWriteNote": "A resident can grant you write access to add and tend requests.",
+    "join": {
+      "openInvite": "Open your invite link to join — or enter your name to watch the board.",
+      "watch": "Watch the board"
+    },
+    "invite": {
+      "heading": "Invite someone",
+      "namePlaceholder": "Their name",
+      "phonePlaceholder": "WhatsApp no. (optional)",
+      "create": "Make invite link",
+      "shareWhatsApp": "Share on WhatsApp",
+      "copy": "Copy link",
+      "copied": "Copied!",
+      "linkFor": "Invite link for {name} — share it on WhatsApp:"
+    },
+    "people": {
+      "heading": "Waiting for a vouch",
+      "grantWrite": "Grant write"
+    },
+    "whatsappMsg": "{name}, you're invited to the Hati Suci board:",
     "add": {
       "heading": "Ask the field",
       "detailPlaceholder": "What do you need?",
