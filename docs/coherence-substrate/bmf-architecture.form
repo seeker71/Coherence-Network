@@ -175,17 +175,22 @@ every `cons`/`if`/`let` is a `walk` step, and there are millions of them. (Rust
 hung where Go finished in 18s for the same reason: a slower per-op interpreter,
 not a different algorithm.)
 
-So the lever is not condensation. It is the architecture's own claim, not yet
-honored: *"the only code is Match + Cursor + primitives; everything else is
-data."* Right now **Match itself is data** — interpreted fk — which is the
-inversion. The fix is to make the **Match engine native** (Go/Rust/TS code that
-runs the rule-table over the cursor), while grammars stay data. The kernel
-already has the hook: `register_jit` aliases a Form name to an existing native,
-so a native `g-match` can be dropped in under the same fk surface. Native Match
-is O(1)-dispatch and no interpreter overhead — that is what turns 18s into
-milliseconds and lets Rust complete. Packrat/condensation may still matter for a
-genuinely ambiguous grammar, but for BML it was the wrong stone; the interpreter
-was.
+So the lever is not condensation, and it is *not* hand-porting a native Match
+into Go/Rust/TS — that would fork the engine out of Form and break *"the only
+code is Match + Cursor + primitives; everything else is data."* The engine
+**stays Form recipes**. Nothing decrees that Form is *interpreted* — the
+interpreter (`walk`) is just the JIT's current ceiling. The real lever is the
+**JIT**: it already compiles Form recipes → native (`jit.go`: recipe → Go via
+`go build -buildmode=plugin`), and the architecture's intent is that it compile
+*any* recipe. Today it compiles an **int64-only** subset (trivials, MATH,
+COMPARE, COND, BLOCK, self-recursion) and *refuses* lists, strings, native
+calls, and non-int signatures — which is exactly why the grammar engine's
+recipes (`str_eq`, `cons`, `intern_node`, `cur-peek`, recursion over lists/
+nodes) fall back to `walk`. **Extend the JIT from int64-only to `Value`-typed
+with native-call emission**, and the *same* Form engine (`g-match` and friends),
+JIT-compiled, becomes native — no fork, grammars still data, the kernel still
+thin. That is what turns 18s into milliseconds and lets Rust complete. Cut and a
+left-factored grammar are second-order gains on top.
 
 **Second experiment — Cut (the thesis's own tool), and why it ranks above
 packrat.** The thesis BMF engine had a `Cut` primitive (`primitive-Cut.bml`):
@@ -211,12 +216,12 @@ correctly parsing every construct; cut enforces honest coverage. (2) cut at the
 so a cut can commit after that shared construct.
 
 **Ranked, measured:** packrat — no help (wrong axis). Cut — ~2x and the thesis's
-proven lever, but needs left-factoring + honest-coverage repair to land. Native
-Match engine — the big multiplier (the thesis was *compiled* Java, not
-interpreted; that, plus cut, is why old hardware ran it trivially). The real
-target is **native engine + cut + a left-factored grammar** together — each was
-one leg of why the thesis was fast, and we'd been missing all three. Next
-experiment: a native Match inner loop, aliased in, benchmarked the same way.
+proven lever, but needs left-factoring + honest-coverage repair to land.
+**JIT-compiling the Form engine** — the big multiplier (the thesis was *compiled*
+Java, not interpreted; that, plus cut, is why old hardware ran it trivially). The
+real target is **JIT the engine recipes + cut + a left-factored grammar**
+together — each was one leg of why the thesis was fast, and we'd been missing all
+three. The engine stays Form; the JIT (not a hand-port) makes it native.
 
 **Third experiment — reshape the grammar itself (full freedom granted).** With
 license to change any grammar shape for efficiency, I flattened: inlined the thin
@@ -240,10 +245,15 @@ is a handful of dispatches per token, and shaving them buys ~8%, not 8×.
 ~2× but coverage-confounded, flatten ~8 %, profile = ~all in `walk`): *the BML
 grammar is not the bottleneck — the interpreter is.* The grammar is already
 about as token- and shape-efficient as interpretation rewards; the multiplier is
-to stop interpreting `Match` and run it as native code (the thesis's compiled
-engine), with cut and a left-factored grammar as second-order gains on top. Each
-grammar experiment was honest and cheap; together they rule out the grammar as
-the lever and point, with evidence, at the engine.
+to **JIT-compile the Form engine** so `Match` stops running through `walk` —
+the engine stays Form recipes, the JIT turns them native (the thesis's compiled
+engine, reached the substrate's own way), with cut and a left-factored grammar
+as second-order gains. The concrete build: extend `jit.go` from its current
+int64-only subset to **`Value`-typed codegen with native-call emission**, so the
+engine recipes (`str_eq`/`cons`/`intern_node`/`cur-*`/recursion) compile instead
+of falling back to `walk`. Each grammar experiment was honest and cheap;
+together they rule out the grammar as the lever and point, with evidence, at the
+JIT.
 
 ### Template blueprints — the emitting side
 
