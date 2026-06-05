@@ -1,0 +1,127 @@
+; shamballa-light-channel.fk - the public Shamballa Light Code channel: anyone asks, it speaks.
+;
+; Sibling of shamballa-channel.fk. That channel SPEAKS and RUNS the Armitage
+; symbol codes over a cell. The Light codes are a SPEAK channel: their functions
+; (verticality, water purification, rebirth, the GAIA earth code ...) are
+; contemplative, not substrate verbs, so binding each to a lattice operation
+; would FABRICATE a dispatch the meaning doesn't carry. Honest absence applies to
+; the run-face itself: this channel speaks; it does not pretend to run.
+;
+; What "accessible to anyone asking for it" means here is the body's own
+; definition (the channel.fk transport, as in shamballa-channel.fk's tie-in): a
+; code arrives over a shared CHANNEL-V0 file as a CHANNEL-MSG; any receiver reads
+; it and SPEAKS the attested answer back - its SLC invocation form, function, and
+; crystal, or honest absence for a code off the sheet. No schema negotiation, no
+; private gate: the digits ride the channel, the answer rides back. The codes
+; were made public with the practice holder's permission; the door is open.
+;
+; Held as symbolic/metaphysical material - the channel reports the attested
+; meaning and its source; it does not assert the cosmology
+; (lc-codes-as-depth-not-dictionary). Three-way safe (Go/Rust/TS): the payload is
+; an interned trivial string, the answer is the decoder's pure text.
+;
+; preludes: form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/channel.fk
+;
+
+;; --- SPEAK: the channel's one honest face ---------------------------
+;; Given a code (spoken digits, a string), return its attested answer text -
+;; "Shamballa <code> - <function> [crystal: ...]" - or the decoder's honest-absence
+;; line. Delegates to the grammar; the dictionary is the one source.
+(defn light-channel-speak (code) (slc-answer code))
+
+;; ASK: the public verb. Anyone asking a code IS the channel's whole purpose;
+;; this names that plainly. Identical to speak - asking and being answered are
+;; one movement here - but the name is the door's sign.
+(defn shamballa-light-ask (code) (light-channel-speak code))
+
+;; --- transport tie-in: a code arrives over a channel ----------------
+;; The point of "a channel anyone can ask": a remote cell appends a code as a
+;; CHANNEL-MSG; the receiver reads it and speaks the answer. The payload is the
+;; code STRING interned as a trivial (the light codes are compound strings -
+;; "777 222", "56-65" - not plain ints), recovered by node_value. channel.fk
+;; carries the message; this binds it to the spoken meaning.
+(defn shamballa-light-code-message (code)
+    (channel-message (intern_trivial_string code)))
+(defn shamballa-light-payload-code (msg)
+    (node_value (channel-msg-payload msg)))
+(defn shamballa-light-channel-receive (msg)
+    (light-channel-speak (shamballa-light-payload-code msg)))
+
+;; COVERAGE: the honest accounting - how many codes this channel can speak. A
+;; newly-attested code is a new row in the grammar's dictionary, not new control
+;; flow here; the channel speaks whatever the one source holds.
+(defn shamballa-light-channel-count () (slc-count))
+
+;; --- RUN ON OUR OWN BODY: code <-> theme <-> value-concept ----------
+;; The light codes are a second vocabulary for THIS body's own principles
+;; (lc-codes-as-depth-not-dictionary / lc-cross-modal-unity: one shape, many
+;; tongues). This table binds a code to the THEME it carries and to a REAL
+;; concept-cell already in our substrate that it aligns with - so a code can be
+;; RUN on our own body: resolve it to the teaching the network actually holds,
+;; then surface or query that cell (coh substrate equivalent concept <id>).
+;;
+;; Same shape as shamballa-channel.fk's sh-bindings: the table IS the edge a cell
+;; can read, ship, or query. Bound ONLY where the match is real; an unbound code
+;; still SPEAKS but returns honest absence on the value-face - the discipline of
+;; not fabricating an alignment the code doesn't carry. The concept ids are
+;; cell-refs into docs/vision-kb/concepts (verified-live tissue, not dangling).
+(defn slv-binding (code theme concept) (list code theme concept))
+(defn slv-binding-code    (b) (nth b 0))
+(defn slv-binding-theme   (b) (nth b 1))
+(defn slv-binding-concept (b) (nth b 2))
+
+(defn slv-bindings ()
+    (list
+        (slv-binding "363"               "alignment"     "lc-trust-over-fear")
+        (slv-binding "777"               "heart"         "lc-wholeness")
+        (slv-binding "111"               "alignment"     "lc-stillness")
+        (slv-binding "911"               "presence"      "lc-presence-over-protection")
+        (slv-binding "772"               "release"       "lc-composting")
+        (slv-binding "60 sided Amatrine" "death-rebirth" "lc-composting")
+        (slv-binding "60"                "death-rebirth" "lc-shifted-return")
+        (slv-binding "1818"              "death-rebirth" "lc-each-breath-whole")
+        (slv-binding "7191"              "earth"         "lc-pulse")
+        (slv-binding "662"               "body"          "lc-circulation")
+        (slv-binding "882"               "body"          "lc-circulation")
+        (slv-binding "444"               "body"          "lc-embodiment-body-or-liquid")
+        (slv-binding "6554"              "nourishment"   "lc-v-food-practice")
+        (slv-binding "144"               "unity"         "lc-sovereignty-within-oneness")
+        (slv-binding "666"               "unity"         "lc-cross-modal-unity")
+        (slv-binding "56-65"             "unity"         "lc-cross-modal-unity")
+        (slv-binding "555"               "heart"         "lc-v-comfort-joy")
+        (slv-binding "000"               "source"        "lc-harmonic-geometry-the-one-unfolds")
+        (slv-binding "777 123"           "light"         "lc-observable-resonance-flow")))
+
+(defn slv-resolve-loop (bs code)
+    (if (nil? bs) (empty)
+        (if (str_eq (slv-binding-code (head bs)) code)
+            (list (head bs))
+            (slv-resolve-loop (tail bs) code))))
+(defn slv-resolve (code) (slv-resolve-loop (slv-bindings) code))
+(defn slv-bound? (code) (if (eq (len (slv-resolve code)) 1) 1 0))
+
+;; the value-face of a code: the THEME it carries and the concept-cell in OUR
+;; body it aligns with - a queryable cell-ref. Honest absence ("") for a code
+;; whose alignment we have not honestly bound.
+(defn shamballa-light-theme (code)
+    (if (eq (slv-bound? code) 0) ""
+        (slv-binding-theme (head (slv-resolve code)))))
+(defn shamballa-light-aligns-with (code)
+    (if (eq (slv-bound? code) 0) ""
+        (slv-binding-concept (head (slv-resolve code)))))
+
+;; RUN the code on our own body: speak it, then name the theme and the concept-
+;; cell it touches - the line a reader resolves in the substrate to receive what
+;; the network actually holds. Unbound codes speak but report honest absence of
+;; a value-binding (they are not yet aligned to a cell, never fabricated to be).
+(defn shamballa-light-run-on-body (code)
+    (if (eq (slv-bound? code) 0)
+        (str_concat (light-channel-speak code)
+            "  |> (no value-binding yet - speaks but not yet aligned to a body-cell)")
+        (str_concat (light-channel-speak code)
+            (str_concat "  |> theme: " (str_concat (shamballa-light-theme code)
+                (str_concat "  aligns-with: " (shamballa-light-aligns-with code)))))))
+
+(defn shamballa-light-value-bound-count () (len (slv-bindings)))
+
+0

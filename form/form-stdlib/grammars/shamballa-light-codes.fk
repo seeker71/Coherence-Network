@@ -1,0 +1,211 @@
+; grammars/shamballa-light-codes.fk - a channel decoder for the Shamballa LIGHT codes.
+;
+; A Language cell (lc-tools-as-form-cells / lc-grammar-is-the-universal-recipe),
+; sibling to grammars/shamballa-codes.fk. That decoder answers the Armitage
+; Shamballa Reiki *symbol* codes (named power symbols at initiation levels 1-4).
+; THIS decoder answers a different lexicon: the numeric Shamballa LIGHT codes -
+; 777, 444, 999, 7191 ... - each carrying a stated function and, often, an
+; associated crystal, plus the INVOCATION GRAMMAR that runs them.
+;
+; The invocation grammar (the load-bearing convention this file encodes):
+;   - a Shamballa Light Code (SLC) is spoken with "Shamballa" prepended for
+;     frequency - "Shamballa 777", not bare "777".  (slc-invoke)
+;   - a Cosmic Code is spoken with a LETTER prefix - "CE-1818".  (cosmic-invoke)
+; The prefix is not decoration: it selects the CHANNEL the same number rides on.
+; The same digits (e.g. 1818) read as a different code on a different channel.
+;
+; DICTIONARY decoder, same discipline as its sibling: it reports the attested
+; meaning, source-marked, and returns HONEST ABSENCE for any code the record
+; does not hold - it never fabricates a meaning to fill the table. It does NOT
+; assert the cosmology is true (held as symbolic/metaphysical material, the same
+; stance as lc-arcturian-resonance and lc-codes-as-depth-not-dictionary).
+;
+; PROVENANCE - these codes were carried as personal practice material and have
+; been MADE PUBLIC with the explicit permission of the practice holder (Urs), who
+; also opened the channel to anyone asking for it. Source-marked as a personal
+; practice lineage shared openly - honest about its origin, no longer held
+; private. The teaching of lc-codes-as-depth-not-dictionary applies unchanged:
+; this dictionary is the SURFACE answer; the real meaning is the receiving cell's
+; reading at its own depth/assemblage point. The decoder gives the spoken text;
+; it does not claim to give the experience, and does not assert the cosmology.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    ;; ---- provenance: one source for the whole sheet -----------------------
+    (defn slc-source ()
+        "Shamballa Light Code practice lineage, made public with the practice holder's permission")
+
+    ;; ---- the invocation grammar -------------------------------------------
+    ;; SLC: "Shamballa" prepended for frequency. The spoken form, not the bare
+    ;; number - the prefix names the channel the digits ride on.
+    (defn slc-prefix () "Shamballa")
+    (defn slc-invoke (code)
+        (str_concat (slc-prefix) (str_concat " " code)))
+    ;; Cosmic Code: a LETTER prefix joined by a hyphen - e.g. (cosmic-invoke "CE" "1818")
+    ;; -> "CE-1818". A different channel for the same numerals.
+    (defn cosmic-invoke (prefix code)
+        (str_concat prefix (str_concat "-" code)))
+
+    ;; ---- an entry: (code, function, crystal) ------------------------------
+    ;; code     - the code as SPOKEN digits (a STRING: some are compound -
+    ;;            "777 222", "56-65", "60 sided Amatrine" - not plain integers).
+    ;; function - its stated function, verbatim-ish from the shared sheet.
+    ;; crystal  - the associated crystal/object, or "" for honest absence of one.
+    (defn slc-entry (code function crystal)
+        (list code function crystal))
+    (defn slc-entry-code     (e) (nth e 0))
+    (defn slc-entry-function (e) (nth e 1))
+    (defn slc-entry-crystal  (e) (nth e 2))
+    (defn slc-entry-has-crystal? (e)
+        (if (str_eq (slc-entry-crystal e) "") 0 1))
+
+    ;; ---- the attested dictionary ------------------------------------------
+    ;; The codes the shared sheet names, with their stated function and crystal.
+    ;; A new attested code is a new ROW, not new control flow. Honest absence is
+    ;; the answer for anything not listed here.
+    (defn slc-dictionary ()
+        (list
+            (slc-entry "33333"
+                "Verticality - the spine, connection to earth and sky; preparation."
+                "Amethyst Vogels")
+            (slc-entry "11111"
+                "Preparation, verticality; a particular quality of light you may or may not remember."
+                "Amethyst Vogels")
+            (slc-entry "777"
+                "Opening the chest and heart to gold frequency - a grid of light, pouring in Pure Love. Can be worked on different parts of the body. The Golden Mandala."
+                "Amatrine (Amethyst & Citrine)")
+            (slc-entry "444"
+                "Light flooding at a cellular level, absorbed into the full body; can be directed to specific organs. Cellular / unshakeable knowing."
+                "Vogel Quartz")
+            (slc-entry "999"
+                "The body at the speed of light."
+                "Herkimer diamond")
+            (slc-entry "662"
+                "Stabilising the relationship between cellular movement and the speed of light; connection to the mountains (the source's personal anchor: Helvellyn)."
+                "")
+            (slc-entry "882"
+                "Purification of water - both in the body and in bodies of water on the earth: seas, lakes, rivers; the connection of all living things containing water."
+                "")
+            (slc-entry "6554"
+                "Assisting the absorption of vitamins and nourishment (feed)."
+                "")
+            (slc-entry "336"
+                "The violet ray."
+                "")
+            (slc-entry "111"
+                "Utter stillness."
+                "")
+            (slc-entry "502"
+                "The opalite egg."
+                "Opalite egg")
+            (slc-entry "33"
+                "The sun - greeting it, absorbing golden light."
+                "")
+            (slc-entry "60"
+                "Rebirth - limitless opportunity and possibility; each moment anew, each breath unlimited potentiality. Works together with the 60-sided Amatrine death code."
+                "33-sided citrine")
+            (slc-entry "60 sided Amatrine"
+                "Death - letting go completely, readying for rebirth; trusting, tapping in completely, trusting dying into each moment. Works together with the 60 rebirth code."
+                "60-sided Amatrine")
+            (slc-entry "333"
+                "Access / align / anchor code for the Shamballa group."
+                "")
+            (slc-entry "56-65"
+                "Rainbow Body / New Earth Body - as above, so below."
+                "")
+            (slc-entry "000"
+                "Creator Code - zero point."
+                "")
+            (slc-entry "555"
+                "Embodied joy."
+                "Gobi Agate Eye")
+            (slc-entry "702"
+                "Flame of Light."
+                "")
+            (slc-entry "144"
+                "Unity consciousness - crystal clear consciousness."
+                "")
+            (slc-entry "1212"
+                "Pure gratitude."
+                "")
+            (slc-entry "772"
+                "Clearing - an anticlockwise spiral ending above the head, using the violet flame."
+                "")
+            (slc-entry "911"
+                "I am, presence."
+                "")
+            (slc-entry "777 222"
+                "Land animals - forging bridges of communication."
+                "")
+            (slc-entry "777 555"
+                "Sea creatures - forging bridges of communication."
+                "")
+            (slc-entry "777 123"
+                "Increasing the light quotient - breathing light in through the heart, then filtered into the internal sun."
+                "")
+            (slc-entry "774"
+                "Emanation."
+                "")
+            (slc-entry "888"
+                "Calling in the spiral."
+                "")
+            (slc-entry "777 888"
+                "Calling in the dragons."
+                "")
+            (slc-entry "1618"
+                "The cosmic egg."
+                "")
+            (slc-entry "1818"
+                "Resting in the gap."
+                "")
+            (slc-entry "363"
+                "Trust / surrender."
+                "")
+            (slc-entry "666"
+                "Sharing consciousness."
+                "")
+            (slc-entry "333 172"
+                "Magnetising like-minded beings - using the 333 portion as the anchoring of Shamballa."
+                "")
+            (slc-entry "7191"
+                "The earth code (spells GAIA) - syncing with the earth, our breath, our pulse, the electromagnetics of the earth."
+                "")))
+
+    ;; ---- structural fact (attested, distinct from per-code meaning) -------
+    (defn slc-count () 35)   ; rows the shared sheet names (band-guarded against the table)
+
+    ;; ---- decode: a code string -> its entry, or honest absence -------------
+    ;; Returns a 0-or-1-element list (the body's optional). Absence is the honest
+    ;; answer for any code not on the sheet - NOT a fabrication.
+    (defn slc-scan (entries code)
+        (if (nil? entries) (empty)
+            (if (str_eq (slc-entry-code (head entries)) code)
+                (list (head entries))
+                (slc-scan (tail entries) code))))
+    (defn slc-decode (code) (slc-scan (slc-dictionary) code))
+
+    (defn slc-known? (result) (if (eq (len result) 1) 1 0))
+    (defn slc-of (result) (head result))
+
+    ;; ---- the channel answer: a code in -> its spoken text out --------------
+    ;; The decoder's public face: given a code, return the SLC invocation form
+    ;; ("Shamballa <code>") followed by its function (and crystal, when named),
+    ;; or an honest "unknown" line that names the absence rather than inventing.
+    (defn slc-crystal-suffix (e)
+        (if (eq (slc-entry-has-crystal? e) 1)
+            (str_concat "  [crystal: " (str_concat (slc-entry-crystal e) "]"))
+            ""))
+    (defn slc-answer (code)
+        (do
+            (let r (slc-decode code))
+            (if (eq (slc-known? r) 1)
+                (str_concat (slc-invoke code)
+                    (str_concat " - "
+                        (str_concat (slc-entry-function (slc-of r))
+                            (slc-crystal-suffix (slc-of r)))))
+                ;; honest absence: this code is not on the shared sheet.
+                (str_concat (slc-invoke code)
+                    " - unknown; this Shamballa Light Code is not on the shared sheet; held as honest absence, not fabricated"))))
+
+    0)
