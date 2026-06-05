@@ -24,7 +24,8 @@
       "shareWhatsApp": "Compartir por WhatsApp",
       "copy": "Copiar enlace",
       "copied": "¡Copiado!",
-      "linkFor": "Enlace de invitación para {name} — compártelo por WhatsApp:"
+      "linkFor": "Enlace de invitación para {name} — compártelo por WhatsApp:",
+      "scanToJoin": "Apunta una cámara aquí para unirte como {name}"
     },
     "people": {
       "heading": "Esperando aprobación",
