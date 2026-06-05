@@ -278,7 +278,17 @@ const RCOND_IF_ELSE: u32 = 2;
 const RBLK_DO: u32 = 1;
 const RBLK_SEQ: u32 = 2;
 const RBLK_LET: u32 = 3;
-const FORM_KERNEL_STACK_BYTES: usize = 256 * 1024 * 1024;
+// The eval thread's stack. TCO (see walk) removes ITERATION depth (tail-recursive
+// Form loops run flat); this stack covers genuine DATA-nesting depth — a recursive-
+// descent parse of a deeply nested source is inherently recursion proportional to
+// nesting. Env-tunable via FORM_KERNEL_STACK_MB for sizing to a workload without a
+// rebuild. (Go/V8 grow their stacks; this is the explicit equivalent.)
+fn form_kernel_stack_bytes() -> usize {
+    match std::env::var("FORM_KERNEL_STACK_MB") {
+        Ok(s) => s.trim().parse::<usize>().unwrap_or(256) * 1024 * 1024,
+        Err(_) => 256 * 1024 * 1024,
+    }
+}
 
 #[derive(Clone, Debug)]
 struct Recipe {
@@ -5239,291 +5249,309 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
-    if n.level == LEVEL_TRIVIAL {
-        return k.trivial_value(n);
-    }
-    let cat = k.category(n);
-    // Tracing hook: when k.trace is Some, record the arm dispatch. Pure
-    // counter increment — no allocation, no IO. Per lc-native-kernel-binary
-    // "tracing and observation pattern". Records (ty, inst) so typed-numeric
-    // distribution (MATH.PLUS_F64 vs MATH.PLUS_I32) stays distinguishable.
-    if let Some(t) = &mut k.trace {
-        t.record(cat.ty, cat.inst);
-    }
-    let kids = k.children(n);
+    // TCO: a tail-position call — a closure body, a cond branch, or a do/seq
+    // block's last expr — reassigns n/env and loops here instead of recursing,
+    // so tail-recursive Form loops (gm-rep-loop, gm-sep-loop, caps-get, …) run
+    // in CONSTANT stack. Result-transparent; far less stack — what lets this
+    // kernel parse the full thesis grammar files without overflowing.
+    let mut n = n;
+    let mut env = env;
+    loop {
+        if n.level == LEVEL_TRIVIAL {
+            return k.trivial_value(n);
+        }
+        let cat = k.category(n);
+        // Tracing hook: when k.trace is Some, record the arm dispatch. Pure
+        // counter increment — no allocation, no IO. Per lc-native-kernel-binary
+        // "tracing and observation pattern". Records (ty, inst) so typed-numeric
+        // distribution (MATH.PLUS_F64 vs MATH.PLUS_I32) stays distinguishable.
+        if let Some(t) = &mut k.trace {
+            t.record(cat.ty, cat.inst);
+        }
+        let kids = k.children(n);
 
-    match cat.ty {
-        RB_MATH => {
-            let lv = walk(k, a, kids[0], env);
-            let rv = walk(k, a, kids[1], env);
-            // Width promotion: if either operand is Float, the result is
-            // Float (matches Python `int + float → float`, and IEEE 754
-            // arithmetic on mixed inputs). Pure int/int stays on the
-            // fast i64 path.
-            if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
-                let l = lv.as_float();
-                let r = rv.as_float();
-                Value::Float(match cat.inst {
-                    RMATH_PLUS => l + r,
-                    RMATH_MINUS => l - r,
-                    RMATH_MULTIPLY => l * r,
-                    RMATH_DIVIDE => l / r,
-                    RMATH_MODULO => l - (l / r).floor() * r,
-                    _ => panic!("math.f64: unknown op {}", cat.inst),
-                })
-            } else {
-                let l = lv.as_int();
-                let r = rv.as_int();
-                Value::Int(match cat.inst {
-                    RMATH_PLUS => l + r,
-                    RMATH_MINUS => l - r,
-                    RMATH_MULTIPLY => l * r,
-                    RMATH_DIVIDE => l / r,
-                    RMATH_MODULO => l % r,
-                    _ => panic!("math: unknown op {}", cat.inst),
-                })
-            }
-        }
-        RB_COMPARE => {
-            let lv = walk(k, a, kids[0], env);
-            let rv = walk(k, a, kids[1], env);
-            // Same width-promotion rule as math: float on either side
-            // forces an IEEE comparison. Pure int/int stays integer.
-            if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
-                let l = lv.as_float();
-                let r = rv.as_float();
-                Value::Bool(match cat.inst {
-                    RCMP_EQ => l == r,
-                    RCMP_NE => l != r,
-                    RCMP_LT => l < r,
-                    RCMP_LE => l <= r,
-                    RCMP_GT => l > r,
-                    RCMP_GE => l >= r,
-                    _ => panic!("compare.f64: unknown op {}", cat.inst),
-                })
-            } else {
-                let l = lv.as_int();
-                let r = rv.as_int();
-                Value::Bool(match cat.inst {
-                    RCMP_EQ => l == r,
-                    RCMP_NE => l != r,
-                    RCMP_LT => l < r,
-                    RCMP_LE => l <= r,
-                    RCMP_GT => l > r,
-                    RCMP_GE => l >= r,
-                    _ => panic!("compare: unknown op {}", cat.inst),
-                })
-            }
-        }
-        RB_LOGIC => match cat.inst {
-            RLOG_AND => {
-                if !walk(k, a, kids[0], env).as_bool() {
-                    Value::Bool(false)
+        return match cat.ty {
+            RB_MATH => {
+                let lv = walk(k, a, kids[0], env);
+                let rv = walk(k, a, kids[1], env);
+                // Width promotion: if either operand is Float, the result is
+                // Float (matches Python `int + float → float`, and IEEE 754
+                // arithmetic on mixed inputs). Pure int/int stays on the
+                // fast i64 path.
+                if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
+                    let l = lv.as_float();
+                    let r = rv.as_float();
+                    Value::Float(match cat.inst {
+                        RMATH_PLUS => l + r,
+                        RMATH_MINUS => l - r,
+                        RMATH_MULTIPLY => l * r,
+                        RMATH_DIVIDE => l / r,
+                        RMATH_MODULO => l - (l / r).floor() * r,
+                        _ => panic!("math.f64: unknown op {}", cat.inst),
+                    })
                 } else {
-                    Value::Bool(walk(k, a, kids[1], env).as_bool())
+                    let l = lv.as_int();
+                    let r = rv.as_int();
+                    Value::Int(match cat.inst {
+                        RMATH_PLUS => l + r,
+                        RMATH_MINUS => l - r,
+                        RMATH_MULTIPLY => l * r,
+                        RMATH_DIVIDE => l / r,
+                        RMATH_MODULO => l % r,
+                        _ => panic!("math: unknown op {}", cat.inst),
+                    })
                 }
             }
-            RLOG_OR => {
+            RB_COMPARE => {
+                let lv = walk(k, a, kids[0], env);
+                let rv = walk(k, a, kids[1], env);
+                // Same width-promotion rule as math: float on either side
+                // forces an IEEE comparison. Pure int/int stays integer.
+                if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
+                    let l = lv.as_float();
+                    let r = rv.as_float();
+                    Value::Bool(match cat.inst {
+                        RCMP_EQ => l == r,
+                        RCMP_NE => l != r,
+                        RCMP_LT => l < r,
+                        RCMP_LE => l <= r,
+                        RCMP_GT => l > r,
+                        RCMP_GE => l >= r,
+                        _ => panic!("compare.f64: unknown op {}", cat.inst),
+                    })
+                } else {
+                    let l = lv.as_int();
+                    let r = rv.as_int();
+                    Value::Bool(match cat.inst {
+                        RCMP_EQ => l == r,
+                        RCMP_NE => l != r,
+                        RCMP_LT => l < r,
+                        RCMP_LE => l <= r,
+                        RCMP_GT => l > r,
+                        RCMP_GE => l >= r,
+                        _ => panic!("compare: unknown op {}", cat.inst),
+                    })
+                }
+            }
+            RB_LOGIC => match cat.inst {
+                RLOG_AND => {
+                    if !walk(k, a, kids[0], env).as_bool() {
+                        Value::Bool(false)
+                    } else {
+                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                    }
+                }
+                RLOG_OR => {
+                    if walk(k, a, kids[0], env).as_bool() {
+                        Value::Bool(true)
+                    } else {
+                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                    }
+                }
+                RLOG_NOT => Value::Bool(!walk(k, a, kids[0], env).as_bool()),
+                _ => panic!("logic: unknown op {}", cat.inst),
+            },
+            RB_COND => {
                 if walk(k, a, kids[0], env).as_bool() {
-                    Value::Bool(true)
+                    n = kids[1]; // TCO: taken branch is in tail position
+                    continue;
+                } else if cat.inst == RCOND_IF_ELSE && kids.len() >= 3 {
+                    n = kids[2]; // TCO: else branch is in tail position
+                    continue;
                 } else {
-                    Value::Bool(walk(k, a, kids[1], env).as_bool())
+                    Value::Null
                 }
             }
-            RLOG_NOT => Value::Bool(!walk(k, a, kids[0], env).as_bool()),
-            _ => panic!("logic: unknown op {}", cat.inst),
-        },
-        RB_COND => {
-            if walk(k, a, kids[0], env).as_bool() {
-                walk(k, a, kids[1], env)
-            } else if cat.inst == RCOND_IF_ELSE && kids.len() >= 3 {
-                walk(k, a, kids[2], env)
-            } else {
-                Value::Null
-            }
-        }
-        RB_BLOCK => {
-            if cat.inst == RBLK_LET {
-                let name = k.ident_id(kids[0]);
-                let v = walk(k, a, kids[1], env);
-                a.bind(env, name, v.clone());
-                return v;
-            }
-            let mut last = Value::Null;
-            for c in kids {
-                last = walk(k, a, c, env);
-            }
-            last
-        }
-        RB_IDENT => {
-            let id = k.ident_id(n);
-            a.lookup(env, id)
-                .unwrap_or_else(|| panic!("unbound: {}", k.name_str(id)))
-        }
-        RB_FNDEF => {
-            let name = k.ident_id(kids[0]);
-            let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
-            let cl = Arc::new(Closure {
-                name,
-                params,
-                body: kids[2],
-                env,
-            });
-            a.bind(env, name, Value::Closure(cl.clone()));
-            Value::Closure(cl)
-        }
-        RB_FNCALL => {
-            let raw_name = k.ident_id(kids[0]);
-            // JIT alias: if a Form function-name is JIT-registered, swap to
-            // the aliased native-name before native lookup. Form recipes are
-            // the canonical truth; `register_jit form-name native-name` opts
-            // calls into a kernel-resident optimized native.
-            let name = k.jit_aliases.get(&raw_name).copied().unwrap_or(raw_name);
-            // Env-aware natives first — they need caller env (walk_recipe_here).
-            let env_ne_opt = k.env_natives.get(&name).copied();
-            if let Some(ne) = env_ne_opt {
-                if a.lookup(env, name).is_none() {
-                    let mut args = Vec::with_capacity(kids.len() - 1);
-                    for arg in &kids[1..] {
-                        args.push(walk(k, a, *arg, env));
-                    }
-                    if ne.category.ty != RB_UNDEFINED {
-                        if let Some(t) = &mut k.trace {
-                            t.record(ne.category.ty, ne.category.inst);
-                        }
-                    }
-                    let native_name = k.name_str(ne.name).to_string();
-                    if let Some(t) = &mut k.trace {
-                        t.record_native(&native_name);
-                    }
-                    return (ne.func)(k, a, env, &args);
-                }
-            }
-            // Native takes priority unless user shadowed. Copy the entry
-            // out so the natives-map borrow releases before we call &mut k.
-            let ne_opt = k.natives.get(&name).copied();
-            if let Some(ne) = ne_opt {
-                if a.lookup(env, name).is_none() {
-                    let mut args = Vec::with_capacity(kids.len() - 1);
-                    for arg in &kids[1..] {
-                        args.push(walk(k, a, *arg, env));
-                    }
-                    // Native Blueprint attribution — record the Form
-                    // category the native expresses alongside the FNCALL
-                    // arm already recorded above. Trace now reflects the
-                    // structural shape of the work, not just the dispatch
-                    // mechanism.
-                    if ne.category.ty != RB_UNDEFINED {
-                        if let Some(t) = &mut k.trace {
-                            t.record(ne.category.ty, ne.category.inst);
-                        }
-                    }
-                    let native_name = k.name_str(ne.name).to_string();
-                    if let Some(t) = &mut k.trace {
-                        t.record_native(&native_name);
-                    }
-                    return (ne.func)(k, a, &args);
-                }
-            }
-            // Closure lookup uses the ORIGINAL function-name (not the JIT-
-            // aliased one) — the user defined this function and wants to
-            // call THEIR version when no JIT mapping resolved a native.
-            let callee = a
-                .lookup(env, raw_name)
-                .unwrap_or_else(|| panic!("unbound function: {}", k.name_str(raw_name)));
-            let cl = match callee {
-                Value::Closure(c) => c,
-                _ => panic!("not callable: {}", k.name_str(name)),
-            };
-            if kids.len() - 1 != cl.params.len() {
-                panic!(
-                    "{} wants {} args, got {}",
-                    k.name_str(name),
-                    cl.params.len(),
-                    kids.len() - 1
-                );
-            }
-            let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
-            // Evaluate args in CALLER's env, then bind in call_frame.
-            // We collect them into `arg_values` first so the JIT dispatch
-            // path can use them directly without re-walking from the frame.
-            // The clone is Arc<Closure> — bump-the-refcount, not deep.
-            let cl2 = cl.clone();
-            let mut arg_values: Vec<Value> = Vec::with_capacity(cl2.params.len());
-            for (i, p) in cl2.params.iter().enumerate() {
-                let arg = walk(k, a, kids[i + 1], env);
-                arg_values.push(arg.clone());
-                a.bind(call_frame, *p, arg);
-            }
-            let fn_name = k.name_str(cl.name).to_string();
-            if let Some(t) = &mut k.trace {
-                t.record_fn(&fn_name);
-            }
-            // JIT-compiled fast path: if (jit_compile "name") landed for
-            // this closure's body, dispatch through the loaded function
-            // pointer. Form recipe stays canonical truth; the .so is opt-in
-            // bootstrap to host-native speed. Sibling-attested: TS uses
-            // V8's `new Function`; Go uses `plugin.Open`; Rust uses
-            // libloading over a rustc-produced cdylib. Same observable
-            // result, three real host-native paths.
-            //
-            // We hold an Arc<JitCompiled> through the call so the Library
-            // can't be dropped mid-call (kernel mutation is safe; the Arc
-            // bumps refcount synchronously).
-            if let Some(jc) = k.jit_compiled.get(&cl.body).cloned() {
-                if let Some(v) = jit_dispatch(&jc, &arg_values) {
+            RB_BLOCK => {
+                if cat.inst == RBLK_LET {
+                    let name = k.ident_id(kids[0]);
+                    let v = walk(k, a, kids[1], env);
+                    a.bind(env, name, v.clone());
                     return v;
                 }
-                // Args don't unbox to i64 — fall back to the walker.
-                // This preserves Form semantics for closures over non-int
-                // values (lists, strings, closures) even after jit_compile
-                // succeeded for the integer-only path.
-            } else if !k.jit_failed.contains(&cl.body) {
-                // MEASURED REPETITION: no manual jit_compile needed. Count calls
-                // to this undecided recipe; at the threshold, attempt the SAME
-                // compile jit_compile does. Success → every later call dispatches
-                // native (the branch above). Failure (a shape outside the JIT
-                // subset, e.g. strings/lists) → mark it failed so it is tried
-                // once, never on every call. A decided recipe carries no counter.
-                let hits = {
-                    let c = k.jit_hits.entry(cl.body).or_insert(0u32);
-                    *c += 1;
-                    *c
-                };
-                if hits >= JIT_HOT_THRESHOLD {
-                    let compiled = emit_rust_source(k, cl.name, &cl.params, cl.body)
-                        .and_then(|src| compile_rust_cdylib(&src, cl.params.len()));
-                    match compiled {
-                        Some(jc) => {
-                            k.jit_compiled.insert(cl.body, Arc::new(jc));
-                        }
-                        None => {
-                            k.jit_failed.insert(cl.body);
-                        }
+                if kids.is_empty() {
+                    Value::Null
+                } else {
+                    let last = kids.len() - 1;
+                    for c in &kids[..last] {
+                        walk(k, a, *c, env);
                     }
-                    k.jit_hits.remove(&cl.body);
+                    n = kids[last]; // TCO: a do/seq block's last expr is in tail position
+                    continue;
                 }
             }
-            walk(k, a, cl.body, call_frame)
-        }
-        RB_LIST => {
-            let mut out = Vec::with_capacity(kids.len());
-            for c in &kids {
-                out.push(walk(k, a, *c, env));
+            RB_IDENT => {
+                let id = k.ident_id(n);
+                a.lookup(env, id)
+                    .unwrap_or_else(|| panic!("unbound: {}", k.name_str(id)))
             }
-            Value::List(out)
-        }
-        // Structural passthrough — categories the walker can't yet execute
-        // (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
-        // PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
-        // VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
-        // records their attribution. Walking returns the NodeID itself so
-        // downstream structural reasoning continues. Sibling-parity with
-        // TS kernel's behavior. The honest stance: "this kernel knows the
-        // shape exists but cannot yet execute its semantics; the substrate
-        // identity is preserved." Replaces the prior panic — kernels are
-        // no longer fragile in face of recipes from richer dialects.
-        _ => Value::Nid(n),
+            RB_FNDEF => {
+                let name = k.ident_id(kids[0]);
+                let params: Vec<NameID> = k.children(kids[1]).iter().map(|p| p.inst).collect();
+                let cl = Arc::new(Closure {
+                    name,
+                    params,
+                    body: kids[2],
+                    env,
+                });
+                a.bind(env, name, Value::Closure(cl.clone()));
+                Value::Closure(cl)
+            }
+            RB_FNCALL => {
+                let raw_name = k.ident_id(kids[0]);
+                // JIT alias: if a Form function-name is JIT-registered, swap to
+                // the aliased native-name before native lookup. Form recipes are
+                // the canonical truth; `register_jit form-name native-name` opts
+                // calls into a kernel-resident optimized native.
+                let name = k.jit_aliases.get(&raw_name).copied().unwrap_or(raw_name);
+                // Env-aware natives first — they need caller env (walk_recipe_here).
+                let env_ne_opt = k.env_natives.get(&name).copied();
+                if let Some(ne) = env_ne_opt {
+                    if a.lookup(env, name).is_none() {
+                        let mut args = Vec::with_capacity(kids.len() - 1);
+                        for arg in &kids[1..] {
+                            args.push(walk(k, a, *arg, env));
+                        }
+                        if ne.category.ty != RB_UNDEFINED {
+                            if let Some(t) = &mut k.trace {
+                                t.record(ne.category.ty, ne.category.inst);
+                            }
+                        }
+                        let native_name = k.name_str(ne.name).to_string();
+                        if let Some(t) = &mut k.trace {
+                            t.record_native(&native_name);
+                        }
+                        return (ne.func)(k, a, env, &args);
+                    }
+                }
+                // Native takes priority unless user shadowed. Copy the entry
+                // out so the natives-map borrow releases before we call &mut k.
+                let ne_opt = k.natives.get(&name).copied();
+                if let Some(ne) = ne_opt {
+                    if a.lookup(env, name).is_none() {
+                        let mut args = Vec::with_capacity(kids.len() - 1);
+                        for arg in &kids[1..] {
+                            args.push(walk(k, a, *arg, env));
+                        }
+                        // Native Blueprint attribution — record the Form
+                        // category the native expresses alongside the FNCALL
+                        // arm already recorded above. Trace now reflects the
+                        // structural shape of the work, not just the dispatch
+                        // mechanism.
+                        if ne.category.ty != RB_UNDEFINED {
+                            if let Some(t) = &mut k.trace {
+                                t.record(ne.category.ty, ne.category.inst);
+                            }
+                        }
+                        let native_name = k.name_str(ne.name).to_string();
+                        if let Some(t) = &mut k.trace {
+                            t.record_native(&native_name);
+                        }
+                        return (ne.func)(k, a, &args);
+                    }
+                }
+                // Closure lookup uses the ORIGINAL function-name (not the JIT-
+                // aliased one) — the user defined this function and wants to
+                // call THEIR version when no JIT mapping resolved a native.
+                let callee = a
+                    .lookup(env, raw_name)
+                    .unwrap_or_else(|| panic!("unbound function: {}", k.name_str(raw_name)));
+                let cl = match callee {
+                    Value::Closure(c) => c,
+                    _ => panic!("not callable: {}", k.name_str(name)),
+                };
+                if kids.len() - 1 != cl.params.len() {
+                    panic!(
+                        "{} wants {} args, got {}",
+                        k.name_str(name),
+                        cl.params.len(),
+                        kids.len() - 1
+                    );
+                }
+                let call_frame = a.new_frame_with_capacity(Some(cl.env), cl.params.len());
+                // Evaluate args in CALLER's env, then bind in call_frame.
+                // We collect them into `arg_values` first so the JIT dispatch
+                // path can use them directly without re-walking from the frame.
+                // The clone is Arc<Closure> — bump-the-refcount, not deep.
+                let cl2 = cl.clone();
+                let mut arg_values: Vec<Value> = Vec::with_capacity(cl2.params.len());
+                for (i, p) in cl2.params.iter().enumerate() {
+                    let arg = walk(k, a, kids[i + 1], env);
+                    arg_values.push(arg.clone());
+                    a.bind(call_frame, *p, arg);
+                }
+                let fn_name = k.name_str(cl.name).to_string();
+                if let Some(t) = &mut k.trace {
+                    t.record_fn(&fn_name);
+                }
+                // JIT-compiled fast path: if (jit_compile "name") landed for
+                // this closure's body, dispatch through the loaded function
+                // pointer. Form recipe stays canonical truth; the .so is opt-in
+                // bootstrap to host-native speed. Sibling-attested: TS uses
+                // V8's `new Function`; Go uses `plugin.Open`; Rust uses
+                // libloading over a rustc-produced cdylib. Same observable
+                // result, three real host-native paths.
+                //
+                // We hold an Arc<JitCompiled> through the call so the Library
+                // can't be dropped mid-call (kernel mutation is safe; the Arc
+                // bumps refcount synchronously).
+                if let Some(jc) = k.jit_compiled.get(&cl.body).cloned() {
+                    if let Some(v) = jit_dispatch(&jc, &arg_values) {
+                        return v;
+                    }
+                    // Args don't unbox to i64 — fall back to the walker.
+                    // This preserves Form semantics for closures over non-int
+                    // values (lists, strings, closures) even after jit_compile
+                    // succeeded for the integer-only path.
+                } else if !k.jit_failed.contains(&cl.body) {
+                    // MEASURED REPETITION: no manual jit_compile needed. Count calls
+                    // to this undecided recipe; at the threshold, attempt the SAME
+                    // compile jit_compile does. Success → every later call dispatches
+                    // native (the branch above). Failure (a shape outside the JIT
+                    // subset, e.g. strings/lists) → mark it failed so it is tried
+                    // once, never on every call. A decided recipe carries no counter.
+                    let hits = {
+                        let c = k.jit_hits.entry(cl.body).or_insert(0u32);
+                        *c += 1;
+                        *c
+                    };
+                    if hits >= JIT_HOT_THRESHOLD {
+                        let compiled = emit_rust_source(k, cl.name, &cl.params, cl.body)
+                            .and_then(|src| compile_rust_cdylib(&src, cl.params.len()));
+                        match compiled {
+                            Some(jc) => {
+                                k.jit_compiled.insert(cl.body, Arc::new(jc));
+                            }
+                            None => {
+                                k.jit_failed.insert(cl.body);
+                            }
+                        }
+                        k.jit_hits.remove(&cl.body);
+                    }
+                }
+                n = cl.body; // TCO: a closure body is in tail position — loop, don't recurse
+                env = call_frame;
+                continue;
+            }
+            RB_LIST => {
+                let mut out = Vec::with_capacity(kids.len());
+                for c in &kids {
+                    out.push(walk(k, a, *c, env));
+                }
+                Value::List(out)
+            }
+            // Structural passthrough — categories the walker can't yet execute
+            // (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
+            // PROJECT, GENERATIVE, PROOF, INFERENCE, VECTOR, TILE, PARALLELIZE,
+            // VECTORIZE, OBSERVER, TRANSMUTE, ...) intern fine and the trace
+            // records their attribution. Walking returns the NodeID itself so
+            // downstream structural reasoning continues. Sibling-parity with
+            // TS kernel's behavior. The honest stance: "this kernel knows the
+            // shape exists but cannot yet execute its semantics; the substrate
+            // identity is preserved." Replaces the prior panic — kernels are
+            // no longer fragile in face of recipes from richer dialects.
+            _ => Value::Nid(n),
+        };
     }
 }
 
@@ -7179,11 +7207,7 @@ fn handle_request(
         // context fields are not user-controlled and are excluded). Answer an
         // oversized param with a 413 observably instead of evaluating it. A real
         // native query's params are tiny.
-        let max_param_bytes: usize = request_data
-            .iter()
-            .map(|(_, v)| v.len())
-            .max()
-            .unwrap_or(0);
+        let max_param_bytes: usize = request_data.iter().map(|(_, v)| v.len()).max().unwrap_or(0);
         if max_param_bytes > NATIVE_HANDLER_INPUT_LIMIT {
             let status = "413 Payload Too Large".to_string();
             let body = format!(
@@ -7498,10 +7522,12 @@ fn worker_loop(
             Some(Value::Closure(c)) => {
                 let routes_id = k.intern_string("routes").inst;
                 let registry_id = k.intern_string("registry").inst;
-                let routes_val =
-                    arena.lookup(root_env, routes_id).unwrap_or(Value::List(vec![]));
-                let registry_val =
-                    arena.lookup(root_env, registry_id).unwrap_or(Value::List(vec![]));
+                let routes_val = arena
+                    .lookup(root_env, routes_id)
+                    .unwrap_or(Value::List(vec![]));
+                let registry_val = arena
+                    .lookup(root_env, registry_id)
+                    .unwrap_or(Value::List(vec![]));
                 Some((c, routes_val, registry_val))
             }
             _ => {
@@ -7605,7 +7631,7 @@ struct CompiledRouteProgram {
 fn run_source_on_form_stack(name: &str, src: String) -> Result<(Kernel, Value), String> {
     std::thread::Builder::new()
         .name(name.to_string())
-        .stack_size(FORM_KERNEL_STACK_BYTES)
+        .stack_size(form_kernel_stack_bytes())
         .spawn(move || {
             let mut k = Kernel::new();
             let root = read_root_from_source(&mut k, &src);
@@ -8598,7 +8624,11 @@ fn parse_headers(head: &str) -> Vec<(String, String)> {
             // never contains these control bytes; dropping such a header forwards
             // no control character to either hop, regardless of how lenient the
             // far end's parser is.
-            if name.bytes().chain(value.bytes()).any(|b| b == b'\r' || b == b'\n' || b == 0) {
+            if name
+                .bytes()
+                .chain(value.bytes())
+                .any(|b| b == b'\r' || b == b'\n' || b == 0)
+            {
                 continue;
             }
             out.push((name.to_string(), value.to_string()));
@@ -9090,14 +9120,25 @@ mod router_context_tests {
         let head = "GET / HTTP/1.1\nHost: x\nX-Smuggle: v\rContent-Length: 0\nAccept: text/html\n";
         let hs = parse_headers(head);
         let names: Vec<&str> = hs.iter().map(|(n, _)| n.as_str()).collect();
-        assert!(names.contains(&"Host") && names.contains(&"Accept"), "legit header dropped: {:?}", hs);
-        assert!(!names.contains(&"X-Smuggle"), "CR-injected header was relayed: {:?}", hs);
+        assert!(
+            names.contains(&"Host") && names.contains(&"Accept"),
+            "legit header dropped: {:?}",
+            hs
+        );
+        assert!(
+            !names.contains(&"X-Smuggle"),
+            "CR-injected header was relayed: {:?}",
+            hs
+        );
         // NO relayed header carries ANY control byte (CR / LF / NUL).
         for (n, v) in &hs {
             assert!(
-                !n.bytes().chain(v.bytes()).any(|b| b == b'\r' || b == b'\n' || b == 0),
+                !n.bytes()
+                    .chain(v.bytes())
+                    .any(|b| b == b'\r' || b == b'\n' || b == 0),
                 "control byte survived in header {:?}: {:?}",
-                n, v
+                n,
+                v
             );
         }
         // A NUL in a value is likewise dropped; a clean header beside it survives.
@@ -10989,7 +11030,7 @@ fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     let handle = std::thread::Builder::new()
         .name("form-kernel-rust".to_string())
-        .stack_size(FORM_KERNEL_STACK_BYTES)
+        .stack_size(form_kernel_stack_bytes())
         .spawn(move || main_with_args(args))
         .unwrap_or_else(|e| {
             eprintln!("form-kernel-rust: failed to start execution worker: {}", e);
