@@ -185,8 +185,38 @@ so a native `g-match` can be dropped in under the same fk surface. Native Match
 is O(1)-dispatch and no interpreter overhead — that is what turns 18s into
 milliseconds and lets Rust complete. Packrat/condensation may still matter for a
 genuinely ambiguous grammar, but for BML it was the wrong stone; the interpreter
-was. Next experiment: a native Match inner loop, aliased in, benchmarked the
-same way.
+was.
+
+**Second experiment — Cut (the thesis's own tool), and why it ranks above
+packrat.** The thesis BMF engine had a `Cut` primitive (`primitive-Cut.bml`):
+once a rule's discriminator matches, *cut* commits and the enclosing choice
+never tries the other alternatives. That attacks a different axis than packrat —
+packrat caches *re-evaluation*; cut prevents *first-time evaluation of doomed
+alternatives*. I implemented committed-choice (a `(cut)` pattern; failures after
+a cut propagate up through seq/rep/sep/opt to the nearest `Alt`, which stops),
+placed cut after the unique keyword discriminators (if/for/while/switch/try/…),
+and measured:
+
+```
+Go, all four files:   no cut 18.2s    with cut 9.3s   (~2x, interpreted)
+```
+
+So cut *works* where packrat didn't — it prunes the exploration space, exactly
+as it did on 2000-era hardware. Two honest caveats: (1) the 9.3s isn't pure
+speedup — cut also flipped BMF-grammar.bml from `2` to `1`, revealing that its
+prior "full parse" leaned on imprecise backtracking that consumed to EOF without
+correctly parsing every construct; cut enforces honest coverage. (2) cut at the
+*keyword* level only prunes cheap-doomed alternatives; the expensive doomed ones
+(decl/assign/expr sharing a leading construct) need the grammar *left-factored*
+so a cut can commit after that shared construct.
+
+**Ranked, measured:** packrat — no help (wrong axis). Cut — ~2x and the thesis's
+proven lever, but needs left-factoring + honest-coverage repair to land. Native
+Match engine — the big multiplier (the thesis was *compiled* Java, not
+interpreted; that, plus cut, is why old hardware ran it trivially). The real
+target is **native engine + cut + a left-factored grammar** together — each was
+one leg of why the thesis was fast, and we'd been missing all three. Next
+experiment: a native Match inner loop, aliased in, benchmarked the same way.
 
 ### Template blueprints — the emitting side
 
