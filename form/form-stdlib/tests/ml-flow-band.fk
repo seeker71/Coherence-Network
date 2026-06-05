@@ -1,0 +1,67 @@
+section [form.bml] {
+    // --- Helper functions for Vector Representation -----------------------
+    def vector_reverse_loop(in, out) = if eq(len(in), 0) then out else vector_reverse_loop(tail(in), cons(head(in), out));
+
+    def vector_reverse(xs) = vector_reverse_loop(xs, empty);
+
+    def vector_intern_loop(values, acc) = if eq(len(values), 0) then acc else vector_intern_loop(tail(values), cons(make_float64(head(values)), acc));
+
+    def vector_from_list(float_list) {
+        let category = make_nodeid(1, 2, 99, 1200);
+        intern_node(category, vector_reverse(vector_intern_loop(float_list, empty)));
+    }
+
+    // --- Attention Functions ----------------------------------------------
+    def float_value_list(nodes, acc) = if eq(len(nodes), 0) then acc else float_value_list(tail(nodes), cons(float_value(head(nodes)), acc));
+
+    def dot_product_loop(xs, ys, acc) = if eq(len(xs), 0) then acc else if eq(len(ys), 0) then acc else dot_product_loop(tail(xs), tail(ys), add(acc, mul(head(xs), head(ys))));
+
+    def vector_dot(v1, v2) = dot_product_loop(reverse(float_value_list(node_children(v1), empty)), reverse(float_value_list(node_children(v2), empty)), 0.0);
+
+    def project_value_loop(weight, children, acc) = if eq(len(children), 0) then acc else project_value_loop(weight, tail(children), cons(mul(float_value(head(children)), weight), acc));
+
+    def project_value(weight, v) = vector_from_list(reverse(project_value_loop(weight, node_children(v), empty)));
+
+    // --- Diffusion Functions ----------------------------------------------
+    def denoise_step_loop(latent_nodes, noise_nodes, alpha, beta, acc) = if eq(len(latent_nodes), 0) then acc else denoise_step_loop(tail(latent_nodes), tail(noise_nodes), alpha, beta, cons(sub(mul(float_value(head(latent_nodes)), alpha), mul(float_value(head(noise_nodes)), beta)), acc));
+
+    def denoise_step(latent, noise, alpha, beta) = vector_from_list(reverse(denoise_step_loop(node_children(latent), node_children(noise), alpha, beta, empty)));
+
+
+    // --- Execution & Checks -----------------------------------------------
+
+    // 1. Construction and Structural matching
+    let v1 = vector_from_list(list(0.1, 0.2, 0.3));
+    let v2 = vector_from_list(list(0.1, 0.2, 0.3));
+    let v3 = vector_from_list(list(0.1, 0.2, 0.4));
+
+    let check1 = if node_eq(v1, v2) then 1 else 0;
+    let check2 = if node_eq(v1, v3) then 0 else 1;
+
+    // 2. Attention query, key, value projection
+    let q = vector_from_list(list(1.0, 0.0));
+    let k = vector_from_list(list(1.0, 0.0));
+    let v = vector_from_list(list(2.0, 4.0));
+    
+    let dot = vector_dot(q, k);
+    let scale = 2.0;
+    // 1.0 / 2.0 = 0.5
+    let weight = div(dot, scale);
+    
+    let check3 = if eq(weight, 0.5) then 1 else 0;
+
+    let projected_v = project_value(weight, v);
+    let target_v = vector_from_list(list(1.0, 2.0));
+    let check4 = if node_eq(projected_v, target_v) then 1 else 0;
+
+    // 3. Denoising step
+    let latent = vector_from_list(list(2.0, 3.0));
+    let noise = vector_from_list(list(0.5, 1.0));
+    // [2.0*0.5 - 0.5*0.2, 3.0*0.5 - 1.0*0.2] = [0.9, 1.3]
+    let next_latent = denoise_step(latent, noise, 0.5, 0.2);
+    let target_latent = vector_from_list(list(0.9, 1.3));
+    let check5 = if node_eq(next_latent, target_latent) then 1 else 0;
+
+    // Verdict: 5 when all ML flow checks succeed.
+    add(check1, add(check2, add(check3, add(check4, check5))));
+}

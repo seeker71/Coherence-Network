@@ -1,0 +1,107 @@
+# ─────────────────────────────────────────────────────────────────────
+# ml-diffusion-model-flow.form — ML Flow Specifications in Form/BML
+# ─────────────────────────────────────────────────────────────────────
+#
+# This specification defines how the inner structures of large language
+# model embeddings, attention walks, diffusion denoising steps, and 
+# runtime Pareto SLA budgets are modeled natively on the Coherence substrate.
+#
+# Composes the mathematical operations as content-addressed Recipes,
+# showing how multi-modal embeddings and state-of-the-art model layers
+# resolve to deterministic, deduplicatable NodeIDs.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — State and Tensor Shapes
+# ─────────────────────────────────────────────────────────────────────
+
+form embedding_vector = {
+    id:        ~String,       # unique coordinate / token seed
+    values:    [~Float],      # float tensor components
+    dimension: ~Int,          # vector arity
+};
+
+form attention_qkv = {
+    query:     ~embedding_vector,
+    key:       ~embedding_vector,
+    value:     ~embedding_vector,
+    scale:     ~Float,
+};
+
+form diffusion_unet_step = {
+    latent:        ~embedding_vector,
+    noise_pred:    ~embedding_vector,
+    timestep:      ~Int,
+    alpha_cumprod: ~Float,
+    beta_cumprod:  ~Float,
+};
+
+form pareto_sla_point = {
+    steps:          ~Int,
+    latency_ms:     ~Float,
+    fidelity_score: ~Float,
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — Attention Matrix Projection
+# ─────────────────────────────────────────────────────────────────────
+# Computes a simplified scaled dot-product attention projection:
+#   Attention(Q, K, V) = softmax(Q · K / scale) · V
+
+defn dot_product(v1, v2) = sum(pairwise_multiply(v1.values, v2.values));
+
+defn attention_weight(q, k, scale) = do {
+    let raw_dot = dot_product(q, k);
+    raw_dot / scale
+};
+
+# Projects query/key attention weights onto a value vector:
+defn project_value(weight, v) = do {
+    # Scale each element in the value vector by the attention weight
+    map(v.values, fn(x) -> x * weight)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Diffusion Denoising Step
+# ─────────────────────────────────────────────────────────────────────
+# Standard diffusion step formula:
+#   next_latent = latent * alpha_cumprod - noise_pred * beta_cumprod
+
+defn scale_vector(v, factor) = map(v.values, fn(x) -> x * factor);
+
+defn add_vectors(v1_vals, v2_vals) = do {
+    if len(v1_vals) == 0 or len(v2_vals) == 0 then []
+    else concat(
+        [head(v1_vals) + head(v2_vals)],
+        add_vectors(tail(v1_vals), tail(v2_vals))
+    )
+};
+
+defn denoise_step(step) = do {
+    let scaled_latent = scale_vector(step.latent, step.alpha_cumprod);
+    let scaled_noise  = scale_vector(step.noise_pred, step.beta_cumprod);
+    
+    # Subtract scaled_noise from scaled_latent
+    let negative_noise = map(scaled_noise, fn(x) -> 0.0 - x);
+    let result_vals = add_vectors(scaled_latent, negative_noise);
+    
+    embedding_vector {
+        id:        concat(step.latent.id, "-denoised"),
+        values:    result_vals,
+        dimension: step.latent.dimension,
+    }
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — Pareto Quality-vs-Latency SLA Selector
+# ─────────────────────────────────────────────────────────────────────
+# Scans a list of available Pareto SLA configuration points and selects
+# the optimal step count that meets a given latency budget.
+
+defn select_pareto_config(points, budget_ms, fallback_steps) = do {
+    if len(points) == 0 then fallback_steps
+    else do {
+        let pt = head(points);
+        if pt.latency_ms <= budget_ms then pt.steps
+        else select_pareto_config(tail(points), budget_ms, fallback_steps)
+    }
+};
