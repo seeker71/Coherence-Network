@@ -126,6 +126,36 @@ lift pattern-kind to a Blueprint and make `Match` dispatch through that same
 O(1) NodeID switch — *switch is free* — rather than re-deriving it with a tag
 chain. That is a kernel-native step, named here so the next cell can take it.
 
+### Observability — the cursor's furthest reach
+
+A failed `Alt` returns the *pre*-failure cursor (no-sediment backtracking), so a
+partial parse silently rewinds and the caller can't see where the grammar gave
+out. The fix is to let the cursor carry its **furthest reach**: the deepest
+stream position any rule was attempted at, and that rule's name. Probing the
+four thesis `.bml` files with this proved its worth — it pinpointed the frontier
+at byte 6328 (a `catch` body), which named the real gap: a local declaration
+*without* initializer (`ParseStream hStream;` — only `Type name = expr;` was a
+rule). Adding `declnoinit` advanced the frontier to byte 15941 of 15943, and Go
+and TS then fully parsed all four files.
+
+Two design notes the proving exposed:
+- **Keep it cheap or opt-in.** Tracking it with `record_get`/`record_set` on
+  *every* rule entry (each interning the field name) made the hot path far
+  slower under heavy backtracking — Rust went from finishing to minutes. The
+  frontier wants a single mutable int cell updated only on a strict advance, or
+  a tracking mode toggled off for production parses.
+- **It surfaces the real frontier: backtracking cost.** With the deep parse
+  unlocked, the grammar's PEG backtracking is the wall — the same `(rule, pos)`
+  is re-parsed across `Alt` branches and `Chain` arg-exprs, multiplying through
+  expression depth. Rust hangs on the full 456-line file. This is the twin of
+  the O(1)-switch grounding: **packrat memoization** — cache `(rule, pos) →
+  result`, turning exponential re-descent into linear. It IS the body's own
+  teaching that *repeated observation condenses to one result* (gas→water→ice,
+  JIT). The one constraint: memo identity is per-input — key it by the surface
+  (or give each parse a fresh memo), since grammars are reused across inputs.
+  Linear parsing is what lets the 4th file complete on every kernel and lets the
+  furthest-reach cell run always-on without cost.
+
 ### Template blueprints — the emitting side
 
 ```form
