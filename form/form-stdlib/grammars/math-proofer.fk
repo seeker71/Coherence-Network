@@ -1,0 +1,34 @@
+section [form.bml] {
+    // --- Constants / Category coordinates ---------------------------------
+    def VAR_CAT() = make_nodeid(1, 2, 99, 9001);
+    def IMPL_CAT() = make_nodeid(1, 2, 99, 9002);
+
+    // --- Constructors ------------------------------------------------------
+    def mp_var(name) = intern_node(VAR_CAT(), list(intern_trivial_string(name)));
+
+    def mp_impl(antecedent, consequent) = intern_node(IMPL_CAT(), list(antecedent, consequent));
+
+    // --- Helpers -----------------------------------------------------------
+    def mp_contains(xs, y) = if nil?(xs) then 0 else if node_eq(head(xs), y) then 1 else mp_contains(tail(xs), y);
+
+    // --- Speculative Prover Search -----------------------------------------
+    def mp_try_rule(impl, assumptions, goal) {
+        let is_impl = node_eq(node_category(impl), IMPL_CAT());
+        let ant = if is_impl then nth(node_children(impl), 0) else empty;
+        let consq = if is_impl then nth(node_children(impl), 1) else empty;
+        
+        if is_impl then
+            if eq(mp_contains(assumptions, ant), 1) then
+                if eq(mp_contains(assumptions, consq), 0) then
+                    mp_prove(cons(consq, assumptions), goal)
+                else 0
+            else 0
+        else 0;
+    }
+
+    def mp_try_all_rules(rules, assumptions, goal) = if nil?(rules) then 0 else if eq(mp_try_rule(head(rules), assumptions, goal), 1) then 1 else mp_try_all_rules(tail(rules), assumptions, goal);
+
+    def mp_prove(assumptions, goal) = if eq(mp_contains(assumptions, goal), 1) then 1 else mp_try_all_rules(assumptions, assumptions, goal);
+
+    0;
+}
