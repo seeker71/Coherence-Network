@@ -9,7 +9,28 @@
       "namePlaceholder": "Dein Name",
       "enter": "Ins Haus eintreten"
     },
-    "role": { "resident": "Bewohner", "staff": "Personal" },
+    "role": { "resident": "Bewohner", "staff": "Personal", "member": "Mitglied" },
+    "seeOnly": "nur-lesen",
+    "noWriteNote": "Ein Bewohner kann dir Schreibzugriff geben, um Anfragen zu stellen und zu betreuen.",
+    "join": {
+      "openInvite": "Öffne deinen Einladungslink zum Beitreten — oder gib deinen Namen ein, um die Tafel zu sehen.",
+      "watch": "Tafel ansehen"
+    },
+    "invite": {
+      "heading": "Jemanden einladen",
+      "namePlaceholder": "Ihr Name",
+      "phonePlaceholder": "WhatsApp-Nr. (optional)",
+      "create": "Einladungslink erstellen",
+      "shareWhatsApp": "Auf WhatsApp teilen",
+      "copy": "Link kopieren",
+      "copied": "Kopiert!",
+      "linkFor": "Einladungslink für {name} — teile ihn auf WhatsApp:"
+    },
+    "people": {
+      "heading": "Wartet auf Freigabe",
+      "grantWrite": "Schreibzugriff geben"
+    },
+    "whatsappMsg": "{name}, du bist zur Hati-Suci-Tafel eingeladen:",
     "add": {
       "heading": "Das Feld bitten",
       "detailPlaceholder": "Was brauchst du?",

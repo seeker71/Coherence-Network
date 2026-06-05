@@ -9,7 +9,28 @@
       "namePlaceholder": "Tu nombre",
       "enter": "Entrar en la casa"
     },
-    "role": { "resident": "Residente", "staff": "Personal" },
+    "role": { "resident": "Residente", "staff": "Personal", "member": "Miembro" },
+    "seeOnly": "solo-ver",
+    "noWriteNote": "Un residente puede darte acceso de escritura para añadir y atender solicitudes.",
+    "join": {
+      "openInvite": "Abre tu enlace de invitación para unirte — o escribe tu nombre para ver el tablón.",
+      "watch": "Ver el tablón"
+    },
+    "invite": {
+      "heading": "Invitar a alguien",
+      "namePlaceholder": "Su nombre",
+      "phonePlaceholder": "Nº de WhatsApp (opcional)",
+      "create": "Crear enlace de invitación",
+      "shareWhatsApp": "Compartir por WhatsApp",
+      "copy": "Copiar enlace",
+      "copied": "¡Copiado!",
+      "linkFor": "Enlace de invitación para {name} — compártelo por WhatsApp:"
+    },
+    "people": {
+      "heading": "Esperando aprobación",
+      "grantWrite": "Dar escritura"
+    },
+    "whatsappMsg": "{name}, estás invitado al tablón de Hati Suci:",
     "add": {
       "heading": "Pídele al campo",
       "detailPlaceholder": "¿Qué necesitas?",

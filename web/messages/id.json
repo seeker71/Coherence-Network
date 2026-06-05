@@ -9,7 +9,28 @@
       "namePlaceholder": "Nama Anda",
       "enter": "Masuk ke rumah"
     },
-    "role": { "resident": "Penghuni", "staff": "Staf" },
+    "role": { "resident": "Penghuni", "staff": "Staf", "member": "Anggota" },
+    "seeOnly": "hanya-lihat",
+    "noWriteNote": "Penghuni dapat memberi Anda akses tulis untuk menambah dan menangani permintaan.",
+    "join": {
+      "openInvite": "Buka tautan undangan Anda untuk bergabung — atau masukkan nama untuk melihat papan.",
+      "watch": "Lihat papan"
+    },
+    "invite": {
+      "heading": "Undang seseorang",
+      "namePlaceholder": "Nama mereka",
+      "phonePlaceholder": "No. WhatsApp (opsional)",
+      "create": "Buat tautan undangan",
+      "shareWhatsApp": "Bagikan di WhatsApp",
+      "copy": "Salin tautan",
+      "copied": "Tersalin!",
+      "linkFor": "Tautan undangan untuk {name} — bagikan di WhatsApp:"
+    },
+    "people": {
+      "heading": "Menunggu persetujuan",
+      "grantWrite": "Beri akses tulis"
+    },
+    "whatsappMsg": "{name}, Anda diundang ke papan Hati Suci:",
     "add": {
       "heading": "Minta bantuan",
       "detailPlaceholder": "Apa yang Anda butuhkan?",
