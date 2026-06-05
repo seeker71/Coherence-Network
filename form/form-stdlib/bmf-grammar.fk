@@ -58,7 +58,7 @@
             (if (nil? r) (list "rno")
                 (do (let m (g-match g (r3-pat r) c (gc-empty)))
                     (if (g-ok? m)
-                        (list "rok" (g-build g (r3-tpl r) (g-caps m)) (g-cur m))
+                        (list "rok" (g-build g (r3-tpl r) (g-caps m) (cur-pos (g-cur m))) (g-cur m))
                         (list "rno"))))))
     (defn rok? (rr) (str_eq (head rr) "rok"))
     (defn rok-node (rr) (nth rr 1))
@@ -304,7 +304,13 @@
     (defn gm-rep-loop (g inner c caps acc)
         (do (let m (g-match g inner c caps))
             (if (g-ok? m)
-                (gm-rep-loop g inner (g-cur m) (g-caps m) (cons (g-val m) acc))
+                ;; zero-width guard: a rep whose inner matched WITHOUT advancing the
+                ;; cursor can never make progress — repeating it is an infinite loop.
+                ;; Stop and keep what we have. Standard PEG behaviour for `*`/`+`
+                ;; over a nullable inner expression.
+                (if (gt (cur-pos (g-cur m)) (cur-pos c))
+                    (gm-rep-loop g inner (g-cur m) (g-caps m) (cons (g-val m) acc))
+                    (g-ok (nlist (reverse-acc acc)) caps c))
                 (g-ok (nlist (reverse-acc acc)) caps c))))
 
     ;; sep: inner (sepp inner)* ; value is the node-list of inner results.
@@ -324,19 +330,24 @@
                 (g-ok (nlist (reverse-acc acc)) caps c))))
 
     ;; ── templates -> node ────────────────────────────────────────────────
-    (defn g-build (g tpl caps)
+    ;; g-build emits the rule's node via intern_node_at, attributing it to the
+    ;; source cursor position `pos` — so the framebuffer (source_attr side-map)
+    ;; SEES every node the parse creates and where in the source it came from.
+    ;; The framebuffer is the observation that lets us trust+release: a recipe
+    ;; run is witnessed by the cells it authored, keyed back to the bytes.
+    (defn g-build (g tpl caps pos)
         (do (let tag (head tpl))
-            (if (str_eq tag "emit")   (intern_node (bp (nth tpl 1)) (g-kids g (nth tpl 2) caps))
+            (if (str_eq tag "emit")   (intern_node_at (bp (nth tpl 1)) (g-kids g (nth tpl 2) caps pos) "bml" pos 0)
             (if (str_eq tag "splice") (gc-get caps (nth tpl 1))
             (if (str_eq tag "const")  (intern_trivial_string (nth tpl 1))
                 (intern_trivial_string "?"))))))
     ;; kids: a `splice*` kid flattens a captured node-list into the children.
-    (defn g-kids (g kids caps)
+    (defn g-kids (g kids caps pos)
         (if (nil? kids) (empty)
             (do (let k (head kids))
                 (if (str_eq (head k) "splice*")
-                    (append (nlist-items (gc-get caps (nth k 1))) (g-kids g (tail kids) caps))
-                    (cons (g-build g k caps) (g-kids g (tail kids) caps))))))
+                    (append (nlist-items (gc-get caps (nth k 1))) (g-kids g (tail kids) caps pos))
+                    (cons (g-build g k caps pos) (g-kids g (tail kids) caps pos))))))
 
     ;; ── top: parse a string from the grammar's start rule -> node ─────────
     (defn g-parse (g src)

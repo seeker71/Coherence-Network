@@ -61,7 +61,7 @@
         (rule3 "dottedtype" (list "seq" (p-cap "v" (p-run "alpha")) (p-rep (list "seq" (p-lit ".") (p-run "alpha"))) (p-opt (list "seq" (p-lit "[") (p-lit "]")))) (t-splice "v"))
 
         ;; ── statements (keyword-led first, then decls / assigns / exprs) ──
-        (rule3 "stmt" (p-cap "v" (list "alt" (p-ref "retv") (p-ref "retz") (p-ref "breakx") (p-ref "continuex") (p-ref "fails") (p-ref "throws") (p-ref "ifs") (p-ref "fors") (p-ref "whiles") (p-ref "switchs") (p-ref "trys") (p-ref "block") (p-ref "constlocal") (p-ref "typedlocal") (p-ref "compound") (p-ref "assign") (p-ref "exprs"))) (t-splice "v"))
+        (rule3 "stmt" (p-cap "v" (list "alt" (p-ref "retv") (p-ref "retz") (p-ref "breakx") (p-ref "continuex") (p-ref "fails") (p-ref "throws") (p-ref "ifs") (p-ref "fors") (p-ref "whiles") (p-ref "switchs") (p-ref "trys") (p-ref "block") (p-ref "constlocal") (p-ref "typedlocal") (p-ref "decllocal") (p-ref "compound") (p-ref "assign") (p-ref "exprs"))) (t-splice "v"))
         (rule3 "retv" (list "seq" (p-lit "return") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "UE-JUMP-RETURN" (list (t-splice "e"))))
         (rule3 "retz" (list "seq" (p-lit "return") (p-lit ";")) (t-emit "UE-JUMP-RETURN" (list)))
         (rule3 "breakx" (list "seq" (p-lit "break") (p-lit ";")) (t-emit "UE-JUMP-BREAK" (list)))
@@ -83,6 +83,7 @@
         (rule3 "block" (list "seq" (p-lit "{") (p-cap "ss" (p-rep (p-ref "stmt"))) (p-lit "}")) (t-emit "do" (list (t-splices "ss"))))
         (rule3 "constlocal" (list "seq" (p-lit "const") (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "let" (list (t-splice "n") (t-splice "e"))))
         (rule3 "typedlocal" (list "seq" (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "let" (list (t-splice "n") (t-splice "e"))))
+        (rule3 "decllocal" (list "seq" (p-ref "typeref") (p-cap "n" (p-run "alpha")) (p-opt (p-ref "props")) (p-lit ";")) (t-emit "let" (list (t-splice "n"))))
         (rule3 "compound" (list "seq" (p-cap "l" (p-ref "postfix")) (list "alt" (p-lit "+=") (p-lit "-=") (p-lit "*=") (p-lit "/=")) (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "UE-WRITE-ASSIGN" (list (t-splice "l") (t-splice "e"))))
         (rule3 "assign" (list "seq" (p-cap "l" (p-ref "postfix")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-emit "UE-WRITE-ASSIGN" (list (t-splice "l") (t-splice "e"))))
         (rule3 "exprs" (list "seq" (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-splice "e"))

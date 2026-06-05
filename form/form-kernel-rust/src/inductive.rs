@@ -146,7 +146,7 @@ fn read_string_trivial(k: &Kernel, n: NodeID) -> Option<String> {
         return None;
     }
     match k.trivial_value(n) {
-        Value::Str(s) => Some(s),
+        Value::Str(s) => Some(s.to_string()),
         _ => None,
     }
 }

@@ -647,12 +647,21 @@ impl Trace {
 // writing frames don't fight the borrow checker.
 pub(crate) struct Arena {
     frames: Vec<Frame>,
+    // Monotonic count of closures created during this arena's life. The `walk`
+    // wrapper uses it to decide when reclaiming frames on return is sound: a
+    // closure is the ONLY Value that captures a FrameId, so if no closure was
+    // created during a walk call, every frame it pushed is provably dead and may
+    // be truncated. Without this, frames accumulated for the whole eval — the
+    // cause of the multi-GB BML parse runaway (Go stays ~10 MB because its
+    // frames are GC'd *Frame pointers, reclaimed as soon as they go unreachable).
+    closures_created: u64,
 }
 
 impl Arena {
     pub(crate) fn new() -> Self {
         Self {
             frames: Vec::with_capacity(256),
+            closures_created: 0,
         }
     }
 
@@ -973,7 +982,7 @@ impl Kernel {
     ) {
         match value {
             Value::List(xs) => {
-                for item in xs {
+                for item in xs.iter() {
                     self.mark_value(item, arena, live_nodes, live_strings, live_frames);
                 }
             }
@@ -1166,7 +1175,7 @@ impl Kernel {
     pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
-            TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone()),
+            TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone().into()),
             TRIV_BOOL => Value::Bool(n.inst != 0),
             TRIV_NULL => Value::Null,
             TRIV_FLOAT32 => Value::Float(self.decode_float32(n.inst) as f64),
@@ -1214,9 +1223,9 @@ pub(crate) enum Value {
     Null,
     Int(i64),
     Float(f64),
-    Str(String),
+    Str(Arc<str>),
     Bool(bool),
-    List(Vec<Value>),
+    List(Arc<Vec<Value>>),
     Closure(Arc<Closure>),
     Nid(NodeID),
     // Record — a mutable struct/object with identity. The first mutable Value
@@ -1338,7 +1347,7 @@ impl Value {
             Value::Null => "null".to_string(),
             Value::Int(n) => n.to_string(),
             Value::Float(f) => format_float_python(*f),
-            Value::Str(s) => s.clone(),
+            Value::Str(s) => s.to_string(),
             Value::Bool(b) => {
                 if *b {
                     "true".to_string()
@@ -1440,11 +1449,11 @@ struct SourceNativeLexicon {
 }
 
 fn source_native_str(value: &str) -> Value {
-    Value::Str(value.to_string())
+    Value::Str(value.to_string().into())
 }
 
 fn source_native_empty_list() -> Value {
-    Value::List(vec![])
+    Value::List(vec![].into())
 }
 
 fn source_native_atom(kind: &str, value: &str) -> Value {
@@ -1454,7 +1463,7 @@ fn source_native_atom(kind: &str, value: &str) -> Value {
         source_native_str(value),
         source_native_empty_list(),
         Value::Null,
-    ])
+    ].into())
 }
 
 fn source_native_string_set(value: &Value, field: &str) -> HashSet<String> {
@@ -1691,7 +1700,7 @@ fn source_native_scan_text(src: &str, lex: &SourceNativeLexicon) -> Value {
         out.push(source_native_atom(&lex.op_kind, matched));
         i += matched.len();
     }
-    Value::List(out)
+    Value::List(out.into())
 }
 
 // format_float_python — render an f64 the way CPython's `print(float)`
@@ -1856,7 +1865,7 @@ fn native_walk_parallel(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value 
     };
     let mut workers = args[1].as_int().max(1) as usize;
     if roots.is_empty() {
-        return Value::List(Vec::new());
+        return Value::List(Vec::new().into());
     }
     workers = workers.min(roots.len());
     let sequential = |k: &mut Kernel, roots: &[NodeID]| {
@@ -1866,7 +1875,7 @@ fn native_walk_parallel(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value 
             let env = sub_arena.new_frame(None);
             out.push(walk(k, &mut sub_arena, *root, env));
         }
-        Value::List(out)
+        Value::List(out.into())
     };
     if workers <= 1
         || k.trace.is_some()
@@ -1900,11 +1909,11 @@ fn native_walk_parallel(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value 
             out[idx] = Some(value);
         }
     }
-    Value::List(
+    Value::List(Arc::new(
         out.into_iter()
             .map(|value| value.expect("walk_parallel missing worker result"))
             .collect(),
-    )
+    ))
 }
 
 fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) -> Value {
@@ -1914,7 +1923,7 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
     };
     let mut workers = args[1].as_int().max(1) as usize;
     if roots.is_empty() {
-        return Value::List(Vec::new());
+        return Value::List(Vec::new().into());
     }
     workers = workers.min(roots.len());
     let all_pure = roots
@@ -1927,7 +1936,7 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
             let env = sub_arena.new_frame(None);
             out.push(walk(k, &mut sub_arena, *root, env));
         }
-        return Value::List(out);
+        return Value::List(out.into());
     }
     if workers <= 1 || roots.len() <= 1 || k.trace.is_some() {
         let cache_enabled = k.trace.is_none();
@@ -1956,7 +1965,7 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
             }
             out.push(value);
         }
-        return Value::List(out);
+        return Value::List(out.into());
     }
 
     let mut out: Vec<Option<Value>> = vec![None; roots.len()];
@@ -2009,11 +2018,11 @@ fn native_walk_parallel_cached(k: &mut Kernel, _: &mut Arena, args: &[Value]) ->
             }
         }
     }
-    Value::List(
+    Value::List(Arc::new(
         out.into_iter()
             .map(|value| value.expect("walk_parallel_cached missing worker result"))
             .collect(),
-    )
+    ))
 }
 
 fn native_field_node(
@@ -2147,17 +2156,17 @@ impl Kernel {
             let s = args[0].as_str();
             let a = args[1].as_int() as usize;
             let b = args[2].as_int() as usize;
-            Value::Str(s[a..b].to_string())
+            Value::Str(s[a..b].to_string().into())
         });
         self.register_native("char_at", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             let i = args[1].as_int() as usize;
-            Value::Str((s.as_bytes()[i] as char).to_string())
+            Value::Str((s.as_bytes()[i] as char).to_string().into())
         });
         self.register_native("str_concat", cat_method(), |_, _, args| {
             let mut s = args[0].as_str().to_string();
             s.push_str(args[1].as_str());
-            Value::Str(s)
+            Value::Str(s.into())
         });
         // value_str — render ANY value as its canonical display string. The
         // companion str_concat needs for building a response document: int_to_str
@@ -2169,7 +2178,7 @@ impl Kernel {
         // response body (e.g. production-routes.fk's /api/utils handlers). One
         // native, all leaf types — core-abstraction-first.
         self.register_native("value_str", cat_method(), |_, _, args| {
-            Value::Str(args[0].display())
+            Value::Str(args[0].display().into())
         });
         self.register_native("source_scan_file", cat_call(), |_, _, args| {
             let body = fs::read_to_string(args[0].as_str())
@@ -2256,14 +2265,14 @@ impl Kernel {
         self.register_native("record_keys", cat_access(), |k, _, args| match &args[0] {
             Value::Record(r) => {
                 let names: Vec<NameID> = r.lock().unwrap().fields.iter().map(|(n, _)| *n).collect();
-                Value::List(
+                Value::List(Arc::new(
                     names
                         .into_iter()
-                        .map(|n| Value::Str(k.strs[n as usize].clone()))
+                        .map(|n| Value::Str(k.strs[n as usize].clone().into()))
                         .collect(),
-                )
+                ))
             }
-            _ => Value::List(Vec::new()),
+            _ => Value::List(Vec::new().into()),
         });
         // --- methods on the blueprint (BML/NUMS reference, rung 2b) ---------
         // Methods live on the blueprint/type, not on instances — shared by all
@@ -2437,7 +2446,7 @@ impl Kernel {
                 a.bind(
                     call_frame,
                     cl.params[1],
-                    Value::Str((byte as char).to_string()),
+                    Value::Str((byte as char).to_string().into()),
                 );
                 acc = walk(k, a, cl.body, call_frame);
             }
@@ -2455,12 +2464,12 @@ impl Kernel {
         self.register_native("int_to_str", cat_method(), |_, _, args| match &args[0] {
             Value::Str(s) => Value::Str(s.clone()),
             Value::Bool(b) => Value::Str(if *b {
-                "true".to_string()
+                "true".to_string().into()
             } else {
-                "false".to_string()
+                "false".to_string().into()
             }),
-            Value::Null => Value::Str("null".to_string()),
-            _ => Value::Str(args[0].as_int().to_string()),
+            Value::Null => Value::Str("null".to_string().into()),
+            _ => Value::Str(args[0].as_int().to_string().into()),
         });
         self.register_native("str_to_int", cat_method(), |_, _, args| {
             Value::Int(args[0].as_str().parse().unwrap_or(0))
@@ -2499,20 +2508,20 @@ impl Kernel {
         self.register_native("byte_to_str", cat_access(), |_, _, args| {
             let b = args[0].as_int();
             if !(0..=255).contains(&b) {
-                Value::Str(String::new())
+                Value::Str(String::new().into())
             } else {
-                Value::Str((b as u8 as char).to_string())
+                Value::Str((b as u8 as char).to_string().into())
             }
         });
         self.register_native("list", cat_list_nat(), |_, _, args| {
-            Value::List(args.to_vec())
+            Value::List(args.to_vec().into())
         });
         self.register_native("cons", cat_list_nat(), |_, _, args| {
             let mut out = vec![args[0].clone()];
             if let Value::List(rest) = &args[1] {
                 out.extend(rest.iter().cloned());
             }
-            Value::List(out)
+            Value::List(out.into())
         });
         self.register_native("head", cat_list_nat(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
@@ -2524,9 +2533,9 @@ impl Kernel {
         self.register_native("tail", cat_list_nat(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 Value::List(if xs.is_empty() {
-                    vec![]
+                    vec![].into()
                 } else {
-                    xs[1..].to_vec()
+                    xs[1..].to_vec().into()
                 })
             } else {
                 Value::Null
@@ -2537,7 +2546,7 @@ impl Kernel {
                 // Dict-aware: tagged "__dict__" lists report pair count,
                 // matching Python's `len(d)` semantics.
                 if let Some(Value::Str(s)) = xs.first() {
-                    if s == "__dict__" {
+                    if **s == *"__dict__" {
                         return Value::Int(((xs.len() - 1) / 2) as i64);
                     }
                 }
@@ -2562,7 +2571,7 @@ impl Kernel {
             }
             Value::Null
         });
-        self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![]));
+        self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![].into()));
         // _list_append — functional list extension: `(_list_append xs x)` →
         // a NEW list = xs ++ [x]. The Python adapter lowers the accumulator
         // idiom `result.append(x)` to `(let result (_list_append result x))`,
@@ -2574,11 +2583,11 @@ impl Kernel {
         // list, matching `[].append(x)` having extended an empty accumulator.
         self.register_native("_list_append", cat_list_nat(), |_, _, args| {
             let mut xs = match &args[0] {
-                Value::List(xs) => xs.clone(),
+                Value::List(xs) => xs.as_ref().clone(),
                 _ => Vec::new(),
             };
             xs.push(args[1].clone());
-            Value::List(xs)
+            Value::List(Arc::new(xs))
         });
         // _get — one polymorphic accessor over every container shape the
         // Python adapter emits. The emitter lowers BOTH attribute reads
@@ -2647,9 +2656,9 @@ impl Kernel {
             if let Value::Str(s) = &args[0] {
                 let i = args[1].as_int();
                 if i < 0 || (i as usize) >= s.len() {
-                    return Value::Str(String::new());
+                    return Value::Str(String::new().into());
                 }
-                return Value::Str((s.as_bytes()[i as usize] as char).to_string());
+                return Value::Str((s.as_bytes()[i as usize] as char).to_string().into());
             }
             Value::Null
         });
@@ -2672,9 +2681,9 @@ impl Kernel {
                 let mut found: Option<String> = None;
                 while i + 1 < xs.len() {
                     if let Value::Str(key) = &xs[i] {
-                        if key == "__class__" {
+                        if **key == *"__class__" {
                             if let Value::Str(c) = &xs[i + 1] {
-                                found = Some(c.clone());
+                                found = Some(c.to_string());
                             }
                             break;
                         }
@@ -2728,7 +2737,7 @@ impl Kernel {
         fn is_dict(v: &Value) -> bool {
             if let Value::List(xs) = v {
                 if let Some(Value::Str(s)) = xs.first() {
-                    return s == "__dict__";
+                    return **s == *"__dict__";
                 }
             }
             false
@@ -2743,14 +2752,14 @@ impl Kernel {
         self.register_native("_dict_new", cat_list_nat(), |_, _, args| {
             // (_dict_new k0 v0 k1 v1 ...) — variadic constructor used by
             // the emitter for dict literals.
-            let mut out = vec![Value::Str("__dict__".to_string())];
+            let mut out = vec![Value::Str("__dict__".to_string().into())];
             out.extend(args.iter().cloned());
-            Value::List(out)
+            Value::List(out.into())
         });
         self.register_native("_dict_get", cat_access(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 if let Some(Value::Str(tag)) = xs.first() {
-                    if tag == "__dict__" {
+                    if **tag == *"__dict__" {
                         let mut i = 1;
                         while i + 1 < xs.len() {
                             if dict_key_eq(&xs[i], &args[1]) {
@@ -2768,19 +2777,19 @@ impl Kernel {
             // Immutable update — return a new dict; existing references unchanged.
             if let Value::List(xs) = &args[0] {
                 if let Some(Value::Str(tag)) = xs.first() {
-                    if tag == "__dict__" {
-                        let mut out = xs.clone();
+                    if **tag == *"__dict__" {
+                        let mut out = xs.as_ref().clone();
                         let mut i = 1;
                         while i + 1 < out.len() {
                             if dict_key_eq(&out[i], &args[1]) {
                                 out[i + 1] = args[2].clone();
-                                return Value::List(out);
+                                return Value::List(Arc::new(out));
                             }
                             i += 2;
                         }
                         out.push(args[1].clone());
                         out.push(args[2].clone());
-                        return Value::List(out);
+                        return Value::List(Arc::new(out));
                     }
                 }
             }
@@ -2789,7 +2798,7 @@ impl Kernel {
         self.register_native("_dict_has", cat_compare(RCMP_EQ), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 if let Some(Value::Str(tag)) = xs.first() {
-                    if tag == "__dict__" {
+                    if **tag == *"__dict__" {
                         let mut i = 1;
                         while i + 1 < xs.len() {
                             if dict_key_eq(&xs[i], &args[1]) {
@@ -2805,34 +2814,34 @@ impl Kernel {
         self.register_native("_dict_keys", cat_access(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 if let Some(Value::Str(tag)) = xs.first() {
-                    if tag == "__dict__" {
+                    if **tag == *"__dict__" {
                         let mut out = Vec::new();
                         let mut i = 1;
                         while i + 1 < xs.len() {
                             out.push(xs[i].clone());
                             i += 2;
                         }
-                        return Value::List(out);
+                        return Value::List(out.into());
                     }
                 }
             }
-            Value::List(vec![])
+            Value::List(vec![].into())
         });
         self.register_native("_dict_values", cat_access(), |_, _, args| {
             if let Value::List(xs) = &args[0] {
                 if let Some(Value::Str(tag)) = xs.first() {
-                    if tag == "__dict__" {
+                    if **tag == *"__dict__" {
                         let mut out = Vec::new();
                         let mut i = 1;
                         while i + 1 < xs.len() {
                             out.push(xs[i + 1].clone());
                             i += 2;
                         }
-                        return Value::List(out);
+                        return Value::List(out.into());
                     }
                 }
             }
-            Value::List(vec![])
+            Value::List(vec![].into())
         });
         // (The subscript path is folded into the single polymorphic `_get`
         // registered above — dict/record/list/str all dispatch on receiver
@@ -2851,21 +2860,21 @@ impl Kernel {
                         out.push(xs[i].clone());
                         i += 2;
                     }
-                    return Value::List(out);
+                    return Value::List(out.into());
                 }
             }
             if let Value::List(_) = &args[0] {
                 return args[0].clone();
             }
             if let Value::Str(s) = &args[0] {
-                return Value::List(
+                return Value::List(Arc::new(
                     s.as_bytes()
                         .iter()
-                        .map(|b| Value::Str((*b as char).to_string()))
+                        .map(|b| Value::Str((*b as char).to_string().into()))
                         .collect(),
-                );
+                ));
             }
-            Value::List(vec![])
+            Value::List(vec![].into())
         });
         // _in — polymorphic membership. (`k in d` → _in d k). For dicts
         // checks keys; for lists checks elements; for strings checks
@@ -2884,19 +2893,19 @@ impl Kernel {
                 }
             }
             if let Value::List(xs) = &args[1] {
-                for v in xs {
+                for v in xs.iter() {
                     match (&args[0], v) {
-                        (Value::Int(a), Value::Int(b)) if a == b => return Value::Bool(true),
-                        (Value::Str(a), Value::Str(b)) if a == b => return Value::Bool(true),
-                        (Value::Float(a), Value::Float(b)) if a == b => return Value::Bool(true),
-                        (Value::Bool(a), Value::Bool(b)) if a == b => return Value::Bool(true),
+                        (Value::Int(a), Value::Int(b)) if *a == *b => return Value::Bool(true),
+                        (Value::Str(a), Value::Str(b)) if *a == *b => return Value::Bool(true),
+                        (Value::Float(a), Value::Float(b)) if *a == *b => return Value::Bool(true),
+                        (Value::Bool(a), Value::Bool(b)) if *a == *b => return Value::Bool(true),
                         _ => {}
                     }
                 }
                 return Value::Bool(false);
             }
             if let (Value::Str(needle), Value::Str(hay)) = (&args[0], &args[1]) {
-                return Value::Bool(hay.contains(needle.as_str()));
+                return Value::Bool(hay.contains(&needle[..]));
             }
             Value::Bool(false)
         });
@@ -2976,7 +2985,7 @@ impl Kernel {
         // Returns: a new list with child's full prefix + parent's data fields.
         self.register_native("_merge_record", cat_access(), |_, _, args| {
             let child = match &args[0] {
-                Value::List(xs) => xs.clone(),
+                Value::List(xs) => xs.as_ref().clone(),
                 _ => panic!("_merge_record: first arg must be a record"),
             };
             let parent = match &args[1] {
@@ -2987,7 +2996,7 @@ impl Kernel {
             let mut i = 0;
             while i + 1 < parent.len() {
                 if let Value::Str(key) = &parent[i] {
-                    if key == "__class__" || key == "__base__" {
+                    if **key == *"__class__" || **key == *"__base__" {
                         i += 2;
                         continue;
                     }
@@ -3010,7 +3019,7 @@ impl Kernel {
                 }
                 i += 2;
             }
-            Value::List(out)
+            Value::List(Arc::new(out))
         });
         // --- Substrate read primitives — kernel reaches the REST surface ----
         // The body's substrate lives behind /api/substrate/*. Until now the
@@ -3035,7 +3044,7 @@ impl Kernel {
             let url = args[0].as_str();
             match ureq::get(url).call() {
                 Ok(resp) => match resp.into_string() {
-                    Ok(body) => Value::Str(body),
+                    Ok(body) => Value::Str(body.into()),
                     Err(_) => Value::Null,
                 },
                 Err(_) => Value::Null,
@@ -3070,13 +3079,13 @@ impl Kernel {
                         Value::Null
                     }
                 }
-                serde_json::Value::String(s) => Value::Str(s.clone()),
+                serde_json::Value::String(s) => Value::Str(s.clone().into()),
                 // For arrays/objects, return the re-serialized JSON string
                 // so Form code can re-parse with another _json_get call.
                 // Keeps the native surface flat (no recursive Value structure
                 // beyond what the kernel already has) and matches the way
                 // jq pipelines compose at the shell.
-                _ => Value::Str(val.to_string()),
+                _ => Value::Str(val.to_string().into()),
             }
         });
         // _json_to_dict(json_str) → __dict__-tagged list (the kernel's dict
@@ -3096,9 +3105,9 @@ impl Kernel {
                 Some(o) => o,
                 None => return Value::Null,
             };
-            let mut out = vec![Value::Str("__dict__".to_string())];
+            let mut out = vec![Value::Str("__dict__".to_string().into())];
             for (k, v) in obj {
-                out.push(Value::Str(k.clone()));
+                out.push(Value::Str(k.clone().into()));
                 out.push(match v {
                     serde_json::Value::Null => Value::Null,
                     serde_json::Value::Bool(b) => Value::Bool(*b),
@@ -3111,11 +3120,11 @@ impl Kernel {
                             Value::Null
                         }
                     }
-                    serde_json::Value::String(s) => Value::Str(s.clone()),
-                    _ => Value::Str(v.to_string()),
+                    serde_json::Value::String(s) => Value::Str(s.clone().into()),
+                    _ => Value::Str(v.to_string().into()),
                 });
             }
-            Value::List(out)
+            Value::List(out.into())
         });
         // min / max / sum — common Python builtins applied to a list.
         // sum returns the integer sum; min/max return the smallest/largest
@@ -3165,13 +3174,13 @@ impl Kernel {
                 let any_float = xs.iter().any(|v| matches!(v, Value::Float(_)));
                 if any_float {
                     let mut total = 0.0f64;
-                    for v in xs {
+                    for v in xs.iter() {
                         total += v.as_float();
                     }
                     return Value::Float(total);
                 }
                 let mut total: i64 = 0;
-                for v in xs {
+                for v in xs.iter() {
                     total += v.as_int();
                 }
                 return Value::Int(total);
@@ -3198,34 +3207,34 @@ impl Kernel {
                 (Value::Int(a), Value::Float(b)) => Value::Float(*a as f64 + b),
                 (Value::Float(a), Value::Int(b)) => Value::Float(a + *b as f64),
                 (Value::Str(a), Value::Str(b)) => {
-                    let mut s = a.clone();
+                    let mut s = a.to_string();
                     s.push_str(b);
-                    Value::Str(s)
+                    Value::Str(s.into())
                 }
                 (Value::Str(a), Value::Int(b)) => {
-                    let mut s = a.clone();
+                    let mut s = a.to_string();
                     s.push_str(&b.to_string());
-                    Value::Str(s)
+                    Value::Str(s.into())
                 }
                 (Value::Int(a), Value::Str(b)) => {
                     let mut s = a.to_string();
                     s.push_str(b);
-                    Value::Str(s)
+                    Value::Str(s.into())
                 }
                 (Value::Str(a), Value::Float(b)) => {
-                    let mut s = a.clone();
+                    let mut s = a.to_string();
                     s.push_str(&format_float_python(*b));
-                    Value::Str(s)
+                    Value::Str(s.into())
                 }
                 (Value::Float(a), Value::Str(b)) => {
                     let mut s = format_float_python(*a);
                     s.push_str(b);
-                    Value::Str(s)
+                    Value::Str(s.into())
                 }
                 (Value::List(a), Value::List(b)) => {
-                    let mut out = a.clone();
+                    let mut out = a.as_ref().clone();
                     out.extend(b.iter().cloned());
-                    Value::List(out)
+                    Value::List(Arc::new(out))
                 }
                 _ => panic!("_plus: unsupported operand types"),
             }
@@ -3249,7 +3258,7 @@ impl Kernel {
             };
             let mut out: Vec<Value> = Vec::new();
             if step == 0 {
-                return Value::List(out);
+                return Value::List(out.into());
             }
             if step > 0 {
                 let mut i = start;
@@ -3264,7 +3273,7 @@ impl Kernel {
                     i += step;
                 }
             }
-            Value::List(out)
+            Value::List(out.into())
         });
         // ── Python `math` module — a tight kernel-native shape ─────
         // The Python adapter rewrites `math.sqrt(x)` → `(math_sqrt x)`,
@@ -3313,20 +3322,22 @@ impl Kernel {
         // accidental runtime reference returns the same opaque string
         // across CPython, TS eval, and Rust kernel.
         self.register_native("typing_opaque", cat_method(), |_, _, _args| {
-            Value::Str("<typing>".to_string())
+            Value::Str("<typing>".to_string().into())
         });
         self.register_native(
             "read_file",
             cat_call(),
             |_, _, args| match fs::read_to_string(args[0].as_str()) {
-                Ok(s) => Value::Str(s),
+                Ok(s) => Value::Str(s.into()),
                 Err(_) => Value::Null,
             },
         );
         // Byte-level host file read — returns a list of ints (0-255), one per byte.
         self.register_native("read_file_bytes", cat_call(), |_, _, args| {
             match fs::read(args[0].as_str()) {
-                Ok(bytes) => Value::List(bytes.into_iter().map(|b| Value::Int(b as i64)).collect()),
+                Ok(bytes) => {
+                    Value::List(Arc::new(bytes.into_iter().map(|b| Value::Int(b as i64)).collect()))
+                }
                 Err(_) => Value::Null,
             }
         });
@@ -3338,12 +3349,14 @@ impl Kernel {
         self.register_native("random_bytes", cat_call(), |_, _, args| {
             let n = args[0].as_int();
             if n <= 0 {
-                return Value::List(Vec::new());
+                return Value::List(Vec::new().into());
             }
             let mut buf = vec![0u8; n as usize];
             match fs::OpenOptions::new().read(true).open("/dev/urandom") {
                 Ok(mut f) => match f.read_exact(&mut buf) {
-                    Ok(_) => Value::List(buf.into_iter().map(|b| Value::Int(b as i64)).collect()),
+                    Ok(_) => Value::List(Arc::new(
+                        buf.into_iter().map(|b| Value::Int(b as i64)).collect(),
+                    )),
                     Err(_) => Value::Null,
                 },
                 Err(_) => Value::Null,
@@ -3444,7 +3457,9 @@ impl Kernel {
         //   structure in any kernel.
         self.register_native("recipe_to_bytes", cat_witness(), |k, _, args| {
             let bytes = serialize_artifact(k, args[0].as_nid());
-            Value::List(bytes.into_iter().map(|b| Value::Int(b as i64)).collect())
+            Value::List(Arc::new(
+                bytes.into_iter().map(|b| Value::Int(b as i64)).collect(),
+            ))
         });
         // bytes_to_recipe bytes-list → nid (or null on parse error).
         //   Inverse of recipe_to_bytes. The bytes are the .fkb wire
@@ -3584,7 +3599,7 @@ impl Kernel {
             let seed = args[0].as_int() as u32;
             let count = args[1].as_int();
             if count <= 0 {
-                return Value::List(Vec::new());
+                return Value::List(Vec::new().into());
             }
             let mut state: u32 = seed;
             let n = count as usize;
@@ -3593,7 +3608,7 @@ impl Kernel {
                 state = state.wrapping_mul(1103515245).wrapping_add(12345) & 0x7FFFFFFF;
                 out.push(Value::Int((state & 0xFF) as i64));
             }
-            Value::List(out)
+            Value::List(out.into())
         });
         // sum_bytes_list(list) — sum all integer elements. Used for fast
         // verification that two cells' large byte-lists agree without
@@ -3601,7 +3616,7 @@ impl Kernel {
         self.register_native("sum_bytes_list", cat_call(), |_, _, args| match &args[0] {
             Value::List(xs) => {
                 let mut s: i64 = 0;
-                for v in xs {
+                for v in xs.iter() {
                     s = s.wrapping_add(v.as_int());
                 }
                 Value::Int(s)
@@ -3680,19 +3695,19 @@ impl Kernel {
             let offset = args[1].as_int();
             let length = args[2].as_int();
             if offset < 0 || length <= 0 {
-                return Value::Str(String::new());
+                return Value::Str(String::new().into());
             }
             let mut file = match fs::File::open(args[0].as_str()) {
                 Ok(file) => file,
-                Err(_) => return Value::Str(String::new()),
+                Err(_) => return Value::Str(String::new().into()),
             };
             if file.seek(SeekFrom::Start(offset as u64)).is_err() {
-                return Value::Str(String::new());
+                return Value::Str(String::new().into());
             }
             let mut buf = vec![0u8; length as usize];
             match file.read(&mut buf) {
-                Ok(n) => Value::Str(String::from_utf8_lossy(&buf[..n]).to_string()),
-                Err(_) => Value::Str(String::new()),
+                Ok(n) => Value::Str(String::from_utf8_lossy(&buf[..n]).to_string().into()),
+                Err(_) => Value::Str(String::new().into()),
             }
         });
 
@@ -3755,7 +3770,9 @@ impl Kernel {
                         .map(|e| e.file_name().to_string_lossy().to_string())
                         .collect();
                     names.sort();
-                    Value::List(names.into_iter().map(Value::Str).collect())
+                    Value::List(Arc::new(
+                        names.into_iter().map(|s| Value::Str(s.into())).collect(),
+                    ))
                 }
                 Err(_) => Value::Null,
             }
@@ -3840,11 +3857,11 @@ impl Kernel {
             let h = args[0].as_int();
             let max = args[1].as_int();
             if max <= 0 {
-                return Value::Str(String::new());
+                return Value::Str(String::new().into());
             }
             let s = match socket_lookup(h) {
                 Some(s) => s,
-                None => return Value::Str(String::new()),
+                None => return Value::Str(String::new().into()),
             };
             match &*s {
                 SocketKind::Stream(m) => {
@@ -3852,12 +3869,12 @@ impl Kernel {
                     let mut buf = vec![0u8; max as usize];
                     match g.read(&mut buf) {
                         Ok(n) if n > 0 => {
-                            Value::Str(String::from_utf8_lossy(&buf[..n]).to_string())
+                            Value::Str(String::from_utf8_lossy(&buf[..n]).to_string().into())
                         }
-                        _ => Value::Str(String::new()),
+                        _ => Value::Str(String::new().into()),
                     }
                 }
-                _ => Value::Str(String::new()),
+                _ => Value::Str(String::new().into()),
             }
         });
         self.register_native("socket_close", cat_call(), |_, _, args| {
@@ -3904,12 +3921,12 @@ impl Kernel {
             let sql = args[1].as_str().to_string();
             let client = match pg_lookup(h) {
                 Some(c) => c,
-                None => return Value::Str("ERR".to_string()),
+                None => return Value::Str("ERR".to_string().into()),
             };
             let mut g = client.lock().unwrap();
             let rows = match g.query(&sql, &[]) {
                 Ok(r) => r,
-                Err(_) => return Value::Str("ERR".to_string()),
+                Err(_) => return Value::Str("ERR".to_string().into()),
             };
             // Encode rows as tab-separated columns, newline-separated rows.
             // Columns are rendered to text via their SQL type (text/int8/bool
@@ -3926,7 +3943,7 @@ impl Kernel {
                     out.push_str(&pg_cell_to_string(row, ci));
                 }
             }
-            Value::Str(out)
+            Value::Str(out.into())
         });
         self.register_native("pg_close", cat_call(), |_, _, args| {
             let h = args[0].as_int();
@@ -4146,10 +4163,10 @@ impl Kernel {
             native_field_evidence,
         );
         self.register_native("substrate_mark", cat_witness(), |k, _, _| {
-            Value::List(k.substrate_mark())
+            Value::List(k.substrate_mark().into())
         });
         self.register_native("substrate_counts", cat_witness(), |k, _, _| {
-            Value::List(k.substrate_counts())
+            Value::List(k.substrate_counts().into())
         });
         self.register_native(
             "substrate_release",
@@ -4160,15 +4177,15 @@ impl Kernel {
             },
         );
         self.register_native("substrate_gc", cat_witness(), |k, _, args| match &args[0] {
-            Value::List(roots) => Value::List(k.substrate_gc(roots, None)),
-            _ => Value::List(k.substrate_gc(&[], None)),
+            Value::List(roots) => Value::List(k.substrate_gc(roots, None).into()),
+            _ => Value::List(k.substrate_gc(&[], None).into()),
         });
         self.register_native("node_category", cat_witness(), |k, _, args| {
             Value::Nid(k.category(args[0].as_nid()))
         });
         self.register_native("node_children", cat_witness(), |k, _, args| {
             let kids = k.children(args[0].as_nid());
-            Value::List(kids.into_iter().map(Value::Nid).collect())
+            Value::List(Arc::new(kids.into_iter().map(Value::Nid).collect()))
         });
         self.register_native("node_value", cat_witness(), |k, _, args| {
             k.trivial_value(args[0].as_nid())
@@ -4239,12 +4256,12 @@ impl Kernel {
                 Some((file_id, line, col)) => {
                     let file = k.strs[file_id as usize].clone();
                     Value::List(vec![
-                        Value::Str(file),
+                        Value::Str(file.into()),
                         Value::Int(line as i64),
                         Value::Int(col as i64),
-                    ])
+                    ].into())
                 }
-                None => Value::List(vec![]),
+                None => Value::List(vec![].into()),
             }
         });
         // framebuffer-events — return all NodeIDs that have source
@@ -4255,7 +4272,9 @@ impl Kernel {
         // pays the cost of walking + filtering this list when it
         // wants to analyze hot-spots or flow.
         self.register_native("framebuffer-events", cat_witness(), |k, _, _| {
-            Value::List(k.source_attr.keys().copied().map(Value::Nid).collect())
+            Value::List(Arc::new(
+                k.source_attr.keys().copied().map(Value::Nid).collect(),
+            ))
         });
         // framebuffer-clear — reset the framebuffer. Useful for
         // bounded observation windows (subscribe → do work →
@@ -4273,7 +4292,9 @@ impl Kernel {
         self.register_native("serialize-recipe", cat_witness(), |k, _, args| {
             let mut bytes: Vec<u8> = Vec::new();
             serialize_nid(k, args[0].as_nid(), &mut bytes);
-            Value::List(bytes.into_iter().map(|b| Value::Int(b as i64)).collect())
+            Value::List(Arc::new(
+                bytes.into_iter().map(|b| Value::Int(b as i64)).collect(),
+            ))
         });
         // deserialize-recipe — read flat byte list back into a Recipe
         // tree, re-interning composites so the resulting NodeIDs
@@ -4406,7 +4427,7 @@ impl Kernel {
                 Value::Int(k.walk_cache_hits as i64),
                 Value::Int(k.walk_cache_misses as i64),
                 Value::Int(k.walk_cache.len() as i64),
-            ])
+            ].into())
         });
 
         // native_blueprint — read a native's Form category from inside Form.
@@ -4518,7 +4539,7 @@ fn resolve_method(
                 chain.join(" -> ")
             );
         }
-        current = parent_name;
+        current = parent_name.to_string();
         chain.push(current.clone());
     }
 }
@@ -5248,7 +5269,25 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
 // Walker — full RBasic dispatch
 // ---------------------------------------------------------------------------
 
+// walk — public entry. Wraps walk_inner with stack-discipline frame
+// reclamation: the frames pushed during this call are popped on return, unless
+// a closure was created (it captures a FrameId, so its frames must survive).
+// This keeps the arena bounded — the recursive-descent BML parse pushes a frame
+// per combinator call and per cursor step; un-reclaimed they grew the arena to
+// gigabytes on a 15 KB file. Nested walks each truncate to their OWN entry mark,
+// so every pre-existing frame (including an active call frame the caller still
+// needs) is preserved. Mirrors how the Go kernel's GC reclaims dead *Frames.
 pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
+    let frame_mark = a.frames.len();
+    let clo_mark = a.closures_created;
+    let r = walk_inner(k, a, n, env);
+    if a.closures_created == clo_mark {
+        a.frames.truncate(frame_mark);
+    }
+    r
+}
+
+fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
     // TCO: a tail-position call — a closure body, a cond branch, or a do/seq
     // block's last expr — reassigns n/env and loops here instead of recursing,
     // so tail-recursive Form loops (gm-rep-loop, gm-sep-loop, caps-get, …) run
@@ -5394,6 +5433,9 @@ pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Va
                     body: kids[2],
                     env,
                 });
+                // This closure captures `env`; record it so the walk wrapper
+                // will not reclaim frames at/above its definition mark.
+                a.closures_created += 1;
                 a.bind(env, name, Value::Closure(cl.clone()));
                 Value::Closure(cl)
             }
@@ -5538,7 +5580,7 @@ pub(crate) fn walk(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Va
                 for c in &kids {
                     out.push(walk(k, a, *c, env));
                 }
-                Value::List(out)
+                Value::List(out.into())
             }
             // Structural passthrough — categories the walker can't yet execute
             // (CHOICE_MATCH, CONSTRUCTOR, INDUCTIVE, QUOTIENT, ALIAS, BLANKET,
@@ -6594,7 +6636,7 @@ const KH_TAG_FIELD: i64 = 43008;
 
 fn route_value_string(value: &Value, field: &str) -> Result<String, String> {
     match value {
-        Value::Str(s) => Ok(s.clone()),
+        Value::Str(s) => Ok(s.to_string()),
         _ => Err(format!("KernelHTTPRoute {} must be a string", field)),
     }
 }
@@ -6767,9 +6809,9 @@ fn parse_route_spec(
                 let handler = route_value_closure(&ys[1], path)?;
                 let handler_name = k.name_str(handler.name).to_string();
                 Ok(RouteSpec {
-                    name: path.clone(),
+                    name: path.to_string(),
                     method: "ANY".to_string(),
-                    pattern: path.clone(),
+                    pattern: path.to_string(),
                     priority: 0,
                     handler_name,
                     required_header: String::new(),
@@ -6875,20 +6917,20 @@ fn route_candidate_pressure_matrix(
     vec![
         RoutePressureRow {
             axis: "method".to_string(),
-            observed: Value::Str(method.to_string()),
-            expected: Value::Str(route.method.clone()),
+            observed: Value::Str(method.to_string().into()),
+            expected: Value::Str(route.method.clone().into()),
             pressure: method_pressure,
         },
         RoutePressureRow {
             axis: "path".to_string(),
-            observed: Value::Str(path.to_string()),
-            expected: Value::Str(route.pattern.clone()),
+            observed: Value::Str(path.to_string().into()),
+            expected: Value::Str(route.pattern.clone().into()),
             pressure: path_pressure,
         },
         RoutePressureRow {
             axis: "header".to_string(),
-            observed: Value::Str(route_header_observation(route, headers)),
-            expected: Value::Str(route.required_header.clone()),
+            observed: Value::Str(route_header_observation(route, headers).into()),
+            expected: Value::Str(route.required_header.clone().into()),
             pressure: header_pressure,
         },
         RoutePressureRow {
@@ -7010,7 +7052,7 @@ fn build_route_specs(
     match &routes_val {
         Value::List(xs) => {
             let mut specs = Vec::with_capacity(xs.len());
-            for row in xs {
+            for row in xs.iter() {
                 specs.push(parse_route_spec(k, arena, root_env, row, route_data)?);
             }
             Ok(specs)
@@ -7172,14 +7214,14 @@ fn handle_request(
         handler_data.extend(
             request_data
                 .iter()
-                .map(|(k, v)| (k.clone(), Value::Str(v.clone()))),
+                .map(|(k, v)| (k.clone(), Value::Str(v.clone().into()))),
         );
-        let q_alist = Value::List(
+        let q_alist = Value::List(Arc::new(
             handler_data
                 .iter()
-                .map(|(k, v)| Value::List(vec![Value::Str(k.clone()), v.clone()]))
+                .map(|(k, v)| Value::List(vec![Value::Str(k.clone().into()), v.clone()].into()))
                 .collect(),
-        );
+        ));
         let cl = route.handler.clone();
         let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
         if cl.params.len() == 1 {
@@ -7524,10 +7566,10 @@ fn worker_loop(
                 let registry_id = k.intern_string("registry").inst;
                 let routes_val = arena
                     .lookup(root_env, routes_id)
-                    .unwrap_or(Value::List(vec![]));
+                    .unwrap_or(Value::List(vec![].into()));
                 let registry_val = arena
                     .lookup(root_env, registry_id)
-                    .unwrap_or(Value::List(vec![]));
+                    .unwrap_or(Value::List(vec![].into()));
                 Some((c, routes_val, registry_val))
             }
             _ => {
@@ -8349,7 +8391,7 @@ struct NativeHandlerResponse {
 
 fn response_body_string(value: &Value) -> String {
     match value {
-        Value::Str(s) => s.clone(),
+        Value::Str(s) => s.to_string(),
         _ => value.display(),
     }
 }
@@ -8361,7 +8403,7 @@ fn kernel_http_header(value: &Value) -> Option<(String, String)> {
                 (&items[0], &items[1], &items[2])
             {
                 if *tag == KH_TAG_HEADER && !name.trim().is_empty() {
-                    return Some((name.clone(), header_value.clone()));
+                    return Some((name.to_string(), header_value.to_string()));
                 }
             }
             None
@@ -8375,7 +8417,7 @@ fn kernel_http_headers(value: &Value) -> Option<(String, Vec<(String, String)>)>
     let mut relayed = Vec::new();
     match value {
         Value::List(items) => {
-            for item in items {
+            for item in items.iter() {
                 let (name, header_value) = kernel_http_header(item)?;
                 if name.trim().eq_ignore_ascii_case("content-type") {
                     content_type = header_value;
@@ -8421,12 +8463,12 @@ fn handler_status_response(result: &Value) -> Option<NativeHandlerResponse> {
             if let (Value::Str(tag), Value::Int(code), Value::Str(body)) =
                 (&items[0], &items[1], &items[2])
             {
-                if tag == "__http_status__" && (100..=599).contains(code) {
+                if **tag == *"__http_status__" && (100..=599).contains(code) {
                     return Some(NativeHandlerResponse {
                         status_code: *code,
                         content_type: String::new(),
                         headers: Vec::new(),
-                        body: body.clone(),
+                        body: body.to_string(),
                     });
                 }
             }
@@ -8824,90 +8866,90 @@ fn router_count_value(count: u64) -> Value {
 }
 
 fn router_dict_value(entries: Vec<(&str, Value)>) -> Value {
-    let mut values = vec![Value::Str("__dict__".to_string())];
+    let mut values = vec![Value::Str("__dict__".to_string().into())];
     for (key, value) in entries {
-        values.push(Value::Str(key.to_string()));
+        values.push(Value::Str(key.to_string().into()));
         values.push(value);
     }
-    Value::List(values)
+    Value::List(values.into())
 }
 
 fn router_fanout_path_count_value(row: &RouterFanoutPathCount) -> Value {
     router_dict_value(vec![
-        ("path", Value::Str(row.path.clone())),
+        ("path", Value::Str(row.path.clone().into())),
         ("count", router_count_value(row.count)),
-        ("source", Value::Str(row.source.clone())),
+        ("source", Value::Str(row.source.clone().into())),
     ])
 }
 
 fn router_bml_candidate_value(candidate: &RouterBmlCandidate) -> Value {
     router_dict_value(vec![
-        ("path", Value::Str(candidate.path.clone())),
+        ("path", Value::Str(candidate.path.clone().into())),
         ("count", router_count_value(candidate.count)),
-        ("source", Value::Str(candidate.source.clone())),
+        ("source", Value::Str(candidate.source.clone().into())),
     ])
 }
 
 fn router_http_header_value(name: &str, value: &str) -> Value {
     Value::List(vec![
         Value::Int(KH_TAG_HEADER),
-        Value::Str(name.to_string()),
-        Value::Str(value.to_string()),
-    ])
+        Value::Str(name.to_string().into()),
+        Value::Str(value.to_string().into()),
+    ].into())
 }
 
 fn router_http_field_value(name: &str, value: &str) -> Value {
     Value::List(vec![
         Value::Int(KH_TAG_FIELD),
-        Value::Str(name.to_string()),
-        Value::Str(value.to_string()),
-    ])
+        Value::Str(name.to_string().into()),
+        Value::Str(value.to_string().into()),
+    ].into())
 }
 
 fn router_http_route_value(candidate: &RouteCandidateValue) -> Value {
     Value::List(vec![
         Value::Int(KH_TAG_ROUTE),
-        Value::Str(candidate.route_name.clone()),
-        Value::Str(candidate.route_method.clone()),
-        Value::Str(candidate.route_pattern.clone()),
+        Value::Str(candidate.route_name.clone().into()),
+        Value::Str(candidate.route_method.clone().into()),
+        Value::Str(candidate.route_pattern.clone().into()),
         Value::Int(candidate.route_priority),
-        Value::Str(candidate.route_handler_name.clone()),
-        Value::Str(candidate.route_required_header.clone()),
+        Value::Str(candidate.route_handler_name.clone().into()),
+        Value::Str(candidate.route_required_header.clone().into()),
         Value::Int(candidate.route_pressure_budget),
-    ])
+    ].into())
 }
 
 fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
     Value::List(vec![
         Value::Int(KH_TAG_REQUEST),
-        Value::Str(candidate.request_method.clone()),
-        Value::Str(candidate.request_path.clone()),
-        Value::List(
+        Value::Str(candidate.request_method.clone().into()),
+        Value::Str(candidate.request_path.clone().into()),
+        Value::List(Arc::new(
             candidate
                 .request_headers
                 .iter()
                 .map(|(name, value)| router_http_header_value(name, value))
                 .collect(),
-        ),
-        Value::List(
+        )),
+        Value::List(Arc::new(
             candidate
                 .request_query
                 .iter()
                 .map(|(name, value)| router_http_field_value(name, value))
                 .collect(),
-        ),
-        Value::Str(candidate.request_body.clone()),
-    ])
+        )),
+        Value::Str(candidate.request_body.clone().into()),
+    ].into())
 }
 
 fn router_pressure_row_value(row: &RoutePressureRow) -> Value {
     Value::List(vec![
         Value::Int(KH_TAG_PRESSURE_ROW),
-        Value::Str(row.axis.clone()),
+        Value::Str(row.axis.clone().into()),
         row.observed.clone(),
         row.expected.clone(),
         Value::Int(row.pressure),
-    ])
+    ].into())
 }
 
 fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
@@ -8915,39 +8957,39 @@ fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
         Value::Int(KH_TAG_ROUTE_CANDIDATE),
         router_http_route_value(candidate),
         router_http_request_value(candidate),
-        Value::List(
+        Value::List(Arc::new(
             candidate
                 .pressure_matrix
                 .iter()
                 .map(router_pressure_row_value)
                 .collect(),
-        ),
+        )),
         Value::Int(candidate.pressure),
         Value::Int(candidate.score),
-    ])
+    ].into())
 }
 
 fn router_route_candidate_matrix_value(candidate: &RouteCandidateValue) -> Value {
-    Value::List(
+    Value::List(Arc::new(
         candidate
             .pressure_matrix
             .iter()
             .map(router_pressure_row_value)
             .collect(),
-    )
+    ))
 }
 
 fn router_observation_value(metrics: &RouterMetricsSnapshot) -> Value {
     router_dict_value(vec![
         (
             "fanout_path_counts",
-            Value::List(
+            Value::List(Arc::new(
                 metrics
                     .fanout_path_counts
                     .iter()
                     .map(router_fanout_path_count_value)
                     .collect(),
-            ),
+            )),
         ),
         (
             "next_bml_candidate",
@@ -8970,48 +9012,48 @@ fn router_context_data(
     let mut pairs = vec![
         (
             "__request_method__".to_string(),
-            Value::Str(method.to_string()),
+            Value::Str(method.to_string().into()),
         ),
         (
             "__request_target__".to_string(),
-            Value::Str(target.to_string()),
+            Value::Str(target.to_string().into()),
         ),
-        ("__request_path__".to_string(), Value::Str(path.to_string())),
+        ("__request_path__".to_string(), Value::Str(path.to_string().into())),
         (
             "__router_native_route_count__".to_string(),
-            Value::Str(metrics.native_route_count.to_string()),
+            Value::Str(metrics.native_route_count.to_string().into()),
         ),
         (
             "__router_observed_path_count__".to_string(),
-            Value::Str(metrics.observed_path_count.to_string()),
+            Value::Str(metrics.observed_path_count.to_string().into()),
         ),
         (
             "__router_observed_native_route_count__".to_string(),
-            Value::Str(metrics.observed_native_route_count.to_string()),
+            Value::Str(metrics.observed_native_route_count.to_string().into()),
         ),
         (
             "__router_observed_fanout_path_count__".to_string(),
-            Value::Str(metrics.observed_fanout_path_count.to_string()),
+            Value::Str(metrics.observed_fanout_path_count.to_string().into()),
         ),
         (
             "__router_total_requests__".to_string(),
-            Value::Str(metrics.total_requests.to_string()),
+            Value::Str(metrics.total_requests.to_string().into()),
         ),
         (
             "__router_native_requests__".to_string(),
-            Value::Str(metrics.native_requests.to_string()),
+            Value::Str(metrics.native_requests.to_string().into()),
         ),
         (
             "__router_fanout_requests__".to_string(),
-            Value::Str(metrics.fanout_requests.to_string()),
+            Value::Str(metrics.fanout_requests.to_string().into()),
         ),
         (
             "__router_local_control_requests__".to_string(),
-            Value::Str(metrics.local_control_requests.to_string()),
+            Value::Str(metrics.local_control_requests.to_string().into()),
         ),
         (
             "__router_native_error_requests__".to_string(),
-            Value::Str(metrics.native_error_requests.to_string()),
+            Value::Str(metrics.native_error_requests.to_string().into()),
         ),
         (
             "__router_observation__".to_string(),
@@ -9019,15 +9061,15 @@ fn router_context_data(
         ),
         (
             "__router_next_bml_candidate_path__".to_string(),
-            Value::Str(metrics.next_bml_candidate_path.clone()),
+            Value::Str(metrics.next_bml_candidate_path.clone().into()),
         ),
         (
             "__router_next_bml_candidate_requests__".to_string(),
-            Value::Str(metrics.next_bml_candidate_requests.to_string()),
+            Value::Str(metrics.next_bml_candidate_requests.to_string().into()),
         ),
         (
             "__router_next_bml_candidate_source__".to_string(),
-            Value::Str(metrics.next_bml_candidate_source.clone()),
+            Value::Str(metrics.next_bml_candidate_source.clone().into()),
         ),
     ];
     if let Some(candidate) = route_candidate {
@@ -9047,22 +9089,22 @@ fn router_context_data(
     if let Some(upstream_base) = upstream {
         pairs.push((
             "__router_upstream__".to_string(),
-            Value::Str(upstream_base.clone()),
+            Value::Str(upstream_base.clone().into()),
         ));
         match parse_http_upstream(upstream_base) {
             Ok((host, port, base_path)) => {
-                pairs.push(("__router_upstream_host__".to_string(), Value::Str(host)));
+                pairs.push(("__router_upstream_host__".to_string(), Value::Str(host.into())));
                 pairs.push((
                     "__router_upstream_port__".to_string(),
-                    Value::Str(port.to_string()),
+                    Value::Str(port.to_string().into()),
                 ));
                 pairs.push((
                     "__router_upstream_base_path__".to_string(),
-                    Value::Str(base_path),
+                    Value::Str(base_path.into()),
                 ));
             }
             Err(e) => {
-                pairs.push(("__router_upstream_parse_error__".to_string(), Value::Str(e)));
+                pairs.push(("__router_upstream_parse_error__".to_string(), Value::Str(e.into())));
             }
         }
     }
