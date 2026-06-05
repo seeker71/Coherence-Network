@@ -255,6 +255,44 @@ of falling back to `walk`. Each grammar experiment was honest and cheap;
 together they rule out the grammar as the lever and point, with evidence, at the
 JIT.
 
+### The JIT unlock — verified mechanism + the cross-kernel build
+
+Goal: *any* recipe → a native plugin, on every kernel. The blocker and the fix
+are now verified on this machine (darwin/arm64, go1.26.3), not assumed:
+
+- **`buildmode=plugin` works on macOS** — built a `.so`, `plugin.Open` + call →
+  correct; the kernel's own `go-jit-band` scores its full verdict here. (No
+  Linux dependency — an earlier "flaky on macOS" claim was false.)
+- **The real constraint:** a plugin is itself `package main`, so it cannot import
+  the kernel's `main`-package `Value`/`Kernel`/`NodeID`. *That* is why the
+  current JIT is int64-only (int64 is a builtin, needs no kernel types).
+- **The fix, proved:** put the kernel's core types in a **shared importable
+  package**; both the kernel binary and every plugin import it. A plugin built
+  this way took/returned `core.Value`, called shared "natives", did list ops —
+  result correct (a 3-file standalone proof). So Value-typed JIT *via plugin* is
+  viable; no per-op callback, real native speed.
+
+**The build (incremental, cross-kernel-safe — JIT is transparent: a recipe is
+JIT-compiled or walked, same result, so each kernel lands independently and
+`validate` still agrees):**
+
+1. **Go** — extract `Value`/`Kernel`/`NodeID`/`Recipe`/natives from `main` into a
+   `core` package (`main` becomes the thin CLI). Rewrite `jit.go` codegen from
+   `int64` to **`core.Value`**: trivials → typed Values; `if`/`do`/`let` → Go
+   control flow over Values; a **native call** → emit a call into the shared
+   native registry; a call to another Form function → its JIT'd peer (compile the
+   engine's mutually-recursive set into one plugin) or a `walk` fallback. Then
+   `register_jit`-alias `g-match` to the compiled plugin.
+2. **Rust** — core types already separable into a lib crate; emit a `cdylib`,
+   load via `libloading`, same `Value`-typed contract.
+3. **TypeScript** — emit JS for the recipe and `import()` it dynamically (or
+   compile to WASM); "native" here = run as host JS, off the `walk` interpreter.
+
+The smallest first milestone (Go): the `core` extraction + a Value-typed JIT that
+compiles ONE engine leaf with a native call, benchmarked against `walk`. Then
+widen to the whole engine. This is the multiplier that takes the interpreted ~8s
+to milliseconds; cut and a left-factored grammar compose on top.
+
 ### Template blueprints — the emitting side
 
 ```form
