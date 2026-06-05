@@ -9,7 +9,11 @@
       "namePlaceholder": "Nama Anda",
       "enter": "Masuk ke rumah"
     },
-    "role": { "resident": "Penghuni", "staff": "Staf", "member": "Anggota" },
+    "role": {
+      "resident": "Penghuni",
+      "staff": "Staf",
+      "member": "Anggota"
+    },
     "seeOnly": "hanya-lihat",
     "noWriteNote": "Penghuni dapat memberi Anda akses tulis untuk menambah dan menangani permintaan.",
     "join": {
@@ -82,6 +86,17 @@
       "amountPlaceholder": "Jumlah (IDR)",
       "notePlaceholder": "Untuk apa?",
       "paid": "Lunas"
+    },
+    "market": {
+      "heading": "Dari pasar",
+      "fruit": "Buah",
+      "veg": "Sayur",
+      "bumbu": "Bumbu",
+      "pokok": "Pokok",
+      "custom": "Lainnya…",
+      "customAdd": "Tambah",
+      "hint": "Ketuk untuk menambah — atur jumlah setelah",
+      "yourList": "Daftar kamu"
     }
   },
   "_attunement": {

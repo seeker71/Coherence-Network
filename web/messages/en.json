@@ -9,7 +9,11 @@
       "namePlaceholder": "Your name",
       "enter": "Enter the house"
     },
-    "role": { "resident": "Resident", "staff": "Staff", "member": "Member" },
+    "role": {
+      "resident": "Resident",
+      "staff": "Staff",
+      "member": "Member"
+    },
     "seeOnly": "see-only",
     "noWriteNote": "A resident can grant you write access to add and tend requests.",
     "join": {
@@ -82,6 +86,17 @@
       "amountPlaceholder": "Amount (IDR)",
       "notePlaceholder": "What for?",
       "paid": "Paid"
+    },
+    "market": {
+      "heading": "From the market",
+      "fruit": "Fruit",
+      "veg": "Vegetables",
+      "bumbu": "Aromatics & spice",
+      "pokok": "Staples",
+      "custom": "Something else…",
+      "customAdd": "Add",
+      "hint": "Tap to add — set the amount after",
+      "yourList": "Your list"
     }
   },
   "_attunement": {

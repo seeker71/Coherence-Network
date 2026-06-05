@@ -96,6 +96,49 @@
       (fidelity      blueprint-equal)             # the token survives the loop intact
       (human-cost    (point-camera))))            # the whole UX, in one gesture
 
+  # ── Market vocabulary: what a food / supplies signal is made of ─────
+  #
+  # A food or supplies signal is NOT free text — it composes from
+  # market-items, each a (multilingual label, amount-in-local-proportion).
+  # The label carries every tongue at once, so the board renders in the
+  # VIEWER's language: the resident reads "rice", the staff who shops
+  # reads "beras", from the same cell. Nobody types a name twice.
+  #
+  # The amount is measured in the proportions the pasar actually uses —
+  # not bare counts. Leafy greens come by the ikat (bunch); bananas by the
+  # sisir (comb); aromatics by the ons (100 g); rice by the kg; eggs by the
+  # butir (each). The unit is itself multilingual, so "ikat" shows the
+  # resident "bunch" and the staff "ikat".
+
+  (market
+    (item-shape                                   # what one market line IS
+      (id        ?slug)                           # stable key — language-free
+      (group     ?one-of (fruit veg bumbu pokok))
+      (label     (per-tongue en id de es))        # rendered in the viewer's locale
+      (amount    (qty ?n) (unit ?proportion))     # an amount, NOT a bare count
+      (step      ?increment)                      # how +/- moves, in that unit
+      (start     ?default))                       # amount on first tap
+
+    (proportions                                  # the pasar's own measures, each multilingual
+      (kg       (en "kg")     (id "kg"))
+      (ons      (en "100g")   (id "ons"))         # 1 ons = 100 g, the aromatics measure
+      (ikat     (en "bunch")  (id "ikat"))        # leafy greens, lemongrass
+      (sisir    (en "comb")   (id "sisir"))       # a hand of bananas
+      (butir    (en "pcs")    (id "butir"))       # eggs, coconuts — counted
+      (buah     (en "pcs")    (id "buah"))        # whole fruit / veg — counted
+      (potong   (en "pcs")    (id "potong"))      # tofu, sliced pumpkin
+      (bungkus  (en "pack")   (id "bungkus"))     # salt, instant noodles
+      (botol    (en "bottle") (id "botol")))      # cooking oil
+
+    (compose                                      # a food / supplies signal's detail
+      (of   open-signal)
+      (when (kind ?in (food supplies)))
+      (from (sequence (market-item ?i (qty ?n)))) # R_Block.SEQUENCE — one child per line
+      (render-as (per-viewer-locale)))            # staff & resident each read their tongue
+
+    (catalog                                      # the items themselves intern as DATA
+      (note "the pasar items near Hati Suci intern as data, not code; the web carries the instance, the substrate is the source once g4 lands")))
+
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
     (route     /api/household/*)        # HTTP fan-out over the recipes above
@@ -107,4 +150,5 @@
   (gaps
     (g1 "executable .fk recipes in form/form-stdlib + a household.join round-trip band — proven via validate.sh three-way on CI, not a local single-kernel claim")
     (g2 "household.py is the CURRENT carrier but still holds the logic; it thins to serve_via_kernel over these recipes once g1 lands")
-    (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")))
+    (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")
+    (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")))
