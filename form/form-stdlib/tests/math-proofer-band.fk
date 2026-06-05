@@ -1,0 +1,29 @@
+section [form.bml] {
+    let p = mp_var("P");
+    let q = mp_var("Q");
+    let r = mp_var("R");
+    let a = mp_var("A");
+    let b = mp_var("B");
+
+    let p_impl_q = mp_impl(p, q);
+    let q_impl_r = mp_impl(q, r);
+    let a_impl_b = mp_impl(a, b);
+
+    // 1. Deduplication of variables
+    let check1 = if node_eq(p, mp_var("P")) then 1 else 0;
+
+    // 2. Deduplication of implications
+    let check2 = if node_eq(p_impl_q, mp_impl(p, q)) then 1 else 0;
+
+    // 3. Direct Modus Ponens (P, P->Q => Q)
+    let check3 = if eq(mp_prove(list(p, p_impl_q), q), 1) then 1 else 0;
+
+    // 4. Multi-step Modus Ponens (P, P->Q, Q->R => R)
+    let check4 = if eq(mp_prove(list(p, p_impl_q, q_impl_r), r), 1) then 1 else 0;
+
+    // 5. Backtracking Failure (P, P->Q, A->B => R)
+    let check5 = if eq(mp_prove(list(p, p_impl_q, a_impl_b), r), 0) then 1 else 0;
+
+    // Verdict: 5 when all test cases match expectations.
+    add(check1, add(check2, add(check3, add(check4, check5))));
+}
