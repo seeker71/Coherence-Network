@@ -158,12 +158,14 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 > **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new host-language app.
 
-### Syntactic Constraints in the BML/Form Parser
+### Distinguishing the BML Language from the Bootstrap Form-BML Dialect
 
-When authoring native BML (`section [form.bml]`) for the `source-compiler.fk` compiler, you must comply with two parser constraints to prevent compilation failures:
+It is essential to distinguish between the full, high-level **BML Language** and the bootstrap **Form-BML Dialect** used in `.fk` standard library files:
 
-1. **Single-Line `=` Function Declarations**: The BML parser splits top-level statements on newline boundaries. As a result, function definitions utilizing the `=` assignment operator **must be written entirely on a single line** (e.g. `def my_helper(x) = x + 1;`). Spanning an `=` definition across lines truncates the definition and causes syntax panics on subsequent lines. If a multi-line body is required, you must wrap the function body in a braced `{ ... }` block.
-2. **Standalone Comment Lines**: Inline comments (`// ...`) placed after a semicolon (e.g. `let w = x + y; // comment`) split the statement block. The statement splitter treats the semicolon as a statement boundary, causing the comment text to be parsed as a separate syntax node (which fails AST emission). **All comments must live on their own standalone lines.**
+1. **The BML Language (Full Compiler)**: Parsed by the scannerless grammar defined in [bml.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/bml.fk) and demonstrated in [bmf-bml-compiler-picture.bml](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/bml/bmf-bml-compiler-picture.bml). This is a robust, object-oriented language supporting multi-line method definitions, nested classes, interface projections, exception-handling catch blocks, and backtracking speculation. It is parsed directly as a stream of tokens/characters with no line-by-line restrictions, statement-splitting bugs, or inline comment constraints.
+2. **The Form-BML Dialect (Bootstrap Parser)**: The bootstrap syntax written inside `section [form.bml] { ... }` blocks in Fennel/Lisp files (like `.fk` or `.form` files) and parsed by [source-compiler.fk](file:///Users/ursmuff/source/Coherence-Network/form/form-stdlib/source-compiler.fk). Because this bootstrap scanner relies on simpler line-by-line scanning and statement splitting, it exhibits two specific parser constraints:
+   * **Line-bound `=` declarations**: Functions defined with the `=` shorthand (e.g. `def my_fn(x) = expr;`) must be written entirely on a single line because the line-scanner splits top-level statements on newline boundaries. If a multi-line body is required, the braced method syntax `def my_fn(x) { ... }` must be used instead (which the parser correctly scans as a block).
+   * **Line-bound comments**: Comments using `//` placed on the same line after a semicolon (e.g. `let w = x + y; // comment`) can fail AST emission, because the parser treats the semicolon as a statement boundary and tries to parse the remaining comment as a separate syntax node. All comments in `section [form.bml]` blocks must therefore live on their own standalone lines.
 
 → [`agents-using-substrate.md`](agents-using-substrate.md) (when to query the lattice) · [`BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md) · [`bmf-form-runtime.form`](bmf-form-runtime.form) · [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md)
 
