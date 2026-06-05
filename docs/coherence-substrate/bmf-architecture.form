@@ -266,32 +266,39 @@ are now verified on this machine (darwin/arm64, go1.26.3), not assumed:
 - **The real constraint:** a plugin is itself `package main`, so it cannot import
   the kernel's `main`-package `Value`/`Kernel`/`NodeID`. *That* is why the
   current JIT is int64-only (int64 is a builtin, needs no kernel types).
-- **The fix, proved:** put the kernel's core types in a **shared importable
-  package**; both the kernel binary and every plugin import it. A plugin built
-  this way took/returned `core.Value`, called shared "natives", did list ops —
-  result correct (a 3-file standalone proof). So Value-typed JIT *via plugin* is
-  viable; no per-op callback, real native speed.
+- **The fix, shipped (Go):** the kernel's core types live in a **shared importable
+  package** (`form-kernel-go/core`); the kernel binary and every plugin import it.
+  `jit_value.go` compiles ANY recipe to a `core.Value`-typed plugin — strings,
+  lists, native calls, cross-function calls all flow; a `dispatch` callback routes
+  every native / other-function call back to the kernel's registry; self-recursion
+  stays a native `self()` call. Proven end-to-end: a recipe with a string arg +
+  three native calls (`str_len`/`char_at`/`ord`) + recursion returns the walker's
+  exact answer (`jit_value_test.go`), and runs **~3.8× faster** than `walk` on an
+  11M-call native-heavy workload (fib(33): walk ~6.0s → JIT-exec ~1.6s); the
+  one-time `go build` (~0.9s) is cached per body-NodeID thereafter.
 
 **The build (incremental, cross-kernel-safe — JIT is transparent: a recipe is
 JIT-compiled or walked, same result, so each kernel lands independently and
 `validate` still agrees):**
 
-1. **Go** — extract `Value`/`Kernel`/`NodeID`/`Recipe`/natives from `main` into a
-   `core` package (`main` becomes the thin CLI). Rewrite `jit.go` codegen from
-   `int64` to **`core.Value`**: trivials → typed Values; `if`/`do`/`let` → Go
-   control flow over Values; a **native call** → emit a call into the shared
-   native registry; a call to another Form function → its JIT'd peer (compile the
-   engine's mutually-recursive set into one plugin) or a `walk` fallback. Then
-   `register_jit`-alias `g-match` to the compiled plugin.
+1. **Go — DONE.** `core` package extracted from `main`; `jit_value.go` emits
+   `core.Value`-typed plugins (trivials → typed Values; `if`/`do`/`let`/`and`/`or`
+   → Go control flow over Values, faithful to Form's frame-scoped `let`; native &
+   cross-function calls → `dispatch(nameID, args)`; self-recursion → `self(...)`).
+   The `jit_compile_value` native compiles + caches per body-NodeID; FNCALL
+   dispatch prefers the Value plugin, falls back to `walk` for unlowerable shapes.
+   Remaining (next breaths): `jit_compile_value` every engine recipe (`g-match` +
+   `gm-*`), benchmark the real-files band, and inline the hot natives (cursor
+   peek/advance, `str_eq`) to drop the per-call dispatch hop.
 2. **Rust** — core types already separable into a lib crate; emit a `cdylib`,
    load via `libloading`, same `Value`-typed contract.
 3. **TypeScript** — emit JS for the recipe and `import()` it dynamically (or
    compile to WASM); "native" here = run as host JS, off the `walk` interpreter.
 
-The smallest first milestone (Go): the `core` extraction + a Value-typed JIT that
-compiles ONE engine leaf with a native call, benchmarked against `walk`. Then
-widen to the whole engine. This is the multiplier that takes the interpreted ~8s
-to milliseconds; cut and a left-factored grammar compose on top.
+The first milestone (Go) is met: `core` extracted, a Value-typed JIT compiling
+recipes with native calls, benchmarked ~3.8× over `walk`. The multiplier is real;
+widening it to the whole engine (then Rust/TS) is what takes the interpreted ~8s
+toward milliseconds, with cut and a left-factored grammar composing on top.
 
 ### Template blueprints — the emitting side
 
