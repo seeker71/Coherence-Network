@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 141
+**Total files**: 142
 
 | File | Purpose |
 |---|---|
@@ -68,6 +68,7 @@
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
+| [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
 | [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | healing_modality_recipe_proof.py — practitioner-with-receiver as Recipe. |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | Idea-to-Task Bridge — automatically generate tasks from open ideas. |
 | [import_creations.py](import_creations.py) | Auto-import creations into the graph from external sources. |

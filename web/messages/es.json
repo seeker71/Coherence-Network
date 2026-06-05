@@ -1,4 +1,64 @@
 {
+  "hatiSuci": {
+    "title": "Hati Suci",
+    "tagline": "El tablón de la casa — pídelo, y el campo lo atiende. Todos lo ven, nada se oculta.",
+    "you": "Tú",
+    "switchUser": "cambiar",
+    "reg": {
+      "prompt": "Bienvenido. ¿Quién eres en la casa?",
+      "namePlaceholder": "Tu nombre",
+      "enter": "Entrar en la casa"
+    },
+    "role": { "resident": "Residente", "staff": "Personal" },
+    "add": {
+      "heading": "Pídele al campo",
+      "detailPlaceholder": "¿Qué necesitas?",
+      "locationPlaceholder": "¿Dónde? (qué casa, jardín…)",
+      "whenPlaceholder": "¿Cuándo?",
+      "button": "Enviar al tablón"
+    },
+    "kind": {
+      "food": "Comida",
+      "laundry": "Lavandería",
+      "cleaning": "Limpieza",
+      "ride": "Transporte",
+      "repair": "Reparación",
+      "room": "Habitación",
+      "supplies": "Suministros",
+      "other": "Otro"
+    },
+    "board": {
+      "heading": "El tablón",
+      "everyoneSees": "todos lo ven",
+      "empty": "El tablón está despejado. Nada espera."
+    },
+    "status": {
+      "open": "Abierto",
+      "acknowledged": "Visto",
+      "in_progress": "En curso",
+      "completed": "Hecho",
+      "cancelled": "Cancelado"
+    },
+    "meta": {
+      "requestedBy": "pedido por",
+      "acknowledgedBy": "tomado por",
+      "completedBy": "hecho por"
+    },
+    "act": {
+      "acknowledge": "Lo tomo",
+      "start": "Empezar",
+      "complete": "Hecho",
+      "cancel": "Cancelar",
+      "cancelAction": "Cancelar",
+      "markPaid": "Marcar pagado"
+    },
+    "cost": {
+      "heading": "¿Necesitó dinero para recursos externos? (opcional)",
+      "amountPlaceholder": "Importe (IDR)",
+      "notePlaceholder": "¿Para qué?",
+      "paid": "Pagado"
+    }
+  },
   "_attunement": {
     "lang": "es",
     "notes": "First-pass attunement from the en anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",

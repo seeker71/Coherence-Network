@@ -1,4 +1,64 @@
 {
+  "hatiSuci": {
+    "title": "Hati Suci",
+    "tagline": "The household board — ask, and the field tends it. Everyone sees, nothing hidden.",
+    "you": "You",
+    "switchUser": "switch",
+    "reg": {
+      "prompt": "Welcome. Who are you in the house?",
+      "namePlaceholder": "Your name",
+      "enter": "Enter the house"
+    },
+    "role": { "resident": "Resident", "staff": "Staff" },
+    "add": {
+      "heading": "Ask the field",
+      "detailPlaceholder": "What do you need?",
+      "locationPlaceholder": "Where? (which house, garden…)",
+      "whenPlaceholder": "When?",
+      "button": "Send to the board"
+    },
+    "kind": {
+      "food": "Food",
+      "laundry": "Laundry",
+      "cleaning": "Cleaning",
+      "ride": "Ride",
+      "repair": "Repair",
+      "room": "Room",
+      "supplies": "Supplies",
+      "other": "Other"
+    },
+    "board": {
+      "heading": "The board",
+      "everyoneSees": "everyone sees",
+      "empty": "The board is clear. Nothing is waiting."
+    },
+    "status": {
+      "open": "Open",
+      "acknowledged": "Seen",
+      "in_progress": "In progress",
+      "completed": "Done",
+      "cancelled": "Cancelled"
+    },
+    "meta": {
+      "requestedBy": "asked by",
+      "acknowledgedBy": "taken by",
+      "completedBy": "done by"
+    },
+    "act": {
+      "acknowledge": "I'll take it",
+      "start": "Start",
+      "complete": "Done",
+      "cancel": "Cancel",
+      "cancelAction": "Cancel",
+      "markPaid": "Mark paid"
+    },
+    "cost": {
+      "heading": "Did this need money for outside resources? (optional)",
+      "amountPlaceholder": "Amount (IDR)",
+      "notePlaceholder": "What for?",
+      "paid": "Paid"
+    }
+  },
   "_attunement": {
     "lang": "en",
     "role": "anchor",
