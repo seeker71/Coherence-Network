@@ -287,9 +287,21 @@ JIT-compiled or walked, same result, so each kernel lands independently and
    cross-function calls → `dispatch(nameID, args)`; self-recursion → `self(...)`).
    The `jit_compile_value` native compiles + caches per body-NodeID; FNCALL
    dispatch prefers the Value plugin, falls back to `walk` for unlowerable shapes.
-   Remaining (next breaths): `jit_compile_value` every engine recipe (`g-match` +
-   `gm-*`), benchmark the real-files band, and inline the hot natives (cursor
-   peek/advance, `str_eq`) to drop the per-call dispatch hop.
+
+   **Engine JIT'd + benchmarked on the real thesis files (measured):** 145 of the
+   146 engine recipes (`g-match-rule`, `gm-*`, `cur-*`, `match-*`, `is-*`, …) lower
+   to native plugins (1 shape unsupported → walk); the JIT'd parse of all four real
+   `.bml` files scores **2221, identical to walked**. Speed: **~1.45×** (walked
+   11.4s/parse → JIT'd 7.8s/parse, 20-iter avg; one-time compile ~121s, cached).
+
+   *Why 1.45× here vs ~3.8× on clean compute:* the recursive-descent engine is
+   leaf-call-dominated (`cur-peek`, `str_eq`, `head`/`tail`/`cons`/`nth`,
+   `char_at`), and every leaf still pays a **dispatch hop** (`callValueByName`: map
+   lookups + env shadow-checks). JIT-ing the control-flow glue is done; the hop is
+   now the bottleneck. **Next lever (evidence-identified):** inline the hot natives
+   directly as Go over `core.Value` in the codegen (skip dispatch for the hottest
+   leaves), and resolve native-vs-closure at emit time so a native call emits a
+   direct registry call rather than a name lookup. Then re-benchmark.
 2. **Rust** — core types already separable into a lib crate; emit a `cdylib`,
    load via `libloading`, same `Value`-typed contract.
 3. **TypeScript** — emit JS for the recipe and `import()` it dynamically (or
