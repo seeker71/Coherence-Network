@@ -564,6 +564,20 @@ export default function HatiSuciPage() {
     );
   }, [token, load]);
 
+  // A resident seeds the 22 grounds as cells, once — then the map fills.
+  const seedGrounds = useCallback(async () => {
+    if (!token) return;
+    setBusy(true);
+    try {
+      await postJSON("/api/household/places/seed", { actor_token: token });
+      await load();
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(false);
+    }
+  }, [token, load]);
+
   const act = useCallback(
     async (id: string, verb: string, extra: Record<string, unknown> = {}) => {
       if (!token) return;
@@ -1111,9 +1125,18 @@ export default function HatiSuciPage() {
           </div>
 
           {places.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border/40 px-4 py-8 text-center text-sm text-muted-foreground">
-              {t("hatiSuci.map.empty")}
-            </p>
+            <div className="space-y-3 rounded-2xl border border-dashed border-border/40 px-4 py-8 text-center">
+              <p className="text-sm text-muted-foreground">{t("hatiSuci.map.empty")}</p>
+              {isResident && (
+                <button
+                  onClick={seedGrounds}
+                  disabled={busy}
+                  className="rounded-lg border border-sky-500/40 px-3 py-1.5 text-sm text-sky-500 hover:bg-sky-500/10 disabled:opacity-40"
+                >
+                  {t("hatiSuci.map.seed")}
+                </button>
+              )}
+            </div>
           ) : (
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border/30 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.06),transparent_70%)]">
               {places.map((p) => {

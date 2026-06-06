@@ -130,7 +130,8 @@
         "gathering": "encuentro",
         "tended": "cuidado",
         "organ": "trabajo"
-      }
+      },
+      "seed": "Sembrar los terrenos"
     }
   },
   "_attunement": {

@@ -130,7 +130,8 @@
         "gathering": "Versammlung",
         "tended": "gepflegt",
         "organ": "Arbeit"
-      }
+      },
+      "seed": "Gelände säen"
     }
   },
   "_attunement": {

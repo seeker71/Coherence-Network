@@ -130,7 +130,8 @@
         "gathering": "gathering",
         "tended": "tended",
         "organ": "working"
-      }
+      },
+      "seed": "Seed the grounds"
     }
   },
   "_attunement": {
