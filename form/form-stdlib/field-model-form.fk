@@ -910,6 +910,65 @@
         (fmf-self-tending-match-proof)
         (fmf-self-tending-recipe-proof)))
 
+;; resource-routing — the guarded router, frequency-invariant. The same engine
+;; routes a medic (low band: conflict/protection) and a moment of attention
+;; (high band: nutrition/care): draw the resource to declared need, but only
+;; where it can be received (the guard), in the formation that survives. Kin to
+;; self-tending route-resource and the interspecies route-attention/repair-needed.
+(defn fmf-routing-soft? (cap)
+    (if (str_eq cap "medic") 1
+    (if (str_eq cap "care") 1
+    (if (str_eq cap "repair") 1
+    (if (str_eq cap "nutrition") 1 0)))))
+(defn fmf-routing-hostile? (env)
+    (if (str_eq env "active-combat") 1
+    (if (str_eq env "activated") 1 0)))
+(defn fmf-routing-may-move (cap env)
+    (if (and (eq (fmf-routing-soft? cap) 1) (eq (fmf-routing-hostile? env) 1)) 0 1))
+(defn fmf-routing-requires-assistance (cap env)
+    (if (and (str_eq cap "repair") (eq (fmf-routing-hostile? env) 1)) 1 0))
+(defn fmf-routing-may-move-with (cap env assist)
+    (if (eq (fmf-routing-may-move cap env) 1) 1
+        (if (and (eq (fmf-routing-requires-assistance cap env) 1) (eq assist 1)) 1 0)))
+(defn fmf-routing-route (resource from to)
+    (str_concat resource (str_concat ":" (str_concat from (str_concat "->" to)))))
+(defn fmf-routing-select (env available)
+    (str_concat available (str_concat "@" env)))
+
+(defn fmf-resource-routing-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "flow-graph-field"))))
+        (let topology (field_topology (list (fmf-str "needs-and-routes"))))
+        (let fiber (field_fiber (list (fmf-str "located-capability"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+            (and (fmf-node-ok? topology (fmf-topology-cat))
+                 (fmf-node-ok? fiber (fmf-fiber-cat))))
+            1
+            0)))
+
+;; the guard holds on BOTH frequency bands — that is the whole claim.
+(defn fmf-resource-routing-match-proof ()
+    (if (and (eq (fmf-routing-may-move "medic" "active-combat") 0)
+        (and (eq (fmf-routing-may-move "tank" "active-combat") 1)
+        (and (eq (fmf-routing-may-move "care" "activated") 0)
+             (eq (fmf-routing-may-move "nutrition" "receptive") 1))))
+        1
+        0))
+
+(defn fmf-resource-routing-recipe-proof ()
+    (if (and (eq (fmf-routing-may-move-with "repair" "active-combat" 1) 1)
+        (and (eq (fmf-routing-may-move-with "repair" "active-combat" 0) 0)
+        (and (str_eq (fmf-routing-route "medic" "base" "field-hospital") "medic:base->field-hospital")
+             (str_eq (fmf-routing-select "active-combat" "armor") "armor@active-combat"))))
+        1
+        0))
+
+(defn fmf-resource-routing-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-resource-routing-carrier-proof)
+        (fmf-resource-routing-match-proof)
+        (fmf-resource-routing-recipe-proof)))
+
 (defn fmf-domain-proof-score ()
     (add (fmf-dna-rna-proof-score)
     (add (fmf-chemistry-proof-score)
@@ -918,7 +977,8 @@
     (add (fmf-plant-communication-proof-score)
     (add (fmf-em-proof-score)
     (add (fmf-social-proof-score)
-         (fmf-self-tending-proof-score)))))))))
+    (add (fmf-self-tending-proof-score)
+         (fmf-resource-routing-proof-score))))))))))
 
 (defn fmf-lineage-proof-score ()
     (add (fmf-hoffman-proof)

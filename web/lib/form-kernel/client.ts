@@ -93,7 +93,7 @@ export const LOCAL_FORM_EXAMPLES: LocalFormExample[] = [
   {
     label: "Field Model Form proof",
     source: FIELD_MODEL_FORM_DEMO_SOURCE,
-    note: "Runs a 104-point FMF proof over every primitive constructor, eight domain grammars, lineage lenses, quantum rain, observer receipts, and residuals. The canonical BML runtime proof is shipped as field-model-form-bml-runtime-proof:63, with auto-research compiled into FMF as field-auto-research-bml-proof:127 and perturbation observation as field-auto-research-perturbation-proof:255.",
+    note: "Runs a 115-point FMF proof over every primitive constructor, nine domain grammars, lineage lenses, quantum rain, observer receipts, and residuals. The canonical BML runtime proof is shipped as field-model-form-bml-runtime-proof:63, with auto-research compiled into FMF as field-auto-research-bml-proof:127 and perturbation observation as field-auto-research-perturbation-proof:255.",
     proofMarker: FIELD_MODEL_FORM_PUBLIC_MARKER,
   },
 ];

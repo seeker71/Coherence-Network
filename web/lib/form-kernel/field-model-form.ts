@@ -1,4 +1,4 @@
-export const FIELD_MODEL_FORM_PUBLIC_MARKER = "field-model-form-public-proof:104";
+export const FIELD_MODEL_FORM_PUBLIC_MARKER = "field-model-form-public-proof:115";
 export const FIELD_MODEL_FORM_BML_RUNTIME_MARKER = "field-model-form-bml-runtime-proof:63";
 export const FIELD_AUTO_RESEARCH_BML_MARKER = "field-auto-research-bml-proof:127";
 export const FIELD_AUTO_RESEARCH_PERTURBATION_MARKER = "field-auto-research-perturbation-proof:255";
@@ -117,6 +117,7 @@ export const FIELD_MODEL_FORM_DEMO_SOURCE = `(do
   (defn fmf-em-proof-score () (fmf-domain-score "electricity-magnetism"))
   (defn fmf-social-proof-score () (fmf-domain-score "conversation-social"))
   (defn fmf-self-tending-proof-score () (fmf-domain-score "self-tending"))
+  (defn fmf-resource-routing-proof-score () (fmf-domain-score "resource-routing"))
   (defn fmf-quantum-rain-domain-proof-score () (fmf-domain-score "quantum-rain"))
 
   (defn fmf-domain-proof-score ()
@@ -127,7 +128,8 @@ export const FIELD_MODEL_FORM_DEMO_SOURCE = `(do
     (add (fmf-plant-communication-proof-score)
     (add (fmf-em-proof-score)
     (add (fmf-social-proof-score)
-         (fmf-self-tending-proof-score)))))))))
+    (add (fmf-self-tending-proof-score)
+         (fmf-resource-routing-proof-score))))))))))
 
   (defn fmf-lineage-proof-score ()
     (add 1 (add 1 (add 1 1))))
