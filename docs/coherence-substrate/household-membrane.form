@@ -197,7 +197,7 @@
       (name  ?prose)                       # "Yoga Shala", "Fire Circle", "Bamboo House"
       (gps   (lat ?µ) (lon ?µ))            # precise, in micro-degrees
       (wifi  ?ssid)                        # the place's WiFi name (data; not read live)
-      (kind  (one-of (common house))))     # two commons hold most events; houses host occasionally
+      (kind  (one-of (common house amenity)))) # commons host events; houses dwell; amenities (the pool) are tended
     (locate
       (set-by  pin-while-present)          # the sensor sets it: stand here, tap once
       (nearest (recipe nearest-place ?lat ?lon -> place))))  # GPS → place, a Form recipe
@@ -206,27 +206,38 @@
     (is-a place)
     (rooms (sequence room))                # the rooms within
     (resident-placement
-      (member stays-in (room ?r)))         # each resident's house + room, on their cell
+      (member stays-in (room ?r))))        # each resident's house + room, on their cell
 
-    (attention                             # things that need tending — one board signal per issue
-      (issue-shape
-        (of    open-signal)                # it IS a board signal: ask → acknowledge → tend → complete (already Form)
-        (house (cell-ref house))
-        (room  (cell-ref room))
-        (what  (cell-ref issue-kind))      # the common thing, below
-        (detail ?prose))
-      (common                              # the recurring things — each (id, icon, multilingual)
-        (fridge       (en "fridge")              (id "kulkas"))
-        (wifi         (en "WiFi")                (id "wifi"))
-        (toilet       (en "toilet")              (id "toilet"))
-        (stove-gas    (en "stove — out of gas")  (id "kompor — gas habis"))
-        (stove-broken (en "stove — not working") (id "kompor rusak"))
-        (hot-water    (en "hot water")           (id "air panas"))
-        (water        (en "water")               (id "air"))
-        (electricity  (en "electricity")         (id "listrik"))
-        (broken       (en "something broke")     (id "ada yang rusak"))
-        (other        (en "needs tending")       (id "perlu diurus")))
-      (learns "the list grows: a custom issue typed once is remembered as its own tile, the way a custom market item is — the body learns what recurs")))
+  # ── Attention: anything that needs tending, raised by anyone ───────
+  #
+  # Not just house appliances — a pool, the lights, any shared equipment.
+  # ANYONE here can raise it; you don't need write-access to say "the pool
+  # light is out." It rides the board's own lifecycle (the signal already
+  # running on the kernel); only the bar to OPEN one is lower than an ask.
+
+  (attention
+    (issue-shape
+      (of    open-signal)                  # a board signal: ask → acknowledge → tend → complete (already Form)
+      (place (cell-ref place))             # a house, a common, or an amenity (the pool)
+      (room  (cell-ref room))              # optional — when the thing is inside a house
+      (what  (cell-ref issue-kind))        # the common thing, below
+      (detail ?prose))
+    (common                                # the recurring things — appliances, equipment, facilities
+      (fridge       (en "fridge")              (id "kulkas"))
+      (wifi         (en "WiFi")                (id "wifi"))
+      (toilet       (en "toilet")              (id "toilet"))
+      (stove-gas    (en "stove — out of gas")  (id "kompor — gas habis"))
+      (stove-broken (en "stove — not working") (id "kompor rusak"))
+      (hot-water    (en "hot water")           (id "air panas"))
+      (water        (en "water")               (id "air"))
+      (electricity  (en "electricity")         (id "listrik"))
+      (lights       (en "lights")              (id "lampu"))
+      (pool         (en "pool")                (id "kolam"))
+      (equipment    (en "equipment")           (id "peralatan"))
+      (broken       (en "something broke")     (id "ada yang rusak"))
+      (other        (en "needs tending")       (id "perlu diurus")))
+    (raise (open-to active-member))        # ANYONE registered can flag it — lower bar than the board's write-gate
+    (learns "the list grows: a custom issue typed once is remembered as its own tile, the way a custom market item is — the body learns what recurs"))
 
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
@@ -242,4 +253,4 @@
     (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")
     (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")
     (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")
-    (g6 "places & houses carrier: place cells (name, gps-by-pin, wifi, kind), house rooms + resident-placement, the attention issue-vocabulary (market-picker pattern), and the nearest-place Form recipe — built recipe-first when the place/house names land; a house-issue rides the existing board lifecycle, not new machinery")))
+    (g6 "places & houses carrier: place cells (name, gps-by-pin, wifi, kind ∈ common/house/amenity incl. the pool), house rooms + resident-placement, the attention issue-vocabulary (market-picker pattern; appliances + lights + pool + equipment, raised by anyone), and the nearest-place Form recipe — built recipe-first when the place/house names land; an attention-signal rides the existing board lifecycle, not new machinery")))
