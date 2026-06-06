@@ -1125,6 +1125,8 @@
             (if (str_eq kind "class")            (lift-class statement-tree)
             (if (str_eq kind "import")           (lift-import statement-tree)
             (if (str_eq kind "from")             (lift-from-import statement-tree)
+            (if (str_eq rule "break_stmt")       (intern_node PY-BMF-BREAK (empty))
+            (if (str_eq rule "continue_stmt")    (intern_node PY-BMF-CONTINUE (empty))
             (if (str_eq rule "assignment")       (lift-assign statement-tree)
             (if (eq (stmt-attr-assign? statement-tree) 1) (lift-attr-assign statement-tree)
             (if (eq (stmt-aug-op? statement-tree) 1) (lift-aug-assign statement-tree)
@@ -1133,7 +1135,7 @@
             (if (str_eq kind "expr")             (lift-expr-stmt statement-tree)
                 (do
                     (trace "lift-statement: unsupported kind/rule" (list kind rule))
-                    (intern_node PY-BMF-PASS (empty)))))))))))))))))))
+                    (intern_node PY-BMF-PASS (empty)))))))))))))))))))))
 
     ;; ---- module lifter (the public surface) ------------------------
     ;;

@@ -251,6 +251,12 @@
     ;; constructor (the common case); py-stmt-return tags a returning result.
     (defn py-stmt-result (value env) (list value env 0))
     (defn py-stmt-return (value env) (list value env 1))
+    ;; Loop-control extends the signal vocabulary: 2 = break, 3 = continue.
+    ;; A loop arm consumes its own break/continue (resetting the signal); only
+    ;; return (1) propagates past a loop to the function body. The body-loop
+    ;; stops on ANY signal (> 0) so it reaches the loop arm to be acted on.
+    (defn py-stmt-break (env) (list 0 env 2))
+    (defn py-stmt-continue (env) (list 0 env 3))
     (defn py-stmt-value (r) (head r))
     (defn py-stmt-env (r) (head (tail r)))
     (defn py-stmt-returned (r) (head (tail (tail r))))
@@ -459,7 +465,9 @@
         (if (nil? stmts) (py-stmt-result 0 env)
             (do
                 (let r (py-eval-statement (head stmts) env))
-                (if (eq (py-stmt-returned r) 1)
+                ;; Stop on ANY signal (return / break / continue) so it reaches
+                ;; the enclosing loop arm (or function body) to be acted on.
+                (if (gt (py-stmt-returned r) 0)
                     r
                     (py-eval-body-loop (tail stmts) (py-stmt-env r))))))
 
@@ -473,9 +481,13 @@
             (py-stmt-result 0 env)
             (do
                 (let r (py-eval-body-loop body-stmts env))
-                (if (eq (py-stmt-returned r) 1)
-                    r
-                    (py-while-loop cond-recipe body-stmts (py-stmt-env r))))))
+                (let sig (py-stmt-returned r))
+                ;; return (1) propagates out; break (2) ends the loop with a
+                ;; normal result (mutations before it persist); 0 / continue (3)
+                ;; fall to the next iteration with the threaded env.
+                (if (eq sig 1) r
+                (if (eq sig 2) (py-stmt-result 0 (py-stmt-env r))
+                    (py-while-loop cond-recipe body-stmts (py-stmt-env r)))))))
 
     ;; py-for-loop — iterate `items` (a Form list), binding `var` to each
     ;; element and threading env through the body each pass. Mirrors
@@ -490,9 +502,11 @@
             (do
                 (let r (py-eval-body-loop body-stmts
                             (py-env-extend env var (head items))))
-                (if (eq (py-stmt-returned r) 1)
-                    r
-                    (py-for-loop var (tail items) body-stmts (py-stmt-env r))))))
+                (let sig (py-stmt-returned r))
+                ;; return propagates; break ends the loop; 0 / continue advance.
+                (if (eq sig 1) r
+                (if (eq sig 2) (py-stmt-result 0 (py-stmt-env r))
+                    (py-for-loop var (tail items) body-stmts (py-stmt-env r)))))))
 
     ;; py-comp-build — evaluate a list comprehension `[elem for var in iter]`.
     ;; Maps elem-recipe over each item of the already-evaluated iter list,
@@ -587,6 +601,10 @@
         (do
             (let cat (node_category recipe))
             (let kids (node_children recipe))
+            ;; break / continue: yield the loop-control signal; the enclosing
+            ;; loop arm consumes it (return still propagates past the loop).
+            (if (node_eq cat PY-BMF-BREAK) (py-stmt-break env)
+            (if (node_eq cat PY-BMF-CONTINUE) (py-stmt-continue env)
             (if (node_eq cat PY-BMF-ASSIGN)
                 (do
                     ;; ASSIGN children: name-leaf, value-recipe
@@ -758,7 +776,7 @@
                 ;; here, not in the default expression arm below.
                 (py-stmt-result 0 env)
                 ;; Default: expression statement — eval, env unchanged.
-                (py-stmt-result (py-eval recipe env) env)))))))))))))))))
+                (py-stmt-result (py-eval recipe env) env)))))))))))))))))))
 
     ;; py-eval-module-loop drives a statement sequence to its value. It serves
     ;; two roles: the top-level module (last-statement value semantics) AND a
