@@ -117,7 +117,17 @@
       "plusOne": "+1",
       "interested": "Interesado",
       "no": "No puedo",
-      "coming": "vienen"
+      "coming": "vienen",
+      "aud": {
+        "everyone": "Todos",
+        "resident": "Residentes",
+        "staff": "Equipo",
+        "friend": "Amigos"
+      },
+      "event": "Evento",
+      "makeEvent": "Como evento",
+      "where": "¿Dónde?",
+      "when": "¿Cuándo?"
     },
     "map": {
       "heading": "Los terrenos",

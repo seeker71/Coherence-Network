@@ -117,7 +117,17 @@
       "plusOne": "+1",
       "interested": "Tertarik",
       "no": "Tidak bisa",
-      "coming": "datang"
+      "coming": "datang",
+      "aud": {
+        "everyone": "Semua",
+        "resident": "Warga",
+        "staff": "Staf",
+        "friend": "Teman"
+      },
+      "event": "Acara",
+      "makeEvent": "Jadikan acara",
+      "where": "Di mana?",
+      "when": "Kapan?"
     },
     "map": {
       "heading": "Tanah Hati Suci",
