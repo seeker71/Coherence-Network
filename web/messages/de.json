@@ -103,6 +103,9 @@
     "claim": {
       "prompt": "Willkommen! Wie sollen wir dich nennen?",
       "button": "Das bin ich"
+    },
+    "events": {
+      "heading": "Events von Freunden"
     }
   },
   "_attunement": {

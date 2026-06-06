@@ -338,6 +338,21 @@
       (through the-AI-presence)                    # cells speak / interact through the AI as the place's medium
       (sensing-visible-to-the-sensed true)))       # whoever is sensed can see the sensing
 
+  # ── Calendar port: friend events live in a shared calendar, not here ─
+  #
+  # Friend events are not stored by us — they live in shared Google Calendars
+  # the field already keeps. The calendar is an external SHARED SUBSTRATE (a
+  # port, like the substrate's storage / resource ports): we read its iCal feed
+  # and show the upcoming events; the calendar stays the store, editable by
+  # everyone who holds it, outside the app. Adding an event opens the calendar.
+
+  (calendar-port
+    (store    google-calendar)              # the shared substrate, outside the app
+    (read     (ical-feed -> (sequence event)))   # fetch + parse the .ics, show upcoming
+    (write    (add -> open-calendar))       # adding opens Google Calendar (API write is later)
+    (kin      (port storage resource))      # a sibling of the substrate's other ports
+    (no-parallel-store "the calendar IS the store — we never duplicate events into our own DB"))
+
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
     (route     /api/household/*)        # HTTP fan-out over the recipes above
@@ -354,4 +369,5 @@
     (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")
     (g6 "organism carrier: place cells composed of thing-cells (+ room cells for houses) seeded from the at-hati-suci map, the shepherd relation (a member tends a cell — a season of care), resident room-placement, attention raised-on-a-thing flowing to that cell's shepherd (market-picker pattern, raised by anyone), and the nearest-place Form recipe — built recipe-first; an attention rides the board lifecycle already on the kernel, not new machinery")
     (g7 "visits & nourishment carrier: visit cells (host, windows, slots) + the swap codec (DM offer ⇄ accept, the join shape), the nourishment ledger (suggested-gift, automatic record, observable tally) on the kernel, and visibility LEARNED per relationship-category — where the category IS the relationship's content-addressed Blueprint (common properties → shared coordinate), so a cell's one choice holds across same-shape relationships; payment rail is a carrier integration, the ledger is substrate; kin to lc-offering / lc-economy")
-    (g8 "presence-flow carrier: phone-as-proxy presence (no check-in), consent-gated sovereign location share (coarse/precise, to chosen-or-learned group via the visibility recipe), auto staff-presence, and opt-in revocable cameras/mics where cells speak through the AI presence — built recipe-first, the sensing always visible to the sensed; privacy is sovereign, never a default that exposes")))
+    (g8 "presence-flow carrier: phone-as-proxy presence (no check-in), consent-gated sovereign location share (coarse/precise, to chosen-or-learned group via the visibility recipe), auto staff-presence, and opt-in revocable cameras/mics where cells speak through the AI presence — built recipe-first, the sensing always visible to the sensed; privacy is sovereign, never a default that exposes")
+    (g9 "calendar-port carrier: GET /household/events reads the configured shared-calendar iCal feeds and shows upcoming one-off friend events (SHIPPED); recurrence expansion (RRULE) and write-back (add-event via the Google API, or an add-to-calendar link) follow")))

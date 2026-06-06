@@ -39,6 +39,18 @@ type Status = "open" | "acknowledged" | "in_progress" | "completed" | "cancelled
 // fallback when the catalog doesn't know the id (custom items).
 type RequestItem = { id: string; qty: number; unit?: string; label?: string };
 
+// A friend event, read from the shared Google Calendar (the calendar is the
+// store; the app only reads its iCal feed). household-membrane.form: calendar-port.
+type FriendEvent = {
+  title: string;
+  start: string;
+  end?: string | null;
+  all_day?: boolean;
+  location?: string | null;
+  description?: string | null;
+  source?: string | null;
+};
+
 type ServiceRequest = {
   id: string;
   kind: Kind;
@@ -194,6 +206,7 @@ export default function HatiSuciPage() {
   const [member, setMember] = useState<Member | null>(null);
   const [resolved, setResolved] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [events, setEvents] = useState<FriendEvent[]>([]);
   const [members, setMembers] = useState<PublicMember[]>([]);
 
   const [joinName, setJoinName] = useState("");
@@ -280,6 +293,8 @@ export default function HatiSuciPage() {
     if (r) setRequests(r);
     const m = await getJSON<PublicMember[]>("/api/household/members");
     if (m) setMembers(m);
+    const ev = await getJSON<FriendEvent[]>("/api/household/events");
+    if (ev) setEvents(ev);
   }, []);
 
   useEffect(() => {
@@ -885,6 +900,33 @@ export default function HatiSuciPage() {
           <p className="rounded-2xl border border-dashed border-border/40 px-4 py-4 text-center text-sm text-muted-foreground">
             {t("hatiSuci.noWriteNote")}
           </p>
+        )}
+
+        {/* Friend events — read from the shared calendar */}
+        {events.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-base font-medium">{t("hatiSuci.events.heading")}</h2>
+            {events.map((e, i) => {
+              const d = new Date(e.start);
+              const when = e.all_day
+                ? d.toLocaleDateString(lang, { weekday: "short", month: "short", day: "numeric" })
+                : d.toLocaleString(lang, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+              return (
+                <article key={i} className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl leading-none">📅</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground break-words">{e.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {when}
+                        {e.location ? ` · ${e.location}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
         )}
 
         {/* The open board */}
