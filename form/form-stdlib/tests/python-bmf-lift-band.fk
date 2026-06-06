@@ -287,8 +287,35 @@ a + b + c
 "))
     (let cell20-score (if (eq cell20-value 1058) 10000 0))
 
+    ;; ---- cell 21: while-loop + break — CPython:
+    ;;   while i < 100 (guard proves break truly stops the loop);
+    ;;   total += i then break at i == 5  → 0+1+2+3+4+5 = 15
+    ;;   (without break the guard would run to sum 0..99 = 4950).
+    (let cell21-value (py-bmf-run-text "total = 0
+i = 0
+while i < 100:
+    total = total + i
+    if i == 5:
+        break
+    i = i + 1
+total
+"))
+    (let cell21-score (if (eq cell21-value 15) 10000 0))
+
+    ;; ---- cell 22: for-loop + continue — CPython:
+    ;;   for i in range(10): if i == 3 continue (skip that add)
+    ;;   total += i  → 45 - 3 = 42   (without continue: sum 0..9 = 45).
+    (let cell22-value (py-bmf-run-text "total = 0
+for i in range(10):
+    if i == 3:
+        continue
+    total = total + i
+total
+"))
+    (let cell22-score (if (eq cell22-value 42) 10000 0))
+
     ;; ---- aggregate ----------------------------------------------------
-    ;; 19 cells through comprehension = 145000; + 10000 (cell 20 power) = 155000.
+    ;; 20 cells = 155000; + 10000 (cell 21 break) + 10000 (cell 22 continue) = 175000.
 
     (sum (list cell1-score cell2-score cell3-score
                cell4-score cell5-score cell6-score
@@ -296,4 +323,5 @@ a + b + c
                cell10-score cell11-score cell12-score
                cell13-score cell14-score cell15-score
                cell16-score cell17-score cell18-score
-               cell19-score cell20-score)))
+               cell19-score cell20-score
+               cell21-score cell22-score)))
