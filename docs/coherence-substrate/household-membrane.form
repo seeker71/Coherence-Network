@@ -189,10 +189,14 @@
   # cells and thing cells — fridge, toilet, lights, electricity, stove, water,
   # wifi. The pool is a cell holding its own things; the gardens, a cell. Some
   # cells are dwelt in (houses, with rooms), some gathered in (yoga studio,
-  # fire pit, bale, temple); all are tended. Location is set by SENSOR: stand
-  # in the place, tap once, the phone's GPS pins it. (A cell knows its WiFi
-  # NAME as data — useful to share; the web can't read the live SSID, so GPS
-  # is the locator.)
+  # fire pit, bale, temple); all are tended. A cell tells the field which place
+  # it is at through ANY of several doors — there is no single limit. The phone's
+  # GPS pins coordinates (→ nearest-place). A place wears a QR and scanning it IS
+  # being there — the join codec re-aimed, zero native code, consent carried by
+  # the act of scanning. An NFC tap does the same on Android. A thin native shell
+  # reads the live WiFi name to match the place's network. Or the place itself
+  # perceives, as a consented sensor device. Each door is buildable; the gentlest
+  # (scan, tap) are consent-native, which fits the sovereign frame below.
 
   (place                                   # every place is a cell in the organism
     (cell-shape
@@ -202,9 +206,19 @@
       (wifi      ?ssid)                    # the cell's WiFi name (data; not read live)
       (holds     (sequence thing))         # its named thing-cells (below)
       (dwelt     (when house (holds (sequence room)))))  # a house also holds room cells
-    (locate
-      (set-by  pin-while-present)          # the sensor sets it: stand here, tap once
-      (nearest (recipe nearest-place ?lat ?lon -> place)))  # GPS → place, a Form recipe
+    (locate                                  # how a cell tells the field which place — many doors, no single limit
+      (by-pin   pin-while-present)           # GPS: stand here, tap once; coordinates pin the place
+      (by-scan  scan-while-present           # a place wears a QR; scanning it IS "I am here"
+                (kin household.join)         # the JOIN CODEC re-aimed — matrix → link → present-at-place, one R_Codec
+                (native-code none)           # works in the web today; the camera already decodes the join
+                (consent-native true))       # scanning is an explicit act → presence-by-scan is consent by construction
+      (by-tap   nfc-while-present)           # Web NFC (Android): tap the phone to the place's tag
+      (by-ssid  wifi-name-match              # the cell's network == the place's `wifi`
+                (carrier native-shell))      # a thin native wrapper reads the live SSID — the one door the bare web lacks, still buildable
+      (by-sense place-as-sensor              # the place itself perceives: a consented device senses phones present
+                (kin voice))                 # same shape as the consented cameras/mics below — opt-in, revocable, visible-to-the-sensed
+      (nearest  (recipe nearest-place ?lat ?lon -> place))   # the by-pin brain — GPS → place by proximity, a Form recipe
+      (many-doors "presence has many locators; by-scan reuses the join codec with zero native code; only live-SSID wants a native shell — imagination and trying open each door"))
 
     (thing                                 # a named thing-cell — the leaf that gets tended
       (blueprint ?B-thing)                 # each named thing has its own structural identity
