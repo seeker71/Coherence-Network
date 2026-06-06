@@ -283,6 +283,10 @@ export default function HatiSuciPage() {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [gatherings, setGatherings] = useState<Gathering[]>([]);
   const [gatherText, setGatherText] = useState("");
+  const [gatherGroup, setGatherGroup] = useState("everyone"); // everyone | resident | staff | friend
+  const [gatherIsEvent, setGatherIsEvent] = useState(false);
+  const [gatherWhere, setGatherWhere] = useState("");
+  const [gatherWhen, setGatherWhen] = useState("");
   const [places, setPlaces] = useState<Place[]>([]);
   const [locating, setLocating] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -506,17 +510,29 @@ export default function HatiSuciPage() {
     if (!text || !token) return;
     setBusy(true);
     try {
-      await postJSON("/api/household/gatherings", {
-        actor_token: token, text, audience_kind: "everyone",
-      });
+      const body: Record<string, unknown> = {
+        actor_token: token,
+        text,
+        audience_kind: gatherGroup === "everyone" ? "everyone" : "group",
+        audience_value: gatherGroup === "everyone" ? "" : gatherGroup,
+        kind: gatherIsEvent ? "event" : "poll",
+      };
+      if (gatherIsEvent) {
+        body.where = gatherWhere || null;
+        body.when_text = gatherWhen.trim() || null;
+      }
+      await postJSON("/api/household/gatherings", body);
       setGatherText("");
+      setGatherWhere("");
+      setGatherWhen("");
+      setGatherIsEvent(false);
       await load();
     } catch {
       /* ignore */
     } finally {
       setBusy(false);
     }
-  }, [gatherText, token, load]);
+  }, [gatherText, gatherGroup, gatherIsEvent, gatherWhere, gatherWhen, token, load]);
 
   const answerGathering = useCallback(async (id: string, choice: string) => {
     if (!token) return;
@@ -1276,23 +1292,74 @@ export default function HatiSuciPage() {
           </div>
 
           {isResident && (
-            <div className="flex gap-2">
+            <div className="space-y-2 rounded-2xl border border-border/30 bg-card/30 p-3">
               <input
                 value={gatherText}
                 onChange={(e) => setGatherText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") raiseGathering();
+                  if (e.key === "Enter" && !gatherIsEvent) raiseGathering();
                 }}
                 placeholder={t("hatiSuci.gather.placeholder")}
-                className="flex-1 rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm"
               />
-              <button
-                onClick={raiseGathering}
-                disabled={busy || !gatherText.trim()}
-                className="rounded-lg border border-sky-500/40 px-3 py-2 text-sm text-sky-500 hover:bg-sky-500/10 disabled:opacity-40"
-              >
-                {t("hatiSuci.gather.ask")}
-              </button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {["everyone", "resident", "staff", "friend"].map((grp) => (
+                  <button
+                    key={grp}
+                    onClick={() => setGatherGroup(grp)}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs transition ${
+                      gatherGroup === grp
+                        ? "border-sky-500 bg-sky-500/15 text-sky-400"
+                        : "border-border/40 text-muted-foreground hover:bg-accent/40"
+                    }`}
+                  >
+                    {t(`hatiSuci.gather.aud.${grp}`)}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setGatherIsEvent((v) => !v)}
+                  className={`ml-auto rounded-full border px-2.5 py-0.5 text-xs transition ${
+                    gatherIsEvent
+                      ? "border-violet-500 bg-violet-500/15 text-violet-400"
+                      : "border-border/40 text-muted-foreground hover:bg-accent/40"
+                  }`}
+                >
+                  {gatherIsEvent ? `✨ ${t("hatiSuci.gather.event")}` : t("hatiSuci.gather.makeEvent")}
+                </button>
+              </div>
+              {gatherIsEvent && (
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={gatherWhere}
+                    onChange={(e) => setGatherWhere(e.target.value)}
+                    className="rounded-lg border border-border/40 bg-background/60 px-2 py-1.5 text-sm"
+                  >
+                    <option value="">{t("hatiSuci.gather.where")}</option>
+                    {places
+                      .filter((p) => p.kind === "gathering")
+                      .map((p) => (
+                        <option key={p.id} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    value={gatherWhen}
+                    onChange={(e) => setGatherWhen(e.target.value)}
+                    placeholder={t("hatiSuci.gather.when")}
+                    className="flex-1 rounded-lg border border-border/40 bg-background/60 px-3 py-1.5 text-sm"
+                  />
+                </div>
+              )}
+              <div className="flex justify-end">
+                <button
+                  onClick={raiseGathering}
+                  disabled={busy || !gatherText.trim()}
+                  className="rounded-lg border border-sky-500/40 px-3 py-1.5 text-sm text-sky-500 hover:bg-sky-500/10 disabled:opacity-40"
+                >
+                  {t("hatiSuci.gather.ask")}
+                </button>
+              </div>
             </div>
           )}
 

@@ -117,7 +117,17 @@
       "plusOne": "+1",
       "interested": "Interessiert",
       "no": "Kann nicht",
-      "coming": "kommen"
+      "coming": "kommen",
+      "aud": {
+        "everyone": "Alle",
+        "resident": "Bewohner",
+        "staff": "Team",
+        "friend": "Freunde"
+      },
+      "event": "Event",
+      "makeEvent": "Als Event",
+      "where": "Wo?",
+      "when": "Wann?"
     },
     "map": {
       "heading": "Das Gelände",
