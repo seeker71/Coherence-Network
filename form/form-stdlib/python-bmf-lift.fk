@@ -348,7 +348,8 @@
                 ;; natives promote int↔float, so no kernel arithmetic change.
                 (lift-subscript-tail
                     (intern_node PY-BMF-FLOAT
-                        (list (intern_trivial_float (tok-value t))))
+                        (list (intern_trivial_float (tok-value t))
+                              (intern_trivial_string (tok-value t))))
                     rest)
             (if (tok-string? t)
                 ;; STRING literal: intern the raw token text as a trivial-string

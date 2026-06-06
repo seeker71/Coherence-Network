@@ -312,7 +312,7 @@ else:
 
     # Compile to .fk and run via native binary.
     fk_path="${f%.py}.fk"
-    npx tsx src/main.ts python-compile "$f" "$fk_path" >/dev/null 2>&1
+    kernel-bmf-compile "$f" "$fk_path" >/dev/null 2>&1
     rust_result=$("$RUST_BIN" "$fk_path" 2>&1 | tail -1)
 
     # Third runtime — selected by PARITY_THIRD_RUNTIME. The default

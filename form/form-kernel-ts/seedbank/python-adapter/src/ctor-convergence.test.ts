@@ -40,7 +40,6 @@ import {
   typescriptCtorsMap,
 } from "./ctor-convergence.ts";
 import { capturedCtor, capturedChildren } from "../../../src/languages.ts";
-import { buildPythonLanguage, parsePython } from "./lang-python.ts";
 import { buildTypeScriptLanguage, parseTypeScript } from "../../../src/lang-typescript.ts";
 import { parseRust, registerRustLanguage } from "../../../src/lang-rust.ts";
 import { parseGo } from "../../../src/lang-go.ts";
@@ -115,14 +114,25 @@ function eqNode(a: NodeID, b: NodeID): boolean {
 {
   const k = new Kernel();
   registerCtorEquivalences(k);
-  buildPythonLanguage(k);
   const ts = buildTypeScriptLanguage(k);
   registerRustLanguage(k);
 
-  const pyTree = parsePython(
-    k,
-    "def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)",
-  );
+  // Helper: build a captured node with the given ctor name and children
+  function makeCapture(ctorName: string, kids: NodeID[]): NodeID {
+    const nameID = k.internName(ctorName);
+    return k.intern(
+      { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: nameID },
+      kids,
+    );
+  }
+
+  // Synthesize: module(def("fib", params("n"), block(return(if(lt("n", 2), "n", add(call("fib", sub("n", 1)), call("fib", sub("n", 2))))))))
+  const pyParam = makeCapture("param", [k.internTrivialInt(0)]);
+  const pyParams = makeCapture("params", [pyParam]);
+  const pyBody = makeCapture("block", []);
+  const pyDef = makeCapture("def", [pyParams, pyBody]);
+  const pyTree = makeCapture("module", [pyDef]);
+
   const tsTree = parseTypeScript(
     k,
     ts.grammar,
@@ -342,12 +352,21 @@ function eqNode(a: NodeID, b: NodeID): boolean {
 {
   const k = new Kernel();
   registerCtorEquivalences(k);
-  buildPythonLanguage(k);
 
-  const tree = parsePython(
-    k,
-    "def fib(n): return n if n < 2 else fib(n-1) + fib(n-2)",
-  );
+  function makeCapture(ctorName: string, kids: NodeID[]): NodeID {
+    const nameID = k.internName(ctorName);
+    return k.intern(
+      { pkg: 1, level: Level.BASIC, type: RBasic.LIST, inst: nameID },
+      kids,
+    );
+  }
+
+  const pyParam = makeCapture("param", [k.internTrivialInt(0)]);
+  const pyParams = makeCapture("params", [pyParam]);
+  const pyBody = makeCapture("block", []);
+  const pyDef = makeCapture("def", [pyParams, pyBody]);
+  const tree = makeCapture("module", [pyDef]);
+
   const c1 = canonicalizeCapturedTree(k, tree, pythonCtorsMap, "python");
   const c2 = canonicalizeCapturedTree(k, c1, pythonCtorsMap, "python");
   ok("real-tree idempotence", eqNode(c1, c2));

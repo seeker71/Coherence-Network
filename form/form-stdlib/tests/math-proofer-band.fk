@@ -1,3 +1,4 @@
+; preludes: form-stdlib/grammars/math-proofer.fk
 section [form.bml] {
     let p = mp_var("P");
     let q = mp_var("Q");
