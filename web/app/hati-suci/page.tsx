@@ -51,6 +51,28 @@ type FriendEvent = {
   source?: string | null;
 };
 
+// A gathering / question raised to the field — everyone it reaches answers,
+// and the tally is open to all (household-membrane.form: gathering).
+type GatheringTally = {
+  interested: number; yes: number; no: number; yes_plus_one: number; heads: number; voters: number;
+};
+type GatheringVote = { voter_name: string; choice: string };
+type Gathering = {
+  id: string;
+  text: string;
+  author_name: string;
+  audience_kind: string;
+  audience_value: string;
+  kind: string;
+  status?: string | null;
+  where?: string | null;
+  when_text?: string | null;
+  raised_at: string;
+  my_choice?: string | null;
+  tally: GatheringTally;
+  votes: GatheringVote[];
+};
+
 type ServiceRequest = {
   id: string;
   kind: Kind;
@@ -206,6 +228,8 @@ export default function HatiSuciPage() {
   const [member, setMember] = useState<Member | null>(null);
   const [resolved, setResolved] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [gatherings, setGatherings] = useState<Gathering[]>([]);
+  const [gatherText, setGatherText] = useState("");
   const [events, setEvents] = useState<FriendEvent[]>([]);
   const [members, setMembers] = useState<PublicMember[]>([]);
 
@@ -303,9 +327,14 @@ export default function HatiSuciPage() {
         `/api/household/members?token=${encodeURIComponent(tk)}`,
       );
       setMembers(m ?? []);
+      const g = await getJSON<Gathering[]>(
+        `/api/household/gatherings?token=${encodeURIComponent(tk)}`,
+      );
+      setGatherings(g ?? []);
     } else {
       setRequests([]);
       setMembers([]);
+      setGatherings([]);
     }
     const ev = await getJSON<FriendEvent[]>("/api/household/events");
     if (ev) setEvents(ev);
@@ -409,6 +438,33 @@ export default function HatiSuciPage() {
       setBusy(false);
     }
   }, [token, cart, customItems, pick, detail, kind, marketKind, location, whenText, load]);
+
+  const raiseGathering = useCallback(async () => {
+    const text = gatherText.trim();
+    if (!text || !token) return;
+    setBusy(true);
+    try {
+      await postJSON("/api/household/gatherings", {
+        actor_token: token, text, audience_kind: "everyone",
+      });
+      setGatherText("");
+      await load();
+    } catch {
+      /* ignore */
+    } finally {
+      setBusy(false);
+    }
+  }, [gatherText, token, load]);
+
+  const answerGathering = useCallback(async (id: string, choice: string) => {
+    if (!token) return;
+    try {
+      await postJSON(`/api/household/gatherings/${id}/answer`, { actor_token: token, choice });
+      await load();
+    } catch {
+      /* ignore */
+    }
+  }, [token, load]);
 
   const act = useCallback(
     async (id: string, verb: string, extra: Record<string, unknown> = {}) => {
@@ -942,6 +998,94 @@ export default function HatiSuciPage() {
             })}
           </section>
         )}
+
+        {/* Gatherings — raise a question or event; everyone answers; the field sees the tally */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-medium">{t("hatiSuci.gather.heading")}</h2>
+            <span className="text-xs text-muted-foreground">{t("hatiSuci.gather.everyoneAnswers")}</span>
+          </div>
+
+          {isResident && (
+            <div className="flex gap-2">
+              <input
+                value={gatherText}
+                onChange={(e) => setGatherText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") raiseGathering();
+                }}
+                placeholder={t("hatiSuci.gather.placeholder")}
+                className="flex-1 rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm"
+              />
+              <button
+                onClick={raiseGathering}
+                disabled={busy || !gatherText.trim()}
+                className="rounded-lg border border-sky-500/40 px-3 py-2 text-sm text-sky-500 hover:bg-sky-500/10 disabled:opacity-40"
+              >
+                {t("hatiSuci.gather.ask")}
+              </button>
+            </div>
+          )}
+
+          {gatherings.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-border/40 px-4 py-8 text-center text-sm text-muted-foreground">
+              {t("hatiSuci.gather.empty")}
+            </p>
+          )}
+
+          {gatherings.map((g) => {
+            const choices = [
+              { key: "yes", label: t("hatiSuci.gather.yes"), emoji: "🙌" },
+              { key: "yes-plus-one", label: t("hatiSuci.gather.plusOne"), emoji: "👥" },
+              { key: "interested", label: t("hatiSuci.gather.interested"), emoji: "👀" },
+              { key: "no", label: t("hatiSuci.gather.no"), emoji: "🙏" },
+            ];
+            return (
+              <article
+                key={g.id}
+                className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3"
+              >
+                <div>
+                  <p className="text-sm text-foreground">
+                    {g.kind === "event" ? "✨ " : ""}
+                    {g.text}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {g.author_name}
+                    {g.where ? ` · ${g.where}` : ""}
+                    {g.when_text ? ` · ${g.when_text}` : ""}
+                    {g.status ? ` · ${g.status}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {choices.map((c) => {
+                    const active = g.my_choice === c.key;
+                    return (
+                      <button
+                        key={c.key}
+                        onClick={() => answerGathering(g.id, c.key)}
+                        className={`rounded-full border px-3 py-1 text-xs transition ${
+                          active
+                            ? "border-sky-500 bg-sky-500/15 text-sky-400"
+                            : "border-border/40 text-muted-foreground hover:bg-accent/40"
+                        }`}
+                      >
+                        {c.emoji} {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span>🙋 {g.tally.heads} {t("hatiSuci.gather.coming")}</span>
+                  {g.tally.interested > 0 && <span>👀 {g.tally.interested}</span>}
+                  {g.votes.length > 0 && (
+                    <span className="truncate">· {g.votes.map((v) => v.voter_name).join(", ")}</span>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </section>
 
         {/* The open board */}
         <section className="space-y-3">
