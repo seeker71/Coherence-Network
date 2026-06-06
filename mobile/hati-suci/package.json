@@ -1,0 +1,20 @@
+{
+  "name": "hati-suci-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Android shell for the Hati Suci membrane — carrier only; the body is Form (kernel), the UI is the web app at /hati-suci.",
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/geolocation": "^6.0.1",
+    "@capacitor-community/bluetooth-le": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
