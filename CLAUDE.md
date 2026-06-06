@@ -28,11 +28,12 @@
 
 ## Architecture
 
-- **API**: FastAPI (Python) in `api/`
+- **Form-kernel-native.** The Form kernels (Rust/Go/TS) under `form/` are the core execution engine *and* the HTTP front door: native routes are kernel-served (`X-Form-Router: native-kernel`). The body — logic, decisions, transformations — is Form: recipes and grammars, proven three-way via `form/validate.sh`.
+- **Python (FastAPI in `api/`) is the fan-out query carrier, nothing more.** Routes not yet native fan out to the Python upstream (`X-Form-Router: fanout-python`): it scatters queries to the stores and gathers results — never the body. HTTP/router fan-out comes only after Form proof bands (`docs/shared/agent-start-packet.md`; kernel-router fan-out proof: `docs/system_audit/commit_evidence_2026-06-02_kernel_router_fanout.json`). A router still computing in Python is drift composting toward fan-out-only.
 - **Web**: Next.js 16 + shadcn/ui in `web/`
-- **Graph DB**: Neo4j — **Relational DB**: PostgreSQL
+- **Stores** (what Python fans queries out to): Neo4j (graph) · PostgreSQL (relational)
 - **Tests**: `api/tests/` — flow-centric, fast (seconds, not minutes)
-- **Kernels**: [`kernels/README.md`](kernels/README.md) — Rust, Go, TypeScript form-kernels are the core execution engine under `form/`. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. See [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the Python → kernel → framebuffer arc.
+- **Kernels**: [`kernels/README.md`](kernels/README.md) — the Rust, Go, and TypeScript form-kernels under `form/`. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. See [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the Python → kernel → framebuffer arc.
 
 ## Current Shape
 
