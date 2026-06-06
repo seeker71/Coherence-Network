@@ -141,11 +141,27 @@ def _member_by_token(token: str | None) -> dict | None:
     return None
 
 
+def _is_placeholder_name_k(name: str) -> int:
+    """Value-identical fallback for endpoint_placeholder_name_demo.fk."""
+    if len(name) == 0:
+        return 1
+    if len(name) < 4:
+        return 0
+    return 1 if name[0:4] == "New " else 0
+
+
 def _is_placeholder_name(name: str) -> bool:
     """A role-only invite carries 'New {role}' until the newcomer claims it
-    with their own name on first open — the self-name half of `bind` in
-    docs/coherence-substrate/household-membrane.form."""
-    return not name or name.startswith("New ")
+    with their own name on first open — the self-name half of `bind`. The
+    decision runs on the Form kernel (endpoint_placeholder_name_demo.fk),
+    Python the value-identical fallback."""
+    val, _runtime = serve_via_kernel(
+        "endpoint_placeholder_name_demo.fk",
+        bindings={"name": name},
+        fallback=lambda: _is_placeholder_name_k(name),
+        parse=int,
+    )
+    return bool(val)
 
 
 def _create_member(name: str, role: str, *, write_access: bool, status: str,
