@@ -286,7 +286,11 @@ def _is_active(status: str) -> bool:
     return bool(val)
 
 
-async def list_members(role: str | None = Query(default=None)) -> list[MemberPublic]:
+async def list_members(
+    token: str | None = Query(default=None),
+    role: str | None = Query(default=None),
+) -> list[MemberPublic]:
+    _require_member(token)        # the roster is the field's own; see open-to active-member
     # The roster is the people actually here (Form: `see open-to active-member`).
     # Pending invites stay off it until the newcomer opens their link.
     members = [m for m in _all_members() if _is_active(m.get("status", ""))]
@@ -294,6 +298,17 @@ async def list_members(role: str | None = Query(default=None)) -> list[MemberPub
         members = [m for m in members if m.get("role") == role]
     members.sort(key=lambda n: n.get("created_at", ""))
     return [_member_public(m) for m in members]
+
+
+def _require_member(token: str | None) -> dict:
+    """The see-lock — `see open-to active-member` (household-membrane.form). Any
+    registered cell sees the board, even a see-only watcher; the unregistered
+    public does not. The board carries who asked, where it goes, and what it
+    cost — the field's own tissue, witnessed by its cells, not the open internet."""
+    member = _member_by_token(token)
+    if not member:
+        raise HTTPException(status_code=401, detail="register or open your invite link to see the board")
+    return member
 
 
 def _require_writer(token: str | None) -> dict:
@@ -515,12 +530,14 @@ async def create_request(body: RequestCreate) -> RequestResponse:
 @router.get(
     "/household/requests",
     response_model=list[RequestResponse],
-    summary="The open board — every request, what's done and what's waiting",
+    summary="The board — every request, visible to any registered cell here",
 )
 async def list_requests(
+    token: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> list[RequestResponse]:
+    _require_member(token)        # see open-to active-member
     try:
         response = graph_service.list_nodes(type=_REQUEST_TYPE, limit=500)
         nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
@@ -538,7 +555,8 @@ async def list_requests(
     response_model=RequestResponse,
     summary="A single request in full",
 )
-async def get_request(request_id: str) -> RequestResponse:
+async def get_request(request_id: str, token: str | None = Query(default=None)) -> RequestResponse:
+    _require_member(token)        # see open-to active-member
     return _node_to_request(_load_request(request_id))
 
 
@@ -737,7 +755,8 @@ def _request_trace(node: dict) -> RequestTrace:
     response_model=RequestTrace,
     summary="The request's full trace — followed, accounted, attributed, witnessed",
 )
-async def request_trace(request_id: str) -> RequestTrace:
+async def request_trace(request_id: str, token: str | None = Query(default=None)) -> RequestTrace:
+    _require_member(token)        # witnessed by the field's cells, not the open internet
     return _request_trace(_load_request(request_id))
 
 

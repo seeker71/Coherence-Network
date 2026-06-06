@@ -178,6 +178,10 @@ def test_request_trace_follows_attributes_and_witnesses(client):
     }).json()
     rid = r["id"]
 
+    # The board itself is open only to a registered cell, not the public.
+    assert client.get("/api/household/requests").status_code == 401
+    assert client.get(f"/api/household/requests?token={rtok}").status_code == 200
+
     # Walk its whole life; each transition attributes itself to a cell.
     client.post(f"/api/household/requests/{rid}/acknowledge", json={"actor_token": rtok})
     client.post(f"/api/household/requests/{rid}/start", json={"actor_token": rtok})
@@ -186,7 +190,9 @@ def test_request_trace_follows_attributes_and_witnesses(client):
     })
     client.post(f"/api/household/requests/{rid}/pay", json={"actor_token": rtok})
 
-    trace = client.get(f"/api/household/requests/{rid}/trace").json()
+    # The trace is the field's tissue — witnessed by its cells, not the public.
+    assert client.get(f"/api/household/requests/{rid}/trace").status_code == 401
+    trace = client.get(f"/api/household/requests/{rid}/trace?token={rtok}").json()
     # Core, compact: who + where.
     assert trace["requester_name"] == "Wayan"
     assert trace["location"] == "Bale Vishnu"
@@ -203,6 +209,6 @@ def test_request_trace_follows_attributes_and_witnesses(client):
         "actor_token": rtok, "kind": "ride", "detail": "airport run",
     }).json()
     client.post(f"/api/household/requests/{r2['id']}/cancel", json={"actor_token": rtok})
-    t2 = client.get(f"/api/household/requests/{r2['id']}/trace").json()
+    t2 = client.get(f"/api/household/requests/{r2['id']}/trace?token={rtok}").json()
     assert [s["step"] for s in t2["steps"]] == ["requested", "cancelled"]
     assert t2["progress"] == 0 and t2["settled"] is False
