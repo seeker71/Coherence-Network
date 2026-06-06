@@ -13,7 +13,7 @@ from app.models.agent import (
     AgentRunnerSnapshot,
     AgentRunStateUpdate,
 )
-from app.routers.agent_telegram import format_task_alert
+from app.routers.agent_telegram_format import format_task_alert
 from app.services import (
     agent_execution_hooks,
     agent_run_state_service,

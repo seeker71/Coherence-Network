@@ -1,5 +1,6 @@
 """Agent task CRUD and list routes."""
 
+import json
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -26,7 +27,7 @@ from app.routers.agent_helpers import (
     task_status_value,
     task_update_has_fields,
 )
-from app.routers.agent_telegram import format_task_alert, is_runner_task_update
+from app.routers.agent_telegram_format import format_task_alert, is_runner_task_update
 from app.services.app_mode import running_under_test
 from app.services import agent_service
 
