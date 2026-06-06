@@ -678,12 +678,31 @@ def _ical_unescape(v: str) -> str:
             .replace("\\;", ";").replace("\\\\", "\\"))
 
 
+def _ical_is_allday_k(value: str, params: str) -> int:
+    """Value-identical fallback for endpoint_ical_allday_demo.fk."""
+    return 1 if ("VALUE=DATE" in params or (len(value) == 8 and "T" not in value)) else 0
+
+
+def _ical_is_allday(value: str, params: str) -> bool:
+    """The all-day vs timed-event DECISION — on the Form kernel
+    (endpoint_ical_allday_demo.fk), Python the value-identical fallback. The
+    date-param recipe the iCal field recipe promised would follow."""
+    val, _runtime = serve_via_kernel(
+        "endpoint_ical_allday_demo.fk",
+        bindings={"value": value, "params": params},
+        fallback=lambda: _ical_is_allday_k(value, params),
+        parse=int,
+    )
+    return bool(val)
+
+
 def _parse_ical_dt(value: str, params: str) -> tuple[datetime | None, bool]:
     """An iCal date/datetime → aware UTC datetime + all_day. Handles trailing Z
     (UTC), floating/TZID (read as UTC — enough to sort and show the day), and
-    VALUE=DATE all-day."""
+    VALUE=DATE all-day. The all-day choice runs on the Form kernel; strptime
+    stays carrier (parsing an external format's date into a value)."""
     v = value.strip()
-    all_day = "VALUE=DATE" in params or (len(v) == 8 and "T" not in v)
+    all_day = _ical_is_allday(v, params)
     try:
         if all_day:
             return datetime.strptime(v[:8], "%Y%m%d").replace(tzinfo=timezone.utc), True
