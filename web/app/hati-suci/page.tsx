@@ -289,13 +289,27 @@ export default function HatiSuciPage() {
   }, [customItems]);
 
   const load = useCallback(async () => {
-    const r = await getJSON<ServiceRequest[]>("/api/household/requests?limit=200");
-    if (r) setRequests(r);
-    const m = await getJSON<PublicMember[]>("/api/household/members");
-    if (m) setMembers(m);
+    // The board is the field's tissue — who asked, where it goes, the cost.
+    // Seeing is open to an active member (even a see-only watcher), not the
+    // public (household-membrane.form: see open-to active-member). Fetch it
+    // only with a token; an unregistered visitor sees the join screen.
+    const tk = member?.token;
+    if (tk) {
+      const r = await getJSON<ServiceRequest[]>(
+        `/api/household/requests?limit=200&token=${encodeURIComponent(tk)}`,
+      );
+      setRequests(r ?? []);
+      const m = await getJSON<PublicMember[]>(
+        `/api/household/members?token=${encodeURIComponent(tk)}`,
+      );
+      setMembers(m ?? []);
+    } else {
+      setRequests([]);
+      setMembers([]);
+    }
     const ev = await getJSON<FriendEvent[]>("/api/household/events");
     if (ev) setEvents(ev);
-  }, []);
+  }, [member]);
 
   useEffect(() => {
     void load();
