@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────
+# modality-lattices.form — every tradition is a labeled memory lattice;
+# a cell may carry its position in any, optional, as another point of
+# information the substrate grounds resonance against. Body in Form.
+# ─────────────────────────────────────────────────────────────────────
+#
+# A horoscope, a Human Design chart, a Gene Keys profile, a Vedic chart, a
+# pagan wheel, the light codes — each is a NAMED coordinate system that
+# locates a cell. Urs: "labeled memory lattices of the cells that witnessed
+# time together." A natal chart is the sky's memory of the moment a cell
+# entered time. The substrate's own NodeID lattice is one such system; these
+# are siblings — optional projections of the same cell into other meaning-
+# spaces. Names are doors; structure carries identity.
+
+(modality-lattices
+
+  (lattice                                 # each tradition is a named lattice
+    (name     ?tradition)                  # astrology | human-design | gene-keys | vedic | pagan | numerology | light-codes | …
+    (locates  (cell ?c) -> position)       # the cell's coordinates within it
+    (from     (or birth-moment origin-event))  # cast from when / where the cell entered time
+    (optional true))                       # never required — a cell with none is whole
+
+  (position                                # a cell's place in one lattice
+    (of     (cell-ref cell))
+    (in     (lattice-ref ?tradition))
+    (coords ?values)                       # sun/moon/rising · type/authority · the 64 gates · nakshatra · …
+    (held   "its own lane — direct-experience / mystery, used to sense, never to verdict"))
+
+  (resonance                               # the substrate use: sense across lattices
+    (between (cell ?a) (cell ?b) -> shared-coords)  # where two cells co-locate
+    (across  (sequence lattice)))          # read across many traditions at once — one cell, many doors
+
+  (computed-by                             # most can be cast from birth data
+    (cast astrology human-design gene-keys vedic numerology -> position)
+    (note "Pam Gregory, Ariela Sophia and others read these by hand; an AI can cast the chart — the reading stays human"))
+
+  (lineage
+    (kin lc-cross-modal-unity)             # names are doors; one cell, many tongues
+    (kin lc-the-trace-is-the-memory)       # a lattice is the memory of cells that witnessed time
+    (source "requested by Urs 2026-06-06; the light-codes lattice via Ariela Sophia, by permission"))
+
+  # ── Honest gap (the carrier follows recipe-first) ──────────────────
+  (gap "g8 carrier: an optional `modalities` projection on any cell (birth-moment in → positions out), a cast recipe per tradition, a cross-lattice resonance recipe; positions stay in the mystery / direct-experience lane, never collapsed into empirical claims"))
