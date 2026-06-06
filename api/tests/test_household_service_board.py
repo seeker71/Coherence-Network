@@ -93,3 +93,70 @@ def test_only_a_resident_can_invite(client):
     assert client.post("/api/household/requests", json={
         "actor_token": "not-a-real-token", "kind": "other", "detail": "x",
     }).status_code == 401
+
+
+def test_gathering_raise_answer_tally_and_visibility(client):
+    """A resident raises questions; the field answers, changes its mind, and
+    sees the tally — and the audience predicate (visible-to) + head-count rule
+    (yes-plus-one = 2), both Form recipes on the kernel, keep it honest."""
+    resident = client.post("/api/household/bootstrap", json={"name": "Ketut"})
+    if resident.status_code not in (200, 201):
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    rtok = resident.json()["token"]
+
+    # A plain member self-registers — see-only is enough to see and answer.
+    member = client.post("/api/household/members", json={"name": "Made"}).json()
+    mtok = member["token"]
+
+    # Resident raises a poll to everyone.
+    g = client.post("/api/household/gatherings", json={
+        "actor_token": rtok, "text": "Kirtan & Fire on Thursday?", "audience_kind": "everyone",
+    })
+    assert g.status_code == 201, g.text
+    gid = g.json()["id"]
+    assert g.json()["tally"]["voters"] == 0
+    assert g.json()["my_choice"] is None
+
+    # The member answers yes, then changes to yes-plus-one (a vote can change).
+    a1 = client.post(f"/api/household/gatherings/{gid}/answer",
+                     json={"actor_token": mtok, "choice": "yes"})
+    assert a1.json()["my_choice"] == "yes"
+    assert a1.json()["tally"]["heads"] == 1
+    a2 = client.post(f"/api/household/gatherings/{gid}/answer",
+                     json={"actor_token": mtok, "choice": "yes-plus-one"})
+    assert a2.json()["my_choice"] == "yes-plus-one"
+    assert a2.json()["tally"]["heads"] == 2          # yes-plus-one is two heads
+    assert a2.json()["tally"]["voters"] == 1          # re-answer replaces, not appends
+
+    # The member sees the everyone-poll in their list, carrying their choice.
+    listed = client.get(f"/api/household/gatherings?token={mtok}").json()
+    assert any(x["id"] == gid and x["my_choice"] == "yes-plus-one" for x in listed)
+
+    # A resident-only question does not reach a plain member.
+    gr = client.post("/api/household/gatherings", json={
+        "actor_token": rtok, "text": "Residents: budget for the new pump?",
+        "audience_kind": "group", "audience_value": "resident",
+    }).json()
+    grid = gr["id"]
+    member_list = client.get(f"/api/household/gatherings?token={mtok}").json()
+    assert all(x["id"] != grid for x in member_list)   # invisible to the member
+    blocked = client.post(f"/api/household/gatherings/{grid}/answer",
+                          json={"actor_token": mtok, "choice": "yes"})
+    assert blocked.status_code == 403                  # cannot answer what didn't reach you
+
+    # An event-kind question carries a place, a moment, and a proposed status.
+    ev = client.post("/api/household/gatherings", json={
+        "actor_token": rtok, "text": "Cacao circle", "audience_kind": "everyone",
+        "kind": "event", "where": "Fire Pit", "when_text": "Thu 5pm",
+    }).json()
+    assert ev["kind"] == "event" and ev["status"] == "proposed" and ev["where"] == "Fire Pit"
+
+    # Only a resident raises a gathering — a write-capable staff member cannot.
+    inv = client.post("/api/household/invites",
+                      json={"inviter_token": rtok, "name": "Wayan", "role": "staff"}).json()
+    stok = inv["token"]
+    client.get(f"/api/household/me?token={stok}")       # open the link → bind the device
+    staff_raise = client.post("/api/household/gatherings", json={
+        "actor_token": stok, "text": "staff trying to raise", "audience_kind": "everyone",
+    })
+    assert staff_raise.status_code == 403               # raise requires a resident

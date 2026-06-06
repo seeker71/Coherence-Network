@@ -1,0 +1,1 @@
+(do (defn head_value (choice) (if (str_eq choice "yes-plus-one") 2 (if (str_eq choice "yes") 1 0))) (let choice "yes-plus-one") (head_value choice))
