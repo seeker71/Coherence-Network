@@ -118,6 +118,19 @@
       "interested": "Interested",
       "no": "Can't",
       "coming": "coming"
+    },
+    "map": {
+      "heading": "The grounds",
+      "locateMe": "Find my place",
+      "locating": "locating…",
+      "empty": "No places yet. A resident seeds the grounds, then the map fills.",
+      "decayNote": "presence fades as reports age",
+      "kind": {
+        "house": "house",
+        "gathering": "gathering",
+        "tended": "tended",
+        "organ": "working"
+      }
     }
   },
   "_attunement": {

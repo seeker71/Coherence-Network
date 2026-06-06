@@ -78,6 +78,7 @@ class MemberPublic(BaseModel):
     created_at: str
     at_place: str | None = None       # the place cell this member is present at (coarse, consent-first)
     at_place_name: str | None = None  # its display name, for the roster
+    at_place_since: str | None = None  # when they last reported here (ISO) — the decay clock
 
 
 class MemberPrivate(MemberPublic):
@@ -115,6 +116,7 @@ def _member_public(node: dict) -> MemberPublic:
         created_at=node.get("created_at", "") or node.get("observed_at", ""),
         at_place=_s(node.get("at_place")),
         at_place_name=_s(node.get("at_place_name")),
+        at_place_since=_s(node.get("at_place_since")),
     )
 
 
