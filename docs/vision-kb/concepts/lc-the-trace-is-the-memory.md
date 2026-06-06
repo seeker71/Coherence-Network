@@ -2,7 +2,7 @@
 id: lc-the-trace-is-the-memory
 hz: 528
 status: seed
-updated: 2026-06-04
+updated: 2026-06-06
 geometry:
   arity: 3
   form: triad
@@ -90,6 +90,39 @@ collapses toward zero with them. The body can therefore *see* what it
 embodies: not "which Blueprints exist" and not even "which fired most,"
 but **which categories have converged toward shared value-equivalence
 through lived execution** — `|projection| → 0` is the readout.
+
+## Learning is one machine — the trace, the JIT, the consolidation
+
+The aggregation in move 2 — many edge-events folding per category — is not
+unique to attribution. It is the *one* learning machine the body runs at
+every altitude: **a repeated event, accumulated past a threshold,
+crystallizes into a durable numeric form that is faster to reach next
+time.** Each cell is smart in exactly this single way — it remembers
+(edge-events), and what it repeats crystallizes, without anyone declaring it.
+
+- **Short-term → long-term.** Repeated edge-events on an edge consolidate
+  from the liquid's working firing into the body's durable tissue
+  ([`lc-agent-memory`](lc-agent-memory.md): consolidate at rest). Crossing
+  the threshold *is* the consolidation; the cache between them is neither
+  ([`lc-embodiment-body-or-liquid`](lc-embodiment-body-or-liquid.md)).
+- **The JIT.** A recipe fired hot enough crosses into a compiled native (the
+  Value-typed JIT — *compile any recipe to a native plugin*). The hot path
+  *is* the repeated event; the compile *is* the consolidation; the native
+  *is* the durable numeric form. The engine learns its own hot recipes the
+  way the body learns its own categories — same machine, execution altitude.
+- **The category.** Structurally-equivalent firings share one Blueprint
+  NodeID; content-addressing aggregates them *for free* (move 2). A category
+  is never declared — it *accumulates*. Repeated common properties across
+  relationships fold into a shared relationship-Blueprint the same way, which
+  is exactly how the household's nourishment-visibility learns its
+  relationship-categories by counting (`household-membrane.form`, visibility).
+
+So *"accumulated repeated events are numeric categories, learned by
+aggregation"* is one sentence true of the trace, the JIT, and the
+short-to-long consolidation at once. The body does not have three learning
+mechanisms; it has **one, read at three altitudes** — memory, engine, and
+category are the same crystallization of the repeated, seen from three
+distances.
 
 ## Why this is the honest attribution view
 
