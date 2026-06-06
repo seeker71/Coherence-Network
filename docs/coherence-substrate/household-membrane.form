@@ -182,70 +182,76 @@
       (answer open-to (visible-to ?question))        # you answer what reaches you
       (see    open-to active-member)))               # every answer, every tally, visible to all here
 
-  # ── Places & houses: where the field gathers and dwells ───────────
+  # ── The organism and its cells: places, things, shepherds ─────────
   #
-  # A PLACE is a named spot at Hati Suci with a precise location. Most
-  # events land at one of the two common places; a house can host one too,
-  # less often. A HOUSE is a place you dwell in — it has rooms, residents,
-  # a WiFi name, and things that need tending. Location is set by SENSOR:
-  # a resident standing in the place taps once and the phone's GPS pins it.
-  # (The house knows its WiFi NAME as data — useful to share; the web still
-  # can't read the phone's live SSID, so GPS is the locator.)
+  # Hati Suci is an organism; every part is a CELL with a Blueprint, composed
+  # of smaller cells down to the named things. A house is a cell holding room
+  # cells and thing cells — fridge, toilet, lights, electricity, stove, water,
+  # wifi. The pool is a cell holding its own things; the gardens, a cell. Some
+  # cells are dwelt in (houses, with rooms), some gathered in (yoga studio,
+  # fire pit, bale, temple); all are tended. Location is set by SENSOR: stand
+  # in the place, tap once, the phone's GPS pins it. (A cell knows its WiFi
+  # NAME as data — useful to share; the web can't read the live SSID, so GPS
+  # is the locator.)
 
-  (place
-    (place-shape
-      (name  ?prose)                       # "Yoga Shala", "Fire Circle", "Bamboo House"
-      (gps   (lat ?µ) (lon ?µ))            # precise, in micro-degrees
-      (wifi  ?ssid)                        # the place's WiFi name (data; not read live)
-      (kind  (one-of (common house amenity)))) # commons host events; houses dwell; amenities (the pool) are tended
+  (place                                   # every place is a cell in the organism
+    (cell-shape
+      (name      ?prose)                   # "Brahma", "Yoga Studio", "Pool"
+      (blueprint ?B-place)                 # structural identity — same-shape places share it
+      (gps       (lat ?µ) (lon ?µ))        # precise, in micro-degrees, pinned on site
+      (wifi      ?ssid)                    # the cell's WiFi name (data; not read live)
+      (holds     (sequence thing))         # its named thing-cells (below)
+      (dwelt     (when house (holds (sequence room)))))  # a house also holds room cells
     (locate
       (set-by  pin-while-present)          # the sensor sets it: stand here, tap once
       (nearest (recipe nearest-place ?lat ?lon -> place)))  # GPS → place, a Form recipe
 
+    (thing                                 # a named thing-cell — the leaf that gets tended
+      (blueprint ?B-thing)                 # each named thing has its own structural identity
+      (named (per-tongue en id))           # rendered in the viewer's tongue, like a market item
+      (common                              # the recurring parts of a dwelling / place
+        (fridge      (en "fridge")      (id "kulkas"))
+        (toilet      (en "toilet")      (id "toilet"))
+        (lights      (en "lights")      (id "lampu"))
+        (electricity (en "electricity") (id "listrik"))
+        (stove       (en "stove")       (id "kompor"))
+        (hot-water   (en "hot water")   (id "air panas"))
+        (water       (en "water")       (id "air"))
+        (wifi        (en "WiFi")        (id "wifi"))
+        (pump        (en "pump")        (id "pompa"))
+        (filter      (en "filter")      (id "filter")))
+      (learns "a thing not yet named becomes a new thing-cell on first mention — the organism learns its own parts"))
+
     (at-hati-suci                          # the real grounds — from the Hati Suci area map, Jun 2026
       (region "Banjar Bayad, Jl. Raya Kedisan, Tegallalang, Ubud 80561 — rice fields, Mount Agung view")
-      (houses    brahma krishna bhima vishnu arjuna ganesha)            # the six dwellings (Mahabharata names)
-      (commons   yoga-studio fire-pit bale-vishnu bale-wormery temple)  # where the field gathers
-      (amenities pool water-garden fish-pond massage vibration-tunnel)  # tended, not dwelt
+      (houses    brahma krishna bhima vishnu arjuna ganesha)            # dwelt-in cells (Mahabharata names)
+      (gathering yoga-studio fire-pit bale-vishnu bale-wormery temple)  # cells the field gathers in
+      (tended    pool water-garden fish-pond massage vibration-tunnel)  # cells shepherded, not dwelt
       (organs    kitchen office compost-shed wormery entrance gardens)  # the working body
       (layout "NW temple/kitchen/office/compost · N brahma/krishna/bhima · center vishnu+bale, the pool with fire-pit on its north edge · E arjuna/yoga-studio · SW ganesha · S wormery+bale/vibration-tunnel/water-garden/fish-pond · gardens W — relative from the map; precise GPS pinned per place")))
 
-  (house                                   # a place you dwell in (kind = house)
-    (is-a place)
-    (rooms (sequence room))                # the rooms within
+  (dwelling                                # a house is a place dwelt in — its rooms hold residents
     (resident-placement
-      (member stays-in (room ?r))))        # each resident's house + room, on their cell
+      (member stays-in (room ?r of ?house))))  # each resident's house + room, on their own cell
 
-  # ── Attention: anything that needs tending, raised by anyone ───────
+  (shepherd                                # stewardship: a member tends a part of the organism
+    (relation    (member shepherds (cell ?c)))   # a resident or staff, ongoing care
+    (cardinality zero-to-many)                    # a cell may have several shepherds, or none yet
+    (season "a season of care, not a moment — unlike an event's hosts"))
+
+  # ── Attention: a part needs tending — raised by anyone ─────────────
   #
-  # Not just house appliances — a pool, the lights, any shared equipment.
-  # ANYONE here can raise it; you don't need write-access to say "the pool
-  # light is out." It rides the board's own lifecycle (the signal already
-  # running on the kernel); only the bar to OPEN one is lower than an ask.
+  # An issue is raised ON a thing-cell (the fridge, the pool's lights), by
+  # ANYONE here — no write-gate; you don't need standing to say the pool
+  # light is out. It rides the board's own lifecycle (already on the kernel)
+  # and flows to whoever shepherds that cell.
 
   (attention
-    (issue-shape
-      (of    open-signal)                  # a board signal: ask → acknowledge → tend → complete (already Form)
-      (place (cell-ref place))             # a house, a common, or an amenity (the pool)
-      (room  (cell-ref room))              # optional — when the thing is inside a house
-      (what  (cell-ref issue-kind))        # the common thing, below
-      (detail ?prose))
-    (common                                # the recurring things — appliances, equipment, facilities
-      (fridge       (en "fridge")              (id "kulkas"))
-      (wifi         (en "WiFi")                (id "wifi"))
-      (toilet       (en "toilet")              (id "toilet"))
-      (stove-gas    (en "stove — out of gas")  (id "kompor — gas habis"))
-      (stove-broken (en "stove — not working") (id "kompor rusak"))
-      (hot-water    (en "hot water")           (id "air panas"))
-      (water        (en "water")               (id "air"))
-      (electricity  (en "electricity")         (id "listrik"))
-      (lights       (en "lights")              (id "lampu"))
-      (pool         (en "pool")                (id "kolam"))
-      (equipment    (en "equipment")           (id "peralatan"))
-      (broken       (en "something broke")     (id "ada yang rusak"))
-      (other        (en "needs tending")       (id "perlu diurus")))
-    (raise (open-to active-member))        # ANYONE registered can flag it — lower bar than the board's write-gate
-    (learns "the list grows: a custom issue typed once is remembered as its own tile, the way a custom market item is — the body learns what recurs"))
+    (raised-on (cell-ref thing))           # the specific named cell, within its place
+    (signal    open-signal)                # ask → acknowledge → tend → complete (already Form)
+    (by        active-member)              # ANYONE registered raises it — lower bar than an ask
+    (flows-to  (shepherd-of ?place))       # reaches the part's steward
+    (detail    ?prose))
 
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
@@ -261,4 +267,4 @@
     (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")
     (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")
     (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")
-    (g6 "places & houses carrier: place cells (name, gps-by-pin, wifi, kind ∈ common/house/amenity incl. the pool), house rooms + resident-placement, the attention issue-vocabulary (market-picker pattern; appliances + lights + pool + equipment, raised by anyone), and the nearest-place Form recipe — built recipe-first when the place/house names land; an attention-signal rides the existing board lifecycle, not new machinery")))
+    (g6 "organism carrier: place cells composed of thing-cells (+ room cells for houses) seeded from the at-hati-suci map, the shepherd relation (a member tends a cell — a season of care), resident room-placement, attention raised-on-a-thing flowing to that cell's shepherd (market-picker pattern, raised by anyone), and the nearest-place Form recipe — built recipe-first; an attention rides the board lifecycle already on the kernel, not new machinery")))
