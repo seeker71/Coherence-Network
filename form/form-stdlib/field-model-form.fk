@@ -864,6 +864,52 @@
         (fmf-social-match-proof)
         (fmf-social-recipe-proof)))
 
+;; self-tending — the body's own tissue declaring its metabolic want. A cell
+;; declares (intrinsic, not scanner-inferred); the body senses; resources route
+;; to the loudest, readiest declaration. Kin to the social domain's repair-needed
+;; + route-attention, turned reflexively on the body's own code-tissue.
+(defn fmf-tending-wants-transmute (phase has-target)
+    (if (and (str_eq phase "bootstrap") (eq has-target 1)) 1 0))
+(defn fmf-tending-wants-release (circulation)
+    (if (eq circulation 0) 1 0))
+(defn fmf-tending-readiness (has-target has-proof)
+    (div (add has-target has-proof) 2))
+(defn fmf-tending-route-resource (want cell)
+    (str_concat want (str_concat "->" cell)))
+(defn fmf-tending-transmute (cell target)
+    (str_concat cell (str_concat "=>" target)))
+
+(defn fmf-self-tending-carrier-proof ()
+    (do
+        (let carrier (field_carrier (list (fmf-str "tissue-field"))))
+        (let topology (field_topology (list (fmf-str "dependency-circulation"))))
+        (let fiber (field_fiber (list (fmf-str "cell-metabolic-state"))))
+        (if (and (fmf-node-ok? carrier (fmf-carrier-cat))
+            (and (fmf-node-ok? topology (fmf-topology-cat))
+                 (fmf-node-ok? fiber (fmf-fiber-cat))))
+            1
+            0)))
+
+(defn fmf-self-tending-match-proof ()
+    (if (and (eq (fmf-tending-wants-transmute "bootstrap" 1) 1)
+        (and (eq (fmf-tending-wants-release 0) 1)
+             (str_eq (fmf-tending-route-resource "transmute" "cell") "transmute->cell")))
+        1
+        0))
+
+(defn fmf-self-tending-recipe-proof ()
+    (if (and (eq (fmf-tending-readiness 1 1) 1)
+        (and (str_eq (fmf-tending-transmute "wellness-check" "form-proprioception") "wellness-check=>form-proprioception")
+             (eq (fmf-tending-wants-release 1) 0)))
+        1
+        0))
+
+(defn fmf-self-tending-proof-score ()
+    (fmf-semantic-line-score
+        (fmf-self-tending-carrier-proof)
+        (fmf-self-tending-match-proof)
+        (fmf-self-tending-recipe-proof)))
+
 (defn fmf-domain-proof-score ()
     (add (fmf-dna-rna-proof-score)
     (add (fmf-chemistry-proof-score)
@@ -871,7 +917,8 @@
     (add (fmf-cell-signaling-proof-score)
     (add (fmf-plant-communication-proof-score)
     (add (fmf-em-proof-score)
-         (fmf-social-proof-score))))))))
+    (add (fmf-social-proof-score)
+         (fmf-self-tending-proof-score)))))))))
 
 (defn fmf-lineage-proof-score ()
     (add (fmf-hoffman-proof)
