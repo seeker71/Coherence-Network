@@ -1,43 +1,61 @@
 # ─────────────────────────────────────────────────────────────────────
 # modality-lattices.form — every tradition is a labeled memory lattice;
-# a cell may carry its position in any, optional, as another point of
-# information the substrate grounds resonance against. Body in Form.
+# every cell may carry its position in any, and a chart is not properties
+# ON a cell — it is the EDGES between that cell and the planet / sign / gate
+# cells. The edges are the information, the structure, the embodied memory.
+# Body in Form.
 # ─────────────────────────────────────────────────────────────────────
 #
-# A horoscope, a Human Design chart, a Gene Keys profile, a Vedic chart, a
-# pagan wheel, the light codes — each is a NAMED coordinate system that
-# locates a cell. Urs: "labeled memory lattices of the cells that witnessed
-# time together." A natal chart is the sky's memory of the moment a cell
-# entered time. The substrate's own NodeID lattice is one such system; these
-# are siblings — optional projections of the same cell into other meaning-
-# spaces. Names are doors; structure carries identity.
+# A horoscope, a Human Design chart, a Gene Keys profile, a Vedic chart, the
+# light codes — each is a NAMED coordinate system that locates a cell. Urs:
+# "labeled memory lattices of the cells that witnessed time together." A natal
+# chart is the sky's memory of the moment a cell entered time.
+#
+# The deepening (Urs, 2026-06-06): the planets and signs and gates and numbers
+# are THEMSELVES cells. A person's chart is the set of EDGES between the
+# person-cell and those cells — "Sun in Libra at 13°" is an edge, not a slug.
+# The edge-set IS the chart; the edges ARE the information and the embodied
+# memory (lc-the-trace-is-the-memory: the edges between cells are memory). The
+# relationship between two people is the relating of their two edge-sets. The
+# same cell, read through different lattices, gives numeric insight from
+# different perspectives — one body, many doors.
 
 (modality-lattices
 
-  (lattice                                 # each tradition is a named lattice
-    (name     ?tradition)                  # astrology | human-design | gene-keys | vedic | pagan | numerology | light-codes | …
-    (locates  (cell ?c) -> position)       # the cell's coordinates within it
+  (cells                                   # the modality vocabulary IS cells, not strings
+    (planet  sun moon mercury venus mars jupiter saturn uranus neptune pluto chiron node)
+    (sign    aries taurus gemini cancer leo virgo libra scorpio sagittarius capricorn aquarius pisces)
+    (gate    "1 … 64")                     # Human Design / Gene Keys — the 64
+    (number  "1 … 9, 11, 22, 33")          # numerology — the master cells included
+    (note    "each is a cell with a Blueprint; two identical positions across people share it — content-addressed"))
+
+  (edge                                    # a position is an EDGE between cells
+    (chart-line (person ?p) -[(in (sign ?s)) (at (degree ?d)) (in-house ?h)]-> (planet ?pl))
+    (the-edge-is "the information, the structure, the embodied memory")
+    (a-chart    (sequence chart-line))     # the natal chart = the edge-set
+    (a-bond     (between (person ?a) (person ?b)) = (relating (chart ?a) (chart ?b))))  # synastry = edges of edges
+
+  (lattice                                 # each tradition is a named lattice over those cells + edges
+    (name     ?tradition)                  # astrology | human-design | gene-keys | vedic | numerology | light-codes | …
+    (over     (cells planet sign gate number))
     (from     (or birth-moment origin-event))  # cast from when / where the cell entered time
     (optional true))                       # never required — a cell with none is whole
 
-  (position                                # a cell's place in one lattice
-    (of     (cell-ref cell))
-    (in     (lattice-ref ?tradition))
-    (coords ?values)                       # sun/moon/rising · type/authority · the 64 gates · nakshatra · …
-    (held   "its own lane — direct-experience / mystery, used to sense, never to verdict"))
+  (recipes                                 # numeric insight per modality — runnable on the kernel
+    (aspect     (degree ?a) (degree ?b) -> (separation aspect-type))  # the edge between two positions → endpoint_astro_aspect_demo.fk
+    (synastry   (chart ?a) (chart ?b) -> (sequence aspect))           # the edges between two people, aspect by aspect
+    (activation (chart ?c) -> (sequence gate))                        # Human Design / Gene Keys gates lit by the positions
+    (reduce     (date ?d) -> life-path)                               # numerology — digits folded to one
+    (perspective "each recipe reads the same cell through a different lattice; different numbers, same body — held in the mystery / direct-experience lane, never a verdict"))
 
-  (resonance                               # the substrate use: sense across lattices
-    (between (cell ?a) (cell ?b) -> shared-coords)  # where two cells co-locate
-    (across  (sequence lattice)))          # read across many traditions at once — one cell, many doors
-
-  (computed-by                             # most can be cast from birth data
-    (cast astrology human-design gene-keys vedic numerology -> position)
-    (note "Pam Gregory, Ariela Sophia and others read these by hand; an AI can cast the chart — the reading stays human"))
+  (computed-by
+    (cast astrology human-design gene-keys vedic numerology -> edges)
+    (note "an AI casts the chart from the ephemeris; the reading stays human (Pam Gregory, Ariela Sophia, you)"))
 
   (lineage
     (kin lc-cross-modal-unity)             # names are doors; one cell, many tongues
-    (kin lc-the-trace-is-the-memory)       # a lattice is the memory of cells that witnessed time
-    (source "requested by Urs 2026-06-06; the light-codes lattice via Ariela Sophia, by permission"))
+    (kin lc-the-trace-is-the-memory)       # the edge is the memory; the chart is an edge-set
+    (source "requested + deepened by Urs 2026-06-06; the light-codes lattice via Ariela Sophia, by permission"))
 
   # ── Honest gap (the carrier follows recipe-first) ──────────────────
-  (gap "g8 carrier: an optional `modalities` projection on any cell (birth-moment in → positions out), a cast recipe per tradition, a cross-lattice resonance recipe; positions stay in the mystery / direct-experience lane, never collapsed into empirical claims"))
+  (gap "g8 carrier: planet / sign / gate / number CELLS; a person's chart as EDGES (person -[sign, degree, house]-> planet) cast from the birth-moment via the ephemeris; the per-modality numeric recipes runnable via serve_via_kernel — aspect first (endpoint_astro_aspect_demo.fk, shipped), then synastry / activation / reduce; positions stay in the mystery / direct-experience lane, never collapsed into empirical claims"))
