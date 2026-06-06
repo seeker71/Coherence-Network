@@ -4,7 +4,7 @@
 (field-domain-grammars
 
   (end-to-end-proof-contract
-    (domain-count 7)
+    (domain-count 8)
     (per-domain-line-items 11)
     (shared-line-items
       carrier-algebra
@@ -18,11 +18,11 @@
       observer-identity
       residuals
       participation-semantics)
-    (domain-total 77)
+    (domain-total 88)
     (kernel-node-proof 1)
     (lineage-lens-proof 4)
     (quantum-rain-proof 11)
-    (total-proof-score 93)
+    (total-proof-score 104)
     (boundary "structural grammar proof is cross-kernel; typed forward/reverse field runtime is TypeScript-first"))
 
   (domain dna-rna
@@ -174,6 +174,39 @@
     (score-function fmf-social-proof-score)
     (score 11)))
 
+  ; self-tending — the body's own tissue as a field. Reflexive kin to the
+  ; interspecies-and-conversation domain: there a site declares repair-needed
+  ; and route-attention answers; here a cell declares its metabolic want and
+  ; tending routes resources to it. The shift this domain embodies is
+  ; external-inference -> intrinsic-declaration: the want lives IN the cell
+  ; (Form-native), not in a scanner that re-derives it each run. A declared
+  ; want is the observability that licenses tending, the way a traceable recipe
+  ; licenses compression — the body can only tend what declares itself.
+  (domain self-tending
+    (carrier tissue-graph-field)
+    (fiber
+      (site metabolic-phase)        ; bootstrap | circulating | calcified
+      (site declared-want)          ; transmute | nourish | release | compost | none
+      (site readiness)              ; 0.0..1.0, given resources
+      (edge form-target)            ; cell -> its Form-native sibling
+      (edge circulation))           ; readers / feedback that keep it alive
+    (patterns
+      (wants-transmute ?cell)       ; bootstrap tissue with a Form-native target declares it
+      (wants-release ?cell)         ; no circulation -> tight memory asks to be let go
+      (declared-want ?cell ?want)   ; the cell carries its want; the body does not infer it
+      (form-target ?cell ?sibling))
+    (recipes
+      (transmute ?cell ?form-target)   ; old tissue -> its Form-native form
+      (nourish ?cell ?resource)        ; resource flows to a declared want
+      (release ?cell)                  ; let a once-loved form rest
+      (route-resource ?want ?cell))    ; tending answers the loudest, readiest declaration
+    (real-example
+      (source "scripts/wellness_check.py — the body's proprioception, today in Python: bootstrap tissue that senses its own Python-debt")
+      (data "phase bootstrap; want transmute; target a Form-native proprioception; readiness rises as the Form sibling appears — the cell declares its want, the body senses it, resources route to it")
+      (proof "form-stdlib/field-model-form.fk scores tissue-field carrier, wants-transmute / wants-release / route-resource match, and transmute/readiness/release recipe shape; the sensor declares its own transmutation")
+      (score-function fmf-self-tending-proof-score)
+      (score 11)))
+
   (domain quantum-rain
     (carrier quantum-fluid-filament-field)
     (fiber
@@ -209,8 +242,8 @@
     (band "form/form-stdlib/tests/field-model-form-band.fk")
     (browser-local-playground "web/lib/form-kernel/field-model-form.ts")
     (command "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk")
-    (result 93)
+    (result 104)
     (sibling-kernels go rust typescript)
     (browser-local-command "cd web && npx tsx -e '<run Field Model Form proof example>'")
-    (browser-local-result 93)
+    (browser-local-result 104)
     (public-deploy-verification pending)))
