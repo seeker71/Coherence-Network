@@ -4,7 +4,7 @@
 (field-domain-grammars
 
   (end-to-end-proof-contract
-    (domain-count 8)
+    (domain-count 9)
     (per-domain-line-items 11)
     (shared-line-items
       carrier-algebra
@@ -18,11 +18,11 @@
       observer-identity
       residuals
       participation-semantics)
-    (domain-total 88)
+    (domain-total 99)
     (kernel-node-proof 1)
     (lineage-lens-proof 4)
     (quantum-rain-proof 11)
-    (total-proof-score 104)
+    (total-proof-score 115)
     (boundary "structural grammar proof is cross-kernel; typed forward/reverse field runtime is TypeScript-first"))
 
   (domain dna-rna
@@ -207,6 +207,41 @@
       (score-function fmf-self-tending-proof-score)
       (score 11)))
 
+  ; resource-routing — the guarded router, frequency-invariant. Draw the right
+  ; resource to where it is needed or wanted, only where it can be received, in
+  ; the formation that survives the environment. Generalizes self-tending's
+  ; route-resource with capability x environment GUARDS, and the interspecies
+  ; route-attention with survival recipe-selection. The Muzzle Velocity origin:
+  ; no medic into active combat, no repair truck without escort, a tank may. The
+  ; same engine on the high band: no tender care into a cell in active defense, a
+  ; hard repair lands only with capacity built first, nutrition flows to a
+  ; receptive cell. One guard, one routing, one survival-selection — proven on
+  ; both bands so the medic and the moment of attention share a recipe.
+  (domain resource-routing
+    (carrier flow-graph-field)
+    (fiber
+      (site location)               ; where a resource sits
+      (site capability)             ; medic | repair | tank | care | nutrition | attention
+      (site environment)            ; safe | active-combat | activated | receptive
+      (edge route)                  ; how to get from here to there
+      (edge needs-assistance))      ; a move that requires an escort
+    (patterns
+      (declared-need ?node ?capability)    ; a node declares what it needs or wants
+      (may-move ?capability ?environment)  ; the guard — block a soft capability from hostile ground
+      (requires-assistance ?capability ?environment)
+      (survivable ?formation ?environment))
+    (recipes
+      (route ?resource ?from ?to)          ; draw step-by-step along the gradient toward need
+      (permit ?capability ?environment)    ; the guard recipe (a medic blocked from active combat)
+      (escort ?resource ?assist)           ; the assistance that lets repair enter contested ground
+      (select-recipe ?environment ?available))  ; pick the formation that survives this environment
+    (real-example
+      (source "Muzzle Velocity logistics (low band) + tending delivery (high band) — one engine, two frequencies")
+      (data "low: a medic may not enter active combat; a repair truck enters only with escort; a tank may. high: tender care may not enter a cell in active defense; a hard repair lands only with capacity built first; nutrition flows to a receptive cell. same guard, same routing, same survival-selection — kin to self-tending route-resource and interspecies route-attention / repair-needed.")
+      (proof "form-stdlib/field-model-form.fk scores flow-graph carrier, may-move / requires-assistance guard match on BOTH bands (medic-into-combat blocked + tank permitted; care-into-defense blocked + nutrition permitted), and route/escort/select-recipe recipe shape — frequency-invariant")
+      (score-function fmf-resource-routing-proof-score)
+      (score 11)))
+
   (domain quantum-rain
     (carrier quantum-fluid-filament-field)
     (fiber
@@ -242,8 +277,8 @@
     (band "form/form-stdlib/tests/field-model-form-band.fk")
     (browser-local-playground "web/lib/form-kernel/field-model-form.ts")
     (command "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk")
-    (result 104)
+    (result 115)
     (sibling-kernels go rust typescript)
     (browser-local-command "cd web && npx tsx -e '<run Field Model Form proof example>'")
-    (browser-local-result 104)
+    (browser-local-result 115)
     (public-deploy-verification pending)))
