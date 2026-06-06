@@ -117,7 +117,17 @@
       "plusOne": "+1",
       "interested": "Interested",
       "no": "Can't",
-      "coming": "coming"
+      "coming": "coming",
+      "aud": {
+        "everyone": "Everyone",
+        "resident": "Residents",
+        "staff": "Staff",
+        "friend": "Friends"
+      },
+      "event": "Event",
+      "makeEvent": "As event",
+      "where": "Where?",
+      "when": "When?"
     },
     "map": {
       "heading": "The grounds",
