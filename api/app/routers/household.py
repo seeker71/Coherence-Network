@@ -626,6 +626,270 @@ async def pay_request(request_id: str, body: ActorBody) -> RequestResponse:
 
 
 # --------------------------------------------------------------------------
+# Gatherings & votes — a resident raises a question to an audience; everyone
+# it reaches answers (and may change their answer at any time); the field sees
+# every answer with its name and the live tally. An event-kind question also
+# carries a place, a moment, and a status. (household-membrane.form: gathering.)
+#
+# Two decisions run on the Form kernel, value-identical Python the fallback:
+# who a question is VISIBLE to (the audience predicate) and how many HEADS one
+# answer is worth (yes-plus-one = 2). The carrier does only I/O and the fold.
+# --------------------------------------------------------------------------
+_GATHERING_TYPE = "household_gathering"
+_GROUPS = {"staff", "resident", "friend"}
+
+
+def _gathering_visible_k(akind: str, aval: str, author: str, viewer: str, vrole: str) -> int:
+    """Value-identical fallback for endpoint_gathering_visible.fk."""
+    if viewer == author:
+        return 1
+    if akind == "everyone":
+        return 1
+    if akind == "person":
+        return 1 if viewer == aval else 0
+    if akind == "group":
+        if aval == "friend":
+            return 1
+        return 1 if aval == vrole else 0
+    return 0
+
+
+def _gathering_visible(akind: str, aval: str, author: str, viewer: str, vrole: str) -> bool:
+    """The audience predicate (household-membrane.form: visible-to) — on the
+    Form kernel (endpoint_gathering_visible.fk), Python the value-identical
+    fallback. A cell sees a question when it authored it, when it's for
+    everyone, when it's named (person), or when its group matches (friend =
+    any member; resident/staff = role)."""
+    akind, aval, author, viewer, vrole = (str(x or "") for x in (akind, aval, author, viewer, vrole))
+    val, _runtime = serve_via_kernel(
+        "endpoint_gathering_visible.fk",
+        bindings={"akind": akind, "aval": aval, "author": author, "viewer": viewer, "vrole": vrole},
+        fallback=lambda: _gathering_visible_k(akind, aval, author, viewer, vrole),
+        parse=int,
+    )
+    return bool(val)
+
+
+def _head_value_k(choice: str) -> int:
+    """Value-identical fallback for endpoint_gathering_head_value.fk."""
+    if choice == "yes-plus-one":
+        return 2
+    if choice == "yes":
+        return 1
+    return 0
+
+
+def _head_value(choice: str) -> int:
+    """How many heads one answer is worth (yes-plus-one = 2) — on the Form
+    kernel (endpoint_gathering_head_value.fk), Python the value-identical
+    fallback. (household-membrane.form: tally.)"""
+    val, _runtime = serve_via_kernel(
+        "endpoint_gathering_head_value.fk",
+        bindings={"choice": choice},
+        fallback=lambda: _head_value_k(choice),
+        parse=int,
+    )
+    return int(val)
+
+
+class GatheringCreate(BaseModel):
+    actor_token: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=400)
+    audience_kind: Literal["person", "group", "everyone"] = "everyone"
+    audience_value: str = Field(default="", max_length=120)   # member id | group name | ""
+    kind: Literal["poll", "event"] = "poll"
+    where: str | None = Field(default=None, max_length=120)   # event place (a cell name)
+    when_text: str | None = Field(default=None, max_length=120)  # the event's moment, human text
+
+
+class AnswerBody(BaseModel):
+    actor_token: str = Field(min_length=1)
+    choice: Literal["interested", "yes", "no", "yes-plus-one"]
+
+
+class Tally(BaseModel):
+    interested: int = 0
+    yes: int = 0
+    no: int = 0
+    yes_plus_one: int = 0
+    heads: int = 0                  # who is actually coming: yes + 2·yes-plus-one
+    voters: int = 0
+
+
+class VoteOut(BaseModel):
+    voter_name: str
+    choice: str
+
+
+class GatheringResponse(BaseModel):
+    id: str
+    text: str
+    author_id: str
+    author_name: str
+    audience_kind: str
+    audience_value: str
+    kind: str
+    status: str | None = None       # event: proposed | confirmed | delayed
+    where: str | None = None
+    when_text: str | None = None
+    raised_at: str
+    my_choice: str | None = None    # the viewer's current answer
+    tally: Tally
+    votes: list[VoteOut]            # every answer with its name — open to all here
+
+
+def _responses(node: dict) -> list[dict]:
+    raw = node.get("responses_json")
+    if not raw:
+        return []
+    try:
+        items = json.loads(raw)
+        return items if isinstance(items, list) else []
+    except Exception:
+        return []
+
+
+def _tally_of(responses: list[dict]) -> Tally:
+    counts = {"interested": 0, "yes": 0, "no": 0, "yes-plus-one": 0}
+    heads = 0
+    for r in responses:
+        c = r.get("choice", "")
+        if c in counts:
+            counts[c] += 1
+        heads += _head_value(c)
+    return Tally(
+        interested=counts["interested"], yes=counts["yes"], no=counts["no"],
+        yes_plus_one=counts["yes-plus-one"], heads=heads, voters=len(responses),
+    )
+
+
+def _node_to_gathering(node: dict, viewer_id: str) -> GatheringResponse:
+    responses = _responses(node)
+    mine = next((r.get("choice") for r in responses if r.get("voter_id") == viewer_id), None)
+    return GatheringResponse(
+        id=node.get("id", ""),
+        text=node.get("text", "") or node.get("description", ""),
+        author_id=str(node.get("author_id") or ""),
+        author_name=str(node.get("author_name") or ""),
+        audience_kind=node.get("audience_kind", "everyone"),
+        audience_value=str(node.get("audience_value") or ""),
+        kind=node.get("kind", "poll"),
+        status=(node.get("status") or None),
+        where=(node.get("where") or None),
+        when_text=(node.get("when_text") or None),
+        raised_at=node.get("created_at", "") or node.get("observed_at", ""),
+        my_choice=mine,
+        tally=_tally_of(responses),
+        votes=[VoteOut(voter_name=str(r.get("voter_name") or ""), choice=str(r.get("choice") or "")) for r in responses],
+    )
+
+
+def _load_gathering(gathering_id: str) -> dict:
+    node = graph_service.get_node(gathering_id)
+    if not node or node.get("type") != _GATHERING_TYPE:
+        raise HTTPException(status_code=404, detail=f"gathering {gathering_id!r} not found")
+    return node
+
+
+@router.post(
+    "/household/gatherings",
+    response_model=GatheringResponse,
+    status_code=201,
+    summary="Raise a question or event to an audience (residents)",
+)
+async def create_gathering(body: GatheringCreate) -> GatheringResponse:
+    actor = _require_writer(body.actor_token)
+    if actor.get("role") != "resident":
+        raise HTTPException(status_code=403, detail="only a resident raises a gathering")
+    if body.audience_kind == "group" and body.audience_value not in _GROUPS:
+        raise HTTPException(status_code=400, detail="group must be staff, resident, or friend")
+    gid = f"gathering-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    created = _now()
+    properties: dict[str, Any] = {
+        "text": body.text,
+        "author_id": actor.get("id", ""),
+        "author_name": actor.get("name", ""),
+        "audience_kind": body.audience_kind,
+        "audience_value": body.audience_value or "",
+        "kind": body.kind,
+        "responses_json": "[]",
+        "created_at": created,
+        "updated_at": created,
+    }
+    if body.kind == "event":
+        properties["status"] = "proposed"
+        properties["where"] = body.where or ""
+        properties["when_text"] = body.when_text or ""
+    node = graph_service.create_node(
+        id=gid, type=_GATHERING_TYPE, name=body.text[:120],
+        description=body.text, properties=properties,
+    )
+    return _node_to_gathering(node, actor.get("id", ""))
+
+
+@router.get(
+    "/household/gatherings",
+    response_model=list[GatheringResponse],
+    summary="Questions and events visible to you, each with its live tally",
+)
+async def list_gatherings(token: str = Query(..., min_length=1)) -> list[GatheringResponse]:
+    viewer = _member_by_token(token)
+    if not viewer:
+        raise HTTPException(status_code=401, detail="register or open your invite link first")
+    vid = viewer.get("id", "")
+    vrole = viewer.get("role", "member")
+    try:
+        response = graph_service.list_nodes(type=_GATHERING_TYPE, limit=500)
+        nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
+    except Exception:
+        nodes = []
+    out: list[GatheringResponse] = []
+    for n in nodes:
+        if n.get("type") != _GATHERING_TYPE:
+            continue
+        if not _gathering_visible(
+            n.get("audience_kind", "everyone"), _s(n.get("audience_value")),
+            _s(n.get("author_id")), vid, vrole,
+        ):
+            continue
+        out.append(_node_to_gathering(n, vid))
+    out.sort(key=lambda g: g.raised_at, reverse=True)
+    return out
+
+
+@router.post(
+    "/household/gatherings/{gathering_id}/answer",
+    response_model=GatheringResponse,
+    summary="Answer — or change your answer to — a question that reached you",
+)
+async def answer_gathering(gathering_id: str, body: AnswerBody) -> GatheringResponse:
+    viewer = _member_by_token(body.actor_token)
+    if not viewer:
+        raise HTTPException(status_code=401, detail="register or open your invite link first")
+    node = _load_gathering(gathering_id)
+    vid = viewer.get("id", "")
+    if not _gathering_visible(
+        node.get("audience_kind", "everyone"), _s(node.get("audience_value")),
+        _s(node.get("author_id")), vid, viewer.get("role", "member"),
+    ):
+        raise HTTPException(status_code=403, detail="this question did not reach you")
+    responses = [r for r in _responses(node) if r.get("voter_id") != vid]
+    responses.append({
+        "voter_id": vid,
+        "voter_name": viewer.get("name", ""),
+        "choice": body.choice,
+        "changed_at": _now(),
+    })
+    updated = graph_service.update_node(
+        gathering_id,
+        properties={"responses_json": json.dumps(responses), "updated_at": _now()},
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"gathering {gathering_id!r} not found")
+    return _node_to_gathering(updated, vid)
+
+
+# --------------------------------------------------------------------------
 # Friend events — read from the shared Google Calendar(s), the external
 # substrate. The calendar IS the store; we fetch its iCal feed, parse the
 # upcoming events, and show them. No parallel event store of our own.
