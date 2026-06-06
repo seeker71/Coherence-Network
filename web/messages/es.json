@@ -131,7 +131,10 @@
         "tended": "cuidado",
         "organ": "trabajo"
       },
-      "seed": "Sembrar los terrenos"
+      "seed": "Sembrar los terrenos",
+      "keepMe": "Mantenme aquí",
+      "keepMeNote": "Comparte tu lugar hasta que lo apagues",
+      "sharingOn": "Compartiendo"
     }
   },
   "_attunement": {

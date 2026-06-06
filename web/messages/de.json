@@ -131,7 +131,10 @@
         "tended": "gepflegt",
         "organ": "Arbeit"
       },
-      "seed": "Gelände säen"
+      "seed": "Gelände säen",
+      "keepMe": "Mich anzeigen",
+      "keepMeNote": "Teile deinen Ort, bis du es ausschaltest",
+      "sharingOn": "Teilt"
     }
   },
   "_attunement": {

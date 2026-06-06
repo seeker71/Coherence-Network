@@ -6,7 +6,7 @@
 "use client";
 
 import QRCode from "qrcode";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useT } from "@/components/MessagesProvider";
 
@@ -285,6 +285,8 @@ export default function HatiSuciPage() {
   const [gatherText, setGatherText] = useState("");
   const [places, setPlaces] = useState<Place[]>([]);
   const [locating, setLocating] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const shareTimerRef = useRef<number | null>(null);
   const [events, setEvents] = useState<FriendEvent[]>([]);
   const [members, setMembers] = useState<PublicMember[]>([]);
 
@@ -563,6 +565,61 @@ export default function HatiSuciPage() {
       { enableHighAccuracy: true, timeout: 10_000 },
     );
   }, [token, load]);
+
+  // Continuous presence: while on, the phone reports its nearest place every
+  // ~90s (under the 2-min freshness window, so the dot stays solid while you're
+  // home and fades once you leave). Opt-in, revocable — the membrane's sovereign
+  // default; turning it on IS the consent.
+  const reportPlace = useCallback(() => {
+    if (!token || !("geolocation" in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = Math.round(pos.coords.latitude * 1e6);
+          const lon = Math.round(pos.coords.longitude * 1e6);
+          const near = await getJSON<Place>(
+            `/api/household/nearest?token=${encodeURIComponent(token)}&lat=${lat}&lon=${lon}`,
+          );
+          if (near?.id) {
+            await postJSON("/api/household/presence", { actor_token: token, place_id: near.id });
+            await load();
+          }
+        } catch {
+          /* ignore */
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 15_000 },
+    );
+  }, [token, load]);
+
+  const toggleSharing = useCallback(async () => {
+    if (shareTimerRef.current != null) {
+      window.clearInterval(shareTimerRef.current);
+      shareTimerRef.current = null;
+      setSharing(false);
+      if (token) {
+        try {
+          await postJSON("/api/household/presence/leave", { actor_token: token });
+          await load();
+        } catch {
+          /* ignore */
+        }
+      }
+      return;
+    }
+    if (!token || !("geolocation" in navigator)) return;
+    setSharing(true);
+    reportPlace();
+    shareTimerRef.current = window.setInterval(reportPlace, 90_000);
+  }, [token, load, reportPlace]);
+
+  // Stop reporting when the page goes away.
+  useEffect(() => {
+    return () => {
+      if (shareTimerRef.current != null) window.clearInterval(shareTimerRef.current);
+    };
+  }, []);
 
   // A resident seeds the 22 grounds as cells, once — then the map fills.
   const seedGrounds = useCallback(async () => {
@@ -1115,13 +1172,26 @@ export default function HatiSuciPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-medium">{t("hatiSuci.map.heading")}</h2>
-            <button
-              onClick={locateMe}
-              disabled={locating}
-              className="rounded-lg border border-emerald-500/40 px-2.5 py-1 text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40"
-            >
-              {locating ? t("hatiSuci.map.locating") : `📍 ${t("hatiSuci.map.locateMe")}`}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleSharing}
+                className={`rounded-lg border px-2.5 py-1 text-xs transition ${
+                  sharing
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-400"
+                    : "border-border/40 text-muted-foreground hover:bg-accent/40"
+                }`}
+                title={t("hatiSuci.map.keepMeNote")}
+              >
+                {sharing ? `🟢 ${t("hatiSuci.map.sharingOn")}` : t("hatiSuci.map.keepMe")}
+              </button>
+              <button
+                onClick={locateMe}
+                disabled={locating}
+                className="rounded-lg border border-emerald-500/40 px-2.5 py-1 text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                {locating ? t("hatiSuci.map.locating") : `📍 ${t("hatiSuci.map.locateMe")}`}
+              </button>
+            </div>
           </div>
 
           {places.length === 0 ? (
