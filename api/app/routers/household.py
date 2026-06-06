@@ -659,6 +659,37 @@ def _parse_ical_dt(value: str, params: str) -> tuple[datetime | None, bool]:
         return None, False
 
 
+def _ical_field_py(line: str, name: str) -> str:
+    """Value-identical fallback for endpoint_ical_field_demo.fk — given one
+    unfolded iCal line and a field name, the value if the line carries that
+    field (handling the NAME[;params]:value shape), else ''."""
+    colon = line.find(":")
+    semi = line.find(";")
+    if colon < 0:
+        end = -1
+    elif semi < 0 or semi >= colon:
+        end = colon
+    else:
+        end = semi
+    if end < 0 or line[:end] != name:
+        return ""
+    return line[colon + 1:]
+
+
+def _ical_field(line: str, name: str) -> str:
+    """The per-line iCal parsing DECISION + extraction — on the Form kernel
+    (endpoint_ical_field_demo.fk), Python the value-identical fallback. The
+    first piece of the parser to leave the if-tree and execute as Form; the
+    date-param + whole-text recipes follow."""
+    val, _runtime = serve_via_kernel(
+        "endpoint_ical_field_demo.fk",
+        bindings={"line": line, "name": name},
+        fallback=lambda: _ical_field_py(line, name),
+        parse=str,
+    )
+    return val
+
+
 def _parse_ical_events(text: str, source: str) -> list[dict]:
     events: list[dict] = []
     cur: dict | None = None
@@ -670,24 +701,31 @@ def _parse_ical_events(text: str, source: str) -> list[dict]:
                 events.append(cur)
             cur = None
         elif cur is not None and ":" in line:
-            key, val = line.split(":", 1)
-            name = key.split(";", 1)[0].upper()
-            if name == "SUMMARY":
-                cur["title"] = _ical_unescape(val)
-            elif name == "LOCATION":
-                cur["location"] = _ical_unescape(val)
-            elif name == "DESCRIPTION":
-                cur["description"] = _ical_unescape(val)
-            elif name == "DTSTART":
-                dt, ad = _parse_ical_dt(val, key)
-                if dt:
-                    cur["start"], cur["all_day"] = dt, ad
-            elif name == "DTEND":
-                dt, _ = _parse_ical_dt(val, key)
-                if dt:
-                    cur["end"] = dt
-            elif name == "RRULE":
-                cur["recurring"] = True
+            # text fields: the parse DECISION + extraction run as a Form recipe
+            title = _ical_field(line, "SUMMARY")
+            location = _ical_field(line, "LOCATION")
+            description = _ical_field(line, "DESCRIPTION")
+            if title:
+                cur["title"] = _ical_unescape(title)
+            elif location:
+                cur["location"] = _ical_unescape(location)
+            elif description:
+                cur["description"] = _ical_unescape(description)
+            else:
+                # date / recurrence keep their param-handling in Python — the
+                # next recipe to migrate (the param + date logic)
+                key, val = line.split(":", 1)
+                name = key.split(";", 1)[0].upper()
+                if name == "DTSTART":
+                    dt, ad = _parse_ical_dt(val, key)
+                    if dt:
+                        cur["start"], cur["all_day"] = dt, ad
+                elif name == "DTEND":
+                    dt, _ = _parse_ical_dt(val, key)
+                    if dt:
+                        cur["end"] = dt
+                elif name == "RRULE":
+                    cur["recurring"] = True
     return events
 
 
