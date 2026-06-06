@@ -131,7 +131,10 @@
         "tended": "dirawat",
         "organ": "kerja"
       },
-      "seed": "Tanam tanah"
+      "seed": "Tanam tanah",
+      "keepMe": "Tetap di sini",
+      "keepMeNote": "Bagikan tempatmu sampai kamu mematikannya",
+      "sharingOn": "Berbagi"
     }
   },
   "_attunement": {
