@@ -372,6 +372,8 @@
     (route     /api/household/*)        # HTTP fan-out over the recipes above
     (qr-render web qrcode-lib)          # reuse web/.../flyer QR encoder — no new code
     (scan      native-camera)          # the decoder is the phone itself; no scanner code
+    (android-shell mobile/hati-suci     # native Android carrier (Capacitor) — opens by-ssid / by-sense / background
+                   (loads web/hati-suci) (body none))  # pure device-sensor carrier; the body stays Form, the UI stays web
     (note "the carrier realizes recipes already named here; it does not define them"))
 
   # ── Honest gaps (the next breaths, each a real movement) ───────────
