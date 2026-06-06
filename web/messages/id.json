@@ -103,6 +103,9 @@
     "claim": {
       "prompt": "Selamat datang! Siapa nama kamu?",
       "button": "Itu saya"
+    },
+    "events": {
+      "heading": "Acara teman"
     }
   },
   "_attunement": {

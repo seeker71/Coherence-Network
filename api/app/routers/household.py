@@ -23,11 +23,13 @@ vouch. Backed by the same living graph that holds offerings and contributors.
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -588,3 +590,139 @@ async def pay_request(request_id: str, body: ActorBody) -> RequestResponse:
         "paid_by_name": actor.get("name", ""),
         "paid_at": _now(),
     })
+
+
+# --------------------------------------------------------------------------
+# Friend events — read from the shared Google Calendar(s), the external
+# substrate. The calendar IS the store; we fetch its iCal feed, parse the
+# upcoming events, and show them. No parallel event store of our own.
+# (household-membrane.form: calendar-port.) Recurrence expansion is the
+# next breath; v1 shows the one-off events friends actually post.
+# --------------------------------------------------------------------------
+_EVENT_WINDOW_DAYS = 120
+
+
+class EventResponse(BaseModel):
+    title: str
+    start: str                      # ISO 8601 UTC
+    end: str | None = None
+    all_day: bool = False
+    location: str | None = None
+    description: str | None = None
+    source: str | None = None       # which calendar it came from
+
+
+def _calendar_urls() -> list[str]:
+    """The shared Google Calendar iCal feeds — config over env, empty until set."""
+    raw = os.environ.get("HATI_SUCI_CALENDAR_ICS", "")
+    urls = [u.strip() for u in raw.split(",") if u.strip()]
+    try:
+        cfg = os.path.expanduser("~/.coherence-network/config.json")
+        if os.path.exists(cfg):
+            with open(cfg) as f:
+                extra = (json.load(f) or {}).get("hati_suci_calendars") or []
+            urls += [str(u).strip() for u in extra if str(u).strip()]
+    except Exception:
+        pass
+    # de-dupe, preserve order
+    seen: set[str] = set()
+    return [u for u in urls if not (u in seen or seen.add(u))]
+
+
+def _ical_unfold(text: str) -> list[str]:
+    """RFC 5545 line unfolding — continuation lines begin with space/tab."""
+    out: list[str] = []
+    for line in text.replace("\r\n", "\n").split("\n"):
+        if line[:1] in (" ", "\t") and out:
+            out[-1] += line[1:]
+        else:
+            out.append(line)
+    return out
+
+
+def _ical_unescape(v: str) -> str:
+    return (v.replace("\\n", "\n").replace("\\N", "\n").replace("\\,", ",")
+            .replace("\\;", ";").replace("\\\\", "\\"))
+
+
+def _parse_ical_dt(value: str, params: str) -> tuple[datetime | None, bool]:
+    """An iCal date/datetime → aware UTC datetime + all_day. Handles trailing Z
+    (UTC), floating/TZID (read as UTC — enough to sort and show the day), and
+    VALUE=DATE all-day."""
+    v = value.strip()
+    all_day = "VALUE=DATE" in params or (len(v) == 8 and "T" not in v)
+    try:
+        if all_day:
+            return datetime.strptime(v[:8], "%Y%m%d").replace(tzinfo=timezone.utc), True
+        return datetime.strptime(v[:15], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc), False
+    except ValueError:
+        return None, False
+
+
+def _parse_ical_events(text: str, source: str) -> list[dict]:
+    events: list[dict] = []
+    cur: dict | None = None
+    for line in _ical_unfold(text):
+        if line == "BEGIN:VEVENT":
+            cur = {"source": source}
+        elif line == "END:VEVENT":
+            if cur is not None:
+                events.append(cur)
+            cur = None
+        elif cur is not None and ":" in line:
+            key, val = line.split(":", 1)
+            name = key.split(";", 1)[0].upper()
+            if name == "SUMMARY":
+                cur["title"] = _ical_unescape(val)
+            elif name == "LOCATION":
+                cur["location"] = _ical_unescape(val)
+            elif name == "DESCRIPTION":
+                cur["description"] = _ical_unescape(val)
+            elif name == "DTSTART":
+                dt, ad = _parse_ical_dt(val, key)
+                if dt:
+                    cur["start"], cur["all_day"] = dt, ad
+            elif name == "DTEND":
+                dt, _ = _parse_ical_dt(val, key)
+                if dt:
+                    cur["end"] = dt
+            elif name == "RRULE":
+                cur["recurring"] = True
+    return events
+
+
+@router.get(
+    "/household/events",
+    response_model=list[EventResponse],
+    summary="Upcoming friend events, read from the shared Google Calendar(s)",
+)
+async def list_events(limit: int = Query(default=50, ge=1, le=200)) -> list[EventResponse]:
+    urls = _calendar_urls()
+    if not urls:
+        return []
+    now = datetime.now(timezone.utc)
+    floor, horizon = now - timedelta(hours=12), now + timedelta(days=_EVENT_WINDOW_DAYS)
+    out: list[EventResponse] = []
+    async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+        for url in urls:
+            try:
+                r = await client.get(url)
+                if r.status_code != 200:
+                    continue
+                for ev in _parse_ical_events(r.text, url):
+                    start = ev.get("start")
+                    # v1: one-off upcoming events; recurrence expansion is the next breath
+                    if start and not ev.get("recurring") and floor <= start <= horizon:
+                        out.append(EventResponse(
+                            title=ev.get("title", "(untitled)"),
+                            start=start.isoformat(),
+                            end=ev["end"].isoformat() if ev.get("end") else None,
+                            all_day=bool(ev.get("all_day")),
+                            location=ev.get("location"),
+                            description=(ev.get("description") or "")[:500] or None,
+                            source=ev.get("source"),
+                        ))
+            except Exception:
+                continue
+    out.sort(key=lambda e: e.start)
+    return out[:limit]
