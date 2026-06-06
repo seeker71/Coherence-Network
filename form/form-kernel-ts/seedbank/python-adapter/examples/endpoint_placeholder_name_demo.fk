@@ -1,0 +1,1 @@
+(do (defn slen (s) (str_len s)) (defn starts (s p) (if (lt (slen s) (slen p)) 0 (if (str_eq (substring s 0 (slen p)) p) 1 0))) (defn is_placeholder (name) (if (eq (slen name) 0) 1 (starts name "New "))) (let name "New resident") (is_placeholder name))
