@@ -131,7 +131,10 @@
         "tended": "tended",
         "organ": "working"
       },
-      "seed": "Seed the grounds"
+      "seed": "Seed the grounds",
+      "keepMe": "Keep me here",
+      "keepMeNote": "Share which place you're at, until you turn it off",
+      "sharingOn": "Sharing"
     }
   },
   "_attunement": {
