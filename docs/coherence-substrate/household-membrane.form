@@ -307,6 +307,37 @@
       (learn-category (count common-properties (sequence relationship)) -> category)  # categories emerge by counting
       (visible?       ?nourishment ?viewer -> bool)))  # resolves the cell's setting for the viewer's category
 
+  # ── Presence flow: the phone is the cell's proxy; presence is sensed ─
+  #
+  # A human cell carries a phone; the phone is the cell's proxy in the field,
+  # so the substrate can know where each cell is without anyone checking in or
+  # out — staff presence at the sanctuary simply IS the phone being here, and
+  # the information flows on its own. What flows is consent-gated and SOVEREIGN:
+  # each cell sets how its location is shared — coarse (which place) or precise
+  # (which room) — and to whom (a chosen group, or a learned relationship-
+  # category, by the visibility recipe). Urs sets his own to no-limit: exact
+  # room, visible to anyone — his sovereign choice, never the default. The
+  # default is coarse and consent-first.
+  #
+  # Cameras and microphones may live at a place WITH consent, so cells can
+  # speak and interact through them — communicating through the AI presence,
+  # which becomes the medium at that place. Always opt-in, always revocable,
+  # and the sensing is visible to those it senses.
+
+  (presence-flow
+    (proxy   (phone -> (cell ?human)))             # the device carries the cell's presence
+    (sense   (at (place ?p)) -> present)           # no check-in / out — presence IS being here
+    (staff-presence (auto "who is at the sanctuary now, by itself"))
+    (share
+      (granularity (one-of coarse precise))        # which place · which room
+      (to          (or chosen-group (category-of relationship)))  # selected or learned (the visibility recipe)
+      (sovereign   "each cell sets its own limit — Urs: no-limit; default: coarse + consent-first")
+      (revocable   always))
+    (voice                                         # optional cameras / mics, by consent
+      (at      (place ?p) (consent required) (revocable always))
+      (through the-AI-presence)                    # cells speak / interact through the AI as the place's medium
+      (sensing-visible-to-the-sensed true)))       # whoever is sensed can see the sensing
+
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
     (route     /api/household/*)        # HTTP fan-out over the recipes above
@@ -322,4 +353,5 @@
     (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")
     (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")
     (g6 "organism carrier: place cells composed of thing-cells (+ room cells for houses) seeded from the at-hati-suci map, the shepherd relation (a member tends a cell — a season of care), resident room-placement, attention raised-on-a-thing flowing to that cell's shepherd (market-picker pattern, raised by anyone), and the nearest-place Form recipe — built recipe-first; an attention rides the board lifecycle already on the kernel, not new machinery")
-    (g7 "visits & nourishment carrier: visit cells (host, windows, slots) + the swap codec (DM offer ⇄ accept, the join shape), the nourishment ledger (suggested-gift, automatic record, observable tally) on the kernel, and visibility LEARNED per relationship-category — where the category IS the relationship's content-addressed Blueprint (common properties → shared coordinate), so a cell's one choice holds across same-shape relationships; payment rail is a carrier integration, the ledger is substrate; kin to lc-offering / lc-economy")))
+    (g7 "visits & nourishment carrier: visit cells (host, windows, slots) + the swap codec (DM offer ⇄ accept, the join shape), the nourishment ledger (suggested-gift, automatic record, observable tally) on the kernel, and visibility LEARNED per relationship-category — where the category IS the relationship's content-addressed Blueprint (common properties → shared coordinate), so a cell's one choice holds across same-shape relationships; payment rail is a carrier integration, the ledger is substrate; kin to lc-offering / lc-economy")
+    (g8 "presence-flow carrier: phone-as-proxy presence (no check-in), consent-gated sovereign location share (coarse/precise, to chosen-or-learned group via the visibility recipe), auto staff-presence, and opt-in revocable cameras/mics where cells speak through the AI presence — built recipe-first, the sensing always visible to the sensed; privacy is sovereign, never a default that exposes")))
