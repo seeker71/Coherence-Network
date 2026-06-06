@@ -2,12 +2,12 @@
 ;
 ; preludes: form-stdlib/field-model-form.fk
 ;
-; Band verdict: 104 when the full structural FMF proof compiles and executes:
+; Band verdict: 115 when the full structural FMF proof compiles and executes:
 ;   1  kernel primitive constructor surface
-;   88 eight listed domains * 11 checks each
+;   99 nine listed domains * 11 checks each
 ;   4  lineage lenses
 ;   11 quantum-rain adjunct domain checks
 
 (do
     (let score (fmf-proof-score))
-    (if (eq score 104) score 0))
+    (if (eq score 115) score 0))
