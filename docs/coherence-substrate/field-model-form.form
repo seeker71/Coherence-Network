@@ -173,7 +173,7 @@
     (browser-local-playground-proof "web/lib/form-kernel/field-model-form.ts")
     (browser-runtime-proof "web/tests/form-kernel-field-runtime.test.ts")
     (public-deploy-proof "scripts/verify_web_api_deploy.sh")
-    (expected-result 93))
+    (expected-result 104))
 
   (auto-research-loop
     (shape question source-cells evidence-cells field-execution answer residual-questions)
@@ -214,12 +214,12 @@
 
   (end-to-end-domain-contract
     (per-domain-score 11)
-    (domain-count 7)
-    (domain-score-total 77)
+    (domain-count 8)
+    (domain-score-total 88)
     (kernel-node-proof 1)
     (lineage-lens-proof 4)
     (quantum-rain-domain-proof 11)
-    (total-proof-score 93)
+    (total-proof-score 104)
     (line-items
       carrier-algebra
       match-primitive
