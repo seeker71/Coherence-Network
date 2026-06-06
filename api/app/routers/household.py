@@ -76,6 +76,8 @@ class MemberPublic(BaseModel):
     status: str
     invited_by_name: str | None = None
     created_at: str
+    at_place: str | None = None       # the place cell this member is present at (coarse, consent-first)
+    at_place_name: str | None = None  # its display name, for the roster
 
 
 class MemberPrivate(MemberPublic):
@@ -111,6 +113,8 @@ def _member_public(node: dict) -> MemberPublic:
         status=node.get("status", "active"),
         invited_by_name=(node.get("invited_by_name") or None),
         created_at=node.get("created_at", "") or node.get("observed_at", ""),
+        at_place=_s(node.get("at_place")),
+        at_place_name=_s(node.get("at_place_name")),
     )
 
 
@@ -264,11 +268,6 @@ async def whoami(
     return _member_private(node)
 
 
-@router.get(
-    "/household/members",
-    response_model=list[MemberPublic],
-    summary="Everyone in the household — public view, no tokens or phones",
-)
 def _is_active_k(status: str) -> int:
     """Value-identical fallback for endpoint_member_active.fk."""
     return 1 if status == "active" else 0
@@ -286,6 +285,11 @@ def _is_active(status: str) -> bool:
     return bool(val)
 
 
+@router.get(
+    "/household/members",
+    response_model=list[MemberPublic],
+    summary="Everyone in the household — visible to any registered cell here",
+)
 async def list_members(
     token: str | None = Query(default=None),
     role: str | None = Query(default=None),
@@ -1183,6 +1187,54 @@ async def nearest_place(
         return None
     best = min(pinned, key=lambda n: _place_distance(lat, lon, int(n["lat"]), int(n["lon"])))
     return _node_to_place(best)
+
+
+# --------------------------------------------------------------------------
+# Presence — a cell tells the field which place it is at (household-membrane.form:
+# presence-flow + locate/by-scan). The gentlest door: scanning a place's QR IS
+# being there, so consent is the act itself. Coarse by default (which place, not
+# which room), see-locked (the roster shows who's where to registered cells
+# only), opt-in, self-cleared on leave. Sovereign: a cell sets and clears its
+# own presence; nothing tracks it in the background.
+# --------------------------------------------------------------------------
+class PresenceBody(BaseModel):
+    actor_token: str = Field(min_length=1)
+    place_id: str = Field(min_length=1)   # the place cell scanned or chosen
+
+
+@router.post(
+    "/household/presence",
+    response_model=MemberPublic,
+    summary="I am here — present at a place (the scan sets it; coarse, consent-native)",
+)
+async def set_presence(body: PresenceBody) -> MemberPublic:
+    member = _member_by_token(body.actor_token)
+    if not member:
+        raise HTTPException(status_code=401, detail="register or open your invite link first")
+    place = graph_service.get_node(body.place_id)
+    if not place or place.get("type") != _PLACE_TYPE:
+        raise HTTPException(status_code=404, detail=f"place {body.place_id!r} not found")
+    updated = graph_service.update_node(member["id"], properties={
+        "at_place": body.place_id,
+        "at_place_name": place.get("name", "") or body.place_id,
+        "at_place_since": _now(),
+    }) or member
+    return _member_public(updated)
+
+
+@router.post(
+    "/household/presence/leave",
+    response_model=MemberPublic,
+    summary="I have left — clear my presence (sovereign; nothing tracks in the background)",
+)
+async def clear_presence(body: ActorBody) -> MemberPublic:
+    member = _member_by_token(body.actor_token)
+    if not member:
+        raise HTTPException(status_code=401, detail="register or open your invite link first")
+    updated = graph_service.update_node(member["id"], properties={
+        "at_place": "", "at_place_name": "", "at_place_since": "",
+    }) or member
+    return _member_public(updated)
 
 
 # --------------------------------------------------------------------------

@@ -250,3 +250,35 @@ def test_places_seed_pin_and_nearest(client):
     ).json()
     assert near["id"] == "place-yoga-studio"
     assert near["wifi"] == "HatiSuci-Yoga" and near["pinned"] is True
+
+
+def test_presence_scan_sets_and_clears_coarse_and_see_locked(client):
+    """A cell scans a place's QR and is here; the field sees who's where on the
+    see-locked roster, coarse, and the cell clears its own presence on leave —
+    nothing tracks in the background. (household-membrane.form: presence-flow.)"""
+    resident = client.post("/api/household/bootstrap", json={"name": "Nyoman"})
+    if resident.status_code not in (200, 201):
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    rtok = resident.json()["token"]
+    client.post("/api/household/places/seed", json={"actor_token": rtok})
+
+    # A member scans the studio's QR → present there (the scan IS the consent).
+    member = client.post("/api/household/members", json={"name": "Wira"}).json()
+    mtok = member["token"]
+    here = client.post("/api/household/presence",
+                       json={"actor_token": mtok, "place_id": "place-yoga-studio"}).json()
+    assert here["at_place"] == "place-yoga-studio" and here["at_place_name"] == "Yoga Studio"
+
+    # The field sees who's where, on the see-locked roster (registered cells only).
+    assert client.get("/api/household/members").status_code == 401
+    roster = client.get(f"/api/household/members?token={rtok}").json()
+    me = next(m for m in roster if m["id"] == member["id"])
+    assert me["at_place_name"] == "Yoga Studio"
+
+    # The cell clears its own presence on leave — sovereign.
+    left = client.post("/api/household/presence/leave", json={"actor_token": mtok}).json()
+    assert left["at_place"] in (None, "")
+
+    # Presence at a place that doesn't exist is refused.
+    assert client.post("/api/household/presence",
+                       json={"actor_token": mtok, "place_id": "place-nowhere"}).status_code == 404
