@@ -106,6 +106,18 @@
     },
     "events": {
       "heading": "Eventos de amigos"
+    },
+    "gather": {
+      "heading": "Encuentros",
+      "everyoneAnswers": "todos responden",
+      "placeholder": "Pregunta al campo… (¿Kirtan el jueves? ¿Círculo de cacao?)",
+      "ask": "Preguntar a todos",
+      "empty": "Aún no hay preguntas. Lanza una y el campo responderá.",
+      "yes": "Sí",
+      "plusOne": "+1",
+      "interested": "Interesado",
+      "no": "No puedo",
+      "coming": "vienen"
     }
   },
   "_attunement": {

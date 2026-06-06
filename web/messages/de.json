@@ -106,6 +106,18 @@
     },
     "events": {
       "heading": "Events von Freunden"
+    },
+    "gather": {
+      "heading": "Versammlungen",
+      "everyoneAnswers": "alle antworten",
+      "placeholder": "Frag das Feld… (Kirtan Donnerstag? Kakao-Kreis?)",
+      "ask": "Alle fragen",
+      "empty": "Noch keine Fragen. Stell eine und das Feld antwortet.",
+      "yes": "Ja",
+      "plusOne": "+1",
+      "interested": "Interessiert",
+      "no": "Kann nicht",
+      "coming": "kommen"
     }
   },
   "_attunement": {

@@ -106,6 +106,18 @@
     },
     "events": {
       "heading": "Friend events"
+    },
+    "gather": {
+      "heading": "Gatherings",
+      "everyoneAnswers": "everyone answers",
+      "placeholder": "Ask the field… (Kirtan Thursday? Cacao circle?)",
+      "ask": "Ask everyone",
+      "empty": "No questions yet. Raise one and the field will answer.",
+      "yes": "Yes",
+      "plusOne": "+1",
+      "interested": "Interested",
+      "no": "Can't",
+      "coming": "coming"
     }
   },
   "_attunement": {

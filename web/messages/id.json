@@ -106,6 +106,18 @@
     },
     "events": {
       "heading": "Acara teman"
+    },
+    "gather": {
+      "heading": "Pertemuan",
+      "everyoneAnswers": "semua menjawab",
+      "placeholder": "Tanya bersama… (Kirtan Kamis? Lingkaran cacao?)",
+      "ask": "Tanya semua",
+      "empty": "Belum ada pertanyaan. Ajukan satu dan bersama akan menjawab.",
+      "yes": "Ya",
+      "plusOne": "+1",
+      "interested": "Tertarik",
+      "no": "Tidak bisa",
+      "coming": "datang"
     }
   },
   "_attunement": {
