@@ -126,19 +126,8 @@ necessary earlier breath, not the compost gate.
 | `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` | 342 | TS-side parser/eval unit tests | Form-side rule tests under `form-stdlib/tests/python-grammar-*.fk` (one per shipped construct) |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts` | 358 | TS-side convergence unit tests | Form-side equivalence tests asserting NodeID identity for cross-language structural twins |
 
-**Subtotal Phase A — Python adapter: 4245 LOC** — **STILL LIVE (dependency walk
-2026-06-03).** The flip to `kernel-bmf` is taken and all 20 `PARITY_FILES` prove
-three-way green under the Form-native walker — but the dependency walk above
-found the parser + emitter + CLI (`lang-python.ts` parser, `lang-python-fk.ts`,
-`main.ts`) are the parity suite's Rust-bootstrap leg (leg 2, unconditional) with
-four live consumers, and `ctor-convergence.test.ts` imports `lang-python.ts`
-directly. **None of these compost yet** — they release when the Rust-bootstrap
-leg is replaced by a Form-native `.py → .fk` path (the destination shape), not
-on the selector flip. Only the narrow `evalPython`/`ts-eval` sub-path is legacy,
-and it cannot compost in isolation (it lives inside the still-live
-`lang-python.ts` + `main.ts`). The 2026-06-01 "COMPOST-ELIGIBLE" marking was
-based on an incomplete graph; the walk corrects it to the gate that actually
-holds.
+**Subtotal Phase A — Python adapter: 4245 LOC** — **COMPOSTED / RELEASED (2026-06-07).** The Rust-bootstrap leg has been fully replaced by the Form-native compiler (`form-stdlib/grammars/python-bmf-compiler.fk` and `python-bmf-lift.fk`). The legacy TS-based parser (`lang-python.ts`), emitter (`lang-python-fk.ts`), tests (`lang-python.test.ts`), and CLI (`main.ts`) have been completely deleted (composted). `ctor-convergence.test.ts` was successfully refactored to construct mock Python AST captured trees programmatically without any dependency on the legacy TS parser.
+
 
 ### TypeScript adapter
 
