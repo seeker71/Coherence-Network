@@ -20,6 +20,7 @@ type Member = {
   token: string;
   phone?: string | null;
   invited_by_name?: string | null;
+  at_place?: string | null;
 };
 type PublicMember = {
   id: string;
@@ -29,7 +30,59 @@ type PublicMember = {
   status: string;
   invited_by_name?: string | null;
   created_at: string;
+  at_place?: string | null;
+  at_place_name?: string | null;
+  at_place_since?: string | null; // ISO of last report — the decay clock
 };
+
+// A place cell at Hati Suci (household-membrane.form: place).
+type Place = {
+  id: string;
+  name: string;
+  kind: string; // house | gathering | tended | organ
+  lat?: number | null;
+  lon?: number | null;
+  wifi?: string | null;
+  pinned?: boolean;
+};
+
+// Where each place sits on the grounds, 0–100% of the map box — read from the
+// at-hati-suci layout in household-membrane.form (NW temple/kitchen/office;
+// N brahma/krishna/bhima; center vishnu+bale+pool with fire-pit on its north
+// edge; E arjuna/yoga-studio; SW ganesha; S wormery/vibration/water-garden/
+// fish-pond; W gardens). GPS pins refine this when a place is pinned on site.
+const LAYOUT: Record<string, { x: number; y: number }> = {
+  "place-temple": { x: 16, y: 14 }, "place-kitchen": { x: 28, y: 11 },
+  "place-office": { x: 22, y: 22 }, "place-compost-shed": { x: 10, y: 24 },
+  "place-brahma": { x: 44, y: 12 }, "place-krishna": { x: 55, y: 11 },
+  "place-bhima": { x: 66, y: 14 },
+  "place-vishnu": { x: 49, y: 44 }, "place-bale-vishnu": { x: 58, y: 47 },
+  "place-fire-pit": { x: 49, y: 50 }, "place-pool": { x: 49, y: 58 },
+  "place-arjuna": { x: 81, y: 38 }, "place-yoga-studio": { x: 84, y: 52 },
+  "place-ganesha": { x: 17, y: 78 },
+  "place-wormery": { x: 38, y: 82 }, "place-bale-wormery": { x: 46, y: 86 },
+  "place-vibration-tunnel": { x: 56, y: 85 }, "place-water-garden": { x: 66, y: 82 },
+  "place-fish-pond": { x: 74, y: 86 },
+  "place-gardens": { x: 9, y: 50 }, "place-entrance": { x: 30, y: 93 },
+};
+
+const KIND_COLOR: Record<string, string> = {
+  house: "#a78bfa", gathering: "#38bdf8", tended: "#34d399", organ: "#fbbf24",
+};
+
+// Visual decay: how present a report still looks, from the age of its last
+// report. Fresh (<2 min) = full; fades over the next ~13 min; gone after ~15.
+// Knowing fades when circulation stops — lc-the-trace-is-the-memory, made visible.
+function presenceLife(since?: string | null): number {
+  if (!since) return 0;
+  const ms = Date.now() - new Date(since).getTime();
+  if (!isFinite(ms) || ms < 0) return 1;
+  const FRESH = 2 * 60_000;
+  const GONE = 15 * 60_000;
+  if (ms <= FRESH) return 1;
+  if (ms >= GONE) return 0;
+  return 1 - (ms - FRESH) / (GONE - FRESH);
+}
 
 type Kind = "food" | "laundry" | "cleaning" | "ride" | "repair" | "room" | "supplies" | "other";
 type Status = "open" | "acknowledged" | "in_progress" | "completed" | "cancelled";
@@ -230,6 +283,8 @@ export default function HatiSuciPage() {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [gatherings, setGatherings] = useState<Gathering[]>([]);
   const [gatherText, setGatherText] = useState("");
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [locating, setLocating] = useState(false);
   const [events, setEvents] = useState<FriendEvent[]>([]);
   const [members, setMembers] = useState<PublicMember[]>([]);
 
@@ -331,10 +386,15 @@ export default function HatiSuciPage() {
         `/api/household/gatherings?token=${encodeURIComponent(tk)}`,
       );
       setGatherings(g ?? []);
+      const pl = await getJSON<Place[]>(
+        `/api/household/places?token=${encodeURIComponent(tk)}`,
+      );
+      setPlaces(pl ?? []);
     } else {
       setRequests([]);
       setMembers([]);
       setGatherings([]);
+      setPlaces([]);
     }
     const ev = await getJSON<FriendEvent[]>("/api/household/events");
     if (ev) setEvents(ev);
@@ -464,6 +524,44 @@ export default function HatiSuciPage() {
     } catch {
       /* ignore */
     }
+  }, [token, load]);
+
+  // Presence: tap a place to be there. Coarse, consent by the act of tapping.
+  const setHere = useCallback(async (placeId: string) => {
+    if (!token) return;
+    try {
+      await postJSON("/api/household/presence", { actor_token: token, place_id: placeId });
+      await load();
+    } catch {
+      /* ignore */
+    }
+  }, [token, load]);
+
+  // The phone's GPS finds the nearest place (the by-pin door) and reports it.
+  const locateMe = useCallback(() => {
+    if (!token || !("geolocation" in navigator)) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = Math.round(pos.coords.latitude * 1e6); // micro-degrees, as pins store
+          const lon = Math.round(pos.coords.longitude * 1e6);
+          const near = await getJSON<Place>(
+            `/api/household/nearest?token=${encodeURIComponent(token)}&lat=${lat}&lon=${lon}`,
+          );
+          if (near?.id) {
+            await postJSON("/api/household/presence", { actor_token: token, place_id: near.id });
+            await load();
+          }
+        } catch {
+          /* ignore */
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
   }, [token, load]);
 
   const act = useCallback(
@@ -998,6 +1096,84 @@ export default function HatiSuciPage() {
             })}
           </section>
         )}
+
+        {/* The grounds — a live map of the cells, and who is at each (presence fades as reports age) */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-medium">{t("hatiSuci.map.heading")}</h2>
+            <button
+              onClick={locateMe}
+              disabled={locating}
+              className="rounded-lg border border-emerald-500/40 px-2.5 py-1 text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-40"
+            >
+              {locating ? t("hatiSuci.map.locating") : `📍 ${t("hatiSuci.map.locateMe")}`}
+            </button>
+          </div>
+
+          {places.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-border/40 px-4 py-8 text-center text-sm text-muted-foreground">
+              {t("hatiSuci.map.empty")}
+            </p>
+          ) : (
+            <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-border/30 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.06),transparent_70%)]">
+              {places.map((p) => {
+                const pos = LAYOUT[p.id];
+                if (!pos) return null;
+                const here = members.filter((m) => m.at_place === p.id);
+                const mine = member?.at_place === p.id;
+                const color = KIND_COLOR[p.kind] ?? "#94a3b8";
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setHere(p.id)}
+                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5"
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                    title={p.name}
+                  >
+                    <span
+                      className="block rounded-full"
+                      style={{
+                        width: mine ? 14 : 9,
+                        height: mine ? 14 : 9,
+                        background: color,
+                        boxShadow: mine ? `0 0 0 3px ${color}40` : "none",
+                      }}
+                    />
+                    <span className="whitespace-nowrap text-[9px] leading-none text-muted-foreground">
+                      {p.name}
+                    </span>
+                    {here.length > 0 && (
+                      <span className="flex gap-0.5">
+                        {here.map((m) => {
+                          const life = presenceLife(m.at_place_since);
+                          if (life <= 0) return null;
+                          return (
+                            <span
+                              key={m.id}
+                              title={m.name}
+                              className="block h-2 w-2 rounded-full bg-foreground"
+                              style={{ opacity: 0.2 + 0.8 * life, filter: `saturate(${life})` }}
+                            />
+                          );
+                        })}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+            {Object.entries(KIND_COLOR).map(([k, c]) => (
+              <span key={k} className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: c }} />
+                {t(`hatiSuci.map.kind.${k}`)}
+              </span>
+            ))}
+            <span className="ml-auto">{t("hatiSuci.map.decayNote")}</span>
+          </div>
+        </section>
 
         {/* Gatherings — raise a question or event; everyone answers; the field sees the tally */}
         <section className="space-y-3">

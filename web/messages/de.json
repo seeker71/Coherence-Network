@@ -118,6 +118,19 @@
       "interested": "Interessiert",
       "no": "Kann nicht",
       "coming": "kommen"
+    },
+    "map": {
+      "heading": "Das Gelände",
+      "locateMe": "Meinen Ort finden",
+      "locating": "suche…",
+      "empty": "Noch keine Orte. Ein Bewohner sät das Gelände, dann füllt sich die Karte.",
+      "decayNote": "Präsenz verblasst, wenn Meldungen altern",
+      "kind": {
+        "house": "Haus",
+        "gathering": "Versammlung",
+        "tended": "gepflegt",
+        "organ": "Arbeit"
+      }
     }
   },
   "_attunement": {
