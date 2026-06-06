@@ -1,0 +1,1 @@
+(do (defn iabs (x) (if (lt x 0) (sub 0 x) x)) (defn distance (clat clon plat plon) (add (iabs (sub clat plat)) (iabs (sub clon plon)))) (let clat 0) (let clon 0) (let plat 0) (let plon 0) (distance clat clon plat plon))

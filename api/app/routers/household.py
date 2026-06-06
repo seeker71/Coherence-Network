@@ -1025,6 +1025,167 @@ async def answer_gathering(gathering_id: str, body: AnswerBody) -> GatheringResp
 
 
 # --------------------------------------------------------------------------
+# Places — every place at Hati Suci is a CELL (household-membrane.form: place).
+# A place holds a name, a kind, a GPS pin (micro-degrees, set on site), and its
+# WiFi name. Places are the ground the locator doors resolve onto: a GPS ping →
+# nearest place; a scanned place-QR → that place; an SSID → the place whose wifi
+# matches. The proximity DECISION (Manhattan distance in micro-degrees) runs on
+# the Form kernel (endpoint_place_distance.fk); the carrier fans out the place
+# query and folds the nearest. The catalog projects the membrane's at-hati-suci
+# map until the substrate is its source (as with the market).
+# --------------------------------------------------------------------------
+_PLACE_TYPE = "household_place"
+
+# (slug, display name, kind) — from household-membrane.form: at-hati-suci.
+_HATI_SUCI_PLACES: list[tuple[str, str, str]] = [
+    ("brahma", "Brahma", "house"), ("krishna", "Krishna", "house"),
+    ("bhima", "Bhima", "house"), ("vishnu", "Vishnu", "house"),
+    ("arjuna", "Arjuna", "house"), ("ganesha", "Ganesha", "house"),
+    ("yoga-studio", "Yoga Studio", "gathering"), ("fire-pit", "Fire Pit", "gathering"),
+    ("bale-vishnu", "Bale Vishnu", "gathering"), ("bale-wormery", "Bale Wormery", "gathering"),
+    ("temple", "Temple", "gathering"),
+    ("pool", "Pool", "tended"), ("water-garden", "Water Garden", "tended"),
+    ("fish-pond", "Fish Pond", "tended"), ("massage", "Massage", "tended"),
+    ("vibration-tunnel", "Vibration Tunnel", "tended"),
+    ("kitchen", "Kitchen", "organ"), ("office", "Office", "organ"),
+    ("compost-shed", "Compost Shed", "organ"), ("wormery", "Wormery", "organ"),
+    ("entrance", "Entrance", "organ"), ("gardens", "Gardens", "organ"),
+]
+
+
+def _place_distance_k(clat: int, clon: int, plat: int, plon: int) -> int:
+    """Value-identical fallback for endpoint_place_distance.fk."""
+    return abs(clat - plat) + abs(clon - plon)
+
+
+def _place_distance(clat: int, clon: int, plat: int, plon: int) -> int:
+    """Manhattan proximity in micro-degrees (the by-pin brain) — on the Form
+    kernel (endpoint_place_distance.fk), Python the value-identical fallback."""
+    val, _runtime = serve_via_kernel(
+        "endpoint_place_distance.fk",
+        bindings={"clat": clat, "clon": clon, "plat": plat, "plon": plon},
+        fallback=lambda: _place_distance_k(clat, clon, plat, plon),
+        parse=int,
+    )
+    return int(val)
+
+
+class PlaceResponse(BaseModel):
+    id: str
+    name: str
+    kind: str                       # house | gathering | tended | organ
+    lat: int | None = None          # micro-degrees, pinned on site
+    lon: int | None = None
+    wifi: str | None = None         # the place's WiFi name (shared as data; not auto-read by the web)
+    pinned: bool = False            # has someone stood here and pinned the GPS?
+
+
+class PinBody(BaseModel):
+    actor_token: str = Field(min_length=1)
+    lat: int                        # micro-degrees (lat × 1e6, rounded) as the phone's GPS gives
+    lon: int
+    wifi: str | None = Field(default=None, max_length=64)
+
+
+def _node_to_place(node: dict) -> PlaceResponse:
+    lat = node.get("lat")
+    lon = node.get("lon")
+    lat = int(lat) if isinstance(lat, (int, float)) else None
+    lon = int(lon) if isinstance(lon, (int, float)) else None
+    return PlaceResponse(
+        id=node.get("id", ""),
+        name=node.get("name", "") or node.get("id", ""),
+        kind=node.get("kind", "organ"),
+        lat=lat, lon=lon,
+        wifi=_s(node.get("wifi")),
+        pinned=(lat is not None and lon is not None),
+    )
+
+
+def _all_places() -> list[dict]:
+    try:
+        response = graph_service.list_nodes(type=_PLACE_TYPE, limit=500)
+        nodes = response.get("items", []) if isinstance(response, dict) else (response or [])
+    except Exception:
+        nodes = []
+    return [n for n in nodes if n.get("type") == _PLACE_TYPE]
+
+
+@router.post(
+    "/household/places/seed",
+    response_model=list[PlaceResponse],
+    summary="Seed the Hati Suci places as cells (residents) — idempotent",
+)
+async def seed_places(body: ActorBody) -> list[PlaceResponse]:
+    actor = _require_writer(body.actor_token)
+    if actor.get("role") != "resident":
+        raise HTTPException(status_code=403, detail="only a resident seeds the places")
+    have = {n.get("id") for n in _all_places()}
+    created = _now()
+    for slug, name, kind in _HATI_SUCI_PLACES:
+        pid = f"place-{slug}"
+        if pid in have:
+            continue
+        graph_service.create_node(
+            id=pid, type=_PLACE_TYPE, name=name,
+            description=f"{name} — a {kind} cell at Hati Suci",
+            properties={"name": name, "kind": kind, "created_at": created},
+        )
+    return [_node_to_place(n) for n in sorted(_all_places(), key=lambda n: n.get("name", ""))]
+
+
+@router.get(
+    "/household/places",
+    response_model=list[PlaceResponse],
+    summary="Every place cell at Hati Suci, visible to any registered cell here",
+)
+async def list_places(token: str | None = Query(default=None)) -> list[PlaceResponse]:
+    _require_member(token)        # see open-to active-member
+    places = sorted(_all_places(), key=lambda n: (n.get("kind", ""), n.get("name", "")))
+    return [_node_to_place(n) for n in places]
+
+
+@router.post(
+    "/household/places/{place_id}/pin",
+    response_model=PlaceResponse,
+    summary="Stand in the place and pin its GPS + WiFi (residents)",
+)
+async def pin_place(place_id: str, body: PinBody) -> PlaceResponse:
+    actor = _require_writer(body.actor_token)
+    if actor.get("role") != "resident":
+        raise HTTPException(status_code=403, detail="only a resident pins a place")
+    node = graph_service.get_node(place_id)
+    if not node or node.get("type") != _PLACE_TYPE:
+        raise HTTPException(status_code=404, detail=f"place {place_id!r} not found")
+    updates: dict[str, Any] = {"lat": int(body.lat), "lon": int(body.lon), "updated_at": _now()}
+    if body.wifi is not None:
+        updates["wifi"] = body.wifi
+    updated = graph_service.update_node(place_id, properties=updates) or node
+    return _node_to_place(updated)
+
+
+@router.get(
+    "/household/nearest",
+    response_model=PlaceResponse | None,
+    summary="Which place a cell is at, by GPS proximity (the by-pin door)",
+)
+async def nearest_place(
+    lat: int = Query(...),
+    lon: int = Query(...),
+    token: str | None = Query(default=None),
+) -> PlaceResponse | None:
+    _require_member(token)        # see open-to active-member
+    pinned = [
+        n for n in _all_places()
+        if isinstance(n.get("lat"), (int, float)) and isinstance(n.get("lon"), (int, float))
+    ]
+    if not pinned:
+        return None
+    best = min(pinned, key=lambda n: _place_distance(lat, lon, int(n["lat"]), int(n["lon"])))
+    return _node_to_place(best)
+
+
+# --------------------------------------------------------------------------
 # Friend events — read from the shared Google Calendar(s), the external
 # substrate. The calendar IS the store; we fetch its iCal feed, parse the
 # upcoming events, and show them. No parallel event store of our own.
