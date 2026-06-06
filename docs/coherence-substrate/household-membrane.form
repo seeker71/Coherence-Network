@@ -139,6 +139,48 @@
     (catalog                                      # the items themselves intern as DATA
       (note "the pasar items near Hati Suci intern as data, not code; the web carries the instance, the substrate is the source once g4 lands")))
 
+  # ── Gatherings & votes: the field asks itself who's coming ─────────
+  #
+  # A resident raises a question to a chosen audience — one person, a group
+  # (staff | resident | friend), or everyone. Anyone it reaches can answer,
+  # see every answer with its name, and change their own at any time; the
+  # question carries its own date. When the question is an event — a kirtan,
+  # a cacao, a fire circle — it also carries a status the field can watch
+  # and hosts who hold it (zero to many). Aggregates are open to all, the
+  # way a Telegram or WhatsApp poll shows its tally.
+
+  (gathering
+    (question-shape
+      (text     ?prose)                              # "Who's in for Kirtan, Cacao & Fire, Thu 11th 5pm?"
+      (author   (cell-ref member))                   # a resident
+      (audience (one-of (person group everyone)))    # group ∈ {staff resident friend}; friend = member
+      (kind     (one-of (poll event)))
+      (raised   (date ?d))                           # the date of the asking, visible
+      (options  (sequence interested yes no yes-plus-one)))
+
+    (event-extension                                 # present when kind = event
+      (status (one-of (proposed confirmed delayed))) # the field watches this
+      (when   (date ?d))                             # the event's own moment
+      (hosts  (sequence (cell-ref member))))         # zero to many hold it
+
+    (response-shape                                  # one cell per voter — replaceable
+      (voter   (cell-ref member))
+      (choice  (one-of (interested yes no yes-plus-one)))
+      (changed (date ?d)))                           # a vote can change at any time
+
+    (recipes
+      (raise         ?resident ?text ?audience -> open-question)  # residents only
+      (answer        ?member ?question ?choice -> response)       # the addressee votes
+      (re-answer     ?member ?question ?choice -> response)       # change anytime
+      (visible-to    ?question ?member -> bool)      # audience predicate — a Form recipe
+      (tally         ?question -> head-counts)       # yes-plus-one counts as two heads
+      (advance-event ?status ?action -> next-status))# proposed→confirmed→delayed (the `advance` shape, already proven on the kernel)
+
+    (lock
+      (raise  requires resident)                     # only a resident opens a question
+      (answer open-to (visible-to ?question))        # you answer what reaches you
+      (see    open-to active-member)))               # every answer, every tally, visible to all here
+
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
     (route     /api/household/*)        # HTTP fan-out over the recipes above
@@ -151,4 +193,5 @@
     (g1 "executable .fk recipes in form/form-stdlib + a household.join round-trip band — proven via validate.sh three-way on CI, not a local single-kernel claim")
     (g2 "household.py is the CURRENT carrier but still holds the logic; it thins to serve_via_kernel over these recipes once g1 lands")
     (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")
-    (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")))
+    (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")
+    (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")))
