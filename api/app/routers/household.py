@@ -269,10 +269,27 @@ async def whoami(
     response_model=list[MemberPublic],
     summary="Everyone in the household — public view, no tokens or phones",
 )
+def _is_active_k(status: str) -> int:
+    """Value-identical fallback for endpoint_member_active_demo.fk."""
+    return 1 if status == "active" else 0
+
+
+def _is_active(status: str) -> bool:
+    """The see-lock decision (Form: see open-to active-member) — on the kernel
+    (endpoint_member_active_demo.fk), Python the value-identical fallback."""
+    val, _runtime = serve_via_kernel(
+        "endpoint_member_active_demo.fk",
+        bindings={"status": status},
+        fallback=lambda: _is_active_k(status),
+        parse=int,
+    )
+    return bool(val)
+
+
 async def list_members(role: str | None = Query(default=None)) -> list[MemberPublic]:
     # The roster is the people actually here (Form: `see open-to active-member`).
     # Pending invites stay off it until the newcomer opens their link.
-    members = [m for m in _all_members() if m.get("status") == "active"]
+    members = [m for m in _all_members() if _is_active(m.get("status", ""))]
     if role:
         members = [m for m in members if m.get("role") == role]
     members.sort(key=lambda n: n.get("created_at", ""))
