@@ -118,6 +118,19 @@
       "interested": "Tertarik",
       "no": "Tidak bisa",
       "coming": "datang"
+    },
+    "map": {
+      "heading": "Tanah Hati Suci",
+      "locateMe": "Cari tempatku",
+      "locating": "mencari…",
+      "empty": "Belum ada tempat. Warga menanam tanah, lalu peta terisi.",
+      "decayNote": "kehadiran memudar seiring laporan menua",
+      "kind": {
+        "house": "rumah",
+        "gathering": "berkumpul",
+        "tended": "dirawat",
+        "organ": "kerja"
+      }
     }
   },
   "_attunement": {

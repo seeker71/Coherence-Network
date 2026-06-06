@@ -118,6 +118,19 @@
       "interested": "Interesado",
       "no": "No puedo",
       "coming": "vienen"
+    },
+    "map": {
+      "heading": "Los terrenos",
+      "locateMe": "Encontrar mi lugar",
+      "locating": "ubicando…",
+      "empty": "Aún no hay lugares. Un residente siembra los terrenos y el mapa se llena.",
+      "decayNote": "la presencia se desvanece cuando los reportes envejecen",
+      "kind": {
+        "house": "casa",
+        "gathering": "encuentro",
+        "tended": "cuidado",
+        "organ": "trabajo"
+      }
     }
   },
   "_attunement": {
