@@ -142,7 +142,7 @@ def _member_by_token(token: str | None) -> dict | None:
 
 
 def _is_placeholder_name_k(name: str) -> int:
-    """Value-identical fallback for endpoint_placeholder_name_demo.fk."""
+    """Value-identical fallback for endpoint_placeholder_name.fk."""
     if len(name) == 0:
         return 1
     if len(name) < 4:
@@ -153,10 +153,10 @@ def _is_placeholder_name_k(name: str) -> int:
 def _is_placeholder_name(name: str) -> bool:
     """A role-only invite carries 'New {role}' until the newcomer claims it
     with their own name on first open — the self-name half of `bind`. The
-    decision runs on the Form kernel (endpoint_placeholder_name_demo.fk),
+    decision runs on the Form kernel (endpoint_placeholder_name.fk),
     Python the value-identical fallback."""
     val, _runtime = serve_via_kernel(
-        "endpoint_placeholder_name_demo.fk",
+        "endpoint_placeholder_name.fk",
         bindings={"name": name},
         fallback=lambda: _is_placeholder_name_k(name),
         parse=int,
@@ -270,15 +270,15 @@ async def whoami(
     summary="Everyone in the household — public view, no tokens or phones",
 )
 def _is_active_k(status: str) -> int:
-    """Value-identical fallback for endpoint_member_active_demo.fk."""
+    """Value-identical fallback for endpoint_member_active.fk."""
     return 1 if status == "active" else 0
 
 
 def _is_active(status: str) -> bool:
     """The see-lock decision (Form: see open-to active-member) — on the kernel
-    (endpoint_member_active_demo.fk), Python the value-identical fallback."""
+    (endpoint_member_active.fk), Python the value-identical fallback."""
     val, _runtime = serve_via_kernel(
-        "endpoint_member_active_demo.fk",
+        "endpoint_member_active.fk",
         bindings={"status": status},
         fallback=lambda: _is_active_k(status),
         parse=int,
@@ -440,7 +440,7 @@ def _apply(request_id: str, updates: dict[str, Any]) -> RequestResponse:
 
 # ── The request lifecycle, as a Form recipe ───────────────────────────
 # advance(status, verb) — the membrane's state machine — runs on the Form
-# kernel (endpoint_household_advance_demo.fk) with a value-identical Python
+# kernel (endpoint_household_advance.fk) with a value-identical Python
 # fallback. This is the first household rule to leave the Python if-tree and
 # execute as Form; the carrier here only encodes/decodes and does the I/O.
 # (household-membrane.form, recipes: acknowledge / tend / complete.)
@@ -450,7 +450,7 @@ _VERB_CODE = {"acknowledge": 0, "start": 1, "complete": 2, "cancel": 3}
 
 
 def _advance_py(status: int, verb: int) -> int:
-    """Value-identical fallback for endpoint_household_advance_demo.fk."""
+    """Value-identical fallback for endpoint_household_advance.fk."""
     if verb == 0:
         return 1 if status == 0 else -1
     if verb == 1:
@@ -467,7 +467,7 @@ def _advance_status(current: str, verb: str) -> str:
     s = _STATUS_CODE.get(current, 0)
     v = _VERB_CODE[verb]
     code, _runtime = serve_via_kernel(
-        "endpoint_household_advance_demo.fk",
+        "endpoint_household_advance.fk",
         bindings={"status": s, "verb": v},
         fallback=lambda: _advance_py(s, v),
         parse=int,
@@ -679,16 +679,16 @@ def _ical_unescape(v: str) -> str:
 
 
 def _ical_is_allday_k(value: str, params: str) -> int:
-    """Value-identical fallback for endpoint_ical_allday_demo.fk."""
+    """Value-identical fallback for endpoint_ical_allday.fk."""
     return 1 if ("VALUE=DATE" in params or (len(value) == 8 and "T" not in value)) else 0
 
 
 def _ical_is_allday(value: str, params: str) -> bool:
     """The all-day vs timed-event DECISION — on the Form kernel
-    (endpoint_ical_allday_demo.fk), Python the value-identical fallback. The
+    (endpoint_ical_allday.fk), Python the value-identical fallback. The
     date-param recipe the iCal field recipe promised would follow."""
     val, _runtime = serve_via_kernel(
-        "endpoint_ical_allday_demo.fk",
+        "endpoint_ical_allday.fk",
         bindings={"value": value, "params": params},
         fallback=lambda: _ical_is_allday_k(value, params),
         parse=int,
@@ -712,7 +712,7 @@ def _parse_ical_dt(value: str, params: str) -> tuple[datetime | None, bool]:
 
 
 def _ical_field_py(line: str, name: str) -> str:
-    """Value-identical fallback for endpoint_ical_field_demo.fk — given one
+    """Value-identical fallback for endpoint_ical_field.fk — given one
     unfolded iCal line and a field name, the value if the line carries that
     field (handling the NAME[;params]:value shape), else ''."""
     colon = line.find(":")
@@ -730,11 +730,11 @@ def _ical_field_py(line: str, name: str) -> str:
 
 def _ical_field(line: str, name: str) -> str:
     """The per-line iCal parsing DECISION + extraction — on the Form kernel
-    (endpoint_ical_field_demo.fk), Python the value-identical fallback. The
+    (endpoint_ical_field.fk), Python the value-identical fallback. The
     first piece of the parser to leave the if-tree and execute as Form; the
     date-param + whole-text recipes follow."""
     val, _runtime = serve_via_kernel(
-        "endpoint_ical_field_demo.fk",
+        "endpoint_ical_field.fk",
         bindings={"line": line, "name": name},
         fallback=lambda: _ical_field_py(line, name),
         parse=str,
