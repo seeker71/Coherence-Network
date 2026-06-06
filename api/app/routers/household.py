@@ -626,6 +626,122 @@ async def pay_request(request_id: str, body: ActorBody) -> RequestResponse:
 
 
 # --------------------------------------------------------------------------
+# The request's trace — followable, attributed, witnessed (lc-the-trace-is-
+# the-memory). A request is a cell with a life: requested → acknowledged →
+# tended → completed → settled, each transition attributed to a cell at a
+# moment. The board shows only who asked and where it goes (core, compact);
+# the full trace is INSPECTED on demand here — so a request can be followed,
+# accounted for, attributed, and witnessed to be real, without the board
+# carrying all of it. The lifecycle POSITION runs on the Form kernel
+# (endpoint_request_progress.fk); the carrier reads the stored markers — every
+# one already stamped by the lifecycle endpoints — into the sequence.
+# --------------------------------------------------------------------------
+_COST_CODE = {"none": 0, "recorded": 1, "paid": 2}
+
+
+def _request_progress_k(status_code: int, cost_code: int) -> int:
+    """Value-identical fallback for endpoint_request_progress.fk."""
+    if status_code == 4:                          # cancelled — off the path
+        return 0
+    if status_code == 3 and cost_code == 2:       # completed + paid = settled
+        return 5
+    return status_code + 1                         # open=1 ack=2 tending=3 completed=4
+
+
+def _request_progress(status: str, cost_status: str) -> int:
+    """Where in its life a request is (0 cancelled · 1 open · 2 acknowledged ·
+    3 tending · 4 completed · 5 settled) — on the Form kernel
+    (endpoint_request_progress.fk), Python the value-identical fallback."""
+    s = _STATUS_CODE.get(status, 0)
+    c = _COST_CODE.get(cost_status, 0)
+    val, _runtime = serve_via_kernel(
+        "endpoint_request_progress.fk",
+        bindings={"s": s, "c": c},
+        fallback=lambda: _request_progress_k(s, c),
+        parse=int,
+    )
+    return int(val)
+
+
+class TraceStep(BaseModel):
+    step: str                       # requested|acknowledged|tending|completed|settled|cancelled
+    actor_name: str | None = None   # the cell attributed to this beat
+    at: str | None = None           # when it happened (ISO 8601 UTC) — the witness
+    note: str | None = None         # e.g. the recorded cost
+
+
+class RequestTrace(BaseModel):
+    id: str
+    kind: str
+    requester_name: str             # who asked — core
+    location: str | None = None     # where it's expected — core
+    progress: int                   # 0..5, from the Form recipe
+    settled: bool                   # completed and accounted for
+    steps: list[TraceStep]          # the followable, attributed, witnessed sequence
+
+
+def _request_trace(node: dict) -> RequestTrace:
+    status = node.get("status", "open")
+    cost_status = node.get("cost_status", "none") or "none"
+    steps: list[TraceStep] = [TraceStep(
+        step="requested",
+        actor_name=node.get("requester_name", "") or None,
+        at=node.get("created_at", "") or node.get("observed_at", "") or None,
+    )]
+    if node.get("cancelled_at"):
+        steps.append(TraceStep(step="cancelled", at=_s(node.get("cancelled_at"))))
+    else:
+        if node.get("acknowledged_at") or node.get("acknowledged_by_name"):
+            steps.append(TraceStep(
+                step="acknowledged",
+                actor_name=_s(node.get("acknowledged_by_name")),
+                at=_s(node.get("acknowledged_at")),
+            ))
+        if node.get("started_at"):
+            steps.append(TraceStep(
+                step="tending",
+                actor_name=_s(node.get("acknowledged_by_name")),
+                at=_s(node.get("started_at")),
+            ))
+        if node.get("completed_at") or node.get("completed_by_name"):
+            raw_cost = node.get("cost_amount")
+            cost = None
+            if isinstance(raw_cost, (int, float)) and raw_cost:
+                cost = f"{node.get('cost_currency', 'IDR')} {raw_cost:,.0f}"
+            steps.append(TraceStep(
+                step="completed",
+                actor_name=_s(node.get("completed_by_name")),
+                at=_s(node.get("completed_at")),
+                note=cost,
+            ))
+        if cost_status == "paid" or node.get("paid_at"):
+            steps.append(TraceStep(
+                step="settled",
+                actor_name=_s(node.get("paid_by_name")),
+                at=_s(node.get("paid_at")),
+            ))
+    progress = _request_progress(status, cost_status)
+    return RequestTrace(
+        id=node.get("id", ""),
+        kind=node.get("kind", "other"),
+        requester_name=node.get("requester_name", "") or "",
+        location=_s(node.get("location")),
+        progress=progress,
+        settled=(progress == 5),
+        steps=steps,
+    )
+
+
+@router.get(
+    "/household/requests/{request_id}/trace",
+    response_model=RequestTrace,
+    summary="The request's full trace — followed, accounted, attributed, witnessed",
+)
+async def request_trace(request_id: str) -> RequestTrace:
+    return _request_trace(_load_request(request_id))
+
+
+# --------------------------------------------------------------------------
 # Gatherings & votes — a resident raises a question to an audience; everyone
 # it reaches answers (and may change their answer at any time); the field sees
 # every answer with its name and the live tally. An event-kind question also
