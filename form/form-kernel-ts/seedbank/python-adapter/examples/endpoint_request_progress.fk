@@ -1,0 +1,1 @@
+(do (defn progress (s c) (if (eq s 4) 0 (if (if (eq s 3) (eq c 2) 0) 5 (add s 1)))) (let s 3) (let c 2) (progress s c))
