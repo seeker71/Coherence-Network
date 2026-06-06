@@ -160,3 +160,49 @@ def test_gathering_raise_answer_tally_and_visibility(client):
         "actor_token": stok, "text": "staff trying to raise", "audience_kind": "everyone",
     })
     assert staff_raise.status_code == 403               # raise requires a resident
+
+
+def test_request_trace_follows_attributes_and_witnesses(client):
+    """A food request shows who asked + where it goes (core), and carries a
+    full trace that can be followed, accounted for, attributed, and witnessed —
+    each beat naming its cell and its moment. (lc-the-trace-is-the-memory.)"""
+    resident = client.post("/api/household/bootstrap", json={"name": "Wayan"})
+    if resident.status_code not in (200, 201):
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    rtok = resident.json()["token"]
+
+    # Who asks and where it goes are core to the request.
+    r = client.post("/api/household/requests", json={
+        "actor_token": rtok, "kind": "food", "detail": "nasi campur x2",
+        "location": "Bale Vishnu",
+    }).json()
+    rid = r["id"]
+
+    # Walk its whole life; each transition attributes itself to a cell.
+    client.post(f"/api/household/requests/{rid}/acknowledge", json={"actor_token": rtok})
+    client.post(f"/api/household/requests/{rid}/start", json={"actor_token": rtok})
+    client.post(f"/api/household/requests/{rid}/complete", json={
+        "actor_token": rtok, "cost_amount": 50000, "cost_note": "warung",
+    })
+    client.post(f"/api/household/requests/{rid}/pay", json={"actor_token": rtok})
+
+    trace = client.get(f"/api/household/requests/{rid}/trace").json()
+    # Core, compact: who + where.
+    assert trace["requester_name"] == "Wayan"
+    assert trace["location"] == "Bale Vishnu"
+    # The full followable, attributed, witnessed sequence.
+    assert [s["step"] for s in trace["steps"]] == \
+        ["requested", "acknowledged", "tending", "completed", "settled"]
+    assert all(s["at"] for s in trace["steps"])          # every beat witnessed by a moment
+    assert trace["steps"][0]["actor_name"] == "Wayan"     # attributed to the cell who asked
+    assert any("50,000" in (s["note"] or "") for s in trace["steps"])   # accounted for
+    assert trace["progress"] == 5 and trace["settled"] is True
+
+    # A cancelled request traces only what was real.
+    r2 = client.post("/api/household/requests", json={
+        "actor_token": rtok, "kind": "ride", "detail": "airport run",
+    }).json()
+    client.post(f"/api/household/requests/{r2['id']}/cancel", json={"actor_token": rtok})
+    t2 = client.get(f"/api/household/requests/{r2['id']}/trace").json()
+    assert [s["step"] for s in t2["steps"]] == ["requested", "cancelled"]
+    assert t2["progress"] == 0 and t2["settled"] is False
