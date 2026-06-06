@@ -200,7 +200,15 @@
       (kind  (one-of (common house amenity)))) # commons host events; houses dwell; amenities (the pool) are tended
     (locate
       (set-by  pin-while-present)          # the sensor sets it: stand here, tap once
-      (nearest (recipe nearest-place ?lat ?lon -> place))))  # GPS → place, a Form recipe
+      (nearest (recipe nearest-place ?lat ?lon -> place)))  # GPS → place, a Form recipe
+
+    (at-hati-suci                          # the real grounds — from the Hati Suci area map, Jun 2026
+      (region "Banjar Bayad, Jl. Raya Kedisan, Tegallalang, Ubud 80561 — rice fields, Mount Agung view")
+      (houses    brahma krishna bhima vishnu arjuna ganesha)            # the six dwellings (Mahabharata names)
+      (commons   yoga-studio fire-pit bale-vishnu bale-wormery temple)  # where the field gathers
+      (amenities pool water-garden fish-pond massage vibration-tunnel)  # tended, not dwelt
+      (organs    kitchen office compost-shed wormery entrance gardens)  # the working body
+      (layout "NW temple/kitchen/office/compost · N brahma/krishna/bhima · center vishnu+bale, the pool with fire-pit on its north edge · E arjuna/yoga-studio · SW ganesha · S wormery+bale/vibration-tunnel/water-garden/fish-pond · gardens W — relative from the map; precise GPS pinned per place")))
 
   (house                                   # a place you dwell in (kind = house)
     (is-a place)
