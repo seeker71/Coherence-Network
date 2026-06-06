@@ -212,3 +212,41 @@ def test_request_trace_follows_attributes_and_witnesses(client):
     t2 = client.get(f"/api/household/requests/{r2['id']}/trace?token={rtok}").json()
     assert [s["step"] for s in t2["steps"]] == ["requested", "cancelled"]
     assert t2["progress"] == 0 and t2["settled"] is False
+
+
+def test_places_seed_pin_and_nearest(client):
+    """Every place at Hati Suci is a cell; once pinned on site, GPS proximity
+    resolves which one a phone is at — the by-pin door, its distance decision a
+    Form recipe on the kernel. (household-membrane.form: place + locate.)"""
+    resident = client.post("/api/household/bootstrap", json={"name": "Kadek"})
+    if resident.status_code not in (200, 201):
+        pytest.skip("a resident already exists in this graph; bootstrap-dependent flow skipped")
+    rtok = resident.json()["token"]
+
+    # Seed the grounds as cells (idempotent), and a plain member cannot.
+    seeded = client.post("/api/household/places/seed", json={"actor_token": rtok}).json()
+    slugs = {p["id"] for p in seeded}
+    assert {"place-yoga-studio", "place-fire-pit", "place-pool"} <= slugs
+    assert any(p["kind"] == "house" for p in seeded)
+    member = client.post("/api/household/members", json={"name": "Putu"}).json()
+    assert client.post("/api/household/places/seed",
+                       json={"actor_token": member["token"]}).status_code == 403
+
+    # The roster of places is see-locked — registered cells only.
+    assert client.get("/api/household/places").status_code == 401
+    assert len(client.get(f"/api/household/places?token={rtok}").json()) >= 22
+
+    # Stand in two places, pin their GPS (micro-degrees) + one WiFi name.
+    client.post("/api/household/places/place-yoga-studio/pin", json={
+        "actor_token": rtok, "lat": -8516000, "lon": 115278000, "wifi": "HatiSuci-Yoga",
+    })
+    client.post("/api/household/places/place-fire-pit/pin", json={
+        "actor_token": rtok, "lat": -8515900, "lon": 115277900,
+    })
+
+    # A phone near the studio resolves to the studio (the Form distance recipe).
+    near = client.get(
+        f"/api/household/nearest?token={rtok}&lat=-8516010&lon=115278010"
+    ).json()
+    assert near["id"] == "place-yoga-studio"
+    assert near["wifi"] == "HatiSuci-Yoga" and near["pinned"] is True
