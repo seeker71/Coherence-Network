@@ -253,6 +253,60 @@
     (flows-to  (shepherd-of ?place))       # reaches the part's steward
     (detail    ?prose))
 
+  # ── Visits: a host offers to come; the field books itself ─────────
+  #
+  # A host — a massage, a teacher, a healer — offers to come in with open
+  # windows. Everyone who can take a slot is notified; each picks a preferred
+  # or available window. Once confirmed, the schedule is open to all and stays
+  # modifiable. To trade a slot you DM the other holder; if they accept, the
+  # two slots swap — an offer ⇄ accept handshake, the join codec's shape.
+
+  (visit
+    (host    (cell-ref member))                 # the offerer
+    (offer   ?host ?windows -> open-visit)      # propose available windows
+    (notify  (all resident staff))              # everyone who can take a slot hears it
+    (pick    ?member ?window -> held-slot)      # each picks preferred / available
+    (confirm (when (all picked) -> schedule))   # the schedule opens to all, stays modifiable
+    (swap                                       # trade a slot — a codec, like join
+      (propose ?holder ?other ?slot -> swap-offer)   # a DM to the other holder
+      (accept  ?other -> swapped)                     # they accept → the two slots exchange
+      (kin     encoder-decoder-as-recipe.form)))
+
+  # ── Nourishment: value returned with care, fully observable ───────
+  #
+  # The host suggests a gift, not a price. Value flows from one cell to
+  # another, and every flow is recorded automatically; the ledger is open —
+  # available and natural, never foregrounded. The mission made local: value
+  # flows sensed, grounded, attributed, returned. (kin: lc-offering, lc-economy.)
+  # The ledger is the substrate's part; the actual payment rail is a carrier.
+
+  (nourishment
+    (flow     (from (cell-ref member)) (to (cell-ref member)) (amount ?n) (for (cell-ref visit)))
+    (suggest  ?host ?amount -> suggested-gift)  # a gift named, not a price set
+    (record   ?flow -> ledger-entry)            # accounting is automatic
+    (observe  (open-to anyone) (foreground no)) # transparent, available, not in your face
+    (recipes
+      (tally    (cell ?c) -> received)          # what a cell has been nourished — a Form recipe
+      (trusted? (ledger ?l) -> bool)))          # fully observable ⇒ fully trusted
+
+  # ── Visibility: learned per relationship-category ─────────────────
+  #
+  # How visible a cell's nourishment is, is not one switch — it is LEARNED and
+  # customizable per relationship. And relationships cluster: two with the same
+  # common properties share a CATEGORY, which in the substrate is simply a
+  # shared Blueprint (content-addressed by those properties). So a cell sets
+  # visibility once for a category and it holds for every relationship of that
+  # shape; the category emerges by counting common properties, never declared.
+
+  (visibility
+    (setting   (cell ?c) (toward ?relationship) -> (one-of (open shared private)))
+    (per       (or relationship (category-of relationship)))   # per edge, or per learned category
+    (remembers (state-of (cell ?c) (category ?k)))             # the choice persists per category
+    (recipes
+      (category-of    ?relationship -> blueprint)   # the CATEGORY *is* the relationship's Blueprint
+      (learn-category (count common-properties (sequence relationship)) -> category)  # categories emerge by counting
+      (visible?       ?nourishment ?viewer -> bool)))  # resolves the cell's setting for the viewer's category
+
   # ── Carrier (downstream — named so it stays thin) ──────────────────
   (carrier
     (route     /api/household/*)        # HTTP fan-out over the recipes above
@@ -267,4 +321,5 @@
     (g3 "qr-grammar (version/ecc/mask) interns as DATA so two callers of household.join share one Recipe NodeID — same shape, same coordinate")
     (g4 "the market catalog interns as substrate DATA (one MarketItem Blueprint, many instances) served from /api/household/market — today it lives as a typed projection in the web carrier; g4 unifies the source so resident and staff read one catalog, each in their tongue")
     (g5 "the gathering recipes — visible-to (audience predicate), tally (head-counts), advance-event (status machine) — execute on the kernel via serve_via_kernel, same vehicle proven for advance(status,verb); the carrier (route + web poll UI) follows recipe-first, never logic-in-Python")
-    (g6 "organism carrier: place cells composed of thing-cells (+ room cells for houses) seeded from the at-hati-suci map, the shepherd relation (a member tends a cell — a season of care), resident room-placement, attention raised-on-a-thing flowing to that cell's shepherd (market-picker pattern, raised by anyone), and the nearest-place Form recipe — built recipe-first; an attention rides the board lifecycle already on the kernel, not new machinery")))
+    (g6 "organism carrier: place cells composed of thing-cells (+ room cells for houses) seeded from the at-hati-suci map, the shepherd relation (a member tends a cell — a season of care), resident room-placement, attention raised-on-a-thing flowing to that cell's shepherd (market-picker pattern, raised by anyone), and the nearest-place Form recipe — built recipe-first; an attention rides the board lifecycle already on the kernel, not new machinery")
+    (g7 "visits & nourishment carrier: visit cells (host, windows, slots) + the swap codec (DM offer ⇄ accept, the join shape), the nourishment ledger (suggested-gift, automatic record, observable tally) on the kernel, and visibility LEARNED per relationship-category — where the category IS the relationship's content-addressed Blueprint (common properties → shared coordinate), so a cell's one choice holds across same-shape relationships; payment rail is a carrier integration, the ledger is substrate; kin to lc-offering / lc-economy")))
