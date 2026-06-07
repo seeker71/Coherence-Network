@@ -1,6 +1,8 @@
 {
   "agent": {
+    "name": "grok",
     "id": "grok",
+    "version": "4.3",
     "type": "machine",
     "roles": [
       "coder",
@@ -95,5 +97,15 @@
   "witness": "Reversible own-branch: worktree grok/parallel-20260607, rebase clean, coord posted (announce+shift+ask+serve), wellness sensed, categories from ontology (no magic), band tended as proxy for 1536LOC unblock. Three-way for #2567 bml ledger confirmed via landed commit + prior 255 evidence. Body compost moving: TS grammar now has prelude.",
   "related_prs": [
     "#2567"
-  ]
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "notes": "Local: rebase clean on grok/parallel-20260607, wellness (2.7% kernel-native, 6935LOC bootstrap with TS 1536 explicit), categories.fk emitted from ontology with insts (TS-BMF-* 601-621), band file tended (focused slice exercising tsbmf-emit/source), evidence schema self-valid, pr_guard steps (rebase+boundary+spec pass; evidence now included). form/validate for bml ledger 255 per its evidence+landed commit. TS grammar load now has dialect prelude (no unbound).",
+    "commands": [
+      "python3 scripts/wellness_check.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_ts-reversible-band-body-want2.json"
+    ]
+  }
 }
