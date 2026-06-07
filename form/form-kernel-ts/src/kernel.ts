@@ -3977,6 +3977,30 @@ function numericToBig(v: Value): bigint {
   throw new Error(`numericToBig: ${v.kind} is not numeric`);
 }
 
+function truthy(v: Value): boolean {
+  switch (v.kind) {
+    case "bool":
+      return v.bool;
+    case "null":
+      return false;
+    case "int":
+    case "i8":
+    case "i16":
+    case "u8":
+    case "u16":
+    case "u32":
+      return v.int !== 0;
+    case "i64":
+    case "u64":
+      return v.bigint !== 0n;
+    case "f32":
+    case "f64":
+      return v.float !== 0 && !isNaN(v.float);
+    default:
+      return true;
+  }
+}
+
 function walkLogic(
   k: Kernel,
   op: number,
@@ -3986,16 +4010,15 @@ function walkLogic(
   if (op === RLogic.NOT) {
     if (kids.length !== 1) throw new Error("not: need exactly 1 arg");
     const v = walk(k, kids[0]!, frame);
-    if (v.kind !== "bool") throw new Error("not: expected bool");
-    return { kind: "bool", bool: !v.bool };
+    return { kind: "bool", bool: !truthy(v) };
   }
   if (kids.length < 2) throw new Error("and/or: need at least 2 args");
   for (let i = 0; i < kids.length; i++) {
     const v = walk(k, kids[i]!, frame);
-    if (v.kind !== "bool") throw new Error("and/or: expected bool");
-    if (op === RLogic.AND && !v.bool) return { kind: "bool", bool: false };
-    if (op === RLogic.OR && v.bool) return { kind: "bool", bool: true };
-    if (i === kids.length - 1) return v;
+    const b = truthy(v);
+    if (op === RLogic.AND && !b) return { kind: "bool", bool: false };
+    if (op === RLogic.OR && b) return { kind: "bool", bool: true };
+    if (i === kids.length - 1) return { kind: "bool", bool: b };
   }
   return { kind: "bool", bool: op === RLogic.AND };
 }
@@ -4009,13 +4032,11 @@ function walkCond(
   if (op === RCond.IF_THEN) {
     if (kids.length !== 2) throw new Error("if: need 2 args");
     const c = walk(k, kids[0]!, frame);
-    if (c.kind !== "bool") throw new Error("if: condition must be bool");
-    return c.bool ? walk(k, kids[1]!, frame) : { kind: "null" };
+    return truthy(c) ? walk(k, kids[1]!, frame) : { kind: "null" };
   }
   if (kids.length !== 3) throw new Error("if/else: need 3 args");
   const c = walk(k, kids[0]!, frame);
-  if (c.kind !== "bool") throw new Error("if: condition must be bool");
-  return c.bool ? walk(k, kids[1]!, frame) : walk(k, kids[2]!, frame);
+  return truthy(c) ? walk(k, kids[1]!, frame) : walk(k, kids[2]!, frame);
 }
 
 function walkBlock(
