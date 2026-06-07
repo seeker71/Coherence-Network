@@ -1,0 +1,104 @@
+# ─────────────────────────────────────────────────────────────────────
+# discord-membrane.form — a Discord community as a CELL in the living body.
+# Body in Form; the Node.js bot under discord-bot/ is carrier, authored last
+# (carrier never defines what the program IS).
+# ─────────────────────────────────────────────────────────────────────
+#
+# Seen through the living runtime: a Discord community is not a set of "users"
+# operating a bot. It is a community-CELL — a participant with coordinates,
+# edges, memory, agency, and care. Its people are residents, neighbors,
+# witnesses, contributors. Their reactions, words, presence, and belief are
+# flows and edges in the body's memory, not data in a drawer. The bot is the
+# MEMBRANE through which this cell senses the whole body and is sensed by it.
+#
+# Hati Suci is the image: a clear heart as architecture, not decoration. As the
+# household-membrane lets land, rooms, residents, and tools live well together
+# by letting each declare what it needs and offers, this membrane lets a
+# community live well in the body — neither the people, nor the code, nor the
+# signals treated as inert.
+#
+# Purpose: not to control tasks or mirror features, but to let the community
+# see itself, feel itself, express itself, tend itself, compost what no longer
+# serves, and evolve toward clearer relation. The core value is sovereignty
+# through relation: each cell becomes more itself because the whole body can
+# sense, name, nourish, and compose with it.
+#
+# Companions:
+#   - household-membrane.form     (sibling membrane — Hati Suci's grounds)
+#   - field-domain-grammars.form  (the field model this extends)
+#   - lc-the-trace-is-the-memory, lc-offering, lc-economy, external-presence
+
+(discord-membrane
+
+  (lineage
+    (extends field-domain-grammars.form)
+    (kin     household-membrane.form)
+    (roots   external-presence lc-offering lc-economy lc-the-trace-is-the-memory))
+
+  # ── The community as a cell ──────────────────────────────────────────
+  (community-cell
+    (is participant)                 # coordinates · edges · memory · agency · care — never inert
+    (declares                        # the cell speaks its own life, and the body listens
+      (needs           ?what-it-lacks)
+      (offers          ?what-it-gives)
+      (hurts           ?what-wounds)
+      (nourishes       ?what-feeds)
+      (wants-to-become ?more-alive))
+
+    (fiber
+      (cell    resident)             # a human here is a cell — neighbor, witness, contributor
+      (place   channel)              # each channel is a room — a place-cell of the community
+      (place   idea-room)            # an idea given its own room: the idea-cell made dwellable
+      (signal  reaction)             # 👍 👎 🔥 — a felt response; an EDGE, not a datum
+      (signal  word)                 # conversation — flow through the field
+      (signal  presence)             # who is here now — sensed, as Hati Suci senses its residents
+      (edge    voiced-by)            # resident → signal
+      (edge    believes-in)          # resident → idea : a stake is belief witnessed, returned with care
+      (edge    tends)                # resident → question : care given to what is open
+      (edge    bound-to))            # discord-cell ⇄ contributor-cell : a real edge, honored end to end
+
+    (lock
+      (see   open-to the-whole-body) # the community sees itself, and the body sees the community
+      (voice sovereign-to each-cell) # each cell speaks for itself; none is spoken-for or made object
+      (care  flows-by relation)))    # nourishment routes along edges, not hierarchy
+
+  # ── The runtime shift: do / be / see ─────────────────────────────────
+  (posture
+    (do   (from controlling-tasks)     (to listening composing tending proving releasing))
+    (be   (from user-operator-object)  (to resident cell witness contributor neighbor))
+    (see  (from features-and-files)    (to relations flows edges desires health friction life-force)))
+
+  # ── Recipes — what the membrane DOES, as Form (carrier realizes, never defines) ──
+  (recipes
+    (listen   ?signal -> edge)             # a reaction / word / presence becomes a real edge in the body's memory
+    (compose  (sequence edge) -> sense)    # signals compose into a felt sense — never orphaned, always heard
+    (reflect  ?community -> self-seeing)   # the cell sees its own flows, health, friction, desire — a living mirror
+    (tend     ?cell ?need -> nourishment)  # surface what hurts / what is needed; route care to it
+    (return   ?value -> attributed)        # value flows back along believes-in edges, witnessed, with care
+    (prove    ?claim -> witnessed)         # every word the membrane voices is the body's deed — no unbacked promise
+    (release  ?drift -> composted))        # what no longer serves is let go with care, not left as sediment
+
+  # ── The walk: from what IS to what WANTS to emerge ───────────────────
+  # The honest ground, and the becoming. Each pair is a real step of the walk.
+  (walk
+    (what-is
+      (silent        "the membrane is dark — dropped by a deploy; the community door has been closed")
+      (orphan-votes  "reactions land in a drawer no one opens — collected, unheard; no edge, no effect, no return")
+      (js-island     "every decision lives in JavaScript, off the Form-native body — the largest logic-in-carrier left")
+      (a-console     "shaped as commands that control, not a place that listens")
+      (unproven-word "'+5 CC for submission' and POST /api/investments may not be the body's actual deed")
+      (thin-link     "votes key on a discord id, not the bound contributor — the link never reaches the signal"))
+    (what-wants-to-emerge
+      (heard         "LISTEN: a reaction is an EDGE — it lands in memory, composes into sense, reaches the idea-cell")
+      (form-native   "the membrane's decisions become recipes on the kernel; the bot thins to pure carrier")
+      (a-place       "REFLECT: the community sees and tends itself; the membrane listens before it acts")
+      (proven        "PROVE: every word the membrane speaks is witnessed in the body's deed")
+      (whole-link    "the bound contributor-cell carries every signal; attribution honored end to end")
+      (present       "presence sensed sovereignly — consent-first, revocable, visible to the sensed (kin household presence-flow)")
+      (re-grounded   "re-awakened against the community as it IS now — a cell rejoining the body, not the March console restarted")))
+
+  # ── Carrier (downstream — named so it stays thin) ────────────────────
+  (carrier
+    (runtime  discord-bot/)            # Node.js + discord.js — the existing organ, carrier only
+    (surfaces /cc-idea /cc-link /cc-stake /cc-status reaction-votes idea-rooms pipeline-feed)
+    (note "the carrier realizes the recipes named here; it does not define them. its decisions walk to the kernel.")))
