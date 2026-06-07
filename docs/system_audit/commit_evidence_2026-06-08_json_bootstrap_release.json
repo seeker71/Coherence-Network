@@ -1,0 +1,184 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/json-bootstrap-release-20260608",
+  "commit_scope": "Release JSON parsing from compiler/bootstrap and normal stdlib callers: ontology bindings now materialize from kernel-native bp coordinates, JsonCodec owns route/corpus parse-emission, and parse-json remains only in seedbank compost paths.",
+  "files_owned": [
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "docs/system_audit/commit_evidence_2026-06-08_json_bootstrap_release.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/bmf-grammar.fk",
+    "form/form-stdlib/bml.fk",
+    "form/form-stdlib/channel-query-json.fk",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/i18n.fk",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/channel-query-json-band.fk",
+    "form/form-stdlib/tests/concept-i18n-band.fk",
+    "form/form-stdlib/tests/form-ontology-parity-band.fk",
+    "form/form-stdlib/tests/i18n-extensions-band.fk",
+    "form/form-stdlib/tests/json-grammar.fk",
+    "form/form-stdlib/tests/json-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/nl-emit-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk",
+    "form/form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+    "form/form-stdlib/tests/source-compiler-runtime.fk",
+    "form/validate.sh",
+    "scripts/gen_bp_table.py",
+    "scripts/wellness_check.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/gen_bp_table.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/seedbank/cell-trace.fk form-stdlib/tests/json-grammar.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/seedbank/cell-trace.fk form-stdlib/tests/json-grammar.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/json-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/json-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/form-ontology-parity-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/form-ontology-parity-band.fk",
+      "cd form && ./validate.sh form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk",
+      "cd form && ./validate.sh --binary form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-codec-bml-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-codec-bml-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-promoted-types.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-promoted-types.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/tests/i18n-extensions-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/tests/i18n-extensions-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-stdlib/tests/channel-query-json-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-stdlib/tests/channel-query-json-band.fk",
+      "rg -n \"parse-json|json-emit|json-next-token|json-scan|json-unescape\" form/form-stdlib docs/coherence-substrate/form-stdlib-expression-audit.md",
+      "python3 form/scripts/validate_form_ontology.py",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_json_bootstrap_release.json"
+    ],
+    "results": {
+      "prompt_guide": "passed in the dedicated worktree before edits",
+      "wellness": "passed after edits; public health/shape/witness probes returned 404 so those sections were sensed locally only; wellness still names kernel-native API front-door coverage as the larger open body gap",
+      "bp_table_generation": "bp table already in sync with 709 names, including dialect category names such as PY-BMF-IMPORT, BML-AST-PACKAGE, TS-BMF-IMPORT, GO-BMF-PACKAGE, and RS-BMF-USE",
+      "json_grammar_source": "36; 1 ok, 0 divergent — kernels agree on every sample",
+      "json_grammar_binary": "36; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "json_meaning_source": "1000; 1 ok, 0 divergent — kernels agree on every sample",
+      "json_meaning_binary": "1000; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "ontology_parity_source": "1487; 1 ok, 0 divergent — kernels agree on every sample",
+      "ontology_parity_binary": "1487; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "source_compiler_runtime_source": "0; 1 ok, 0 divergent — kernels agree on every sample",
+      "source_compiler_runtime_binary": "0; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "source_compiler_multi_dialect_source": "0; 1 ok, 0 divergent — kernels agree on every sample",
+      "source_compiler_multi_dialect_binary": "0; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "json_codec_bml_source": "8191; 1 ok, 0 divergent — kernels agree on every sample",
+      "json_codec_bml_binary": "8191; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "json_emitter_source": "15; 1 ok, 0 divergent — kernels agree on every sample",
+      "json_emitter_binary": "15; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "json_promoted_types_source": "115; 1 ok, 0 divergent — kernels agree on every sample",
+      "json_promoted_types_binary": "115; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "i18n_extensions_source": "117; 1 ok, 0 divergent — kernels agree on every sample",
+      "i18n_extensions_binary": "117; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "channel_query_json_source": "4; 1 ok, 0 divergent — kernels agree on every sample",
+      "channel_query_json_binary": "4; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "parse_json_scan": "parse-json/json-emit/json-scan/json-unescape remain only in seedbank compost paths and audit text; live stdlib callers use JsonCodec",
+      "form_ontology_validation": "passed; form ontology matches kernel parsers (Go/Rust/TS)",
+      "blueprint_scan": "passed with known name-drift warning; 188 make_nodeid literals, 111 distinct NodeIDs, 375 registered, 0 unregistered type-99",
+      "diff_check": "passed",
+      "evidence_validation": "passed"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; PR checks pending."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed yet; change is kernel/Form bootstrap and stdlib validation focused."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "CI and deploy validation pending until branch push/PR"
+    ]
+  },
+  "idea_ids": [
+    "idea:form-native-front-door"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler",
+    "spec:form-stdlib-expression"
+  ],
+  "task_ids": [
+    "task:release-json-bootstrap-parser"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/json-codec.fk",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/tests/json-grammar.fk",
+    "form/form-stdlib/tests/json-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/form-ontology-parity-band.fk",
+    "docs/coherence-substrate/form-stdlib-expression-audit.md"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/bmf-grammar.fk",
+    "form/form-stdlib/bml.fk",
+    "form/form-stdlib/channel-query-json.fk",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/i18n.fk",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/channel-query-json-band.fk",
+    "form/form-stdlib/tests/concept-i18n-band.fk",
+    "form/form-stdlib/tests/form-ontology-parity-band.fk",
+    "form/form-stdlib/tests/i18n-extensions-band.fk",
+    "form/form-stdlib/tests/json-grammar.fk",
+    "form/form-stdlib/tests/json-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/nl-emit-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk",
+    "form/form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+    "form/form-stdlib/tests/source-compiler-runtime.fk",
+    "form/validate.sh",
+    "scripts/gen_bp_table.py",
+    "scripts/wellness_check.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Compiler/bootstrap no longer parses ontology JSON at runtime, normal JSON parse/emit callers use the BML JsonCodec surface, and old parse-json/json-emit code is confined to seedbank compost paths.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/json-grammar.fk",
+      "form://form-stdlib/tests/json-meaning-ingestion-band.fk",
+      "form://form-stdlib/tests/form-ontology-parity-band.fk"
+    ],
+    "test_flows": [
+      "Run source and binary validate.sh bands for JsonCodec parse/emit, JSON grammar attribution, JSON meaning ingestion, source compiler runtime, multi-dialect source compile, i18n, channel-query JSON projection, and ontology parity.",
+      "Scan for parse-json/json-emit/json-scan/json-unescape and verify remaining references are seedbank compost or audit text."
+    ]
+  }
+}

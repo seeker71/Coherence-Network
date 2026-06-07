@@ -1,6 +1,6 @@
 ; channel-query-json.fk — JSON wire-bridge for the channel-query vocabulary.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/channel-query.fk form-stdlib/sha256.fk
+; preludes: form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/channel-query.fk form-stdlib/sha256.fk
 ;
 ; The frame:
 ;   A QUERY/RESPONSE Recipe (channel-query.fk) is a substrate-resident

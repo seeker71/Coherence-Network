@@ -710,9 +710,9 @@ def sense_form_ontology() -> list[str]:
 
     `form/form-stdlib/form-ontology.json` holds the canonical (name,
     type, inst) rows for parser-special-form primitives (add/gt/and/...)
-    and composite shapes (do/let/if/fndef/...). The Form-side bindings
-    are materialised at load time by form-stdlib/form-ontology-loader.fk
-    (reading the JSON via parse-json from form-stdlib/json.fk). Each
+    and composite shapes (do/let/if/fndef/...). The generated kernel
+    `bp` table carries those coordinates, and form-stdlib/form-ontology-loader.fk
+    materialises the Form-side bindings from that native table. Each
     kernel (Go/Rust/TS) has its own switch table in parseSexp/buildVerb.
     If a primitive is added to one but not the other, every test that
     doesn't happen to exercise it stays silent through the drift.

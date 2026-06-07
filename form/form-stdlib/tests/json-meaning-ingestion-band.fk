@@ -1,6 +1,6 @@
 ; json-meaning-ingestion-band.fk - JSON file decoded into queryable Form nodes.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/grammars/json.fk
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk
 
 section [form.action] {
     let repo_root = form-capsule-root(83, 1, 9, 2);
@@ -20,7 +20,7 @@ section [form.action] {
     def score_node(value, want, score) = if node_eq(value, want) then score else 0;
 
     let text = read_file("form-samples/demo-config.json");
-    let ast = parse-json("form/form-samples/demo-config.json", text);
+    let ast = json_parse_body("form/form-samples/demo-config.json", text);
     let meaning = fsc-repo-meaning(json_decoder, list(fsc-repo-field-node(ast_field, ast), fsc-repo-field-int(size_field, str_len(text))));
     let doc = fsc-repo-text-document(json_kind, text, meaning);
     let file = fsc-repo-file-from-text("form/form-samples/demo-config.json", json_kind, "application/json", text, doc);
