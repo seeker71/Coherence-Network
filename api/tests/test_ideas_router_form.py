@@ -76,7 +76,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
     assert "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable" in text
-    assert "mutable DB-backed portfolio routes still enter through FastAPI" in text
+    assert "graph-node-port.fk now exposes native get/list/count shape" in text
+    assert "mutable DB-backed portfolio routes still enter through FastAPI until schema projection lands" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():

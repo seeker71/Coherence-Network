@@ -5,9 +5,9 @@ source:
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [idea_route_shape, idea_route_recipe_shape, ideas_router_structure, browse_ideas_recipe, sense_governance_recipe, choose_next_idea_recipe, mutate_idea_recipe, question_answer_recipe, link_idea_recipe, translate_idea_recipe, invest_in_idea_recipe, rollup_super_idea_recipe, inspect_idea_recipe]
   - file: deploy/kernel-router/production-routes.fk
-    symbols: [route_ideas_router_structure, route_ideas_source_index]
+    symbols: []
   - file: Dockerfile.kernel-router
-    symbols: [ideas]
+    symbols: []
   - file: scripts/runtime_surface_report.py
     symbols: [kernel_first_capable_routes]
   - file: api/app/routers/ideas.py
@@ -95,10 +95,10 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1: `/api/ideas/router-structure` and `/api/ideas/source-index` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until graph-node storage is exposed through a Form carrier.
-- Follow-up: lift one graph-node-backed ideas read route after the graph-node registry is exposed through the Form storage/substrate carrier.
+- GAP-I1: `/api/ideas/router-structure` and `/api/ideas/source-index` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until a graph-node Form read route projects the new `graph-node-port.fk` carrier into the existing API schema.
+- Follow-up: lift one graph-node-backed ideas read route on top of `form/form-stdlib/graph-node-port.fk`.
 
 ## Risks and Assumptions
 
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
-- A later native route lift can consume this route recipe once graph-node ideas carriers are ready.
+- A later native route lift can consume this route recipe now that the graph-node read carrier shape exists; schema projection remains the next boundary.
