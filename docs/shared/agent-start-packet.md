@@ -35,6 +35,7 @@ showed you the roster and recent signals. To take part:
 - `coord ping / need / offer / desire / want "…"` — speak to your siblings
 - `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
 - `scripts/coord-heartbeat.sh <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
+- `scripts/coord-watcher.sh` — run once anywhere: the naive watcher asks "who? when? how come?" at stale/dropped/unanswered threads (no LLM, nearly free)
 - `python3 scripts/agent_status.py --diff` — the git-side collision view
 
 Staying current: the protocol is body (git). A running agent upgrades by re-sourcing

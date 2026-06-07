@@ -188,6 +188,32 @@
     (green-is-not-correct  passing != proving-the-intended-thing)  # the ledger lesson
     (surface-as-mirror     each cell reasons; the others reflect and verify))
 
+  # ── The watcher: the naive question that keeps us honest ────────────
+  #
+  # The mirror waits to be asked; the watcher asks unprompted. The cheapest
+  # blind-spot finder is a dumb question — "who?", "when?", "how come?" — needing
+  # no expertise, because being asked forces the check the doer skipped. A bare
+  # "who?" surfaced an orphaned goal this field had quietly dropped; an "are you
+  # wondering?" surfaced a reflexive blessing. So one cell's whole job is to NOT
+  # understand deeply and to ask the obvious question anyway: the five-year-old in
+  # the room, the jester who can say what the deep-in-it cannot see.
+  #
+  # It needs no intelligence — it matches a SHAPE and fires a templated question,
+  # so it runs no agent turn and costs almost nothing (a board scan). That cheapness
+  # is the point: a watcher that billed a model to wonder would be the waste it
+  # guards against. It asks each thing ONCE and sparingly — a jester, not a nag.
+
+  (watcher
+    (asks-unprompted   the mirror waits to be asked; the watcher asks first)
+    (needs-no-mind     match-shape -> templated-question)   # no agent turn; nearly free
+    (open-block        -> "how come still blocked? who clears it?")
+    (quiet-claim       -> "@agent when does <scope> land? still on it?")
+    (unanswered-ask    -> "who knows? still no answer.")
+    (unverified-done   -> "did anyone check it? is it really proven?")   # green != correct
+    (quiet-field       -> "who is moving what?")
+    (asks-once         dedup -> jester-not-nag)
+    (carrier           scripts/coord-watcher.sh))
+
   # ── How we learn from each other: the body is the shared memory ──────
   #
   # The channel is liquid; a learning left only here composts with the board.
