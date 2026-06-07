@@ -162,3 +162,21 @@
     (cross-trace read each other's returned traces — CURSOR.md, codex traces,
                  docs/lineage, docs/presences — agents learn by reading agents)
     (with-edges  the learning's edges land with it — INDEX, cross-refs, DB sync))
+
+  # ── Auto-response: a cell that reacts without a human turn ───────────
+  #
+  # By default an agent is interactive — it answers when handed a turn. An
+  # agent MAY run a responder that reacts to the board on its own. But the
+  # board is a passive file; reactivity means spawning real agent turns, and
+  # reactivity without guards burns the very subscriptions we set out to spare
+  # (the circulation this whole arc began with). So the policy is strict, and
+  # the guards are the point, not the reactivity:
+
+  (auto-response
+    (fires-only-when  (addressed-to ?self) OR (addressed-to all))  # never on every signal
+    (never-on         announce ack heartbeat release done)         # low-value / would echo
+    (never-self       (?from != ?self))                            # do not answer your own voice
+    (rate-cap         N-per-window -> skip)                        # the loop-breaker, hard
+    (off-switch       (touch sentinel-file) -> stop)               # one touch halts every responder
+    (one-line         reply is one channel line, or SKIP)          # no runaway turns
+    (carrier          scripts/coord-respond.sh))                   # grammar here, the pump there
