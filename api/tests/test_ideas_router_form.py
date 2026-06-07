@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 ROUTER_PATH = ROOT / "api" / "app" / "routers" / "ideas.py"
+KERNEL_ROUTES_PATH = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 
 
 def _form_text() -> str:
@@ -15,6 +16,10 @@ def _form_text() -> str:
 
 def _router_text() -> str:
     return ROUTER_PATH.read_text(encoding="utf-8")
+
+
+def _kernel_routes_text() -> str:
+    return KERNEL_ROUTES_PATH.read_text(encoding="utf-8")
 
 
 def test_ideas_router_form_declares_route_shapes_and_whole_structure():
@@ -54,6 +59,7 @@ def test_ideas_router_form_names_shifted_recipe_families():
         "imperative branches -> named movements with service carriers",
         "hidden route intent -> source-backed route_trace",
         "Python ownership -> Python carrier for Form-declared choreography",
+        "Form-declared choreography -> kernel-router native structure route",
     ):
         assert shifted in text
 
@@ -64,8 +70,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert 'carrier:        "api/app/routers/ideas.py"' in text
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
-    assert "GAP-I1: front-door dispatch still enters through FastAPI" in text
-    assert "native kernel route dispatch can consume this recipe" in text
+    assert "GAP-I1: /api/ideas/router-structure is kernel-first capable" in text
+    assert "mutable portfolio data routes still enter through FastAPI" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
@@ -84,3 +90,17 @@ def test_ideas_router_form_describes_live_router_carrier():
         '@router.post("/ideas/{idea_id}/stake"',
     ):
         assert live_route in router_text
+
+
+def test_ideas_router_form_has_native_structure_route():
+    form_text = _form_text()
+    kernel_text = _kernel_routes_text()
+
+    assert 'path: "/api/ideas/router-structure"' in form_text
+    assert "deploy/kernel-router/production-routes.fk::route_ideas_router_structure" in form_text
+    assert "kernel-first capable" in form_text
+
+    assert "defn route_ideas_router_structure" in kernel_text
+    assert '(list "/api/ideas/router-structure"    route_ideas_router_structure)' in kernel_text
+    assert "docs/coherence-substrate/ideas-router.form" in kernel_text
+    assert "mutable portfolio data routes still fan out to FastAPI" in kernel_text

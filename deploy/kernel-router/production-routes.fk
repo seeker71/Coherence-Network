@@ -34,6 +34,7 @@
 ;   /api/utils/idea_grounding_summary  int grounding signals over two parallel CSV
 ;                                       scalar-lists (422 on len mismatch)
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
+;   /api/ideas/router-structure       Form-native ideas route structure reading
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -54,6 +55,7 @@
 ;
 ;   curl ':PORT/api/utils/coherence_weight'              -> live-api JSON, byte-identical
 ;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
+;   curl ':PORT/api/ideas/router-structure'              -> native Form route reading
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1489,6 +1491,27 @@
             "}"))))))))))))))))))))))))
 
 ; ===========================================================================
+; /api/ideas/router-structure
+;   native structure route for the high-level ideas router Form expression.
+;   This is the first ideas-family row that the kernel-router can dispatch
+;   without CPython. It does NOT claim the mutable portfolio data routes have
+;   moved yet; those remain fan-out until their storage-backed recipes lift.
+; ===========================================================================
+
+(defn route_ideas_router_structure (q)
+  (str_concat_all (list
+    "{\"source\":\"docs/coherence-substrate/ideas-router.form\""
+    ",\"route_source\":\"api/app/routers/ideas.py\""
+    ",\"north_star\":\"Ideas move from promise to real contribution through evidence, relation, value flow, and closure.\""
+    ",\"native_path\":\"/api/ideas/router-structure\""
+    ",\"families\":[\"browse\",\"sense\",\"choose\",\"mutate\",\"question-answer\",\"link\",\"translate\",\"invest\",\"rollup\",\"inspect\"]"
+    ",\"shifted\":[\"endpoint list -> recipe family lattice\",\"Python carrier -> Form-declared choreography\",\"Form declaration -> kernel-router native structure route\"]"
+    ",\"carrier_boundary\":\"mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift\""
+    ",\"runtime\":\"inline\"}")))
+
+(defn route_health (q) "ok")
+
+; ===========================================================================
 ; Source-language route class surface lowered to KernelHTTPRoute.
 ; ===========================================================================
 section [form.route] {
@@ -1545,4 +1568,6 @@ section [form.route] {
     (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
     (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
-    (list "/api/utils/concept_match_score"     route_concept_match_score)))
+    (list "/api/utils/concept_match_score"     route_concept_match_score)
+    (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
+    (list "/api/ideas/router-structure"    route_ideas_router_structure)))

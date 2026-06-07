@@ -110,3 +110,14 @@ def test_web_lib_changes_are_runtime_evidence() -> None:
     errors = mod.validate(_record(changed_files, "test_only"), changed_files=changed_files)
 
     assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
+
+
+def test_kernel_router_manifest_changes_are_runtime_evidence() -> None:
+    mod = _load_validator()
+    changed_files = ["deploy/kernel-router/production-routes.fk"]
+
+    assert mod.validate(_record(changed_files, "runtime_feature"), changed_files=changed_files) == []
+
+    errors = mod.validate(_record(changed_files, "process_only"), changed_files=changed_files)
+
+    assert "runtime files changed but change_intent is not runtime_feature/runtime_fix" in errors
