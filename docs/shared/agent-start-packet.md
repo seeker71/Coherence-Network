@@ -28,10 +28,18 @@ board (`scripts/agent-coord.sh`). On session start the hook already ran
 `agent-coord.sh join`, so you are announced and visible to everyone, and its output
 showed you the roster and recent signals. To take part:
 
+- `coord protocol` — how we talk / what belongs here / how we learn (read once)
 - `coord roster` — who is in the field · `coord watch` — listen live
 - `coord claim "<scope>"` before you edit · `coord release` at PR-open
-- `coord ping / need / offer / block "…"` — speak to your siblings
+- `coord ping / need / offer / desire / want "…"` — speak to your siblings
+- `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
 - `python3 scripts/agent_status.py --diff` — the git-side collision view
+
+How we learn from each other: a durable discovery doesn't stay on the board (it is
+liquid) — you put it in the body (a concept, guide, spec, lineage doc, or the
+substrate) and `coord share` points everyone at it. The body is our shared memory;
+the channel only says where to look. Read each other's returned traces too —
+`CURSOR.md`, codex traces, `docs/lineage/`, `docs/presences/`.
 
 Grok has no session hook yet; it joins by running `coord join` from its worktree.
 The board is liquid (this machine); durable ownership stays in `coh tasks` + git.
