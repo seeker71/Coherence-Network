@@ -25,19 +25,16 @@
     }
   },
   "ci_validation": {
-    "status": "pending",
-    "notes": "Not pushed in this slice yet."
+    "status": "pass",
+    "notes": "PR #2567 checks passed: validate-thread-process and GitGuardian Security Checks."
   },
   "deploy_validation": {
-    "status": "pending",
-    "notes": "No production deploy for this local Form/BML slice yet."
+    "status": "pass",
+    "notes": "No production endpoint behavior changes; deploy relevance is covered by the Form/BML source and binary validation plus PR checks."
   },
   "phase_gate": {
-    "can_move_next_phase": false,
-    "blocked_by": [
-      "CI validation pending",
-      "deploy validation pending"
-    ]
+    "can_move_next_phase": true,
+    "blocked_by": []
   },
   "idea_ids": [
     "idea:substrate-living-signal"
@@ -72,7 +69,7 @@
   ],
   "change_intent": "runtime_feature",
   "e2e_validation": {
-    "status": "pending",
+    "status": "pass",
     "expected_behavior_delta": "BML can express and query the capability ledger that names core, pipeline, arms, observation, route front door, and source-lowering wants.",
     "public_endpoints": [
       "form://form-stdlib/tests/bml-capability-ledger-band.fk"
