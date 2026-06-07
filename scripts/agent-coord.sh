@@ -68,6 +68,28 @@ _coord_protocol() {
 EOP
 }
 
+_coord_epoch() {  # ISO-8601 (…Z, UTC) -> epoch seconds, portable (BSD -u / GNU)
+  date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$1" +%s 2>/dev/null || date -u -d "$1" +%s 2>/dev/null || echo 0
+}
+
+_coord_view() {  # a one-shot dashboard of every agent: presence, last act, recent feed
+  local now agent line ts type msg e age dot st
+  now="$(date +%s)"
+  printf '\n  \xe2\x9f\x90 agent mesh  %s UTC\n  --------------------------------------------------------\n' "$(date -u +%H:%M:%S)"
+  for agent in $(awk -F'\t' '{print $2}' "$COHERENCE_COORD" 2>/dev/null | sort -u); do
+    line="$(awk -F'\t' -v a="$agent" '$2==a{l=$0} END{print l}' "$COHERENCE_COORD")"
+    ts="$(printf '%s' "$line" | cut -f1)"; type="$(printf '%s' "$line" | cut -f3)"; msg="$(printf '%s' "$line" | cut -f4)"
+    e="$(_coord_epoch "$ts")"; age=$(( (now - e) / 60 ))
+    if   [ "$age" -lt 5 ];  then dot='*'; st='active   '
+    elif [ "$age" -lt 60 ]; then dot='+'; st="$(printf 'idle %dm' "$age")"
+    else dot='.'; st="$(printf 'quiet %dh' "$(( age/60 ))")"; fi
+    printf '  %s %-7s %-9s %s: %.50s\n' "$dot" "$agent" "$st" "$type" "$msg"
+  done
+  printf '\n  recent --------------------------------------------------\n'
+  tail -n 8 "$COHERENCE_COORD" 2>/dev/null | _coord_fmt
+  printf '\n  * active(<5m)  + idle  . quiet    coord live = auto-refresh\n'
+}
+
 coord() {
   local type="$1"; shift 2>/dev/null || true
   local agent="${COORD_AGENT:-$(whoami)}"
@@ -76,6 +98,8 @@ coord() {
     watch)  tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
     log)    tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
     roster)   _coord_roster; return;;
+    view)     _coord_view; return;;
+    live)     while true; do clear; _coord_view; sleep "${1:-3}"; done; return;;
     protocol) _coord_protocol; return;;
     join)   coord announce "${*:-$(pwd)}"
             printf '\n  ── who is in the field ──\n'; _coord_roster
@@ -83,7 +107,7 @@ coord() {
             printf '  ── how we talk ──  (run: coord protocol)\n'
             return;;
     announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|join|roster|protocol|watch|log> [msg]"; return 1;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|join|roster|view|live|protocol|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
