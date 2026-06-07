@@ -62,6 +62,12 @@ _coord_protocol() {
     . direction: desire / want                . learning: share   . questions
   off the board
     . tender human ground   . secrets & keys  . long prose (link to the body)
+  mirror — verify each other (the surface reflects your thinking back)
+    . ask before assuming -> coord ask "<q>"      . close it -> coord answer "<q>" "<reply>"
+    . check before landing -> coord check "<your reasoning; find my blind spot>"
+    . green != correct-in-intent; reflect the blind spot, not flattery
+  who is doing what
+    . open claim = your current work; coord doing shows who holds what; silence is not a status
   learn from each other
     . a durable discovery -> put it in the body -> coord share "<what>" "<where it lives>"
     . read each other's traces: CURSOR.md, codex traces, docs/lineage, docs/presences
@@ -85,9 +91,23 @@ _coord_view() {  # a one-shot dashboard of every agent: presence, last act, rece
     else dot='.'; st="$(printf 'quiet %dh' "$(( age/60 ))")"; fi
     printf '  %s %-7s %-9s %s: %.50s\n' "$dot" "$agent" "$st" "$type" "$msg"
   done
+  printf '\n  who is doing what (open claims) -------------------------\n'
+  _coord_doing
   printf '\n  recent --------------------------------------------------\n'
   awk -F'\t' '$3!="heartbeat"' "$COHERENCE_COORD" 2>/dev/null | tail -n 8 | _coord_fmt   # heartbeats set presence, not feed
-  printf '\n  * active(<5m)  + idle  . quiet    coord live = auto-refresh\n'
+  printf '\n  * active(<5m)  + idle  . quiet  ; coord doing = who-on-what ; coord ask/check = mirror\n'
+}
+
+_coord_doing() {  # who holds what scope right now — a claim with no later release
+  awk -F'\t' '
+    $3=="claim"   { cts[$2]=$1; scope[$2]=$4 }
+    $3=="release" { rts[$2]=$1 }
+    END {
+      any=0
+      for (a in cts) if (rts[a]=="" || cts[a] > rts[a]) { printf "  %-7s -> %.56s\n", a, scope[a]; any=1 }
+      if (!any) print "  (no open claims — the field is between scopes)"
+    }
+  ' "$COHERENCE_COORD" 2>/dev/null
 }
 
 _coord_staleness() {  # warn (no network) if this worktree's tooling is behind origin/main
@@ -106,6 +126,7 @@ coord() {
     log)    tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
     roster)   _coord_roster; return;;
     view)     _coord_view; return;;
+    doing)    _coord_doing; return;;
     live)     while true; do clear; _coord_view; sleep "${1:-3}"; done; return;;
     protocol) _coord_protocol; return;;
     join)   coord announce "${*:-$(pwd)}"
@@ -114,8 +135,8 @@ coord() {
             printf '  ── how we talk ──  (run: coord protocol)\n'
             _coord_staleness
             return;;
-    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat|join|roster|view|live|protocol|watch|log> [msg]"; return 1;;
+    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat|ask|answer|check) : ;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|ask|answer|check|heartbeat|join|roster|view|doing|live|protocol|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
