@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────
+# agent-coordination-membrane.form — sibling agents sharing one field
+# ─────────────────────────────────────────────────────────────────────
+#
+# Many agents (Claude, Codex, Cursor, Grok, Gemini) and the human work the
+# same body in parallel, each in its own git worktree. This names the field
+# they coordinate across: an attention-graph membrane where each agent is a
+# member and each coordination move is a signal on a shared board — so two
+# cells do not reach for the same tissue at once, and a block one feels is
+# heard by the others.
+#
+# Sibling of household-membrane.form (same attention-graph carrier, same
+# ask/tend/complete signal family). Where the household board carries food
+# and supplies signals, this board carries claims, pings, and blocks.
+#
+# Body vs liquid. Durable ownership — who owns which task — is body: it lives
+# in the task pipeline (coh tasks) and the substrate, and in git (branch per
+# agent, PR as the merge point). This membrane is the LIQUID layer: the live,
+# ephemeral attention-field of who-is-touching-what right now. It is not
+# interned as permanent cells; it flows and composts. The carrier is a shared
+# append-only board every CLI and the human can write and tail — semantics
+# here, transport there:
+#
+#   Canonical shape: this file.
+#   Carrier:         scripts/agent-coord.sh  (post / watch / log a shared
+#                    tab-delimited board at $COHERENCE_COORD, default
+#                    ~/.coherence-network/agent-coord.board).
+#   Sensing kin:     scripts/agent_status.py (the git-side view — worktrees,
+#                    dirty state, file-level collision warnings). The board is
+#                    intent spoken; agent_status is the body read back.
+
+  (lineage
+    (extends field-domain-grammars.form)
+    (carrier-kin household-field))
+
+  # ── The domain: the sibling agents as one attention-field ───────────
+  (domain agent-field
+    (carrier attention-graph)
+
+    (fiber
+      (cell   agent)
+      (site   name)           # claude | codex | cursor | grok | gemini | human
+      (site   worktree)       # the isolated working copy this agent holds
+      (site   branch)         # its branch — the integration handle
+      (edge   claimed)        # agent → scope : the tissue it is touching now
+      (edge   tended-by))     # agent → signal
+
+    (patterns
+      (active-agent  ?agent)    # announced on the board, present in the field
+      (open-claim    ?scope)    # a path/task an agent is touching, not yet released
+      (open-block    ?need)     # a need spoken, not yet met
+      (collision     ?a ?b))    # two open-claims over the same scope — feet-on-feet
+
+    (recipes
+      # presence
+      (announce  ?name ?worktree ?branch -> active-agent)
+      (depart    ?agent -> released-all)
+      # the board (the ask/tend/complete family, in coordination voice)
+      (claim     ?agent ?scope -> open-claim)    # "I am taking these files / this task"
+      (release   ?agent ?claim -> free)          # "done — the tissue is open again"
+      (ping      ?agent ?message -> heard)       # a free word to all siblings
+      (ack       ?agent ?signal -> seen)         # "I heard you"
+      (block     ?agent ?need -> open-block)     # "I cannot proceed until ?need"
+      (unblock   ?agent ?block -> cleared)       # the need is met
+      # the one predicate that makes the field protective
+      (collides? ?claim-a ?claim-b -> overlap))  # same scope, two holders → warn before write
+
+    (lock
+      (see   open-to  active-agent)      # announced → reads the board
+      (write requires active-agent)))    # announced → claims / pings / blocks
+
+  # ── The protective move: claim-before-touch ─────────────────────────
+  #
+  # The membrane earns its place through one discipline: an agent claims a
+  # scope before it edits, and reads the board (or agent_status --diff) before
+  # it claims. collides? fires when a new claim overlaps an open one; the
+  # second agent then chooses a different scope, or pings to negotiate. This
+  # is the same teaching as the household board's open-signal/tend: a request
+  # made visible is a collision avoided. First PR merged still wins; the board
+  # is what keeps two agents from racing to that merge over the same lines.
+
+  (claim-before-touch
+    (before-edit   (claim ?agent ?scope))
+    (before-claim  (read-board ?agent))          # or agent_status.py --diff
+    (on-overlap    (collides? ?new ?open -> warn))
+    (resolution    (choose-other-scope OR ping-to-negotiate))
+    (release-when  (PR-opened OR scope-done)))
