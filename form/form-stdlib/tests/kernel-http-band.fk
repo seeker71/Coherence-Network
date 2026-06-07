@@ -2,7 +2,7 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
 ;
-; Band verdict: 66690 when constructors/accessors, validation, pressure
+; Band verdict: 132226 when constructors/accessors, validation, pressure
 ; matrices, route candidates, and highest-score selection all agree.
 
 section [form.bml] {
@@ -38,6 +38,7 @@ section [form.bml] {
             kh-bool-score(if kh-route-candidate-valid?(stale_candidate) then false else true, 8192),
             kh-bool-score(kh-field-present?(kh-request-query(request), "limit"), 16384),
             kh-bool-score(str_eq(kh-field-value(head(kh-request-query(request))), "20"), 32768),
+            kh-bool-score(str_eq(kh-header-value-or(kh-request-headers(request), "Accept", ""), "application/json"), 65536),
             kh-route-candidate-score(selected),
             kh-route-candidate-pressure(tail_candidate)
         ));
