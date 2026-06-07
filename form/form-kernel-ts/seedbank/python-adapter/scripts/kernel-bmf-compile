@@ -50,6 +50,10 @@ PRELUDES=(
     "form-stdlib/json.fk"
     "form-stdlib/cache.fk"
     "form-stdlib/form-ontology-loader.fk"
+    "form-stdlib/line-grammar.fk"
+    "form-stdlib/bmf-core.fk"
+    "form-stdlib/bmf-grammar.fk"
+    "form-stdlib/bml.fk"
     "form-stdlib/engine.fk"
     "form-stdlib/compiler.fk"
     "form-stdlib/source-compiler.fk"
@@ -76,6 +80,8 @@ for src in "${PRELUDES[@]}"; do
         "$GO_BIN" \
             "form-stdlib/json.fk" "form-stdlib/cache.fk" \
             "form-stdlib/form-ontology-loader.fk" \
+            "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" \
+            "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" \
             "form-stdlib/source-compiler.fk" \
             "$driver" >/dev/null
         prepared+=("$out")
