@@ -20,14 +20,14 @@
 
 section [form.bml] {
 
-    ;; a kh-request's query (a kh-field list) -> the (name value) alist the proven
-    ;; handlers read through param_or / assoc. One pair per field; names and
-    ;; values are carried through, never literals here.
+    // a kh-request's query (a kh-field list) -> the (name value) alist the proven
+    // handlers read through param_or / assoc. One pair per field; names and
+    // values are carried through, never literals here.
     def kh-fields-as-pairs(fields) = if nil?(fields) then list() else cons(list(kh-field-name(head(fields)), kh-field-value(head(fields))), kh-fields-as-pairs(tail(fields)));
     def kh-request-as-alist(request) = kh-fields-as-pairs(kh-request-query(request));
 
-    ;; wrap a handler's JSON-string body in a 200 application/json kh-response.
-    ;; The handler returns the exact CPython JSON text; this only frames it.
+    // wrap a handler's JSON-string body in a 200 application/json kh-response.
+    // The handler returns the exact CPython JSON text; this only frames it.
     def kh-ok-json(body) = kh-response(200, list(kh-header("Content-Type", "application/json")), body);
 
     0;

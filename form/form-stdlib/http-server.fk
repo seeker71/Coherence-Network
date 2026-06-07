@@ -24,57 +24,57 @@
 
 section [form.bml] {
 
-    ;; ---- the match decision : did a real route win? -----------------
-    ;; The Router always returns a best candidate, even a poor one. A real match
-    ;; is one whose PATH pressure is below the miss score (500): 0 for an exact
-    ;; path, 25 for a wildcard prefix. We read the path row from the candidate's
-    ;; pressure matrix by AXIS, not by position, so the check holds if the matrix
-    ;; order ever changes — the axis name is the contract, the slot is not.
+    // ---- the match decision : did a real route win? -----------------
+    // The Router always returns a best candidate, even a poor one. A real match
+    // is one whose PATH pressure is below the miss score (500): 0 for an exact
+    // path, 25 for a wildcard prefix. We read the path row from the candidate's
+    // pressure matrix by AXIS, not by position, so the check holds if the matrix
+    // order ever changes — the axis name is the contract, the slot is not.
     def kh-matrix-pressure-for(matrix, axis) = if nil?(matrix) then 500 else if str_eq(kh-pressure-row-axis(head(matrix)), axis) then kh-pressure-row-pressure(head(matrix)) else kh-matrix-pressure-for(tail(matrix), axis);
     def kh-candidate-matched?(candidate) = if nil?(candidate) then false else lt(kh-matrix-pressure-for(kh-route-candidate-matrix(candidate), "path"), 500);
 
-    ;; ---- the handler registry : (name, handler) pairs ---------------
-    ;; Look up a handler closure by the name its route carries. The registry is
-    ;; DATA — a list of (name, closure) pairs — and the lookup walks it
-    ;; generically. Returns the handler WRAPPED in a one-element list when found,
-    ;; empty when not, so the caller tests presence by LENGTH: nil? cannot tell a
-    ;; closure from empty (a closure reads as length 0), but a one-element
-    ;; wrapper has length 1 no matter what it holds. A route naming a handler the
-    ;; registry does not hold is a wiring gap the caller surfaces as 500.
+    // ---- the handler registry : (name, handler) pairs ---------------
+    // Look up a handler closure by the name its route carries. The registry is
+    // DATA — a list of (name, closure) pairs — and the lookup walks it
+    // generically. Returns the handler WRAPPED in a one-element list when found,
+    // empty when not, so the caller tests presence by LENGTH: nil? cannot tell a
+    // closure from empty (a closure reads as length 0), but a one-element
+    // wrapper has length 1 no matter what it holds. A route naming a handler the
+    // registry does not hold is a wiring gap the caller surfaces as 500.
     def kh-handler-of(registry, name) = if nil?(registry) then empty else if str_eq(nth(head(registry), 0), name) then list(nth(head(registry), 1)) else kh-handler-of(tail(registry), name);
 
-    ;; ---- the Server's own framing responses -------------------------
-    ;; When no handler runs, the Server still answers honestly: 404 when no route
-    ;; matched (the path is named so the caller sees what missed), 500 when a
-    ;; route matched but its handler is not registered (a wiring gap, not the
-    ;; client's fault — named so the gap is visible).
+    // ---- the Server's own framing responses -------------------------
+    // When no handler runs, the Server still answers honestly: 404 when no route
+    // matched (the path is named so the caller sees what missed), 500 when a
+    // route matched but its handler is not registered (a wiring gap, not the
+    // client's fault — named so the gap is visible).
     def kh-not-found(request) = kh-response(404, list(), str_concat("no route for ", kh-request-path(request)));
     def kh-no-handler(name) = kh-response(500, list(), str_concat("no handler registered for ", name));
 
-    ;; ---- dispatch : a matched candidate -> the handler's kh-response -
-    ;; Resolve the handler from the route's name; if registered (the wrapper is
-    ;; non-empty), invoke it on the request; else the 500 wiring-gap response.
-    ;; The handler never sees routing — it receives a kh-request and returns a
-    ;; kh-response, nothing more.
+    // ---- dispatch : a matched candidate -> the handler's kh-response -
+    // Resolve the handler from the route's name; if registered (the wrapper is
+    // non-empty), invoke it on the request; else the 500 wiring-gap response.
+    // The handler never sees routing — it receives a kh-request and returns a
+    // kh-response, nothing more.
     def kh-dispatch(registry, candidate, request) {
         let name = kh-route-handler(kh-route-candidate-route(candidate));
         let found = kh-handler-of(registry, name);
         if eq(len(found), 0) then kh-no-handler(name) else kh-invoke-found(found, request);
     }
 
-    ;; invoke the found handler on the request. Bound to a name first because
-    ;; Form calls in verb position — ((head found) request) does not parse, but a
-    ;; named closure does. `found` is non-empty here (the caller checked length).
+    // invoke the found handler on the request. Bound to a name first because
+    // Form calls in verb position — ((head found) request) does not parse, but a
+    // named closure does. `found` is non-empty here (the caller checked length).
     def kh-invoke-found(found, request) {
         let handler = head(found);
         handler(request);
     }
 
-    ;; ---- the Server : raw request -> wire response ------------------
-    ;; One flow, every shape and size: parse the bytes into a kh-request, let the
-    ;; Router score the routes, dispatch to the matched handler (or 404), render
-    ;; the kh-response to the wire. The whole front door — bytes in, bytes out,
-    ;; every decision a value you can name and trace.
+    // ---- the Server : raw request -> wire response ------------------
+    // One flow, every shape and size: parse the bytes into a kh-request, let the
+    // Router score the routes, dispatch to the matched handler (or 404), render
+    // the kh-response to the wire. The whole front door — bytes in, bytes out,
+    // every decision a value you can name and trace.
     def kh-serve(routes, registry, raw) {
         let request = kh-request-from-raw(raw);
         let candidate = kh-select-route-candidate-for-request(routes, request);

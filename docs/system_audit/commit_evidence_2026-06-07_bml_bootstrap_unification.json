@@ -9,6 +9,11 @@
     "form/form-samples/cross-modal/28-distributed-daemon/orchestrate.sh",
     "form/form-stdlib/bmf-grammar.fk",
     "form/form-stdlib/bml.fk",
+    "form/form-stdlib/http-adapter.fk",
+    "form/form-stdlib/http-render.fk",
+    "form/form-stdlib/http-request.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/http-socket.fk",
     "form/form-stdlib/line-grammar.fk",
     "form/form-stdlib/source-compiler.fk",
     "form/form-stdlib/tests/channel-bml-band.fk",
@@ -81,7 +86,8 @@
   },
   "evidence_refs": [
     "form/form-stdlib/source-compiler.fk routes fsc-compile-section-recipe directly through g-parse over bml-grammar.",
-    "form/form-stdlib/bml.fk handles ident categories, boolean literals, integers via splice-int, and subtraction negation correctly."
+    "form/form-stdlib/bml.fk handles ident categories, boolean literals, integers via splice-int, and subtraction negation correctly.",
+    "form/form-stdlib/http-request.fk, http-render.fk, http-server.fk, http-socket.fk, and http-adapter.fk BML section comments converted to C-style // so they parse correctly with bml-grammar."
   ],
   "change_files": [
     "form/form-kernel-rust/src/main.rs",
@@ -90,6 +96,11 @@
     "form/form-samples/cross-modal/28-distributed-daemon/orchestrate.sh",
     "form/form-stdlib/bmf-grammar.fk",
     "form/form-stdlib/bml.fk",
+    "form/form-stdlib/http-adapter.fk",
+    "form/form-stdlib/http-render.fk",
+    "form/form-stdlib/http-request.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/http-socket.fk",
     "form/form-stdlib/line-grammar.fk",
     "form/form-stdlib/source-compiler.fk",
     "form/form-stdlib/tests/channel-bml-band.fk",
