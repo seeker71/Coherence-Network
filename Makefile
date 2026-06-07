@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-guide prompt-guide start-gate prompt-gate install-pre-push-hook wellness
+.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-guide prompt-guide start-gate prompt-gate install-pre-push-hook wellness circulation
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -56,3 +56,6 @@ prompt-gate: prompt-guide
 
 wellness:
 	@python3 scripts/wellness_check.py
+
+circulation:
+	@python3 scripts/sense_subscription_circulation.py
