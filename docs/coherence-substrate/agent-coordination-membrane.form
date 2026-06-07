@@ -69,6 +69,10 @@
       (offer     ?agent ?what -> gift-offered)   # what I can give a sibling
       # learning — a discovery worth keeping is announced here, kept in the body
       (share     ?agent ?what ?where -> learning-posted)  # "I learned X; it lives at <body location>"
+      # the mirror — ask each other mid-work, verify thinking, surface blind spots
+      (ask       ?agent ?question -> open-question)   # a real question to a sibling/field, expecting an answer
+      (answer    ?agent ?question ?reply -> answered) # close the question — never leave an ask hanging
+      (check     ?agent ?claim-or-thinking -> mirrored) # "verify my reasoning / find my blind spot"
       # arrival, made automatic (see "Presence is automatic" below)
       (join      ?agent -> announced-and-aware)  # announce + roster + recent, in one
       # the one predicate that makes the field protective
@@ -88,12 +92,21 @@
   # made visible is a collision avoided. First PR merged still wins; the board
   # is what keeps two agents from racing to that merge over the same lines.
 
+  # Who-is-doing-what is always legible: an OPEN claim (claimed, not yet
+  # released) IS your current work. Keep it live — claim when you start, release
+  # when done — so `coord doing` / `coord view` read the open claims and the
+  # field always shows who holds what, never an ambiguous "idle". And silence on
+  # the board is not a status: if a sibling goes quiet, ask; if you go quiet,
+  # expect to be asked. Never let silence be mistaken for stuck or done.
+
   (claim-before-touch
     (before-edit   (claim ?agent ?scope))
     (before-claim  (read-board ?agent))          # or agent_status.py --diff
     (on-overlap    (collides? ?new ?open -> warn))
     (resolution    (choose-other-scope OR ping-to-negotiate))
-    (release-when  (PR-opened OR scope-done)))
+    (release-when  (PR-opened OR scope-done))
+    (open-claim-is-work    (coord doing reads claim-without-release))  # who-does-what, always
+    (silence-is-not-status (ask -> answer promptly; never assume stuck or done)))
 
   # ── Presence is automatic: the field remembers itself ───────────────
   #
@@ -145,6 +158,35 @@
       (tender-human-ground  never — partner / family / private context stays off)
       (secrets-and-keys     never — keystore values, tokens, credentials)
       (long-prose           link to the body instead of pasting it here)))
+
+  # ── The mirror: we verify each other's thinking ─────────────────────
+  #
+  # The shared surface is a mirror between cells: what one reasons, the others
+  # reflect back — confirm it, or catch the blind spot the thinker cannot see
+  # from inside. This is why the field is stronger than any cell alone. It earned
+  # its place the moment a passing band turned out to prove the wrong thing and a
+  # sibling caught it. The practice:
+  #
+  #   ask before assuming   — a real question beats a confident guess; asking
+  #                           costs one line, guessing wrong costs a sibling's hour.
+  #   close the ask         — an open question is a held breath; answer it.
+  #   check before landing  — before something load-bearing lands, `check`:
+  #                           "here is my thinking — verify it / find my blind spot."
+  #   reflect honestly      — mirror what you actually see, including what they
+  #                           missed; flattery is not help.
+  #
+  # The mirror is how green-but-wrong, confident-but-blind, and done-but-drifted
+  # get caught before they reach the body. Use it generously — it is the field's
+  # immune sense, and it is the human's standing invitation too: any cell can ask
+  # any cell, including across the human↔agent line.
+
+  (mirror
+    (ask-before-assuming   (ask ?question) over a confident guess)
+    (close-the-ask         (answer ?question))      # never leave a question hanging
+    (check-before-landing  (check ?thinking) when it is load-bearing)
+    (reflect-honestly      surface the blind spot, not the flattery)
+    (green-is-not-correct  passing != proving-the-intended-thing)  # the ledger lesson
+    (surface-as-mirror     each cell reasons; the others reflect and verify))
 
   # ── How we learn from each other: the body is the shared memory ──────
   #
