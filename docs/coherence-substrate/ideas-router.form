@@ -195,13 +195,22 @@ defn ideas_router_structure() = {
         recipe: "idea_route_recipe_shape",
         named_cell: "@router(ideas)",
     },
-    native_carrier: {
-        path: "/api/ideas/router-structure",
-        route_source: "deploy/kernel-router/production-routes.fk::route_ideas_router_structure",
-        status: "kernel-first capable",
-        meaning: "the high-level ideas router structure is now dispatchable by the kernel-router without CPython",
-        boundary: "mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift",
-    },
+    native_carrier: [
+        {
+            path: "/api/ideas/router-structure",
+            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_router_structure",
+            status: "kernel-first capable",
+            meaning: "the high-level ideas router structure is dispatchable by the kernel-router without CPython",
+            boundary: "mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift",
+        },
+        {
+            path: "/api/ideas/source-index",
+            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_index",
+            status: "kernel-first capable",
+            meaning: "the kernel-router reads ideas/INDEX.md and returns source-backed idea counts without CPython",
+            boundary: "DB-backed /api/ideas/count still fans out until graph-node storage is exposed through a Form carrier",
+        },
+    ],
     recipes: [
         browse_ideas_recipe(),
         sense_governance_recipe(),
@@ -220,8 +229,9 @@ defn ideas_router_structure() = {
         "hidden route intent -> source-backed route_trace",
         "Python ownership -> Python carrier for Form-declared choreography",
         "Form-declared choreography -> kernel-router native structure route",
+        "repo idea source -> kernel-router native source-index route",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure is kernel-first capable; mutable portfolio data routes still enter through FastAPI until storage-backed ideas recipes lift.",
+    current_gap: "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable; mutable DB-backed portfolio routes still enter through FastAPI until graph-node storage is exposed through a Form carrier.",
 };
 
 defn ideas_router_reading() = {

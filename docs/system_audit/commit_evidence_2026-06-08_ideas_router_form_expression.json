@@ -1,8 +1,9 @@
 {
   "date": "2026-06-08",
   "thread_branch": "codex/ideas-form-rewrite-20260608",
-  "commit_scope": "Express the ideas router as high-level Form and lift its structure reading into the kernel-router native manifest.",
+  "commit_scope": "Express the ideas router as high-level Form and lift its structure and source-index readings into the kernel-router native manifest.",
   "files_owned": [
+    "Dockerfile.kernel-router",
     "api/tests/test_commit_evidence_validator.py",
     "api/tests/test_ideas_router_form.py",
     "api/tests/test_runtime_surface_native_routes.py",
@@ -28,6 +29,7 @@
       "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py",
       "python3 scripts/runtime_surface_report.py --json",
       "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19171 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19171/api/ideas/router-structure",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19173 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19173/api/ideas/source-index",
       "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
       "python3 scripts/generate_repo_indexes.py --check",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_ideas_router_form_expression.json",
@@ -37,12 +39,17 @@
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
       "git diff --check"
     ],
-    "summary": "docs/coherence-substrate/ideas-router.form expresses api/app/routers/ideas.py as a route recipe and deploy/kernel-router/production-routes.fk now binds /api/ideas/router-structure to a native Form handler. The Rust kernel-router served the route with HTTP 200, Content-Type application/json, X-Form-Router: native-kernel, and the expected source-backed JSON body. Mutable portfolio data routes remain FastAPI fan-out until storage-backed ideas recipes lift.",
+    "summary": "docs/coherence-substrate/ideas-router.form expresses api/app/routers/ideas.py as a route recipe and deploy/kernel-router/production-routes.fk now binds /api/ideas/router-structure and /api/ideas/source-index to native Form handlers. The Rust kernel-router served both routes with HTTP 200, Content-Type application/json, and X-Form-Router: native-kernel. /api/ideas/source-index read ideas/INDEX.md and returned super_idea_count=17 and index_bytes=3512. Mutable DB-backed portfolio data routes remain FastAPI fan-out until graph-node storage is exposed through a Form carrier.",
     "known_limitations": [
       {
         "command": "cd form && ./validate.sh ../deploy/kernel-router/production-routes.fk",
         "observed": "The manifest evaluates to a route table containing closures; Go/Rust/TypeScript print closure identities differently, so the textual sibling comparison diverges even after the manifest boots and serves through the Rust carrier.",
-        "replacement_proof": "Rust kernel-router smoke for /api/ideas/router-structure returned HTTP 200 with X-Form-Router: native-kernel."
+        "replacement_proof": "Rust kernel-router smoke for /api/ideas/router-structure and /api/ideas/source-index returned HTTP 200 with X-Form-Router: native-kernel."
+      },
+      {
+        "command": "docker version --format '{{.Server.Version}}'",
+        "observed": "Docker daemon is not running at unix:///Users/ursmuff/.docker/run/docker.sock in this local session, so the kernel-router image build was not run locally.",
+        "replacement_proof": "Dockerfile change is scoped to COPY directives; route behavior is proven by the local Rust kernel-router binary using the same production manifest."
       }
     ]
   },
@@ -58,15 +65,17 @@
   },
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "The kernel-router can serve GET /api/ideas/router-structure natively from Form with the high-level ideas-router structure while existing mutable ideas data routes continue to fan out to FastAPI.",
+    "expected_behavior_delta": "The kernel-router can serve GET /api/ideas/router-structure and GET /api/ideas/source-index natively from Form. The source-index route reads repo idea source and returns super_idea_count=17 while existing mutable DB-backed ideas data routes continue to fan out to FastAPI.",
     "public_endpoints": [
       "GET /api/ideas/router-structure",
+      "GET /api/ideas/source-index",
       "GET /api/ideas"
     ],
     "test_flows": [
       "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py",
       "python3 scripts/runtime_surface_report.py --json",
-      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19171 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19171/api/ideas/router-structure"
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19171 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19171/api/ideas/router-structure",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19173 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19173/api/ideas/source-index"
     ]
   },
   "phase_gate": {
@@ -81,7 +90,8 @@
   ],
   "task_ids": [
     "ideas-router-form-expression-20260608",
-    "ideas-router-structure-native-route-20260608"
+    "ideas-router-structure-native-route-20260608",
+    "ideas-source-index-native-route-20260608"
   ],
   "contributors": [
     {
@@ -107,7 +117,9 @@
   },
   "evidence_refs": [
     "docs/coherence-substrate/ideas-router.form",
+    "ideas/INDEX.md",
     "deploy/kernel-router/production-routes.fk",
+    "Dockerfile.kernel-router",
     "api/tests/test_ideas_router_form.py",
     "api/tests/test_runtime_surface_native_routes.py",
     "api/tests/test_commit_evidence_validator.py",
@@ -116,6 +128,7 @@
     "specs/ideas-router-form-expression.md"
   ],
   "change_files": [
+    "Dockerfile.kernel-router",
     "api/tests/test_commit_evidence_validator.py",
     "api/tests/test_ideas_router_form.py",
     "api/tests/test_runtime_surface_native_routes.py",
