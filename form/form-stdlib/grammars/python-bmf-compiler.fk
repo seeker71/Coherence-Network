@@ -1,0 +1,736 @@
+; form-stdlib/grammars/python-bmf-compiler.fk
+;
+; Form-native Python S-expression (.fk) compiler and emitter.
+; Walks the PY-BMF-* category nodes lifted by python-bmf-lift.fk
+; and outputs S-expression source strings that the Go/Rust/TS kernels
+; can parse and execute natively.
+;
+
+(do
+    ;; ---- compiler state ---------------------------------------------
+    ;; state: (list while-counter lifted-defns module-aliases imported-names current-class)
+    (defn py-state-init ()
+        (list 0 (empty) (empty) (empty) ""))
+
+    (defn py-state-while-counter (state) (nth state 0))
+    (defn py-state-lifted-defns (state) (nth state 1))
+    (defn py-state-module-aliases (state) (nth state 2))
+    (defn py-state-imported-names (state) (nth state 3))
+    (defn py-state-current-class (state) (nth state 4))
+
+    (defn py-state-with-while-counter (state v)
+        (list v (nth state 1) (nth state 2) (nth state 3) (nth state 4)))
+    (defn py-state-with-lifted-defns (state v)
+        (list (nth state 0) v (nth state 2) (nth state 3) (nth state 4)))
+    (defn py-state-with-module-aliases (state v)
+        (list (nth state 0) (nth state 1) v (nth state 3) (nth state 4)))
+    (defn py-state-with-imported-names (state v)
+        (list (nth state 0) (nth state 1) (nth state 2) v (nth state 4)))
+    (defn py-state-with-current-class (state v)
+        (list (nth state 0) (nth state 1) (nth state 2) (nth state 3) v))
+
+    (defn py-state-add-lifted-defn (state defn-str)
+        (py-state-with-lifted-defns state
+            (cons defn-str (py-state-lifted-defns state))))
+
+    (defn py-state-inc-while-counter (state)
+        (py-state-with-while-counter state
+            (add (py-state-while-counter state) 1)))
+
+    (defn comp-res (str state) (list str state))
+    (defn comp-res-str (r) (nth r 0))
+    (defn comp-res-state (r) (nth r 1))
+
+    ;; ---- helpers ----------------------------------------------------
+    (defn py-quote-loop (s i)
+        (if (ge i (str_len s)) ""
+            (do
+                (let ch (char_at s i))
+                (let rest (py-quote-loop s (add i 1)))
+                (if (str_eq ch "\\") (str_concat "\\\\" rest)
+                (if (str_eq ch "\"") (str_concat "\\\"" rest)
+                    (str_concat ch rest))))))
+
+    (defn py-q (s)
+        (str_concat "\"" (str_concat (py-quote-loop s 0) "\"")))
+
+    (defn join-strings-with-spaces (strs)
+        (if (nil? strs) ""
+            (if (nil? (tail strs)) (head strs)
+                (str_concat (head strs)
+                    (str_concat " " (join-strings-with-spaces (tail strs)))))))
+
+    (defn contains-string-literal? (n)
+        (let cat (node_category n))
+        (if (node_eq cat PY-BMF-STRING) 1
+        (if (or (node_eq cat PY-BMF-DEF) (node_eq cat PY-BMF-LAMBDA)) 0
+            (any-child-contains-string? (node_children n)))))
+
+    (defn any-child-contains-string? (kids)
+        (if (nil? kids) 0
+            (if (eq (contains-string-literal? (head kids)) 1) 1
+                (any-child-contains-string? (tail kids)))))
+
+    (defn contains-return? (n)
+        (let cat (node_category n))
+        (if (node_eq cat PY-BMF-RETURN) 1
+        (if (or (node_eq cat PY-BMF-DEF) (node_eq cat PY-BMF-LAMBDA)) 0
+            (any-child-contains-return? (node_children n)))))
+
+    (defn any-child-contains-return? (kids)
+        (if (nil? kids) 0
+            (if (eq (contains-return? (head kids)) 1) 1
+                (any-child-contains-return? (tail kids)))))
+
+    (defn list-contains? (lst s)
+        (if (nil? lst) 0
+            (if (str_eq (head lst) s) 1
+                (list-contains? (tail lst) s))))
+
+    (defn collect-loop-vars (n acc)
+        (let cat (node_category n))
+        (let kids (node_children n))
+        (if (or (node_eq cat PY-BMF-ASSIGN)
+            (or (node_eq cat PY-BMF-SUB-ASSIGN)
+                (node_eq cat PY-BMF-AUG-ASSIGN)))
+            (do
+                (let name (node_value (head kids)))
+                (if (eq (list-contains? acc name) 0)
+                    (cons name acc)
+                    acc))
+        (if (node_eq cat PY-BMF-METHOD-CALL)
+            (do
+                (let recv (nth kids 0))
+                (let recv-cat (node_category recv))
+                (let method (node_value (nth kids 1)))
+                (if (and (node_eq recv-cat PY-BMF-IDENT) (str_eq method "append"))
+                    (do
+                        (let name (node_value (head (node_children recv))))
+                        (if (eq (list-contains? acc name) 0)
+                            (cons name acc)
+                            acc))
+                    (collect-loop-vars-list kids acc)))
+        (if (or (node_eq cat PY-BMF-DEF) (node_eq cat PY-BMF-LAMBDA))
+            acc
+            (collect-loop-vars-list kids acc)))))
+
+    (defn collect-loop-vars-list (nodes acc)
+        (if (nil? nodes) acc
+            (collect-loop-vars-list (tail nodes)
+                (collect-loop-vars (head nodes) acc))))
+
+    (defn math-node? (cat)
+        (and (eq (node_pkg cat) 1)
+             (and (eq (node_level cat) 2)
+                  (eq (node_type cat) 12))))
+
+    (defn compare-node? (cat)
+        (and (eq (node_pkg cat) 1)
+             (and (eq (node_level cat) 2)
+                  (eq (node_type cat) 13))))
+
+    (defn py-math-resolve-name (member)
+        (if (str_eq member "sqrt")  "math_sqrt"
+        (if (str_eq member "pi")    "math_pi"
+        (if (str_eq member "floor") "math_floor"
+        (if (str_eq member "ceil")  "math_ceil"
+        (if (str_eq member "pow")   "math_pow"
+        (if (str_eq member "log")   "math_log"
+        (if (str_eq member "exp")   "math_exp"
+            "")))))))
+
+    (defn py-math-const? (member)
+        (if (str_eq member "pi") 1 0))
+
+    (defn py-add-from-import-members-loop (state modname members)
+        (if (nil? members) state
+            (do
+                (let m (head members))
+                (let native
+                    (if (str_eq modname "math") (py-math-resolve-name m) ""))
+                (let state2
+                    (if (not (str_eq native ""))
+                        (py-state-with-imported-names state
+                            (cons (list m native) (py-state-imported-names state)))
+                        state))
+                (py-add-from-import-members-loop state2 modname (tail members)))))
+
+    (defn py-add-from-import-members (state modname members)
+        (py-add-from-import-members-loop state modname members))
+
+    (defn py-lookup-imported-name-loop (imported name)
+        (if (nil? imported) ""
+            (if (str_eq (head (head imported)) name)
+                (head (tail (head imported)))
+                (py-lookup-imported-name-loop (tail imported) name))))
+
+    (defn py-lookup-imported-name (state name)
+        (py-lookup-imported-name-loop (py-state-imported-names state) name))
+
+    (defn py-module-alias-of?-loop (aliases alias expected)
+        (if (nil? aliases) 0
+            (if (str_eq (head (head aliases)) alias)
+                (if (str_eq (head (tail (head aliases))) expected) 1 0)
+                (py-module-alias-of?-loop (tail aliases) alias expected))))
+
+    (defn py-module-alias-of? (state base expected)
+        (let cat (node_category base))
+        (if (node_eq cat PY-BMF-IDENT)
+            (do
+                (let name (node_value (head (node_children base))))
+                (py-module-alias-of?-loop (py-state-module-aliases state) name expected))
+            0))
+
+    (defn super-call? (n)
+        (do
+            (let cat (node_category n))
+            (if (node_eq cat PY-BMF-CALL)
+                (do
+                    (let kids (node_children n))
+                    (let callee (node_value (head kids)))
+                    (if (str_eq callee "super") 1 0))
+                0)))
+
+    (defn py-make-destructure-lets (vars resultName idx)
+        (if (nil? vars) ""
+            (str_concat "(let " (str_concat (head vars) (str_concat " (nth " (str_concat resultName (str_concat " " (str_concat (int_to_str idx) ")) " (py-make-destructure-lets (tail vars) resultName (add idx 1))))))))))
+
+    (defn py-find-init-method (methods)
+        (if (nil? methods) (head (empty))
+            (do
+                (let m (head methods))
+                (let mname (node_value (head (node_children m))))
+                (if (str_eq mname "__init__") m
+                    (py-find-init-method (tail methods))))))
+
+    (defn py-compile-init-stmt-loop (stmts fields initBindings superInitCalled baseName state)
+        (if (nil? stmts) (list fields initBindings superInitCalled state)
+            (do
+                (let stmt (head stmts))
+                (let cat (node_category stmt))
+                (let kids (node_children stmt))
+                (if (node_eq cat PY-BMF-ATTR-ASSIGN)
+                    (do
+                        (let obj (nth kids 0))
+                        (let attr (node_value (nth kids 1)))
+                        (let val-node (nth kids 2))
+                        (let obj-name (node_value (head (node_children obj))))
+                        (if (str_eq obj-name "self")
+                            (do
+                                (let res-val (py-compile-expr val-node state))
+                                (let fields2 (if (eq (list-contains? fields attr) 0) (cons attr fields) fields))
+                                (let bind (str_concat "(let " (str_concat attr (str_concat " " (str_concat (comp-res-str res-val) ")"))))
+                                (py-compile-init-stmt-loop (tail stmts) fields2 (cons bind initBindings) superInitCalled baseName (comp-res-state res-val)))
+                            (do
+                                (trace "init attribute assign receiver must be self" obj-name)
+                                (head (empty)))))
+                (if (node_eq cat PY-BMF-ASSIGN)
+                    (do
+                        (let name (node_value (head kids)))
+                        (let val-node (nth kids 1))
+                        (let res-val (py-compile-expr val-node state))
+                        (let bind (str_concat "(let " (str_concat name (str_concat " " (str_concat (comp-res-str res-val) ")"))))
+                        (py-compile-init-stmt-loop (tail stmts) fields (cons bind initBindings) superInitCalled baseName (comp-res-state res-val)))
+                    (if (node_eq cat PY-BMF-METHOD-CALL)
+                        (do
+                            (let base (nth kids 0))
+                            (let method (node_value (nth kids 1)))
+                            (let args (drop 2 kids))
+                            (if (and (super-call? base) (str_eq method "__init__"))
+                                (do
+                                    (let res-args (py-compile-expr-list args state))
+                                    (let args-str
+                                        (if (nil? (comp-res-str res-args)) ""
+                                            (str_concat " " (join-strings-with-spaces (comp-res-str res-args)))))
+                                    (let call-expr (str_concat "(" (str_concat baseName (str_concat args-str ")"))))
+                                    (let bind (str_concat "(let _super_init " (str_concat call-expr ")")))
+                                    (py-compile-init-stmt-loop (tail stmts) fields (cons bind initBindings) 1 baseName (comp-res-state res-args)))
+                                (do
+                                    (trace "unsupported statement kind in __init__" cat)
+                                    (head (empty)))))
+                        (do
+                            (trace "unsupported statement kind in __init__" cat)
+                            (head (empty))))))))))
+
+    ;; ---- expression list compiler -----------------------------------
+    (defn py-compile-expr-list-loop (nodes acc state)
+        (if (nil? nodes) (comp-res (reverse acc) state)
+            (do
+                (let res (py-compile-expr (head nodes) state))
+                (py-compile-expr-list-loop (tail nodes)
+                    (cons (comp-res-str res) acc)
+                    (comp-res-state res)))))
+
+    (defn py-compile-expr-list (nodes state)
+        (py-compile-expr-list-loop nodes (empty) state))
+
+    ;; ---- expression compiler ----------------------------------------
+    (defn py-compile-expr (n state)
+        (do
+            (let cat (node_category n))
+            (let kids (node_children n))
+            (if (node_eq cat PY-BMF-INT)
+                (comp-res (int_to_str (node_value (head kids))) state)
+            (if (node_eq cat PY-BMF-FLOAT)
+                (comp-res (node_value (nth kids 1)) state)
+            (if (node_eq cat PY-BMF-STRING)
+                (comp-res (py-q (node_value (head kids))) state)
+            (if (node_eq cat PY-BMF-IDENT)
+                (do
+                    (let name (node_value (head kids)))
+                    (let mapped (py-lookup-imported-name state name))
+                    (if (not (str_eq mapped ""))
+                        (if (eq (py-math-const? name) 1)
+                            (comp-res (str_concat "(" (str_concat mapped ")")) state)
+                            (comp-res mapped state))
+                        (comp-res name state)))
+            (if (math-node? cat)
+                (do
+                    (let math-inst (node_inst cat))
+                    (let res-lhs (py-compile-expr (nth kids 0) state))
+                    (let res-rhs (py-compile-expr (nth kids 1) (comp-res-state res-lhs)))
+                    (let op
+                        (if (eq math-inst 1)
+                            (if (or (contains-string-literal? (nth kids 0))
+                                    (contains-string-literal? (nth kids 1)))
+                                "_plus" "add")
+                        (if (eq math-inst 2) "sub"
+                        (if (eq math-inst 3) "mul"
+                        (if (eq math-inst 4) "div"
+                        (if (eq math-inst 5) "mod"
+                            ""))))))
+                    (comp-res (str_concat "(" (str_concat op (str_concat " " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))))
+                              (comp-res-state res-rhs)))
+            (if (compare-node? cat)
+                (do
+                    (let cmp-inst (node_inst cat))
+                    (let res-lhs (py-compile-expr (nth kids 0) state))
+                    (let res-rhs (py-compile-expr (nth kids 1) (comp-res-state res-lhs)))
+                    (let op
+                        (if (eq cmp-inst 1) "eq"
+                        (if (eq cmp-inst 2) "ne"
+                        (if (eq cmp-inst 3) "lt"
+                        (if (eq cmp-inst 4) "le"
+                        (if (eq cmp-inst 5) "gt"
+                        (if (eq cmp-inst 6) "ge"
+                            "")))))))
+                    (comp-res (str_concat "(" (str_concat op (str_concat " " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))))
+                              (comp-res-state res-rhs)))
+            (if (node_eq cat PY-BMF-BINOP)
+                (do
+                    (let op (node_value (nth kids 1)))
+                    (let res-lhs (py-compile-expr (nth kids 0) state))
+                    (let res-rhs (py-compile-expr (nth kids 2) (comp-res-state res-lhs)))
+                    (if (str_eq op "**")
+                        (comp-res (str_concat "(math_pow " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))
+                                  (comp-res-state res-rhs))
+                        (comp-res (str_concat "(" (str_concat op (str_concat " " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))))
+                                  (comp-res-state res-rhs))))
+            (if (node_eq cat PY-BMF-COMPARE)
+                (do
+                    (let op (node_value (nth kids 1)))
+                    (let res-lhs (py-compile-expr (nth kids 0) state))
+                    (let res-rhs (py-compile-expr (nth kids 2) (comp-res-state res-lhs)))
+                    (if (str_eq op "in")
+                        (comp-res (str_concat "(_in " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))
+                                  (comp-res-state res-rhs))
+                        (comp-res (str_concat "(" (str_concat op (str_concat " " (str_concat (comp-res-str res-lhs) (str_concat " " (str_concat (comp-res-str res-rhs) ")"))))))
+                                  (comp-res-state res-rhs))))
+            (if (node_eq cat PY-BMF-IF)
+                (do
+                    (let res-cond (py-compile-expr (nth kids 0) state))
+                    (let res-then (py-compile-expr (nth kids 1) (comp-res-state res-cond)))
+                    (let res-else (py-compile-expr (nth kids 2) (comp-res-state res-then)))
+                    (comp-res (str_concat "(if " (str_concat (comp-res-str res-cond) (str_concat " " (str_concat (comp-res-str res-then) (str_concat " " (str_concat (comp-res-str res-else) ")"))))))
+                              (comp-res-state res-else)))
+            (if (node_eq cat PY-BMF-LIST)
+                (if (nil? kids)
+                    (comp-res "(list)" state)
+                    (do
+                        (let res-list (py-compile-expr-list kids state))
+                        (comp-res (str_concat "(list " (str_concat (join-strings-with-spaces (comp-res-str res-list)) ")"))
+                                  (comp-res-state res-list))))
+            (if (node_eq cat PY-BMF-DICT)
+                (if (nil? kids)
+                    (comp-res "(_dict_new)" state)
+                    (do
+                        (let res-list (py-compile-expr-list kids state))
+                        (comp-res (str_concat "(_dict_new " (str_concat (join-strings-with-spaces (comp-res-str res-list)) ")"))
+                                  (comp-res-state res-list))))
+            (if (node_eq cat PY-BMF-SUBSCRIPT)
+                (do
+                    (let res-base (py-compile-expr (nth kids 0) state))
+                    (let res-idx (py-compile-expr (nth kids 1) (comp-res-state res-base)))
+                    (comp-res (str_concat "(_get " (str_concat (comp-res-str res-base) (str_concat " " (str_concat (comp-res-str res-idx) ")"))))
+                              (comp-res-state res-idx)))
+            (if (node_eq cat PY-BMF-ATTR)
+                (do
+                    (let base (nth kids 0))
+                    (let attr (node_value (nth kids 1)))
+                    (let is-math-alias (py-module-alias-of? state base "math"))
+                    (if (and is-math-alias (not (str_eq (py-math-resolve-name attr) "")))
+                        (comp-res (str_concat "(" (str_concat (py-math-resolve-name attr) ")")) state)
+                        (do
+                            (let res-base (py-compile-expr base state))
+                            (comp-res (str_concat "(_get " (str_concat (comp-res-str res-base) (str_concat " " (str_concat (py-q attr) ")"))))
+                                      (comp-res-state res-base)))))
+            (if (node_eq cat PY-BMF-METHOD-CALL)
+                (do
+                    (let base (nth kids 0))
+                    (let method (node_value (nth kids 1)))
+                    (let args (drop 2 kids))
+                    (let is-append (and (str_eq method "append") (eq (len args) 1)))
+                    (let is-math-alias (py-module-alias-of? state base "math"))
+                    (if (and is-math-alias (not (str_eq (py-math-resolve-name method) "")))
+                        (do
+                            (let res-args (py-compile-expr-list args state))
+                            (let native (py-math-resolve-name method))
+                            (comp-res (str_concat "(" (str_concat native (str_concat " " (str_concat (join-strings-with-spaces (comp-res-str res-args)) ")"))))
+                                      (comp-res-state res-args)))
+                    (if is-append
+                        (do
+                            (let recv-name (node_value (head (node_children base))))
+                            (let res-arg (py-compile-expr (head args) state))
+                            (comp-res (str_concat "(let " (str_concat recv-name (str_concat " (_list_append " (str_concat recv-name (str_concat " " (str_concat (comp-res-str res-arg) "))"))))))
+                                      (comp-res-state res-arg)))
+                    (if (super-call? base)
+                        (do
+                            (let current-class (py-state-current-class state))
+                            (let res-args (py-compile-expr-list args state))
+                            (let tail-str
+                                (if (nil? (comp-res-str res-args)) ""
+                                    (str_concat " " (join-strings-with-spaces (comp-res-str res-args)))))
+                            (comp-res (str_concat "(_dispatch_super self " (str_concat (py-q current-class) (str_concat " " (str_concat (py-q method) (str_concat tail-str ")")))))
+                                      (comp-res-state res-args)))
+                        (do
+                            (let res-base (py-compile-expr base state))
+                            (let res-args (py-compile-expr-list args (comp-res-state res-base)))
+                            (let tail-str
+                                (if (nil? (comp-res-str res-args)) ""
+                                    (str_concat " " (join-strings-with-spaces (comp-res-str res-args)))))
+                            (comp-res (str_concat "(_dispatch " (str_concat (comp-res-str res-base) (str_concat " " (str_concat (py-q method) (str_concat tail-str ")")))))
+                                      (comp-res-state res-base)))))))
+            (if (node_eq cat PY-BMF-CALL)
+                (do
+                    (let callee (node_value (head kids)))
+                    (let args (tail kids))
+                    (let res-args (py-compile-expr-list args state))
+                    (let mapped (py-lookup-imported-name state callee))
+                    (let fn-name (if (not (str_eq mapped "")) mapped callee))
+                    (let args-str
+                        (if (nil? (comp-res-str res-args)) ""
+                            (str_concat " " (join-strings-with-spaces (comp-res-str res-args)))))
+                    (comp-res (str_concat "(" (str_concat fn-name (str_concat args-str ")")))
+                              (comp-res-state res-args)))
+            (if (node_eq cat PY-BMF-LAMBDA)
+                (do
+                    (let n-kids (len kids))
+                    (let param-leaves (take (sub n-kids 1) kids))
+                    (let body (nth kids (sub n-kids 1)))
+                    (let param-names (map node_value param-leaves))
+                    (let lambda-idx (py-state-while-counter state))
+                    (let state2 (py-state-inc-while-counter state))
+                    (let lambda-name (str_concat "_lambda_" (int_to_str lambda-idx)))
+                    (let res-body (py-compile-expr body state2))
+                    (let state3 (comp-res-state res-body))
+                    (let defn-str (str_concat "(defn " (str_concat lambda-name (str_concat " (" (str_concat (join-strings-with-spaces param-names) (str_concat ") " (str_concat (comp-res-str res-body) ")")))))))
+                    (let state4 (py-state-add-lifted-defn state3 defn-str))
+                    (comp-res lambda-name state4))
+            (if (node_eq cat PY-BMF-COMP)
+                (do
+                    (let elem (nth kids 0))
+                    (let var-name (node_value (nth kids 1)))
+                    (let iter (nth kids 2))
+                    (let lambda-idx (py-state-while-counter state))
+                    (let state2 (py-state-inc-while-counter state))
+                    (let lambda-name (str_concat "_lambda_" (int_to_str lambda-idx)))
+                    (let res-elem (py-compile-expr elem state2))
+                    (let state3 (comp-res-state res-elem))
+                    (let defn-str (str_concat "(defn " (str_concat lambda-name (str_concat " (" (str_concat var-name (str_concat ") " (str_concat (comp-res-str res-elem) ")")))))))
+                    (let state4 (py-state-add-lifted-defn state3 defn-str))
+                    (let res-iter (py-compile-expr iter state4))
+                    (comp-res (str_concat "(map " (str_concat lambda-name (str_concat " " (str_concat (comp-res-str res-iter) ")"))))
+                              (comp-res-state res-iter)))
+                (do
+                    (trace "py-compile-expr: unsupported category" cat)
+                    (comp-res "false" state)))))))))))))))))))))
+
+    ;; ---- definition body compiler (def scope with CPS) -------------
+    (defn py-compile-def-body (body state)
+        (do
+            (let cat (node_category body))
+            (let stmts (if (node_eq cat PY-BMF-MODULE) (node_children body) (list body)))
+            (py-compile-stmt-seq stmts 0 state)))
+
+    ;; ---- statement sequence compiler --------------------------------
+    (defn py-compile-stmt-seq (stmts start state)
+        (if (ge start (len stmts)) (comp-res "false" state)
+            (do
+                (let stmt (nth stmts start))
+                (let cat (node_category stmt))
+                (let kids (node_children stmt))
+                (if (node_eq cat PY-BMF-RETURN)
+                    (py-compile-expr (head kids) state)
+                (if (node_eq cat PY-BMF-IF-STMT)
+                    (py-compile-if-in-def-body kids stmts start state)
+                (if (node_eq cat PY-BMF-ASSIGN)
+                    (do
+                        (let res-assign (py-compile-stmt stmt state))
+                        (let res-rest (py-compile-stmt-seq stmts (add start 1) (comp-res-state res-assign)))
+                        (comp-res (str_concat "(do " (str_concat (comp-res-str res-assign) (str_concat " " (str_concat (comp-res-str res-rest) ")"))))
+                                  (comp-res-state res-rest)))
+                (if (node_eq cat PY-BMF-SUB-ASSIGN)
+                    (do
+                        (let res-assign (py-compile-stmt stmt state))
+                        (let res-rest (py-compile-stmt-seq stmts (add start 1) (comp-res-state res-assign)))
+                        (comp-res (str_concat "(do " (str_concat (comp-res-str res-assign) (str_concat " " (str_concat (comp-res-str res-rest) ")"))))
+                                  (comp-res-state res-rest)))
+                (if (node_eq cat PY-BMF-AUG-ASSIGN)
+                    (do
+                        (let res-assign (py-compile-stmt stmt state))
+                        (let res-rest (py-compile-stmt-seq stmts (add start 1) (comp-res-state res-assign)))
+                        (comp-res (str_concat "(do " (str_concat (comp-res-str res-assign) (str_concat " " (str_concat (comp-res-str res-rest) ")"))))
+                                  (comp-res-state res-rest)))
+                    (do
+                        (let res-side (py-compile-stmt stmt state))
+                        (let next-start (add start 1))
+                        (if (ge next-start (len stmts))
+                            res-side
+                            (do
+                                (let res-rest (py-compile-stmt-seq stmts next-start (comp-res-state res-side)))
+                                (comp-res (str_concat "(do " (str_concat (comp-res-str res-side) (str_concat " " (str_concat (comp-res-str res-rest) ")"))))
+                                          (comp-res-state res-rest))))))))))))))
+
+    ;; ---- if-statement compiler in def body (CPS short circuit) -----
+    (defn py-compile-if-in-def-body (if-kids stmts start state)
+        (do
+            (let cond (head if-kids))
+            (let body-stmts (tail if-kids))
+            (let res-cond (py-compile-expr cond state))
+            (let res-else (py-compile-stmt-seq stmts (add start 1) (comp-res-state res-cond)))
+            (let state-after-else (comp-res-state res-else))
+            (let has-ret (any-child-contains-return? body-stmts))
+            (let res-then
+                (if (eq has-ret 1)
+                    (py-compile-stmt-seq body-stmts 0 state-after-else)
+                    (do
+                        (let res-body (py-compile-stmt-seq body-stmts 0 state-after-else))
+                        (let body-str (comp-res-str res-body))
+                        (let else-str (comp-res-str res-else))
+                        (let combined-str
+                            (if (str_eq body-str "false")
+                                else-str
+                                (str_concat "(do " (str_concat body-str (str_concat " " (str_concat else-str ")"))))))
+                        (comp-res combined-str (comp-res-state res-body)))))
+            (let cond-str (comp-res-str res-cond))
+            (let then-str (comp-res-str res-then))
+            (let else-str (comp-res-str res-else))
+            (comp-res (str_concat "(if " (str_concat cond-str (str_concat " " (str_concat then-str (str_concat " " (str_concat else-str ")"))))))
+                      (comp-res-state res-then))))
+
+    ;; ---- statement compiler ------------------------------------------
+    (defn py-compile-stmt (stmt state)
+        (do
+            (let cat (node_category stmt))
+            (let kids (node_children stmt))
+            (if (node_eq cat PY-BMF-ASSIGN)
+                (do
+                    (let name (node_value (head kids)))
+                    (let val (nth kids 1))
+                    (let res-val (py-compile-expr val state))
+                    (comp-res (str_concat "(let " (str_concat name (str_concat " " (str_concat (comp-res-str res-val) ")"))))
+                              (comp-res-state res-val)))
+            (if (node_eq cat PY-BMF-SUB-ASSIGN)
+                (do
+                    (let name (node_value (head kids)))
+                    (let idx (nth kids 1))
+                    (let val (nth kids 2))
+                    (let res-idx (py-compile-expr idx state))
+                    (let res-val (py-compile-expr val (comp-res-state res-idx)))
+                    (let str (str_concat "(let " (str_concat name (str_concat " (_dict_set " (str_concat name (str_concat " " (str_concat (comp-res-str res-idx) (str_concat " " (str_concat (comp-res-str res-val) "))")))))))))
+                    (comp-res str (comp-res-state res-val)))
+            (if (node_eq cat PY-BMF-AUG-ASSIGN)
+                (do
+                    (let name (node_value (head kids)))
+                    (let op (node_value (nth kids 1)))
+                    (let val (nth kids 2))
+                    (let res-val (py-compile-expr val state))
+                    (let math-op (if (str_eq op "+") "add" (if (str_eq op "-") "sub" (if (str_eq op "*") "mul" (if (str_eq op "/") "div" (if (str_eq op "%") "mod" ""))))))
+                    (let math-op2 (if (and (str_eq op "+") (contains-string-literal? val)) "_plus" math-op))
+                    (let str (str_concat "(let " (str_concat name (str_concat " (" (str_concat math-op2 (str_concat " " (str_concat name (str_concat " " (str_concat (comp-res-str res-val) "))")))))))))
+                    (comp-res str (comp-res-state res-val)))
+            (if (node_eq cat PY-BMF-DEF)
+                (do
+                    (let name (node_value (head kids)))
+                    (let param-leaves (take (sub (len kids) 2) (tail kids)))
+                    (let param-names (map node_value param-leaves))
+                    (let body (nth kids (sub (len kids) 1)))
+                    (let res-body (py-compile-def-body body state))
+                    (let str (str_concat "(defn " (str_concat name (str_concat " (" (str_concat (join-strings-with-spaces param-names) (str_concat ") " (str_concat (comp-res-str res-body) ")"))))))
+                    (comp-res str (comp-res-state res-body)))
+            (if (node_eq cat PY-BMF-CLASS)
+                (do
+                    (let className (node_value (head kids)))
+                    (let is-subclass (node_eq (node_category (nth kids 1)) PY-BMF-IDENT))
+                    (let baseName (if is-subclass (node_value (head (node_children (nth kids 1)))) ""))
+                    (let methods (if is-subclass (drop 2 kids) (drop 1 kids)))
+                    (let state2 (py-state-add-lifted-defn state (str_concat "(let " (str_concat className (str_concat "__base " (str_concat (py-q baseName) ")"))))))
+                    (let state3 (py-state-with-current-class state2 className))
+                    (let initMethod (py-find-init-method methods))
+                    ;; Constructor parameters & init bindings
+                    (let fields (empty))
+                    (let initBindings (empty))
+                    (let superInitCalled 0)
+                    (let ctorParams (empty))
+                    (let state-after-init state3)
+                    (if (not (nil? initMethod))
+                        (do
+                            (let initKids (node_children initMethod))
+                            (let paramNodes (node_children (nth initKids 1)))
+                            (let ctorParams1 (map node_value (tail paramNodes)))
+                            (let initBody (nth initKids (sub (len initKids) 1)))
+                            (let init-stmts (if (node_eq (node_category initBody) PY-BMF-MODULE) (node_children initBody) (list initBody)))
+                            (let init-res (py-compile-init-stmt-loop init-stmts (empty) (empty) 0 baseName state3))
+                            (let fields1 (nth init-res 0))
+                            (let initBindings1 (reverse (nth init-res 1)))
+                            (let superInitCalled1 (nth init-res 2))
+                            (let state-after-init1 (nth init-res 3))
+                            (let fields fields1)
+                            (let initBindings initBindings1)
+                            (let superInitCalled superInitCalled1)
+                            (let ctorParams ctorParams1)
+                            (let state-after-init state-after-init1)
+                            0)
+                        0)
+                    ;; Record literal construction
+                    (let recordParts (list "\"__class__\"" (py-q className) "\"__base__\"" (py-q baseName)))
+                    (defn py-build-record-parts (flds parts)
+                        (if (nil? flds) parts
+                            (py-build-record-parts (tail flds)
+                                (cons (py-q (head flds)) (cons (head flds) parts)))))
+                    (let recordParts-full (reverse (py-build-record-parts fields (reverse recordParts))))
+                    (let recordExpr (str_concat "(list " (str_concat (join-strings-with-spaces recordParts-full) ")")))
+                    (let recordExpr-merged (if (eq superInitCalled 1) (str_concat "(_merge_record " (str_concat recordExpr " _super_init)")) recordExpr))
+                    (let ctorBody
+                        (if (nil? initBindings)
+                            recordExpr-merged
+                            (str_concat "(do " (str_concat (join-strings-with-spaces initBindings) (str_concat " " (str_concat recordExpr-merged ")"))))))
+                    (let ctorDef (str_concat "(defn " (str_concat className (str_concat " (" (str_concat (join-strings-with-spaces ctorParams) (str_concat ") " (str_concat ctorBody ")")))))))
+                    (let state4 (py-state-add-lifted-defn state-after-init ctorDef))
+                    ;; Other methods
+                    (defn py-compile-other-methods (meths st)
+                        (if (nil? meths) st
+                            (do
+                                (let m (head meths))
+                                (let mname (node_value (head (node_children m))))
+                                (if (str_eq mname "__init__")
+                                    (py-compile-other-methods (tail meths) st)
+                                    (do
+                                        (let mKids (node_children m))
+                                        (let paramNodes (node_children (nth mKids 1)))
+                                        (let paramNames (map node_value paramNodes))
+                                        (let mBody (nth mKids (sub (len mKids) 1)))
+                                        (let res-mbody (py-compile-def-body mBody st))
+                                        (let mdefn (str_concat "(defn " (str_concat className (str_concat "__" (str_concat mname (str_concat " (" (str_concat (join-strings-with-spaces paramNames) (str_concat ") " (str_concat (comp-res-str res-mbody) ")")))))))))
+                                        (let st2 (py-state-add-lifted-defn (comp-res-state res-mbody) mdefn))
+                                        (py-compile-other-methods (tail meths) st2))))))
+                    (let state5 (py-compile-other-methods methods state4))
+                    (comp-res "false" (py-state-with-current-class state5 (py-state-current-class state))))
+            (if (node_eq cat PY-BMF-WHILE)
+                (do
+                    (let cond (nth kids 0))
+                    (let body-stmts (tail kids))
+                    (let loopVars (collect-loop-vars-list body-stmts (empty)))
+                    (let helperName (str_concat "_while_" (int_to_str (py-state-while-counter state))))
+                    (let state2 (py-state-inc-while-counter state))
+                    (let res-cond (py-compile-expr cond state2))
+                    (let res-body (py-compile-stmt-seq body-stmts 0 (comp-res-state res-cond)))
+                    (let state3 (comp-res-state res-body))
+                    (let recCall (str_concat "(" (str_concat helperName (str_concat " " (str_concat (join-strings-with-spaces loopVars) ")")))))
+                    (let trueBranch (str_concat "(do " (str_concat (comp-res-str res-body) (str_concat " " (str_concat recCall ")")))))
+                    (let elseBranch (if (eq (len loopVars) 1) (head loopVars) (str_concat "(list " (str_concat (join-strings-with-spaces loopVars) ")"))))
+                    (let helperDef (str_concat "(defn " (str_concat helperName (str_concat " (" (str_concat (join-strings-with-spaces loopVars) (str_concat ") (if " (str_concat (comp-res-str res-cond) (str_concat " " (str_concat trueBranch (str_concat " " (str_concat elseBranch "))"))))))))))
+                    (let state4 (py-state-add-lifted-defn state3 helperDef))
+                    (let helperCall
+                        (if (eq (len loopVars) 1)
+                            (str_concat "(let " (str_concat (head loopVars) (str_concat " (" (str_concat helperName (str_concat " " (str_concat (head loopVars) "))"))))))
+                            (do
+                                (let resultName (str_concat "_while_" (str_concat (int_to_str (py-state-while-counter state)) "_result")))
+                                (let destructures (py-make-destructure-lets loopVars resultName 0))
+                                (str_concat "(let " (str_concat resultName (str_concat " (" (str_concat helperName (str_concat " " (str_concat (join-strings-with-spaces loopVars) (str_concat ")) " destructures))))))))))
+                    (comp-res helperCall state4))
+            (if (node_eq cat PY-BMF-FOR)
+                (do
+                    (let target (node_value (nth kids 0)))
+                    (let iterable (nth kids 1))
+                    (let body-stmts (drop 2 kids))
+                    (let loopVars (collect-loop-vars-list body-stmts (empty)))
+                    (let helperName (str_concat "_for_" (int_to_str (py-state-while-counter state))))
+                    (let state2 (py-state-inc-while-counter state))
+                    (let res-iter (py-compile-expr iterable state2))
+                    (let iterExpr (str_concat "(_iter " (str_concat (comp-res-str res-iter) ")")))
+                    (let res-body (py-compile-stmt-seq body-stmts 0 (comp-res-state res-iter)))
+                    (let state3 (comp-res-state res-body))
+                    (let recCall (if (nil? loopVars) (str_concat "(" (str_concat helperName " (tail _remaining))")) (str_concat "(" (str_concat helperName (str_concat " (tail _remaining) " (str_concat (join-strings-with-spaces loopVars) ")"))))))
+                    (let wrappedBody (str_concat "(do (let " (str_concat target (str_concat " (head _remaining)) " (str_concat (comp-res-str res-body) (str_concat " " (str_concat recCall ")"))))))
+                    (let elseBranch (if (nil? loopVars) "null" (if (eq (len loopVars) 1) (head loopVars) (str_concat "(list " (str_concat (join-strings-with-spaces loopVars) ")")))))
+                    (let params (if (nil? loopVars) "_remaining" (str_concat "_remaining " (join-strings-with-spaces loopVars))))
+                    (let helperDef (str_concat "(defn " (str_concat helperName (str_concat " (" (str_concat params (str_concat ") (if (eq (len _remaining) 0) " (str_concat elseBranch (str_concat " " (str_concat wrappedBody "))")))))))))
+                    (let state4 (py-state-add-lifted-defn state3 helperDef))
+                    (let helperCall
+                        (if (nil? loopVars)
+                            (str_concat "(" (str_concat helperName (str_concat " " (str_concat iterExpr ")"))))
+                            (if (eq (len loopVars) 1)
+                                (str_concat "(let " (str_concat (head loopVars) (str_concat " (" (str_concat helperName (str_concat " " (str_concat iterExpr (str_concat " " (str_concat (head loopVars) "))"))))))))
+                                (do
+                                    (let resultName (str_concat "_for_" (str_concat (int_to_str (py-state-while-counter state)) "_result")))
+                                    (let destructures (py-make-destructure-lets loopVars resultName 0))
+                                    (str_concat "(let " (str_concat resultName (str_concat " (" (str_concat helperName (str_concat " " (str_concat iterExpr (str_concat " " (str_concat (join-strings-with-spaces loopVars) (str_concat ")) " destructures)))))))))))))
+                    (comp-res helperCall state4))
+            (if (node_eq cat PY-BMF-IF-STMT)
+                (do
+                    (let cond (head kids))
+                    (let body-stmts (tail kids))
+                    (let res-cond (py-compile-expr cond state))
+                    (let res-body (py-compile-stmt-seq body-stmts 0 (comp-res-state res-cond)))
+                    (comp-res (str_concat "(if " (str_concat (comp-res-str res-cond) (str_concat " " (str_concat (comp-res-str res-body) " false)")))) (comp-res-state res-body)))
+            (if (node_eq cat PY-BMF-IMPORT)
+                (do
+                    (let alias (node_value (head kids)))
+                    (let state2 (py-state-with-module-aliases state (cons (list alias "math") (py-state-module-aliases state))))
+                    (comp-res "false" state2))
+            (if (node_eq cat PY-BMF-FROM-IMPORT)
+                (do
+                    (let modname (node_value (head kids)))
+                    (let members (map node_value (tail kids)))
+                    (let state2 (py-add-from-import-members state modname members))
+                    (comp-res "false" state2))
+            (if (node_eq cat PY-BMF-RETURN)
+                (py-compile-expr (head kids) state)
+            (if (node_eq cat PY-BMF-PASS)
+                (comp-res "false" state)
+                (py-compile-expr stmt state))))))))))))))))))))
+
+    ;; ---- file compiler ----------------------------------------------
+    (defn py-compile-file (in-path out-path)
+        (do
+            (let ast (lift-module-file in-path))
+            (let kids (node_children ast))
+            (let state (py-state-init))
+            (let res (py-compile-stmt-seq kids 0 state))
+            (let final-state (comp-res-state res))
+            (let body (comp-res-str res))
+            (let lifted-defns (py-state-lifted-defns final-state))
+            (let final-str
+                (if (nil? lifted-defns)
+                    body
+                    (do
+                        (let is-bare-do (and (str_eq (substring body 0 4) "(do ") (str_eq (substring body (sub (str_len body) 1) (str_len body)) ")")))
+                        (if is-bare-do
+                            (do
+                                (let inner (substring body 4 (sub (str_len body) 1)))
+                                (str_concat "(do " (str_concat (join-strings-with-spaces (reverse lifted-defns)) (str_concat " " (str_concat inner ")")))))
+                            (str_concat "(do " (str_concat (join-strings-with-spaces (reverse lifted-defns)) (str_concat " " (str_concat body ")"))))))))
+            (write_file_text out-path final-str)))
+
+    0)
