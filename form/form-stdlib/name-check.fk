@@ -52,9 +52,21 @@
                 true
                 (nc-member? name (tail xs)))))
 
-    ;; --- the head-name of a FNDEF / FNCALL / IDENT (first child is a STRING)
+    ;; --- the name a name-position node denotes ----------------------------
+    ;; A name-position node (a FNDEF/FNCALL/IDENT's first child, a param, a let
+    ;; name) is EITHER a bare STRING trivial (its node_value IS the name) OR a
+    ;; one-child wrapper whose child is that STRING — the two shapes the kernel's
+    ;; own `ident_id` accepts. The S-expr `(f args)` form lowers a callee to the
+    ;; bare shape; the BML `f(args)` form lowers it to the wrapper shape; both
+    ;; occur in one real manifest, so the resolver must read both or it crashes
+    ;; on real input (node_value on a non-trivial wrapper).
+    (defn nc-name-of (node)
+        (if (eq (node_type node) 2)                      ; TRIV_STRING — node IS the name
+            (node_value node)
+            (node_value (head (node_children node)))))    ; wrapper — its STRING child
+    ;; the name of a FNDEF / FNCALL / IDENT — its first child read as a name.
     (defn nc-head-name (n)
-        (node_value (head (node_children n))))
+        (nc-name-of (head (node_children n))))
 
     ;; Resolution is pure string-membership against the known-name set. The set
     ;; is the caller's to seed (the kernel natives, plus any generated/lowered
@@ -89,12 +101,12 @@
     (defn nc-add-names (xs defs)
         (if (nc-empty? xs)
             defs
-            (nc-add-names (tail xs) (cons (node_value (head xs)) defs))))
+            (nc-add-names (tail xs) (cons (nc-name-of (head xs)) defs))))
     (defn nc-let? (n)
         (if (eq (node_type n) 9)                                         ; RB_BLOCK
             (eq (node_inst (node_category n)) 3)                         ; RBLK_LET (category inst, not node inst)
             false))
-    (defn nc-let-name (n) (node_value (head (node_children n))))         ; kids[0]
+    (defn nc-let-name (n) (nc-name-of (head (node_children n))))         ; kids[0]
     (defn nc-scope-after (n defs)
         (if (nc-let? n) (cons (nc-let-name n) defs) defs))
 
@@ -109,7 +121,11 @@
                       (nc-add-names (node_children (nc-FNDEF-params n)) defs)
                       acc)
             (if (eq (node_type n) (nc-FNCALL))
-                (nc-check-ref (nc-head-name n) n defs acc)
+                ;; check the callee name, then walk only the ARGS (the tail). The
+                ;; callee child is the name itself — walking it too would re-count it
+                ;; when the callee is a wrapper (BML `f(args)` → IDENT callee).
+                (nc-check-kids (tail (node_children n)) defs
+                    (if (nc-member? (nc-head-name n) defs) acc (cons (nc-head-name n) acc)))
                 (if (eq (node_type n) (nc-IDENT))
                     (nc-check-ref (nc-head-name n) n defs acc)
                     (nc-check-kids (node_children n) defs acc)))))
