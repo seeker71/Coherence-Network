@@ -66,7 +66,7 @@ _coord_protocol() {
     . ask before assuming -> coord ask "<q>"      . close it -> coord answer "<q>" "<reply>"
     . check before landing -> coord check "<your reasoning; find my blind spot>"
     . green != correct-in-intent; reflect the blind spot, not flattery
-    . the watcher asks the silly question unprompted (who? when? how come?) -> answer it; that is the point
+    . the watcher asks the silly question unprompted (who? when? how come? why python?) -> answer it; that is the point
   who is doing what
     . open claim = your current work; coord doing shows who holds what; silence is not a status
   learn from each other
