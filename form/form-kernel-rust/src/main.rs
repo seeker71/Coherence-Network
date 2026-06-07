@@ -7657,16 +7657,18 @@ fn worker_loop(
 
 // The form-stdlib preludes a source manifest is source-compiled through, in load
 // order: the ontology loader asks the kernel-native bp table for coordinates,
-// then source-compiler.fk lowers a `section [...]` against those bindings.
+// then bml-source.fk names reusable BML source cells, and source-compiler.fk
+// lowers a `section [...]` against those bindings.
 // This is the SAME prelude set + lowering `form/validate.sh prepare_sources`
 // runs to source-compile a `section [...]` file — the router reuses the body's
 // own compiler, not a Rust reimplementation of a source-language parser.
-const SOURCE_COMPILE_PRELUDES: [&str; 6] = [
+const SOURCE_COMPILE_PRELUDES: [&str; 7] = [
     "form-ontology-loader.fk",
     "line-grammar.fk",
     "bmf-core.fk",
     "bmf-grammar.fk",
     "bml.fk",
+    "bml-source.fk",
     "source-compiler.fk",
 ];
 

@@ -617,11 +617,11 @@
         (if (fsc-empty? xs) ys
             (cons (head xs) (fsc-list-append (tail xs) ys))))
 
-    ;; --- BML source objects + route-domain lowering -------------------
+    ;; --- BML route-domain lowering ------------------------------------
     ;;
-    ;; `form.route` is a BML-shaped domain surface. BML mechanics become
-    ;; source objects first; the route dialect then lowers those objects into
-    ;; shared language-model cells instead of generic UE-* nodes.
+    ;; `form.route` is a BML-shaped domain surface. Shared source cells live in
+    ;; bml-source.fk; this compiler consumes them and lowers route-domain
+    ;; objects into shared language-model cells instead of generic UE-* nodes.
 
     ;; Comma-separated names → list of trimmed name strings.
     (defn fsc-bml-name-list-strings-loop (args i acc)
@@ -662,54 +662,6 @@
     (defn fsc-bml-class-member-name (class-name member-name)
         (str_concat class-name (str_concat "_" member-name)))
 
-    (defn fsc-bml-template-use-source (class-name template-name type-arguments)
-        (list "fsc-bml-template-use" class-name template-name type-arguments))
-
-    (defn fsc-bml-template-use-source? (source)
-        (if (eq (len source) 4)
-            (str_eq (nth source 0) "fsc-bml-template-use")
-            false))
-
-    (defn fsc-bml-template-use-class-name (source) (nth source 1))
-    (defn fsc-bml-template-use-template-name (source) (nth source 2))
-    (defn fsc-bml-template-use-type-arguments (source) (nth source 3))
-
-    (defn fsc-bml-parse-template-use-source (class-name typed-template)
-        (do
-            (let type-open (fsc-find-char-from typed-template "<" 0))
-            (let type-close (fsc-find-char-from typed-template ">" type-open))
-            (let template-name (fsc-trim (fsc-sub typed-template 0 type-open)))
-            (let type-args-text (fsc-sub typed-template (add type-open 1) type-close))
-            (let type-args (fsc-bml-name-list-strings-loop type-args-text 0 (empty)))
-            (fsc-bml-template-use-source class-name template-name type-args)))
-
-    (defn fsc-bml-route-call-source (name args)
-        (list "fsc-bml-route-call" name args))
-
-    (defn fsc-bml-route-call-source? (source)
-        (if (eq (len source) 3)
-            (str_eq (nth source 0) "fsc-bml-route-call")
-            false))
-
-    (defn fsc-bml-route-call-name (source) (nth source 1))
-    (defn fsc-bml-route-call-args (source) (nth source 2))
-
-    (defn fsc-bml-route-call-source-from-expr (expr)
-        (do
-            (let value (fsc-strip-semi (fsc-trim expr)))
-            (let route-open (fsc-find-char-from value "(" 0))
-            (let route-close (fsc-last-char-index value))
-            (let route-call-name (fsc-trim (fsc-sub value 0 route-open)))
-            (let route-args (fsc-sub value (add route-open 1) route-close))
-            (fsc-bml-route-call-source route-call-name route-args)))
-
-    (defn fsc-bml-route-call-source-from-assignment (line)
-        (do
-            (let value (fsc-strip-semi line))
-            (let eq-pos (fsc-find-char-from value "=" 0))
-            (fsc-bml-route-call-source-from-expr
-                (fsc-sub value (add eq-pos 1) (str_len value)))))
-
     (defn fsc-bml-route-data-arg-recipes-for-class (args class-name)
         (do
             (let p (fsc-skip-spaces args 0))
@@ -725,24 +677,24 @@
                     (empty)))))
 
     (defn fsc-bml-route-call-arg-recipes (route-call)
-        (if (str_eq (fsc-bml-route-call-name route-call) "route_data")
-            (fsc-bml-route-data-arg-recipes (fsc-bml-route-call-args route-call))
-            (fsc-bml-args-recipes-loop (fsc-bml-route-call-args route-call) 0 (empty))))
+        (if (str_eq (bml-source-route-call-name route-call) "route_data")
+            (fsc-bml-route-data-arg-recipes (bml-source-route-call-args route-call))
+            (fsc-bml-args-recipes-loop (bml-source-route-call-args route-call) 0 (empty))))
 
     (defn fsc-bml-route-call-arg-recipes-for-class (route-call class-name)
-        (if (str_eq (fsc-bml-route-call-name route-call) "route_data")
+        (if (str_eq (bml-source-route-call-name route-call) "route_data")
             (fsc-bml-route-data-arg-recipes-for-class
-                (fsc-bml-route-call-args route-call)
+                (bml-source-route-call-args route-call)
                 class-name)
-            (fsc-bml-args-recipes-loop (fsc-bml-route-call-args route-call) 0 (empty))))
+            (fsc-bml-args-recipes-loop (bml-source-route-call-args route-call) 0 (empty))))
 
     (defn fsc-bml-route-call-language-class-fn (route-call)
-        (if (str_eq (fsc-bml-route-call-name route-call) "route_data")
+        (if (str_eq (bml-source-route-call-name route-call) "route_data")
             "language-route-class-route-data"
             "language-route-class"))
 
     (defn fsc-bml-route-call-kernel-route-fn (route-call)
-        (if (str_eq (fsc-bml-route-call-name route-call) "route_data")
+        (if (str_eq (bml-source-route-call-name route-call) "route_data")
             "kh-route-data-ref"
             "kh-route"))
 
@@ -961,23 +913,23 @@
             (let eq-pos (fsc-find-char-from line "=" colon))
             (let class-name (fsc-trim (fsc-sub line 6 colon)))
             (let typed-template (fsc-trim (fsc-sub line (add colon 1) eq-pos)))
-            (let template-use (fsc-bml-parse-template-use-source class-name typed-template))
+            (let template-use (bml-source-parse-template-use class-name typed-template))
             (let route-call
-                (fsc-bml-route-call-source-from-expr
+                (bml-source-route-call-from-expr
                     (fsc-sub line (add eq-pos 1) (str_len line))))
             (let route-arg-recipes (fsc-bml-route-call-arg-recipes route-call))
             (fsc-rec-let class-name
                 (fsc-rec-call
                     (fsc-bml-route-call-language-class-fn route-call)
-                    (cons (fsc-rec-string (fsc-bml-template-use-class-name template-use))
-                    (cons (fsc-rec-ident (fsc-bml-template-use-template-name template-use))
-                    (cons (fsc-rec-string-list (fsc-bml-template-use-type-arguments template-use))
+                    (cons (fsc-rec-string (bml-source-template-use-class-name template-use))
+                    (cons (fsc-rec-ident (bml-source-template-use-template-name template-use))
+                    (cons (fsc-rec-string-list (bml-source-template-use-type-arguments template-use))
                           route-arg-recipes)))))))
 
     (defn fsc-compile-form-bml-language-class-block-route-recipe
         (line class-name template-name type-args)
         (do
-            (let route-call (fsc-bml-route-call-source-from-assignment line))
+            (let route-call (bml-source-route-call-from-assignment line))
             (let route-arg-recipes
                 (fsc-bml-route-call-arg-recipes-for-class route-call class-name))
             (fsc-rec-call "language-class-member-route"
@@ -1073,7 +1025,7 @@
             (let brace (fsc-find-char-from line "{" colon))
             (let class-name (fsc-trim (fsc-sub line 6 colon)))
             (let typed-template (fsc-trim (fsc-sub line (add colon 1) brace)))
-            (let template-use (fsc-bml-parse-template-use-source class-name typed-template))
+            (let template-use (bml-source-parse-template-use class-name typed-template))
             (let body-end (fsc-bml-block-end body body-start 0))
             (let method-defs
                 (fsc-bml-class-method-defs-loop body body-start body-end class-name (empty)))
@@ -1083,17 +1035,17 @@
                     body-start
                     body-end
                     class-name
-                    (fsc-bml-template-use-template-name template-use)
-                    (fsc-bml-template-use-type-arguments template-use)
+                    (bml-source-template-use-template-name template-use)
+                    (bml-source-template-use-type-arguments template-use)
                     (empty)))
             (fsc-list-append method-defs
                 (list
                     (fsc-rec-let class-name
                         (fsc-rec-call "language-class"
                             (list
-                                (fsc-rec-string (fsc-bml-template-use-class-name template-use))
-                                (fsc-rec-ident (fsc-bml-template-use-template-name template-use))
-                                (fsc-rec-string-list (fsc-bml-template-use-type-arguments template-use))
+                                (fsc-rec-string (bml-source-template-use-class-name template-use))
+                                (fsc-rec-ident (bml-source-template-use-template-name template-use))
+                                (fsc-rec-string-list (bml-source-template-use-type-arguments template-use))
                                 (fsc-rec-list-of members))))))))
 
     ;; A block-line returns a (possibly empty) list of recipes. Empty for
@@ -1191,8 +1143,11 @@
                             (fsc-line-next body p)
                             (fsc-rec-append-rev line-recipes acc))))))))))
 
-    (defn fsc-compile-form-route-section-recipe (body)
+    (defn fsc-compile-form-bml-section-recipe (body)
         (fsc-rec-do (fsc-form-bml-lines-recipes-loop body 0 (empty))))
+
+    (defn fsc-compile-form-route-section-recipe (body)
+        (fsc-compile-form-bml-section-recipe body))
 
 
     ;; --- Recipe source emitter --------------------------------------
@@ -1289,9 +1244,11 @@
     (defn fsc-compile-section-recipe (dialect-name body)
         (if (str_eq dialect-name "form.route")
             (fsc-compile-form-route-section-recipe body)
+        (if (str_eq dialect-name "form.bml")
+            (fsc-compile-form-bml-section-recipe body)
         (if (fsc-high-level-form-dialect? dialect-name)
             (g-parse (bml-grammar) body)
-            (fsc-bmf-section-recipe dialect-name body))))
+            (fsc-bmf-section-recipe dialect-name body)))))
 
     (defn fsc-compile-section (dialect-name body)
         (do
