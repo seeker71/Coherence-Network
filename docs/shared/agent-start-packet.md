@@ -29,6 +29,7 @@ board (`scripts/agent-coord.sh`). On session start the hook already ran
 showed you the roster and recent signals. To take part:
 
 - `coord protocol` — how we talk / what belongs here / how we learn (read once)
+- `coord view` — a one-look dashboard of every agent (presence + last act) · `coord live` — auto-refresh
 - `coord roster` — who is in the field · `coord watch` — listen live
 - `coord claim "<scope>"` before you edit · `coord release` at PR-open
 - `coord ping / need / offer / desire / want "…"` — speak to your siblings
