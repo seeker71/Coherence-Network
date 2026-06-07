@@ -9,19 +9,26 @@
 # This file only moves the bytes. The git-side view (worktrees, dirty state,
 # file-level collisions) is scripts/agent_status.py — intent here, body there.
 #
-# Usage (per terminal):
-#   export COORD_AGENT=grok           # claude | codex | cursor | grok | gemini | human
-#   source scripts/agent-coord.sh
-#   coord announce "$(pwd)"           # join the field, name your worktree
-#   coord claim   "form/ kernel files"
-#   coord ping    "rebased on main, kernel band green"
-#   coord block   "need the cursor UI branch merged first"
-#   coord release "form/ kernel files"
-#   coord watch                       # live stream from all siblings (Ctrl-C to leave)
-#   coord log 50                      # last 50 signals
+# Two ways to call it:
+#   1. Sourced (interactive):  export COORD_AGENT=grok; source scripts/agent-coord.sh; coord join
+#   2. Executed (hooks):       COORD_AGENT=grok bash scripts/agent-coord.sh join
 #
-# The board is liquid (ephemeral, gitignored, this machine). Durable task
-# ownership stays in `coh tasks` + git branches + PRs.
+# Verbs:
+#   join                  # announce + show roster + recent — the one-command arrival
+#   roster                # who is in the field (last-seen + worktree per agent)
+#   announce "$(pwd)"     # present yourself / name your worktree
+#   claim   "form/ kernel"# I am taking this scope — before editing
+#   release "form/ kernel"# done, the tissue is open again
+#   ping    "rebased"     # a free word to all siblings
+#   block   "need X"      # I cannot proceed until X     · unblock / ack
+#   desire / want / need / offer  "..."   # the relational layer — what we wish, lack, can give
+#   watch                 # live stream from all siblings (Ctrl-C to leave)
+#   log 50                # last 50 signals
+#
+# Auto-join: SessionStart hooks (.claude/settings.json, .codex/hooks.json) run
+# `agent-coord.sh join` so every new session is visible without anyone bootstrapping.
+# The board is liquid (ephemeral, gitignored, this machine); durable task ownership
+# stays in `coh tasks` + git branches + PRs.
 
 COHERENCE_COORD="${COHERENCE_COORD:-$HOME/.coherence-network/agent-coord.board}"
 
@@ -32,17 +39,34 @@ _coord_fmt() {
   done
 }
 
+_coord_roster() {
+  # who is in the field: last-seen time + announced worktree, newest first
+  awk -F'\t' '
+    { last[$2]=$1; n[$2]++; if($3=="announce") home[$2]=$4 }
+    END { for (a in last) printf "%s\t  %-8s last %s  (%d signals)  %s\n", last[a], a, substr(last[a],12,8), n[a], home[a] }
+  ' "$COHERENCE_COORD" 2>/dev/null | sort -r | cut -f2-
+}
+
 coord() {
   local type="$1"; shift 2>/dev/null || true
   local agent="${COORD_AGENT:-$(whoami)}"
   mkdir -p "$(dirname "$COHERENCE_COORD")"; touch "$COHERENCE_COORD" 2>/dev/null
   case "$type" in
-    watch) tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
-    log)   tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
-    announce|claim|release|ping|block|unblock|ack|done) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|watch|log> [message]"; return 1;;
+    watch)  tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
+    log)    tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
+    roster) _coord_roster; return;;
+    join)   coord announce "${*:-$(pwd)}"
+            printf '\n  ── who is in the field ──\n'; _coord_roster
+            printf '  ── recent signals ──\n'; tail -n 8 "$COHERENCE_COORD" | _coord_fmt
+            return;;
+    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer) : ;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|join|roster|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
   printf '  → [%s] %s %s\n' "$agent" "$type" "$msg"
 }
+
+# Dual-mode: sourced → defines `coord` for interactive use; executed → dispatches
+# `coord "$@"` so a SessionStart hook can run `agent-coord.sh join` directly.
+if [ "${BASH_SOURCE[0]:-}" = "${0}" ]; then coord "$@"; fi

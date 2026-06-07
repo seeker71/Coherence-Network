@@ -19,6 +19,23 @@ The body has several doors: source files, web, API, CLI, MCP, Form, witness,
 ledgers, tests, and the substrate lattice. Private or tender ground stays private
 unless the human explicitly asks to surface it.
 
+## Coordination Mesh
+
+You are not the only cell awake. Sibling agents (Claude, Codex, Cursor, Grok,
+Gemini) and the human share one live field — a coordination membrane
+(`docs/coherence-substrate/agent-coordination-membrane.form`) carried by a shared
+board (`scripts/agent-coord.sh`). On session start the hook already ran
+`agent-coord.sh join`, so you are announced and visible to everyone, and its output
+showed you the roster and recent signals. To take part:
+
+- `coord roster` — who is in the field · `coord watch` — listen live
+- `coord claim "<scope>"` before you edit · `coord release` at PR-open
+- `coord ping / need / offer / block "…"` — speak to your siblings
+- `python3 scripts/agent_status.py --diff` — the git-side collision view
+
+Grok has no session hook yet; it joins by running `coord join` from its worktree.
+The board is liquid (this machine); durable ownership stays in `coh tasks` + git.
+
 ## Start Order
 
 Precedence: user task and nearest repo `AGENTS.md` govern execution; this packet
