@@ -1,0 +1,81 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-query-helpers-20260607",
+  "commit_scope": "Extract Form-native HTTP header and query access helpers from the native-http dirty worktree as the first small native-front-door slice.",
+  "files_owned": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-07_native_http_query_helpers.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "passed; clean linked worktree",
+      "wellness": "passed; deploy aligned and kernel-native API still at 22/812 route surface",
+      "validate_source": "132226; 1 ok, 0 divergent — kernels agree on every sample",
+      "validate_binary": "132226; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "PR #2572 checks passed: validate-thread-process and GitGuardian Security Checks."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No production endpoint behavior changes; deploy relevance is covered by Form/BML source and binary validation plus PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:native-http-query-helpers"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/validate.sh"
+  ],
+  "change_files": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native HTTP handlers can read headers and query values through Form-native accessors instead of ad hoc host-side inspection.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/kernel-http-band.fk"
+    ],
+    "test_flows": [
+      "Run source and binary validate.sh on kernel-http.fk plus kernel-http-band.fk; both return 132226 with Go/Rust/TypeScript agreement."
+    ]
+  }
+}
