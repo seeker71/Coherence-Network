@@ -35,6 +35,7 @@
 ;                                       scalar-lists (422 on len mismatch)
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
 ;   /api/ideas/router-structure       Form-native ideas route structure reading
+;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -56,6 +57,7 @@
 ;   curl ':PORT/api/utils/coherence_weight'              -> live-api JSON, byte-identical
 ;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
 ;   curl ':PORT/api/ideas/router-structure'              -> native Form route reading
+;   curl ':PORT/api/ideas/source-index'                  -> native source-index data
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1509,6 +1511,34 @@
     ",\"carrier_boundary\":\"mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift\""
     ",\"runtime\":\"inline\"}")))
 
+(defn str_count_from (s needle start)
+  (do (let found (str_find s needle start))
+      (if (eq found -1)
+          0
+          (add 1 (str_count_from s needle (add found (str_len needle)))))))
+
+(defn str_count (s needle)
+  (str_count_from s needle 0))
+
+(defn ideas_index_text ()
+  (do (let docker_text (read_file_slice "ideas/INDEX.md" 0 200000))
+      (if (gt (str_len docker_text) 0)
+          docker_text
+          (read_file_slice "../../ideas/INDEX.md" 0 200000))))
+
+(defn route_ideas_source_index (q)
+  (do (let text (ideas_index_text))
+  (do (let super_ideas (str_count text "\n| ["))
+  (do (let source_status (if (gt (str_len text) 0) "read" "missing")))
+      (str_concat_all (list
+        "{\"source\":\"ideas/INDEX.md\""
+        ",\"route_source\":\"deploy/kernel-router/production-routes.fk::route_ideas_source_index\""
+        ",\"super_idea_count\":" (value_str super_ideas)
+        ",\"index_bytes\":" (value_str (str_len text))
+        ",\"source_status\":\"" source_status "\""
+        ",\"carrier_boundary\":\"source-index route reads repo idea source; mutable DB-backed /api/ideas/count still fans out\""
+        ",\"runtime\":\"inline\"}")))))
+
 (defn route_health (q) "ok")
 
 ; ===========================================================================
@@ -1570,4 +1600,5 @@ section [form.route] {
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
     (list "/api/utils/concept_match_score"     route_concept_match_score)
     (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
-    (list "/api/ideas/router-structure"    route_ideas_router_structure)))
+    (list "/api/ideas/router-structure"    route_ideas_router_structure)
+    (list "/api/ideas/source-index"        route_ideas_source_index)))
