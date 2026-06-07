@@ -1231,6 +1231,9 @@ export default function HatiSuciPage() {
                 const here = members.filter((m) => m.at_place === p.id);
                 const mine = member?.at_place === p.id;
                 const color = KIND_COLOR[p.kind] ?? "#94a3b8";
+                // life-force: a place where cells are present glows — bright while
+                // fresh, dimming as their reports age (presenceLife → 0).
+                const placeLife = here.reduce((mx, m) => Math.max(mx, presenceLife(m.at_place_since)), 0);
                 return (
                   <button
                     key={p.id}
@@ -1240,12 +1243,15 @@ export default function HatiSuciPage() {
                     title={p.name}
                   >
                     <span
-                      className="block rounded-full"
+                      className="block rounded-full transition-all duration-700"
                       style={{
                         width: mine ? 14 : 9,
                         height: mine ? 14 : 9,
                         background: color,
-                        boxShadow: mine ? `0 0 0 3px ${color}40` : "none",
+                        boxShadow: [
+                          mine ? `0 0 0 3px ${color}40` : "",
+                          placeLife > 0 ? `0 0 ${4 + 14 * placeLife}px ${color}` : "",
+                        ].filter(Boolean).join(", ") || "none",
                       }}
                     />
                     <span className="whitespace-nowrap text-[9px] leading-none text-muted-foreground">
@@ -1282,6 +1288,41 @@ export default function HatiSuciPage() {
             ))}
             <span className="ml-auto">{t("hatiSuci.map.decayNote")}</span>
           </div>
+
+          {(() => {
+            const hereNow = members
+              .filter((m) => m.at_place && presenceLife(m.at_place_since) > 0)
+              .sort((a, b) => presenceLife(b.at_place_since) - presenceLife(a.at_place_since));
+            return (
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">{t("hatiSuci.map.hereNow")}</p>
+                {hereNow.length === 0 ? (
+                  <p className="text-xs text-muted-foreground/50">{t("hatiSuci.map.noOneHere")}</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {hereNow.map((m) => {
+                      const life = presenceLife(m.at_place_since);
+                      const pc = KIND_COLOR[places.find((p) => p.id === m.at_place)?.kind ?? ""] ?? "#94a3b8";
+                      return (
+                        <span
+                          key={m.id}
+                          className="flex items-center gap-1.5 rounded-full border border-border/30 px-2 py-0.5 text-[11px] transition-opacity duration-700"
+                          style={{ opacity: 0.45 + 0.55 * life }}
+                        >
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ background: pc, boxShadow: `0 0 ${6 * life}px ${pc}` }}
+                          />
+                          <span className="text-foreground">{m.name}</span>
+                          <span className="text-muted-foreground">· {m.at_place_name}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </section>
 
         {/* Gatherings — raise a question or event; everyone answers; the field sees the tally */}

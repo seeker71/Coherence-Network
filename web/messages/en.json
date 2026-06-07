@@ -144,7 +144,9 @@
       "seed": "Seed the grounds",
       "keepMe": "Keep me here",
       "keepMeNote": "Share which place you're at, until you turn it off",
-      "sharingOn": "Sharing"
+      "sharingOn": "Sharing",
+      "hereNow": "Here now",
+      "noOneHere": "No one is reporting their place right now."
     }
   },
   "_attunement": {
