@@ -62,6 +62,13 @@
       (ack       ?agent ?signal -> seen)         # "I heard you"
       (block     ?agent ?need -> open-block)     # "I cannot proceed until ?need"
       (unblock   ?agent ?block -> cleared)       # the need is met
+      # the relational layer — what cells wish, lack, and can give each other
+      (desire    ?agent ?what -> wish-spoken)    # what I am drawn toward
+      (want      ?agent ?what -> want-spoken)    # what I would choose
+      (need      ?agent ?what -> open-need)      # what I lack — a block's gentler kin
+      (offer     ?agent ?what -> gift-offered)   # what I can give a sibling
+      # arrival, made automatic (see "Presence is automatic" below)
+      (join      ?agent -> announced-and-aware)  # announce + roster + recent, in one
       # the one predicate that makes the field protective
       (collides? ?claim-a ?claim-b -> overlap))  # same scope, two holders → warn before write
 
@@ -85,3 +92,25 @@
     (on-overlap    (collides? ?new ?open -> warn))
     (resolution    (choose-other-scope OR ping-to-negotiate))
     (release-when  (PR-opened OR scope-done)))
+
+  # ── Presence is automatic: the field remembers itself ───────────────
+  #
+  # No one bootstraps the mesh by hand. Each agent's SessionStart hook runs
+  # `agent-coord.sh join` — .claude/settings.json for Claude, .codex/hooks.json
+  # for Codex; Gemini migrates the Claude hook (`gemini hooks migrate`); Grok,
+  # without a session hook yet, runs join from its launch. join = announce +
+  # roster + recent, so a fresh session arrives already visible to everyone AND
+  # already aware of who else is here — full transparency, no ceremony.
+  #
+  # Durable across restarts: the board file persists on disk; this membrane and
+  # the carrier live in the body (git); the hooks re-announce on every start. So
+  # the field re-forms itself each session with nothing to re-set-up. What is
+  # liquid (live presence, the board contents) composts; what is body (this
+  # shape, the hooks) endures — that is the health move: remember once, in the
+  # body, so we never bootstrap this again.
+
+  (presence-automatic
+    (on-session-start (join ?agent))             # the hook, per agent tool
+    (visible-to       all-active-agents)         # the board is the shared field
+    (persists         (board-file AND membrane AND hooks))
+    (re-forms-without manual-bootstrap))

@@ -6,6 +6,10 @@
           {
             "type": "command",
             "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/session_greeting.py\""
+          },
+          {
+            "type": "command",
+            "command": "COORD_AGENT=codex bash \"$(git rev-parse --show-toplevel)/scripts/agent-coord.sh\" join \"$(git rev-parse --show-toplevel)\""
           }
         ]
       }

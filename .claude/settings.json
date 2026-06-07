@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "python3 $CLAUDE_PROJECT_DIR/scripts/arrival.py"
+          },
+          {
+            "type": "command",
+            "command": "COORD_AGENT=claude bash $CLAUDE_PROJECT_DIR/scripts/agent-coord.sh join \"$CLAUDE_PROJECT_DIR\""
           }
         ]
       }
