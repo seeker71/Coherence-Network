@@ -1,0 +1,26 @@
+; json-codec-bml-band.fk - BML-authored generic codec proof for JSON.
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk
+;
+; Band verdict: 8191 when Codec<TCell,TText> and JsonCodec lower from BML,
+; expose reusable parse/emit/round-trip composition, and produce canonical JSON.
+
+section [form.bml] {
+    def jcb_score(ok, bit) {
+        if ok then bit else 0;
+    }
+
+    def json_codec_bml_band_score() {
+        let codec_value = json_codec();
+        let doc = json-node-object(list(json-node-pair("name", json-node-string("BML")), json-node-pair("count", json-node-int(2)), json-node-pair("active", json-node-bool(true))));
+        let emitted = json_response_body(doc);
+        let parsed = json_parse_body("json-codec-bml-band", emitted);
+        let roundtrip = codec_round_trip(codec_value, "json-codec-bml-band", emitted);
+        let codec_lookup = codec_for(list(codec_entry("json", codec_value)), "json");
+        let emit_member = language-class-member-named(language-class-members(JsonCodec), "emit");
+        let parse_member = language-class-member-named(language-class-members(JsonCodec), "parse");
+        sum(list(jcb_score(language-template-valid?(Codec), 1), jcb_score(language-class-valid?(JsonCodec), 2), jcb_score(eq(len(language-template-members(Codec)), 3), 4), jcb_score(str_eq(nth(language-template-parameters(Codec), 0), "TCell"), 8), jcb_score(eq(len(language-class-type-arguments(JsonCodec)), 2), 16), jcb_score(str_eq(nth(language-class-type-arguments(JsonCodec), 1), "JsonText"), 32), jcb_score(eq(language-class-member-kind(emit_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 64), jcb_score(eq(language-class-member-kind(parse_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 128), jcb_score(str_eq(codec_media_type(codec_value), "application/json"), 256), jcb_score(str_eq(codec_media_type(codec_lookup), "application/json"), 512), jcb_score(str_eq(emitted, "{\"name\":\"BML\",\"count\":2,\"active\":true}"), 1024), jcb_score(str_eq(json-string-value(json-object-get(parsed, "name")), "BML"), 2048), jcb_score(str_eq(roundtrip, emitted), 4096)));
+    }
+
+    json_codec_bml_band_score();
+}

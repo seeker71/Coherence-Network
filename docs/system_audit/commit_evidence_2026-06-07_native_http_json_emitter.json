@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-json-emitter-20260607",
+  "commit_scope": "Move route-facing JSON behind a BML-authored JsonCodec declaration backed by a reusable structured-codec runtime, removing json-emit as the public route-grade path and naming the stdlib-wide expression audit this exposed.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/codec.fk",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/json-codec.fk",
+    "form/form-stdlib/structured-codec.fk",
+    "form/form-stdlib/tests/json-codec-bml-band.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk",
+    "form/form-stdlib/tests/json-promoted-types.fk",
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "docs/system_audit/commit_evidence_2026-06-07_native_http_json_emitter.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-codec-bml-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-promoted-types.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-codec-bml-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-promoted-types.fk",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "passed after the primary branch upstream was restored",
+      "wellness": "local body reading completed; public health URLs still reported 404 and remain outside this local Form/runtime slice",
+      "json_codec_bml_source": "8191; 1 ok, 0 divergent — BML JsonCodec declaration uses structured-codec parse/emit and executes across sibling kernels",
+      "json_emitter_source": "15; 1 ok, 0 divergent — route-grade emission enters through json_response_body, not json-emit",
+      "json_promoted_types_source": "115; 1 ok, 0 divergent — route-grade parsing enters through json_parse_body and preserves bool/float primitives",
+      "json_codec_bml_binary": "8191; 1 ok, 0 divergent — BML JsonCodec declaration compiles to binary artifacts that execute across sibling kernels",
+      "json_emitter_binary": "15; 1 ok, 0 divergent — json_response_body binary artifact emits canonical JSON",
+      "json_promoted_types_binary": "115; 1 ok, 0 divergent — json_parse_body binary artifact preserves promoted JSON primitives",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "Local source and binary sibling-kernel gates pass for this amended Form/runtime slice; PR #2574 checks rerun after push and remain the external merge gate."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No public deployment was changed in this commit; route-facing behavior is covered by Form source and binary sibling validation."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:native-http-front-door",
+    "idea:form-owned-json"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler",
+    "spec:native-kernel-http"
+  ],
+  "task_ids": [
+    "task:native-http-json-emitter"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/json-emitter-band.fk",
+    "form/form-stdlib/tests/json-codec-bml-band.fk",
+    "form/form-stdlib/tests/json-promoted-types.fk",
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "form/validate.sh"
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/codec.fk",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/json-codec.fk",
+    "form/form-stdlib/structured-codec.fk",
+    "form/form-stdlib/tests/json-codec-bml-band.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk",
+    "form/form-stdlib/tests/json-promoted-types.fk",
+    "docs/coherence-substrate/form-stdlib-expression-audit.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML can express a JsonCodec declaration over a reusable Codec<TCell,TText> abstraction; JSON parse/emit behavior is supplied by a generic structured-codec runtime from declared categories/tokens instead of a hand-authored json-emit public path; route-grade tests enter through json_response_body/json_parse_body; parsed booleans and float-like numbers preserve their substrate primitive types for native HTTP handlers; the stdlib expression audit names the same rewrite question for adjacent surfaces.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/json-emitter-band.fk",
+      "form://form-stdlib/tests/json-codec-bml-band.fk",
+      "form://form-stdlib/tests/json-promoted-types.fk"
+    ],
+    "test_flows": [
+      "Run source and binary validate.sh workloads for the BML JSON codec declaration, route-grade JSON response body, and promoted primitive parsing; all agree across Go, Rust, and TypeScript siblings."
+    ],
+    "gaps_found_and_closed": [
+      "intern_trivial_bool existed as substrate shape but was not callable from Form; added sibling native registrations.",
+      "scan_run class 6 was needed for JSON-safe string emission; added sibling scan class rather than moving JSON encoding into host code.",
+      "int_to_str documented value-to-string behavior but did not handle floats consistently; added float passthrough.",
+      "json-emit initially asked node_category of trivial leaves; reordered dispatch to check node_level first.",
+      "json-number-float? had a malformed ge expression; source and binary tests now cover decimal and exponent numbers.",
+      "JSON emission was initially exposed only as raw Form functions; replaced the route-facing json-emit path with json_response_body over a BML JsonCodec declaration.",
+      "The first BML wrapper still carried hand-authored JSON algorithm methods; released that middle form and moved JSON-specific source to a declared structured codec spec backed by reusable runtime machinery.",
+      "The first structured codec emitter still hardcoded JSON's pair separator; changed it to use the declared sc-pair-sep spec field.",
+      "The same question applies across stdlib; added docs/coherence-substrate/form-stdlib-expression-audit.md to name hot rewrite targets and first moves."
+    ]
+  }
+}

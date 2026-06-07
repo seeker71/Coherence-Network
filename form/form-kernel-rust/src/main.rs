@@ -2375,7 +2375,8 @@ impl Kernel {
         // TS scan_run. Generic per-byte loop in Rust avoids the walker
         // dispatch a pure-Form recursion would pay per character.
         // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
-        //              4=non-quote-non-escape, 5=non-newline.
+        //              4=non-quote-non-escape, 5=non-newline,
+        //              6=json-string-safe (byte >= 0x20, not quote/backslash).
         self.register_native("scan_run", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             let from = args[1].as_int().max(0) as usize;
@@ -2418,7 +2419,13 @@ impl Kernel {
                         end += 1;
                     }
                 }
-                _ => panic!("scan_run: unknown class_code {} (valid: 0-5)", class),
+                6 => {
+                    while end < n && bytes[end] >= 0x20 && bytes[end] != b'"' && bytes[end] != b'\\'
+                    {
+                        end += 1;
+                    }
+                }
+                _ => panic!("scan_run: unknown class_code {} (valid: 0-6)", class),
             }
             Value::Int(end as i64)
         });
@@ -2469,6 +2476,7 @@ impl Kernel {
                 "false".to_string().into()
             }),
             Value::Null => Value::Str("null".to_string().into()),
+            Value::Float(f) => Value::Str(format_float_python(*f).into()),
             _ => Value::Str(args[0].as_int().to_string().into()),
         });
         self.register_native("str_to_int", cat_method(), |_, _, args| {
@@ -4006,6 +4014,14 @@ impl Kernel {
         self.register_native("intern_trivial_string", cat_witness(), |k, _, args| {
             let s = args[0].as_str().to_string();
             Value::Nid(k.intern_string(&s))
+        });
+        self.register_native("intern_trivial_bool", cat_witness(), |_, _, args| {
+            Value::Nid(NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_BOOL,
+                inst: if args[0].as_bool() { 1 } else { 0 },
+            })
         });
         // intern_trivial_float — content-address an IEEE-754 f64 into the
         // overflow table and return its trivial NodeID. The string argument is
