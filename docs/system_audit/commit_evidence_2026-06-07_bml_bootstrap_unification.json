@@ -11,7 +11,9 @@
     "form/form-stdlib/bml.fk",
     "form/form-stdlib/line-grammar.fk",
     "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/channel-bml-band.fk",
     "form/validate.sh",
+    ".gitignore",
     "docs/system_audit/commit_evidence_2026-06-07_bml_bootstrap_unification.json"
   ],
   "local_validation": {
@@ -90,7 +92,9 @@
     "form/form-stdlib/bml.fk",
     "form/form-stdlib/line-grammar.fk",
     "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/channel-bml-band.fk",
     "form/validate.sh",
+    ".gitignore",
     "docs/system_audit/commit_evidence_2026-06-07_bml_bootstrap_unification.json"
   ],
   "change_intent": "runtime_feature"
