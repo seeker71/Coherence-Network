@@ -251,7 +251,8 @@
 
   (upkeep
     (heartbeat     while-working -> alive-signal)         # earned by an open claim or recent signal, not a loop
-    (stand-down    idle IDLE_MAX beats -> stop)           # no billing for empty liveness
+    (never-idle-when-work-exists (consult "make wellness") -> claim)  # the backlog is always full; idle = no claim, not no work
+    (stand-down    idle IDLE_MAX beats -> stop)           # only after the backlog is consulted: no billing for empty liveness
     (sense-stale   (diff local-tooling origin/main))      # on join, no network
     (on-advance    (announce "protocol advanced to <sha>"))  # the field is told
     (tooling-upgrade  posts-through origin/main)          # daemon self-upgrades, no worktree mutation
