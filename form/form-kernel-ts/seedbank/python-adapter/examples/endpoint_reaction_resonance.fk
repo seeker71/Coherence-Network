@@ -1,0 +1,1 @@
+(do (defn resonance (p n e) (sub (add (add p e) e) n)) (let p 0) (let n 0) (let e 0) (resonance p n e))

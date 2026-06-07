@@ -136,6 +136,46 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
     return resp
 
 
+def _reaction_resonance_k(positive: int, negative: int, excited: int) -> int:
+    """Value-identical fallback for endpoint_reaction_resonance.fk."""
+    return positive + 2 * excited - negative
+
+
+def _reaction_resonance(positive: int, negative: int, excited: int) -> int:
+    """Compose the community's reactions into a felt sense — how warmly the field
+    holds a question (discord-membrane.form: compose). On the Form kernel
+    (endpoint_reaction_resonance.fk), Python the value-identical fallback."""
+    from app.services.form_kernel_bridge import serve_via_kernel
+    val, _runtime = serve_via_kernel(
+        "endpoint_reaction_resonance.fk",
+        bindings={"p": positive, "n": negative, "e": excited},
+        fallback=lambda: _reaction_resonance_k(positive, negative, excited),
+        parse=int,
+    )
+    return int(val)
+
+
+def _attach_question_votes(idea: IdeaWithScore) -> None:
+    """Let the community's reactions be HEARD on the idea-cell: for each open
+    question, read its stored vote-edges and surface them + the resonance.
+    Without this the votes land in memory and are never heard.
+    (discord-membrane.form: listen → compose → reaches the idea-cell.)"""
+    from app.services import discord_vote_service
+    questions = getattr(idea, "open_questions", None) or []
+    for idx, q in enumerate(questions):
+        try:
+            counts = discord_vote_service.get_counts(idea.id, idx)
+        except Exception:
+            continue
+        if counts.positive or counts.negative or counts.excited:
+            q.votes = {
+                "positive": counts.positive,
+                "negative": counts.negative,
+                "excited": counts.excited,
+            }
+            q.resonance = _reaction_resonance(counts.positive, counts.negative, counts.excited)
+
+
 def _apply_idea_view(idea: IdeaWithScore, lang: str | None) -> IdeaWithScore:
     """Project a single idea from its canonical entity view when present."""
     from app.services import translator_service
@@ -820,6 +860,7 @@ async def get_idea(
     idea = idea_service.get_idea(idea_id)
     if idea is None:
         raise HTTPException(status_code=404, detail="Idea not found")
+    _attach_question_votes(idea)        # the community's reactions, heard on the idea-cell
     return _apply_idea_view(idea, resolve_caller_lang(request, lang))
 
 

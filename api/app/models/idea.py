@@ -142,6 +142,12 @@ class IdeaQuestion(BaseModel):
     estimated_cost: float = Field(ge=0.0)
     answer: Optional[str] = None
     measured_delta: Optional[float] = None
+    # The community's reactions, HEARD on the idea-cell (discord-membrane.form:
+    # listen). votes = {positive, negative, excited}; resonance = how warmly the
+    # field holds the question, composed on the Form kernel (+1 per 👍, +2 per 🔥,
+    # −1 per 👎). Without these the votes land in memory and are never heard.
+    votes: Optional[dict] = None
+    resonance: Optional[int] = None
 
 
 class IdeaQuestionCreate(BaseModel):
