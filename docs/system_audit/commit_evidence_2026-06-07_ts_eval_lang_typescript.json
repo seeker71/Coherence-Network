@@ -1,0 +1,79 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "cursor/ts-bmf-compost-rules-20260607",
+  "commit_scope": "Route ts-eval through lang-typescript.ts native parser/evaluator; keep ts-compile/ts-run/ts-trace on legacy lang-ts until .fk emitter lands.",
+  "files_owned": [
+    "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
+    "form/form-kernel-ts/src/lang-typescript.ts",
+    "docs/system_audit/commit_evidence_2026-06-07_ts_eval_lang_typescript.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-ts && npx tsx src/lang-typescript.test.ts",
+      "cd form/form-kernel-ts && bash seedbank/ts-adapter/scripts/parity_suite.sh"
+    ],
+    "results": {
+      "lang_typescript_tests": "36/36 passed",
+      "parity_suite_ts": "5 passing, 0 failing (arith, recursion, arrow, accumulator, composition)"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Await PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Form-kernel-ts adapter path only; no production API route change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "ci_validation pending until PR checks pass",
+      "ts-compile/ts-run still emit via lang-ts-fk.ts — next compost slice"
+    ]
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:ts-bmf-compost-rules"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "auto"
+  },
+  "evidence_refs": [
+    "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
+    "form/form-kernel-ts/src/lang-typescript.test.ts"
+  ],
+  "change_files": [
+    "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
+    "form/form-kernel-ts/src/lang-typescript.ts"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "ts-eval uses buildTypeScriptLanguage + evalTypeScriptValue; parity_suite stays 5/5 including arrow demo → 46.",
+    "public_endpoints": [
+      "form://form-kernel-ts/seedbank/ts-adapter/examples/ts_arrow_demo.ts"
+    ],
+    "test_flows": [
+      "npx tsx src/lang-typescript.test.ts — 36/36",
+      "bash seedbank/ts-adapter/scripts/parity_suite.sh — 5 passing"
+    ]
+  }
+}
