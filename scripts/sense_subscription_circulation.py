@@ -19,6 +19,14 @@ the real traces those providers leave behind.
 One engine over uniform events; each provider is an extractor that fills whatever
 its trace can honestly carry (fidelity is reported, never faked).
 
+CANONICAL LOGIC LIVES IN FORM, not here. The verdict / pace / alignment rules are
+defined and proven in docs/coherence-substrate/circulation-as-recipe.form (the
+body's tongue, executable via `coh substrate run`). This Python is the BOOTSTRAP
+carrier: it reads the traces (edge IO, legitimately Python) and *mirrors* those
+recipes. When the two disagree, the .form is right and this is drifting. (The
+.form carries ratios as integer percents 0..100; this carrier uses the matching
+fraction thresholds 0.80 ⇔ 80, 0.40 ⇔ 40 — the same decisions.)
+
 Run: python3 scripts/sense_subscription_circulation.py            (the reading)
      python3 scripts/sense_subscription_circulation.py --json     (machine payload)
      python3 scripts/sense_subscription_circulation.py --days 7   (narrow the window)
@@ -93,7 +101,8 @@ class LimitReading:
 
     def pace(self) -> str | None:
         """Are we burning faster than the clock? Compares fraction-used to
-        fraction-of-window-elapsed — the 'rate vs remaining' question directly."""
+        fraction-of-window-elapsed — the 'rate vs remaining' question directly.
+        Mirror of `pace_projected` / `pace_on_track` in circulation-as-recipe.form."""
         if not (self.resets_at and self.window_minutes):
             return None
         window_s = self.window_minutes * 60
@@ -135,7 +144,8 @@ class Reading:
         return None if lt is None else (NOW - lt) / 86400
 
     def alignment(self) -> tuple[int, int]:
-        """(aligned, side) by native unit, over events that carry a project tag."""
+        """(aligned, side) by native unit, over events that carry a project tag.
+        Mirror of `aligned_pct` / `side_pct` in circulation-as-recipe.form."""
         a = s = 0
         for e in self.events:
             if e.project is None:
@@ -392,7 +402,10 @@ def _reset_in(resets_at: float | None) -> str:
 
 
 def verdict(r: Reading, days: float) -> tuple[str, str]:
-    """(tag, sentence) — where attention wants to move."""
+    """(tag, sentence) — where attention wants to move.
+
+    Mirror of `circulation_verdict` in circulation-as-recipe.form (canonical).
+    Same cascade, same order; thresholds correspond 0.80⇔80, 0.40⇔40."""
     idle = r.idle_days
     if r.fidelity == "unavailable":
         return "BLIND", "couldn't read this trace — sensing gap, not necessarily idle"
