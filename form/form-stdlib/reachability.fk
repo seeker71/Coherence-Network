@@ -76,15 +76,22 @@
             (rc-reach rest pairs visited)
             (rc-reach (rc-append rest (rc-body-refs name pairs)) pairs (cons name visited))))
 
-    ;; --- top-level CALLS (the executed setup), skipping FNDEF definitions ---
-    ;; The real roots are not just an API entry — a bootstrap's top-level forms run
-    ;; (e.g. loading the ontology). These are the names CALLED at the top level.
+    ;; --- top-level references (the executed setup), skipping FNDEF definitions ---
+    ;; A bootstrap's top-level forms run (e.g. loading the ontology), so they are
+    ;; roots too. An executed form's FULL reference set seeds reachability — callee
+    ;; AND functions passed as HIGHER-ORDER ARGUMENTS. The ontology load is
+    ;; `(read_with_cache "..." cache parse-json)`: parse-json is a callback invoked
+    ;; via read_with_cache's param, so collecting only the callee strands parse-json
+    ;; (and the whole json-* parser) as falsely-releasable — a real gap this closes.
+    ;; Recurse nested do/let blocks (skipping their FNDEF siblings); for every other
+    ;; executed form collect ALL refs via rc-refs. Over-approximates safely: a release
+    ;; tool must never under-keep. (Residual: a function STORED in a var then called
+    ;; later is still missed — verify such indirections per-defn before composting.)
     (defn rc-toplevel (n acc)
         (if (eq (node_type n) 31) acc
-            (if (eq (node_type n) 32)
-                (rc-toplevel-kids (tail (node_children n)) (cons (rc-name-of (head (node_children n))) acc))
-                (if (eq (node_type n) 33) acc
-                    (rc-toplevel-kids (node_children n) acc)))))
+            (if (eq (node_type n) 9)
+                (rc-toplevel-kids (node_children n) acc)
+                (rc-refs n acc))))
     (defn rc-toplevel-kids (xs acc)
         (if (rc-empty? xs) acc (rc-toplevel-kids (tail xs) (rc-toplevel (head xs) acc))))
 

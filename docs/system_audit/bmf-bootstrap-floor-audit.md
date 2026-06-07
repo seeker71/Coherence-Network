@@ -2,7 +2,7 @@
 
 What the BMF/BML source-compile **actually reaches**, measured over the pinned,
 self-contained bootstrap `.fkb` (the 8 source-compile preludes bundled into one
-artifact). The instrument is [`form/form-stdlib/reachability.fk`](../../form/form-stdlib/reachability.fk)
+artifact, #2587). The instrument is [`form/form-stdlib/reachability.fk`](../../form/form-stdlib/reachability.fk)
 — a Form-native transitive-closure walk, sibling to `name-check.fk`. Regenerate
 this manifest any time with `scripts/bmf_bootstrap_audit.sh --names`.
 
@@ -11,26 +11,36 @@ this manifest any time with `scripts/bmf_bootstrap_audit.sh --names`.
 | tier | count | meaning |
 |------|-------|---------|
 | **FLOOR** | 146 | reached from the compile entry (`fsc-compile-section-recipe`) — the **minimum to compile any BMF/BML section**: parse (`g-parse` + the grammar) + emit (`fsc-rec-*` + ontology category mapping). Covers both the high-level and BMF paths. |
-| **STORE** | 65 | reached from setup/runtime entries but not the compile entry — the ontology load + the runtime the emitted recipe needs. **FLOOR + STORE = 211 = must-store** for a working, self-contained bootstrap. |
-| **RELEASABLE** | 291 | reached from **no** entry — candidate old bootstrap tissue to compost. |
+| **STORE** | 91 | reached from setup/runtime entries but not the compile entry — the ontology load (incl. the json parser, reached as a higher-order callback) + the runtime the emitted recipe needs. **FLOOR + STORE = 237 = must-store** for a working, self-contained bootstrap. |
+| **RELEASABLE** | 265 | reached from **no** entry — candidate old bootstrap tissue to compost. |
 | total | 502 | every defn the bootstrap currently bundles. |
 
-**Caveat — the honest bound.** The walk is *static* (it follows `FNCALL` callees
-and `IDENT` references). A defn reached only through a *constructed* name (a string
-built at runtime and resolved indirectly) appears RELEASABLE but is not. So the 291
-are **candidates**: verify dynamic references per-defn before composting. (Example:
-the entire `json-*` parser appears RELEASABLE — likely because the ontology is
-loaded from cache rather than re-parsed; confirm the live load path before release.)
+## A real gap this audit caught (and the walk now handles)
+
+The first run marked the entire `json-*` parser RELEASABLE — but the ontology loader
+*uses* it (33 refs) to parse `form-ontology.json` on a cold cache. The walk had missed
+it: `parse-json` is passed to `read_with_cache` as a **higher-order callback**, invoked
+via that function's param, so collecting only the callee stranded `parse-json` (and all
+of json-*) as falsely-releasable. Verification (a grep of the loader) caught it before
+any release; the walk was then fixed to seed reachability from an executed form's *full*
+reference set, including higher-order arguments. That moved 26 defns RELEASABLE→STORE
+(291→265). **This is why the caveat below is load-bearing, not ceremony.**
+
+**Caveat — the honest bound.** The walk is *static*. It now follows higher-order
+arguments, but a function STORED in a variable and called later is still missed. So the
+265 are **candidates**: verify dynamic/indirect references per-defn before composting.
+(Example still to confirm: `json-value` is RELEASABLE — parse-json doesn't use that
+accessor — but confirm no other indirect caller before dropping it.)
 
 ## Toward the north-star compiler
 
-The minimum is small — ~146 recipes for parse + emit. That is the core to rewrite
-as the streaming, cursor-based, recipe-emitting compiler: generic (data-driven over
-the grammar), blazing fast, and leaning on the kernel's **content-addressing** so
-that multiple parse branches are an order of magnitude cheaper — shared sub-recipes
-intern once, discarded branches cost nothing (GC'd, never copied), overlapping
-branches memoize for free. Releasing the 291 clears the field; the pinned bootstrap
-(#2587) lets the core be swapped under a stable artifact without stdlib-drift.
+The minimum is small — ~146 recipes for parse + emit. That is the core to rewrite as the
+streaming, cursor-based, recipe-emitting compiler: generic (data-driven over the grammar),
+blazing fast, and leaning on the kernel's **content-addressing** so that multiple parse
+branches are an order of magnitude cheaper — shared sub-recipes intern once, discarded
+branches cost nothing (GC'd, never copied), overlapping branches memoize for free.
+Releasing the 265 clears the field; the pinned bootstrap (#2587) lets the core be swapped
+under a stable artifact without stdlib-drift.
 
 ## FLOOR — the minimum to compile any section (146)
 
@@ -55,7 +65,7 @@ branches memoize for free. Releasing the 291 clears the field; the pinned bootst
   surf-kind surf-len surf-payload surface-string t-const t-const-bool t-const-int t-emit 
   t-splice t-splice-int t-splices unit 
 
-## STORE — ontology load + emitted-recipe runtime (65)
+## STORE — ontology load (incl. json via higher-order) + emitted-recipe runtime (91)
 
   cache-fresh? fol-3to5-loop fol-all-dialect-lets fol-all-dialect-lets-loop 
   fol-all-engine-defns fol-all-engine-defns-loop fol-append fol-build-row fol-build-rows 
@@ -70,11 +80,16 @@ branches memoize for free. Releasing the 291 clears the field; the pinned bootst
   fsc-source-emit-call fsc-source-emit-join fsc-source-emit-list fsc-source-emit-list-loop 
   fsc-source-emit-params fsc-source-emit-params-loop fsc-source-emit-recipe 
   fsc-source-primitive-name fsc-source-primitive-name-loop json-array-elements json-int-value 
+  json-is-digit-cp json-is-digit-or-minus-cp json-mk-pair-r json-mk-tok json-next-token 
   json-object-get json-object-get-loop json-object-has-loop json-object-has? 
-  json-object-pairs json-pair-key json-pair-value json-reverse-acc json-reverse-acc-loop 
-  json-string-value read_with_cache 
+  json-object-pairs json-pair-key json-pair-pos json-pair-r json-pair-value json-parse-array 
+  json-parse-array-elements json-parse-object json-parse-object-pairs json-parse-value 
+  json-reverse-acc json-reverse-acc-loop json-scan-literal json-scan-number 
+  json-scan-number-end json-scan-string json-scan-string-end-loop json-scan-string-end-pos 
+  json-scan-string-loop json-skip-ws json-string-value json-substr json-tok-kind 
+  json-tok-start json-tok-val json-token-end parse-json read_with_cache 
 
-## RELEASABLE — candidate old bootstrap tissue (291) — verify dynamic refs before composting
+## RELEASABLE — candidate old bootstrap tissue (265) — verify indirect refs before composting
 
   apply-form-action-bmf-rule build-emit build-kids build-tpl caps-add caps-empty caps-get 
   cur-checkpoint cur-peek-char cur-restore cursor-file find-from find-loop 
@@ -136,14 +151,8 @@ branches memoize for free. Releasing the 291 clears the field; the pinned bootst
   fsc-source-section-dialect fsc-source-section-node-eq? fsc-source-section-rule-name 
   fsc-source-section-source fsc-source-window-size fsc-string-list-contains? 
   fsc-string-to-bytes fsc-string-to-bytes-len-loop fsc-strip-semi is-blank? json-array-length 
-  json-count-line json-is-digit-cp json-is-digit-or-minus-cp json-is-ws-cp json-mk-pair-r 
-  json-mk-tok json-next-token json-object-keys json-object-keys-loop json-pair-pos 
-  json-pair-r json-parse-array json-parse-array-elements json-parse-object 
-  json-parse-object-pairs json-parse-value json-scan-literal json-scan-number 
-  json-scan-number-end json-scan-string json-scan-string-end-loop json-scan-string-end-pos 
-  json-scan-string-loop json-skip-ws json-substr json-tok-kind json-tok-start json-tok-val 
-  json-token-end line-num line-text lines-from-source lines-loop m-caps m-cur m-no m-ok m-ok? 
-  match-alt match-cap match-cls match-lit match-opt match-pat match-run match-run-loop 
-  match-seq parse-json pick-min rule-of rule-pat rule-tpl run-cur run-node run-ok? run-rule 
-  split-on split-on-loop starts-with-keyword? starts-with? surface-file trim trim-leading-ws 
-  trim-trailing-ws 
+  json-count-line json-is-ws-cp json-object-keys json-object-keys-loop line-num line-text 
+  lines-from-source lines-loop m-caps m-cur m-no m-ok m-ok? match-alt match-cap match-cls 
+  match-lit match-opt match-pat match-run match-run-loop match-seq pick-min rule-of rule-pat 
+  rule-tpl run-cur run-node run-ok? run-rule split-on split-on-loop starts-with-keyword? 
+  starts-with? surface-file trim trim-leading-ws trim-trailing-ws 
