@@ -73,6 +73,10 @@ printf '(do (form-source-compile-file "%s" "%s"))\n' "$CORE_SRC" "$CORE" > "$COM
         "form-stdlib/json.fk" \
         "form-stdlib/cache.fk" \
         "form-stdlib/form-ontology-loader.fk" \
+        "form-stdlib/line-grammar.fk" \
+        "form-stdlib/bmf-core.fk" \
+        "form-stdlib/bmf-grammar.fk" \
+        "form-stdlib/bml.fk" \
         "form-stdlib/source-compiler.fk" \
         "$COMPILE_DRIVER" >/dev/null
 )

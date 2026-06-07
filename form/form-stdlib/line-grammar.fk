@@ -40,7 +40,9 @@
                 (eq cp 95))))
 
     (defn is-ident-cont-cp (cp)
-        (or (is-alpha-cp cp) (is-digit-cp cp)))
+        (or (is-alpha-cp cp)
+            (or (is-digit-cp cp)
+                (or (eq cp 45) (eq cp 63)))))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; whitespace trimming
@@ -70,8 +72,20 @@
     ;; newline produces no extra empty line; a source without trailing
     ;; newline still emits its final partial line.
 
-    (defn rev-step (acc x) (cons x acc))
-    (defn reverse-acc (xs) (foldl rev-step (empty) xs))
+    (defn reverse-acc-loop (xs acc)
+        (if (eq (len xs) 0) acc
+            (reverse-acc-loop (tail xs) (cons (head xs) acc))))
+    (defn reverse-acc (xs) (reverse-acc-loop xs (empty)))
+
+    (defn nil? (xs) (eq (len xs) 0))
+
+    (defn nth (xs n)
+        (if (eq n 0) (head xs)
+            (nth (tail xs) (sub n 1))))
+
+    (defn append (xs ys)
+        (if (nil? xs) ys
+            (cons (head xs) (append (tail xs) ys))))
 
     (defn lines-from-source (s)
         (lines-loop s 0 0 1 (empty)))

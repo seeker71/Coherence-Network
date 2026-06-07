@@ -7630,10 +7630,14 @@ fn worker_loop(
 // This is the SAME prelude set + lowering `form/validate.sh prepare_sources`
 // runs to source-compile a `section [...]` file — the router reuses the body's
 // own compiler, not a Rust reimplementation of a source-language parser.
-const SOURCE_COMPILE_PRELUDES: [&str; 4] = [
+const SOURCE_COMPILE_PRELUDES: [&str; 8] = [
     "json.fk",
     "cache.fk",
     "form-ontology-loader.fk",
+    "line-grammar.fk",
+    "bmf-core.fk",
+    "bmf-grammar.fk",
+    "bml.fk",
     "source-compiler.fk",
 ];
 
