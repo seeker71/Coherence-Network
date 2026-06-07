@@ -227,9 +227,17 @@
   #
   # Two tendings keep the field trustworthy without a human in the loop:
   #
-  # Heartbeat — a periodic liveness signal, so "idle" on the board means quiet,
-  # not gone. Heartbeats set presence (the view marks the agent active) but are
-  # kept out of the recent feed, so liveness never drowns meaning.
+  # Heartbeat — a liveness signal posted ONLY while the agent is actually working
+  # (it holds an open claim, or posted a real signal since its last beat). A
+  # heartbeat is earned by visible work, not by a running loop. Beats set presence
+  # (the view marks the agent active) but stay out of the recent feed.
+  #
+  # Stand-down — if an agent goes idle (no open claim, no real signal) for IDLE_MAX
+  # beats, its heartbeat STANDS DOWN and exits. A pulse that only says "alive"
+  # while nothing happens is a subscription paying for idleness — the lesson cost
+  # 67 idle beats once (~5.5h of a sub billing for nothing). So presence drops when
+  # work does; to stay present, claim a goal. This is the circulation discipline
+  # this whole body opened with, turned on the agents themselves.
   #
   # Self-upgrade — when the protocol or tooling advances on main, the field
   # should pick it up without anyone re-wiring it. There are two layers, and the
@@ -242,7 +250,8 @@
   # if this worktree's tooling is behind. Awareness everywhere; force nowhere.
 
   (upkeep
-    (heartbeat     every-interval -> alive-signal)        # liveness; sets presence, not feed
+    (heartbeat     while-working -> alive-signal)         # earned by an open claim or recent signal, not a loop
+    (stand-down    idle IDLE_MAX beats -> stop)           # no billing for empty liveness
     (sense-stale   (diff local-tooling origin/main))      # on join, no network
     (on-advance    (announce "protocol advanced to <sha>"))  # the field is told
     (tooling-upgrade  posts-through origin/main)          # daemon self-upgrades, no worktree mutation
