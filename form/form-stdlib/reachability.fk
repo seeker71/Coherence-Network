@@ -1,0 +1,100 @@
+; reachability.fk — the minimum-closure walk, in Form's own voice.
+;
+; A sibling of name-check.fk: the SAME recipe-tree walk (dispatch on node_type,
+; the bare-string / one-child-wrapper name shapes), but it accumulates the set of
+; names TRANSITIVELY REACHED from an entry, instead of the set that fails to
+; resolve. Where name-check answers "what is broken?", this answers "what is
+; actually used?" — and therefore "what can be released?".
+;
+; Why it earns its place: a self-contained bootstrap (a loaded module or a
+; read_form_binary artifact) bundles every defn it COULD need. Only some are
+; reached from the real entry points. The reached set is the minimum a bootstrap
+; must store; the rest is releasable tissue. This walk measures that split over
+; the post-lowering recipe, so the answer is grounded in what the kernel runs,
+; not in a guess.
+;
+; Caveat (the honest bound): the walk is STATIC — it follows FNCALL callees and
+; IDENT references. A defn reached only through a CONSTRUCTED name (a string built
+; at runtime and resolved indirectly) looks unreached but is not. So the unreached
+; set is a list of CANDIDATES for release; a dynamic reference is verified per-defn
+; before composting. The walk narrows the field; judgment closes the gap.
+;
+; Companion: name-check.fk (the resolution walk this mirrors), form-engine.form
+; (the evaluator both are siblings of).
+
+(do
+    (defn rc-empty? (xs) (eq (len xs) 0))
+    (defn rc-member? (name xs)
+        (if (rc-empty? xs) false
+            (if (str_eq name (head xs)) true (rc-member? name (tail xs)))))
+    (defn rc-append (a b) (if (rc-empty? a) b (cons (head a) (rc-append (tail a) b))))
+
+    ;; a name-position node: a bare STRING trivial (type 2), or a one-child wrapper
+    ;; whose child is that STRING — the two shapes the kernel's own ident_id accepts.
+    (defn rc-name-of (node)
+        (if (eq (node_type node) 2)
+            (node_value node)
+            (node_value (head (node_children node)))))
+
+    ;; --- (name . body) for every FNDEF (kids = [name params body]) ---
+    (defn rc-pairs (n acc)
+        (if (eq (node_type n) 31)
+            (rc-pairs-kids (node_children n)
+                (cons (list (rc-name-of (head (node_children n)))
+                            (head (tail (tail (node_children n))))) acc))
+            (rc-pairs-kids (node_children n) acc)))
+    (defn rc-pairs-kids (xs acc)
+        (if (rc-empty? xs) acc (rc-pairs-kids (tail xs) (rc-pairs (head xs) acc))))
+    (defn rc-names (pairs acc)
+        (if (rc-empty? pairs) acc (rc-names (tail pairs) (cons (head (head pairs)) acc))))
+    ;; (list body) if name has a defn body, else (empty) — an empty-list sentinel
+    ;; (a native name has no body; the kernel has no `null` literal in this reader).
+    (defn rc-body-of (name pairs)
+        (if (rc-empty? pairs) (empty)
+            (if (str_eq name (head (head pairs))) (list (head (tail (head pairs))))
+                (rc-body-of name (tail pairs)))))
+
+    ;; --- references (FNCALL callee + IDENT name) inside a body ---
+    (defn rc-refs (n acc)
+        (if (eq (node_type n) 32)
+            (rc-refs-kids (tail (node_children n)) (cons (rc-name-of (head (node_children n))) acc))
+            (if (eq (node_type n) 33)
+                (cons (rc-name-of n) acc)
+                (rc-refs-kids (node_children n) acc))))
+    (defn rc-refs-kids (xs acc)
+        (if (rc-empty? xs) acc (rc-refs-kids (tail xs) (rc-refs (head xs) acc))))
+    (defn rc-refs-or-empty (wrapped)
+        (if (rc-empty? wrapped) (empty) (rc-refs (head wrapped) (empty))))
+    (defn rc-body-refs (name pairs) (rc-refs-or-empty (rc-body-of name pairs)))
+
+    ;; --- BFS: the transitive reachable name set from a worklist ---
+    (defn rc-reach (worklist pairs visited)
+        (if (rc-empty? worklist) visited
+            (rc-reach-1 (head worklist) (tail worklist) pairs visited)))
+    (defn rc-reach-1 (name rest pairs visited)
+        (if (rc-member? name visited)
+            (rc-reach rest pairs visited)
+            (rc-reach (rc-append rest (rc-body-refs name pairs)) pairs (cons name visited))))
+
+    ;; --- top-level CALLS (the executed setup), skipping FNDEF definitions ---
+    ;; The real roots are not just an API entry — a bootstrap's top-level forms run
+    ;; (e.g. loading the ontology). These are the names CALLED at the top level.
+    (defn rc-toplevel (n acc)
+        (if (eq (node_type n) 31) acc
+            (if (eq (node_type n) 32)
+                (rc-toplevel-kids (tail (node_children n)) (cons (rc-name-of (head (node_children n))) acc))
+                (if (eq (node_type n) 33) acc
+                    (rc-toplevel-kids (node_children n) acc)))))
+    (defn rc-toplevel-kids (xs acc)
+        (if (rc-empty? xs) acc (rc-toplevel-kids (tail xs) (rc-toplevel (head xs) acc))))
+
+    ;; --- count reached names that are DEFNS (natives are reached but have no body) ---
+    (defn rc-count-in (names set acc)
+        (if (rc-empty? names) acc
+            (rc-count-in (tail names) set
+                (if (rc-member? (head names) set) (add acc 1) acc))))
+
+    ;; the surface: the transitive reachable set from a single entry name.
+    (defn reachable-from (program entry)
+        (rc-reach (list entry) (rc-pairs program (empty)) (empty)))
+)

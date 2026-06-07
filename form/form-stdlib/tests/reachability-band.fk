@@ -1,0 +1,43 @@
+; reachability-band.fk — proof that the closure walk keeps what is reached and
+; drops what is not.
+;
+; preludes: form-stdlib/reachability.fk
+;
+; Builds a 5-defn program with intern_node (no source->recipe reflection needed):
+;   a -> b -> c   (a chain reached from entry "a")
+;   dead -> gone  (an island, unreachable from "a")
+; and asserts reachable-from(program, "a") reaches exactly {a, b, c}: the three
+; chain defns are members, and the reached-defn count is 3 (so dead + gone, the
+; other two defns, are NOT reached). The verdict is deterministic, so the three
+; sibling kernels must agree.
+
+(do
+    (let fndef-cat  (make_nodeid 1 2 31 1))
+    (let fncall-cat (make_nodeid 1 2 32 1))
+    (let seq-cat    (make_nodeid 1 2 9 2))
+    (let do-cat     (make_nodeid 1 2 9 1))
+
+    (defn mkfn (name body)
+        (intern_node fndef-cat
+            (list (intern_trivial_string name) (intern_node seq-cat (empty)) body)))
+    (defn call (name) (intern_node fncall-cat (list (intern_trivial_string name))))
+
+    (let a    (mkfn "a"    (call "b")))
+    (let b    (mkfn "b"    (call "c")))
+    (let c    (mkfn "c"    (intern_trivial_int 0)))
+    (let dead (mkfn "dead" (call "gone")))
+    (let gone (mkfn "gone" (intern_trivial_int 0)))
+    (let program (intern_node do-cat (list a b c dead gone)))
+
+    (let reached   (reachable-from program "a"))
+    (let all-defns (rc-names (rc-pairs program (empty)) (empty)))
+
+    ;; a/b/c reached; the reached-DEFN count is exactly 3 (so dead+gone are not).
+    (let pass
+        (and (rc-member? "a" reached)
+        (and (rc-member? "b" reached)
+        (and (rc-member? "c" reached)
+             (eq (rc-count-in all-defns reached 0) 3)))))
+
+    (print (if pass "reachability-band: PASS" "reachability-band: FAIL"))
+)
