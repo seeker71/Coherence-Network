@@ -107,6 +107,45 @@
     (let arrow-rt
         (ts-rt "arrow1"
             (list (ts-src-name "x") (ts-src-op "=>") (ts-src-name "y"))))
+    (let return-ternary-rt
+        (ts-rt "return-ternary"
+            (list (ts-src-keyword "return") (ts-src-name "n")
+                  (ts-src-op "?") (ts-src-name "one")
+                  (ts-src-op ":") (ts-src-name "fact")
+                  (ts-src-op ";"))))
+    (let ternary-rt
+        (ts-rt "ternary"
+            (list (ts-src-name "n") (ts-src-op "?")
+                  (ts-src-name "neg") (ts-src-op ":") (ts-src-name "n"))))
+    (let if-return-rt
+        (ts-rt "if-return"
+            (list (ts-src-keyword "if") (ts-src-op "(") (ts-src-name "n")
+                  (ts-src-op ")") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "neg")
+                  (ts-src-op ";") (ts-src-op "}"))))
+    (let if-else-return-rt
+        (ts-rt "if-else-return"
+            (list (ts-src-keyword "if") (ts-src-op "(") (ts-src-name "n")
+                  (ts-src-op ")") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "neg")
+                  (ts-src-op ";") (ts-src-op "}")
+                  (ts-src-keyword "else") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "pos")
+                  (ts-src-op ";") (ts-src-op "}"))))
+    (let if-elif-else-return-rt
+        (ts-rt "if-elif-else-return"
+            (list (ts-src-keyword "if") (ts-src-op "(") (ts-src-name "n")
+                  (ts-src-op ")") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "neg")
+                  (ts-src-op ";") (ts-src-op "}")
+                  (ts-src-keyword "else") (ts-src-keyword "if")
+                  (ts-src-op "(") (ts-src-name "zero")
+                  (ts-src-op ")") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "z")
+                  (ts-src-op ";") (ts-src-op "}")
+                  (ts-src-keyword "else") (ts-src-op "{")
+                  (ts-src-keyword "return") (ts-src-name "pos")
+                  (ts-src-op ";") (ts-src-op "}"))))
     (let array-rt
         (ts-rt "array-empty"
             (list (ts-src-op "[") (ts-src-op "]"))))
@@ -125,5 +164,7 @@
               (rt-score assign-ident-rt) (rt-score assign-int-rt)
               (rt-score member-rt) (rt-score index-rt)
               (rt-score if-rt) (rt-score for-rt)
-              (rt-score arrow-rt) (rt-score array-rt)
-              (rt-score object-rt))))
+              (rt-score arrow-rt) (rt-score return-ternary-rt)
+              (rt-score ternary-rt) (rt-score if-return-rt)
+              (rt-score if-else-return-rt) (rt-score if-elif-else-return-rt)
+              (rt-score array-rt) (rt-score object-rt))))
