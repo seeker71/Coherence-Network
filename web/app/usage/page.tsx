@@ -7,7 +7,14 @@ import {
   MAX_PAGE_SIZE,
   type UsageSearchParams,
 } from "./types";
-import { loadDailySummary, loadRuntimeSlice, loadViewPerformance, parsePositiveInt } from "./data";
+import {
+  loadDailySummary,
+  loadLocalCirculation,
+  loadRuntimeSlice,
+  loadViewPerformance,
+  parsePositiveInt,
+  type LocalCircSnapshot,
+} from "./data";
 import {
   FrictionSection,
   HostRunnerSection,
@@ -66,6 +73,20 @@ async function loadProviderStats(api: string): Promise<ProviderStatsResponse | n
 
 export const revalidate = 60;
 
+function compactNum(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return `${n}`;
+}
+
+function verdictTone(verdict: string): string {
+  if (verdict === "IDLE" || verdict === "BLIND") return "text-red-600 dark:text-red-400";
+  if (verdict === "NEAR LIMIT" || verdict === "COOLING" || verdict === "SIDE-HEAVY")
+    return "text-amber-600 dark:text-amber-400";
+  return "text-green-600 dark:text-green-400";
+}
+
 export default async function UsagePage({ searchParams }: { searchParams: UsageSearchParams }) {
   const resolved = await searchParams;
   const pageSize = Math.max(
@@ -76,12 +97,14 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const offset = (page - 1) * pageSize;
 
   const API = getApiBase();
-  const [runtimeSlice, dailySummaryResult, viewPerformance, providerStats] = await Promise.all([
-    loadRuntimeSlice(API, pageSize, offset),
-    loadDailySummary(API),
-    loadViewPerformance(API),
-    loadProviderStats(API),
-  ]);
+  const [runtimeSlice, dailySummaryResult, viewPerformance, providerStats, localCirculation] =
+    await Promise.all([
+      loadRuntimeSlice(API, pageSize, offset),
+      loadDailySummary(API),
+      loadViewPerformance(API),
+      loadProviderStats(API),
+      loadLocalCirculation(API),
+    ]);
 
   const runtime = runtimeSlice.runtime;
   const dailySummary = dailySummaryResult.summary;
@@ -133,6 +156,63 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         </section>
 
         <NavLinksSection />
+
+        {localCirculation.length > 0 ? (
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+            <h2 className="text-xl font-semibold">Subscription circulation</h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              How the paid AI subscriptions actually flow on contributor machines — recency, volume,
+              Coherence-alignment, and limit standing, read from each tool&apos;s local traces.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[...localCirculation]
+                .sort((a, b) => a.provider.localeCompare(b.provider))
+                .map((s: LocalCircSnapshot) => {
+                  const vol = s.metrics.find((m) => m.id?.startsWith("volume"));
+                  const aligned = s.metrics.find((m) => m.id === "aligned_ratio");
+                  const limits = s.metrics.filter((m) => m.id?.startsWith("limit_"));
+                  const verdict = s.raw?.verdict ?? s.status;
+                  return (
+                    <div
+                      key={s.provider}
+                      className="rounded-xl border border-border/30 p-4 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold capitalize">{s.provider}</span>
+                        <span className={`text-xs font-medium ${verdictTone(verdict)}`}>
+                          {verdict}
+                        </span>
+                      </div>
+                      {vol ? (
+                        <p className="text-sm text-muted-foreground">
+                          {compactNum(vol.used)} {vol.unit} · {vol.window}
+                        </p>
+                      ) : null}
+                      {aligned ? (
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(aligned.used * 100)}% Coherence-aligned
+                        </p>
+                      ) : null}
+                      {limits.map((l) => (
+                        <p key={l.id} className="text-xs text-muted-foreground">
+                          {l.window}: {Math.round(l.used * 100)}% used
+                          {l.remaining != null ? ` · ${Math.round(l.remaining * 100)}% left` : ""}
+                        </p>
+                      ))}
+                      {s.notes?.[0] ? (
+                        <p className="text-xs italic text-muted-foreground/80">{s.notes[0]}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+            </div>
+            <p className="text-xs text-muted-foreground/70">
+              Source: contributor machines via <code>make circulation</code>{" "}
+              <code>--push</code>. Only Codex&apos;s trace carries vendor limits; others show what
+              their local trace can honestly report.
+            </p>
+          </section>
+        ) : null}
 
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
           <h2 className="text-xl font-semibold">Provider Health</h2>

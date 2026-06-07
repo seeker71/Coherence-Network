@@ -31,8 +31,10 @@ import glob
 import json
 import os
 import re
+import socket
 import sys
 import time
+import urllib.request
 from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -495,16 +497,83 @@ def to_payload(readings: list[Reading], days: float) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Push to the collective body — map readings to the canonical ProviderUsageSnapshot
+# shape and POST so the /usage surface (not just this CLI) can see the circulation.
+# ---------------------------------------------------------------------------
+
+_SNAPSHOT_UNIT = {"tokens": "tokens", "turns": "requests", "sessions": "tasks"}
+
+
+def snapshots_payload(readings: list[Reading], days: float) -> list[dict]:
+    out = []
+    for r in readings:
+        unit = _SNAPSHOT_UNIT.get(r.unit, "tasks")
+        metrics: list[dict] = []
+        if r.events:
+            metrics.append({
+                "id": f"volume_{int(days)}d", "label": f"{r.provider} activity ({int(days)}d)",
+                "unit": unit, "used": float(r.vol(days)), "window": f"{int(days)}d",
+                "evidence_source": r.fidelity,
+            })
+        a, s = r.alignment()
+        if a + s:
+            metrics.append({
+                "id": "aligned_ratio", "label": "Coherence-aligned share", "unit": "ratio",
+                "used": round(a / (a + s), 4), "limit": 1.0, "evidence_source": "cwd of each turn",
+            })
+        for lm in r.limits:
+            frac = round(lm.used_percent / 100.0, 4)
+            metrics.append({
+                "id": f"limit_{lm.label.replace(' ', '_')}", "label": f"{lm.label} limit",
+                "unit": "ratio", "used": frac, "limit": 1.0, "remaining": round(max(0.0, 1 - frac), 4),
+                "window": lm.label, "evidence_source": lm.source,
+            })
+        tag, sentence = verdict(r, days)
+        out.append({
+            "id": f"local_{r.provider}_{int(NOW)}", "provider": r.provider, "kind": "custom",
+            "status": "ok" if r.events else "unavailable", "metrics": metrics,
+            "data_source": "provider_cli",
+            "usage_per_time": f"{r.vol(1)} {unit}/24h" if r.events else None,
+            "notes": [sentence] + r.notes[:3],
+            "raw": {"verdict": tag, "fidelity": r.fidelity,
+                    "idle_days": round(r.idle_days, 2) if r.idle_days is not None else None,
+                    "alignment": {"aligned": a, "side": s}},
+        })
+    return out
+
+
+def push(readings: list[Reading], days: float, api_base: str, host: str) -> tuple[int, str]:
+    body = json.dumps({"host": host, "snapshots": snapshots_payload(readings, days)}).encode()
+    url = api_base.rstrip("/") + "/api/automation/usage/local-circulation"
+    req = urllib.request.Request(url, data=body,
+                                 headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        return resp.status, resp.read().decode()[:200]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Sense subscription circulation from local CLI traces.")
     ap.add_argument("--days", type=float, default=32.0, help="window to sense over (default 32)")
     ap.add_argument("--json", action="store_true", help="emit machine payload")
+    ap.add_argument("--push", action="store_true",
+                    help="push the reading to the collective body's /usage store")
+    ap.add_argument("--api", default="https://api.coherencycoin.com",
+                    help="API base for --push (default prod)")
+    ap.add_argument("--host", default=socket.gethostname(),
+                    help="host label for pushed snapshots")
     args = ap.parse_args()
     readings = build_readings(args.days)
     if args.json:
         print(json.dumps(to_payload(readings, args.days), indent=2))
     else:
         render(readings, args.days)
+    if args.push:
+        try:
+            status, _ = push(readings, args.days, args.api, args.host)
+            print(f"  → pushed {len(readings)} snapshots to {args.api} as host={args.host} (HTTP {status})")
+        except Exception as e:
+            print(f"  → push failed: {type(e).__name__}: {e}")
     return 0
 
 

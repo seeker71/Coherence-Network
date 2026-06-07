@@ -207,6 +207,41 @@ export async function loadDailySummary(
   return { summary: DEFAULT_DAILY_SUMMARY, warnings: ["daily usage summary unavailable"] };
 }
 
+export type LocalCircMetric = {
+  id: string;
+  label: string;
+  unit: string;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  window: string | null;
+  evidence_source: string | null;
+};
+
+export type LocalCircSnapshot = {
+  provider: string;
+  status: string;
+  data_source: string;
+  usage_per_time: string | null;
+  metrics: LocalCircMetric[];
+  notes: string[];
+  raw: {
+    verdict?: string;
+    fidelity?: string;
+    idle_days?: number | null;
+    alignment?: { aligned: number; side: number };
+    source?: string;
+  };
+};
+
+export async function loadLocalCirculation(apiBase: string): Promise<LocalCircSnapshot[]> {
+  const data = await fetchJsonOrNull<{ count: number; snapshots: LocalCircSnapshot[] }>(
+    `${apiBase}/api/automation/usage/local-circulation`,
+    PROVIDER_SNAPSHOT_FALLBACK_TIMEOUT_MS,
+  );
+  return data?.snapshots ?? [];
+}
+
 export async function loadViewPerformance(
   apiBase: string,
 ): Promise<WebViewPerformanceReport | null> {
