@@ -371,9 +371,7 @@ def render_human(r: dict) -> str:
     cap = r.get("kernel_first_capable_routes", 0)
     if cap:
         names = ", ".join(r.get("kernel_first_capable_route_names", []))
-        w(
-            f"  Kernel-FIRST CAPABLE (a real native handler in the router manifest,"
-        )
+        w("  Kernel-FIRST CAPABLE (a real native handler in the router manifest,")
         w(
             f"  whole lifecycle in Form, awaiting the front-door flip): {cap} — {names}."
         )
