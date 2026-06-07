@@ -1,0 +1,30 @@
+; typescript-bmf-reversible-band.fk
+; exercises the grammar for reversible mapping on 21 constructs
+section [form.bmf] {
+    def score (ok s) (if ok s 0)
+    let features (list
+        (score (list? (tsbmf-emit-import-named (list "names" "module"))) 5)
+        (score (list? (tsbmf-source-import-named (tsbmf-emit-import-named (list "names" "module")))) 5)
+        ; add more for other constructs using the defined emit/source
+        (score (list? (tsbmf-emit-arrow1 (list "x" "body"))) 5)
+        (score (list? (tsbmf-emit-call1 (list "callee" "arg"))) 5)
+        (score (list? (tsbmf-emit-function (list "name" "params"))) 5)
+        (score (list? (tsbmf-emit-class (list "name"))) 5)
+        (score (list? (tsbmf-emit-interface (list "name"))) 5)
+        (score (list? (tsbmf-emit-type-alias (list "name" "value"))) 5)
+        (score (list? (tsbmf-emit-await (list "expr"))) 5)
+        (score (list? (tsbmf-emit-jsx-self (list))) 5)
+        (score (list? (tsbmf-emit-return-ident (list "id"))) 5)
+        (score (list? (tsbmf-emit-assign-ident (list "id" "val"))) 5)
+        (score (list? (tsbmf-emit-member (list "obj" "prop"))) 5)
+        (score (list? (tsbmf-emit-index-int (list "obj" "idx"))) 5)
+        (score (list? (tsbmf-emit-if-pass (list "cond"))) 5)
+        (score (list? (tsbmf-emit-for-of-pass (list))) 5)
+        (score (list? (tsbmf-emit-array-empty (list))) 5)
+        (score (list? (tsbmf-emit-object-empty (list))) 5)
+        (score (list? (tsbmf-emit-enum-empty (list))) 5)
+        (score (list? (tsbmf-emit-optional-member (list))) 5)
+        (score (list? (tsbmf-emit-template-ident (list))) 5)
+    )
+    sum features
+}
