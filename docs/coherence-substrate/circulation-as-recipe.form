@@ -1,0 +1,123 @@
+# ─────────────────────────────────────────────────────────────────────
+# circulation-as-recipe.form — subscription circulation, in Form's voice
+# ─────────────────────────────────────────────────────────────────────
+#
+# A subscription is alive when it circulates. This file names the reading
+# that turns measured circulation into where-attention-moves — the verdict,
+# the alignment, the pace — as Form recipes, the body's canonical tongue.
+#
+# The Python sensor reads the raw traces (~/.claude, ~/.codex, ~/.grok,
+# ~/.gemini, Cursor) into events; that is carrier IO at the edge, and it
+# may stay Python. The *logic* — what counts as idle, near-limit, cooling,
+# side-heavy, flowing; whether the current burn fits the window left — is
+# body, and body is Form. It first landed in Python (body in the carrier);
+# this file is the composting move that returns it home.
+#
+# Bootstrap: scripts/sense_subscription_circulation.py (the verdict / pace /
+# alignment mirror, in Python). Canonical shape: this file — the same
+# relationship name-resolution-as-recipe.form holds to form_check.py. When
+# the two disagree, this file is right and the carrier is drifting.
+#
+# Numbers are integers (the lattice is a numeric lattice; `/` floors). Ratios
+# are therefore carried as integer percents 0..100, not fractions — which is
+# the honest native shape, not a workaround. The Python carrier holds the
+# same decisions with fraction thresholds (0.80 ⇔ 80, 0.40 ⇔ 40).
+#
+# Verify (every arm, against the real Form runtime):
+#   python3 scripts/coh_substrate.py run \
+#     'do { defn cv(s,h,i,m,r) = if !s then "BLIND" else if !h then "IDLE"
+#           else if i >= 7 then "IDLE" else if m >= 80 then "NEAR-LIMIT"
+#           else if i >= 3 then "COOLING" else if r > 40 then "SIDE-HEAVY"
+#           else "FLOWING"; cv(true, true, 3, 0, 0) }'        # → "COOLING"
+#
+# Companion teaching: lc-edges-as-vitality (waste is an edge gone quiet),
+# lc-whole-vitality (friction lowers health), automation_usage (the
+# collective frame these readings feed via /api/automation/usage).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the fields a reading stands on
+# ─────────────────────────────────────────────────────────────────────
+#
+# Every provider reduces, whatever its trace fidelity, to a sensed flag and
+# four scalars. The verdict asks only these — never the raw trace. Trace
+# fidelity differs (Claude carries exact tokens, Codex vendor limits, Grok
+# turns); the reading is the same shape over all of them.
+#
+#   sensed       did the extractor reach the trace at all (else BLIND)
+#   has_events   any activity in the window (else the subscription is still)
+#   idle_days    whole days since the last breath
+#   max_used     tightest vendor limit, percent 0..100 (0 when unknown)
+#   side_pct     share of activity off the Coherence mission, percent 0..100
+#
+# Thresholds (named here, inlined in the recipes so the bundle stays leaf-pure):
+#   idle      >= 7 days    paid but not circulating
+#   cooling   >= 3 days    circulation slowing
+#   near      >= 80 pct    pressing the edge
+#   side      >  40 pct    attention spread off-mission
+#   on-pace   <= 105 pct   within 5% of the clock
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — the verdict: where attention wants to move
+# ─────────────────────────────────────────────────────────────────────
+#
+# A cascade, most-urgent first. Each arm is a Cond.IF_THEN_ELSE coordinate;
+# the whole reads as one match over the field-space. Order is the meaning: a
+# still subscription is named idle before its (absent) limits are weighed,
+# and a trace we could not read is named BLIND, never mistaken for idle waste.
+
+defn circulation_verdict(sensed, has_events, idle_days, max_used, side_pct) =
+    if !sensed then "BLIND"
+    else if !has_events then "IDLE"
+    else if idle_days >= 7 then "IDLE"
+    else if max_used >= 80 then "NEAR-LIMIT"
+    else if idle_days >= 3 then "COOLING"
+    else if side_pct > 40 then "SIDE-HEAVY"
+    else "FLOWING";
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — alignment: aligned vs side, by measured share
+# ─────────────────────────────────────────────────────────────────────
+#
+# The cwd each turn records is the evidence; the share is the reading,
+# carried as an integer percent. A provider whose trace carries no project
+# (grok today) sums to zero and returns 0 — honest absence, and the
+# verdict's side-heavy arm is simply never reached, rather than a false zero
+# pulling it off-mission.
+
+defn aligned_pct(aligned, side) =
+    if (aligned + side) <= 0 then 0
+    else (aligned * 100) / (aligned + side);
+
+defn side_pct(aligned, side) =
+    if (aligned + side) <= 0 then 0
+    else (side * 100) / (aligned + side);
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — pace: is the burn within the window left?
+# ─────────────────────────────────────────────────────────────────────
+#
+# The exact question asked of the body: in which rate are we going, and does
+# it fit the rate remaining. used-so-far over window-elapsed, projected to
+# the whole window as a percent; a projection above 100 means the limit
+# arrives before the reset. Codex is the one trace carrying used_percent +
+# window + resets_at, so this runs for real there; for the rest it waits on
+# the trace. Inputs are percents: used_pct of limit, elapsed_pct of window.
+
+defn pace_projected(used_pct, elapsed_pct) =
+    if elapsed_pct <= 0 then used_pct
+    else (used_pct * 100) / elapsed_pct;
+
+defn pace_on_track(used_pct, elapsed_pct) =
+    pace_projected(used_pct, elapsed_pct) <= 105;
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — idle dollars: the waste, named in the ledger
+# ─────────────────────────────────────────────────────────────────────
+#
+# Waste is friction; friction lowers health. A subscription's monthly price
+# counts as at-rest only when the verdict reads idle — circulating spend is
+# not waste however large. The carrier sums this across providers; the rule
+# is one choice guarded by the verdict.
+
+defn idle_dollars(is_idle, monthly_usd) =
+    if is_idle then monthly_usd else 0;
