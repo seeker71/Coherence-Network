@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 240
+**Total files**: 241
 
 | File | Purpose |
 |---|---|
@@ -57,6 +57,7 @@
 | [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
+| [test_discord_votes_heard.py](test_discord_votes_heard.py) | A Discord reaction is HEARD on the idea-cell (discord-membrane.form: listen). |
 | [test_distribution_engine.py](test_distribution_engine.py) | Tests for the distribution engine (spec: distribution-engine). |
 | [test_doorway_teaching.py](test_doorway_teaching.py) | Doorway teaching tests — does what /come-in promises actually work? |
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
