@@ -26,7 +26,7 @@ The authored source shall be the closest expression of intent:
 
 | Area | Current Tissue | Closest Ideal | First Rewrite Move |
 | --- | --- | --- | --- |
-| JSON codec | `json.fk` still carries a hand parser for compiler/bootstrap and older seedbank/test paths; i18n and channel-query now enter through `JsonCodec`. | `json-codec.fk` declares JSON as a structured codec; parse/emit enter through `JsonCodec`, and lower Form is generated or generic runtime execution. | Remove the compiler/bootstrap cycle that keeps `parse-json` live; then compost the old parser or make it generated output. |
+| JSON codec | `json.fk` now names JSON cell categories, accessors, and constructors only. Compiler/bootstrap, i18n, channel-query, and normal tests enter through the BML `JsonCodec`; `parse-json` remains only in seedbank compost paths. | `json-codec.fk` declares JSON as a structured codec; parse/emit enter through `JsonCodec`, and lower Form is generated or generic runtime execution. | Add the seedbank migration ledger entry for the old parser/emitter pair, then promote, generate, or release those artifacts explicitly. |
 | HTTP stack | `http-parse.fk`, `http-render.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, `http-adapter.fk`, and `kernel-http.fk` split protocol, routing, rendering, and serving across hand-authored functions. | HTTP is a protocol grammar plus route graph: request grammar, response grammar, route classes, observation cells, and socket/listener lifecycle as one front door. | Declare HTTP/1.1 parse/render as a protocol codec, then route serving consumes request/response cells only. |
 | Route catalog | `router-routes.fk`, `kernel-http.fk`, and route tests still describe routes with low-level constructors. | Routes are high-grammar `RouteCell<Request, Response>` declarations with choice/fail/dispatch observation attached. | Convert the highest-traffic API routes into route classes that return codec-backed response cells. |
 | Source compiler | `source-compiler.fk`, `compiler.fk`, `engine.fk`, `bmf-core.fk`, `bmf-grammar.fk`, `grammar-chars.fk`, and `runtime-grammar.fk` overlap as compiler, grammar, runtime, emitter, and registry layers. | One grammar-of-grammars pipeline: source declaration -> grammar cells -> lowering cells -> executable recipes -> reversible source/trace. | Name one canonical compiler pipeline and mark overlapping engines as candidates to merge, generate, or release. |
@@ -57,9 +57,11 @@ For each stdlib file touched on a hot path:
 ## First Rewrite Sequence
 
 1. Finish JSON as the pattern: `JsonCodec` is the only route-facing and corpus
-   JSON surface; old parser tissue is either generated or released.
-2. Move the compiler/bootstrap ontology loader off `parse-json` by removing the
-   source-compiler cycle that currently needs it while compiling codec sections.
+   JSON surface; seedbank parser/emitter tissue is explicitly promoted,
+   generated, or released.
+2. Keep the compiler/bootstrap ontology path free of `parse-json`: ontology
+   coordinates live in kernel-native `bp` tables and the loader materializes
+   Form bindings from those coordinates.
 3. Lift HTTP parse/render into a protocol codec, then make native route classes
    consume only request and response cells.
 4. Consolidate compiler/grammar engines by naming one source-to-recipe pipeline

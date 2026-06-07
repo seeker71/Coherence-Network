@@ -7656,14 +7656,12 @@ fn worker_loop(
 }
 
 // The form-stdlib preludes a source manifest is source-compiled through, in load
-// order: json.fk + cache.fk feed the ontology loader, which binds the Form
-// category/primitive tables source-compiler.fk lowers a `section [...]` against.
+// order: the ontology loader asks the kernel-native bp table for coordinates,
+// then source-compiler.fk lowers a `section [...]` against those bindings.
 // This is the SAME prelude set + lowering `form/validate.sh prepare_sources`
 // runs to source-compile a `section [...]` file — the router reuses the body's
 // own compiler, not a Rust reimplementation of a source-language parser.
-const SOURCE_COMPILE_PRELUDES: [&str; 8] = [
-    "json.fk",
-    "cache.fk",
+const SOURCE_COMPILE_PRELUDES: [&str; 6] = [
     "form-ontology-loader.fk",
     "line-grammar.fk",
     "bmf-core.fk",
@@ -7981,11 +7979,11 @@ fn source_compile_manifest_recipe_object(
         .lock()
         .map_err(|_| "source-compile: cwd lock poisoned".to_string())?;
 
-    // The source-compiler's ontology loader reads its data files by paths
-    // RELATIVE to "form-stdlib/" (e.g. read_with_cache "form-stdlib/form-ontology.json")
-    // — exactly as validate.sh runs it with cwd = form/. So object compilation
-    // temporarily runs from the PARENT of the stdlib dir, where
-    // "form-stdlib/..." resolves, then restores the previous cwd.
+    // Source compilation shares validate.sh's form/ cwd shape. The compiler
+    // prelude now reads its coordinates from the kernel-native bp table, but
+    // route-language source files may still use repo-relative stdlib paths, so
+    // object compilation temporarily runs from the PARENT of the stdlib dir and
+    // then restores the previous cwd.
     let stdlib_path = std::path::Path::new(stdlib_dir);
     let stdlib_abs = stdlib_path
         .canonicalize()
@@ -8008,13 +8006,12 @@ fn source_compile_manifest_recipe_object(
     // relative reads resolve, run the compile, then restore cwd. Restoring is
     // important: the rest of cli_serve (and the workers) expect the original cwd.
     let prev_cwd = env::current_dir().map_err(|e| format!("source-compile: read cwd: {}", e))?;
-    // Guard against a surprising layout where the stdlib's parent isn't named to
-    // match the loader's hardcoded "form-stdlib/" prefix — if the dir name isn't
-    // "form-stdlib", the relative reads would still miss. Name it explicitly.
+    // Guard against a surprising layout where the requested stdlib directory
+    // is not the form-stdlib source tree the compiler prelude expects.
     if stdlib_name != "form-stdlib" {
         return Err(format!(
             "source-compile: --stdlib must point at a directory named 'form-stdlib' \
-             (the source-compiler reads form-stdlib/form-ontology.json relative to its parent); \
+             (the source-compiler loads form-ontology-loader.fk and source-compiler.fk from it); \
              got {}",
             stdlib_abs.display()
         ));

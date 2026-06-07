@@ -18,7 +18,7 @@
 ; end-to-end on real corpora, and we're naming the current state
 ; truthfully.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/concept-corpus.fk form-stdlib/concept-i18n-bridge.fk
+; preludes: form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/concept-corpus.fk form-stdlib/concept-i18n-bridge.fk
 
 (do
     ;; --- load all four locales once --------------------------------
