@@ -1,6 +1,14 @@
 /**
  * Coherence Network Discord bot — entry point (spec-164).
  *
+ * Soul — what this organ IS, and what it is becoming: the Discord community is
+ * a CELL in the living body, and this bot is its membrane. The body lives in
+ * Form at docs/coherence-substrate/discord-membrane.form; this file is carrier,
+ * authored last. The membrane's decisions (listen, compose, reflect, tend,
+ * return, prove, release) walk to the kernel as that document names. Not a
+ * console that controls — a place where a community sees, feels, and tends
+ * itself, where every reaction is a real edge in the body's memory.
+ *
  * Wires together:
  * - Discord.js client with Gateway intents
  * - Slash command handler
