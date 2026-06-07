@@ -1,0 +1,22 @@
+; routes-method.fk — a method-specific native route, for proving the flip's
+; method fall-through (the /api/ideas shape).
+;
+; A read route promoted to native MUST let a write to the SAME path fall through
+; to the Python upstream — not 404, and not mis-served by the read handler. So
+; this route declares method GET explicitly: a POST to /api/items is a method
+; mismatch, becomes ineligible (pressure 400 > budget 40), select returns None,
+; and the serve loop fans it out to --upstream. test_serve.py asserts exactly
+; that end-to-end.
+;
+; The row is the raw KernelHTTPRoute tagged-list form (43004 = KH_TAG_ROUTE),
+; the same shape the kernel's unit tests load:
+;   (list 43004 name method pattern priority handler required_header budget)
+; The simple (path handler) shorthand would default method to "ANY" — which
+; would CAPTURE the POST natively instead of fanning out. Declaring the method
+; is the safe pattern for a route whose write twin stays on the CPython carrier.
+
+(defn route_items_list () "native items list")
+
+(let routes
+  (list
+    (list 43004 "items-list" "GET" "/api/items" 0 "route_items_list" "" 40)))

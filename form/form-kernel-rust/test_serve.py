@@ -28,6 +28,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 BIN = HERE / "target" / "release" / "form-kernel-rust"
 ROUTES = HERE / "examples" / "routes.fk"
+ROUTES_METHOD = HERE / "examples" / "routes-method.fk"
 
 
 def free_port() -> int:
@@ -67,6 +68,20 @@ class UpstreamHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
 
+    def do_POST(self) -> None:
+        # The write twin that stays on the CPython carrier. A POST that fell
+        # through here (instead of 404ing at the kernel) is the proof the flip's
+        # method fall-through holds.
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length:
+            self.rfile.read(length)
+        body = f"python upstream POST {self.path}".encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def log_message(self, _format: str, *_args: object) -> None:
         return
 
@@ -81,8 +96,21 @@ def get(url: str) -> str:
     return get_response(url)[2]
 
 
-def start_kernel(port: int, upstream: str | None = None) -> subprocess.Popen[bytes]:
-    args = [str(BIN), "serve", "--port", str(port), "--routes", str(ROUTES)]
+def post_response(url: str, payload: bytes) -> tuple[int, str, str]:
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=2.0) as r:
+        return r.status, r.headers.get("X-Form-Router", ""), r.read().decode("utf-8")
+
+
+def start_kernel(
+    port: int, upstream: str | None = None, routes: Path = ROUTES
+) -> subprocess.Popen[bytes]:
+    args = [str(BIN), "serve", "--port", str(port), "--routes", str(routes)]
     if upstream is not None:
         args.extend(["--upstream", upstream])
     return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -171,6 +199,48 @@ def main() -> int:
             "ok — kernel stayed native for /hello and fanned out "
             f"/python-tail on 127.0.0.1:{router_port}"
         )
+
+        # Third proof — the flip's method fall-through (the /api/ideas shape):
+        # a method-specific native route (GET-only) MUST let a POST to the SAME
+        # path fan out to the Python upstream — not 404, and not mis-served by
+        # the GET handler. This is what makes promoting a read route to native
+        # safe while its write twin stays on the CPython carrier. A 404 here
+        # would be the regression a kernel-as-router flip could introduce.
+        method_port = free_port()
+        method_proc = start_kernel(
+            method_port, f"http://127.0.0.1:{upstream_port}", routes=ROUTES_METHOD
+        )
+        try:
+            wait_for_port(method_port)
+
+            status, router, items = get_response(
+                f"http://127.0.0.1:{method_port}/api/items"
+            )
+            assert status == 200, f"GET /api/items status -> {status}"
+            assert router == "native-kernel", f"GET /api/items router -> {router!r}"
+            assert items == "native items list", f"GET /api/items -> {items!r}"
+
+            status, router, created = post_response(
+                f"http://127.0.0.1:{method_port}/api/items", b"{}"
+            )
+            assert status == 200, f"method-mismatch POST status -> {status}"
+            assert router == "fanout-python", (
+                "POST to a GET-only native route must fan out to Python, got "
+                f"X-Form-Router={router!r} (a 404 here is the regression)"
+            )
+            assert created == "python upstream POST /api/items", created
+
+            print(
+                "ok — GET /api/items native, POST /api/items (no native POST "
+                f"arm) fanned out to Python on 127.0.0.1:{method_port}"
+            )
+        finally:
+            method_proc.terminate()
+            try:
+                method_proc.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                method_proc.kill()
+
         return 0
     finally:
         proc.terminate()

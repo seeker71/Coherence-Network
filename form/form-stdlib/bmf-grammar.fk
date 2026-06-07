@@ -95,13 +95,32 @@
     ;; ── character literals (string / char / number) — matched over the cursor,
     ;; scannerless (no lexer, no token stream); siblings of lit/cls/run. value = leaf ──
     ;; codepoints: 34=" 39=' 92=\ 46=.
+    (defn bmf-unescape-str-loop (s i acc)
+        (if (ge i (str_len s)) acc
+            (do
+                (let ch (char_at s i))
+                (if (and (str_eq ch "\\") (lt (add i 1) (str_len s)))
+                    (do
+                        (let nx (char_at s (add i 1)))
+                        (let lit
+                            (if (str_eq nx "n") "\n"
+                            (if (str_eq nx "t") "\t"
+                            (if (str_eq nx "r") "\r"
+                            (if (str_eq nx "\\") "\\"
+                            (if (str_eq nx "\"") "\""
+                                nx))))))
+                        (bmf-unescape-str-loop s (add i 2) (str_concat acc lit)))
+                    (bmf-unescape-str-loop s (add i 1) (str_concat acc ch))))))
+
+    (defn bmf-unescape-str (s) (bmf-unescape-str-loop s 0 ""))
+
     (defn gm-str (pat c caps)
         (do (let cc (skip-ws c))
             (if (cur-eof? cc) (g-no)
                 (if (eq (cur-peek cc) 34)
                     (do (let start (cur-advance cc 1)) (let endc (gm-q-scan start 34))
                         (if (eq (cur-peek endc) 34)
-                            (g-ok (intern_trivial_string (cur-slice start (cur-pos endc))) caps (cur-advance endc 1))
+                            (g-ok (intern_trivial_string (bmf-unescape-str (cur-slice start (cur-pos endc)))) caps (cur-advance endc 1))
                             (g-no)))
                     (g-no)))))
     (defn gm-char (pat c caps)
@@ -187,7 +206,7 @@
         (do (let cc (skip-ws c))
             (if (cur-eof? cc) (g-ok acc caps c)
             (if (eq (cur-peek cc) 46)
-                (do (let idm (g-match g (p-run "alpha") (cur-advance cc 1) caps))
+                (do (let idm (g-match g (p-run "alnum") (cur-advance cc 1) caps))
                     (if (g-ok? idm)
                         (do (let mem (intern_node (bp "UE-ACCESS-MEMBER") (list acc (g-val idm))))
                             (let call (gm-call-suffix g exprp (g-cur idm) caps))
@@ -339,8 +358,11 @@
         (do (let tag (head tpl))
             (if (str_eq tag "emit")   (intern_node_at (bp (nth tpl 1)) (g-kids g (nth tpl 2) caps pos) "bml" pos 0)
             (if (str_eq tag "splice") (gc-get caps (nth tpl 1))
+            (if (str_eq tag "splice-int") (intern_trivial_int (str_to_int (node_value (gc-get caps (nth tpl 1)))))
             (if (str_eq tag "const")  (intern_trivial_string (nth tpl 1))
-                (intern_trivial_string "?"))))))
+            (if (str_eq tag "const-int") (intern_trivial_int (nth tpl 1))
+            (if (str_eq tag "const-bool") (make_nodeid 1 1 3 (nth tpl 1))
+                (intern_trivial_string "?")))))))))
     ;; kids: a `splice*` kid flattens a captured node-list into the children.
     (defn g-kids (g kids caps pos)
         (if (nil? kids) (empty)
@@ -370,6 +392,9 @@
     (defn p-ternary (cond branch) (list "ternary" cond branch))
     (defn t-emit (op kids) (list "emit" op kids))
     (defn t-splice (n) (list "splice" n))
+    (defn t-splice-int (n) (list "splice-int" n))
     (defn t-splices (n) (list "splice*" n))
     (defn t-const (s) (list "const" s))
+    (defn t-const-int (n) (list "const-int" n))
+    (defn t-const-bool (n) (list "const-bool" n))
 )
