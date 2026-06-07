@@ -215,7 +215,9 @@
         {"name": "OBJECT",       "inst": 618},
         {"name": "ENUM",         "inst": 619},
         {"name": "OPTIONAL",     "inst": 620},
-        {"name": "TEMPLATE",     "inst": 621}
+        {"name": "TEMPLATE",     "inst": 621},
+        {"name": "TERNARY",      "inst": 622},
+        {"name": "IF-ELSE",      "inst": 623}
       ]
     },
     "rust.bmf": {

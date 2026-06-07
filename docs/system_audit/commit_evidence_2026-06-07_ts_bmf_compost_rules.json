@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "cursor/ts-bmf-compost-rules-20260607",
+  "commit_scope": "Extend TypeScript BMF grammar with ternary and if/else return rules toward lang-ts adapter compost (body-want #2).",
+  "files_owned": [
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/grammars/typescript-bmf.fk",
+    "form/form-stdlib/tests/typescript-bmf-reversible-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-07_ts_bmf_compost_rules.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-ts && bash seedbank/ts-adapter/scripts/parity_suite.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/typescript-bmf-reversible-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/typescript-bmf-reversible-band.fk",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "results": {
+      "parity_suite_ts": "5 passing, 0 failing (arith, recursion, arrow, accumulator, composition)",
+      "validate_source": "210; 1 ok, 0 divergent — kernels agree on every sample",
+      "validate_binary": "210; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "pr_guard": "ready_for_push=True, local_preflight=pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Await PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Form grammar and proof band only; no production route or API behavior change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "ci_validation pending until PR checks pass"
+    ]
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:ts-bmf-compost-rules"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "auto"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/typescript-bmf-reversible-band.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
+    "form/validate.sh"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/grammars/typescript-bmf.fk",
+    "form/form-stdlib/tests/typescript-bmf-reversible-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "TypeScript BMF reversible band covers ternary and if/else return shapes used by parity demos; score 210 with three-way kernel agreement.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/typescript-bmf-reversible-band.fk"
+    ],
+    "test_flows": [
+      "Run validate.sh and --binary on the typescript-bmf reversible workload; both return 210 with Go/Rust/TypeScript agreement.",
+      "Run ts-adapter parity_suite.sh; 5/5 demos pass."
+    ]
+  }
+}
