@@ -32,12 +32,27 @@
     (let reached   (reachable-from program "a"))
     (let all-defns (rc-names (rc-pairs program (empty)) (empty)))
 
-    ;; a/b/c reached; the reached-DEFN count is exactly 3 (so dead+gone are not).
+    ;; HIGHER-ORDER case: a top-level call passes `cb` as an argument (a callback,
+    ;; not a callee) to `hof`. rc-toplevel must collect `cb` — collecting only the
+    ;; callee would falsely strand it (the real-world bug: parse-json passed to
+    ;; read_with_cache). cb is an IDENT arg (a name reference, the higher-order shape).
+    (let ident-cat (make_nodeid 1 2 33 1))
+    (let cb  (mkfn "cb"  (intern_trivial_int 0)))
+    (let hof (mkfn "hof" (call "f")))
+    (let hocall (intern_node fncall-cat
+                    (list (intern_trivial_string "hof")
+                          (intern_node ident-cat (list (intern_trivial_string "cb"))))))
+    (let prog2  (intern_node do-cat (list cb hof hocall)))
+    (let tl-refs (rc-toplevel prog2 (empty)))
+
+    ;; a/b/c reached; the reached-DEFN count is exactly 3 (so dead+gone are not);
+    ;; and the higher-order arg `cb` is collected by rc-toplevel.
     (let pass
         (and (rc-member? "a" reached)
         (and (rc-member? "b" reached)
         (and (rc-member? "c" reached)
-             (eq (rc-count-in all-defns reached 0) 3)))))
+        (and (eq (rc-count-in all-defns reached 0) 3)
+             (rc-member? "cb" tl-refs))))))
 
     (print (if pass "reachability-band: PASS" "reachability-band: FAIL"))
 )
