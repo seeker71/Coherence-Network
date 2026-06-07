@@ -7071,7 +7071,9 @@ fn build_worker_kernel(
     program: &RouteProgram,
     routes_path: &str,
 ) -> Result<(Kernel, Arena, RouteSpecs), String> {
-    build_worker_kernel_with_route_data(program, routes_path, &RouteDataRegistry::default())
+    let (k, arena, routes, _frame) =
+        build_worker_kernel_with_route_data(program, routes_path, &RouteDataRegistry::default())?;
+    Ok((k, arena, routes))
 }
 
 fn build_worker_kernel_with_route_data(
@@ -9129,7 +9131,7 @@ mod router_context_tests {
 
     fn str_for(pairs: &[(String, Value)], key: &str) -> String {
         match value_for(pairs, key) {
-            Value::Str(s) => s.clone(),
+            Value::Str(s) => s.to_string(),
             Value::Int(i) => i.to_string(),
             v => v.display(),
         }
@@ -9139,7 +9141,7 @@ mod router_context_tests {
         if let Value::List(xs) = dict {
             let mut i = 1;
             while i + 1 < xs.len() {
-                if matches!(&xs[i], Value::Str(k) if k == key) {
+                if matches!(&xs[i], Value::Str(k) if k.as_ref() == key) {
                     return &xs[i + 1];
                 }
                 i += 2;
@@ -9150,7 +9152,7 @@ mod router_context_tests {
 
     fn dict_str(dict: &Value, key: &str) -> String {
         match dict_get(dict, key) {
-            Value::Str(s) => s.clone(),
+            Value::Str(s) => s.to_string(),
             Value::Int(i) => i.to_string(),
             v => v.display(),
         }
@@ -9368,8 +9370,8 @@ mod router_context_tests {
             Value::List(xs) => xs,
             _ => panic!("kernel request must be a Form list value"),
         };
-        assert!(matches!(&request_rows[1], Value::Str(method) if method == "GET"));
-        assert!(matches!(&request_rows[2], Value::Str(path) if path == "/api/runtime/health"));
+        assert!(matches!(&request_rows[1], Value::Str(method) if method.as_ref() == "GET"));
+        assert!(matches!(&request_rows[2], Value::Str(path) if path.as_ref() == "/api/runtime/health"));
         let request_headers = match &request_rows[3] {
             Value::List(xs) => xs,
             _ => panic!("kernel request headers must be a Form list value"),
@@ -9380,7 +9382,7 @@ mod router_context_tests {
             _ => panic!("kernel request query must be a Form list value"),
         };
         assert_eq!(list_tag(&request_query[0]), KH_TAG_FIELD);
-        assert!(matches!(&request_rows[5], Value::Str(body) if body == "{\"alive\":true}"));
+        assert!(matches!(&request_rows[5], Value::Str(body) if body.as_ref() == "{\"alive\":true}"));
         let rows = match candidate_value {
             Value::List(xs) => xs,
             _ => panic!("route candidate must be a Form list value"),
@@ -9480,28 +9482,28 @@ mod route_spec_tests {
 
     #[test]
     fn kernel_http_response_result_carries_status_headers_and_body() {
-        let result = Value::List(vec![
+        let result = Value::List(Arc::new(vec![
             Value::Int(KH_TAG_RESPONSE),
             Value::Int(418),
-            Value::List(vec![
-                Value::List(vec![
+            Value::List(Arc::new(vec![
+                Value::List(Arc::new(vec![
                     Value::Int(KH_TAG_HEADER),
-                    Value::Str("Content-Type".to_string()),
-                    Value::Str("application/problem+json".to_string()),
-                ]),
-                Value::List(vec![
+                    Value::Str("Content-Type".into()),
+                    Value::Str("application/problem+json".into()),
+                ])),
+                Value::List(Arc::new(vec![
                     Value::Int(KH_TAG_HEADER),
-                    Value::Str("X-Kernel-Response".to_string()),
-                    Value::Str("native".to_string()),
-                ]),
-                Value::List(vec![
+                    Value::Str("X-Kernel-Response".into()),
+                    Value::Str("native".into()),
+                ])),
+                Value::List(Arc::new(vec![
                     Value::Int(KH_TAG_HEADER),
-                    Value::Str("Content-Length".to_string()),
-                    Value::Str("999".to_string()),
-                ]),
-            ]),
-            Value::Str("{\"detail\":\"teapot\"}".to_string()),
-        ]);
+                    Value::Str("Content-Length".into()),
+                    Value::Str("999".into()),
+                ])),
+            ])),
+            Value::Str("{\"detail\":\"teapot\"}".into()),
+        ]));
 
         let parsed = handler_native_response(&result).expect("kh-response parses");
         assert_eq!(parsed.status_code, 418);
@@ -9515,11 +9517,11 @@ mod route_spec_tests {
 
     #[test]
     fn status_response_tag_stays_compatible() {
-        let result = Value::List(vec![
-            Value::Str("__http_status__".to_string()),
+        let result = Value::List(Arc::new(vec![
+            Value::Str("__http_status__".into()),
             Value::Int(422),
-            Value::Str("{\"detail\":\"invalid\"}".to_string()),
-        ]);
+            Value::Str("{\"detail\":\"invalid\"}".into()),
+        ]));
 
         let parsed = handler_native_response(&result).expect("status tag parses");
         assert_eq!(parsed.status_code, 422);
@@ -9551,6 +9553,14 @@ mod route_spec_tests {
         assert_eq!(spec.pressure_budget, 0);
     }
 
+    // KNOWN RED, tracked: this currently panics `unbound: health_route_from_class`
+    // at the eval-time RB_IDENT lookup (main.rs ~5425). The source-compile path
+    // emits the recipe without resolving names, so a `let` bound inside the
+    // `section` block is unbound when the routes list evaluates. The fix is to
+    // wire name-check-clean? into compile_source_section_to_recipe_node so an
+    // unbound ref errors at compile, not serve (the name-check gate, PR #2579).
+    // Left runnable on purpose — it is the red→green target for that work, not a
+    // failure to mask with #[ignore].
     #[test]
     fn source_route_manifest_compiles_to_recipe_object_program() {
         let manifest = r#"
@@ -9598,7 +9608,7 @@ mod route_spec_tests {
                 },
             )]),
         };
-        let (_, _, routes) = build_worker_kernel_with_route_data(&program, &path_str, &route_data)
+        let (_, _, routes, _) = build_worker_kernel_with_route_data(&program, &path_str, &route_data)
             .expect("recipe-object route program loads");
         let spec = &routes[0];
         assert_eq!(spec.name, "health");
