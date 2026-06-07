@@ -1,0 +1,183 @@
+; graph-node-port.fk -- graph_nodes as a Form-native storage-port layer.
+;
+; This exposes the graph node functions the ideas router is waiting on:
+; put/get/exists/count/list by node type, with the same call-site shape across
+; memory, file, and future db carriers. The values are plain strings so the
+; durable file carrier can persist them without host records.
+;
+; Python contract mirrored at the boundary:
+;   api/app/services/graph_service.py::get_node
+;   api/app/services/graph_service.py::list_nodes(type=...)
+;   api/app/services/graph_service.py::count_nodes(type=...)
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+(do
+    ;; ---- storage keys -----------------------------------------------------
+    (defn gn-node-key (id) (str_concat "graph/node/" id))
+    (defn gn-node-type-key (id) (str_concat "graph/node-type/" id))
+    (defn gn-type-count-key (node-type) (str_concat "graph/count/type/" node-type))
+    (defn gn-total-count-key () "graph/count/total")
+    (defn gn-type-index-key (node-type) (str_concat "graph/index/type/" node-type))
+
+    ;; String envelope for the durable carrier. This is intentionally simple:
+    ;; a native route can return it as proof now, while a later JSON/Form codec
+    ;; can project the same stored fields into richer response bodies.
+    (defn gn-node-value (id node-type name description phase properties)
+        (str_concat "id=" (str_concat id
+        (str_concat "\ntype=" (str_concat node-type
+        (str_concat "\nname=" (str_concat name
+        (str_concat "\ndescription=" (str_concat description
+        (str_concat "\nphase=" (str_concat phase
+        (str_concat "\nproperties=" properties))))))))))))
+
+    ;; ---- small string/list helpers ---------------------------------------
+    (defn gn-match-at? (s needle i j)
+        (if (eq j (str_len needle)) 1
+            (if (ge (add i j) (str_len s)) 0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (gn-match-at? s needle i (add j 1))
+                    0))))
+
+    (defn gn-contains-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle))) 0
+            (if (eq (gn-match-at? s needle i 0) 1)
+                1
+                (gn-contains-loop? s needle (add i 1)))))
+
+    (defn gn-contains? (s needle)
+        (if (eq (str_len needle) 0) 1
+            (if (lt (str_len s) (str_len needle)) 0
+                (gn-contains-loop? s needle 0))))
+
+    (defn gn-split-lines-loop (s i n acc cur)
+        (if (eq i n)
+            (reverse (if (str_eq cur "") acc (cons cur acc)))
+            (if (str_eq (char_at s i) "\n")
+                (gn-split-lines-loop s (add i 1) n
+                    (if (str_eq cur "") acc (cons cur acc)) "")
+                (gn-split-lines-loop s (add i 1) n acc
+                    (str_concat cur (char_at s i))))))
+
+    (defn gn-split-lines (s) (gn-split-lines-loop s 0 (str_len s) (empty) ""))
+
+    (defn gn-ids-without (ids target)
+        (if (nil? ids) (empty)
+            (if (str_eq (head ids) target)
+                (gn-ids-without (tail ids) target)
+                (cons (head ids) (gn-ids-without (tail ids) target)))))
+
+    (defn gn-index-from-ids-loop (ids acc)
+        (if (nil? ids) acc
+            (gn-index-from-ids-loop (tail ids)
+                (str_concat acc (str_concat (head ids) "\n")))))
+    (defn gn-index-from-ids (ids) (gn-index-from-ids-loop ids "\n"))
+
+    ;; ---- count/index helpers ---------------------------------------------
+    (defn gn-count-value (carrier store key)
+        (do
+            (let got (storage-get carrier store key))
+            (if (eq (storage-found? got) 1) (str_to_int (storage-value got)) 0)))
+
+    (defn gn-put-count (carrier store key value)
+        (storage-put carrier store key (int_to_str value)))
+
+    (defn gn-bump-count (carrier store key delta)
+        (gn-put-count carrier store key (max2 0 (add (gn-count-value carrier store key) delta))))
+
+    (defn gn-index-text (carrier store node-type)
+        (do
+            (let got (storage-get carrier store (gn-type-index-key node-type)))
+            (if (eq (storage-found? got) 1) (storage-value got) "\n")))
+
+    (defn gn-index-add-id (carrier store node-type id)
+        (do
+            (let key (gn-type-index-key node-type))
+            (let text (gn-index-text carrier store node-type))
+            (let needle (str_concat "\n" (str_concat id "\n")))
+            (if (eq (gn-contains? text needle) 1)
+                store
+                (storage-put carrier store key (str_concat text (str_concat id "\n"))))))
+
+    (defn gn-index-remove-id (carrier store node-type id)
+        (do
+            (let key (gn-type-index-key node-type))
+            (let ids (gn-list-node-ids carrier store node-type))
+            (storage-put carrier store key (gn-index-from-ids (gn-ids-without ids id)))))
+
+    (defn gn-adjust-type-indexes (carrier store id node-type)
+        (do
+            (let old-type-result (storage-get carrier store (gn-node-type-key id)))
+            (if (eq (storage-found? old-type-result) 1)
+                (do
+                    (let old-type (storage-value old-type-result))
+                    (if (str_eq old-type node-type)
+                        store
+                        (do
+                            (let s1 (gn-bump-count carrier store (gn-type-count-key old-type) (sub 0 1)))
+                            (let s2 (gn-bump-count carrier s1 (gn-type-count-key node-type) 1))
+                            (let s3 (gn-index-remove-id carrier s2 old-type id))
+                            (gn-index-add-id carrier s3 node-type id))))
+                (do
+                    (let s1 (gn-bump-count carrier store (gn-total-count-key) 1))
+                    (let s2 (gn-bump-count carrier s1 (gn-type-count-key node-type) 1))
+                    (gn-index-add-id carrier s2 node-type id)))))
+
+    ;; ---- graph-node port --------------------------------------------------
+    (defn gn-put-node (carrier store id node-type name description phase properties)
+        (do
+            (let s1 (gn-adjust-type-indexes carrier store id node-type))
+            (let s2 (storage-put carrier s1 (gn-node-key id)
+                (gn-node-value id node-type name description phase properties)))
+            (storage-put carrier s2 (gn-node-type-key id) node-type)))
+
+    (defn gn-get-node (carrier store id)
+        (storage-get carrier store (gn-node-key id)))
+
+    (defn gn-node-exists? (carrier store id)
+        (storage-has? carrier store (gn-node-key id)))
+
+    (defn gn-count-nodes (carrier store node-type)
+        (if (str_eq node-type "")
+            (gn-count-value carrier store (gn-total-count-key))
+            (gn-count-value carrier store (gn-type-count-key node-type))))
+
+    (defn gn-list-node-ids (carrier store node-type)
+        (gn-split-lines (gn-index-text carrier store node-type)))
+
+    (defn gn-list-nodes-by-ids (carrier store ids)
+        (if (nil? ids) (empty)
+            (do
+                (let got (gn-get-node carrier store (head ids)))
+                (let rest (gn-list-nodes-by-ids carrier store (tail ids)))
+                (if (eq (storage-found? got) 1)
+                    (cons (storage-value got) rest)
+                    rest))))
+
+    (defn gn-list-nodes (carrier store node-type)
+        (gn-list-nodes-by-ids carrier store (gn-list-node-ids carrier store node-type)))
+
+    ;; ---- executable proof -------------------------------------------------
+    ;; 1111111 = create/update/retype/read/list/count all hold for any carrier.
+    (defn gn-test (carrier config)
+        (do
+            (let s0 (storage-open carrier config))
+            (let s1 (gn-put-node carrier s0 "idea:one" "idea" "One" "First" "gas" "{}"))
+            (let s2 (gn-put-node carrier s1 "idea:two" "idea" "Two" "Second" "water" "{}"))
+            (let s3 (gn-put-node carrier s2 "concept:one" "concept" "Concept" "Third" "ice" "{}"))
+            (let s4 (gn-put-node carrier s3 "idea:one" "idea" "One revised" "First" "water" "{\"revised\":true}"))
+            (let s5 (gn-put-node carrier s4 "concept:one" "idea" "Concept as idea" "Third" "water" "{}"))
+
+            (let total-ok (if (eq (gn-count-nodes carrier s5 "") 3) 1 0))
+            (let idea-ok (if (eq (gn-count-nodes carrier s5 "idea") 3) 10 0))
+            (let concept-ok (if (eq (gn-count-nodes carrier s5 "concept") 0) 100 0))
+            (let exists-ok (if (eq (gn-node-exists? carrier s5 "idea:one") 1) 1000 0))
+            (let get-ok
+                (if (str_eq (storage-value (gn-get-node carrier s5 "idea:one"))
+                        (gn-node-value "idea:one" "idea" "One revised" "First" "water" "{\"revised\":true}"))
+                    10000 0))
+            (let ids-ok (if (eq (len (gn-list-node-ids carrier s5 "idea")) 3) 100000 0))
+            (let nodes-ok (if (eq (len (gn-list-nodes carrier s5 "idea")) 3) 1000000 0))
+            (sum (list total-ok idea-ok concept-ok exists-ok get-ok ids-ok nodes-ok))))
+
+    0)
