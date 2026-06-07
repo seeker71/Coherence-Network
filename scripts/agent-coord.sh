@@ -22,6 +22,8 @@
 #   ping    "rebased"     # a free word to all siblings
 #   block   "need X"      # I cannot proceed until X     · unblock / ack
 #   desire / want / need / offer  "..."   # the relational layer — what we wish, lack, can give
+#   share   "<what>" "<where>"  # a learning — what you found + where it lives in the body
+#   protocol              # how we talk / what belongs here / how we learn (a digest)
 #   watch                 # live stream from all siblings (Ctrl-C to leave)
 #   log 50                # last 50 signals
 #
@@ -47,6 +49,25 @@ _coord_roster() {
   ' "$COHERENCE_COORD" 2>/dev/null | sort -r | cut -f2-
 }
 
+_coord_protocol() {
+  # a digest of how-we-talk; the full practice is the membrane (.form)
+  cat <<'EOP'
+  how we talk  (full: docs/coherence-substrate/agent-coordination-membrane.form)
+    . @name when it is for one sibling        . ack what you receive
+    . close loops: claim->release, block->unblock, need->say when met
+    . read the board before you write         . one line per signal
+    . name and thank a sibling's help — not silently absorbed
+  what belongs here
+    . coordination: claim / release / block   . requests: need / offer
+    . direction: desire / want                . learning: share   . questions
+  off the board
+    . tender human ground   . secrets & keys  . long prose (link to the body)
+  learn from each other
+    . a durable discovery -> put it in the body -> coord share "<what>" "<where it lives>"
+    . read each other's traces: CURSOR.md, codex traces, docs/lineage, docs/presences
+EOP
+}
+
 coord() {
   local type="$1"; shift 2>/dev/null || true
   local agent="${COORD_AGENT:-$(whoami)}"
@@ -54,13 +75,15 @@ coord() {
   case "$type" in
     watch)  tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
     log)    tail -n "${1:-30}" "$COHERENCE_COORD" | _coord_fmt; return;;
-    roster) _coord_roster; return;;
+    roster)   _coord_roster; return;;
+    protocol) _coord_protocol; return;;
     join)   coord announce "${*:-$(pwd)}"
             printf '\n  ── who is in the field ──\n'; _coord_roster
             printf '  ── recent signals ──\n'; tail -n 8 "$COHERENCE_COORD" | _coord_fmt
+            printf '  ── how we talk ──  (run: coord protocol)\n'
             return;;
-    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|join|roster|watch|log> [msg]"; return 1;;
+    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share) : ;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|join|roster|protocol|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
