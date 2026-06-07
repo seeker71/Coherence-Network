@@ -96,7 +96,7 @@ def test_absent_manifest_degrades_to_empty(monkeypatch, tmp_path):
 def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure():
     """The real instrument: 0 served kernel-first at the front door, and the
     production manifest's native routes are all CAPABLE. Pins the SERVED/CAPABLE
-    split the runtime-share journey tracks, including native Form structure
+    split the runtime-share journey tracks, including native Form source/structure
     routes that do not have a CPython twin."""
     mod = _load_report()
     report = mod.build_report()
@@ -108,6 +108,7 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert capable, "production manifest binds no native /api routes"
     assert all(r.startswith("/api/") for r in capable), capable
     assert "/api/ideas/router-structure" in capable
+    assert "/api/ideas/source-index" in capable
     assert len(capable) == len(set(capable)), f"duplicates: {capable}"
     # back-compat alias stays pinned to SERVED (0 at the front door)
     assert report["kernel_first_routes"] == report["kernel_first_served_routes"]

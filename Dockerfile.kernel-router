@@ -100,6 +100,11 @@ COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
 COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
 COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
 
+# Source-backed native routes read the canonical idea markdown index directly.
+# This is not the mutable DB-backed registry; it is the repo source surface that
+# the kernel-router can carry without CPython.
+COPY ideas/ /app/ideas/
+
 # The entrypoint resolves env at RUN time so PORT / UPSTREAM_URL / ROUTES_FILE
 # are container-configurable (compose env, -e flags) without rebuilding.
 COPY deploy/kernel-router/entrypoint.sh /app/entrypoint.sh

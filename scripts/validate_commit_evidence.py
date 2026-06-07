@@ -12,7 +12,15 @@ from typing import Any
 VALID_STATUS = {"pass", "fail", "pending"}
 VALID_CHANGE_INTENTS = {"runtime_feature", "runtime_fix", "process_only", "docs_only", "test_only"}
 VALID_E2E_STATUS = {"pass", "fail", "pending"}
-RUNTIME_PATH_PREFIXES = ("api/app/", "web/app/", "web/components/", "web/lib/", "form/", "deploy/kernel-router/")
+RUNTIME_PATH_PREFIXES = (
+    "api/app/",
+    "web/app/",
+    "web/components/",
+    "web/lib/",
+    "form/",
+    "deploy/kernel-router/",
+    "Dockerfile.kernel-router",
+)
 REQUIRED_TOP_LEVEL = {
     "date",
     "thread_branch",
