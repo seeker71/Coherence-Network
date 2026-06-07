@@ -12,9 +12,9 @@
 ;   array  → JSON-ARRAY recipe with element children
 ;   pair   → JSON-PAIR recipe with two children (key, value)
 ;   string → trivial string  (intern_trivial_string)
-;   number → trivial int     (intern_trivial_int)
-;   true   → trivial int 1
-;   false  → trivial int 0
+;   number → trivial int or float (intern_trivial_int / intern_trivial_float)
+;   true   → trivial bool true
+;   false  → trivial bool false
 ;   null   → JSON-NULL recipe (empty children)
 ;
 ; Source attribution: each composite Recipe is interned via
@@ -42,8 +42,105 @@
             (or (eq cp 10) (eq cp 13)))))
 
 (defn json-is-digit-cp (cp) (and (ge cp 48) (le cp 57)))
-(defn json-is-digit-or-minus-cp (cp)
-    (or (json-is-digit-cp cp) (eq cp 45)))   ; '-' = 45
+(defn json-is-number-cp (cp)
+    (or (json-is-digit-cp cp)
+        (or (eq cp 45)
+        (or (eq cp 43)
+        (or (eq cp 46)
+        (or (eq cp 69) (eq cp 101)))))))
+
+(defn json-hex-value-cp (cp)
+    (if (and (ge cp 48) (le cp 57)) (sub cp 48)
+    (if (and (ge cp 65) (le cp 70)) (add 10 (sub cp 65))
+    (if (and (ge cp 97) (le cp 102)) (add 10 (sub cp 97))
+        0))))
+
+(defn json-hex4 (s i)
+    (add
+        (mul (json-hex-value-cp (ord (char_at s i))) 4096)
+        (add
+            (mul (json-hex-value-cp (ord (char_at s (add i 1)))) 256)
+            (add
+                (mul (json-hex-value-cp (ord (char_at s (add i 2)))) 16)
+                (json-hex-value-cp (ord (char_at s (add i 3))))))))
+
+(defn json-high-surrogate? (cp) (and (ge cp 55296) (le cp 56319)))
+(defn json-low-surrogate? (cp) (and (ge cp 56320) (le cp 57343)))
+(defn json-surrogate-pair-cp (hi lo)
+    (add 65536
+        (add
+            (mul (sub hi 55296) 1024)
+            (sub lo 56320))))
+
+(defn json-codepoint-to-utf8 (cp)
+    (if (lt cp 128)
+        (byte_to_str cp)
+    (if (lt cp 2048)
+        (str_concat
+            (byte_to_str (add 192 (div cp 64)))
+            (byte_to_str (add 128 (mod cp 64))))
+    (if (lt cp 65536)
+        (str_concat
+            (byte_to_str (add 224 (div cp 4096)))
+            (str_concat
+                (byte_to_str (add 128 (mod (div cp 64) 64)))
+                (byte_to_str (add 128 (mod cp 64)))))
+        (str_concat
+            (byte_to_str (add 240 (div cp 262144)))
+            (str_concat
+                (byte_to_str (add 128 (mod (div cp 4096) 64)))
+                (str_concat
+                    (byte_to_str (add 128 (mod (div cp 64) 64)))
+                    (byte_to_str (add 128 (mod cp 64))))))))))
+
+(defn json-unescape-basic-cp (cp)
+    (if (eq cp 34) "\""
+    (if (eq cp 47) "/"
+    (if (eq cp 92) "\\"
+    (if (eq cp 98) (byte_to_str 8)
+    (if (eq cp 102) (byte_to_str 12)
+    (if (eq cp 110) (byte_to_str 10)
+    (if (eq cp 114) (byte_to_str 13)
+    (if (eq cp 116) (byte_to_str 9)
+        (byte_to_str cp))))))))))
+
+(defn json-unescape-loop (s i acc)
+    (do
+        (let n (str_len s))
+        (let slash (str_find s "\\" i))
+        (if (lt slash 0)
+            (str_concat acc (substring s i n))
+            (do
+                (let acc2 (str_concat acc (substring s i slash)))
+                (if (ge (add slash 1) n)
+                    (str_concat acc2 "\\")
+                    (do
+                        (let esc-cp (ord (char_at s (add slash 1))))
+                        (if (and (eq esc-cp 117) (le (add slash 5) (sub n 1)))
+                            (do
+                                (let cp (json-hex4 s (add slash 2)))
+                                (if (and
+                                        (json-high-surrogate? cp)
+                                        (and
+                                            (le (add slash 11) (sub n 1))
+                                            (and
+                                                (eq (ord (char_at s (add slash 6))) 92)
+                                                (eq (ord (char_at s (add slash 7))) 117))))
+                                    (do
+                                        (let lo (json-hex4 s (add slash 8)))
+                                        (if (json-low-surrogate? lo)
+                                            (json-unescape-loop s (add slash 12)
+                                                (str_concat acc2
+                                                    (json-codepoint-to-utf8
+                                                        (json-surrogate-pair-cp cp lo))))
+                                            (json-unescape-loop s (add slash 6)
+                                                (str_concat acc2 (json-codepoint-to-utf8 cp)))))
+                                    (json-unescape-loop s (add slash 6)
+                                        (str_concat acc2 (json-codepoint-to-utf8 cp)))))
+                            (json-unescape-loop s (add slash 2)
+                                (str_concat acc2 (json-unescape-basic-cp esc-cp))))))))))
+
+(defn json-unescape-string (s) (json-unescape-loop s 0 ""))
 
 ;; scan_run class 0 = whitespace (space/tab/lf/cr). One native call
 ;; replaces N walker-step recursions — closing the per-byte parser-
@@ -86,7 +183,7 @@
                 (if (eq cp 58)  (json-mk-tok "COLON"  ":" i)
                 (if (eq cp 44)  (json-mk-tok "COMMA"  "," i)
                 (if (eq cp 34)  (json-scan-string s i)
-                (if (json-is-digit-or-minus-cp cp) (json-scan-number s i)
+                (if (json-is-number-cp cp) (json-scan-number s i)
                 (if (eq cp 116) (json-scan-literal s i "true" "TRUE")
                 (if (eq cp 102) (json-scan-literal s i "false" "FALSE")
                 (if (eq cp 110) (json-scan-literal s i "null" "NULL")
@@ -97,9 +194,8 @@
 
 ;; Walks a JSON string body to its closing quote, honouring `\X` as an
 ;; escape — the backslash and the following byte are skipped so an
-;; embedded `\"` doesn't end the string. The token value is the raw
-;; substring between the quotes (escapes not expanded — the loader
-;; only needs ASCII keys and simple values).
+;; embedded `\"` doesn't end the string. The token value is decoded
+;; JSON text, including common escapes and UTF-8 for \uXXXX values.
 ;; scan_run class 4 = non-quote-non-escape. Fast-forward to the next
 ;; '"' or '\\' in one native call; only fall back to per-char walk for
 ;; escape sequences (rare in our data files). Was per-char recursion.
@@ -107,10 +203,10 @@
     (do
         (let k (scan_run s j 4))
         (if (eq k (str_len s))
-            (json-mk-tok "STRING" (json-substr s (add start 1) k) start)
+            (json-mk-tok "STRING" (json-unescape-string (json-substr s (add start 1) k)) start)
             (if (eq (ord (char_at s k)) 92)        ; backslash — skip 2
                 (json-scan-string-loop s (add k 2) start)
-                (json-mk-tok "STRING" (json-substr s (add start 1) k) start)))))
+                (json-mk-tok "STRING" (json-unescape-string (json-substr s (add start 1) k)) start)))))
 
 (defn json-scan-string-end-pos (s i)
     (json-scan-string-end-loop s (add i 1)))
@@ -131,9 +227,19 @@
     (if (eq i (str_len s)) i
         (do
             (let cp (ord (char_at s i)))
-            (if (or (json-is-digit-cp cp) (or (eq cp 45) (eq cp 46)))
+            (if (json-is-number-cp cp)
                 (json-scan-number-end s (add i 1))
                 i))))
+
+(defn json-number-float? (text)
+    (or (ge (str_find text "." 0) 0)
+        (or (ge (str_find text "e" 0) 0)
+            (ge (str_find text "E" 0) 0))))
+
+(defn json-number-node (text)
+    (if (json-number-float? text)
+        (intern_trivial_float text)
+        (intern_trivial_int (str_to_int text))))
 
 (defn json-scan-literal (s i word kind)
     (json-mk-tok kind word i))
@@ -170,11 +276,11 @@
         (if (str_eq kind "STRING")
             (json-mk-pair-r (intern_trivial_string (json-tok-val tok)) (json-token-end s tok))
         (if (str_eq kind "NUMBER")
-            (json-mk-pair-r (intern_trivial_int (str_to_int (json-tok-val tok))) (json-token-end s tok))
+            (json-mk-pair-r (json-number-node (json-tok-val tok)) (json-token-end s tok))
         (if (str_eq kind "TRUE")
-            (json-mk-pair-r (intern_trivial_int 1) (json-token-end s tok))
+            (json-mk-pair-r (intern_trivial_bool true) (json-token-end s tok))
         (if (str_eq kind "FALSE")
-            (json-mk-pair-r (intern_trivial_int 0) (json-token-end s tok))
+            (json-mk-pair-r (intern_trivial_bool false) (json-token-end s tok))
         (if (str_eq kind "NULL")
             (json-mk-pair-r (intern_node_at JSON-NULL (empty) source-path
                                         1 1)
@@ -308,5 +414,20 @@
 
 ;; json-int-value — int content of a trivial-int recipe.
 (defn json-int-value (node) (node_value node))
+
+;; --- JSON constructors --------------------------------------------
+;;
+;; Route handlers and storage projections build JSON as JSON recipe nodes.
+;; Emission is authored by the BML JsonCodec in json-codec.fk.
+
+(defn json-node-string (s) (intern_trivial_string s))
+(defn json-node-int (n) (intern_trivial_int n))
+(defn json-node-float-text (s) (intern_trivial_float s))
+(defn json-node-bool (b) (intern_trivial_bool b))
+(defn json-node-null () (intern_node_at JSON-NULL (empty) "form-stdlib/json.fk" 1 1))
+(defn json-node-array (items) (intern_node_at JSON-ARRAY items "form-stdlib/json.fk" 1 1))
+(defn json-node-pair (key value)
+    (intern_node_at JSON-PAIR (list (intern_trivial_string key) value) "form-stdlib/json.fk" 1 1))
+(defn json-node-object (pairs) (intern_node_at JSON-OBJECT pairs "form-stdlib/json.fk" 1 1))
 
 0

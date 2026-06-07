@@ -1610,6 +1610,7 @@ func (k *Kernel) registerNatives() {
 	//   3  identifier-char     alpha + digit + '_' + '-'
 	//   4  non-quote-non-escape   anything except '"' and '\\'
 	//   5  non-newline         anything except '\n'
+	//   6  json-string-safe    byte >= 0x20 and not '"' or '\\'
 	// Used by json.fk's skip-ws / scan-string / scan-number, BMF
 	// tokenizers, CSV scanners, future YAML/TOML parsers — not
 	// JSON-special. A new class adds one branch to a small switch.
@@ -1660,8 +1661,12 @@ func (k *Kernel) registerNatives() {
 			for end < n && s[end] != '\n' {
 				end++
 			}
+		case 6: // json-string-safe
+			for end < n && s[end] >= 0x20 && s[end] != '"' && s[end] != '\\' {
+				end++
+			}
 		default:
-			panic(fmt.Sprintf("scan_run: unknown class_code %d (valid: 0-5)", class))
+			panic(fmt.Sprintf("scan_run: unknown class_code %d (valid: 0-6)", class))
 		}
 		return Value{Kind: VInt, Int: int64(end)}
 	})
@@ -1711,6 +1716,8 @@ func (k *Kernel) registerNatives() {
 			return Value{Kind: VStr, Str: "false"}
 		case VNull:
 			return Value{Kind: VStr, Str: "null"}
+		case VFloat:
+			return Value{Kind: VStr, Str: formatFloatJS(v.Float)}
 		}
 		return Value{Kind: VStr, Str: strconv.FormatInt(v.Int, 10)}
 	})
@@ -2469,6 +2476,13 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("intern_trivial_string", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internString(args[0].Str)}
+	})
+	k.registerNative("intern_trivial_bool", catWitness(), func(_ *Kernel, args []Value) Value {
+		inst := uint32(0)
+		if truthy(args[0]) {
+			inst = 1
+		}
+		return Value{Kind: VNodeID, Nid: NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivBool, Inst: inst}}
 	})
 	// intern_trivial_float — content-address an IEEE-754 f64 into the overflow
 	// table and return its trivial NodeID. The string argument is the float's

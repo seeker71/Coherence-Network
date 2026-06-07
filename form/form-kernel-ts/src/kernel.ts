@@ -1377,7 +1377,8 @@ export class Kernel {
     // Rust scan_run. Generic per-byte loop in JS avoids the walker
     // dispatch a pure-Form recursion would pay per character.
     // Class codes: 0=ws, 1=digit, 2=alpha, 3=identifier-char,
-    //              4=non-quote-non-escape, 5=non-newline.
+    //              4=non-quote-non-escape, 5=non-newline,
+    //              6=json-string-safe (code unit >= 0x20, not quote/backslash).
     this.registerNative("scan_run", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       const from = Math.max(0, argInt(args, 1));
@@ -1433,8 +1434,16 @@ export class Kernel {
           }
           break;
         }
+        case 6: { // json-string-safe
+          while (end < n) {
+            const c = s.charCodeAt(end);
+            if (c < 0x20 || c === 34 || c === 92) break;
+            end++;
+          }
+          break;
+        }
         default:
-          throw new Error(`scan_run: unknown class_code ${cls} (valid: 0-5)`);
+          throw new Error(`scan_run: unknown class_code ${cls} (valid: 0-6)`);
       }
       return { kind: "int", int: end };
     });
@@ -1479,6 +1488,7 @@ export class Kernel {
       if (v.kind === "str") return { kind: "str", str: v.str ?? "" };
       if (v.kind === "bool") return { kind: "str", str: v.bool ? "true" : "false" };
       if (v.kind === "null") return { kind: "str", str: "null" };
+      if (v.kind === "f32" || v.kind === "f64") return { kind: "str", str: String(v.float) };
       return { kind: "str", str: String(argInt(args, 0)) };
     });
     this.registerNative("str_to_int", catMethod(), (_k, args) => ({
@@ -2434,6 +2444,10 @@ export class Kernel {
     this.registerNative("intern_trivial_string", catWitness(), (k, args) => ({
       kind: "nodeid",
       nodeid: k.internString(argStr(args, 0)),
+    }));
+    this.registerNative("intern_trivial_bool", catWitness(), (k, args) => ({
+      kind: "nodeid",
+      nodeid: k.internTrivialBool(truthy(args[0]!)),
     }));
     // intern_trivial_float — content-address an IEEE-754 f64 into the overflow
     // table and return its trivial NodeID. The string argument is the float's
