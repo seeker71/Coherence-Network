@@ -1867,18 +1867,29 @@ function applyBinOp(op: string, a: unknown, b: unknown): unknown {
 // evalTypeScript — walk a parsed program in a fresh environment seeded
 // with stdlib bindings. Returns the final environment so callers can
 // invoke declared functions.
-export function evalTypeScript(k: Kernel, recipe: NodeID): Env {
+function evalTypeScriptEnv(k: Kernel, recipe: NodeID): Env {
   const env = envNew();
   // Minimal stdlib bindings exercised by the test suite.
   env.vars.set("console", { log: (...args: unknown[]) => console.log(...args) });
   env.vars.set("Math", Math);
-  env.vars.set("JSON", JSON);
-  env.vars.set("Array", Array);
   env.vars.set("Map", Map);
   env.vars.set("Set", Set);
   env.vars.set("Promise", Promise);
+  env.vars.set("JSON", JSON);
+  env.vars.set("Array", Array);
+  return env;
+}
+
+export function evalTypeScript(k: Kernel, recipe: NodeID): Env {
+  const env = evalTypeScriptEnv(k, recipe);
   evalNode(k, recipe, env);
   return env;
+}
+
+// evalTypeScriptValue — last program value for parity gates (ts-eval).
+export function evalTypeScriptValue(k: Kernel, recipe: NodeID): unknown {
+  const env = evalTypeScriptEnv(k, recipe);
+  return evalNode(k, recipe, env);
 }
 
 export function callFunction(env: Env, name: string, ...args: unknown[]): unknown {

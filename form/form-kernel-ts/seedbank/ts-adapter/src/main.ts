@@ -18,8 +18,13 @@ import { spawn } from "node:child_process";
 import { dirname, resolve as pathResolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Frame, Kernel, Trace, walk, type Value } from "../../../src/kernel.ts";
-import { evalTypeScript, parseTypeScript } from "./lang-ts.ts";
+import { parseTypeScript as parseTypeScriptLegacy } from "./lang-ts.ts";
 import { emitFk } from "./lang-ts-fk.ts";
+import {
+  buildTypeScriptLanguage,
+  parseTypeScript as parseTypeScriptNative,
+  evalTypeScriptValue,
+} from "../../../src/lang-typescript.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -57,7 +62,7 @@ async function runTsCompile(args: string[]): Promise<void> {
   const src = await readFile(inPath, "utf8");
 
   const k = new Kernel();
-  const tree = parseTypeScript(k, src);
+  const tree = parseTypeScriptLegacy(k, src);
   const fk = emitFk(k, tree);
 
   if (outArg === "-") {
@@ -80,7 +85,7 @@ async function runTsRun(args: string[]): Promise<void> {
   const src = await readFile(inPath, "utf8");
 
   const k = new Kernel();
-  const tree = parseTypeScript(k, src);
+  const tree = parseTypeScriptLegacy(k, src);
   const fk = emitFk(k, tree);
 
   const fkPath = inPath.endsWith(".ts")
@@ -116,9 +121,10 @@ async function runTsEval(args: string[]): Promise<void> {
   }
   const src = await readFile(args[0]!, "utf8");
   const k = new Kernel();
-  const tree = parseTypeScript(k, src);
-  const value = evalTypeScript(k, tree);
-  console.log(renderForParity(value));
+  const ts = buildTypeScriptLanguage(k);
+  const tree = parseTypeScriptNative(k, ts.grammar, src);
+  const value = evalTypeScriptValue(k, tree);
+  console.log(renderJsForParity(value));
 }
 
 async function runTsTrace(args: string[]): Promise<void> {
@@ -129,7 +135,7 @@ async function runTsTrace(args: string[]): Promise<void> {
   const src = await readFile(args[0]!, "utf8");
   const k = new Kernel();
   const parseStart = process.hrtime.bigint();
-  const tree = parseTypeScript(k, src);
+  const tree = parseTypeScriptLegacy(k, src);
   const parseNs = Number(process.hrtime.bigint() - parseStart);
 
   k.trace = new Trace();
@@ -149,10 +155,20 @@ async function runTsTrace(args: string[]): Promise<void> {
   console.log(JSON.stringify(report, null, 2));
 }
 
-// renderForParity — match the parity-comparison form. The TS demos end
-// with a bare expression; its value is what tsc / node prints when the
-// transpiled JS uses `console.log(<last>)`. Format here matches node's
-// default console output for primitive types.
+// renderJsForParity — lang-typescript.ts eval returns JS primitives.
+function renderJsForParity(v: unknown): string {
+  if (v === null) return "null";
+  if (v === undefined) return "undefined";
+  if (typeof v === "number") return formatFloatJs(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
+  if (typeof v === "string") return v;
+  if (typeof v === "bigint") return String(v);
+  if (Array.isArray(v)) return "[ " + v.map(renderJsForParity).join(", ") + " ]";
+  if (typeof v === "function") return "[Function]";
+  return String(v);
+}
+
+// renderForParity — legacy lang-ts.ts Value renderer (ts-trace / walk path).
 function renderForParity(v: Value): string {
   switch (v.kind) {
     case "f32":
