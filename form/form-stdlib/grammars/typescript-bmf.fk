@@ -292,6 +292,118 @@
                   (ts-src-int (int_to_str (node_value (nth kids 1))))
                   (ts-src-op "]"))))
 
+    (defn tsbmf-emit-ternary (objects)
+        (intern_node TS-BMF-TERNARY
+                     (list (tsbmf-string objects "cond")
+                           (tsbmf-string objects "then")
+                           (tsbmf-string objects "else"))))
+
+    (defn tsbmf-source-ternary (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "?")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 2))))))
+
+    (defn tsbmf-emit-return-ternary (objects)
+        (intern_node TS-BMF-RETURN
+                     (list (tsbmf-string objects "cond")
+                           (tsbmf-string objects "then")
+                           (tsbmf-string objects "else"))))
+
+    (defn tsbmf-source-return-ternary (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op "?")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ":")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ";"))))
+
+    (defn tsbmf-emit-if-return (objects)
+        (intern_node TS-BMF-IF
+                     (list (tsbmf-string objects "cond")
+                           (tsbmf-string objects "value"))))
+
+    (defn tsbmf-source-if-return (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "if")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-if-else-return (objects)
+        (intern_node TS-BMF-IF-ELSE
+                     (list (tsbmf-string objects "cond")
+                           (tsbmf-string objects "then")
+                           (tsbmf-string objects "else"))))
+
+    (defn tsbmf-source-if-else-return (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "if")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ";")
+                  (ts-src-op "}")
+                  (ts-src-keyword "else")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
+    (defn tsbmf-emit-if-elif-else-return (objects)
+        (intern_node TS-BMF-IF-ELSE
+                     (list (tsbmf-string objects "cond1")
+                           (tsbmf-string objects "then1")
+                           (tsbmf-string objects "cond2")
+                           (tsbmf-string objects "then2")
+                           (tsbmf-string objects "else3"))))
+
+    (defn tsbmf-source-if-elif-else-return (object)
+        (do
+            (let kids (tsbmf-node-kids object))
+            (list (ts-src-keyword "if")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 0)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 1)))
+                  (ts-src-op ";")
+                  (ts-src-op "}")
+                  (ts-src-keyword "else")
+                  (ts-src-keyword "if")
+                  (ts-src-op "(")
+                  (ts-src-name (node_value (nth kids 2)))
+                  (ts-src-op ")")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 3)))
+                  (ts-src-op ";")
+                  (ts-src-op "}")
+                  (ts-src-keyword "else")
+                  (ts-src-op "{")
+                  (ts-src-keyword "return")
+                  (ts-src-name (node_value (nth kids 4)))
+                  (ts-src-op ";")
+                  (ts-src-op "}"))))
+
     (defn tsbmf-emit-if-pass (objects)
         (intern_node TS-BMF-IF (list (tsbmf-string objects "cond"))))
 
@@ -450,11 +562,16 @@
             (bmf-native "tsbmf-emit-jsx-self" tsbmf-emit-jsx-self TS-BMF-JSX)
             (bmf-native "tsbmf-emit-return-ident" tsbmf-emit-return-ident TS-BMF-RETURN)
             (bmf-native "tsbmf-emit-return-string" tsbmf-emit-return-string TS-BMF-RETURN)
+            (bmf-native "tsbmf-emit-return-ternary" tsbmf-emit-return-ternary TS-BMF-RETURN)
+            (bmf-native "tsbmf-emit-ternary" tsbmf-emit-ternary TS-BMF-TERNARY)
             (bmf-native "tsbmf-emit-assign-ident" tsbmf-emit-assign-ident TS-BMF-ASSIGN)
             (bmf-native "tsbmf-emit-assign-int" tsbmf-emit-assign-int TS-BMF-ASSIGN)
             (bmf-native "tsbmf-emit-member" tsbmf-emit-member TS-BMF-MEMBER)
             (bmf-native "tsbmf-emit-index-int" tsbmf-emit-index-int TS-BMF-INDEX)
             (bmf-native "tsbmf-emit-if-pass" tsbmf-emit-if-pass TS-BMF-IF)
+            (bmf-native "tsbmf-emit-if-return" tsbmf-emit-if-return TS-BMF-IF)
+            (bmf-native "tsbmf-emit-if-else-return" tsbmf-emit-if-else-return TS-BMF-IF-ELSE)
+            (bmf-native "tsbmf-emit-if-elif-else-return" tsbmf-emit-if-elif-else-return TS-BMF-IF-ELSE)
             (bmf-native "tsbmf-emit-for-of-pass" tsbmf-emit-for-of-pass TS-BMF-FOR)
             (bmf-native "tsbmf-emit-arrow1" tsbmf-emit-arrow1 TS-BMF-ARROW)
             (bmf-native "tsbmf-emit-array-empty" tsbmf-emit-array-empty TS-BMF-ARRAY)
@@ -480,11 +597,16 @@
       jsx-self ::= "<" $name:name "/" ">" => tsbmf-emit-jsx-self <= tsbmf-source-jsx-self;
       return-ident ::= "return" $value:name ";" => tsbmf-emit-return-ident <= tsbmf-source-return-ident;
       return-string ::= "return" $value:string ";" => tsbmf-emit-return-string <= tsbmf-source-return-string;
+      return-ternary ::= "return" $cond:name "?" $then:name ":" $else:name ";" => tsbmf-emit-return-ternary <= tsbmf-source-return-ternary;
+      ternary ::= $cond:name "?" $then:name ":" $else:name => tsbmf-emit-ternary <= tsbmf-source-ternary;
       assign-ident ::= $target:name "=" $value:name ";" => tsbmf-emit-assign-ident <= tsbmf-source-assign-ident;
       assign-int ::= $target:name "=" $value:int ";" => tsbmf-emit-assign-int <= tsbmf-source-assign-int;
       member ::= $object:name "." $field:name => tsbmf-emit-member <= tsbmf-source-member;
       index-int ::= $object:name "[" $index:int "]" => tsbmf-emit-index-int <= tsbmf-source-index-int;
       if-pass ::= "if" "(" $cond:name ")" "{" "}" => tsbmf-emit-if-pass <= tsbmf-source-if-pass;
+      if-return ::= "if" "(" $cond:name ")" "{" "return" $value:name ";" "}" => tsbmf-emit-if-return <= tsbmf-source-if-return;
+      if-else-return ::= "if" "(" $cond:name ")" "{" "return" $then:name ";" "}" "else" "{" "return" $else:name ";" "}" => tsbmf-emit-if-else-return <= tsbmf-source-if-else-return;
+      if-elif-else-return ::= "if" "(" $cond1:name ")" "{" "return" $then1:name ";" "}" "else" "if" "(" $cond2:name ")" "{" "return" $then2:name ";" "}" "else" "{" "return" $else3:name ";" "}" => tsbmf-emit-if-elif-else-return <= tsbmf-source-if-elif-else-return;
       for-of-pass ::= "for" "(" "const" $item:name "of" $iter:name ")" "{" "}" => tsbmf-emit-for-of-pass <= tsbmf-source-for-of-pass;
       arrow1 ::= $param:name "=>" $body:name => tsbmf-emit-arrow1 <= tsbmf-source-arrow1;
       array-empty ::= "[" "]" => tsbmf-emit-array-empty <= tsbmf-source-array-empty;
@@ -520,10 +642,15 @@
                 (compiler-rule "typescript" "interface" "TypeScript interface source objects" tsbmf-emit-interface)
                 (compiler-rule "typescript" "type-alias" "TypeScript type alias source objects" tsbmf-emit-type-alias)
                 (compiler-rule "typescript" "return" "TypeScript return source objects" tsbmf-emit-return-ident)
+                (compiler-rule "typescript" "return-ternary" "TypeScript return-ternary source objects" tsbmf-emit-return-ternary)
+                (compiler-rule "typescript" "ternary" "TypeScript ternary source objects" tsbmf-emit-ternary)
                 (compiler-rule "typescript" "assign" "TypeScript assignment source objects" tsbmf-emit-assign-ident)
                 (compiler-rule "typescript" "member" "TypeScript member access source objects" tsbmf-emit-member)
                 (compiler-rule "typescript" "index" "TypeScript index access source objects" tsbmf-emit-index-int)
                 (compiler-rule "typescript" "if" "TypeScript if source objects" tsbmf-emit-if-pass)
+                (compiler-rule "typescript" "if-return" "TypeScript if-return source objects" tsbmf-emit-if-return)
+                (compiler-rule "typescript" "if-else-return" "TypeScript if-else-return source objects" tsbmf-emit-if-else-return)
+                (compiler-rule "typescript" "if-elif-else-return" "TypeScript if-elif-else-return source objects" tsbmf-emit-if-elif-else-return)
                 (compiler-rule "typescript" "for-of" "TypeScript for-of source objects" tsbmf-emit-for-of-pass)
                 (compiler-rule "typescript" "arrow" "TypeScript arrow source objects" tsbmf-emit-arrow1)
                 (compiler-rule "typescript" "jsx" "TSX element source objects" tsbmf-emit-jsx-self)
