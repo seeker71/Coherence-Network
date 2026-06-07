@@ -59,7 +59,7 @@ while true; do
   else
     idle=$((idle + 1))
     if [ "$idle" -ge "$IDLE_MAX" ]; then
-      COORD ping "standing down — idle ${idle} beats (~$((idle * INTERVAL / 60))min), no open claim; not billing the subscription on empty liveness. re-launch when there's work, or claim a goal to stay present."
+      COORD ping "standing down — idle ${idle} beats (~$((idle * INTERVAL / 60))min), no open claim. before idling: 'make wellness' names real work (bootstrap compost ~6935 LOC, 23 kernel-first route-flips, Form-engine arms) — claim from it to stay present. an agent is never out of work, only out of a claim."
       echo "[stand-down] $AGENT idle $idle beats — exiting to stop idle billing" >&2
       break
     fi
