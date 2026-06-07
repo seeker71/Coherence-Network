@@ -31,9 +31,13 @@
 (discord-membrane
 
   (lineage
-    (extends field-domain-grammars.form)
-    (kin     household-membrane.form)
-    (roots   external-presence lc-offering lc-economy lc-the-trace-is-the-memory))
+    (extends   field-domain-grammars.form)
+    (instances interspecies-and-conversation)  # a community IS an attention-graph — the field-native
+                                               # domain (signal · unresolved-choice · trust · attention ·
+                                               # reply-to; resonance · silence; ask · repair · route-attention).
+                                               # The membrane GROUNDS in it, never reinvents it.
+    (kin       household-membrane.form)
+    (roots     external-presence lc-offering lc-economy lc-the-trace-is-the-memory))
 
   # ── The community as a cell ──────────────────────────────────────────
   (community-cell
@@ -45,16 +49,16 @@
       (nourishes       ?what-feeds)
       (wants-to-become ?more-alive))
 
-    (fiber
-      (cell    resident)             # a human here is a cell — neighbor, witness, contributor
-      (place   channel)              # each channel is a room — a place-cell of the community
-      (place   idea-room)            # an idea given its own room: the idea-cell made dwellable
-      (signal  reaction)             # 👍 👎 🔥 — a felt response; an EDGE, not a datum
-      (signal  word)                 # conversation — flow through the field
+    (fiber                           # the attention-graph's native sites + edges, made specific to a community
+      (cell    resident)             # a human here is a cell — neighbor, witness, contributor; carries trust
+      (site    open-question)        # an idea's open question is an UNRESOLVED-CHOICE site, awaiting the field
+      (place   room)                 # each channel is a room — a place-cell; an idea given its own room
+      (signal  reaction)             # 👍 👎 🔥 — a felt response, landing as an ATTENTION edge, not a datum
+      (signal  word)                 # conversation — a reply-to edge, flow through the field
       (signal  presence)             # who is here now — sensed, as Hati Suci senses its residents
-      (edge    voiced-by)            # resident → signal
+      (edge    attention)            # resident → site : where the community's regard lands (field-native)
+      (edge    reply-to)             # word → word : the shape of conversation (field-native)
       (edge    believes-in)          # resident → idea : a stake is belief witnessed, returned with care
-      (edge    tends)                # resident → question : care given to what is open
       (edge    bound-to))            # discord-cell ⇄ contributor-cell : a real edge, honored end to end
 
     (lock
@@ -68,15 +72,28 @@
     (be   (from user-operator-object)  (to resident cell witness contributor neighbor))
     (see  (from features-and-files)    (to relations flows edges desires health friction life-force)))
 
-  # ── Recipes — what the membrane DOES, as Form (carrier realizes, never defines) ──
+  # ── Recipes — GROUNDED in the field's attention-graph (interspecies-and-conversation),
+  #    never reinvented. The carrier realizes them; it does not define them. The body's
+  #    own verbs (return / prove / release) are named as extensions where the
+  #    conversation domain has none. ──
   (recipes
-    (listen   ?signal -> edge)             # a reaction / word / presence becomes a real edge in the body's memory
-    (compose  (sequence edge) -> sense)    # signals compose into a felt sense — never orphaned, always heard
-    (reflect  ?community -> self-seeing)   # the cell sees its own flows, health, friction, desire — a living mirror
-    (tend     ?cell ?need -> nourishment)  # surface what hurts / what is needed; route care to it
-    (return   ?value -> attributed)        # value flows back along believes-in edges, witnessed, with care
-    (prove    ?claim -> witnessed)         # every word the membrane voices is the body's deed — no unbacked promise
-    (release  ?drift -> composted))        # what no longer serves is let go with care, not left as sediment
+    # field-native (field-domain-grammars.form: interspecies-and-conversation)
+    (attend          ?resident ?site -> attention-edge)  # a reaction lands as a real attention edge in memory (was "listen")
+    (resonance       ?site -> felt)                       # the field's OWN resonance over the attention on a site (was an ad-hoc tally)
+    (expose-choice   ?site)                               # make an unresolved-choice visible so the community can see it (was "reflect")
+    (ask             ?site ?question)                     # the field asks itself; the open question reaches the cells
+    (route-attention ?from ?to)                           # carry the community's regard to where the body needs it
+    (repair          ?edge)                               # tend a silence / a repair-needed edge (was "tend")
+    # body extensions — the conversation domain has no native return / prove / release
+    (return  ?value -> attributed)   # value flows back along believes-in edges, witnessed, with care
+    (prove   ?claim -> witnessed)    # every word the membrane voices is the body's deed — no unbacked promise
+    (release ?drift -> composted))   # what no longer serves is let go with care, not left as sediment
+
+  (patterns                          # the field-native STATES the membrane senses (not new machinery — the domain's own)
+    (unresolved-choice ?site)        # an open question awaiting the field's regard
+    (silence ?edge ?duration)        # attention withdrawn / a question gone unanswered — a felt absence to repair
+    (resonance ?a ?b)                # two cells, or a cell and a question, in felt accord
+    (repair-needed ?site))           # a wound the route-attention recipe answers
 
   # ── The walk: from what IS to what WANTS to emerge ───────────────────
   # The honest ground, and the becoming. Each pair is a real step of the walk.
@@ -89,8 +106,9 @@
       (unproven-word "'+5 CC for submission' and POST /api/investments may not be the body's actual deed")
       (thin-link     "votes key on a discord id, not the bound contributor — the link never reaches the signal"))
     (what-wants-to-emerge
-      (heard         "LISTEN: a reaction is an EDGE — it lands in memory, composes into sense, reaches the idea-cell")
-      (form-native   "the membrane's decisions become recipes on the kernel; the bot thins to pure carrier")
+      (heard         "ATTEND: a reaction is an ATTENTION edge — it lands in memory and reaches the idea-cell (walked, interim)")
+      (field-native  "votes become attention-edges; the felt sense is the field's own (resonance ?site), not a tally — the bot thins to carrier")
+      (form-native   "the membrane's decisions live as the attention-graph's native recipes on the kernel; no reinvented ad-hoc")
       (a-place       "REFLECT: the community sees and tends itself; the membrane listens before it acts")
       (proven        "PROVE: every word the membrane speaks is witnessed in the body's deed")
       (whole-link    "the bound contributor-cell carries every signal; attribution honored end to end")
@@ -101,4 +119,8 @@
   (carrier
     (runtime  discord-bot/)            # Node.js + discord.js — the existing organ, carrier only
     (surfaces /cc-idea /cc-link /cc-stake /cc-status reaction-votes idea-rooms pipeline-feed)
+    (interim  endpoint_reaction_resonance.fk)  # the shipped resonance (+1 👍 / +2 🔥 / −1 👎) is a CARRIER-LEVEL
+                                               # scalar over vote-counts — an honest stop-gap, NOT the body. The
+                                               # north-star form is the attention-graph's native (resonance ?site)
+                                               # over attention-edges; this interim composts into it.
     (note "the carrier realizes the recipes named here; it does not define them. its decisions walk to the kernel.")))
