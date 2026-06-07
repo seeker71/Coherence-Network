@@ -16,11 +16,12 @@
 ; → gas (env bindings).
 ;
 ; Prelude requirement: form-stdlib/json.fk must load before this
-; file so parse-json and the json-* accessors are in scope.
+; file so the bootstrap parser and json-* accessors are in scope.
 
 ;; --- read + parse (with .fkb cache) ---------------------------------
 ;;
-;; First load: parse-json runs (~84 ms on form-ontology.json's 18 KB),
+;; First load: the bootstrap JSON parser runs (~84 ms on
+;; form-ontology.json's 18 KB),
 ;; writes the parsed Recipe to form-stdlib/.cache/form-ontology.fkb.
 ;; Subsequent loads: read_form_binary in microseconds. Cache invalidates
 ;; when form-ontology.json's mtime advances past the .fkb's. See
@@ -28,7 +29,10 @@
 ;;
 ;; Prelude requirement: form-stdlib/cache.fk must load before this
 ;; file so read_with_cache + cache-fresh? are in scope. Earlier deps
-;; (form-stdlib/json.fk for parse-json) still required.
+;; (form-stdlib/json.fk for the bootstrap parser) still required. This
+;; loader participates in compiling BML/codec sections, so moving it to
+;; JsonCodec belongs with the compiler-pipeline rewrite that removes that
+;; bootstrap cycle.
 
 (let ONTOLOGY-JSON
     (read_with_cache "form-stdlib/form-ontology.json"

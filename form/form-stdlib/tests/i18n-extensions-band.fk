@@ -5,7 +5,7 @@
 ; Three kernels must agree on every locale × key probe and the
 ; aggregate score.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk
+; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk
 
 (do
     ;; --- CLI corpus: help.usage across four locales ----------------

@@ -26,7 +26,7 @@ The authored source shall be the closest expression of intent:
 
 | Area | Current Tissue | Closest Ideal | First Rewrite Move |
 | --- | --- | --- | --- |
-| JSON codec | `json.fk` still carries a hand parser; older tests and clients call `parse-json` directly. | `json-codec.fk` declares JSON as a structured codec; parse/emit enter through `JsonCodec`, and lower Form is generated or generic runtime execution. | Move all stdlib callers from `parse-json` to `json_parse_body`; then compost the old parser or make it generated output. |
+| JSON codec | `json.fk` still carries a hand parser for compiler/bootstrap and older seedbank/test paths; i18n and channel-query now enter through `JsonCodec`. | `json-codec.fk` declares JSON as a structured codec; parse/emit enter through `JsonCodec`, and lower Form is generated or generic runtime execution. | Remove the compiler/bootstrap cycle that keeps `parse-json` live; then compost the old parser or make it generated output. |
 | HTTP stack | `http-parse.fk`, `http-render.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, `http-adapter.fk`, and `kernel-http.fk` split protocol, routing, rendering, and serving across hand-authored functions. | HTTP is a protocol grammar plus route graph: request grammar, response grammar, route classes, observation cells, and socket/listener lifecycle as one front door. | Declare HTTP/1.1 parse/render as a protocol codec, then route serving consumes request/response cells only. |
 | Route catalog | `router-routes.fk`, `kernel-http.fk`, and route tests still describe routes with low-level constructors. | Routes are high-grammar `RouteCell<Request, Response>` declarations with choice/fail/dispatch observation attached. | Convert the highest-traffic API routes into route classes that return codec-backed response cells. |
 | Source compiler | `source-compiler.fk`, `compiler.fk`, `engine.fk`, `bmf-core.fk`, `bmf-grammar.fk`, `grammar-chars.fk`, and `runtime-grammar.fk` overlap as compiler, grammar, runtime, emitter, and registry layers. | One grammar-of-grammars pipeline: source declaration -> grammar cells -> lowering cells -> executable recipes -> reversible source/trace. | Name one canonical compiler pipeline and mark overlapping engines as candidates to merge, generate, or release. |
@@ -34,8 +34,8 @@ The authored source shall be the closest expression of intent:
 | Python bridge | `python-bmf-lift.fk`, `python-bmf-eval.fk`, `grammars/python-bmf.fk`, and `emits/python-native*` are major bridge tissue. | Python is one optional grammar among many; no special runtime status, no privileged fallback. | Classify every Python bridge entry as: release now, compile through BML/BMF, or temporary call-out with a named compost gate. |
 | Emitters | `emit-engine.fk`, `seedbank/emits/*`, `emits/python-native*`, and self-witness emitters overlap. | Emitters are codec/target declarations over cell shapes with one reusable engine and target-specific declarations. | Promote the useful seedbank emit templates into codec declarations or compost them. |
 | Query/path languages | `xpath.fk`, `doc-xpath.fk`, and `concept-xpath.fk` hand-parse path strings and walk trees. | Query is a graph/path grammar with typed selectors, predicates, and substrate coordinates. | Replace split-loop path parsing with a reusable query grammar and lens registry. |
-| i18n and corpus loading | `i18n.fk` carries static locale lists and direct JSON parser calls. | Locales are discovered corpus cells; JSON is only a codec selector. | Use `json_parse_body` and replace static locale lists with a manifest/corpus query. |
-| Channel JSON bridge | `channel-query-json.fk` manually maps channel/query cells to JSON strings and parses JSON back. | Channel query has a native cell protocol; JSON is a codec projection at the boundary. | Rebuild the bridge as channel-query cells + `JsonCodec` projection, then delete bespoke JSON wiring. |
+| i18n and corpus loading | `i18n.fk` now loads through `json_parse_body`; static locale lists remain. | Locales are discovered corpus cells; JSON is only a codec selector. | Replace static locale lists with a manifest/corpus query. |
+| Channel JSON bridge | `channel-query-json.fk` now projects query/response values into JSON cells and emits/parses through `JsonCodec`; response decode and richer item schemas remain. | Channel query has a native cell protocol; JSON is a codec projection at the boundary. | Add response decode as cell projection and move mixed item schemas into declarations. |
 | Storage and carriers | `storage-port*.fk`, `persistence.fk`, `cell-log-store.fk`, and carrier integration files encode carriers with lists and callbacks. | Carriers are capability cells with protocol laws, observation, and interchangeable persistence grammars. | Name carrier specs and move list offsets into typed carrier cells. |
 | Field model | `field-model-form.fk` and `field-model-form-runtime.fk` contain many list/accessor and symbolic math helpers. | Field concepts are model cells with algebraic laws, observation, and reusable dimensional operators. | Split authored domain declarations from generic numeric/topology runtime support. |
 | Algorithms and encodings | `base64.fk`, `hex.fk`, `url-encode.fk`, `rle.fk`, `uuid.fk`, `ulid.fk`, `sha256.fk`, `hmac-sha256.fk`, `crc32.fk`, `adler32.fk`, `dns.fk`. | Algorithm families are law declarations with reference vectors, possible native primitive realization, and generated runners. | Keep exact algorithms where needed, but wrap them in law/spec declarations and mark hot ones for native primitive/JIT treatment. |
@@ -56,11 +56,10 @@ For each stdlib file touched on a hot path:
 
 ## First Rewrite Sequence
 
-1. Finish JSON as the pattern: `JsonCodec` is the only route-facing JSON surface;
-   direct `parse-json` callers move to `json_parse_body`; old parser tissue is
-   either generated or released.
-2. Move `channel-query-json.fk` and `i18n.fk` onto `JsonCodec`, because they keep
-   JSON duplication alive.
+1. Finish JSON as the pattern: `JsonCodec` is the only route-facing and corpus
+   JSON surface; old parser tissue is either generated or released.
+2. Move the compiler/bootstrap ontology loader off `parse-json` by removing the
+   source-compiler cycle that currently needs it while compiling codec sections.
 3. Lift HTTP parse/render into a protocol codec, then make native route classes
    consume only request and response cells.
 4. Consolidate compiler/grammar engines by naming one source-to-recipe pipeline
