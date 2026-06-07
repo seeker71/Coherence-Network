@@ -1,0 +1,81 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/bml-capability-ledger-slice-20260607",
+  "commit_scope": "Add a BML-authored capability ledger for core, pipeline, arms, observation, route front door, and source lowering wants.",
+  "files_owned": [
+    "form/form-stdlib/bml-capability-ledger.fk",
+    "form/form-stdlib/tests/bml-capability-ledger-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-07_bml_capability_ledger.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bml-capability-ledger.fk form-stdlib/tests/bml-capability-ledger-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/bml-capability-ledger.fk form-stdlib/tests/bml-capability-ledger-band.fk",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "passed; clean worktree entry before edits",
+      "wellness": "passed; deploy aligned, indexes aligned, kernel-native API still at 22/812 route surface",
+      "validate_source": "255; 1 ok, 0 divergent — kernels agree on every sample",
+      "validate_binary": "255; 1 ok, 0 divergent — kernels agree on every binary artifact",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "PR #2567 checks passed: validate-thread-process and GitGuardian Security Checks."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No production endpoint behavior changes; deploy relevance is covered by the Form/BML source and binary validation plus PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:bml-capability-ledger"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-capability-ledger-band.fk",
+    "form/validate.sh"
+  ],
+  "change_files": [
+    "form/form-stdlib/bml-capability-ledger.fk",
+    "form/form-stdlib/tests/bml-capability-ledger-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML can express and query the capability ledger that names core, pipeline, arms, observation, route front door, and source-lowering wants.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/bml-capability-ledger-band.fk"
+    ],
+    "test_flows": [
+      "Run validate.sh on the BML ledger workload and the binary artifact workload; both return 255 with Go/Rust/TypeScript agreement."
+    ]
+  }
+}

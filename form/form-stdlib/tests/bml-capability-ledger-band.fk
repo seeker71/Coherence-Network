@@ -1,0 +1,36 @@
+; bml-capability-ledger-band.fk - BML-authored proof for capability wants.
+;
+; preludes: form-stdlib/bml-capability-ledger.fk
+;
+; Proof path: run through form/validate.sh. The validator lowers section
+; [form.bml] before Go/Rust/TypeScript execute the sibling workload.
+; Raw direct-kernel execution of section source is not this proof surface.
+;
+; Verdict: 255 when BML can read the ledger, find the first tending target, and
+; prove the initial core/pipeline/arms/source coverage shape.
+
+section [form.bml] {
+    def bcl-band-score(ok, score) = if ok then score else 0;
+
+    def bcl-capability-ledger-band-score() {
+        let ledger = bcl-seed-ledger();
+        let features = bcl-ledger-features(ledger);
+        let first_tending = bcl-ledger-next-attention(ledger);
+        let route_feature = bcl-find-feature(features, "core.route-front-door");
+        let arms_feature = bcl-find-feature(features, "arms.agent-coordination");
+        let source_feature = bcl-find-feature(features, "source.bml-full-lowering");
+        sum(list(
+            bcl-band-score(bcl-ledger?(ledger), 1),
+            bcl-band-score(eq(len(features), 6), 2),
+            bcl-band-score(eq(bcl-ledger-core-count(ledger), 3), 4),
+            bcl-band-score(eq(bcl-ledger-pipeline-count(ledger), 1), 8),
+            bcl-band-score(eq(bcl-ledger-arms-count(ledger), 1), 16),
+            bcl-band-score(str_eq(bcl-feature-name(first_tending), "core.route-front-door"), 32),
+            bcl-band-score(str_eq(bcl-feature-status(arms_feature), "gap"), 64),
+            bcl-band-score(str_eq(bcl-feature-lowering-target(source_feature), "BML source file as language definition, not only Form bootstrap code"), 128),
+            if bcl-feature?(route_feature) then 0 else head(empty)
+        ));
+    }
+
+    bcl-capability-ledger-band-score();
+}
