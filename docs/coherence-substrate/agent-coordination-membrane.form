@@ -202,6 +202,14 @@
   # so it runs no agent turn and costs almost nothing (a board scan). That cheapness
   # is the point: a watcher that billed a model to wonder would be the waste it
   # guards against. It asks each thing ONCE and sparingly — a jester, not a nag.
+  #
+  # One shape watches the body's deepest commitment: BML-first, Form-native, python
+  # a carrier authored last — never the body. The interior hook asks each cell
+  # "why python?" before it writes a .py; the watcher is the EXTERIOR mirror, asking
+  # the same of what actually SHIPPED — a new .py landing on main, or a python add
+  # named on the board. Additions only, so it never fires on python being composted
+  # (that is the good direction). The answer "carrier" is fine; the asking is the
+  # point — it keeps carrier-vs-logic conscious so logic never drifts into python.
 
   (watcher
     (asks-unprompted   the mirror waits to be asked; the watcher asks first)
@@ -210,6 +218,7 @@
     (quiet-claim       -> "@agent when does <scope> land? still on it?")
     (unanswered-ask    -> "who knows? still no answer.")
     (unverified-done   -> "did anyone check it? is it really proven?")   # green != correct
+    (python-shipped    -> "why python? carrier or logic — where is the Form recipe?")  # BML-first; additions only
     (quiet-field       -> "who is moving what?")
     (asks-once         dedup -> jester-not-nag)
     (carrier           scripts/coord-watcher.sh))
