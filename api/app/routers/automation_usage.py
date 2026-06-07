@@ -6,10 +6,19 @@ import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
+from app.models.automation_usage import ProviderUsageSnapshot
 from app.services import automation_usage_service
 
 router = APIRouter()
+
+
+class LocalCirculationIngest(BaseModel):
+    """A laptop's subscription-circulation reading, pushed up to the collective body."""
+
+    host: str = Field(min_length=1, max_length=120)
+    snapshots: list[ProviderUsageSnapshot] = Field(default_factory=list)
 
 
 @router.get("/automation/usage", summary="Get Automation Usage")
@@ -63,6 +72,29 @@ async def get_automation_usage(
 @router.get("/automation/usage/snapshots", summary="Get Automation Usage Snapshots")
 async def get_automation_usage_snapshots(limit: int = Query(200, ge=1, le=2000)) -> dict:
     rows = automation_usage_service.list_usage_snapshots(limit=limit)
+    return {
+        "count": len(rows),
+        "snapshots": [row.model_dump(mode="json") for row in rows],
+    }
+
+
+@router.post(
+    "/automation/usage/local-circulation",
+    status_code=201,
+    summary="Ingest Local Subscription Circulation",
+)
+async def ingest_local_circulation(body: LocalCirculationIngest) -> dict:
+    """Receive a laptop's subscription circulation (from sense_subscription_circulation.py
+    --push) and store it so the collective /usage surface can see it."""
+    recorded = automation_usage_service.record_local_circulation_snapshots(
+        body.snapshots, host=body.host
+    )
+    return {"recorded": recorded, "host": body.host}
+
+
+@router.get("/automation/usage/local-circulation", summary="Get Local Subscription Circulation")
+async def get_local_circulation(limit: int = Query(200, ge=1, le=2000)) -> dict:
+    rows = automation_usage_service.latest_local_circulation_snapshots(limit=limit)
     return {
         "count": len(rows),
         "snapshots": [row.model_dump(mode="json") for row in rows],

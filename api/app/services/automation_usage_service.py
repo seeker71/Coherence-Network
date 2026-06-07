@@ -294,6 +294,46 @@ def _store_snapshot(snapshot: ProviderUsageSnapshot) -> None:
     _write_store(rows)
 
 
+def record_local_circulation_snapshots(
+    snapshots: list[ProviderUsageSnapshot], *, host: str
+) -> int:
+    """Persist subscription-circulation snapshots pushed from a developer laptop.
+
+    Reuses the canonical snapshot store; each is tagged via raw.source so it reads
+    back distinctly from the runner's own server-side provider snapshots. This is
+    how *this machine's* personal subscription circulation reaches the collective
+    body — the server cannot read a laptop's ~/.claude, so the laptop ships it up.
+    """
+    recorded = 0
+    for snap in snapshots:
+        snap.raw = {**(snap.raw or {}), "source": f"laptop:{host}"}
+        if snap.data_source == "unknown":
+            snap.data_source = "provider_cli"
+        _store_snapshot(snap)
+        recorded += 1
+    return recorded
+
+
+def latest_local_circulation_snapshots(limit: int = 200) -> list[ProviderUsageSnapshot]:
+    """Latest laptop-sourced circulation snapshot per (provider, host)."""
+    latest: dict[tuple[str, str], ProviderUsageSnapshot] = {}
+    for row in _read_store():
+        if not isinstance(row, dict):
+            continue
+        source = str((row.get("raw") or {}).get("source") or "")
+        if not source.startswith("laptop:"):
+            continue
+        try:
+            snap = ProviderUsageSnapshot(**row)
+        except Exception:
+            continue
+        key = (snap.provider, source)
+        prev = latest.get(key)
+        if prev is None or snap.collected_at > prev.collected_at:
+            latest[key] = snap
+    return sorted(latest.values(), key=lambda s: s.provider)[:limit]
+
+
 def _metric(
     *,
     id: str,
