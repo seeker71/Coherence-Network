@@ -5928,6 +5928,19 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
     }
 }
 
+// The kernel's surface-verb vocabulary — the verbs build_verb lowers into TYPED
+// nodes (BLOCK/COND/MATH/COMPARE/LOGIC/FNDEF) rather than the FNCALL fallback.
+// These resolve structurally, never as a looked-up function, so the
+// name-resolution gate must seed them as `known` alongside the natives — else a
+// source-compiled recipe that carries an operator as an FNCALL callee (the
+// bundled compile machinery does) is falsely reported unbound. Single source of
+// truth: build_verb's match must handle exactly these (the
+// build_verbs_are_typed_not_fncall test drift-guards it).
+const BUILD_VERBS: &[&str] = &[
+    "do", "seq", "let", "if", "defn", "params", "add", "sub", "mul", "div", "mod", "eq", "ne",
+    "lt", "le", "gt", "ge", "and", "or", "not",
+];
+
 fn build_verb(k: &mut Kernel, verb: &str, args: Vec<NodeID>) -> NodeID {
     match verb {
         "do" => k.intern(cat_block(RBLK_DO), args),
@@ -8067,10 +8080,17 @@ fn name_check_route_recipe(
         .copied()
         .chain(k.env_natives.keys().copied())
         .collect();
-    let known: Vec<Value> = native_ids
+    let mut known: Vec<Value> = native_ids
         .into_iter()
         .map(|id| Value::Str(Arc::from(k.name_str(id))))
         .collect();
+    // Seed the kernel's surface-verb vocabulary (build_verb): operators and
+    // structural verbs resolve as typed nodes, not function lookups, so they are
+    // known, not unbound. Without this the gate false-flags add/sub/…/and/or when
+    // they ride as FNCALL callees in source-compiled machinery (verified: a
+    // manifest using (add 6 2)/(mul 6 2) serves {"sum":8,"prod":12} while the gate
+    // reported those very verbs unbound).
+    known.extend(BUILD_VERBS.iter().map(|v| Value::Str(Arc::from(*v))));
     let known_val = Value::List(Arc::new(known));
     // Apply name-check(route_root, known) directly — the same closure resolution the
     // serve path uses for route handlers (resolve_route_handler -> arena.lookup).
@@ -8179,6 +8199,58 @@ fn cli_check(args: &[String]) -> i32 {
             eprintln!("check: {}", e);
             1
         }
+    }
+}
+
+#[cfg(test)]
+mod gate_known_set_tests {
+    use super::*;
+
+    // The name-resolution gate seeds `known` with BUILD_VERBS so a source-compiled
+    // operator carried as an FNCALL callee isn't false-flagged unbound. That is only
+    // safe if every BUILD_VERBS entry is a verb build_verb lowers to a TYPED node
+    // (never the FNCALL fallback) — else seeding it would mask a genuinely-unbound
+    // FNCALL of that name. This drift-guards that invariant: add a verb to
+    // BUILD_VERBS without teaching build_verb to specialize it, and this fails.
+    #[test]
+    fn build_verbs_are_typed_not_fncall() {
+        let mut k = Kernel::new();
+        let a = k.intern_trivial_int(2);
+        let b = k.intern_trivial_int(3);
+        // operators + block-verbs take uniform args; `not` is unary.
+        let uniform = [
+            "add", "sub", "mul", "div", "mod", "eq", "ne", "lt", "le", "gt", "ge", "and", "or",
+            "do", "seq", "params",
+        ];
+        for v in uniform {
+            let node = build_verb(&mut k, v, vec![a, b]);
+            assert_ne!(
+                k.category(node),
+                cat_fncall(),
+                "build_verb({v}) fell through to FNCALL — the gate would mask a real unbound {v}"
+            );
+        }
+        let not_node = build_verb(&mut k, "not", vec![a]);
+        assert_ne!(k.category(not_node), cat_fncall());
+        // let/if/defn carry special arg shapes (name/params repackaging); they are
+        // structural by construction. Assert the test covers every BUILD_VERBS entry
+        // so a new verb can't be added to the gate's known-set untested.
+        let covered: Vec<&str> = uniform
+            .iter()
+            .copied()
+            .chain(["not", "let", "if", "defn"])
+            .collect();
+        for v in BUILD_VERBS {
+            assert!(covered.contains(v), "BUILD_VERBS has {v} but this test doesn't cover it");
+        }
+        // and a verb build_verb does NOT know must hit the FNCALL fallback, so the
+        // gate still flags genuinely-unbound names (e.g. health_route_from_class).
+        let unknown = build_verb(&mut k, "health_route_from_class", vec![a, b]);
+        assert_eq!(
+            k.category(unknown),
+            cat_fncall(),
+            "an unknown verb must be FNCALL so the gate can flag it"
+        );
     }
 }
 
