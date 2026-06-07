@@ -7961,6 +7961,151 @@ fn source_compile_manifest_recipe_object(
     compile_result
 }
 
+// Resolve every name in a compiled route recipe, returning the unresolved ones.
+// The evaluator resolves names LAZILY — it raises `unbound: <name>` only when the
+// walk reaches that node at serve time (RB_IDENT) — so a manifest with a dangling
+// reference compiles to a recipe and only fails in production. This runs the Form
+// resolution walk (form-stdlib/name-check.fk, scope-aware) over the lowered recipe
+// so the dangling reference is found BEFORE anything is served. The resolver IS
+// Form: this loads it into the route kernel and applies its `name-check` closure
+// to the route recipe — no resolution logic duplicated in Rust.
+fn name_check_route_recipe(
+    k: &mut Kernel,
+    stdlib_abs: &std::path::Path,
+    route_root: NodeID,
+) -> Result<Vec<String>, String> {
+    let nc_path = stdlib_abs.join("name-check.fk");
+    let nc_src = fs::read_to_string(&nc_path)
+        .map_err(|e| format!("check: read {}: {}", nc_path.display(), e))?;
+    let nc_root = read_root_from_source(k, &nc_src);
+    let mut a = Arena::new();
+    let env = a.new_frame(None);
+    // Walk name-check.fk so `name-check` / `name-check-clean?` / `nc-*` bind in env.
+    walk(k, &mut a, nc_root, env);
+    // `known` seeds the resolvable set with every kernel native name. The manifest's
+    // own defns are collected from the recipe by name-check's PASS 1; the natives are
+    // NOT in the recipe, so they must be named here or every native call would report.
+    let native_ids: Vec<NameID> = k
+        .natives
+        .keys()
+        .copied()
+        .chain(k.env_natives.keys().copied())
+        .collect();
+    let known: Vec<Value> = native_ids
+        .into_iter()
+        .map(|id| Value::Str(Arc::from(k.name_str(id))))
+        .collect();
+    let known_val = Value::List(Arc::new(known));
+    // Apply name-check(route_root, known) directly — the same closure resolution the
+    // serve path uses for route handlers (resolve_route_handler -> arena.lookup).
+    let nc_name = k.intern_string("name-check").inst;
+    let cl = match a.lookup(env, nc_name) {
+        Some(Value::Closure(c)) => c,
+        _ => return Err("check: name-check not bound after loading name-check.fk".to_string()),
+    };
+    if cl.params.len() != 2 {
+        return Err(format!(
+            "check: name-check expects 2 params (program known), found {}",
+            cl.params.len()
+        ));
+    }
+    let frame = a.new_frame_with_capacity(Some(cl.env), 2);
+    a.bind(frame, cl.params[0], Value::Nid(route_root));
+    a.bind(frame, cl.params[1], known_val);
+    let result = walk(k, &mut a, cl.body, frame);
+    let mut unbound: Vec<String> = Vec::new();
+    if let Value::List(xs) = result {
+        for v in xs.iter() {
+            if let Value::Str(s) = v {
+                let name = s.to_string();
+                if !unbound.contains(&name) {
+                    unbound.push(name); // name-check cons-es one entry per reference; dedup
+                }
+            }
+        }
+    }
+    Ok(unbound)
+}
+
+// check --routes <file> [--stdlib <dir>] — source-compile a routes manifest and
+// resolve every name in the lowered recipe BEFORE serving. Exit non-zero, naming
+// the unresolved symbols, if any reference is dangling. This is the compile-time
+// gate the lazy evaluator lacks: a manifest that references an unbound symbol (e.g.
+// production-routes.fk's `health_route_from_class`) becomes a clean error here
+// instead of a serve-time panic — the silent-rot class. CI runs this over the
+// manifests so a dangling reference can never reach main.
+fn cli_check(args: &[String]) -> i32 {
+    let mut routes_path: Option<String> = None;
+    let mut stdlib_dir: String = "form-stdlib".to_string();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--routes" => {
+                if i + 1 >= args.len() {
+                    eprintln!("check: --routes requires an argument");
+                    return 2;
+                }
+                routes_path = Some(args[i + 1].clone());
+                i += 2;
+            }
+            "--stdlib" => {
+                if i + 1 >= args.len() {
+                    eprintln!("check: --stdlib requires an argument");
+                    return 2;
+                }
+                stdlib_dir = args[i + 1].clone();
+                i += 2;
+            }
+            other => {
+                eprintln!("check: unknown argument: {}", other);
+                return 2;
+            }
+        }
+    }
+    let routes_path = match routes_path {
+        Some(p) => p,
+        None => {
+            eprintln!("check: --routes <file> is required");
+            return 2;
+        }
+    };
+    let stdlib_abs = match std::path::Path::new(&stdlib_dir).canonicalize() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("check: --stdlib {}: {}", stdlib_dir, e);
+            return 2;
+        }
+    };
+    let mut prog = match source_compile_manifest_recipe_object(&routes_path, &stdlib_dir) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("check: {}", e);
+            return 1;
+        }
+    };
+    match name_check_route_recipe(&mut prog.kernel, &stdlib_abs, prog.root) {
+        Ok(unbound) if unbound.is_empty() => {
+            println!("check: {} — every name resolves (0 unbound)", routes_path);
+            0
+        }
+        Ok(unbound) => {
+            eprintln!(
+                "check: {} — {} unresolved name(s) — would panic at serve time:",
+                routes_path,
+                unbound.len()
+            );
+            for name in &unbound {
+                eprintln!("  unbound: {}", name);
+            }
+            1
+        }
+        Err(e) => {
+            eprintln!("check: {}", e);
+            1
+        }
+    }
+}
+
 // Quote a path/string as an S-expression string literal for the compile driver:
 // wrap in double quotes, escaping backslash and double-quote. Paths with a quote
 // or backslash are exotic but must not break the driver's parse.
@@ -11038,6 +11183,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
         "trace" => cli_trace(&args[1..]),
         "fetch" => cli_fetch(&args[1..]),
         "serve" => cli_serve(&args[1..]),
+        "check" => cli_check(&args[1..]),
         _ => {
             // Source adapter: --expr or <file.fk> [more.fk ...]
             let src = if args[0] == "--expr" {

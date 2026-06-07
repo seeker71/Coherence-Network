@@ -12,10 +12,15 @@
 ;   5. a defn whose body references its PARAM → resolves (empty)   [scope]
 ;   6. a `let` then a use of the bound name   → resolves (empty)   [scope]
 ;   7. a `let` then a use of a MISSING name   → reported (one name) [scope]
+;   8. a call whose callee is a WRAPPER ident → resolves (empty)   [shape]
+;   9. a wrapper-callee call to a MISSING name → reported (one name) [shape]
 ; Cases 1/2 prove the native test; 3/4 prove defn-collection + the walk; 5/6/7
 ; prove scope — a param is bound for its body, a let for the siblings that follow
-; it. Without scope, 5 and 6 would false-report, and the checker could not gate
-; real code. The printed verdict is deterministic, so the three siblings agree.
+; it. 8/9 prove the two real callee shapes: `(f x)` lowers a bare-string callee,
+; `f(x)` (BML) lowers a wrapper IDENT callee — the resolver reads a name through
+; either, and counts a missing one ONCE (not twice via the callee child). Without
+; these the checker crashes or miscounts on a real manifest. The printed verdict
+; is deterministic, so the three siblings must agree.
 
 (do
     (let fncall-cat (make_nodeid 1 2 32 1))
@@ -49,6 +54,18 @@
     (let prog-let-ok  (intern_node do-cat (list let-bind (intern_node ident-cat (list (intern_trivial_string "y"))))))
     (let prog-let-bad (intern_node do-cat (list let-bind (intern_node ident-cat (list (intern_trivial_string "z"))))))
 
+    ;; cases 8/9 — WRAPPER-callee shape: the BML `f(args)` form lowers a call's
+    ;; callee to an IDENT node (not a bare string, as `(f args)` does). A real
+    ;; manifest mixes both; the resolver must read a name through one wrapper
+    ;; level or it crashes (node_value on a non-trivial) — production-routes.fk
+    ;; exposed exactly this. callee = (ident "print") resolves; (ident "nope") not.
+    (let call-wrapped-ok  (intern_node fncall-cat
+                              (list (intern_node ident-cat (list (intern_trivial_string "print")))
+                                    (intern_trivial_int 1))))
+    (let call-wrapped-bad (intern_node fncall-cat
+                              (list (intern_node ident-cat (list (intern_trivial_string "nope-xyz")))
+                                    (intern_trivial_int 1))))
+
     ;; `known` seeds the resolvable set with the builtin name this test uses.
     (let known (list "print"))
 
@@ -59,7 +76,9 @@
         (and (eq (len (name-check prog-bad known)) 1)
         (and (eq (len (name-check param-fn known)) 0)
         (and (eq (len (name-check prog-let-ok known)) 0)
-             (eq (len (name-check prog-let-bad known)) 1))))))))
+        (and (eq (len (name-check prog-let-bad known)) 1)
+        (and (eq (len (name-check call-wrapped-ok known)) 0)
+             (eq (len (name-check call-wrapped-bad known)) 1))))))))))
 
     (print (if pass "name-check-band: PASS" "name-check-band: FAIL"))
 )
