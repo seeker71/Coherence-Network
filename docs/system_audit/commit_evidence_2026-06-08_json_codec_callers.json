@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/json-codec-callers-20260608",
+  "commit_scope": "Move i18n and channel-query JSON callers onto the BML JsonCodec surface, replacing direct parse-json and bespoke JSON string emission with codec-backed JSON cell projection.",
+  "files_owned": [
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "docs/system_audit/commit_evidence_2026-06-08_json_codec_callers.json",
+    "form/form-samples/cross-modal/36-channel-query-json/channel-query-json.fk",
+    "form/form-stdlib/cache.fk",
+    "form/form-stdlib/channel-query-json.fk",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/i18n.fk",
+    "form/form-stdlib/tests/channel-query-json-band.fk",
+    "form/form-stdlib/tests/concept-i18n-band.fk",
+    "form/form-stdlib/tests/i18n-extensions-band.fk",
+    "form/form-stdlib/tests/nl-emit-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "find form/form-stdlib/.cache -maxdepth 1 -type f \\( -name 'i18n-*.fkb' -o -name 'cli-i18n-*.fkb' -o -name 'presence-walk-i18n-*.fkb' \\) -delete",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/tests/i18n-extensions-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/tests/i18n-extensions-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-stdlib/tests/channel-query-json-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-stdlib/tests/channel-query-json-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/concept-corpus.fk form-stdlib/concept-i18n-bridge.fk form-stdlib/tests/concept-i18n-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/nl-emit.fk form-stdlib/tests/nl-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/self-witness.fk form-stdlib/tests/self-witness-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-samples/cross-modal/36-channel-query-json/channel-query-json.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk form-samples/cross-modal/36-channel-query-json/channel-query-json.fk",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass",
+      "wellness": "pass; kernel-native API reading remains 22/812 kernel-served and 0 front-door kernel-first",
+      "i18n_source": "117; 1 ok, 0 divergent after clearing generated i18n .fkb caches",
+      "i18n_binary": "117; 1 ok, 0 divergent",
+      "channel_query_source": "4; 1 ok, 0 divergent",
+      "channel_query_binary": "4; 1 ok, 0 divergent",
+      "concept_i18n_source": "1710; 1 ok, 0 divergent",
+      "nl_emit_source": "550; 1 ok, 0 divergent",
+      "self_witness_source": "1120; 1 ok, 0 divergent",
+      "channel_sample_source": "query-json-match: 1; response-json-match: 1; verdict 2; 1 ok, 0 divergent",
+      "channel_sample_binary": "query-json-match: 1; response-json-match: 1; verdict 2; 1 ok, 0 divergent",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "Local source and binary sibling-kernel gates pass for this stacked Form/runtime slice; external PR checks rerun after push and remain the merge gate."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No public deployment changed in this commit; behavior is covered by Form source and binary sibling validation."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:form-owned-json",
+    "idea:kernel-native-api-front-door"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler",
+    "spec:native-kernel-http"
+  ],
+  "task_ids": [
+    "task:json-codec-callers"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/i18n-extensions-band.fk",
+    "form/form-stdlib/tests/channel-query-json-band.fk",
+    "form/form-samples/cross-modal/36-channel-query-json/channel-query-json.fk",
+    "docs/coherence-substrate/form-stdlib-expression-audit.md"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/form-stdlib-expression-audit.md",
+    "form/form-samples/cross-modal/36-channel-query-json/channel-query-json.fk",
+    "form/form-stdlib/cache.fk",
+    "form/form-stdlib/channel-query-json.fk",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/i18n.fk",
+    "form/form-stdlib/tests/channel-query-json-band.fk",
+    "form/form-stdlib/tests/concept-i18n-band.fk",
+    "form/form-stdlib/tests/i18n-extensions-band.fk",
+    "form/form-stdlib/tests/nl-emit-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "i18n corpus loaders and channel-query JSON bridges now enter JSON through json_parse_body/json_response_body. Channel query values are projected into JSON cells before emission instead of constructing JSON strings by hand.",
+    "public_endpoints": [
+      "form://form-stdlib/tests/i18n-extensions-band.fk",
+      "form://form-stdlib/tests/channel-query-json-band.fk",
+      "form://form-samples/cross-modal/36-channel-query-json/channel-query-json.fk"
+    ],
+    "test_flows": [
+      "Clear generated i18n .fkb caches, then run source and binary sibling-kernel validation for i18n and channel-query JSON workloads."
+    ],
+    "gaps_found_and_closed": [
+      "i18n still used read_with_cache(..., parse-json); moved web, CLI, and presence-walk loaders to json_parse_body.",
+      "channel-query-json still had bespoke JSON quote/int/object string helpers; replaced query and response emission with JSON cell projection plus json_response_body.",
+      "json-to-query still parsed through parse-json; moved it to json_parse_body.",
+      "form-ontology-loader still needs the bootstrap parser while compiling codec/BML sections; named that as a compiler-pipeline cycle rather than hiding it."
+    ]
+  }
+}
