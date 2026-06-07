@@ -52,6 +52,18 @@
 - [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — Split Review Into code-review → deploy → verify-production
 - [symphony-alignment-orchestration](symphony-alignment-orchestration.md) — Symphony Alignment for Coherence Orchestration
 
+### idea-realization-engine (10 specs)
+- [form-binary-to-native-python-emitter](form-binary-to-native-python-emitter.md) — Form Binary to Native Python Emitter -- universal translator from a .fkb
+- [idea-dual-identity](idea-dual-identity.md) — UUID Primary Key + Structured Human Slug
+- [idea-hierarchy-super-child](idea-hierarchy-super-child.md) — Super-Ideas and Child-Ideas
+- [idea-lifecycle-closure](idea-lifecycle-closure.md) — System Must Recognize When an Idea Is Done
+- [idea-lifecycle-management](idea-lifecycle-management.md) — Idea Lifecycle Management
+- [idea-right-sizing](idea-right-sizing.md) — Automatic Granularity Management
+- [ideas-prioritization](ideas-prioritization.md) — Ideas Prioritization API
+- [ideas-router-form-expression](ideas-router-form-expression.md) — Ideas Router as Form Expression
+- [standing-questions-roi-and-next-task-generation](standing-questions-roi-and-next-task-generation.md) — Standing Questions, ROI Fields, and Next-Task Generation
+- [super-idea-rollup-criteria](super-idea-rollup-criteria.md) — Super-Idea Rollup Criteria
+
 ### pipeline-reliability (10 specs)
 - [auto-heal-from-diagnostics](auto-heal-from-diagnostics.md) — Auto-Heal from Diagnostics
 - [data-driven-timeout-resume](data-driven-timeout-resume.md) — Data-Driven Timeout and Task Resume
@@ -76,27 +88,6 @@
 - [task-claim-tracking-and-roi-dedupe](task-claim-tracking-and-roi-dedupe.md) — Task Claim Tracking and ROI Auto-Pick De-duplication
 - [value-lineage-and-payout-attribution](value-lineage-and-payout-attribution.md) — Value Lineage and Payout Attribution
 
-### idea-realization-engine (9 specs)
-- [form-binary-to-native-python-emitter](form-binary-to-native-python-emitter.md) — Form Binary to Native Python Emitter -- universal translator from a .fkb
-- [idea-dual-identity](idea-dual-identity.md) — UUID Primary Key + Structured Human Slug
-- [idea-hierarchy-super-child](idea-hierarchy-super-child.md) — Super-Ideas and Child-Ideas
-- [idea-lifecycle-closure](idea-lifecycle-closure.md) — System Must Recognize When an Idea Is Done
-- [idea-lifecycle-management](idea-lifecycle-management.md) — Idea Lifecycle Management
-- [idea-right-sizing](idea-right-sizing.md) — Automatic Granularity Management
-- [ideas-prioritization](ideas-prioritization.md) — Ideas Prioritization API
-- [standing-questions-roi-and-next-task-generation](standing-questions-roi-and-next-task-generation.md) — Standing Questions, ROI Fields, and Next-Task Generation
-- [super-idea-rollup-criteria](super-idea-rollup-criteria.md) — Super-Idea Rollup Criteria
-
-### coherence-credit (8 specs)
-- [cc-economics-and-value-coherence](cc-economics-and-value-coherence.md) — CC Economics and Value Coherence
-- [cc-new-earth-exchange-bridge](cc-new-earth-exchange-bridge.md) — CC ↔ New Earth Exchange Bridge
-- [coherence-credit-internal-currency](coherence-credit-internal-currency.md) — Internal Currency (Phase 1: Unit of Account)
-- [execution-value-income-proof](execution-value-income-proof.md) — Execution Value Income Proof
-- [grounded-cost-value-measurement](grounded-cost-value-measurement.md) — Grounded Cost & Value Measurement for Prompt A/B ROI
-- [grounded-idea-portfolio-metrics](grounded-idea-portfolio-metrics.md) — Grounded Idea Portfolio Metrics
-- [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP Cost Tracking and Acceptance Proof
-- [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — Portfolio Governance Effectiveness Metrics
-
 ### data-infrastructure (8 specs)
 - [api-request-logging-middleware](api-request-logging-middleware.md) — API Request Logging Middleware
 - [canonical-route-registry-and-runtime-mapping](canonical-route-registry-and-runtime-mapping.md) — Canonical Route Registry and Runtime Mapping
@@ -106,6 +97,15 @@
 - [runtime-telemetry-db-precedence](runtime-telemetry-db-precedence.md) — Runtime Telemetry DB Precedence
 - [unified-sqlite-store](unified-sqlite-store.md) — Single Source of Truth
 - [universal-node-edge-layer](universal-node-edge-layer.md) — Universal Node + Edge Data Layer
+
+### coherence-credit (7 specs)
+- [cc-economics-and-value-coherence](cc-economics-and-value-coherence.md) — CC Economics and Value Coherence
+- [cc-new-earth-exchange-bridge](cc-new-earth-exchange-bridge.md) — CC ↔ New Earth Exchange Bridge
+- [coherence-credit-internal-currency](coherence-credit-internal-currency.md) — Internal Currency (Phase 1: Unit of Account)
+- [grounded-cost-value-measurement](grounded-cost-value-measurement.md) — Grounded Cost & Value Measurement for Prompt A/B ROI
+- [grounded-idea-portfolio-metrics](grounded-idea-portfolio-metrics.md) — Grounded Idea Portfolio Metrics
+- [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP Cost Tracking and Acceptance Proof
+- [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — Portfolio Governance Effectiveness Metrics
 
 ### user-surfaces (7 specs)
 - [coherence-cli-comprehensive](coherence-cli-comprehensive.md) — Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
