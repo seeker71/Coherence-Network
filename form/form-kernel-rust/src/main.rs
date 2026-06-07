@@ -7676,39 +7676,109 @@ struct CompiledRouteProgram {
     root: NodeID,
 }
 
-fn run_source_on_form_stack(name: &str, src: String) -> Result<(Kernel, Value), String> {
-    std::thread::Builder::new()
-        .name(name.to_string())
-        .stack_size(form_kernel_stack_bytes())
-        .spawn(move || {
-            let mut k = Kernel::new();
-            let root = read_root_from_source(&mut k, &src);
-            let value = execute_root(&mut k, root);
-            (k, value)
-        })
-        .map_err(|e| format!("source-compile: spawn {} thread: {}", name, e))?
-        .join()
-        .map_err(|_| format!("source-compile: {} panicked", name))
+// In-process cache of the self-contained BMF bootstrap .fkb, keyed by stdlib dir.
+fn bmf_bootstrap_cache() -> &'static Mutex<std::collections::HashMap<PathBuf, Arc<Vec<u8>>>> {
+    static C: OnceLock<Mutex<std::collections::HashMap<PathBuf, Arc<Vec<u8>>>>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(std::collections::HashMap::new()))
 }
 
-fn source_compile_driver(stdlib_abs: &std::path::Path, body: &str) -> Result<String, String> {
-    let mut parts: Vec<String> = Vec::with_capacity(SOURCE_COMPILE_PRELUDES.len() + 1);
-    for name in SOURCE_COMPILE_PRELUDES {
-        let p = stdlib_abs.join(name);
-        match fs::read_to_string(&p) {
-            Ok(s) => parts.push(s),
-            Err(e) => {
-                return Err(format!(
-                    "source-compile: read prelude {}: {} (is --stdlib {} correct?)",
+// The BMF bootstrap as ONE self-contained .fkb: the source-compile preludes parsed
+// into a single recipe tree — every defn the source-compiler uses (g-parse, the BML
+// grammar, the verb tables, the ontology loader) bundled in one artifact. The source-
+// compile loads THIS instead of re-reading the .fk preludes live on every section
+// compile, so a stdlib edit can no longer reach into a compile mid-flight: the
+// machinery is PINNED per build. It is emitted-if-stale (any prelude newer than the
+// cached .fkb) by THIS kernel binary, so the binary and the bootstrap can never drift
+// apart — the version mismatch that made a fresh stdlib panic an old kernel is gone.
+// (A residual data-coupling remains: the ontology loader still reads form-ontology.json
+// at load; pinning that DATA into the artifact is a follow-up. The recipes are pinned.)
+fn ensure_bmf_bootstrap(stdlib_abs: &std::path::Path) -> Result<Arc<Vec<u8>>, String> {
+    if let Some(b) = bmf_bootstrap_cache()
+        .lock()
+        .map_err(|_| "bmf bootstrap cache poisoned".to_string())?
+        .get(stdlib_abs)
+    {
+        return Ok(b.clone());
+    }
+    let fkb_path = stdlib_abs.join(".cache").join("bmf-bootstrap.fkb");
+    let prelude_paths: Vec<PathBuf> = SOURCE_COMPILE_PRELUDES
+        .iter()
+        .map(|n| stdlib_abs.join(n))
+        .collect();
+    let fkb_mtime = fs::metadata(&fkb_path).and_then(|m| m.modified()).ok();
+    let stale = match fkb_mtime {
+        None => true,
+        Some(t) => prelude_paths.iter().any(|p| {
+            fs::metadata(p)
+                .and_then(|m| m.modified())
+                .map(|pt| pt > t)
+                .unwrap_or(true)
+        }),
+    };
+    let bytes = if stale {
+        let mut parts = Vec::with_capacity(prelude_paths.len());
+        for p in &prelude_paths {
+            parts.push(fs::read_to_string(p).map_err(|e| {
+                format!(
+                    "bmf bootstrap: read prelude {}: {} (is --stdlib {} correct?)",
                     p.display(),
                     e,
                     stdlib_abs.display()
-                ))
-            }
+                )
+            })?);
         }
-    }
-    parts.push(body.to_string());
-    Ok(parts.join("\n"))
+        let src = parts.join("\n");
+        let emitted = std::thread::Builder::new()
+            .name("bmf-bootstrap-emit".to_string())
+            .stack_size(form_kernel_stack_bytes())
+            .spawn(move || {
+                let mut k = Kernel::new();
+                let root = read_root_from_source(&mut k, &src);
+                serialize_artifact(&k, root)
+            })
+            .map_err(|e| format!("bmf bootstrap: spawn emit: {}", e))?
+            .join()
+            .map_err(|_| "bmf bootstrap: emit panicked".to_string())?;
+        let _ = fs::create_dir_all(stdlib_abs.join(".cache"));
+        let _ = fs::write(&fkb_path, &emitted); // best-effort disk cache; in-process map is source of truth
+        emitted
+    } else {
+        fs::read(&fkb_path)
+            .map_err(|e| format!("bmf bootstrap: read {}: {}", fkb_path.display(), e))?
+    };
+    let arc = Arc::new(bytes);
+    bmf_bootstrap_cache()
+        .lock()
+        .map_err(|_| "bmf bootstrap cache poisoned".to_string())?
+        .insert(stdlib_abs.to_path_buf(), arc.clone());
+    Ok(arc)
+}
+
+// Run a source-compile driver against the PINNED bootstrap: deserialize the bootstrap
+// .fkb's recipes (binding the machinery), then run the driver in the SAME env, so the
+// driver resolves every name against the pinned machinery — never the live .fk on disk.
+// `(do bootstrap driver)` shares one env: the bootstrap's defns bind, the driver uses them.
+fn run_source_with_bootstrap(
+    name: &str,
+    bootstrap: Arc<Vec<u8>>,
+    driver_body: String,
+) -> Result<(Kernel, Value), String> {
+    let handle = std::thread::Builder::new()
+        .name(name.to_string())
+        .stack_size(form_kernel_stack_bytes())
+        .spawn(move || -> Result<(Kernel, Value), String> {
+            let mut k = Kernel::new();
+            let bootstrap_root = deserialize_artifact(&mut k, &bootstrap)
+                .map_err(|e| format!("source-compile: load bootstrap: {}", e))?;
+            let driver_root = read_root_from_source(&mut k, &driver_body);
+            let combined = k.intern(cat_block(RBLK_DO), vec![bootstrap_root, driver_root]);
+            let value = execute_root(&mut k, combined);
+            Ok((k, value))
+        })
+        .map_err(|e| format!("source-compile: spawn {} thread: {}", name, e))?;
+    handle
+        .join()
+        .map_err(|_| format!("source-compile: {} panicked", name))?
 }
 
 fn compile_source_section_to_recipe_node(
@@ -7716,13 +7786,13 @@ fn compile_source_section_to_recipe_node(
     body: &str,
     stdlib_abs: &std::path::Path,
 ) -> Result<(Kernel, NodeID), String> {
+    let bootstrap = ensure_bmf_bootstrap(stdlib_abs)?;
     let driver_body = format!(
         "(fsc-compile-section-recipe {} {})",
         sexp_string_literal(dialect_name),
         sexp_string_literal(body)
     );
-    let driver_src = source_compile_driver(stdlib_abs, &driver_body)?;
-    let (kernel, value) = run_source_on_form_stack("route-section-compile", driver_src)?;
+    let (kernel, value) = run_source_with_bootstrap("route-section-compile", bootstrap, driver_body)?;
     match value {
         Value::Nid(root) => Ok((kernel, root)),
         _ => Err("source-compile: fsc-compile-section-recipe did not return a recipe".to_string()),
