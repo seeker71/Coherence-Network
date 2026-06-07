@@ -1,0 +1,238 @@
+# ideas-router.form -- ideas.py as a high-level route recipe
+#
+# Companion to api/app/routers/ideas.py and
+# specs/ideas-router-form-expression.md.
+#
+# This file names the shape that emerged when the idea portfolio router
+# is read from Form altitude. Python still carries FastAPI transport and
+# existing services still carry persistence and business logic. The
+# route choreography lives here: the portfolio is sensed, browsed,
+# chosen from, changed, linked, translated, invested in, rolled up, and
+# inspected as one recipe family.
+
+# ---------------------------------------------------------------------
+# Part 1 -- route and recipe shapes
+# ---------------------------------------------------------------------
+
+form idea_route_shape = {
+    name:             ~String,
+    method:           ~String,
+    path:             ~String,
+    movement:         ~String,
+    carrier:          ~String,
+    service_recipe:   ~String,
+    response_shape:   ~String,
+    evidence:         [~String],
+};
+
+form idea_route_recipe_shape = {
+    family:           ~String,
+    intent:           ~String,
+    routes:           [idea_route_shape],
+    route_trace:      [~String],
+    proof:            [~String],
+};
+
+defn idea_route(name, method, path, movement, service_recipe, response_shape, evidence) =
+    idea_route_shape {
+        name:           name,
+        method:         method,
+        path:           path,
+        movement:       movement,
+        carrier:        "api/app/routers/ideas.py",
+        service_recipe: service_recipe,
+        response_shape: response_shape,
+        evidence:       evidence,
+    };
+
+defn idea_route_recipe(family, intent, routes, route_trace, proof) =
+    idea_route_recipe_shape {
+        family:      family,
+        intent:      intent,
+        routes:      routes,
+        route_trace: route_trace,
+        proof:       proof,
+    };
+
+# ---------------------------------------------------------------------
+# Part 2 -- recipe families shifted out of imperative route reading
+# ---------------------------------------------------------------------
+
+defn browse_ideas_recipe() = idea_route_recipe(
+    "browse",
+    "Read portfolio cells as ranked, filtered, language-aware lists.",
+    [
+        idea_route("list_ideas", "GET", "/ideas", "browse portfolio", "idea_service.list_ideas", "IdeaPortfolioResponse", ["spec-053", "portfolio-governance"]),
+        idea_route("list_idea_cards", "GET", "/ideas/cards", "browse actionable cards", "inventory_service.build_idea_cards_feed", "dict", ["idea cards feed"]),
+        idea_route("list_ideas_showcase", "GET", "/ideas/showcase", "browse funder showcase", "idea_service.list_showcase_ideas", "IdeaShowcaseResponse", ["showcase route"]),
+        idea_route("get_portfolio_summary", "GET", "/ideas/portfolio-summary", "browse curated rollup", "idea_service.get_portfolio_summary", "dict", ["curated super-ideas"]),
+    ],
+    ["read query filters", "normalize tags", "read portfolio service", "project optional language view", "return carrier response"],
+    ["api/app/routers/ideas.py::list_ideas", "api/tests/test_ideas_router_form.py"]
+);
+
+defn sense_governance_recipe() = idea_route_recipe(
+    "sense",
+    "Read the portfolio body-state without writing it.",
+    [
+        idea_route("get_governance_health", "GET", "/ideas/health", "sense governance", "idea_service.compute_governance_health", "GovernanceHealth", ["spec-126"]),
+        idea_route("get_right_sizing_report", "GET", "/ideas/right-sizing", "sense granularity", "right_sizing_service.build_report", "RightSizingReport", ["spec-158"]),
+        idea_route("get_right_sizing_history", "GET", "/ideas/right-sizing/history", "sense trend", "right_sizing_service.get_history", "RightSizingHistoryResponse", ["spec-158"]),
+        idea_route("get_breath_overview", "GET", "/ideas/breath-overview", "sense breath", "breath_service.compute_breath_overview", "dict", ["gas/water/ice"]),
+    ],
+    ["read aggregate state", "compute score or phase", "surface tightness and flow", "return measured snapshot"],
+    ["api/tests/test_governance_health.py", "api/tests/test_right_sizing.py"]
+);
+
+defn choose_next_idea_recipe() = idea_route_recipe(
+    "choose",
+    "Select work from the portfolio with traceable scoring rather than hidden preference.",
+    [
+        idea_route("select_idea", "POST", "/ideas/select", "choose next idea", "idea_service.select_idea", "IdeaSelectionResult", ["weighted stochastic selection"]),
+        idea_route("get_selection_ab_stats", "GET", "/ideas/selection-ab/stats", "compare selection methods", "idea_selection_ab_service.get_comparison", "dict", ["selection comparison"]),
+    ],
+    ["read candidate pool", "apply method and temperature", "exclude named cells", "return selected cell with weight"],
+    ["api/app/services/idea_service.py::select_idea"]
+);
+
+defn mutate_idea_recipe() = idea_route_recipe(
+    "mutate",
+    "Create or alter an idea while keeping workspace and parent invariants explicit.",
+    [
+        idea_route("create_idea", "POST", "/ideas", "create idea", "idea_service.create_idea", "IdeaWithScore", ["workspace validation", "parent reciprocal edge"]),
+        idea_route("update_idea", "PATCH", "/ideas/{idea_id}", "update idea", "idea_service.update_idea", "IdeaWithScore", ["require_api_key", "field allow-list"]),
+        idea_route("update_idea_slug", "PATCH", "/ideas/{idea_id}/slug", "rename slug", "idea_service.update_idea_slug", "SlugUpdateResponse", ["slug history"]),
+        idea_route("put_idea_tags", "PUT", "/ideas/{idea_id}/tags", "replace tags", "idea_service.set_idea_tags", "IdeaTagUpdateResponse", ["normalized tag catalog"]),
+    ],
+    ["validate request", "call service carrier", "repair reciprocal edge when needed", "return refreshed idea"],
+    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea"]
+);
+
+defn question_answer_recipe() = idea_route_recipe(
+    "question-answer",
+    "Keep standing questions and measured answers attached to the idea-cell.",
+    [
+        idea_route("add_idea_question", "POST", "/ideas/{idea_id}/questions", "add question", "idea_service.add_question", "IdeaWithScore", ["standing questions"]),
+        idea_route("answer_idea_question", "POST", "/ideas/{idea_id}/questions/answer", "answer question", "idea_service.answer_question", "IdeaWithScore", ["measured_delta"]),
+    ],
+    ["find idea", "add or answer question", "preserve duplicate/not-found distinctions", "return updated cell"],
+    ["api/tests/test_idea_standing_questions.py"]
+);
+
+defn link_idea_recipe() = idea_route_recipe(
+    "link",
+    "Show how ideas connect to contributors, children, tasks, specs, concepts, and activity.",
+    [
+        idea_route("fork_idea_endpoint", "POST", "/ideas/{idea_id}/fork", "fork idea", "idea_service.fork_idea", "dict", ["contributor identity"]),
+        idea_route("list_idea_children", "GET", "/ideas/{idea_id}/children", "list children", "idea_service.list_children_of", "list[IdeaWithScore]", ["parent child edge"]),
+        idea_route("list_idea_specs", "GET", "/ideas/{idea_id}/specs", "list specs", "spec_registry_service.list_specs_for_idea", "list[dict]", ["spec frontmatter idea_id"]),
+        idea_route("list_idea_tasks", "GET", "/ideas/{idea_id}/tasks", "list tasks", "agent_service.list_tasks_for_idea", "IdeaTasksResponse", ["task linkage"]),
+        idea_route("get_idea_activity_endpoint", "GET", "/ideas/{idea_id}/activity", "list activity", "idea_service.get_idea_activity", "list[dict]", ["activity trace"]),
+    ],
+    ["resolve source idea", "read linked cells", "preserve missing source as 404", "return relation surface"],
+    ["api/app/routers/ideas.py relation endpoints"]
+);
+
+defn translate_idea_recipe() = idea_route_recipe(
+    "translate",
+    "Project an idea through worldview and language lenses without changing its anchor cell.",
+    [
+        idea_route("translate_idea_view", "GET", "/ideas/{idea_id}/translate", "worldview projection", "concept_translation_service.translate_idea or translate_service.translate_idea", "IdeaTranslationResponse | dict", ["ontology graph", "legacy conceptual lens"]),
+        idea_route("list_idea_translations_all", "GET", "/ideas/{idea_id}/translations", "list lens translations", "lens_translation_service.list_translations_for_idea", "dict", ["spec-181"]),
+        idea_route("get_idea_translation_spec181", "GET", "/ideas/{idea_id}/translations/{lens_id}", "read lens translation", "lens_translation_service.build_idea_translation", "dict", ["spec-181"]),
+        idea_route("post_idea_translation_regenerate", "POST", "/ideas/{idea_id}/translations/{lens_id}", "regenerate lens translation", "lens_translation_service.build_idea_translation", "dict", ["require_api_key", "spec-181"]),
+    ],
+    ["read anchor idea", "extract tags/name/description", "apply lens or language view", "return projection"],
+    ["app.services.translation_cache_service", "app.services.lens_translation_service"]
+);
+
+defn invest_in_idea_recipe() = idea_route_recipe(
+    "invest",
+    "Let value move toward an idea with dry-run and contributor identity preserved.",
+    [
+        idea_route("stake_on_idea", "POST", "/ideas/{idea_id}/stake", "stake CC", "stake_compute_service.execute_stake", "dict", ["dry_run preview", "contributor identity"]),
+        idea_route("get_idea_progress", "GET", "/ideas/{idea_id}/progress", "read staked progress", "stake_compute_service.get_idea_progress", "dict", ["stage/tasks/CC/contributors"]),
+    ],
+    ["resolve contributor", "honor dry-run as no-write preview", "execute or inspect stake", "return value trace"],
+    ["api/tests/test_investments.py", "api/tests/test_portfolio_governance.py"]
+);
+
+defn rollup_super_idea_recipe() = idea_route_recipe(
+    "rollup",
+    "Let super-ideas read and validate their child completion condition.",
+    [
+        idea_route("get_idea_rollup", "GET", "/ideas/{idea_id}/rollup", "read rollup", "idea_service.get_rollup_progress", "RollupProgress", ["super-idea-rollup-criteria"]),
+        idea_route("validate_super_idea_rollup", "POST", "/ideas/{idea_id}/validate-rollup", "validate rollup", "idea_service.validate_super_idea", "RollupProgress", ["require_api_key", "super-idea-rollup-criteria"]),
+    ],
+    ["read super-idea", "count validated children", "apply rollup condition", "return progress or exact blocker"],
+    ["api/tests/test_idea_lifecycle_closure.py"]
+);
+
+defn inspect_idea_recipe() = idea_route_recipe(
+    "inspect",
+    "Return one idea and its local resonance surfaces.",
+    [
+        idea_route("get_idea", "GET", "/ideas/{idea_id}", "inspect idea", "idea_service.get_idea", "IdeaWithScore", ["question votes heard", "language projection"]),
+        idea_route("get_idea_concept_resonance", "GET", "/ideas/{idea_id}/concept-resonance", "inspect concepts", "idea_service.get_concept_resonance_matches", "IdeaConceptResonanceResponse", ["cross-domain concept resonance"]),
+        idea_route("get_idea_resonance", "GET", "/ideas/{idea_id}/resonance", "inspect resonant ideas", "idea_resonance_service.find_resonant_ideas", "list[dict]", ["coherence score"]),
+        idea_route("get_idea_breath", "GET", "/ideas/{idea_id}/breath", "inspect phase", "breath_service.compute_idea_breath", "dict", ["gas/water/ice"]),
+        idea_route("get_idea_lifecycle", "GET", "/ideas/{idea_id}/lifecycle", "inspect closure", "idea_service.get_idea_lifecycle", "dict", ["closure blockers"]),
+    ],
+    ["resolve idea", "attach local evidence", "project requested view", "return exact not-found when absent"],
+    ["api/tests/test_discord_votes_heard.py", "api/tests/test_idea_lifecycle_closure.py"]
+);
+
+# ---------------------------------------------------------------------
+# Part 3 -- the whole router as one structure
+# ---------------------------------------------------------------------
+
+defn ideas_router_structure() = {
+    route_source: "api/app/routers/ideas.py",
+    form_source: "docs/coherence-substrate/ideas-router.form",
+    north_star: "Ideas move from promise to real contribution through evidence, relation, value flow, and closure.",
+    phase: {
+        blueprint: "idea_route_shape",
+        recipe: "idea_route_recipe_shape",
+        named_cell: "@router(ideas)",
+    },
+    recipes: [
+        browse_ideas_recipe(),
+        sense_governance_recipe(),
+        choose_next_idea_recipe(),
+        mutate_idea_recipe(),
+        question_answer_recipe(),
+        link_idea_recipe(),
+        translate_idea_recipe(),
+        invest_in_idea_recipe(),
+        rollup_super_idea_recipe(),
+        inspect_idea_recipe(),
+    ],
+    shifted: [
+        "endpoint list -> recipe family lattice",
+        "imperative branches -> named movements with service carriers",
+        "hidden route intent -> source-backed route_trace",
+        "Python ownership -> Python carrier for Form-declared choreography",
+    ],
+    current_gap: "GAP-I1: front-door dispatch still enters through FastAPI; native kernel route dispatch can consume this recipe once the ideas route carrier is lifted.",
+};
+
+defn ideas_router_reading() = {
+    observed: [
+        "api/app/routers/ideas.py carries the live HTTP routes",
+        "services carry persistence and computation",
+        "tests prove selected route contracts and this Form expression",
+    ],
+    inferred: [
+        "ideas.py is not one function; it is a portfolio organism with ten route recipe families",
+        "the north star is closure through evidence, relation, value flow, and contribution",
+    ],
+    measured: [
+        "api/tests/test_ideas_router_form.py",
+        "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+    ],
+    mystery: [
+        "which recipe family wants to become kernel-front-door first remains a later body reading",
+    ],
+};
+
+defn example_ideas_router_structure() = ideas_router_structure();

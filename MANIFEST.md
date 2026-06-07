@@ -9,20 +9,11 @@
 > drill into next, then ~1500 tokens to know which file to read.
 > Total cost to locate any file: under 2K tokens.
 
-## Agent entry (read first)
-
-| Doc | Purpose |
-|---|---|
-| [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) | **First file for any agent** — Form-native runtime primary surface, Python bridge/bootstrap compost, read-only query default |
-| [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) | **Current production substrate** — Hostinger/VPS topology, internal Postgres credential carriers, native-kernel DB probe path |
-| [docs/coherence-substrate/INDEX.md](docs/coherence-substrate/INDEX.md) | Substrate + Form notation drill-down |
-
 ## Narrative layer (existing)
 
 | Index | Purpose |
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Body tending practice + Quick Lookup table |
-| [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) | Current Hostinger/VPS topology, internal Postgres, and native-kernel DB probe path |
 | [specs/INDEX.md](specs/INDEX.md) | All specs, grouped by parent idea (auto-generated) |
 | [ideas/INDEX.md](ideas/INDEX.md) | Super-ideas (16) across the 6 pillars |
 | [docs/vision-kb/INDEX.md](docs/vision-kb/INDEX.md) | Living Collective wiki — concepts, axes, lineage |
@@ -40,14 +31,14 @@
 
 | Index | Files | Purpose |
 |---|---|---|
-| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 144 | Python bridge/API routers — current endpoint carrier and upstream tail while Form-native routes are promoted |
-| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 245 | API services — business logic and graph operations |
-| [api/app/models/INDEX.md](api/app/models/INDEX.md) | 57 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 244 | API tests — flow-centric |
+| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 143 | API routers — every HTTP endpoint surface |
+| [api/app/services/INDEX.md](api/app/services/INDEX.md) | 244 | API services — business logic and graph operations |
+| [api/app/models/INDEX.md](api/app/models/INDEX.md) | 56 | API models — Pydantic + ORM shapes |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 242 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 35 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 53 | Web components — shared React surfaces |
 | [web/app/INDEX.md](web/app/INDEX.md) | 161 | Web routes — every visible page in the app |
-| [scripts/INDEX.md](scripts/INDEX.md) | 147 | Scripts — operational tools, generators, syncers |
+| [scripts/INDEX.md](scripts/INDEX.md) | 144 | Scripts — operational tools, generators, syncers |
 
 ## Convention
 
