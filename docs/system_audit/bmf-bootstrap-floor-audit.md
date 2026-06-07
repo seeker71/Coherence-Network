@@ -34,6 +34,9 @@ accessor — but confirm no other indirect caller before dropping it.)
 
 ## Toward the north-star compiler
 
+The direction this audit grounds is named in
+[`docs/coherence-substrate/north-star-compiler.md`](../coherence-substrate/north-star-compiler.md).
+
 The minimum is small — ~146 recipes for parse + emit. That is the core to rewrite as the
 streaming, cursor-based, recipe-emitting compiler: generic (data-driven over the grammar),
 blazing fast, and leaning on the kernel's **content-addressing** so that multiple parse
