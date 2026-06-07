@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 142
+**Total files**: 143
 
 | File | Purpose |
 |---|---|
@@ -113,6 +113,7 @@
 | [seed_schema_to_db.py](seed_schema_to_db.py) | One-time migration: load ontology schema (relationship types + axes) into DB. |
 | [sense_external_signals.py](sense_external_signals.py) | Sense the outer skin of the organism and record what is found. |
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | sense_strategy_efficacy.py — read accumulated strategy_fired traces and |
+| [sense_subscription_circulation.py](sense_subscription_circulation.py) | Sense subscription circulation — are the AI subscriptions we pay for actually flowing? |
 | [sense_world.py](sense_world.py) | Sense the world through the new earth lens. |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | Render a Claude session as a memory-as-framebuffer .mfb capture. |
 | [session_greeting.py](session_greeting.py) | Session greeting — detect the agent and the human, greet with memory. |
