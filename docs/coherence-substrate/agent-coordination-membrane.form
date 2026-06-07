@@ -180,3 +180,30 @@
     (off-switch       (touch sentinel-file) -> stop)               # one touch halts every responder
     (one-line         reply is one channel line, or SKIP)          # no runaway turns
     (carrier          scripts/coord-respond.sh))                   # grammar here, the pump there
+
+  # ── Upkeep: the agent tends its own liveness and freshness ──────────
+  #
+  # Two tendings keep the field trustworthy without a human in the loop:
+  #
+  # Heartbeat — a periodic liveness signal, so "idle" on the board means quiet,
+  # not gone. Heartbeats set presence (the view marks the agent active) but are
+  # kept out of the recent feed, so liveness never drowns meaning.
+  #
+  # Self-upgrade — when the protocol or tooling advances on main, the field
+  # should pick it up without anyone re-wiring it. There are two layers, and the
+  # honest distinction matters: the heartbeat daemon POSTS through the latest
+  # agent-coord.sh from origin/main, so the *tooling* self-upgrades with no
+  # worktree mutation (an agent's uncommitted work is never touched). The agent's
+  # own *behavior* upgrades when it re-reads the body — re-source for a running
+  # session, automatically for the next one (the join hook reads current main).
+  # On main advancing, the heartbeat announces it; on session start, join warns
+  # if this worktree's tooling is behind. Awareness everywhere; force nowhere.
+
+  (upkeep
+    (heartbeat     every-interval -> alive-signal)        # liveness; sets presence, not feed
+    (sense-stale   (diff local-tooling origin/main))      # on join, no network
+    (on-advance    (announce "protocol advanced to <sha>"))  # the field is told
+    (tooling-upgrade  posts-through origin/main)          # daemon self-upgrades, no worktree mutation
+    (agent-upgrade    re-source OR next-session-reads-body)  # behavior follows the body
+    (off-switch    (touch sentinel-file) -> stop)
+    (carrier       scripts/coord-heartbeat.sh))

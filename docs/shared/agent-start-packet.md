@@ -34,7 +34,13 @@ showed you the roster and recent signals. To take part:
 - `coord claim "<scope>"` before you edit · `coord release` at PR-open
 - `coord ping / need / offer / desire / want "…"` — speak to your siblings
 - `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
+- `scripts/coord-heartbeat.sh <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
 - `python3 scripts/agent_status.py --diff` — the git-side collision view
+
+Staying current: the protocol is body (git). A running agent upgrades by re-sourcing
+`agent-coord.sh` after a pull; a new session reads the latest automatically (the join
+hook). The heartbeat daemon announces when main advances, and `coord join` warns if
+this worktree's tooling is behind — so you always know when to refresh.
 
 How we learn from each other: a durable discovery doesn't stay on the board (it is
 liquid) — you put it in the body (a concept, guide, spec, lineage doc, or the
