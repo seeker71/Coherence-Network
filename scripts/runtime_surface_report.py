@@ -61,8 +61,10 @@ What is measured vs stated (the honesty bar)
     CPython; the 22 kernel-served routes are CPython handlers calling the kernel
     as a subroutine). CAPABLE = the count of native handlers in the kernel-router
     manifest (deploy/kernel-router/production-routes.fk) — whole-lifecycle-Form
-    routes proven byte-identical in shadow, awaiting the front-door flip. CAPABLE
-    is the native surface that EXISTS; SERVED is what fronts live traffic.
+    routes whose dispatch mechanism is proven but whose byte-identity to the live
+    twin is NOT yet proven (no harness, none in CI, e2e pending), awaiting that
+    identity proof and then the front-door flip. CAPABLE is the native surface that
+    EXISTS; SERVED is what fronts live traffic.
 
 This is a SENSING instrument — read-only, no behavior change, like the wellness
 probe and the attribution report. It tells the body the unflattering truth about
@@ -123,11 +125,14 @@ def kernel_first_capable_routes() -> list[str]:
 
     These serve their ENTIRE request lifecycle in Form (X-Form-Router:
     native-kernel) — the categorical step past serve_via_kernel's guest
-    subroutine. They are CAPABLE / proven-byte-identical-in-shadow, NOT yet
-    served at the live front door: the manifest is what the durable runtime-share
-    flip will front with, but until that flip Traefik still routes every request
-    to CPython. So this is the native surface that EXISTS and is proven, awaiting
-    the front-door cutover — distinct from kernel-first SERVED, which stays 0.
+    subroutine. They are CAPABLE: a real native handler exists in the manifest and
+    the dispatch mechanism is proven, but they are NOT yet proven byte-identical to
+    the live CPython twin (no harness diffs them, none in CI, e2e status:pending),
+    and NOT yet served at the live front door. The manifest is what the durable
+    runtime-share flip will front with, but until that flip Traefik still routes
+    every request to CPython. So this is the native surface that EXISTS, awaiting
+    its identity proof and then the front-door cutover — distinct from kernel-first
+    SERVED, which stays 0.
 
     Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
     the one source); ``/health`` and other non-``/api`` probes are excluded so the
@@ -322,15 +327,20 @@ def render_human(r: dict) -> str:
     if cap:
         names = ", ".join(r.get("kernel_first_capable_route_names", []))
         w(
-            f"  Kernel-FIRST CAPABLE (native handler proven byte-identical in the"
+            f"  Kernel-FIRST CAPABLE (a real native handler in the router manifest,"
         )
         w(
-            f"  router manifest, whole lifecycle in Form, awaiting the front-door"
+            f"  whole lifecycle in Form, awaiting the front-door flip): {cap} — {names}."
         )
-        w(f"  flip): {cap} — {names}.")
         w("  This is the native surface that EXISTS today: the compute AND the")
         w("  request lifecycle run Form-native, no CPython in the path. It is the")
         w("  runtime-share metric genuinely moving, distinct from route-count.")
+        w("  PROVEN so far: the dispatch MECHANISM (a native route is served")
+        w("  kernel-first, unmatched paths fan out, X-Form-Router labels each).")
+        w("  NOT yet proven: that these 23 handlers are byte-identical to the live")
+        w("  CPython API — no harness diffs them against the twin, none runs in CI,")
+        w("  and the kernel-router e2e evidence is still status:pending. That")
+        w("  byte-identity proof is the cutover's gating step, not the front-door flip.")
     w("  The 22 kernel-SERVED routes above are a different, shallower thing: each")
     w("  is a CPython handler that calls the kernel as a SUBROUTINE inside the")
     w("  request — the kernel is a guest there. The capable routes flip that: the")
@@ -401,17 +411,20 @@ def render_human(r: dict) -> str:
     w("")
     if cap:
         w(f"  But the reversal is no longer hypothetical. {cap} routes are now")
-        w("  kernel-FIRST CAPABLE: native handlers in the router manifest, proven")
-        w("  byte-identical to the live api in shadow, whole lifecycle in Form. The")
-        w("  capable count moved 0 → {0}: the native front-door surface EXISTS and".format(cap))
-        w("  is proven. What remains is the cutover (Traefik → kernel-router), which")
-        w("  is a deliberate two-person live-traffic moment, not more code.")
+        w("  kernel-FIRST CAPABLE: real native handlers in the router manifest, whole")
+        w("  lifecycle in Form. The capable count moved 0 → {0}: the native front-door".format(cap))
+        w("  surface EXISTS. What remains before the cutover is TWO things, not one:")
+        w("  (1) prove these handlers byte-identical to the live API (no harness does")
+        w("  this yet, none in CI, e2e evidence status:pending) — the gating proof;")
+        w("  (2) the Traefik → kernel-router flip, a deliberate two-person live-traffic")
+        w("  moment. The surface exists and the mechanism is proven; the handler-")
+        w("  identity proof is the honest work still between here and a safe flip.")
     else:
         w("  The reversal (kernel-as-front-door) has no proven native surface yet.")
     w("")
     w("  The metric to track is runtime-SHARE moving toward the kernel — and it has")
     w("  two honest readings now: kernel-first SERVED (0, the live front door) and")
-    w("  kernel-first CAPABLE (the proven native surface, ready to front). Route-")
+    w("  kernel-first CAPABLE (the native surface that exists, not yet identity-proven). Route-")
     w("  count alone stays the wrong metric: it can rise while CPython rises with it.")
     w("")
 
