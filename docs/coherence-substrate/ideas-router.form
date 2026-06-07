@@ -195,6 +195,13 @@ defn ideas_router_structure() = {
         recipe: "idea_route_recipe_shape",
         named_cell: "@router(ideas)",
     },
+    native_carrier: {
+        path: "/api/ideas/router-structure",
+        route_source: "deploy/kernel-router/production-routes.fk::route_ideas_router_structure",
+        status: "kernel-first capable",
+        meaning: "the high-level ideas router structure is now dispatchable by the kernel-router without CPython",
+        boundary: "mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift",
+    },
     recipes: [
         browse_ideas_recipe(),
         sense_governance_recipe(),
@@ -212,8 +219,9 @@ defn ideas_router_structure() = {
         "imperative branches -> named movements with service carriers",
         "hidden route intent -> source-backed route_trace",
         "Python ownership -> Python carrier for Form-declared choreography",
+        "Form-declared choreography -> kernel-router native structure route",
     ],
-    current_gap: "GAP-I1: front-door dispatch still enters through FastAPI; native kernel route dispatch can consume this recipe once the ideas route carrier is lifted.",
+    current_gap: "GAP-I1: /api/ideas/router-structure is kernel-first capable; mutable portfolio data routes still enter through FastAPI until storage-backed ideas recipes lift.",
 };
 
 defn ideas_router_reading() = {
