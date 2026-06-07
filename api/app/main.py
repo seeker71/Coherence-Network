@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -312,7 +313,17 @@ async def _setup_service_registry(app: FastAPI) -> None:
 async def lifespan(app: FastAPI):
     _warn_on_suspect_cors_config()
     _ensure_db_tables()
-    _warm_startup_caches()
+    # Warm read caches in the BACKGROUND so the app reports healthy in ~1-2s
+    # rather than blocking startup for the full warm (~22s). The warm is pure
+    # pre-population — every cache it fills also fills lazily on first request —
+    # so until it finishes the first requests just take the cold path and still
+    # return 200. Blocking here kept each freshly recreated container unhealthy
+    # for the whole warm, so every `api` deploy opened a Traefik-404 / CF-502
+    # window with no healthy backend; that gap is what surfaced as the reported
+    # POST /api/ideas "404 page not found".
+    threading.Thread(
+        target=_warm_startup_caches, name="startup-cache-warm", daemon=True
+    ).start()
     await _setup_service_registry(app)
 
     # Register the on-demand translator backend. Because the app uses a
