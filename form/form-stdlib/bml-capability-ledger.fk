@@ -1,0 +1,65 @@
+; bml-capability-ledger.fk - BML feature wants as native source cells.
+;
+; preludes: form-stdlib/core.fk
+;
+; The ledger names desired BML expression first, then the current carrier,
+; lowering target, proof band, kernel support, runtime evidence, and status.
+; A gap names the next language, lowering, runtime, or kernel feature to tend.
+
+section [form.bml] {
+    let bcl_tag_feature = 65601;
+    let bcl_tag_ledger = 65602;
+
+    def bcl-tagged?(value, tag, arity) = if eq(len(value), arity) then eq(nth(value, 0), tag) else false;
+
+    def bcl-feature(name, area, why, desired_bml, current_surface, lowering_target, proof_band, kernel_support, runtime_evidence, status) = list(bcl_tag_feature, name, area, why, desired_bml, current_surface, lowering_target, proof_band, kernel_support, runtime_evidence, status);
+    def bcl-feature?(feature) = bcl-tagged?(feature, bcl_tag_feature, 11);
+    def bcl-feature-name(feature) = nth(feature, 1);
+    def bcl-feature-area(feature) = nth(feature, 2);
+    def bcl-feature-why(feature) = nth(feature, 3);
+    def bcl-feature-desired-bml(feature) = nth(feature, 4);
+    def bcl-feature-current-surface(feature) = nth(feature, 5);
+    def bcl-feature-lowering-target(feature) = nth(feature, 6);
+    def bcl-feature-proof-band(feature) = nth(feature, 7);
+    def bcl-feature-kernel-support(feature) = nth(feature, 8);
+    def bcl-feature-runtime-evidence(feature) = nth(feature, 9);
+    def bcl-feature-status(feature) = nth(feature, 10);
+
+    def bcl-status-proven?(status) = str_eq(status, "proven");
+    def bcl-status-partial?(status) = str_eq(status, "partial");
+    def bcl-status-gap?(status) = str_eq(status, "gap");
+    def bcl-feature-proven?(feature) = bcl-status-proven?(bcl-feature-status(feature));
+    def bcl-feature-needs-attention?(feature) = if bcl-feature-proven?(feature) then false else true;
+
+    def bcl-ledger(name, north_star, features) = list(bcl_tag_ledger, name, north_star, features);
+    def bcl-ledger?(ledger) = bcl-tagged?(ledger, bcl_tag_ledger, 4);
+    def bcl-ledger-name(ledger) = nth(ledger, 1);
+    def bcl-ledger-north-star(ledger) = nth(ledger, 2);
+    def bcl-ledger-features(ledger) = nth(ledger, 3);
+
+    def bcl-core-coordinate-feature() = bcl-feature("core.substrate-coordinate", "core", "All cells need direct coordinates into the substrate lattice.", "Cell, Blueprint, Recipe, and Capability rows name coordinates before labels.", "Form NodeID, bp, intern_node, node_eq, and recipe carriers.", "BML classes lower to NodeID-shaped cells and ordinary recipes.", "bml-capability-ledger-band.fk", "Go/Rust/TS NodeID and Recipe walkers", "node_eq, bp, and Match.SWITCH proof bands", "proven");
+    def bcl-route-front-door-feature() = bcl-feature("core.route-front-door", "core", "The native kernel listener and router need one high-grammar front door.", "RouteCell<KernelHTTPRequest, KernelHTTPResponse> with handler closures and pressure rows.", "deploy/front-door/api.bml plus kernel-http.fk", "kh-route, kh-request, kh-response, and route class lowering", "kernel-http-band.fk", "Go/Rust/TS HTTP value surface; Rust carries socket lifecycle, Go carries native route catalog", "X-Form-Router, route decision headers, runtime_events", "partial");
+    def bcl-pipeline-goal-loop-feature() = bcl-feature("pipeline.goal-loop", "pipeline", "Goal and loop movement need a native state cell, not prose or scripts alone.", "GoalLoop<State, RoutePressure, TaskCard, ProofBand> chooses next movement by measured flow.", "native-route-goal-cells.fk over docs/system_audit/native_route_goal_state.json", "runtime event JSON becomes Form cells, then BML goal/loop grammar", "native-route-goal-cells-band.fk", "Form JSON lens and sibling kernels", "route traffic share, native executable share, next task card", "partial");
+    def bcl-agent-arms-feature() = bcl-feature("arms.agent-coordination", "arms", "Agent arms need claim, want, need, offer, share, and release as visible cells.", "AgentArm<Scope, Claim, Want, Need, Offer, Share, Release> over the coordination membrane.", "scripts/agent-coord.sh board and docs/coherence-substrate/agent-coordination-membrane.form", "BML arm cells backed by the coordination board, then durable substrate memory", "bml-capability-ledger-band.fk", "shell carrier today; Form membrane present; kernel-native board cell missing", "coord roster, claim, share, and agent_status", "gap");
+    def bcl-observation-feature() = bcl-feature("core.observation-jit-framebuffer", "core", "Observation, JIT hits, misses, choice attempts, and dispatch counts are part of execution.", "ObservationCell<Dispatch, Choice, Match, JIT, Cost> is emitted by every hot feature.", "trace counters, framebuffer roots, Go JIT observations, route timing probes", "BML observation cells and aggregate compression after JIT", "go-jit-value-helper-band.fk", "Go has detailed JIT/framebuffer slices; Rust/TS parity still growing", "dispatch-hit, guard-miss, choice fail/success, match hit/default", "partial");
+    def bcl-source-lowering-feature() = bcl-feature("source.bml-full-lowering", "source", "BML is not full until source compiles into executable Form/BMA for the whole desired feature set.", "section [bml.lexicon], [bml.bmf], [bml.model], [bml.lowering], [bml.reverse], [bml.proof].", "grammars/bml.fk and source-compiler.fk with focused semantic lowerers", "BML source file as language definition, not only Form bootstrap code", "bml-thesis-feature-audit proof set", "generic source scanner plus Form compiler; semantic lowering incomplete", "172 reference entries, 33 semantic emitters, focused companion proofs", "partial");
+
+    def bcl-seed-features() = list(bcl-core-coordinate-feature(), bcl-route-front-door-feature(), bcl-pipeline-goal-loop-feature(), bcl-agent-arms-feature(), bcl-observation-feature(), bcl-source-lowering-feature());
+    def bcl-seed-ledger() = bcl-ledger("bml-full-expression-ledger", "BML names the desired expression first; missing expression becomes language, lowering, runtime, or kernel work with proof.", bcl-seed-features());
+
+    def bcl-count-area(features, area) = if nil?(features) then 0 else add(if str_eq(bcl-feature-area(head(features)), area) then 1 else 0, bcl-count-area(tail(features), area));
+    def bcl-count-status(features, status) = if nil?(features) then 0 else add(if str_eq(bcl-feature-status(head(features)), status) then 1 else 0, bcl-count-status(tail(features), status));
+    def bcl-find-feature(features, name) = if nil?(features) then empty else if str_eq(bcl-feature-name(head(features)), name) then head(features) else bcl-find-feature(tail(features), name);
+    def bcl-next-attention(features) = if nil?(features) then empty else if bcl-feature-needs-attention?(head(features)) then head(features) else bcl-next-attention(tail(features));
+    def bcl-ledger-next-attention(ledger) = bcl-next-attention(bcl-ledger-features(ledger));
+
+    def bcl-ledger-proven-count(ledger) = bcl-count-status(bcl-ledger-features(ledger), "proven");
+    def bcl-ledger-partial-count(ledger) = bcl-count-status(bcl-ledger-features(ledger), "partial");
+    def bcl-ledger-gap-count(ledger) = bcl-count-status(bcl-ledger-features(ledger), "gap");
+    def bcl-ledger-core-count(ledger) = bcl-count-area(bcl-ledger-features(ledger), "core");
+    def bcl-ledger-pipeline-count(ledger) = bcl-count-area(bcl-ledger-features(ledger), "pipeline");
+    def bcl-ledger-arms-count(ledger) = bcl-count-area(bcl-ledger-features(ledger), "arms");
+    def bcl-ledger-source-count(ledger) = bcl-count-area(bcl-ledger-features(ledger), "source");
+
+    0;
+}
