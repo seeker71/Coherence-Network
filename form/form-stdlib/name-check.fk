@@ -74,23 +74,54 @@
             acc
             (nc-collect-kids (tail xs) (nc-collect (head xs) acc))))
 
-    ;; --- PASS 2: walk, resolving every FNCALL callee + IDENT value --------
-    ;; A reference that doesn't resolve is consed onto `acc`. Children are
-    ;; always walked (so FNCALL args are checked); the callee STRING trivial
-    ;; itself is a leaf with no children, so it is never double-counted.
+    ;; --- scope: the locals a node introduces ------------------------------
+    ;; PASS 2 must resolve like the evaluator, which binds params and `let`
+    ;; names into `env` by name (RB_IDENT looks up locals and globals the same
+    ;; way). So the walk threads a growing name-set: a FNDEF binds its params
+    ;; for its BODY (child scope); a LET binds its name for the siblings that
+    ;; FOLLOW it in the same block (sibling scope). Without this, every param
+    ;; and let-var reference would be reported as unresolved — a scope-blind
+    ;; checker that cannot gate a real compile. Node shapes (from the kernel):
+    ;; FNDEF kids = [name params body]; LET = BLOCK(type 9)/inst RBLK_LET(3),
+    ;; kids = [name value]; a params node's children are the param-name leaves.
+    (defn nc-FNDEF-params (n) (head (tail (node_children n))))           ; kids[1]
+    (defn nc-FNDEF-body   (n) (head (tail (tail (node_children n)))))    ; kids[2]
+    (defn nc-add-names (xs defs)
+        (if (nc-empty? xs)
+            defs
+            (nc-add-names (tail xs) (cons (node_value (head xs)) defs))))
+    (defn nc-let? (n)
+        (if (eq (node_type n) 9)                                         ; RB_BLOCK
+            (eq (node_inst (node_category n)) 3)                         ; RBLK_LET (category inst, not node inst)
+            false))
+    (defn nc-let-name (n) (node_value (head (node_children n))))         ; kids[0]
+    (defn nc-scope-after (n defs)
+        (if (nc-let? n) (cons (nc-let-name n) defs) defs))
+
+    ;; --- PASS 2: walk, scope-aware, resolving every FNCALL callee + IDENT --
+    ;; A reference outside the in-scope set is consed onto `acc`. A FNDEF checks
+    ;; only its BODY (its name + params are bindings, not references), with its
+    ;; params added to scope. Other nodes walk their children; nc-check-kids
+    ;; threads each LET's binding to the siblings after it.
     (defn nc-check (n defs acc)
-        (if (eq (node_type n) (nc-FNCALL))
-            (nc-check-ref (nc-head-name n) n defs acc)
-            (if (eq (node_type n) (nc-IDENT))
+        (if (eq (node_type n) (nc-FNDEF))
+            (nc-check (nc-FNDEF-body n)
+                      (nc-add-names (node_children (nc-FNDEF-params n)) defs)
+                      acc)
+            (if (eq (node_type n) (nc-FNCALL))
                 (nc-check-ref (nc-head-name n) n defs acc)
-                (nc-check-kids (node_children n) defs acc))))
+                (if (eq (node_type n) (nc-IDENT))
+                    (nc-check-ref (nc-head-name n) n defs acc)
+                    (nc-check-kids (node_children n) defs acc)))))
     (defn nc-check-ref (name n defs acc)
         (nc-check-kids (node_children n) defs
             (if (nc-member? name defs) acc (cons name acc))))
     (defn nc-check-kids (xs defs acc)
         (if (nc-empty? xs)
             acc
-            (nc-check-kids (tail xs) defs (nc-check (head xs) defs acc))))
+            (nc-check-kids (tail xs)
+                           (nc-scope-after (head xs) defs)
+                           (nc-check (head xs) defs acc))))
 
     ;; --- the surface: walk a program recipe, return its unresolved names ---
     ;; `known` seeds the resolvable set (the kernel natives + any already-loaded

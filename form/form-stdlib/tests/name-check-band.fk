@@ -3,20 +3,27 @@
 ;
 ; preludes: form-stdlib/name-check.fk
 ;
-; Builds four programs with intern_node (so the test needs no source→recipe
+; Builds programs with intern_node (so the test needs no source→recipe
 ; reflection) and asserts name-check's verdict on each:
 ;   1. a call to the native `print`          → resolves (empty)
 ;   2. a call to an undefined name           → reported (one name)
 ;   3. a defn + a call to that defn          → resolves (empty)
 ;   4. the same defn + a call to a missing    → reported (one name)
-; Cases 1/2 prove the native test; 3/4 prove defn-collection + the walk. The
-; printed verdict is deterministic, so the three sibling kernels must agree.
+;   5. a defn whose body references its PARAM → resolves (empty)   [scope]
+;   6. a `let` then a use of the bound name   → resolves (empty)   [scope]
+;   7. a `let` then a use of a MISSING name   → reported (one name) [scope]
+; Cases 1/2 prove the native test; 3/4 prove defn-collection + the walk; 5/6/7
+; prove scope — a param is bound for its body, a let for the siblings that follow
+; it. Without scope, 5 and 6 would false-report, and the checker could not gate
+; real code. The printed verdict is deterministic, so the three siblings agree.
 
 (do
     (let fncall-cat (make_nodeid 1 2 32 1))
     (let fndef-cat  (make_nodeid 1 2 31 1))
+    (let ident-cat  (make_nodeid 1 2 33 1))
     (let seq-cat    (make_nodeid 1 2 9 2))
     (let do-cat     (make_nodeid 1 2 9 1))
+    (let let-cat    (make_nodeid 1 2 9 3))
 
     (let good (intern_node fncall-cat
                   (list (intern_trivial_string "print") (intern_trivial_int 1))))
@@ -32,6 +39,16 @@
     (let prog-ok  (intern_node do-cat (list fndef call-foo)))
     (let prog-bad (intern_node do-cat (list fndef call-bar)))
 
+    ;; case 5 — scope: (defn g (x) x), body references its own parameter
+    (let param-fn (intern_node fndef-cat
+                      (list (intern_trivial_string "g")
+                            (intern_node seq-cat (list (intern_trivial_string "x")))
+                            (intern_node ident-cat (list (intern_trivial_string "x"))))))
+    ;; cases 6/7 — scope: (do (let y 1) <ref>); the let binds y for the next sibling
+    (let let-bind (intern_node let-cat (list (intern_trivial_string "y") (intern_trivial_int 1))))
+    (let prog-let-ok  (intern_node do-cat (list let-bind (intern_node ident-cat (list (intern_trivial_string "y"))))))
+    (let prog-let-bad (intern_node do-cat (list let-bind (intern_node ident-cat (list (intern_trivial_string "z"))))))
+
     ;; `known` seeds the resolvable set with the builtin name this test uses.
     (let known (list "print"))
 
@@ -39,7 +56,10 @@
         (and (eq (len (name-check good known)) 0)
         (and (eq (len (name-check bad known)) 1)
         (and (eq (len (name-check prog-ok known)) 0)
-             (eq (len (name-check prog-bad known)) 1)))))
+        (and (eq (len (name-check prog-bad known)) 1)
+        (and (eq (len (name-check param-fn known)) 0)
+        (and (eq (len (name-check prog-let-ok known)) 0)
+             (eq (len (name-check prog-let-bad known)) 1))))))))
 
     (print (if pass "name-check-band: PASS" "name-check-band: FAIL"))
 )
