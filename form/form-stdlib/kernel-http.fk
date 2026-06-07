@@ -31,6 +31,7 @@ section [form.bml] {
     def kh-header-value(header) = nth(header, 2);
     def kh-headers-valid?(headers) = if nil?(headers) then true else if kh-header?(head(headers)) then kh-headers-valid?(tail(headers)) else false;
     def kh-header-present?(headers, name) = if nil?(headers) then false else if str_eq(kh-header-name(head(headers)), name) then true else kh-header-present?(tail(headers), name);
+    def kh-header-value-or(headers, name, default_value) = if nil?(headers) then default_value else if str_eq(kh-header-name(head(headers)), name) then kh-header-value(head(headers)) else kh-header-value-or(tail(headers), name, default_value);
     def kh-header-observation(headers, name) = if str_eq(name, "") then "not-required" else if kh-header-present?(headers, name) then "present" else "missing";
 
     def kh-field(name, value) = list(kh_tag_field, name, value);
@@ -39,6 +40,15 @@ section [form.bml] {
     def kh-field-value(field) = nth(field, 2);
     def kh-fields-valid?(fields) = if nil?(fields) then true else if kh-field?(head(fields)) then kh-fields-valid?(tail(fields)) else false;
     def kh-field-present?(fields, name) = if nil?(fields) then false else if str_eq(kh-field-name(head(fields)), name) then true else kh-field-present?(tail(fields), name);
+    def kh-field-value-or(fields, name, default_value) = if nil?(fields) then default_value else if str_eq(kh-field-name(head(fields)), name) then kh-field-value(head(fields)) else kh-field-value-or(tail(fields), name, default_value);
+    def kh-field-int-or(fields, name, default_value) {
+        let raw = kh-field-value-or(fields, name, "");
+        if str_eq(raw, "") then default_value else str_to_int(raw);
+    }
+    def kh-field-bool-or(fields, name, default_value) {
+        let raw = kh-field-value-or(fields, name, "");
+        if str_eq(raw, "") then default_value else or(str_eq(raw, "true"), str_eq(raw, "1"));
+    }
 
     def kh-request(method, path, headers, query, body) = list(kh_tag_request, method, path, headers, query, body);
     def kh-request?(request) = kh-tagged?(request, kh_tag_request, 6);
@@ -48,6 +58,9 @@ section [form.bml] {
     def kh-request-query(request) = nth(request, 4);
     def kh-request-body(request) = nth(request, 5);
     def kh-request-valid?(request) = if kh-request?(request) then and(kh-method-known?(kh-request-method(request)), and(kh-path-valid?(kh-request-path(request)), and(kh-headers-valid?(kh-request-headers(request)), kh-fields-valid?(kh-request-query(request))))) else false;
+    def kh-query-value-or(request, name, default_value) = kh-field-value-or(kh-request-query(request), name, default_value);
+    def kh-query-int-or(request, name, default_value) = kh-field-int-or(kh-request-query(request), name, default_value);
+    def kh-query-bool-or(request, name, default_value) = kh-field-bool-or(kh-request-query(request), name, default_value);
 
     def kh-response(status, headers, body) = list(kh_tag_response, status, headers, body);
     def kh-response?(response) = kh-tagged?(response, kh_tag_response, 4);
