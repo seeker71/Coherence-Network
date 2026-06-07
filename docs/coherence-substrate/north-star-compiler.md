@@ -1,82 +1,88 @@
 # North-star compiler — the streaming, content-addressed BMF/BML core
 
-The direction the BMF/BML compiler is moving toward: a small, generic, streaming,
-cursor-based recipe-emitter that leans on the kernel's content-addressing so that
-exploring multiple parse branches is an order of magnitude cheaper than a copying
-parser. This is a *north star* — a heading, not a deadline. It names what the
-compile floor wants to become so each concrete step can be checked against it.
+The north star — a small, generic, streaming, cursor-based recipe-emitter whose
+content-addressing makes exploring parse branches an order of magnitude cheaper than a
+copying parser — **is already the live BML compile path.** It is not a future rewrite.
+`g-parse`, the `Match` engine in [`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk)
+over [`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk)'s pure-functional cursor, sits
+**inside the compile FLOOR**: `fsc-compile-section-recipe` parses every high-level
+section through it (`g-parse(bml-grammar)`), and it is proven three-way by the
+`bmf-core` / `bmf-grammar` / `bmf-langs` / `literals` bands.
 
-**The design already exists; this doc is the migration.** The cursor/streaming
-architecture is drawn in [`bmf-architecture.form`](bmf-architecture.form) (a cursor
-over surfaces, the Pattern/Template/Grammar blueprints, the one `Match` engine, the
-self-hosting fixpoint), the multi-language convergence in
-[`grammars-from-the-cursor.form`](grammars-from-the-cursor.form), the one generic
-parser engine in [`engine.fk`](../../form/form-stdlib/engine.fk) /
-[`bmf-core.fk`](../../form/form-stdlib/bmf-core.fk) /
-[`bmf-grammar.fk`](../../form/form-stdlib/bmf-grammar.fk), and the picture in
-[`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md).
-This doc adds what those didn't have until now: a **measured floor** to aim the
-rewrite at, a **pinned bootstrap** to swap it under, and a **safe migration order**
-to get there from the current source-compiler without breaking it.
+So this doc records what is **already reached**, and names honestly what **remains** —
+which is not building the engine, but *releasing the old tissue it made redundant* and
+*densifying its coverage*.
 
-## Why this is reachable now
+## Already reached
 
-Two pieces of ground had to be laid first, and both are in place:
+- **The engine is the compile path.** `g-parse`, `g-rule`, `cur-peek`, `cur-advance`
+  are all in the FLOOR (`reachable-from fsc-compile-section-recipe`). The BML compile
+  doesn't *move toward* the cursor engine — it *runs on* it. The architecture is drawn
+  in [`bmf-architecture.form`](bmf-architecture.form) (a cursor over surfaces, the
+  Pattern/Template/Grammar blueprints, the one `Match` engine, the self-hosting
+  fixpoint); the multi-language convergence in
+  [`grammars-from-the-cursor.form`](grammars-from-the-cursor.form), proven by
+  `bmf-langs-band` — six languages' function + `if` rules all intern to one `~Function`
+  / one `~Cond` NodeID. The whole-picture map is
+  [`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md).
+- **The cheap branching is structural, not aspirational.** `bmf-core.fk`'s cursor is
+  pure-functional: every advance returns a new cursor, a checkpoint *is* an earlier
+  cursor value, restore *is* returning to it, and backtracking leaves no sediment
+  because nothing was mutated. A copying parser pays for every speculative branch by
+  duplicating state; this engine doesn't copy — and because the kernel interns every
+  recipe **by content**, the emit side shares too:
+  - **shared structure for free** — two branches that agree on a prefix share its
+    interned nodes; no copy.
+  - **discarded branches cost nothing** — an abandoned parse leaves interned nodes
+    unreferenced (GC'd); you never paid to copy them.
+  - **automatic memoization** — re-deriving the same sub-recipe returns the same NodeID.
+
+  That *is* the order of magnitude: branching is pointer-sharing, not state-copying.
+- **It is a sibling of the two walks already in the body.**
+  [`name-check.fk`](../../form/form-stdlib/name-check.fk) (the resolution walk) and
+  [`reachability.fk`](../../form/form-stdlib/reachability.fk) (the closure walk) share
+  the same node-dispatch shape; the compile emitter is the third — accumulating recipes
+  instead of diagnostics or a reached set.
+
+## The ground that made it swappable and measurable
+
+Two pieces laid recently turn "the engine is the compile path" into "the engine can
+evolve safely":
 
 - **A pinned, self-contained bootstrap** ([#2587]). The source-compile no longer
   re-reads the stdlib `.fk` live on every section — it loads one self-contained
-  bootstrap `.fkb` (every recipe it uses bundled, emitted by the same kernel that
-  runs it). So the compiler core can be **swapped under a stable artifact** without
-  the stdlib-drift brittleness that used to bite (the g-parse panic, the #2490
-  operator drift). The bootstrap is the seam the new core slides into.
+  bootstrap `.fkb` (every recipe it uses bundled, emitted by the same kernel that runs
+  it). So the core can be **densified under a stable artifact** without the stdlib-drift
+  brittleness that used to bite (the g-parse panic, the #2490 operator drift). The
+  bootstrap is the seam.
 - **A measured floor** ([`bmf-bootstrap-floor-audit.md`](../system_audit/bmf-bootstrap-floor-audit.md),
-  via [`reachability.fk`](../../form/form-stdlib/reachability.fk), #2588/#2589). Of 502
-  bootstrap defns, **146 are the FLOOR** — the minimum that compiles any section
-  (parse + emit) — **91 are STORE** (ontology load + runtime), and **265 are
-  releasable** old tissue. The north-star core is a rewrite of the *small* FLOOR;
-  the 265 is what clears away as it lands.
+  via `reachability.fk`, #2588/#2589). Of 502 bootstrap defns, **146 are the FLOOR**
+  (the minimum that compiles any section — and the cursor engine is in it), **91 are
+  STORE** (ontology load + runtime), and **265 are releasable** old tissue. The floor
+  is the engine; the 265 is what clears away.
 
-## The shape
+## What remains — release and densify, not rewrite
 
-A copying parser pays for every speculative branch by duplicating state. This
-kernel interns every recipe **by content** — identical sub-trees are one NodeID for
-everyone — so a streaming emitter that builds recipe objects as it scans gets:
+The work is *release inside the build*, never bulk deletion ahead of proof. The 265
+releasable defns are static-analysis candidates (the audit now follows higher-order
+callbacks, but a function stored in a variable and called later is still missed — see
+the audit's caveat), and the preludes (`bml.fk`, `source-compiler.fk`, the grammar) are
+actively-tended shared ground. So, per construct the old path still owns:
 
-- **shared structure for free** — two branches that agree on a prefix share its
-  interned nodes; no copy.
-- **discarded branches cost nothing** — an abandoned parse leaves interned nodes
-  simply unreferenced (GC'd); you never paid to copy them.
-- **automatic memoization** — re-deriving the same sub-recipe returns the same
-  NodeID, so overlapping branches don't recompute.
+1. **Densify coverage** where the cursor grammar doesn't yet reach. Real gap: a
+   `section [form.route]` written in TS-like member syntax (`member x: T;`, `def m(){}`,
+   bare `field = expr;`, `template`) lowers to an empty recipe because the BML grammar is
+   type-first — the gate from #2581 names the resulting unbound symbol. Each such surface
+   variant is one bag of cursor rules added to the grammar.
+2. **Prove parity** — the newly-covered construct's output is byte-identical to the
+   current path's, three-way (Go/Rust/TS) via `form/validate.sh`.
+3. **Release the old tissue** the cursor engine now subsumes — re-running the floor audit
+   to confirm a candidate dropped to genuinely unreached, with a per-candidate
+   indirect-ref check before composting.
 
-That is the order of magnitude: branching becomes *pointer-sharing*, not
-*state-copying*. The core is **generic** — data-driven over the grammar, one engine
-the languages drop into as data (the core-abstraction-first discipline) — and
-**cursor-based / streaming**: it emits recipe objects as the cursor advances rather
-than building then walking a separate AST. It is a sibling of the two walks already
-in the body: [`name-check.fk`](../../form/form-stdlib/name-check.fk) (the resolution
-walk) and `reachability.fk` (the closure walk); the same node-dispatch shape, a
-third accumulation — emitting recipes instead of diagnostics or a reached set.
-
-## Migration — release inside the build, not before it
-
-The 265 releasable defns are **not** composted up front. The preludes
-(`bml.fk`, `source-compiler.fk`, the grammar) are actively edited, and the audit's
-release-list is static (it now follows higher-order callbacks, but a function stored
-in a variable and called later is still missed — see the audit's caveat). So the
-release happens *as the new core covers each construct*, verified, not by bulk
-deletion ahead of proof:
-
-1. Build the streaming core for one construct family, emitting recipes.
-2. Prove parity — its output is byte-identical to the current compiler's for that
-   family, three-way (Go/Rust/TS) via `form/validate.sh`.
-3. Swap that family under the pinned bootstrap.
-4. Release the old tissue the new core now subsumes — re-running the floor audit to
-   confirm it dropped from STORE/FLOOR to genuinely unreached, with a per-candidate
-   indirect-ref check.
-
-This keeps the compiler working at every step and coordinates cleanly with whoever
-owns the grammar at the time (the source-compiler is shared, actively-tended ground).
+This keeps the compiler working at every step and coordinates cleanly with whoever owns
+the grammar at the time — the source-compiler is shared, actively-tended ground, so the
+release happens *with* its tenders, as the engine covers each construct, not around them.
 
 ## Constraints (the body's grain)
 
@@ -85,13 +91,13 @@ owns the grammar at the time (the source-compiler is shared, actively-tended gro
 - **Three-way.** Every construct's parity is proven across Go/Rust/TS, not asserted.
 - **Content-addressed.** The cheap-branching property is the whole point — the design
   leans on intern + structural sharing, not around them.
-- **Pinned-bootstrap discipline.** The core is swapped under a self-contained artifact;
+- **Pinned-bootstrap discipline.** The core is densified under a self-contained artifact;
   no live coupling to a moving stdlib.
 
 ## The measure to watch
 
-Not "is it done" but two honest readings that move together: the bootstrap's
-must-store count *shrinking* (toward the FLOOR, then below it as the core gets
-denser) and the parse-branch cost *falling* (interned sharing replacing copying).
-When the streaming core compiles every section the current one does, faster, with the
-old tissue released, the north star has been reached — and the next one is named.
+Two honest readings that move together: the bootstrap's must-store count *shrinking*
+(toward the FLOOR, then below it as releases land) and the grammar's *coverage growing*
+(fewer sections that lower to empty). When every section the old tissue once handled
+compiles through the cursor engine, with that tissue released, this north star is
+reached — and the next one (a measured branch-cost against a copying baseline) is named.
