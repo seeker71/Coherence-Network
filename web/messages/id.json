@@ -144,7 +144,9 @@
       "seed": "Tanam tanah",
       "keepMe": "Tetap di sini",
       "keepMeNote": "Bagikan tempatmu sampai kamu mematikannya",
-      "sharingOn": "Berbagi"
+      "sharingOn": "Berbagi",
+      "hereNow": "Di sini sekarang",
+      "noOneHere": "Tidak ada yang melaporkan tempatnya sekarang."
     }
   },
   "_attunement": {
