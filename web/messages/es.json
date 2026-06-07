@@ -144,7 +144,9 @@
       "seed": "Sembrar los terrenos",
       "keepMe": "Mantenme aquí",
       "keepMeNote": "Comparte tu lugar hasta que lo apagues",
-      "sharingOn": "Compartiendo"
+      "sharingOn": "Compartiendo",
+      "hereNow": "Aquí ahora",
+      "noOneHere": "Nadie está reportando su lugar ahora."
     }
   },
   "_attunement": {
