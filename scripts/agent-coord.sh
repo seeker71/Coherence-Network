@@ -86,8 +86,15 @@ _coord_view() {  # a one-shot dashboard of every agent: presence, last act, rece
     printf '  %s %-7s %-9s %s: %.50s\n' "$dot" "$agent" "$st" "$type" "$msg"
   done
   printf '\n  recent --------------------------------------------------\n'
-  tail -n 8 "$COHERENCE_COORD" 2>/dev/null | _coord_fmt
+  awk -F'\t' '$3!="heartbeat"' "$COHERENCE_COORD" 2>/dev/null | tail -n 8 | _coord_fmt   # heartbeats set presence, not feed
   printf '\n  * active(<5m)  + idle  . quiet    coord live = auto-refresh\n'
+}
+
+_coord_staleness() {  # warn (no network) if this worktree's tooling is behind origin/main
+  local root; root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+  if ! git -C "$root" diff --quiet HEAD origin/main -- scripts/agent-coord.sh 2>/dev/null; then
+    printf '  ── upgrade available ──  coordination tooling changed on main; run: (cd %s && git pull) then re-source\n' "$root"
+  fi
 }
 
 coord() {
@@ -103,11 +110,12 @@ coord() {
     protocol) _coord_protocol; return;;
     join)   coord announce "${*:-$(pwd)}"
             printf '\n  ── who is in the field ──\n'; _coord_roster
-            printf '  ── recent signals ──\n'; tail -n 8 "$COHERENCE_COORD" | _coord_fmt
+            printf '  ── recent signals ──\n'; awk -F'\t' '$3!="heartbeat"' "$COHERENCE_COORD" 2>/dev/null | tail -n 8 | _coord_fmt
             printf '  ── how we talk ──  (run: coord protocol)\n'
+            _coord_staleness
             return;;
-    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|join|roster|view|live|protocol|watch|log> [msg]"; return 1;;
+    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat) : ;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat|join|roster|view|live|protocol|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
