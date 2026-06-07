@@ -25,49 +25,49 @@
 
 section [form.bml] {
 
-    ;; ---- query layer : path/query split, k=v&… -> kh-field list -------
+    // ---- query layer : path/query split, k=v&… -> kh-field list -------
 
-    ;; the path up to the first '?', or the whole path when there is none.
-    ;; Bind the '?' index once (block-let) rather than scanning twice. The block
-    ;; spans lines — the local source-compiler reads multi-line blocks correctly
-    ;; but mangles single-line ones (the `let` gets dropped); the body's blocks
-    ;; (kernel-http.fk) follow the same shape.
+    // the path up to the first '?', or the whole path when there is none.
+    // Bind the '?' index once (block-let) rather than scanning twice. The block
+    // spans lines — the local source-compiler reads multi-line blocks correctly
+    // but mangles single-line ones (the `let` gets dropped); the body's blocks
+    // (kernel-http.fk) follow the same shape.
     def kh-req-path-only(path) {
         let qi = str_find(path, "?", 0);
         if eq(qi, -1) then path else substring(path, 0, qi);
     }
 
-    ;; the query string after the first '?', or "" when there is none.
+    // the query string after the first '?', or "" when there is none.
     def kh-req-query-str(path) {
         let qi = str_find(path, "?", 0);
         if eq(qi, -1) then "" else substring(path, add(qi, 1), str_len(path));
     }
 
-    ;; a "k=v" segment -> kh-field(k, v). Split on the FIRST '=' so a value
-    ;; containing '=' stays whole; no '=' -> kh-field(segment, "").
+    // a "k=v" segment -> kh-field(k, v). Split on the FIRST '=' so a value
+    // containing '=' stays whole; no '=' -> kh-field(segment, "").
     def kh-req-field-of(seg) {
         let ei = str_find(seg, "=", 0);
         if eq(ei, -1) then kh-field(seg, "") else kh-field(substring(seg, 0, ei), substring(seg, add(ei, 1), str_len(seg)));
     }
 
-    ;; the query string -> kh-field list. Split on '&', each segment to a field.
-    ;; Walks via str_find/substring; recursion advances the cursor past each '&'.
+    // the query string -> kh-field list. Split on '&', each segment to a field.
+    // Walks via str_find/substring; recursion advances the cursor past each '&'.
     def kh-req-fields-loop(s, start) {
         let amp = str_find(s, "&", start);
         if eq(amp, -1) then list(kh-req-field-of(substring(s, start, str_len(s)))) else cons(kh-req-field-of(substring(s, start, amp)), kh-req-fields-loop(s, add(amp, 1)));
     }
     def kh-req-fields(qs) = if eq(str_len(qs), 0) then empty else kh-req-fields-loop(qs, 0);
 
-    ;; ---- header layer : parsed HTTP-HEADER nodes -> kh-header list ----
-    ;; http-headers(node) returns a list of the parser's HEADER nodes; each
-    ;; lifts to a kh-header value. The recipe walks the list; the names/values
-    ;; are data carried through, never literals here.
+    // ---- header layer : parsed HTTP-HEADER nodes -> kh-header list ----
+    // http-headers(node) returns a list of the parser's HEADER nodes; each
+    // lifts to a kh-header value. The recipe walks the list; the names/values
+    // are data carried through, never literals here.
     def kh-req-headers(parsed) = if nil?(parsed) then empty else cons(kh-header(http-header-name(head(parsed)), http-header-value(head(parsed))), kh-req-headers(tail(parsed)));
 
-    ;; ---- the adapter : raw request string -> kh-request --------------
-    ;; Parse to the lexer node, then read its parts through the http-* accessors
-    ;; and assemble the kh-request. The full path is split: kh-request carries
-    ;; the path-only for routing and the parsed fields for the handler.
+    // ---- the adapter : raw request string -> kh-request --------------
+    // Parse to the lexer node, then read its parts through the http-* accessors
+    // and assemble the kh-request. The full path is split: kh-request carries
+    // the path-only for routing and the parsed fields for the handler.
     def kh-request-from-raw(raw) {
         let node = http-parse-request(raw);
         let full-path = http-path(node);

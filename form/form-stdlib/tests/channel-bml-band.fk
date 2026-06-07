@@ -20,7 +20,7 @@ section [form.bml] {
         let read_score = if eq(len(all), 1) then 100 else 0;
         let value_score = if str_eq(node_value(back), "bml-channel") then 100 else 0;
         let identity_score = if node_eq(msg, first) then 100 else 0;
-        add(add(add(add(create_score, append_score), read_score), value_score), identity_score)
+        add(add(add(add(create_score, append_score), read_score), value_score), identity_score);
     }
 }
 
