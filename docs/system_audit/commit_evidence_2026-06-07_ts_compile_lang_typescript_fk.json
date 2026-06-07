@@ -1,0 +1,79 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "cursor/ts-bmf-compost-rules-20260607",
+  "commit_scope": "Add lang-typescript-fk emitter; route ts-compile and ts-run through lang-typescript.ts parse + native .fk emission (body-want #2 compost).",
+  "files_owned": [
+    "form/form-kernel-ts/seedbank/ts-adapter/src/lang-typescript-fk.ts",
+    "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
+    "docs/system_audit/commit_evidence_2026-06-07_ts_compile_lang_typescript_fk.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-ts && npx tsx src/lang-typescript.test.ts",
+      "cd form/form-kernel-ts && bash seedbank/ts-adapter/scripts/parity_suite.sh"
+    ],
+    "results": {
+      "lang_typescript_tests": "36/36 passed",
+      "parity_suite_ts": "5 passing, 0 failing — node, ts-eval, and rust agree on all demos"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Await PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Form-kernel-ts adapter only; ts-trace remains on legacy lang-ts until trace walker ports."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "ci_validation pending until PR checks pass",
+      "typescript-bmf-lift.fk + typescript-bmf-compiler.fk not yet shipped"
+    ]
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:ts-bmf-compost-rules"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "auto"
+  },
+  "evidence_refs": [
+    "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
+    "form/form-kernel-ts/seedbank/ts-adapter/src/lang-typescript-fk.ts"
+  ],
+  "change_files": [
+    "form/form-kernel-ts/seedbank/ts-adapter/src/lang-typescript-fk.ts",
+    "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "ts-compile/ts-run emit .fk from lang-typescript.ts trees; three-way parity 5/5 including rust kernel execution.",
+    "public_endpoints": [
+      "form://form-kernel-ts/seedbank/ts-adapter/examples/ts_composition_demo.ts"
+    ],
+    "test_flows": [
+      "bash seedbank/ts-adapter/scripts/parity_suite.sh — 5 passing",
+      "npx tsx src/lang-typescript.test.ts — 36/36"
+    ]
+  }
+}

@@ -9,7 +9,7 @@
 //
 // Three runtimes for parity:
 //   1. tsc transpile → node runs the JS, captures stdout of final expr
-//   2. ts-eval — our captured-recipe walker (no kernel binary, no .fk)
+//   2. ts-eval — lang-typescript.ts walker (no kernel binary, no .fk)
 //   3. ts-run  — emit .fk + run via form-kernel-rust binary
 // All three must agree on the printed value of the final expression.
 
@@ -18,13 +18,13 @@ import { spawn } from "node:child_process";
 import { dirname, resolve as pathResolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Frame, Kernel, Trace, walk, type Value } from "../../../src/kernel.ts";
-import { parseTypeScript as parseTypeScriptLegacy } from "./lang-ts.ts";
-import { emitFk } from "./lang-ts-fk.ts";
 import {
   buildTypeScriptLanguage,
   parseTypeScript as parseTypeScriptNative,
   evalTypeScriptValue,
 } from "../../../src/lang-typescript.ts";
+import { parseTypeScript as parseTypeScriptLegacy } from "./lang-ts.ts";
+import { emitTypeScriptFk } from "./lang-typescript-fk.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -62,8 +62,9 @@ async function runTsCompile(args: string[]): Promise<void> {
   const src = await readFile(inPath, "utf8");
 
   const k = new Kernel();
-  const tree = parseTypeScriptLegacy(k, src);
-  const fk = emitFk(k, tree);
+  const ts = buildTypeScriptLanguage(k);
+  const tree = parseTypeScriptNative(k, ts.grammar, src);
+  const fk = emitTypeScriptFk(k, tree);
 
   if (outArg === "-") {
     process.stdout.write(fk + "\n");
@@ -85,8 +86,9 @@ async function runTsRun(args: string[]): Promise<void> {
   const src = await readFile(inPath, "utf8");
 
   const k = new Kernel();
-  const tree = parseTypeScriptLegacy(k, src);
-  const fk = emitFk(k, tree);
+  const ts = buildTypeScriptLanguage(k);
+  const tree = parseTypeScriptNative(k, ts.grammar, src);
+  const fk = emitTypeScriptFk(k, tree);
 
   const fkPath = inPath.endsWith(".ts")
     ? inPath.slice(0, -3) + ".fk"
