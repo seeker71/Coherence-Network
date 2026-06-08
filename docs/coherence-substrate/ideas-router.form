@@ -279,7 +279,7 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/native-mutation-side-effects.fk + api/tests/test_native_mutation_side_effects_form.py",
             status: "native side-effect execution carrier proven",
             meaning: "Form-native side effects now execute parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt against rollback-safe throwaway Postgres",
-            boundary: "this proves the execution carrier; route-runner binding and public-gate rollback receipt now sit above it while ordinary no-header traffic remains fanout",
+            boundary: "this proves the execution carrier and does not bind side-effect execution to ordinary public traffic; route-runner binding and public-gate rollback receipt now sit above it while ordinary no-header traffic remains fanout",
         },
         {
             path: "form/scripts/native-mutation-route-side-effects-test.sh",
@@ -294,6 +294,13 @@ defn ideas_router_structure() = {
             status: "native mutation public gate proven",
             meaning: "X-Form-Native-Public-Gate selects native public-gate route rows, emits a route-local rollback receipt, and the Form gate persists public-gate rollback receipts against rollback-safe throwaway Postgres",
             boundary: "ordinary no-header public traffic still fans out to FastAPI; next movement is a deployed header-gated public canary before any no-header flip",
+        },
+        {
+            path: "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+            route_source: "api/tests/test_native_mutation_side_effect_ledger.py",
+            status: "source-classified side-effect ledger",
+            meaning: "side effects are separated into primary mutation, Python parity effect, reversible gate receipt, missing Python parity, and not-carried rows before any front-door move",
+            boundary: "rollback receipts are reversible gate safety, not Python parity; idea-valuation-audit-ledger remains missing Python parity before ordinary no-header flip",
         },
     ],
     recipes: [
@@ -326,8 +333,9 @@ defn ideas_router_structure() = {
         "carried side-effect intents -> Form-native side-effect execution carrier",
         "side-effect execution carrier -> Form-native mutation route-runner binding",
         "mutation route-runner binding -> header-gated native public gate with rollback receipt",
+        "side-effect proof -> source-classified side-effect ledger",
     ],
-    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state; mutation_ab_observation_harness.py turns the flip into A/B observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses; native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres; native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner; and native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate while preserving fanout for no-header traffic. Public mutable DB-backed /api/ideas still enters through FastAPI by default until a deployed header-gated public canary is observed before any no-header flip.",
+    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state; mutation_ab_observation_harness.py turns the flip into A/B observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses; native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres; native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner; native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate while preserving fanout for no-header traffic; and native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity. Public mutable DB-backed /api/ideas still enters through FastAPI by default until a deployed header-gated public canary is observed before any no-header flip, and idea-valuation-audit-ledger is carried Form-native or explicitly retired before that movement.",
 };
 
 defn ideas_router_reading() = {
@@ -349,10 +357,11 @@ defn ideas_router_reading() = {
         "api/tests/test_native_mutation_side_effects_form.py",
         "api/tests/test_native_mutation_route_side_effect_binding.py",
         "api/tests/test_native_mutation_public_gate.py",
+        "api/tests/test_native_mutation_side_effect_ledger.py",
         "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
     ],
     mystery: [
-        "the public mutation flip wants a deployed X-Form-Native-Public-Gate canary before ordinary no-header traffic moves",
+        "the public mutation flip wants a deployed X-Form-Native-Public-Gate canary and a carried-or-retired idea valuation audit ledger before ordinary no-header traffic moves",
     ],
 };
 
