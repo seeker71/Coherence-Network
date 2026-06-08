@@ -62,9 +62,8 @@ recommend the next bounded trial when every case passes.
   `prediction_error="carried_as_residual"`, `choice_success=1`,
   silence/protocol/fail/stop/BMA markers, side-effect intents, and reversible
   gate state.
-- [ ] **R7**: When every case passes, the next evidence names route-runner
-  binding for the native side-effect execution carrier and a narrow reversible
-  public gate with rollback receipt.
+- [ ] **R7**: When every case passes, the next evidence names the narrow
+  reversible public gate with route-local rollback receipt.
 
 ## Research Inputs
 
@@ -130,9 +129,12 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
   side-effect intents now have a Form-native execution carrier with throwaway
   Postgres readback for cache-invalidation receipt, parent-edge repair,
   contributor-key audit, and rollback receipt.
-- GAP-NMAOG5 follow-up task: `native-mutation-route-side-effect-binding`. Bind
-  the proven side-effect carrier to mutation route execution before ordinary
-  traffic is eligible for a reversible flip.
+- GAP-NMAOG5: closed by `specs/native-mutation-route-side-effect-binding.md`.
+  Native route runners now bind application graph mutation execution to
+  side-effect execution in throwaway Postgres.
+- GAP-NMAOG6 follow-up task: `native-mutation-public-flip-gate`. Add the narrow
+  reversible public gate with route-local rollback receipt before ordinary
+  traffic moves.
 
 ## Risks and Assumptions
 

@@ -137,9 +137,10 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-enve
   side-effect intents now have a Form-native execution carrier with throwaway
   Postgres readback for cache-invalidation receipt, parent-edge repair,
   contributor-key audit, and rollback receipt.
-- GAP-NMTE2 follow-up task: `native-mutation-route-side-effect-binding`. Bind
-  the proven carrier to mutation route execution, then add the narrow reversible
-  public gate.
+- GAP-NMTE2: closed by `specs/native-mutation-route-side-effect-binding.md`. The
+  proven side-effect carrier is now bound to Form-native route-runner execution.
+- GAP-NMTE3 follow-up task: `native-mutation-public-flip-gate`. Add the narrow
+  reversible public gate with route-local rollback receipt.
 
 ## Risks and Assumptions
 

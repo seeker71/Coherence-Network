@@ -142,9 +142,12 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
   side-effect intents now have a Form-native execution carrier for
   cache-invalidation receipt, parent-edge repair, contributor-key audit, and
   rollback receipt.
-- GAP-MSNMPB6 follow-up task: `native-mutation-route-side-effect-binding`. Bind
-  the proven carrier to mutation route execution before public mutation traffic
-  moves.
+- GAP-MSNMPB6: closed by `specs/native-mutation-route-side-effect-binding.md`.
+  Native route runners now bind application graph mutation execution to
+  side-effect execution in throwaway Postgres.
+- GAP-MSNMPB7 follow-up task: `native-mutation-public-flip-gate`. Add a
+  reversible public gate with route-local rollback receipt before public
+  mutation traffic moves.
 
 ## Risks and Assumptions
 

@@ -125,9 +125,11 @@ PY
   `native-mutation-side-effects-test.sh` proves parent-edge repair,
   contributor-key audit, cache-invalidation receipt, and rollback receipt
   execute natively against throwaway Postgres. Public mutable DB-backed spec
-  registry behavior still enters through FastAPI by default until the proven
-  side-effect carrier is bound to route execution and a narrow reversible public
-  gate has a rollback receipt.
+  `native-mutation-route-side-effects-test.sh` proves application graph mutation
+  plus side-effect execution are bound in one Form-native route runner. Public
+  mutable DB-backed spec registry behavior still enters through FastAPI by
+  default until a narrow reversible public gate has a route-local rollback
+  receipt.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

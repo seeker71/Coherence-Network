@@ -146,8 +146,7 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["recommendation"] == "promote_to_live_db_trial"
     assert report["ordinary_traffic_flip_performed"] is False
     assert report["next_evidence_needed"] == [
-        "bind native side-effect execution carrier to mutation route runner",
-        "narrow reversible public gate with rollback receipt",
+        "narrow reversible public gate with route-local rollback receipt",
     ]
 
 
