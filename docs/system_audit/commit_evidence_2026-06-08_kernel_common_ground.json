@@ -1,0 +1,81 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/kernel-common-ground-verify-20260608",
+  "commit_scope": "Document the exact common primitive substrate across the Go, Rust, and TypeScript kernels, including the trace/choice seam and the next Form-native choice-receipt move.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-08_kernel_common_ground.json",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "kernels/README.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && make wellness",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && python3 - <<'PY' ... RBasic central-table comparison ... PY",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && rg -n \"record_choice|choiceAttempts|ChoiceAttempts|choice_attempt|choice_success|choice_failure|choice\" form/form-kernel-go/main.go form/form-kernel-rust/src/main.rs form/form-kernel-ts/src/kernel.ts form/form-stdlib -g '!*.json'",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-verify-20260608 && rg -n \"RB_CHOICE|RBasicChoice|CHOICE|QUOTIENT|INDUCTIVE|PROOF|OBSERVER|PROJECT|VECTOR|PARALLELIZE|CONSTRUCTOR|INFERENCE|ALIAS|BLANKET|GENERATIVE\" form/form-kernel-rust/src form/form-kernel-go form/form-kernel-ts/src"
+    ],
+    "notes": "The central RBasic scan found 36 exact shared categories across Go, Rust, and TypeScript with zero numeric drift after normalizing FNDEF/FNCALL naming. TypeScript exposes several higher categories in its central table while Go/Rust carry CHOICE/INDUCTIVE/CONSTRUCTOR/QUOTIENT in side modules. All three central kernels expose a trace JSON shape with total walks, arm variants, functions, natives, choice_attempts, choice_successes, choice_failures, and choice_success_rate. Public deploy verification passed after the rollback and wellness reported deploy aligned at dfc06639."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this docs-only branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Docs-only deployment verification is pending until PR merge and public verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local documentation proof is complete. CI, merge, and deployment remain pending."
+  },
+  "idea_ids": [
+    "one-kernel-many-tongues",
+    "kernel-common-ground",
+    "trace-preserving-choice"
+  ],
+  "spec_ids": [
+    "kernel-common-ground-choice-receipts"
+  ],
+  "task_ids": [
+    "kernel-common-ground-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "kernel-reading",
+        "documentation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "kernels/KERNEL_COMMON_GROUND.md records the 36 exact shared central categories and maps them to be/do/witness/choice/care/space/time primitives.",
+    "The RBasic comparison found no numeric drift among the categories present in all three central tables.",
+    "Go and Rust side modules carry INDUCTIVE, CONSTRUCTOR, CHOICE_MATCH, and QUOTIENT while TypeScript exposes those category names centrally.",
+    "All three central kernels carry trace counters for choice attempts, successes, failures, and success rate, but the choice surfaces do not yet feed one shared choice-receipt discipline.",
+    "form/form-stdlib/kernel-http.fk already carries route-choice signatures with fixed buckets; the document names that as the reusable branch-receipt grammar for BMF/BML choice.",
+    "kernels/README.md now links the common-ground note from the kernel roadmap section."
+  ],
+  "change_files": [
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "kernels/README.md"
+  ],
+  "change_intent": "docs_only"
+}

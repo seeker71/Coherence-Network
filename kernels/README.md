@@ -134,3 +134,8 @@ The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what 
 [`UNIVERSAL_TRANSLATOR_AUDIT.md`](UNIVERSAL_TRANSLATOR_AUDIT.md) walks the body's current artifacts against the highest goal (universal translator across media, recipe orchestration in pure numeric space, less ice / more gas, minimize bootstrap surface). It names where the body is heavy in ice, heavy in bootstrap, heavy in dependencies, already light, and the top-ten concrete next breaths.
 
 [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) names the closing shapes for the audit's finding #4 — *one Blueprint per shape across all source languages*. Three shapes (A: rules emit MATH directly; B: lift maps BINOP→MATH at recipe time; C: BINOP as Blueprint-view on MATH); Shape B is the smallest closing breath.
+
+[`KERNEL_COMMON_GROUND.md`](KERNEL_COMMON_GROUND.md) names the shared primitive
+substrate already visible across Go, Rust, and TypeScript: NodeID coordinates,
+walk, witness trace, route-choice signatures, record/method object shape, and
+the next low-risk move toward trace-preserving choice receipts.
