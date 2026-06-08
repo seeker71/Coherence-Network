@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 244
+**Total files**: 261
 
 | File | Purpose |
 |---|---|
@@ -25,6 +25,9 @@
 | [test_agent_task_claims.py](test_agent_task_claims.py) | Task claim tracking and ROI auto-pick deduplication. |
 | [test_anonymous_meeting_traces.py](test_anonymous_meeting_traces.py) | Anonymous meeting trace tests. |
 | [test_api_dockerfile_contract.py](test_api_dockerfile_contract.py) | _no top-of-file purpose_ |
+| [test_application_graph_live_db_trial.py](test_application_graph_live_db_trial.py) | Proof that native application graph mutation SQL executes against live DB. |
+| [test_application_graph_node_port_form.py](test_application_graph_node_port_form.py) | Proof that application graph table mutations have a native Form carrier. |
+| [test_application_graph_response_projection.py](test_application_graph_response_projection.py) | Proof that native graph mutation rows project to response shapes. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |
@@ -109,12 +112,16 @@
 | [test_governance_health.py](test_governance_health.py) | Tests for compute_governance_health (spec: portfolio-governance-effectiveness). |
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
+| [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
+| [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_household_service_board.py](test_household_service_board.py) | Flow test for the household resident-service board (api/app/routers/household.py). |
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
 | [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
+| [test_ideas_graph_projection_form.py](test_ideas_graph_projection_form.py) | Proof that graph-node Form envelopes project to idea API read shape. |
+| [test_ideas_router_form.py](test_ideas_router_form.py) | Proof that the ideas router has a high-level Form expression. |
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |
 | [test_inspired_by.py](test_inspired_by.py) | Flow-centric tests for the inspired-by resolver and /api/inspired-by. |
@@ -135,6 +142,14 @@
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
+| [test_native_auth_parity_form.py](test_native_auth_parity_form.py) | Proof that mutation auth has a native Form parity carrier. |
+| [test_native_idea_valuation_audit_ledger.py](test_native_idea_valuation_audit_ledger.py) | Proof that idea valuation audit-ledger parity is Form-native. |
+| [test_native_mutation_ab_observation.py](test_native_mutation_ab_observation.py) | Proof for the native mutation A/B observation gate. |
+| [test_native_mutation_public_gate.py](test_native_mutation_public_gate.py) | Proof that native mutation public gates are reversible and receipt-backed. |
+| [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
+| [test_native_mutation_route_side_effect_binding.py](test_native_mutation_route_side_effect_binding.py) | Proof that native mutation route runners bind side-effect execution. |
+| [test_native_mutation_side_effect_ledger.py](test_native_mutation_side_effect_ledger.py) | Proof that native mutation side effects are source-classified, not circular. |
+| [test_native_mutation_side_effects_form.py](test_native_mutation_side_effects_form.py) | Proof that native mutation side-effect intents have a Form execution carrier. |
 | [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
@@ -170,6 +185,8 @@
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
+| [test_spec_registry_router_form.py](test_spec_registry_router_form.py) | Proof that the spec registry has a high-level Form expression. |
+| [test_specs_source_native_route.py](test_specs_source_native_route.py) | Proof that specs can be read from source through a native Form route. |
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |
 | [test_story_protocol_e2e.py](test_story_protocol_e2e.py) | End-to-end integration flow for the story-protocol-integration arc. |

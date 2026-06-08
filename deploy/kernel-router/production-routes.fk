@@ -34,6 +34,21 @@
 ;   /api/utils/idea_grounding_summary  int grounding signals over two parallel CSV
 ;                                       scalar-lists (422 on len mismatch)
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
+;   /api/ideas/router-structure       Form-native ideas route structure reading
+;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
+;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
+;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
+;   /api/spec-registry/source-list    Form-native specs/INDEX.md -> SpecRegistryEntry[]
+;   POST   /api/ideas                 Header-gated native mutation SQL preview
+;   PATCH  /api/ideas/*               Header-gated native mutation SQL preview
+;   POST   /api/spec-registry         Header-gated native mutation SQL preview
+;   PATCH  /api/spec-registry/*       Header-gated native mutation SQL preview
+;   DELETE /api/spec-registry/*       Header-gated native mutation SQL preview
+;   POST   /api/ideas                 Header-gated native mutation public gate
+;   PATCH  /api/ideas/*               Header-gated native mutation public gate
+;   POST   /api/spec-registry         Header-gated native mutation public gate
+;   PATCH  /api/spec-registry/*       Header-gated native mutation public gate
+;   DELETE /api/spec-registry/*       Header-gated native mutation public gate
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -54,6 +69,13 @@
 ;
 ;   curl ':PORT/api/utils/coherence_weight'              -> live-api JSON, byte-identical
 ;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
+;   curl ':PORT/api/ideas/router-structure'              -> native Form route reading
+;   curl ':PORT/api/ideas/source-index'                  -> native source-index data
+;   curl ':PORT/api/ideas/source-portfolio'              -> native source portfolio data
+;   curl ':PORT/api/ideas/graph-projection'              -> native graph projection preview
+;   curl ':PORT/api/spec-registry/source-list'           -> native source spec list
+;   curl -H 'X-Form-Native-Preview: 1' -X POST ':PORT/api/spec-registry' -d '{"spec_id":"x","title":"X"}'
+;                                                        -> native mutation SQL preview
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1489,6 +1511,713 @@
             "}"))))))))))))))))))))))))
 
 ; ===========================================================================
+; /api/ideas/router-structure
+;   native structure route for the high-level ideas router Form expression.
+;   This is the first ideas-family row that the kernel-router can dispatch
+;   without CPython. It does NOT claim the mutable portfolio data routes have
+;   moved yet; those remain fan-out until their storage-backed recipes lift.
+; ===========================================================================
+
+(defn route_ideas_router_structure (q)
+  (str_concat_all (list
+    "{\"source\":\"docs/coherence-substrate/ideas-router.form\""
+    ",\"route_source\":\"api/app/routers/ideas.py\""
+    ",\"north_star\":\"Ideas move from promise to real contribution through evidence, relation, value flow, and closure.\""
+    ",\"native_path\":\"/api/ideas/router-structure\""
+    ",\"families\":[\"browse\",\"sense\",\"choose\",\"mutate\",\"question-answer\",\"link\",\"translate\",\"invest\",\"rollup\",\"inspect\"]"
+    ",\"shifted\":[\"endpoint list -> recipe family lattice\",\"Python carrier -> Form-declared choreography\",\"Form declaration -> kernel-router native structure route\"]"
+    ",\"carrier_boundary\":\"mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift\""
+    ",\"runtime\":\"inline\"}")))
+
+(defn str_count_from (s needle start)
+  (do (let found (str_find s needle start))
+      (if (eq found -1)
+          0
+          (add 1 (str_count_from s needle (add found (str_len needle)))))))
+
+(defn str_count (s needle)
+  (str_count_from s needle 0))
+
+(defn ideas_index_text ()
+  (do (let docker_text (read_file_slice "ideas/INDEX.md" 0 200000))
+      (if (gt (str_len docker_text) 0)
+          docker_text
+          (read_file_slice "../../ideas/INDEX.md" 0 200000))))
+
+(defn route_ideas_source_index (q)
+  (do (let text (ideas_index_text))
+  (do (let super_ideas (str_count text "\n| ["))
+  (do (let source_status (if (gt (str_len text) 0) "read" "missing")))
+      (str_concat_all (list
+        "{\"source\":\"ideas/INDEX.md\""
+        ",\"route_source\":\"deploy/kernel-router/production-routes.fk::route_ideas_source_index\""
+        ",\"super_idea_count\":" (value_str super_ideas)
+        ",\"index_bytes\":" (value_str (str_len text))
+        ",\"source_status\":\"" source_status "\""
+        ",\"carrier_boundary\":\"source-index route reads repo idea source; mutable DB-backed /api/ideas/count still fans out\""
+        ",\"runtime\":\"inline\"}")))))
+
+; ===========================================================================
+; /api/ideas/source-portfolio
+;   native curated portfolio route for ideas/INDEX.md. This is the source-backed
+;   sibling of /api/ideas?curated_only=true: it reads the repo idea table and
+;   emits the public portfolio response shape without FastAPI or idea_service.
+; ===========================================================================
+
+(defn isp-find-or-end (s needle start)
+  (do (let p (str_find s needle start))
+      (if (eq p -1) (str_len s) p)))
+
+(defn isp-stage-from-index (stage)
+  (if (str_eq stage "impl") "implementing"
+      (if (str_eq stage "spec") "specced" "none")))
+
+(defn isp-status-from-index (stage)
+  (if (str_eq stage "done") "validated" "partial"))
+
+(defn isp-row-title-start (row_pos) (add row_pos (str_len "\n| [")))
+(defn isp-row-title-end (text row_pos) (str_find text "](" row_pos))
+(defn isp-row-slug-start (text row_pos) (add (isp-row-title-end text row_pos) 2))
+(defn isp-row-slug-end (text row_pos) (str_find text ".md)" (isp-row-slug-start text row_pos)))
+(defn isp-row-link-end (text row_pos) (str_find text ") | " (isp-row-slug-start text row_pos)))
+(defn isp-row-pillar-start (text row_pos) (add (isp-row-link-end text row_pos) (str_len ") | ")))
+(defn isp-row-pillar-end (text row_pos) (str_find text " | " (isp-row-pillar-start text row_pos)))
+(defn isp-row-stage-start (text row_pos) (add (isp-row-pillar-end text row_pos) (str_len " | ")))
+(defn isp-row-stage-end (text row_pos) (str_find text " | " (isp-row-stage-start text row_pos)))
+(defn isp-row-specs-start (text row_pos) (add (isp-row-stage-end text row_pos) (str_len " | ")))
+(defn isp-row-specs-end (text row_pos) (str_find text " | " (isp-row-specs-start text row_pos)))
+(defn isp-row-capability-start (text row_pos) (add (isp-row-specs-end text row_pos) (str_len " | ")))
+(defn isp-row-capability-end (text row_pos) (isp-find-or-end text " |\n" (isp-row-capability-start text row_pos)))
+
+(defn isp-row-title (text row_pos)
+  (substring text (isp-row-title-start row_pos) (isp-row-title-end text row_pos)))
+
+(defn isp-row-slug (text row_pos)
+  (substring text (isp-row-slug-start text row_pos) (isp-row-slug-end text row_pos)))
+
+(defn isp-row-pillar (text row_pos)
+  (substring text (isp-row-pillar-start text row_pos) (isp-row-pillar-end text row_pos)))
+
+(defn isp-row-stage (text row_pos)
+  (substring text (isp-row-stage-start text row_pos) (isp-row-stage-end text row_pos)))
+
+(defn isp-row-specs (text row_pos)
+  (substring text (isp-row-specs-start text row_pos) (isp-row-specs-end text row_pos)))
+
+(defn isp-row-capability (text row_pos)
+  (substring text (isp-row-capability-start text row_pos) (isp-row-capability-end text row_pos)))
+
+(defn isp-idea-json (text row_pos)
+  (do (let id (isp-row-slug text row_pos))
+  (do (let stage_raw (isp-row-stage text row_pos))
+  (do (let stage (isp-stage-from-index stage_raw))
+  (do (let status (isp-status-from-index stage_raw))
+      (str_concat_all (list
+        "{\"id\":" (json_string id)
+        ",\"name\":" (json_string (isp-row-title text row_pos))
+        ",\"description\":" (json_string (isp-row-capability text row_pos))
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"resistance_risk\":1.0"
+        ",\"confidence\":0.5"
+        ",\"manifestation_status\":" (json_string status)
+        ",\"interfaces\":[]"
+        ",\"open_questions\":[]"
+        ",\"idea_type\":\"super\""
+        ",\"parent_idea_id\":null"
+        ",\"child_idea_ids\":[]"
+        ",\"stage\":" (json_string stage)
+        ",\"work_type\":\"feature\""
+        ",\"lifecycle\":\"active\""
+        ",\"duplicate_of\":null"
+        ",\"last_activity_at\":null"
+        ",\"value_basis\":null"
+        ",\"cost_vector\":null"
+        ",\"value_vector\":null"
+        ",\"tags\":[]"
+        ",\"workspace_git_url\":null"
+        ",\"slug\":" (json_string id)
+        ",\"slug_history\":[]"
+        ",\"is_curated\":true"
+        ",\"pillar\":" (json_string (isp-row-pillar text row_pos))
+        ",\"workspace_id\":\"coherence-network\""
+        ",\"rollup_condition\":null"
+        ",\"free_energy_score\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"content_markdown\":\"\""
+        ",\"marginal_cc_score\":0.0"
+        ",\"selection_weight\":0.0"
+        ",\"remaining_cost_cc\":0.0"
+        ",\"value_gap_cc\":0.0"
+        ",\"roi_cc\":0.0"
+        "}")))))))
+
+(defn isp-ideas-json-from (text start remaining)
+  (if (eq remaining 0)
+      ""
+      (do (let row_pos (str_find text "\n| [" start))
+          (if (eq row_pos -1)
+              ""
+              (if (eq remaining 1)
+                  (isp-idea-json text row_pos)
+                  (str_concat
+                    (str_concat (isp-idea-json text row_pos) ",")
+                    (isp-ideas-json-from text (add row_pos 1) (sub remaining 1))))))))
+
+(defn route_ideas_source_portfolio (q)
+  (do (let text (ideas_index_text))
+  (do (let total (str_count text "\n| ["))
+      (str_concat_all (list
+        "{\"ideas\":[" (isp-ideas-json-from text 0 total) "]"
+        ",\"summary\":{\"total_ideas\":" (value_str total)
+        ",\"unvalidated_ideas\":" (value_str total)
+        ",\"validated_ideas\":0"
+        ",\"total_potential_value\":0.0"
+        ",\"total_actual_value\":0.0"
+        ",\"total_value_gap\":0.0}"
+        ",\"pagination\":{\"total\":" (value_str total)
+        ",\"limit\":" (value_str (max2 total 1))
+        ",\"offset\":0"
+        ",\"returned\":" (value_str total)
+        ",\"has_more\":false}"
+        "}")))))
+
+; ===========================================================================
+; /api/ideas/graph-projection
+;   native projection route for graph-node-shaped rows. This binds the same
+;   portfolio response shape proven in form-stdlib/ideas-graph-projection.fk into
+;   the production manifest, while keeping live DB-backed /api/ideas fan-out.
+;   The rows here are deliberate fixture graph rows until a live carrier lands.
+; ===========================================================================
+
+(defn ideas_graph_projection_rows ()
+  (list
+    (list "idea:form-native-read" "idea" "Form-native idea read" "Projected from graph rows by the kernel-router" "water")
+    (list "idea:evidence-bound" "idea" "Evidence-bound idea" "Validated graph projection route" "ice")
+    (list "concept:carrier-boundary" "concept" "Carrier boundary" "Filtered non-idea row" "gas")))
+
+(defn igpr-row-id (row) (head row))
+(defn igpr-row-type (row) (head (tail row)))
+(defn igpr-row-name (row) (head (tail (tail row))))
+(defn igpr-row-description (row) (head (tail (tail (tail row)))))
+(defn igpr-row-phase (row) (head (tail (tail (tail (tail row))))))
+
+(defn igpr-filter-idea-rows (rows)
+  (if (eq (len rows) 0)
+      (list)
+      (if (str_eq (igpr-row-type (head rows)) "idea")
+          (cons (head rows) (igpr-filter-idea-rows (tail rows)))
+          (igpr-filter-idea-rows (tail rows)))))
+
+(defn igpr-status-from-phase (phase)
+  (if (str_eq phase "ice") "validated"
+      (if (str_eq phase "water") "partial" "none")))
+
+(defn igpr-stage-from-status (status)
+  (if (str_eq status "validated") "complete"
+      (if (str_eq status "partial") "implementing" "none")))
+
+(defn igpr-idea-json (row)
+  (do (let id (igpr-row-id row))
+  (do (let status (igpr-status-from-phase (igpr-row-phase row)))
+  (do (let stage (igpr-stage-from-status status))
+      (str_concat_all (list
+        "{\"id\":" (json_string id)
+        ",\"name\":" (json_string (igpr-row-name row))
+        ",\"description\":" (json_string (igpr-row-description row))
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"resistance_risk\":1.0"
+        ",\"confidence\":0.5"
+        ",\"manifestation_status\":" (json_string status)
+        ",\"interfaces\":[]"
+        ",\"open_questions\":[]"
+        ",\"idea_type\":\"standalone\""
+        ",\"parent_idea_id\":null"
+        ",\"child_idea_ids\":[]"
+        ",\"stage\":" (json_string stage)
+        ",\"work_type\":null"
+        ",\"lifecycle\":\"active\""
+        ",\"duplicate_of\":null"
+        ",\"last_activity_at\":null"
+        ",\"value_basis\":null"
+        ",\"cost_vector\":null"
+        ",\"value_vector\":null"
+        ",\"tags\":[]"
+        ",\"workspace_git_url\":null"
+        ",\"slug\":" (json_string id)
+        ",\"slug_history\":[]"
+        ",\"is_curated\":false"
+        ",\"pillar\":null"
+        ",\"workspace_id\":\"coherence-network\""
+        ",\"rollup_condition\":null"
+        ",\"free_energy_score\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"content_markdown\":\"\""
+        ",\"marginal_cc_score\":0.0"
+        ",\"selection_weight\":0.0"
+        ",\"remaining_cost_cc\":0.0"
+        ",\"value_gap_cc\":0.0"
+        ",\"roi_cc\":0.0"
+        "}"))))))
+
+(defn igpr-idea-json-list (rows)
+  (if (eq (len rows) 0)
+      ""
+      (if (eq (len rows) 1)
+          (igpr-idea-json (head rows))
+          (str_concat (igpr-idea-json (head rows))
+                      (str_concat "," (igpr-idea-json-list (tail rows)))))))
+
+(defn igpr-count-validated (rows)
+  (if (eq (len rows) 0)
+      0
+      (add (if (str_eq (igpr-status-from-phase (igpr-row-phase (head rows))) "validated") 1 0)
+           (igpr-count-validated (tail rows)))))
+
+(defn igpr-portfolio-json-from-rows (rows)
+  (do (let total (len rows))
+  (do (let validated (igpr-count-validated rows))
+  (do (let unvalidated (sub total validated))
+      (str_concat_all (list
+        "{\"ideas\":[" (igpr-idea-json-list rows) "]"
+        ",\"summary\":{\"total_ideas\":" (value_str total)
+        ",\"unvalidated_ideas\":" (value_str unvalidated)
+        ",\"validated_ideas\":" (value_str validated)
+        ",\"total_potential_value\":0.0"
+        ",\"total_actual_value\":0.0"
+        ",\"total_value_gap\":0.0}"
+        ",\"pagination\":{\"total\":" (value_str total)
+        ",\"limit\":" (value_str (max2 total 1))
+        ",\"offset\":0"
+        ",\"returned\":" (value_str total)
+        ",\"has_more\":false}"
+        "}"))))))
+
+(defn route_ideas_graph_projection (q)
+  (igpr-portfolio-json-from-rows
+    (igpr-filter-idea-rows (ideas_graph_projection_rows))))
+
+; ===========================================================================
+; Header-gated native mutation preview and public-gate bindings.
+;
+; These rows bind the real public mutable paths and HTTP methods into
+; KernelHTTPRoute without stealing ordinary production mutations. The required
+; X-Form-Native-Preview header gives a native preview arm for explicit probes;
+; X-Form-Native-Public-Gate gives a narrower reversible public-gate arm with a
+; route-local rollback receipt. Requests without either header exceed the
+; route's pressure budget and fan out to FastAPI.
+;
+; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
+; preview response intentionally does not move ordinary traffic. Live DB
+; execution, response projection, side-effect execution, route-runner
+; side-effect binding, and public-gate rollback receipts are proven in Form.
+; Ordinary no-header traffic remains fanout-python until a deployed canary moves.
+; ===========================================================================
+
+(defn mpv-join (sep xs)
+  (if (eq (len xs) 0)
+      ""
+      (if (eq (len xs) 1)
+          (head xs)
+          (str_concat (head xs) (str_concat sep (mpv-join sep (tail xs)))))))
+
+(defn mpv-sql-esc-loop (s i n acc)
+  (if (ge i n)
+      acc
+      (do (let c (substring s i (add i 1)))
+          (mpv-sql-esc-loop s (add i 1) n
+            (str_concat acc (if (str_eq c "'") "''" c))))))
+
+(defn mpv-sql-quote (s)
+  (str_concat "'" (str_concat (mpv-sql-esc-loop s 0 (str_len s) "") "'")))
+
+(defn mpv-jsonb (s)
+  (str_concat (mpv-sql-quote s) "::jsonb"))
+
+(defn mpv-snapshot-sql ()
+  "jsonb_build_object('id', id, 'type', type, 'name', name, 'description', description, 'phase', phase, 'created_at', created_at, 'updated_at', updated_at) || properties")
+
+(defn mpv-create-node-sql (revision-id id node-type name description phase properties source author)
+  (mpv-join " " (list
+    "WITH inserted AS ("
+    "INSERT INTO graph_nodes (id, type, name, description, properties, phase)"
+    (str_concat "VALUES (" (str_concat
+      (mpv-join ", " (list
+        (mpv-sql-quote id)
+        (mpv-sql-quote node-type)
+        (mpv-sql-quote name)
+        (mpv-sql-quote description)
+        (mpv-jsonb properties)
+        (mpv-sql-quote phase)))
+      ")"))
+    "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+    ")"
+    "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+    (str_concat "SELECT " (mpv-join ", " (list
+      (mpv-sql-quote revision-id)
+      "id"
+      "1"
+      (mpv-sql-quote source)
+      (mpv-sql-quote author)
+      (mpv-jsonb "[\"__create__\"]")
+      (mpv-snapshot-sql))))
+    "FROM inserted")))
+
+(defn mpv-update-node-sql (revision-id id name description phase property-patch fields-changed source author)
+  (mpv-join " " (list
+    "WITH updated AS ("
+    (str_concat "UPDATE graph_nodes SET " (mpv-join ", " (list
+      (str_concat "name = " (mpv-sql-quote name))
+      (str_concat "description = " (mpv-sql-quote description))
+      (str_concat "phase = " (mpv-sql-quote phase))
+      (str_concat "properties = properties || " (mpv-jsonb property-patch))
+      "updated_at = CURRENT_TIMESTAMP")))
+    (str_concat "WHERE id = " (mpv-sql-quote id))
+    "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+    ")"
+    "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+    (str_concat "SELECT " (mpv-join ", " (list
+      (mpv-sql-quote revision-id)
+      "id"
+      (str_concat "(SELECT COALESCE(max(revision_number), 0) + 1 FROM graph_node_revisions WHERE node_id = " (str_concat (mpv-sql-quote id) ")"))
+      (mpv-sql-quote source)
+      (mpv-sql-quote author)
+      (mpv-jsonb fields-changed)
+      (mpv-snapshot-sql))))
+    "FROM updated")))
+
+(defn mpv-delete-node-sql (id)
+  (mpv-join " " (list
+    "WITH deleted_edges AS ("
+    (str_concat "DELETE FROM graph_edges WHERE from_id = " (str_concat
+      (mpv-sql-quote id)
+      (str_concat " OR to_id = " (mpv-sql-quote id))))
+    "RETURNING id"
+    ")"
+    (str_concat "DELETE FROM graph_nodes WHERE id = " (mpv-sql-quote id)))))
+
+(defn mpv-typed-request? (q)
+  (eq (nth q 0) 43002))
+
+(defn mpv-body (q)
+  (if (mpv-typed-request? q)
+      (do (let body (nth q 5))
+          (if (eq (str_len body) 0) "{}" body))
+      (do (let body (assoc "__body__" q))
+          (if (eq (str_len body) 0) "{}" body))))
+
+(defn mpv-request-path (q)
+  (if (mpv-typed-request? q)
+      (nth q 2)
+      (assoc "__request_path__" q)))
+
+(defn mpv-json-value-or (body key dflt)
+  (do (let raw (value_str (_json_get body key)))
+      (if (str_eq raw "null") dflt raw)))
+
+(defn mpv-path-tail (path prefix)
+  (if (ge (str_len path) (str_len prefix))
+      (substring path (str_len prefix) (str_len path))
+      ""))
+
+(defn mpv-idea-phase (status)
+  (if (str_eq status "validated")
+      "ice"
+      (if (str_eq status "partial") "water" "gas")))
+
+(defn mpv-side-effect-intents-json ()
+  (str_concat_all (list
+    "["
+    "{\"name\":\"cache-invalidation\",\"surface\":\"ideas/specs/translation-read-caches\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"parent-edge-repair\",\"surface\":\"idea-parent-child-graph\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"contributor-key-audit\",\"surface\":\"contributor_api_keys.last_used_at\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"idea-valuation-audit-ledger\",\"surface\":\"audit_ledger.VALUATION_CHANGE\",\"mode\":\"carrier-proven\"}"
+    ",{\"name\":\"rollback-receipt\",\"surface\":\"native-mutation-front-door\",\"mode\":\"intent-carried\"}"
+    "]")))
+
+(defn mpv-reversible-gate-json ()
+  (str_concat_all (list
+    "{\"default_route\":\"fanout-python\""
+    ",\"native_route\":\"X-Form-Native-Preview\""
+    ",\"ordinary_traffic_flip_allowed\":false"
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"rollback\":\"remove preview header or disable native route row\""
+    "}")))
+
+(defn mpv-trust-envelope-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"embodied-trust-preview\""
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"choice_success\":1"
+    ",\"silence\":\"fanout-default\""
+    ",\"protocol\":\"X-Form-Native-Preview\""
+    ",\"fail\":\"rollback-to-fanout\""
+    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"bma\":\"native-mutation-trust-envelope\""
+    ",\"prediction_error\":\"carried_as_residual\""
+    ",\"residual\":\"side-effects are named and held in the envelope while fanout remains default\""
+    ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
+    ",\"reversible_gate\":" (mpv-reversible-gate-json)
+    "}")))
+
+(defn mpv-preview-response (operation node-id sql body)
+  (respond 202
+    (str_concat_all (list
+      "{\"native_preview\":true"
+      ",\"route_binding\":\"kernel-http-header-gated\""
+      ",\"required_header\":\"X-Form-Native-Preview\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"executes\":false"
+      ",\"sql\":" (json_string sql)
+      ",\"request_body\":" (json_string body)
+      ",\"trust_envelope\":" (mpv-trust-envelope-json operation node-id)
+      ",\"runtime\":\"inline\"}"))))
+
+(defn mpg-public-gate-header () "X-Form-Native-Public-Gate")
+
+(defn mpg-rollback-receipt-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"route-local-rollback-receipt\""
+    ",\"receipt_id\":" (json_string (str_concat "public-gate-rollback:" (str_concat operation (str_concat ":" node-id))))
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"persistence\":\"proven-in-form-pg-fixture\""
+    ",\"proof\":\"form/scripts/native-mutation-public-gate-test.sh\""
+    "}")))
+
+(defn mpg-reversible-gate-json ()
+  (str_concat_all (list
+    "{\"default_route\":\"fanout-python\""
+    ",\"preview_route\":\"X-Form-Native-Preview\""
+    ",\"public_gate_route\":\"X-Form-Native-Public-Gate\""
+    ",\"public_gate_allowed\":true"
+    ",\"ordinary_traffic_flip_allowed\":false"
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+    "}")))
+
+(defn mpg-trust-envelope-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"embodied-trust-public-gate\""
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"choice_success\":1"
+    ",\"silence\":\"fanout-default\""
+    ",\"protocol\":\"X-Form-Native-Public-Gate\""
+    ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
+    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"bma\":\"native-mutation-public-gate\""
+    ",\"prediction_error\":\"carried_as_residual\""
+    ",\"residual\":\"public gate is header-gated and rollback-receipted while no-header traffic remains fanout\""
+    ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
+    ",\"reversible_gate\":" (mpg-reversible-gate-json)
+    "}")))
+
+(defn mpg-public-gate-response (operation node-id sql body)
+  (respond 202
+    (str_concat_all (list
+      "{\"native_public_gate\":true"
+      ",\"native_preview\":false"
+      ",\"route_binding\":\"kernel-http-public-rollback-gated\""
+      ",\"required_header\":\"X-Form-Native-Public-Gate\""
+      ",\"preview_header\":\"X-Form-Native-Preview\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"executes\":false"
+      ",\"route_local_gate_executes\":true"
+      ",\"db_execution\":\"proven-by-form-native-public-gate-live-fixture\""
+      ",\"sql\":" (json_string sql)
+      ",\"request_body\":" (json_string body)
+      ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
+      ",\"trust_envelope\":" (mpg-trust-envelope-json operation node-id)
+      ",\"runtime\":\"inline\"}"))))
+
+(defn route_ideas_create_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let id (mpv-json-value-or body "id" "idea:native-preview"))
+  (do (let name (mpv-json-value-or body "name" "Native preview idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "none"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-create-node-sql "rev-native-preview-create-idea" id "idea" name description phase body "kernel-router-preview" "form-native"))
+      (mpv-preview-response "create-idea" id sql body)))))))))
+
+(defn route_ideas_update_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let id (mpv-path-tail path "/api/ideas/"))
+  (do (let name (mpv-json-value-or body "name" "Native preview idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "partial"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-update-node-sql "rev-native-preview-update-idea" id name description phase body "[\"name\",\"description\",\"phase\",\"properties\"]" "kernel-router-preview" "form-native"))
+      (mpv-preview-response "update-idea" id sql body))))))))))
+
+(defn route_specs_create_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let spec-id (mpv-json-value-or body "spec_id" "native-preview-spec"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-create-node-sql "rev-native-preview-create-spec" node-id "spec" title summary "ice" body "kernel-router-preview" "form-native"))
+      (mpv-preview-response "create-spec" node-id sql body))))))))
+
+(defn route_specs_update_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-update-node-sql "rev-native-preview-update-spec" node-id title summary "ice" body "[\"title\",\"summary\",\"properties\"]" "kernel-router-preview" "form-native"))
+      (mpv-preview-response "update-spec" node-id sql body)))))))))
+
+(defn route_specs_delete_native_preview (q)
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let sql (mpv-delete-node-sql node-id))
+      (mpv-preview-response "delete-spec" node-id sql "{}"))))))
+
+(defn route_ideas_create_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let id (mpv-json-value-or body "id" "idea:native-public-gate"))
+  (do (let name (mpv-json-value-or body "name" "Native public gate idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "none"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-create-node-sql "rev-native-public-gate-create-idea" id "idea" name description phase body "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "create-idea" id sql body)))))))))
+
+(defn route_ideas_update_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let id (mpv-path-tail path "/api/ideas/"))
+  (do (let name (mpv-json-value-or body "name" "Native public gate idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "partial"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-update-node-sql "rev-native-public-gate-update-idea" id name description phase body "[\"name\",\"description\",\"phase\",\"properties\"]" "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "update-idea" id sql body))))))))))
+
+(defn route_specs_create_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let spec-id (mpv-json-value-or body "spec_id" "native-public-gate-spec"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-create-node-sql "rev-native-public-gate-create-spec" node-id "spec" title summary "ice" body "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "create-spec" node-id sql body))))))))
+
+(defn route_specs_update_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-update-node-sql "rev-native-public-gate-update-spec" node-id title summary "ice" body "[\"title\",\"summary\",\"properties\"]" "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "update-spec" node-id sql body)))))))))
+
+(defn route_specs_delete_native_public_gate (q)
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let sql (mpv-delete-node-sql node-id))
+      (mpg-public-gate-response "delete-spec" node-id sql "{}"))))))
+
+; ===========================================================================
+; /api/spec-registry/source-list
+;   native source-backed spec registry list for specs/INDEX.md. This is the
+;   read-only source sibling of /api/spec-registry: it parses the generated
+;   source index and emits SpecRegistryEntry-shaped rows without Python.
+; ===========================================================================
+
+(defn specs_index_text ()
+  (do (let local_text (read_file_slice "specs/INDEX.md" 0 500000))
+      (if (gt (str_len local_text) 0)
+          local_text
+          (read_file_slice "../../specs/INDEX.md" 0 500000))))
+
+(defn ssl-row-title-start (row_pos) (add row_pos (str_len "\n- [")))
+(defn ssl-row-title-end (text row_pos) (str_find text "](" row_pos))
+(defn ssl-row-slug-start (text row_pos) (add (ssl-row-title-end text row_pos) 2))
+(defn ssl-row-slug-end (text row_pos) (str_find text ".md)" (ssl-row-slug-start text row_pos)))
+(defn ssl-row-summary-start (text row_pos) (add (ssl-row-slug-end text row_pos) (str_len ".md) — ")))
+(defn ssl-row-summary-end (text row_pos) (isp-find-or-end text "\n" (ssl-row-summary-start text row_pos)))
+
+(defn ssl-row-title (text row_pos)
+  (substring text (ssl-row-title-start row_pos) (ssl-row-title-end text row_pos)))
+
+(defn ssl-row-slug (text row_pos)
+  (substring text (ssl-row-slug-start text row_pos) (ssl-row-slug-end text row_pos)))
+
+(defn ssl-row-summary (text row_pos)
+  (substring text (ssl-row-summary-start text row_pos) (ssl-row-summary-end text row_pos)))
+
+(defn ssl-content-path (slug)
+  (str_concat (str_concat "specs/" slug) ".md"))
+
+(defn ssl-entry-json (text row_pos)
+  (do (let spec_id (ssl-row-slug text row_pos))
+  (do (let title (ssl-row-title text row_pos))
+  (do (let summary (ssl-row-summary text row_pos))
+      (str_concat_all (list
+        "{\"spec_id\":" (json_string spec_id)
+        ",\"title\":" (json_string title)
+        ",\"summary\":" (json_string summary)
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"cost_gap\":0.0"
+        ",\"estimated_roi\":0.0"
+        ",\"actual_roi\":0.0"
+        ",\"idea_id\":null"
+        ",\"process_summary\":null"
+        ",\"pseudocode_summary\":null"
+        ",\"implementation_summary\":null"
+        ",\"created_by_contributor_id\":null"
+        ",\"updated_by_contributor_id\":null"
+        ",\"created_at\":\"2026-06-08T00:00:00Z\""
+        ",\"updated_at\":\"2026-06-08T00:00:00Z\""
+        ",\"content_path\":" (json_string (ssl-content-path spec_id))
+        ",\"content_hash\":null"
+        ",\"workspace_id\":\"coherence-network\""
+        "}"))))))
+
+(defn ssl-entries-json-from (text start remaining)
+  (if (eq remaining 0)
+      ""
+      (do (let row_pos (str_find text "\n- [" start))
+          (if (eq row_pos -1)
+              ""
+              (if (eq remaining 1)
+                  (ssl-entry-json text row_pos)
+                  (str_concat
+                    (str_concat (ssl-entry-json text row_pos) ",")
+                    (ssl-entries-json-from text (add row_pos 1) (sub remaining 1))))))))
+
+(defn route_specs_source_list (q)
+  (do (let text (specs_index_text))
+  (do (let total (str_count text "\n- ["))
+      (str_concat
+        (str_concat "[" (ssl-entries-json-from text 0 total))
+        "]"))))
+
+(defn route_health (q) "ok")
+
+; ===========================================================================
 ; Source-language route class surface lowered to KernelHTTPRoute.
 ; ===========================================================================
 section [form.route] {
@@ -1545,4 +2274,20 @@ section [form.route] {
     (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
     (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
-    (list "/api/utils/concept_match_score"     route_concept_match_score)))
+    (list "/api/utils/concept_match_score"     route_concept_match_score)
+    (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
+    (list "/api/ideas/router-structure"    route_ideas_router_structure)
+    (list "/api/ideas/source-index"        route_ideas_source_index)
+    (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
+    (list "/api/ideas/graph-projection"    route_ideas_graph_projection)
+    (list "/api/spec-registry/source-list" route_specs_source_list)
+    (kh-route "ideas-create-native-public-gate" "POST" "/api/ideas" 1 "route_ideas_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "ideas-update-native-public-gate" "PATCH" "/api/ideas/*" 1 "route_ideas_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-create-native-public-gate" "POST" "/api/spec-registry" 1 "route_specs_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "specs-update-native-public-gate" "PATCH" "/api/spec-registry/*" 1 "route_specs_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-delete-native-public-gate" "DELETE" "/api/spec-registry/*" 1 "route_specs_delete_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "ideas-create-native-preview" "POST" "/api/ideas" 0 "route_ideas_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "specs-update-native-preview" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)))

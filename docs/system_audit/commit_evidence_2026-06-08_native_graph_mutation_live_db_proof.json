@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Prove Form-native application graph mutation wrappers execute against a rollback-safe live PostgreSQL fixture before any public mutation flip.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_live_db_trial.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_graph_mutation_live_db_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/application-graph-live-db.fk",
+    "form/scripts/application-graph-live-db-test.sh",
+    "specs/INDEX.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form/scripts/application-graph-live-db-test.sh",
+      "cd api && python3 -m pytest -q tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live-db-proof.md --file specs/native-mutation-ab-observation-gate.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "form/scripts/application-graph-live-db-test.sh self-provisioned a throwaway local Postgres and ran form/form-stdlib/integration/application-graph-live-db.fk through the Rust kernel with the Form-native application graph mutation wrappers. Verdict 1111111 proved connect, fixture schema creation, agn-create-node with graph_node_revisions readback, agn-update-node with next per-node revision readback, agn-delete-node with graph_edges cleanup readback, fixture table cleanup, and connection close.",
+    "known_limitations": [
+      {
+        "scope": "public mutation routing",
+        "observed": "No ordinary public POST/PATCH/DELETE traffic moved. The live DB trial runs in a throwaway database only."
+      },
+      {
+        "scope": "route response projection",
+        "observed": "The proof verifies application graph table effects. It does not yet project results into IdeaWithScore or SpecRegistryEntry."
+      },
+      {
+        "scope": "route side effects",
+        "observed": "Cache invalidation, parent/edge repair beyond deleted-node edge cleanup, resonance re-attunement, and contributor-key audit updates remain follow-up proof."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of the native graph mutation live DB proof commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. This slice intentionally avoids the production application database and keeps the public front-door flip blocked."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-native application graph mutation wrappers now have live PostgreSQL execution proof in a rollback-safe fixture database. The public route still fans out to FastAPI by default.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "form/scripts/application-graph-live-db-test.sh -> verdict: 1111111 and application graph live DB PASS",
+      "agn-create-node -> graph_nodes row plus graph_node_revisions revision 1 read back",
+      "agn-update-node -> graph_nodes update plus graph_node_revisions count 2 read back",
+      "agn-delete-node -> target graph_nodes row removed and connected graph_edges row removed",
+      "fixture tables dropped before pg_close",
+      "cd api && python3 -m pytest -q tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> 27 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Live DB execution proof is complete for the Form-native application graph wrappers; public mutable front-door execution still needs route response projection parity, cache/side-effect proof, contributor-key audit proof, and a reversible public flip gate."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-graph-mutation-live-db-proof",
+    "native-mutation-response-projection",
+    "native-mutation-side-effects",
+    "native-mutation-public-flip-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/integration/application-graph-live-db.fk",
+    "form/scripts/application-graph-live-db-test.sh",
+    "api/tests/test_application_graph_live_db_trial.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-graph-mutation-live-db-proof.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_live_db_trial.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_graph_mutation_live_db_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/application-graph-live-db.fk",
+    "form/scripts/application-graph-live-db-test.sh",
+    "specs/INDEX.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md"
+  ],
+  "change_intent": "runtime_feature"
+}

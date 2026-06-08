@@ -1,0 +1,33 @@
+; tests/graph-node-port-band.fk -- graph_nodes over the storage port.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk
+;
+; Proves the graph-node port over two carriers with one carrier-agnostic test:
+; memory for pure logic, file for durable native storage. This is the bridge the
+; ideas router can consume before a Postgres carrier joins the same shape.
+;
+; Band verdict: 11111 when both carriers fully pass and file persistence holds.
+;   memory graph-node contract pass       -> 1
+;   file graph-node contract pass         -> 10
+;   memory and file verdicts agree        -> 100
+;   reopened file keeps typed count       -> 1000
+;   reopened file keeps typed node list   -> 10000
+
+(do
+    (let dir "/tmp/graph-node-port-band.d")
+    (fs_rmdir dir)
+
+    (let mem-verdict (gn-test (carrier-memory) ""))
+    (let file-verdict (gn-test (carrier-file) dir))
+
+    (let mem-ok (if (eq mem-verdict 1111111) 1 0))
+    (let file-ok (if (eq file-verdict 1111111) 10 0))
+    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))
+
+    (let cf (carrier-file))
+    (let reopened (storage-open cf dir))
+    (let count-ok (if (eq (gn-count-nodes cf reopened "idea") 3) 1000 0))
+    (let list-ok (if (eq (len (gn-list-nodes cf reopened "idea")) 3) 10000 0))
+
+    (fs_rmdir dir)
+    (sum (list mem-ok file-ok agree-ok count-ok list-ok)))

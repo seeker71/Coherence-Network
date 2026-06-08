@@ -1,0 +1,8 @@
+; native-mutation-side-effects-band.fk
+;
+; Band verdict: 11111 when durable side-effect SQL exists for receipts,
+; cache-invalidation receipt, parent-edge repair, contributor-key audit, and
+; rollback receipt.
+
+(do
+    (nms-side-effects-sql-test))

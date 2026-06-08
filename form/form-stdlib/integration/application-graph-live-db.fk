@@ -1,0 +1,135 @@
+; integration/application-graph-live-db.fk -- live Postgres proof for mutable
+; application graph writes.
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
+;
+; NOT a three-way value band. This executes against a throwaway Postgres through
+; the Rust kernel's pg_* carrier. Driven by
+; form/scripts/application-graph-live-db-test.sh, which injects PG_DSN below.
+;
+; Verdict: 1111111 when every step holds against live Postgres:
+;   connect                                -> 1
+;   create rollback-safe fixture tables     -> 10
+;   create node + revision, read back        -> 100
+;   update node + next revision, read back   -> 1000
+;   delete node + edge cleanup, read back    -> 10000
+;   drop fixture tables                      -> 100000
+;   close connection                         -> 1000000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+
+    (let conn (pg_connect DSN))
+    (let connect-ok (if (ge conn 0) 1 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+
+    (let nodes-ddl
+        "CREATE TABLE graph_nodes (
+            id VARCHAR(255) PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            phase VARCHAR(20) NOT NULL DEFAULT 'water',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let revisions-ddl
+        "CREATE TABLE graph_node_revisions (
+            id VARCHAR(255) PRIMARY KEY,
+            node_id VARCHAR(255) NOT NULL,
+            revision_number INTEGER NOT NULL,
+            captured_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            source VARCHAR(32) NOT NULL DEFAULT 'api',
+            author VARCHAR(255) NOT NULL DEFAULT '',
+            fields_changed JSONB NOT NULL DEFAULT '[]'::jsonb,
+            snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+            CONSTRAINT uq_node_revisions_node_rev UNIQUE (node_id, revision_number)
+        )")
+    (let edges-ddl
+        "CREATE TABLE graph_edges (
+            id VARCHAR(255) PRIMARY KEY,
+            from_id VARCHAR(255) NOT NULL,
+            to_id VARCHAR(255) NOT NULL,
+            type VARCHAR(100) NOT NULL,
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            strength DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+            created_by VARCHAR(255) NOT NULL DEFAULT 'system',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+
+    (let schema-ok (if (eq (agn-and3
+        (if (ge (pg_exec conn nodes-ddl) 0) 1 0)
+        (if (ge (pg_exec conn revisions-ddl) 0) 1 0)
+        (if (ge (pg_exec conn edges-ddl) 0) 1 0)) 1) 10 0))
+
+    (let create-conn (agn-create-node
+        conn
+        "rev-live-create-idea"
+        "idea-live-native"
+        "idea"
+        "Live Native Idea"
+        "Created through Form pg_exec"
+        "gas"
+        "{\"stage\":\"none\",\"workspace_id\":\"coherence-network\"}"
+        "kernel-live-trial"
+        "form-native"))
+    (let idea-row (pg_query conn "SELECT type || ':' || name || ':' || phase || ':' || (properties->>'stage') FROM graph_nodes WHERE id = 'idea-live-native'"))
+    (let idea-rev (pg_query conn "SELECT revision_number::text || ':' || source || ':' || author || ':' || (fields_changed->>0) || ':' || (snapshot->>'name') FROM graph_node_revisions WHERE node_id = 'idea-live-native'"))
+    (let create-ok (if (eq (agn-and3
+        (if (eq create-conn conn) 1 0)
+        (if (str_eq idea-row "idea:Live Native Idea:gas:none") 1 0)
+        (if (str_eq idea-rev "1:kernel-live-trial:form-native:__create__:Live Native Idea") 1 0)) 1) 100 0))
+
+    (agn-create-node
+        conn
+        "rev-live-create-spec"
+        "spec-live-native"
+        "spec"
+        "Live Native Spec"
+        "Created through Form pg_exec"
+        "ice"
+        "{\"status\":\"draft\",\"workspace_id\":\"coherence-network\"}"
+        "kernel-live-trial"
+        "form-native")
+    (let update-conn (agn-update-node
+        conn
+        "rev-live-update-spec"
+        "spec-live-native"
+        "Live Native Spec Updated"
+        "Updated through Form pg_exec"
+        "water"
+        "{\"status\":\"validated\"}"
+        "[\"title\",\"summary\",\"phase\",\"properties.status\"]"
+        "kernel-live-trial"
+        "form-native"))
+    (let spec-row (pg_query conn "SELECT name || ':' || phase || ':' || (properties->>'status') FROM graph_nodes WHERE id = 'spec-live-native'"))
+    (let spec-rev-count (pg_query conn "SELECT count(*) FROM graph_node_revisions WHERE node_id = 'spec-live-native'"))
+    (let spec-last-rev (pg_query conn "SELECT revision_number::text || ':' || (fields_changed->>0) || ':' || (snapshot->>'name') FROM graph_node_revisions WHERE node_id = 'spec-live-native' ORDER BY revision_number DESC LIMIT 1"))
+    (let update-ok (if (eq (agn-and4
+        (if (eq update-conn conn) 1 0)
+        (if (str_eq spec-row "Live Native Spec Updated:water:validated") 1 0)
+        (if (str_eq spec-rev-count "2") 1 0)
+        (if (str_eq spec-last-rev "2:title:Live Native Spec Updated") 1 0)) 1) 1000 0))
+
+    (pg_exec conn "INSERT INTO graph_edges (id, from_id, to_id, type, properties, strength, created_by) VALUES ('edge-live-native', 'spec-live-native', 'idea-live-native', 'implements', '{\"proof\":\"live-db\"}'::jsonb, 1.0, 'form-native')")
+    (let delete-conn (agn-delete-node conn "spec-live-native"))
+    (let spec-after-delete (pg_query conn "SELECT count(*) FROM graph_nodes WHERE id = 'spec-live-native'"))
+    (let edge-after-delete (pg_query conn "SELECT count(*) FROM graph_edges WHERE id = 'edge-live-native'"))
+    (let delete-ok (if (eq (agn-and3
+        (if (eq delete-conn conn) 1 0)
+        (if (str_eq spec-after-delete "0") 1 0)
+        (if (str_eq edge-after-delete "0") 1 0)) 1) 10000 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (let cleanup-read (pg_query conn "SELECT COALESCE(to_regclass('public.graph_nodes')::text, '')"))
+    (let cleanup-ok (if (str_eq cleanup-read "") 100000 0))
+
+    (let close-ok (if (eq (pg_close conn) 0) 1000000 0))
+
+    (sum (list connect-ok schema-ok create-ok update-ok delete-ok cleanup-ok close-ok)))
