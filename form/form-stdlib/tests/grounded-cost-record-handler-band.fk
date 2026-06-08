@@ -1,0 +1,90 @@
+; grounded-cost-record-handler-band.fk
+;
+; Sibling-portable BML/Form handler core for /api/utils/grounded_cost.
+;
+; The legacy Python-adapter recipe for this endpoint uses _dict_new/_get/_iter,
+; which is a Rust+TS adapter shape. This file writes the same handler body in
+; the portable record/list vocabulary: record_new, record_get, head/tail
+; recursion, and numeric add/mul. That is the shape a native HTTP handler should
+; move toward when the endpoint is not carried by a host-language bridge.
+;
+; Frozen sample:
+;   specs   [{actual_cost 3.5, estimated_cost 4.25},
+;            {actual_cost 1.25, estimated_cost 2.5}]
+;   commits [{change_files 3, lines_added 100}]
+;   links   [{estimated_cost 5.25}, {estimated_cost 1.5}]
+;   runtime_cost 2.25
+; Result:
+;   [4.75, 6.75, 2.25, 0.75, 6.75, 7.75]
+
+(do
+    (let input_blueprint (make_nodeid 1 5 4 1))
+
+    (let specs (list
+        (record_new input_blueprint
+            "actual_cost" 3.5
+            "estimated_cost" 4.25)
+        (record_new input_blueprint
+            "actual_cost" 1.25
+            "estimated_cost" 2.5)))
+
+    (let commits (list
+        (record_new input_blueprint
+            "change_files" 3
+            "lines_added" 100)))
+
+    (let links (list
+        (record_new input_blueprint "estimated_cost" 5.25)
+        (record_new input_blueprint "estimated_cost" 1.5)))
+
+    (let runtime_cost 2.25)
+
+    (defn min2 (a b)
+        (if (gt a b) b a))
+
+    (defn max2 (a b)
+        (if (gt a b) a b))
+
+    (defn sum_record_field (xs field acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_record_field
+                (tail xs)
+                field
+                (add acc (record_get (head xs) field)))))
+
+    (defn commit_cost (c)
+        (do
+            (let files (record_get c "change_files"))
+            (let lines (record_get c "lines_added"))
+            (let base (add (add 0.1 (mul files 0.15)) (mul lines 0.002)))
+            (max2 0.05 (min2 10.0 base))))
+
+    (defn sum_commit_cost (xs acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_commit_cost
+                (tail xs)
+                (add acc (commit_cost (head xs))))))
+
+    (defn grounded_cost (specs commits links runtime_cost)
+        (do
+            (let spec_actual_cost_sum
+                (sum_record_field specs "actual_cost" 0.0))
+            (let spec_estimated_cost_sum
+                (sum_record_field specs "estimated_cost" 0.0))
+            (let commit_cost_sum
+                (sum_commit_cost commits 0.0))
+            (let lineage_estimated_cost
+                (sum_record_field links "estimated_cost" 0.0))
+            (let computed_actual_cost
+                (add (add spec_actual_cost_sum runtime_cost) commit_cost_sum))
+            (list
+                spec_actual_cost_sum
+                spec_estimated_cost_sum
+                runtime_cost
+                commit_cost_sum
+                lineage_estimated_cost
+                computed_actual_cost)))
+
+    (grounded_cost specs commits links runtime_cost))

@@ -1,0 +1,6 @@
+; audit-evidence-index-cache.fk - ensure the dynamic audit evidence index .fkb.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-index-cache.fk
+
+(aec-ensure-index-cache ".." (aec-index-cache-path))

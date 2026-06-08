@@ -1,0 +1,132 @@
+; edge-categories.fk - Form-native edge reputation and reflex-pain cells.
+;
+; This is the source shape for the wellness edge-category observer.
+; The Python scanner is a bridge over repository files; the category,
+; cluster, and pain shapes live here so the desired carrier is Form.
+
+(do
+    (let EC-TAG-CATEGORY 65001)
+    (let EC-TAG-CLUSTER 65002)
+    (let EC-TAG-REFLEX-PAIN 65003)
+
+    (defn ec-tagged? (value tag arity)
+        (if (eq (len value) arity) (eq (nth value 0) tag) false))
+
+    ; A repeated relation compressed by category.
+    (defn ec-category (name source-domain target-domain edge-reputation source-count target-count recipe felt)
+        (list EC-TAG-CATEGORY name source-domain target-domain edge-reputation source-count target-count recipe felt))
+    (defn ec-category? (category) (ec-tagged? category EC-TAG-CATEGORY 9))
+    (defn ec-category-name (category) (nth category 1))
+    (defn ec-category-source-domain (category) (nth category 2))
+    (defn ec-category-target-domain (category) (nth category 3))
+    (defn ec-category-edge-reputation (category) (nth category 4))
+    (defn ec-category-source-count (category) (nth category 5))
+    (defn ec-category-target-count (category) (nth category 6))
+    (defn ec-category-recipe (category) (nth category 7))
+    (defn ec-category-felt (category) (nth category 8))
+
+    ; A named hot/cool surface inside a category: inbound hub or source fan-out.
+    (defn ec-cluster (name category mode center-domain center edge-reputation source-count target-count temperature felt examples)
+        (list EC-TAG-CLUSTER name category mode center-domain center edge-reputation source-count target-count temperature felt examples))
+    (defn ec-cluster? (cluster) (ec-tagged? cluster EC-TAG-CLUSTER 12))
+    (defn ec-cluster-name (cluster) (nth cluster 1))
+    (defn ec-cluster-category (cluster) (nth cluster 2))
+    (defn ec-cluster-mode (cluster) (nth cluster 3))
+    (defn ec-cluster-center-domain (cluster) (nth cluster 4))
+    (defn ec-cluster-center (cluster) (nth cluster 5))
+    (defn ec-cluster-edge-reputation (cluster) (nth cluster 6))
+    (defn ec-cluster-temperature (cluster) (nth cluster 9))
+    (defn ec-cluster-felt (cluster) (nth cluster 10))
+    (defn ec-cluster-examples (cluster) (nth cluster 11))
+
+    (defn ec-temperature (edge-reputation)
+        (if (ge edge-reputation 20) "hot"
+            (if (ge edge-reputation 5) "warm" "cool")))
+
+    ; --- Form-native concept edge sensing ---------------------------
+    ;
+    ; These recipes release the hottest edge-category slice from
+    ; Python-only observation. They read real concept markdown through
+    ; concept-corpus.fk and return the same category/cluster shapes.
+    ;
+    ; Prelude requirement for these functions:
+    ;   form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/concept-corpus.fk
+
+    (defn ec-concept-body-mentions? (source-id target-id)
+        (if (str_eq source-id target-id) false
+            (ge (str_find (concept-body (concept-load source-id)) target-id 0) 0)))
+
+    (defn ec-concept-inbound-count-loop (source-ids target-id acc)
+        (if (eq (len source-ids) 0) acc
+            (ec-concept-inbound-count-loop
+                (tail source-ids)
+                target-id
+                (if (ec-concept-body-mentions? (head source-ids) target-id)
+                    (add acc 1)
+                    acc))))
+
+    (defn ec-concept-inbound-count (source-ids target-id)
+        (ec-concept-inbound-count-loop source-ids target-id 0))
+
+    (defn ec-concept-inbound-category (source-ids target-id)
+        (do
+            (let count (ec-concept-inbound-count source-ids target-id))
+            (ec-category
+                "concept_contains_concept"
+                "concept"
+                "concept"
+                count
+                count
+                1
+                "R_Compose.CROSS_REF(body)"
+                "heart/meaning")))
+
+    (defn ec-concept-cross-ref-fanout-cluster (source-id)
+        (do
+            (let refs (concept-cross-refs (concept-load source-id)))
+            (let count (len refs))
+            (ec-cluster
+                (str_concat "concept:" (str_concat source-id ":concept_contains_concept:fanout"))
+                "concept_contains_concept"
+                "fanout"
+                "concept"
+                source-id
+                count
+                1
+                count
+                (ec-temperature count)
+                "heart/meaning"
+                refs)))
+
+    ; Reflex pain is the cost of repeating a carrier choice after the body
+    ; already knows the desired carrier. Not-surprised Python-for-Form is hot.
+    (defn ec-reflex-pain-score (carrier desired-carrier surprise-state)
+        (if (str_eq carrier desired-carrier) 0
+            (if (and (str_eq carrier "python") (str_eq desired-carrier "form"))
+                (if (str_eq surprise-state "not-surprised") 100 70)
+                20)))
+
+    (defn ec-reflex-pain-temperature (score)
+        (if (ge score 80) "hot"
+            (if (ge score 40) "warm" "cool")))
+
+    (defn ec-reflex-pain (carrier desired-carrier reflex-name surprise-state edge-category)
+        (do
+            (let score (ec-reflex-pain-score carrier desired-carrier surprise-state))
+            (list EC-TAG-REFLEX-PAIN carrier desired-carrier reflex-name surprise-state edge-category score (ec-reflex-pain-temperature score))))
+
+    (defn ec-reflex-pain? (pain) (ec-tagged? pain EC-TAG-REFLEX-PAIN 8))
+    (defn ec-reflex-pain-carrier (pain) (nth pain 1))
+    (defn ec-reflex-pain-desired-carrier (pain) (nth pain 2))
+    (defn ec-reflex-pain-reflex-name (pain) (nth pain 3))
+    (defn ec-reflex-pain-surprise-state (pain) (nth pain 4))
+    (defn ec-reflex-pain-edge-category (pain) (nth pain 5))
+    (defn ec-reflex-pain-score-value (pain) (nth pain 6))
+    (defn ec-reflex-pain-temperature-value (pain) (nth pain 7))
+    (defn ec-reflex-wants-release? (pain) (gt (ec-reflex-pain-score-value pain) 0))
+    (defn ec-reflex-release-target (pain)
+        (if (ec-reflex-wants-release? pain)
+            "form-substrate-cell"
+            "current-carrier"))
+
+    0)

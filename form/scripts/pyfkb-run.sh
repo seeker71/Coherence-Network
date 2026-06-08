@@ -7,12 +7,12 @@
 # The pipeline is Form-on-kernel, NO Python runtime in the path:
 #   .py  →  python-bmf.fk scanner+grammar  →  python-bmf-lift.fk (→ PY-BMF-*
 #           recipes)  →  python-bmf-eval.fk (walk to a value)
-# driven by a native kernel binary (Go by default).
+# driven by a native kernel binary (Rust by default for the current rotation).
 #
 # Usage:
 #   pyfkb-run.sh <file.py>            # print the Form-native result
 #   pyfkb-run.sh --parity <file.py>   # run Form-native AND CPython, diff
-#   pyfkb-run.sh --kernel rust <file.py>
+#   pyfkb-run.sh --kernel go <file.py>
 #
 # Exit code: 0 on success (and, with --parity, on match); 1 on mismatch/error.
 #
@@ -22,7 +22,7 @@
 # validate.sh does.
 set -euo pipefail
 
-KERNEL="go"
+KERNEL="rust"
 PARITY=0
 while [[ "${1:-}" == --* ]]; do
   case "$1" in
@@ -32,12 +32,13 @@ while [[ "${1:-}" == --* ]]; do
   esac
 done
 
-PY="${1:?usage: pyfkb-run.sh [--parity] [--kernel go|rust] <file.py>}"
+PY="${1:?usage: pyfkb-run.sh [--parity] [--kernel rust|go] <file.py>}"
 FORMDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$FORMDIR"
 
 GO_BIN="form-kernel-go/bin-go"
 RUST_BIN="form-kernel-rust/target/release/form-kernel-rust"
+COMPILER_BIN="$RUST_BIN"
 
 # The prelude chain (matches python-bmf-lift-band.fk's header).
 PRELUDES=(
@@ -65,7 +66,7 @@ for src in "${PRELUDES[@]}"; do
     out="$SRCDIR/$safe"
     drv="$SRCDIR/compile-$safe.fk"
     printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$drv"
-    "$GO_BIN" form-stdlib/json.fk form-stdlib/cache.fk \
+    "$COMPILER_BIN" form-stdlib/json.fk form-stdlib/cache.fk \
       form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk \
       "$drv" >/dev/null
     PREPARED+=("$out")

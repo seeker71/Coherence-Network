@@ -1,4 +1,4 @@
-# Self-hosted Form — what's already in Form, what's still Python
+# Self-hosted Form — what's already in Form, what's still bridge/bootstrap
 
 Form is a substrate-native DSL. The honest question — *"can the parser, interpreter and runtime all live in Form itself?"* — has a layered answer. This page maps where each layer currently lives.
 
@@ -24,9 +24,15 @@ defn ev(n) = match n.category {
 }
 ```
 
-The `_` arm reads through `.value` — the substrate's single source of truth for trivial-leaf encoding (`api/app/services/substrate/form_runtime.py` `_trivial_value`). Form and Python read the same decoder; a change to integer encoding moves both engines at once. Composites have no atomic value, so `.value` on a composite raises — the engine refuses to silently fake an answer for an unknown verb.
+The `_` arm reads through `.value` — the substrate's single source of truth for
+trivial-leaf encoding. Form and the current bridge runtime read the same decoder;
+a change to integer encoding moves both engines at once. Composites have no
+atomic value, so `.value` on a composite raises — the engine refuses to silently
+fake an answer for an unknown verb.
 
-It produces identical answers to the Python engine across MATH (×5), COMPARE (×6), LOGIC (×3), COND (×2), and trivial INTEGER / BOOL / STRING decode. Two engines, identical answer, same substrate.
+It produces identical answers to the bootstrap engine across MATH (×5), COMPARE
+(×6), LOGIC (×3), COND (×2), and trivial INTEGER / BOOL / STRING decode. Two
+engines, identical answer, same substrate.
 
 Extending to STATE, CHOICE, METHOD, etc. is adding one arm here and one expected literal to `_EXPECTED_LITERALS` — mechanical, not conceptual.
 
@@ -38,21 +44,34 @@ Extending to STATE, CHOICE, METHOD, etc. is adding one arm here and one expected
 
 `Build`, `CaptureRef`, `Const` templates compose into Recipes that the runtime executes. The "what does a keyword build" lives in the substrate.
 
-## What is still Python
+## What is still bridge/bootstrap
 
 ### The bootstrap parser
 
-`api/app/services/substrate/form.py` — `tokenize`, `tokenize_iter`, `tokenize_chunks`, `Parser`, `parse`, `parse_chunks`. Regex-driven lexer, recursive-descent parser, builds an AST of dataclasses (`BinOp`, `IfExpr`, `DoBlock`, …). This is the bootstrap — the thing that turns surface text into a Recipe tree the Form-level interpreter can then walk.
+`api/app/services/substrate/form.py` — `tokenize`, `tokenize_iter`,
+`tokenize_chunks`, `Parser`, `parse`, `parse_chunks`. Regex-driven lexer,
+recursive-descent parser, builds an AST of dataclasses (`BinOp`, `IfExpr`,
+`DoBlock`, …). This is the bootstrap bridge — the thing that turns surface text
+into a Recipe tree the Form-level interpreter can then walk.
 
 A Form-level parser is reachable but unbuilt: Form would need string-manipulation primitives and a `Token` cell shape. The interpreter above already proves it's a tractable next move, just not present.
 
 ### The substrate-mutation primitives
 
-`make_cell`, `define_method`, `register_form_keyword`, the ingest paths — these write to the SQL backend. They're Python because the storage is Python (SQLAlchemy ORM). A Form-level mutation API would either bind through Python or grow a Form-native persistence layer.
+`make_cell`, `define_method`, `register_form_keyword`, the ingest paths — these
+currently write through the compatibility service's SQLAlchemy carrier. That is
+bridge tissue, not the ownership model. Form-native persistence already exists
+for `.fkb` cell round-trips; the remaining work is the DB-backed storage port and
+mutation API as Form-visible cells.
 
 ### Leaf operations
 
-Arithmetic, comparison, conditional dispatch at the leaves — `a + b`, `a == b`, `if c then … else …`. The Form interpreter recurses *through* these; the trivials themselves bottom out in Python integer ops. This is the floor any self-hosted language has: at some level the operations are the host's operations.
+Arithmetic, comparison, conditional dispatch at the leaves — `a + b`, `a == b`,
+`if c then … else …`. The Form interpreter recurses *through* these; the
+trivials themselves bottom out in host primitives. In the bridge engine that host
+is Python; in sibling kernels it is Go/Rust/TypeScript. This is the floor any
+self-hosted language has: at some level the operations are the carrier's
+operations.
 
 ## The map
 
@@ -61,15 +80,18 @@ Arithmetic, comparison, conditional dispatch at the leaves — `a + b`, `a == b`
 | **Interpreter** (recipe-walking) | Form (on-disk `form-engine.form`; MATH / COMPARE / LOGIC / COND / trivial decode proven; drift-sentinel keeps literals in sync) | Add one match arm per new category, one entry in `_EXPECTED_LITERALS` |
 | **Keyword grammar** | Form (substrate-resident via `register_form_keyword`) | Already there |
 | **Pattern/builder templates** | Form (substrate-resident) | Already there |
-| **Bootstrap parser** | Python (`tokenize` + recursive descent) | Form-level parser needs string primitives + Token cell shape |
-| **Substrate mutation** | Python (SQLAlchemy backend) | Form-native storage layer, or Python-bound writes |
-| **Leaf arithmetic/comparison** | Python (integer ops on `node.instance`) | Inherent floor — any language bottoms out in host ops |
+| **Bootstrap parser** | Compatibility bridge (`tokenize` + recursive descent) | Form-level parser needs string primitives + Token cell shape |
+| **Substrate mutation** | Compatibility service carrier (SQLAlchemy) | Form-native DB storage port and mutation cells |
+| **Leaf arithmetic/comparison** | Host primitives (`node.instance`) | Inherent floor — each sibling kernel bottoms out in its carrier ops |
 
 ## Why this matters
 
 Self-hosting isn't a single yes/no. The shape that matters is: **can the language describe its own semantics in itself?** The demo answers yes for the interpreter layer. The parser layer is the same answer waiting for an afternoon of work. The persistence layer is a substrate-design choice, not a language limitation.
 
-The bootstrap parser staying Python isn't a confession — it's a deliberate floor. Even the BML/BMF self-hosting lineage (master thesis 2000) bottomed out somewhere; the discipline is *as much as possible in the language, and the rest is honest about being the floor*.
+The remaining bridge parser is not the destination — it is a named floor. Even
+the BML/BMF self-hosting lineage (master thesis 2000) bottomed out somewhere;
+the discipline is *as much as possible in the language, and the rest is honest
+about being the floor*.
 
 ## Run the demo
 
@@ -77,4 +99,8 @@ The bootstrap parser staying Python isn't a confession — it's a deliberate flo
 cd api && python -m pytest tests/test_substrate_form_self_hosted.py -v
 ```
 
-Twenty tests, all green: smoke tests per dispatch arm, a drift sentinel that asserts every NodeID literal in `form-engine.form` matches a known Python enum, and property-based parity that runs random expressions through both engines. Two engines, identical answer, same substrate — that's the proof, and it's now armored against silent rename drift.
+Twenty tests, all green: smoke tests per dispatch arm, a drift sentinel that
+asserts every NodeID literal in `form-engine.form` matches the bootstrap enum,
+and property-based parity that runs random expressions through both engines. Two
+engines, identical answer, same substrate — that's the proof, and it's now
+armored against silent rename drift.

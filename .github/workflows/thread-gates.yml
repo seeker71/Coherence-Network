@@ -142,6 +142,47 @@ jobs:
             --fail-on-regression
           cat maintainability_audit_report.json
 
+      - name: Build Rust Form kernel
+        if: steps.changed_surfaces.outputs.api == 'true'
+        run: |
+          cd form/form-kernel-rust
+          cargo build --release
+
+      - name: Smoke native Rust HTTP kernel
+        if: steps.changed_surfaces.outputs.api == 'true'
+        run: |
+          cd form/form-kernel-rust
+          server_log="$(mktemp)"
+          ./target/release/form-kernel-rust serve \
+            --port 19108 \
+            --routes ../../deploy/front-door/api.bml \
+            --stdlib ../form-stdlib >"$server_log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS \
+              -D /tmp/form-kernel-health.headers \
+              http://127.0.0.1:19108/api/health \
+              -o /tmp/form-kernel-health.json 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          if [ ! -s /tmp/form-kernel-health.json ]; then
+            cat "$server_log"
+            exit 1
+          fi
+          cat /tmp/form-kernel-health.headers
+          cat /tmp/form-kernel-health.json
+          grep -q "X-Form-Router: native-kernel" /tmp/form-kernel-health.headers
+          grep -q '"kernel_runtime":"form-kernel-rust"' /tmp/form-kernel-health.json
+
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |

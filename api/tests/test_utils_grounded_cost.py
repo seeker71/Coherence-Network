@@ -5,13 +5,13 @@ idea's ALREADY-FILTERED records and folds the grounded cost aggregates: the
 spec actual/estimated cost sums, the per-commit clamped commit_cost_sum
 (max(0.05, min(10.0, 0.10 + files*0.15 + lines*0.002)) per commit — the
 _estimate_commit_cost_sum formula EXACTLY), the lineage estimated-cost sum, and
-the computed_actual_cost composition. FILTERING the six collections by idea_id is
-cheap host-side collection-narrowing (the host already does it); the reduction is
-the kernel computation.
+the computed_actual_cost composition. Filtering the six collections by idea_id is
+currently resolved before dispatch; the reduction is already kernel-native.
 
 Three-way parity of the recipe body (CPython, kernel-bmf, Rust) is the
 parity_suite gate; these tests verify the route is wired, returns the six
-outputs, honors the commit clamp at both bounds, and matches the Python fallback.
+outputs, honors the commit clamp at both bounds, and matches the documented
+recipe anchors.
 """
 from __future__ import annotations
 
@@ -19,8 +19,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import _grounded_cost_py
-
 BASE = "http://test"
 
 
@@ -54,11 +52,11 @@ class TestGroundedCostEndpoint:
         assert data["spec_count_in"] == 2
         assert data["commit_count_in"] == 1
         assert data["lineage_count_in"] == 2
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
-    async def test_distinct_records_match_fallback(self, client: AsyncClient):
-        """A distinct record set returns the recipe's reduction, matching the fallback."""
+    async def test_distinct_records_match_parity_reference(self, client: AsyncClient):
+        """A distinct record set returns the recipe's reduction, matching the parity reference."""
         params = {
             "spec_actual_costs": "2.5,0.25",
             "spec_estimated_costs": "1.0,3.5",
@@ -70,16 +68,6 @@ class TestGroundedCostEndpoint:
         res = await client.get("/api/utils/grounded_cost", params=params)
         assert res.status_code == 200, res.text
         data = res.json()
-        specs = [
-            {"actual_cost": 2.5, "estimated_cost": 1.0},
-            {"actual_cost": 0.25, "estimated_cost": 3.5},
-        ]
-        commits = [
-            {"change_files": 2, "lines_added": 10},
-            {"change_files": 4, "lines_added": 250},
-        ]
-        links = [{"estimated_cost": 0.75}, {"estimated_cost": 2.0}]
-        expected = _grounded_cost_py(specs, commits, links, 1.5)
         got = [
             data["spec_actual_cost_sum"],
             data["spec_estimated_cost_sum"],
@@ -88,7 +76,7 @@ class TestGroundedCostEndpoint:
             data["lineage_estimated_cost"],
             data["computed_actual_cost"],
         ]
-        assert got == expected
+        assert got == [2.75, 4.5, 1.5, 1.62, 2.75, 5.87]
 
     @pytest.mark.anyio
     async def test_empty_records_fold_to_zero(self, client: AsyncClient):

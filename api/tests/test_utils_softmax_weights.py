@@ -1,9 +1,8 @@
 """Tests for /api/utils/softmax_weights — the first LIST-returning kernel-served route.
 
-The body runs as a Form recipe (endpoint_softmax_weights_demo.fk) through
-form-kernel-rust when available, with the Python fallback
-idea_scoring._softmax_weights when the binary is missing. Both return the
-SAME list of weights for the same inputs — the recipe builds the result via
+The body runs as a Form recipe (endpoint_softmax_weights_demo.fk) through the
+kernel. The source example, domain-service helper, and kernel siblings return
+the SAME list of weights for the same inputs — the recipe builds the result via
 the append-accumulator idiom (the kernel's value-walk now carries list
 construction) and the list round-trips through value_to_py's List arm.
 Element-wise CPython==Rust parity is guaranteed by parity_suite.sh.
@@ -15,7 +14,7 @@ The test verifies:
   - the deterministic branch (temperature 0.0) puts all weight on the max
   - the empty-scores edge returns [] (no division by zero)
   - the single-element edge returns [1.0]
-  - the fallback body is element-wise identical to the kernel result
+  - the service helper remains element-wise identical to the recipe anchor
   - the runtime field reports which path served the request
 """
 from __future__ import annotations
@@ -58,7 +57,7 @@ class TestSoftmaxWeightsEndpoint:
         assert abs(sum(data["weights"]) - 1.0) < 1e-12
         assert data["scores"] == [1.0, 2.0, 3.0]
         assert data["temperature"] == 1.0
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_deterministic_temperature_zero(self, client: AsyncClient):
@@ -85,8 +84,8 @@ class TestSoftmaxWeightsEndpoint:
         assert res.json()["weights"] == [1.0]
 
     @pytest.mark.anyio
-    async def test_arbitrary_input_matches_fallback(self, client: AsyncClient):
-        """An off-frozen input serves via binding-injection, matching the fallback."""
+    async def test_arbitrary_input_matches_service_helper(self, client: AsyncClient):
+        """An off-frozen input serves via binding-injection, matching the service helper."""
         res = await client.get(
             "/api/utils/softmax_weights",
             params={"scores": "0.5,0.5,2.0,1.0", "temperature": 1.0},
@@ -103,11 +102,11 @@ class TestSoftmaxWeightsEndpoint:
         assert res.status_code == 422
 
     @pytest.mark.anyio
-    async def test_fallback_agrees_with_recipe_value(self):
-        """The Python fallback returns the same list the recipe does.
+    async def test_service_helper_agrees_with_recipe_value(self):
+        """The service helper returns the same list the recipe anchor does.
 
-        Direct element-wise parity claim without the kernel — the fallback IS
-        the canonical body the recipe was transmuted from.
+        Direct element-wise parity claim without the kernel — the helper is the
+        domain-service arithmetic the recipe was transmuted from.
         """
         assert _softmax_weights([1.0, 2.0, 3.0], 1.0) == CANONICAL
         assert _softmax_weights([5.0, 1.0, 1.0], 0.0) == [1.0, 0.0, 0.0]

@@ -63,8 +63,8 @@ Provenance honesty
 ────────────────────────────────────────────────────────────────────────────
 
 The inputs below are REPRESENTATIVE-DERIVED from each endpoint's Pydantic
-contract and query defaults in api/app/routers/utils.py — they are NOT
-sampled from live production traffic. Capturing real traffic (request log →
+contract and query defaults in the owning api/app/routers/kernel_*.py module —
+they are NOT sampled from live production traffic. Capturing real traffic (request log →
 replay corpus) is the named next step before a real flip. Each case says so.
 
 Usage:
@@ -78,6 +78,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import statistics
@@ -99,11 +100,32 @@ PYFKB = REPO / "form" / "scripts" / "pyfkb-run.sh"
 # `form-kernel-rust serve`. Holds the same recipe bodies the live endpoints run.
 SERVE_ROUTES = REPO / "scripts" / "kernel_readiness_routes.fk"
 
+if str(API) not in sys.path:
+    sys.path.insert(0, str(API))
 
 # ---------------------------------------------------------------------------
 # Captured calls — DATA fed to the one engine. Each names a real endpoint, a
-# representative input (provenance honest), and the CPython reference fn.
+# representative input (provenance honest), and the CPython source-example fn.
 # ---------------------------------------------------------------------------
+
+
+_DEMO_FUNC_CACHE: dict[tuple[str, str], Callable[..., Any]] = {}
+
+
+def demo_func(demo_py: str, fn_name: str) -> Callable[..., Any]:
+    """Load a CPython baseline from the source example that compiles to the recipe."""
+    key = (demo_py, fn_name)
+    if key in _DEMO_FUNC_CACHE:
+        return _DEMO_FUNC_CACHE[key]
+    path = EXAMPLES / demo_py
+    spec = importlib.util.spec_from_file_location(f"kernel_readiness_{path.stem}", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load demo source: {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    fn = getattr(mod, fn_name)
+    _DEMO_FUNC_CACHE[key] = fn
+    return fn
 
 
 @dataclass
@@ -114,8 +136,8 @@ class CaptureCall:
     fk_demo         the .py demo whose body IS the recipe (under EXAMPLES);
                     compiled to .fk once = the deploy artifact
     bindings        the (let ...) inputs the live endpoint injects per request
-    cpython_ref     zero-arg thunk computing the reference value in CPython —
-                    the exact fallback the endpoint would run inline
+    cpython_ref     zero-arg thunk computing the reference value in CPython
+                    from the source example that compiles to the recipe
     parse           how the live endpoint parses the kernel's textual output
     response_shape  the API contract's response fields (SHAPE check, not just
                     scalar) — what the kernel value must slot into
@@ -138,39 +160,8 @@ class CaptureCall:
     serve_query: str = ""
 
 
-# --- CPython reference implementations: copied verbatim from the endpoint
-#     fallbacks in api/app/routers/utils.py so the harness needs no API import.
-
-
-def _coherence_weight_py(values: List[int], threshold: int) -> int:
-    def weighted(value: int, position: int) -> int:
-        if position == 0:
-            return value * 100
-        if position == 1:
-            return value * 50
-        if position == 2:
-            return value * 25
-        return value * 10
-
-    total, position = 0, 0
-    for v in values:
-        if v >= threshold:
-            total += weighted(v, position)
-            position += 1
-    above = sum(1 for v in values if v >= threshold)
-    return above * 100 + total
-
-
-def _nodeid_distance_py(a: List[int], b: List[int]) -> int:
-    return sum(abs(x - y) for x, y in zip(a, b))
-
-
-def _nodeid_compat_py(a: List[int], b: List[int]) -> int:
-    return sum(int(x == y) for x, y in zip(a, b))
-
-
-def _weighted_average_py(values: List[float], weights: List[float]) -> float:
-    return sum(v * w for v, w in zip(values, weights)) / sum(weights)
+# --- CPython references: loaded from the canonical source examples that compile
+#     to the recipe. Production route modules stay dispatch-only.
 
 
 CASES: List[CaptureCall] = [
@@ -178,12 +169,14 @@ CASES: List[CaptureCall] = [
         name="coherence_weight",
         fk_demo="endpoint_coherence_weight_demo.py",
         bindings={"values": [72, 38, 91, 55, 28, 67, 84, 45, 95, 12], "threshold": 50},
-        cpython_ref=lambda: _coherence_weight_py(
+        cpython_ref=lambda: demo_func(
+            "endpoint_coherence_weight_demo.py", "coherence_weight"
+        )(
             [72, 38, 91, 55, 28, 67, 84, 45, 95, 12], 50
         ),
         parse=int,
         response_shape=["weight", "values", "threshold", "runtime"],
-        provenance="representative-derived from query defaults in utils.py (NOT traffic-sampled)",
+        provenance="representative-derived from kernel_nodeid.py query defaults (NOT traffic-sampled)",
         serve_path="/coherence_weight",
         serve_query="",  # list arg — handler computes frozen sample (serve alist is string-only)
     ),
@@ -194,10 +187,12 @@ CASES: List[CaptureCall] = [
             "a_pkg": 1, "a_lvl": 5, "a_type": 4, "a_inst": 1,
             "b_pkg": 1, "b_lvl": 4, "b_type": 4, "b_inst": 7,
         },
-        cpython_ref=lambda: _nodeid_distance_py([1, 5, 4, 1], [1, 4, 4, 7]),
+        cpython_ref=lambda: demo_func(
+            "endpoint_nodeid_distance_demo.py", "manhattan"
+        )(1, 5, 4, 1, 1, 4, 4, 7),
         parse=int,
         response_shape=["distance", "a", "b", "runtime"],
-        provenance="representative-derived from Query defaults in utils.py (NOT traffic-sampled)",
+        provenance="representative-derived from kernel_nodeid.py query defaults (NOT traffic-sampled)",
         serve_path="/nodeid_distance",
         serve_query="a_pkg=1&a_lvl=5&a_type=4&a_inst=1&b_pkg=1&b_lvl=4&b_type=4&b_inst=7",
     ),
@@ -208,10 +203,12 @@ CASES: List[CaptureCall] = [
             "a_pkg": 1, "a_lvl": 5, "a_type": 4, "a_inst": 1,
             "b_pkg": 1, "b_lvl": 4, "b_type": 4, "b_inst": 7,
         },
-        cpython_ref=lambda: _nodeid_compat_py([1, 5, 4, 1], [1, 4, 4, 7]),
+        cpython_ref=lambda: demo_func(
+            "endpoint_nodeid_compatibility_demo.py", "compatibility"
+        )(1, 5, 4, 1, 1, 4, 4, 7),
         parse=int,
         response_shape=["compatibility", "a", "b", "runtime"],
-        provenance="representative-derived from Query defaults in utils.py (NOT traffic-sampled)",
+        provenance="representative-derived from kernel_nodeid.py query defaults (NOT traffic-sampled)",
         serve_path="/nodeid_compatibility",
         serve_query="a_pkg=1&a_lvl=5&a_type=4&a_inst=1&b_pkg=1&b_lvl=4&b_type=4&b_inst=7",
     ),
@@ -219,10 +216,12 @@ CASES: List[CaptureCall] = [
         name="weighted_average",
         fk_demo="endpoint_weighted_average_demo.py",
         bindings={"values": [0.5, 0.75, 1.0], "weights": [0.25, 0.25, 0.5]},
-        cpython_ref=lambda: _weighted_average_py([0.5, 0.75, 1.0], [0.25, 0.25, 0.5]),
+        cpython_ref=lambda: demo_func(
+            "endpoint_weighted_average_demo.py", "weighted_average"
+        )([0.5, 0.75, 1.0], [0.25, 0.25, 0.5]),
         parse=float,
         response_shape=["average", "values", "weights", "runtime"],
-        provenance="representative-derived from query defaults in utils.py (NOT traffic-sampled)",
+        provenance="representative-derived from kernel_scoring.py query defaults (NOT traffic-sampled)",
         serve_path="/weighted_average",
         serve_query="",  # list+float args — handler computes frozen sample
     ),

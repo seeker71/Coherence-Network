@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 241
+**Total files**: 243
 
 | File | Purpose |
 |---|---|
@@ -164,6 +164,7 @@
 | [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
 | [test_runtime_surface_native_routes.py](test_runtime_surface_native_routes.py) | The runtime-surface instrument SEES the kernel-router's native surface. |
+| [test_runtime_web_api_provenance.py](test_runtime_web_api_provenance.py) | Runtime telemetry preserves web API provenance for route-frequency promotion. |
 | [test_session_greeting.py](test_session_greeting.py) | Session greeting — detect agent + human, greet with memory, across all agents. |
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
@@ -176,6 +177,7 @@
 | [test_substrate_auto_reactive.py](test_substrate_auto_reactive.py) | Auto-firing reactive subscriptions. |
 | [test_substrate_concept_structured.py](test_substrate_concept_structured.py) | Concept domain — structured composition discipline. |
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
+| [test_substrate_edge_categories.py](test_substrate_edge_categories.py) | Edge-category sensing over source substrate files. |
 | [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
 | [test_substrate_form_args_try_methods.py](test_substrate_form_args_try_methods.py) | Method args + try/catch + cell-method dispatch + nested ?-queries. |
 | [test_substrate_form_ast_access.py](test_substrate_form_ast_access.py) | Pin Access + MethodCall in the structural Form evaluator. |

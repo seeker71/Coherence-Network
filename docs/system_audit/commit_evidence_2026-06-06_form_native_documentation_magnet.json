@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Form-native documentation magnet and Python bridge release",
+  "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "MANIFEST.md",
+    "README.template.md",
+    "README.md",
+    "api/app/routers/INDEX.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/PLAN.md",
+    "docs/STATUS.md",
+    "kernels/README.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "docs/vision-kb/concepts/lc-native-kernel-binary.md",
+    "scripts/generate_repo_indexes.py",
+    "docs/SETUP.md",
+    "docs/coherence-substrate/self-hosted-eval.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/build_readmes.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "! rg -n \"FastAPI \\\\(Python\\\\)|Python runtime plus|Python remains the body's primary|\\\\*\\\\*API\\\\*\\\\*: FastAPI\" AGENTS.md CLAUDE.md MANIFEST.md README.template.md README.md cli/README.md mcp-server/README.md skills/coherence-network/SKILL.md docs/shared/agent-start-packet.md docs/PLAN.md docs/STATUS.md kernels/README.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md kernels/KERNEL_AS_ROUTER.md docs/vision-kb/concepts/lc-native-kernel-binary.md",
+      "! rg -n \"FastAPI \\\\(Python\\\\)|Python runtime plus|Python remains the body's primary|Python remains culturally special|Python remains only one handler carrier|Python remains bridge|\\\\*\\\\*API\\\\*\\\\*: FastAPI\" AGENTS.md CLAUDE.md MANIFEST.md README.template.md README.md cli/README.md mcp-server/README.md skills/coherence-network/SKILL.md docs/shared/agent-start-packet.md docs/PLAN.md docs/STATUS.md docs/SETUP.md docs/coherence-substrate/self-hosted-eval.md kernels/README.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md kernels/KERNEL_AS_ROUTER.md kernels/PYTHON_PIPELINE_STATUS.md docs/vision-kb/concepts/lc-native-kernel-binary.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check -- AGENTS.md CLAUDE.md MANIFEST.md README.template.md README.md api/app/routers/INDEX.md cli/README.md mcp-server/README.md skills/coherence-network/SKILL.md docs/shared/agent-start-packet.md docs/PLAN.md docs/STATUS.md docs/SETUP.md docs/coherence-substrate/self-hosted-eval.md kernels/README.md kernels/KERNEL_AS_ROUTER.md kernels/PYTHON_PIPELINE_STATUS.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md docs/vision-kb/concepts/lc-native-kernel-binary.md scripts/generate_repo_indexes.py docs/system_audit/commit_evidence_2026-06-06_form_native_documentation_magnet.json"
+    ],
+    "summary": "High-traffic orientation docs now name Form-native route/runtime work as the architectural center and keep Python references in bridge, tooling, source-specific proof, or historical-evidence lanes. README-derived surfaces were regenerated from README.template.md and docs/shared/agent-start-packet.md; generated indexes now label api/app/routers as the compatibility bridge/upstream tail."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Documentation-only pass; no production deploy performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local documentation validation passed, but CI/deploy validation has not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "form-native-documentation-magnet"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "AGENTS.md project summary now names Form-native grammar -> recipes/cells -> sibling kernels -> observed route/runtime proof as the architectural center.",
+    "docs/shared/agent-start-packet.md now carries the Form-native magnet rule: Python references stay only for bridge/upstream behavior, operational tooling, or historical evidence.",
+    "README.template.md and regenerated README/CLI/MCP/skill surfaces now present Form-native runtime and native-kernel routes before FastAPI/Python bridge wording.",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md and kernels/KERNEL_AS_ROUTER.md now state Python as a temporary handler carrier/upstream, not route identity or front-door destination.",
+    "docs/PLAN.md and docs/STATUS.md now put Form-native/BML route promotion into the active priority/status surface.",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md now frames existing FastAPI bodies as bridge friction and BML/domain handlers as the direction of travel.",
+    "docs/coherence-substrate/self-hosted-eval.md now names remaining Python pieces as bridge/bootstrap carriers and points mutation toward Form-native storage ports.",
+    "docs/SETUP.md now labels the local API process as the compatibility API and points native route work to the kernel router docs.",
+    "kernels/PYTHON_PIPELINE_STATUS.md now reads as source-language to Form-native status, with Python-source demos preserved as the first proof set rather than the center."
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "MANIFEST.md",
+    "README.template.md",
+    "README.md",
+    "api/app/routers/INDEX.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/PLAN.md",
+    "docs/STATUS.md",
+    "kernels/README.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "docs/vision-kb/concepts/lc-native-kernel-binary.md",
+    "scripts/generate_repo_indexes.py",
+    "docs/system_audit/commit_evidence_2026-06-06_form_native_documentation_magnet.json",
+    "docs/SETUP.md",
+    "docs/coherence-substrate/self-hosted-eval.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A fresh agent reading the primary orientation docs is pulled toward Form-native handlers and sees Python as bridge/tool/history rather than the target runtime.",
+    "public_endpoints": [
+      "api/app/routers/INDEX.md"
+    ],
+    "test_flows": [
+      "README-derived surfaces regenerated from the edited template/start packet",
+      "focused wording scan no longer finds stale Python-primary phrases in the edited orientation surfaces",
+      "repo index check remains aligned"
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Align route-lift doorway language with shall/can/do discipline and required route-purpose questions",
+  "files_owned": [
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "rg -n \"[s]hould|[w]ould\" docs/shared/agent-start-packet.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md docs/system_audit/commit_evidence_2026-06-07_route_lift_modal_language.json || true"
+    ],
+    "summary": "The route-lift start packet and source-language tracking doorway now express commitments with shall, available movement with can, and execution paths with do. They also require each promoted route to answer organism purpose, actual user/web callers, grammar fitness, response-shape fitness, and highest-goal fit. The scoped search returns no remaining soft-modal residue in those docs or this evidence cell."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "This is a docs-only modal-language alignment with no deployment surface."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local documentation proof passed; CI and PR review remain pending until this work is committed and pushed."
+  },
+  "idea_ids": [
+    "route-lift-discipline",
+    "form-native-documentation-magnet",
+    "modal-language-as-commitment",
+    "route-purpose-gate"
+  ],
+  "spec_ids": [
+    "kernel-native-api-promotion",
+    "source-language-kernel-router-tracking",
+    "agent-start-doorway"
+  ],
+  "task_ids": [
+    "align-route-lift-modal-language",
+    "add-route-purpose-question-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "route-discipline",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/shared/agent-start-packet.md names the route-lift gate as source -> flow -> purpose -> grammar -> proof -> release.",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md names the same gate and ties it to source/flow/purpose/grammar/proof/release for native route promotion.",
+    "Both doorway docs now require every route promotion to answer organism purpose, actual user/web callers, grammar fitness, response-shape fitness, and highest-goal fit.",
+    "The scoped rg proof confirms no soft-modal residue remains in the two route-lift doorway docs."
+  ],
+  "change_files": [
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-07_route_lift_modal_language.json"
+  ],
+  "change_intent": "docs_only"
+}

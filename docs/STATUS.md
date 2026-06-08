@@ -16,7 +16,8 @@
 | Coherence endpoint support | ✅ Complete |
 | Import stack support (lockfile + requirements) | ✅ Complete |
 | Agent orchestration endpoints | ✅ Complete |
-| Production deployment | ✅ Active (public API + web contract passing; legacy Railway URL remains unavailable) |
+| Production deployment | ✅ Active (Hostinger public API + web contract passing) |
+| Form-native front-door promotion | 🚧 In progress (BML route catalog + Go native probes; compatibility API remains bridge/upstream for tail routes) |
 | Pipeline monitoring + attention workflow | 🚧 In progress |
 | Full unattended effectiveness loop | 🚧 In progress |
 
@@ -24,15 +25,16 @@
 
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
-| API | Current public API | https://api.coherencycoin.com | ✅ Active (`/api/health` 200; deployed SHA verified 2026-05-23) |
-| API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-05-23) |
-| Web | Hostinger (current) | https://coherencycoin.com | ✅ Active |
+| API/front door | Hostinger VPS | https://api.coherencycoin.com | ✅ Active (`/api/health` 200; deployed SHA verified by public contract; public carrier still includes bridge routes while native front-door promotion proceeds) |
+| Web | Hostinger VPS | https://coherencycoin.com | ✅ Active |
+| Database | Hostinger Docker Compose | internal Postgres service | ✅ Active (config-file credentials; see [PRODUCTION-SUBSTRATE.md](PRODUCTION-SUBSTRATE.md)) |
 
 ### Deployment Health
-- API health endpoint: ✅ Reachable at https://api.coherencycoin.com/api/health; legacy Railway URL still returns HTTP 404
+- API health endpoint: ✅ Reachable at https://api.coherencycoin.com/api/health
 - Web root: ✅ Reachable on current public domain
 - Web API health page: ✅ Reachable
 - CORS configuration: ✅ Allows https://coherencycoin.com
+- Production DB: ✅ Hostinger internal Postgres is the live DB. Railway Postgres/Supabase pooler paths are historical or stale.
 
 ## Specs Implemented (Selected)
 
@@ -46,11 +48,12 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 
 ## Active Priorities
 
-1. Improve pipeline effectiveness and issue resolution loop.
-2. Keep status/coverage artifacts in sync with shipped behavior.
-3. Continue graph + coherence quality improvements through scoped specs.
-4. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
-5. Execute non-software MVP marketplace track with ROI ordering (see [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md)).
+1. Grow Form-native/BML handler coverage for observed web-used `/api` traffic.
+2. Improve pipeline effectiveness and issue resolution loop.
+3. Keep status/coverage artifacts in sync with shipped behavior.
+4. Continue graph + coherence quality improvements through scoped specs.
+5. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
+6. Execute non-software MVP marketplace track with ROI ordering (see [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md)).
 
 ## Non-Software MVP Track
 
@@ -64,7 +67,7 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 
 ## Validation Snapshot
 
-- API endpoint set is implemented, locally testable, and publicly verified on the current API/web domains.
+- API endpoint set is implemented, locally testable, and publicly verified on the current API/web domains; native route promotion is tracked separately so bridge traffic is not counted as high-grammar native.
 - Test suite remains the release gate.
 - Overnight pipeline remains the main autonomous execution path.
 
@@ -98,7 +101,7 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 | Test File | Status | Notes |
 |-----------|--------|-------|
 | `test_agent_executor_policy.py` | ❌ 4 failing | Tests set ENV vars that code no longer reads |
-| `test_agent_telegram_webhook.py` | ❌ 7 failing | Tests expect Railway URLs, not config |
+| `test_agent_telegram_webhook.py` | ❌ 7 failing | Tests expect legacy hosted URLs, not config |
 | `test_execute_endpoint_auto_retries_*` | ❌ 1 failing | Tests set ENV vars not in config |
 | `test_026_pipeline_observability.py` | ❌ 1 error | JSONB/SQLite incompatibility (pre-existing) |
 

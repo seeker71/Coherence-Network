@@ -9,7 +9,7 @@ opened. The accumulator seeds at 0.0 so every add walks (float, float).
 
 Three-way parity of the recipe body (CPython, kernel-bmf, Rust) is the
 parity_suite gate; these tests verify the route is wired, returns the float pair,
-and matches the Python fallback over the real reduction.
+and matches the documented recipe anchors over the real reduction.
 """
 from __future__ import annotations
 
@@ -17,8 +17,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import _grounded_cost_sum_py
-
 BASE = "http://test"
 
 
@@ -46,22 +44,16 @@ class TestIdeaGroundedCostSumEndpoint:
         assert data["spec_actual_cost_sum"] == 5.25
         assert data["spec_actual_value_sum"] == 3.75
         assert data["spec_count_in"] == 3
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
-    async def test_distinct_specs_match_fallback(self, client: AsyncClient):
-        """A distinct spec list returns the recipe's float reduction, matching the fallback."""
+    async def test_distinct_specs_match_parity_reference(self, client: AsyncClient):
+        """A distinct spec list returns the recipe's float reduction, matching the parity reference."""
         params = {"actual_costs": "2.5,0.25,1.0", "actual_values": "0.5,0.0,3.25"}
         res = await client.get("/api/utils/idea_grounded_cost_sum", params=params)
         assert res.status_code == 200, res.text
         data = res.json()
-        specs = [
-            {"actual_cost": 2.5, "actual_value": 0.5},
-            {"actual_cost": 0.25, "actual_value": 0.0},
-            {"actual_cost": 1.0, "actual_value": 3.25},
-        ]
-        expected = _grounded_cost_sum_py(specs)
-        assert [data["spec_actual_cost_sum"], data["spec_actual_value_sum"]] == expected
+        assert [data["spec_actual_cost_sum"], data["spec_actual_value_sum"]] == [3.75, 3.75]
 
     @pytest.mark.anyio
     async def test_empty_specs_fold_to_zero(self, client: AsyncClient):

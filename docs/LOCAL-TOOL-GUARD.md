@@ -112,7 +112,7 @@ Use this to run **Claude** on one real impl task: discover the highest-ROI gap f
 2. **Manual:** Discover from public API, then create and run:
    ```bash
    # Discover (public)
-   curl -s "https://coherence-network-production.up.railway.app/api/spec-registry/cards?state=in_progress&sort=roi_desc&limit=1"
+   curl -s "https://api.coherencycoin.com/api/spec-registry/cards?state=in_progress&sort=roi_desc&limit=1"
    # Create task (local) with direction + context.executor=claude
    curl -s -X POST "http://127.0.0.1:8000/api/agent/tasks" -H "Content-Type: application/json" \
      -d '{"direction":"Implement spec SPEC_ID (Title) from spec file. ...","task_type":"impl","context":{"executor":"claude","source":"spec_implementation_gap","spec_id":"SPEC_ID","spec_title":"Title"}}'

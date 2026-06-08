@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Native /api/ideas timing breakdown across public Python, local native Go, and same-SQL Python",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "scripts/ideas_route_timing_breakdown.py",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile scripts/ideas_route_timing_breakdown.py",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form/form-kernel-go && go run . serve --port 19086 --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml",
+      "curl -sS -H 'Accept: application/json' -H 'X-Form-Observe: 1' 'http://127.0.0.1:19086/api/_form/ideas-timing?limit=2&offset=0&sort=marginal_cc'",
+      "python3 scripts/ideas_route_timing_breakdown.py --samples 40 --warmup 5",
+      "python3 scripts/ideas_route_timing_breakdown.py --samples 40 --warmup 5 --skip-native --skip-python-sql",
+      "python3 scripts/ideas_route_timing_breakdown.py --samples 40 --warmup 5 --skip-public --skip-python-sql",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-05_native_http_timing_breakdown.json"
+    ],
+    "summary": "The BML catalog now exposes /api/_form/ideas-timing behind X-Form-Observe, the Go serve loader compiled the source manifest successfully, and the reusable probe reports p50/p95 timing splits across public FastAPI, local native Go, native handler internals, and Python same-SQL against the production Postgres tunnel."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk ../deploy/front-door/api.bml",
+      "output": "go/rust/typescript: unbound function \"language-template-with-members\"",
+      "reason": "The command supplied an incomplete source-section prelude. The actual Go serve path loads the source compiler and language model before compiling deploy/front-door/api.bml."
+    },
+    {
+      "command": "python3 scripts/ideas_route_timing_breakdown.py --samples 5 --warmup 1 --skip-public --skip-native",
+      "output": "ProgrammingError: argument formats can't be mixed",
+      "reason": "The first psycopg2 SQL translator did not escape literal percent signs in BML SQL. Fixed by escaping SQL '%' before converting $n placeholders to named pyformat placeholders."
+    },
+    {
+      "command": "python3 scripts/ideas_route_timing_breakdown.py --samples 40 --warmup 5",
+      "output": "public_fastapi_http_total returned status_code 403",
+      "reason": "The public edge blocked Python urllib's default user-agent. Fixed by sending User-Agent: CoherenceRouteTiming/1.0 and rerunning the public leg."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local native kernel probe used SSH tunnel to production Postgres; no deploy performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime diagnostic and documentation are validated locally but not committed, pushed, or deployed."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "native-http-timing-breakdown"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "public FastAPI HTTP total: status=200 body_bytes=4450 p50=269.859 ms p95=1087.374 ms",
+    "local native Go HTTP total: status=200 body_bytes=4226 p50=547.091 ms p95=1303.667 ms",
+    "native handler timing: status=200 body_bytes=4226 p50=555 ms p95=1301 ms",
+    "native median segments: connect=248 ms summary_query=137 ms page_query=154 ms params=1 ms shape_tree=5 ms json_emit=3 ms",
+    "python same-SQL handler total: body_bytes=4318 p50=412.903 ms p95=434.894 ms",
+    "python same-SQL median segments: connect=215.906 ms summary_query=93.528 ms page_query=101.260 ms shape_dicts=0.082 ms json_dumps=0.102 ms",
+    "slow native samples assigned pauses to shape_tree/json_emit/params while DB segments stayed near median"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "scripts/ideas_route_timing_breakdown.py",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "form/form-kernel-go/main.go"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native /api/ideas has a real BML timing route and reusable timing probe that separate handler-internal cost from public network, startup, TCP accept, and client download costs.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ideas?limit=2&offset=0&sort=marginal_cc",
+      "http://127.0.0.1:19086/api/ideas?limit=2&offset=0&sort=marginal_cc",
+      "http://127.0.0.1:19086/api/_form/ideas-timing?limit=2&offset=0&sort=marginal_cc"
+    ],
+    "test_flows": [
+      "public FastAPI HTTP total through Cloudflare/Traefik",
+      "native Go HTTP total through local loopback and production Postgres SSH tunnel",
+      "native BML handler-internal timing route",
+      "Python same-SQL microbreakdown against the same production Postgres tunnel"
+    ]
+  }
+}

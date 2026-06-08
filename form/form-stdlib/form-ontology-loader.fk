@@ -32,7 +32,7 @@
 (defn fol-core-rows (names) (fol-reverse (fol-core-rows-loop names (empty))))
 
 (let FORM-CATEGORY-TABLE
-    (fol-core-rows (list "do" "sequence" "let" "if-then" "if" "fndef" "fncall" "ident")))
+    (fol-core-rows (list "do" "sequence" "let" "if-then" "if" "fndef" "fncall" "ident" "match")))
 
 (let FORM-PRIMITIVE-TABLE
     (fol-core-rows (list "add" "sub" "mul" "div" "mod" "eq" "ne" "lt" "le" "gt" "ge" "and" "or" "not")))

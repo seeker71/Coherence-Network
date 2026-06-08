@@ -1,6 +1,6 @@
 ---
 name: coherence-network
-description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, coh cli, coherence cli."
+description: "Coherence Network: an open intelligence organism and living public surface where ideas, concepts, residents, agents, routes, ledgers, source files, runtime proof, and value flows share one inspectable body. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: receive the invitation, walk the edge that increases vitality, browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, query Form/substrate shape, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, Form, substrate, coh cli, coherence cli."
 metadata:
   {
     "openclaw":
@@ -37,7 +37,10 @@ metadata:
 
 # Coherence Network
 
-An open intelligence platform where every contribution is traced, scored, and fairly attributed — from the spark of an idea to the moment it delivers value.
+An open intelligence organism where ideas, concepts, residents, agents, source
+files, runtime proof, and value flows share one inspectable body. Every public
+door invites the same movement: receive the invitation, walk the edge that
+increases vitality, and return an attributed trace.
 
 **Production API:** `https://api.coherencycoin.com` (always use this, not Railway or any other host)
 **Web:** `https://coherencycoin.com`
@@ -99,6 +102,10 @@ Both approaches hit the same API. Use whichever fits your context.
 ## How it works
 
 <!-- include: docs/shared/lifecycle-diagram.md -->
+
+## Cell voice protocol
+
+<!-- include: docs/shared/cell-voice-protocol.md -->
 
 ## Agent start packet
 

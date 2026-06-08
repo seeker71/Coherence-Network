@@ -10,8 +10,8 @@ structure-access route read fields from ONE record; this folds over a list.
 Three-way parity of the recipe body (CPython, kernel-bmf, Rust) is the
 parity_suite gate; the list-of-record marshalling and model→dict normalization
 are covered by test_form_kernel_bridge_structure_access. These tests verify the
-route is wired, returns the expected shape, and matches the Python fallback over
-the real reduction.
+route is wired, returns the expected shape, and matches the documented recipe
+anchors over the real reduction.
 """
 from __future__ import annotations
 
@@ -19,8 +19,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import _grounding_summary_py
-
 BASE = "http://test"
 
 
@@ -50,28 +48,21 @@ class TestIdeaGroundingSummaryEndpoint:
         assert data["specs_with_value_count"] == 2
         assert data["max_event_count"] == 7
         assert data["spec_count_in"] == 3
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
-    async def test_distinct_specs_match_fallback(self, client: AsyncClient):
-        """A distinct spec list returns the recipe's reduction, matching the fallback."""
+    async def test_distinct_specs_match_parity_reference(self, client: AsyncClient):
+        """A distinct spec list returns the recipe's reduction, matching the parity reference."""
         params = {"event_counts": "4,1,9,0", "actual_values": "2.0,0.0,3.5,0.0"}
         res = await client.get("/api/utils/idea_grounding_summary", params=params)
         assert res.status_code == 200, res.text
         data = res.json()
-        specs = [
-            {"event_count": 4, "actual_value": 2.0},
-            {"event_count": 1, "actual_value": 0.0},
-            {"event_count": 9, "actual_value": 3.5},
-            {"event_count": 0, "actual_value": 0.0},
-        ]
-        expected = _grounding_summary_py(specs)
         assert [
             data["spec_count"],
             data["total_event_count"],
             data["specs_with_value_count"],
             data["max_event_count"],
-        ] == expected
+        ] == [4, 14, 2, 9]
 
     @pytest.mark.anyio
     async def test_empty_specs_fold_to_zeros(self, client: AsyncClient):

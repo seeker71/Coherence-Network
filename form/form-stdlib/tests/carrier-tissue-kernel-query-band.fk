@@ -1,0 +1,71 @@
+; carrier-tissue-kernel-query-band.fk - real Form-kernel carrier lens query.
+;
+; preludes: form-stdlib/carrier-tissue.fk
+
+(do
+    (let counts (ct-census-counts-from-root ".."))
+    (let tag (ct-counts-tag counts))
+    (let host-runtime-used (nth counts 1))
+    (let total-files (nth counts 2))
+    (let transparent-files (nth counts 4))
+    (let lens-files (nth counts 5))
+    (let old-wound-files (nth counts 6))
+    (let misalignment-files (nth counts 7))
+    (let tenderness-files (nth counts 8))
+    (let python-files (nth counts 9))
+    (let typescript-files (nth counts 10))
+    (let go-files (nth counts 11))
+    (let rust-files (nth counts 12))
+    (let json-files (ct-counts-json-files counts))
+    (let form-rule (ct-classify-path "form/form-stdlib/carrier-tissue.fk"))
+    (let python-rule (ct-classify-path "api/app/routers/ideas.py"))
+    (let field-rule (ct-classify-path "docs/field/local.py"))
+    (let vitality (ct-vitality-snapshot counts))
+    (let transparent-per-1000 (nth vitality 5))
+    (let healing-pressure (nth vitality 11))
+    (let next-attention (nth vitality 12))
+    (let tending (ct-tending-from-root ".."))
+    (let tending-carrier (nth tending 2))
+    (let tending-files (nth tending 3))
+
+    (add
+        (add
+            (add
+                (add
+                    (if (eq tag 65202) 1 0)
+                    (if (eq host-runtime-used false) 2 0))
+                (add
+                    (if (gt total-files 1000) 4 0)
+                    (if (gt transparent-files 100) 8 0)))
+            (add
+                (add
+                    (if (gt lens-files 500) 16 0)
+                    (if (gt old-wound-files 50) 32 0))
+                (add
+                    (if (gt misalignment-files 100) 64 0)
+                    (if (gt tenderness-files 1) 128 0))))
+            (add
+                (add
+                    (add
+                        (add
+                            (if (gt python-files 100) 256 0)
+                            (if (gt typescript-files 100) 512 0))
+                        (add
+                            (if (gt go-files 1) 1024 0)
+                            (if (gt rust-files 1) 2048 0)))
+                    (add
+                        (add
+                            (if (str_eq (ct-rule-class form-rule) "transparent") 4096 0)
+                            (if (str_eq (ct-rule-class python-rule) "misalignment") 8192 0))
+                        (if (ct-rule-private-display? field-rule) 16384 0)))
+                (add
+                    (add
+                        (add
+                            (if (gt transparent-per-1000 100) 32768 0)
+                            (if (gt healing-pressure 5000) 65536 0))
+                        (if (str_eq next-attention "lens/load: name repeated external carriers into cells") 131072 0))
+                    (add
+                        (add
+                            (if (gt json-files 800) 262144 0)
+                            (if (str_eq tending-carrier "json") 524288 0))
+                        (if (eq tending-files json-files) 1048576 0))))))

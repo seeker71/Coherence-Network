@@ -13,9 +13,9 @@ done_when:
   - "docs/system_audit/model_executor_runs.jsonl has new entry for this task"
 
 commands:
-  - "API_URL=https://coherence-network-production.up.railway.app; TASK_ID=$(curl -s -X POST \"$API_URL/api/agent/tasks\" -H 'Content-Type: application/json' -d '{\"direction\":\"Provider smoke: free-provider execution proof. Do minimal safe work and return a short confirmation.\",\"task_type\":\"impl\",\"context\":{\"executor\":\"openclaw\",\"model_override\":\"openrouter/free\"}}' | jq -r '.id'); printf \"%s\n\" \"$TASK_ID\" | tee /tmp/free_provider_smoke_task_id"
-  - "API_URL=https://coherence-network-production.up.railway.app; TASK_ID=$(cat /tmp/free_provider_smoke_task_id); curl -s \"$API_URL/api/agent/tasks/$TASK_ID\" | jq '{ id, status, is_paid: .context.route_decision.is_paid_provider, provider: .context.route_decision.provider, model: .context.route_decision.model }'"
-  - "API_URL=https://coherence-network-production.up.railway.app; TASK_ID=$(cat /tmp/free_provider_smoke_task_id); curl -s \"$API_URL/api/friction/events?status=open&limit=20\" | jq --arg id \"$TASK_ID\" '[.[] | select(.block_type == \"paid_provider_blocked\" and (.metadata.task_id == $id))]'"
+  - "API_URL=https://api.coherencycoin.com; TASK_ID=$(curl -s -X POST \"$API_URL/api/agent/tasks\" -H 'Content-Type: application/json' -d '{\"direction\":\"Provider smoke: free-provider execution proof. Do minimal safe work and return a short confirmation.\",\"task_type\":\"impl\",\"context\":{\"executor\":\"openclaw\",\"model_override\":\"openrouter/free\"}}' | jq -r '.id'); printf \"%s\n\" \"$TASK_ID\" | tee /tmp/free_provider_smoke_task_id"
+  - "API_URL=https://api.coherencycoin.com; TASK_ID=$(cat /tmp/free_provider_smoke_task_id); curl -s \"$API_URL/api/agent/tasks/$TASK_ID\" | jq '{ id, status, is_paid: .context.route_decision.is_paid_provider, provider: .context.route_decision.provider, model: .context.route_decision.model }'"
+  - "API_URL=https://api.coherencycoin.com; TASK_ID=$(cat /tmp/free_provider_smoke_task_id); curl -s \"$API_URL/api/friction/events?status=open&limit=20\" | jq --arg id \"$TASK_ID\" '[.[] | select(.block_type == \"paid_provider_blocked\" and (.metadata.task_id == $id))]'"
 
 constraints:
   - "No tests unless listed"

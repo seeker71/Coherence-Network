@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from datetime import date
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -61,6 +61,10 @@ from app.services import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+def _utc_today():
+    return datetime.now(timezone.utc).date()
 
 
 @pytest.fixture
@@ -205,7 +209,7 @@ def test_full_creator_to_settlement_flow(client):
     assert agg["per_asset"][node_id]["free_reads"] == 0
 
     # --- Render events were auto-seeded by the bridge — no manual hop ---
-    today = date.today()
+    today = _utc_today()
 
     # --- Evidence submission — photos + GPS + attestations ---
     evidence_service.register_community_location(37.78, -122.41)
@@ -310,7 +314,7 @@ def test_free_tier_flow(client):
     # Settlement: the free-tier read auto-seeded a render event via the
     # bridge with cc_pool=0 (free reads carry no CC). The batch still
     # counts the read; CC distributed is 0 with no multiplier.
-    today = date.today()
+    today = _utc_today()
     settle_body = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()
@@ -361,7 +365,7 @@ def test_derivative_flow(client):
     # in this iteration. The single paid read already auto-seeded a
     # render event via the bridge, so settlement aggregates without
     # extra wiring.
-    today = date.today()
+    today = _utc_today()
     batch = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()

@@ -202,46 +202,35 @@ cd api && ./scripts/ensure_effective_pipeline.sh
 
 This checks: API reachable, metrics endpoint, monitor-issues endpoint, effectiveness endpoint, version tracking, monitor/runner processes. Reports effectiveness summary (throughput, success rate, issues, goal proximity) and required actions if anything needs attention.
 
-## Production Postgres Operations (Railway)
+## Production Postgres Operations (Hostinger)
 
-Use this flow for any direct production DB work (assessment or cleanup).
+Use this flow for direct production DB assessment. Read
+[`PRODUCTION-SUBSTRATE.md`](PRODUCTION-SUBSTRATE.md) first.
 
 Safety contract:
 - Always run read-only checks first.
-- Never use Railway internal DB host from local shell (`postgres.railway.internal` is not reachable locally).
-- For local execution, resolve the public proxy URL from Railway fallback variable.
+- Do not print or commit credentials.
+- Postgres is internal to the Hostinger Docker Compose network.
+- Use the VPS config files or the local `0600` kernel overlay; do not add shell
+  `DATABASE_URL` fallbacks to application code.
 - Use dry-run before any delete and record row counts before/after.
 
-### 1) Resolve a reachable production DB URL
+### 1) Read the live DB through the VPS
 
 ```bash
-cd /path/to/Coherence-Network
-railway run printenv DATABASE_URL_RAILWAY_FALLBACK
+ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 <<'SH'
+cd /docker/coherence-network
+docker compose exec -T postgres sh -lc \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select current_database(), current_schema(), count(*) from graph_nodes where type = '\''idea'\'';"'
+SH
 ```
 
-This returns the public Railway Postgres proxy URL (`*.proxy.rlwy.net`), suitable for local scripts.
+### 2) Read from a local native-kernel tunnel
 
-### 2) Run read-only assessment
-
-```bash
-python3 - <<'PY'
-import json, subprocess
-from sqlalchemy import create_engine, text
-url = subprocess.check_output(
-    ['bash','-lc','cd /path/to/Coherence-Network && railway run printenv DATABASE_URL_RAILWAY_FALLBACK'],
-    text=True
-).strip()
-engine = create_engine(url, pool_pre_ping=True)
-with engine.connect() as conn:
-    rows = conn.execute(text("""
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema='public' AND table_type='BASE TABLE'
-        ORDER BY table_name
-    """)).fetchall()
-print("table_count=", len(rows))
-PY
-```
+Use the tunnel and local overlay documented in
+[`PRODUCTION-SUBSTRATE.md`](PRODUCTION-SUBSTRATE.md#local-native-kernel-access).
+That path is for read-only native kernel probes such as the Go BML `/api/ideas`
+route.
 
 For existing snapshots, see:
 - `docs/system_audit/production_db_table_assessment_2026-03-05.json`

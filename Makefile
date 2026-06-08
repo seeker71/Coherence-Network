@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-guide prompt-guide start-gate prompt-gate install-pre-push-hook wellness circulation
+.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-guide prompt-guide start-gate prompt-gate install-pre-push-hook wellness circulation carrier-tissue-census carrier-vitality carrier-tending cell-voice-tissue json-lens-tending audit-evidence-tending audit-evidence-index-cache native-route-goal-tending
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -59,3 +59,35 @@ wellness:
 
 circulation:
 	@python3 scripts/sense_subscription_circulation.py
+
+carrier-tissue-census:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk
+
+carrier-vitality:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-vitality.fk
+
+carrier-tending:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tending.fk
+
+cell-voice-tissue:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/cell-voice-tissue.fk
+
+json-lens-tending:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/json-lens-tissue.fk form-stdlib/queries/json-lens-tending.fk
+
+audit-evidence-tending:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-tending.fk
+
+audit-evidence-index-cache:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-index-cache.fk
+
+native-route-goal-tending:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/queries/native-route-goal-tending.fk

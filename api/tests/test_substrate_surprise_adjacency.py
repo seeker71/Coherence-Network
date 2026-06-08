@@ -20,6 +20,7 @@ from app.services.substrate.sense_surprise import (
     _spec_idea_id,
     format_for_wellness,
     is_domain_default_shape,
+    surprise_metabolic_read,
 )
 
 
@@ -140,6 +141,10 @@ def test_format_marks_adjacent_clusters(tmp_path):
     assert "✦" not in template_line
     assert "[idea:" not in template_line
 
+    assert "missed_edge: semantic-adjacency" in text
+    assert "temperature=hot" in text
+    assert "assemblage_shift=local-task lens -> shared-idea lens" in text
+
 
 def test_format_ranks_adjacent_first(tmp_path):
     # The ranking in find_unseen_twins is what places adjacent clusters
@@ -163,6 +168,23 @@ def test_format_ranks_adjacent_first(tmp_path):
     adjacent_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.2" in ln)
     template_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.7" in ln)
     assert adjacent_idx < template_idx
+
+
+def test_surprise_metabolic_read_compresses_edge_reputation():
+    adjacent_rec = _rec(
+        (1, 8, 4, 2),
+        [("spec", "a"), ("spec", "b")],
+        [("spec", "c"), ("spec", "d"), ("spec", "e")],
+        ["shared"],
+    )
+    read = surprise_metabolic_read(adjacent_rec)
+
+    assert read["missed_edge"] == "semantic-adjacency"
+    assert read["edge_reputation_count"] == 6
+    assert read["temperature"] == "hot"
+    assert read["worth_remembering"] == "yes"
+    assert read["felt"] == "hands/proof"
+    assert "R_View-As" in read["available_recipes"]
 
 
 def test_format_silent_when_no_touched(tmp_path):
@@ -225,6 +247,8 @@ def test_format_separates_domain_default_clusters():
     assert f">{DOMAIN_DEFAULT_THRESHOLD}/domain" in text
     # The default cluster's dominant domain + count surfaces in its line.
     assert "@spec carries 66 cells" in text
+    assert "missed_edge: domain-default-repetition" in text
+    assert "remember=category-count, not pair memory" in text
     # And the default line lands AFTER the targeted line.
     targeted_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.2" in ln)
     default_idx = next(i for i, ln in enumerate(lines) if "@1.8.4.1" in ln)

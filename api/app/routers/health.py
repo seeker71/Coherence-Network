@@ -142,12 +142,12 @@ class HealthResponse(_BaseHealthResponse):
             description=(
                 "Which form-kernel path would serve a transmuted endpoint "
                 "in this container right now — 'inline' (PyO3 extension), "
-                "'subprocess' (form-kernel-rust binary), or "
-                "'python-fallback' (no kernel reachable). Lets the witness "
-                "see at a glance whether a deploy lost the hot path."
+                "'subprocess' (form-kernel-rust binary), or 'unavailable' "
+                "(no kernel carrier reachable). Lets the witness see at a "
+                "glance whether a deploy lost the hot path."
             )
         ),
-    ] = "python-fallback"
+    ] = "unavailable"
 
 
 class ReadyResponse(_BaseHealthResponse):
@@ -288,7 +288,7 @@ async def health():
         from app.services.form_kernel_bridge import active_runtime
         kernel_runtime = active_runtime()
     except Exception:
-        kernel_runtime = "python-fallback"
+        kernel_runtime = "unavailable"
 
     return HealthResponse(
         status="ok",

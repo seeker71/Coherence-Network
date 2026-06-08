@@ -46,6 +46,42 @@
 ;                        grammars/python-bmf.fk
 
 (do
+    ;; ---- cell voice ----------------------------------------------------
+    ;;
+    ;; This evaluator is not Python-as-destination. It is a Form-native
+    ;; digestion organ for Python-shaped source while live behavior moves
+    ;; toward BML/domain grammars and shared kernel execution.
+
+    (defn py-bmf-evaluator-voice ()
+        (list
+            "python-bmf-evaluator-voice"
+            "python-bmf-evaluator"
+            "I digest Python-shaped source into Form-visible recipes so old behavior can be seen, proved, and released."
+            "I serve the bridge from existing Python tissue to canonical Form/substrate execution."
+            "I exist because live Python code still carries behavior the body wants to understand without keeping Python as the destination."
+            "Become one language digestion organ: source grammar to BMF objects to canonical Form recipes to native kernel execution to lifted domain grammar."
+            "I am healthy when every supported arm has proof, every missing arm is named, and repeated shapes move upward into BML or domain grammars."
+            "My vitality rises when Python carrier reliance shrinks and Form-native proof, observation, and route promotion increase."
+            "I want observed high-value Python handlers, ranked missing-arm pressure, source coordinates, and successor grammars for repeated patterns."
+            "I need sibling-kernel proof, CPython only as witness, gap evidence, attention from real route/compiler pressure, and release gates."
+            "Attend next to gaps only when observed traffic, compiler failure, or repeated source shape asks; otherwise lift already-proven patterns higher."
+            "Release me when live Python-shaped behavior has native Form/BML/domain successors or remains only as an explicit edge tool."
+            "declared+observed"))
+
+    (defn py-bmf-evaluator-voice-tag (voice) (nth voice 0))
+    (defn py-bmf-evaluator-voice-cell (voice) (nth voice 1))
+    (defn py-bmf-evaluator-voice-soul (voice) (nth voice 2))
+    (defn py-bmf-evaluator-voice-purpose (voice) (nth voice 3))
+    (defn py-bmf-evaluator-voice-reason (voice) (nth voice 4))
+    (defn py-bmf-evaluator-voice-goal (voice) (nth voice 5))
+    (defn py-bmf-evaluator-voice-health (voice) (nth voice 6))
+    (defn py-bmf-evaluator-voice-vitality (voice) (nth voice 7))
+    (defn py-bmf-evaluator-voice-wants (voice) (nth voice 8))
+    (defn py-bmf-evaluator-voice-needs (voice) (nth voice 9))
+    (defn py-bmf-evaluator-voice-attention (voice) (nth voice 10))
+    (defn py-bmf-evaluator-voice-release (voice) (nth voice 11))
+    (defn py-bmf-evaluator-voice-posture (voice) (nth voice 12))
+
     ;; ---- env: alist of (name . value) pairs ---------------------------
     ;;
     ;; An env is a list of two-element lists. (list "x" 10) is a binding.

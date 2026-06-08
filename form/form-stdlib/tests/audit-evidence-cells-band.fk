@@ -1,0 +1,31 @@
+; audit-evidence-cells-band.fk - durable Form cells over real evidence JSON.
+;
+; preludes: form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk
+
+(do
+    (let cells (aec-load-cells-from-root ".."))
+    (let cell
+        (aec-find-cell-by-source
+            cells
+            "docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json"))
+    (let summary (aec-tending-from-root ".."))
+
+    (add
+        (add
+            (add
+                (if (aec-evidence-cell? cell) 1 0)
+                (if (str_eq (aec-date cell) "2026-06-07") 2 0))
+            (add
+                (if (str_eq (aec-commit-scope cell) "Add Form JSON lens tending and evidence cell proof") 4 0)
+                (if (aec-pass? cell) 8 0)))
+        (add
+            (add
+                (if (aec-phase-held? cell) 16 0)
+                (if (aec-summary? summary) 32 0))
+            (add
+                (if (gt (aec-summary-total-json summary) 600) 64 0)
+                (add
+                    (if (gt (aec-summary-loaded-cells summary) 600) 128 0)
+                    (add
+                        (if (gt (aec-summary-pass-count summary) 100) 256 0)
+                        (if (str_eq (aec-summary-next-release summary) "persist dynamic commit evidence cell index and compress repeated proof fields") 512 0)))))))

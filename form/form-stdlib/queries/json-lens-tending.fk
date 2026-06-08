@@ -1,0 +1,6 @@
+; json-lens-tending.fk - Form chooses the next repeated JSON lens to tend.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/json-lens-tissue.fk form-stdlib/queries/json-lens-tending.fk
+
+(jlt-tending-from-root "..")

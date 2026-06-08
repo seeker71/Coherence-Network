@@ -1,9 +1,10 @@
 """Transmuted /api/utils idea/score combinator endpoints (bodies run as Form recipes).
 
-Bodies live as Form recipes; the route prefers the native kernel via
-``serve_via_kernel`` and falls back to the value-identical Python ``_py``
-function. Routes decorate the shared ``/utils`` router from
-``app.routers.kernel_shared`` so every path stays ``/api/utils/...``.
+Bodies live as Form recipes; the route requires the native kernel via
+``serve_via_kernel``. This module owns request binding and response shaping;
+the endpoint arithmetic lives in the committed Form recipes. Routes decorate
+the shared ``/utils`` router from ``app.routers.kernel_shared`` so every path
+stays ``/api/utils/...``.
 """
 from __future__ import annotations
 
@@ -30,13 +31,6 @@ from app.routers.kernel_shared import (
 # ---------------------------------------------------------------------------
 
 
-def weighted_average_py(values: list[float], weights: list[float]) -> float:
-    """Python fallback — semantically identical to the Form recipe."""
-    numerator = sum(v * w for v, w in zip(values, weights))
-    denominator = sum(weights)
-    return numerator / denominator
-
-
 class WeightedAverageResponse(BaseModel):
     """GET /api/utils/weighted_average response."""
 
@@ -46,7 +40,7 @@ class WeightedAverageResponse(BaseModel):
     weights: Annotated[list[float], Field(description="Input weights, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -57,7 +51,7 @@ class WeightedAverageResponse(BaseModel):
     description=(
         "Pure-computation endpoint, body transmuted to a Form recipe. "
         "Returns sum(values[i] * weights[i]) / sum(weights). The substrate's "
-        "bread-and-butter coherence-score combinator. Kernel-or-fallback served "
+        "bread-and-butter coherence-score combinator. Kernel-only served "
         "by serve_via_kernel; three-way parity (CPython, TS, Rust) is the gate."
     ),
 )
@@ -83,7 +77,6 @@ async def weighted_average(
     avg, runtime = serve_via_kernel(
         "endpoint_weighted_average_demo.fk",
         bindings={"values": parsed_v, "weights": parsed_w},
-        fallback=lambda: weighted_average_py(parsed_v, parsed_w),
         parse=float,
     )
     return WeightedAverageResponse(
@@ -100,23 +93,11 @@ async def weighted_average(
 # Pure computation: Simpson's diversity index 1 - sum(p_i^2) over a list of
 # integer category counts (p_i = count_i / total). The substrate's spread
 # signal — how evenly contributors' dominant worldview axes are distributed.
-# Shares its body with vitality_service._simpson_diversity (the fallback);
-# the Form recipe is its kernel-served twin. Float division is forced via a
+# Shares the arithmetic shape vitality_service._simpson_diversity uses.
+# Float division is forced via a
 # total + 0.0 coercion in the recipe (the kernel's `div` is integer division
 # on two ints; Python's `/` is always float), value-identical.
 # ---------------------------------------------------------------------------
-
-
-def _simpson_diversity_py(counts: list[int]) -> float:
-    """Python fallback — semantically identical to the Form recipe.
-
-    Mirrors vitality_service._simpson_diversity: 1 - sum((c/total)^2), with a
-    total <= 0 guard returning 0.0.
-    """
-    total = sum(counts)
-    if total <= 0:
-        return 0.0
-    return 1.0 - sum((c / total) ** 2 for c in counts)
 
 
 class SimpsonDiversityResponse(BaseModel):
@@ -127,7 +108,7 @@ class SimpsonDiversityResponse(BaseModel):
     counts: Annotated[list[int], Field(description="Input category counts, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -140,7 +121,7 @@ class SimpsonDiversityResponse(BaseModel):
         "Returns 1 - sum((count_i / total)^2) — 0.0 for a single category "
         "(no diversity), approaching 1.0 as the distribution spreads evenly. "
         "The same shape vitality_service uses for contributor-worldview spread. "
-        "Kernel-or-fallback via serve_via_kernel; three-way parity is the gate."
+        "Kernel-only via serve_via_kernel; three-way parity is the gate."
     ),
 )
 async def simpson_diversity(
@@ -153,7 +134,6 @@ async def simpson_diversity(
     diversity, runtime = serve_via_kernel(
         "endpoint_simpson_diversity_demo.fk",
         bindings={"counts": parsed},
-        fallback=lambda: _simpson_diversity_py(parsed),
         parse=float,
     )
     return SimpsonDiversityResponse(
@@ -168,23 +148,11 @@ async def simpson_diversity(
 #
 # Pure computation: the free-energy idea score (potential_value * confidence)
 # / max(estimated_cost + resistance_risk, 0.5). The substrate's value-per-cost
-# prioritization signal — the number select_idea ranks the backlog by. Shares
-# its body with idea_scoring._score (the fallback). The two-argument max is
+# prioritization signal — the number select_idea ranks the backlog by. It mirrors
+# idea_scoring._score's arithmetic. The two-argument max is
 # expressed as a comparison in the recipe (the kernel's `max` native floors
 # floats; an `if a > b` branch is float-correct and value-identical).
 # ---------------------------------------------------------------------------
-
-
-def _idea_score_py(
-    potential_value: float, confidence: float, estimated_cost: float, resistance_risk: float
-) -> float:
-    """Python fallback — semantically identical to the Form recipe.
-
-    Mirrors idea_scoring._score: the 0.5 CC floor prevents inflated scores when
-    cost and risk are both near zero.
-    """
-    denom = max(estimated_cost + resistance_risk, 0.5)
-    return (potential_value * confidence) / denom
 
 
 class IdeaScoreResponse(BaseModel):
@@ -198,7 +166,7 @@ class IdeaScoreResponse(BaseModel):
     resistance_risk: Annotated[float, Field(description="Input resistance_risk, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -211,7 +179,7 @@ class IdeaScoreResponse(BaseModel):
         "Returns (potential_value * confidence) / max(estimated_cost + "
         "resistance_risk, 0.5) — the substrate's value-per-cost ranking signal. "
         "The 0.5 CC floor prevents inflated scores when cost and risk are near "
-        "zero. Same body as idea_scoring._score. Kernel-or-fallback via "
+        "zero. Same body as idea_scoring._score. Kernel-only via "
         "serve_via_kernel; three-way parity is the gate."
     ),
 )
@@ -229,9 +197,6 @@ async def idea_score(
             "estimated_cost": estimated_cost,
             "resistance_risk": resistance_risk,
         },
-        fallback=lambda: _idea_score_py(
-            potential_value, confidence, estimated_cost, resistance_risk
-        ),
         parse=float,
     )
     return IdeaScoreResponse(
@@ -252,25 +217,11 @@ async def idea_score(
 # remaining_cost = max(ec - ac, 0.1). Prioritizes uncaptured value per
 # remaining CC — confidence enters squared so low-confidence ideas are
 # discounted twice. Shares its arithmetic core with idea_scoring.
-# _marginal_cc_return (the fallback); that function additionally coalesces
+# _marginal_cc_return; that function additionally coalesces
 # falsy fields to defaults before the math — host concern, applied here in
 # the same way before the recipe runs. The two maxes are comparisons in the
 # recipe (float-correct; the `max` native floors floats).
 # ---------------------------------------------------------------------------
-
-
-def _marginal_cc_return_py(
-    pv: float, av: float, conf: float, ec: float, ac: float, rr: float
-) -> float:
-    """Python fallback — the arithmetic core of idea_scoring._marginal_cc_return.
-
-    Inputs are the already-coalesced floats (the service function's
-    ``getattr(...) or default`` substitution is the caller's job; this is the
-    pure math after it). value_gap floors at 0.0, remaining_cost at 0.1.
-    """
-    value_gap = max(pv - av, 0.0)
-    remaining_cost = max(ec - ac, 0.1)
-    return (value_gap * conf * conf) / (remaining_cost + rr * 0.5)
 
 
 class MarginalCcReturnResponse(BaseModel):
@@ -288,7 +239,7 @@ class MarginalCcReturnResponse(BaseModel):
     rr: Annotated[float, Field(description="resistance_risk, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -301,7 +252,7 @@ class MarginalCcReturnResponse(BaseModel):
         "Returns (value_gap * conf^2) / (remaining_cost + rr*0.5) where "
         "value_gap = max(pv - av, 0.0) and remaining_cost = max(ec - ac, 0.1) — "
         "uncaptured value per remaining CC, confidence discounted twice. The "
-        "arithmetic core of idea_scoring._marginal_cc_return. Kernel-or-fallback "
+        "arithmetic core of idea_scoring._marginal_cc_return. Kernel-only "
         "via serve_via_kernel; three-way parity is the gate."
     ),
 )
@@ -316,7 +267,6 @@ async def marginal_cc_return(
     marginal_return, runtime = serve_via_kernel(
         "endpoint_marginal_cc_return_demo.fk",
         bindings={"pv": pv, "av": av, "conf": conf, "ec": ec, "ac": ac, "rr": rr},
-        fallback=lambda: _marginal_cc_return_py(pv, av, conf, ec, ac, rr),
         parse=float,
     )
     return MarginalCcReturnResponse(
@@ -363,31 +313,8 @@ class IdeaMarginalFromRecordResponse(BaseModel):
     ]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
-
-
-def _marginal_from_idea_py(idea: dict) -> float:
-    """Python fallback — value-identical to endpoint_idea_marginal_from_record_demo.fk.
-
-    Reads the six fields from the structured object and computes the Method-B
-    marginal CC return, round(_, 6). The recipe's operation order mirrors this
-    so kernel and fallback agree.
-    """
-    pv = idea["potential_value"]
-    av = idea["actual_value"]
-    conf = idea["confidence"]
-    ec = idea["estimated_cost"]
-    ac = idea["actual_cost"]
-    rr = idea["resistance_risk"]
-    value_gap = pv - av
-    if value_gap < 0.0:
-        value_gap = 0.0
-    remaining_cost = ec - ac
-    if remaining_cost < 0.1:
-        remaining_cost = 0.1
-    return round((value_gap * conf * conf) / (remaining_cost + rr * 0.5), 6)
-
 
 @router.get(
     "/idea_marginal_from_record",
@@ -399,7 +326,7 @@ def _marginal_from_idea_py(idea: dict) -> float:
         "one structured object (the idea), marshalled into a kernel Record from "
         "a Python dict, and the recipe reads them by name via the kernel's field "
         "accessor. Same arithmetic as marginal_cc_return; the new capability is "
-        "field extraction from a record binding. Kernel-or-fallback via "
+        "field extraction from a record binding. Kernel-only via "
         "serve_via_kernel; CPython==Rust value-parity is the gate."
     ),
 )
@@ -422,7 +349,6 @@ async def idea_marginal_from_record(
     marginal_return, runtime = serve_via_kernel(
         "endpoint_idea_marginal_from_record_demo.fk",
         bindings={"idea": idea},
-        fallback=lambda: _marginal_from_idea_py(idea),
         parse=float,
     )
     return IdeaMarginalFromRecordResponse(
@@ -442,7 +368,7 @@ async def idea_marginal_from_record(
 # result list via the append-accumulator idiom (form-stdlib's METHOD-CALL
 # accumulator arm / the adapter's `_list_append` lowering) and the result
 # round-trips through value_to_py's List arm as a real Python list. Shares
-# its body with idea_scoring._softmax_weights (the fallback). Uses the
+# its body mirrors idea_scoring._softmax_weights. Uses the
 # math.exp transcendental native (math_exp), like breath_balance's ln.
 # This opens the whole class of list-returning routes — distributions,
 # vectors, normalized weights.
@@ -461,7 +387,7 @@ class SoftmaxWeightsResponse(BaseModel):
     temperature: Annotated[float, Field(description="Exploration temperature, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -477,7 +403,7 @@ class SoftmaxWeightsResponse(BaseModel):
         "flattens the distribution. The same shape idea selection uses to "
         "sample the backlog. This is the FIRST kernel-served route to return "
         "a LIST — the value-walk carries list construction end to end. "
-        "Kernel-or-fallback via serve_via_kernel; CPython==Rust element-wise "
+        "Kernel-only via serve_via_kernel; CPython==Rust element-wise "
         "value-parity is the gate."
     ),
 )
@@ -491,13 +417,10 @@ async def softmax_weights(
         Query(ge=0.0, description="Exploration temperature (0.0 = deterministic)"),
     ] = 1.0,
 ) -> SoftmaxWeightsResponse:
-    from app.services.idea_scoring import _softmax_weights
-
     parsed = _parse_floats(scores, "scores")
     weights, runtime = serve_via_kernel(
         "endpoint_softmax_weights_demo.fk",
         bindings={"scores": parsed, "temperature": temperature},
-        fallback=lambda: _softmax_weights(parsed, temperature),
         parse=_coerce_float_list,
     )
     return SoftmaxWeightsResponse(

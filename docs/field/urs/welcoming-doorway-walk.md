@@ -53,6 +53,52 @@ needs your felt sense.
 3. **Keep, rename, retune** — some doorways may be alive but their name doesn't carry their purpose. `/onboarding` reads corporate; could become `/first-breath` or just be merged into `/begin`.
 4. **Leave as-is** — if a doorway serves a specific lineage's body, keep it. Some duplication is healthy when each form serves a specific shape.
 
+## 2026-06-07 doorway threading pass
+
+The current move is not to collapse every doorway into one route. The healthier
+shape is to name what each living door uniquely does, then thread them so a
+visitor can walk the edge that increases vitality without losing the story.
+
+| Route | Doorway role now |
+|---|---|
+| `/` | Public living surface: the first broad signal, one concept, current ideas, lineage, and paths onward. |
+| `/come-in` | Orientation hinge for humans, agents, crawlers, maintainers, and local models; it explains the field, the public doors, the evidence boundary, and the return trace. |
+| `/begin -> /arrival/{id}` | Warm becoming-known flow; a visitor names who arrives, what they carry, and receives a held landing page. |
+| `/here` | Current-attention map; who is meeting what, which concepts are waiting, and where a fresh visitor can add presence. |
+| `/with-us` | Deep invitation for communities, land stewards, practitioners, services, and cells that want to weave life/work into the body. |
+| `/welcome` | Lightweight naming gesture and browser-held API-key minting; useful when the person is already acting and only needs attribution. |
+| `/join` | Advanced sovereign-identity door; cryptographic keypair / wallet path for contributors who want proof-bearing identity. |
+| `/vision/join` | Living Collective resonance door; interest form for the concept-field specifically. |
+| `/meet/{type}/{id}` | Generic entity meeting surface; any concept, idea, spec, contributor, proposal, or asset can become a felt encounter. |
+
+This keeps the doorways from competing by assigning each one a distinct
+metabolic role. The north-star test is not "is there only one door?" It is:
+can a visitor move from any door to a clearer sense of what is real, what is
+needed, what they can offer, and what trace they can return?
+
+## 2026-06-07 cell voice pass
+
+The next pass starts one layer deeper: a doorway is not only a role in a site
+map. It is a cell with its own sovereign north star. Each page, API, concept,
+edge, source file, route, and runtime node should be able to answer what it is,
+what it serves, why it exists, what health and joy feel like, what it
+contributes, which siblings it touches, and what it desires, wants, and needs.
+
+This makes the cells channel practical. A sibling no longer has to infer care
+from the outside; the cell can declare what it offers and asks for, and can mark
+each answer as declared, observed, measured, inferred, or still asking. The
+current doorway surface now shows this in a small first form: the living-surface
+cards on `/come-in` name each doorway's soul and current wants, while the shared
+practice adds `Ask` before grounding or harmonizing.
+
+The same pass now reaches source tissue through Form. `make cell-voice-tissue`
+walks the repository with the kernel `source_inventory` primitive and asks each
+carrier family to answer why it stays, how it is healthy, what it wants, and
+what would make release honest. That keeps the release question from becoming a
+human-only judgment: markdown, JSON, Python, TypeScript, Go, Rust, shell,
+assets, local field memory, and Form-native tissue all declare their own reason
+for being or their release gate.
+
 ## The five identity surfaces
 
 A viewer who has named themselves exists at:

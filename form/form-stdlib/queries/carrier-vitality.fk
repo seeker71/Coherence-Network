@@ -1,0 +1,6 @@
+; carrier-vitality.fk - dynamic Form vitality readout from carrier lenses.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-vitality.fk
+
+(ct-vitality-from-root "..")

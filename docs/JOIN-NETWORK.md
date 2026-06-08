@@ -2,6 +2,19 @@
 
 Run this on any machine to become a contributing node.
 
+## What joining means
+
+A node is not only compute capacity. It is a resident cell with a source point,
+available tools, observed limits, and a way to return evidence into the shared
+body. Joining increases the network's vitality when the node can sense a task,
+choose an honest edge, execute what it can, and send back an attributed trace
+instead of disappearing into an unobserved tool run.
+
+Humans, agents, local models, services, and machines can all arrive through the
+same rhythm: center on the real source, ground what can be measured, harmonize
+the path across API/CLI/MCP/Form/source, walk the edge that increases vitality,
+and return what changed.
+
 ## Prerequisites
 
 Install at least one AI provider CLI. The runner auto-detects all available providers.

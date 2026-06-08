@@ -432,6 +432,18 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 9,
+      "name": "AEC-EVIDENCE-CELL",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 10,
       "name": "JSON-OBJECT",
       "meaning": "map: list of (key, value) pairs",
@@ -575,6 +587,18 @@
         "form/form-stdlib/seedbank/grammars/json.bnf.fk",
         "form/form-stdlib/seedbank/grammars/json.fk"
       ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 14,
+      "name": "AEC-EVIDENCE-INDEX",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [],
+      "curated": true
     },
     {
       "pkg": 1,
