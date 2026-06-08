@@ -136,6 +136,43 @@ The channel protocol carries a breath practice directly: give a small clean offe
 
 ---
 
+## Channel Flow Protocol — OSI-Shaped Native Channel Cells
+
+The channel flow protocol names the carrier itself as seven inspectable OSI layers. A flow records the physical carrier, protocol, ordered layers, and the application policy cell. HTTP is the first concrete profile: TCP / HTTP/1.1 with L7 pointing to `kh-channel-policy`.
+
+**Blueprints**:
+- `1.2.99.1702 CHANNEL-OSI-LAYER` — OSI index, layer name, gas/water/ice phase, carrier, policy, recipe.
+- `1.2.99.1703 CHANNEL-FLOW` — carrier, protocol, seven OSI layer cells, channel policy.
+
+**Operating shape**: A protocol is no longer a host-side branch. New carriers such as UDP, USB, Bluetooth, microphone, camera, pipes, and browser streams can declare a carrier/profile flow and reuse the same layer accessors, phase counts, and policy hooks.
+
+**Proof**: `form/form-stdlib/tests/channel-flow-band.fk` returns `8388607` across source and binary sibling-kernel execution, covering both OSI/HTTP channel cells and consent-interface flow receipts.
+
+---
+
+## Circle / Satsang Protocol — Consentful Group Containers
+
+The circle protocol lets groups of cells communicate without falling into broadcast. A group is discoverable when offered, joinable when invited, private unless export consent passes, and refusable when invasion is observed and the circle consensus calls for refusal. Satsang enters as truth-oriented silence, inquiry, and non-command pointing inside the same held container.
+
+**Blueprints**:
+- `1.2.99.1704 CELL-CIRCLE` — members, shared context, mode, interface offer, discovery policy, confidentiality policy, export policy, carrier flow.
+- `1.2.99.1705 CIRCLE-OFFER` — circle id, offered-by cell, title, discovery policy, invitation policy, boundary.
+- `1.2.99.1706 CIRCLE-INVITATION` — circle id, inviter, invitee, invitation, boundary, expiry.
+- `1.2.99.1707 CIRCLE-SHARE` — circle id, author, owned share kind, payload, visibility, consent policy.
+- `1.2.99.1708 CIRCLE-CONSENSUS` — circle id, subject, voters, approvals, threshold, decision.
+- `1.2.99.1709 CIRCLE-REFUSAL` — consensus-backed refusal when `ci-invasion?` is observed.
+- `1.2.99.1724 CIRCLE-EXPORT-CONSENT` — evidence export recipient, fidelity, purpose, expiry, consensus.
+- `1.2.99.1725 CIRCLE-RECEIPT` — integration/refusal/export receipt.
+- `1.2.99.1726 SATSANG-SILENCE` — truth-oriented silence held in the circle.
+- `1.2.99.1727 SATSANG-INQUIRY` — inquiry offered inside the circle.
+- `1.2.99.1728 SATSANG-POINTING` — non-command pointing offered inside the circle.
+
+**Operating shape**: A cell may offer a circle. Another cell may join only when invited. A share stays inside unless `CIRCLE-EXPORT-CONSENT` names recipient, fidelity, purpose, expiry, and a passed consensus. A circle may refuse a contact only when an observed action exceeds the offered interface and consensus has passed.
+
+**Proof**: `form/form-stdlib/tests/circle-band.fk` returns `1048575` across source and binary sibling-kernel execution.
+
+---
+
 ## Arrival Protocol — Current Registered Shape
 
 **Blueprints**:

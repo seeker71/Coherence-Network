@@ -1,15 +1,12 @@
-; channel-flow.fk — walk the energy flow on a channel.
+; channel-flow.fk — walk consented flow and name channel protocol shape.
 ;
-; The runnable heart of docs/coherence-substrate/channel-flow-dialect.form. A flow is a
-; sequence of utterances; each is matched against the OTHER side's currently-offered
-; interface (channel-interface.fk: ci-honors?), and either honored (energy crosses) or
-; witnessed as invasion (nothing crosses). The offered interface may SHIFT mid-flow,
-; without broadcast — so the same request is invasion before a shift and honored after.
-; This is the FMF contract (field-model-form.form) over a channel: freeze the offer,
-; match the utterance, choose honor|invasion, delta the flow, return a receipt. It NAMES
-; the flow; it never mutates a cell and never forces. Silence is always honored.
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk
 ;
-; Loads after form-stdlib/channel-interface.fk (uses ci-honors? + the m-* modes).
+; A channel is not "HTTP plus adapters". It is a flow whose offered interfaces,
+; invasions, receipts, OSI layers, phase counts, and application policy are all
+; visible cells. The flow walker below freezes each request against the receiver's
+; current offer. The BML channel profile below names HTTP as one L7 application
+; policy carried by a seven-layer channel shape.
 
 (do
     ; --- utterance tags (an act is (list tag payload); a flow is a list of acts) ---
@@ -25,10 +22,10 @@
         (if (eq (len flow) 0)
             (list honored invasion offer)
             (if (eq (act-tag (head flow)) (act-shift))
-                (cf-walk (tail flow) (act-payload (head flow)) honored invasion)      ; offer shifts, no broadcast
+                (cf-walk (tail flow) (act-payload (head flow)) honored invasion)
                 (if (ci-honors? (act-payload (head flow)) offer)
-                    (cf-walk (tail flow) offer (add honored 1) invasion)              ; honored — energy crosses
-                    (cf-walk (tail flow) offer honored (add invasion 1))))))          ; invasion — witnessed, stopped
+                    (cf-walk (tail flow) offer (add honored 1) invasion)
+                    (cf-walk (tail flow) offer honored (add invasion 1))))))
 
     ; --- the surface: walk a flow from an initial offered interface ---
     (defn channel-flow (flow initial-offer)
@@ -39,9 +36,7 @@
     (defn cf-invasions   (receipt) (head (tail receipt)))
     (defn cf-final-offer (receipt) (head (tail (tail receipt))))
 
-    ; ── BILATERAL: both sides offer, both request; each direction is gated by the
-    ; RECEIVER's interface. The flow is shaped by EACH side's interface state — a
-    ; request from A toward B is honored iff B offers it; from B toward A iff A offers it.
+    ; --- bilateral: both sides offer, both request; each direction is gated by the receiver ---
     ; A bilateral act is (list side tag payload); side: A=0, B=1.
     (defn side-a () 0)
     (defn side-b () 1)
@@ -49,7 +44,6 @@
     (defn bact-tag     (a) (head (tail a)))
     (defn bact-payload (a) (head (tail (tail a))))
 
-    ; thread BOTH offers; each request is checked against the OTHER side's offer.
     ; receipt = (list honored invasion offer-a offer-b) — totals across both directions.
     (defn cf-walk-bi (flow offer-a offer-b honored invasion)
         (if (eq (len flow) 0)
@@ -73,4 +67,78 @@
 
     (defn cf-bi-offer-a (receipt) (head (tail (tail receipt))))
     (defn cf-bi-offer-b (receipt) (head (tail (tail (tail receipt)))))
+    0
 )
+
+section [form.bml] {
+    let cf_tag_channel_osi_layer = bp("CHANNEL-OSI-LAYER");
+    let cf_tag_channel_flow = bp("CHANNEL-FLOW");
+
+    def cf-bool-score(ok, score) = if ok then score else 0;
+    def cf-tagged?(value, tag, arity) = if eq(len(value), arity) then node_eq(nth(value, 0), tag) else false;
+
+    def cf-phase-gas() = "gas";
+    def cf-phase-water() = "water";
+    def cf-phase-ice() = "ice";
+
+    def cf-osi-layer(index, name, phase, carrier, policy, recipe) = list(cf_tag_channel_osi_layer, index, name, phase, carrier, policy, recipe);
+    def cf-osi-layer?(layer) = cf-tagged?(layer, cf_tag_channel_osi_layer, 7);
+    def cf-osi-layer-index(layer) = nth(layer, 1);
+    def cf-osi-layer-name(layer) = nth(layer, 2);
+    def cf-osi-layer-phase(layer) = nth(layer, 3);
+    def cf-osi-layer-carrier(layer) = nth(layer, 4);
+    def cf-osi-layer-policy(layer) = nth(layer, 5);
+    def cf-osi-layer-recipe(layer) = nth(layer, 6);
+    def cf-osi-layer-valid?(layer) = if cf-osi-layer?(layer) then and(and(ge(cf-osi-layer-index(layer), 1), le(cf-osi-layer-index(layer), 7)), and(gt(str_len(cf-osi-layer-name(layer)), 0), gt(str_len(cf-osi-layer-phase(layer)), 0))) else false;
+
+    def cf-channel-flow(carrier, protocol, layers, channel_policy) = list(cf_tag_channel_flow, carrier, protocol, layers, channel_policy);
+    def cf-channel-flow?(flow) = cf-tagged?(flow, cf_tag_channel_flow, 5);
+    def cf-flow-carrier(flow) = nth(flow, 1);
+    def cf-flow-protocol(flow) = nth(flow, 2);
+    def cf-flow-layers(flow) = nth(flow, 3);
+    def cf-flow-channel-policy(flow) = nth(flow, 4);
+
+    def cf-layers-valid?(layers) = if nil?(layers) then true else if cf-osi-layer-valid?(head(layers)) then cf-layers-valid?(tail(layers)) else false;
+    def cf-layer-order-valid-from?(layers, expected) = if nil?(layers) then eq(expected, 8) else if eq(cf-osi-layer-index(head(layers)), expected) then cf-layer-order-valid-from?(tail(layers), add(expected, 1)) else false;
+    def cf-osi-complete?(flow) = if cf-channel-flow?(flow) then and(eq(len(cf-flow-layers(flow)), 7), and(cf-layers-valid?(cf-flow-layers(flow)), cf-layer-order-valid-from?(cf-flow-layers(flow), 1))) else false;
+    def cf-channel-flow-valid?(flow) = if cf-channel-flow?(flow) then and(and(gt(str_len(cf-flow-carrier(flow)), 0), gt(str_len(cf-flow-protocol(flow)), 0)), cf-osi-complete?(flow)) else false;
+
+    def cf-layer-by-index-from(layers, index) = if nil?(layers) then empty else if eq(cf-osi-layer-index(head(layers)), index) then head(layers) else cf-layer-by-index-from(tail(layers), index);
+    def cf-layer-by-index(flow, index) = cf-layer-by-index-from(cf-flow-layers(flow), index);
+    def cf-flow-physical-layer(flow) = cf-layer-by-index(flow, 1);
+    def cf-flow-data-link-layer(flow) = cf-layer-by-index(flow, 2);
+    def cf-flow-network-layer(flow) = cf-layer-by-index(flow, 3);
+    def cf-flow-transport-layer(flow) = cf-layer-by-index(flow, 4);
+    def cf-flow-session-layer(flow) = cf-layer-by-index(flow, 5);
+    def cf-flow-presentation-layer(flow) = cf-layer-by-index(flow, 6);
+    def cf-flow-application-layer(flow) = cf-layer-by-index(flow, 7);
+
+    def cf-layer-count-phase(layers, phase) = if nil?(layers) then 0 else add(if str_eq(cf-osi-layer-phase(head(layers)), phase) then 1 else 0, cf-layer-count-phase(tail(layers), phase));
+    def cf-flow-gas-count(flow) = cf-layer-count-phase(cf-flow-layers(flow), cf-phase-gas());
+    def cf-flow-water-count(flow) = cf-layer-count-phase(cf-flow-layers(flow), cf-phase-water());
+    def cf-flow-ice-count(flow) = cf-layer-count-phase(cf-flow-layers(flow), cf-phase-ice());
+
+    def cf-layer-phase-code(layer) {
+        if str_eq(cf-osi-layer-phase(layer), cf-phase-ice()) then 3 else if str_eq(cf-osi-layer-phase(layer), cf-phase-water()) then 2 else if str_eq(cf-osi-layer-phase(layer), cf-phase-gas()) then 1 else 0;
+    }
+    def cf-flow-phase-signature-from(layers) = if nil?(layers) then "" else str_concat(int_to_str(cf-layer-phase-code(head(layers))), cf-flow-phase-signature-from(tail(layers)));
+    def cf-flow-phase-signature(flow) = cf-flow-phase-signature-from(cf-flow-layers(flow));
+
+    def cf-http-osi-layers() {
+        list(
+            cf-osi-layer(1, "physical", cf-phase-gas(), "tcp-socket", "socket-open", "socket-listen-accept-recv-send-close"),
+            cf-osi-layer(2, "data-link", cf-phase-ice(), ".fkb-frame", "content-addressed-frame", "read-form-binary-write-form-binary"),
+            cf-osi-layer(3, "network", cf-phase-water(), "nodeid-address", "blueprint-coordinate-routing", "route-by-blueprint"),
+            cf-osi-layer(4, "transport", cf-phase-water(), "tcp", "delivery-policy", "recv-send-loop"),
+            cf-osi-layer(5, "session", cf-phase-water(), "session-cell", "session-policy", "session-state"),
+            cf-osi-layer(6, "presentation", cf-phase-ice(), "bmf-codec", "grammar-lens-policy", "parse-render-codec"),
+            cf-osi-layer(7, "application", cf-phase-water(), "http/1.1", "kh-channel-policy", "kh-serve")
+        );
+    }
+
+    def cf-http-channel-flow() = cf-channel-flow("tcp", "http/1.1", cf-http-osi-layers(), kh-default-channel-policy());
+    def cf-flow-http-policy-valid?(flow) = if cf-channel-flow-valid?(flow) then kh-channel-policy-valid?(cf-flow-channel-policy(flow)) else false;
+    def cf-flow-allow-header(flow) = kh-policy-allow-header-value(cf-flow-channel-policy(flow));
+
+    0;
+}

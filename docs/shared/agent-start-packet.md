@@ -127,7 +127,7 @@ lattice work** without Python in the loop:
 | Capability | Where |
 |------------|--------|
 | File I/O | `read_file`, `read_file_bytes`, `read_file_slice`, `write_file_*`, bands in `form-stdlib/tests/file-*` |
-| HTTP | `http-parse.fk`, `http-serve.fk`, `http-server.fk`, kernel `http_get`, `fetch` |
+| HTTP + channel flow + circles | `kernel-http.fk`, `channel-flow.fk`, `circle.fk`, `http-parse.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, kernel `http_get`, `fetch` |
 | Persistence read | `form-stdlib/persistence.fk` — `lookup-cell`, `store-cells`; kernel `read_form_binary` |
 | Substrate reach | Recipes compose lookups + file/HTTP — no separate “query evaluator” |
 
@@ -172,7 +172,7 @@ Deeper substrate practice: [`agents-using-substrate.md`](../coherence-substrate/
 
 ## Shifting the Mind: How to Think and Code Differently
 
-Imperative software models train developers to reason about instructions mutating memory state, querying databases via symbol strings, and handling control flow via statistical rules. 
+Imperative software models train developers to reason about instructions mutating memory state, querying databases via symbol strings, and handling control flow via statistical rules.
 In the Coherence substrate, you must redirect this programming into **coordinates** and **relations**:
 
 1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
