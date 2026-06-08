@@ -473,6 +473,17 @@ impl Trace {
         self.choice_failures += 1;
     }
 
+    pub(crate) fn record_route_choice(&mut self, choice: &RouteChoice<'_>) {
+        for decision in &choice.decisions {
+            self.record_choice_attempt();
+            if decision.selected {
+                self.record_choice_success();
+            } else {
+                self.record_choice_failure();
+            }
+        }
+    }
+
     pub(crate) fn arm_name(arm_ty: u32) -> &'static str {
         match arm_ty {
             RB_BLOCK => "BLOCK",
@@ -892,6 +903,7 @@ impl Kernel {
     /// NameIDs here exactly as the `record_new` native does (main.rs ~2051), so
     /// a record marshalled from Python and one built by `record_new` in Form
     /// are the same shape — `record_get`/`record_has` read both identically.
+    #[cfg(feature = "pyo3")]
     pub(crate) fn make_record(&mut self, blueprint: NodeID, pairs: Vec<(String, Value)>) -> Value {
         let fields: Vec<(NameID, Value)> = pairs
             .into_iter()
@@ -4627,11 +4639,6 @@ impl EmittedExpr {
         }
     }
 
-    fn src(&self) -> &str {
-        match self {
-            EmittedExpr::Int(s) | EmittedExpr::Bool(s) => s.as_str(),
-        }
-    }
 }
 
 /// Tracks compile-time scope while emitting. `vars` maps NameID → Rust
@@ -6149,14 +6156,6 @@ fn cat_list_nat() -> NodeID {
         inst: 1,
     }
 }
-fn cat_transmute() -> NodeID {
-    NodeID {
-        pkg: 1,
-        level: LEVEL_BASIC,
-        ty: RB_TRANSMUTE,
-        inst: 1,
-    }
-}
 fn cat_field_primitive(ty: u32) -> NodeID {
     NodeID {
         pkg: 1,
@@ -6568,6 +6567,9 @@ struct RouterMetrics {
     fanout_requests: u64,
     local_control_requests: u64,
     native_error_requests: u64,
+    choice_attempts: u64,
+    choice_successes: u64,
+    choice_failures: u64,
     observed_paths: HashSet<String>,
     observed_native_paths: HashSet<String>,
     observed_fanout_paths: HashSet<String>,
@@ -6582,6 +6584,9 @@ struct RouterMetricsSnapshot {
     fanout_requests: u64,
     local_control_requests: u64,
     native_error_requests: u64,
+    choice_attempts: u64,
+    choice_successes: u64,
+    choice_failures: u64,
     observed_path_count: usize,
     observed_native_route_count: usize,
     observed_fanout_path_count: usize,
@@ -6644,6 +6649,18 @@ impl RouterMetrics {
         }
     }
 
+    fn record_route_choice(&mut self, choice: &RouteChoice<'_>) {
+        let attempts = choice.decisions.len() as u64;
+        let successes = choice
+            .decisions
+            .iter()
+            .filter(|decision| decision.selected)
+            .count() as u64;
+        self.choice_attempts += attempts;
+        self.choice_successes += successes;
+        self.choice_failures += attempts.saturating_sub(successes);
+    }
+
     fn snapshot(&self, native_route_count: usize) -> RouterMetricsSnapshot {
         let fanout_path_counts = self.fanout_path_counts();
         let next_bml_candidate = Self::next_bml_candidate(&fanout_path_counts);
@@ -6657,6 +6674,9 @@ impl RouterMetrics {
             fanout_requests: self.fanout_requests,
             local_control_requests: self.local_control_requests,
             native_error_requests: self.native_error_requests,
+            choice_attempts: self.choice_attempts,
+            choice_successes: self.choice_successes,
+            choice_failures: self.choice_failures,
             observed_path_count: self.observed_paths.len(),
             observed_native_route_count: self.observed_native_paths.len(),
             observed_fanout_path_count: self.observed_fanout_paths.len(),
@@ -6685,6 +6705,12 @@ fn router_metrics_snapshot(
 fn record_router_metrics(metrics: &Arc<Mutex<RouterMetrics>>, path: &str, router: &str) {
     if let Ok(mut guard) = metrics.lock() {
         guard.record(path, router);
+    }
+}
+
+fn record_router_choice_metrics(metrics: &Arc<Mutex<RouterMetrics>>, choice: &RouteChoice<'_>) {
+    if let Ok(mut guard) = metrics.lock() {
+        guard.record_route_choice(choice);
     }
 }
 
@@ -7381,6 +7407,10 @@ fn handle_request(
         &query_data,
         &request_body,
     );
+    record_router_choice_metrics(router_metrics, &route_choice);
+    if let Some(trace) = &mut k.trace {
+        trace.record_route_choice(&route_choice);
+    }
     if let Some(selection) = route_choice.selected.as_ref() {
         let route = selection.route;
         // NATIVE: served entirely in Form, no Python in the path.
@@ -7507,6 +7537,7 @@ fn handle_request(
         // an unframed one; Connection per the client's intent). This arm does its
         // OWN client write (head + streamed body) and returns the client keep-alive
         // verdict directly — it does NOT fall through to the buffered emit below.
+        record_router_metrics(router_metrics, &path, "fanout-python");
         return fanout_stream_to_client(
             stream,
             keep_alive,
@@ -9701,6 +9732,18 @@ fn router_observation_value(metrics: &RouterMetricsSnapshot) -> Value {
             "next_bml_candidate",
             router_bml_candidate_value(&metrics.next_bml_candidate),
         ),
+        (
+            "choice_attempts",
+            Value::Int(metrics.choice_attempts as i64),
+        ),
+        (
+            "choice_successes",
+            Value::Int(metrics.choice_successes as i64),
+        ),
+        (
+            "choice_failures",
+            Value::Int(metrics.choice_failures as i64),
+        ),
     ])
 }
 
@@ -9767,6 +9810,18 @@ fn router_context_data(
         (
             "__router_native_error_requests__".to_string(),
             Value::Str(metrics.native_error_requests.to_string().into()),
+        ),
+        (
+            "__router_choice_attempts__".to_string(),
+            Value::Str(metrics.choice_attempts.to_string().into()),
+        ),
+        (
+            "__router_choice_successes__".to_string(),
+            Value::Str(metrics.choice_successes.to_string().into()),
+        ),
+        (
+            "__router_choice_failures__".to_string(),
+            Value::Str(metrics.choice_failures.to_string().into()),
         ),
         (
             "__router_observation__".to_string(),
@@ -9945,6 +10000,9 @@ mod router_context_tests {
             fanout_requests: 3,
             local_control_requests: 1,
             native_error_requests: 0,
+            choice_attempts: 52,
+            choice_successes: 18,
+            choice_failures: 34,
             observed_path_count: 5,
             observed_native_route_count: 4,
             observed_fanout_path_count: 1,
@@ -9979,6 +10037,9 @@ mod router_context_tests {
         assert_eq!(str_for(&pairs, "__router_native_requests__"), "17");
         assert_eq!(str_for(&pairs, "__router_fanout_requests__"), "3");
         assert_eq!(str_for(&pairs, "__router_local_control_requests__"), "1");
+        assert_eq!(str_for(&pairs, "__router_choice_attempts__"), "52");
+        assert_eq!(str_for(&pairs, "__router_choice_successes__"), "18");
+        assert_eq!(str_for(&pairs, "__router_choice_failures__"), "34");
         assert_eq!(str_for(&pairs, "__router_observed_path_count__"), "5");
         assert_eq!(
             str_for(&pairs, "__router_observed_native_route_count__"),
