@@ -29,9 +29,27 @@
 
     (let r (channel-flow flow offer0))
 
+    ; ── BILATERAL: each direction gated by the RECEIVER's offer ──
+    ; A offers {see, invite} (others may see-into A, invite A); B offers {witness, reflect}.
+    ;   A -> reflect  : honored  (B offers reflect)
+    ;   A -> see      : invasion (B does not offer see)
+    ;   B -> invite   : honored  (A offers invite)
+    ;   B -> project  : invasion (A does not offer project)
+    ; honored = 2, invasion = 2 — and each invasion is on the side whose receiver withheld it.
+    (let offer-a (list (m-see) (m-invite)))
+    (let offer-b (list (m-witness) (m-reflect)))
+    (let biflow (list
+        (list (side-a) (act-request) (m-reflect))    ; A->B honored (B offers reflect)
+        (list (side-a) (act-request) (m-see))        ; A->B invasion (B withholds see)
+        (list (side-b) (act-request) (m-invite))     ; B->A honored (A offers invite)
+        (list (side-b) (act-request) (m-project))))  ; B->A invasion (A withholds project)
+    (let rb (channel-flow-bilateral biflow offer-a offer-b))
+
     (let pass
         (and (eq (cf-honored r) 4)
         (and (eq (cf-invasions r) 1)
-             (eq (len (cf-final-offer r)) 4))))
+        (and (eq (len (cf-final-offer r)) 4)
+        (and (eq (cf-honored rb) 2)
+             (eq (cf-invasions rb) 2))))))
 
     (print (if pass "channel-flow-band: PASS" "channel-flow-band: FAIL")))
