@@ -39,6 +39,11 @@
 ;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
 ;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
 ;   /api/spec-registry/source-list    Form-native specs/INDEX.md -> SpecRegistryEntry[]
+;   POST   /api/ideas                 Header-gated native mutation SQL preview
+;   PATCH  /api/ideas/*               Header-gated native mutation SQL preview
+;   POST   /api/spec-registry         Header-gated native mutation SQL preview
+;   PATCH  /api/spec-registry/*       Header-gated native mutation SQL preview
+;   DELETE /api/spec-registry/*       Header-gated native mutation SQL preview
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -64,6 +69,8 @@
 ;   curl ':PORT/api/ideas/source-portfolio'              -> native source portfolio data
 ;   curl ':PORT/api/ideas/graph-projection'              -> native graph projection preview
 ;   curl ':PORT/api/spec-registry/source-list'           -> native source spec list
+;   curl -H 'X-Form-Native-Preview: 1' -X POST ':PORT/api/spec-registry' -d '{"spec_id":"x","title":"X"}'
+;                                                        -> native mutation SQL preview
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1791,6 +1798,181 @@
     (igpr-filter-idea-rows (ideas_graph_projection_rows))))
 
 ; ===========================================================================
+; Header-gated native mutation preview bindings.
+;
+; These rows bind the real public mutable paths and HTTP methods into
+; KernelHTTPRoute without stealing ordinary production mutations. The required
+; X-Form-Native-Preview header gives a native preview arm for explicit probes;
+; requests without it exceed the route's pressure budget and fan out to FastAPI.
+;
+; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
+; preview response intentionally does not execute the database write yet:
+; execution, response projection, cache invalidation, parent/edge side effects,
+; and contributor-key last_used_at updates are the remaining live-DB proof.
+; ===========================================================================
+
+(defn mpv-join (sep xs)
+  (if (eq (len xs) 0)
+      ""
+      (if (eq (len xs) 1)
+          (head xs)
+          (str_concat (head xs) (str_concat sep (mpv-join sep (tail xs)))))))
+
+(defn mpv-sql-esc-loop (s i n acc)
+  (if (ge i n)
+      acc
+      (do (let c (substring s i (add i 1)))
+          (mpv-sql-esc-loop s (add i 1) n
+            (str_concat acc (if (str_eq c "'") "''" c))))))
+
+(defn mpv-sql-quote (s)
+  (str_concat "'" (str_concat (mpv-sql-esc-loop s 0 (str_len s) "") "'")))
+
+(defn mpv-jsonb (s)
+  (str_concat (mpv-sql-quote s) "::jsonb"))
+
+(defn mpv-snapshot-sql ()
+  "jsonb_build_object('id', id, 'type', type, 'name', name, 'description', description, 'phase', phase, 'created_at', created_at, 'updated_at', updated_at) || properties")
+
+(defn mpv-create-node-sql (revision-id id node-type name description phase properties source author)
+  (mpv-join " " (list
+    "WITH inserted AS ("
+    "INSERT INTO graph_nodes (id, type, name, description, properties, phase)"
+    (str_concat "VALUES (" (str_concat
+      (mpv-join ", " (list
+        (mpv-sql-quote id)
+        (mpv-sql-quote node-type)
+        (mpv-sql-quote name)
+        (mpv-sql-quote description)
+        (mpv-jsonb properties)
+        (mpv-sql-quote phase)))
+      ")"))
+    "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+    ")"
+    "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+    (str_concat "SELECT " (mpv-join ", " (list
+      (mpv-sql-quote revision-id)
+      "id"
+      "1"
+      (mpv-sql-quote source)
+      (mpv-sql-quote author)
+      (mpv-jsonb "[\"__create__\"]")
+      (mpv-snapshot-sql))))
+    "FROM inserted")))
+
+(defn mpv-update-node-sql (revision-id id name description phase property-patch fields-changed source author)
+  (mpv-join " " (list
+    "WITH updated AS ("
+    (str_concat "UPDATE graph_nodes SET " (mpv-join ", " (list
+      (str_concat "name = " (mpv-sql-quote name))
+      (str_concat "description = " (mpv-sql-quote description))
+      (str_concat "phase = " (mpv-sql-quote phase))
+      (str_concat "properties = properties || " (mpv-jsonb property-patch))
+      "updated_at = CURRENT_TIMESTAMP")))
+    (str_concat "WHERE id = " (mpv-sql-quote id))
+    "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+    ")"
+    "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+    (str_concat "SELECT " (mpv-join ", " (list
+      (mpv-sql-quote revision-id)
+      "id"
+      (str_concat "(SELECT COALESCE(max(revision_number), 0) + 1 FROM graph_node_revisions WHERE node_id = " (str_concat (mpv-sql-quote id) ")"))
+      (mpv-sql-quote source)
+      (mpv-sql-quote author)
+      (mpv-jsonb fields-changed)
+      (mpv-snapshot-sql))))
+    "FROM updated")))
+
+(defn mpv-delete-node-sql (id)
+  (mpv-join " " (list
+    "WITH deleted_edges AS ("
+    (str_concat "DELETE FROM graph_edges WHERE from_id = " (str_concat
+      (mpv-sql-quote id)
+      (str_concat " OR to_id = " (mpv-sql-quote id))))
+    "RETURNING id"
+    ")"
+    (str_concat "DELETE FROM graph_nodes WHERE id = " (mpv-sql-quote id)))))
+
+(defn mpv-body (q)
+  (do (let body (assoc "__body__" q))
+      (if (eq (str_len body) 0) "{}" body)))
+
+(defn mpv-json-value-or (body key dflt)
+  (do (let raw (value_str (_json_get body key)))
+      (if (str_eq raw "null") dflt raw)))
+
+(defn mpv-path-tail (path prefix)
+  (if (ge (str_len path) (str_len prefix))
+      (substring path (str_len prefix) (str_len path))
+      ""))
+
+(defn mpv-idea-phase (status)
+  (if (str_eq status "validated")
+      "ice"
+      (if (str_eq status "partial") "water" "gas")))
+
+(defn mpv-preview-response (operation node-id sql body)
+  (respond 202
+    (str_concat_all (list
+      "{\"native_preview\":true"
+      ",\"route_binding\":\"kernel-http-header-gated\""
+      ",\"required_header\":\"X-Form-Native-Preview\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"executes\":false"
+      ",\"sql\":" (json_string sql)
+      ",\"request_body\":" (json_string body)
+      ",\"remaining_gap\":\"live DB execution, response projection, cache invalidation, contributor-key audit side effects\""
+      ",\"runtime\":\"inline\"}"))))
+
+(defn route_ideas_create_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let id (mpv-json-value-or body "id" "idea:native-preview"))
+  (do (let name (mpv-json-value-or body "name" "Native preview idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "none"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-create-node-sql "rev-native-preview-create-idea" id "idea" name description phase body "kernel-router-preview" "form-native"))
+      (mpv-preview-response "create-idea" id sql body)))))))))
+
+(defn route_ideas_update_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let path (assoc "__request_path__" q))
+  (do (let id (mpv-path-tail path "/api/ideas/"))
+  (do (let name (mpv-json-value-or body "name" "Native preview idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "partial"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-update-node-sql "rev-native-preview-update-idea" id name description phase body "[\"name\",\"description\",\"phase\",\"properties\"]" "kernel-router-preview" "form-native"))
+      (mpv-preview-response "update-idea" id sql body))))))))))
+
+(defn route_specs_create_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let spec-id (mpv-json-value-or body "spec_id" "native-preview-spec"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-create-node-sql "rev-native-preview-create-spec" node-id "spec" title summary "ice" body "kernel-router-preview" "form-native"))
+      (mpv-preview-response "create-spec" node-id sql body))))))))
+
+(defn route_specs_update_native_preview (q)
+  (do (let body (mpv-body q))
+  (do (let path (assoc "__request_path__" q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-update-node-sql "rev-native-preview-update-spec" node-id title summary "ice" body "[\"title\",\"summary\",\"properties\"]" "kernel-router-preview" "form-native"))
+      (mpv-preview-response "update-spec" node-id sql body)))))))))
+
+(defn route_specs_delete_native_preview (q)
+  (do (let path (assoc "__request_path__" q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let sql (mpv-delete-node-sql node-id))
+      (mpv-preview-response "delete-spec" node-id sql "{}"))))))
+
+; ===========================================================================
 ; /api/spec-registry/source-list
 ;   native source-backed spec registry list for specs/INDEX.md. This is the
 ;   read-only source sibling of /api/spec-registry: it parses the generated
@@ -1935,4 +2117,9 @@ section [form.route] {
     (list "/api/ideas/source-index"        route_ideas_source_index)
     (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
     (list "/api/ideas/graph-projection"    route_ideas_graph_projection)
-    (list "/api/spec-registry/source-list" route_specs_source_list)))
+    (list "/api/spec-registry/source-list" route_specs_source_list)
+    (kh-route "ideas-create-native-preview" "POST" "/api/ideas" 0 "route_ideas_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "specs-update-native-preview" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)))
