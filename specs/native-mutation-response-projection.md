@@ -12,6 +12,8 @@ source:
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_response_projection_names_idea_and_spec_response_shapes, test_response_projection_band_executes_across_sibling_kernels, test_response_projection_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_response_projection_before_public_flip]
+  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+    symbols: [nmte-trust-envelope-json]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -22,6 +24,7 @@ requirements:
   - "The projection computes free_energy_score, marginal_cc_score, remaining cost, value gap, ROI, cost vectors, and value vectors from row fields."
   - "A live DB harness creates graph rows through the Form application graph mutation carrier, reads them back through pg_query, and projects both response shapes."
   - "The proof does not perform the public front-door flip or claim side-effect parity."
+  - "The remaining side-effect boundary is carried by the native mutation trust envelope."
 done_when:
   - 'file_exists("form/form-stdlib/application-graph-response-projection.fk")'
   - 'file_exists("form/scripts/application-graph-response-projection-test.sh")'
@@ -112,8 +115,13 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-p
 ## Gaps
 
 - GAP-NMRP1 follow-up task: `native-mutation-side-effects`. Carry route cache,
-  parent/edge repair, resonance, and contributor-key audit side effects natively.
-- GAP-NMRP2 follow-up task: `native-mutation-public-flip-gate`. Add a reversible
+- GAP-NMRP1: closed by `specs/native-mutation-trust-envelope.md`. Preview
+  responses now carry prediction residual, side-effect intents, and reversible
+  gate state around the response projection boundary.
+- GAP-NMRP2 follow-up task: `native-mutation-side-effects`. Execute route cache,
+  parent/edge repair, resonance, contributor-key audit, and rollback receipt
+  intents natively.
+- GAP-NMRP3 follow-up task: `native-mutation-public-flip-gate`. Add a reversible
   public flip gate only after side effects pass.
 
 ## Risks and Assumptions
