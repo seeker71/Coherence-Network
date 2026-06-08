@@ -1,0 +1,154 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Prove direct application graph table mutation SQL as a Form-native carrier before mutable front-door route flips.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_node_port_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_auth_parity_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_application_graph_node_sql_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/application-graph-node-port.fk",
+    "form/form-stdlib/tests/application-graph-node-port-band.fk",
+    "specs/INDEX.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk",
+      "cd api && python3 -m pytest -q tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "cd api && python3 -m ruff check tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "form/form-stdlib/application-graph-node-port.fk now carries application-table mutation SQL for graph_nodes, graph_node_revisions, and graph_edges. Create SQL inserts the node and a __create__ revision snapshot. Update SQL merges properties, sets updated_at, computes the next per-node revision number, records fields_changed, and snapshots the updated node. Delete SQL clears connected graph_edges before deleting the graph_nodes row. The Form band returned 1111.",
+    "known_limitations": [
+      {
+        "scope": "public mutable front doors",
+        "observed": "No POST/PATCH/DELETE /api/ideas or /api/spec-registry route is flipped in this slice."
+      },
+      {
+        "scope": "live DB execution",
+        "observed": "The carrier emits SQL and exposes pg_exec binding functions. A later route-specific proof must execute against the application schema before a front-door flip."
+      },
+      {
+        "scope": "route side effects",
+        "observed": "Idea/spec response projection, cache invalidation, resonance re-attunement, and contributor-key last_used_at updates remain method-specific route-binding work."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this application graph SQL carrier commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this Form stdlib carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form can now express direct application graph table mutation SQL for create/update/delete semantics, including revision snapshots and edge cleanup. Existing public mutation endpoints keep current FastAPI behavior until method-specific route rows bind request bodies, response projection, cache invalidation, and live DB execution proof.",
+    "public_endpoints": [
+      "Form agn-create-node-sql",
+      "Form agn-update-node-sql",
+      "Form agn-delete-node-sql",
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk -> 1111",
+      "cd api && python3 -m pytest -q tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py -> 22 passed",
+      "cd api && python3 -m ruff check tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py -> OK"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Carrier proof is complete; public route binding and live DB execution proof remain pending."
+  },
+  "idea_ids": [
+    "data-infrastructure",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-application-graph-nodes-postgres-carrier",
+    "method-specific-ideas-spec-mutation-routes",
+    "native-graph-mutation-live-db-proof",
+    "native-contributor-key-last-used-update"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/application-graph-node-port.fk",
+    "form/form-stdlib/tests/application-graph-node-port-band.fk",
+    "api/app/services/graph_service.py",
+    "api/app/models/graph.py",
+    "api/tests/test_application_graph_node_port_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/application-graph-node-sql-carrier.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_node_port_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_auth_parity_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_application_graph_node_sql_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/application-graph-node-port.fk",
+    "form/form-stdlib/tests/application-graph-node-port-band.fk",
+    "specs/INDEX.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

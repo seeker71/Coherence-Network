@@ -10,6 +10,10 @@ source:
     symbols: [auth-require-api-key]
   - file: form/form-stdlib/tests/auth-port-band.fk
     symbols: []
+  - file: form/form-stdlib/application-graph-node-port.fk
+    symbols: [agn-create-node, agn-update-node, agn-delete-node]
+  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+    symbols: []
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [mutate_idea_recipe, ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -23,7 +27,7 @@ source:
 requirements:
   - "The graph-node Form port exposes create, replace, and delete mutation operations over the storage port."
   - "The mutation carrier is proven over memory and durable file storage with one shared Form band, including recreate after tombstone."
-  - "Ideas and specs name the native mutation carrier while keeping the live auth/Postgres front-door gap explicit."
+  - "Ideas and specs name the native mutation carrier while keeping the live method-specific front-door gap explicit."
 done_when:
   - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-create-node")'
   - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-delete-node")'
@@ -32,7 +36,7 @@ test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.f
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation paths in this slice."
   - "Do not introduce a parallel public mutation store for live users."
-  - "Keep native auth parity proven and application graph_nodes Postgres parity named before front-door binding."
+  - "Keep native auth parity and application graph table SQL parity proven before front-door binding."
 ---
 
 # Spec: Graph Node Mutation Native Carrier
@@ -43,8 +47,8 @@ Ideas and specs can now leave the Python-only mutation vocabulary at the carrier
 level. This spec adds native Form graph-node create, replace, and delete
 operations over the existing storage port and proves that the same mutation
 recipe works over memory and durable file storage. The public HTTP mutation
-paths remain FastAPI until direct application `graph_nodes` Postgres writes,
-revision rows, and edge cleanup are exact.
+paths remain FastAPI until method-specific route rows bind auth, application
+table SQL, response projection, cache invalidation, and live DB execution proof.
 
 ## Requirements
 
@@ -103,15 +107,15 @@ python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native
 - GAP-GNMC1: closed by `specs/native-auth-parity-carrier.md`. Kernel handlers
   can see request headers, and Form now preserves shared API key and
   contributor-key decision parity before mutating paths flip.
-- GAP-GNMC2 follow-up task: `native-application-graph-nodes-postgres-carrier`.
-  The current native storage DB carrier writes `port_kv`; live parity needs
-  direct `graph_nodes`, `graph_edges`, and `graph_node_revisions` writes.
+- GAP-GNMC2: closed by `specs/application-graph-node-sql-carrier.md`. The
+  native application graph carrier now emits direct `graph_nodes`,
+  `graph_edges`, and `graph_node_revisions` SQL instead of `port_kv`.
 - GAP-GNMC3 follow-up task: `method-specific-ideas-spec-mutation-routes`.
-  Once auth and application Postgres writes are exact, bind POST/PATCH/DELETE
-  rows without stealing existing GET surfaces.
+  Once route-specific request/response projection and live DB execution proof
+  are exact, bind POST/PATCH/DELETE rows without stealing existing GET surfaces.
 
 ## Risks and Assumptions
 
 - Logical tombstones are the right storage-port delete shape because the port has no physical delete primitive, and recreate-after-tombstone must restore active counts rather than inheriting the deleted marker.
-- Front-door mutation should wait for exact auth and application-table parity rather than exposing a weaker native route.
+- Front-door mutation should wait for exact route binding and live DB proof rather than exposing a weaker native route.
 - The carrier proof is valuable now because it lets future route binding use one tested mutation recipe instead of re-inventing create/update/delete per endpoint.
