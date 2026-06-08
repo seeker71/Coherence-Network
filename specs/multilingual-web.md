@@ -57,25 +57,25 @@ requirements:
   - "Middleware detects locale from URL → cookie → Accept-Language → default en"
   - "Every translatable entity (concept, idea, contribution, comment) carries a source_lang — English is not privileged; contributors write in the language they live in"
   - "Content translations cached in content_translations table keyed by (entity_type, entity_id, target_lang, source_lang, source_hash)"
-  - "Translations carry translator_type (machine | human) and translator_id; human translations supersede machine ones for the same (entity, target_lang)"
+  - "Translations carry translator_type (machine | human) and translator_id; provenance stays visible, and the newest accepted canonical row supersedes the prior canonical for the same (entity, target_lang)"
   - "Any contributor can submit a translation via POST /api/translations; it becomes canonical immediately and the prior canonical is preserved as superseded (history is the moderation surface, not a review queue)"
-  - "Source edits bump source_hash and invalidate stale translations automatically (both machine and human flagged as stale, not deleted)"
+  - "Source edits bump source_hash and invalidate stale translations automatically (all provenance buckets flagged as stale, not deleted)"
   - "Translator service injects a per-language glossary of frequency-anchor terms into the LLM prompt"
-  - "Every machine translation is flagged reviewed=false until a native speaker approves or replaces it"
+  - "Every generated translation carries review/provenance metadata until another contributor or agent accepts, updates, or replaces it"
   - "Contributions created in any supported language appear in any other supported language via cached translation on read"
   - "GET /api/concepts/{id}?lang=es returns canonical translation if present, else source language with pending_translation=true and enqueues translation"
-  - "POST /api/concepts/{id}/translate?lang=de force-regenerates the machine translation; never overwrites a human translation"
-  - "GET /api/locales returns supported locales with coverage stats (machine, human, reviewed) per locale"
+  - "POST /api/concepts/{id}/translate?lang=de force-regenerates a machine rendering; existing canonical/history rows are preserved unless an explicit override accepts the new row"
+  - "GET /api/locales returns supported locales with coverage stats per locale; legacy machine/human buckets are exposed as provenance labels"
   - "Glossary seeded for de, es, id with anchor terms: tending, ripening, wholeness, coherence, resonance, stewardship, kinship, belonging"
 done_when:
   - "Visiting /de/vision/lc-water-as-living-body shows German UI chrome and a German-translated story"
   - "Switching the picker from en to es on any page keeps the user on the equivalent /es/... path"
   - "A contributor can submit a contribution in Spanish; an English viewer sees it translated; a Bahasa viewer sees it in Bahasa"
-  - "Any signed-in contributor can submit a human translation via POST /api/translations; it replaces the machine version immediately"
-  - "Editing a source story flags every language row for that entity as stale (machine AND human preserved — never silently discarded)"
+  - "Any signed-in contributor can submit another rendering via POST /api/translations; it becomes canonical immediately and preserves the prior row as history"
+  - "Editing a source story flags every language row for that entity as stale (generated and submitted rows preserved — never silently discarded)"
   - "coh stories --lang de returns stories with translated titles and summaries"
-  - "coh translate submit {entity-id} --lang es --file translation.md posts a human translation"
-  - "Locale coverage visible on /settings/translations: per-locale counts of machine vs. human vs. stale"
+  - "coh translate submit {entity-id} --lang es --file translation.md posts a contributor rendering"
+  - "Locale coverage visible on /settings/translations: per-locale counts of generated vs. contributor-submitted vs. stale"
   - "All new and existing tests pass (api and web)"
   - 'file_exists("web/app/layout.tsx")'
   - 'symbol_in_file("web/app/layout.tsx", "RootLayout")'
@@ -136,8 +136,8 @@ test: "cd api && python -m pytest tests/test_translations_router.py tests/test_l
 constraints:
   - "Never mutate source markdown — translations are additive rows keyed by (target_lang, source_hash)"
   - "English is not privileged — source_lang is whatever the contributor wrote in; any locale can be source or target"
-  - "Human translations always outrank machine translations for the same (entity, target_lang)"
-  - "Stale translations (source_hash mismatch) are flagged, not deleted — prior human work is preserved for the translator to update"
+  - "Canonical selection is not a human-vs-machine quality ranking; provenance, acceptance, freshness, and history carry the decision"
+  - "Stale translations (source_hash mismatch) are flagged, not deleted — prior rendering work is preserved for the translator to update"
   - "Never silently fall back to another language in the UI chrome — missing message keys must fail loudly in dev"
   - "Source hash is sha256 of the source markdown; any change flags all language rows as stale"
   - "Glossary terms MUST be injected into the translation prompt for the target language every call"
@@ -148,7 +148,7 @@ constraints:
 
 ## Purpose
 
-The platform's mission names "every idea tracked, for humanity" — but a single-language surface excludes most of humanity. Communities in Peru, Puerto Rico, Guatemala, and Bali already carry stewardship practices the vision describes; they deserve to meet the work in their own tongue AND to contribute in their own voice. This spec makes every translatable surface multilingual in both directions: read and write. Machine translation provides coverage from day one; human translations from community members replace them on arrival, and history is preserved so anything can be revisited.
+The platform's mission names "every idea tracked, for humanity" — but a single-language surface excludes most of humanity. Communities in Peru, Puerto Rico, Guatemala, and Bali already carry stewardship practices the vision describes; they deserve to meet the work in their own tongue AND to contribute in their own voice. This spec makes every translatable surface multilingual in both directions: read and write. Machine translation can provide coverage from day one; contributor or agent renderings can replace it on arrival, and history is preserved so anything can be revisited.
 
 ## Requirements
 
@@ -157,13 +157,13 @@ The platform's mission names "every idea tracked, for humanity" — but a single
 - [ ] **R3**: `LocaleSwitcher` component in the header shows the current language, offers the others, persists choice via `NEXT_LOCALE` cookie, and rewrites the current URL to the new locale.
 - [ ] **R4**: `content_translations` Postgres table stores per-entity translated markdown keyed by `(entity_type, entity_id, target_lang, source_hash)`. Supports entities `concept`, `idea`, `contribution`, `comment`. Each row carries `source_lang`, `translator_type` (`machine | human`), and `translator_id`.
 - [ ] **R5**: `translator` service calls the configured LLM with a prompt that always includes the per-language glossary. Returns translated markdown. No auto-regeneration in the request path — translations are enqueued and served from cache on the next request.
-- [ ] **R6**: Source-hash invalidation: on any source edit, compute sha256 of the new source; cached rows with different hashes are flagged `stale=true`. Nothing is deleted — prior human work is preserved for the translator to update.
+- [ ] **R6**: Source-hash invalidation: on any source edit, compute sha256 of the new source; cached rows with different hashes are flagged `stale=true`. Nothing is deleted — prior rendering work is preserved for the translator to update.
 - [ ] **R7**: Glossary table stores anchor terms per language. Seed with: tending, ripening, wholeness, coherence, resonance, stewardship, kinship, belonging — with their felt-sense equivalents in de, es, id. Admins can edit via `PATCH /api/glossary/{lang}`.
-- [ ] **R8**: Canonical selection: for a given (entity, target_lang), the canonical row is the newest non-stale human translation if any exists, else the newest machine translation. Readers always see the canonical.
-- [ ] **R9**: Human translation submission: any signed-in contributor can `POST /api/translations` with `{entity_type, entity_id, target_lang, translated_markdown}`. It becomes canonical immediately. The prior canonical is preserved as `superseded` so history is visible on the edit page.
+- [ ] **R8**: Canonical selection: for a given (entity, target_lang), the canonical row is the newest non-stale accepted rendering. `translator_type` remains visible as provenance, not a quality hierarchy. Readers always see the canonical.
+- [ ] **R9**: Rendering submission: any signed-in contributor can `POST /api/translations` with `{entity_type, entity_id, target_lang, translated_markdown}`. It becomes canonical immediately. The prior canonical is preserved as `superseded` so history is visible on the edit page.
 - [ ] **R10**: Multi-directional source languages: contributions and comments store `source_lang` from contributor input. `GET /api/contributions/{id}?lang=es` returns the canonical Spanish view regardless of whether the source was English, German, or Balinese. If no translation exists, returns source with `pending_translation=true`.
-- [ ] **R11**: "Needs native review" banner appears on any machine-translated surface for users whose profile locale matches. A "Propose a better translation" action opens an inline editor that submits via R9. No approval gate.
-- [ ] **R12**: `GET /api/locales` returns supported locales with coverage stats per locale: total entities, machine-translated, human-translated, stale.
+- [ ] **R11**: "Open for attunement" banner appears on generated surfaces for users whose profile locale matches. A "Propose another rendering" action opens an inline editor that submits via R9. No approval gate.
+- [ ] **R12**: `GET /api/locales` returns supported locales with coverage stats per locale: total entities, generated renderings, contributor-submitted renderings, stale.
 - [ ] **R13**: Per-entity translation history: `GET /api/translations?entity_type=concept&entity_id=lc-xxx&lang=es` lists every translation row for that entity+lang, newest first. The edit page shows this so a new translator sees prior attempts.
 - [ ] **R14**: CLI additions: `coh stories --lang de`, `coh translate show {id} --lang es`, `coh translate submit {id} --lang es --file t.md`, `coh glossary --lang id`.
 
@@ -194,10 +194,10 @@ The platform's mission names "every idea tracked, for humanity" — but a single
 Extended existing endpoint. Returns `{concept_id, source_lang, lang, translation_status, translator_type, reviewed, stale, translated_markdown}` where `translation_status` is `native | canonical | pending | stale_fallback`. If `pending`, enqueues translation and returns source markdown with `pending_translation: true`.
 
 ### `POST /api/concepts/{id}/translate?lang=de`
-Force regenerate the machine translation. Refuses (409) if a human-canonical translation exists unless `force_override=true` by admin. Response: `{concept_id, lang, translator_type: "machine", source_hash, translated_at}`.
+Force regenerate a machine rendering. Existing canonical/history rows stay preserved; the new row becomes canonical only when the request explicitly accepts that replacement. Response: `{concept_id, lang, translator_type: "machine", source_hash, translated_at}`.
 
 ### `POST /api/translations`
-Submit a human translation. Body: `{entity_type, entity_id, target_lang, translated_markdown, notes?}`. Any signed-in contributor can submit. Becomes canonical immediately. The prior canonical row is preserved with `status: "superseded"` so the history is visible on the edit page.
+Submit a rendering. Body: `{entity_type, entity_id, target_lang, translated_markdown, notes?}`. Any signed-in contributor can submit. Becomes canonical immediately. The prior canonical row is preserved with `status: "superseded"` so the history is visible on the edit page.
 
 ### `GET /api/translations?entity_type=&entity_id=&lang=&status=`
 List translation rows for an entity, newest first. `status` filter: `canonical | stale | superseded`. Backs the history view on the edit page.
@@ -220,14 +220,14 @@ ContentTranslation:
   source_hash: string        # sha256 of source markdown at translation time
   translated_markdown: text
   translator_type: enum [machine, human]
-  translator_id: string | null  # contributor id if human, else null
+  translator_id: string | null  # contributor id when available
   translator_model: string | null  # e.g. "claude-opus-4-7" for machine
   status: enum [canonical, stale, superseded]
   notes: text | null         # translator's note on word choices and felt-sense
   created_at: timestamp
   updated_at: timestamp
   index: [entity_type, entity_id, target_lang, status]
-  # No unique constraint on (entity, lang) — history is preserved. Canonical selection is by status + translator_type + recency.
+  # No unique constraint on (entity, lang) — history is preserved. Canonical selection is by accepted status + recency; translator_type is provenance.
 
 GlossaryEntry:
   id: uuid
@@ -252,13 +252,13 @@ Contribution (existing — extend):
 
 **Canonical selection rule** (in `select_canonical()`):
 1. Prefer rows with `status=canonical` for the target_lang.
-2. Among those, prefer `translator_type=human` over `machine`.
+2. Among those, prefer rows accepted explicitly for this locale surface.
 3. Among ties, prefer the most recent by `updated_at`.
 4. If no canonical row exists, return source with `pending_translation=true` and enqueue machine translation.
 
-**When a human translation arrives** (in `POST /api/translations`):
+**When another rendering arrives** (in `POST /api/translations`):
 1. The prior canonical row (if any) is flipped to `status=superseded`.
-2. The new row is inserted with `status=canonical`, `translator_type=human`, current source_hash.
+2. The new row is inserted with `status=canonical`, its visible `translator_type`, and current source_hash.
 3. No approval gate — trust is the default. History is the moderation surface: if something feels off, anyone can submit another translation, and the lineage is visible on the edit page.
 
 ## Files to Create/Modify
@@ -268,7 +268,7 @@ Contribution (existing — extend):
 - `api/app/services/translation_cache.py` — `get_or_translate()`, `select_canonical()`, `invalidate_for_entity()`, `source_hash_of()`
 - `api/app/services/translator.py` — `translate_markdown(text, source_lang, target_lang, glossary)`, `build_glossary_prompt(lang)`
 - `api/app/routers/locale.py` — `/api/locales`, `/api/glossary/{lang}` handlers
-- `api/app/routers/translations.py` — `POST /api/translations` (submit human translation), `GET /api/translations` (history)
+- `api/app/routers/translations.py` — `POST /api/translations` (submit rendering), `GET /api/translations` (history)
 - `api/app/routers/concepts.py` — extend `GET /api/concepts/{id}` with `lang` query param; add `POST /api/concepts/{id}/translate`
 - `api/app/routers/contributions.py` — accept `source_lang` on create; honor `lang` on read
 - `api/migrations/XXXX_content_translations.sql` — create `content_translations`, `glossary_entries`, `supported_locales`; add `source_lang` to `contributions`, `comments`
@@ -284,20 +284,20 @@ Contribution (existing — extend):
 - `web/app/[locale]/...` — move all existing routes under `[locale]`
 - `web/messages/en.json`, `web/messages/de.json`, `web/messages/es.json`, `web/messages/id.json` — UI chrome strings
 - `web/components/LocaleSwitcher.tsx` — header language picker
-- `web/components/StoryContent.tsx` — accept `lang` prop, show "Needs native review" + "Propose better translation" banners when machine-translated
-- `web/components/TranslationEditor.tsx` — inline markdown editor for submitting a human translation (posts to `/api/translations`)
+- `web/components/StoryContent.tsx` — accept `lang` prop, show "Open for attunement" + "Propose another rendering" banners when generated
+- `web/components/TranslationEditor.tsx` — inline markdown editor for submitting another rendering (posts to `/api/translations`)
 - `web/components/ContributionForm.tsx` — language selector defaulting to profile locale; submits `source_lang`
-- `web/app/[locale]/settings/translations/page.tsx` — coverage dashboard (counts per locale, links into concepts needing native voice)
+- `web/app/[locale]/settings/translations/page.tsx` — coverage dashboard (counts per locale, links into concepts open for attunement)
 - `web/app/[locale]/translate/[entity_type]/[entity_id]/page.tsx` — full-page translation editor with history and glossary reference
 
 ### Tests
 - `api/tests/test_locale.py` — locale list, glossary CRUD
-- `api/tests/test_translation_cache.py` — cache hit, miss, invalidation on source edit, human-beats-machine canonical selection
-- `api/tests/test_translations_api.py` — submit human translation, it becomes canonical immediately, prior canonical becomes superseded, history lists both
+- `api/tests/test_translation_cache.py` — cache hit, miss, invalidation on source edit, accepted-canonical selection
+- `api/tests/test_translations_api.py` — submit another rendering, it becomes canonical immediately, prior canonical becomes superseded, history lists both
 - `api/tests/test_contributions_i18n.py` — contribution in es readable in en, id, de
 - `web/tests/locale-switcher.test.ts` — URL rewrite on switch
 - `web/tests/e2e/de-vision.spec.ts` — Playwright: visit /de/vision, assert German chrome
-- `web/tests/e2e/submit-translation.spec.ts` — Playwright: submit human translation, see it replace machine version on refresh
+- `web/tests/e2e/submit-translation.spec.ts` — Playwright: submit another rendering, see it replace prior generated version on refresh
 
 ## Acceptance Tests
 
@@ -305,10 +305,10 @@ Contribution (existing — extend):
 - `api/tests/test_locale.py::test_glossary_seeded_for_all_locales`
 - `api/tests/test_translation_cache.py::test_source_edit_flags_translations_stale`
 - `api/tests/test_translation_cache.py::test_pending_returns_source_enqueues_translation`
-- `api/tests/test_translation_cache.py::test_human_translation_beats_machine_in_canonical_selection`
-- `api/tests/test_translations_api.py::test_human_submission_becomes_canonical_immediately`
-- `api/tests/test_translations_api.py::test_prior_canonical_becomes_superseded_on_new_human_translation`
-- `api/tests/test_translations_api.py::test_machine_translate_never_overwrites_human_canonical`
+- `api/tests/test_translation_cache.py::test_accepted_rendering_wins_canonical_selection`
+- `api/tests/test_translations_api.py::test_submission_becomes_canonical_immediately`
+- `api/tests/test_translations_api.py::test_prior_canonical_becomes_superseded_on_new_rendering`
+- `api/tests/test_translations_api.py::test_generated_rendering_preserves_history_on_override`
 - `api/tests/test_translations_api.py::test_history_lists_superseded_rows_newest_first`
 - `api/tests/test_contributions_i18n.py::test_spanish_contribution_readable_in_english`
 - `api/tests/test_concepts.py::test_get_concept_with_lang_returns_translated`
@@ -338,12 +338,12 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 - No detected language-of-origin for existing contributions — they'll be assumed `en` on migration. A one-off reclassification pass may be needed if non-English contributions already exist in the DB.
 - No offline translation mode — translator service requires the configured LLM provider to be reachable. A queue-and-retry on provider failure is left to a follow-up.
 - No per-user "preferred locale" in contributor profiles yet — falls back to browser Accept-Language. Profile locale field is a small follow-up migration.
-- History pruning is unspecified — every human translation adds a superseded row. If volume grows, a "keep last N per (entity, lang)" pass is a straightforward follow-up.
-- Regional Spanish variants (es-PE, es-PR, es-GT) will layer in as community translations on top of neutral `es` once native speakers want to contribute them. No schema change needed.
+- History pruning is unspecified — every submitted rendering adds a superseded row. If volume grows, a "keep last N per (entity, lang)" pass is a straightforward follow-up.
+- Regional Spanish variants (es-PE, es-PR, es-GT) will layer in as community renderings on top of neutral `es` once contributors want to tend them. No schema change needed.
 
 ## Risks and Assumptions
 
-- **LLM translation flattens frequency** — mitigated by per-language glossary injection, the "Needs native voice" banner, and the "Propose a better translation" inline editor. Human translations supersede machine ones the moment they land. Worst case before community engagement: translations read as policy-speak until a native speaker drops a better version. The glossary and the human-first canonical rule are the living correction surface.
+- **Translation can flatten frequency** — mitigated by per-language glossary injection, the "Open for attunement" banner, and the "Propose another rendering" inline editor. Generated and contributor renderings stay visible through provenance and history; the newest accepted rendering becomes canonical without claiming any source type is inherently better. Worst case before deeper attunement: translations read as policy-speak until another contributor or agent offers a version that carries the meaning more clearly.
 - **Translation cost at scale** — 56 concepts × ~5KB × 3 languages ≈ 840KB output tokens per full rebuild. Cached aggressively; regenerated only on source edit. Config-driven model choice lets Haiku handle bulk and Opus handle care-work.
 - **URL breakage** — moving routes under `[locale]` changes every path. Middleware redirects `/vision/xxx` → `/en/vision/xxx` to preserve existing links.
 - **Assumption — trust by default**: anyone signed in can replace a translation, and history is the correction surface rather than an approval gate. If a bad translation lands, the next contributor to notice can replace it, and the superseded row remains visible. This is aligned with the vision: tending comes from relationship, not from moderation.
@@ -361,10 +361,10 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 - Integration tests — `api/tests/test_flow_multilingual.py`, `test_on_demand_attunement.py`
 
 **Confirmed during this session** (each a discrete commit in the trail):
-- `POST /api/translations` endpoint + `GET` history — human/machine supersede semantics exposed
+- `POST /api/translations` endpoint + `GET` history — submitted/generated supersede semantics exposed
 - `coh translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `coh translate history` CLI
 - Anchor glossary seeded for `es` and `id` (matching the existing `de` pattern); 15 anchor terms per language
-- `/settings/translations` coverage dashboard — per-locale `original/human/machine/stale` tallies from `GET /api/locales`, linked from `/settings`
+- `/settings/translations` coverage dashboard — per-locale original/contributor/machine/stale tallies from `GET /api/locales`, linked from `/settings`
 - Language picker in site header — `LocaleSwitcherCompact` wired at `web/components/site_header.tsx` (desktop and mobile menu); cookie-backed, ?lang= override, Accept-Language auto-detection all in `web/middleware.ts`
 
 **Deferred to its own restructure PR**:

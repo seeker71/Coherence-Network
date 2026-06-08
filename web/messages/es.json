@@ -153,7 +153,7 @@
     "lang": "es",
     "name": "Spanish",
     "nativeName": "Español",
-    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
+    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from any contributor or agent carrying the meaning differently. Re-attuning a key means: feel the meaning, render it in that voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
     "role": "anchor"
   },
   "common": {
@@ -295,10 +295,10 @@
     "levelLivingExpression": "Expresión Viva",
     "visualExpressionsHeading": "Expresiones visuales",
     "resonantAssetsIntro": "Cada expresión es una contribución única. La más resonante emerge a la superficie.",
-    "needsNativeVoice": "Necesita una voz nativa — propón una mejor traducción",
+    "needsAttunement": "Abierto a nueva sintonía - propón otra versión",
     "pendingTranslation": "Aún no hay vista en este idioma — mostrando la vista ancla",
     "translationPendingTitle": "La traducción se está preparando",
-    "translationPendingBody": "Este concepto aún no tiene una vista completa en este idioma. La versión ancla en inglés queda oculta aquí para que la página no mezcle idiomas mientras se realiza la sintonización.",
+    "translationPendingBody": "Este concepto aún no tiene una vista completa en este idioma. La vista ancla actual queda oculta aquí para que la página no mezcle idiomas mientras se realiza la sintonización.",
     "staleAwaitingReattunement": "La vista ancla ha cambiado — esta vista espera una nueva sintonización",
     "voicesHeading": "Voces desde el campo",
     "voicesLede": "Cómo vive este concepto en la práctica, contado por quienes lo viven.",
@@ -2462,7 +2462,7 @@
     },
     "noteEyebrow": "Una nota desde este cuerpo",
     "editProfileCta": "Cómo reclamar, editar o eliminar este perfil →",
-    "sourceLanguageDisclosure": "Nota: el contenido curado de esta página está actualmente en inglés. La navegación, los encabezados y la capa de datos a continuación (títulos de obras, descripciones, cuerpo de evidencia) se traducen automáticamente a tu idioma; una traducción curada por el autor de la prosa más larga en esta página vendrá después. Mientras tanto, la función incorporada de tu navegador „traducir esta página“ mostrará el resto en tu idioma."
+    "sourceLanguageDisclosure": "Nota: la prosa curada más larga de esta página aún no está renderizada para todos los idiomas. La navegación, los encabezados y la capa de datos a continuación (títulos de obras, descripciones, cuerpo de evidencia) se traducen automáticamente a tu idioma; una versión curada de esa prosa vendrá después. Mientras tanto, la función incorporada de tu navegador „traducir esta página“ mostrará el resto en tu idioma."
   },
   "presence": {
     "location": {

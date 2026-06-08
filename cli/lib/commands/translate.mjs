@@ -2,8 +2,8 @@
  * Translate commands — submit and inspect entity translations.
  *
  * Closes the spec gap in `multilingual-web` R8: any signed-in contributor
- * can submit a human translation; it becomes canonical immediately and
- * the prior canonical is preserved as superseded.
+ * can submit another rendering; it becomes canonical immediately and the
+ * prior canonical is preserved as superseded.
  *
  * Commands:
  *   coh translate submit <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>] [--description <d>] [--from-lang <source>] [--by <author_id>] [--notes <notes>]
