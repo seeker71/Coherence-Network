@@ -157,7 +157,7 @@
             (list
                 (compiler-stage "grammar-source" "A grammar is source, not metadata." "BMF or BNF or Form grammar text" "source grammar objects" "BMF-grammar.bml and compiler.fk")
                 (compiler-stage "grammar-parse" "The grammar parses itself into objects." "BMF object runtime" "Rule or Branch or Sequence or Repeat objects" "bmf-compiler-runtime.fk")
-                (compiler-stage "grammar-compile" "Source grammar objects lower into reusable compiler objects." "compiler-object" "compiler-rule and comp-bmf-* cells" "apply-bmf-compiler-rule")
+                (compiler-stage "grammar-compile" "Source grammar objects lower into reusable compiler objects." "compiler-object" "compiler-rule and comp-bmf-* cells" "apply-bmf-compiler-first-rule")
                 (compiler-stage "dialect-capsule" "A grammar becomes a runtime port by selector." "runtime-grammar registry" "parse and emit capsule" "runtime-real-grammar-capsules-band.fk")
                 (compiler-stage "sibling-proof" "The same grammar carrier walks on each kernel." "Go/Rust/TypeScript kernels" "identical result" "form/validate.sh"))))
 
@@ -173,7 +173,7 @@
     (defn bmf-bml-language-ports (_x)
         (list
             (compiler-language-port "BMF" "BMF grammar text" "compiler.fk bmf second" "bmf-compiler-rules" "comp-bmf-runtime" "form-kernel" "compiler-object" "proven" "full original source body semantic lowering remains growing" "bmf-compiler-runtime.fk")
-            (compiler-language-port "BML" "BML object/runtime source" "grammars/bml.fk" "apply-bml-bmf-rule" "bml-compile-program" "form-kernel" "compiler-object" "proven" "complete thesis corpus execution remains growing" "bml-compiler-runtime.fk")
+            (compiler-language-port "BML" "BML object/runtime source" "grammars/bml.fk" "apply-bml-bmf-first-rule and indexed source parser" "bml-compile-program" "form-kernel" "compiler-object" "proven" "complete thesis corpus execution remains growing" "bml-compiler-runtime.fk")
             (compiler-language-port "Python" "Python source" "grammars/python-bmf.fk" "python-bmf-lift.fk" "python-bmf-eval.fk" "form-kernel" "compiler-object" "in-motion" "f-strings, decorators, try/catch, modules, ORM runtime" "PYTHON_BMF_CONTRACT.md")
             (compiler-language-port "TypeScript" "TypeScript source" "grammars/typescript-bmf.fk" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "seed" "full TS grammar and semantic lift" "source-compiler-multi-dialect-band.fk")
             (compiler-language-port "Go" "Go source" "grammars/go-bmf.fk" "shared BMF object lift" "emit-engine or Form recipe" "form-kernel" "compiler-object" "seed" "full Go grammar and semantic lift" "source-compiler-multi-dialect-band.fk")
@@ -953,6 +953,9 @@
                   bmf-compile-bmf-rule-full
                   bmf-identity-inverse)))
 
+    (let bmf-compiler-rule-index
+        (object-rule-set-index bmf-compiler-rules))
+
     (defn bmf-compiler-rule-name (r) (head r))
 
     (defn bmf-compiler-find-rule (rule-name rules)
@@ -985,6 +988,9 @@
 
     (defn apply-bmf-compiler-rule (rule-name objects)
         (apply-object-rule (bmf-compiler-find-rule rule-name bmf-compiler-rules) objects))
+
+    (defn apply-bmf-compiler-first-rule (objects)
+        (apply-indexed-object-rule-set bmf-compiler-rule-index objects))
 
     section [bmf.bmf] {
       rule-reversible ::= $name:name "::=" $pattern:pattern "=>" $action:name "<=" $reverse:name ";" => bmf-emit-reversible-rule-source;
