@@ -15,7 +15,7 @@
 #
 # Usage:
 #   form/scripts/pg-carrier-test.sh                 # self-provision a throwaway PG
-#   PG_DSN="host=... port=... user=... dbname=..." \
+#   PG_DSN="postgresql://postgres@127.0.0.1:5432/substrate_test" \
 #     form/scripts/pg-carrier-test.sh               # use an existing PG
 #
 # Exit 0 on the expected verdict (111111), 1 otherwise.
@@ -53,7 +53,7 @@ if [[ -z "${PG_DSN:-}" ]]; then
   pg_ctl -D "$PGDIR/data" -o "-p $PGPORT -k $PGDIR" -l "$PGDIR/log" start >/dev/null 2>&1
   sleep 2
   psql -h 127.0.0.1 -p "$PGPORT" -U postgres -c "CREATE DATABASE substrate_test;" >/dev/null 2>&1
-  PG_DSN="host=127.0.0.1 port=$PGPORT user=postgres dbname=substrate_test"
+  PG_DSN="postgresql://postgres@127.0.0.1:$PGPORT/substrate_test"
 fi
 
 # --- compile the core prelude (BML dialect → kernel-walkable) --------------
