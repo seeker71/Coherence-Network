@@ -1834,6 +1834,27 @@
 
     (defn object-pattern-tag (p) (head p))
 
+    (defn object-literal-pattern? (p)
+        (and (gt (len p) 0) (str_eq (object-pattern-tag p) "object")))
+
+    (defn object-literal-kind (p) (nth p 1))
+    (defn object-literal-value (p) (nth p 2))
+
+    ;; Bare object-literal alternatives all produce the same result shape:
+    ;; empty captures plus the stream tail. That makes `choose_any` safe for
+    ;; literal-only choices even when two literals overlap; mixed choices still
+    ;; use the ordered matcher.
+    (defn object-choice-direct-safe? (alternatives)
+        (if (nil? alternatives) true
+            (if (object-literal-pattern? (head alternatives))
+                (object-choice-direct-safe? (tail alternatives))
+                false)))
+
+    (defn object-literal-matches-object? (p obj)
+        (and (str_eq (object-literal-kind p) (bmf-object-kind obj))
+             (or (str_eq (object-literal-value p) "")
+                 (str_eq (object-literal-value p) (bmf-object-value obj)))))
+
     (defn match-object-pattern (p object-stream)
         (do
             (let tag (object-pattern-tag p))
@@ -1884,7 +1905,7 @@
                                            (match-rest m)
                                            (cap-merge acc-caps (match-caps m))))))))
 
-    (defn match-object-choice (alternatives object-stream)
+    (defn match-object-choice-linear (alternatives object-stream)
         (if (nil? alternatives)
             (mk-fail "no object alternative matched")
             (do
@@ -1894,7 +1915,236 @@
                 ;; cut's scope stays this choice, not its caller.
                 (if (match? m) m
                 (if (fail-cut? m) (mk-fail (fail-reason m))
-                    (match-object-choice (tail alternatives) object-stream))))))
+                    (match-object-choice-linear (tail alternatives) object-stream))))))
+
+    (defn match-object-choice-direct-or-linear (alternatives object-stream all-alternatives)
+        (if (nil? alternatives)
+            (mk-fail "no object alternative matched")
+            (if (object-literal-pattern? (head alternatives))
+                (if (nil? object-stream)
+                    (match-object-choice-direct-or-linear (tail alternatives) object-stream all-alternatives)
+                    (if (object-literal-matches-object? (head alternatives) (head object-stream))
+                        (match-object-literal (head alternatives) object-stream)
+                        (match-object-choice-direct-or-linear (tail alternatives) object-stream all-alternatives)))
+                (match-object-choice-linear all-alternatives object-stream))))
+
+    (defn match-object-choice (alternatives object-stream)
+        (match-object-choice-direct-or-linear alternatives object-stream alternatives))
+
+    (defn object-pattern-first-literal (p)
+        (if (nil? p) (empty)
+            (do
+                (let tag (object-pattern-tag p))
+                (if (str_eq tag "object") p
+                (if (str_eq tag "capture")
+                    (object-pattern-first-literal (nth p 2))
+                (if (str_eq tag "sequence")
+                    (if (nil? (tail p))
+                        (empty)
+                        (object-pattern-first-literal (head (tail p))))
+                    (empty)))))))
+
+    (defn object-rule-first-literal (rule)
+        (object-pattern-first-literal (rule-pattern rule)))
+
+    (defn object-rule-candidate? (rule object-stream)
+        (do
+            (let first (object-rule-first-literal rule))
+            (if (nil? first) true
+            (if (nil? object-stream) false
+                (object-literal-matches-object? first (head object-stream))))))
+
+    (defn object-rule-index-entry (rule)
+        (list (object-rule-first-literal rule) rule))
+
+    (defn object-rule-index-entry-first (entry) (head entry))
+    (defn object-rule-index-entry-rule (entry) (nth entry 1))
+
+    (defn object-dispatch-key (first)
+        (list (object-literal-kind first) (object-literal-value first)))
+
+    (defn object-dispatch-key-kind (key) (head key))
+    (defn object-dispatch-key-value (key) (nth key 1))
+
+    (defn object-dispatch-key-wild? (key)
+        (str_eq (object-dispatch-key-value key) ""))
+
+    (defn object-dispatch-key-eq? (a b)
+        (and (str_eq (object-dispatch-key-kind a) (object-dispatch-key-kind b))
+             (str_eq (object-dispatch-key-value a) (object-dispatch-key-value b))))
+
+    (defn object-dispatch-key-matches-object? (key obj)
+        (and (str_eq (object-dispatch-key-kind key) (bmf-object-kind obj))
+             (or (object-dispatch-key-wild? key)
+                 (str_eq (object-dispatch-key-value key) (bmf-object-value obj)))))
+
+    (defn object-rule-index-entry-key (entry)
+        (object-dispatch-key (object-rule-index-entry-first entry)))
+
+    (defn object-rule-index-entry-kind (entry)
+        (object-dispatch-key-kind (object-rule-index-entry-key entry)))
+
+    (defn object-rule-index-entry-wild? (entry)
+        (object-dispatch-key-wild? (object-rule-index-entry-key entry)))
+
+    (defn object-rule-entries-has-exact-kind? (entries kind)
+        (if (nil? entries) false
+            (if (and (str_eq (object-rule-index-entry-kind (head entries)) kind)
+                     (not (object-rule-index-entry-wild? (head entries))))
+                true
+                (object-rule-entries-has-exact-kind? (tail entries) kind))))
+
+    (defn object-rule-entries-ambiguous? (entries)
+        (if (nil? entries) false
+            (if (and (object-rule-index-entry-wild? (head entries))
+                     (object-rule-entries-has-exact-kind?
+                        entries
+                        (object-rule-index-entry-kind (head entries))))
+                true
+                (object-rule-entries-ambiguous? (tail entries)))))
+
+    (defn object-rule-bucket (key entries)
+        (list "object-rule-bucket" key entries))
+
+    (defn object-rule-bucket-key (bucket) (nth bucket 1))
+    (defn object-rule-bucket-entries (bucket) (nth bucket 2))
+
+    (defn object-rule-bucket-add-entry (bucket entry)
+        (object-rule-bucket
+            (object-rule-bucket-key bucket)
+            (append (object-rule-bucket-entries bucket) (list entry))))
+
+    (defn object-rule-buckets-add-entry (buckets entry)
+        (if (nil? buckets)
+            (list (object-rule-bucket (object-rule-index-entry-key entry) (list entry)))
+            (if (object-dispatch-key-eq?
+                    (object-rule-bucket-key (head buckets))
+                    (object-rule-index-entry-key entry))
+                (cons (object-rule-bucket-add-entry (head buckets) entry) (tail buckets))
+                (cons (head buckets)
+                      (object-rule-buckets-add-entry (tail buckets) entry)))))
+
+    (defn object-rule-exact-buckets (entries buckets)
+        (if (nil? entries) buckets
+            (if (object-rule-index-entry-wild? (head entries))
+                (object-rule-exact-buckets (tail entries) buckets)
+                (object-rule-exact-buckets
+                    (tail entries)
+                    (object-rule-buckets-add-entry buckets (head entries))))))
+
+    (defn object-rule-wild-buckets (entries buckets)
+        (if (nil? entries) buckets
+            (if (object-rule-index-entry-wild? (head entries))
+                (object-rule-wild-buckets
+                    (tail entries)
+                    (object-rule-buckets-add-entry buckets (head entries)))
+                (object-rule-wild-buckets (tail entries) buckets))))
+
+    (defn object-rule-segment (mode exact-buckets wild-buckets ordered-entries unknown-entry)
+        (list "object-rule-segment" mode exact-buckets wild-buckets ordered-entries unknown-entry))
+
+    (defn object-rule-segment-mode (segment) (nth segment 1))
+    (defn object-rule-segment-exact-buckets (segment) (nth segment 2))
+    (defn object-rule-segment-wild-buckets (segment) (nth segment 3))
+    (defn object-rule-segment-ordered-entries (segment) (nth segment 4))
+    (defn object-rule-segment-unknown-entry (segment) (nth segment 5))
+
+    (defn object-rule-build-segment (entries unknown-entry)
+        (if (object-rule-entries-ambiguous? entries)
+            (object-rule-segment "ordered" (empty) (empty) entries unknown-entry)
+            (object-rule-segment "bucketed"
+                                 (object-rule-exact-buckets entries (empty))
+                                 (object-rule-wild-buckets entries (empty))
+                                 entries
+                                 unknown-entry)))
+
+    (defn object-rule-index-known-run (rules entries)
+        (if (nil? rules)
+            (list entries (empty) (empty))
+            (do
+                (let entry (object-rule-index-entry (head rules)))
+                (if (nil? (object-rule-index-entry-first entry))
+                    (list entries entry (tail rules))
+                    (object-rule-index-known-run
+                        (tail rules)
+                        (append entries (list entry)))))))
+
+    (defn object-rule-set-index (rules)
+        (if (nil? rules) (empty)
+            (do
+                (let run (object-rule-index-known-run rules (empty)))
+                (cons (object-rule-build-segment (head run) (nth run 1))
+                      (object-rule-set-index (nth run 2))))))
+
+    (defn object-rule-index-entry-candidate? (entry object-stream)
+        (do
+            (let first (object-rule-index-entry-first entry))
+            (if (nil? first) true
+            (if (nil? object-stream) false
+                (object-literal-matches-object? first (head object-stream))))))
+
+    (defn object-rule-index-entry-count (entries)
+        (if (nil? entries) 0
+            (add 1 (object-rule-index-entry-count (tail entries)))))
+
+    (defn object-rule-bucket-count (buckets)
+        (if (nil? buckets) 0
+            (add 1 (object-rule-bucket-count (tail buckets)))))
+
+    (defn object-rule-buckets-entry-count (buckets)
+        (if (nil? buckets) 0
+            (add (object-rule-index-entry-count (object-rule-bucket-entries (head buckets)))
+                 (object-rule-buckets-entry-count (tail buckets)))))
+
+    (defn object-rule-buckets-candidate-count (buckets object-stream)
+        (if (nil? buckets) 0
+            (if (nil? object-stream) 0
+                (if (object-dispatch-key-matches-object?
+                        (object-rule-bucket-key (head buckets))
+                        (head object-stream))
+                    (add (object-rule-index-entry-count (object-rule-bucket-entries (head buckets)))
+                         (object-rule-buckets-candidate-count (tail buckets) object-stream))
+                    (object-rule-buckets-candidate-count (tail buckets) object-stream)))))
+
+    (defn object-rule-segment-known-count (segment)
+        (object-rule-index-entry-count (object-rule-segment-ordered-entries segment)))
+
+    (defn object-rule-segment-bucket-count (segment)
+        (add (object-rule-bucket-count (object-rule-segment-exact-buckets segment))
+             (object-rule-bucket-count (object-rule-segment-wild-buckets segment))))
+
+    (defn object-rule-segment-candidate-count (segment object-stream)
+        (if (str_eq (object-rule-segment-mode segment) "bucketed")
+            (add (object-rule-buckets-candidate-count
+                    (object-rule-segment-exact-buckets segment)
+                    object-stream)
+                 (object-rule-buckets-candidate-count
+                    (object-rule-segment-wild-buckets segment)
+                    object-stream))
+            (object-rule-segment-known-count segment)))
+
+    (defn object-rule-dispatch-index-known-count (segments)
+        (if (nil? segments) 0
+            (add (object-rule-segment-known-count (head segments))
+                 (object-rule-dispatch-index-known-count (tail segments)))))
+
+    (defn object-rule-dispatch-index-candidate-count (segments object-stream)
+        (if (nil? segments) 0
+            (add (object-rule-segment-candidate-count (head segments) object-stream)
+                 (object-rule-dispatch-index-candidate-count (tail segments) object-stream))))
+
+    (defn object-rule-dispatch-index-skip-count (segments object-stream)
+        (sub (object-rule-dispatch-index-known-count segments)
+             (object-rule-dispatch-index-candidate-count segments object-stream)))
+
+    (defn object-rule-dispatch-index-bucket-count (segments)
+        (if (nil? segments) 0
+            (add (object-rule-segment-bucket-count (head segments))
+                 (object-rule-dispatch-index-bucket-count (tail segments)))))
+
+    (defn object-rule-dispatch-index-segment-count (segments)
+        (if (nil? segments) 0
+            (add 1 (object-rule-dispatch-index-segment-count (tail segments)))))
 
     (defn capture-object-value (m original-stream)
         (if (nil? (match-caps m))
@@ -1943,6 +2193,83 @@
                                 "result"
                                 object)
                               (match-rest m))))))
+
+    (defn apply-object-rule-index-entry (entry object-stream)
+        (apply-object-rule (object-rule-index-entry-rule entry) object-stream))
+
+    (defn apply-object-rule-index-entries (entries object-stream)
+        (if (nil? entries)
+            (mk-fail "no object rule matched")
+            (if (object-rule-index-entry-candidate? (head entries) object-stream)
+                (do
+                    (let m (apply-object-rule-index-entry (head entries) object-stream))
+                    (if (match? m) m
+                    (if (fail-cut? m) (mk-fail (fail-reason m))
+                        (apply-object-rule-index-entries (tail entries) object-stream))))
+                (apply-object-rule-index-entries (tail entries) object-stream))))
+
+    (defn apply-object-rule-buckets (buckets object-stream)
+        (if (nil? buckets)
+            (mk-fail "no object rule matched")
+            (if (and (not (nil? object-stream))
+                     (object-dispatch-key-matches-object?
+                        (object-rule-bucket-key (head buckets))
+                        (head object-stream)))
+                (apply-object-rule-index-entries
+                    (object-rule-bucket-entries (head buckets))
+                    object-stream)
+                (apply-object-rule-buckets (tail buckets) object-stream))))
+
+    (defn apply-object-rule-segment-unknown (segment object-stream)
+        (if (nil? (object-rule-segment-unknown-entry segment))
+            (mk-fail "no object rule matched")
+            (apply-object-rule-index-entry
+                (object-rule-segment-unknown-entry segment)
+                object-stream)))
+
+    (defn apply-bucketed-object-rule-segment (segment object-stream)
+        (do
+            (let exact-match
+                (apply-object-rule-buckets
+                    (object-rule-segment-exact-buckets segment)
+                    object-stream))
+            (if (match? exact-match) exact-match
+            (if (fail-cut? exact-match) (mk-fail (fail-reason exact-match))
+                (do
+                    (let wild-match
+                        (apply-object-rule-buckets
+                            (object-rule-segment-wild-buckets segment)
+                            object-stream))
+                    (if (match? wild-match) wild-match
+                    (if (fail-cut? wild-match) (mk-fail (fail-reason wild-match))
+                        (apply-object-rule-segment-unknown segment object-stream))))))))
+
+    (defn apply-ordered-object-rule-segment (segment object-stream)
+        (do
+            (let ordered-match
+                (apply-object-rule-index-entries
+                    (object-rule-segment-ordered-entries segment)
+                    object-stream))
+            (if (match? ordered-match) ordered-match
+            (if (fail-cut? ordered-match) (mk-fail (fail-reason ordered-match))
+                (apply-object-rule-segment-unknown segment object-stream)))))
+
+    (defn apply-object-rule-segment (segment object-stream)
+        (if (str_eq (object-rule-segment-mode segment) "bucketed")
+            (apply-bucketed-object-rule-segment segment object-stream)
+            (apply-ordered-object-rule-segment segment object-stream)))
+
+    (defn apply-indexed-object-rule-set (segments object-stream)
+        (if (nil? segments)
+            (mk-fail "no object rule matched")
+            (do
+                (let m (apply-object-rule-segment (head segments) object-stream))
+                (if (match? m) m
+                (if (fail-cut? m) (mk-fail (fail-reason m))
+                    (apply-indexed-object-rule-set (tail segments) object-stream))))))
+
+    (defn apply-object-rule-set (rules object-stream)
+        (apply-indexed-object-rule-set (object-rule-set-index rules) object-stream))
 
     (defn apply-object-rule-reverse (rule object)
         (do

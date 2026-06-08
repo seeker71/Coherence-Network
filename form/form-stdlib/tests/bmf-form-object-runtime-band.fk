@@ -79,6 +79,71 @@
     (let cut-match (apply-object-rule cut-rule opt-absent-stream))
     (let stop-match (match-object-pattern (list "stop") object-stream))
 
+    (let direct-choice-pattern
+        (list "choice"
+              (object-lit "kw" "return")
+              (object-lit "kw" "break")
+              (object-lit "op" "{")))
+    (let direct-choice-match
+        (match-object-pattern
+            direct-choice-pattern
+            (list (bmf-atom "kw" "break") (bmf-atom "end" "."))))
+    (let wildcard-choice-pattern
+        (list "choice"
+              (object-lit "kw" "")
+              (object-lit "kw" "break")))
+    (let duplicate-choice-pattern
+        (list "choice"
+              (object-lit "kw" "return")
+              (object-lit "kw" "return")))
+    (let mixed-choice-pattern
+        (list "choice"
+              (object-lit "kw" "return")
+              (list "sequence" (object-lit "kw" "break"))))
+    (let mixed-choice-match
+        (match-object-pattern
+            mixed-choice-pattern
+            (list (bmf-atom "kw" "return") (bmf-atom "end" "."))))
+
+    (let rule-set-stream
+        (list
+            (bmf-atom "kw" "break")
+            (bmf-atom "int" "9")
+            (bmf-atom "end" ".")))
+    (let return-rule
+        (list "kw-return"
+              (list "sequence"
+                    (object-lit "kw" "return")
+                    (list "capture" "n" (object-lit "int" "")))
+              emit-captures
+              emit-source-span))
+    (let break-rule
+        (list "kw-break"
+              (list "sequence"
+                    (object-lit "kw" "break")
+                    (list "capture" "n" (object-lit "int" "")))
+              emit-captures
+              emit-source-span))
+    (let unknown-first-rule
+        (list "empty-first"
+              (list "opt" (object-lit "ws" " "))
+              emit-captures
+              emit-source-span))
+    (let rule-set-known-match
+        (apply-object-rule-set
+            (list return-rule break-rule)
+            rule-set-stream))
+    (let rule-set-known-index
+        (object-rule-set-index (list return-rule break-rule)))
+    (let rule-set-ordered-match
+        (apply-object-rule-set
+            (list return-rule unknown-first-rule break-rule)
+            rule-set-stream))
+    (let rule-set-no-match
+        (apply-object-rule-set
+            (list return-rule break-rule)
+            (list (bmf-atom "kw" "continue") (bmf-atom "end" "."))))
+
     (sum
         (list
             (bool-score (match? match) 1)
@@ -91,4 +156,19 @@
             (bool-score (match? star-match) 128)
             (int-score (len (cap-get (match-caps star-match) "items")) 2 256)
             (bool-score (fail? cut-match) 512)
-            (bool-score (fail? stop-match) 1024))))
+            (bool-score (fail? stop-match) 1024)
+            (bool-score (object-choice-direct-safe? (tail direct-choice-pattern)) 2048)
+            (bool-score (object-choice-direct-safe? (tail wildcard-choice-pattern)) 4096)
+            (bool-score (object-choice-direct-safe? (tail duplicate-choice-pattern)) 8192)
+            (bool-score (match? direct-choice-match) 16384)
+            (int-score (len (match-rest direct-choice-match)) 1 32768)
+            (bool-score (not (object-choice-direct-safe? (tail mixed-choice-pattern))) 65536)
+            (bool-score (match? mixed-choice-match) 131072)
+            (str-score (bmf-object-kind (cap-get (match-caps rule-set-known-match) "result")) "kw-break" 262144)
+            (str-score (bmf-object-kind (cap-get (match-caps rule-set-ordered-match) "result")) "empty-first" 524288)
+            (bool-score (fail? rule-set-no-match) 1048576)
+            (int-score (object-rule-dispatch-index-known-count rule-set-known-index) 2 2097152)
+            (int-score (object-rule-dispatch-index-candidate-count rule-set-known-index rule-set-stream) 1 4194304)
+            (int-score (object-rule-dispatch-index-skip-count rule-set-known-index rule-set-stream) 1 8388608)
+            (int-score (object-rule-dispatch-index-bucket-count rule-set-known-index) 2 16777216)
+            (int-score (object-rule-dispatch-index-segment-count rule-set-known-index) 1 33554432))))
