@@ -6742,7 +6742,7 @@ fn validate_route_spec(spec: RouteSpec) -> Result<RouteSpec, String> {
     }
     if !matches!(
         spec.method.as_str(),
-        "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "ANY"
+        "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "ANY"
     ) {
         return Err(format!(
             "KernelHTTPRoute {} method must be a known HTTP method or ANY",
@@ -6910,6 +6910,8 @@ fn route_pattern_prefix(pattern: &str) -> &str {
 fn route_method_pressure(route: &RouteSpec, method: &str) -> i64 {
     if route.method == method {
         0
+    } else if route.method == "GET" && method == "HEAD" {
+        20
     } else if route.method == "ANY" {
         40
     } else {
@@ -7424,6 +7426,17 @@ fn handle_request(
             &body_bytes,
             upstream_pool,
         );
+    } else if method == "OPTIONS" {
+        // A router with no matching native route and no upstream can still answer
+        // protocol discovery as a native no-body invitation. Exact OPTIONS routes
+        // still win above through the ordinary route-choice path.
+        status = "204 No Content".to_string();
+        body = String::new();
+        router = "local-control";
+        resp_headers.push((
+            "Allow".to_string(),
+            "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS".to_string(),
+        ));
     } else {
         // No native handler and no upstream configured.
         status = "404 Not Found".to_string();
@@ -7440,7 +7453,7 @@ fn handle_request(
         .write_all(
             http_response(
                 &status,
-                &body,
+                buffered_response_body_for_method(&method, &body),
                 router,
                 keep_alive,
                 &resp_content_type,
@@ -10278,14 +10291,23 @@ mod route_spec_tests {
     }
 
     #[test]
-    fn kernel_http_route_selection_rejects_method_mismatch() {
-        let routes = vec![route("get-only", "GET", "/api/items", 0, "", 0)];
+    fn kernel_http_route_selection_bridges_head_through_get() {
+        let routes = vec![route("get-only", "GET", "/api/items", 0, "", 20)];
 
         assert!(select_route_spec(&routes, "POST", "/api/items", &[]).is_none());
         assert_eq!(
             select_route_spec(&routes, "GET", "/api/items", &[]).map(|r| r.name.as_str()),
             Some("get-only")
         );
+        let head_choice = route_choice_for_request(&routes, "HEAD", "/api/items", &[], &[], "");
+        assert_eq!(
+            head_choice
+                .selected
+                .as_ref()
+                .map(|selection| selection.route.name.as_str()),
+            Some("get-only")
+        );
+        assert_eq!(head_choice.decisions[0].candidate.pressure, 20);
     }
 
     #[test]
@@ -10312,6 +10334,37 @@ mod route_spec_tests {
             Some("tail")
         );
         assert!(select_route_spec(&routes, "GET", "/api/other", &headers).is_none());
+    }
+
+    #[test]
+    fn kernel_http_route_manifest_accepts_head_and_options_methods() {
+        let src = r#"
+            (defn route_probe () "ok")
+            (defn route_options () "ok")
+            (let routes
+              (list
+                (list 43004 "probe" "HEAD" "/probe" 0 "route_probe" "" 20)
+                (list 43004 "probe-options" "OPTIONS" "/probe" 0 "route_options" "" 0)))
+        "#;
+        let (_, _, routes) = build_worker_kernel_from_source(src, "kernel-http-methods.fk")
+            .expect("HEAD/OPTIONS KernelHTTPRoute manifest loads");
+
+        assert_eq!(routes[0].method, "HEAD");
+        assert_eq!(routes[1].method, "OPTIONS");
+        assert_eq!(
+            select_route_spec(&routes, "HEAD", "/probe", &[]).map(|r| r.name.as_str()),
+            Some("probe")
+        );
+        assert_eq!(
+            select_route_spec(&routes, "OPTIONS", "/probe", &[]).map(|r| r.name.as_str()),
+            Some("probe-options")
+        );
+    }
+
+    #[test]
+    fn buffered_response_body_for_method_omits_head_body() {
+        assert_eq!(buffered_response_body_for_method("GET", "ok"), "ok");
+        assert_eq!(buffered_response_body_for_method("HEAD", "ok"), "");
     }
 }
 
@@ -10997,6 +11050,14 @@ fn http_response(
     out.push_str("\r\n");
     out.push_str(body);
     out
+}
+
+fn buffered_response_body_for_method<'a>(method: &str, body: &'a str) -> &'a str {
+    if method == "HEAD" {
+        ""
+    } else {
+        body
+    }
 }
 
 // Write ONLY the client response HEAD for a STREAMING fan-out, then the body is
