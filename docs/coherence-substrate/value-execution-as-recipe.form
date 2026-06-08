@@ -1,0 +1,57 @@
+; value-execution-as-recipe.form — map execution to paid-value, proven.
+;
+; THE ASK (Urs, 2026-06-09; coord claim: value-execution-income-proof):
+;   "find a way to prove value creation — observation and validation — built and shipped"
+;   "map execution to paid-value proof surface"
+;
+; THE BODY ALREADY HOLDS TWO-THIRDS:
+;   observation + validation -> docs/system_audit/commit_evidence_*.json
+;       change_files / change_intent          = WHAT was created   (observation)
+;       local_/ci_/deploy_/e2e_validation     = THAT it is proven  (validation)
+;   value grounding          -> api/app/services/grounded_measurement_service.py
+;   attribution / credit     -> api/app/services/coherence_credit_service.py   (CC = paid-value)
+;
+; THE MISSING THIRD — the GATE that ties value to proof:
+;   value is CREATED only when EXECUTION is proven. Written-but-never-run is not value;
+;   ran-but-failed is not value; passing-but-not-shipped is potential, not yet returned.
+;   The proven value is what gets credited (paid-value). Unproven claims are held open —
+;   named, never folded into credit. "Every contribution sensed, grounded, attributed,
+;   returned" made falsifiable: no value-claim without its execution proof.
+;
+; THE SURFACE   (runnable: form-stdlib/value-execution.fk · proven: tests/value-execution-band.fk)
+;
+;   (execution observed) -> (value validated) -> (credit attributed)
+;
+;   contribution = (claimed-value  ran?  validated?  served?)
+;       ran?       the artifact EXECUTED        (band ran / route invoked)         — observation
+;       validated? the execution PROVED correct (band PASS / 200 / witness breathing) — validation
+;       served?    live where it SERVES         (on main / route 200 / breathing)  — returned
+;
+;   ve-proven?  = ran AND validated AND served            ; the three runtime gates
+;   ve-credit   = proven? ? claimed-value : 0             ; paid-value = execution-proven value
+;   ve-surface -> (credited  potential)                  ; credited = sum proven; potential = held open
+;
+; CONSERVATION (-> substrate-thermodynamics.form):
+;   potential value is never destroyed and never silently counted. A claim that has not
+;   executed-and-shipped is held open (gas — potential) and condenses into credited
+;   (paid-value) the moment its execution is proven. Same value, two states; the proof IS
+;   the phase transition. claim/gas -> validated/grounded.
+;
+; DATA-OBLIVIOUS TO THE WORK ITSELF (-> north-star-compiler.md: proof over claim):
+;   the surface reads only the EXECUTION GATES (ran / validated / served), never the content
+;   of the work. A recipe, a route, a concept, a carrier — all credit the same way: did it
+;   run, pass, and serve? Value is proven by BEHAVIOR, not by self-description. This is the
+;   same structural truth as content-addressing: identity (and worth) come from what a thing
+;   IS and DOES, not what it claims about itself.
+;
+; APPLIED TO ITS OWN SHIPPING (the gate, run on the gate):
+;   value-execution.fk + band   ran? 1 (band executes)   validated? 1 (band verdict 7 on rust;
+;   three-way at validate.sh)   served? — 1 once on main, 0 while in worktree. Until merged,
+;   the gate honestly credits ITSELF 0 — potential, held open — and condenses to credited the
+;   moment it lands and CI proves it. The gate refuses to credit its own value before its own
+;   execution is proven. That refusal is the proof that the surface is honest.
+;
+; LINEAGE:
+;   commit_evidence_*.json (observation + validation) · coherence_credit_service.py (credit) ·
+;   grounded_measurement_service.py (value) · value-execution.fk (the gate) ·
+;   substrate-thermodynamics.form (potential -> credited phase) · north-star-compiler.md (proof over claim)

@@ -1,0 +1,26 @@
+; preludes: form-stdlib/value-execution.fk
+;
+; value-execution-band — value is credited ONLY when execution is proven.
+;
+; Four contributions (claimed-value  ran?  validated?  served?):
+;   (10 1 1 1) ran, passed, serving        -> CREDITED 10
+;   (8  1 1 0) ran, passed, NOT shipped     -> potential (held open)
+;   (7  1 0 0) ran but FAILED               -> potential (a failing run creates no value)
+;   (15 1 1 1) ran, passed, serving         -> CREDITED 15
+; surface: credited = 25 (only execution-proven), potential = 2.
+;
+; Band verdict: 7 when every check lands where expected:
+;   1 credited == 25      (only ran+passed+serving counts)
+;   2 potential == 2      (the unshipped pass and the failing run held open)
+;   4 a failing run credits 0   (ran-but-failed earns nothing)
+(do
+  (let contribs (list
+    (list 10 1 1 1)
+    (list 8  1 1 0)
+    (list 7  1 0 0)
+    (list 15 1 1 1)))
+  (let s (ve-surface contribs 0 0))
+  (let c0 (if (eq (ve-credited s) 25) 1 0))
+  (let c1 (if (eq (ve-potential s) 2) 2 0))
+  (let c2 (if (eq (ve-credit (list 7 1 0 0)) 0) 4 0))
+  (add c0 (add c1 c2)))
