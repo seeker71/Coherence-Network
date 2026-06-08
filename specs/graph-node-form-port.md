@@ -87,9 +87,10 @@ python3 scripts/validate_spec_quality.py --file specs/graph-node-form-port.md
 - GAP-GN1: The port is proven over memory and file carriers. Follow-up task:
   `graph-node-form-postgres-carrier` can add a live Postgres graph-node carrier
   to the same storage-port shape.
-- GAP-GN2: Native HTTP routes still need response projection from the stored
-  graph-node string envelope into the existing FastAPI JSON schemas. Follow-up
-  task: `ideas-native-graph-node-read-route`.
+- GAP-GN2: Native HTTP routes still need response projection bound into the
+  production route manifest. Follow-up task:
+  `ideas-native-graph-projection-route`; the Form projection itself now lives in
+  `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 

@@ -1,0 +1,157 @@
+; ideas-graph-projection.fk -- project graph-node envelopes into idea reads.
+;
+; This is the schema-projection layer after graph-node-port.fk: graph nodes come
+; from a carrier-agnostic store, and this module emits an IdeaPortfolioResponse-
+; shaped JSON body. It does not replace FastAPI yet; it proves the projection
+; that a native route can bind next.
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/graph-node-port.fk
+;
+(do
+    (defn igp-str-concat-all (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (igp-str-concat-all (tail xs)))))
+
+    (defn igp-json-string-escape-loop (s i)
+        (if (ge i (str_len s))
+            ""
+            (str_concat (char_at s i) (igp-json-string-escape-loop s (add i 1)))))
+
+    (defn igp-json-string (s)
+        (str_concat "\"" (str_concat (igp-json-string-escape-loop s 0) "\"")))
+
+    ;; graph-node-port's durable envelope is newline-separated key=value pairs.
+    ;; Prefixing with "\n" lets one function read both the first id= line and
+    ;; later lines through the same "\nkey=" search.
+    (defn igp-field (node key)
+        (do
+            (let wrapped (str_concat "\n" node))
+            (let label (str_concat "\n" (str_concat key "=")))
+            (let pos (str_find wrapped label 0))
+            (if (eq pos -1) ""
+                (do
+                    (let start (add pos (str_len label)))
+                    (let end (str_find wrapped "\n" start))
+                    (if (eq end -1)
+                        (substring wrapped start (str_len wrapped))
+                        (substring wrapped start end))))))
+
+    (defn igp-status-from-phase (phase)
+        (if (str_eq phase "ice") "validated"
+            (if (str_eq phase "water") "partial" "none")))
+
+    (defn igp-stage-from-status (status)
+        (if (str_eq status "validated") "complete"
+            (if (str_eq status "partial") "impl" "none")))
+
+    (defn igp-idea-json (node)
+        (do
+            (let id (igp-field node "id"))
+            (let name (igp-field node "name"))
+            (let description (igp-field node "description"))
+            (let phase (igp-field node "phase"))
+            (let status (igp-status-from-phase phase))
+            (let stage (igp-stage-from-status status))
+            (igp-str-concat-all (list
+                "{\"id\":" (igp-json-string id)
+                ",\"name\":" (igp-json-string name)
+                ",\"description\":" (igp-json-string description)
+                ",\"potential_value\":0.0"
+                ",\"actual_value\":0.0"
+                ",\"estimated_cost\":0.0"
+                ",\"actual_cost\":0.0"
+                ",\"resistance_risk\":1.0"
+                ",\"confidence\":0.5"
+                ",\"manifestation_status\":" (igp-json-string status)
+                ",\"interfaces\":[]"
+                ",\"open_questions\":[]"
+                ",\"idea_type\":\"standalone\""
+                ",\"parent_idea_id\":null"
+                ",\"child_idea_ids\":[]"
+                ",\"stage\":" (igp-json-string stage)
+                ",\"work_type\":null"
+                ",\"lifecycle\":\"active\""
+                ",\"duplicate_of\":null"
+                ",\"last_activity_at\":null"
+                ",\"value_basis\":null"
+                ",\"cost_vector\":null"
+                ",\"value_vector\":null"
+                ",\"tags\":[]"
+                ",\"workspace_git_url\":null"
+                ",\"slug\":" (igp-json-string id)
+                ",\"slug_history\":[]"
+                ",\"is_curated\":false"
+                ",\"pillar\":null"
+                ",\"workspace_id\":\"coherence-network\""
+                ",\"rollup_condition\":null"
+                ",\"free_energy_score\":0.0"
+                ",\"value_gap\":0.0"
+                ",\"content_markdown\":\"\""
+                ",\"marginal_cc_score\":0.0"
+                ",\"selection_weight\":0.0"
+                ",\"remaining_cost_cc\":0.0"
+                ",\"value_gap_cc\":0.0"
+                ",\"roi_cc\":0.0"
+                "}"))))
+
+    (defn igp-idea-json-list (nodes)
+        (if (nil? nodes) ""
+            (if (eq (len nodes) 1)
+                (igp-idea-json (head nodes))
+                (str_concat (igp-idea-json (head nodes))
+                    (str_concat "," (igp-idea-json-list (tail nodes)))))))
+
+    (defn igp-count-validated (nodes)
+        (if (nil? nodes) 0
+            (do
+                (let status (igp-status-from-phase (igp-field (head nodes) "phase")))
+                (add (if (str_eq status "validated") 1 0)
+                     (igp-count-validated (tail nodes))))))
+
+    (defn igp-portfolio-json-from-nodes (nodes)
+        (do
+            (let total (len nodes))
+            (let validated (igp-count-validated nodes))
+            (let unvalidated (sub total validated))
+            (igp-str-concat-all (list
+                "{\"ideas\":[" (igp-idea-json-list nodes) "]"
+                ",\"summary\":{\"total_ideas\":" (int_to_str total)
+                ",\"unvalidated_ideas\":" (int_to_str unvalidated)
+                ",\"validated_ideas\":" (int_to_str validated)
+                ",\"total_potential_value\":0.0"
+                ",\"total_actual_value\":0.0"
+                ",\"total_value_gap\":0.0}"
+                ",\"pagination\":{\"total\":" (int_to_str total)
+                ",\"limit\":" (int_to_str (max2 total 1))
+                ",\"offset\":0"
+                ",\"returned\":" (int_to_str total)
+                ",\"has_more\":false}"
+                "}"))))
+
+    (defn igp-portfolio-json (carrier store)
+        (igp-portfolio-json-from-nodes (gn-list-nodes carrier store "idea")))
+
+    ;; 111111 = portfolio shape, type filtering, status projection, required
+    ;; score fields, summary counts, and pagination all survive the graph port.
+    (defn igp-test (carrier config)
+        (do
+            (let s0 (storage-open carrier config))
+            (let s1 (gn-put-node carrier s0 "idea:alpha" "idea" "Alpha" "Projected from graph" "water" "{}"))
+            (let s2 (gn-put-node carrier s1 "idea:beta" "idea" "Beta" "Validated graph idea" "ice" "{}"))
+            (let s3 (gn-put-node carrier s2 "concept:alpha" "concept" "Concept" "Not an idea" "gas" "{}"))
+            (let body (igp-portfolio-json carrier s3))
+            (let shape-ok (if (eq (gn-contains? body "\"ideas\":[") 1) 1 0))
+            (let filter-ok (if (eq (gn-contains? body "concept:alpha") 0) 10 0))
+            (let status-ok
+                (if (eq (gn-contains? body "\"manifestation_status\":\"partial\"") 1)
+                    (if (eq (gn-contains? body "\"manifestation_status\":\"validated\"") 1)
+                        100 0) 0))
+            (let score-ok (if (eq (gn-contains? body "\"free_energy_score\":0.0") 1) 1000 0))
+            (let summary-ok
+                (if (eq (gn-contains? body "\"total_ideas\":2") 1)
+                    (if (eq (gn-contains? body "\"validated_ideas\":1") 1)
+                        10000 0) 0))
+            (let pagination-ok (if (eq (gn-contains? body "\"pagination\"") 1) 100000 0))
+            (sum (list shape-ok filter-ok status-ok score-ok summary-ok pagination-ok))))
+
+    0)
