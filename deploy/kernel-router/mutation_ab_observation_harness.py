@@ -315,7 +315,7 @@ def build_gate_report(
         "ordinary_traffic_flip_performed": False,
         "ordinary_traffic_flip_allowed": False,
         "next_evidence_needed": [
-            "execute carried side-effect intents natively",
+            "bind native side-effect execution carrier to mutation route runner",
             "narrow reversible public gate with rollback receipt",
         ],
     }

@@ -1,0 +1,98 @@
+; integration/native-mutation-side-effects-live.fk -- live Postgres proof for
+; native mutation side-effect execution.
+;
+; preludes: form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk
+;
+; Verdict: 11111111 when every step holds against live Postgres:
+;   connect                                -> 1
+;   create rollback-safe fixture tables     -> 10
+;   cache invalidation receipt executed     -> 100
+;   parent edge repair executed             -> 1000
+;   contributor-key audit executed          -> 10000
+;   rollback receipt executed               -> 100000
+;   drop fixture tables                      -> 1000000
+;   close connection                         -> 10000000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+
+    (let conn (pg_connect DSN))
+    (let connect-ok (if (ge conn 0) 1 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (pg_exec conn "DROP TABLE IF EXISTS contributor_api_keys")
+
+    (let nodes-ddl
+        "CREATE TABLE graph_nodes (
+            id VARCHAR(255) PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            phase VARCHAR(20) NOT NULL DEFAULT 'water',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let edges-ddl
+        "CREATE TABLE graph_edges (
+            id VARCHAR(255) PRIMARY KEY,
+            from_id VARCHAR(255) NOT NULL,
+            to_id VARCHAR(255) NOT NULL,
+            type VARCHAR(100) NOT NULL,
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            strength DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+            created_by VARCHAR(255) NOT NULL DEFAULT 'system',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let edge-index-ddl "CREATE UNIQUE INDEX ix_graph_edges_pair ON graph_edges (from_id, to_id, type)")
+    (let keys-ddl
+        "CREATE TABLE contributor_api_keys (
+            id VARCHAR(255) PRIMARY KEY,
+            contributor_id VARCHAR(255) NOT NULL,
+            label VARCHAR(255),
+            provider VARCHAR(255),
+            provider_id VARCHAR(255),
+            scopes_json TEXT NOT NULL DEFAULT '[]',
+            created_at VARCHAR(255) NOT NULL,
+            last_used_at VARCHAR(255),
+            revoked_at VARCHAR(255)
+        )")
+    (let schema-ok (if (eq (nms-and4
+        (if (ge (pg_exec conn nodes-ddl) 0) 1 0)
+        (if (ge (pg_exec conn edges-ddl) 0) 1 0)
+        (if (ge (pg_exec conn edge-index-ddl) 0) 1 0)
+        (if (ge (pg_exec conn keys-ddl) 0) 1 0)) 1) 10 0))
+    (nms-create-receipts-table conn)
+
+    (pg_exec conn "INSERT INTO graph_nodes (id, type, name, properties, phase) VALUES ('idea-parent-native', 'idea', 'Parent', '{\"stage\":\"validated\"}'::jsonb, 'ice')")
+    (pg_exec conn "INSERT INTO graph_nodes (id, type, name, properties, phase) VALUES ('idea-child-native', 'idea', 'Child', '{\"stage\":\"partial\"}'::jsonb, 'water')")
+    (pg_exec conn "INSERT INTO contributor_api_keys (id, contributor_id, scopes_json, created_at) VALUES ('key-hash-native', 'urs-muff', '[\"own:write\"]', '2026-06-08T00:00:00Z')")
+
+    (nms-record-cache-invalidation conn "mut-side-effects" "idea-child-native")
+    (let cache-row (pg_query conn "SELECT status || ':' || (details->>'mode') FROM native_mutation_side_effect_receipts WHERE effect_name = 'cache-invalidation'"))
+    (let cache-ok (if (str_eq cache-row "executed-native:executed-native-receipt") 100 0))
+
+    (nms-repair-parent-edge conn "edge-parent-child-native" "mut-side-effects" "idea-parent-native" "idea-child-native" "form-native")
+    (let edge-row (pg_query conn "SELECT type || ':' || created_by || ':' || (properties->>'effect') || ':' || (properties->>'mutation_id') FROM graph_edges WHERE from_id = 'idea-parent-native' AND to_id = 'idea-child-native'"))
+    (let edge-ok (if (str_eq edge-row "parent-of:form-native:parent-edge-repair:mut-side-effects") 1000 0))
+
+    (nms-audit-contributor-key conn "key-hash-native")
+    (let key-row (pg_query conn "SELECT CASE WHEN last_used_at IS NOT NULL AND last_used_at <> '' THEN 'used' ELSE 'missing' END FROM contributor_api_keys WHERE id = 'key-hash-native'"))
+    (let key-ok (if (str_eq key-row "used") 10000 0))
+
+    (nms-record-rollback-receipt conn "mut-side-effects" "idea-child-native")
+    (let rollback-row (pg_query conn "SELECT status || ':' || (details->>'rollback') FROM native_mutation_side_effect_receipts WHERE effect_name = 'rollback-receipt'"))
+    (let rollback-ok (if (str_eq rollback-row "executed-native:fanout-python remains default") 100000 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (pg_exec conn "DROP TABLE IF EXISTS contributor_api_keys")
+    (let cleanup-read (pg_query conn "SELECT COALESCE(to_regclass('public.native_mutation_side_effect_receipts')::text, '')"))
+    (let cleanup-ok (if (str_eq cleanup-read "") 1000000 0))
+
+    (let close-ok (if (eq (pg_close conn) 0) 10000000 0))
+
+    (sum (list connect-ok schema-ok cache-ok edge-ok key-ok rollback-ok cleanup-ok close-ok)))

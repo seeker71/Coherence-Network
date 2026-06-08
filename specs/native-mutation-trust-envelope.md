@@ -36,7 +36,7 @@ done_when:
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk && cd ../api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not perform the ordinary public mutation traffic flip in this slice."
-  - "Do not claim side-effect execution; carry side-effect intents until native execution proof lands."
+  - "This slice does not claim side-effect execution; the later side-effect carrier proof must remain separately named."
   - "Do not ignore prediction residuals or hide rollback state outside the response."
 ---
 
@@ -57,8 +57,8 @@ on the Python fanout path.
   reusable envelope recipe that returns JSON with operation, node id, state, and
   `choice_success=1`.
 - [ ] **R2**: The envelope carries `prediction_error="carried_as_residual"` and
-  a residual sentence naming that side effects are held as intent while fanout
-  remains default.
+	  a residual sentence naming that side effects are held as intent while fanout
+	  remains default.
 - [ ] **R3**: The envelope carries the choice protocol markers:
   `silence="fanout-default"`, `protocol="X-Form-Native-Preview"`,
   `fail="rollback-to-fanout"`, `stop="ordinary-traffic-unflipped"`, and
@@ -127,21 +127,24 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-enve
 
 - Ordinary public traffic flip for mutable idea/spec routes.
 - Native execution of cache invalidation, parent-edge repair, contributor-key
-  audit updates, or rollback receipt persistence.
+  audit updates, or rollback receipt persistence; that proof lives in
+  `specs/native-mutation-side-effects.md`.
 - Claiming numeric provider or model trust metrics.
 
 ## Gaps
 
-- GAP-NMTE1 follow-up task: `native-mutation-side-effects`. Execute the carried
-  side-effect intents natively and verify cache, parent-edge, contributor-key,
-  and rollback receipt behavior.
-- GAP-NMTE2 follow-up task: `native-mutation-public-flip-gate`. Add the narrow
-  reversible public gate after side-effect execution has a rollback receipt.
+- GAP-NMTE1: closed by `specs/native-mutation-side-effects.md`. The carried
+  side-effect intents now have a Form-native execution carrier with throwaway
+  Postgres readback for cache-invalidation receipt, parent-edge repair,
+  contributor-key audit, and rollback receipt.
+- GAP-NMTE2 follow-up task: `native-mutation-route-side-effect-binding`. Bind
+  the proven carrier to mutation route execution, then add the narrow reversible
+  public gate.
 
 ## Risks and Assumptions
 
 - The envelope is a JSON-shaped response contract; it is not yet persisted as a
   dedicated audit row.
 - The preview header remains the only native mutation entry point in this slice.
-- Trust is embodied as explicit residual and rollback state, not as proof that
-  deferred side effects already ran.
+- The trust envelope remains a preview response contract; execution proof is
+  separate until route binding carries the proven side-effect carrier.

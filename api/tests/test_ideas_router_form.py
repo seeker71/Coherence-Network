@@ -88,7 +88,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "Public mutable DB-backed /api/ideas still enters through FastAPI by default" in text
     assert "trust envelope carrying prediction residual" in text
     assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
-    assert "carried side-effect intents execute natively" in text
+    assert "native-mutation-side-effects-test.sh proves parent-edge repair" in text
+    assert "proven side-effect carrier is bound to route execution" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
