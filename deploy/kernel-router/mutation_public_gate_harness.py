@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""A/B observation gate for native mutation preview routes.
+"""Observation gate for the native mutation public-gate header.
 
-This turns the mutation flip into measurement before movement. It starts a
-local mock CPython upstream, starts the production kernel-router manifest in
-front of it, and sends each mutation shape twice:
+This is the narrow movement after A/B preview confidence:
 
-  A: no X-Form-Native-Preview header -> must fan out to upstream.
-  B: X-Form-Native-Preview present   -> must return native SQL preview.
+  A: no mutation gate header -> must fan out to upstream.
+  B: X-Form-Native-Preview -> must remain a non-executing native SQL preview.
+  C: X-Form-Native-Public-Gate -> must select the public-gate native route and
+     carry a route-local rollback receipt.
 
-No production routing changes, no database writes, no public traffic. The output
-is a confidence report. A passing report recommends the next bounded step
-(live-DB trial), not an ordinary-traffic flip.
+No ordinary no-header traffic moves, no production database is touched, and the
+HTTP route does not claim DB execution. The live Postgres receipt proof lives in
+form/scripts/native-mutation-public-gate-test.sh.
 """
 
 from __future__ import annotations
@@ -35,10 +35,11 @@ BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-ker
 PRODUCTION_ROUTES = HERE / "production-routes.fk"
 STDLIB = REPO_ROOT / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
+PUBLIC_GATE_HEADER = "X-Form-Native-Public-Gate"
 
 
 @dataclass(frozen=True)
-class ObservationCase:
+class PublicGateCase:
     name: str
     method: str
     path: str
@@ -57,90 +58,94 @@ class HTTPObservation:
 
 
 @dataclass(frozen=True)
-class CaseObservation:
+class PublicGateObservation:
     name: str
     passed: bool
     checks: dict[str, bool]
     control_status: int
     control_router: str
-    treatment_status: int
-    treatment_router: str
+    preview_status: int
+    preview_router: str
+    public_gate_status: int
+    public_gate_router: str
+    both_headers_status: int
+    both_headers_router: str
     operation: str
     node_id: str
 
 
-CASES: tuple[ObservationCase, ...] = (
-    ObservationCase(
+CASES: tuple[PublicGateCase, ...] = (
+    PublicGateCase(
         name="idea-create",
         method="POST",
         path="/api/ideas",
-        body='{"id":"idea-ab-native","name":"AB Native Idea","description":"observation","manifestation_status":"partial"}',
+        body='{"id":"idea-public-gate","name":"Public Gate Idea","description":"gate","manifestation_status":"partial"}',
         operation="create-idea",
-        node_id="idea-ab-native",
+        node_id="idea-public-gate",
         sql_contains=(
             "INSERT INTO graph_nodes",
             "INSERT INTO graph_node_revisions",
-            "__create__",
-            "'idea-ab-native'",
+            "kernel-router-public-gate",
+            "'idea-public-gate'",
             "'water'",
         ),
     ),
-    ObservationCase(
+    PublicGateCase(
         name="idea-update",
         method="PATCH",
-        path="/api/ideas/idea-ab-native",
-        body='{"name":"AB Native Idea Moved","description":"observed","manifestation_status":"validated"}',
+        path="/api/ideas/idea-public-gate",
+        body='{"name":"Public Gate Idea Updated","description":"gate observed","manifestation_status":"validated"}',
         operation="update-idea",
-        node_id="idea-ab-native",
+        node_id="idea-public-gate",
         sql_contains=(
             "UPDATE graph_nodes SET",
             "properties = properties ||",
-            "COALESCE(max(revision_number), 0) + 1",
-            "'idea-ab-native'",
+            "kernel-router-public-gate",
+            "'idea-public-gate'",
             "'ice'",
         ),
     ),
-    ObservationCase(
+    PublicGateCase(
         name="spec-create",
         method="POST",
         path="/api/spec-registry",
-        body='{"spec_id":"ab-native-spec","title":"AB Native Spec","summary":"observation"}',
+        body='{"spec_id":"public-gate-spec","title":"Public Gate Spec","summary":"gate"}',
         operation="create-spec",
-        node_id="spec-ab-native-spec",
+        node_id="spec-public-gate-spec",
         sql_contains=(
             "INSERT INTO graph_nodes",
             "INSERT INTO graph_node_revisions",
-            "__create__",
-            "'spec-ab-native-spec'",
+            "kernel-router-public-gate",
+            "'spec-public-gate-spec'",
             "'spec'",
         ),
     ),
-    ObservationCase(
+    PublicGateCase(
         name="spec-update",
         method="PATCH",
-        path="/api/spec-registry/ab-native-spec",
-        body='{"title":"AB Native Spec Updated","summary":"observed"}',
+        path="/api/spec-registry/public-gate-spec",
+        body='{"title":"Public Gate Spec Updated","summary":"gate observed"}',
         operation="update-spec",
-        node_id="spec-ab-native-spec",
+        node_id="spec-public-gate-spec",
         sql_contains=(
             "UPDATE graph_nodes SET",
             "properties = properties ||",
-            "COALESCE(max(revision_number), 0) + 1",
-            "'spec-ab-native-spec'",
+            "kernel-router-public-gate",
+            "'spec-public-gate-spec'",
         ),
     ),
-    ObservationCase(
+    PublicGateCase(
         name="spec-delete",
         method="DELETE",
-        path="/api/spec-registry/ab-native-spec",
+        path="/api/spec-registry/public-gate-spec",
         body="",
         operation="delete-spec",
-        node_id="spec-ab-native-spec",
+        node_id="spec-public-gate-spec",
         sql_contains=(
             "WITH deleted_edges AS",
             "DELETE FROM graph_edges",
             "DELETE FROM graph_nodes",
-            "'spec-ab-native-spec'",
+            "'spec-public-gate-spec'",
         ),
     ),
 )
@@ -198,16 +203,15 @@ class MockMutationUpstream(http.server.BaseHTTPRequestHandler):
         return
 
 
-def http_request(base_url: str, case: ObservationCase, *, preview: bool) -> HTTPObservation:
+def http_request(base_url: str, case: PublicGateCase, *, headers: dict[str, str]) -> HTTPObservation:
     data = case.body.encode("utf-8") if case.body else None
-    headers = {"Content-Type": "application/json"}
-    if preview:
-        headers[PREVIEW_HEADER] = "1"
+    request_headers = {"Content-Type": "application/json"}
+    request_headers.update(headers)
     req = urllib.request.Request(
         base_url + case.path,
         data=data,
         method=case.method,
-        headers=headers,
+        headers=request_headers,
     )
     try:
         with urllib.request.urlopen(req, timeout=10.0) as response:
@@ -225,71 +229,92 @@ def http_request(base_url: str, case: ObservationCase, *, preview: bool) -> HTTP
     return HTTPObservation(status=status, router=router, body=body, parsed=parsed)
 
 
-def evaluate_case(
-    case: ObservationCase,
-    control: HTTPObservation,
-    treatment: HTTPObservation,
-) -> CaseObservation:
-    sql = str(treatment.parsed.get("sql") or "")
-    trust_envelope = treatment.parsed.get("trust_envelope")
-    if not isinstance(trust_envelope, dict):
-        trust_envelope = {}
-    reversible_gate = trust_envelope.get("reversible_gate")
+def _gate_checks(case: PublicGateCase, observation: HTTPObservation) -> dict[str, bool]:
+    parsed = observation.parsed
+    sql = str(parsed.get("sql") or "")
+    receipt = parsed.get("route_local_rollback_receipt")
+    if not isinstance(receipt, dict):
+        receipt = {}
+    trust = parsed.get("trust_envelope")
+    if not isinstance(trust, dict):
+        trust = {}
+    reversible_gate = trust.get("reversible_gate")
     if not isinstance(reversible_gate, dict):
         reversible_gate = {}
-    side_effect_intents = trust_envelope.get("side_effect_intents")
-    if not isinstance(side_effect_intents, list):
-        side_effect_intents = []
+    return {
+        "public_gate_native": observation.router == "native-kernel",
+        "public_gate_status": observation.status == 202,
+        "public_gate_declared": parsed.get("native_public_gate") is True,
+        "public_gate_not_preview": parsed.get("native_preview") is False,
+        "public_gate_required_header": parsed.get("required_header") == PUBLIC_GATE_HEADER,
+        "public_gate_route_binding": parsed.get("route_binding") == "kernel-http-public-rollback-gated",
+        "public_gate_operation": parsed.get("operation") == case.operation,
+        "public_gate_node_id": parsed.get("node_id") == case.node_id,
+        "public_gate_keeps_db_execution_honest": parsed.get("executes") is False,
+        "public_gate_executes_gate": parsed.get("route_local_gate_executes") is True,
+        "public_gate_sql_shape": all(part in sql for part in case.sql_contains),
+        "public_gate_body_seen": parsed.get("request_body", "") == (case.body or "{}"),
+        "rollback_receipt_state": receipt.get("state") == "route-local-rollback-receipt",
+        "rollback_receipt_node": receipt.get("node_id") == case.node_id,
+        "rollback_receipt_rollback": "remove X-Form-Native-Public-Gate" in str(receipt.get("rollback") or ""),
+        "trust_protocol": trust.get("protocol") == PUBLIC_GATE_HEADER,
+        "trust_choice_success": trust.get("choice_success") == 1,
+        "trust_fail": trust.get("fail") == "rollback-to-fanout-by-removing-public-gate-header",
+        "trust_stop": trust.get("stop") == "ordinary-traffic-unflipped",
+        "trust_bma": trust.get("bma") == "native-mutation-public-gate",
+        "trust_reversible_gate": (
+            reversible_gate.get("default_route") == "fanout-python"
+            and reversible_gate.get("preview_route") == PREVIEW_HEADER
+            and reversible_gate.get("public_gate_route") == PUBLIC_GATE_HEADER
+            and reversible_gate.get("public_gate_allowed") is True
+            and reversible_gate.get("ordinary_traffic_flip_performed") is False
+        ),
+    }
+
+
+def evaluate_case(
+    case: PublicGateCase,
+    control: HTTPObservation,
+    preview: HTTPObservation,
+    public_gate: HTTPObservation,
+    both_headers: HTTPObservation,
+) -> PublicGateObservation:
+    preview_checks = {
+        "preview_native": preview.router == "native-kernel",
+        "preview_status": preview.status == 202,
+        "preview_declared": preview.parsed.get("native_preview") is True,
+        "preview_observes_only": preview.parsed.get("executes") is False,
+        "preview_protocol": (preview.parsed.get("trust_envelope") or {}).get("protocol") == PREVIEW_HEADER,
+    }
     checks = {
         "control_fanned_out": control.router == "fanout-python",
         "control_status_ok": control.status == 200,
         "control_method_seen": control.parsed.get("method") == case.method,
         "control_path_seen": control.parsed.get("path") == case.path,
         "control_body_seen": control.parsed.get("body", "") == case.body,
-        "treatment_native": treatment.router == "native-kernel",
-        "treatment_status_preview": treatment.status == 202,
-        "treatment_declares_preview": treatment.parsed.get("native_preview") is True,
-        "treatment_operation": treatment.parsed.get("operation") == case.operation,
-        "treatment_node_id": treatment.parsed.get("node_id") == case.node_id,
-        "treatment_observes_only": treatment.parsed.get("executes") is False,
-        "treatment_body_seen": treatment.parsed.get("request_body", "") == (case.body or "{}"),
-        "treatment_sql_shape": all(part in sql for part in case.sql_contains),
-        "treatment_prediction_error_carried": trust_envelope.get("prediction_error") == "carried_as_residual",
-        "treatment_choice_protocol_carried": (
-            trust_envelope.get("choice_success") == 1
-            and trust_envelope.get("silence") == "fanout-default"
-            and trust_envelope.get("protocol") == PREVIEW_HEADER
-            and trust_envelope.get("fail") == "rollback-to-fanout"
-            and trust_envelope.get("stop") == "ordinary-traffic-unflipped"
-            and trust_envelope.get("bma") == "native-mutation-trust-envelope"
-        ),
-        "treatment_side_effect_intents_carried": {
-            "cache-invalidation",
-            "parent-edge-repair",
-            "contributor-key-audit",
-        }.issubset({str(item.get("name") or "") for item in side_effect_intents if isinstance(item, dict)}),
-        "treatment_reversible_gate_held": (
-            reversible_gate.get("default_route") == "fanout-python"
-            and reversible_gate.get("native_route") == PREVIEW_HEADER
-            and reversible_gate.get("ordinary_traffic_flip_allowed") is False
-            and reversible_gate.get("ordinary_traffic_flip_performed") is False
-        ),
+        **{f"preview_{name}": ok for name, ok in preview_checks.items()},
+        **_gate_checks(case, public_gate),
+        **{f"both_headers_{name}": ok for name, ok in _gate_checks(case, both_headers).items()},
     }
-    return CaseObservation(
+    return PublicGateObservation(
         name=case.name,
         passed=all(checks.values()),
         checks=checks,
         control_status=control.status,
         control_router=control.router,
-        treatment_status=treatment.status,
-        treatment_router=treatment.router,
-        operation=str(treatment.parsed.get("operation") or ""),
-        node_id=str(treatment.parsed.get("node_id") or ""),
+        preview_status=preview.status,
+        preview_router=preview.router,
+        public_gate_status=public_gate.status,
+        public_gate_router=public_gate.router,
+        both_headers_status=both_headers.status,
+        both_headers_router=both_headers.router,
+        operation=str(public_gate.parsed.get("operation") or ""),
+        node_id=str(public_gate.parsed.get("node_id") or ""),
     )
 
 
 def build_gate_report(
-    observations: list[CaseObservation],
+    observations: list[PublicGateObservation],
     *,
     min_confidence: float,
 ) -> dict[str, Any]:
@@ -298,9 +323,10 @@ def build_gate_report(
     confidence = (passed / total) if total else 0.0
     gate_pass = confidence >= min_confidence and passed == total
     return {
-        "gate": "native_mutation_ab_observation",
-        "variant_a": "fanout-python without X-Form-Native-Preview",
+        "gate": "native_mutation_public_gate",
+        "variant_a": "fanout-python without native mutation headers",
         "variant_b": "native-kernel SQL preview with X-Form-Native-Preview",
+        "variant_c": "native-kernel public gate with X-Form-Native-Public-Gate",
         "cases": [asdict(obs) for obs in observations],
         "passed_cases": passed,
         "total_cases": total,
@@ -308,12 +334,13 @@ def build_gate_report(
         "min_confidence": min_confidence,
         "gate_pass": gate_pass,
         "recommendation": (
-            "preview_confidence_complete"
+            "promote_to_deployed_header_canary"
             if gate_pass
-            else "hold_flip_collect_more_observations"
+            else "hold_public_gate"
         ),
-        "ordinary_traffic_flip_performed": False,
+        "public_gate_header_allowed": gate_pass,
         "ordinary_traffic_flip_allowed": False,
+        "ordinary_traffic_flip_performed": False,
         "next_evidence_needed": [
             "deployed X-Form-Native-Public-Gate canary before any no-header flip",
         ],
@@ -370,8 +397,14 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
         observations = [
             evaluate_case(
                 case,
-                http_request(base_url, case, preview=False),
-                http_request(base_url, case, preview=True),
+                http_request(base_url, case, headers={}),
+                http_request(base_url, case, headers={PREVIEW_HEADER: "1"}),
+                http_request(base_url, case, headers={PUBLIC_GATE_HEADER: "1"}),
+                http_request(
+                    base_url,
+                    case,
+                    headers={PREVIEW_HEADER: "1", PUBLIC_GATE_HEADER: "1"},
+                ),
             )
             for case in CASES
         ]
@@ -388,10 +421,11 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
 
 def render_human(report: dict[str, Any]) -> str:
     lines = [
-        "# Native Mutation A/B Observation Gate",
+        "# Native Mutation Public Gate",
         "",
         f"variant A: {report['variant_a']}",
         f"variant B: {report['variant_b']}",
+        f"variant C: {report['variant_c']}",
         f"confidence: {report['confidence']:.4f} ({report['passed_cases']}/{report['total_cases']} cases)",
         f"gate_pass: {report['gate_pass']}",
         f"recommendation: {report['recommendation']}",
@@ -403,7 +437,9 @@ def render_human(report: dict[str, Any]) -> str:
         lines.append(
             f"  - {case['name']}: {'pass' if case['passed'] else 'fail'} "
             f"A={case['control_router']}:{case['control_status']} "
-            f"B={case['treatment_router']}:{case['treatment_status']} "
+            f"B={case['preview_router']}:{case['preview_status']} "
+            f"C={case['public_gate_router']}:{case['public_gate_status']} "
+            f"both={case['both_headers_router']}:{case['both_headers_status']} "
             f"{case['operation']} {case['node_id']}"
         )
         failed = [name for name, ok in case["checks"].items() if not ok]
@@ -430,7 +466,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_observation(min_confidence=args.min_confidence)
     except Exception as exc:
-        print(f"mutation A/B observation failed: {exc}", file=sys.stderr)
+        print(f"mutation public gate failed: {exc}", file=sys.stderr)
         return 2
 
     if args.json:
