@@ -18,6 +18,8 @@ section [form.bml] {
     let kh_tag_field = 43008;
     let kh_tag_route_decision = 43009;
     let kh_tag_route_choice = 43010;
+    let kh_tag_route_decision_signature = 43011;
+    let kh_tag_route_choice_signature = 43012;
 
     def kh-bool-score(ok, score) = if ok then score else 0;
     def kh-tagged?(value, tag, arity) = if eq(len(value), arity) then eq(nth(value, 0), tag) else false;
@@ -149,6 +151,36 @@ section [form.bml] {
     def kh-route-decision-valid?(decision) = if kh-route-decision?(decision) then kh-route-candidate-valid?(kh-route-decision-candidate(decision)) else false;
     def kh-route-decisions(candidates, selected) = if nil?(candidates) then empty else cons(kh-route-decision(head(candidates), kh-route-candidate-eligible?(head(candidates)), kh-route-candidate-same?(head(candidates), selected)), kh-route-decisions(tail(candidates), selected));
     def kh-route-decisions-valid?(decisions) = if nil?(decisions) then true else if kh-route-decision-valid?(head(decisions)) then kh-route-decisions-valid?(tail(decisions)) else false;
+
+    // Fixed, data-oblivious buckets for route-choice attention. This borrows the
+    // TurboQuant teaching: compression remains content-addressable only when the
+    // quantizer is universal, not trained from the current route corpus.
+    def kh-pressure-bucket(pressure) = if eq(pressure, 0) then 0 else if le(pressure, 25) then 1 else if le(pressure, 120) then 2 else if le(pressure, 400) then 3 else if le(pressure, 500) then 4 else 5;
+    def kh-score-bucket(score) = if lt(score, 0) then 0 else if lt(score, 500) then 1 else if lt(score, 900) then 2 else if lt(score, 1000) then 3 else if lt(score, 1100) then 4 else 5;
+    def kh-pressure-code(row) = list(kh-pressure-row-axis(row), kh-pressure-bucket(kh-pressure-row-pressure(row)));
+    def kh-pressure-codes(matrix) = if nil?(matrix) then empty else cons(kh-pressure-code(head(matrix)), kh-pressure-codes(tail(matrix)));
+    def kh-route-decision-signature(decision) {
+        let candidate = kh-route-decision-candidate(decision);
+        let route = kh-route-candidate-route(candidate);
+        list(
+            kh_tag_route_decision_signature,
+            kh-route-name(route),
+            kh-route-handler(route),
+            kh-pressure-codes(kh-route-candidate-matrix(candidate)),
+            kh-pressure-bucket(kh-route-candidate-pressure(candidate)),
+            kh-score-bucket(kh-route-candidate-score(candidate)),
+            kh-route-decision-eligible?(decision),
+            kh-route-decision-selected?(decision)
+        );
+    }
+    def kh-route-decision-signature?(signature) = kh-tagged?(signature, kh_tag_route_decision_signature, 8);
+    def kh-route-decision-signature-codes(signature) = nth(signature, 3);
+    def kh-route-decision-signature-pressure-bucket(signature) = nth(signature, 4);
+    def kh-route-decision-signature-score-bucket(signature) = nth(signature, 5);
+    def kh-route-decision-signature-eligible?(signature) = nth(signature, 6);
+    def kh-route-decision-signature-selected?(signature) = nth(signature, 7);
+    def kh-route-decision-signatures(decisions) = if nil?(decisions) then empty else cons(kh-route-decision-signature(head(decisions)), kh-route-decision-signatures(tail(decisions)));
+
     def kh-route-choice(request, candidates, decisions, selected) = list(kh_tag_route_choice, request, candidates, decisions, selected);
     def kh-route-choice?(choice) = kh-tagged?(choice, kh_tag_route_choice, 5);
     def kh-route-choice-request(choice) = nth(choice, 1);
@@ -156,6 +188,9 @@ section [form.bml] {
     def kh-route-choice-decisions(choice) = nth(choice, 3);
     def kh-route-choice-selected(choice) = nth(choice, 4);
     def kh-route-choice-valid?(choice) = if kh-route-choice?(choice) then and(kh-request-valid?(kh-route-choice-request(choice)), and(eq(len(kh-route-choice-candidates(choice)), len(kh-route-choice-decisions(choice))), kh-route-decisions-valid?(kh-route-choice-decisions(choice)))) else false;
+    def kh-route-choice-signature(choice) = list(kh_tag_route_choice_signature, kh-request-method(kh-route-choice-request(choice)), kh-request-path(kh-route-choice-request(choice)), kh-route-decision-signatures(kh-route-choice-decisions(choice)));
+    def kh-route-choice-signature?(signature) = kh-tagged?(signature, kh_tag_route_choice_signature, 4);
+    def kh-route-choice-signature-decision-signatures(signature) = nth(signature, 3);
     def kh-route-choice-for-request(routes, request) {
         let candidates = kh-route-candidates(routes, request);
         let selected = kh-select-route-candidate(kh-eligible-candidates(candidates));

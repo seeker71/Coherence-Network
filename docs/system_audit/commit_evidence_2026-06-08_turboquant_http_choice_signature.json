@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/turboquant-http-choice-lens-20260608",
+  "commit_scope": "Use the TurboQuant recipe shape to add fixed, data-oblivious route-choice signatures for native HTTP attention.",
+  "files_owned": [
+    "docs/coherence-substrate/turboquant-as-recipe.form",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-08_turboquant_http_choice_signature.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form/form-kernel-rust && cargo test router_context_carries_selected_route_candidate_form_value --quiet",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_turboquant_http_choice_signature.json",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass",
+      "wellness": "pass; deploy lag and kernel-native API growth edge remain visible",
+      "kernel_http_band": "pass across Go/Rust/TypeScript with result 536872066",
+      "rust_router_context_signature": "pass; native handler context carries KernelHTTPRouteChoiceSignature and per-decision signatures for blocked and selected branches",
+      "kernel_http_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 536872066",
+      "commit_evidence_validation": "pass",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No production deploy was performed for this local route-choice signature change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending",
+      "production deploy not run"
+    ]
+  },
+  "idea_ids": [
+    "native-http-kernel-router",
+    "source-language-first-router"
+  ],
+  "spec_ids": [
+    "canonical-route-registry-and-runtime-mapping",
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "turboquant-http-choice-lens-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form://docs/coherence-substrate/turboquant-as-recipe.form#HTTP-route-choice-use",
+    "form://form-stdlib/kernel-http.fk#kh-route-choice-signature",
+    "form://form-stdlib/kernel-http.fk#kh-route-decision-signature",
+    "rust://form-kernel-rust/src/main.rs#router_route_choice_signature_value",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md#HTTP-native-function-and-choice-audit"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/turboquant-as-recipe.form",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native HTTP route choices now expose a fixed-bucket signature so repeated branch pressure patterns can be observed and clustered without replacing the full route-choice receipt or introducing corpus-trained state.",
+    "public_endpoints": [
+      "form://form-stdlib/kernel-http.fk",
+      "rust://form-kernel-rust/src/main.rs"
+    ],
+    "test_flows": [
+      "kernel-http-band proves route-choice signatures with fixed pressure and score buckets across all kernels",
+      "binary validation proves the signature survives artifact compilation",
+      "Rust router context test proves the native listener exports the compressed route-choice signature beside the full decision table"
+    ]
+  }
+}
