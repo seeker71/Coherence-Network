@@ -44,8 +44,8 @@
 ;; path) or runs `parse-fn source-path source-text` and writes the
 ;; result back to the cache.
 ;;
-;; `parse-fn` is any (source-path text) → Recipe function. parse-json
-;; from form-stdlib/json.fk fits; future parse-yaml, parse-toml fit
+;; `parse-fn` is any (source-path text) → Recipe function. json_parse_body
+;; from form-stdlib/json-codec.fk fits; future parse-yaml, parse-toml fit
 ;; the same shape.
 
 (defn read_with_cache (source-path cache-path parse-fn)

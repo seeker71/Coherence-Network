@@ -1,6 +1,6 @@
 ; tests/channel-query-json-band.fk — channel-query JSON bridge sibling-witness band.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/channel-query-json.fk
 ;
 ; Exercises the bridge on:
 ;   - a QUERY (encode → match canonical string; decode → reconstruct verb+address)

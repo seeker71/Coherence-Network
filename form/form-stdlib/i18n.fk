@@ -22,8 +22,9 @@
 ; each locale." Multiply across 4 locales × 2300 keys → ~9300 observed
 ; emission triples.
 ;
-; Prelude requirement: form-stdlib/json.fk and form-stdlib/cache.fk
-; must load before this file.
+; Prelude requirement: form-stdlib/json.fk, form-stdlib/cache.fk,
+; form-stdlib/codec.fk, form-stdlib/structured-codec.fk, and
+; form-stdlib/json-codec.fk must load before this file.
 
 ;; --- locale-file paths ----------------------------------------------
 ;;
@@ -50,7 +51,7 @@
     (read_with_cache
         (i18n-source-path locale-name)
         (i18n-cache-path locale-name)
-        parse-json))
+        json_parse_body))
 
 ;; --- key-path traversal --------------------------------------------
 ;;
@@ -112,7 +113,7 @@
 ;;
 ;; Use (i18n-string-by-path (cli-i18n-load "de") (list "help" "usage"))
 ;; to read a CLI surface in any locale, same shape as the web loader.
-;; The composition is bottom-up: same read_with_cache, same parse-json,
+;; The composition is bottom-up: same read_with_cache, same JsonCodec,
 ;; only the source/cache paths change.
 (defn cli-i18n-source-path (locale-name)
     (str_concat "../cli/lib/messages/"
@@ -126,7 +127,7 @@
     (read_with_cache
         (cli-i18n-source-path locale-name)
         (cli-i18n-cache-path locale-name)
-        parse-json))
+        json_parse_body))
 
 ;; --- sibling corpora: web/content/presence-walk --------------------
 ;;
@@ -146,6 +147,6 @@
     (read_with_cache
         (presence-walk-i18n-source-path locale-name)
         (presence-walk-i18n-cache-path locale-name)
-        parse-json))
+        json_parse_body))
 
 0

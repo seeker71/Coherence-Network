@@ -1,7 +1,7 @@
 ; channel-query-json.fk — encode a QUERY and a RESPONSE into JSON for
 ; a non-Form HTTP service (Slack webhook, Discord bot, generic REST).
 ;
-; preludes: form-stdlib/json.fk form-stdlib/channel-query.fk form-stdlib/sha256.fk form-stdlib/channel-query-json.fk
+; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/channel-query.fk form-stdlib/sha256.fk form-stdlib/channel-query-json.fk
 ;
 ; The frame:
 ;   Form-native cells talk to each other through the channel-query
