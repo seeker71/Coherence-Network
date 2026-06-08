@@ -75,6 +75,15 @@ export default function BeginPage() {
   const [message, setMessage] = useState("");
   const [resonantRoles, setResonantRoles] = useState<string[]>([]);
 
+  // How do you want to be received? — the reception choices belong to the one
+  // arriving (first-encounter-protocol.form). Exposure-bearing consents default
+  // off: nothing defaults a person into being discoverable or emailed.
+  // Name-on-contributions defaults on, since weaving in is itself the chosen
+  // yes to be known — and it stays visible and toggleable.
+  const [consentShareName, setConsentShareName] = useState(true);
+  const [consentFindable, setConsentFindable] = useState(false);
+  const [consentEmail, setConsentEmail] = useState(false);
+
   const toggleRole = (id: string) => {
     setResonantRoles((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
@@ -107,9 +116,9 @@ export default function BeginPage() {
           offering: offering.trim() || null,
           message: message.trim() || null,
           resonant_roles: resonantRoles.length ? resonantRoles : null,
-          consent_email_updates: true,
-          consent_share_name: true,
-          consent_findable: true,
+          consent_email_updates: consentEmail,
+          consent_share_name: consentShareName,
+          consent_findable: consentFindable,
         }),
       });
       if (!res.ok) {
@@ -293,6 +302,40 @@ export default function BeginPage() {
           <p>{renderProse(t("begin.publicPostureBody1"))}</p>
           <p>{renderProse(t("begin.publicPostureBody2"))}</p>
           <p>{renderProse(t("begin.publicPostureBody3"))}</p>
+        </div>
+
+        {/* How do you want to be received? — explicit reception choices,
+            enacting first-encounter-protocol.form. The exposure-bearing
+            consents (findable, email) default off; nothing defaults a person
+            into being discoverable. The terms belong to the one arriving. */}
+        <div className="space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-4">
+          <div>
+            <p className="text-sm font-medium text-amber-300">
+              {t("begin.receiveTitle")}
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+              {t("begin.receiveHelp")}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {[
+              { checked: consentShareName, set: setConsentShareName, labelKey: "interestForm.consentShareName" },
+              { checked: consentFindable, set: setConsentFindable, labelKey: "interestForm.consentFindable" },
+              { checked: consentEmail, set: setConsentEmail, labelKey: "interestForm.consentUpdates" },
+            ].map((c, i) => (
+              <label key={i} className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={c.checked}
+                  onChange={(e) => c.set(e.target.checked)}
+                  className="mt-0.5 rounded border-border/40 bg-card/60 text-amber-500 focus:ring-amber-500/30 focus:ring-offset-0"
+                />
+                <span className="text-sm text-stone-400 group-hover:text-stone-300 transition-colors">
+                  {t(c.labelKey)}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
