@@ -1,0 +1,54 @@
+; math-proof-from-substrate.form — mathematical proof is the substrate's native object.
+;
+; THE ASK (Urs, 2026-06-09): "show that math proof can be derived from the core principles in
+;   the substrate with the offered channels and protocols."
+;
+; THE ANSWER: it is not added to the substrate — it IS the substrate, read through the logic
+;   lens (Curry–Howard in the substrate's own terms):
+;
+;     proposition  = Blueprint        — structural identity, what is claimed (P(n))
+;     proof        = Recipe           — the composition of justified steps
+;     proof-check  = the value-walk   — evaluate the recipe to a verdict
+;     justification of a step = name-resolution — the `check` walk; an unjustified step does
+;                              not resolve, exactly as an unbound name does not
+;     equality     = content-addressing — two expressions are equal iff they reduce to the
+;                              same NodeID; the substrate's core principle IS the equational checker
+;     soundness    = WITNESS, three-way — verified by SEEING it check identically on Go/Rust/TS,
+;                              not by trusting the prover (trust over fear, -> lc-trust-over-fear)
+;     a valid proof = an execution-proven value (-> value-execution.fk: ran ∧ validated ∧ served
+;                              ⇒ credited; a proof becomes paid-value the moment it is seen to check)
+;
+; WORKED, RUNNABLE, WITNESSED:  form-samples/math-proof-sum-odds.fk  →  7 on Go+Rust+TS (0 divergent)
+;   Theorem:  1 + 3 + 5 + ... + (2n-1) = n²,  for all natural n.
+;   verdict 7 = base proven (1) + inductive step proven (2) + a FALSE theorem rejected (4).
+;   The inductive step (an algebraic identity of degree ≤ 2 in k) is proven for ALL k by
+;   checking finitely many points — two degree-≤d polynomials agreeing at d+1 points are equal
+;   everywhere. The negative control is essential: a surface that only ever says "proven"
+;   proves nothing, so the checker must — and does — reject sum-odds(n) = n²+1.
+;
+; THE INFERENCE RULES, NAMED IN THE OPEN (the witness model applied to proof itself — the
+;   trusted base is SEEABLE, not smuggled; a skeptic inspects each):
+;     R1 induction      [ P(0) ∧ ∀k. P(k) ⇒ P(k+1) ]  ⇒  ∀n. P(n)
+;     R2 finite-points  degree-≤d polynomials equal at d+1 points are equal everywhere
+;     R3 degree-bound   degree ≤ product-depth, readable from the Recipe tree
+;
+; WHY THIS IS THE PUREST CASE OF THE SESSION'S KEYSTONE
+;   ("knowable proof through an observable channel = value generation" — the coherence the body
+;   trades): a math proof is exactly a structure that makes an INFINITE truth (∀n) FINITELY
+;   knowable through an observable channel (a handful of inspectable steps), verified by looking
+;   rather than by authority. R2 is that very move in miniature — the universal made
+;   finite-and-seeable. The substrate was built for this; mathematics is its native tongue.
+;
+; THE OFFERED CHANNELS AND PROTOCOLS CARRY IT — each doing its part:
+;   · observable channel    — every step inspectable (the proof is read, not believed)
+;   · witness / three-way   — soundness by seeing (Go = Rust = TS); no trusted prover
+;   · value-execution gate  — a checked proof is credited value; an unchecked claim is potential
+;   · consent interface     — the proof is askable within the offered interface, read-only
+;   · content-addressing    — same proof-shape ⇒ same NodeID ⇒ proof equivalence / reuse for free
+;
+; LINEAGE:
+;   value-execution-as-recipe.form (proof = value) · channel-interface-consent.form (the
+;   observable channel) · north-star-compiler.md (proof over claim) · universal-shapes.form
+;   (Blueprint = proposition) · name-resolution-as-recipe.form (justification = resolution) ·
+;   lc-trust-over-fear (soundness by witness) · form-samples/math-proof-sum-odds.fk (the
+;   runnable, three-way-witnessed proof)
