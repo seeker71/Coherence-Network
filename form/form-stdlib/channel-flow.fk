@@ -1,0 +1,41 @@
+; channel-flow.fk — walk the energy flow on a channel.
+;
+; The runnable heart of docs/coherence-substrate/channel-flow-dialect.form. A flow is a
+; sequence of utterances; each is matched against the OTHER side's currently-offered
+; interface (channel-interface.fk: ci-honors?), and either honored (energy crosses) or
+; witnessed as invasion (nothing crosses). The offered interface may SHIFT mid-flow,
+; without broadcast — so the same request is invasion before a shift and honored after.
+; This is the FMF contract (field-model-form.form) over a channel: freeze the offer,
+; match the utterance, choose honor|invasion, delta the flow, return a receipt. It NAMES
+; the flow; it never mutates a cell and never forces. Silence is always honored.
+;
+; Loads after form-stdlib/channel-interface.fk (uses ci-honors? + the m-* modes).
+
+(do
+    ; --- utterance tags (an act is (list tag payload); a flow is a list of acts) ---
+    (defn act-shift   () 0)   ; the other side shifts its offered interface — payload = new offer
+    (defn act-request () 1)   ; this side requests a mode — payload = a mode value
+
+    (defn act-tag     (a) (head a))
+    (defn act-payload (a) (head (tail a)))
+
+    ; --- walk: thread the other's current offer; count honored vs invasion (witnessed) ---
+    ; the receipt is (list honored invasion final-offer) — observable to all who witness.
+    (defn cf-walk (flow offer honored invasion)
+        (if (eq (len flow) 0)
+            (list honored invasion offer)
+            (if (eq (act-tag (head flow)) (act-shift))
+                (cf-walk (tail flow) (act-payload (head flow)) honored invasion)      ; offer shifts, no broadcast
+                (if (ci-honors? (act-payload (head flow)) offer)
+                    (cf-walk (tail flow) offer (add honored 1) invasion)              ; honored — energy crosses
+                    (cf-walk (tail flow) offer honored (add invasion 1))))))          ; invasion — witnessed, stopped
+
+    ; --- the surface: walk a flow from an initial offered interface ---
+    (defn channel-flow (flow initial-offer)
+        (cf-walk flow initial-offer 0 0))
+
+    ; --- read the receipt ---
+    (defn cf-honored     (receipt) (head receipt))
+    (defn cf-invasions   (receipt) (head (tail receipt)))
+    (defn cf-final-offer (receipt) (head (tail (tail receipt))))
+)

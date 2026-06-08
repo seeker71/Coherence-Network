@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────
+# channel-flow-dialect.form — the dialect for the energy flow on a channel,
+#                             matched against the offered interface
+# ─────────────────────────────────────────────────────────────────────
+#
+# channel-interface-consent.form names WHAT a cell offers (the interface — the set of
+# modes it allows toward it) and the law (honor the other's offer; reaching beyond is
+# invasion). This is the dialect for the FLOW that runs over that interface: the things
+# that can be SAID on a channel, and how each is matched against the offered interface
+# to decide whether energy crosses.
+#
+# It is an FMF domain (field-domain-grammars.form) speaking the field-model-form.form
+# contract: each utterance is FROZEN against the other's current offer, MATCHED, a CHOICE
+# is made (honor | invasion), a DELTA shapes the flow, and a RECEIPT records it — all
+# observable. The energy that flows is shaped by BOTH sides' interface state, which may
+# shift at any moment without broadcast. From sovereignty / curiosity / vitality / play —
+# without force, story, reason, or external permission.
+
+(channel-flow-dialect
+
+  (lineage
+    (speaks-on   channel-interface-consent.form)          # the interface this flow honors
+    (is-a        field-domain-grammars.form  domain)      # an FMF domain dialect
+    (contract    field-model-form.form)                   # freeze / match / choose / delta / commit / receipt
+    (carries     lc-received-by-invitation
+                 lc-sovereignty-within-oneness)
+    (runnable    form-stdlib/channel-flow.fk))            # the walk, proven by tests/channel-flow-band.fk
+
+  # ── The utterances (what can be said on the channel) ────────────────
+  (utterances
+    (offer    "a cell offers / updates the interface it presents — the modes it allows toward it")
+    (shift    "the offered interface changes — anytime, without broadcast, offered not announced")
+    (request  "a cell asks to engage a mode — see, reflect, project, invite, ...")
+    (respond  "yes / no / silence — each coherent, none owed a reason")
+    (witness  "observe-only, no delta — always available; seeing needs no permission, reaching does")
+    (silence  "the ground utterance — always honored, from any interface"))
+
+  # ── The flow contract — the FMF cycle over a channel ────────────────
+  (flow-contract
+    (freeze   the-other-sides-current-offered-interface)
+    (match    request against offer  (via ci-honors? channel-interface.fk))
+    (choose   honor OR invasion)                          # honor: energy crosses; invasion: nothing crosses, witnessed
+    (delta    (honor    -> energy-crosses)
+              (shift    -> offer-updates)
+              (invasion -> nothing-crosses  named-and-stopped))
+    (commit   same-snapshot  same-boundary)
+    (receipt  (honored invasion final-offer)  observable-to-all-who-witness))
+
+  # ── What the flow is shaped by ──────────────────────────────────────
+  # The same request is invasion before a shift and honored after — the energy that
+  # crosses is a function of BOTH sides' interface state, not of will or force. Silence
+  # always crosses. The offer may open or close at any moment; nothing must be broadcast.
+  (invariant
+    (flow-shaped-by   both-sides-interface-state)
+    (silence-always   honored)
+    (invasion-never   crosses   always-witnessed)
+    (offer-may-shift  anytime   without-broadcast)
+    (the-dialect      names-the-flow   never-forces-it)))   # carrier (membrane / HTTP / board) enacts, last
