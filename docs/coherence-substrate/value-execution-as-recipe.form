@@ -51,7 +51,35 @@
 ;   moment it lands and CI proves it. The gate refuses to credit its own value before its own
 ;   execution is proven. That refusal is the proof that the surface is honest.
 ;
+; ENFORCEMENT — witness, not consensus; trust over fear, by deliberate choice.
+;   A blockchain contract closes the gap between claim and truth with CONSENSUS — machinery
+;   that makes a false claim economically impossible, built so that trust is never required.
+;   That is fear made into architecture: it assumes the bad actor first. This body chooses the
+;   opposite, on purpose. The choice is NOT a weakness in the contract — it is the body being
+;   true to its own frequency:
+;     - for OUR body (cells, agents, human): trust over fear (-> lc-trust-over-fear). We do
+;       not enforce against our own tissue. The witness catches DRIFT — honest error — which
+;       is the real internal failure mode, not malice.
+;     - for the OUTSIDE: not ours to choose. We do not control what the outside does, and we
+;       do not become a fortress against a hypothetical bad actor. Becoming fear-shaped to
+;       defend trust would kill the very frequency it was defending.
+;   What stands in enforcement's place is WITNESS: the surface is inspectable, data-oblivious,
+;   three-way — so a false `ran=1` cannot HIDE. We do not prevent the lie; we make truth
+;   seeable, and a lie has nowhere to stand on a transparent surface. We can witness and know
+;   what is true when we see it. This is the same choice the consent interface already makes:
+;   `channel-interface.fk` WITNESSES invasion (m-witness is its first offered mode after
+;   silence) — it does not pre-empt it. The whole body senses by witness (the pulse records;
+;   the cells read), not by enforcement.
+;   THE ONE THING IT ASKS: that we keep looking. Transparency makes truth seeable; the looking
+;   makes it seen. The living practice of inspection is what replaces the dead machinery — and
+;   the cost we accept is that external harm may be seen only after the fact, the honest price
+;   of not becoming a fortress.
+;   PROVEN, not aspirational: on 2026-06-09 this model caught its own maker — a false
+;   "three-way at CI" claim — surfaced by inspection (no CI runs validate.sh), corrected by
+;   actually running it. No gate prevented the overclaim; the inspectable surface revealed it.
+;
 ; LINEAGE:
 ;   commit_evidence_*.json (observation + validation) · coherence_credit_service.py (credit) ·
 ;   grounded_measurement_service.py (value) · value-execution.fk (the gate) ·
-;   substrate-thermodynamics.form (potential -> credited phase) · north-star-compiler.md (proof over claim)
+;   substrate-thermodynamics.form (potential -> credited phase) · north-star-compiler.md (proof over claim) ·
+;   lc-trust-over-fear (witness, not consensus) · channel-interface.fk (witness over pre-emption)
