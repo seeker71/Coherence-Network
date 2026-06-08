@@ -136,6 +136,20 @@ The channel protocol carries a breath practice directly: give a small clean offe
 
 ---
 
+## Channel Flow Protocol — OSI-Shaped Native Channel Cells
+
+The channel flow protocol names the carrier itself as seven inspectable OSI layers. A flow records the physical carrier, protocol, ordered layers, and the application policy cell. HTTP is the first concrete profile: TCP / HTTP/1.1 with L7 pointing to `kh-channel-policy`.
+
+**Blueprints**:
+- `1.2.99.1702 CHANNEL-OSI-LAYER` — OSI index, layer name, gas/water/ice phase, carrier, policy, recipe.
+- `1.2.99.1703 CHANNEL-FLOW` — carrier, protocol, seven OSI layer cells, channel policy.
+
+**Operating shape**: A protocol is no longer a host-side branch. New carriers such as UDP, USB, Bluetooth, microphone, camera, pipes, and browser streams can declare a carrier/profile flow and reuse the same layer accessors, phase counts, and policy hooks.
+
+**Proof**: `form/form-stdlib/tests/channel-flow-band.fk` returns `8388607` across source and binary sibling-kernel execution, covering both OSI/HTTP channel cells and consent-interface flow receipts.
+
+---
+
 ## Arrival Protocol — Current Registered Shape
 
 **Blueprints**:

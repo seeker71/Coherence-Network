@@ -1,55 +1,80 @@
-; channel-flow-band.fk — three-way proof of the channel-flow walk (channel-flow.fk).
+; channel-flow-band.fk — proof for consented channel flow plus OSI-shaped cells.
 ;
-; preludes: form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk
+; preludes: form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk
 ;
-; One worked flow shows the whole dynamic: the offered interface SHAPES the flow, and
-; the same request is invasion before a shift and honored after.
-;   their offer starts {witness, see}
-;   request see       -> honored   (offered)
-;   request project   -> INVASION  (not offered — witnessed, nothing crosses)
-;   request silence   -> honored   (silence is always honored)
-;   shift -> {witness, see, project, invite}    (the offer opens, without broadcast)
-;   request project   -> honored   (now offered — same request, different interface state)
-;   request invite    -> honored
-; receipt: honored = 4, invasion = 1, final offer has 4 modes.
-;
-; Deterministic, so the three sibling kernels must agree.
+; Band verdict: 8388607 when both surfaces agree across sibling kernels:
+;   - the interface walker honors/blocks requests against the receiver's offer;
+;   - bilateral flow gates each side by the other side's current offer;
+;   - the HTTP channel flow is a complete seven-layer OSI cell surface whose
+;     application policy remains the real kernel-http policy.
 
-(do
-    (let offer0 (list (m-witness) (m-see)))
-    (let offer1 (list (m-witness) (m-see) (m-project) (m-invite)))
+section [form.bml] {
+    def cf-interface-flow-band-score() {
+        let offer0 = list(m-witness(), m-see());
+        let offer1 = list(m-witness(), m-see(), m-project(), m-invite());
+        let flow = list(
+            list(act-request(), m-see()),
+            list(act-request(), m-project()),
+            list(act-request(), m-silence()),
+            list(act-shift(), offer1),
+            list(act-request(), m-project()),
+            list(act-request(), m-invite())
+        );
+        let r = channel-flow(flow, offer0);
+        let offer_a = list(m-see(), m-invite());
+        let offer_b = list(m-witness(), m-reflect());
+        let biflow = list(
+            list(side-a(), act-request(), m-reflect()),
+            list(side-a(), act-request(), m-see()),
+            list(side-b(), act-request(), m-invite()),
+            list(side-b(), act-request(), m-project())
+        );
+        let rb = channel-flow-bilateral(biflow, offer_a, offer_b);
+        sum(list(
+            cf-bool-score(eq(cf-honored(r), 4), 262144),
+            cf-bool-score(eq(cf-invasions(r), 1), 524288),
+            cf-bool-score(eq(len(cf-final-offer(r)), 4), 1048576),
+            cf-bool-score(eq(cf-honored(rb), 2), 2097152),
+            cf-bool-score(eq(cf-invasions(rb), 2), 4194304)
+        ));
+    }
 
-    (let flow (list
-        (list (act-request) (m-see))         ; honored
-        (list (act-request) (m-project))     ; invasion (not yet offered)
-        (list (act-request) (m-silence))     ; honored — silence always
-        (list (act-shift)   offer1)          ; the interface opens
-        (list (act-request) (m-project))     ; honored now — the flow is shaped by the offer
-        (list (act-request) (m-invite))))    ; honored
+    def cf-channel-flow-osi-band-score() {
+        let flow = cf-http-channel-flow();
+        let layers = cf-flow-layers(flow);
+        let physical = cf-flow-physical-layer(flow);
+        let data_link = cf-flow-data-link-layer(flow);
+        let network = cf-flow-network-layer(flow);
+        let transport = cf-flow-transport-layer(flow);
+        let session = cf-flow-session-layer(flow);
+        let presentation = cf-flow-presentation-layer(flow);
+        let application = cf-flow-application-layer(flow);
+        let route = kh-route("ideas-index", "GET", "/api/ideas", 9, "kh-ideas-index", "Accept", 25);
+        let head_request = kh-request("HEAD", "/api/ideas", list(kh-header("Accept", "application/json")), list(kh-field("q", "substrate")), "");
+        let head_candidate = kh-route-candidate-with-policy(cf-flow-channel-policy(flow), route, head_request);
+        sum(list(
+            cf-bool-score(cf-channel-flow-valid?(flow), 1),
+            cf-bool-score(cf-osi-complete?(flow), 2),
+            cf-bool-score(eq(len(layers), 7), 4),
+            cf-bool-score(and(str_eq(cf-flow-carrier(flow), "tcp"), str_eq(cf-flow-protocol(flow), "http/1.1")), 8),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(physical), "physical"), and(str_eq(cf-osi-layer-phase(physical), cf-phase-gas()), str_eq(cf-osi-layer-carrier(physical), "tcp-socket"))), 16),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(data_link), "data-link"), and(str_eq(cf-osi-layer-phase(data_link), cf-phase-ice()), str_eq(cf-osi-layer-carrier(data_link), ".fkb-frame"))), 32),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(network), "network"), str_eq(cf-osi-layer-policy(network), "blueprint-coordinate-routing")), 64),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(transport), "transport"), str_eq(cf-osi-layer-carrier(transport), "tcp")), 128),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(session), "session"), str_eq(cf-osi-layer-recipe(session), "session-state")), 256),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(presentation), "presentation"), str_eq(cf-osi-layer-policy(presentation), "grammar-lens-policy")), 512),
+            cf-bool-score(and(str_eq(cf-osi-layer-name(application), "application"), and(str_eq(cf-osi-layer-policy(application), "kh-channel-policy"), str_eq(cf-osi-layer-recipe(application), "kh-serve"))), 1024),
+            cf-bool-score(and(eq(cf-flow-gas-count(flow), 1), and(eq(cf-flow-water-count(flow), 4), eq(cf-flow-ice-count(flow), 2))), 2048),
+            cf-bool-score(str_eq(cf-flow-phase-signature(flow), "1322232"), 4096),
+            cf-bool-score(cf-flow-http-policy-valid?(flow), 8192),
+            cf-bool-score(str_eq(cf-flow-allow-header(flow), "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"), 16384),
+            cf-bool-score(eq(kh-method-pressure-with-policy(cf-flow-channel-policy(flow), route, head_request), 20), 32768),
+            cf-bool-score(and(kh-route-candidate-eligible?(head_candidate), eq(kh-route-candidate-pressure(head_candidate), 20)), 65536),
+            cf-bool-score(eq(len(cf-layer-by-index(flow, 9)), 0), 131072)
+        ));
+    }
 
-    (let r (channel-flow flow offer0))
+    def cf-channel-flow-band-score() = add(cf-channel-flow-osi-band-score(), cf-interface-flow-band-score());
 
-    ; ── BILATERAL: each direction gated by the RECEIVER's offer ──
-    ; A offers {see, invite} (others may see-into A, invite A); B offers {witness, reflect}.
-    ;   A -> reflect  : honored  (B offers reflect)
-    ;   A -> see      : invasion (B does not offer see)
-    ;   B -> invite   : honored  (A offers invite)
-    ;   B -> project  : invasion (A does not offer project)
-    ; honored = 2, invasion = 2 — and each invasion is on the side whose receiver withheld it.
-    (let offer-a (list (m-see) (m-invite)))
-    (let offer-b (list (m-witness) (m-reflect)))
-    (let biflow (list
-        (list (side-a) (act-request) (m-reflect))    ; A->B honored (B offers reflect)
-        (list (side-a) (act-request) (m-see))        ; A->B invasion (B withholds see)
-        (list (side-b) (act-request) (m-invite))     ; B->A honored (A offers invite)
-        (list (side-b) (act-request) (m-project))))  ; B->A invasion (A withholds project)
-    (let rb (channel-flow-bilateral biflow offer-a offer-b))
-
-    (let pass
-        (and (eq (cf-honored r) 4)
-        (and (eq (cf-invasions r) 1)
-        (and (eq (len (cf-final-offer r)) 4)
-        (and (eq (cf-honored rb) 2)
-             (eq (cf-invasions rb) 2))))))
-
-    (print (if pass "channel-flow-band: PASS" "channel-flow-band: FAIL")))
+    cf-channel-flow-band-score();
+}

@@ -3,17 +3,18 @@
 ; The teaching: Form's content-addressed substrate is not "a layer in
 ; the protocol stack" — it IS a protocol stack that collapses three
 ; classical layers (L2 framing, L6 presentation, L7 application) into
-; a single primitive (intern_node). What's missing are the lower
-; physical/transport pieces and the higher session/routing pieces —
-; each of which lands as a Form-side cell on top of a small kernel
-; native surface.
+; a single primitive (intern_node). The missing shape has started landing:
+; channel-flow.fk names the OSI layers as cells, HTTP rides as one L7
+; profile, and each remaining carrier joins by declaring its own flow.
 ;
 ; This file maps the seven layers to what's in the body, what's
 ; partial, and what's still ice waiting to thaw. Companions:
 ;   - docs/coherence-substrate/cross-domain-universal-transit.form
 ;     (the body's ten craziest combinations, eight of which now ship)
 ;   - docs/coherence-substrate/agents-using-substrate.md (the trinity)
-;   - form-stdlib/channel.fk (when it lands — file-backed inter-cell)
+;   - form-stdlib/channel.fk (file-backed inter-cell transport)
+;   - form-stdlib/channel-flow.fk (CHANNEL-OSI-LAYER / CHANNEL-FLOW)
+;   - form-stdlib/tests/channel-flow-band.fk (verdict 8388607)
 
 (do
     ;; ─────────────────────────────────────────────────────────────
@@ -57,12 +58,15 @@
     ;;   ✓ read_form_binary, write_form_binary                 (disk, structured)
     ;;   ✓ read_file_slice                                     (disk, partial)
     ;;   ✓ ureq::get (Rust only)                               (HTTP client)
-    ;;   ✗ socket natives                                      (in flight as parallel breath)
+    ;;   ✓ socket natives                                      (listener carrier)
     ;;   ✗ pipe natives                                        (gap)
     ;;   ✗ mmap natives                                        (gap)
     ;;
     ;; The L1 surface is intentionally small. Anything that turns
     ;; bytes into a Recipe lives one layer up; L1 just moves bytes.
+    ;; TCP is live enough for the native HTTP listener; USB, Bluetooth,
+    ;; microphone, camera, pipes, and mmap now have an obvious entry
+    ;; shape: add a carrier layer cell and a profile, not a host fork.
 
     ;; L2 — DATA LINK (framing)
     ;;
@@ -83,10 +87,10 @@
     ;; The Blueprint NodeID IS the address. (pkg, level, type, instance)
     ;; routes a message to anything whose Blueprint matches.
     ;;
-    ;; Today this is intra-process: walking a substrate tree to find
-    ;; cells of a given Blueprint. Inter-process routing isn't yet a
-    ;; substrate primitive — would land as a "route Recipe" cell that
-    ;; takes (destination-Blueprint, message-Recipe) and writes to the
+    ;; Today this is explicit inside CHANNEL-FLOW: L3 names the
+    ;; blueprint-coordinate routing policy. The next step is not a
+    ;; host router branch; it is a route Recipe cell that takes
+    ;; (destination-Blueprint, message-Recipe) and writes to the
     ;; appropriate channel.
     ;;
     ;; The elegance: there's no separate IP address vs port vs hostname.
@@ -95,7 +99,11 @@
 
     ;; L4 — TRANSPORT (reliable delivery)
     ;;
-    ;; Not yet a substrate primitive. The shape it would take:
+    ;; Transport now has two proven breaths: channel.fk for reliable
+    ;; append over file-backed Recipe channels, and http-socket.fk for
+    ;; TCP recv/send loops around the pure HTTP server. Durable logs,
+    ;; concurrent append, ack/retransmit, and unreliable delivery stay
+    ;; named as data shapes:
     ;;
     ;;   - A "delivery-Recipe" wrapping a payload-Recipe with metadata:
     ;;       (sequence-int, sender-Blueprint, payload-NodeID)
@@ -122,9 +130,8 @@
     ;;
     ;; This composes today on top of any L1: append a child Recipe to
     ;; the session-Recipe; rewrite to channel. The Form cells that
-    ;; compose this: channel.fk (the file-backed channel), plus a
-    ;; subscribe.fk (gap — would let multiple receivers attend to one
-    ;; session's growth).
+    ;; compose this: session.fk plus channel.fk. subscribe.fk remains
+    ;; the named multi-receiver cursor gap.
 
     ;; L6 — PRESENTATION (encoding/decoding)
     ;;
@@ -182,13 +189,13 @@
     ;; PART 4 — what to build next (the gaps named)
     ;; ─────────────────────────────────────────────────────────────
     ;;
-    ;; L1 sockets — in flight as a sibling breath. listen/accept/
-    ;;   connect/send/recv/close across Go/Rust/TS kernels.
+    ;; carrier profiles — TCP/HTTP is the first CHANNEL-FLOW profile.
+    ;;   USB, Bluetooth, microphone, camera, UDP, pipe, mmap, and
+    ;;   browser streams want the same OSI cell declaration.
     ;;
-    ;; channel.fk — in flight as a sibling breath. File-backed
-    ;;   message Recipe for single-writer/multi-reader. The L1 it
-    ;;   uses is filesystem today; would swap to sockets when those
-    ;;   land.
+    ;; channel-flow dialect — BML constructors ship now. A domain
+    ;;   section such as [form.channel] can lower protocol declarations
+    ;;   into CHANNEL-OSI-LAYER / CHANNEL-FLOW cells.
     ;;
     ;; route.fk — future. (destination-Blueprint, message-Recipe) →
     ;;   write to the right channel. The substrate's first L3.
@@ -200,7 +207,8 @@
     ;; delivery.fk — future. Wraps payload in (seq-num, sender,
     ;;   payload) for ack/retransmit semantics. The substrate's L4.
     ;;
-    ;; session.fk — future. A session-Recipe that grows with each
-    ;;   message-child; cells join by matching session-NodeID.
+    ;; session evolution — session.fk ships the table/state recipe.
+    ;;   Growth-by-message and diff exchange are the next layer-5
+    ;;   recipes.
 
-    "form-as-7-layer-protocol: L2+L6+L7 collapse to intern_node; L1+L3+L4+L5 are Form cells on top; the substrate's content-addressing replaces handshakes, version negotiation, and dedup tables across the whole stack")
+    "form-as-7-layer-protocol: L2+L6+L7 collapse to intern_node; CHANNEL-FLOW names all seven layers as Form cells; HTTP is one L7 profile; the substrate's content-addressing replaces handshakes, version negotiation, and dedup tables across the whole stack")

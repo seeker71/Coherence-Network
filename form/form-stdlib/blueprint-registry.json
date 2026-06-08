@@ -3347,6 +3347,34 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1702,
+      "name": "CHANNEL-OSI-LAYER",
+      "meaning": "one native channel protocol layer: osi index, name, phase, carrier, policy, recipe",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-flow.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1703,
+      "name": "CHANNEL-FLOW",
+      "meaning": "native channel protocol flow: carrier, protocol, seven OSI layer cells, channel policy",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/channel-flow.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1710,
       "name": "QUERY",
       "meaning": "",

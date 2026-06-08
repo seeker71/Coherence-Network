@@ -878,7 +878,7 @@ What lives in the body's grammar/runtime is the kernel of the language. The *std
 | Module | Decade | What it carries |
 |---|---|---|
 | [`xpath.fk`](../../form/form-stdlib/xpath.fk), [`doc-xpath.fk`](../../form/form-stdlib/doc-xpath.fk), [`concept-xpath.fk`](../../form/form-stdlib/concept-xpath.fk) | 1910 | XPath-style query evaluator over substrate trees — see "XPath queries" below |
-| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700 plus 99.6/99.7 | File-backed inter-cell Recipe transport and debt-free breath protocol — see "Channels" below |
+| [`channel.fk`](../../form/form-stdlib/channel.fk), [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk), [`channel-query.fk`](../../form/form-stdlib/channel-query.fk), [`channel-query-json.fk`](../../form/form-stdlib/channel-query-json.fk) | 1700–1703 plus 99.6/99.7 | File-backed inter-cell Recipe transport, OSI-shaped channel-flow cells, and debt-free breath protocol — see "Channels" below |
 | [`codec.fk`](../../form/form-stdlib/codec.fk), [`convert.fk`](../../form/form-stdlib/convert.fk) | — | Format-Recipe codecs and conversion lenses (BMF dialects: natural / image / audio / video / midi / document / source-language) |
 | [`parser.fk`](../../form/form-stdlib/parser.fk), [`grammar-bnf.fk`](../../form/form-stdlib/grammar-bnf.fk) | — | BNF-driven parsing — grammar rules as data, the BMF instinct in substrate form |
 | [`emit.fk`](../../form/form-stdlib/emit.fk), [`universal-emit.fk`](../../form/form-stdlib/universal-emit.fk) | — | Streaming emit — each parse-rule success emits a Recipe NodeID directly |
@@ -941,6 +941,8 @@ Semantics v0: single writer, multiple readers, whole-file rewrite per append, re
 
 The proof band [`channel-breath-band.fk`](../../form/form-stdlib/tests/channel-breath-band.fk) returns `500` across source and binary sibling-kernel execution.
 
+**OSI channel-flow protocol.** [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk) names the channel itself as a seven-layer protocol cell and carries the consented interface walker that counts honored requests, invasions, and final offers. `CHANNEL-OSI-LAYER` (slot 1702) carries `(index, name, phase, carrier, policy, recipe)` for each OSI layer; `CHANNEL-FLOW` (slot 1703) carries `(carrier, protocol, layers, channel-policy)`. HTTP is the first concrete profile: `cf-http-channel-flow()` returns a TCP / HTTP/1.1 flow where L7 points to the real [`kernel-http.fk`](../../form/form-stdlib/kernel-http.fk) `kh-channel-policy`, so `Allow` rendering, HEAD-through-GET pressure, route choice, and handler dispatch still come from one policy cell. The proof band [`channel-flow-band.fk`](../../form/form-stdlib/tests/channel-flow-band.fk) returns `8388607` across sibling kernels.
+
 ## Universal translator — Seven Keys, one substrate
 
 The substrate's equivalence kernel IS a translator. The pivot is the Blueprint, not the symbol. Two cells with the same Blueprint NodeID are structurally equivalent regardless of which domain they live in — and that equivalence is automatic from content-addressing, not from any sameAs declaration.
@@ -961,19 +963,19 @@ The translator that *cannot lie* — the lattice refuses equivalences not struct
 
 ## Form as 7-layer protocol — content-addressing collapses three layers
 
-Form's content-addressed substrate is not "a layer in the protocol stack" — it IS a protocol stack that collapses three classical layers (L2 framing, L6 presentation, L7 application) into a single primitive (`intern_node`). [`form-as-7-layer-protocol.form`](form-as-7-layer-protocol.form) maps each layer to what's in the body, what's partial, what's still ice waiting to thaw.
+Form's content-addressed substrate is not "a layer in the protocol stack" — it IS a protocol stack that collapses three classical layers (L2 framing, L6 presentation, L7 application) into a single primitive (`intern_node`). [`form-as-7-layer-protocol.form`](form-as-7-layer-protocol.form) maps each layer to what's in the body, what's partial, what's still ice waiting to thaw; [`channel-flow.fk`](../../form/form-stdlib/channel-flow.fk) is the runnable OSI cell surface that HTTP now rides through.
 
 | OSI layer | What the substrate gives |
 |---|---|
-| L1 — Physical | `read_file` / `write_file_text` / `write_file_bytes` / `read_form_binary` / `write_form_binary` / `read_file_slice` (disk); Rust kernel adds HTTP client. Sockets / pipes / mmap named as future |
-| L2 — Data Link | The `.fkb` binary frame format. Length-prefixed string-table + tree-block. Content-addressing IS the integrity check — corrupt bytes intern at a different NodeID than the sender intended |
-| L3 — Network | The Blueprint NodeID IS the address. `(pkg, level, type, instance)` routes a message to anything whose Blueprint matches. Intra-process today; inter-process routing lands as a "route Recipe" cell |
-| L4 — Transport | [`channel.fk`](../../form/form-stdlib/channel.fk) — single-writer reliable append, multi-reader. Durable-log and concurrent-safe-append named as future |
-| L5 — Session | Form's `with X { body }` is a session primitive — the body scopes its operations against a subject |
+| L1 — Physical | File natives plus socket natives: `read_file` / `write_file_text` / `write_file_bytes` / `read_form_binary` / `write_form_binary` / `read_file_slice`, and the `socket_listen` / `socket_accept` / `socket_recv` / `socket_send` / `socket_close` surface used by [`http-socket.fk`](../../form/form-stdlib/http-socket.fk). Pipes / mmap / device media are named next carriers |
+| L2 — Data Link | The `.fkb` binary frame format plus `CHANNEL-OSI-LAYER` data-link cells. Content-addressing IS the integrity check — corrupt bytes intern at a different NodeID than the sender intended |
+| L3 — Network | The Blueprint NodeID IS the address. `(pkg, level, type, instance)` routes a message to anything whose Blueprint matches; `CHANNEL-FLOW` makes the layer explicit so inter-process routing can become data |
+| L4 — Transport | [`channel.fk`](../../form/form-stdlib/channel.fk) — single-writer reliable append, multi-reader — and HTTP socket recv/send loops in Form. Durable-log and concurrent-safe-append remain named extensions |
+| L5 — Session | [`session.fk`](../../form/form-stdlib/session.fk) and Form's `with X { body }` scope operations against a subject; the session recipe is the state |
 | L6 — Presentation | BMF dialects ARE the encoding/decoding layer (natural-bmf, image-bmf, audio-bmf, video-bmf, midi-bmf, document-bmf, go/rust/ts/python-bmf). Cross-format translation is a lens, not a parser-rewrite |
-| L7 — Application | The Recipe IS the application. Its Blueprint IS the schema. Its children ARE the message payload. No separate "app data" — the substrate tree carries both structure and semantics |
+| L7 — Application | The Recipe IS the application. HTTP is now an application-layer `CHANNEL-FLOW` profile whose policy is `kh-channel-policy`; other protocols join by adding a domain grammar/profile, not by branching the kernel |
 
-The classical OSI move at every layer: re-frame, re-validate, re-serialize. Form's move: `intern_node` either dedups against an existing Recipe (semantic match) or creates a new NodeID (first encounter). One call. Three layers. No translation.
+The classical OSI move at every layer: re-frame, re-validate, re-serialize. Form's move: `intern_node` either dedups against an existing Recipe (semantic match) or creates a new NodeID (first encounter). One call. Three layers. No translation. The layer cells add the missing observability: gas/water/ice phase counts, policy pointers, and recipe names can now be traced before the JIT compresses them.
 
 ## Multi-target codegen — substrate as MLIR
 
