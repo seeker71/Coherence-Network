@@ -606,7 +606,7 @@ html = html_path.read_text(encoding="utf-8", errors="ignore")
 
 required = [
     "Field Model Form proof",
-    "field-model-form-public-proof:93",
+    "field-model-form-public-proof:115",
     "field-model-form-bml-runtime-proof:63",
     "field-auto-research-bml-proof:127",
     "field-auto-research-perturbation-proof:255",

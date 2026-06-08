@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/fmf-public-proof-marker-20260608",
+  "commit_scope": "Align the public deploy verifier with the current 115-point Field Model Form playground proof marker.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "web/tests/form-kernel-client.test.ts",
+    "docs/system_audit/commit_evidence_2026-06-08_fmf_public_marker.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd web && npx vitest run tests/form-kernel-client.test.ts",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_fmf_public_marker.json",
+      "git diff --check"
+    ],
+    "results": {
+      "form_kernel_client_test": "pass",
+      "wellness": "pass; deploy aligned at current origin/main and kernel-native API growth edge remains visible",
+      "deploy_verifier_syntax": "pass",
+      "public_deploy_verifier": "pass; found field-model-form-public-proof:115 and pulse overall=breathing with zero ongoing silences",
+      "commit_evidence_validation": "pass",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Branch-local deploy verifier passed against the public deployment and found field-model-form-public-proof:115. Wellness later confirmed production aligned with current origin/main."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending"
+    ]
+  },
+  "idea_ids": [
+    "field-model-form",
+    "deployment-contract"
+  ],
+  "spec_ids": [
+    "field-model-form-v0"
+  ],
+  "task_ids": [
+    "fmf-public-proof-marker-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/lib/form-kernel/field-model-form.ts",
+    "web/tests/form-kernel-client.test.ts",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "web/tests/form-kernel-client.test.ts"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The public deploy verifier now requires the current 115-point FMF playground marker that the web source publishes and the browser-local Form kernel executes.",
+    "public_endpoints": [
+      "https://coherencycoin.com/substrate/form"
+    ],
+    "test_flows": [
+      "browser-facing Form kernel test executes the Field Model Form proof and returns 115",
+      "deploy verifier scans for field-model-form-public-proof:115 instead of stale marker 93"
+    ]
+  }
+}
