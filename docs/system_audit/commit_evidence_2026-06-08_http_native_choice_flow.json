@@ -1,0 +1,141 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/http-native-choice-flow-20260608",
+  "commit_scope": "Move HTTP route candidate eligibility and full route-choice receipts into Form-native choice tissue and document the native HTTP choice-flow audit.",
+  "files_owned": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/.namecheck-baseline",
+    "scripts/check_route_manifests.sh",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-rust/production_routes_harness.py",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-08_http_native_choice_flow.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/tests/http-server-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/bml-source.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/tests/http-server-band.fk",
+      "cd form/form-kernel-rust && cargo test router_context_carries_selected_route_candidate_form_value --quiet",
+      "cd form && ./form-kernel-rust/target/release/form-kernel-rust check --routes ../deploy/kernel-router/production-routes.fk --stdlib form-stdlib",
+      "scripts/check_route_manifests.sh",
+      "cd form/form-kernel-rust && cargo test source_route_manifest_compiles_to_recipe_object_program --quiet",
+      "python3 form/form-kernel-rust/production_routes_harness.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_http_native_choice_flow.json",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass",
+      "wellness": "pass with remote telemetry timeout warnings; kernel-native API growth edge remains visible",
+      "kernel_http_band": "pass across Go/Rust/TypeScript with result 33555586",
+      "http_server_band": "pass across Go/Rust/TypeScript with result 63",
+      "route_template_band": "pass across Go/Rust/TypeScript with result 525377",
+      "kernel_http_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 33555586",
+      "http_server_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 63",
+      "rust_router_context_choice_receipt": "pass; native handler context carries KernelHTTPRouteChoice, candidate table, and decision rows with blocked eligible=false selected=false and exact eligible=true selected=true",
+      "production_routes_name_check": "pass; every name resolves in deploy/kernel-router/production-routes.fk",
+      "route_manifest_gate": "pass; production-routes.fk and shadow-routes.fk are name-check clean with no production baseline exception",
+      "rust_route_manifest_regression": "pass; source route manifest compiles to a recipe object program using kh-route-data-ref and generated HealthRoute_handle",
+      "production_routes_harness": "pass; 109 promoted route checks are value-identical to local CPython oracle, fan-out /api/health still returns X-Form-Router=fanout-python, native p50 0.540ms/p99 0.690ms/min 0.486ms, CPython p50 10.233ms/p99 11.953ms/min 8.940ms, native p50 19.0x faster; 22 routes are promotion-ready",
+      "commit_evidence_validation": "pass",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No production deploy was performed for this local Form stdlib choice-flow change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending",
+      "production deploy not run"
+    ]
+  },
+  "idea_ids": [
+    "native-http-kernel-router",
+    "source-language-first-router"
+  ],
+  "spec_ids": [
+    "canonical-route-registry-and-runtime-mapping",
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "http-native-choice-flow-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form://form-stdlib/kernel-http.fk#kh-route-candidate-eligible?",
+    "form://form-stdlib/kernel-http.fk#kh-route-choice-for-request",
+    "form://form-stdlib/kernel-http.fk#kh-route-decision",
+    "form://form-stdlib/http-server.fk#kh-candidate-matched?",
+    "form://deploy/kernel-router/production-routes.fk#kh-route-data-ref",
+    "rust://form-kernel-rust/src/main.rs#route_choice_for_request",
+    "rust://form-kernel-rust/src/main.rs#router_route_choice_value",
+    "rust://form-kernel-rust/src/main.rs#source_route_manifest_compiles_to_recipe_object_program",
+    "script://scripts/check_route_manifests.sh",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md#HTTP-native-function-and-choice-audit"
+  ],
+  "change_files": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/.namecheck-baseline",
+    "scripts/check_route_manifests.sh",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-rust/production_routes_harness.py",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "HTTP route candidate eligibility is now computed and selected in Form, and each request can carry a full route-choice receipt so high-scoring over-budget routes are visible rejected branches rather than hidden skips.",
+    "public_endpoints": [
+      "form://form-stdlib/kernel-http.fk",
+      "form://form-stdlib/http-server.fk"
+    ],
+    "test_flows": [
+      "kernel-http-band proves an ineligible exact high-priority route loses to an eligible wildcard route, an all-ineligible set returns empty/score 0, and route-choice receipts carry candidates plus selected yes/no decision rows",
+      "http-server-band proves an exact route with a missing required header and zero pressure budget returns the route-miss response instead of invoking its handler",
+      "binary validation proves the same content-addressed artifact behavior across Go/Rust/TypeScript",
+      "Rust router context test proves the live native listener exports the same route-choice and route-decision tags to handlers",
+      "production route harness proves the content-addressed production route manifest boots from the repo root and keeps promoted route outputs identical to the CPython oracle"
+    ]
+  }
+}

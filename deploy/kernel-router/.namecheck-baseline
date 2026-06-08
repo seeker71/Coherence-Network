@@ -5,11 +5,4 @@
 # license to add new broken manifests. Remove a line when its gap is fixed; the
 # manifest must then stay clean (exit 0 from `check`).
 #
-# production-routes.fk: the section [form.route] HealthRoute class lowers to an empty
-# recipe, so health_route_from_class is never produced. Root cause is in the form.route
-# class->route lowering (the section is written in a TS-like member syntax the bml-
-# grammar never supported; rewriting it type-first hits a g-parse pipeline gap in the
-# threaded section-compile — the failure is even cache-dependent: sometimes reported as
-# `unbound: health_route_from_class`, sometimes a `g-parse` panic). Owned by codex
-# (source-compiler core / native-http architecture). Remove this line when it lands.
-production-routes.fk
+# No baselined route manifests remain.
