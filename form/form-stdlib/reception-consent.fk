@@ -1,0 +1,57 @@
+; reception-consent.fk — the reception-consent policy, runnable.
+;
+; The runnable heart of docs/coherence-substrate/reception-consent-policy.form.
+; First-encounter consent across all channels: each channel is a FACET, each
+; consent rests open or closed. The DECISION lives here, in Form — not in a
+; carrier's hard-coded booleans (that was bootstrap compost). The carrier reads
+; the resting state this computes; it never bakes its own.
+;
+; The universal rule, in Form:
+;   - EXPOSURE-bearing consents rest CLOSED, in every facet — nothing defaults a
+;     cell into being findable, emailed, enrolled, recorded, or remembered;
+;   - the natural attribution of contributing-under-your-name rests OPEN only at
+;     the /begin contributor door, where weaving in IS the chosen yes to be known;
+;   - everything else rests CLOSED (opt-in — the arriving cell opens what it wants);
+;   - the resting state is only a default — the arriving cell sets the true value;
+;     silence keeps the rest-state. It NAMES the resting state; it never forces.
+
+(do
+    ; --- the two resting positions ---
+    (defn rc-closed () 0)   ; rests no  — opt-in (never default into it)
+    (defn rc-open   () 1)   ; rests yes — visible, revocable
+
+    ; --- the channels, as facets ---
+    (defn f-web-begin    () 1)   ; human <-> body, the /begin contributor door
+    (defn f-web-interest () 2)   ; human <-> body, the /vision/join interest form
+    (defn f-agent        () 3)   ; agent <-> agent / agent <-> body
+    (defn f-channel      () 4)   ; channel <-> body (e.g. the Discord community)
+    (defn f-body-arrival () 5)   ; the session-start recognition of an arriving cell
+
+    ; --- the consents, named by number ---
+    (defn c-share-name        () 1)
+    (defn c-share-location    () 2)
+    (defn c-share-skills      () 3)
+    (defn c-findable          () 4)   ; exposure
+    (defn c-email-updates     () 5)   ; exposure
+    (defn c-recorded-relation () 6)   ; exposure (agent)
+    (defn c-enrolled          () 7)   ; exposure (channel)
+    (defn c-relationship-mem  () 8)   ; exposure (arrival)
+
+    ; --- is a consent EXPOSURE-bearing? exposure rests closed, in every facet. ---
+    (defn rc-exposure? (consent)
+        (if (eq consent (c-findable))          true
+        (if (eq consent (c-email-updates))     true
+        (if (eq consent (c-recorded-relation)) true
+        (if (eq consent (c-enrolled))          true
+        (if (eq consent (c-relationship-mem))  true
+            false))))))
+
+    ; --- THE RULE: exposure rests closed; share-name rests open ONLY at the
+    ; contributor door (weaving in = the chosen yes to be known); else closed. ---
+    (defn rc-resting (facet consent)
+        (if (rc-exposure? consent)
+            (rc-closed)
+            (if (and (eq facet (f-web-begin)) (eq consent (c-share-name)))
+                (rc-open)
+                (rc-closed))))
+)

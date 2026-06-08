@@ -30,6 +30,7 @@
   (lineage
     (substance     Recipe)                               # how first-encounter consent is decided
     (phase-ladder  substrate-thermodynamics.form)        # ice <-> water <-> gas, by choice, per facet
+    (runnable-heart form-stdlib/reception-consent.fk)    # the RULE in Form, three-way proven (reception-consent-band)
     (realizes      first-encounter-protocol.form consent)  # the (consent open) for every pairing
     (field-consent field-model-form.FieldRecipe.consent))
 
