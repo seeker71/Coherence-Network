@@ -22,7 +22,7 @@ requirements:
   - "Form-native side-effect recipes execute durable cache-invalidation and rollback receipts."
   - "Form-native side-effect recipes execute parent-edge repair and contributor-key audit updates against throwaway Postgres."
   - "The proof keeps ordinary public mutation traffic on FastAPI and leaves preview executes:false unchanged."
-  - "Route docs and the A/B observation gate name route binding and reversible public gating as the remaining boundary."
+  - "Route docs and the A/B observation gate name route binding as a separate follow-up boundary."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-side-effects.fk")'
   - 'file_exists("form/scripts/native-mutation-side-effects-test.sh")'
@@ -117,11 +117,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
 
 ## Gaps
 
-- GAP-NMSE1 follow-up task: `native-mutation-route-side-effect-binding`. Bind the
-  proven side-effect carrier to mutation route execution with route-local
-  rollback receipt.
+- GAP-NMSE1: closed by `specs/native-mutation-route-side-effect-binding.md`. The
+  proven side-effect carrier is now bound to Form-native route-runner execution
+  with application graph writes in throwaway Postgres.
 - GAP-NMSE2 follow-up task: `native-mutation-public-flip-gate`. Add a narrow
-  reversible public gate only after route-bound side effects pass.
+  reversible public gate with route-local rollback receipt.
 
 ## Risks and Assumptions
 

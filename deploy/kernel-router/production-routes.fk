@@ -1807,9 +1807,9 @@
 ;
 ; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
 ; preview response intentionally does not move ordinary traffic yet: live DB
-; execution and response projection are proven in Form, while cache invalidation,
-; parent/edge side effects, contributor-key last_used_at updates, and reversible
-; public gating remain before the front door moves.
+; execution, response projection, side-effect execution, and route-runner
+; side-effect binding are proven in Form. A reversible public gate with a
+; route-local rollback receipt remains before the front door moves.
 ; ===========================================================================
 
 (defn mpv-join (sep xs)
