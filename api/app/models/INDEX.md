@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 56
+**Total files**: 57
 
 | File | Purpose |
 |---|---|
@@ -31,6 +31,7 @@
 | [distribution.py](distribution.py) | _no top-of-file purpose_ |
 | [error.py](error.py) | _no top-of-file purpose_ |
 | [evidence.py](evidence.py) | Evidence models — implementation evidence for assets, per story-protocol-integration R9. |
+| [execution_value.py](execution_value.py) | Models for execution value and income proof surfaces. |
 | [federation.py](federation.py) | Federation models for cross-instance data exchange. |
 | [friction.py](friction.py) | Friction event and report models. |
 | [geocoding.py](geocoding.py) | Models for forward geocoding and geographically filtered agent tasks. |
