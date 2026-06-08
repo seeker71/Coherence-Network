@@ -1806,9 +1806,10 @@
 ; requests without it exceed the route's pressure budget and fan out to FastAPI.
 ;
 ; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
-; preview response intentionally does not execute the database write yet:
-; execution, response projection, cache invalidation, parent/edge side effects,
-; and contributor-key last_used_at updates are the remaining live-DB proof.
+; preview response intentionally does not move ordinary traffic yet: live DB
+; execution and response projection are proven in Form, while cache invalidation,
+; parent/edge side effects, contributor-key last_used_at updates, and reversible
+; public gating remain before the front door moves.
 ; ===========================================================================
 
 (defn mpv-join (sep xs)
@@ -1922,7 +1923,7 @@
       ",\"executes\":false"
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
-      ",\"remaining_gap\":\"live DB execution, response projection, cache invalidation, contributor-key audit side effects\""
+      ",\"remaining_gap\":\"cache invalidation, parent/edge side effects, contributor-key audit side effects, reversible public flip gate\""
       ",\"runtime\":\"inline\"}"))))
 
 (defn route_ideas_create_native_preview (q)

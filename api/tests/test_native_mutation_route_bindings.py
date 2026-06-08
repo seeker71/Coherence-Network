@@ -54,7 +54,7 @@ def test_native_mutation_preview_handlers_emit_application_graph_sql():
         assert sql_piece in text
 
     assert ',\\"executes\\":false' in text
-    assert "live DB execution, response projection, cache invalidation" in text
+    assert "cache invalidation, parent/edge side effects, contributor-key audit side effects" in text
 
 
 def test_native_mutation_preview_uses_live_spec_node_id_convention():
@@ -70,4 +70,6 @@ def test_idea_and_spec_forms_name_method_specific_preview_bindings():
         assert "method-specific mutation paths -> header-gated Form-native SQL preview bindings" in text
         assert "X-Form-Native-Preview" in text
         assert "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview" in text or "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview" in text
-        assert "live DB execution, response projection, cache invalidation" in text
+        assert "response projection parity proven" in text
+        assert "cache invalidation" in text
+        assert "reversible flip gate" in text

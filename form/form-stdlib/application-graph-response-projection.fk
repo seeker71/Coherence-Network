@@ -1,0 +1,324 @@
+; application-graph-response-projection.fk -- project application graph rows
+; into mutation response shapes.
+;
+; The mutation carrier can now write graph_nodes / graph_node_revisions /
+; graph_edges through pg_exec. This module carries the next boundary: turn the
+; written graph row into the public response shapes without calling Python.
+;
+; Mirrors:
+;   api/app/services/idea_scoring.py::_with_score
+;   api/app/services/spec_registry_service.py::_graph_node_to_spec
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn agrp-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (agrp-cat (tail xs)))))
+
+    (defn agrp-json-string-escape-loop (s i)
+        (if (ge i (str_len s))
+            ""
+            (do
+                (let ch (char_at s i))
+                (let rest (agrp-json-string-escape-loop s (add i 1)))
+                (if (str_eq ch "\\")
+                    (str_concat "\\\\" rest)
+                    (if (str_eq ch "\"")
+                        (str_concat "\\\"" rest)
+                        (if (str_eq ch "\n")
+                            (str_concat "\\n" rest)
+                            (if (str_eq ch "\r")
+                                (str_concat "\\r" rest)
+                                (if (str_eq ch "\t")
+                                    (str_concat "\\t" rest)
+                                    (str_concat ch rest)))))))))
+
+    (defn agrp-json-string (s)
+        (str_concat "\"" (str_concat (agrp-json-string-escape-loop s 0) "\"")))
+
+    (defn agrp-json-null-or-string (s)
+        (if (eq (str_len s) 0) "null" (agrp-json-string s)))
+
+    (defn agrp-round4 (x) (round_ndigits x 4))
+    (defn agrp-abs-num (x) (if (lt x 0.0) (sub 0.0 x) x))
+    (defn agrp-digit (n)
+        (do
+            (let idx (math_floor n))
+            (substring "0123456789" idx (add idx 1))))
+    (defn agrp-frac4 (n)
+        (str_concat
+            (agrp-digit (div n 1000))
+            (str_concat
+                (agrp-digit (mod (div n 100) 10))
+                (str_concat
+                    (agrp-digit (mod (div n 10) 10))
+                    (agrp-digit (mod n 10))))))
+    (defn agrp-trim-frac (s end)
+        (if (le end 1)
+            (substring s 0 1)
+            (if (str_eq (char_at s (sub end 1)) "0")
+                (agrp-trim-frac s (sub end 1))
+                (substring s 0 end))))
+    (defn agrp-num (x)
+        (do
+            (let scaled (math_floor (add (mul (agrp-abs-num (agrp-round4 x)) 10000.0) 0.5)))
+            (let whole (div scaled 10000))
+            (let frac (mod scaled 10000))
+            (let sign (if (lt x 0.0) "-" ""))
+            (let frac-str (agrp-trim-frac (agrp-frac4 frac) 4))
+            (str_concat sign
+                (str_concat (int_to_str (math_floor whole))
+                    (str_concat "." frac-str)))))
+
+    (defn agrp-decimal-digit? (ch)
+        (do
+            (let cp (ord ch))
+            (and (ge cp 48) (le cp 57))))
+    (defn agrp-parse-int-loop (s i end acc)
+        (if (ge i end)
+            acc
+            (if (agrp-decimal-digit? (char_at s i))
+                (agrp-parse-int-loop s (add i 1) end
+                    (add (mul acc 10) (sub (ord (char_at s i)) 48)))
+                acc)))
+    (defn agrp-parse-frac-loop (s i end acc scale)
+        (if (ge i end)
+            (list acc scale)
+            (if (agrp-decimal-digit? (char_at s i))
+                (agrp-parse-frac-loop s (add i 1) end
+                    (add (mul acc 10) (sub (ord (char_at s i)) 48))
+                    (mul scale 10))
+                (list acc scale))))
+    (defn agrp-str-to-num (s)
+        (if (eq (str_len s) 0)
+            0.0
+            (do
+                (let start (if (str_eq (char_at s 0) "-") 1 0))
+                (let dot (str_find s "." start))
+                (let end (str_len s))
+                (let whole-end (if (eq dot -1) end dot))
+                (let whole (agrp-parse-int-loop s start whole-end 0))
+                (let frac-pair
+                    (if (eq dot -1)
+                        (list 0 1)
+                        (agrp-parse-frac-loop s (add dot 1) end 0 1)))
+                (let value
+                    (add (mul whole 1.0)
+                         (div (head frac-pair) (mul (head (tail frac-pair)) 1.0))))
+                (if (eq start 1) (sub 0.0 value) value))))
+    (defn agrp-value-gap (potential actual) (agrp-round4 (max2 (sub potential actual) 0.0)))
+    (defn agrp-safe-ratio (numerator denominator)
+        (if (le denominator 0.0) 0.0 (agrp-round4 (div numerator denominator))))
+    (defn agrp-free-energy-score (potential confidence estimated-cost resistance-risk)
+        (agrp-round4 (div (mul potential confidence) (max2 (add estimated-cost resistance-risk) 0.5))))
+    (defn agrp-marginal-cc-score (potential actual confidence estimated-cost actual-cost resistance-risk)
+        (do
+            (let value-gap (max2 (sub potential actual) 0.0))
+            (let remaining-cost (max2 (sub estimated-cost actual-cost) 0.1))
+            (agrp-round4
+                (div (mul (mul value-gap confidence) confidence)
+                     (add remaining-cost (mul resistance-risk 0.5))))))
+    (defn agrp-remaining-cost (estimated actual)
+        (agrp-round4 (max2 (sub estimated actual) 0.0)))
+
+    (defn agrp-status-from-phase (phase)
+        (if (str_eq phase "ice") "validated"
+            (if (str_eq phase "water") "partial" "none")))
+
+    (defn agrp-stage-from-status (status)
+        (if (str_eq status "validated") "complete"
+            (if (str_eq status "partial") "implementing" "none")))
+
+    (defn agrp-cost-vector-json (estimated-cost)
+        (agrp-cat (list
+            "{\"total_cc\":" (agrp-num (agrp-round4 estimated-cost))
+            ",\"compute_cc\":" (agrp-num (agrp-round4 (mul estimated-cost 0.60)))
+            ",\"infrastructure_cc\":" (agrp-num (agrp-round4 (mul estimated-cost 0.15)))
+            ",\"human_attention_cc\":" (agrp-num (agrp-round4 (mul estimated-cost 0.25)))
+            ",\"opportunity_cc\":0.0"
+            ",\"external_cc\":0.0"
+            "}")))
+
+    (defn agrp-value-vector-json (potential-value)
+        (agrp-cat (list
+            "{\"total_cc\":" (agrp-num (agrp-round4 potential-value))
+            ",\"adoption_cc\":" (agrp-num (agrp-round4 (mul potential-value 0.50)))
+            ",\"lineage_cc\":" (agrp-num (agrp-round4 (mul potential-value 0.30)))
+            ",\"friction_avoided_cc\":" (agrp-num (agrp-round4 (mul potential-value 0.20)))
+            ",\"revenue_cc\":0.0"
+            "}")))
+
+    (defn agrp-idea-with-score-json
+        (id name description phase potential-value actual-value estimated-cost actual-cost resistance-risk confidence workspace-id)
+        (do
+            (let status (agrp-status-from-phase phase))
+            (let stage (agrp-stage-from-status status))
+            (let value-gap (agrp-value-gap potential-value actual-value))
+            (let remaining-cost (agrp-remaining-cost estimated-cost actual-cost))
+            (let roi-cc (agrp-safe-ratio value-gap remaining-cost))
+            (agrp-cat (list
+                "{\"id\":" (agrp-json-string id)
+                ",\"name\":" (agrp-json-string name)
+                ",\"description\":" (agrp-json-string description)
+                ",\"potential_value\":" (agrp-num (agrp-round4 potential-value))
+                ",\"actual_value\":" (agrp-num (agrp-round4 actual-value))
+                ",\"estimated_cost\":" (agrp-num (agrp-round4 estimated-cost))
+                ",\"actual_cost\":" (agrp-num (agrp-round4 actual-cost))
+                ",\"resistance_risk\":" (agrp-num (agrp-round4 resistance-risk))
+                ",\"confidence\":" (agrp-num (agrp-round4 confidence))
+                ",\"manifestation_status\":" (agrp-json-string status)
+                ",\"interfaces\":[]"
+                ",\"open_questions\":[]"
+                ",\"idea_type\":\"standalone\""
+                ",\"parent_idea_id\":null"
+                ",\"child_idea_ids\":[]"
+                ",\"stage\":" (agrp-json-string stage)
+                ",\"work_type\":null"
+                ",\"lifecycle\":\"active\""
+                ",\"duplicate_of\":null"
+                ",\"last_activity_at\":null"
+                ",\"value_basis\":null"
+                ",\"cost_vector\":" (agrp-cost-vector-json estimated-cost)
+                ",\"value_vector\":" (agrp-value-vector-json potential-value)
+                ",\"tags\":[]"
+                ",\"workspace_git_url\":null"
+                ",\"slug\":" (agrp-json-string id)
+                ",\"slug_history\":[]"
+                ",\"is_curated\":false"
+                ",\"pillar\":null"
+                ",\"workspace_id\":" (agrp-json-string workspace-id)
+                ",\"rollup_condition\":null"
+                ",\"free_energy_score\":" (agrp-num (agrp-free-energy-score potential-value confidence estimated-cost resistance-risk))
+                ",\"value_gap\":" (agrp-num value-gap)
+                ",\"content_markdown\":\"\""
+                ",\"marginal_cc_score\":" (agrp-num (agrp-marginal-cc-score potential-value actual-value confidence estimated-cost actual-cost resistance-risk))
+                ",\"selection_weight\":0.0"
+                ",\"remaining_cost_cc\":" (agrp-num remaining-cost)
+                ",\"value_gap_cc\":" (agrp-num value-gap)
+                ",\"roi_cc\":" (agrp-num roi-cc)
+                "}"))))
+
+    (defn agrp-spec-entry-json
+        (spec-id title summary potential-value actual-value estimated-cost actual-cost idea-id process-summary pseudocode-summary implementation-summary created-by updated-by created-at updated-at content-path content-hash workspace-id)
+        (do
+            (let value-gap (agrp-value-gap potential-value actual-value))
+            (let cost-gap (agrp-round4 (sub actual-cost estimated-cost)))
+            (agrp-cat (list
+                "{\"spec_id\":" (agrp-json-string spec-id)
+                ",\"title\":" (agrp-json-string title)
+                ",\"summary\":" (agrp-json-string summary)
+                ",\"potential_value\":" (agrp-num (agrp-round4 potential-value))
+                ",\"actual_value\":" (agrp-num (agrp-round4 actual-value))
+                ",\"estimated_cost\":" (agrp-num (agrp-round4 estimated-cost))
+                ",\"actual_cost\":" (agrp-num (agrp-round4 actual-cost))
+                ",\"value_gap\":" (agrp-num value-gap)
+                ",\"cost_gap\":" (agrp-num cost-gap)
+                ",\"estimated_roi\":" (agrp-num (agrp-safe-ratio potential-value estimated-cost))
+                ",\"actual_roi\":" (agrp-num (agrp-safe-ratio actual-value actual-cost))
+                ",\"idea_id\":" (agrp-json-null-or-string idea-id)
+                ",\"process_summary\":" (agrp-json-null-or-string process-summary)
+                ",\"pseudocode_summary\":" (agrp-json-null-or-string pseudocode-summary)
+                ",\"implementation_summary\":" (agrp-json-null-or-string implementation-summary)
+                ",\"created_by_contributor_id\":" (agrp-json-null-or-string created-by)
+                ",\"updated_by_contributor_id\":" (agrp-json-null-or-string updated-by)
+                ",\"created_at\":" (agrp-json-string created-at)
+                ",\"updated_at\":" (agrp-json-string updated-at)
+                ",\"content_path\":" (agrp-json-null-or-string content-path)
+                ",\"content_hash\":" (agrp-json-null-or-string content-hash)
+                ",\"workspace_id\":" (agrp-json-string workspace-id)
+                "}"))))
+
+    (defn agrp-col-loop (row wanted current start pos)
+        (if (ge pos (str_len row))
+            (if (eq current wanted) (substring row start (str_len row)) "")
+            (if (str_eq (char_at row pos) "\t")
+                (if (eq current wanted)
+                    (substring row start pos)
+                    (agrp-col-loop row wanted (add current 1) (add pos 1) (add pos 1)))
+                (agrp-col-loop row wanted current start (add pos 1)))))
+
+    (defn agrp-col (row idx) (agrp-col-loop row idx 0 0 0))
+    (defn agrp-float-col (row idx) (agrp-str-to-num (agrp-col row idx)))
+
+    ;; row columns:
+    ;; 0 id, 1 name, 2 description, 3 phase, 4 pv, 5 av, 6 ec, 7 ac, 8 rr,
+    ;; 9 confidence, 10 workspace_id
+    (defn agrp-project-idea-row (row)
+        (agrp-idea-with-score-json
+            (agrp-col row 0) (agrp-col row 1) (agrp-col row 2) (agrp-col row 3)
+            (agrp-float-col row 4) (agrp-float-col row 5) (agrp-float-col row 6)
+            (agrp-float-col row 7) (agrp-float-col row 8) (agrp-float-col row 9)
+            (agrp-col row 10)))
+
+    ;; row columns:
+    ;; 0 spec_id, 1 title, 2 summary, 3 pv, 4 av, 5 ec, 6 ac, 7 idea_id,
+    ;; 8 process, 9 pseudocode, 10 implementation, 11 created_by, 12 updated_by,
+    ;; 13 created_at, 14 updated_at, 15 content_path, 16 content_hash, 17 workspace
+    (defn agrp-project-spec-row (row)
+        (agrp-spec-entry-json
+            (agrp-col row 0) (agrp-col row 1) (agrp-col row 2)
+            (agrp-float-col row 3) (agrp-float-col row 4)
+            (agrp-float-col row 5) (agrp-float-col row 6)
+            (agrp-col row 7) (agrp-col row 8) (agrp-col row 9)
+            (agrp-col row 10) (agrp-col row 11) (agrp-col row 12)
+            (agrp-col row 13) (agrp-col row 14) (agrp-col row 15)
+            (agrp-col row 16) (agrp-col row 17)))
+
+    (defn agrp-match-at? (s needle i j)
+        (if (eq j (str_len needle))
+            1
+            (if (ge (add i j) (str_len s))
+                0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (agrp-match-at? s needle i (add j 1))
+                    0))))
+
+    (defn agrp-contains-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle)))
+            0
+            (if (eq (agrp-match-at? s needle i 0) 1)
+                1
+                (agrp-contains-loop? s needle (add i 1)))))
+
+    (defn agrp-contains? (s needle)
+        (if (eq (str_len needle) 0)
+            1
+            (if (lt (str_len s) (str_len needle))
+                0
+                (agrp-contains-loop? s needle 0))))
+
+    (defn agrp-and2 (a b) (if (eq a 1) (if (eq b 1) 1 0) 0))
+    (defn agrp-and3 (a b c) (agrp-and2 (agrp-and2 a b) c))
+    (defn agrp-and4 (a b c d) (agrp-and2 (agrp-and3 a b c) d))
+
+    (defn agrp-test ()
+        (do
+            (let idea-json (agrp-idea-with-score-json
+                "idea-projection" "Projection Idea" "Native response shape" "water"
+                8.0 3.0 4.0 1.0 2.0 0.8 "coherence-network"))
+            (let spec-json (agrp-spec-entry-json
+                "projection-spec" "Projection Spec" "Native spec response"
+                9.0 3.0 3.0 1.5 "idea-projection"
+                "process" "pseudo" "impl" "agent:codex" "agent:codex"
+                "2026-06-08 00:00:00+00" "2026-06-08 00:00:01+00"
+                "specs/projection.md" "hash-projection" "coherence-network"))
+            (let row "idea-row\tIdea Row\tFrom row\tice\t10.0\t2.0\t5.0\t1.0\t1.0\t0.75\tcoherence-network")
+            (let row-json (agrp-project-idea-row row))
+            (sum (list
+                (if (eq (agrp-and4
+                    (agrp-contains? idea-json "\"free_energy_score\":1.0667")
+                    (agrp-contains? idea-json "\"marginal_cc_score\":0.8")
+                    (agrp-contains? idea-json "\"roi_cc\":1.6667")
+                    (agrp-contains? idea-json "\"cost_vector\":{\"total_cc\":4.0")) 1) 1 0)
+                (if (eq (agrp-and4
+                    (agrp-contains? spec-json "\"value_gap\":6.0")
+                    (agrp-contains? spec-json "\"cost_gap\":-1.5")
+                    (agrp-contains? spec-json "\"estimated_roi\":3.0")
+                    (agrp-contains? spec-json "\"actual_roi\":2.0")) 1) 10 0)
+                (if (eq (agrp-and3
+                    (agrp-contains? row-json "\"manifestation_status\":\"validated\"")
+                    (agrp-contains? row-json "\"stage\":\"complete\"")
+                    (agrp-contains? row-json "\"free_energy_score\":1.25")) 1) 100 0)))))
+
+    0)

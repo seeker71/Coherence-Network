@@ -18,6 +18,8 @@ source:
     symbols: [agn-create-node, agn-update-node, agn-delete-node]
   - file: form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
+  - file: api/tests/test_application_graph_response_projection.py
+    symbols: [test_route_forms_name_response_projection_before_public_flip]
 requirements:
   - "The kernel-router production manifest exposes a native /api/spec-registry/source-list route."
   - "The route reads specs/INDEX.md directly, without FastAPI or spec_registry_service."
@@ -105,9 +107,8 @@ PY
   carrier emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges`
   SQL. `POST/PATCH/DELETE /api/spec-registry` also have `X-Form-Native-Preview`
   header-gated native SQL preview rows. Public mutable DB-backed spec registry
-  behavior still enters through FastAPI by default until live DB execution,
-  response projection, cache invalidation, and contributor-key audit side effects
-  are proven.
+  behavior still enters through FastAPI by default until cache invalidation,
+  contributor-key audit side effects, and a reversible public gate are proven.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

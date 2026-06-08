@@ -28,6 +28,8 @@ source:
     symbols: [test_ideas_router_form_declares_route_shapes_and_whole_structure, test_ideas_router_form_names_shifted_recipe_families, test_ideas_router_form_keeps_python_as_carrier_with_gap_named, test_ideas_router_form_describes_live_router_carrier, test_ideas_router_form_has_native_structure_route, test_ideas_router_form_has_native_source_index_route, test_ideas_router_form_has_native_source_portfolio_route, test_ideas_router_form_has_native_graph_projection_route, test_ideas_router_form_names_native_mutation_carrier]
   - file: api/tests/test_native_mutation_route_bindings.py
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql]
+  - file: api/tests/test_application_graph_response_projection.py
+    symbols: [test_route_forms_name_response_projection_before_public_flip]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
 requirements:
@@ -124,14 +126,18 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 - Changing API response schemas or endpoint paths.
 - Moving service-layer persistence or scoring logic to a new Python module.
-- Flipping ordinary public mutable, DB-backed ideas traffic to native execution before live DB execution, response projection, cache invalidation, and side-effect proof.
+- Flipping ordinary public mutable, DB-backed ideas traffic to native execution
+  before cache invalidation, side-effect proof, and a reversible public gate.
 
 ## Gaps
 
-- GAP-I1 follow-up task: `ideas-native-mutation-live-db-proof`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, and `POST/PATCH /api/ideas` now have `X-Form-Native-Preview` header-gated native SQL preview rows. Public mutable DB-backed portfolio routes still enter through FastAPI by default until live DB execution, response projection, cache invalidation, parent/edge side effects, and contributor-key audit side effects are proven.
+- GAP-I1 follow-up task: `ideas-native-mutation-side-effects`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, and Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows. Public mutable DB-backed portfolio routes still enter through FastAPI by default until cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible public gate are proven.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
-- A later native route lift can consume this route recipe now that the graph-node read carrier, mutation carrier, auth carrier, application-table SQL carrier, and idea schema projection shapes exist; manifest binding and live DB execution proof remain the next boundary.
+- A later native route lift can consume this route recipe now that the graph-node
+  read carrier, mutation carrier, auth carrier, application-table SQL carrier,
+  live DB execution proof, and response projection proof exist; side effects and
+  reversible public gating remain the next boundary.
