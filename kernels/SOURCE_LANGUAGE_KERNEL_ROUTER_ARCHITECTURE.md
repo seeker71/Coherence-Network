@@ -230,8 +230,12 @@ classDiagram
 
 Current implementation anchors:
 
-- `form/form-stdlib/source-compiler.fk` parses `template` and `class` lines in
-  `section [form.route]` and returns Recipe objects through
+- `form/form-stdlib/bml-source.fk` names reusable BML source cells such as
+  typed template use and route call source objects before any dialect chooses
+  what they mean.
+- `form/form-stdlib/source-compiler.fk` walks full `section [form.bml]` and
+  `section [form.route]` bodies through the BML line/block compiler, consumes
+  those source cells for route-domain lowering, and returns Recipe objects through
   `fsc-compile-section-recipe`.
 - `form/form-stdlib/language-model.fk` defines `LanguageTemplate`,
   `LanguageClass`, and `language-route-class-kernel-route`. Their runtime type
