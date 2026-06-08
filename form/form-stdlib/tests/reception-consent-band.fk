@@ -1,0 +1,29 @@
+; reception-consent-band.fk — three-way proof of the reception-consent rule.
+;
+; preludes: form-stdlib/reception-consent.fk
+;
+; The resting states the policy names, computed in Form and asserted:
+;   /begin (web-begin):   share-name OPEN  (weaving in = chosen yes to be known)
+;                         findable / email CLOSED (no silent exposure)
+;   interest form:        share-name CLOSED (opt-in here, not the contributor door)
+;                         location / skills / findable / email all CLOSED
+;   agent:                recorded-as-relation CLOSED (a reader is not recorded)
+;   channel (discord):    enrolled CLOSED (witnessed, not enrolled)
+;   arrival:              relationship-memory CLOSED (recorded only when allowed)
+; Every assertion is deterministic, so the three sibling kernels must agree.
+
+(do
+    (let pass
+        (and (eq (rc-resting (f-web-begin) (c-share-name)) (rc-open))
+        (and (eq (rc-resting (f-web-begin) (c-findable)) (rc-closed))
+        (and (eq (rc-resting (f-web-begin) (c-email-updates)) (rc-closed))
+        (and (eq (rc-resting (f-web-interest) (c-share-name)) (rc-closed))
+        (and (eq (rc-resting (f-web-interest) (c-share-location)) (rc-closed))
+        (and (eq (rc-resting (f-web-interest) (c-share-skills)) (rc-closed))
+        (and (eq (rc-resting (f-web-interest) (c-findable)) (rc-closed))
+        (and (eq (rc-resting (f-web-interest) (c-email-updates)) (rc-closed))
+        (and (eq (rc-resting (f-agent) (c-recorded-relation)) (rc-closed))
+        (and (eq (rc-resting (f-channel) (c-enrolled)) (rc-closed))
+             (eq (rc-resting (f-body-arrival) (c-relationship-mem)) (rc-closed)))))))))))))
+
+    (print (if pass "reception-consent-band: PASS" "reception-consent-band: FAIL")))

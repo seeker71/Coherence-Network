@@ -7,6 +7,11 @@
 // change a facet, MELT the Form policy (re-tune), then re-FREEZE the new resting
 // state here. Carriers READ this single source; they never bake their own copy.
 //
+// The RULE that decides these resting states is runnable, three-way-proven Form:
+// form-stdlib/reception-consent.fk (proven by tests/reception-consent-band.fk). The
+// logic lives in the body, not here — these values are its frozen output. Change the
+// rule there first; this projection follows.
+//
 // Each consent rests at its sovereign default; the arriving cell sets the true
 // value. Exposure-bearing consents rest closed — no silent exposure.
 
