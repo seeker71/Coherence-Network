@@ -6700,6 +6700,88 @@ const KH_TAG_ROUTE_DECISION: i64 = 43009;
 const KH_TAG_ROUTE_CHOICE: i64 = 43010;
 const KH_TAG_ROUTE_DECISION_SIGNATURE: i64 = 43011;
 const KH_TAG_ROUTE_CHOICE_SIGNATURE: i64 = 43012;
+const KH_TAG_CHANNEL_POLICY: i64 = 43013;
+const KH_TAG_METHOD_BRIDGE: i64 = 43014;
+
+#[derive(Clone, Copy, Debug)]
+struct MethodBridgePolicy {
+    route_method: &'static str,
+    request_method: &'static str,
+    pressure: i64,
+}
+
+#[derive(Clone, Debug)]
+struct ChannelPolicy {
+    carrier: &'static str,
+    protocol: &'static str,
+    allowed_methods: &'static [&'static str],
+    method_bridges: &'static [MethodBridgePolicy],
+    no_body_methods: &'static [&'static str],
+    allow_methods: &'static [&'static str],
+    cache_policy: &'static str,
+    compression_policy: &'static str,
+    stream_policy: &'static str,
+    identity_policy: &'static str,
+    authorization_policy: &'static str,
+}
+
+const DEFAULT_HTTP_ALLOWED_METHODS: &[&str] =
+    &["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+const DEFAULT_HTTP_METHOD_BRIDGES: &[MethodBridgePolicy] = &[MethodBridgePolicy {
+    route_method: "GET",
+    request_method: "HEAD",
+    pressure: 20,
+}];
+const DEFAULT_HTTP_NO_BODY_METHODS: &[&str] = &["HEAD"];
+
+fn default_http_channel_policy() -> ChannelPolicy {
+    ChannelPolicy {
+        carrier: "tcp",
+        protocol: "http/1.1",
+        allowed_methods: DEFAULT_HTTP_ALLOWED_METHODS,
+        method_bridges: DEFAULT_HTTP_METHOD_BRIDGES,
+        no_body_methods: DEFAULT_HTTP_NO_BODY_METHODS,
+        allow_methods: DEFAULT_HTTP_ALLOWED_METHODS,
+        cache_policy: "cache-policy-observe",
+        compression_policy: "compression-policy-observe",
+        stream_policy: "stream-policy-buffered",
+        identity_policy: "identity-policy-claim",
+        authorization_policy: "authorization-policy-capability",
+    }
+}
+
+fn channel_policy_method_known(policy: &ChannelPolicy, method: &str) -> bool {
+    policy.allowed_methods.iter().any(|known| *known == method)
+}
+
+fn channel_policy_route_method_valid(policy: &ChannelPolicy, method: &str) -> bool {
+    method == "ANY" || channel_policy_method_known(policy, method)
+}
+
+fn channel_policy_method_bridge_pressure(
+    policy: &ChannelPolicy,
+    route_method: &str,
+    request_method: &str,
+) -> Option<i64> {
+    policy
+        .method_bridges
+        .iter()
+        .find(|bridge| {
+            bridge.route_method == route_method && bridge.request_method == request_method
+        })
+        .map(|bridge| bridge.pressure)
+}
+
+fn channel_policy_no_body_method(policy: &ChannelPolicy, method: &str) -> bool {
+    policy
+        .no_body_methods
+        .iter()
+        .any(|no_body| *no_body == method)
+}
+
+fn channel_policy_allow_header_value(policy: &ChannelPolicy) -> String {
+    policy.allow_methods.join(", ")
+}
 
 fn route_value_string(value: &Value, field: &str) -> Result<String, String> {
     match value {
@@ -6740,10 +6822,8 @@ fn validate_route_spec(spec: RouteSpec) -> Result<RouteSpec, String> {
             spec.name
         ));
     }
-    if !matches!(
-        spec.method.as_str(),
-        "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "ANY"
-    ) {
+    let policy = default_http_channel_policy();
+    if !channel_policy_route_method_valid(&policy, spec.method.as_str()) {
         return Err(format!(
             "KernelHTTPRoute {} method must be a known HTTP method or ANY",
             spec.name
@@ -6907,16 +6987,26 @@ fn route_pattern_prefix(pattern: &str) -> &str {
     }
 }
 
-fn route_method_pressure(route: &RouteSpec, method: &str) -> i64 {
+fn route_method_pressure_with_policy(
+    policy: &ChannelPolicy,
+    route: &RouteSpec,
+    method: &str,
+) -> i64 {
     if route.method == method {
         0
-    } else if route.method == "GET" && method == "HEAD" {
-        20
+    } else if let Some(pressure) =
+        channel_policy_method_bridge_pressure(policy, route.method.as_str(), method)
+    {
+        pressure
     } else if route.method == "ANY" {
         40
     } else {
         400
     }
+}
+
+fn route_method_pressure(route: &RouteSpec, method: &str) -> i64 {
+    route_method_pressure_with_policy(&default_http_channel_policy(), route, method)
 }
 
 fn route_path_pressure(route: &RouteSpec, path: &str) -> i64 {
@@ -7218,6 +7308,7 @@ fn handle_request(
     upstream_pool: &mut UpstreamPool,
     router_metrics: &Arc<Mutex<RouterMetrics>>,
 ) -> bool {
+    let channel_policy = default_http_channel_policy();
     // Read the FULL request: the header block, then exactly Content-Length body
     // bytes if present (read_request honors Content-Length across as many socket
     // reads as the body needs — a body larger than one buffer is fully captured —
@@ -7426,7 +7517,7 @@ fn handle_request(
             &body_bytes,
             upstream_pool,
         );
-    } else if method == "OPTIONS" {
+    } else if method == "OPTIONS" && channel_policy_method_known(&channel_policy, "OPTIONS") {
         // A router with no matching native route and no upstream can still answer
         // protocol discovery as a native no-body invitation. Exact OPTIONS routes
         // still win above through the ordinary route-choice path.
@@ -7435,7 +7526,7 @@ fn handle_request(
         router = "local-control";
         resp_headers.push((
             "Allow".to_string(),
-            "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS".to_string(),
+            channel_policy_allow_header_value(&channel_policy),
         ));
     } else {
         // No native handler and no upstream configured.
@@ -7453,7 +7544,7 @@ fn handle_request(
         .write_all(
             http_response(
                 &status,
-                buffered_response_body_for_method(&method, &body),
+                buffered_response_body_for_method_with_policy(&channel_policy, &method, &body),
                 router,
                 keep_alive,
                 &resp_content_type,
@@ -9357,6 +9448,53 @@ fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
     )
 }
 
+fn router_string_list_value(items: &[&str]) -> Value {
+    Value::List(Arc::new(
+        items
+            .iter()
+            .map(|item| Value::Str((*item).to_string().into()))
+            .collect(),
+    ))
+}
+
+fn router_method_bridge_policy_value(bridge: &MethodBridgePolicy) -> Value {
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_METHOD_BRIDGE),
+            Value::Str(bridge.route_method.to_string().into()),
+            Value::Str(bridge.request_method.to_string().into()),
+            Value::Int(bridge.pressure),
+        ]
+        .into(),
+    )
+}
+
+fn router_channel_policy_value(policy: &ChannelPolicy) -> Value {
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_CHANNEL_POLICY),
+            Value::Str(policy.carrier.to_string().into()),
+            Value::Str(policy.protocol.to_string().into()),
+            router_string_list_value(policy.allowed_methods),
+            Value::List(Arc::new(
+                policy
+                    .method_bridges
+                    .iter()
+                    .map(router_method_bridge_policy_value)
+                    .collect(),
+            )),
+            router_string_list_value(policy.no_body_methods),
+            router_string_list_value(policy.allow_methods),
+            Value::Str(policy.cache_policy.to_string().into()),
+            Value::Str(policy.compression_policy.to_string().into()),
+            Value::Str(policy.stream_policy.to_string().into()),
+            Value::Str(policy.identity_policy.to_string().into()),
+            Value::Str(policy.authorization_policy.to_string().into()),
+        ]
+        .into(),
+    )
+}
+
 fn router_http_choice_request_value(request: &RouteRequestValue) -> Value {
     router_http_request_parts_value(
         &request.method,
@@ -9589,6 +9727,10 @@ fn router_context_data(
         (
             "__request_path__".to_string(),
             Value::Str(path.to_string().into()),
+        ),
+        (
+            "__router_channel_policy__".to_string(),
+            router_channel_policy_value(&default_http_channel_policy()),
         ),
         (
             "__router_native_route_count__".to_string(),
@@ -9858,6 +10000,22 @@ mod router_context_tests {
             str_for(&pairs, "__router_next_bml_candidate_source__"),
             "observed-fanout-path"
         );
+        let channel_policy = value_for(&pairs, "__router_channel_policy__");
+        assert_eq!(list_tag(channel_policy), KH_TAG_CHANNEL_POLICY);
+        let policy_rows = match channel_policy {
+            Value::List(xs) => xs,
+            _ => panic!("router channel policy must be a Form list value"),
+        };
+        assert!(matches!(&policy_rows[1], Value::Str(carrier) if carrier.as_ref() == "tcp"));
+        assert!(matches!(&policy_rows[2], Value::Str(protocol) if protocol.as_ref() == "http/1.1"));
+        assert!(matches!(&policy_rows[3], Value::List(methods) if methods.len() == 7));
+        assert!(
+            matches!(&policy_rows[4], Value::List(bridges) if bridges.len() == 1 && list_tag(&bridges[0]) == KH_TAG_METHOD_BRIDGE)
+        );
+        assert!(
+            matches!(&policy_rows[5], Value::List(methods) if matches!(&methods[0], Value::Str(method) if method.as_ref() == "HEAD"))
+        );
+        assert!(matches!(&policy_rows[6], Value::List(methods) if methods.len() == 7));
         let observation = value_for(&pairs, "__router_observation__");
         let rows = dict_get(observation, "fanout_path_counts");
         assert!(matches!(rows, Value::List(xs) if xs.len() == 1));
@@ -10358,6 +10516,30 @@ mod route_spec_tests {
         assert_eq!(
             select_route_spec(&routes, "OPTIONS", "/probe", &[]).map(|r| r.name.as_str()),
             Some("probe-options")
+        );
+    }
+
+    #[test]
+    fn kernel_http_channel_policy_defaults_drive_protocol_invitation() {
+        let policy = default_http_channel_policy();
+        let route = route("probe", "GET", "/probe", 0, "", 25);
+
+        assert!(channel_policy_route_method_valid(&policy, "OPTIONS"));
+        assert_eq!(
+            channel_policy_allow_header_value(&policy),
+            "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
+        );
+        assert_eq!(
+            route_method_pressure_with_policy(&policy, &route, "HEAD"),
+            20
+        );
+        assert_eq!(
+            buffered_response_body_for_method_with_policy(&policy, "HEAD", "ok"),
+            ""
+        );
+        assert_eq!(
+            buffered_response_body_for_method_with_policy(&policy, "GET", "ok"),
+            "ok"
         );
     }
 
@@ -11052,12 +11234,21 @@ fn http_response(
     out
 }
 
-fn buffered_response_body_for_method<'a>(method: &str, body: &'a str) -> &'a str {
-    if method == "HEAD" {
+fn buffered_response_body_for_method_with_policy<'a>(
+    policy: &ChannelPolicy,
+    method: &str,
+    body: &'a str,
+) -> &'a str {
+    if channel_policy_no_body_method(policy, method) {
         ""
     } else {
         body
     }
+}
+
+#[cfg(test)]
+fn buffered_response_body_for_method<'a>(method: &str, body: &'a str) -> &'a str {
+    buffered_response_body_for_method_with_policy(&default_http_channel_policy(), method, body)
 }
 
 // Write ONLY the client response HEAD for a STREAMING fan-out, then the body is

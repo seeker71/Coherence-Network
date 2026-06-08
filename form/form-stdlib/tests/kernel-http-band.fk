@@ -2,10 +2,10 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
 ;
-; Band verdict: 536893066 when constructors/accessors, validation, pressure
+; Band verdict: 536965066 when constructors/accessors, validation, pressure
 ; matrices, route choice receipts, route-choice signatures, broader method
-; invitation, header case matching, eligible route candidates, and highest-score
-; selection all agree.
+; invitation, channel policy cells, header case matching, eligible route
+; candidates, and highest-score selection all agree.
 
 section [form.bml] {
     def kh-kernel-http-band-score() {
@@ -20,9 +20,12 @@ section [form.bml] {
         let wrong_route = kh-route("post-echo", "POST", "/api/echo", 7, "kh-post-echo", "Content-Type", 20);
         let blocked_route = kh-route("blocked-runtime", "GET", "/api/runtime/health", 99, "kh-blocked-runtime", "X-Missing", 0);
         let fallback_route = kh-route("runtime-prefix", "ANY", "/api/runtime/*", 1, "kh-runtime-prefix", "", 80);
+        let default_policy = kh-default-channel-policy();
+        let custom_policy = kh-channel-policy("tcp", "http/1.1", list("GET", "HEAD", "OPTIONS"), list(kh-method-bridge("GET", "HEAD", 12)), list("HEAD"), list("GET", "HEAD", "OPTIONS"), "cache-policy-observe", "compression-policy-observe", "stream-policy-buffered", "identity-policy-claim", "authorization-policy-capability");
         let exact_candidate = kh-route-candidate(exact_route, request);
         let lower_header_candidate = kh-route-candidate(exact_route, lower_header_request);
         let head_candidate = kh-route-candidate(exact_route, head_request);
+        let custom_head_candidate = kh-route-candidate-with-policy(custom_policy, exact_route, head_request);
         let tail_candidate = kh-route-candidate(tail_route, request);
         let wrong_candidate = kh-route-candidate(wrong_route, request);
         let blocked_candidate = kh-route-candidate(blocked_route, request);
@@ -30,6 +33,7 @@ section [form.bml] {
         let routes = list(wrong_route, tail_route, exact_route);
         let selected = kh-select-route-candidate-for-request(routes, request);
         let head_selected = kh-select-route-candidate-for-request(routes, head_request);
+        let custom_head_selected = kh-select-route-candidate-for-request-with-policy(custom_policy, routes, head_request);
         let selected_score = kh-select-route-score(routes, request);
         let selected_name = kh-route-name(kh-route-candidate-route(selected));
         let fallback_selected = kh-select-route-candidate-for-request(list(blocked_route, fallback_route), request);
@@ -79,6 +83,10 @@ section [form.bml] {
             kh-bool-score(and(kh-header-present?(kh-request-headers(lower_header_request), "Accept"), eq(kh-route-candidate-pressure(lower_header_candidate), 0)), 3000),
             kh-bool-score(and(eq(kh-route-candidate-pressure(head_candidate), 20), str_eq(kh-route-name(kh-route-candidate-route(head_selected)), "runtime-health")), 7000),
             kh-bool-score(kh-request-valid?(options_request), 11000),
+            kh-bool-score(kh-channel-policy-valid?(default_policy), 13000),
+            kh-bool-score(str_eq(kh-policy-allow-header-value(default_policy), "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"), 17000),
+            kh-bool-score(eq(kh-method-pressure-with-policy(custom_policy, exact_route, head_request), 12), 19000),
+            kh-bool-score(and(eq(kh-route-candidate-pressure(custom_head_candidate), 12), str_eq(kh-route-name(kh-route-candidate-route(custom_head_selected)), "runtime-health")), 23000),
             kh-route-candidate-score(selected),
             kh-route-candidate-pressure(tail_candidate)
         ));
