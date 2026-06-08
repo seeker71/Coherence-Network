@@ -56,13 +56,15 @@ What is measured vs stated (the honesty bar)
     files; it is offered as evidence of the layering's weight, NOT as a precise
     "fraction of runtime" (wall-clock fraction depends on inputs and is dominated
     by FastAPI+Pydantic+network for any real request — stated, not faked).
-  • Kernel-FIRST has two honest readings. CAPABLE = the count of native handlers
-    in the kernel-router manifest (deploy/kernel-router/production-routes.fk):
-    whole-lifecycle-Form routes whose production harness parity has landed.
-    SERVED = CAPABLE only when the live public provenance probe returns
-    X-Form-Router: native-kernel, meaning Traefik is reaching kernel-router as
-    the front door. If the probe is unread or missing that header, SERVED stays 0
-    and the probe record says why.
+  • Kernel-FIRST has two honest readings, both exact. SERVED = 0: no route is
+    served by the kernel at the LIVE front door (Traefik routes every request to
+    CPython; the 22 kernel-served routes are CPython handlers calling the kernel
+    as a subroutine). CAPABLE = the count of native handlers in the kernel-router
+    manifest (deploy/kernel-router/production-routes.fk) — whole-lifecycle-Form
+    routes whose dispatch mechanism is proven but whose byte-identity to the live
+    twin is NOT yet proven (no harness, none in CI, e2e pending), awaiting that
+    identity proof and then the front-door flip. CAPABLE is the native surface that
+    EXISTS; SERVED is what fronts live traffic.
 
 This is a SENSING instrument — read-only, no behavior change, like the wellness
 probe and the attribution report. It tells the body the unflattering truth about
@@ -80,11 +82,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import os
 import re
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -119,7 +118,6 @@ _KERNEL_ROUTER_FILES = [
 # is the whole request lifecycle, a categorically deeper move than serve_via_kernel
 # (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
 _KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
-_DEFAULT_FRONT_DOOR_PROBE_PATH = "/api/attention/kernel-runtime"
 
 
 def kernel_first_capable_routes() -> list[str]:
@@ -127,12 +125,14 @@ def kernel_first_capable_routes() -> list[str]:
 
     These serve their ENTIRE request lifecycle in Form (X-Form-Router:
     native-kernel) — the categorical step past serve_via_kernel's guest
-    subroutine. They are CAPABLE: a real native handler exists in the manifest,
-    the dispatch mechanism is proven, and the production-route harness has proven
-    the promoted handlers value-identical to their local CPython oracle. They are
-    served at the live front door only after Traefik points to kernel-router.
-    So this is the native surface that EXISTS — distinct from kernel-first SERVED,
-    which is read from the public X-Form-Router probe.
+    subroutine. They are CAPABLE: a real native handler exists in the manifest and
+    the dispatch mechanism is proven, but they are NOT yet proven byte-identical to
+    the live CPython twin (no harness diffs them, none in CI, e2e status:pending),
+    and NOT yet served at the live front door. The manifest is what the durable
+    runtime-share flip will front with, but until that flip Traefik still routes
+    every request to CPython. So this is the native surface that EXISTS, awaiting
+    its identity proof and then the front-door cutover — distinct from kernel-first
+    SERVED, which stays 0.
 
     Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
     the one source); ``/health`` and other non-``/api`` probes are excluded so the
@@ -195,62 +195,6 @@ def _kernel_route_data_patterns(manifest: Path) -> dict[str, str]:
         if isinstance(pattern, str) and pattern.startswith("/api/"):
             out[route_id] = pattern
     return out
-
-
-def probe_kernel_front_door() -> dict:
-    """Read the public API front-door provenance header.
-
-    The manifest tells us which routes are kernel-first CAPABLE. The live public
-    header tells us whether Traefik is actually sending api.coherencycoin.com to
-    the kernel-router. When the probe route returns X-Form-Router: native-kernel,
-    served count is inferred from the manifest: the same router process owns the
-    manifest and will native-serve every listed handler while fanning out the tail.
-    If the probe is unreachable, the report marks the front door unread instead
-    of preserving the old pre-flip assumption as fact.
-    """
-    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com").rstrip("/")
-    path = os.environ.get("KERNEL_FRONT_DOOR_PROBE_PATH", _DEFAULT_FRONT_DOOR_PROBE_PATH)
-    url = f"{api}{path}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "User-Agent": "runtime-surface-report/1.0",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            body = resp.read(256).decode("utf-8", errors="replace")
-            router = resp.headers.get("X-Form-Router", "")
-            return {
-                "url": url,
-                "reachable": True,
-                "status": resp.status,
-                "x_form_router": router,
-                "kernel_front_door": router == "native-kernel",
-                "body_preview": body,
-            }
-    except urllib.error.HTTPError as exc:
-        body = exc.read(256).decode("utf-8", errors="replace")
-        router = exc.headers.get("X-Form-Router", "")
-        return {
-            "url": url,
-            "reachable": True,
-            "status": exc.code,
-            "x_form_router": router,
-            "kernel_front_door": router == "native-kernel",
-            "body_preview": body,
-        }
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        return {
-            "url": url,
-            "reachable": False,
-            "status": None,
-            "x_form_router": "",
-            "kernel_front_door": False,
-            "error": str(exc),
-        }
 
 
 def _load_attribution_module():
@@ -355,13 +299,6 @@ def build_report() -> dict:
 
     capable = kernel_first_capable_routes()
     n_capable = len(capable)
-    front_door = probe_kernel_front_door() if n_capable else {
-        "reachable": False,
-        "kernel_front_door": False,
-        "url": "",
-    }
-    front_door_native = bool(front_door.get("kernel_front_door"))
-    n_kernel_first_served = n_capable if front_door_native else 0
 
     usage_pct = (100.0 * n_served / total_routes) if total_routes else None
     loc_per_route = (cpy["total"] / n_served) if n_served else None
@@ -372,17 +309,18 @@ def build_report() -> dict:
         "kernel_served_routes": n_served,
         "kernel_served_pct": round(usage_pct, 1) if usage_pct is not None else None,
         # kernel-FIRST = the kernel as the FRONT DOOR (whole lifecycle in Form).
-        # CAPABLE comes from the manifest. SERVED is inferred from the public
-        # X-Form-Router provenance header on one native probe route; if Traefik
-        # reaches kernel-router with the production manifest, the listed routes
-        # serve native and the tail fans out. If the probe is unread/not-native,
-        # served remains 0 and the probe record says why.
-        "kernel_first_served_routes": n_kernel_first_served,
+        # Two honest sub-counts the journey needs kept apart:
+        #   SERVED  — served kernel-first at the LIVE front door. Still 0: Traefik
+        #             routes every request to CPython; the manifest is not yet the
+        #             front door (the durable flip is Urs's go + presence).
+        #   CAPABLE — native handlers proven byte-identical in shadow in the router
+        #             manifest, whole lifecycle in Form, awaiting the front-door
+        #             flip. This is the native surface that EXISTS today — the
+        #             runtime-share metric genuinely moving, not route-count.
+        "kernel_first_served_routes": 0,
         "kernel_first_capable_routes": n_capable,
         "kernel_first_capable_route_names": capable,
-        "kernel_first_front_door_probe": front_door,
-        "kernel_first_served_inferred_from_probe": front_door_native,
-        "kernel_first_routes": n_kernel_first_served,  # back-compat alias of SERVED
+        "kernel_first_routes": 0,  # back-compat alias of SERVED: 0 at the front door
         "served_route_names": served_routes,
         # --- Axis 2: the per-route CPython-vs-kernel layering ---
         "kernel_router_cpython_loc": cpy["total"],
@@ -430,18 +368,6 @@ def render_human(r: dict) -> str:
         f"  Served kernel-FIRST at the LIVE front door (kernel as the runtime, "
         f"whole lifecycle in Form): {r['kernel_first_served_routes']}."
     )
-    probe = r.get("kernel_first_front_door_probe") or {}
-    if probe:
-        if probe.get("reachable"):
-            w(
-                f"  Front-door probe: {probe.get('url')} -> status={probe.get('status')} "
-                f"X-Form-Router={probe.get('x_form_router') or '<missing>'}."
-            )
-        else:
-            w(
-                f"  Front-door probe unread: {probe.get('url') or '<unknown>'} "
-                f"({probe.get('error') or 'not reached'})."
-            )
     cap = r.get("kernel_first_capable_routes", 0)
     if cap:
         names = ", ".join(r.get("kernel_first_capable_route_names", []))
@@ -454,10 +380,12 @@ def render_human(r: dict) -> str:
         w("  This is the native surface that EXISTS today: the compute AND the")
         w("  request lifecycle run Form-native, no CPython in the path. It is the")
         w("  runtime-share metric genuinely moving, distinct from route-count.")
-        w("  PROVEN so far: the dispatch mechanism, native/fan-out provenance,")
-        w("  production route name resolution, and production-route harness parity.")
-        w("  The remaining live question is no longer whether the capable surface")
-        w("  exists; it is whether the public front door is currently pointed at it.")
+        w("  PROVEN so far: the dispatch MECHANISM (a native route is served")
+        w("  kernel-first, unmatched paths fan out, X-Form-Router labels each).")
+        w("  NOT yet proven: that these 23 handlers are byte-identical to the live")
+        w("  CPython API — no harness diffs them against the twin, none runs in CI,")
+        w("  and the kernel-router e2e evidence is still status:pending. That")
+        w("  byte-identity proof is the cutover's gating step, not the front-door flip.")
     w("  The 22 kernel-SERVED routes above are a different, shallower thing: each")
     w("  is a CPython handler that calls the kernel as a SUBROUTINE inside the")
     w("  request — the kernel is a guest there. The capable routes flip that: the")
@@ -523,16 +451,19 @@ def render_human(r: dict) -> str:
         if pct is not None
         else "  Still honestly low at the front door"
     )
-    w("  at all (as a guest-subroutine). Kernel-first served is read from the")
-    w("  public X-Form-Router probe and the production manifest, not hard-coded.")
+    w("  at all (as a guest-subroutine); 0 are SERVED kernel-first — Traefik still")
+    w("  routes every live request to CPython.")
     w("")
     if cap:
         w(f"  But the reversal is no longer hypothetical. {cap} routes are now")
         w("  kernel-FIRST CAPABLE: real native handlers in the router manifest, whole")
         w("  lifecycle in Form. The capable count moved 0 → {0}: the native front-door".format(cap))
-        w("  surface EXISTS and its harness proof has landed. The remaining live")
-        w("  movement is the Traefik → kernel-router route and the public verifier")
-        w("  that requires X-Form-Router: native-kernel on the probe route.")
+        w("  surface EXISTS. What remains before the cutover is TWO things, not one:")
+        w("  (1) prove these handlers byte-identical to the live API (no harness does")
+        w("  this yet, none in CI, e2e evidence status:pending) — the gating proof;")
+        w("  (2) the Traefik → kernel-router flip, a deliberate two-person live-traffic")
+        w("  moment. The surface exists and the mechanism is proven; the handler-")
+        w("  identity proof is the honest work still between here and a safe flip.")
     else:
         w("  The reversal (kernel-as-front-door) has no proven native surface yet.")
     w("")

@@ -18,19 +18,19 @@
 #      because this image serves, it is not imported by Python).
 #   2. runtime — a lean debian-slim with ONLY the stripped binary, the form-stdlib
 #      (so a BML-authored manifest can be source-compiled at load via --stdlib),
-#      and both route manifests. No Rust toolchain in the final image.
+#      and the shadow routes manifest. No Rust toolchain in the final image.
 #
-# SHADOW MODE BY DEFAULT: the default manifest (deploy/kernel-router/shadow-routes.fk)
+# SHADOW MODE BY DEFAULT: the baked manifest (deploy/kernel-router/shadow-routes.fk)
 # binds an EMPTY routes list, so EVERY request fans out to ${UPSTREAM_URL}
 # (default http://api:8000) — byte-identical to today's behavior, one proxy hop,
 # with the X-Form-Router: fanout-python header as live evidence the router carries
 # the traffic. Promoting a route to native = adding a (path handler) line to the
 # manifest; nothing else in the topology changes.
 #
-# PRODUCTION FLIP: the image also carries production-routes.fk and its route data.
-# The deploy layer chooses ROUTES_FILE=/routes/production-routes.fk when Traefik
-# points api.coherencycoin.com at kernel-router. Rollback is the same topology
-# with ROUTES_FILE=/routes/shadow-routes.fk, or Traefik pointed back at api.
+# THIS IMAGE DOES NOT FLIP PRODUCTION. Building and even running this container
+# changes nothing about what fronts api.coherencycoin.com — that is a Traefik
+# re-point (one label), Urs's intent, a SEPARATE step. See
+# deploy/kernel-router/docker-compose.kernel-router.yml and KERNEL_AS_ROUTER.md.
 
 # -----------------------------------------------------------------------------
 # Stage 1 — build form-kernel-rust: the native binary (the front-door server)
@@ -56,7 +56,7 @@ RUN cargo build --release --bin form-kernel-rust \
 
 
 # -----------------------------------------------------------------------------
-# Stage 2 — lean runtime: just the binary + form-stdlib + route manifests
+# Stage 2 — lean runtime: just the binary + form-stdlib + the shadow manifest
 # -----------------------------------------------------------------------------
 FROM debian:bookworm-slim AS runtime
 
@@ -92,13 +92,10 @@ RUN chmod +x /app/bin/form-kernel-rust \
 # stdlib in lets a BML manifest work later without rebuilding the image.
 COPY form/form-stdlib/ /app/form/form-stdlib/
 
-# Route manifests:
-#   shadow-routes.fk      empty routes -> every path fans out to the upstream
-#   production-routes.fk  native route cells plus fan-out tail
-# production-routes-data.json carries route metadata addressed by route-data ref.
+# The shadow routes manifest: an EMPTY routes list -> every path fans out to the
+# upstream. This is the deployable shadow-mode default; mount/replace
+# /routes/shadow-routes.fk to promote native routes.
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
-COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
-COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
 
 # The entrypoint resolves env at RUN time so PORT / UPSTREAM_URL / ROUTES_FILE
 # are container-configurable (compose env, -e flags) without rebuilding.

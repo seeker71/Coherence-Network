@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/kernel-common-ground-20260608",
+  "commit_scope": "Rollback the production API front-door flip to the kernel-router after public API traffic returned Traefik 404s, restoring the prior deploy path while keeping the kernel-router available as an inactive shadow overlay.",
+  "files_owned": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "docs/system_audit/commit_evidence_2026-06-08_kernel_front_door_rollback.json",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_api_native_deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/wellness_check.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && make wellness",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && curl -sS --max-time 8 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | {name,status,detail,last_sample_at,latency_ms}]}'",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && curl -sS -i --max-time 8 https://api.coherencycoin.com/api/health | head -n 40",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && ./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && git revert --no-edit e3bdc155",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && bash scripts/test_hostinger_api_native_deploy.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_kernel_front_door_rollback.json",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && git diff --check HEAD^ HEAD && git diff --check",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && ./scripts/check_route_manifests.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 && python3 scripts/runtime_surface_report.py --json >/tmp/runtime_surface_report_rollback.json"
+    ],
+    "notes": "Initial public witness before rollback: pulse overall=silent with one ongoing silence; page_vitality was silent with detail 'missing Diversity Index signal'. Public /api/health returned HTTP 404 text/plain '404 page not found'; /api/gates/main-head returned HTTP 404; /api/health-proxy returned HTTP 502/503. Full public deploy verification failed at the API health, SHA parity, persistence, CORS, and pulse checks. The response lacked X-Form-Router, so the observed failure looked like Traefik/default gateway routing rather than a kernel-router local-control 404 or fan-out response. Local rollback checks passed: test_hostinger_api_native_deploy.sh passed, evidence validation passed, diff checks passed, route manifest check passed for production-routes.fk and shadow-routes.fk, and runtime_surface_report.py --json reported total_routes=812, kernel_served_routes=22, kernel_first_capable_routes=23, live_front_door_router=null."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this rollback branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until this rollback lands, Hostinger deploy completes, and public API/web/pulse checks pass."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Rollback patch has local proof. CI, merge, deployment, and public witness verification remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "kernel-router-shadow-first",
+    "public-witness-recovery"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door-rollback"
+  ],
+  "task_ids": [
+    "kernel-front-door-rollback-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "recovery",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make prompt-guide passed in /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-common-ground-20260608 with no blocking risk.",
+    "make wellness reported local/static alignment but production probes for /api/health, /api/substrate/shape_health, and /api/views/health returned 404.",
+    "Pulse witness returned overall=silent, silences=1, with page_vitality silent due missing Diversity Index signal.",
+    "Public /api/health and /api/gates/main-head returned HTTP 404 text/plain '404 page not found'; web /api/health-proxy returned HTTP 502.",
+    "scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com failed during the API health rollout wait with HTTP 404.",
+    "bash scripts/test_hostinger_api_native_deploy.sh passed after rollback, proving the Hostinger deployment script preserves provider env and targets git SHA contexts without applying the kernel-router Traefik front-door overlay.",
+    "./scripts/check_route_manifests.sh passed after rollback: production-routes.fk and shadow-routes.fk both resolve.",
+    "python3 scripts/runtime_surface_report.py --json reported total_routes=812, kernel_served_routes=22, kernel_first_capable_routes=23, live_front_door_router=null.",
+    "The rollback reverts e3bdc155, restoring the kernel-router overlay to shadow/inactive mode and removing the production Traefik front-door flip from the Hostinger API native deploy workflow."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_api_native_deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/wellness_check.py"
+  ],
+  "change_intent": "process_only"
+}

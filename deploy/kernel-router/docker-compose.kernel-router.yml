@@ -1,12 +1,27 @@
-# docker-compose.kernel-router.yml — production front-door overlay.
+# docker-compose.kernel-router.yml — the kernel-router as a DEFINED-BUT-INACTIVE
+# service. An OVERLAY, intentionally NOT the production docker-compose.yml.
 #
-# This overlay expresses the flip: Traefik routes api.coherencycoin.com to the
-# kernel-router service on port 8080, and the api service remains the private
-# fan-out upstream on api:8000. Routes in production-routes.fk run Form-native;
-# unmatched routes fan out to CPython with X-Form-Router: fanout-python.
+# The production deploy runs `docker compose -f docker-compose.yml ...` (see
+# deploy/hostinger/auto-deploy.sh). This file is a SEPARATE overlay the deploy
+# never includes, so defining the service here changes NOTHING about production
+# routing until someone explicitly composes with this file AND uncomments the
+# Traefik labels below. The service is buildable and runnable on demand; it does
+# not front api.coherencycoin.com.
+#
+# WHAT THIS IS: the deployable shadow step of the flip in
+# kernels/KERNEL_AS_ROUTER.md. The kernel-router (form-kernel-rust serve) sits in
+# front of the api service and, in shadow mode (empty routes manifest), fans
+# EVERYTHING out to api:8000 — byte-identical to today, one proxy hop, with
+# X-Form-Router: fanout-python as live evidence.
+#
+# WHAT THIS IS NOT: the flip. The flip is pointing Traefik at this service
+# instead of at the api service. That is one label change (uncommented below),
+# and it is Urs's INTENT — a stakes-and-vision decision, not something this file
+# performs. Today's front door (Traefik -> coherence-api -> api:8000) is
+# untouched by merging this overlay.
 #
 # ---------------------------------------------------------------------------
-# HOW TO RUN IT LOCALLY / IN STAGING:
+# HOW TO RUN IT IN SHADOW (local / staging, NO production routing change):
 #
 #   # from the compose root, layering this overlay on top of the base compose
 #   docker compose \
@@ -14,19 +29,24 @@
 #     -f repo/deploy/kernel-router/docker-compose.kernel-router.yml \
 #     up -d --build kernel-router
 #
-#   curl -i http://localhost:8088/api/attention/kernel-runtime
-#   # X-Form-Router: native-kernel
-#   curl -i http://localhost:8088/api/health
-#   # X-Form-Router: fanout-python unless /api/health is promoted
+#   # the router is now reachable on :8088 (host) and proxies to api:8000.
+#   # PROVE it carries traffic, byte-identically:
+#   curl -i http://localhost:8088/api/health   # 200 + X-Form-Router: fanout-python
+#   curl -s http://localhost:8088/api/health | diff - <(curl -s http://localhost:8000/api/health)
+#   #   ^ identical body; the only difference is the X-Form-Router header
+#
+# ---------------------------------------------------------------------------
+# THE FLIP (Urs's intent — a SEPARATE step, do NOT do this as part of building):
+#
+#   To make the kernel-router the REAL front door for api.coherencycoin.com,
+#   uncomment the `traefik.*` labels on the kernel-router service below AND
+#   remove (or override to a non-web entrypoint) the Traefik router rule on the
+#   api service in the base docker-compose.yml, so Traefik routes
+#   Host(api.coherencycoin.com) -> kernel-router -> (fan-out) api:8000.
+#   Rollback = re-comment these labels / restore the api rule. Instant, no data
+#   migration. THIS IS THE FLIP. Building this overlay is not.
 
 services:
-  api:
-    # Keep api on the compose network as the private upstream, but remove it as
-    # a public Traefik target. The kernel-router owns the public coherence-api
-    # router and fans out to api:8000 for not-yet-native routes.
-    labels:
-      traefik.enable: "false"
-
   kernel-router:
     build:
       # Build context is the repo root (where Dockerfile.kernel-router lives).
@@ -37,22 +57,39 @@ services:
     image: coherence-network-kernel-router:latest
     restart: unless-stopped
     environment:
-      # The fan-out target: the api service on the shared compose network.
+      # The fan-out target: the api service on the shared compose network. In
+      # shadow mode EVERY request goes here (empty routes manifest).
       UPSTREAM_URL: "http://api:8000"
       KERNEL_ROUTER_PORT: "8080"
-      ROUTES_FILE: "/routes/production-routes.fk"
-      STDLIB_DIR: "/app/form/form-stdlib"
+      ROUTES_FILE: "/routes/shadow-routes.fk"
       # KERNEL_ROUTER_WORKERS: "4"   # optional pool size; default = host parallelism
     depends_on:
       # The fan-out upstream must exist; the router proxies to it.
       - api
-    # Host port mapping for local/staging proof only. In production Traefik talks
-    # to the service over the compose network on port 8080.
+    # Host port mapping for LOCAL/STAGING shadow proof only. This exposes the
+    # router on the host so you can curl it directly WITHOUT touching Traefik or
+    # production routing. In the real flip Traefik talks to it over the compose
+    # network (port 8080) and this host mapping is unnecessary.
     ports:
       - "8088:8080"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.coherence-api.rule=Host(`api.coherencycoin.com`)"
-      - "traefik.http.routers.coherence-api.entrypoints=websecure"
-      - "traefik.http.routers.coherence-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.coherence-api.loadbalancer.server.port=8080"
+
+    # ----------------------------------------------------------------------
+    # TRAEFIK LABELS — PRESENT BUT INACTIVE (commented). Uncommenting these is
+    # THE FLIP (Urs's intent). They mirror the api service's production rule
+    # (Host(api.coherencycoin.com) -> port 8000) but point at the kernel-router
+    # on port 8080. Activating them WITHOUT also removing the api service's own
+    # Traefik rule would create two routers for the same Host — so the flip is:
+    # uncomment here, AND drop/redirect the api rule in the base compose.
+    #
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.coherence-api.rule=Host(`api.coherencycoin.com`)"
+    #   - "traefik.http.routers.coherence-api.entrypoints=websecure"
+    #   - "traefik.http.routers.coherence-api.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.coherence-api.loadbalancer.server.port=8080"
+    # ----------------------------------------------------------------------
+
+# The api service is defined in the base docker-compose.yml. This overlay only
+# ADDS the kernel-router; it does not redefine api, and it does NOT touch the
+# api service's Traefik labels. Merging this file leaves production routing
+# exactly as it is.
