@@ -37,7 +37,7 @@ if [[ -z "${PG_DSN:-}" ]]; then
   pg_ctl -D "$PGDIR/data" -o "-p $PGPORT -k $PGDIR" -l "$PGDIR/log" start >/dev/null 2>&1
   sleep 2
   psql -h 127.0.0.1 -p "$PGPORT" -U postgres -c "CREATE DATABASE native_route_side_effects_test;" >/dev/null 2>&1
-  PG_DSN="host=127.0.0.1 port=$PGPORT user=postgres dbname=native_route_side_effects_test"
+  PG_DSN="postgresql://postgres@127.0.0.1:$PGPORT/native_route_side_effects_test"
 fi
 
 SRCDIR="$(mktemp -d "${TMPDIR:-/tmp}/nativeroutesideeffects.XXXXXX")"

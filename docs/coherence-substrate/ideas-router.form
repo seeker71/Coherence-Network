@@ -265,14 +265,14 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/integration/application-graph-live-db.fk + api/tests/test_application_graph_live_db_trial.py",
             status: "live DB execution trial proven",
             meaning: "Form-native application graph mutation wrappers now create, update, delete, and read back graph_nodes, graph_node_revisions, and graph_edges in a rollback-safe throwaway Postgres",
-            boundary: "this closes the local live DB execution trial; the trust envelope now carries prediction residual plus side-effect intents while ordinary traffic remains unflipped",
+            boundary: "this closes the local live DB execution trial and does not perform the public front-door flip; the trust envelope now carries prediction residual plus side-effect intents while ordinary traffic remains unflipped",
         },
         {
             path: "form/scripts/application-graph-response-projection-test.sh",
             route_source: "form/form-stdlib/application-graph-response-projection.fk + api/tests/test_application_graph_response_projection.py",
             status: "response projection parity proven",
             meaning: "Form-native projection now emits IdeaWithScore and SpecRegistryEntry-shaped mutation responses from live graph rows",
-            boundary: "this closes response projection; side-effect execution, route-runner binding, and the public-gate receipt are now proven; deployed public canary remains before ordinary traffic moves",
+            boundary: "this closes response projection and does not perform the public front-door flip; side-effect execution, route-runner binding, and the public-gate receipt are now proven; deployed public canary remains before ordinary traffic moves",
         },
         {
             path: "form/scripts/native-mutation-side-effects-test.sh",

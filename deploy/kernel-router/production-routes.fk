@@ -1901,9 +1901,20 @@
     ")"
     (str_concat "DELETE FROM graph_nodes WHERE id = " (mpv-sql-quote id)))))
 
+(defn mpv-typed-request? (q)
+  (eq (nth q 0) 43002))
+
 (defn mpv-body (q)
-  (do (let body (assoc "__body__" q))
-      (if (eq (str_len body) 0) "{}" body)))
+  (if (mpv-typed-request? q)
+      (do (let body (nth q 5))
+          (if (eq (str_len body) 0) "{}" body))
+      (do (let body (assoc "__body__" q))
+          (if (eq (str_len body) 0) "{}" body))))
+
+(defn mpv-request-path (q)
+  (if (mpv-typed-request? q)
+      (nth q 2)
+      (assoc "__request_path__" q)))
 
 (defn mpv-json-value-or (body key dflt)
   (do (let raw (value_str (_json_get body key)))
@@ -2042,7 +2053,7 @@
 
 (defn route_ideas_update_native_preview (q)
   (do (let body (mpv-body q))
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let id (mpv-path-tail path "/api/ideas/"))
   (do (let name (mpv-json-value-or body "name" "Native preview idea"))
   (do (let description (mpv-json-value-or body "description" ""))
@@ -2062,7 +2073,7 @@
 
 (defn route_specs_update_native_preview (q)
   (do (let body (mpv-body q))
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let title (mpv-json-value-or body "title" spec-id))
@@ -2071,7 +2082,7 @@
       (mpv-preview-response "update-spec" node-id sql body)))))))))
 
 (defn route_specs_delete_native_preview (q)
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let sql (mpv-delete-node-sql node-id))
@@ -2089,7 +2100,7 @@
 
 (defn route_ideas_update_native_public_gate (q)
   (do (let body (mpv-body q))
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let id (mpv-path-tail path "/api/ideas/"))
   (do (let name (mpv-json-value-or body "name" "Native public gate idea"))
   (do (let description (mpv-json-value-or body "description" ""))
@@ -2109,7 +2120,7 @@
 
 (defn route_specs_update_native_public_gate (q)
   (do (let body (mpv-body q))
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let title (mpv-json-value-or body "title" spec-id))
@@ -2118,7 +2129,7 @@
       (mpg-public-gate-response "update-spec" node-id sql body)))))))))
 
 (defn route_specs_delete_native_public_gate (q)
-  (do (let path (assoc "__request_path__" q))
+  (do (let path (mpv-request-path q))
   (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let sql (mpv-delete-node-sql node-id))
