@@ -124,9 +124,9 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 
 - GAP-MSNMPB1: closed by `specs/native-mutation-ab-observation-gate.md`. The
   preview binding now has an A/B observation gate over fanout vs native preview.
-- GAP-MSNMPB2 follow-up task: `native-graph-mutation-live-db-proof`. Execute the
-  generated SQL against the application schema and prove revision rows plus edge
-  cleanup.
+- GAP-MSNMPB2: closed by `specs/native-graph-mutation-live-db-proof.md`. The
+  Form-native application graph wrappers now execute against a rollback-safe
+  throwaway Postgres and prove revision rows plus edge cleanup.
 - GAP-MSNMPB3 follow-up task: `native-mutation-response-projection`. Project
   mutation results into `IdeaWithScore` and `SpecRegistryEntry` without FastAPI.
 - GAP-MSNMPB4 follow-up task: `native-mutation-side-effects`. Carry cache
