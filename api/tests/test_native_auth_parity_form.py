@@ -79,4 +79,4 @@ def test_idea_and_spec_forms_name_auth_carrier_before_front_door_flip():
         assert "form/form-stdlib/auth-port.fk::auth-require-api-key" in text
         assert "auth-port-band.fk" in text
         assert "public mutable" in text
-        assert "graph_nodes Postgres writes" in text
+        assert "method-specific route binding" in text

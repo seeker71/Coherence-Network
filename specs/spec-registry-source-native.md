@@ -12,6 +12,10 @@ source:
     symbols: [test_specs_source_native_route_is_bound_and_reads_index, test_specs_source_native_route_emits_spec_registry_entry_shape]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
+  - file: form/form-stdlib/application-graph-node-port.fk
+    symbols: [agn-create-node, agn-update-node, agn-delete-node]
+  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+    symbols: []
 requirements:
   - "The kernel-router production manifest exposes a native /api/spec-registry/source-list route."
   - "The route reads specs/INDEX.md directly, without FastAPI or spec_registry_service."
@@ -91,9 +95,11 @@ PY
 - GAP-SRS1 follow-up task: `spec-registry-live-graph-storage-carrier`. The
   source-backed route is native and the Form graph-node mutation carrier now
   exposes create/replace/delete. The Form auth carrier now preserves
-  API-key/contributor-key decision parity. Public mutable DB-backed spec
-  registry behavior still enters through FastAPI until direct application
-  `graph_nodes` Postgres writes, revision rows, and edge cleanup are bound.
+  API-key/contributor-key decision parity, and the Form application graph
+  carrier emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges`
+  SQL. Public mutable DB-backed spec registry behavior still enters through
+  FastAPI until method-specific route rows bind request bodies, response
+  projection, cache invalidation, and live DB execution proof.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

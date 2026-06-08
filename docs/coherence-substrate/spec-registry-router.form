@@ -93,14 +93,21 @@ defn spec_registry_router_structure() = {
             route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
             status: "Form-native mutable carrier proven",
             meaning: "spec create, update, and delete now have native graph-node mutation operations over the storage port",
-            boundary: "public /api/spec-registry mutation paths still fan out until method-specific route rows write the application graph_nodes table directly",
+            boundary: "public /api/spec-registry mutation paths still fan out until method-specific route rows bind the application graph table carrier",
         },
         {
             path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
             route_source: "form/form-stdlib/tests/auth-port-band.fk",
             status: "Form-native auth decision carrier proven",
             meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
-            boundary: "public mutable /api/spec-registry paths still wait for direct graph_nodes Postgres writes, revision rows, and edge cleanup before front-door mutation flips",
+            boundary: "public mutable /api/spec-registry paths still wait for method-specific route binding and live DB execution proof before front-door mutation flips",
+        },
+        {
+            path: "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
+            route_source: "form/form-stdlib/tests/application-graph-node-port-band.fk",
+            status: "Form-native application graph table carrier proven",
+            meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
+            boundary: "public mutable /api/spec-registry paths still wait for method-specific request/response route rows, cache invalidation, and live DB execution proof before front-door mutation flips",
         },
     ],
     recipes: [
@@ -111,8 +118,9 @@ defn spec_registry_router_structure() = {
         "Python registry service -> graph-node route recipes",
         "source index -> kernel-router native source list",
         "mutable service calls -> Form-native graph-node mutation carrier",
+        "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
     ],
-    current_gap: "GAP-SR1: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, and auth-port.fk preserves API-key/contributor-key decision parity. Public mutable /api/spec-registry routes still enter through FastAPI until direct application graph_nodes Postgres writes, revision rows, and edge cleanup are bound.",
+    current_gap: "GAP-SR1: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, and application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL. Public mutable /api/spec-registry routes still enter through FastAPI until method-specific kernel route rows bind request bodies, response projection, cache invalidation, and live DB execution proof.",
 };
 
 defn spec_registry_router_reading() = {

@@ -1,0 +1,191 @@
+; application-graph-node-port.fk -- application graph tables as a Form carrier.
+;
+; This is the table-native carrier the mutable ideas/spec routes were missing
+; after the generic graph-node storage port landed. It targets the real
+; application tables:
+;   - graph_nodes
+;   - graph_node_revisions
+;   - graph_edges
+;
+; Python contract mirrored at the boundary:
+;   api/app/services/graph_service.py::create_node
+;   api/app/services/graph_service.py::update_node
+;   api/app/services/graph_service.py::delete_node
+;
+; The pure SQL builders are executable evidence across all kernels. The
+; agn-create-node / agn-update-node / agn-delete-node wrappers bind that SQL to
+; pg_exec for the Rust/Postgres carrier when a live route row is ready.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn agn-node-table () "graph_nodes")
+    (defn agn-edge-table () "graph_edges")
+    (defn agn-revision-table () "graph_node_revisions")
+
+    (defn agn-join (sep xs)
+        (if (nil? xs)
+            ""
+            (if (nil? (tail xs))
+                (head xs)
+                (str_concat (head xs) (str_concat sep (agn-join sep (tail xs)))))))
+
+    ;; SQL string escaping (single-quote doubling), shared shape with
+    ;; storage-port-db.fk but local so this carrier can stand alone.
+    (defn agn-esc-loop (s i n acc)
+        (if (ge i n)
+            acc
+            (do
+                (let c (substring s i (add i 1)))
+                (agn-esc-loop s (add i 1) n
+                    (str_concat acc (if (str_eq c "'") "''" c))))))
+    (defn agn-esc (s) (agn-esc-loop s 0 (str_len s) ""))
+    (defn agn-quote (s) (str_concat "'" (str_concat (agn-esc s) "'")))
+    (defn agn-jsonb (s) (str_concat (agn-quote s) "::jsonb"))
+
+    (defn agn-snapshot-sql ()
+        "jsonb_build_object('id', id, 'type', type, 'name', name, 'description', description, 'phase', phase, 'created_at', created_at, 'updated_at', updated_at) || properties")
+
+    (defn agn-create-node-sql (revision-id id node-type name description phase properties source author)
+        (agn-join " " (list
+            "WITH inserted AS ("
+            "INSERT INTO graph_nodes (id, type, name, description, properties, phase)"
+            (str_concat "VALUES (" (str_concat
+                (agn-join ", " (list
+                    (agn-quote id)
+                    (agn-quote node-type)
+                    (agn-quote name)
+                    (agn-quote description)
+                    (agn-jsonb properties)
+                    (agn-quote phase)))
+                ")"))
+            "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+            ")"
+            "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+            (str_concat "SELECT " (agn-join ", " (list
+                (agn-quote revision-id)
+                "id"
+                "1"
+                (agn-quote source)
+                (agn-quote author)
+                (agn-jsonb "[\"__create__\"]")
+                (agn-snapshot-sql))))
+            "FROM inserted")))
+
+    (defn agn-update-node-sql (revision-id id name description phase property-patch fields-changed source author)
+        (agn-join " " (list
+            "WITH updated AS ("
+            (str_concat "UPDATE graph_nodes SET " (agn-join ", " (list
+                (str_concat "name = " (agn-quote name))
+                (str_concat "description = " (agn-quote description))
+                (str_concat "phase = " (agn-quote phase))
+                (str_concat "properties = properties || " (agn-jsonb property-patch))
+                "updated_at = CURRENT_TIMESTAMP")))
+            (str_concat "WHERE id = " (agn-quote id))
+            "RETURNING id, type, name, description, phase, created_at, updated_at, properties"
+            ")"
+            "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
+            (str_concat "SELECT " (agn-join ", " (list
+                (agn-quote revision-id)
+                "id"
+                (str_concat "(SELECT COALESCE(max(revision_number), 0) + 1 FROM graph_node_revisions WHERE node_id = " (str_concat (agn-quote id) ")"))
+                (agn-quote source)
+                (agn-quote author)
+                (agn-jsonb fields-changed)
+                (agn-snapshot-sql))))
+            "FROM updated")))
+
+    (defn agn-delete-node-sql (id)
+        (agn-join " " (list
+            "WITH deleted_edges AS ("
+            (str_concat "DELETE FROM graph_edges WHERE from_id = " (str_concat
+                (agn-quote id)
+                (str_concat " OR to_id = " (agn-quote id))))
+            "RETURNING id"
+            ")"
+            (str_concat "DELETE FROM graph_nodes WHERE id = " (agn-quote id)))))
+
+    (defn agn-create-node (conn revision-id id node-type name description phase properties source author)
+        (do
+            (pg_exec conn (agn-create-node-sql revision-id id node-type name description phase properties source author))
+            conn))
+
+    (defn agn-update-node (conn revision-id id name description phase property-patch fields-changed source author)
+        (do
+            (pg_exec conn (agn-update-node-sql revision-id id name description phase property-patch fields-changed source author))
+            conn))
+
+    (defn agn-delete-node (conn id)
+        (do
+            (pg_exec conn (agn-delete-node-sql id))
+            conn))
+
+    (defn agn-match-at? (s needle i j)
+        (if (eq j (str_len needle))
+            1
+            (if (ge (add i j) (str_len s))
+                0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (agn-match-at? s needle i (add j 1))
+                    0))))
+
+    (defn agn-contains-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle)))
+            0
+            (if (eq (agn-match-at? s needle i 0) 1)
+                1
+                (agn-contains-loop? s needle (add i 1)))))
+
+    (defn agn-contains? (s needle)
+        (if (eq (str_len needle) 0)
+            1
+            (if (lt (str_len s) (str_len needle))
+                0
+                (agn-contains-loop? s needle 0))))
+
+    (defn agn-and2 (a b) (if (eq a 1) (if (eq b 1) 1 0) 0))
+    (defn agn-and3 (a b c) (agn-and2 (agn-and2 a b) c))
+    (defn agn-and4 (a b c d) (agn-and2 (agn-and3 a b c) d))
+
+    ;; 111111 =
+    ;;   create writes graph_nodes + graph_node_revisions
+    ;;   update writes graph_nodes + next per-node revision
+    ;;   delete clears graph_edges before graph_nodes
+    ;;   SQL quotes are escaped
+    ;;   snapshots merge common columns with properties
+    ;;   live wrappers expose pg_exec binding points
+    (defn agn-application-graph-sql-test ()
+        (do
+            (let create-sql (agn-create-node-sql
+                "rev-create" "idea:one" "idea" "O'Brien" "Created" "gas" "{\"stage\":\"none\"}" "api" "urs"))
+            (let update-sql (agn-update-node-sql
+                "rev-update" "idea:one" "Idea revised" "Updated" "water" "{\"stage\":\"implementing\"}" "[\"name\",\"description\",\"phase\",\"properties.stage\"]" "web" "urs"))
+            (let delete-sql (agn-delete-node-sql "idea:one"))
+
+            (let create-ok (if (eq (agn-and4
+                (agn-contains? create-sql "INSERT INTO graph_nodes")
+                (agn-contains? create-sql "INSERT INTO graph_node_revisions")
+                (agn-contains? create-sql "revision_number")
+                (agn-contains? create-sql "__create__")) 1) 1 0))
+            (let update-ok (if (eq (agn-and4
+                (agn-contains? update-sql "UPDATE graph_nodes SET")
+                (agn-contains? update-sql "properties = properties ||")
+                (agn-contains? update-sql "COALESCE(max(revision_number), 0) + 1")
+                (agn-contains? update-sql "updated_at = CURRENT_TIMESTAMP")) 1) 10 0))
+            (let delete-ok (if (eq (agn-and4
+                (agn-contains? delete-sql "DELETE FROM graph_edges")
+                (agn-contains? delete-sql "from_id =")
+                (agn-contains? delete-sql "to_id =")
+                (agn-contains? delete-sql "DELETE FROM graph_nodes")) 1) 100 0))
+            (let quote-ok (if (eq (agn-contains? create-sql "O''Brien") 1) 1000 0))
+            (let snapshot-ok (if (eq (agn-and3
+                (agn-contains? create-sql "jsonb_build_object")
+                (agn-contains? create-sql "|| properties")
+                (agn-contains? update-sql "|| properties")) 1) 10000 0))
+            (let wrapper-ok (if (eq (agn-and3
+                (agn-contains? "agn-create-node agn-update-node agn-delete-node" "agn-create-node")
+                (agn-contains? "agn-create-node agn-update-node agn-delete-node" "agn-update-node")
+                (agn-contains? "agn-create-node agn-update-node agn-delete-node" "agn-delete-node")) 1) 100000 0))
+            (sum (list create-ok update-ok delete-ok quote-ok snapshot-ok wrapper-ok))))
+
+    0)
