@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Free the source-backed spec registry list from mandatory Python handling with a native kernel-router route.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_specs_source_native_route.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_spec_registry_source_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/INDEX.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19186 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+      "python3 - <<'PY'\nimport json, urllib.request\nwith urllib.request.urlopen('http://127.0.0.1:19186/api/spec-registry/source-list') as r:\n    body = json.loads(r.read())\n    print(r.status, r.headers.get('X-Form-Router'), len(body), body[0]['spec_id'], body[-1]['spec_id'], body[-1]['content_path'])\nPY",
+      "cd api && python3 -m pytest -q tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "cd api && python3 -m ruff check tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/spec-registry-source-native.md --file specs/ideas-router-form-expression.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "GET /api/spec-registry/source-list now reads specs/INDEX.md inside the kernel-router manifest and emits SpecRegistryEntry-shaped rows without FastAPI or spec_registry_service. After the new contract joined specs/INDEX.md, the route returned 146 source specs with X-Form-Router:native-kernel and is counted as a kernel-first capable /api route.",
+    "known_limitations": [
+      {
+        "scope": "live spec registry",
+        "observed": "The mutable /api/spec-registry list/create/update/delete routes still enter FastAPI. This slice frees the source-backed spec list only."
+      },
+      {
+        "scope": "frontmatter richness",
+        "observed": "specs/INDEX.md carries slug, title, and summary. Metrics, timestamps, workspace, and content fields emit conservative defaults until a native frontmatter parser lands."
+      },
+      {
+        "scope": "route-table validate",
+        "observed": "Full production-routes.fk cross-kernel validate is not used as the pass/fail gate because the manifest's existing source-language section still depends on helper lowering outside the plain validate path. Rust serve plus HTTP assertion is the route behavior proof."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this spec source native route commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this source-backed native route slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/spec-registry/source-list is now a kernel-first capable route that reads specs/INDEX.md and returns SpecRegistryEntry-shaped JSON rows without FastAPI or spec_registry_service. Existing /api/spec-registry behavior is unchanged.",
+    "public_endpoints": [
+      "GET /api/spec-registry/source-list",
+      "GET /api/spec-registry",
+      "GET /api/ideas/source-portfolio"
+    ],
+    "test_flows": [
+      "python3 runtime assertion -> 200 native-kernel 146 active-recipe-tracing-form substrate-render-fabric-v0 specs/substrate-render-fabric-v0.md",
+      "python3 scripts/runtime_surface_report.py --json -> kernel_first_capable_routes=28 and includes /api/spec-registry/source-list",
+      "cd api && python3 -m pytest -q tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py -> 5 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and deployment validation remain pending."
+  },
+  "idea_ids": [
+    "data-infrastructure",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/spec-registry-source-native.md",
+    "specs/ideas-router-form-expression.md"
+  ],
+  "task_ids": [
+    "spec-registry-source-native-20260608",
+    "spec-registry-live-graph-storage-carrier"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk",
+    "specs/INDEX.md",
+    "api/app/models/spec_registry.py",
+    "api/tests/test_specs_source_native_route.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_specs_source_native_route.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_spec_registry_source_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/INDEX.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

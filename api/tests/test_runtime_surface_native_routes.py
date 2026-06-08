@@ -97,7 +97,8 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     """The real instrument: 0 served kernel-first at the front door, and the
     production manifest's native routes are all CAPABLE. Pins the SERVED/CAPABLE
     split the runtime-share journey tracks, including native Form source/structure
-    source-portfolio, and graph-projection routes that do not have a CPython twin."""
+    source-portfolio, graph-projection, and specs source routes that do not have
+    a CPython twin."""
     mod = _load_report()
     report = mod.build_report()
 
@@ -111,6 +112,7 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert "/api/ideas/source-index" in capable
     assert "/api/ideas/source-portfolio" in capable
     assert "/api/ideas/graph-projection" in capable
+    assert "/api/spec-registry/source-list" in capable
     assert len(capable) == len(set(capable)), f"duplicates: {capable}"
     # back-compat alias stays pinned to SERVED (0 at the front door)
     assert report["kernel_first_routes"] == report["kernel_first_served_routes"]
