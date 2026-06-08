@@ -16,6 +16,8 @@ section [form.bml] {
     let kh_tag_route_candidate = 43006;
     let kh_tag_route_data_ref = 43007;
     let kh_tag_field = 43008;
+    let kh_tag_route_decision = 43009;
+    let kh_tag_route_choice = 43010;
 
     def kh-bool-score(ok, score) = if ok then score else 0;
     def kh-tagged?(value, tag, arity) = if eq(len(value), arity) then eq(nth(value, 0), tag) else false;
@@ -129,12 +131,41 @@ section [form.bml] {
     def kh-route-candidate-score(candidate) = nth(candidate, 5);
     def kh-route-candidate-valid?(candidate) = if kh-route-candidate?(candidate) then and(kh-route-valid?(kh-route-candidate-route(candidate)), and(kh-request-valid?(kh-route-candidate-request(candidate)), and(eq(kh-route-candidate-pressure(candidate), kh-pressure-matrix-total(kh-route-candidate-matrix(candidate))), eq(kh-route-candidate-score(candidate), kh-candidate-score-from(kh-route-candidate-route(candidate), kh-route-candidate-pressure(candidate)))))) else false;
 
+    def kh-route-candidate-eligible?(candidate) = if kh-route-candidate?(candidate) then le(kh-route-candidate-pressure(candidate), kh-route-pressure-budget(kh-route-candidate-route(candidate))) else false;
     def kh-route-candidates(routes, request) = if nil?(routes) then empty else cons(kh-route-candidate(head(routes), request), kh-route-candidates(tail(routes), request));
+    def kh-keep-eligible-candidate(candidate, rest) = if kh-route-candidate-eligible?(candidate) then cons(candidate, rest) else rest;
+    def kh-eligible-candidates(candidates) = if nil?(candidates) then empty else kh-keep-eligible-candidate(head(candidates), kh-eligible-candidates(tail(candidates)));
+    def kh-route-eligible-candidates(routes, request) = kh-eligible-candidates(kh-route-candidates(routes, request));
+    def kh-route-same?(left, right) = if kh-route?(left) then if kh-route?(right) then and(str_eq(kh-route-name(left), kh-route-name(right)), and(str_eq(kh-route-method(left), kh-route-method(right)), and(str_eq(kh-route-pattern(left), kh-route-pattern(right)), and(eq(kh-route-priority(left), kh-route-priority(right)), and(str_eq(kh-route-handler(left), kh-route-handler(right)), and(str_eq(kh-route-required-header(left), kh-route-required-header(right)), eq(kh-route-pressure-budget(left), kh-route-pressure-budget(right)))))))) else false else false;
+    def kh-route-candidate-same?(left, right) = if kh-route-candidate?(left) then if kh-route-candidate?(right) then and(kh-route-same?(kh-route-candidate-route(left), kh-route-candidate-route(right)), and(eq(kh-route-candidate-pressure(left), kh-route-candidate-pressure(right)), eq(kh-route-candidate-score(left), kh-route-candidate-score(right)))) else false else false;
     def kh-better-candidate(left, right) = if gt(kh-route-candidate-score(left), kh-route-candidate-score(right)) then left else if eq(kh-route-candidate-score(left), kh-route-candidate-score(right)) then if ge(kh-route-priority(kh-route-candidate-route(left)), kh-route-priority(kh-route-candidate-route(right))) then left else right else right;
     def kh-select-route-candidate-loop(candidates, best) = if nil?(candidates) then best else kh-select-route-candidate-loop(tail(candidates), kh-better-candidate(best, head(candidates)));
     def kh-select-route-candidate(candidates) = if nil?(candidates) then empty else kh-select-route-candidate-loop(tail(candidates), head(candidates));
-    def kh-select-route-candidate-for-request(routes, request) = kh-select-route-candidate(kh-route-candidates(routes, request));
-    def kh-select-route-score(routes, request) = if nil?(routes) then 0 else kh-route-candidate-score(kh-select-route-candidate-for-request(routes, request));
+    def kh-route-decision(candidate, eligible, selected) = list(kh_tag_route_decision, candidate, eligible, selected);
+    def kh-route-decision?(decision) = kh-tagged?(decision, kh_tag_route_decision, 4);
+    def kh-route-decision-candidate(decision) = nth(decision, 1);
+    def kh-route-decision-eligible?(decision) = nth(decision, 2);
+    def kh-route-decision-selected?(decision) = nth(decision, 3);
+    def kh-route-decision-valid?(decision) = if kh-route-decision?(decision) then kh-route-candidate-valid?(kh-route-decision-candidate(decision)) else false;
+    def kh-route-decisions(candidates, selected) = if nil?(candidates) then empty else cons(kh-route-decision(head(candidates), kh-route-candidate-eligible?(head(candidates)), kh-route-candidate-same?(head(candidates), selected)), kh-route-decisions(tail(candidates), selected));
+    def kh-route-decisions-valid?(decisions) = if nil?(decisions) then true else if kh-route-decision-valid?(head(decisions)) then kh-route-decisions-valid?(tail(decisions)) else false;
+    def kh-route-choice(request, candidates, decisions, selected) = list(kh_tag_route_choice, request, candidates, decisions, selected);
+    def kh-route-choice?(choice) = kh-tagged?(choice, kh_tag_route_choice, 5);
+    def kh-route-choice-request(choice) = nth(choice, 1);
+    def kh-route-choice-candidates(choice) = nth(choice, 2);
+    def kh-route-choice-decisions(choice) = nth(choice, 3);
+    def kh-route-choice-selected(choice) = nth(choice, 4);
+    def kh-route-choice-valid?(choice) = if kh-route-choice?(choice) then and(kh-request-valid?(kh-route-choice-request(choice)), and(eq(len(kh-route-choice-candidates(choice)), len(kh-route-choice-decisions(choice))), kh-route-decisions-valid?(kh-route-choice-decisions(choice)))) else false;
+    def kh-route-choice-for-request(routes, request) {
+        let candidates = kh-route-candidates(routes, request);
+        let selected = kh-select-route-candidate(kh-eligible-candidates(candidates));
+        kh-route-choice(request, candidates, kh-route-decisions(candidates, selected), selected);
+    }
+    def kh-select-route-candidate-for-request(routes, request) = kh-route-choice-selected(kh-route-choice-for-request(routes, request));
+    def kh-select-route-score(routes, request) {
+        let selected = kh-select-route-candidate-for-request(routes, request);
+        if nil?(selected) then 0 else kh-route-candidate-score(selected);
+    }
 
     0;
 }

@@ -14,11 +14,9 @@
 # section-compile's g-parse gap) — and both must be caught.
 #
 # The baseline (deploy/kernel-router/.namecheck-baseline) lists manifests with a KNOWN,
-# tracked failure — currently production-routes.fk, whose form.route class->route
-# lowering is broken (codex's source-compiler core; see the file's note). A baselined
-# manifest is reported but does not fail the build; a NON-baselined failure does. When
-# the known gap is fixed, remove its line: the manifest must then stay clean. The
-# ratchet only ever tightens.
+# tracked failure. A baselined manifest is reported but does not fail the build; a
+# NON-baselined failure does. When a known gap is fixed, remove its line: the manifest
+# must then stay clean. The ratchet only ever tightens.
 #
 # Run standalone:  scripts/check_route_manifests.sh   (builds the kernel if stale)
 # Designed to also be called from form/validate.sh (the proof harness, which already

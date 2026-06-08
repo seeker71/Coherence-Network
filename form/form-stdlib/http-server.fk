@@ -11,8 +11,8 @@
 ; The shape:
 ;   kh-serve(routes, registry, raw) -> wire string
 ;     parse    : raw -> kh-request                       (http-request.fk)
-;     route    : kh-request + routes -> best candidate    (kernel-http.fk Router)
-;     match?   : did a real route win? (path pressure < 500)
+;     route    : kh-request + routes -> route choice      (kernel-http.fk Router)
+;     match?   : did an eligible real route win? (path pressure < 500)
 ;     dispatch : candidate -> handler(kh-request) -> kh-response
 ;     render   : kh-response -> wire string               (http-render.fk)
 ;
@@ -26,12 +26,13 @@ section [form.bml] {
 
     // ---- the match decision : did a real route win? -----------------
     // The Router always returns a best candidate, even a poor one. A real match
-    // is one whose PATH pressure is below the miss score (500): 0 for an exact
-    // path, 25 for a wildcard prefix. We read the path row from the candidate's
-    // pressure matrix by AXIS, not by position, so the check holds if the matrix
-    // order ever changes — the axis name is the contract, the slot is not.
+    // is eligible and has PATH pressure below the miss score (500): 0 for an
+    // exact path, 25 for a wildcard prefix. We read the path row from the
+    // candidate's pressure matrix by AXIS, not by position, so the check holds
+    // if the matrix order ever changes — the axis name is the contract, the
+    // slot is not.
     def kh-matrix-pressure-for(matrix, axis) = if nil?(matrix) then 500 else if str_eq(kh-pressure-row-axis(head(matrix)), axis) then kh-pressure-row-pressure(head(matrix)) else kh-matrix-pressure-for(tail(matrix), axis);
-    def kh-candidate-matched?(candidate) = if nil?(candidate) then false else lt(kh-matrix-pressure-for(kh-route-candidate-matrix(candidate), "path"), 500);
+    def kh-candidate-matched?(candidate) = if nil?(candidate) then false else and(kh-route-candidate-eligible?(candidate), lt(kh-matrix-pressure-for(kh-route-candidate-matrix(candidate), "path"), 500));
 
     // ---- the handler registry : (name, handler) pairs ---------------
     // Look up a handler closure by the name its route carries. The registry is
@@ -77,7 +78,8 @@ section [form.bml] {
     // every decision a value you can name and trace.
     def kh-serve(routes, registry, raw) {
         let request = kh-request-from-raw(raw);
-        let candidate = kh-select-route-candidate-for-request(routes, request);
+        let choice = kh-route-choice-for-request(routes, request);
+        let candidate = kh-route-choice-selected(choice);
         let response = if kh-candidate-matched?(candidate) then kh-dispatch(registry, candidate, request) else kh-not-found(request);
         kh-serve-response(response);
     }

@@ -6518,10 +6518,33 @@ struct RouteCandidateValue {
     score: i64,
 }
 
+#[derive(Clone, Debug)]
+struct RouteRequestValue {
+    method: String,
+    path: String,
+    headers: Vec<(String, String)>,
+    query: Vec<(String, String)>,
+    body: String,
+}
+
+#[derive(Clone, Debug)]
+struct RouteDecisionValue {
+    candidate: RouteCandidateValue,
+    eligible: bool,
+    selected: bool,
+}
+
 #[derive(Debug)]
 struct RouteSelection<'a> {
     route: &'a RouteSpec,
     candidate: RouteCandidateValue,
+}
+
+#[derive(Debug)]
+struct RouteChoice<'a> {
+    request: RouteRequestValue,
+    decisions: Vec<RouteDecisionValue>,
+    selected: Option<RouteSelection<'a>>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -6673,6 +6696,8 @@ const KH_TAG_PRESSURE_ROW: i64 = 43005;
 const KH_TAG_ROUTE_CANDIDATE: i64 = 43006;
 const KH_TAG_ROUTE_DATA_REF: i64 = 43007;
 const KH_TAG_FIELD: i64 = 43008;
+const KH_TAG_ROUTE_DECISION: i64 = 43009;
+const KH_TAG_ROUTE_CHOICE: i64 = 43010;
 
 fn route_value_string(value: &Value, field: &str) -> Result<String, String> {
     match value {
@@ -6924,17 +6949,6 @@ fn route_header_observation(route: &RouteSpec, headers: &[(String, String)]) -> 
     }
 }
 
-fn route_base_pressure(
-    route: &RouteSpec,
-    method: &str,
-    path: &str,
-    headers: &[(String, String)],
-) -> i64 {
-    route_method_pressure(route, method)
-        + route_path_pressure(route, path)
-        + route_header_pressure(route, headers)
-}
-
 fn route_budget_pressure(base_pressure: i64, pressure_budget: i64) -> i64 {
     if base_pressure <= pressure_budget {
         0
@@ -7024,6 +7038,64 @@ fn route_candidate_value_for_request(
     }
 }
 
+fn route_choice_for_request<'a>(
+    route_specs: &'a RouteSpecs,
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+    query: &[(String, String)],
+    body: &str,
+) -> RouteChoice<'a> {
+    let request = RouteRequestValue {
+        method: method.to_string(),
+        path: path.to_string(),
+        headers: headers.to_vec(),
+        query: query.to_vec(),
+        body: body.to_string(),
+    };
+    let mut rows: Vec<(&'a RouteSpec, RouteCandidateValue, bool)> = Vec::new();
+    let mut best_index: Option<usize> = None;
+    for route in route_specs {
+        let candidate =
+            route_candidate_value_for_request(route, method, path, headers, query, body);
+        let eligible = route_candidate_eligible(route, candidate.pressure);
+        if eligible {
+            let replace = match best_index {
+                None => true,
+                Some(current_index) => {
+                    let current = &rows[current_index];
+                    candidate.score > current.1.score
+                        || (candidate.score == current.1.score
+                            && route.priority > current.0.priority)
+                }
+            };
+            if replace {
+                best_index = Some(rows.len());
+            }
+        }
+        rows.push((route, candidate, eligible));
+    }
+    let decisions = rows
+        .iter()
+        .enumerate()
+        .map(|(index, (_, candidate, eligible))| RouteDecisionValue {
+            candidate: candidate.clone(),
+            eligible: *eligible,
+            selected: best_index == Some(index),
+        })
+        .collect();
+    let selected = best_index.map(|index| RouteSelection {
+        route: rows[index].0,
+        candidate: rows[index].1.clone(),
+    });
+    RouteChoice {
+        request,
+        decisions,
+        selected,
+    }
+}
+
+#[cfg(test)]
 fn select_route_candidate<'a>(
     route_specs: &'a RouteSpecs,
     method: &str,
@@ -7032,29 +7104,7 @@ fn select_route_candidate<'a>(
     query: &[(String, String)],
     body: &str,
 ) -> Option<RouteSelection<'a>> {
-    let mut best: Option<RouteSelection<'a>> = None;
-    for route in route_specs {
-        let base_pressure = route_base_pressure(route, method, path, headers);
-        let budget_pressure = route_budget_pressure(base_pressure, route.pressure_budget);
-        let pressure = base_pressure + budget_pressure;
-        if !route_candidate_eligible(route, pressure) {
-            continue;
-        }
-        let candidate =
-            route_candidate_value_for_request(route, method, path, headers, query, body);
-        let replace = match best {
-            None => true,
-            Some(ref current) => {
-                candidate.score > current.candidate.score
-                    || (candidate.score == current.candidate.score
-                        && route.priority > current.route.priority)
-            }
-        };
-        if replace {
-            best = Some(RouteSelection { route, candidate });
-        }
-    }
-    best
+    route_choice_for_request(route_specs, method, path, headers, query, body).selected
 }
 
 #[cfg(test)]
@@ -7228,14 +7278,15 @@ fn handle_request(
     // headers; the router owns all framing on those arms.
     let mut resp_content_type = String::new();
     let mut resp_headers: Vec<(String, String)> = Vec::new();
-    if let Some(selection) = select_route_candidate(
+    let route_choice = route_choice_for_request(
         route_specs,
         &method,
         &path,
         &req_headers,
         &query_data,
         &request_body,
-    ) {
+    );
+    if let Some(selection) = route_choice.selected.as_ref() {
         let route = selection.route;
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the compatibility handler alist as Value::List of (key, value)
@@ -7251,7 +7302,7 @@ fn handle_request(
             &path,
             upstream,
             &metrics_snapshot,
-            Some(&selection.candidate),
+            Some(&route_choice),
         );
         handler_data.extend(
             request_data
@@ -9251,29 +9302,53 @@ fn router_http_route_value(candidate: &RouteCandidateValue) -> Value {
     )
 }
 
-fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
+fn router_http_request_parts_value(
+    method: &str,
+    path: &str,
+    headers: &[(String, String)],
+    query: &[(String, String)],
+    body: &str,
+) -> Value {
     Value::List(
         vec![
             Value::Int(KH_TAG_REQUEST),
-            Value::Str(candidate.request_method.clone().into()),
-            Value::Str(candidate.request_path.clone().into()),
+            Value::Str(method.to_string().into()),
+            Value::Str(path.to_string().into()),
             Value::List(Arc::new(
-                candidate
-                    .request_headers
+                headers
                     .iter()
                     .map(|(name, value)| router_http_header_value(name, value))
                     .collect(),
             )),
             Value::List(Arc::new(
-                candidate
-                    .request_query
+                query
                     .iter()
                     .map(|(name, value)| router_http_field_value(name, value))
                     .collect(),
             )),
-            Value::Str(candidate.request_body.clone().into()),
+            Value::Str(body.to_string().into()),
         ]
         .into(),
+    )
+}
+
+fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
+    router_http_request_parts_value(
+        &candidate.request_method,
+        &candidate.request_path,
+        &candidate.request_headers,
+        &candidate.request_query,
+        &candidate.request_body,
+    )
+}
+
+fn router_http_choice_request_value(request: &RouteRequestValue) -> Value {
+    router_http_request_parts_value(
+        &request.method,
+        &request.path,
+        &request.headers,
+        &request.query,
+        &request.body,
     )
 }
 
@@ -9320,6 +9395,56 @@ fn router_route_candidate_matrix_value(candidate: &RouteCandidateValue) -> Value
     ))
 }
 
+fn router_route_decision_value(decision: &RouteDecisionValue) -> Value {
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE_DECISION),
+            router_route_candidate_value(&decision.candidate),
+            Value::Bool(decision.eligible),
+            Value::Bool(decision.selected),
+        ]
+        .into(),
+    )
+}
+
+fn router_route_choice_candidates_value(choice: &RouteChoice<'_>) -> Value {
+    Value::List(Arc::new(
+        choice
+            .decisions
+            .iter()
+            .map(|decision| router_route_candidate_value(&decision.candidate))
+            .collect(),
+    ))
+}
+
+fn router_route_choice_decisions_value(choice: &RouteChoice<'_>) -> Value {
+    Value::List(Arc::new(
+        choice
+            .decisions
+            .iter()
+            .map(router_route_decision_value)
+            .collect(),
+    ))
+}
+
+fn router_route_choice_value(choice: &RouteChoice<'_>) -> Value {
+    let selected = choice
+        .selected
+        .as_ref()
+        .map(|selection| router_route_candidate_value(&selection.candidate))
+        .unwrap_or_else(|| Value::List(Arc::new(Vec::new())));
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE_CHOICE),
+            router_http_choice_request_value(&choice.request),
+            router_route_choice_candidates_value(choice),
+            router_route_choice_decisions_value(choice),
+            selected,
+        ]
+        .into(),
+    )
+}
+
 fn router_observation_value(metrics: &RouterMetricsSnapshot) -> Value {
     router_dict_value(vec![
         (
@@ -9348,7 +9473,7 @@ fn router_context_data(
     path: &str,
     upstream: &Option<String>,
     metrics: &RouterMetricsSnapshot,
-    route_candidate: Option<&RouteCandidateValue>,
+    route_choice: Option<&RouteChoice<'_>>,
 ) -> Vec<(String, Value)> {
     let mut pairs = vec![
         (
@@ -9416,19 +9541,34 @@ fn router_context_data(
             Value::Str(metrics.next_bml_candidate_source.clone().into()),
         ),
     ];
-    if let Some(candidate) = route_candidate {
+    if let Some(choice) = route_choice {
         pairs.push((
-            "__kernel_request__".to_string(),
-            router_http_request_value(candidate),
+            "__router_route_choice__".to_string(),
+            router_route_choice_value(choice),
         ));
         pairs.push((
-            "__router_route_candidate__".to_string(),
-            router_route_candidate_value(candidate),
+            "__router_route_candidates__".to_string(),
+            router_route_choice_candidates_value(choice),
         ));
         pairs.push((
-            "__router_route_candidate_matrix__".to_string(),
-            router_route_candidate_matrix_value(candidate),
+            "__router_route_decisions__".to_string(),
+            router_route_choice_decisions_value(choice),
         ));
+        if let Some(selection) = choice.selected.as_ref() {
+            let candidate = &selection.candidate;
+            pairs.push((
+                "__kernel_request__".to_string(),
+                router_http_request_value(candidate),
+            ));
+            pairs.push((
+                "__router_route_candidate__".to_string(),
+                router_route_candidate_value(candidate),
+            ));
+            pairs.push((
+                "__router_route_candidate_matrix__".to_string(),
+                router_route_candidate_matrix_value(candidate),
+            ));
+        }
     }
     if let Some(upstream_base) = upstream {
         pairs.push((
@@ -9677,7 +9817,7 @@ mod router_context_tests {
             ..RouterMetricsSnapshot::default()
         };
         let headers = vec![("Accept".to_string(), "application/json".to_string())];
-        let route = route(
+        let exact_route = route(
             "runtime-health",
             "GET",
             "/api/runtime/health",
@@ -9686,9 +9826,19 @@ mod router_context_tests {
             "Accept",
             0,
         );
+        let blocked_route = route(
+            "blocked-runtime",
+            "GET",
+            "/api/runtime/health",
+            99,
+            "route_blocked_runtime",
+            "X-Missing",
+            0,
+        );
         let query = vec![("limit".to_string(), "20".to_string())];
-        let candidate = route_candidate_value_for_request(
-            &route,
+        let routes = vec![blocked_route, exact_route];
+        let route_choice = route_choice_for_request(
+            &routes,
             "GET",
             "/api/runtime/health",
             &headers,
@@ -9701,11 +9851,34 @@ mod router_context_tests {
             "/api/runtime/health",
             &upstream,
             &metrics,
-            Some(&candidate),
+            Some(&route_choice),
         );
 
         let candidate_value = value_for(&pairs, "__router_route_candidate__");
         assert_eq!(list_tag(candidate_value), KH_TAG_ROUTE_CANDIDATE);
+        let choice_value = value_for(&pairs, "__router_route_choice__");
+        assert_eq!(list_tag(choice_value), KH_TAG_ROUTE_CHOICE);
+        let candidates_value = value_for(&pairs, "__router_route_candidates__");
+        assert!(matches!(candidates_value, Value::List(xs) if xs.len() == 2));
+        let decisions_value = value_for(&pairs, "__router_route_decisions__");
+        assert!(matches!(decisions_value, Value::List(xs) if xs.len() == 2));
+        let decision_rows = match decisions_value {
+            Value::List(xs) => xs,
+            _ => panic!("route decisions must be a Form list value"),
+        };
+        assert_eq!(list_tag(&decision_rows[0]), KH_TAG_ROUTE_DECISION);
+        assert!(matches!(
+            &decision_rows[0],
+            Value::List(xs)
+                if matches!(&xs[2], Value::Bool(false))
+                    && matches!(&xs[3], Value::Bool(false))
+        ));
+        assert!(matches!(
+            &decision_rows[1],
+            Value::List(xs)
+                if matches!(&xs[2], Value::Bool(true))
+                    && matches!(&xs[3], Value::Bool(true))
+        ));
         let request_value = value_for(&pairs, "__kernel_request__");
         assert_eq!(list_tag(request_value), KH_TAG_REQUEST);
         let matrix_value = value_for(&pairs, "__router_route_candidate_matrix__");
@@ -9901,14 +10074,9 @@ mod route_spec_tests {
         assert_eq!(spec.pressure_budget, 0);
     }
 
-    // KNOWN RED, tracked: this currently panics `unbound: health_route_from_class`
-    // at the eval-time RB_IDENT lookup (main.rs ~5425). The source-compile path
-    // emits the recipe without resolving names, so a `let` bound inside the
-    // `section` block is unbound when the routes list evaluates. The fix is to
-    // wire name-check-clean? into compile_source_section_to_recipe_node so an
-    // unbound ref errors at compile, not serve (the name-check gate, PR #2579).
-    // Left runnable on purpose — it is the red→green target for that work, not a
-    // failure to mask with #[ignore].
+    // Route classes export their methods as `Class_method` closures. The raw
+    // route list consumes the generated handler through a route-data ref, so it
+    // does not rely on a section-local alias escaping into the following Form.
     #[test]
     fn source_route_manifest_compiles_to_recipe_object_program() {
         let manifest = r#"
@@ -9927,10 +10095,9 @@ mod route_spec_tests {
                     route = route_data(health, handle);
                 }
 
-                let health_route_from_class = language-route-class-kernel-route(HealthRoute);
             }
 
-            (let routes (list health_route_from_class))
+            (let routes (list (kh-route-data-ref "health" HealthRoute_handle)))
         "#;
         let path = env::temp_dir().join(format!(
             "form-router-source-route-object-{}.fk",
