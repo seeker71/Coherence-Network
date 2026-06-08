@@ -15,6 +15,7 @@ Covers:
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -23,6 +24,15 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 
 BASE = "http://test"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _installed_locale_codes() -> set[str]:
+    return {
+        path.stem
+        for path in (REPO_ROOT / "web" / "messages").glob("*.json")
+        if path.stem
+    }
 
 
 def _uid(prefix: str = "view-test") -> str:
@@ -54,12 +64,12 @@ async def _post_view(c: AsyncClient, cid: str, **body) -> dict:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_locales_includes_en_de_es_id():
+async def test_list_locales_matches_installed_message_bundles():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.get("/api/locales")
         assert r.status_code == 200
         codes = {loc["code"] for loc in r.json()["locales"]}
-        assert {"en", "de", "es", "id"}.issubset(codes)
+        assert _installed_locale_codes().issubset(codes)
         assert r.json()["default"] == "en"
 
 

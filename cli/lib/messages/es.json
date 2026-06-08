@@ -30,7 +30,7 @@
     "sectionGlobalFlags": "Banderas globales:",
     "sectionEnvVars": "Variables de entorno:",
     "hubLine": "Nodo: {url}",
-    "langFlagDescription": "--lang <código>  Anula el idioma del CLI solo para esta invocación (en|de|es|id)"
+    "langFlagDescription": "--lang <código>  Anula el idioma del CLI solo para esta invocación"
   },
   "status": {
     "ok": "OK",

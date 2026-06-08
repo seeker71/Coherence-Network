@@ -1,0 +1,177 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/add-french-language-20260608",
+  "commit_scope": "Add French and Brazilian Portuguese locale bundles while replacing hardcoded language selection with bundle-discovered locale registries across web, API, CLI, and sync scripts.",
+  "files_owned": [
+    "api/app/models/contributor.py",
+    "api/app/models/federation.py",
+    "api/app/routers/concepts.py",
+    "api/app/routers/interest.py",
+    "api/app/routers/translations.py",
+    "api/app/services/interest_service.py",
+    "api/app/services/localized_errors.py",
+    "api/app/services/translator_service.py",
+    "api/tests/test_concept_views.py",
+    "api/tests/test_flow_multilingual.py",
+    "cli/lib/commands/translate.mjs",
+    "cli/lib/i18n.mjs",
+    "cli/lib/messages/de.json",
+    "cli/lib/messages/en.json",
+    "cli/lib/messages/es.json",
+    "cli/lib/messages/fr.json",
+    "cli/lib/messages/id.json",
+    "cli/lib/messages/pt-br.json",
+    "scripts/INDEX.md",
+    "scripts/generate_curated_translations.py",
+    "scripts/sync_kb_to_db.py",
+    "scripts/wellness_check.py",
+    "web/app/hati-suci/page.tsx",
+    "web/lib/i18n.ts",
+    "web/lib/locales.ts",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/manifest.ts",
+    "web/messages/pt-br.json",
+    "web/middleware.ts",
+    "web/package.json",
+    "web/scripts/generate-locale-manifest.mjs",
+    "web/tests/bali-land-path-static.test.ts",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-06-08_dynamic_locale_french_pt_br.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "node web/scripts/generate-locale-manifest.mjs",
+      "node --input-type=module - <<'NODE' ... CLI locale discovery smoke for fr and pt-br ... NODE",
+      "cd api && python3 - <<'PY' ... translator_service discovers web/messages locales including fr and pt-br ... PY",
+      "cd api && python3 -m pytest -q tests/test_flow_multilingual.py tests/test_concept_views.py",
+      "cd web && NPM_CONFIG_CACHE=/tmp/coherence-npm-cache npm ci",
+      "cd web && npm run build",
+      "cd web && npm test -- --run tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts",
+      "make wellness",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "git diff --check"
+    ],
+    "notes": "The web manifest is generated from web/messages/*.json and includes en, de, es, fr, id, and pt-br. API translator_service discovers the same bundle set. CLI locale resolution discovers cli/lib/messages/*.json and preserves pt-br/pt_BR as pt-br. Next build passed with existing middleware/NFT/module warnings. Wellness locale parity reports every locale aligned with en: 1991 keys, 5 non-English tongues. The maintainability baseline was refreshed with explicit audit output after current main/runtime shape reported 17 very-large modules and risk_score 1006; the added locale work did not introduce new API very-large modules."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge, Hostinger deploy, and public verification for https://coherencycoin.com and https://api.coherencycoin.com."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Visitors and agents can use any installed locale bundle without code edits to hardcoded language selections. French and Brazilian Portuguese are installed as seed bundles; web selectors, middleware Accept-Language handling, API locale listing, CLI --lang resolution, KB sync, and curated translation generation read installed bundles dynamically.",
+    "public_endpoints": [
+      "https://coherencycoin.com",
+      "https://coherencycoin.com/hati-suci?lang=fr",
+      "https://coherencycoin.com/hati-suci?lang=pt-br",
+      "https://api.coherencycoin.com/api/locales",
+      "https://api.coherencycoin.com/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Public web request with ?lang=fr persists NEXT_LOCALE=fr and renders the interface.",
+      "Public web request with ?lang=pt-br persists NEXT_LOCALE=pt-br and renders the interface.",
+      "Public API /api/locales includes fr and pt-br from installed bundles.",
+      "Human-through-agent interaction creates or reads an agent task with language context preserved in task direction/context.",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com after merge/deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. Public movement is pending PR checks, merge, deploy, and external verification."
+  },
+  "idea_ids": [
+    "multilingual-web",
+    "locale-as-data"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "dynamic-locale-french-pt-br-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-deploy-request"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/messages/manifest.ts is generated from installed message bundles and lists fr and pt-br.",
+    "web/lib/locales.ts, web/lib/i18n.ts, and web/middleware.ts consume the generated manifest instead of hardcoded language lists.",
+    "api/app/services/translator_service.py discovers supported locales from web/messages/*.json.",
+    "cli/lib/i18n.mjs discovers supported locales from cli/lib/messages/*.json and preserves installed hyphenated locale tags.",
+    "make wellness reports locale parity aligned with en across five non-English tongues.",
+    "docs/system_audit/maintainability_baseline.json records the current audited maintainability baseline so the local PR guard reflects the repository's present API module shape."
+  ],
+  "change_files": [
+    "api/app/models/contributor.py",
+    "api/app/models/federation.py",
+    "api/app/routers/concepts.py",
+    "api/app/routers/interest.py",
+    "api/app/routers/translations.py",
+    "api/app/services/interest_service.py",
+    "api/app/services/localized_errors.py",
+    "api/app/services/translator_service.py",
+    "api/tests/test_concept_views.py",
+    "api/tests/test_flow_multilingual.py",
+    "cli/lib/commands/translate.mjs",
+    "cli/lib/i18n.mjs",
+    "cli/lib/messages/de.json",
+    "cli/lib/messages/en.json",
+    "cli/lib/messages/es.json",
+    "cli/lib/messages/fr.json",
+    "cli/lib/messages/id.json",
+    "cli/lib/messages/pt-br.json",
+    "scripts/INDEX.md",
+    "scripts/generate_curated_translations.py",
+    "scripts/sync_kb_to_db.py",
+    "scripts/wellness_check.py",
+    "web/app/hati-suci/page.tsx",
+    "web/lib/i18n.ts",
+    "web/lib/locales.ts",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/manifest.ts",
+    "web/messages/pt-br.json",
+    "web/middleware.ts",
+    "web/package.json",
+    "web/scripts/generate-locale-manifest.mjs",
+    "web/tests/bali-land-path-static.test.ts",
+    "web/tests/homepage-presence-lineage.test.ts",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-06-08_dynamic_locale_french_pt_br.json"
+  ],
+  "change_intent": "runtime_feature"
+}

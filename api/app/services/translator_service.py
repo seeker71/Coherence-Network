@@ -15,20 +15,53 @@ so the reader still meets the concept somewhere.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from app.services import translation_cache_service as _cache
 
 
-SUPPORTED_LOCALES: dict[str, dict[str, str]] = {
-    "en": {"name": "English", "native_name": "English"},
-    "de": {"name": "German", "native_name": "Deutsch"},
-    "es": {"name": "Spanish", "native_name": "Español"},
-    "id": {"name": "Indonesian", "native_name": "Bahasa Indonesia"},
-}
-
 DEFAULT_LOCALE = "en"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_WEB_MESSAGES_DIR = _REPO_ROOT / "web" / "messages"
+
+
+def _locale_meta(path: Path) -> dict[str, str]:
+    code = path.stem
+    try:
+        bundle = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        bundle = {}
+    attunement = bundle.get("_attunement", {}) if isinstance(bundle, dict) else {}
+    if not isinstance(attunement, dict):
+        attunement = {}
+    name = attunement.get("name") or attunement.get("languageName") or code
+    native_name = (
+        attunement.get("nativeName")
+        or attunement.get("native_name")
+        or name
+    )
+    return {"name": str(name), "native_name": str(native_name)}
+
+
+def _discover_supported_locales() -> dict[str, dict[str, str]]:
+    locales: dict[str, dict[str, str]] = {}
+    if _WEB_MESSAGES_DIR.exists():
+        for path in sorted(_WEB_MESSAGES_DIR.glob("*.json")):
+            locales[path.stem] = _locale_meta(path)
+
+    if DEFAULT_LOCALE not in locales:
+        return {DEFAULT_LOCALE: {"name": "English", "native_name": "English"}}
+
+    ordered = {DEFAULT_LOCALE: locales[DEFAULT_LOCALE]}
+    for code in sorted(c for c in locales if c != DEFAULT_LOCALE):
+        ordered[code] = locales[code]
+    return ordered
+
+
+SUPPORTED_LOCALES: dict[str, dict[str, str]] = _discover_supported_locales()
 
 
 @dataclass

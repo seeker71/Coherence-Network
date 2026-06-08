@@ -29,7 +29,7 @@ class TranslationSubmit(BaseModel):
 
     entity_type: str = Field(description="concept, idea, contribution, story, etc.")
     entity_id: str
-    lang: str = Field(description="Target language code: de, es, id, en, etc.")
+    lang: str = Field(description="Target installed language code.")
     content_title: str
     content_description: str = ""
     content_markdown: str

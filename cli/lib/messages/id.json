@@ -30,7 +30,7 @@
     "sectionGlobalFlags": "Bendera global:",
     "sectionEnvVars": "Variabel lingkungan:",
     "hubLine": "Simpul: {url}",
-    "langFlagDescription": "--lang <kode>  Menimpa bahasa CLI hanya untuk pemanggilan ini (en|de|es|id)"
+    "langFlagDescription": "--lang <kode>  Menimpa bahasa CLI hanya untuk pemanggilan ini"
   },
   "status": {
     "ok": "OK",

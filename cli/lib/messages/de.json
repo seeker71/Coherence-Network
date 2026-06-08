@@ -30,7 +30,7 @@
     "sectionGlobalFlags": "Globale Flags:",
     "sectionEnvVars": "Umgebungsvariablen:",
     "hubLine": "Knoten: {url}",
-    "langFlagDescription": "--lang <Code>  CLI-Sprache für diesen Aufruf überschreiben (en|de|es|id)"
+    "langFlagDescription": "--lang <Code>  CLI-Sprache für diesen Aufruf überschreiben"
   },
   "status": {
     "ok": "OK",

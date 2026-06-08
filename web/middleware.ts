@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const SUPPORTED = new Set(["en", "de", "es", "id"]);
+import { LOCALES } from "./messages/manifest";
+
+const SUPPORTED: Set<string> = new Set(LOCALES.map((locale) => locale.code));
 const COOKIE_NAME = "NEXT_LOCALE";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // one year
 
@@ -18,12 +20,14 @@ function bestFromAcceptLanguage(header: string | null): string | null {
       const [tag, ...params] = raw.trim().split(";");
       const qParam = params.find((p) => p.trim().startsWith("q="));
       const q = qParam ? parseFloat(qParam.split("=")[1]) || 0 : 1;
-      const prefix = (tag || "").split("-")[0].toLowerCase();
-      return { prefix, q };
+      const locale = (tag || "").trim().toLowerCase();
+      const prefix = locale.split("-")[0];
+      return { locale, prefix, q };
     })
-    .filter((c) => c.prefix && !Number.isNaN(c.q))
+    .filter((c) => c.locale && !Number.isNaN(c.q))
     .sort((a, b) => b.q - a.q);
   for (const c of candidates) {
+    if (SUPPORTED.has(c.locale)) return c.locale;
     if (SUPPORTED.has(c.prefix)) return c.prefix;
   }
   return null;

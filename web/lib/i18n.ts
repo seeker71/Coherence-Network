@@ -1,9 +1,8 @@
 /** Locale-text-as-data helpers.
  *
- * All user-facing strings live in web/messages/{lang}.json. Components call
- * t('key.path') rather than inlining text. This keeps translation work
- * separate from UI work — a native speaker can update messages/de.json
- * without touching TypeScript.
+ * All user-facing strings live in web/messages/{lang}.json. The installed
+ * locale list is generated from those files, so adding a language means adding
+ * a bundle and regenerating web/messages/manifest.ts.
  *
  * Works both server-side (getMessages, translateWith) and client-side (via
  * MessagesProvider + useT hook). The resolveLocale priority matches the
@@ -14,20 +13,8 @@
  *   4. default (en)
  */
 
-import en from "@/messages/en.json";
-import de from "@/messages/de.json";
-import es from "@/messages/es.json";
-import id from "@/messages/id.json";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
-
-type MessageTree = Record<string, unknown>;
-
-const BUNDLES: Record<LocaleCode, MessageTree> = {
-  en: en as MessageTree,
-  de: de as MessageTree,
-  es: es as MessageTree,
-  id: id as MessageTree,
-};
+import { BUNDLES, type MessageTree } from "@/messages/manifest";
 
 export function getMessages(lang: LocaleCode): MessageTree {
   return BUNDLES[lang] ?? BUNDLES[DEFAULT_LOCALE];

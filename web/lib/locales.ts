@@ -1,19 +1,11 @@
-export type LocaleCode = "en" | "de" | "es" | "id";
+import {
+  DEFAULT_LOCALE,
+  LOCALES,
+  type Locale,
+  type LocaleCode,
+} from "@/messages/manifest";
 
-export type Locale = {
-  code: LocaleCode;
-  name: string;
-  nativeName: string;
-};
-
-export const LOCALES: Locale[] = [
-  { code: "en", name: "English", nativeName: "English" },
-  { code: "de", name: "German", nativeName: "Deutsch" },
-  { code: "es", name: "Spanish", nativeName: "Español" },
-  { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia" },
-];
-
-export const DEFAULT_LOCALE: LocaleCode = "en";
+export { DEFAULT_LOCALE, LOCALES, type Locale, type LocaleCode };
 
 export function isSupportedLocale(code: string | null | undefined): code is LocaleCode {
   return !!code && LOCALES.some((l) => l.code === code);

@@ -30,7 +30,7 @@
     "sectionGlobalFlags": "Global flags:",
     "sectionEnvVars": "Environment variables:",
     "hubLine": "Hub: {url}",
-    "langFlagDescription": "--lang <code>  Override CLI locale (en|de|es|id) just for this invocation"
+    "langFlagDescription": "--lang <code>  Override CLI locale for this invocation"
   },
   "status": {
     "ok": "OK",
