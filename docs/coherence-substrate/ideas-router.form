@@ -208,7 +208,7 @@ defn ideas_router_structure() = {
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_index",
             status: "kernel-first capable",
             meaning: "the kernel-router reads ideas/INDEX.md and returns source-backed idea counts without CPython",
-            boundary: "DB-backed /api/ideas/count still fans out until graph-node Form reads are projected into the public API schema",
+            boundary: "DB-backed /api/ideas/count still fans out until the proven ideas graph projection is bound into the production route manifest",
         },
     ],
     recipes: [
@@ -231,7 +231,7 @@ defn ideas_router_structure() = {
         "Form-declared choreography -> kernel-router native structure route",
         "repo idea source -> kernel-router native source-index route",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable; graph-node-port.fk now exposes native get/list/count shape, while mutable DB-backed portfolio routes still enter through FastAPI until schema projection lands.",
+    current_gap: "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable; graph-node-port.fk exposes native get/list/count and ideas-graph-projection.fk now emits an IdeaPortfolioResponse-shaped read, while mutable DB-backed portfolio routes still enter through FastAPI until route-manifest binding and live storage carrier land.",
 };
 
 defn ideas_router_reading() = {

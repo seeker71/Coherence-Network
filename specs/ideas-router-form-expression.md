@@ -95,10 +95,10 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1: `/api/ideas/router-structure` and `/api/ideas/source-index` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until a graph-node Form read route projects the new `graph-node-port.fk` carrier into the existing API schema.
-- Follow-up: lift one graph-node-backed ideas read route on top of `form/form-stdlib/graph-node-port.fk`.
+- GAP-I1: `/api/ideas/router-structure` and `/api/ideas/source-index` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until the proven `ideas-graph-projection.fk` read shape is bound into the route manifest and a live storage carrier.
+- Follow-up: lift one graph-node-backed ideas read route on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
-- A later native route lift can consume this route recipe now that the graph-node read carrier shape exists; schema projection remains the next boundary.
+- A later native route lift can consume this route recipe now that the graph-node read carrier and idea schema projection shapes exist; manifest binding and live storage remain the next boundary.
