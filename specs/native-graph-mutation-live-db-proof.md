@@ -93,14 +93,14 @@ python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live
 
 - Production database writes.
 - Ordinary public front-door mutation routing changes.
-- `IdeaWithScore` or `SpecRegistryEntry` response projection.
 - Cache invalidation, parent/edge repair outside the deleted node edge cleanup,
   resonance re-attunement, or contributor-key audit updates.
 
 ## Gaps
 
-- GAP-NGMLDB1 follow-up task: `native-mutation-response-projection`. Project
-  live mutation results into the route response shape without FastAPI.
+- GAP-NGMLDB1: closed by `specs/native-mutation-response-projection.md`. Form
+  now projects live mutation rows into `IdeaWithScore` and `SpecRegistryEntry`
+  response shapes without FastAPI.
 - GAP-NGMLDB2 follow-up task: `native-mutation-side-effects`. Carry route cache,
   parent/edge repair, resonance, and contributor-key audit side effects natively.
 - GAP-NGMLDB3 follow-up task: `native-mutation-public-flip-gate`. Add a

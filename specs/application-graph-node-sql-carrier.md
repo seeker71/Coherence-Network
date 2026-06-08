@@ -47,8 +47,8 @@ This spec adds that missing Form carrier. It emits the SQL a native route row
 can execute through the Postgres `pg_exec` carrier, while keeping the public
 FastAPI mutation routes unchanged until method-specific request/response
 binding, live DB execution proof, response projection, and side effects are
-present. A later slice added header-gated native preview rows; this carrier
-remains the SQL source for those rows.
+present. Later slices added header-gated native preview rows, live DB execution,
+and response projection; this carrier remains the SQL source for those rows.
 
 ## Requirements
 
@@ -115,15 +115,17 @@ python3 scripts/validate_spec_quality.py --file specs/application-graph-node-sql
 
 - GAP-AGN1 follow-up task: `native-graph-mutation-live-db-proof`.
   Auth decisions, generic graph mutation shape, application table SQL, and
-  header-gated method-specific preview rows are now native. Public mutation
-  still needs live DB execution, response projection, cache invalidation,
-  parent/edge side effects, and contributor-key audit proof.
+  header-gated method-specific preview rows are now native. Live DB execution
+  and response projection are now proven by
+  `specs/native-graph-mutation-live-db-proof.md` and
+  `specs/native-mutation-response-projection.md`. Public mutation still needs
+  cache invalidation, parent/edge side effects, contributor-key audit proof, and
+  reversible public gating.
 - GAP-AGN2 follow-up task: `native-contributor-key-last-used-update`.
   Contributor-key allow/deny parity is native, but the audit side effect still
   belongs with a table carrier.
-- GAP-AGN3 follow-up task: `native-graph-mutation-live-db-proof`.
-  The SQL carrier is executable through `pg_exec`; live DB proof should run it
-  against the application schema before front-door flip.
+- GAP-AGN3: closed by `specs/native-graph-mutation-live-db-proof.md`. The SQL
+  carrier executes through `pg_exec` against a rollback-safe live DB fixture.
 
 ## Risks and Assumptions
 

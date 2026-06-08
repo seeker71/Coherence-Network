@@ -1,0 +1,180 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Prove Form-native mutation response projection from live application graph rows before any public mutation flip.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_response_projection.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_response_projection.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/application-graph-response-projection.fk",
+    "form/form-stdlib/integration/application-graph-response-projection-live.fk",
+    "form/form-stdlib/tests/application-graph-response-projection-band.fk",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "specs/INDEX.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/graph-node-form-port.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk",
+      "form/scripts/application-graph-response-projection-test.sh",
+      "cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_application_graph_response_projection.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/native-mutation-ab-observation-gate.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/graph-node-form-port.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "git diff --check"
+    ],
+    "summary": "application-graph-response-projection.fk projects graph row values into IdeaWithScore and SpecRegistryEntry-shaped JSON without FastAPI service calls. The sibling-kernel band returned 111 across Go/Rust/TypeScript. application-graph-response-projection-test.sh self-provisioned a throwaway Postgres and returned verdict 111111 after Form-native graph writes, SQL readback, idea projection, spec projection, cleanup, and close.",
+    "known_limitations": [
+      {
+        "scope": "public mutation routing",
+        "observed": "No ordinary public POST/PATCH/DELETE traffic moved. The response projection proof runs in Form tests and a throwaway database only."
+      },
+      {
+        "scope": "route side effects",
+        "observed": "Cache invalidation, parent/edge repair beyond deleted-node edge cleanup, resonance re-attunement, and contributor-key audit updates remain follow-up proof."
+      },
+      {
+        "scope": "front-door flip",
+        "observed": "The preview response now reports side-effect and reversible-gate blockers; it still returns executes:false and requires X-Form-Native-Preview."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of the native mutation response projection commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. This slice intentionally avoids the production application database and keeps the public front-door flip blocked."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-native mutation responses can now be projected from live application graph rows into IdeaWithScore and SpecRegistryEntry-shaped responses. The public route still fans out to FastAPI by default.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk -> 111",
+      "form/scripts/application-graph-response-projection-test.sh -> verdict: 111111 and application graph response projection PASS",
+      "agn-create-node -> graph_nodes rows read through pg_query and projected by agrp-project-idea-row / agrp-project-spec-row",
+      "IdeaWithScore projection computes free_energy_score, marginal_cc_score, remaining_cost_cc, value_gap_cc, roi_cc, cost_vector, and value_vector",
+      "SpecRegistryEntry projection computes value_gap, cost_gap, estimated_roi, actual_roi, contributor ids, source path, hash, and workspace id",
+      "cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> 31 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Response projection parity is complete for live mutation rows; public mutable front-door execution still needs cache/side-effect proof, contributor-key audit proof, and a reversible public flip gate."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-response-projection.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-mutation-response-projection",
+    "native-mutation-side-effects",
+    "native-mutation-public-flip-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/application-graph-response-projection.fk",
+    "form/form-stdlib/tests/application-graph-response-projection-band.fk",
+    "form/form-stdlib/integration/application-graph-response-projection-live.fk",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "api/tests/test_application_graph_response_projection.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-mutation-response-projection.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_application_graph_response_projection.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_response_projection.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/application-graph-response-projection.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/channel-flow.fk",
+    "form/form-stdlib/integration/application-graph-response-projection-live.fk",
+    "form/form-stdlib/tests/application-graph-response-projection-band.fk",
+    "form/form-stdlib/tests/channel-flow-band.fk",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "form/user-blueprint-registry.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "specs/INDEX.md",
+    "specs/native-mutation-response-projection.md"
+  ],
+  "change_intent": "runtime_feature"
+}

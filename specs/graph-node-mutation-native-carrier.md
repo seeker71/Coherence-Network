@@ -47,10 +47,10 @@ Ideas and specs can now leave the Python-only mutation vocabulary at the carrier
 level. This spec adds native Form graph-node create, replace, and delete
 operations over the existing storage port and proves that the same mutation
 recipe works over memory and durable file storage. The public HTTP mutation
-paths remain FastAPI by default until live DB execution, response projection,
-cache invalidation, and side effects are proven. Auth, application table SQL,
-and header-gated preview binding now exist; the default public mutation route
-still waits for live execution and side effects.
+paths remain FastAPI by default until cache invalidation, side effects, and a
+reversible public gate are proven. Auth, application table SQL, header-gated
+preview binding, live DB execution, and response projection now exist; the
+default public mutation route still waits for side effects.
 
 ## Requirements
 

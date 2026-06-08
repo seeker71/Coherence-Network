@@ -98,7 +98,6 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 
 - Public front-door routing changes.
 - PostgreSQL execution of preview SQL.
-- Response projection parity with `IdeaWithScore` or `SpecRegistryEntry`.
 - Cache invalidation, parent/edge repair, resonance re-attunement, or
   contributor-key audit side effects.
 
@@ -107,11 +106,12 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 - GAP-NMAOG1: closed by `specs/native-graph-mutation-live-db-proof.md`. The
   Form-native application graph mutation wrappers now run against a rollback-safe
   throwaway Postgres and verify writes, revisions, and edge cleanup.
-- GAP-NMAOG2 follow-up task: `native-mutation-response-projection`. Add response
-  projection parity to the B-side observation.
+- GAP-NMAOG2: closed by `specs/native-mutation-response-projection.md`. Form
+  response projection now covers `IdeaWithScore` and `SpecRegistryEntry` rows
+  after live DB mutation readback.
 - GAP-NMAOG3 follow-up task: `native-mutation-public-flip-gate`. Only after live
-  DB execution, response projection, cache invalidation, and side effects pass
-  should ordinary traffic be eligible for a reversible flip.
+  DB execution, cache invalidation, and side effects pass should ordinary traffic
+  be eligible for a reversible flip.
 
 ## Risks and Assumptions
 

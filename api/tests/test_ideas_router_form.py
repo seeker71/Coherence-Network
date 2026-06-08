@@ -83,8 +83,11 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL" in text
     assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
     assert "POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows" in text
+    assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in text
+    assert "application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses" in text
     assert "Public mutable DB-backed /api/ideas still enters through FastAPI by default" in text
-    assert "live DB execution, response projection, cache invalidation" in text
+    assert "cache invalidation, parent/edge side effects, contributor-key audit side effects" in text
+    assert "reversible public flip gate" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():

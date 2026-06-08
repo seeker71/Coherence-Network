@@ -57,4 +57,7 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "auth-port.fk preserves API-key/contributor-key decision parity" in form_text
     assert "application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL" in form_text
     assert "header-gated native SQL preview rows" in form_text
-    assert "live DB execution, response projection, cache invalidation" in form_text
+    assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in form_text
+    assert "application-graph-response-projection-test.sh proves live graph rows project into SpecRegistryEntry and IdeaWithScore-shaped mutation responses" in form_text
+    assert "cache invalidation, contributor-key audit side effects" in form_text
+    assert "reversible public flip gate" in form_text

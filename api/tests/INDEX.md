@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 252
+**Total files**: 253
 
 | File | Purpose |
 |---|---|
@@ -27,6 +27,7 @@
 | [test_api_dockerfile_contract.py](test_api_dockerfile_contract.py) | _no top-of-file purpose_ |
 | [test_application_graph_live_db_trial.py](test_application_graph_live_db_trial.py) | Proof that native application graph mutation SQL executes against live DB. |
 | [test_application_graph_node_port_form.py](test_application_graph_node_port_form.py) | Proof that application graph table mutations have a native Form carrier. |
+| [test_application_graph_response_projection.py](test_application_graph_response_projection.py) | Proof that native graph mutation rows project to response shapes. |
 | [test_asset_registration.py](test_asset_registration.py) | Tests for POST /api/assets/register and GET /api/assets/{id}/registration. |
 | [test_asset_renderer.py](test_asset_renderer.py) | Tests for the asset-renderer-plugin spec pure-logic pieces. |
 | [test_assets.py](test_assets.py) | Tests for the assets-api spec (specs/assets-api.md). |

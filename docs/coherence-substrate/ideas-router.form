@@ -251,7 +251,7 @@ defn ideas_router_structure() = {
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview|route_ideas_update_native_preview",
             status: "kernel-first capable preview",
             meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL preview responses without CPython when X-Form-Native-Preview is present",
-            boundary: "normal public mutations without X-Form-Native-Preview still fan out to FastAPI; live DB execution, response projection, cache invalidation, parent/edge side effects, and contributor-key audit side effects remain before a public front-door flip",
+            boundary: "normal public mutations without X-Form-Native-Preview still fan out to FastAPI; cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible flip gate remain before a public front-door flip",
         },
         {
             path: "deploy/kernel-router/mutation_ab_observation_harness.py",
@@ -265,7 +265,14 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/integration/application-graph-live-db.fk + api/tests/test_application_graph_live_db_trial.py",
             status: "live DB execution trial proven",
             meaning: "Form-native application graph mutation wrappers now create, update, delete, and read back graph_nodes, graph_node_revisions, and graph_edges in a rollback-safe throwaway Postgres",
-            boundary: "this closes the local live DB execution trial only; it does not perform the public front-door flip, and response projection, cache invalidation, parent/edge side effects, and contributor-key audit side effects remain before ordinary traffic moves",
+            boundary: "this closes the local live DB execution trial only; it does not perform the public front-door flip, and cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible flip gate remain before ordinary traffic moves",
+        },
+        {
+            path: "form/scripts/application-graph-response-projection-test.sh",
+            route_source: "form/form-stdlib/application-graph-response-projection.fk + api/tests/test_application_graph_response_projection.py",
+            status: "response projection parity proven",
+            meaning: "Form-native projection now emits IdeaWithScore and SpecRegistryEntry-shaped mutation responses from live graph rows",
+            boundary: "this closes response projection only; it does not perform the public front-door flip, and cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible flip gate remain before ordinary traffic moves",
         },
     ],
     recipes: [
@@ -294,8 +301,9 @@ defn ideas_router_structure() = {
         "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
         "front-door flip -> A/B observation gate before movement",
         "native SQL preview -> live DB execution trial",
+        "live graph rows -> Form-native mutation response projection",
     ],
-    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows; mutation_ab_observation_harness.py turns the flip into A/B observation; and application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers. Public mutable DB-backed /api/ideas still enters through FastAPI by default until response projection, cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible public flip gate are proven.",
+    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows; mutation_ab_observation_harness.py turns the flip into A/B observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; and application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses. Public mutable DB-backed /api/ideas still enters through FastAPI by default until cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible public flip gate are proven.",
 };
 
 defn ideas_router_reading() = {
@@ -313,10 +321,11 @@ defn ideas_router_reading() = {
         "api/tests/test_native_mutation_route_bindings.py",
         "api/tests/test_native_mutation_ab_observation.py",
         "api/tests/test_application_graph_live_db_trial.py",
+        "api/tests/test_application_graph_response_projection.py",
         "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
     ],
     mystery: [
-        "the public mutation flip wants response projection and side-effect proof before ordinary traffic moves",
+        "the public mutation flip wants side-effect proof before ordinary traffic moves",
     ],
 };
 
