@@ -1457,13 +1457,16 @@ fn source_native_empty_list() -> Value {
 }
 
 fn source_native_atom(kind: &str, value: &str) -> Value {
-    Value::List(vec![
-        source_native_str("cell"),
-        source_native_str(kind),
-        source_native_str(value),
-        source_native_empty_list(),
-        Value::Null,
-    ].into())
+    Value::List(
+        vec![
+            source_native_str("cell"),
+            source_native_str(kind),
+            source_native_str(value),
+            source_native_empty_list(),
+            Value::Null,
+        ]
+        .into(),
+    )
 }
 
 fn source_native_string_set(value: &Value, field: &str) -> HashSet<String> {
@@ -2579,7 +2582,9 @@ impl Kernel {
             }
             Value::Null
         });
-        self.register_native("empty", cat_list_nat(), |_, _, _| Value::List(vec![].into()));
+        self.register_native("empty", cat_list_nat(), |_, _, _| {
+            Value::List(vec![].into())
+        });
         // _list_append — functional list extension: `(_list_append xs x)` →
         // a NEW list = xs ++ [x]. The Python adapter lowers the accumulator
         // idiom `result.append(x)` to `(let result (_list_append result x))`,
@@ -3343,9 +3348,9 @@ impl Kernel {
         // Byte-level host file read — returns a list of ints (0-255), one per byte.
         self.register_native("read_file_bytes", cat_call(), |_, _, args| {
             match fs::read(args[0].as_str()) {
-                Ok(bytes) => {
-                    Value::List(Arc::new(bytes.into_iter().map(|b| Value::Int(b as i64)).collect()))
-                }
+                Ok(bytes) => Value::List(Arc::new(
+                    bytes.into_iter().map(|b| Value::Int(b as i64)).collect(),
+                )),
                 Err(_) => Value::Null,
             }
         });
@@ -4271,11 +4276,14 @@ impl Kernel {
             match k.source_attr.get(&nid).copied() {
                 Some((file_id, line, col)) => {
                     let file = k.strs[file_id as usize].clone();
-                    Value::List(vec![
-                        Value::Str(file.into()),
-                        Value::Int(line as i64),
-                        Value::Int(col as i64),
-                    ].into())
+                    Value::List(
+                        vec![
+                            Value::Str(file.into()),
+                            Value::Int(line as i64),
+                            Value::Int(col as i64),
+                        ]
+                        .into(),
+                    )
                 }
                 None => Value::List(vec![].into()),
             }
@@ -4439,11 +4447,14 @@ impl Kernel {
             Value::Int(k.walk_cache.len() as i64)
         });
         self.register_native("walk-cache-stats", cat_witness(), |k, _, _| {
-            Value::List(vec![
-                Value::Int(k.walk_cache_hits as i64),
-                Value::Int(k.walk_cache_misses as i64),
-                Value::Int(k.walk_cache.len() as i64),
-            ].into())
+            Value::List(
+                vec![
+                    Value::Int(k.walk_cache_hits as i64),
+                    Value::Int(k.walk_cache_misses as i64),
+                    Value::Int(k.walk_cache.len() as i64),
+                ]
+                .into(),
+            )
         });
 
         // native_blueprint — read a native's Form category from inside Form.
@@ -7821,7 +7832,8 @@ fn compile_source_section_to_recipe_node(
         sexp_string_literal(dialect_name),
         sexp_string_literal(body)
     );
-    let (kernel, value) = run_source_with_bootstrap("route-section-compile", bootstrap, driver_body)?;
+    let (kernel, value) =
+        run_source_with_bootstrap("route-section-compile", bootstrap, driver_body)?;
     match value {
         Value::Nid(root) => Ok((kernel, root)),
         _ => Err("source-compile: fsc-compile-section-recipe did not return a recipe".to_string()),
@@ -8256,7 +8268,10 @@ mod gate_known_set_tests {
             .chain(["not", "let", "if", "defn"])
             .collect();
         for v in BUILD_VERBS {
-            assert!(covered.contains(v), "BUILD_VERBS has {v} but this test doesn't cover it");
+            assert!(
+                covered.contains(v),
+                "BUILD_VERBS has {v} but this test doesn't cover it"
+            );
         }
         // and a verb build_verb does NOT know must hit the FNCALL fallback, so the
         // gate still flags genuinely-unbound names (e.g. health_route_from_class).
@@ -9199,82 +9214,100 @@ fn router_bml_candidate_value(candidate: &RouterBmlCandidate) -> Value {
 }
 
 fn router_http_header_value(name: &str, value: &str) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_HEADER),
-        Value::Str(name.to_string().into()),
-        Value::Str(value.to_string().into()),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_HEADER),
+            Value::Str(name.to_string().into()),
+            Value::Str(value.to_string().into()),
+        ]
+        .into(),
+    )
 }
 
 fn router_http_field_value(name: &str, value: &str) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_FIELD),
-        Value::Str(name.to_string().into()),
-        Value::Str(value.to_string().into()),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_FIELD),
+            Value::Str(name.to_string().into()),
+            Value::Str(value.to_string().into()),
+        ]
+        .into(),
+    )
 }
 
 fn router_http_route_value(candidate: &RouteCandidateValue) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_ROUTE),
-        Value::Str(candidate.route_name.clone().into()),
-        Value::Str(candidate.route_method.clone().into()),
-        Value::Str(candidate.route_pattern.clone().into()),
-        Value::Int(candidate.route_priority),
-        Value::Str(candidate.route_handler_name.clone().into()),
-        Value::Str(candidate.route_required_header.clone().into()),
-        Value::Int(candidate.route_pressure_budget),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE),
+            Value::Str(candidate.route_name.clone().into()),
+            Value::Str(candidate.route_method.clone().into()),
+            Value::Str(candidate.route_pattern.clone().into()),
+            Value::Int(candidate.route_priority),
+            Value::Str(candidate.route_handler_name.clone().into()),
+            Value::Str(candidate.route_required_header.clone().into()),
+            Value::Int(candidate.route_pressure_budget),
+        ]
+        .into(),
+    )
 }
 
 fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_REQUEST),
-        Value::Str(candidate.request_method.clone().into()),
-        Value::Str(candidate.request_path.clone().into()),
-        Value::List(Arc::new(
-            candidate
-                .request_headers
-                .iter()
-                .map(|(name, value)| router_http_header_value(name, value))
-                .collect(),
-        )),
-        Value::List(Arc::new(
-            candidate
-                .request_query
-                .iter()
-                .map(|(name, value)| router_http_field_value(name, value))
-                .collect(),
-        )),
-        Value::Str(candidate.request_body.clone().into()),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_REQUEST),
+            Value::Str(candidate.request_method.clone().into()),
+            Value::Str(candidate.request_path.clone().into()),
+            Value::List(Arc::new(
+                candidate
+                    .request_headers
+                    .iter()
+                    .map(|(name, value)| router_http_header_value(name, value))
+                    .collect(),
+            )),
+            Value::List(Arc::new(
+                candidate
+                    .request_query
+                    .iter()
+                    .map(|(name, value)| router_http_field_value(name, value))
+                    .collect(),
+            )),
+            Value::Str(candidate.request_body.clone().into()),
+        ]
+        .into(),
+    )
 }
 
 fn router_pressure_row_value(row: &RoutePressureRow) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_PRESSURE_ROW),
-        Value::Str(row.axis.clone().into()),
-        row.observed.clone(),
-        row.expected.clone(),
-        Value::Int(row.pressure),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_PRESSURE_ROW),
+            Value::Str(row.axis.clone().into()),
+            row.observed.clone(),
+            row.expected.clone(),
+            Value::Int(row.pressure),
+        ]
+        .into(),
+    )
 }
 
 fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
-    Value::List(vec![
-        Value::Int(KH_TAG_ROUTE_CANDIDATE),
-        router_http_route_value(candidate),
-        router_http_request_value(candidate),
-        Value::List(Arc::new(
-            candidate
-                .pressure_matrix
-                .iter()
-                .map(router_pressure_row_value)
-                .collect(),
-        )),
-        Value::Int(candidate.pressure),
-        Value::Int(candidate.score),
-    ].into())
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE_CANDIDATE),
+            router_http_route_value(candidate),
+            router_http_request_value(candidate),
+            Value::List(Arc::new(
+                candidate
+                    .pressure_matrix
+                    .iter()
+                    .map(router_pressure_row_value)
+                    .collect(),
+            )),
+            Value::Int(candidate.pressure),
+            Value::Int(candidate.score),
+        ]
+        .into(),
+    )
 }
 
 fn router_route_candidate_matrix_value(candidate: &RouteCandidateValue) -> Value {
@@ -9326,7 +9359,10 @@ fn router_context_data(
             "__request_target__".to_string(),
             Value::Str(target.to_string().into()),
         ),
-        ("__request_path__".to_string(), Value::Str(path.to_string().into())),
+        (
+            "__request_path__".to_string(),
+            Value::Str(path.to_string().into()),
+        ),
         (
             "__router_native_route_count__".to_string(),
             Value::Str(metrics.native_route_count.to_string().into()),
@@ -9401,7 +9437,10 @@ fn router_context_data(
         ));
         match parse_http_upstream(upstream_base) {
             Ok((host, port, base_path)) => {
-                pairs.push(("__router_upstream_host__".to_string(), Value::Str(host.into())));
+                pairs.push((
+                    "__router_upstream_host__".to_string(),
+                    Value::Str(host.into()),
+                ));
                 pairs.push((
                     "__router_upstream_port__".to_string(),
                     Value::Str(port.to_string().into()),
@@ -9412,7 +9451,10 @@ fn router_context_data(
                 ));
             }
             Err(e) => {
-                pairs.push(("__router_upstream_parse_error__".to_string(), Value::Str(e.into())));
+                pairs.push((
+                    "__router_upstream_parse_error__".to_string(),
+                    Value::Str(e.into()),
+                ));
             }
         }
     }
@@ -9673,7 +9715,9 @@ mod router_context_tests {
             _ => panic!("kernel request must be a Form list value"),
         };
         assert!(matches!(&request_rows[1], Value::Str(method) if method.as_ref() == "GET"));
-        assert!(matches!(&request_rows[2], Value::Str(path) if path.as_ref() == "/api/runtime/health"));
+        assert!(
+            matches!(&request_rows[2], Value::Str(path) if path.as_ref() == "/api/runtime/health")
+        );
         let request_headers = match &request_rows[3] {
             Value::List(xs) => xs,
             _ => panic!("kernel request headers must be a Form list value"),
@@ -9684,7 +9728,9 @@ mod router_context_tests {
             _ => panic!("kernel request query must be a Form list value"),
         };
         assert_eq!(list_tag(&request_query[0]), KH_TAG_FIELD);
-        assert!(matches!(&request_rows[5], Value::Str(body) if body.as_ref() == "{\"alive\":true}"));
+        assert!(
+            matches!(&request_rows[5], Value::Str(body) if body.as_ref() == "{\"alive\":true}")
+        );
         let rows = match candidate_value {
             Value::List(xs) => xs,
             _ => panic!("route candidate must be a Form list value"),
@@ -9910,8 +9956,9 @@ mod route_spec_tests {
                 },
             )]),
         };
-        let (_, _, routes, _) = build_worker_kernel_with_route_data(&program, &path_str, &route_data)
-            .expect("recipe-object route program loads");
+        let (_, _, routes, _) =
+            build_worker_kernel_with_route_data(&program, &path_str, &route_data)
+                .expect("recipe-object route program loads");
         let spec = &routes[0];
         assert_eq!(spec.name, "health");
         assert_eq!(spec.method, "ANY");
