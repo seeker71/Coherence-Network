@@ -1,0 +1,35 @@
+; tests/graph-node-mutation-carrier-band.fk -- mutable graph nodes over the storage port.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk
+;
+; Proves the native mutation carrier shape the ideas/spec mutable surfaces need:
+; create refuses duplicates, replace refuses missing nodes, delete tombstones
+; nodes out of active counts/indexes, recreate restores active counts, and the
+; durable file carrier keeps the resulting shape after reopen.
+;
+; Band verdict: 11111 when memory/file mutation contracts pass and file reopen
+; preserves the active post-delete graph.
+;   memory mutation contract pass        -> 1
+;   file mutation contract pass          -> 10
+;   memory and file verdicts agree       -> 100
+;   reopened file keeps active idea      -> 1000
+;   reopened file keeps deleted spec out -> 10000
+
+(do
+    (let dir "/tmp/graph-node-mutation-carrier-band.d")
+    (fs_rmdir dir)
+
+    (let mem-verdict (gn-mutation-test (carrier-memory) ""))
+    (let file-verdict (gn-mutation-test (carrier-file) dir))
+
+    (let mem-ok (if (eq mem-verdict 1111111) 1 0))
+    (let file-ok (if (eq file-verdict 1111111) 10 0))
+    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))
+
+    (let cf (carrier-file))
+    (let reopened (storage-open cf dir))
+    (let idea-ok (if (eq (gn-node-exists? cf reopened "idea:mutable") 1) 1000 0))
+    (let delete-ok (if (eq (gn-node-exists? cf reopened "spec:mutable") 0) 10000 0))
+
+    (fs_rmdir dir)
+    (sum (list mem-ok file-ok agree-ok idea-ok delete-ok)))

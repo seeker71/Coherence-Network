@@ -1,0 +1,130 @@
+# spec-registry-router.form -- spec_registry.py as high-level route recipes
+#
+# Companion to api/app/routers/spec_registry.py and
+# specs/spec-registry-source-native.md. The public FastAPI routes still carry
+# live mutable transport; Form now carries the source-backed read route and the
+# graph-node mutation carrier that create/update/delete will use when the live
+# front door moves.
+
+form spec_route_shape = {
+    name:             ~String,
+    method:           ~String,
+    path:             ~String,
+    movement:         ~String,
+    carrier:          ~String,
+    service_recipe:   ~String,
+    response_shape:   ~String,
+    evidence:         [~String],
+};
+
+form spec_route_recipe_shape = {
+    family:           ~String,
+    intent:           ~String,
+    routes:           [spec_route_shape],
+    route_trace:      [~String],
+    proof:            [~String],
+};
+
+defn spec_route(name, method, path, movement, service_recipe, response_shape, evidence) =
+    spec_route_shape {
+        name:           name,
+        method:         method,
+        path:           path,
+        movement:       movement,
+        carrier:        "api/app/routers/spec_registry.py",
+        service_recipe: service_recipe,
+        response_shape: response_shape,
+        evidence:       evidence,
+    };
+
+defn spec_route_recipe(family, intent, routes, route_trace, proof) =
+    spec_route_recipe_shape {
+        family:      family,
+        intent:      intent,
+        routes:      routes,
+        route_trace: route_trace,
+        proof:       proof,
+    };
+
+defn browse_specs_recipe() = spec_route_recipe(
+    "browse",
+    "Read specs as source-backed rows or graph-backed registry entries.",
+    [
+        spec_route("list_specs", "GET", "/spec-registry", "browse live specs", "spec_registry_service.list_specs", "list[SpecRegistryEntry]", ["graph node type=spec"]),
+        spec_route("list_spec_cards", "GET", "/spec-registry/cards", "browse spec cards", "spec_registry_service.build_spec_cards_feed", "dict", ["inventory cards"]),
+        spec_route("get_spec", "GET", "/spec-registry/{spec_id}", "inspect spec", "spec_registry_service.get_spec", "SpecRegistryEntry", ["graph node id lookup"]),
+        spec_route("source_list_specs", "GET", "/spec-registry/source-list", "browse source specs", "route_specs_source_list", "list[SpecRegistryEntry]", ["specs/INDEX.md"]),
+    ],
+    ["read query filters", "resolve graph/source carrier", "project optional language view", "return spec entries"],
+    ["api/app/routers/spec_registry.py::list_specs", "deploy/kernel-router/production-routes.fk::route_specs_source_list"]
+);
+
+defn mutate_specs_recipe() = spec_route_recipe(
+    "mutate",
+    "Create, replace, or delete spec graph nodes while preserving source and workspace fields.",
+    [
+        spec_route("create_spec", "POST", "/spec-registry", "create spec", "spec_registry_service.create_spec + gn-create-node", "SpecRegistryEntry", ["workspace validation", "graph node type=spec"]),
+        spec_route("update_spec", "PATCH", "/spec-registry/{spec_id}", "update spec", "spec_registry_service.update_spec + gn-replace-node", "SpecRegistryEntry", ["field allow-list", "graph node revision"]),
+        spec_route("delete_spec", "DELETE", "/spec-registry/{spec_id}", "delete spec", "spec_registry_service.delete_spec + gn-delete-node", "204", ["API key", "edge cleanup boundary"]),
+    ],
+    ["validate request", "shape graph-node mutation", "call live service carrier until front-door parity lands", "return entry or exact not-found/duplicate result"],
+    ["api/app/routers/spec_registry.py::create_spec", "api/app/routers/spec_registry.py::update_spec", "api/app/routers/spec_registry.py::delete_spec", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node"]
+);
+
+defn spec_registry_router_structure() = {
+    route_source: "api/app/routers/spec_registry.py",
+    form_source: "docs/coherence-substrate/spec-registry-router.form",
+    north_star: "Specs turn ideas into inspectable contracts, proof commands, and changed source.",
+    phase: {
+        blueprint: "spec_route_shape",
+        recipe: "spec_route_recipe_shape",
+        named_cell: "@router(spec-registry)",
+    },
+    native_carrier: [
+        {
+            path: "/api/spec-registry/source-list",
+            route_source: "deploy/kernel-router/production-routes.fk::route_specs_source_list",
+            status: "kernel-first capable",
+            meaning: "the kernel-router reads specs/INDEX.md and emits SpecRegistryEntry-shaped source rows without CPython",
+            boundary: "live graph-backed /api/spec-registry still fans out for mutable/read DB behavior",
+        },
+        {
+            path: "form/form-stdlib/graph-node-port.fk::gn-create-node|gn-replace-node|gn-delete-node",
+            route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+            status: "Form-native mutable carrier proven",
+            meaning: "spec create, update, and delete now have native graph-node mutation operations over the storage port",
+            boundary: "public /api/spec-registry mutation paths still fan out until method-specific route rows preserve API-key/contributor-key auth and write the application graph_nodes table directly",
+        },
+    ],
+    recipes: [
+        browse_specs_recipe(),
+        mutate_specs_recipe(),
+    ],
+    shifted: [
+        "Python registry service -> graph-node route recipes",
+        "source index -> kernel-router native source list",
+        "mutable service calls -> Form-native graph-node mutation carrier",
+    ],
+    current_gap: "GAP-SR1: /api/spec-registry/source-list is kernel-first capable and graph-node-port.fk exposes native create/replace/delete. Public mutable /api/spec-registry routes still enter through FastAPI until auth parity and direct application graph_nodes Postgres writes are bound.",
+};
+
+defn spec_registry_router_reading() = {
+    observed: [
+        "api/app/routers/spec_registry.py carries the live HTTP routes",
+        "spec_registry_service maps specs to graph nodes",
+        "production-routes.fk carries the native source-list read",
+    ],
+    inferred: [
+        "spec registry mutation is graph-node mutation with spec-shaped projection",
+        "the source index and live graph registry are two carriers of the same spec body",
+    ],
+    measured: [
+        "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+        "api/tests/test_specs_source_native_route.py",
+    ],
+    mystery: [
+        "the live auth and contributor-key boundary needs exact native parity before front-door mutation flips",
+    ],
+};
+
+defn example_spec_registry_router_structure() = spec_registry_router_structure();
