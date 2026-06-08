@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Release stale Python utility shim and duplicated readiness fallback bodies",
+  "files_owned": [
+    "api/app/routers/utils.py",
+    "api/app/routers/INDEX.md",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_weighted_average.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "scripts/kernel_readiness_harness.py",
+    "scripts/kernel_attribution_report.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd api && python3 -m pytest -q tests/test_utils_coherence_weight.py tests/test_utils_nodeid_distance.py tests/test_utils_nodeid_compatibility.py tests/test_utils_weighted_average.py tests/test_utils_idea_marginal_from_record.py tests/test_utils_idea_grounded_cost_sum.py tests/test_utils_idea_grounding_summary.py tests/test_utils_grounded_cost.py tests/test_utils_grounded_value.py",
+      "python3 scripts/kernel_readiness_harness.py --endpoint nodeid_distance --iters 3 --json /tmp/kernel_readiness_release_python.json",
+      "python3 scripts/generate_repo_indexes.py",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 -m py_compile scripts/kernel_readiness_harness.py scripts/kernel_attribution_report.py api/app/routers/utils.py",
+      "! rg -n \"app\\\\.routers\\\\.utils import|utils\\\\.(coherence_weight_py|nodeid_distance_py|nodeid_compatibility_py|weighted_average_py|_marginal_from_idea_py|_grounded_cost_sum_py|_grounding_summary_py|_grounded_cost_py|_grounded_value_py)|def _coherence_weight_py|def _nodeid_distance_py|def _nodeid_compat_py|def _weighted_average_py\" api scripts specs docs -g '!api/app/routers/utils.py' -g '!docs/system_audit/commit_evidence_*.json'",
+      "git diff --check -- api/app/routers/utils.py api/app/routers/INDEX.md api/tests/test_utils_coherence_weight.py api/tests/test_utils_nodeid_distance.py api/tests/test_utils_nodeid_compatibility.py api/tests/test_utils_weighted_average.py api/tests/test_utils_idea_marginal_from_record.py api/tests/test_utils_idea_grounded_cost_sum.py api/tests/test_utils_idea_grounding_summary.py api/tests/test_utils_grounded_cost.py api/tests/test_utils_grounded_value.py scripts/kernel_readiness_harness.py scripts/kernel_attribution_report.py docs/system_audit/commit_evidence_2026-06-06_release_python_router_shim.json"
+    ],
+    "summary": "The old app.routers.utils fallback export surface is gone. Tests now import parity/fallback helpers from their owning kernel_* route-family modules. The readiness harness no longer carries copied CPython bodies for coherence_weight, nodeid_distance, nodeid_compatibility, and weighted_average; it imports the canonical route-family fallback functions instead. Focused endpoint tests passed: 46 passed, 5 warnings. Harness smoke for nodeid_distance matched cpython=7 and kernel=7, with p50 CPython 0.0002ms and p50 subprocess kernel 5.2710ms."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && .venv/bin/pytest -q tests/test_utils_coherence_weight.py tests/test_utils_nodeid_distance.py tests/test_utils_nodeid_compatibility.py tests/test_utils_weighted_average.py tests/test_utils_idea_marginal_from_record.py tests/test_utils_idea_grounded_cost_sum.py tests/test_utils_idea_grounding_summary.py tests/test_utils_grounded_cost.py tests/test_utils_grounded_value.py",
+      "output": "zsh:1: no such file or directory: .venv/bin/pytest",
+      "resolution": "The linked worktree has no api/.venv; reran the focused suite with python3 -m pytest from api/ and it passed."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed for this uncommitted worktree pass."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but CI/deploy validation has not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "release-python-router-shim"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "api/app/routers/utils.py now gathers route families and exposes kernel status only; it no longer re-exports fallback helpers.",
+    "The nine focused utility route tests now import fallback/parity helpers directly from app.routers.kernel_nodeid, app.routers.kernel_scoring, app.routers.kernel_grounding, or app.routers.kernel_grounded_cv.",
+    "scripts/kernel_readiness_harness.py imports canonical route-family fallback functions instead of carrying copied CPython implementations for the four benchmark cases.",
+    "rg stale-surface scan returned no matches for app.routers.utils fallback imports, utils.<fallback> references, or the removed copied readiness helper definitions.",
+    "api/app/routers/INDEX.md was regenerated from the new utils.py docstring."
+  ],
+  "change_files": [
+    "api/app/routers/utils.py",
+    "api/app/routers/INDEX.md",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_weighted_average.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "scripts/kernel_readiness_harness.py",
+    "scripts/kernel_attribution_report.py",
+    "docs/system_audit/commit_evidence_2026-06-06_release_python_router_shim.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No endpoint behavior changes. Utility routes still register through /api/utils, but Python fallback helpers have one canonical route-family import surface instead of also being exported through app.routers.utils; readiness benchmarking now uses the same canonical helpers.",
+    "public_endpoints": [
+      "GET /api/utils/kernel_status",
+      "GET /api/utils/nodeid_distance",
+      "GET /api/utils/coherence_weight",
+      "GET /api/utils/weighted_average",
+      "GET /api/utils/grounded_cost",
+      "GET /api/utils/grounded_value"
+    ],
+    "test_flows": [
+      "Focused utility route tests passed with canonical fallback imports.",
+      "Readiness harness smoke matched CPython and kernel values for nodeid_distance.",
+      "Repository index and wellness readings stayed aligned."
+    ]
+  }
+}

@@ -27,11 +27,15 @@ import (
 	"math"
 	"net"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
+
+	"form-kernel-go/jitabi"
 )
 
 // --- core types extracted to package core (so JIT plugins can import them) ---
@@ -116,6 +120,8 @@ const (
 	RBasicCompare   uint32 = 13
 	RBasicLogic     uint32 = 14
 	RBasicAccess    uint32 = 15 // read property / field
+	RBasicMatch     uint32 = 19 // match/switch by substrate key
+	RBasicChoice    uint32 = 20 // choose/fail/stop - speculative branching
 	RBasicMethod    uint32 = 27 // transform on a cell-like value
 	RBasicTransmute uint32 = 76 // present value through Blueprint without changing identity
 	// Kernel-demo additions (extending RBasic for self-hosting needs)
@@ -189,6 +195,12 @@ const (
 	RBlockDo       uint32 = 1
 	RBlockSequence uint32 = 2
 	RBlockLet      uint32 = 3
+
+	RMatchSwitch uint32 = 1
+
+	RChoiceChoose uint32 = 1
+	RChoiceFail   uint32 = 2
+	RChoiceStop   uint32 = 3
 )
 
 // Recipe — composite storage. Trivials are NOT stored; their NodeID carries
@@ -236,6 +248,10 @@ type Trace struct {
 	ChoiceAttempts  uint64
 	ChoiceSuccesses uint64
 	ChoiceFailures  uint64
+	MatchLookups    uint64
+	MatchHits       uint64
+	MatchDefaults   uint64
+	MatchMisses     uint64
 }
 
 func newTrace() *Trace {
@@ -273,6 +289,8 @@ func armName(armTy uint32) string {
 		return "COMPARE"
 	case RBasicLogic:
 		return "LOGIC"
+	case RBasicMatch:
+		return "MATCH"
 	case RBasicIdent:
 		return "IDENT"
 	case RBasicFnDef:
@@ -281,12 +299,16 @@ func armName(armTy uint32) string {
 		return "FNCALL"
 	case RBasicList:
 		return "LIST"
+	case RBasicChoiceMatch:
+		return "CHOICE_MATCH"
 	case RBasicWitness:
 		return "WITNESS"
 	case RBasicCall:
 		return "CALL"
 	case RBasicAccess:
 		return "ACCESS"
+	case RBasicChoice:
+		return "CHOICE"
 	case RBasicMethod:
 		return "METHOD"
 	case RBasicTransmute:
@@ -399,6 +421,20 @@ func armVariantName(armTy uint32, armInst uint32) string {
 		case RBlockLet:
 			variant = "LET"
 		}
+	case RBasicMatch:
+		switch armInst {
+		case RMatchSwitch:
+			variant = "SWITCH"
+		}
+	case RBasicChoice:
+		switch armInst {
+		case RChoiceChoose:
+			variant = "CHOOSE"
+		case RChoiceFail:
+			variant = "FAIL"
+		case RChoiceStop:
+			variant = "STOP"
+		}
 	}
 	if variant == "" {
 		return base
@@ -475,6 +511,10 @@ func (t *Trace) toJSON() map[string]interface{} {
 		"choice_successes":    t.ChoiceSuccesses,
 		"choice_failures":     t.ChoiceFailures,
 		"choice_success_rate": rate,
+		"match_lookups":       t.MatchLookups,
+		"match_hits":          t.MatchHits,
+		"match_defaults":      t.MatchDefaults,
+		"match_misses":        t.MatchMisses,
 	}
 }
 
@@ -514,30 +554,49 @@ type Kernel struct {
 	// walkCache — JIT-vector memoization for pure recipes. Keyed by
 	// recipe NodeID. Real JIT replaces this with compiled native code;
 	// the architectural slot is the same: same NodeID = same result.
-	walkCache       map[NodeID]Value
-	walkCacheHits   uint64
-	walkCacheMisses uint64
-	activeRoots     []NodeID
+	walkCache        map[NodeID]Value
+	walkCacheHits    uint64
+	walkCacheMisses  uint64
+	activeRoots      []NodeID
+	framebufferRoots []NodeID
+	observeRuntime   bool
+	observeSeq       uint32
+	sourceCompileErr string
 	// Optional tracing — nil for hot-path runs, set for trace subcommand.
 	// Per lc-native-kernel-binary's "tracing and observation pattern."
 	Trace *Trace
-	// jitCompiledGo — body-NodeID-key → host-native int64 function pointer.
+	// jitCompiledGo - body-NodeID-key -> host-native typed function pointers.
 	// Populated by the recipe→Go-source+plugin.Open JIT path (see jit.go's
-	// machinery wired into the `jit_compile` env-aware native). Read on
-	// every FNCALL closure dispatch: when present, marshal Form int args
-	// to int64, call the loaded function, box the int64 result back to
-	// VInt. Same shape as TS kernel's k.jitCompiled. Go's `plugin` package
-	// loads native shared objects on linux, darwin, and freebsd — verified
-	// working on darwin/arm64 (the build-id match comes from the plugin
-	// sharing the kernel's go.mod toolchain via readHostGoVersion).
-	jitCompiledGo map[string]func([]int64) int64
+	// machinery wired into the `jit_compile` env-aware native). Read on every
+	// FNCALL closure dispatch: when present, marshal Form values into the ABI
+	// whose guard matches (i64, f64, or jitabi.Value), call generated Go, and
+	// box the result. Same shape as TS kernel's k.jitCompiled, widened for
+	// honest guard-miss observation.
+	jitCompiledGo map[string]*GoJITCompiled
 	// jitCompiledGoV — body-NodeID-key → Value-typed native function. The
 	// general JIT path (jit_value.go): compiles ANY recipe to a plugin that
 	// operates on core.Value and routes native / cross-function calls back
 	// through a kernel-supplied dispatch. Read on FNCALL closure dispatch
 	// before the int64 fast path; when present, runs the body native with no
 	// walk-interpreter overhead. Falls back to walk when a shape can't lower.
-	jitCompiledGoV map[string]jitValueFn
+	jitCompiledGoV  map[string]jitValueFn
+	jitHits         map[NodeID]uint32
+	jitFailed       map[NodeID]bool
+	jitFailedReason map[NodeID]string
+	jitDispatchHits map[NodeID]uint32
+	switchTables    map[NodeID]*switchTable
+}
+
+type switchTable struct {
+	cases       map[NodeID]NodeID
+	dynamicArms []switchArm
+	defaultBody NodeID
+	hasDefault  bool
+}
+
+type switchArm struct {
+	pattern NodeID
+	body    NodeID
 }
 
 type sourceLoc struct {
@@ -548,23 +607,77 @@ type sourceLoc struct {
 
 func NewKernel() *Kernel {
 	k := &Kernel{
-		byHash:         make(map[uint64]NodeID),
-		byID:           make(map[NodeID]Recipe),
-		strIdx:         make(map[string]NameID),
-		sourceAttr:     make(map[NodeID]sourceLoc),
-		importSeq:      1,
-		walkCache:      make(map[NodeID]Value),
-		next:           1,
-		f64Idx:         make(map[uint64]uint32),
-		natives:        make(map[NameID]NativeEntry),
-		envNatives:     make(map[NameID]EnvAwareNativeEntry),
-		methods:        make(map[methodKey]*Closure),
-		jitAliases:     make(map[NameID]NameID),
-		jitCompiledGo:  make(map[string]func([]int64) int64),
-		jitCompiledGoV: make(map[string]jitValueFn),
+		byHash:          make(map[uint64]NodeID),
+		byID:            make(map[NodeID]Recipe),
+		strIdx:          make(map[string]NameID),
+		sourceAttr:      make(map[NodeID]sourceLoc),
+		importSeq:       1,
+		walkCache:       make(map[NodeID]Value),
+		next:            1,
+		f64Idx:          make(map[uint64]uint32),
+		natives:         make(map[NameID]NativeEntry),
+		envNatives:      make(map[NameID]EnvAwareNativeEntry),
+		methods:         make(map[methodKey]*Closure),
+		jitAliases:      make(map[NameID]NameID),
+		jitCompiledGo:   make(map[string]*GoJITCompiled),
+		jitCompiledGoV:  make(map[string]jitValueFn),
+		jitHits:         make(map[NodeID]uint32),
+		jitFailed:       make(map[NodeID]bool),
+		jitFailedReason: make(map[NodeID]string),
+		jitDispatchHits: make(map[NodeID]uint32),
+		switchTables:    make(map[NodeID]*switchTable),
 	}
 	k.registerNatives()
 	return k
+}
+
+func resolveKernelHostPath(path string) string {
+	if path == "" || filepath.IsAbs(path) {
+		return path
+	}
+	slashPath := filepath.ToSlash(path)
+	if slashPath == "form-stdlib" || strings.HasPrefix(slashPath, "form-stdlib/") {
+		root, err := findRepoRoot()
+		if err == nil {
+			return filepath.Join(root, "form", filepath.FromSlash(slashPath))
+		}
+	}
+	return path
+}
+
+func sourceInventorySkipSet(v Value) map[string]bool {
+	skip := map[string]bool{}
+	if v.Kind != VList {
+		return skip
+	}
+	for _, item := range v.List {
+		if item.Kind == VStr && item.Str != "" {
+			skip[item.Str] = true
+		}
+	}
+	return skip
+}
+
+func countTextLines(path string) int64 {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return -1
+	}
+	if len(body) == 0 {
+		return 0
+	}
+	lines := int64(strings.Count(string(body), "\n"))
+	if body[len(body)-1] != '\n' {
+		lines++
+	}
+	return lines
+}
+
+func sourceInventoryRow(rel string, loc int64) Value {
+	return Value{Kind: VList, List: []Value{
+		{Kind: VStr, Str: rel},
+		{Kind: VInt, Int: loc},
+	}}
 }
 
 func (k *Kernel) nextImportScope() uint32 {
@@ -688,6 +801,141 @@ func (k *Kernel) internName(s string) NameID {
 	return idx
 }
 
+func (k *Kernel) observationActive() bool {
+	return k.observeRuntime || k.Trace != nil
+}
+
+func (k *Kernel) observeFrame(file string, line uint32, col uint32, children ...NodeID) {
+	if !k.observationActive() {
+		return
+	}
+	k.observeSeq++
+	kids := make([]NodeID, 0, len(children)+1)
+	kids = append(kids, k.internTrivialInt(int64(k.observeSeq)))
+	kids = append(kids, children...)
+	nid := k.intern(catReceipt(), kids)
+	fileID := k.internName(file)
+	k.sourceAttr[nid] = sourceLoc{FileID: fileID, Line: line, Col: col}
+	k.activeRoots = append(k.activeRoots, nid)
+	k.framebufferRoots = append(k.framebufferRoots, nid)
+}
+
+func (k *Kernel) observeRecipeDispatch(cat NodeID) {
+	k.observeFrame(
+		"observe/go/recipe-dispatch",
+		cat.Type,
+		cat.Inst,
+		k.internTrivialInt(int64(cat.Type)),
+		k.internTrivialInt(int64(cat.Inst)),
+	)
+}
+
+func (k *Kernel) observeNamedDispatch(file string, name NameID) {
+	k.observeFrame(file, uint32(name), 1, k.internString(k.nameStr(name)))
+}
+
+func (k *Kernel) observeJIT(file string, body NodeID, line uint32, col uint32) {
+	k.observeFrame(file, line, col, body)
+}
+
+func (k *Kernel) nodeDisplay(n NodeID) string {
+	if n.Level != LevelTrivial {
+		return nodeIDKey(n)
+	}
+	return k.trivialValue(n).String()
+}
+
+func (k *Kernel) framebufferSourceCounts() []map[string]interface{} {
+	type key struct {
+		file string
+		line uint32
+		col  uint32
+	}
+	counts := map[key]int{}
+	for _, nid := range k.framebufferRoots {
+		loc, ok := k.sourceAttr[nid]
+		if !ok {
+			continue
+		}
+		file := ""
+		if int(loc.FileID) < len(k.strs) {
+			file = k.strs[loc.FileID]
+		}
+		counts[key{file: file, line: loc.Line, col: loc.Col}]++
+	}
+	rows := make([]map[string]interface{}, 0, len(counts))
+	for k, count := range counts {
+		rows = append(rows, map[string]interface{}{
+			"file":  k.file,
+			"line":  k.line,
+			"col":   k.col,
+			"count": count,
+		})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		ci := rows[i]["count"].(int)
+		cj := rows[j]["count"].(int)
+		if ci != cj {
+			return ci > cj
+		}
+		fi := rows[i]["file"].(string)
+		fj := rows[j]["file"].(string)
+		if fi != fj {
+			return fi < fj
+		}
+		li := rows[i]["line"].(uint32)
+		lj := rows[j]["line"].(uint32)
+		if li != lj {
+			return li < lj
+		}
+		return rows[i]["col"].(uint32) < rows[j]["col"].(uint32)
+	})
+	return rows
+}
+
+func (k *Kernel) framebufferEvents() []map[string]interface{} {
+	rows := make([]map[string]interface{}, 0, len(k.framebufferRoots))
+	for _, nid := range k.framebufferRoots {
+		loc, ok := k.sourceAttr[nid]
+		if !ok {
+			continue
+		}
+		file := ""
+		if int(loc.FileID) < len(k.strs) {
+			file = k.strs[loc.FileID]
+		}
+		kids := k.children(nid)
+		seq := int64(0)
+		if len(kids) > 0 && kids[0].Level == LevelTrivial && kids[0].Type == TrivInt {
+			seq = int64(int32(kids[0].Inst))
+		}
+		childRows := make([]string, 0, len(kids))
+		childValues := make([]string, 0, len(kids))
+		for _, child := range kids {
+			childRows = append(childRows, nodeIDKey(child))
+			childValues = append(childValues, k.nodeDisplay(child))
+		}
+		rows = append(rows, map[string]interface{}{
+			"seq":          seq,
+			"file":         file,
+			"line":         loc.Line,
+			"col":          loc.Col,
+			"node":         nodeIDKey(nid),
+			"children":     childRows,
+			"child_values": childValues,
+		})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		si := rows[i]["seq"].(int64)
+		sj := rows[j]["seq"].(int64)
+		if si != sj {
+			return si < sj
+		}
+		return rows[i]["node"].(string) < rows[j]["node"].(string)
+	})
+	return rows
+}
+
 func (k *Kernel) substrateMark() []Value {
 	return []Value{
 		{Kind: VInt, Int: int64(k.next)},
@@ -719,6 +967,7 @@ func (k *Kernel) substrateRelease(mark []Value) int64 {
 			delete(k.byHash, hashRecipe(recipe))
 			delete(k.sourceAttr, nid)
 			delete(k.walkCache, nid)
+			delete(k.switchTables, nid)
 			released++
 		}
 	}
@@ -819,6 +1068,7 @@ func (k *Kernel) substrateGC(roots []Value, stack *Frame) []Value {
 			delete(k.byHash, hashRecipe(recipe))
 			delete(k.sourceAttr, nid)
 			delete(k.walkCache, nid)
+			delete(k.switchTables, nid)
 			freed++
 		}
 	}
@@ -877,7 +1127,7 @@ func (k *Kernel) isParallelPure(n NodeID, seen map[NodeID]bool) bool {
 		return false
 	}
 	switch r.Category.Type {
-	case RBasicMath, RBasicCompare, RBasicLogic, RBasicCond, RBasicList:
+	case RBasicMath, RBasicCompare, RBasicLogic, RBasicCond, RBasicList, RBasicMatch:
 		for _, child := range r.Children {
 			if !k.isParallelPure(child, seen) {
 				return false
@@ -933,10 +1183,51 @@ func (k *Kernel) nameStr(id NameID) string { return k.strs[id] }
 
 // Record — a mutable struct/object. Blueprint tags its type (class /
 // method-table NodeID); Fields is an ordered name→value map.
+func isDictValue(v Value) bool {
+	return v.Kind == VList &&
+		len(v.List) > 0 &&
+		v.List[0].Kind == VStr &&
+		v.List[0].Str == "__dict__"
+}
+
+func dictKeyEq(a, b Value) bool {
+	if a.Kind == VStr && b.Kind == VStr {
+		return a.Str == b.Str
+	}
+	if a.Kind == VInt && b.Kind == VInt {
+		return a.Int == b.Int
+	}
+	return false
+}
 
 // Value — runtime tagged union. List and Closure carry pointers; the rest
 // are inline. Kept as a flat struct so the walker's hot path is allocation-
 // free for ints and bools.
+
+func valueKindName(v Value) string {
+	switch v.Kind {
+	case VNull:
+		return "null"
+	case VInt:
+		return "int"
+	case VStr:
+		return "string"
+	case VBool:
+		return "bool"
+	case VList:
+		return "list"
+	case VClosure:
+		return "closure"
+	case VNodeID:
+		return "node_id"
+	case VFloat:
+		return "float"
+	case VRecord:
+		return "record"
+	default:
+		return "unknown"
+	}
+}
 
 type sourceNativeLexicon struct {
 	keywords     map[string]bool
@@ -1365,6 +1656,67 @@ func composeScaledDecimal(kept string, n int, neg bool) string {
 // breath will harmonize Rust's render to match.) Specials follow the JS
 // surface: NaN → "NaN", +Inf → "Infinity", -Inf → "-Infinity".
 
+type GoJITCompiled struct {
+	I64   func([]int64) int64
+	F64   func([]float64) float64
+	Value func([]jitabi.Value) jitabi.Value
+}
+
+func valueToJIT(v Value) (jitabi.Value, bool) {
+	switch v.Kind {
+	case VNull:
+		return jitabi.Null(), true
+	case VInt:
+		return jitabi.Int(v.Int), true
+	case VFloat:
+		return jitabi.Float(v.Float), true
+	case VStr:
+		return jitabi.Str(v.Str), true
+	case VBool:
+		return jitabi.Bool(v.Bool), true
+	case VNodeID:
+		return jitabi.Node(v.Nid.Pkg, v.Nid.Level, v.Nid.Type, v.Nid.Inst), true
+	case VList:
+		out := make([]jitabi.Value, 0, len(v.List))
+		for _, child := range v.List {
+			jv, ok := valueToJIT(child)
+			if !ok {
+				return jitabi.Null(), false
+			}
+			out = append(out, jv)
+		}
+		return jitabi.List(out...), true
+	}
+	return jitabi.Null(), false
+}
+
+func valueFromJIT(v jitabi.Value) Value {
+	switch v.Kind {
+	case jitabi.NullKind:
+		return Value{Kind: VNull}
+	case jitabi.IntKind:
+		return Value{Kind: VInt, Int: v.Int}
+	case jitabi.FloatKind:
+		return Value{Kind: VFloat, Float: v.Float}
+	case jitabi.StrKind:
+		return Value{Kind: VStr, Str: v.Str}
+	case jitabi.BoolKind:
+		return Value{Kind: VBool, Bool: v.Bool}
+	case jitabi.NodeKind:
+		return Value{Kind: VNodeID, Nid: NodeID{Pkg: v.Node.Pkg, Level: v.Node.Level, Type: v.Node.Type, Inst: v.Node.Inst}}
+	case jitabi.ListKind:
+		out := make([]Value, 0, len(v.List))
+		for _, child := range v.List {
+			out = append(out, valueFromJIT(child))
+		}
+		return Value{Kind: VList, List: out}
+	}
+	return Value{Kind: VNull}
+}
+
+type choiceFailSignal struct{}
+type choiceStopSignal struct{}
+
 // methodKey — (blueprint, method-name) key for the blueprint method table.
 type methodKey struct {
 	blueprint NodeID
@@ -1598,6 +1950,33 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: int64(from + idx)}
 	})
+	k.registerNative("str_line_at", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		idx := int(args[1].Int)
+		if idx < 0 || idx > len(s) {
+			return Value{Kind: VStr, Str: ""}
+		}
+		start := idx
+		for start > 0 && s[start-1] != '\n' {
+			start--
+		}
+		end := idx
+		for end < len(s) && s[end] != '\n' {
+			end++
+		}
+		if end > start && s[end-1] == '\r' {
+			end--
+		}
+		return Value{Kind: VStr, Str: s[start:end]}
+	})
+	k.registerNative("str_ascii_prefix", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		end := 0
+		for end < len(s) && s[end] < utf8.RuneSelf {
+			end++
+		}
+		return Value{Kind: VStr, Str: s[:end]}
+	})
 	// scan_run — return the end-index where a contiguous run of bytes
 	// matching `class_code` ends (exclusive). Generic per-byte loop in
 	// Go avoids the walker dispatch a pure-Form recursion would pay
@@ -1721,9 +2100,22 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VStr, Str: strconv.FormatInt(v.Int, 10)}
 	})
+	k.registerNative("value_str", catMethod(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VStr, Str: formValueString(args[0])}
+	})
+	k.registerNative("value_kind", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VStr, Str: valueKindName(args[0])}
+	})
+	k.registerNative("value-kind", catWitness(), func(_ *Kernel, args []Value) Value {
+		return Value{Kind: VStr, Str: valueKindName(args[0])}
+	})
 	k.registerNative("str_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
 		n, _ := strconv.ParseInt(args[0].Str, 10, 64)
 		return Value{Kind: VInt, Int: n}
+	})
+	k.registerNative("str_to_float", catMethod(), func(_ *Kernel, args []Value) Value {
+		f, _ := strconv.ParseFloat(args[0].Str, 64)
+		return Value{Kind: VFloat, Float: f}
 	})
 	k.registerNative("ord", catAccess(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].Str) == 0 {
@@ -1764,14 +2156,25 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("len", catAccess(), func(_ *Kernel, args []Value) Value {
 		switch args[0].Kind {
 		case VList:
+			if isDictValue(args[0]) {
+				return Value{Kind: VInt, Int: int64((len(args[0].List) - 1) / 2)}
+			}
 			return Value{Kind: VInt, Int: int64(len(args[0].List))}
 		case VStr:
 			return Value{Kind: VInt, Int: int64(len(args[0].Str))}
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
-	// `nth` composted 2026-05-22 — sibling-parity with Rust kernel.
-	// Re-author in core.fk as needed: (defn nth (xs n) (if (eq n 0) (head xs) (nth (tail xs) (sub n 1))))
+	k.registerNative("nth", catAccess(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind != VList {
+			return Value{Kind: VNull}
+		}
+		i := args[1].Int
+		if i < 0 || int(i) >= len(args[0].List) {
+			return Value{Kind: VNull}
+		}
+		return args[0].List[i]
+	})
 	k.registerNative("empty", catListNat(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VList, List: []Value{}}
 	})
@@ -1789,6 +2192,161 @@ func (k *Kernel) registerNatives() {
 		}
 		xs = append(xs, args[1])
 		return Value{Kind: VList, List: xs}
+	})
+	k.registerNative("_dict_new", catListNat(), func(_ *Kernel, args []Value) Value {
+		out := make([]Value, 0, len(args)+1)
+		out = append(out, Value{Kind: VStr, Str: "__dict__"})
+		out = append(out, args...)
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_dict_get", catAccess(), func(_ *Kernel, args []Value) Value {
+		if !isDictValue(args[0]) {
+			return Value{Kind: VNull}
+		}
+		xs := args[0].List
+		for i := 1; i+1 < len(xs); i += 2 {
+			if dictKeyEq(xs[i], args[1]) {
+				return xs[i+1]
+			}
+		}
+		return Value{Kind: VNull}
+	})
+	k.registerNative("_dict_set", catMethod(), func(_ *Kernel, args []Value) Value {
+		if !isDictValue(args[0]) {
+			return args[0]
+		}
+		out := append([]Value{}, args[0].List...)
+		for i := 1; i+1 < len(out); i += 2 {
+			if dictKeyEq(out[i], args[1]) {
+				out[i+1] = args[2]
+				return Value{Kind: VList, List: out}
+			}
+		}
+		out = append(out, args[1], args[2])
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_dict_has", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
+		if !isDictValue(args[0]) {
+			return Value{Kind: VBool, Bool: false}
+		}
+		xs := args[0].List
+		for i := 1; i+1 < len(xs); i += 2 {
+			if dictKeyEq(xs[i], args[1]) {
+				return Value{Kind: VBool, Bool: true}
+			}
+		}
+		return Value{Kind: VBool, Bool: false}
+	})
+	k.registerNative("_dict_keys", catAccess(), func(_ *Kernel, args []Value) Value {
+		if !isDictValue(args[0]) {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		xs := args[0].List
+		out := make([]Value, 0, (len(xs)-1)/2)
+		for i := 1; i+1 < len(xs); i += 2 {
+			out = append(out, xs[i])
+		}
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_dict_values", catAccess(), func(_ *Kernel, args []Value) Value {
+		if !isDictValue(args[0]) {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		xs := args[0].List
+		out := make([]Value, 0, (len(xs)-1)/2)
+		for i := 1; i+1 < len(xs); i += 2 {
+			out = append(out, xs[i+1])
+		}
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("_get", catAccess(), func(k *Kernel, args []Value) Value {
+		if len(args) < 2 {
+			return Value{Kind: VNull}
+		}
+		if args[0].Kind == VRecord && args[1].Kind == VStr {
+			v, _ := args[0].Rec.Get(k.internName(args[1].Str))
+			return v
+		}
+		if isDictValue(args[0]) {
+			xs := args[0].List
+			for i := 1; i+1 < len(xs); i += 2 {
+				if dictKeyEq(xs[i], args[1]) {
+					return xs[i+1]
+				}
+			}
+			return Value{Kind: VNull}
+		}
+		if args[0].Kind == VList && args[1].Kind == VStr {
+			xs := args[0].List
+			for i := 0; i+1 < len(xs); i += 2 {
+				if xs[i].Kind == VStr && xs[i].Str == args[1].Str {
+					return xs[i+1]
+				}
+			}
+			panic(fmt.Sprintf("_get: no field '%s' on record", args[1].Str))
+		}
+		if args[0].Kind == VList {
+			i := args[1].Int
+			if i < 0 || int(i) >= len(args[0].List) {
+				return Value{Kind: VNull}
+			}
+			return args[0].List[i]
+		}
+		if args[0].Kind == VStr {
+			i := args[1].Int
+			if i < 0 || int(i) >= len(args[0].Str) {
+				return Value{Kind: VStr, Str: ""}
+			}
+			return Value{Kind: VStr, Str: string(args[0].Str[i])}
+		}
+		return Value{Kind: VNull}
+	})
+	k.registerNative("_iter", catListNat(), func(_ *Kernel, args []Value) Value {
+		if len(args) == 0 {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		if isDictValue(args[0]) {
+			xs := args[0].List
+			out := make([]Value, 0, (len(xs)-1)/2)
+			for i := 1; i+1 < len(xs); i += 2 {
+				out = append(out, xs[i])
+			}
+			return Value{Kind: VList, List: out}
+		}
+		if args[0].Kind == VList {
+			return args[0]
+		}
+		if args[0].Kind == VStr {
+			out := make([]Value, 0, len(args[0].Str))
+			for i := 0; i < len(args[0].Str); i++ {
+				out = append(out, Value{Kind: VStr, Str: string(args[0].Str[i])})
+			}
+			return Value{Kind: VList, List: out}
+		}
+		return Value{Kind: VList, List: []Value{}}
+	})
+	k.registerNative("_in", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
+		if isDictValue(args[1]) {
+			xs := args[1].List
+			for i := 1; i+1 < len(xs); i += 2 {
+				if dictKeyEq(xs[i], args[0]) {
+					return Value{Kind: VBool, Bool: true}
+				}
+			}
+			return Value{Kind: VBool, Bool: false}
+		}
+		if args[1].Kind == VList {
+			for _, v := range args[1].List {
+				if dictKeyEq(v, args[0]) || (v.Kind == VBool && args[0].Kind == VBool && v.Bool == args[0].Bool) {
+					return Value{Kind: VBool, Bool: true}
+				}
+			}
+			return Value{Kind: VBool, Bool: false}
+		}
+		if args[1].Kind == VStr && args[0].Kind == VStr {
+			return Value{Kind: VBool, Bool: strings.Contains(args[1].Str, args[0].Str)}
+		}
+		return Value{Kind: VBool, Bool: false}
 	})
 	// Common Python builtins applied to lists. Sibling-parity with
 	// Rust + TS kernels. Honest error messages on empty lists.
@@ -1940,7 +2498,7 @@ func (k *Kernel) registerNatives() {
 
 	// File I/O
 	k.registerNative("read_file", catCall(), func(_ *Kernel, args []Value) Value {
-		b, err := os.ReadFile(args[0].Str)
+		b, err := os.ReadFile(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VNull}
 		}
@@ -1948,7 +2506,7 @@ func (k *Kernel) registerNatives() {
 	})
 	// Byte-level host file read — returns a list of ints (0-255), one per byte.
 	k.registerNative("read_file_bytes", catCall(), func(_ *Kernel, args []Value) Value {
-		b, err := os.ReadFile(args[0].Str)
+		b, err := os.ReadFile(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VNull}
 		}
@@ -1957,6 +2515,45 @@ func (k *Kernel) registerNatives() {
 			out[i] = Value{Kind: VInt, Int: int64(by)}
 		}
 		return Value{Kind: VList, List: out}
+	})
+	// source_inventory(root, suffix, skip-dir-names) — generic source
+	// inventory primitive. Returns rows of [relative-path, line-count].
+	// Form owns classification and aggregation; the kernel only exposes
+	// filesystem walking and text line counts as primitive observation.
+	k.registerNative("source_inventory", catCall(), func(_ *Kernel, args []Value) Value {
+		root := resolveKernelHostPath(args[0].Str)
+		suffix := args[1].Str
+		skip := sourceInventorySkipSet(args[2])
+		rootAbs, err := filepath.Abs(root)
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		rows := []Value{}
+		err = filepath.WalkDir(rootAbs, func(path string, d os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			name := d.Name()
+			if d.IsDir() {
+				if skip[name] {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if suffix != "" && !strings.HasSuffix(name, suffix) {
+				return nil
+			}
+			rel, err := filepath.Rel(rootAbs, path)
+			if err != nil {
+				return err
+			}
+			rows = append(rows, sourceInventoryRow(filepath.ToSlash(rel), countTextLines(path)))
+			return nil
+		})
+		if err != nil {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VList, List: rows}
 	})
 	// random_bytes(n) — open the doorway. Reads n bytes from
 	// /dev/urandom every call. Different per invocation, per kernel
@@ -2093,9 +2690,9 @@ func (k *Kernel) registerNatives() {
 	//
 	// The Go path: Form recipe body → generated Go source under /tmp/
 	//   → `go build -buildmode=plugin -o plugin.so` (via os/exec)
-	//   → plugin.Open + plugin.Lookup("Fn") to load the symbol
-	//   → store func([]int64) int64 under bodyKey in k.jitCompiledGo
-	//   → FNCALL closure path checks the map and dispatches when present.
+	//   -> plugin.Open + plugin.Lookup("FnI64"/"FnF64") to load ABI symbols
+	//   -> store typed artifact under bodyKey in k.jitCompiledGo
+	//   -> FNCALL closure path checks ABI guards and dispatches when present.
 	//
 	// Same shape as TS kernel's compileNode+jitCompiled — same canonical
 	// truth (the recipe) expressed through each host's available compiler.
@@ -2113,6 +2710,8 @@ func (k *Kernel) registerNatives() {
 		// Already compiled? Reuse — the body NodeID is content-addressed,
 		// so the same shape across calls always resolves to the same .so.
 		if _, exists := k.jitCompiledGo[bodyKey]; exists {
+			delete(k.jitHits, cl.Body)
+			k.observeJIT("observe/go/jit/compile-hit", cl.Body, 1, 1)
 			return Value{Kind: VInt, Int: 1}
 		}
 		fn, err := jitCompileClosureGo(k, cl)
@@ -2120,9 +2719,14 @@ func (k *Kernel) registerNatives() {
 			// Honest fallback — the recipe still walks. The body remains
 			// canonical truth; the JIT path is just unavailable for this
 			// shape today.
+			k.jitFailed[cl.Body] = true
+			k.jitFailedReason[cl.Body] = err.Error()
+			k.observeJIT("observe/go/jit/compile-fail", cl.Body, 1, 1)
 			return Value{Kind: VInt, Int: 0}
 		}
 		k.jitCompiledGo[bodyKey] = fn
+		delete(k.jitHits, cl.Body)
+		k.observeJIT("observe/go/jit/compile-success", cl.Body, 1, 1)
 		return Value{Kind: VInt, Int: 1}
 	})
 	// jit_compile_value form-name-str → 1 if the Value-typed JIT compiled
@@ -2163,6 +2767,74 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
+	// jit_compiled? form-name-str -> 1 if the named closure's body NodeID has
+	// a loaded Go plugin artifact, else 0. This reports compile-state only:
+	// dispatch still depends on the artifact ABI matching the call's runtime
+	// argument values. The trace's `jit-go-dispatch` native is the proof that a
+	// call actually crossed into generated Go.
+	k.registerEnvNative("jit_compiled?", catCompare(RCompareEq), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 1 || args[0].Kind != VStr {
+			return Value{Kind: VInt, Int: 0}
+		}
+		formID := k.internName(args[0].Str)
+		v, ok := env.Lookup(formID)
+		if !ok || v.Kind != VClosure {
+			return Value{Kind: VInt, Int: 0}
+		}
+		bodyKey := nodeIDKey(v.Cl.Body)
+		if jc, ok := k.jitCompiledGo[bodyKey]; ok && jc != nil && (jc.I64 != nil || jc.F64 != nil || jc.Value != nil) {
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
+	// jit-stats -> list(kind, body-nodeid, count, detail). This is the
+	// observer-facing JIT state: warming counters, compiled artifacts,
+	// dispatch hits, and failed bodies with their compiler reason.
+	k.registerNative("jit-stats", catWitness(), func(k *Kernel, _ []Value) Value {
+		type jitStatRow struct {
+			kind   string
+			body   string
+			count  uint32
+			detail string
+		}
+		rows := []jitStatRow{}
+		for bodyKey := range k.jitCompiledGo {
+			rows = append(rows, jitStatRow{kind: "compiled", body: bodyKey})
+		}
+		for body, count := range k.jitDispatchHits {
+			rows = append(rows, jitStatRow{kind: "dispatch-hit", body: nodeIDKey(body), count: count})
+		}
+		for body, count := range k.jitHits {
+			rows = append(rows, jitStatRow{kind: "warming", body: nodeIDKey(body), count: count})
+		}
+		for body, failed := range k.jitFailed {
+			if !failed {
+				continue
+			}
+			rows = append(rows, jitStatRow{
+				kind:   "compile-failed",
+				body:   nodeIDKey(body),
+				count:  1,
+				detail: k.jitFailedReason[body],
+			})
+		}
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].kind != rows[j].kind {
+				return rows[i].kind < rows[j].kind
+			}
+			return rows[i].body < rows[j].body
+		})
+		out := make([]Value, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, Value{Kind: VList, List: []Value{
+				{Kind: VStr, Str: row.kind},
+				{Kind: VStr, Str: row.body},
+				{Kind: VInt, Int: int64(row.count)},
+				{Kind: VStr, Str: row.detail},
+			}})
+		}
+		return Value{Kind: VList, List: out}
+	})
 	// seeded_bytes(seed, count) — deterministic LCG byte stream.
 	// Same (seed, count) → byte-identical output across Go / Rust / TS.
 	// glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
@@ -2196,7 +2868,7 @@ func (k *Kernel) registerNatives() {
 	// serialize-recipe alone drops string indices, which break under
 	// fresh string tables on load. This format embeds the strings.
 	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
-		path := args[0].Str
+		path := resolveKernelHostPath(args[0].Str)
 		nid := args[1].Nid
 		bytes := serializeArtifact(k, nid)
 		if err := os.WriteFile(path, bytes, 0644); err != nil {
@@ -2205,7 +2877,7 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: int64(len(bytes))}
 	})
 	k.registerNative("read_form_binary", catCall(), func(k *Kernel, args []Value) Value {
-		b, err := os.ReadFile(args[0].Str)
+		b, err := os.ReadFile(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VNull}
 		}
@@ -2217,13 +2889,13 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
 		bytes := serializeArtifact(k, args[1].Nid)
-		if err := os.WriteFile(args[0].Str, bytes, 0644); err != nil {
+		if err := os.WriteFile(resolveKernelHostPath(args[0].Str), bytes, 0644); err != nil {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: int64(len(bytes))}
 	})
 	k.registerNative("file_size", catCall(), func(_ *Kernel, args []Value) Value {
-		info, err := os.Stat(args[0].Str)
+		info, err := os.Stat(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
 		}
@@ -2234,7 +2906,7 @@ func (k *Kernel) registerNatives() {
 	// when a .fkb projection of a source file is stale. Generic: any
 	// "regenerate cache when source newer" pattern can compose this.
 	k.registerNative("file_mtime", catCall(), func(_ *Kernel, args []Value) Value {
-		info, err := os.Stat(args[0].Str)
+		info, err := os.Stat(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
 		}
@@ -2244,7 +2916,7 @@ func (k *Kernel) registerNatives() {
 		if args[1].Int < 0 {
 			return Value{Kind: VInt, Int: -1}
 		}
-		f, err := os.Open(args[0].Str)
+		f, err := os.Open(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
 		}
@@ -2262,7 +2934,7 @@ func (k *Kernel) registerNatives() {
 		if offset < 0 || length <= 0 {
 			return Value{Kind: VStr, Str: ""}
 		}
-		f, err := os.Open(args[0].Str)
+		f, err := os.Open(resolveKernelHostPath(args[0].Str))
 		if err != nil {
 			return Value{Kind: VStr, Str: ""}
 		}
@@ -2818,6 +3490,8 @@ func (k *Kernel) registerNatives() {
 		line := uint32(args[3].Int)
 		col := uint32(args[4].Int)
 		k.sourceAttr[nid] = sourceLoc{FileID: fileID, Line: line, Col: col}
+		k.activeRoots = append(k.activeRoots, nid)
+		k.framebufferRoots = append(k.framebufferRoots, nid)
 		return Value{Kind: VNodeID, Nid: nid}
 	})
 	// node_source — read back a Recipe's source attribution.
@@ -2839,15 +3513,75 @@ func (k *Kernel) registerNatives() {
 	// tracing: emitter pays one hashmap insert per intern_node_at;
 	// observer pays the cost of walking this list when it analyzes.
 	k.registerNative("framebuffer-events", catWitness(), func(k *Kernel, _ []Value) Value {
-		out := make([]Value, 0, len(k.sourceAttr))
-		for nid := range k.sourceAttr {
+		out := make([]Value, 0, len(k.framebufferRoots))
+		for _, nid := range k.framebufferRoots {
+			if _, ok := k.sourceAttr[nid]; !ok {
+				continue
+			}
 			out = append(out, Value{Kind: VNodeID, Nid: nid})
 		}
 		return Value{Kind: VList, List: out}
 	})
+	// framebuffer-event-rows - ordered detail rows over the same framebuffer
+	// facts as framebuffer-counts. Detail is useful before a route condenses;
+	// counts are the compressed after-JIT view.
+	k.registerNative("framebuffer-event-rows", catWitness(), func(k *Kernel, _ []Value) Value {
+		rows := k.framebufferEvents()
+		out := make([]Value, 0, len(rows))
+		for _, row := range rows {
+			childVals := []Value{}
+			for _, child := range row["children"].([]string) {
+				childVals = append(childVals, Value{Kind: VStr, Str: child})
+			}
+			childValueVals := []Value{}
+			for _, child := range row["child_values"].([]string) {
+				childValueVals = append(childValueVals, Value{Kind: VStr, Str: child})
+			}
+			out = append(out, Value{Kind: VList, List: []Value{
+				{Kind: VInt, Int: row["seq"].(int64)},
+				{Kind: VStr, Str: row["file"].(string)},
+				{Kind: VInt, Int: int64(row["line"].(uint32))},
+				{Kind: VInt, Int: int64(row["col"].(uint32))},
+				{Kind: VStr, Str: row["node"].(string)},
+				{Kind: VList, List: childVals},
+				{Kind: VList, List: childValueVals},
+			}})
+		}
+		return Value{Kind: VList, List: out}
+	})
+	// framebuffer-counts - observer-side aggregation over the framebuffer
+	// plane. Rows are (file, line, col, count), so repeated recipe dispatch,
+	// branch failure, and JIT events stay on the same surface as source
+	// attribution instead of becoming a trace-only side channel.
+	k.registerNative("framebuffer-counts", catWitness(), func(k *Kernel, _ []Value) Value {
+		rows := k.framebufferSourceCounts()
+		out := make([]Value, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, Value{Kind: VList, List: []Value{
+				{Kind: VStr, Str: row["file"].(string)},
+				{Kind: VInt, Int: int64(row["line"].(uint32))},
+				{Kind: VInt, Int: int64(row["col"].(uint32))},
+				{Kind: VInt, Int: int64(row["count"].(int))},
+			}})
+		}
+		return Value{Kind: VList, List: out}
+	})
+	k.registerNative("framebuffer-observe-start", catWitness(), func(k *Kernel, _ []Value) Value {
+		k.observeRuntime = true
+		return Value{Kind: VNull}
+	})
+	k.registerNative("framebuffer-observe-stop", catWitness(), func(k *Kernel, _ []Value) Value {
+		k.observeRuntime = false
+		return Value{Kind: VNull}
+	})
+	k.registerNative("framebuffer-observe-active?", catCompare(RCompareEq), func(k *Kernel, _ []Value) Value {
+		return Value{Kind: VBool, Bool: k.observationActive()}
+	})
 	// framebuffer-clear — reset the framebuffer for bounded windows.
 	k.registerNative("framebuffer-clear", catWitness(), func(k *Kernel, _ []Value) Value {
 		k.sourceAttr = make(map[NodeID]sourceLoc)
+		k.observeSeq = 0
+		k.framebufferRoots = nil
 		return Value{Kind: VNull}
 	})
 	// serialize-recipe — walk a Recipe tree, emit a flat byte list as
@@ -2951,6 +3685,54 @@ func (k *Kernel) registerNatives() {
 			{Kind: VInt, Int: int64(k.walkCacheMisses)},
 			{Kind: VInt, Int: int64(len(k.walkCache))},
 		}}
+	})
+	compileFormSource := func(k *Kernel, args []Value) Value {
+		k.sourceCompileErr = ""
+		label := "runtime:string/form"
+		if len(args) > 1 && args[1].Kind == VStr && args[1].Str != "" {
+			label = args[1].Str
+		}
+		root := readRootFromSource(k, args[0].Str)
+		pinRuntimeCompiledRoot(k, root, label)
+		return Value{Kind: VNodeID, Nid: root}
+	}
+	k.registerNative("compile_form_source", catWitness(), compileFormSource)
+	k.registerNative("compile-form-source", catWitness(), compileFormSource)
+	compileSourceSection := func(k *Kernel, args []Value) Value {
+		k.sourceCompileErr = ""
+		label := "runtime:string/source-section"
+		if len(args) > 2 && args[2].Kind == VStr && args[2].Str != "" {
+			label = args[2].Str
+		}
+		root, err := compileSourceSectionIntoKernel(k, args[0].Str, args[1].Str, label)
+		if err != nil {
+			k.sourceCompileErr = err.Error()
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: root}
+	}
+	k.registerNative("compile_source_section", catWitness(), compileSourceSection)
+	k.registerNative("compile-source-section", catWitness(), compileSourceSection)
+	compileSourceText := func(k *Kernel, args []Value) Value {
+		k.sourceCompileErr = ""
+		label := "runtime:string/source"
+		if len(args) > 1 && args[1].Kind == VStr && args[1].Str != "" {
+			label = args[1].Str
+		}
+		root, err := compileSourceTextIntoKernel(k, label, args[0].Str)
+		if err != nil {
+			k.sourceCompileErr = err.Error()
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VNodeID, Nid: root}
+	}
+	k.registerNative("compile_source_text", catWitness(), compileSourceText)
+	k.registerNative("compile-source-text", catWitness(), compileSourceText)
+	k.registerNative("source_compile_last_error", catWitness(), func(k *Kernel, _ []Value) Value {
+		return Value{Kind: VStr, Str: k.sourceCompileErr}
+	})
+	k.registerNative("source-compile-last-error", catWitness(), func(k *Kernel, _ []Value) Value {
+		return Value{Kind: VStr, Str: k.sourceCompileErr}
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
@@ -3128,6 +3910,8 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VNodeID, Nid: ne.Category}
 	})
 
+	k.registerHostIONatives()
+
 	// --- Debug / inspection -----------------------------------------------
 	// `trace` — print-and-return. No Form category claimed; debug surface.
 	k.registerNative("trace", catUndefined(), func(_ *Kernel, args []Value) Value {
@@ -3184,6 +3968,7 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		if k.Trace != nil {
 			k.Trace.record(cat.Type, cat.Inst)
 		}
+		k.observeRecipeDispatch(cat)
 
 		switch cat.Type {
 		case RBasicMath:
@@ -3308,6 +4093,45 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			n = kids[len(kids)-1] // TCO: a do/seq block's last expr is in tail position
 			continue
 
+		case RBasicMatch:
+			if cat.Inst == RMatchSwitch {
+				return k.walkMatchSwitch(n, kids, env)
+			}
+			return Value{Kind: VNodeID, Nid: n}
+
+		case RBasicChoice:
+			switch cat.Inst {
+			case RChoiceFail:
+				panic(choiceFailSignal{})
+			case RChoiceStop:
+				panic(choiceStopSignal{})
+			case RChoiceChoose:
+				for i, branch := range kids {
+					if k.Trace != nil {
+						k.Trace.ChoiceAttempts++
+					}
+					k.observeFrame("observe/go/choice/attempt", uint32(i+1), uint32(len(kids)), branch)
+					value, ok, stopped := k.walkChoiceBranch(branch, env)
+					if ok {
+						if k.Trace != nil {
+							k.Trace.ChoiceSuccesses++
+						}
+						if stopped {
+							k.observeFrame("observe/go/choice/stop", uint32(i+1), uint32(len(kids)), branch)
+						} else {
+							k.observeFrame("observe/go/choice/success", uint32(i+1), uint32(len(kids)), branch)
+						}
+						return value
+					}
+					if k.Trace != nil {
+						k.Trace.ChoiceFailures++
+					}
+					k.observeFrame("observe/go/choice/fail", uint32(i+1), uint32(len(kids)), branch)
+				}
+				panic(choiceFailSignal{})
+			}
+			return Value{Kind: VNull}
+
 		case RBasicIdent:
 			id := k.identID(n)
 			if v, ok := env.Lookup(id); ok {
@@ -3351,32 +4175,29 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 					if k.Trace != nil {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
+					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
 					return ne.Fn(k, env, args)
 				}
 			}
-			// Native takes priority unless user shadowed with a closure
+			// Native takes priority unless user shadowed with a closure.
 			if ne, ok := k.natives[name]; ok {
 				if _, hasUserBinding := env.Lookup(name); !hasUserBinding {
 					args := make([]Value, len(kids)-1)
 					for i := 1; i < len(kids); i++ {
 						args[i-1] = k.walk(kids[i], env)
 					}
-					// Native Blueprint attribution — record the Form category
-					// the native expresses alongside the FNCALL arm already
-					// recorded above. The kernel knows itself even when the
-					// call leaves Form-land.
 					if k.Trace != nil && ne.Category.Type != RBasicUndefined {
 						k.Trace.record(ne.Category.Type, ne.Category.Inst)
 					}
 					if k.Trace != nil {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
+					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
 					return ne.Fn(k, args)
 				}
 			}
-			// Closure lookup uses the ORIGINAL function-name (not the JIT-
-			// aliased one) — the user defined this function and wants to
-			// call THEIR version when no JIT mapping resolved a native.
+			// Closure lookup uses the original function name so user code stays
+			// canonical when no native or alias resolved above.
 			v, ok := env.Lookup(rawName)
 			if !ok {
 				panic(fmt.Sprintf("walk: unbound function %q", k.nameStr(rawName)))
@@ -3388,47 +4209,95 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			if len(kids)-1 != len(cl.Params) {
 				panic(fmt.Sprintf("walk: %q wants %d args, got %d", k.nameStr(rawName), len(cl.Params), len(kids)-1))
 			}
-			// JIT dispatch: if this closure's body has been JIT-compiled to
-			// host-native Go (via `jit_compile name` → recipe-to-Go-source
-			// → go build -buildmode=plugin → plugin.Open), marshal args to
-			// int64, call the loaded function, box the int64 result back to
-			// VInt. The recipe stays canonical truth — the JIT path is just
-			// a faster way to evaluate it. If the closure body needs args
-			// the int64-only signature can't carry (a float, string, list),
-			// we fall through to the walker with the args we already evaluated.
-			// Same answer either way.
 			argVals := make([]Value, len(cl.Params))
 			for i := 1; i < len(kids); i++ {
 				argVals[i-1] = k.walk(kids[i], env)
 			}
 			bodyKey := nodeIDKey(cl.Body)
-			// Value-typed JIT — the general path. Runs the whole body native
-			// over core.Value, routing native / cross-function calls through
-			// dispatch. No arg-kind restriction (lists, strings, records all
-			// flow). Checked first because it subsumes the int64 fast path.
 			if _, ok := k.jitCompiledGoV[bodyKey]; ok {
 				if k.Trace != nil {
 					k.Trace.recordFn(k.nameStr(cl.Name))
 					k.Trace.recordNative("jit-go-value-dispatch")
 				}
+				k.jitDispatchHits[cl.Body]++
+				k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+				k.observeJIT("observe/go/jit/dispatch-hit", cl.Body, 4, uint32(len(argVals)))
 				return k.applyClosureValue(cl, argVals)
 			}
-			if fn, ok := k.jitCompiledGo[bodyKey]; ok {
+			if jc, ok := k.jitCompiledGo[bodyKey]; ok && jc != nil {
 				allInt := true
+				allNumeric := true
+				hasFloat := false
+				allJITValue := true
 				intArgs := make([]int64, len(cl.Params))
+				floatArgs := make([]float64, len(cl.Params))
+				jitArgs := make([]jitabi.Value, len(cl.Params))
 				for i, av := range argVals {
 					if av.Kind != VInt {
 						allInt = false
-						break
 					}
-					intArgs[i] = av.Int
+					if jv, ok := valueToJIT(av); ok {
+						jitArgs[i] = jv
+					} else {
+						allJITValue = false
+					}
+					switch av.Kind {
+					case VInt:
+						intArgs[i] = av.Int
+						floatArgs[i] = float64(av.Int)
+					case VFloat:
+						hasFloat = true
+						floatArgs[i] = av.Float
+					default:
+						allNumeric = false
+					}
 				}
-				if allInt {
+				if allInt && jc.I64 != nil {
 					if k.Trace != nil {
 						k.Trace.recordFn(k.nameStr(cl.Name))
 						k.Trace.recordNative("jit-go-dispatch")
 					}
-					return Value{Kind: VInt, Int: fn(intArgs)}
+					k.jitDispatchHits[cl.Body]++
+					k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+					k.observeJIT("observe/go/jit/dispatch-hit", cl.Body, 1, uint32(len(argVals)))
+					return Value{Kind: VInt, Int: jc.I64(intArgs)}
+				}
+				if allNumeric && hasFloat && jc.F64 != nil {
+					if k.Trace != nil {
+						k.Trace.recordFn(k.nameStr(cl.Name))
+						k.Trace.recordNative("jit-go-dispatch")
+					}
+					k.jitDispatchHits[cl.Body]++
+					k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+					k.observeJIT("observe/go/jit/dispatch-hit", cl.Body, 2, uint32(len(argVals)))
+					return Value{Kind: VFloat, Float: jc.F64(floatArgs)}
+				}
+				if allJITValue && jc.Value != nil {
+					if k.Trace != nil {
+						k.Trace.recordFn(k.nameStr(cl.Name))
+						k.Trace.recordNative("jit-go-dispatch")
+					}
+					k.jitDispatchHits[cl.Body]++
+					k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+					k.observeJIT("observe/go/jit/dispatch-hit", cl.Body, 3, uint32(len(argVals)))
+					return valueFromJIT(jc.Value(jitArgs))
+				}
+				k.observeJIT("observe/go/jit/guard-miss", cl.Body, 1, uint32(len(argVals)))
+			} else if !k.jitFailed[cl.Body] {
+				const goJITHotThreshold uint32 = 2000
+				hits := k.jitHits[cl.Body] + 1
+				if hits >= goJITHotThreshold {
+					if jc, err := jitCompileClosureGo(k, cl); err == nil {
+						k.jitCompiledGo[bodyKey] = jc
+						k.observeJIT("observe/go/jit/auto-compile-success", cl.Body, 1, 1)
+					} else {
+						k.jitFailed[cl.Body] = true
+						k.jitFailedReason[cl.Body] = err.Error()
+						k.observeJIT("observe/go/jit/auto-compile-fail", cl.Body, 1, 1)
+					}
+					delete(k.jitHits, cl.Body)
+				} else {
+					k.jitHits[cl.Body] = hits
 				}
 			}
 			call := NewCallFrame(cl.Env, len(cl.Params))
@@ -3438,7 +4307,8 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			if k.Trace != nil {
 				k.Trace.recordFn(k.nameStr(cl.Name))
 			}
-			n = cl.Body // TCO: a closure body is in tail position — loop, don't recurse
+			k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+			n = cl.Body // TCO: closure body is in tail position.
 			env = call
 			continue
 
@@ -3459,6 +4329,147 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 		// the Rust + TS kernels.
 		return Value{Kind: VNodeID, Nid: n}
 	}
+}
+
+func (k *Kernel) walkChoiceBranch(branch NodeID, env *Frame) (value Value, ok bool, stopped bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch r.(type) {
+			case choiceFailSignal:
+				value = Value{Kind: VNull}
+				ok = false
+				stopped = false
+			case choiceStopSignal:
+				value = Value{Kind: VNull}
+				ok = true
+				stopped = true
+			default:
+				panic(r)
+			}
+		}
+	}()
+	return k.walk(branch, env), true, false
+}
+
+func (k *Kernel) switchTableFor(node NodeID, kids []NodeID) *switchTable {
+	if table, ok := k.switchTables[node]; ok {
+		return table
+	}
+	if len(kids) < 1 || (len(kids)-1)%2 != 0 {
+		panic("match: SWITCH expects scrutinee plus pattern/body pairs")
+	}
+	table := &switchTable{cases: make(map[NodeID]NodeID)}
+	for i := 1; i < len(kids); i += 2 {
+		pattern := kids[i]
+		body := kids[i+1]
+		if k.isSwitchDefaultPattern(pattern) {
+			table.defaultBody = body
+			table.hasDefault = true
+			continue
+		}
+		if pattern.Level == LevelTrivial {
+			table.cases[pattern] = body
+			continue
+		}
+		table.dynamicArms = append(table.dynamicArms, switchArm{pattern: pattern, body: body})
+	}
+	k.switchTables[node] = table
+	return table
+}
+
+func (k *Kernel) isSwitchDefaultPattern(pattern NodeID) bool {
+	if pattern.Level != LevelTrivial {
+		cat := k.category(pattern)
+		if cat.Type == RBasicIdent {
+			return k.nameStr(k.identID(pattern)) == "_"
+		}
+	}
+	return false
+}
+
+func (k *Kernel) switchKeyFromValue(v Value) (NodeID, bool) {
+	switch v.Kind {
+	case VNull:
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivNull, Inst: 0}, true
+	case VInt:
+		return k.internTrivialInt(v.Int), true
+	case VFloat:
+		return k.internTrivialFloat64(v.Float), true
+	case VStr:
+		return k.internString(v.Str), true
+	case VBool:
+		if v.Bool {
+			return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivBool, Inst: 1}, true
+		}
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivBool, Inst: 0}, true
+	case VNodeID:
+		return v.Nid, true
+	default:
+		return NodeID{}, false
+	}
+}
+
+func valueEqual(a, b Value) bool {
+	if a.Kind != b.Kind {
+		return false
+	}
+	switch a.Kind {
+	case VNull:
+		return true
+	case VInt:
+		return a.Int == b.Int
+	case VFloat:
+		return a.Float == b.Float
+	case VStr:
+		return a.Str == b.Str
+	case VBool:
+		return a.Bool == b.Bool
+	case VNodeID:
+		return a.Nid == b.Nid
+	default:
+		return false
+	}
+}
+
+func (k *Kernel) walkMatchSwitch(node NodeID, kids []NodeID, env *Frame) Value {
+	if len(kids) < 1 || (len(kids)-1)%2 != 0 {
+		panic("match: SWITCH expects scrutinee plus pattern/body pairs")
+	}
+	if k.Trace != nil {
+		k.Trace.MatchLookups++
+	}
+	scrutinee := k.walk(kids[0], env)
+	table := k.switchTableFor(node, kids)
+	if key, ok := k.switchKeyFromValue(scrutinee); ok {
+		if body, found := table.cases[key]; found {
+			if k.Trace != nil {
+				k.Trace.MatchHits++
+			}
+			k.observeFrame("observe/go/match/hit", key.Type, key.Inst, node, key, body)
+			return k.walk(body, env)
+		}
+	}
+	for _, arm := range table.dynamicArms {
+		if valueEqual(k.walk(arm.pattern, env), scrutinee) {
+			if k.Trace != nil {
+				k.Trace.MatchHits++
+			}
+			k.observeFrame("observe/go/match/dynamic-hit", 1, uint32(len(table.dynamicArms)), node, arm.pattern, arm.body)
+			return k.walk(arm.body, env)
+		}
+	}
+	if table.hasDefault {
+		if k.Trace != nil {
+			k.Trace.MatchDefaults++
+		}
+		k.observeFrame("observe/go/match/default", 1, 1, node, table.defaultBody)
+		return k.walk(table.defaultBody, env)
+	}
+	if k.Trace != nil {
+		k.Trace.MatchMisses++
+	}
+	k.observeFrame("observe/go/match/miss", 1, uint32(len(kids)), node)
+	panic(fmt.Sprintf("match: exhausted without a matching arm for %s", scrutinee.String()))
 }
 
 func truthy(v Value) bool {
@@ -3761,6 +4772,14 @@ func (k *Kernel) buildVerb(verb string, args []NodeID) NodeID {
 		return k.intern(catLogic(RLogicOr), args)
 	case "not":
 		return k.intern(catLogic(RLogicNot), args)
+	case "match":
+		return k.intern(catMatch(RMatchSwitch), args)
+	case "choose":
+		return k.intern(catChoice(RChoiceChoose), args)
+	case "fail":
+		return k.intern(catChoice(RChoiceFail), args)
+	case "stop":
+		return k.intern(catChoice(RChoiceStop), args)
 	case "defn":
 		// (defn <name> (<params>...) <body>) — names and params get repackaged
 		// as bare string trivials so the walker reads NameID via `inst`.
@@ -3792,6 +4811,8 @@ func catCompare(inst uint32) NodeID { return NodeID{1, LevelBasic, RBasicCompare
 func catLogic(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicLogic, inst} }
 func catCond(inst uint32) NodeID    { return NodeID{1, LevelBasic, RBasicCond, inst} }
 func catBlock(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicBlock, inst} }
+func catMatch(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicMatch, inst} }
+func catChoice(inst uint32) NodeID  { return NodeID{1, LevelBasic, RBasicChoice, inst} }
 func catIdent() NodeID              { return NodeID{1, LevelBasic, RBasicIdent, 1} }
 func catFnDef() NodeID              { return NodeID{1, LevelBasic, RBasicFnDef, 1} }
 func catFnCall() NodeID             { return NodeID{1, LevelBasic, RBasicFnCall, 1} }
@@ -3852,7 +4873,7 @@ func readRootFromSource(k *Kernel, src string) NodeID {
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --binary file.fkb | --emit-binary out.fkb file.fk... | --expr \"...\" | --bench | --numeric-bench | trace ...")
+		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --binary file.fkb | --emit-binary out.fkb file.fk... | --expr \"...\" | --bench | --numeric-bench | trace ... | serve --port 18080 <route-prelude.fk...>")
 		os.Exit(2)
 	}
 
@@ -3868,6 +4889,10 @@ func main() {
 
 	if args[0] == "trace" {
 		os.Exit(cliTrace(args[1:]))
+	}
+
+	if args[0] == "serve" {
+		os.Exit(cliServe(args[1:]))
 	}
 
 	if args[0] == "--binary" {
@@ -3977,12 +5002,16 @@ func cliTrace(args []string) int {
 		}
 		src = args[1]
 	} else {
-		b, err := os.ReadFile(args[0])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "read %s: %v\n", args[0], err)
-			return 1
+		var parts []string
+		for _, path := range args {
+			b, err := os.ReadFile(path)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "read %s: %v\n", path, err)
+				return 1
+			}
+			parts = append(parts, string(b))
 		}
-		src = string(b)
+		src = strings.Join(parts, "\n")
 	}
 
 	k := NewKernel()
@@ -4018,10 +5047,12 @@ func cliTrace(args []string) int {
 	elapsed := time.Since(start)
 
 	report := map[string]interface{}{
-		"result":        result.String(),
-		"elapsed_us":    elapsed.Microseconds(),
-		"elapsed_human": elapsed.String(),
-		"trace":         k.Trace.toJSON(),
+		"result":             result.String(),
+		"elapsed_us":         elapsed.Microseconds(),
+		"elapsed_human":      elapsed.String(),
+		"trace":              k.Trace.toJSON(),
+		"framebuffer_counts": k.framebufferSourceCounts(),
+		"framebuffer_events": k.framebufferEvents(),
 	}
 	out, _ := json.MarshalIndent(report, "", "  ")
 	fmt.Println(string(out))

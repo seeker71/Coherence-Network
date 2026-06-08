@@ -129,9 +129,9 @@ Notes:
 
 Gemini CLI is supported through `context.executor=gemini` with OAuth-only auth mode (no API keys).
 
-### Required env (Railway/hosted runner)
+### Required env (hosted runner)
 
-Set in `api/.env` (or Railway service variables):
+Set in the hosted runner config:
 
 ```bash
 AGENT_EXECUTOR_DEFAULT=gemini

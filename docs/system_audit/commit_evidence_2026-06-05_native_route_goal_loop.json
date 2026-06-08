@@ -1,0 +1,165 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Native route-frequency goal loop, web API provenance telemetry, and BML route promotion batch",
+  "files_owned": [
+    "web/app/api/[...path]/route.ts",
+    "api/app/main.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/runtime_service.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/INDEX.md",
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server.go",
+    "scripts/native_route_goal_loop.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    ".claude/commands/goal.md",
+    ".claude/commands/loop.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 20",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --limit 2000 --write-state",
+      "cd web && npm ci --ignore-scripts",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 20 --json | python3 -m json.tool",
+      "cd form/form-kernel-go && go test ./...",
+      "curl -sS http://127.0.0.1:18128/api/coherence/score",
+      "curl -sS http://127.0.0.1:18128/api/concepts/lc-pulse",
+      "curl -sS 'http://127.0.0.1:18128/api/ideas/resonance?window_hours=72&limit=3'",
+      "curl -sS 'http://127.0.0.1:18128/api/edges?limit=2'",
+      "curl -sS 'http://127.0.0.1:18128/api/inspired-by?contributor_id=seeker71'",
+      "curl -sS 'http://127.0.0.1:18128/api/runtime/endpoints/summary?seconds=86400&limit=5&source=web_api'",
+      "curl -sS 'http://127.0.0.1:18128/api/feed/personal?author_name=Mama&limit=5&lang=en'",
+      "curl -sS 'http://127.0.0.1:18129/api/household/requests?limit=5'",
+      "curl -sS 'http://127.0.0.1:18129/api/household/members'",
+      "curl -sS 'http://127.0.0.1:18129/api/household/requests/request-20260605T084921-8bbaef'",
+      "diff -u /tmp/household-requests.public.sorted.json /tmp/household-requests.native.sorted.json",
+      "diff -u /tmp/household-members.public.sorted.json /tmp/household-members.native.sorted.json",
+      "diff -u /tmp/household-detail.public.sorted.json /tmp/household-detail.native.sorted.json",
+      "curl -sS -X POST http://127.0.0.1:18129/api/meetings/anonymous-traces -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"visitor_key\":\"codex-native-validation-20260605-visitor\",\"session_key\":\"codex-native-validation-20260605-session\",\"surface\":\"/api/native-kernel-route-validation\",\"duration_ms\":12345,\"referrer_domain\":\"https://example.com/path?x=1\",\"started_at\":\"2026-06-05T00:00:00+00:00\",\"ended_at\":\"2026-06-05T00:00:12+00:00\"}'",
+      "curl -sS -X POST http://127.0.0.1:18129/api/meetings/anonymous-traces -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"visitor_key\":\"codex-native-validation-20260605-visitor\",\"session_key\":\"codex-native-validation-20260605-session\",\"surface\":\"/api/native-kernel-route-validation/second\",\"duration_ms\":22222,\"referrer_domain\":\"coherencycoin.com/path\",\"started_at\":\"2026-06-05T00:00:00+00:00\",\"ended_at\":\"2026-06-05T00:00:25+00:00\"}'",
+      "curl -sS 'http://127.0.0.1:18129/api/meetings/anonymous-traces?source_point_id=anon:a6cd4c8e2c76453c&limit=5'",
+      "curl -sS 'https://api.coherencycoin.com/api/meetings/anonymous-traces?source_point_id=anon:a6cd4c8e2c76453c&limit=5'",
+      "python3 - <<'PY'\nimport json, pathlib\nnative=json.loads(pathlib.Path('/tmp/native-anon-get-after-order.json').read_text())\npublic=json.loads(pathlib.Path('/tmp/public-anon-get-after-order.json').read_text())\nassert native == public\nPY",
+      "psql <production-tunnel-url-from-config> -Atc \"delete from graph_nodes where id='anonymous-meeting:a6cd4c8e2c76453c:31b0f91bd19a0ed5' and properties->>'source_point_id'='anon:a6cd4c8e2c76453c' returning id\"",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --write-state",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000",
+      "bash -n scripts/verify_worktree_local_web.sh",
+      "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh --start",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-05_native_route_goal_loop.json"
+    ],
+    "summary": "The web API proxy stamps proxied calls and API runtime events can be sliced as source=web_api, but method-aware events show the current web-only traffic is only GET /api/health-proxy and is not yet a backend promotion queue. The /goal+/loop script now ranks method+path rows from runtime_events before falling back to endpoint summaries, so GET and POST gaps do not collapse into one endpoint. The BML catalog now promotes DB-backed handlers for coherence score, Living Collective concept reads, idea resonance, edges, inspired-by, runtime endpoint summary, personal feed, household board reads, and anonymous meeting trace read/write. Household GET requests, members, and request-detail routes were probed through the Go listener against the production Postgres tunnel and byte-normalized diffs against the public Python carrier were empty. Anonymous meeting trace POST was probed through the Go listener against production Postgres, used Form SHA-256-derived source/session IDs, merged a second surface, matched the public Python GET output, and then deleted the validation row."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && .venv/bin/pytest -q tests/test_runtime_web_api_provenance.py",
+      "output": "zsh:1: no such file or directory: .venv/bin/pytest",
+      "reason": "This worktree has no api/.venv. The same focused test passed with the available system Python: cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py."
+    },
+    {
+      "command": "cd web && npx tsc --noEmit --pretty false",
+      "output": "tests/homepage-presence-lineage.test.ts(88,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'. Type 'undefined' is not assignable to type 'string'.",
+      "reason": "After installing web dependencies, the full web type-check is blocked by an unrelated existing test typing issue outside the changed proxy route."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deploy performed. Public runtime_events source filtering is available, but the current source=web_api window only observes GET /api/health-proxy; backend promotion ranking still uses source=api until web route normalization or fresh navigation traffic is present."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Scoped local validation passed, but the web_api production readout requires deployment and the unrelated web type-check issue remains outside this task."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "native-route-goal-loop"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "API provenance test: 2 passed in tests/test_runtime_web_api_provenance.py",
+    "Go carrier validation: cd form/form-kernel-go && go test ./... passed",
+    "Native HTTP probes through form-kernel-go :18128 returned 200 + X-Form-Router: native-kernel-go for /api/coherence/score, /api/concepts/lc-pulse, /api/ideas/resonance, /api/edges, /api/inspired-by, /api/runtime/endpoints/summary, and /api/feed/personal",
+    "Coherence score native response used 6 signals: task_completion, spec_coverage, contribution_activity, runtime_health, value_realization, graph_connectedness; score=0.5532 in the probe",
+    "Inspired-by was reshaped from full-node emission to bounded card projection; default probe returned count=40, total=281, limit=40 in 0.727s",
+    "Household source was found on origin/main: api/app/routers/household.py plus docs/coherence-substrate/household-membrane.form; deploy/front-door/api.bml now carries GET /api/household/requests, GET /api/household/requests/{request_id}, and GET /api/household/members.",
+    "Household native parity: jq -S public/native diffs for requests, members, and request detail returned no output; local Go listener responses were 200 against production Postgres data.",
+    "Anonymous trace POST native proof: local Go listener returned 201 for POST /api/meetings/anonymous-traces, computed anon:a6cd4c8e2c76453c and session:31b0f91bd19a0ed5 via the Form SHA-256 recipe, merged a second surface into one graph_nodes event, and preserved first-occurrence surface/referrer ordering.",
+    "Anonymous trace read parity: native GET and public Python GET for source_point_id=anon:a6cd4c8e2c76453c compared equal after the ordered-summary fix; the validation graph_nodes row was deleted afterward.",
+    "Method-aware /goal public readout: source=web_api measurement=runtime_events, events=28, goal-native share=0.00%, next=GET /api/health-proxy; this is a web-observer normalization/fresh-navigation gap, not a backend route promotion queue.",
+    "Backend-source /goal readout: source=api measurement=runtime_events, events=2000, goal-native high-grammar share=78.15%, kernel-native executable share=79.55%, next=POST /api/substrate/form count=90 share=4.50%; POST /api/meetings/anonymous-traces is now high-grammar native.",
+    "Local verifier: API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh --start passed and printed PASS: web_api runtime summary includes /api/health",
+    "Full web type-check blocked by unrelated tests/homepage-presence-lineage.test.ts:88 string|undefined issue"
+  ],
+  "change_files": [
+    "web/app/api/[...path]/route.ts",
+    "api/app/main.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/runtime_service.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/INDEX.md",
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server.go",
+    "scripts/native_route_goal_loop.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    ".claude/commands/goal.md",
+    ".claude/commands/loop.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents can invoke /goal or /loop to rank measured API route traffic, track progress toward 90% high-grammar native execution, and pick the next route promotion from runtime evidence rather than static route count.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?seconds=86400&limit=20",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?seconds=86400&limit=2000&source=web_api"
+    ],
+    "test_flows": [
+      "web proxy request stamps X-Coherence-Web-Proxy and API runtime event source becomes web_api",
+      "runtime endpoint summary accepts source filtering",
+      "native_route_goal_loop /goal reads public telemetry and overlays BML/Form native route manifests",
+      "native_route_goal_loop /loop writes docs/system_audit/native_route_goal_state.json with next task card"
+    ]
+  }
+}

@@ -1,0 +1,937 @@
+; api.bml — BML-authored front-door API catalog.
+;
+; Source identity is the API front door. Go/Rust/TS/Python are carriers.
+; This catalog is loaded through the Form source compiler into ordinary route
+; and handler recipes before any carrier serves requests.
+
+section [form.bml] {
+    def idea-clamp-limit(n) = if lt(n, 1) then 1 else if gt(n, 500) then 500 else n;
+    def idea-safe-offset(n) = if lt(n, 0) then 0 else n;
+    def idea-sort-value(value) = match value { "marginal_cc" => "marginal_cc", _ => "free_energy" };
+    def idea-row(key, row) = _dict_get(row, key);
+    def idea-json-float(value) = json-node-float-text(value_str(value));
+    def idea-json-nullable-string(key, value) = json-node-pair(key, if str_eq(value, "") then json-node-null() else json-node-string(value));
+    def idea-json-text(path, text) = parse-json(path, text);
+    def idea-cost-vector(row) = json-node-object(list(json-node-pair("compute_cc", idea-json-float(mul(idea-row("estimated_cost", row), 0.6))), json-node-pair("infrastructure_cc", idea-json-float(mul(idea-row("estimated_cost", row), 0.15))), json-node-pair("human_attention_cc", idea-json-float(mul(idea-row("estimated_cost", row), 0.25))), json-node-pair("opportunity_cc", json-node-float-text("0.0")), json-node-pair("external_cc", json-node-float-text("0.0")), json-node-pair("total_cc", idea-json-float(idea-row("estimated_cost", row)))));
+    def idea-value-vector(row) = json-node-object(list(json-node-pair("adoption_cc", idea-json-float(mul(idea-row("potential_value", row), 0.5))), json-node-pair("lineage_cc", idea-json-float(mul(idea-row("potential_value", row), 0.3))), json-node-pair("friction_avoided_cc", idea-json-float(mul(idea-row("potential_value", row), 0.2))), json-node-pair("revenue_cc", json-node-float-text("0.0")), json-node-pair("total_cc", idea-json-float(idea-row("potential_value", row)))));
+    def idea-json-row(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("name", json-node-string(idea-row("name", row))), json-node-pair("description", json-node-string(idea-row("description", row))), json-node-pair("potential_value", idea-json-float(idea-row("potential_value", row))), json-node-pair("actual_value", idea-json-float(idea-row("actual_value", row))), json-node-pair("estimated_cost", idea-json-float(idea-row("estimated_cost", row))), json-node-pair("actual_cost", idea-json-float(idea-row("actual_cost", row))), json-node-pair("resistance_risk", idea-json-float(idea-row("resistance_risk", row))), json-node-pair("confidence", idea-json-float(idea-row("confidence", row))), json-node-pair("manifestation_status", json-node-string(idea-row("manifestation_status", row))), json-node-pair("interfaces", idea-json-text("interfaces", idea-row("interfaces_json", row))), json-node-pair("open_questions", idea-json-text("open_questions", idea-row("open_questions_json", row))), json-node-pair("idea_type", json-node-string(idea-row("idea_type", row))), idea-json-nullable-string("parent_idea_id", idea-row("parent_idea_id", row)), json-node-pair("child_idea_ids", idea-json-text("child_idea_ids", idea-row("child_idea_ids_json", row))), json-node-pair("stage", json-node-string(idea-row("stage", row))), idea-json-nullable-string("work_type", idea-row("work_type", row)), json-node-pair("lifecycle", json-node-string(idea-row("lifecycle", row))), idea-json-nullable-string("duplicate_of", idea-row("duplicate_of", row)), idea-json-nullable-string("last_activity_at", idea-row("last_activity_at", row)), json-node-pair("value_basis", idea-json-text("value_basis", idea-row("value_basis_json", row))), json-node-pair("cost_vector", idea-cost-vector(row)), json-node-pair("value_vector", idea-value-vector(row)), json-node-pair("tags", idea-json-text("tags", idea-row("tags_json", row))), idea-json-nullable-string("workspace_git_url", idea-row("workspace_git_url", row)), json-node-pair("slug", json-node-string(idea-row("slug", row))), json-node-pair("slug_history", idea-json-text("slug_history", idea-row("slug_history_json", row))), json-node-pair("is_curated", json-node-bool(idea-row("is_curated", row))), idea-json-nullable-string("pillar", idea-row("pillar", row)), json-node-pair("workspace_id", json-node-string(idea-row("workspace_id", row))), idea-json-nullable-string("rollup_condition", idea-row("rollup_condition", row)), json-node-pair("free_energy_score", idea-json-float(idea-row("free_energy_score", row))), json-node-pair("value_gap", idea-json-float(idea-row("value_gap", row))), json-node-pair("content_markdown", json-node-string("")), json-node-pair("marginal_cc_score", idea-json-float(idea-row("marginal_cc_score", row))), json-node-pair("selection_weight", idea-json-float(idea-row("selection_weight", row))), json-node-pair("remaining_cost_cc", idea-json-float(idea-row("remaining_cost_cc", row))), json-node-pair("value_gap_cc", idea-json-float(idea-row("value_gap_cc", row))), json-node-pair("roi_cc", idea-json-float(idea-row("roi_cc", row)))));
+    def idea-json-rows(rows) = if nil?(rows) then empty else cons(idea-json-row(head(rows)), idea-json-rows(tail(rows)));
+    def idea-summary-json(row) = json-node-object(list(json-node-pair("total_ideas", json-node-int(idea-row("total_ideas", row))), json-node-pair("unvalidated_ideas", json-node-int(idea-row("unvalidated_ideas", row))), json-node-pair("validated_ideas", json-node-int(idea-row("validated_ideas", row))), json-node-pair("total_potential_value", idea-json-float(idea-row("total_potential_value", row))), json-node-pair("total_actual_value", idea-json-float(idea-row("total_actual_value", row))), json-node-pair("total_value_gap", idea-json-float(idea-row("total_value_gap", row)))));
+    def idea-pagination-json(summary, limit, offset, returned) = json-node-object(list(json-node-pair("total", json-node-int(idea-row("total_ideas", summary))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("returned", json-node-int(returned)), json-node-pair("has_more", json-node-bool(lt(add(offset, returned), idea-row("total_ideas", summary))))));
+    def idea-response-json(summary, rows, limit, offset) = json-node-object(list(json-node-pair("ideas", json-node-array(idea-json-rows(rows))), json-node-pair("summary", idea-summary-json(summary)), json-node-pair("pagination", idea-pagination-json(summary, limit, offset, len(rows)))));
+    def idea-error-response(status, code, detail) = kh-response(status, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("error", json-node-string(code)), json-node-pair("detail", json-node-string(detail))))));
+    def idea-ok-response(summary, rows, limit, offset) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(idea-response-json(summary, rows, limit, offset)));
+    def timing-ms(start, stop) = sub(stop, start);
+    def idea-timing-json(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit) = json-node-object(list(json-node-pair("route", json-node-string("/api/ideas")), json-node-pair("scope", json-node-string("native-handler")), json-node-pair("status", json-node-int(status)), json-node-pair("body_bytes", json-node-int(body_bytes)), json-node-pair("rows_returned", json-node-int(rows_returned)), json-node-pair("summary_rows", json-node-int(summary_rows)), json-node-pair("excluded", json-node-array(list(json-node-string("process_startup"), json-node-string("tcp_accept"), json-node-string("client_network"), json-node-string("response_write")))), json-node-pair("timings_ms", json-node-object(list(json-node-pair("config", json-node-int(timing-ms(t0, t_config))), json-node-pair("connect", json-node-int(timing-ms(t_config, t_connect))), json-node-pair("params", json-node-int(timing-ms(t_connect, t_params))), json-node-pair("summary_query", json-node-int(timing-ms(t_params, t_summary))), json-node-pair("page_query", json-node-int(timing-ms(t_summary, t_page))), json-node-pair("close", json-node-int(timing-ms(t_page, t_close))), json-node-pair("shape_tree", json-node-int(timing-ms(t_close, t_shape))), json-node-pair("json_emit", json-node-int(timing-ms(t_shape, t_emit))), json-node-pair("handler_total", json-node-int(timing-ms(t0, t_emit))))))));
+    def idea-timing-response(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(idea-timing-json(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit)));
+    def observe-event-limit(n) = if lt(n, 1) then 1 else if gt(n, 250000) then 250000 else n;
+    def observe-warm-count(n) = if lt(n, 0) then 0 else if gt(n, 200) then 200 else n;
+    def observe-json-string-list(items) = if nil?(items) then empty else cons(json-node-string(head(items)), observe-json-string-list(tail(items)));
+    def observe-count-json(row) = json-node-object(list(json-node-pair("file", json-node-string(nth(row, 0))), json-node-pair("line", json-node-int(nth(row, 1))), json-node-pair("col", json-node-int(nth(row, 2))), json-node-pair("count", json-node-int(nth(row, 3)))));
+    def observe-count-json-rows(rows) = if nil?(rows) then empty else cons(observe-count-json(head(rows)), observe-count-json-rows(tail(rows)));
+    def observe-event-json(row) = json-node-object(list(json-node-pair("seq", json-node-int(nth(row, 0))), json-node-pair("file", json-node-string(nth(row, 1))), json-node-pair("line", json-node-int(nth(row, 2))), json-node-pair("col", json-node-int(nth(row, 3))), json-node-pair("node", json-node-string(nth(row, 4))), json-node-pair("children", json-node-array(observe-json-string-list(nth(row, 5)))), json-node-pair("child_values", json-node-array(observe-json-string-list(nth(row, 6))))));
+    def observe-event-json-rows(rows, remaining) = if nil?(rows) then empty else if le(remaining, 0) then empty else cons(observe-event-json(head(rows)), observe-event-json-rows(tail(rows), sub(remaining, 1)));
+    def observe-jit-json(row) = json-node-object(list(json-node-pair("kind", json-node-string(nth(row, 0))), json-node-pair("body", json-node-string(nth(row, 1))), json-node-pair("count", json-node-int(nth(row, 2))), json-node-pair("detail", json-node-string(nth(row, 3)))));
+    def observe-jit-json-rows(rows) = if nil?(rows) then empty else cons(observe-jit-json(head(rows)), observe-jit-json-rows(tail(rows)));
+    def observe-response-json(response, counts, events, event_nodes, jit_rows, warm_count) = json-node-object(list(json-node-pair("route", json-node-string("/api/ideas")), json-node-pair("status", json-node-int(kh-response-status(response))), json-node-pair("body_bytes", json-node-int(str_len(kh-response-body(response)))), json-node-pair("warm_count", json-node-int(warm_count)), json-node-pair("framebuffer_count_rows", json-node-int(len(counts))), json-node-pair("framebuffer_event_rows", json-node-int(len(events))), json-node-pair("events_returned", json-node-int(len(event_nodes))), json-node-pair("jit_rows", json-node-int(len(jit_rows))), json-node-pair("jit_stats", json-node-array(observe-jit-json-rows(jit_rows))), json-node-pair("counts", json-node-array(observe-count-json-rows(counts))), json-node-pair("events", json-node-array(event_nodes))));
+    def observe-response(response, counts, events, event_limit, jit_rows, warm_count) {
+        let event_nodes = observe-event-json-rows(events, event_limit);
+        kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(observe-response-json(response, counts, events, event_nodes, jit_rows, warm_count)));
+    }
+    def api-ideas-summary-sql() = "WITH raw AS (SELECT n.id, n.name, n.description, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(n.properties->>'resistance_risk','')::double precision,1.0) AS resistance_risk, COALESCE(NULLIF(n.properties->>'confidence','')::double precision,0.5) AS confidence, COALESCE(n.properties->>'manifestation_status','none') AS manifestation_status FROM graph_nodes n WHERE n.type = 'idea' AND ($1 = '' OR n.id ILIKE '%' || $1 || '%' OR n.name ILIKE '%' || $1 || '%' OR n.description ILIKE '%' || $1 || '%') AND ($2 OR NOT (n.id LIKE 'runtime:%' OR n.id LIKE 'runtime-%' OR COALESCE(n.properties->'interfaces','[]'::jsonb) ?| array['internal','system','machine:internal','agent:internal'])) AND (NOT $3 OR COALESCE(n.properties->>'manifestation_status','none') <> 'validated') AND (NOT $4 OR COALESCE((n.properties->>'is_curated')::boolean,false)) AND ($5 = '' OR COALESCE(n.properties->>'pillar','') = $5) AND ($6 = '' OR COALESCE(n.properties->>'workspace_id','coherence-network') = $6) AND ($7 = '' OR COALESCE(n.properties->'tags','[]'::jsonb) ?& string_to_array($7, ','))) SELECT count(*)::bigint AS total_ideas, count(*) FILTER (WHERE manifestation_status <> 'validated')::bigint AS unvalidated_ideas, count(*) FILTER (WHERE manifestation_status = 'validated')::bigint AS validated_ideas, COALESCE(round(sum(potential_value)::numeric, 4), 0)::double precision AS total_potential_value, COALESCE(round(sum(actual_value)::numeric, 4), 0)::double precision AS total_actual_value, COALESCE(round(GREATEST(sum(potential_value) - sum(actual_value), 0)::numeric, 4), 0)::double precision AS total_value_gap FROM raw";
+    def api-ideas-page-sql() = "WITH raw AS (SELECT n.id, n.name, n.description, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(n.properties->>'resistance_risk','')::double precision,1.0) AS resistance_risk, COALESCE(NULLIF(n.properties->>'confidence','')::double precision,0.5) AS confidence, COALESCE(n.properties->>'manifestation_status','none') AS manifestation_status, COALESCE(n.properties->'interfaces','[]'::jsonb)::text AS interfaces_json, COALESCE(n.properties->'open_questions','[]'::jsonb)::text AS open_questions_json, COALESCE(n.properties->>'idea_type','standalone') AS idea_type, COALESCE(n.properties->>'parent_idea_id','') AS parent_idea_id, COALESCE(n.properties->'child_idea_ids','[]'::jsonb)::text AS child_idea_ids_json, COALESCE(n.properties->>'stage','none') AS stage, COALESCE(n.properties->>'work_type','') AS work_type, COALESCE(n.properties->>'lifecycle','active') AS lifecycle, COALESCE(n.properties->>'duplicate_of','') AS duplicate_of, COALESCE(n.properties->>'last_activity_at','') AS last_activity_at, COALESCE(n.properties->'value_basis','null'::jsonb)::text AS value_basis_json, COALESCE(n.properties->'tags','[]'::jsonb)::text AS tags_json, COALESCE(n.properties->>'workspace_git_url','') AS workspace_git_url, COALESCE(NULLIF(n.properties->>'slug',''), n.id) AS slug, COALESCE(n.properties->'slug_history','[]'::jsonb)::text AS slug_history_json, COALESCE((n.properties->>'is_curated')::boolean,false) AS is_curated, COALESCE(n.properties->>'pillar','') AS pillar, COALESCE(n.properties->>'workspace_id','coherence-network') AS workspace_id, COALESCE(n.properties->>'rollup_condition','') AS rollup_condition FROM graph_nodes n WHERE n.type = 'idea' AND ($1 = '' OR n.id ILIKE '%' || $1 || '%' OR n.name ILIKE '%' || $1 || '%' OR n.description ILIKE '%' || $1 || '%') AND ($2 OR NOT (n.id LIKE 'runtime:%' OR n.id LIKE 'runtime-%' OR COALESCE(n.properties->'interfaces','[]'::jsonb) ?| array['internal','system','machine:internal','agent:internal'])) AND (NOT $3 OR COALESCE(n.properties->>'manifestation_status','none') <> 'validated') AND (NOT $4 OR COALESCE((n.properties->>'is_curated')::boolean,false)) AND ($5 = '' OR COALESCE(n.properties->>'pillar','') = $5) AND ($6 = '' OR COALESCE(n.properties->>'workspace_id','coherence-network') = $6) AND ($7 = '' OR COALESCE(n.properties->'tags','[]'::jsonb) ?& string_to_array($7, ','))), scored AS (SELECT raw.*, round(((potential_value * confidence) / GREATEST(estimated_cost + resistance_risk, 0.5))::numeric, 4)::double precision AS free_energy_score, round(GREATEST(potential_value - actual_value, 0)::numeric, 4)::double precision AS value_gap, round(((GREATEST(potential_value - actual_value, 0) * confidence * confidence) / (GREATEST(estimated_cost - actual_cost, 0.1) + resistance_risk * 0.5))::numeric, 4)::double precision AS marginal_cc_score, round(GREATEST(estimated_cost - actual_cost, 0)::numeric, 4)::double precision AS remaining_cost_cc, round(GREATEST(potential_value - actual_value, 0)::numeric, 4)::double precision AS value_gap_cc, CASE WHEN GREATEST(estimated_cost - actual_cost, 0) > 0 THEN round((GREATEST(potential_value - actual_value, 0) / GREATEST(estimated_cost - actual_cost, 0))::numeric, 4)::double precision ELSE 0.0 END AS roi_cc FROM raw), ranked AS (SELECT scored.*, CASE WHEN $8 = 'marginal_cc' THEN marginal_cc_score ELSE free_energy_score END AS sort_score FROM scored), weighted AS (SELECT ranked.*, exp(sort_score - max(sort_score) OVER ()) AS exp_score FROM ranked), final AS (SELECT weighted.*, COALESCE(round((exp_score / NULLIF(sum(exp_score) OVER (), 0))::numeric, 6), 0)::double precision AS selection_weight FROM weighted) SELECT * FROM final ORDER BY sort_score DESC, id ASC LIMIT $9 OFFSET $10";
+    def api-ideas-summary-params(request) = list(kh-query-value-or(request, "query", ""), kh-query-bool-or(request, "include_internal", true), kh-query-bool-or(request, "only_unvalidated", false), kh-query-bool-or(request, "curated_only", false), kh-query-value-or(request, "pillar", ""), kh-query-value-or(request, "workspace_id", ""), kh-query-value-or(request, "tags", ""));
+    def api-ideas-page-params(request, limit, offset) = list(kh-query-value-or(request, "query", ""), kh-query-bool-or(request, "include_internal", true), kh-query-bool-or(request, "only_unvalidated", false), kh-query-bool-or(request, "curated_only", false), kh-query-value-or(request, "pillar", ""), kh-query-value-or(request, "workspace_id", ""), kh-query-value-or(request, "tags", ""), idea-sort-value(kh-query-value-or(request, "sort", "free_energy")), limit, offset);
+    def api-ideas-connected(conn, request) {
+        let limit = idea-clamp-limit(kh-query-int-or(request, "limit", 200));
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let summary_params = api-ideas-summary-params(request);
+        let page_params = api-ideas-page-params(request, limit, offset);
+        let summary_rows = pg_query_rows(conn, api-ideas-summary-sql(), summary_params);
+        let page_rows = pg_query_rows(conn, api-ideas-page-sql(), page_params);
+        let closed = pg_close(conn);
+        if nil?(summary_rows) then idea-error-response(500, "persistence", "idea query failed") else idea-ok-response(head(summary_rows), page_rows, limit, offset);
+    }
+    def api_ideas(request) {
+        let database_url = config_database_url();
+        let conn = pg_connect(database_url);
+        if lt(conn, 0) then idea-error-response(503, "persistence", "database unavailable") else api-ideas-connected(conn, request);
+    }
+    def api-ideas-timing-error(conn, t0, t_config, t_connect, t_params, t_summary, t_page) {
+        let closed = pg_close(conn);
+        let t_close = now_unix_ms();
+        let response_node = json-node-object(list(json-node-pair("error", json-node-string("persistence")), json-node-pair("detail", json-node-string("idea query failed"))));
+        let t_shape = now_unix_ms();
+        let body = json-emit(response_node);
+        let t_emit = now_unix_ms();
+        idea-timing-response(500, str_len(body), 0, 0, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit);
+    }
+    def api-ideas-timing-success(conn, summary_rows, page_rows, limit, offset, t0, t_config, t_connect, t_params, t_summary, t_page) {
+        let closed = pg_close(conn);
+        let t_close = now_unix_ms();
+        let response_node = idea-response-json(head(summary_rows), page_rows, limit, offset);
+        let t_shape = now_unix_ms();
+        let body = json-emit(response_node);
+        let t_emit = now_unix_ms();
+        idea-timing-response(200, str_len(body), len(page_rows), len(summary_rows), t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit);
+    }
+    def api-ideas-timing-connected(conn, request, t0, t_config, t_connect) {
+        let limit = idea-clamp-limit(kh-query-int-or(request, "limit", 200));
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let summary_params = api-ideas-summary-params(request);
+        let page_params = api-ideas-page-params(request, limit, offset);
+        let t_params = now_unix_ms();
+        let summary_rows = pg_query_rows(conn, api-ideas-summary-sql(), summary_params);
+        let t_summary = now_unix_ms();
+        let page_rows = pg_query_rows(conn, api-ideas-page-sql(), page_params);
+        let t_page = now_unix_ms();
+        if nil?(summary_rows) then api-ideas-timing-error(conn, t0, t_config, t_connect, t_params, t_summary, t_page) else api-ideas-timing-success(conn, summary_rows, page_rows, limit, offset, t0, t_config, t_connect, t_params, t_summary, t_page);
+    }
+    def api_ideas_timing(request) {
+        let t0 = now_unix_ms();
+        let database_url = config_database_url();
+        let t_config = now_unix_ms();
+        let conn = pg_connect(database_url);
+        let t_connect = now_unix_ms();
+        if lt(conn, 0) then idea-error-response(503, "persistence", "database unavailable") else api-ideas-timing-connected(conn, request, t0, t_config, t_connect);
+    }
+    def observe-warm-ideas(request, remaining) {
+        if le(remaining, 0) then 0 else observe-warm-ideas-after(request, remaining, api_ideas(request));
+    }
+    def observe-warm-ideas-after(request, remaining, ignored) = observe-warm-ideas(request, sub(remaining, 1));
+    def api_ideas_observe(request) {
+        let warm_count = observe-warm-count(kh-query-int-or(request, "warm", 0));
+        let warmed = observe-warm-ideas(request, warm_count);
+        let cleared = framebuffer-clear();
+        let started = framebuffer-observe-start();
+        let response = api_ideas(request);
+        let stopped = framebuffer-observe-stop();
+        let counts = framebuffer-counts();
+        let events = framebuffer-event-rows();
+        let event_limit = observe-event-limit(kh-query-int-or(request, "event_limit", 1000));
+        let jit_rows = jit-stats();
+        observe-response(response, counts, events, event_limit, jit_rows, warm_count);
+    }
+
+    def api-clamp-limit(n, max_value) = if lt(n, 1) then 1 else if gt(n, max_value) then max_value else n;
+    def api-json-nullable-string(value) = if str_eq(value, "") then json-node-null() else json-node-string(value);
+    def api-json-number(value) = json-node-float-text(value_str(value));
+    def api-json-db-bool(value) = if str_eq(value_str(value), "true") then true else if str_eq(value_str(value), "1") then true else false;
+    def api-ok-json(node) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(node));
+    def api-created-json(node) = kh-response(201, list(kh-header("Content-Type", "application/json")), json-emit(node));
+    def api-error-status-json(status, detail) = kh-response(status, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("detail", json-node-string(detail))))));
+    def api-service-unavailable(code, detail) = kh-response(503, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("detail", json-node-object(list(json-node-pair("error", json-node-string(code)), json-node-pair("detail", json-node-string(detail)))))))));
+    def api-query-failed?() = gt(str_len(pg_last_error()), 0);
+    def api-now-iso() = unix_ms_to_iso_utc(now_unix_ms());
+    def api-started-at-iso() = unix_ms_to_iso_utc(kernel_started_unix_ms());
+    def api-uptime-seconds() = div(sub(now_unix_ms(), kernel_started_unix_ms()), 1000);
+    def api-version() = "1.0.0";
+    def api-deployed-sha() = config_value_or("deployed_sha", "");
+    def api-deployed-sha-source() = if api-deployed-sha() == "" then "" else "config:deployed_sha";
+    def api-strip-trailing-slash(s) = if and(gt(str_len(s), 0), char_at(s, sub(str_len(s), 1)) == "/") then substring(s, 0, sub(str_len(s), 1)) else s;
+    def api-gate-main-head-cache-key(repo, branch) = str_concat(repo, str_concat("|", branch));
+    def api-gate-main-head-cache-ttl-ms() = mul(config_value_or("release_gates.branch_head_sha_cache_ttl_seconds", 45.0), 1000.0);
+    def api-gate-main-head-cache-fresh?(cached) = if value_kind(cached) == "list" then lt(sub(now_unix_ms(), nth(cached, 1)), api-gate-main-head-cache-ttl-ms()) else false;
+    def api-gate-main-head-cache-sha(cached) = if api-gate-main-head-cache-fresh?(cached) then nth(cached, 0) else "";
+    def api-gate-main-head-cache-get(repo, branch) = api-gate-main-head-cache-sha(volatile_cell_get("github.branch_head_sha", api-gate-main-head-cache-key(repo, branch)));
+    def api-gate-main-head-cache-put(repo, branch, sha) {
+        let stored = volatile_cell_put("github.branch_head_sha", api-gate-main-head-cache-key(repo, branch), list(sha, now_unix_ms()));
+        sha;
+    }
+    def api-gate-github-token() {
+        let token = config_value_or("github.token", "");
+        if token == "" then config_value_or("github.api_token", config_value_or("github_token", config_value_or("keys.github.token", config_value_or("keys.github_token", "")))) else token;
+    }
+    def api-gate-github-api-base() = api-strip-trailing-slash(config_value_or("github.api_base", "https://api.github.com"));
+    def api-gate-github-headers() {
+        let token = api-gate-github-token();
+        let headers = list(kh-header("Accept", "application/vnd.github+json"), kh-header("X-GitHub-Api-Version", "2022-11-28"), kh-header("User-Agent", "CoherenceNetworkNativeKernel/1.0"));
+        if token == "" then headers else _list_append(headers, kh-header("Authorization", str_concat("Bearer ", token)));
+    }
+    def api-gate-main-head-timeout-seconds(request) {
+        let default_timeout = value_str(config_value_or("release_gates.branch_head_sha_timeout_seconds", 6.0));
+        let raw = kh-query-value-or(request, "timeout_seconds", default_timeout);
+        let seconds = str_to_float(raw);
+        if lt(seconds, 1.0) then 1.0 else if gt(seconds, 60.0) then 60.0 else seconds;
+    }
+    def api-gate-main-head-timeout-ms(request) = mul(api-gate-main-head-timeout-seconds(request), 1000.0);
+    def api-gate-main-head-url(repo, branch) = str_concat(api-gate-github-api-base(), str_concat("/repos/", str_concat(repo, str_concat("/branches/", branch))));
+    def api-gate-http-status(response) = idea-row("status_code", response);
+    def api-gate-http-body(response) = idea-row("body", response);
+    def api-gate-http-error(response) = idea-row("error", response);
+    def api-gate-main-head-sha-from-body(body) {
+        let root = parse-json("github-branch-head", body);
+        let commit = api-json-field-node-or(root, "commit", json-node-object(empty));
+        api-json-field-value-or(commit, "sha", "");
+    }
+    def api-gate-main-head-json(repo, branch, sha) = json-node-object(list(json-node-pair("repo", json-node-string(repo)), json-node-pair("branch", json-node-string(branch)), json-node-pair("sha", json-node-string(sha))));
+    def api-gate-main-head-ok(repo, branch, sha) = api-ok-json(api-gate-main-head-json(repo, branch, sha));
+    def api-gate-main-head-from-http(repo, branch, response) {
+        let status = api-gate-http-status(response);
+        let error = api-gate-http-error(response);
+        if gt(str_len(error), 0) then api-error-status-json(502, "Could not resolve branch head SHA") else if or(lt(status, 200), ge(status, 300)) then api-error-status-json(502, "Could not resolve branch head SHA") else api-gate-main-head-from-body(repo, branch, api-gate-http-body(response));
+    }
+    def api-gate-main-head-from-body(repo, branch, body) {
+        let sha = api-gate-main-head-sha-from-body(body);
+        if sha == "" then api-error-status-json(502, "Could not resolve branch head SHA") else api-gate-main-head-ok(repo, branch, api-gate-main-head-cache-put(repo, branch, sha));
+    }
+    def api_gates_main_head(request) {
+        let repo = kh-query-value-or(request, "repo", "seeker71/Coherence-Network");
+        let branch = kh-query-value-or(request, "branch", "main");
+        let cached = api-gate-main-head-cache-get(repo, branch);
+        if cached == "" then api-gate-main-head-from-http(repo, branch, http_get(api-gate-main-head-url(repo, branch), api-gate-github-headers(), api-gate-main-head-timeout-ms(request))) else api-gate-main-head-ok(repo, branch, cached);
+    }
+    def api-db-connected-with(conn) {
+        let ok = pg_ping(conn);
+        let closed = pg_close(conn);
+        ok;
+    }
+    def api-db-connected() {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then false else api-db-connected-with(conn);
+    }
+    def api-schema-ok-with(conn) {
+        let rows = pg_query_rows(conn, "SELECT count(*)::bigint AS table_count FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('contributions','contributors','assets')", list());
+        let closed = pg_close(conn);
+        if nil?(rows) then false else eq(idea-row("table_count", head(rows)), 3);
+    }
+    def api-schema-ok() {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then false else api-schema-ok-with(conn);
+    }
+    def api-integrity-compromised-with(conn) {
+        let rows = pg_query_rows(conn, "SELECT count(*)::bigint AS malformed_count FROM audit_ledger WHERE hash IS NULL OR previous_hash IS NULL OR hash = '' OR previous_hash = ''", list());
+        let closed = pg_close(conn);
+        if nil?(rows) then false else gt(idea-row("malformed_count", head(rows)), 0);
+    }
+    def api-integrity-compromised() {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then false else api-integrity-compromised-with(conn);
+    }
+    def api-outcome-total(two_xx, three_xx, four_xx, five_xx) = add(add(two_xx, three_xx), add(four_xx, five_xx));
+    def api-outcome-window-json(row, prefix) {
+        let two_xx = idea-row(str_concat(prefix, "_2xx"), row);
+        let three_xx = idea-row(str_concat(prefix, "_3xx"), row);
+        let four_xx = idea-row(str_concat(prefix, "_4xx"), row);
+        let five_xx = idea-row(str_concat(prefix, "_5xx"), row);
+        json-node-object(list(json-node-pair("2xx", json-node-int(two_xx)), json-node-pair("3xx", json-node-int(three_xx)), json-node-pair("4xx", json-node-int(four_xx)), json-node-pair("5xx", json-node-int(five_xx)), json-node-pair("total", json-node-int(api-outcome-total(two_xx, three_xx, four_xx, five_xx)))));
+    }
+    def api-recent-outcomes-json(row) = json-node-object(list(json-node-pair("last_1m", api-outcome-window-json(row, "last_1m")), json-node-pair("last_5m", api-outcome-window-json(row, "last_5m")), json-node-pair("as_of_minute", json-node-int(idea-row("as_of_minute", row)))));
+    def api-recent-outcomes-sql() = "WITH filtered AS (SELECT status_code, recorded_at FROM runtime_events WHERE recorded_at >= now() - interval '5 minutes' AND endpoint NOT IN ('/api/health','/api/ready','/api/ping','/api/version','/health','/')), counted AS (SELECT count(*) FILTER (WHERE recorded_at >= now() - interval '1 minute' AND status_code >= 200 AND status_code < 300)::bigint AS last_1m_2xx, count(*) FILTER (WHERE recorded_at >= now() - interval '1 minute' AND status_code >= 300 AND status_code < 400)::bigint AS last_1m_3xx, count(*) FILTER (WHERE recorded_at >= now() - interval '1 minute' AND status_code >= 400 AND status_code < 500)::bigint AS last_1m_4xx, count(*) FILTER (WHERE recorded_at >= now() - interval '1 minute' AND status_code >= 500)::bigint AS last_1m_5xx, count(*) FILTER (WHERE status_code >= 200 AND status_code < 300)::bigint AS last_5m_2xx, count(*) FILTER (WHERE status_code >= 300 AND status_code < 400)::bigint AS last_5m_3xx, count(*) FILTER (WHERE status_code >= 400 AND status_code < 500)::bigint AS last_5m_4xx, count(*) FILTER (WHERE status_code >= 500)::bigint AS last_5m_5xx FROM filtered) SELECT counted.*, floor(extract(epoch from now()) / 60)::bigint AS as_of_minute FROM counted";
+    def api-recent-outcomes-cache-ttl-ms() = 5000;
+    def api-recent-outcomes-cache-fresh?(cached) = if str_eq(value_kind(cached), "list") then lt(sub(now_unix_ms(), nth(cached, 1)), api-recent-outcomes-cache-ttl-ms()) else false;
+    def api-recent-outcomes-cache-put(node) {
+        let stored = volatile_cell_put("api.health", "recent_outcomes", list(node, now_unix_ms()));
+        node;
+    }
+    def api-recent-outcomes-with(conn) {
+        let rows = pg_query_rows(conn, api-recent-outcomes-sql(), list());
+        let closed = pg_close(conn);
+        if nil?(rows) then api-recent-outcomes-cache-put(json-node-null()) else api-recent-outcomes-cache-put(api-recent-outcomes-json(head(rows)));
+    }
+    def api-recent-outcomes-refresh() {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-recent-outcomes-cache-put(json-node-null()) else api-recent-outcomes-with(conn);
+    }
+    def api-recent-outcomes() {
+        let cached = volatile_cell_get("api.health", "recent_outcomes");
+        if api-recent-outcomes-cache-fresh?(cached) then nth(cached, 0) else api-recent-outcomes-refresh();
+    }
+    def api-smart-reap-available?() = eq(fs_exists(str_concat(repo_root(), "/api/app/services/smart_reaper_service.py")), 1);
+    def api-health-json(status, db_connected, include_db) {
+        let up = api-uptime-seconds();
+        let deployed_sha = api-deployed-sha();
+        let deployed_sha_source = api-deployed-sha-source();
+        let common = list(json-node-pair("status", json-node-string(status)), json-node-pair("version", json-node-string(api-version())), json-node-pair("timestamp", json-node-string(api-now-iso())), json-node-pair("started_at", json-node-string(api-started-at-iso())), json-node-pair("uptime_seconds", json-node-int(up)), json-node-pair("uptime_human", json-node-string(uptime_human(up))), json-node-pair("deployed_sha", api-json-nullable-string(deployed_sha)), json-node-pair("deployed_sha_source", api-json-nullable-string(deployed_sha_source)), json-node-pair("integrity_compromised", json-node-bool(api-integrity-compromised())));
+        if include_db then json-node-object(_list_append(common, json-node-pair("db_connected", json-node-bool(db_connected)))) else json-node-object(list(json-node-pair("status", json-node-string(status)), json-node-pair("version", json-node-string(api-version())), json-node-pair("timestamp", json-node-string(api-now-iso())), json-node-pair("started_at", json-node-string(api-started-at-iso())), json-node-pair("uptime_seconds", json-node-int(up)), json-node-pair("uptime_human", json-node-string(uptime_human(up))), json-node-pair("deployed_sha", api-json-nullable-string(deployed_sha)), json-node-pair("deployed_sha_source", api-json-nullable-string(deployed_sha_source)), json-node-pair("integrity_compromised", json-node-bool(api-integrity-compromised())), json-node-pair("schema_ok", json-node-bool(api-schema-ok())), json-node-pair("opencode_enabled", json-node-bool(true)), json-node-pair("smart_reap_available", json-node-bool(api-smart-reap-available?())), json-node-pair("smart_reap_import_error", json-node-null()), json-node-pair("recent_outcomes", api-recent-outcomes()), json-node-pair("kernel_runtime", json-node-string(kernel_runtime_name()))));
+    }
+    def api_health(request) = api-ok-json(api-health-json("ok", false, false));
+    def api_ready(request) {
+        let db_ok = api-db-connected();
+        if db_ok then api-ok-json(api-health-json("ready", db_ok, true)) else api-service-unavailable("database_unavailable", "database unavailable");
+    }
+
+    def api-agent-task-id(request) {
+        let path = kh-request-path(request);
+        if le(str_len(path), 17) then "" else substring(path, 17, str_len(path));
+    }
+    def agent-json-nullable-int(value) = if str_eq(value_str(value), "") then json-node-null() else json-node-int(value);
+    def agent-context-node-or-null(context, key) = if json-object-has?(context, key) then json-object-get(context, key) else json-node-null();
+    def agent-task-time-sql(column_name) = str_concat("CASE WHEN ", str_concat(column_name, str_concat(" IS NULL THEN '' ELSE to_char(", str_concat(column_name, " AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') END"))));
+    def agent-task-sql() = str_concat("SELECT id, direction, task_type, status, model, command, COALESCE(output,'') AS output, COALESCE(context_json,'{}') AS context_json, progress_pct, COALESCE(current_step,'') AS current_step, COALESCE(decision_prompt,'') AS decision_prompt, COALESCE(decision,'') AS decision, COALESCE(error_summary,'') AS error_summary, COALESCE(error_category,'') AS error_category, COALESCE(claimed_by,'') AS claimed_by, ", str_concat(agent-task-time-sql("claimed_at"), str_concat(" AS claimed_at, ", str_concat(agent-task-time-sql("created_at"), str_concat(" AS created_at, ", str_concat(agent-task-time-sql("updated_at"), " AS updated_at FROM agent_tasks WHERE id = $1 LIMIT 1"))))));
+    def agent-task-json(row) {
+        let context = parse-json("agent-task.context", idea-row("context_json", row));
+        json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("direction", json-node-string(idea-row("direction", row))), json-node-pair("task_type", json-node-string(idea-row("task_type", row))), json-node-pair("status", json-node-string(idea-row("status", row))), json-node-pair("model", json-node-string(idea-row("model", row))), json-node-pair("command", json-node-string(idea-row("command", row))), json-node-pair("output", api-json-nullable-string(idea-row("output", row))), json-node-pair("context", context), json-node-pair("error_summary", api-json-nullable-string(idea-row("error_summary", row))), json-node-pair("error_category", api-json-nullable-string(idea-row("error_category", row))), json-node-pair("progress_pct", agent-json-nullable-int(idea-row("progress_pct", row))), json-node-pair("current_step", api-json-nullable-string(idea-row("current_step", row))), json-node-pair("decision_prompt", api-json-nullable-string(idea-row("decision_prompt", row))), json-node-pair("decision", api-json-nullable-string(idea-row("decision", row))), json-node-pair("target_state", agent-context-node-or-null(context, "target_state")), json-node-pair("success_evidence", agent-context-node-or-null(context, "success_evidence")), json-node-pair("abort_evidence", agent-context-node-or-null(context, "abort_evidence")), json-node-pair("observation_window_sec", agent-context-node-or-null(context, "observation_window_sec")), json-node-pair("claimed_by", api-json-nullable-string(idea-row("claimed_by", row))), json-node-pair("claimed_at", api-json-nullable-string(idea-row("claimed_at", row))), json-node-pair("created_at", json-node-string(idea-row("created_at", row))), json-node-pair("updated_at", api-json-nullable-string(idea-row("updated_at", row)))));
+    }
+    def api-agent-task-connected(conn, request) {
+        let task_id = api-agent-task-id(request);
+        let rows = pg_query_rows(conn, agent-task-sql(), list(task_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "agent task query failed") else if nil?(rows) then api-error-status-json(404, "Task not found") else api-ok-json(agent-task-json(head(rows)));
+    }
+    def api_agent_task(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-agent-task-connected(conn, request);
+    }
+
+    def recent-voice-row(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("concept_id", json-node-string(idea-row("concept_id", row))), json-node-pair("author_name", json-node-string(idea-row("author_name", row))), json-node-pair("author_id", api-json-nullable-string(idea-row("author_id", row))), json-node-pair("locale", json-node-string(idea-row("locale", row))), json-node-pair("body", json-node-string(idea-row("body", row))), json-node-pair("location", api-json-nullable-string(idea-row("location", row))), json-node-pair("created_at", api-json-nullable-string(idea-row("created_at", row))), json-node-pair("proposed_as_proposal_id", api-json-nullable-string(idea-row("proposed_as_proposal_id", row)))));
+    def recent-voice-rows(rows) = if nil?(rows) then empty else cons(recent-voice-row(head(rows)), recent-voice-rows(tail(rows)));
+    def recent-voices-connected(conn, request) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 20), 100);
+        let rows = pg_query_rows(conn, "SELECT id, concept_id, author_name, COALESCE(author_id,'') AS author_id, locale, body, COALESCE(location,'') AS location, replace(created_at::text, ' ', 'T') AS created_at, COALESCE(proposed_as_proposal_id,'') AS proposed_as_proposal_id FROM concept_voices ORDER BY created_at DESC LIMIT $1", list(limit));
+        let closed = pg_close(conn);
+        api-ok-json(json-node-object(list(json-node-pair("voices", json-node-array(recent-voice-rows(rows))), json-node-pair("total", json-node-int(len(rows))))));
+    }
+    def api_concepts_voices_recent(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else recent-voices-connected(conn, request);
+    }
+
+    def recent-reaction-row(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("entity_type", json-node-string(idea-row("entity_type", row))), json-node-pair("entity_id", json-node-string(idea-row("entity_id", row))), json-node-pair("author_name", json-node-string(idea-row("author_name", row))), json-node-pair("author_id", api-json-nullable-string(idea-row("author_id", row))), json-node-pair("emoji", api-json-nullable-string(idea-row("emoji", row))), json-node-pair("comment", api-json-nullable-string(idea-row("comment", row))), json-node-pair("locale", json-node-string(idea-row("locale", row))), json-node-pair("parent_reaction_id", api-json-nullable-string(idea-row("parent_reaction_id", row))), json-node-pair("created_at", api-json-nullable-string(idea-row("created_at", row)))));
+    def recent-reaction-rows(rows) = if nil?(rows) then empty else cons(recent-reaction-row(head(rows)), recent-reaction-rows(tail(rows)));
+    def recent-reactions-connected(conn, request) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 20), 100);
+        let rows = pg_query_rows(conn, "SELECT id, entity_type, entity_id, author_name, COALESCE(author_id,'') AS author_id, COALESCE(emoji,'') AS emoji, COALESCE(comment,'') AS comment, locale, COALESCE(parent_reaction_id,'') AS parent_reaction_id, replace(created_at::text, ' ', 'T') AS created_at FROM reactions ORDER BY created_at DESC LIMIT $1", list(limit));
+        let closed = pg_close(conn);
+        api-ok-json(json-node-object(list(json-node-pair("reactions", json-node-array(recent-reaction-rows(rows))))));
+    }
+    def api_reactions_recent(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else recent-reactions-connected(conn, request);
+    }
+
+    def anonymous-trace-item-row(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("source_point_id", api-json-nullable-string(idea-row("source_point_id", row))), json-node-pair("session_id", api-json-nullable-string(idea-row("session_id", row))), json-node-pair("first_seen_at", api-json-nullable-string(idea-row("first_seen_at", row))), json-node-pair("last_seen_at", api-json-nullable-string(idea-row("last_seen_at", row))), json-node-pair("duration_ms", api-json-number(idea-row("duration_ms", row))), json-node-pair("duration_bucket", json-node-string(idea-row("duration_bucket", row))), json-node-pair("entry_surface", api-json-nullable-string(idea-row("entry_surface", row))), json-node-pair("surface_count", json-node-int(idea-row("surface_count", row))), json-node-pair("surface_sequence", parse-json("surface_sequence", idea-row("surface_sequence_json", row))), json-node-pair("page_count", json-node-int(idea-row("page_count", row))), json-node-pair("surfaces", parse-json("surfaces", idea-row("surfaces_json", row))), json-node-pair("referrer_domain", api-json-nullable-string(idea-row("referrer_domain", row))), json-node-pair("referrer_domains", parse-json("referrer_domains", idea-row("referrer_domains_json", row))), json-node-pair("folded_into_contributor_id", api-json-nullable-string(idea-row("folded_into_contributor_id", row))), json-node-pair("raw_keys_stored", json-node-bool(api-json-db-bool(idea-row("raw_keys_stored", row))))));
+    def anonymous-trace-item-rows(rows) = if nil?(rows) then empty else cons(anonymous-trace-item-row(head(rows)), anonymous-trace-item-rows(tail(rows)));
+    def anonymous-traces-sql() = "WITH traces AS (SELECT id, properties, updated_at FROM graph_nodes WHERE type = 'event' AND COALESCE((properties->>'anonymous_meeting_trace')::boolean,false) AND ($1 = '' OR properties->>'source_point_id' = $1) ORDER BY updated_at DESC), items AS (SELECT id, properties->>'source_point_id' AS source_point_id, properties->>'session_id' AS session_id, properties->>'first_seen_at' AS first_seen_at, properties->>'last_seen_at' AS last_seen_at, COALESCE((SELECT sum(COALESCE((s.value->>'duration_ms')::int,0)) FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) s),0)::bigint AS duration_ms, COALESCE(properties->>'entry_surface',(SELECT s.value->>'surface' FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) ORDER BY s.ord LIMIT 1)) AS entry_surface, jsonb_array_length(COALESCE(properties->'surfaces','[]'::jsonb))::bigint AS surface_count, COALESCE((SELECT jsonb_agg(surface ORDER BY first_ord) FROM (SELECT s.value->>'surface' AS surface, min(s.ord) AS first_ord FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) WHERE COALESCE(s.value->>'surface','') <> '' GROUP BY 1) seq),'[]'::jsonb)::text AS surface_sequence_json, COALESCE(properties->'surfaces','[]'::jsonb)::text AS surfaces_json, COALESCE(properties->>'entry_referrer_domain',(SELECT s.value->>'referrer_domain' FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) WHERE COALESCE(s.value->>'referrer_domain','') <> '' ORDER BY s.ord LIMIT 1)) AS referrer_domain, COALESCE((SELECT jsonb_agg(referrer_domain ORDER BY first_ord) FROM (SELECT s.value->>'referrer_domain' AS referrer_domain, min(s.ord) AS first_ord FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) WHERE COALESCE(s.value->>'referrer_domain','') <> '' GROUP BY 1) refs),'[]'::jsonb)::text AS referrer_domains_json, COALESCE(properties->>'folded_into_contributor_id','') AS folded_into_contributor_id, ((properties ? 'visitor_key') OR (properties ? 'session_key')) AS raw_keys_stored FROM traces LIMIT $2) SELECT *, CASE WHEN duration_ms < 10000 THEN 'under_10s' WHEN duration_ms < 60000 THEN '10s_to_1m' WHEN duration_ms < 300000 THEN '1m_to_5m' WHEN duration_ms < 900000 THEN '5m_to_15m' ELSE '15m_plus' END AS duration_bucket, jsonb_array_length(surface_sequence_json::jsonb)::bigint AS page_count FROM items";
+    def anonymous-traces-summary-sql() = "WITH traces AS (SELECT properties, row_number() OVER (ORDER BY updated_at DESC, id ASC)::bigint AS trace_ord FROM graph_nodes WHERE type = 'event' AND COALESCE((properties->>'anonymous_meeting_trace')::boolean,false) AND ($1 = '' OR properties->>'source_point_id' = $1)), surfaces AS (SELECT surface, min(first_ord) AS first_ord FROM (SELECT s.value->>'surface' AS surface, (trace_ord * 1000000 + s.ord)::bigint AS first_ord FROM traces, jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) WHERE COALESCE(s.value->>'surface','') <> '') raw GROUP BY surface), referrers AS (SELECT referrer, min(first_ord) AS first_ord FROM (SELECT s.value->>'referrer_domain' AS referrer, (trace_ord * 1000000 + s.ord)::bigint AS first_ord FROM traces, jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) WITH ORDINALITY s(value, ord) WHERE COALESCE(s.value->>'referrer_domain','') <> '') raw GROUP BY referrer), totals AS (SELECT count(*)::bigint AS meeting_count, count(DISTINCT properties->>'source_point_id')::bigint AS source_point_count, min(properties->>'first_seen_at') AS first_seen_at, max(properties->>'last_seen_at') AS last_seen_at, COALESCE(sum((SELECT sum(COALESCE((s.value->>'duration_ms')::int,0)) FROM jsonb_array_elements(COALESCE(properties->'surfaces','[]'::jsonb)) s)),0)::bigint AS total_duration_ms, max(COALESCE(properties->>'folded_into_contributor_id','')) AS folded_into_contributor_id FROM traces) SELECT $1 AS source_point_id, source_point_count, meeting_count, first_seen_at, last_seen_at, total_duration_ms, CASE WHEN total_duration_ms < 10000 THEN 'under_10s' WHEN total_duration_ms < 60000 THEN '10s_to_1m' WHEN total_duration_ms < 300000 THEN '1m_to_5m' WHEN total_duration_ms < 900000 THEN '5m_to_15m' ELSE '15m_plus' END AS duration_bucket, (SELECT surface FROM surfaces ORDER BY first_ord LIMIT 1) AS entry_surface, COALESCE((SELECT jsonb_agg(surface ORDER BY first_ord) FROM surfaces),'[]'::jsonb)::text AS surfaces_met_json, COALESCE((SELECT jsonb_agg(surface ORDER BY first_ord) FROM surfaces),'[]'::jsonb)::text AS surface_sequence_json, (SELECT count(*)::bigint FROM surfaces) AS page_count, (SELECT referrer FROM referrers ORDER BY first_ord LIMIT 1) AS referrer_domain, COALESCE((SELECT jsonb_agg(referrer ORDER BY first_ord) FROM referrers),'[]'::jsonb)::text AS referrer_domains_json, folded_into_contributor_id, 'source_point_id is a same-browser continuity hint, not identity proof' AS continuity_note FROM totals";
+    def anonymous-traces-summary-json(row) = json-node-object(list(json-node-pair("source_point_id", api-json-nullable-string(idea-row("source_point_id", row))), json-node-pair("source_point_count", json-node-int(idea-row("source_point_count", row))), json-node-pair("meeting_count", json-node-int(idea-row("meeting_count", row))), json-node-pair("first_seen_at", api-json-nullable-string(idea-row("first_seen_at", row))), json-node-pair("last_seen_at", api-json-nullable-string(idea-row("last_seen_at", row))), json-node-pair("total_duration_ms", api-json-number(idea-row("total_duration_ms", row))), json-node-pair("duration_bucket", json-node-string(idea-row("duration_bucket", row))), json-node-pair("entry_surface", api-json-nullable-string(idea-row("entry_surface", row))), json-node-pair("surfaces_met", parse-json("surfaces_met", idea-row("surfaces_met_json", row))), json-node-pair("surface_sequence", parse-json("surface_sequence", idea-row("surface_sequence_json", row))), json-node-pair("page_count", json-node-int(idea-row("page_count", row))), json-node-pair("referrer_domain", api-json-nullable-string(idea-row("referrer_domain", row))), json-node-pair("referrer_domains", parse-json("referrer_domains", idea-row("referrer_domains_json", row))), json-node-pair("folded_into_contributor_id", api-json-nullable-string(idea-row("folded_into_contributor_id", row))), json-node-pair("continuity_note", json-node-string(idea-row("continuity_note", row)))));
+    def anonymous-traces-connected(conn, request) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 50), 200);
+        let source_point_id = kh-query-value-or(request, "source_point_id", "");
+        let rows = pg_query_rows(conn, anonymous-traces-sql(), list(source_point_id, limit));
+        let summary_rows = pg_query_rows(conn, anonymous-traces-summary-sql(), list(source_point_id));
+        let closed = pg_close(conn);
+        let summary = if nil?(summary_rows) then anonymous-traces-summary-json(_dict_new("source_point_id", source_point_id, "source_point_count", 0, "meeting_count", 0, "first_seen_at", "", "last_seen_at", "", "total_duration_ms", 0, "duration_bucket", "under_10s", "entry_surface", "", "surfaces_met_json", "[]", "surface_sequence_json", "[]", "page_count", 0, "referrer_domain", "", "referrer_domains_json", "[]", "folded_into_contributor_id", "", "continuity_note", "source_point_id is a same-browser continuity hint, not identity proof")) else anonymous-traces-summary-json(head(summary_rows));
+        api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(anonymous-trace-item-rows(rows))), json-node-pair("summary", summary), json-node-pair("limit", json-node-int(limit)))));
+    }
+    def api_meetings_anonymous_traces(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else anonymous-traces-connected(conn, request);
+    }
+
+    def api-ws-code?(cp) = or(eq(cp, 32), or(eq(cp, 9), or(eq(cp, 10), eq(cp, 13))));
+    def api-trim-left-index(s, i) = if ge(i, str_len(s)) then str_len(s) else if api-ws-code?(ord(char_at(s, i))) then api-trim-left-index(s, add(i, 1)) else i;
+    def api-trim-right-index(s, i) = if lt(i, 0) then -1 else if api-ws-code?(ord(char_at(s, i))) then api-trim-right-index(s, sub(i, 1)) else i;
+    def api-trim(s) {
+        let left = api-trim-left-index(s, 0);
+        let right = api-trim-right-index(s, sub(str_len(s), 1));
+        if lt(right, left) then "" else substring(s, left, add(right, 1));
+    }
+    def api-json-null-node?(value) = node_eq(node_category(value), JSON-NULL);
+    def api-json-value-or(value, default_value) = if api-json-null-node?(value) then default_value else value_str(node_value(value));
+    def api-json-int-or(value, default_value) = if api-json-null-node?(value) then default_value else str_to_int(value_str(node_value(value)));
+    def api-json-float-or(value, default_value) = if api-json-null-node?(value) then default_value else str_to_float(value_str(node_value(value)));
+    def api-json-object-node?(value) = node_eq(node_category(value), JSON-OBJECT);
+    def api-json-field-value-or(root, key, default_value) = if json-object-has?(root, key) then api-json-value-or(json-object-get(root, key), default_value) else default_value;
+    def api-json-field-int-or(root, key, default_value) = if json-object-has?(root, key) then api-json-int-or(json-object-get(root, key), default_value) else default_value;
+    def api-json-field-float-or(root, key, default_value) = if json-object-has?(root, key) then api-json-float-or(json-object-get(root, key), default_value) else default_value;
+    def api-json-field-node-or(root, key, default_value) = if json-object-has?(root, key) then json-object-get(root, key) else default_value;
+    def api-request-header-value-or(request, name, default_value) = kh-header-value-or(kh-request-headers(request), name, default_value);
+    def api-nodeid-value-json(node) = json-node-object(list(json-node-pair("package", json-node-int(node_pkg(node))), json-node-pair("level", json-node-int(node_level(node))), json-node-pair("type", json-node-int(node_type(node))), json-node-pair("instance", json-node-int(node_inst(node)))));
+    def api-node-source-json(node) {
+        let source = node_source(node);
+        if nil?(source) then json-node-null() else json-node-object(list(json-node-pair("file", json-node-string(nth(source, 0))), json-node-pair("line", json-node-int(nth(source, 1))), json-node-pair("col", json-node-int(nth(source, 2)))));
+    }
+    def api-form-value-json-list(items) = if nil?(items) then empty else cons(api-form-value-json(head(items)), api-form-value-json-list(tail(items)));
+    def api-form-value-json(value) {
+        let kind = value_kind(value);
+        if str_eq(kind, "null") then json-node-null() else if str_eq(kind, "int") then json-node-int(value) else if str_eq(kind, "float") then json-node-float-text(value_str(value)) else if str_eq(kind, "bool") then json-node-bool(value) else if str_eq(kind, "string") then json-node-string(value) else if str_eq(kind, "node_id") then api-nodeid-value-json(value) else if str_eq(kind, "list") then json-node-array(api-form-value-json-list(value)) else json-node-string(value_str(value));
+    }
+    def api-substrate-form-compiler(body) = api-json-field-value-or(body, "compiler", api-json-field-value-or(body, "grammar", "form.bml"));
+    def api-substrate-form-compile(compiler, expression) = if str_eq(compiler, "form") then compile_form_source(expression, "/api/substrate/form") else if str_eq(compiler, "form.sexpr") then compile_form_source(expression, "/api/substrate/form") else if str_eq(compiler, "source") then compile_source_text(expression, "/api/substrate/form") else compile_source_section(compiler, expression, "/api/substrate/form");
+    def api-substrate-form-invocation(compiler) = if str_eq(compiler, "form") then "compile_form_source" else if str_eq(compiler, "form.sexpr") then "compile_form_source" else if str_eq(compiler, "source") then "compile_source_text" else "compile_source_section";
+    def api-substrate-form-recipe-json(mode, compiler, recipe) = json-node-object(list(json-node-pair("kind", json-node-string("recipe")), json-node-pair("mode", json-node-string(mode)), json-node-pair("compiler", json-node-string(compiler)), json-node-pair("node_id", api-nodeid-value-json(recipe)), json-node-pair("source", api-node-source-json(recipe)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_substrate_form")), json-node-pair("compiler_invocation", json-node-string(api-substrate-form-invocation(compiler))))))));
+    def api-substrate-form-run-json(mode, compiler, recipe, value) = json-node-object(list(json-node-pair("kind", json-node-string("value")), json-node-pair("mode", json-node-string(mode)), json-node-pair("compiler", json-node-string(compiler)), json-node-pair("recipe", api-nodeid-value-json(recipe)), json-node-pair("value_kind", json-node-string(value_kind(value))), json-node-pair("value", api-form-value-json(value)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_substrate_form")), json-node-pair("compiler_invocation", json-node-string(api-substrate-form-invocation(compiler))))))));
+    def api_substrate_form(request) {
+        let body = parse-json("substrate-form-request", kh-request-body(request));
+        let expression = api-json-field-value-or(body, "expression", "");
+        let mode = api-json-field-value-or(body, "mode", "ast");
+        let compiler = api-substrate-form-compiler(body);
+        if str_eq(api-trim(expression), "") then api-error-status-json(400, "expression is required") else api_substrate_form_ready(mode, compiler, expression);
+    }
+    def api_substrate_form_ready(mode, compiler, expression) {
+        let recipe = api-substrate-form-compile(compiler, expression);
+        if str_eq(value_kind(recipe), "null") then api-error-status-json(400, source_compile_last_error()) else api_substrate_form_compiled(mode, compiler, recipe);
+    }
+    def api_substrate_form_compiled(mode, compiler, recipe) {
+        if str_eq(mode, "run") then api-ok-json(api-substrate-form-run-json(mode, compiler, recipe, walk_recipe(recipe))) else if str_eq(mode, "ast") then api-ok-json(api-substrate-form-recipe-json(mode, compiler, recipe)) else if str_eq(mode, "streaming") then api-ok-json(api-substrate-form-recipe-json(mode, compiler, recipe)) else api-error-status-json(400, "mode must be ast, streaming, or run");
+    }
+    def api-str-to-bytes-loop(s, i) = if ge(i, str_len(s)) then empty else cons(ord(char_at(s, i)), api-str-to-bytes-loop(s, add(i, 1)));
+    def api-str-to-bytes(s) = api-str-to-bytes-loop(s, 0);
+    def api-byte-hex(b) = str_concat(json-hex-digit(div(b, 16)), json-hex-digit(mod(b, 16)));
+    def api-bytes-hex(bytes) = if nil?(bytes) then "" else str_concat(api-byte-hex(head(bytes)), api-bytes-hex(tail(bytes)));
+    def anonymous-trace-hash-id(kind, value) {
+        let digest = sha256(api-str-to-bytes(str_concat(kind, str_concat(":", value))));
+        str_concat(kind, str_concat(":", substring(api-bytes-hex(digest), 0, 16)));
+    }
+    def anonymous-trace-node-id(source_point_id, session_id) = str_concat("anonymous-meeting:", str_concat(substring(source_point_id, 5, str_len(source_point_id)), str_concat(":", substring(session_id, 8, str_len(session_id)))));
+    def anonymous-trace-body-json(request) = parse-json("anonymous-meeting-trace-request", kh-request-body(request));
+    def anonymous-trace-surface(value) = api-trim(value);
+    def anonymous-trace-record-sql() = "WITH input AS (SELECT $1::text AS node_id, $2::text AS source_point_id, $3::text AS session_id, $4::text AS surface_raw, $5::bigint AS duration_raw, $6::text AS referrer_raw, $7::text AS started_raw, $8::text AS ended_raw, $9::text AS contributor_raw, $10::text AS now_iso), ref_host AS (SELECT *, trim(both '.' from CASE WHEN lower(btrim(referrer_raw)) LIKE '%://%' THEN split_part(split_part(split_part(split_part(lower(btrim(referrer_raw)), '://', 2), '/', 1), '?', 1), '#', 1) ELSE split_part(split_part(split_part(lower(btrim(referrer_raw)), '/', 1), '?', 1), '#', 1) END) AS ref_host_raw FROM input), normalized AS (SELECT node_id, source_point_id, session_id, COALESCE(NULLIF(left(btrim(surface_raw), 300), ''), '/') AS surface, GREATEST(0, LEAST(duration_raw, 86400000))::bigint AS duration_ms, CASE WHEN ref_host_raw <> '' AND length(ref_host_raw) <= 255 AND ref_host_raw ~ '^[a-z0-9.-]+$' THEN ref_host_raw ELSE NULL END AS referrer_domain, COALESCE(NULLIF(btrim(started_raw), ''), now_iso) AS started_at, COALESCE(NULLIF(btrim(ended_raw), ''), now_iso) AS ended_at, NULLIF(btrim(contributor_raw), '') AS contributor_id, now_iso FROM ref_host), existing AS (SELECT n.* FROM graph_nodes n JOIN normalized x ON n.id = x.node_id FOR UPDATE), raw_surfaces AS (SELECT raw.value, raw.ord FROM normalized x LEFT JOIN existing e ON true LEFT JOIN LATERAL jsonb_array_elements(COALESCE(e.properties->'surfaces', '[]'::jsonb)) WITH ORDINALITY raw(value, ord) ON jsonb_typeof(raw.value) = 'object'), clean_surfaces AS (SELECT ord, COALESCE(NULLIF(left(btrim(value->>'surface'), 300), ''), '/') AS surface, CASE WHEN COALESCE(value->>'duration_ms', '') ~ '^[0-9]+$' THEN GREATEST(0, LEAST((value->>'duration_ms')::bigint, 86400000)) ELSE 0 END AS duration_ms, CASE WHEN trim(both '.' from lower(COALESCE(value->>'referrer_domain', ''))) <> '' AND length(trim(both '.' from lower(COALESCE(value->>'referrer_domain', '')))) <= 255 AND trim(both '.' from lower(COALESCE(value->>'referrer_domain', ''))) ~ '^[a-z0-9.-]+$' THEN trim(both '.' from lower(COALESCE(value->>'referrer_domain', ''))) ELSE NULL END AS referrer_domain FROM raw_surfaces WHERE value IS NOT NULL), surface_seen AS (SELECT EXISTS(SELECT 1 FROM clean_surfaces c, normalized x WHERE c.surface = x.surface) AS seen), merged_existing AS (SELECT jsonb_strip_nulls(jsonb_build_object('surface', c.surface, 'duration_ms', CASE WHEN c.surface = x.surface THEN GREATEST(c.duration_ms, x.duration_ms) ELSE c.duration_ms END, 'referrer_domain', CASE WHEN c.surface = x.surface THEN COALESCE(c.referrer_domain, x.referrer_domain) ELSE c.referrer_domain END)) AS item, c.ord FROM clean_surfaces c CROSS JOIN normalized x), merged AS (SELECT COALESCE((SELECT jsonb_agg(item ORDER BY ord) FROM merged_existing), '[]'::jsonb) || CASE WHEN (SELECT seen FROM surface_seen) THEN '[]'::jsonb ELSE (SELECT jsonb_build_array(jsonb_strip_nulls(jsonb_build_object('surface', surface, 'duration_ms', duration_ms, 'referrer_domain', referrer_domain))) FROM normalized) END AS surfaces), firsts AS (SELECT (SELECT value->>'surface' FROM merged m, jsonb_array_elements(m.surfaces) WITH ORDINALITY s(value, ord) ORDER BY ord LIMIT 1) AS first_surface, (SELECT value->>'referrer_domain' FROM merged m, jsonb_array_elements(m.surfaces) WITH ORDINALITY s(value, ord) WHERE COALESCE(value->>'referrer_domain', '') <> '' ORDER BY ord LIMIT 1) AS first_referrer), props AS (SELECT x.node_id, x.source_point_id, jsonb_strip_nulls(jsonb_build_object('anonymous_meeting_trace', true, 'source_point_id', x.source_point_id, 'session_id', x.session_id, 'first_seen_at', COALESCE(e.properties->>'first_seen_at', x.started_at, x.now_iso), 'last_seen_at', COALESCE(x.ended_at, x.now_iso), 'entry_surface', COALESCE(e.properties->>'entry_surface', f.first_surface, x.surface), 'entry_referrer_domain', COALESCE(e.properties->>'entry_referrer_domain', f.first_referrer), 'surfaces', m.surfaces, 'folded_into_contributor_id', COALESCE(x.contributor_id, e.properties->>'folded_into_contributor_id'))) AS properties, x.contributor_id FROM normalized x CROSS JOIN merged m CROSS JOIN firsts f LEFT JOIN existing e ON true), upserted AS (INSERT INTO graph_nodes (id, type, name, description, properties, phase) SELECT node_id, 'event', 'Anonymous meeting ' || source_point_id, 'Anonymous public meeting trace', properties, 'water' FROM props ON CONFLICT (id) DO UPDATE SET properties = EXCLUDED.properties, updated_at = now() RETURNING id), folded AS (UPDATE graph_nodes n SET properties = jsonb_set(n.properties, array['folded_into_contributor_id']::text[], to_jsonb(p.contributor_id), true), updated_at = now() FROM props p WHERE p.contributor_id IS NOT NULL AND n.type = 'event' AND COALESCE((n.properties->>'anonymous_meeting_trace')::boolean, false) AND n.properties->>'source_point_id' = p.source_point_id RETURNING n.id) SELECT (SELECT id FROM upserted) AS id, (SELECT count(*)::bigint FROM folded) AS folded_count";
+    def anonymous-trace-find-row(rows, node_id) = if nil?(rows) then empty else if str_eq(idea-row("id", head(rows)), node_id) then head(rows) else anonymous-trace-find-row(tail(rows), node_id);
+    def anonymous-trace-record-response(source_point_id, node_id, rows, summary_rows) {
+        let session_row = anonymous-trace-find-row(rows, node_id);
+        let summary = if nil?(summary_rows) then anonymous-traces-summary-json(_dict_new("source_point_id", source_point_id, "source_point_count", 0, "meeting_count", 0, "first_seen_at", "", "last_seen_at", "", "total_duration_ms", 0, "duration_bucket", "under_10s", "entry_surface", "", "surfaces_met_json", "[]", "surface_sequence_json", "[]", "page_count", 0, "referrer_domain", "", "referrer_domains_json", "[]", "folded_into_contributor_id", "", "continuity_note", "source_point_id is a same-browser continuity hint, not identity proof")) else anonymous-traces-summary-json(head(summary_rows));
+        if nil?(session_row) then api-service-unavailable("persistence", "anonymous meeting trace write did not return a session row") else api-created-json(json-node-object(list(json-node-pair("source_point_id", json-node-string(source_point_id)), json-node-pair("session", anonymous-trace-item-row(session_row)), json-node-pair("summary", summary))));
+    }
+    def anonymous-trace-record-valid(conn, source_point_id, session_id, node_id, surface, duration_ms, referrer_domain, started_at, ended_at, contributor_id, now_iso) {
+        let write_rows = pg_query_rows(conn, anonymous-trace-record-sql(), list(node_id, source_point_id, session_id, surface, duration_ms, referrer_domain, started_at, ended_at, contributor_id, now_iso));
+        let rows = pg_query_rows(conn, anonymous-traces-sql(), list(source_point_id, 200));
+        let summary_rows = pg_query_rows(conn, anonymous-traces-summary-sql(), list(source_point_id));
+        let closed = pg_close(conn);
+        if nil?(write_rows) then api-service-unavailable("persistence", "anonymous meeting trace write failed") else anonymous-trace-record-response(source_point_id, node_id, rows, summary_rows);
+    }
+    def anonymous-trace-record-ready(conn, visitor_key, session_key, surface, duration_ms, referrer_domain, started_at, ended_at, contributor_id) {
+        let source_point_id = anonymous-trace-hash-id("anon", visitor_key);
+        let session_id = anonymous-trace-hash-id("session", session_key);
+        let node_id = anonymous-trace-node-id(source_point_id, session_id);
+        anonymous-trace-record-valid(conn, source_point_id, session_id, node_id, surface, duration_ms, referrer_domain, started_at, ended_at, contributor_id, api-now-iso());
+    }
+    def anonymous-trace-record-connected(conn, request) {
+        let body = anonymous-trace-body-json(request);
+        let visitor_key = api-trim(api-json-field-value-or(body, "visitor_key", ""));
+        let session_key = api-trim(api-json-field-value-or(body, "session_key", ""));
+        let surface = anonymous-trace-surface(api-json-field-value-or(body, "surface", "/"));
+        let duration_ms = api-json-field-int-or(body, "duration_ms", 0);
+        let referrer_domain = api-json-field-value-or(body, "referrer_domain", "");
+        let started_at = api-json-field-value-or(body, "started_at", "");
+        let ended_at = api-json-field-value-or(body, "ended_at", "");
+        let contributor_id = api-json-field-value-or(body, "contributor_id", "");
+        if lt(str_len(visitor_key), 4) then api-error-status-json(422, "visitor_key must be at least 4 characters") else if gt(str_len(visitor_key), 128) then api-error-status-json(422, "visitor_key must be at most 128 characters") else if lt(str_len(session_key), 4) then api-error-status-json(422, "session_key must be at least 4 characters") else if gt(str_len(session_key), 128) then api-error-status-json(422, "session_key must be at most 128 characters") else if lt(str_len(surface), 1) then api-error-status-json(422, "surface must be at least 1 character") else if gt(str_len(surface), 300) then api-error-status-json(422, "surface must be at most 300 characters") else if lt(duration_ms, 0) then api-error-status-json(422, "duration_ms must be greater than or equal to 0") else if gt(duration_ms, 86400000) then api-error-status-json(422, "duration_ms must be less than or equal to 86400000") else if gt(str_len(referrer_domain), 300) then api-error-status-json(422, "referrer_domain must be at most 300 characters") else if gt(str_len(contributor_id), 200) then api-error-status-json(422, "contributor_id must be at most 200 characters") else anonymous-trace-record-ready(conn, visitor_key, session_key, surface, duration_ms, referrer_domain, started_at, ended_at, contributor_id);
+    }
+    def api_meetings_anonymous_trace_record(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else anonymous-trace-record-connected(conn, request);
+    }
+
+    def api_vitality_signal_score(value) = if lt(value, 0.0) then 0.0 else if gt(value, 1.0) then 1.0 else value;
+    def api_vitality_description(score) = if ge(score, 0.7) then "Thriving - diverse contributors, flowing ideas, strong connections" else if ge(score, 0.4) then "Growing - some areas active, others dormant. Needs more diverse contributors or flowing ideas." else "Germinating - early stage. Plant seeds by creating ideas and inviting contributors.";
+    def api_vitality_sql() = "WITH contributors AS (SELECT properties FROM graph_nodes WHERE type='contributor' LIMIT 200), ideas AS (SELECT phase, COALESCE(properties->>'lifecycle_state', phase, 'gas') AS lifecycle, updated_at FROM graph_nodes WHERE type='idea' LIMIT 500), edge_sample AS (SELECT strength FROM graph_edges LIMIT 200), node_count AS (SELECT count(*)::bigint AS total_nodes FROM graph_nodes), events_7d AS (SELECT count(*)::bigint AS event_count FROM graph_nodes WHERE type='event' AND created_at >= now() - interval '7 days'), phase_counts AS (SELECT count(*) FILTER (WHERE lifecycle='gas' OR lifecycle NOT IN ('water','ice'))::bigint AS gas, count(*) FILTER (WHERE lifecycle='water')::bigint AS water, count(*) FILTER (WHERE lifecycle='ice')::bigint AS ice FROM ideas), idea_counts AS (SELECT count(*)::bigint AS total_ideas, count(*) FILTER (WHERE updated_at >= now() - interval '30 days')::bigint AS advanced FROM ideas), edge_counts AS (SELECT count(*)::bigint AS edge_count, COALESCE(avg(strength),0.0)::double precision AS resonance_density FROM edge_sample), axis_counts AS (SELECT count(*)::bigint AS axis_group_count, COALESCE(sum(axis_n * axis_n),0)::double precision AS axis_square_sum, COALESCE(sum(axis_n),0)::double precision AS axis_total FROM (SELECT COALESCE((SELECT key FROM jsonb_each_text(COALESCE(properties->'worldview_axes','{}'::jsonb)) ORDER BY value::double precision DESC LIMIT 1),'_none') AS axis, count(*)::double precision AS axis_n FROM contributors GROUP BY axis) a) SELECT COALESCE(CASE WHEN axis_total > 0 THEN 1.0 - (axis_square_sum / (axis_total * axis_total)) ELSE 0.0 END,0.0)::double precision AS diversity_index, LEAST(1.0, resonance_density)::double precision AS resonance_density, COALESCE(CASE WHEN total_ideas > 0 THEN LEAST(1.0, advanced::double precision / total_ideas::double precision) ELSE 0.0 END,0.0)::double precision AS flow_rate, gas, water, ice, COALESCE(CASE WHEN total_nodes > 0 THEN LEAST(1.0, edge_count::double precision / total_nodes::double precision / 5.0) ELSE 0.0 END,0.0)::double precision AS connection_strength, LEAST(1.0, event_count::double precision / 20.0)::double precision AS activity_pulse FROM axis_counts, phase_counts, idea_counts, edge_counts, node_count, events_7d";
+    def api-breath-ratio(count, total) = if le(total, 0) then 0.0 else round_ndigits(div(count, _plus(total, 0.0)), 4);
+    def api-breath-term(count, total) = if le(count, 0) then 0.0 else mul(div(count, _plus(total, 0.0)), math_log(div(count, _plus(total, 0.0))));
+    def api-breath-score(gas, water, ice) {
+        let total = add(add(gas, water), ice);
+        if le(total, 0) then 0.0 else div(mul(-1.0, _plus(_plus(api-breath-term(gas, total), api-breath-term(water, total)), api-breath-term(ice, total))), math_log(3.0));
+    }
+    def api-vitality-json(workspace_id, row) {
+        let gas = idea-row("gas", row);
+        let water = idea-row("water", row);
+        let ice = idea-row("ice", row);
+        let breath_score = api_vitality_signal_score(api-breath-score(gas, water, ice));
+        let diversity = api_vitality_signal_score(idea-row("diversity_index", row));
+        let resonance = api_vitality_signal_score(idea-row("resonance_density", row));
+        let flow = api_vitality_signal_score(idea-row("flow_rate", row));
+        let connection = api_vitality_signal_score(idea-row("connection_strength", row));
+        let activity = api_vitality_signal_score(idea-row("activity_pulse", row));
+        let score = round_ndigits(api_vitality_signal_score(_plus(_plus(_plus(mul(0.15, diversity), mul(0.15, resonance)), _plus(mul(0.20, flow), mul(0.15, breath_score))), _plus(mul(0.15, connection), mul(0.20, activity)))), 4);
+        json-node-object(list(json-node-pair("workspace_id", json-node-string(workspace_id)), json-node-pair("vitality_score", idea-json-float(score)), json-node-pair("signals", json-node-object(list(json-node-pair("diversity_index", idea-json-float(round_ndigits(diversity, 4))), json-node-pair("resonance_density", idea-json-float(round_ndigits(resonance, 4))), json-node-pair("flow_rate", idea-json-float(round_ndigits(flow, 4))), json-node-pair("breath_rhythm", json-node-object(list(json-node-pair("gas", idea-json-float(api-breath-ratio(gas, add(add(gas, water), ice)))), json-node-pair("water", idea-json-float(api-breath-ratio(water, add(add(gas, water), ice)))), json-node-pair("ice", idea-json-float(api-breath-ratio(ice, add(add(gas, water), ice))))))), json-node-pair("connection_strength", idea-json-float(round_ndigits(connection, 4))), json-node-pair("activity_pulse", idea-json-float(round_ndigits(activity, 4)))))), json-node-pair("health_description", json-node-string(api_vitality_description(score))), json-node-pair("generated_at", json-node-string(api-now-iso()))));
+    }
+    def api_vitality_coherence_network(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-vitality-connected(conn, request);
+    }
+    def api-vitality-connected(conn, request) {
+        let rows = pg_query_rows(conn, api_vitality_sql(), list());
+        let closed = pg_close(conn);
+        if nil?(rows) then api-service-unavailable("persistence", "vitality query failed") else api-ok-json(api-vitality-json("coherence-network", head(rows)));
+    }
+
+    def api-route-page-path(route) = if str_eq(route, "") then "web/app/page.tsx" else if str_eq(route, "/") then "web/app/page.tsx" else if kh-prefix?(route, "/substrate/form/space") then "web/app/substrate/form/space/page.tsx" else if kh-prefix?(route, "/substrate/form") then "web/app/substrate/form/page.tsx" else if kh-prefix?(route, "/substrate/") then "web/app/substrate/[domain]/[name]/page.tsx" else if kh-prefix?(route, "/vision/") then "web/app/vision/[conceptId]/page.tsx" else if kh-prefix?(route, "/people/") then "web/app/people/[id]/page.tsx" else if kh-prefix?(route, "/concepts/") then "web/app/concepts/[conceptId]/page.tsx" else if kh-prefix?(route, "/ideas/") then "web/app/ideas/[id]/page.tsx" else if kh-prefix?(route, "/nodes/") then "web/app/nodes/[id]/page.tsx" else str_concat("web/app", str_concat(route, "/page.tsx"));
+    def substrate-nodeid-json(row, prefix) {
+        let pkg = idea-row(str_concat(prefix, "_package"), row);
+        if str_eq(value_str(pkg), "") then json-node-null() else json-node-object(list(json-node-pair("package", json-node-int(pkg)), json-node-pair("level", json-node-int(idea-row(str_concat(prefix, "_level"), row))), json-node-pair("type", json-node-int(idea-row(str_concat(prefix, "_type"), row))), json-node-pair("instance", json-node-int(idea-row(str_concat(prefix, "_instance"), row)))));
+    }
+    def substrate-cell-json(row) = json-node-object(list(json-node-pair("cell_id", json-node-int(idea-row("cell_id", row))), json-node-pair("name", json-node-string(idea-row("name", row))), json-node-pair("domain", json-node-string(idea-row("domain", row))), json-node-pair("blueprint", substrate-nodeid-json(row, "bp")), json-node-pair("base", substrate-nodeid-json(row, "base")), json-node-pair("access", substrate-nodeid-json(row, "access")), json-node-pair("ctor", substrate-nodeid-json(row, "ctor")), json-node-pair("source_path", api-json-nullable-string(idea-row("source_path", row)))));
+    def substrate-cell-rows-json(rows) = if nil?(rows) then empty else cons(substrate-cell-json(head(rows)), substrate-cell-rows-json(tail(rows)));
+    def substrate-page-cell-sql() = "SELECT c.cell_id, c.name, c.domain, COALESCE(c.source_path,'') AS source_path, bp.package AS bp_package, bp.level AS bp_level, bp.type AS bp_type, bp.instance AS bp_instance, base.package AS base_package, base.level AS base_level, base.type AS base_type, base.instance AS base_instance, access.package AS access_package, access.level AS access_level, access.type AS access_type, access.instance AS access_instance, ctor.package AS ctor_package, ctor.level AS ctor_level, ctor.type AS ctor_type, ctor.instance AS ctor_instance FROM substrate_named_cells c JOIN substrate_nodes bp ON bp.node_id = c.blueprint_node_id LEFT JOIN substrate_nodes base ON base.node_id = c.base_node_id LEFT JOIN substrate_nodes access ON access.node_id = c.access_recipe_node_id LEFT JOIN substrate_nodes ctor ON ctor.node_id = c.ctor_recipe_node_id WHERE c.source_path = $1 ORDER BY c.cell_id LIMIT 1";
+    def substrate-page-twins-sql() = "SELECT c.cell_id, c.name, c.domain, COALESCE(c.source_path,'') AS source_path, bp.package AS bp_package, bp.level AS bp_level, bp.type AS bp_type, bp.instance AS bp_instance, base.package AS base_package, base.level AS base_level, base.type AS base_type, base.instance AS base_instance, access.package AS access_package, access.level AS access_level, access.type AS access_type, access.instance AS access_instance, ctor.package AS ctor_package, ctor.level AS ctor_level, ctor.type AS ctor_type, ctor.instance AS ctor_instance FROM substrate_named_cells c JOIN substrate_nodes bp ON bp.node_id = c.blueprint_node_id LEFT JOIN substrate_nodes base ON base.node_id = c.base_node_id LEFT JOIN substrate_nodes access ON access.node_id = c.access_recipe_node_id LEFT JOIN substrate_nodes ctor ON ctor.node_id = c.ctor_recipe_node_id WHERE c.domain = 'artifact' AND c.name LIKE '%.tsx' AND c.name <> $1 ORDER BY c.name LIMIT 24";
+    def substrate-page-missing-json(route, path) = json-node-object(list(json-node-pair("route", json-node-string(route)), json-node-pair("source_path", json-node-string(path)), json-node-pair("in_substrate", json-node-bool(false)), json-node-pair("kind", json-node-string("tsx")), json-node-pair("note", json-node-string("page found on disk but not yet ingested as an ARTIFACT cell"))));
+    def substrate-page-found-json(route, path, row, twins) = json-node-object(list(json-node-pair("route", json-node-string(route)), json-node-pair("source_path", json-node-string(path)), json-node-pair("in_substrate", json-node-bool(true)), json-node-pair("source", substrate-cell-json(row)), json-node-pair("twins", json-node-array(substrate-cell-rows-json(twins))), json-node-pair("twins_count", json-node-int(len(twins))), json-node-pair("twins_kind", json-node-string("tsx")), json-node-pair("kind", json-node-string("tsx"))));
+    def api-substrate-page-connected(conn, request) {
+        let route = kh-query-value-or(request, "route", "/");
+        let path = api-route-page-path(route);
+        let rows = pg_query_rows(conn, substrate-page-cell-sql(), list(path));
+        let twins = pg_query_rows(conn, substrate-page-twins-sql(), list(path));
+        let closed = pg_close(conn);
+        if nil?(rows) then api-ok-json(substrate-page-missing-json(route, path)) else api-ok-json(substrate-page-found-json(route, path, head(rows), twins));
+    }
+    def api_substrate_page(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-substrate-page-connected(conn, request);
+    }
+
+    def api-federation-count-connected(conn) {
+        let rows = pg_query_rows(conn, "SELECT count(*)::bigint AS count FROM federation_nodes", list());
+        let closed = pg_close(conn);
+        if nil?(rows) then api-service-unavailable("persistence", "federation node count query failed") else api-ok-json(json-node-object(list(json-node-pair("count", json-node-int(idea-row("count", head(rows)))))));
+    }
+    def api_federation_nodes_count(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-federation-count-connected(conn);
+    }
+
+    def api-json-pairs-merge(left, right) = if nil?(left) then right else cons(head(left), api-json-pairs-merge(tail(left), right));
+    def api-row-key(prefix, key) = str_concat(prefix, key);
+    def api-row(row, prefix, key) = idea-row(api-row-key(prefix, key), row);
+    def api-node-base-pairs(row, prefix) = list(json-node-pair("id", json-node-string(api-row(row, prefix, "id"))), json-node-pair("type", json-node-string(api-row(row, prefix, "type"))), json-node-pair("name", json-node-string(api-row(row, prefix, "name"))), json-node-pair("description", json-node-string(api-row(row, prefix, "description"))), json-node-pair("phase", json-node-string(api-row(row, prefix, "phase"))), json-node-pair("created_at", api-json-nullable-string(api-row(row, prefix, "created_at"))), json-node-pair("updated_at", api-json-nullable-string(api-row(row, prefix, "updated_at"))));
+    def api-node-observation-json(row, prefix) = json-node-object(list(json-node-pair("source", json-node-string("graph_nodes")), json-node-pair("property_dimensions", json-node-int(api-row(row, prefix, "property_dimensions"))), json-node-pair("incoming_edges", json-node-int(api-row(row, prefix, "incoming_edges"))), json-node-pair("outgoing_edges", json-node-int(api-row(row, prefix, "outgoing_edges"))), json-node-pair("voices", json-node-int(api-row(row, prefix, "voice_count"))), json-node-pair("reactions", json-node-int(api-row(row, prefix, "reaction_count")))));
+    def api-node-json(row, prefix) {
+        let properties = parse-json(str_concat(prefix, "properties"), api-row(row, prefix, "properties_json"));
+        let base_pairs = api-node-base-pairs(row, prefix);
+        let with_properties = api-json-pairs-merge(base_pairs, json-object-pairs(properties));
+        json-node-object(api-json-pairs-merge(with_properties, list(json-node-pair("native_observation", api-node-observation-json(row, prefix)))));
+    }
+    def api-node-stub-json(row, prefix) = json-node-object(list(json-node-pair("id", json-node-string(api-row(row, prefix, "id"))), json-node-pair("type", json-node-string(api-row(row, prefix, "type"))), json-node-pair("name", json-node-string(api-row(row, prefix, "name"))), json-node-pair("image_url", api-json-nullable-string(api-row(row, prefix, "image_url"))), json-node-pair("slug", api-json-nullable-string(api-row(row, prefix, "slug")))));
+    def api-graph-nodes-count-sql() = "SELECT count(*)::bigint AS total FROM graph_nodes n WHERE ($1 = '' OR n.type = $1) AND ($2 = '' OR n.phase = $2) AND ($3 = '' OR n.name ILIKE '%' || $3 || '%' OR n.description ILIKE '%' || $3 || '%') AND n.id NOT LIKE 'anonymous-meeting:%'";
+    def api-graph-nodes-page-sql() = "SELECT n.id AS node_id, n.type AS node_type, n.name AS node_name, n.description AS node_description, n.phase AS node_phase, replace(n.created_at::text, ' ', 'T') AS node_created_at, replace(n.updated_at::text, ' ', 'T') AS node_updated_at, COALESCE(n.properties,'{}'::jsonb)::text AS node_properties_json, (SELECT count(*)::bigint FROM jsonb_object_keys(COALESCE(n.properties,'{}'::jsonb))) AS node_property_dimensions, (SELECT count(*)::bigint FROM graph_edges e WHERE e.to_id = n.id) AS node_incoming_edges, (SELECT count(*)::bigint FROM graph_edges e WHERE e.from_id = n.id) AS node_outgoing_edges, CASE WHEN n.type = 'concept' THEN (SELECT count(*)::bigint FROM concept_voices v WHERE v.concept_id = n.id) ELSE 0 END AS node_voice_count, (SELECT count(*)::bigint FROM reactions r WHERE r.entity_type = n.type AND r.entity_id = n.id) AS node_reaction_count FROM graph_nodes n WHERE ($1 = '' OR n.type = $1) AND ($2 = '' OR n.phase = $2) AND ($3 = '' OR n.name ILIKE '%' || $3 || '%' OR n.description ILIKE '%' || $3 || '%') AND n.id NOT LIKE 'anonymous-meeting:%' ORDER BY n.updated_at DESC LIMIT $4 OFFSET $5";
+    def api-graph-node-rows-json(rows) = if nil?(rows) then empty else cons(api-node-json(head(rows), "node_"), api-graph-node-rows-json(tail(rows)));
+    def api-graph-nodes-total(count_rows) = if nil?(count_rows) then 0 else idea-row("total", head(count_rows));
+    def api-graph-nodes-response(count_rows, page_rows, limit, offset) = api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-graph-node-rows-json(page_rows))), json-node-pair("total", json-node-int(api-graph-nodes-total(count_rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_graph_nodes")), json-node-pair("projection", json-node-string("graph_nodes.to_dict-compatible")), json-node-pair("property_projection", json-node-string("merged"))))))));
+    def api-graph-nodes-connected(conn, node_type, phase, search, limit, offset) {
+        let count_rows = pg_query_rows(conn, api-graph-nodes-count-sql(), list(node_type, phase, search));
+        let page_rows = pg_query_rows(conn, api-graph-nodes-page-sql(), list(node_type, phase, search, limit, offset));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "graph nodes query failed") else api-graph-nodes-response(count_rows, page_rows, limit, offset);
+    }
+    def api_graph_nodes(request) {
+        let node_type = kh-query-value-or(request, "type", "");
+        let phase = kh-query-value-or(request, "phase", "");
+        let search = kh-query-value-or(request, "search", "");
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 50), 500);
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-graph-nodes-connected(conn, node_type, phase, search, limit, offset);
+    }
+
+    def coherence-score-sql() = "WITH ideas AS (SELECT properties, updated_at, COALESCE(properties->>'manifestation_status','none') AS manifestation_status, COALESCE(NULLIF(properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(properties->>'confidence','')::double precision,0.5) AS confidence FROM graph_nodes WHERE type='idea'), idea_metrics AS (SELECT count(*)::bigint AS total_ideas, count(*) FILTER (WHERE manifestation_status='validated')::bigint AS validated_ideas, count(*) FILTER (WHERE manifestation_status='partial')::bigint AS partial_ideas, count(*) FILTER (WHERE updated_at >= now() - interval '30 days')::bigint AS active_ideas_30d, count(*) FILTER (WHERE properties ? 'workspace_id')::bigint AS workspace_scoped_ideas, COALESCE(avg(confidence),0.5)::double precision AS avg_confidence, COALESCE(sum(potential_value),0.0)::double precision AS total_potential_value, COALESCE(sum(actual_value),0.0)::double precision AS total_actual_value, COALESCE(sum(GREATEST(potential_value - actual_value,0.0)),0.0)::double precision AS total_value_gap, COALESCE(sum(GREATEST(estimated_cost - actual_cost,0.0)),0.0)::double precision AS remaining_cost FROM ideas), spec_metrics AS (SELECT count(*)::bigint AS total_specs, count(*) FILTER (WHERE COALESCE(implementation_summary,'') <> '')::bigint AS specs_with_implementation, count(*) FILTER (WHERE COALESCE(process_summary,'') <> '')::bigint AS specs_with_process, count(*) FILTER (WHERE COALESCE(idea_id,'') <> '')::bigint AS specs_linked_to_ideas, count(*) FILTER (WHERE COALESCE(content_hash,'') <> '')::bigint AS specs_with_content_hash FROM spec_registry_entries), evidence_metrics AS (SELECT count(*)::bigint AS total_evidence_records, count(*) FILTER (WHERE created_at >= now() - interval '7 days')::bigint AS evidence_7d, count(*) FILTER (WHERE created_at >= now() - interval '30 days')::bigint AS evidence_30d, count(DISTINCT source_file)::bigint AS evidence_source_files, count(*) FILTER (WHERE COALESCE(payload_json,'') <> '' AND COALESCE(payload_json,'') <> '{}')::bigint AS evidence_with_payload FROM commit_evidence_records), runtime_metrics AS (SELECT count(*)::bigint AS total_events_24h, count(*) FILTER (WHERE status_code < 400)::bigint AS success_events_24h, count(*) FILTER (WHERE status_code >= 500)::bigint AS error_5xx_24h, count(DISTINCT endpoint)::bigint AS endpoint_count_24h, COALESCE(percentile_cont(0.95) WITHIN GROUP (ORDER BY runtime_ms),0.0)::double precision AS p95_runtime_ms FROM runtime_events WHERE recorded_at >= now() - interval '24 hours'), graph_metrics AS (SELECT (SELECT count(*)::bigint FROM graph_nodes) AS total_nodes, (SELECT count(*)::bigint FROM graph_edges) AS total_edges, (SELECT count(DISTINCT node_id)::bigint FROM (SELECT from_id AS node_id FROM graph_edges UNION SELECT to_id AS node_id FROM graph_edges) linked) AS connected_nodes, (SELECT COALESCE(avg(strength),0.0)::double precision FROM graph_edges) AS average_edge_strength, (SELECT count(*)::bigint FROM graph_nodes WHERE type='concept') AS concept_nodes), scored AS (SELECT idea_metrics.*, spec_metrics.*, evidence_metrics.*, runtime_metrics.*, graph_metrics.*, CASE WHEN total_ideas = 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, ((validated_ideas::double precision + partial_ideas::double precision * 0.5) / total_ideas::double precision) * 0.60 + LEAST(1.0, active_ideas_30d::double precision / GREATEST(total_ideas::double precision,1.0)) * 0.20 + LEAST(1.0, workspace_scoped_ideas::double precision / GREATEST(total_ideas::double precision,1.0)) * 0.10 + avg_confidence * 0.10)) END AS task_completion_score, CASE WHEN total_specs = 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, specs_with_implementation::double precision / total_specs::double precision * 0.45 + specs_with_process::double precision / total_specs::double precision * 0.25 + specs_linked_to_ideas::double precision / total_specs::double precision * 0.20 + specs_with_content_hash::double precision / total_specs::double precision * 0.10)) END AS spec_coverage_score, CASE WHEN total_evidence_records = 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, LEAST(1.0, evidence_7d::double precision / 5.0) * 0.35 + LEAST(1.0, evidence_30d::double precision / 20.0) * 0.25 + LEAST(1.0, evidence_source_files::double precision / 24.0) * 0.20 + evidence_with_payload::double precision / GREATEST(total_evidence_records::double precision,1.0) * 0.20)) END AS contribution_activity_score, CASE WHEN total_events_24h = 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, success_events_24h::double precision / total_events_24h::double precision * 0.60 + LEAST(1.0, GREATEST(0.0, 1.0 - GREATEST(p95_runtime_ms - 250.0,0.0) / 1750.0)) * 0.25 + LEAST(1.0, endpoint_count_24h::double precision / 60.0) * 0.15 - LEAST(0.25, error_5xx_24h::double precision / total_events_24h::double precision * 0.5))) END AS runtime_health_score, CASE WHEN total_potential_value <= 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, total_actual_value / total_potential_value * 0.55 + LEAST(1.0, (total_potential_value - total_value_gap) / GREATEST(total_potential_value,1.0)) * 0.25 + LEAST(1.0, total_actual_value / GREATEST(remaining_cost + 1.0,1.0)) * 0.20)) END AS value_realization_score, CASE WHEN total_nodes = 0 THEN 0.5 ELSE LEAST(1.0, GREATEST(0.0, connected_nodes::double precision / total_nodes::double precision * 0.40 + LEAST(1.0, total_edges::double precision / GREATEST(total_nodes::double precision * 3.0,1.0)) * 0.25 + LEAST(1.0, average_edge_strength) * 0.20 + LEAST(1.0, concept_nodes::double precision / 120.0) * 0.15)) END AS graph_connectedness_score FROM idea_metrics, spec_metrics, evidence_metrics, runtime_metrics, graph_metrics) SELECT round((task_completion_score * 0.18 + spec_coverage_score * 0.17 + contribution_activity_score * 0.16 + runtime_health_score * 0.16 + value_realization_score * 0.16 + graph_connectedness_score * 0.17)::numeric,4)::double precision AS score, scored.*, ((CASE WHEN total_ideas > 0 THEN 1 ELSE 0 END) + (CASE WHEN total_specs > 0 THEN 1 ELSE 0 END) + (CASE WHEN total_evidence_records > 0 THEN 1 ELSE 0 END) + (CASE WHEN total_events_24h > 0 THEN 1 ELSE 0 END) + (CASE WHEN total_potential_value > 0 THEN 1 ELSE 0 END) + (CASE WHEN total_nodes > 0 THEN 1 ELSE 0 END))::bigint AS signals_with_data, 6::bigint AS total_signals, replace((now() AT TIME ZONE 'UTC')::text, ' ', 'T') || 'Z' AS computed_at FROM scored";
+    def coherence-signal-json(row, score_key, weight, dimensions, details) = json-node-object(list(json-node-pair("score", idea-json-float(round_ndigits(idea-row(score_key, row), 4))), json-node-pair("weight", idea-json-float(weight)), json-node-pair("dimensions", json-node-int(dimensions)), json-node-pair("details", details)));
+    def coherence-task-details(row) = json-node-object(list(json-node-pair("total_ideas", json-node-int(idea-row("total_ideas", row))), json-node-pair("validated", json-node-int(idea-row("validated_ideas", row))), json-node-pair("partial", json-node-int(idea-row("partial_ideas", row))), json-node-pair("active_30d", json-node-int(idea-row("active_ideas_30d", row))), json-node-pair("workspace_scoped", json-node-int(idea-row("workspace_scoped_ideas", row))), json-node-pair("average_confidence", idea-json-float(round_ndigits(idea-row("avg_confidence", row), 4)))));
+    def coherence-spec-details(row) = json-node-object(list(json-node-pair("total_specs", json-node-int(idea-row("total_specs", row))), json-node-pair("with_implementation", json-node-int(idea-row("specs_with_implementation", row))), json-node-pair("with_process", json-node-int(idea-row("specs_with_process", row))), json-node-pair("linked_to_ideas", json-node-int(idea-row("specs_linked_to_ideas", row))), json-node-pair("with_content_hash", json-node-int(idea-row("specs_with_content_hash", row)))));
+    def coherence-evidence-details(row) = json-node-object(list(json-node-pair("total_records", json-node-int(idea-row("total_evidence_records", row))), json-node-pair("recent_7d", json-node-int(idea-row("evidence_7d", row))), json-node-pair("recent_30d", json-node-int(idea-row("evidence_30d", row))), json-node-pair("source_files", json-node-int(idea-row("evidence_source_files", row))), json-node-pair("with_payload", json-node-int(idea-row("evidence_with_payload", row)))));
+    def coherence-runtime-details(row) = json-node-object(list(json-node-pair("total_events_24h", json-node-int(idea-row("total_events_24h", row))), json-node-pair("success_2xx_3xx", json-node-int(idea-row("success_events_24h", row))), json-node-pair("error_5xx", json-node-int(idea-row("error_5xx_24h", row))), json-node-pair("endpoint_count_24h", json-node-int(idea-row("endpoint_count_24h", row))), json-node-pair("p95_runtime_ms", idea-json-float(round_ndigits(idea-row("p95_runtime_ms", row), 4)))));
+    def coherence-value-details(row) = json-node-object(list(json-node-pair("total_potential", idea-json-float(round_ndigits(idea-row("total_potential_value", row), 4))), json-node-pair("total_actual", idea-json-float(round_ndigits(idea-row("total_actual_value", row), 4))), json-node-pair("total_value_gap", idea-json-float(round_ndigits(idea-row("total_value_gap", row), 4))), json-node-pair("remaining_cost", idea-json-float(round_ndigits(idea-row("remaining_cost", row), 4)))));
+    def coherence-graph-details(row) = json-node-object(list(json-node-pair("total_nodes", json-node-int(idea-row("total_nodes", row))), json-node-pair("total_edges", json-node-int(idea-row("total_edges", row))), json-node-pair("connected_nodes", json-node-int(idea-row("connected_nodes", row))), json-node-pair("average_edge_strength", idea-json-float(round_ndigits(idea-row("average_edge_strength", row), 4))), json-node-pair("concept_nodes", json-node-int(idea-row("concept_nodes", row)))));
+    def coherence-response-json(row) = json-node-object(list(json-node-pair("score", idea-json-float(idea-row("score", row))), json-node-pair("signals", json-node-object(list(json-node-pair("task_completion", coherence-signal-json(row, "task_completion_score", 0.18, 6, coherence-task-details(row))), json-node-pair("spec_coverage", coherence-signal-json(row, "spec_coverage_score", 0.17, 5, coherence-spec-details(row))), json-node-pair("contribution_activity", coherence-signal-json(row, "contribution_activity_score", 0.16, 5, coherence-evidence-details(row))), json-node-pair("runtime_health", coherence-signal-json(row, "runtime_health_score", 0.16, 5, coherence-runtime-details(row))), json-node-pair("value_realization", coherence-signal-json(row, "value_realization_score", 0.16, 4, coherence-value-details(row))), json-node-pair("graph_connectedness", coherence-signal-json(row, "graph_connectedness_score", 0.17, 5, coherence-graph-details(row)))))), json-node-pair("signals_with_data", json-node-int(idea-row("signals_with_data", row))), json-node-pair("total_signals", json-node-int(idea-row("total_signals", row))), json-node-pair("computed_at", json-node-string(idea-row("computed_at", row))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("data_source", json-node-string("production-postgres")), json-node-pair("handler", json-node-string("api_coherence_score")))))));
+    def api-coherence-score-connected(conn) {
+        let rows = pg_query_rows(conn, coherence-score-sql(), list());
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "coherence score query failed") else if nil?(rows) then api-service-unavailable("persistence", "coherence score query returned no rows") else api-ok-json(coherence-response-json(head(rows)));
+    }
+    def api_coherence_score(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-coherence-score-connected(conn);
+    }
+
+    def api-concept-id(request) {
+        let path = kh-request-path(request);
+        if le(str_len(path), 14) then "" else substring(path, 14, str_len(path));
+    }
+    def api-concept-sql() = "SELECT n.id, n.type, n.name, n.description, n.phase, replace(n.created_at::text, ' ', 'T') AS created_at, replace(n.updated_at::text, ' ', 'T') AS updated_at, COALESCE(n.properties,'{}'::jsonb)::text AS properties_json, (SELECT count(*)::bigint FROM jsonb_object_keys(COALESCE(n.properties,'{}'::jsonb))) AS property_dimensions, (SELECT count(*)::bigint FROM graph_edges e WHERE e.to_id = n.id) AS incoming_edges, (SELECT count(*)::bigint FROM graph_edges e WHERE e.from_id = n.id) AS outgoing_edges, (SELECT count(*)::bigint FROM concept_voices v WHERE v.concept_id = n.id) AS voice_count, (SELECT count(*)::bigint FROM reactions r WHERE r.entity_type = 'concept' AND r.entity_id = n.id) AS reaction_count FROM graph_nodes n WHERE n.type = 'concept' AND n.id = $1 LIMIT 1";
+    def api-concept-connected(conn, request) {
+        let concept_id = api-concept-id(request);
+        let rows = pg_query_rows(conn, api-concept-sql(), list(concept_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "concept query failed") else if nil?(rows) then api-not-found(str_concat("Concept not found: ", concept_id)) else api-ok-json(api-node-json(head(rows), ""));
+    }
+    def api_concept_living_collective(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-concept-connected(conn, request);
+    }
+
+    def ideas-resonance-sql() = "WITH governance_raw AS (SELECT updated_at, CASE WHEN COALESCE(payload_json,'') LIKE '{%' THEN payload_json::jsonb ELSE '{}'::jsonb END AS payload FROM governance_change_requests WHERE updated_at >= now() - (GREATEST($1::int,1) * interval '1 hour')), governance_activity AS (SELECT COALESCE(payload->>'idea_id', payload->>'id') AS idea_id, max(updated_at) AS governance_last_activity_at, count(*)::bigint AS governance_events FROM governance_raw WHERE COALESCE(payload->>'idea_id', payload->>'id') IS NOT NULL GROUP BY 1), idea_base AS (SELECT n.id, n.name, n.description, n.updated_at, COALESCE(n.properties->>'manifestation_status','none') AS manifestation_status, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(n.properties->>'resistance_risk','')::double precision,1.0) AS resistance_risk, COALESCE(NULLIF(n.properties->>'confidence','')::double precision,0.5) AS confidence, CASE WHEN jsonb_typeof(COALESCE(n.properties->'concepts','[]'::jsonb)) = 'array' THEN jsonb_array_length(COALESCE(n.properties->'concepts','[]'::jsonb)) ELSE 0 END AS concept_count, CASE WHEN jsonb_typeof(COALESCE(n.properties->'domains','[]'::jsonb)) = 'array' THEN jsonb_array_length(COALESCE(n.properties->'domains','[]'::jsonb)) ELSE 0 END AS domain_count, CASE WHEN jsonb_typeof(COALESCE(n.properties->'tags','[]'::jsonb)) = 'array' THEN jsonb_array_length(COALESCE(n.properties->'tags','[]'::jsonb)) ELSE 0 END AS tag_count, CASE WHEN jsonb_typeof(COALESCE(n.properties->'open_questions','[]'::jsonb)) = 'array' THEN jsonb_array_length(COALESCE(n.properties->'open_questions','[]'::jsonb)) ELSE 0 END AS open_question_count, (SELECT count(*)::bigint FROM graph_edges e WHERE e.from_id=n.id OR e.to_id=n.id) AS edge_count FROM graph_nodes n WHERE n.type='idea'), active AS (SELECT idea_base.*, COALESCE(g.governance_events,0)::bigint AS governance_events, GREATEST(idea_base.updated_at, COALESCE(g.governance_last_activity_at, idea_base.updated_at)) AS last_activity_at FROM idea_base LEFT JOIN governance_activity g ON g.idea_id = idea_base.id WHERE idea_base.updated_at >= now() - (GREATEST($1::int,1) * interval '1 hour') OR g.idea_id IS NOT NULL OR idea_base.open_question_count > 0), scored AS (SELECT *, round(((potential_value * confidence) / GREATEST(estimated_cost + resistance_risk, 0.5))::numeric,4)::double precision AS free_energy_score, round(LEAST(1.0, GREATEST(0.0, exp(-1.0 * GREATEST(EXTRACT(EPOCH FROM (now() - last_activity_at)) / 3600.0, 0.0) / GREATEST($1::double precision, 1.0)) * 0.35 + LEAST(1.0, governance_events::double precision / 5.0) * 0.20 + LEAST(1.0, edge_count::double precision / 12.0) * 0.15 + LEAST(1.0, (concept_count + domain_count + tag_count)::double precision / 12.0) * 0.15 + confidence * 0.15))::numeric,4)::double precision AS resonance_score FROM active) SELECT id AS idea_id, name, replace(last_activity_at::text, ' ', 'T') AS last_activity_at, free_energy_score, manifestation_status, resonance_score, governance_events, concept_count::bigint, domain_count::bigint, tag_count::bigint, open_question_count::bigint, edge_count::bigint, count(*) OVER()::bigint AS total FROM scored ORDER BY last_activity_at DESC, resonance_score DESC, idea_id ASC LIMIT $2 OFFSET $3";
+    def ideas-resonance-row-json(row) = json-node-object(list(json-node-pair("idea_id", json-node-string(idea-row("idea_id", row))), json-node-pair("name", json-node-string(idea-row("name", row))), json-node-pair("last_activity_at", api-json-nullable-string(idea-row("last_activity_at", row))), json-node-pair("free_energy_score", idea-json-float(idea-row("free_energy_score", row))), json-node-pair("manifestation_status", json-node-string(idea-row("manifestation_status", row))), json-node-pair("resonance_score", idea-json-float(idea-row("resonance_score", row))), json-node-pair("activity_sources", json-node-object(list(json-node-pair("governance_events", json-node-int(idea-row("governance_events", row))), json-node-pair("open_questions", json-node-int(idea-row("open_question_count", row))), json-node-pair("edges", json-node-int(idea-row("edge_count", row)))))), json-node-pair("semantic_dimensions", json-node-object(list(json-node-pair("concepts", json-node-int(idea-row("concept_count", row))), json-node-pair("domains", json-node-int(idea-row("domain_count", row))), json-node-pair("tags", json-node-int(idea-row("tag_count", row))))))));
+    def ideas-resonance-rows-json(rows) = if nil?(rows) then empty else cons(ideas-resonance-row-json(head(rows)), ideas-resonance-rows-json(tail(rows)));
+    def ideas-resonance-total(rows) = if nil?(rows) then 0 else idea-row("total", head(rows));
+    def ideas-resonance-connected(conn, request) {
+        let window_hours = api-clamp-limit(kh-query-int-or(request, "window_hours", 24), 720);
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 20), 100);
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let rows = pg_query_rows(conn, ideas-resonance-sql(), list(window_hours, limit, offset));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "idea resonance query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(ideas-resonance-rows-json(rows))), json-node-pair("total", json-node-int(ideas-resonance-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("window_hours", json-node-int(window_hours)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("dimensions", json-node-int(8)), json-node-pair("handler", json-node-string("api_ideas_resonance"))))))));
+    }
+    def api_ideas_resonance(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else ideas-resonance-connected(conn, request);
+    }
+
+    def api-edge-canonical-types() = "resonates-with,emerges-from,transcends,instantiates,embodies,reflects,transforms-into,enables,blocks,catalyzes,stabilizes,amplifies,dampens,implements,extends,refines,generalises,contradicts,complements,subsumes,fractal-scaling,composes-from,decomposes-into,aggregates,specialises,precedes,follows,co-occurs-with,triggers,resolves,iterates,paradox-resolution,polarity-of,tension-with,bridges,integrates,contributes-to,funded-by,inspired-by,referenced-by,challenges,validates,invalidates,analogous-to,depends-on,precondition-of,at-place";
+    def api-edges-sql() = "WITH filtered AS (SELECT e.*, count(*) OVER()::bigint AS total FROM graph_edges e WHERE ($1 = '' OR e.type = $1) AND ($2 = '' OR e.from_id = $2) AND ($3 = '' OR e.to_id = $3) ORDER BY e.created_at DESC LIMIT $4 OFFSET $5) SELECT e.id, e.from_id, e.to_id, e.type, e.strength, e.created_by, replace(e.created_at::text, ' ', 'T') AS created_at, COALESCE(e.properties,'{}'::jsonb)::text AS properties_json, (SELECT count(*)::bigint FROM jsonb_object_keys(COALESCE(e.properties,'{}'::jsonb))) AS property_dimensions, e.total, (e.type = ANY(string_to_array($6, ','))) AS canonical, fn.id AS from_id, fn.type AS from_type, fn.name AS from_name, COALESCE(fn.properties->>'image_url','') AS from_image_url, COALESCE(fn.properties->>'slug','') AS from_slug, tn.id AS to_id, tn.type AS to_type, tn.name AS to_name, COALESCE(tn.properties->>'image_url','') AS to_image_url, COALESCE(tn.properties->>'slug','') AS to_slug FROM filtered e LEFT JOIN graph_nodes fn ON fn.id = e.from_id LEFT JOIN graph_nodes tn ON tn.id = e.to_id ORDER BY e.created_at DESC";
+    def api-edge-row-json(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("from_id", json-node-string(idea-row("from_id", row))), json-node-pair("to_id", json-node-string(idea-row("to_id", row))), json-node-pair("type", json-node-string(idea-row("type", row))), json-node-pair("strength", idea-json-float(idea-row("strength", row))), json-node-pair("created_by", json-node-string(idea-row("created_by", row))), json-node-pair("created_at", api-json-nullable-string(idea-row("created_at", row))), json-node-pair("properties", parse-json("graph_edges.properties", idea-row("properties_json", row))), json-node-pair("from_node", api-node-stub-json(row, "from_")), json-node-pair("to_node", api-node-stub-json(row, "to_")), json-node-pair("canonical", json-node-bool(idea-row("canonical", row))), json-node-pair("native_observation", json-node-object(list(json-node-pair("source", json-node-string("graph_edges")), json-node-pair("property_dimensions", json-node-int(idea-row("property_dimensions", row))))))));
+    def api-edge-rows-json(rows) = if nil?(rows) then empty else cons(api-edge-row-json(head(rows)), api-edge-rows-json(tail(rows)));
+    def api-edges-total(rows) = if nil?(rows) then 0 else idea-row("total", head(rows));
+    def api-edges-connected(conn, request) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 50), 500);
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let rows = pg_query_rows(conn, api-edges-sql(), list(kh-query-value-or(request, "type", ""), kh-query-value-or(request, "from_id", ""), kh-query-value-or(request, "to_id", ""), limit, offset, api-edge-canonical-types()));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "edges query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-edge-rows-json(rows))), json-node-pair("total", json-node-int(api-edges-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_edges"))))))));
+    }
+    def api_edges(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-edges-connected(conn, request);
+    }
+
+    def api-contributor-id(raw) = if kh-prefix?(raw, "contributor:") then raw else str_concat("contributor:", raw);
+    def api-inspired-by-sql() = "WITH viewer_edges AS (SELECT to_id FROM graph_edges WHERE $2 <> '' AND from_id = $2 AND type = 'inspired-by'), edges AS (SELECT e.*, EXISTS (SELECT 1 FROM viewer_edges ve WHERE ve.to_id = e.to_id) AS shared_with_viewer, count(*) OVER()::bigint AS total FROM graph_edges e WHERE e.from_id = $1 AND e.type = 'inspired-by' ORDER BY e.strength DESC, e.created_at DESC LIMIT $3 OFFSET $4) SELECT e.id AS edge_id, e.strength AS weight, replace(e.created_at::text, ' ', 'T') AS created_at, e.shared_with_viewer, e.total, n.id AS target_id, n.type AS target_type, n.name AS target_name, n.description AS target_description, COALESCE(n.properties->>'canonical_url','') AS target_canonical_url, COALESCE(n.properties->>'image_url','') AS target_image_url, COALESCE(n.properties->>'provider','') AS target_provider, COALESCE(n.properties->>'tagline','') AS target_tagline, COALESCE(n.properties->>'slug','') AS target_slug, CASE WHEN lower(COALESCE(n.properties->>'claimed','true')) = 'false' THEN false ELSE true END AS target_claimed, CASE WHEN jsonb_typeof(COALESCE(n.properties->'presences','[]'::jsonb)) = 'array' THEN COALESCE(n.properties->'presences','[]'::jsonb)::text ELSE '[]' END AS target_presences_json, (SELECT count(*)::bigint FROM jsonb_object_keys(COALESCE(n.properties,'{}'::jsonb))) AS target_property_dimensions, (SELECT count(*)::bigint FROM graph_edges ge WHERE ge.to_id = n.id) AS target_incoming_edges, (SELECT count(*)::bigint FROM graph_edges ge WHERE ge.from_id = n.id) AS target_outgoing_edges FROM edges e JOIN graph_nodes n ON n.id = e.to_id";
+    def api-inspired-node-json(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("target_id", row))), json-node-pair("name", json-node-string(idea-row("target_name", row))), json-node-pair("description", json-node-string(idea-row("target_description", row))), json-node-pair("type", json-node-string(idea-row("target_type", row))), json-node-pair("canonical_url", api-json-nullable-string(idea-row("target_canonical_url", row))), json-node-pair("image_url", api-json-nullable-string(idea-row("target_image_url", row))), json-node-pair("provider", api-json-nullable-string(idea-row("target_provider", row))), json-node-pair("tagline", api-json-nullable-string(idea-row("target_tagline", row))), json-node-pair("slug", api-json-nullable-string(idea-row("target_slug", row))), json-node-pair("claimed", json-node-bool(idea-row("target_claimed", row))), json-node-pair("presences", parse-json("inspired-by.presences", idea-row("target_presences_json", row))), json-node-pair("native_observation", json-node-object(list(json-node-pair("property_dimensions", json-node-int(idea-row("target_property_dimensions", row))), json-node-pair("incoming_edges", json-node-int(idea-row("target_incoming_edges", row))), json-node-pair("outgoing_edges", json-node-int(idea-row("target_outgoing_edges", row))))))));
+    def api-inspired-by-row-json(row) = json-node-object(list(json-node-pair("edge_id", json-node-string(idea-row("edge_id", row))), json-node-pair("weight", idea-json-float(idea-row("weight", row))), json-node-pair("node", api-inspired-node-json(row)), json-node-pair("created_at", api-json-nullable-string(idea-row("created_at", row))), json-node-pair("shared_with_viewer", json-node-bool(idea-row("shared_with_viewer", row)))));
+    def api-inspired-by-rows-json(rows) = if nil?(rows) then empty else cons(api-inspired-by-row-json(head(rows)), api-inspired-by-rows-json(tail(rows)));
+    def api-inspired-shared-count(rows) = if nil?(rows) then 0 else if idea-row("shared_with_viewer", head(rows)) then add(1, api-inspired-shared-count(tail(rows))) else api-inspired-shared-count(tail(rows));
+    def api-inspired-total(rows) = if nil?(rows) then 0 else idea-row("total", head(rows));
+    def api-inspired-by-connected(conn, request, source_id, viewer_id) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 40), 500);
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let rows = pg_query_rows(conn, api-inspired-by-sql(), list(source_id, viewer_id, limit, offset));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "inspired-by query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-inspired-by-rows-json(rows))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("total", json-node-int(api-inspired-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("shared_count", if str_eq(viewer_id, "") then json-node-null() else json-node-int(api-inspired-shared-count(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_inspired_by")), json-node-pair("source_contributor_id", json-node-string(source_id))))))));
+    }
+    def api-inspired-by-ready(request, source_id, viewer_id) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-inspired-by-connected(conn, request, source_id, viewer_id);
+    }
+    def api_inspired_by(request) {
+        let raw_source = kh-query-value-or(request, "contributor_id", "");
+        let source_id = api-contributor-id(raw_source);
+        let viewer_raw = kh-query-value-or(request, "viewer_id", "");
+        let viewer_id = if str_eq(viewer_raw, "") then "" else api-contributor-id(viewer_raw);
+        if str_eq(raw_source, "") then api-error-json(422, "contributor_id is required") else api-inspired-by-ready(request, source_id, viewer_id);
+    }
+
+    def views-ping-uuid-from-hex(h) = str_concat(substring(h, 0, 8), str_concat("-", str_concat(substring(h, 8, 12), str_concat("-", str_concat(substring(h, 12, 16), str_concat("-", str_concat(substring(h, 16, 20), str_concat("-", substring(h, 20, 32)))))))));
+    def views-ping-event-id() = views-ping-uuid-from-hex(api-bytes-hex(random_bytes(16)));
+    def views-ping-attention-id() = str_concat("clr_", api-bytes-hex(random_bytes(6)));
+    def views-ping-effective-concept-id(asset_id, concept_id) = if str_eq(concept_id, "") then if kh-prefix?(asset_id, "lc-") then asset_id else "" else concept_id;
+    def views-ping-strip-leading-slash(page) = if and(gt(str_len(page), 0), str_eq(char_at(page, 0), "/")) then substring(page, 1, str_len(page)) else page;
+    def views-ping-first-segment(text) {
+        let slash = str_find(text, "/", 0);
+        if eq(slash, -1) then text else substring(text, 0, slash);
+    }
+    def views-ping-source-segment(source_page) = views-ping-first-segment(views-ping-strip-leading-slash(source_page));
+    def views-ping-page-entity-type(segment) = match segment { "ideas" => "idea", "assets" => "asset", "specs" => "spec", _ => "page" };
+    def views-ping-page-entity-id(segment, asset_id) = match segment { "ideas" => asset_id, "assets" => asset_id, "specs" => asset_id, _ => segment };
+    def views-ping-inferred-page-entity(asset_id, source_page) {
+        let segment = views-ping-source-segment(source_page);
+        list(views-ping-page-entity-type(segment), views-ping-page-entity-id(segment, asset_id));
+    }
+    def views-ping-inferred-entity(asset_id, concept_id, source_page) = if not(str_eq(concept_id, "")) then list("concept", concept_id) else if kh-prefix?(asset_id, "lc-") then list("concept", asset_id) else if kh-prefix?(asset_id, "page:") then list("page", substring(asset_id, 5, str_len(asset_id))) else if and(not(str_eq(source_page, "")), not(str_eq(source_page, "/"))) then views-ping-inferred-page-entity(asset_id, source_page) else list("asset", asset_id);
+    def views-ping-effective-entity(asset_id, concept_id, entity_type, entity_id, source_page) = if and(not(str_eq(entity_type, "")), not(str_eq(entity_id, ""))) then list(entity_type, entity_id) else views-ping-inferred-entity(asset_id, concept_id, source_page);
+    def views-ping-write-sql() = "WITH input AS (SELECT $1::text AS event_id, left($2::text, 128) AS asset_id, NULLIF(left($3::text, 128), '') AS concept_id, NULLIF(left($4::text, 128), '') AS contributor_id, NULLIF(left($5::text, 64), '') AS session_fingerprint, NULLIF(left($6::text, 256), '') AS source_page, NULLIF(left($7::text, 128), '') AS referrer_contributor_id, NULLIF(left($8::text, 64), '') AS entity_type, NULLIF(left($9::text, 256), '') AS entity_id, $10::timestamptz AS recorded_at, $11::text AS attention_id), view_insert AS (INSERT INTO asset_view_events (id, asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, created_at) SELECT event_id, asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, recorded_at FROM input RETURNING id), read_upsert AS (INSERT INTO asset_reads_daily (asset_id, day, read_count, cc_distributed, concepts) SELECT asset_id, CURRENT_DATE, 1, 0, CASE WHEN concept_id IS NULL THEN '{}' ELSE jsonb_build_object(concept_id, 1)::text END FROM input ON CONFLICT (asset_id, day) DO UPDATE SET read_count = asset_reads_daily.read_count + 1, concepts = CASE WHEN (SELECT concept_id FROM input) IS NULL THEN COALESCE(asset_reads_daily.concepts, '{}') ELSE jsonb_set(COALESCE(NULLIF(asset_reads_daily.concepts, '')::jsonb, '{}'::jsonb), ARRAY[(SELECT concept_id FROM input)], to_jsonb(COALESCE((NULLIF(asset_reads_daily.concepts, '')::jsonb ->> (SELECT concept_id FROM input))::int, 0) + 1), true)::text END RETURNING asset_id), source AS (SELECT l.id, l.contributor_id, l.metadata_json::jsonb AS metadata FROM contribution_ledger l JOIN input i ON true WHERE l.contribution_type = 'content_view' AND COALESCE(l.metadata_json, '') <> '' AND l.metadata_json::jsonb->>'entity_type' = i.entity_type AND l.metadata_json::jsonb->>'entity_id' = i.entity_id ORDER BY l.recorded_at DESC LIMIT 1), policy_raw AS (SELECT value_json::jsonb AS policy FROM reward_policies WHERE workspace_id = 'coherence-network' AND key = 'discovery.view_reward_cc' LIMIT 1), reward AS (SELECT CASE WHEN jsonb_typeof(policy) = 'object' AND jsonb_typeof(policy->'value') = 'number' THEN (policy->>'value')::double precision WHEN jsonb_typeof(policy) = 'number' THEN (policy#>>'{}')::double precision ELSE 0.01 END AS amount_cc FROM policy_raw UNION ALL SELECT 0.01 WHERE NOT EXISTS (SELECT 1 FROM policy_raw)), attention_insert AS (INSERT INTO contribution_ledger (id, contributor_id, contribution_type, idea_id, amount_cc, metadata_json, recorded_at) SELECT i.attention_id, s.contributor_id, 'attention', CASE WHEN i.entity_type = 'idea' THEN i.entity_id ELSE NULL END, round((SELECT amount_cc FROM reward LIMIT 1)::numeric, 4)::double precision, jsonb_build_object('entity_type', i.entity_type, 'entity_id', i.entity_id, 'asset_id', i.asset_id, 'source_contribution_id', s.id, 'source_view_id', s.metadata->>'view_id', 'source_content_hash', s.metadata->>'content_hash', 'view_event_id', i.event_id, 'viewer_contributor_id', i.contributor_id, 'source_page', i.source_page, 'workspace_id', 'coherence-network')::text, i.recorded_at FROM source s JOIN input i ON true WHERE (i.contributor_id IS NULL OR i.contributor_id <> s.contributor_id) AND (SELECT amount_cc FROM reward LIMIT 1) > 0 RETURNING id) SELECT COALESCE((SELECT id FROM view_insert), i.event_id) AS event_id, COALESCE((SELECT id FROM source), '') AS credited_source_contribution_id, COALESCE((SELECT id FROM attention_insert), '') AS attention_contribution_id, (SELECT count(*)::bigint FROM read_upsert) AS read_daily_written, EXISTS (SELECT 1 FROM attention_insert) AS attention_credited FROM input i";
+    def views-ping-response-json(row) = json-node-object(list(json-node-pair("ok", json-node-bool(true)), json-node-pair("event_id", json-node-string(idea-row("event_id", row))), json-node-pair("credited_source_contribution_id", api-json-nullable-string(idea-row("credited_source_contribution_id", row))), json-node-pair("attention_contribution_id", api-json-nullable-string(idea-row("attention_contribution_id", row))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_views_ping")), json-node-pair("writes", json-node-array(list(json-node-string("asset_view_events"), json-node-string("asset_reads_daily"), json-node-string("contribution_ledger")))), json-node-pair("read_daily_written", json-node-int(idea-row("read_daily_written", row))), json-node-pair("attention_credited", json-node-bool(idea-row("attention_credited", row))))))));
+    def views-ping-connected(conn, event_id, asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, entity_type, entity_id, recorded_at, attention_id) {
+        let rows = pg_query_rows(conn, views-ping-write-sql(), list(event_id, asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, entity_type, entity_id, recorded_at, attention_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "view ping write failed") else if nil?(rows) then api-service-unavailable("persistence", "view ping write returned no row") else api-ok-json(views-ping-response-json(head(rows)));
+    }
+    def views-ping-ready(asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, entity_type, entity_id) {
+        let event_id = views-ping-event-id();
+        let attention_id = views-ping-attention-id();
+        let recorded_at = api-now-iso();
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else views-ping-connected(conn, event_id, asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, entity_type, entity_id, recorded_at, attention_id);
+    }
+    def api_views_ping(request) {
+        let body = parse-json("views-ping-request", kh-request-body(request));
+        let asset_id = api-trim(api-json-field-value-or(body, "asset_id", ""));
+        let concept_id = views-ping-effective-concept-id(asset_id, api-trim(api-json-field-value-or(body, "concept_id", "")));
+        let source_page = api-json-field-value-or(body, "source_page", "");
+        let explicit_entity_type = api-json-field-value-or(body, "entity_type", "");
+        let explicit_entity_id = api-json-field-value-or(body, "entity_id", "");
+        let entity = views-ping-effective-entity(asset_id, concept_id, explicit_entity_type, explicit_entity_id, source_page);
+        let contributor_id = api-request-header-value-or(request, "X-Contributor-Id", "");
+        let session_fingerprint = api-request-header-value-or(request, "X-Session-Fingerprint", "");
+        let referrer_contributor_id = api-request-header-value-or(request, "X-Referrer-Contributor-Id", "");
+        if str_eq(asset_id, "") then api-error-status-json(422, "asset_id is required") else if gt(str_len(asset_id), 128) then api-error-status-json(422, "asset_id must be at most 128 characters") else if gt(str_len(concept_id), 128) then api-error-status-json(422, "concept_id must be at most 128 characters") else if gt(str_len(source_page), 256) then api-error-status-json(422, "source_page must be at most 256 characters") else views-ping-ready(asset_id, concept_id, contributor_id, session_fingerprint, source_page, referrer_contributor_id, nth(entity, 0), nth(entity, 1));
+    }
+
+    def runtime-event-id() = str_concat("rt_", api-bytes-hex(random_bytes(6)));
+    def runtime-source-valid?(source) = or(str_eq(source, "api"), or(str_eq(source, "web"), or(str_eq(source, "web_api"), str_eq(source, "worker"))));
+    def runtime-queryless-path(path) {
+        let idx = str_find(path, "?", 0);
+        if eq(idx, -1) then path else substring(path, 0, idx);
+    }
+    def runtime-normalize-path(raw) {
+        let stripped = runtime-queryless-path(api-trim(raw));
+        if str_eq(stripped, "") then "/" else if str_eq(char_at(stripped, 0), "/") then stripped else str_concat("/", stripped);
+    }
+    def runtime-default-idea-id(endpoint) = if kh-prefix?(endpoint, "/api") then "oss-interface-alignment" else if kh-prefix?(endpoint, "/v1") then "portfolio-governance" else if kh-prefix?(endpoint, "/") then "oss-interface-alignment" else "unmapped";
+    def runtime-cost-per-second() = str_to_float(value_str(config_value_or("agent_cost.runtime_cost_per_second", "0.002")));
+    def runtime-cost-estimate(runtime_ms) = div(mul(runtime_ms, runtime-cost-per-second()), 1000.0);
+    def runtime-event-insert-sql() = "INSERT INTO runtime_events (id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, metadata_json, runtime_cost_estimate, recorded_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb::text, $11, $12::timestamptz)";
+    def runtime-event-json(event_id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, metadata, runtime_cost, recorded_at) = json-node-object(list(json-node-pair("source", json-node-string(source)), json-node-pair("endpoint", json-node-string(endpoint)), json-node-pair("raw_endpoint", json-node-string(raw_endpoint)), json-node-pair("method", json-node-string(method)), json-node-pair("status_code", json-node-int(status_code)), json-node-pair("runtime_ms", idea-json-float(runtime_ms)), json-node-pair("idea_id", json-node-string(idea_id)), json-node-pair("metadata", metadata), json-node-pair("id", json-node-string(event_id)), json-node-pair("recorded_at", json-node-string(recorded_at)), json-node-pair("runtime_cost_estimate", idea-json-float(runtime_cost)), json-node-pair("origin_idea_id", json-node-string(origin_idea_id)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_runtime_events_create")), json-node-pair("normalized_endpoint", json-node-bool(not(str_eq(endpoint, raw_endpoint)))))))));
+    def runtime-event-connected(conn, event_id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, metadata, runtime_cost, recorded_at) {
+        let inserted = pg_exec(conn, runtime-event-insert-sql(), list(event_id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, json-emit(metadata), runtime_cost, recorded_at));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "runtime event write failed") else api-created-json(runtime-event-json(event_id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, metadata, runtime_cost, recorded_at));
+    }
+    def runtime-event-ready(source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, metadata) {
+        let event_id = runtime-event-id();
+        let origin_idea_id = idea_id;
+        let runtime_cost = runtime-cost-estimate(runtime_ms);
+        let recorded_at = api-now-iso();
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else runtime-event-connected(conn, event_id, source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, origin_idea_id, metadata, runtime_cost, recorded_at);
+    }
+    def api_runtime_events_create(request) {
+        let body = parse-json("runtime-event-request", kh-request-body(request));
+        let source = api-json-field-value-or(body, "source", "");
+        let endpoint = runtime-normalize-path(api-json-field-value-or(body, "endpoint", ""));
+        let raw_endpoint = runtime-normalize-path(api-json-field-value-or(body, "raw_endpoint", endpoint));
+        let method = api-json-field-value-or(body, "method", "GET");
+        let status_code = api-json-field-int-or(body, "status_code", 200);
+        let runtime_ms = api-json-field-float-or(body, "runtime_ms", 0.0);
+        let explicit_idea_id = api-json-field-value-or(body, "idea_id", "");
+        let idea_id = if str_eq(explicit_idea_id, "") then runtime-default-idea-id(endpoint) else explicit_idea_id;
+        let metadata = api-json-field-node-or(body, "metadata", json-node-object(empty));
+        if not(runtime-source-valid?(source)) then api-error-status-json(422, "source must be api, web, web_api, or worker") else if str_eq(endpoint, "/") then api-error-status-json(422, "endpoint is required") else if str_eq(method, "") then api-error-status-json(422, "method is required") else if or(lt(status_code, 100), gt(status_code, 599)) then api-error-status-json(422, "status_code must be between 100 and 599") else if le(runtime_ms, 0.0) then api-error-status-json(422, "runtime_ms must be greater than 0") else if not(api-json-object-node?(metadata)) then api-error-status-json(422, "metadata must be an object") else runtime-event-ready(source, endpoint, raw_endpoint, method, status_code, runtime_ms, idea_id, metadata);
+    }
+
+    def api-runtime-summary-sql() = "WITH filtered AS (SELECT endpoint, raw_endpoint, method, status_code, runtime_ms, runtime_cost_estimate, COALESCE(idea_id,'unmapped') AS idea_id, COALESCE(origin_idea_id, idea_id, 'unmapped') AS origin_idea_id, COALESCE(source,'unknown') AS source, COALESCE(metadata_json,'') AS metadata_json FROM runtime_events WHERE recorded_at >= now() - (GREATEST($1::int,60) * interval '1 second') AND ($3 = '' OR lower(COALESCE(source,'')) = lower($3)) ORDER BY recorded_at DESC LIMIT 2000), endpoint_counts AS (SELECT endpoint, count(*)::bigint AS event_count, COALESCE(sum(runtime_ms),0.0)::double precision AS total_runtime_ms, COALESCE(avg(runtime_ms),0.0)::double precision AS average_runtime_ms, COALESCE(sum(runtime_cost_estimate),0.0)::double precision AS runtime_cost_estimate, count(*) FILTER (WHERE metadata_json LIKE '%is_paid_provider%' AND metadata_json LIKE '%true%')::bigint AS paid_tool_event_count, count(*) FILTER (WHERE status_code >= 400 AND metadata_json LIKE '%is_paid_provider%' AND metadata_json LIKE '%true%')::bigint AS paid_tool_failure_count FROM filtered GROUP BY endpoint), ranked_ideas AS (SELECT endpoint, idea_id, origin_idea_id, count(*) AS c, row_number() OVER (PARTITION BY endpoint ORDER BY count(*) DESC, idea_id ASC) AS rn FROM filtered GROUP BY endpoint, idea_id, origin_idea_id), method_maps AS (SELECT endpoint, COALESCE(jsonb_agg(DISTINCT upper(method)),'[]'::jsonb)::text AS methods_json FROM filtered GROUP BY endpoint), source_maps AS (SELECT endpoint, COALESCE(jsonb_object_agg(source, source_count),'{}'::jsonb)::text AS by_source_json FROM (SELECT endpoint, source, count(*)::bigint AS source_count FROM filtered GROUP BY endpoint, source) s GROUP BY endpoint), status_maps AS (SELECT endpoint, COALESCE(jsonb_object_agg(status_code::text, status_count),'{}'::jsonb)::text AS status_counts_json FROM (SELECT endpoint, status_code, count(*)::bigint AS status_count FROM filtered GROUP BY endpoint, status_code) s GROUP BY endpoint) SELECT c.endpoint, COALESCE(m.methods_json,'[]') AS methods_json, COALESCE(i.idea_id,'unmapped') AS idea_id, COALESCE(i.origin_idea_id, i.idea_id, 'unmapped') AS origin_idea_id, c.event_count, round(c.total_runtime_ms::numeric,4)::double precision AS total_runtime_ms, round(c.average_runtime_ms::numeric,4)::double precision AS average_runtime_ms, round(c.runtime_cost_estimate::numeric,8)::double precision AS runtime_cost_estimate, c.paid_tool_event_count, c.paid_tool_failure_count, CASE WHEN c.event_count > 0 THEN round((c.paid_tool_event_count::double precision / c.event_count::double precision)::numeric,4)::double precision ELSE 0.0 END AS paid_tool_ratio, 0.0::double precision AS paid_tool_runtime_cost, 0.0::double precision AS paid_tool_average_runtime_ms, COALESCE(src.by_source_json,'{}') AS by_source_json, COALESCE(st.status_counts_json,'{}') AS status_counts_json FROM endpoint_counts c LEFT JOIN ranked_ideas i ON i.endpoint = c.endpoint AND i.rn = 1 LEFT JOIN method_maps m ON m.endpoint = c.endpoint LEFT JOIN source_maps src ON src.endpoint = c.endpoint LEFT JOIN status_maps st ON st.endpoint = c.endpoint ORDER BY c.runtime_cost_estimate DESC, c.endpoint DESC LIMIT $2";
+    def api-runtime-endpoint-row-json(row) = json-node-object(list(json-node-pair("endpoint", json-node-string(idea-row("endpoint", row))), json-node-pair("methods", parse-json("runtime.methods", idea-row("methods_json", row))), json-node-pair("idea_id", json-node-string(idea-row("idea_id", row))), json-node-pair("origin_idea_id", json-node-string(idea-row("origin_idea_id", row))), json-node-pair("event_count", json-node-int(idea-row("event_count", row))), json-node-pair("total_runtime_ms", idea-json-float(idea-row("total_runtime_ms", row))), json-node-pair("average_runtime_ms", idea-json-float(idea-row("average_runtime_ms", row))), json-node-pair("runtime_cost_estimate", idea-json-float(idea-row("runtime_cost_estimate", row))), json-node-pair("paid_tool_event_count", json-node-int(idea-row("paid_tool_event_count", row))), json-node-pair("paid_tool_failure_count", json-node-int(idea-row("paid_tool_failure_count", row))), json-node-pair("paid_tool_ratio", idea-json-float(idea-row("paid_tool_ratio", row))), json-node-pair("paid_tool_runtime_cost", idea-json-float(idea-row("paid_tool_runtime_cost", row))), json-node-pair("paid_tool_average_runtime_ms", idea-json-float(idea-row("paid_tool_average_runtime_ms", row))), json-node-pair("by_source", parse-json("runtime.by_source", idea-row("by_source_json", row))), json-node-pair("status_counts", parse-json("runtime.status_counts", idea-row("status_counts_json", row)))));
+    def api-runtime-endpoint-rows-json(rows) = if nil?(rows) then empty else cons(api-runtime-endpoint-row-json(head(rows)), api-runtime-endpoint-rows-json(tail(rows)));
+    def api-runtime-summary-connected(conn, request) {
+        let seconds = api-clamp-limit(kh-query-int-or(request, "seconds", 3600), 2592000);
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 200), 2000);
+        let source = kh-query-value-or(request, "source", "");
+        let rows = pg_query_rows(conn, api-runtime-summary-sql(), list(seconds, limit, source));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "runtime endpoint summary query failed") else api-ok-json(json-node-object(list(json-node-pair("window_seconds", json-node-int(seconds)), json-node-pair("source", if str_eq(source, "") then json-node-null() else json-node-string(source)), json-node-pair("endpoints", json-node-array(api-runtime-endpoint-rows-json(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_runtime_endpoints_summary")), json-node-pair("source_filter_applied", json-node-bool(not(str_eq(source, ""))))))))));
+    }
+    def api_runtime_endpoints_summary(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-runtime-summary-connected(conn, request);
+    }
+
+    def api-feed-personal-sql() = "WITH my_reactions AS (SELECT id FROM reactions WHERE $1 <> '' AND author_id = $1), my_concepts AS (SELECT DISTINCT concept_id FROM concept_voices WHERE $1 <> '' AND author_id = $1), items AS (SELECT 'concept' AS entity_type, concept_id AS entity_id, 'voice' AS kind, concept_id AS title, left(COALESCE(body,''),200) AS snippet, COALESCE(author_name,'') AS actor_name, 'i_voiced' AS reason, created_at FROM concept_voices WHERE (($1 <> '' AND author_id = $1) OR ($1 = '' AND $2 <> '' AND author_name = $2)) UNION ALL SELECT entity_type, entity_id, 'reaction' AS kind, entity_id AS title, left(COALESCE(NULLIF(comment,''), emoji, ''),200) AS snippet, COALESCE(author_name,'') AS actor_name, 'i_reacted' AS reason, created_at FROM reactions WHERE (($1 <> '' AND author_id = $1) OR ($1 = '' AND $2 <> '' AND author_name = $2)) AND COALESCE(comment,'') <> '' UNION ALL SELECT CASE WHEN COALESCE(resolved_as_idea_id,'') <> '' THEN 'idea' ELSE 'proposal' END AS entity_type, CASE WHEN COALESCE(resolved_as_idea_id,'') <> '' THEN resolved_as_idea_id ELSE id END AS entity_id, 'proposal' AS kind, title, left(COALESCE(body,''),200) AS snippet, COALESCE(author_name,'') AS actor_name, CASE WHEN COALESCE(resolved_as_idea_id,'') <> '' THEN 'lifted_from_my_proposal' ELSE 'i_proposed' END AS reason, COALESCE(resolved_at, created_at) AS created_at FROM proposals WHERE (($1 <> '' AND author_id = $1) OR ($1 = '' AND $2 <> '' AND author_name = $2)) UNION ALL SELECT r.entity_type, r.entity_id, 'reply_to_me' AS kind, r.entity_id AS title, left(COALESCE(NULLIF(r.comment,''), r.emoji, ''),200) AS snippet, COALESCE(r.author_name,'') AS actor_name, 'replied_to_me' AS reason, r.created_at FROM reactions r WHERE $1 <> '' AND r.parent_reaction_id IN (SELECT id FROM my_reactions) UNION ALL SELECT r.entity_type, r.entity_id, 'reaction_on_my_voice' AS kind, r.entity_id AS title, left(COALESCE(NULLIF(r.comment,''), r.emoji, ''),200) AS snippet, COALESCE(r.author_name,'') AS actor_name, 'reaction_on_my_voice' AS reason, r.created_at FROM reactions r WHERE $1 <> '' AND r.entity_type = 'concept' AND r.entity_id IN (SELECT concept_id FROM my_concepts) AND COALESCE(r.author_id,'') <> $1) SELECT entity_type, entity_id, kind, title, snippet, actor_name, reason, replace(created_at::text, ' ', 'T') AS created_at FROM items ORDER BY created_at DESC LIMIT $3";
+    def api-feed-label-en(reason) = if str_eq(reason, "i_voiced") then "You voiced this" else if str_eq(reason, "i_reacted") then "You reacted here" else if str_eq(reason, "i_proposed") then "You proposed this" else if str_eq(reason, "replied_to_me") then "Someone replied to you" else if str_eq(reason, "reaction_on_my_voice") then "Someone reacted to your voice" else if str_eq(reason, "lifted_from_my_proposal") then "Your proposal became this idea" else "This touched your field";
+    def api-feed-label(row, locale) = api-feed-label-en(idea-row("reason", row));
+    def api-feed-row-json(row, locale) = json-node-object(list(json-node-pair("entity_type", json-node-string(idea-row("entity_type", row))), json-node-pair("entity_id", json-node-string(idea-row("entity_id", row))), json-node-pair("kind", json-node-string(idea-row("kind", row))), json-node-pair("title", json-node-string(idea-row("title", row))), json-node-pair("snippet", json-node-string(idea-row("snippet", row))), json-node-pair("actor_name", api-json-nullable-string(idea-row("actor_name", row))), json-node-pair("reason", json-node-string(idea-row("reason", row))), json-node-pair("reason_label", json-node-string(api-feed-label(row, locale))), json-node-pair("created_at", api-json-nullable-string(idea-row("created_at", row)))));
+    def api-feed-rows-json(rows, locale) = if nil?(rows) then empty else cons(api-feed-row-json(head(rows), locale), api-feed-rows-json(tail(rows), locale));
+    def api-feed-personal-connected(conn, contributor_id, author_name, limit, locale) {
+        let rows = pg_query_rows(conn, api-feed-personal-sql(), list(contributor_id, author_name, limit));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "personal feed query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-feed-rows-json(rows, locale))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("locale", json-node-string(locale)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_feed_personal")), json-node-pair("union_arms", json-node-int(5))))))));
+    }
+    def api_feed_personal(request) {
+        let contributor_id = kh-query-value-or(request, "contributor_id", "");
+        let author_name = kh-query-value-or(request, "author_name", "");
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 40), 200);
+        let locale = kh-query-value-or(request, "lang", "en");
+        if and(str_eq(contributor_id, ""), str_eq(author_name, "")) then api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(empty)), json-node-pair("count", json-node-int(0)), json-node-pair("locale", json-node-string(locale))))) else api-feed-personal-ready(contributor_id, author_name, limit, locale);
+    }
+    def api-feed-personal-ready(contributor_id, author_name, limit, locale) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-feed-personal-connected(conn, contributor_id, author_name, limit, locale);
+    }
+
+    def api-household-nullable-number(value) = if str_eq(value, "") then json-node-null() else json-node-float-text(value);
+    def api-household-requests-sql() = "SELECT n.id, COALESCE(n.properties->>'kind','other') AS kind, COALESCE(NULLIF(n.properties->>'detail',''), n.description, '') AS detail, COALESCE(NULLIF(n.properties->>'items_json',''), '[]') AS items_json, COALESCE(n.properties->>'location','') AS location, COALESCE(n.properties->>'when_text','') AS when_text, COALESCE(n.properties->>'status','open') AS status, COALESCE(n.properties->>'requester_id','') AS requester_id, COALESCE(n.properties->>'requester_name','') AS requester_name, COALESCE(n.properties->>'acknowledged_by_name','') AS acknowledged_by_name, COALESCE(n.properties->>'completed_by_name','') AS completed_by_name, COALESCE(CASE WHEN COALESCE(n.properties->>'cost_amount','') ~ '^[0-9]+(\\.[0-9]+)?$' THEN (n.properties->>'cost_amount') ELSE '' END, '') AS cost_amount, COALESCE(n.properties->>'cost_currency','IDR') AS cost_currency, COALESCE(n.properties->>'cost_note','') AS cost_note, COALESCE(n.properties->>'cost_status','none') AS cost_status, COALESCE(n.properties->>'paid_by_name','') AS paid_by_name, COALESCE(n.properties->>'created_at', replace(n.created_at::text, ' ', 'T')) AS created_at, COALESCE(n.properties->>'updated_at', n.properties->>'created_at', replace(n.updated_at::text, ' ', 'T')) AS updated_at FROM graph_nodes n WHERE n.type = 'service_request' AND ($1 = '' OR COALESCE(n.properties->>'status','open') = $1) ORDER BY COALESCE(n.properties->>'created_at', replace(n.created_at::text, ' ', 'T')) DESC LIMIT $2";
+    def api-household-request-sql() = "SELECT n.id, COALESCE(n.properties->>'kind','other') AS kind, COALESCE(NULLIF(n.properties->>'detail',''), n.description, '') AS detail, COALESCE(NULLIF(n.properties->>'items_json',''), '[]') AS items_json, COALESCE(n.properties->>'location','') AS location, COALESCE(n.properties->>'when_text','') AS when_text, COALESCE(n.properties->>'status','open') AS status, COALESCE(n.properties->>'requester_id','') AS requester_id, COALESCE(n.properties->>'requester_name','') AS requester_name, COALESCE(n.properties->>'acknowledged_by_name','') AS acknowledged_by_name, COALESCE(n.properties->>'completed_by_name','') AS completed_by_name, COALESCE(CASE WHEN COALESCE(n.properties->>'cost_amount','') ~ '^[0-9]+(\\.[0-9]+)?$' THEN (n.properties->>'cost_amount') ELSE '' END, '') AS cost_amount, COALESCE(n.properties->>'cost_currency','IDR') AS cost_currency, COALESCE(n.properties->>'cost_note','') AS cost_note, COALESCE(n.properties->>'cost_status','none') AS cost_status, COALESCE(n.properties->>'paid_by_name','') AS paid_by_name, COALESCE(n.properties->>'created_at', replace(n.created_at::text, ' ', 'T')) AS created_at, COALESCE(n.properties->>'updated_at', n.properties->>'created_at', replace(n.updated_at::text, ' ', 'T')) AS updated_at FROM graph_nodes n WHERE n.type = 'service_request' AND n.id = $1 LIMIT 1";
+    def api-household-request-json(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("kind", json-node-string(idea-row("kind", row))), json-node-pair("detail", json-node-string(idea-row("detail", row))), json-node-pair("items", parse-json("household.items", idea-row("items_json", row))), json-node-pair("location", api-json-nullable-string(idea-row("location", row))), json-node-pair("when_text", api-json-nullable-string(idea-row("when_text", row))), json-node-pair("status", json-node-string(idea-row("status", row))), json-node-pair("requester_id", json-node-string(idea-row("requester_id", row))), json-node-pair("requester_name", json-node-string(idea-row("requester_name", row))), json-node-pair("acknowledged_by_name", api-json-nullable-string(idea-row("acknowledged_by_name", row))), json-node-pair("completed_by_name", api-json-nullable-string(idea-row("completed_by_name", row))), json-node-pair("cost_amount", api-household-nullable-number(idea-row("cost_amount", row))), json-node-pair("cost_currency", json-node-string(idea-row("cost_currency", row))), json-node-pair("cost_note", api-json-nullable-string(idea-row("cost_note", row))), json-node-pair("cost_status", json-node-string(idea-row("cost_status", row))), json-node-pair("paid_by_name", api-json-nullable-string(idea-row("paid_by_name", row))), json-node-pair("created_at", json-node-string(idea-row("created_at", row))), json-node-pair("updated_at", json-node-string(idea-row("updated_at", row)))));
+    def api-household-request-rows-json(rows) = if nil?(rows) then empty else cons(api-household-request-json(head(rows)), api-household-request-rows-json(tail(rows)));
+    def api-household-requests-connected(conn, request) {
+        let status = kh-query-value-or(request, "status", "");
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 200), 500);
+        let rows = pg_query_rows(conn, api-household-requests-sql(), list(status, limit));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else api-ok-json(json-node-array(api-household-request-rows-json(rows)));
+    }
+    def api_household_requests(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-household-requests-connected(conn, request);
+    }
+    def api-household-request-id(request) {
+        let path = kh-request-path(request);
+        if le(str_len(path), 24) then "" else substring(path, 24, str_len(path));
+    }
+    def api-household-request-detail-connected(conn, request_id) {
+        let rows = pg_query_rows(conn, api-household-request-sql(), list(request_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else if nil?(rows) then api-not-found(str_concat("request not found: ", request_id)) else api-ok-json(api-household-request-json(head(rows)));
+    }
+    def api_household_request_detail(request) {
+        let request_id = api-household-request-id(request);
+        let conn = pg_connect(config_database_url());
+        if str_eq(request_id, "") then api-error-json(422, "request_id is required") else if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-household-request-detail-connected(conn, request_id);
+    }
+
+    def api-household-members-sql() = "SELECT n.id, n.name, COALESCE(n.properties->>'role','member') AS role, COALESCE((n.properties->>'write_access')::boolean,false) AS write_access, COALESCE(n.properties->>'status','active') AS status, COALESCE(n.properties->>'invited_by_name','') AS invited_by_name, COALESCE(n.properties->>'created_at', replace(n.created_at::text, ' ', 'T')) AS created_at FROM graph_nodes n WHERE n.type = 'household_member' AND ($1 = '' OR COALESCE(n.properties->>'role','member') = $1) ORDER BY COALESCE(n.properties->>'created_at', replace(n.created_at::text, ' ', 'T')) ASC LIMIT 1000";
+    def api-household-member-json(row) = json-node-object(list(json-node-pair("id", json-node-string(idea-row("id", row))), json-node-pair("name", json-node-string(idea-row("name", row))), json-node-pair("role", json-node-string(idea-row("role", row))), json-node-pair("write_access", json-node-bool(idea-row("write_access", row))), json-node-pair("status", json-node-string(idea-row("status", row))), json-node-pair("invited_by_name", api-json-nullable-string(idea-row("invited_by_name", row))), json-node-pair("created_at", json-node-string(idea-row("created_at", row)))));
+    def api-household-member-rows-json(rows) = if nil?(rows) then empty else cons(api-household-member-json(head(rows)), api-household-member-rows-json(tail(rows)));
+    def api-household-members-connected(conn, request) {
+        let role = kh-query-value-or(request, "role", "");
+        let rows = pg_query_rows(conn, api-household-members-sql(), list(role));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "household members query failed") else api-ok-json(json-node-array(api-household-member-rows-json(rows)));
+    }
+    def api_household_members(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-household-members-connected(conn, request);
+    }
+
+    def api-error-json(status, detail) = kh-response(status, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("detail", json-node-string(detail))))));
+    def api-presence-window-ms() = 90000;
+    def api-presence-supported?(entity_type) = or(str_eq(entity_type, "concept"), or(str_eq(entity_type, "idea"), or(str_eq(entity_type, "spec"), or(str_eq(entity_type, "contributor"), or(str_eq(entity_type, "community"), or(str_eq(entity_type, "workspace"), or(str_eq(entity_type, "asset"), or(str_eq(entity_type, "contribution"), or(str_eq(entity_type, "story"), or(str_eq(entity_type, "config"), or(str_eq(entity_type, "insight"), or(str_eq(entity_type, "agent_task"), or(str_eq(entity_type, "agent_run"), or(str_eq(entity_type, "proposal"), or(str_eq(entity_type, "voice"), str_eq(entity_type, "blog")))))))))))))));
+    def api-presence-tail(request) {
+        let path = kh-request-path(request);
+        if le(str_len(path), 14) then "" else substring(path, 14, str_len(path));
+    }
+    def api-presence-split(tail) = str_find(tail, "/", 0);
+    def api-presence-entity-type-from-tail(tail) {
+        let slash = api-presence-split(tail);
+        if eq(slash, -1) then tail else substring(tail, 0, slash);
+    }
+    def api-presence-entity-id-from-tail(tail) {
+        let slash = api-presence-split(tail);
+        if eq(slash, -1) then "" else substring(tail, add(slash, 1), str_len(tail));
+    }
+    def api-presence-entity-type(request) = api-presence-entity-type-from-tail(api-presence-tail(request));
+    def api-presence-entity-id(request) = api-presence-entity-id-from-tail(api-presence-tail(request));
+    def api-presence-body-fingerprint(request) = json-string-value(json-object-get(parse-json("presence-request-body", kh-request-body(request)), "fingerprint"));
+    def api-presence-key(entity_type, entity_id, fingerprint) = str_concat(entity_type, str_concat("|", str_concat(entity_id, str_concat("|", fingerprint))));
+    def api-presence-value(entity_type, entity_id, fingerprint) = list(entity_type, entity_id, fingerprint);
+    def api-presence-row-value(row) = nth(row, 1);
+    def api-presence-row-entity-type(row) = nth(api-presence-row-value(row), 0);
+    def api-presence-row-entity-id(row) = nth(api-presence-row-value(row), 1);
+    def api-presence-row-fingerprint(row) = nth(api-presence-row-value(row), 2);
+    def api-presence-row-matches?(row, entity_type, entity_id) = and(str_eq(api-presence-row-entity-type(row), entity_type), str_eq(api-presence-row-entity-id(row), entity_id));
+    def api-presence-count-rows(rows, entity_type, entity_id) = if nil?(rows) then 0 else if api-presence-row-matches?(head(rows), entity_type, entity_id) then add(1, api-presence-count-rows(tail(rows), entity_type, entity_id)) else api-presence-count-rows(tail(rows), entity_type, entity_id);
+    def api-presence-others-rows(rows, entity_type, entity_id, fingerprint) = if nil?(rows) then 0 else if api-presence-row-matches?(head(rows), entity_type, entity_id) then if and(gt(str_len(fingerprint), 0), str_eq(api-presence-row-fingerprint(head(rows)), fingerprint)) then api-presence-others-rows(tail(rows), entity_type, entity_id, fingerprint) else add(1, api-presence-others-rows(tail(rows), entity_type, entity_id, fingerprint)) else api-presence-others-rows(tail(rows), entity_type, entity_id, fingerprint);
+    def api-presence-cutoff() = sub(now_unix_ms(), api-presence-window-ms());
+    def api-presence-live-rows() {
+        let cutoff = api-presence-cutoff();
+        let pruned = volatile_cell_prune_before("presence", cutoff);
+        volatile_cell_scan_since("presence", cutoff);
+    }
+    def api-presence-count-json(rows, entity_type, entity_id, fingerprint) = json-node-object(list(json-node-pair("present", json-node-int(api-presence-count-rows(rows, entity_type, entity_id))), json-node-pair("others", json-node-int(api-presence-others-rows(rows, entity_type, entity_id, fingerprint)))));
+    def api-presence-beat-json(rows, entity_type, entity_id) = json-node-object(list(json-node-pair("present", json-node-int(api-presence-count-rows(rows, entity_type, entity_id)))));
+    def api-presence-upsert-summary(acc, entity_type, entity_id) = if nil?(acc) then list(list(entity_type, entity_id, 1)) else if and(str_eq(nth(head(acc), 0), entity_type), str_eq(nth(head(acc), 1), entity_id)) then cons(list(entity_type, entity_id, add(nth(head(acc), 2), 1)), tail(acc)) else cons(head(acc), api-presence-upsert-summary(tail(acc), entity_type, entity_id));
+    def api-presence-summary-acc(rows, acc) = if nil?(rows) then acc else api-presence-summary-acc(tail(rows), api-presence-upsert-summary(acc, api-presence-row-entity-type(head(rows)), api-presence-row-entity-id(head(rows))));
+    def api-presence-insert-summary(row, rows) = if nil?(rows) then list(row) else if gt(nth(row, 2), nth(head(rows), 2)) then cons(row, rows) else cons(head(rows), api-presence-insert-summary(row, tail(rows)));
+    def api-presence-sort-summary(rows) = if nil?(rows) then empty else api-presence-insert-summary(head(rows), api-presence-sort-summary(tail(rows)));
+    def api-presence-summary-row-json(row) = json-node-object(list(json-node-pair("entity_type", json-node-string(nth(row, 0))), json-node-pair("entity_id", json-node-string(nth(row, 1))), json-node-pair("present", json-node-int(nth(row, 2)))));
+    def api-presence-summary-row-jsons(rows) = if nil?(rows) then empty else cons(api-presence-summary-row-json(head(rows)), api-presence-summary-row-jsons(tail(rows)));
+    def api_presence_summary(request) {
+        let rows = api-presence-live-rows();
+        let summary_rows = api-presence-sort-summary(api-presence-summary-acc(rows, empty));
+        api-ok-json(json-node-object(list(json-node-pair("total_entities", json-node-int(len(summary_rows))), json-node-pair("top", json-node-array(api-presence-summary-row-jsons(take(20, summary_rows)))))));
+    }
+    def api_presence_count(request) {
+        let entity_type = api-presence-entity-type(request);
+        let entity_id = api-presence-entity-id(request);
+        let fingerprint = kh-query-value-or(request, "fingerprint", "");
+        if api-presence-supported?(entity_type) then api-ok-json(api-presence-count-json(api-presence-live-rows(), entity_type, entity_id, fingerprint)) else api-error-json(400, str_concat("Unsupported entity_type '", str_concat(entity_type, "'")));
+    }
+    def api_presence_heartbeat(request) {
+        let entity_type = api-presence-entity-type(request);
+        let entity_id = api-presence-entity-id(request);
+        let fingerprint = api-presence-body-fingerprint(request);
+        if api-presence-supported?(entity_type) then if or(str_eq(entity_id, ""), lt(str_len(fingerprint), 4)) then api-error-json(422, "fingerprint must be at least 4 characters") else api_presence_heartbeat_valid(entity_type, entity_id, fingerprint) else api-error-json(400, str_concat("Unsupported entity_type '", str_concat(entity_type, "'")));
+    }
+    def api_presence_heartbeat_valid(entity_type, entity_id, fingerprint) {
+        let wrote = volatile_cell_put("presence", api-presence-key(entity_type, entity_id, fingerprint), api-presence-value(entity_type, entity_id, fingerprint));
+        api-ok-json(api-presence-beat-json(api-presence-live-rows(), entity_type, entity_id));
+    }
+
+    def api-not-found(detail) = api-error-json(404, detail);
+    def api-repo-path(path) = str_concat(repo_root(), str_concat("/", path));
+    def api-field-tail(request) {
+        let path = kh-request-path(request);
+        if le(str_len(path), 19) then "" else substring(path, 19, str_len(path));
+    }
+    def api-field-first-segment(text) {
+        let slash = str_find(text, "/", 0);
+        if eq(slash, -1) then text else substring(text, 0, slash);
+    }
+    def api-field-after-first-segment(text) {
+        let slash = str_find(text, "/", 0);
+        if eq(slash, -1) then "" else substring(text, add(slash, 1), str_len(text));
+    }
+    def api-field-slug(request) = api-field-first-segment(api-field-tail(request));
+    def api-field-trace-rest(request) = api-field-after-first-segment(api-field-tail(request));
+    def api-field-trace-selector(request) {
+        let rest = api-field-trace-rest(request);
+        if kh-prefix?(rest, "trace/") then api-field-first-segment(substring(rest, 6, str_len(rest))) else "";
+    }
+    def api-field-trace-value(request) {
+        let rest = api-field-trace-rest(request);
+        if kh-prefix?(rest, "trace/") then api-field-after-first-segment(substring(rest, 6, str_len(rest))) else "";
+    }
+    def api-field-author-line-exact(text, value) = str_find(text, str_concat("\"name\": \"", str_concat(value, "\"")), 0);
+    def api-field-author-line-prefix(text, value) {
+        let prefix = str_ascii_prefix(value);
+        if str_eq(prefix, "") then -1 else str_find(text, str_concat("\"name\": \"", prefix), 0);
+    }
+    def api-field-author-line(text, value) {
+        let exact = api-field-author-line-exact(text, value);
+        if eq(exact, -1) then api-field-author-line-prefix(text, value) else exact;
+    }
+    def api-field-author-result(value) {
+        let text = read_file(api-repo-path("docs/field/urs/trace/author_index.jsonl"));
+        let idx = api-field-author-line(text, value);
+        if eq(idx, -1) then empty else list(parse-json("docs/field/urs/trace/author_index.jsonl", str_line_at(text, idx)));
+    }
+    def api_field_story_trace(request) {
+        let slug = api-field-slug(request);
+        let selector = api-field-trace-selector(request);
+        let value = api-field-trace-value(request);
+        let result = if and(str_eq(slug, "urs-field-story"), str_eq(selector, "author")) then api-field-author-result(value) else empty;
+        if nil?(result) then api-not-found("field story trace value not found") else api-ok-json(json-node-object(list(json-node-pair("slug", json-node-string(slug)), json-node-pair("selector", json-node-string(selector)), json-node-pair("value", json-node-string(value)), json-node-pair("result", head(result)))));
+    }
+
+    0;
+}
+
+section [form.route] {
+    template RouteCell<TRequest, TResponse> {
+        member request: TRequest;
+        member response: TResponse;
+        member route: KernelHTTPRoute;
+    }
+
+    class IdeasIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-index", "GET", "/api/ideas", 90, "api_ideas", "Accept", 20);
+    class IdeasResonanceRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-resonance", "GET", "/api/ideas/resonance", 89, "api_ideas_resonance", "Accept", 35);
+    class IdeasObservationRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-observation", "GET", "/api/_form/ideas-observation", 95, "api_ideas_observe", "X-Form-Observe", 40);
+    class IdeasTimingRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-timing", "GET", "/api/_form/ideas-timing", 96, "api_ideas_timing", "X-Form-Observe", 40);
+    class HealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("api-health", "GET", "/api/health", 100, "api_health", "Accept", 20);
+    class ReadyRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("api-ready", "GET", "/api/ready", 100, "api_ready", "Accept", 20);
+    class GatesMainHeadRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("gates-main-head", "GET", "/api/gates/main-head", 83, "api_gates_main_head", "Accept", 35);
+    class AgentTaskRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-detail", "GET", "/api/agent/tasks/task_*", 88, "api_agent_task", "Accept", 35);
+    class RecentConceptVoicesRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("recent-concept-voices", "GET", "/api/concepts/voices/recent", 88, "api_concepts_voices_recent", "Accept", 25);
+    class RecentReactionsRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("recent-reactions", "GET", "/api/reactions/recent", 88, "api_reactions_recent", "Accept", 25);
+    class AnonymousMeetingTraceRecordRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("anonymous-meeting-trace-record", "POST", "/api/meetings/anonymous-traces", 87, "api_meetings_anonymous_trace_record", "Accept", 40);
+    class AnonymousMeetingTracesRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("anonymous-meeting-traces", "GET", "/api/meetings/anonymous-traces", 86, "api_meetings_anonymous_traces", "Accept", 30);
+    class CoherenceNetworkVitalityRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("coherence-network-vitality", "GET", "/api/workspaces/coherence-network/vitality", 84, "api_vitality_coherence_network", "Accept", 35);
+    class CoherenceScoreRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("coherence-score", "GET", "/api/coherence/score", 84, "api_coherence_score", "Accept", 35);
+    class GraphNodesIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("graph-nodes-index", "GET", "/api/graph/nodes", 83, "api_graph_nodes", "Accept", 35);
+    class PresenceSummaryRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-summary", "GET", "/api/presence/summary", 83, "api_presence_summary", "Accept", 25);
+    class PresenceHeartbeatRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-heartbeat", "POST", "/api/presence/*", 82, "api_presence_heartbeat", "Accept", 25);
+    class PresenceCountRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-count", "GET", "/api/presence/*", 82, "api_presence_count", "Accept", 25);
+    class SubstrateFormCompilerRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("substrate-form-compiler", "POST", "/api/substrate/form", 83, "api_substrate_form", "Accept", 35);
+    class SubstratePageRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("substrate-page", "GET", "/api/substrate/page", 82, "api_substrate_page", "Accept", 35);
+    class FederationNodesCountRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("federation-nodes-count", "GET", "/api/federation/nodes/count", 80, "api_federation_nodes_count", "Accept", 20);
+    class LivingCollectiveConceptRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("living-collective-concept", "GET", "/api/concepts/lc-*", 80, "api_concept_living_collective", "Accept", 35);
+    class EdgesRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("edges-index", "GET", "/api/edges", 79, "api_edges", "Accept", 35);
+    class InspiredByRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("inspired-by-index", "GET", "/api/inspired-by", 79, "api_inspired_by", "Accept", 35);
+    class ViewsPingRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("views-ping", "POST", "/api/views/ping", 83, "api_views_ping", "Accept", 40);
+    class RuntimeEventsCreateRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("runtime-events-create", "POST", "/api/runtime/events", 80, "api_runtime_events_create", "Accept", 40);
+    class RuntimeEndpointsSummaryRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("runtime-endpoints-summary", "GET", "/api/runtime/endpoints/summary", 79, "api_runtime_endpoints_summary", "Accept", 40);
+    class PersonalFeedRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("personal-feed", "GET", "/api/feed/personal", 79, "api_feed_personal", "Accept", 35);
+    class HouseholdRequestsRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("household-requests", "GET", "/api/household/requests", 79, "api_household_requests", "Accept", 35);
+    class HouseholdRequestDetailRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("household-request-detail", "GET", "/api/household/requests/{request_id}", 78, "api_household_request_detail", "Accept", 35);
+    class HouseholdMembersRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("household-members", "GET", "/api/household/members", 78, "api_household_members", "Accept", 30);
+    class FieldStoryTraceRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("field-story-trace", "GET", "/api/field-stories/*", 78, "api_field_story_trace", "Accept", 40);
+
+    let routes = list(language-route-class-kernel-route(HealthRoute), language-route-class-kernel-route(ReadyRoute), language-route-class-kernel-route(GatesMainHeadRoute), language-route-class-kernel-route(CoherenceNetworkVitalityRoute), language-route-class-kernel-route(CoherenceScoreRoute), language-route-class-kernel-route(GraphNodesIndexRoute), language-route-class-kernel-route(AnonymousMeetingTraceRecordRoute), language-route-class-kernel-route(AnonymousMeetingTracesRoute), language-route-class-kernel-route(AgentTaskRoute), language-route-class-kernel-route(RecentConceptVoicesRoute), language-route-class-kernel-route(RecentReactionsRoute), language-route-class-kernel-route(PresenceSummaryRoute), language-route-class-kernel-route(PresenceHeartbeatRoute), language-route-class-kernel-route(PresenceCountRoute), language-route-class-kernel-route(SubstrateFormCompilerRoute), language-route-class-kernel-route(SubstratePageRoute), language-route-class-kernel-route(FederationNodesCountRoute), language-route-class-kernel-route(LivingCollectiveConceptRoute), language-route-class-kernel-route(EdgesRoute), language-route-class-kernel-route(InspiredByRoute), language-route-class-kernel-route(ViewsPingRoute), language-route-class-kernel-route(RuntimeEventsCreateRoute), language-route-class-kernel-route(RuntimeEndpointsSummaryRoute), language-route-class-kernel-route(PersonalFeedRoute), language-route-class-kernel-route(HouseholdRequestsRoute), language-route-class-kernel-route(HouseholdRequestDetailRoute), language-route-class-kernel-route(HouseholdMembersRoute), language-route-class-kernel-route(FieldStoryTraceRoute), language-route-class-kernel-route(IdeasTimingRoute), language-route-class-kernel-route(IdeasObservationRoute), language-route-class-kernel-route(IdeasResonanceRoute), language-route-class-kernel-route(IdeasIndexRoute));
+    0;
+}

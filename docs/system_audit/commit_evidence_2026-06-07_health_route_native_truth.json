@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Move GET /api/health from native-compatible shape toward native operational truth",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000",
+      "cd form/form-kernel-go && go test -count=1 ./...",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "ssh tunnel opened per docs/PRODUCTION-SUBSTRATE.md to local 127.0.0.1:15432 using the local kernel config overlay",
+      "cd form/form-kernel-go && go run . serve --port 19086 --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml",
+      "curl -sS -i -H 'Accept: application/json' 'http://127.0.0.1:19086/api/health'",
+      "curl -sS -H 'Accept: application/json' 'http://127.0.0.1:19086/api/health' | jq '{status, schema_ok, smart_reap_available, kernel_runtime, recent_outcomes}'",
+      "temporary Go listener and SSH tunnel stopped; lsof confirmed no listeners on 19086 or 15432"
+    ],
+    "summary": "The route-goal read showed current web_api traffic at 47/47 events on GET /api/health, already high-grammar native, so this movement served health truth rather than route-count coverage. The BML health handler now populates recent_outcomes from production runtime_events when the native kernel has DB reach, keeps null when that organ cannot answer, and resolves smart_reap_available from repo_root instead of process cwd. The Go route test proves the native listener still compiles and serves the operational shape."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "A local Go kernel listener hit production Postgres through the documented SSH tunnel and returned native 200 for GET /api/health with populated recent_outcomes."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and production-tunnel proof passed; CI and public deployment remain pending until this work is committed, pushed, and shipped."
+  },
+  "idea_ids": [
+    "route-health-as-operational-breath",
+    "native-route-truth",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "kernel-native-api-promotion",
+    "source-language-kernel-router-tracking",
+    "health-check-operational-truth"
+  ],
+  "task_ids": [
+    "move-health-route-to-native-truth"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "form",
+        "kernel",
+        "http",
+        "observability",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api-recent-outcomes-* helpers that aggregate recent runtime_events into the existing health response shape.",
+    "deploy/front-door/api.bml now resolves smart_reap_available from repo_root, avoiding cwd-sensitive false negatives in the Go kernel.",
+    "form/form-kernel-go/server_test.go includes TestHealthRouteNativeOperationalShape for the native listener route shape.",
+    "Native production-tunnel curl returned X-Form-Router: native-kernel-go with schema_ok=true, smart_reap_available=true, kernel_runtime=form-kernel-go, and populated recent_outcomes."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-07_health_route_native_truth.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/health served by the native Go kernel now reports recent_outcomes from the persisted runtime_events organ when production DB reach is present, while preserving the existing health response contract and keeping unavailable observations null.",
+    "public_endpoints": [
+      "GET /api/health"
+    ],
+    "test_flows": [
+      "Go test suite compiles the BML front-door catalog and asserts native /api/health response fields and route headers.",
+      "Native Go listener served /api/health against production Postgres through the documented SSH tunnel.",
+      "Public API and native health samples both reported status=ok, schema_ok=true, smart_reap_available=true, and populated recent_outcomes; kernel_runtime differs by carrier as expected."
+    ],
+    "known_gaps": [
+      "The native route reads deployed_sha from config, so the local production-tunnel overlay reports null until that overlay carries deployed_sha.",
+      "A broader health domain grammar can emerge later if shape_health, provider readiness, witness organs, and runtime outcome summaries repeat enough structure."
+    ]
+  }
+}

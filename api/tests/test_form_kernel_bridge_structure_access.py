@@ -212,7 +212,6 @@ class TestListOfRecordReductionEndToEnd:
         value, runtime = serve_via_kernel(
             "endpoint_idea_grounding_summary_demo.fk",
             bindings={"specs": specs},
-            fallback=lambda: _grounding_summary_py(specs),
             parse=_coerce_int_list,
         )
         assert runtime in ("inline", "subprocess")
@@ -238,7 +237,6 @@ class TestListOfRecordReductionEndToEnd:
         value, runtime = serve_via_kernel(
             "endpoint_idea_grounding_summary_demo.fk",
             bindings={"specs": models},
-            fallback=lambda: _grounding_summary_py([m.model_dump() for m in models]),
             parse=_coerce_int_list,
         )
         assert runtime in ("inline", "subprocess")
@@ -265,15 +263,14 @@ class TestStructureAccessEndToEnd:
         value, runtime = serve_via_kernel(
             "endpoint_idea_marginal_from_record_demo.fk",
             bindings={"idea": idea},
-            fallback=lambda: _marginal_from_idea_py(idea),
             parse=float,
         )
         assert runtime in ("inline", "subprocess")
         assert abs(value - _marginal_from_idea_py(idea)) < 1e-12
         assert value == 0.8
 
-    def test_fallback_path_when_no_kernel(self):
-        """With no kernel reachable the fallback computes the same value."""
+    def test_parity_reference_matches_expected_value(self):
+        """The Python reference remains only a parity oracle for the recipe."""
         idea = {
             "potential_value": 10.0,
             "actual_value": 2.0,
@@ -282,5 +279,4 @@ class TestStructureAccessEndToEnd:
             "actual_cost": 1.0,
             "resistance_risk": 1.0,
         }
-        # The fallback is the source of truth for the value regardless of path.
         assert _marginal_from_idea_py(idea) == round((8.0 * 0.81) / (5.0 + 0.5), 6)

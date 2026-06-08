@@ -10,12 +10,13 @@ has_runtime_data/has_commits = min(1.0, count/N) guarded by count>0, and
 computed_confidence = clamp(weighted coverage sum, 0.05, 0.95) with weights
 0.30/0.25/0.25/0.10/0.10. The boolean-presence levels (has_specs_with_data,
 has_lineage, has_friction — any(...)-over-records / len>0 ladders) and the
-collection filtering stay host-side BY DESIGN.
+collection filtering are currently resolved before dispatch; they are visible
+next native work.
 
 Three-way parity of the recipe body (CPython, kernel-bmf, Rust) is the
 parity_suite gate; these tests verify the route is wired, returns the four
 outputs, honors the realization guard + ceiling and the confidence [0.05, 0.95]
-clamp at both bounds, and matches the Python fallback.
+clamp at both bounds, and matches the documented recipe anchors.
 """
 from __future__ import annotations
 
@@ -23,8 +24,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import _grounded_value_py
-
 BASE = "http://test"
 
 
@@ -54,7 +53,7 @@ class TestGroundedValueEndpoint:
         assert data["value_realization_pct"] == 0.625  # min(12.5/20.0, 1.0)
         # 1.0*0.30 + 0.7*0.25 + 1.0*0.25 + 0.6*0.10 + 0.3*0.10 = 0.815
         assert data["computed_confidence"] == 0.815
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_realization_guard_zero_potential(self, client: AsyncClient):
@@ -127,8 +126,8 @@ class TestGroundedValueEndpoint:
         assert res.json()["computed_actual_value"] == 9.25
 
     @pytest.mark.anyio
-    async def test_distinct_scalars_match_fallback(self, client: AsyncClient):
-        """A distinct scalar set returns the recipe's reduction, matching the fallback."""
+    async def test_distinct_scalars_match_recipe_anchor(self, client: AsyncClient):
+        """A distinct scalar set returns the committed recipe reduction."""
         params = {
             "lineage_measured_value": 1.5,
             "usage_revenue": 8.75,
@@ -145,13 +144,10 @@ class TestGroundedValueEndpoint:
         res = await client.get("/api/utils/grounded_value", params=params)
         assert res.status_code == 200, res.text
         data = res.json()
-        expected = _grounded_value_py(
-            1.5, 8.75, 4.25, 3.25, 7.5, 20.0, 4, 2, 0.5, 0.5, 0.3
-        )
         got = [
             data["computed_actual_value"],
             data["computed_estimated_cost"],
             data["value_realization_pct"],
             data["computed_confidence"],
         ]
-        assert got == expected
+        assert got == [8.75, 7.5, 0.4375, 0.44500000000000006]

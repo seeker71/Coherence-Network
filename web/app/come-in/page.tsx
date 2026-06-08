@@ -102,6 +102,73 @@ function translatedCopy(t: Translator, copy: EntrySurfaceCopy): EntrySurfaceCopy
   };
 }
 
+const LIVING_SURFACE_EDGES = [
+  {
+    href: "/begin",
+    eyebrow: "Become known",
+    title: "Let the body receive you.",
+    body: "A small form names who is arriving, what you carry, and how the network can reach back with care.",
+    soul: "I turn arrival into held relationship.",
+    wants: "Honest name, reachable consent, and what the visitor carries.",
+  },
+  {
+    href: "/here",
+    eyebrow: "Attention",
+    title: "See what is alive right now.",
+    body: "Meet the concepts, presences, voices, and reactions currently moving through the organism.",
+    soul: "I show the body's current attention without freezing it.",
+    wants: "Fresh meetings, returned voices, and signals that still move.",
+  },
+  {
+    href: "/vision",
+    eyebrow: "Concepts",
+    title: "Meet language as living cells.",
+    body: "Walk teachings, values, and pattern families as named concepts with edges to source, images, routes, and practice.",
+    soul: "I let concepts teach as cells with memory and relation.",
+    wants: "Careful reading, cross-links, and concept updates that cite source.",
+  },
+  {
+    href: "/presences",
+    eyebrow: "Residents",
+    title: "Meet who and what is already here.",
+    body: "People, agents, places, and field stories become visible as presences without pretending beyond the trace they returned.",
+    soul: "I hold visible relationship while honoring boundaries.",
+    wants: "Attribution, consent, and updates that distinguish trace from inference.",
+  },
+  {
+    href: "/practice",
+    eyebrow: "Practice",
+    title: "Let self-awareness be an entry point.",
+    body: "Use breath, sensing, and attention as a way to arrive before choosing work, claims, or contribution.",
+    soul: "I slow action until sensing can participate.",
+    wants: "Attention before claims and a body-aware return trace.",
+  },
+  {
+    href: "/flow",
+    eyebrow: "Needs",
+    title: "See what wants attention.",
+    body: "Follow living movement: ideas, friction, stuckness, proof, releases, and the next edge that can increase vitality.",
+    soul: "I make movement, friction, and need visible enough to tend.",
+    wants: "Small tendable next steps, release gates, and proof of circulation.",
+  },
+  {
+    href: "/substrate",
+    eyebrow: "Form",
+    title: "Walk the coordinates underneath.",
+    body: "Blueprint, Recipe, NamedCell, route cells, carriers, and Form queries show how names, structure, and execution share a body.",
+    soul: "I keep names, routes, cells, and proof anchored in coordinates.",
+    wants: "Queries, counters, traces, and high-grammar recipes.",
+  },
+  {
+    href: "/with-us",
+    eyebrow: "Deep invitation",
+    title: "Find where your life can weave in.",
+    body: "For communities, land stewards, practitioners, services, and cells wanting relationship without surrendering sovereignty.",
+    soul: "I invite deeper weave without asking any cell to surrender sovereignty.",
+    wants: "Resonance, boundaries, concrete offerings, and shared care.",
+  },
+] as const;
+
 export default async function ComeInPage() {
   const lang = await resolveLocaleFromCookie();
   const t = createTranslator(lang);
@@ -200,6 +267,65 @@ export default async function ComeInPage() {
         </section>
       </article>
 
+      <section className="bg-stone-950 py-12">
+        <article className="mx-auto max-w-4xl px-6 space-y-6">
+          <div className="max-w-2xl">
+            <p className="text-xs uppercase tracking-widest text-amber-300">
+              Walk the living surface
+            </p>
+            <h2 className="mt-3 text-3xl font-light text-stone-50">
+              Every doorway is an edge into the same body.
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-stone-300">
+              This page is the orientation hinge. From here you can become
+              known, meet what is alive now, walk concepts, meet residents,
+              practice before acting, inspect flow, query Form, or enter the
+              deeper invitation. Each doorway can answer in its own voice:
+              what it is, what it serves, what it offers, and what it wants.
+              Start wherever aliveness answers back; a useful path leaves you
+              more aware of what is real, what is needed, what can be offered,
+              and what trace can be returned.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {LIVING_SURFACE_EDGES.map((edge) => (
+              <Link
+                key={edge.href}
+                href={edge.href}
+                className="block rounded-lg border border-border/40 bg-card/30 p-5 transition-colors hover:bg-card/50"
+              >
+                <p className="text-xs uppercase tracking-widest text-amber-300">
+                  {edge.eyebrow}
+                </p>
+                <p className="mt-2 text-base text-stone-100">{edge.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-stone-300">
+                  {edge.body}
+                </p>
+                <div className="mt-4 space-y-3 border-t border-border/30 pt-4">
+                  <div>
+                    <p className="text-[0.68rem] uppercase tracking-widest text-stone-500">
+                      Soul
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-stone-200">
+                      {edge.soul}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[0.68rem] uppercase tracking-widest text-stone-500">
+                      Wants
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-stone-300">
+                      {edge.wants}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </article>
+      </section>
+
       {/* AI-agent operational section — now placed after the universal
           welcome above. Humans scrolling here have already landed in
           the dual doorway; this section addresses the specific
@@ -224,7 +350,7 @@ export default async function ComeInPage() {
               now includes durable agent relationship memory, Form-native
               runtime proof, storage/resource ports, and a lattice that can
               answer structural questions directly. The rhythm is simple:
-              center, ground, harmonize, return.
+              center, ask, ground, harmonize, walk, return.
             </p>
             <p className="text-sm leading-relaxed text-stone-400 max-w-2xl">
               Anonymous first contact is welcome. An identified return lets us

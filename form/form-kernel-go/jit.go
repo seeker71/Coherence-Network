@@ -55,6 +55,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"form-kernel-go/jitabi"
 )
 
 // runtimeVersionRaw — thin indirection so readHostGoVersion can be tested.
@@ -79,41 +81,109 @@ func readHostGoVersion() string {
 	return v
 }
 
-// goCompileScope — name resolution context during emission. Maps Form
-// NameIDs to generated Go variable names. Maps recursive-self references
-// to the generated Go function name.
-type goCompileScope struct {
-	// vars: parameter and let-binding NameID → Go identifier.
-	vars map[NameID]string
-	// selfName: the Form name this body is the recipe for (so recursive
-	// calls resolve to the generated function). Empty when emitting at
-	// the top level (no recursion needed).
-	selfName  NameID
-	selfFn    string
-	// uid for fresh-name generation.
-	uid *int
-	// isFloat: whether this recipe uses float values (for Phase 1 float vector JIT support).
-	isFloat bool
+func formKernelModuleDir() string {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "."
+	}
+	return filepath.Dir(file)
 }
 
-func newGoCompileScope(selfName NameID, selfFn string, isFloat bool) *goCompileScope {
+type goJITABI string
+
+const (
+	goJITABIi64   goJITABI = "i64"
+	goJITABIf64   goJITABI = "f64"
+	goJITABIValue goJITABI = "value"
+)
+
+type goCompileScope struct {
+	vars     map[NameID]string
+	selfName NameID
+	selfFn   string
+	uid      *int
+	abi      goJITABI
+	env      *Frame
+	plan     *goCompilePlan
+}
+
+type goCompilePlan struct {
+	abi       goJITABI
+	helpers   map[NameID]string
+	emitted   map[NameID]bool
+	emitting  map[NameID]bool
+	helperSrc strings.Builder
+}
+
+func newGoCompilePlan(abi goJITABI) *goCompilePlan {
+	return &goCompilePlan{
+		abi:      abi,
+		helpers:  map[NameID]string{},
+		emitted:  map[NameID]bool{},
+		emitting: map[NameID]bool{},
+	}
+}
+
+func newGoCompileScope(selfName NameID, selfFn string, abi goJITABI, env *Frame, plan *goCompilePlan) *goCompileScope {
 	n := 0
+	if plan == nil {
+		plan = newGoCompilePlan(abi)
+	}
 	return &goCompileScope{
 		vars:     map[NameID]string{},
 		selfName: selfName,
 		selfFn:   selfFn,
 		uid:      &n,
-		isFloat:  isFloat,
+		abi:      abi,
+		env:      env,
+		plan:     plan,
 	}
 }
 
 func (s *goCompileScope) child() *goCompileScope {
-	cp := newGoCompileScope(s.selfName, s.selfFn, s.isFloat)
+	cp := newGoCompileScope(s.selfName, s.selfFn, s.abi, s.env, s.plan)
 	for k, v := range s.vars {
 		cp.vars[k] = v
 	}
 	cp.uid = s.uid
 	return cp
+}
+
+func (s *goCompileScope) scalarType() string {
+	if s.abi == goJITABIValue {
+		return "jitabi.Value"
+	}
+	if s.abi == goJITABIf64 {
+		return "float64"
+	}
+	return "int64"
+}
+
+func (s *goCompileScope) scalarZero() string {
+	if s.abi == goJITABIValue {
+		return "jitabi.Null()"
+	}
+	if s.abi == goJITABIf64 {
+		return "float64(0)"
+	}
+	return "int64(0)"
+}
+
+func (s *goCompileScope) scalarOne() string {
+	if s.abi == goJITABIValue {
+		return "jitabi.Int(1)"
+	}
+	if s.abi == goJITABIf64 {
+		return "float64(1)"
+	}
+	return "int64(1)"
+}
+
+func (s *goCompileScope) cast(expr string) string {
+	if s.abi == goJITABIValue {
+		return expr
+	}
+	return fmt.Sprintf("%s(%s)", s.scalarType(), expr)
 }
 
 func (s *goCompileScope) fresh(hint string) string {
@@ -141,9 +211,6 @@ func sanitizeIdent(s string) string {
 	return out.String()
 }
 
-// jitCompileError — the emitter raises this when it hits a recipe shape
-// it can't lower to the supported subset. The native catches it and
-// returns 0 from jit_compile (honest fallback).
 type jitCompileError struct {
 	reason string
 }
@@ -152,124 +219,57 @@ func (e *jitCompileError) Error() string { return e.reason }
 
 func unsupported(reason string) error { return &jitCompileError{reason: reason} }
 
-// recipeUsesFloat walks the recipe tree to see if it contains any float
-// trivials. Used to decide whether to emit float64 or int64 code for the
-// compiled function (for Phase 1 float vector support in geometry recipes).
-func recipeUsesFloat(k *Kernel, node NodeID) bool {
-	if node.Level == LevelTrivial {
-		t := node.Type
-		return t == TrivFloat32 || t == TrivFloat64
+func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
+	type abiBuild struct {
+		abi string
+		src string
+		err error
 	}
-	for _, c := range k.children(node) {
-		if recipeUsesFloat(k, c) {
-			return true
+	builds := []abiBuild{}
+	firstErr := error(nil)
+	valueErr := error(nil)
+	abis := []goJITABI{goJITABIi64, goJITABIf64, goJITABIValue}
+	if jitRecipeNeedsValueABI(k, cl.Body) {
+		abis = []goJITABI{goJITABIValue}
+	}
+	for _, abi := range abis {
+		src, err := emitGoPluginABI(k, cl, abi)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			if abi == goJITABIValue {
+				valueErr = err
+			}
+			continue
 		}
+		builds = append(builds, abiBuild{abi: string(abi), src: src})
 	}
-	return false
-}
-
-// jitCompileClosureGo — the entry point. Given a closure, emits a Go
-// program that defines a function of (n int64 args) → int64, writes it
-// to disk, invokes `go build -buildmode=plugin`, loads the .so, and
-// returns the loaded function. Any failure surfaces as a non-nil error;
-// the caller maps that to `jit_compile → 0`.
-func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
-	// Closure over outer state — the emitter only handles params + the
-	// closure's own recursive self-reference. Any IDENT that doesn't
-	// resolve to a param surfaces as unsupported during emission.
-	isFloat := recipeUsesFloat(k, cl.Body)
-	paramType := "int64"
-	if isFloat {
-		// For Phase 1 geometry (list of floats for 8-band vectors), declare list params as []float64.
-		// The shim will build the slices from serialized args (float bits as int64).
-		paramType = "[]float64"
-	}
-	returnType := "int64"
-	if isFloat {
-		returnType = "float64"
-	}
-
-	selfFn := "fn_self"
-	scope := newGoCompileScope(cl.Name, selfFn, isFloat)
-
-	// Bind parameters to generated Go names. Use `p0, p1, ...` for clarity
-	// in the generated code.
-	paramNames := make([]string, len(cl.Params))
-	for i, p := range cl.Params {
-		gn := fmt.Sprintf("p%d", i)
-		scope.vars[p] = gn
-		paramNames[i] = gn
-	}
-
-	// Emit the body expression. Errors propagate out as unsupported.
-	bodySrc, err := emitGoExpr(k, cl.Body, scope)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the full Go source. The plugin exports a single `Fn` symbol
-	// with the contract: takes []int64, returns int64. We dispatch through
-	// a thin shim that unpacks the slice into the recursive function's
-	// arity-fixed signature.
-	paramSig := strings.Builder{}
-	for i := range cl.Params {
-		if i > 0 {
-			paramSig.WriteString(", ")
+	if len(builds) == 0 {
+		if valueErr != nil {
+			return nil, valueErr
 		}
-		paramSig.WriteString(fmt.Sprintf("p%d %s", i, paramType))
-	}
-
-	callArgs := strings.Builder{}
-	for i := range cl.Params {
-		if i > 0 {
-			callArgs.WriteString(", ")
+		if firstErr == nil {
+			firstErr = unsupported("jit: no ABI emitted")
 		}
-		callArgs.WriteString(fmt.Sprintf("args[%d]", i))
+		return nil, firstErr
 	}
 
 	var src strings.Builder
 	src.WriteString("// Generated by form-kernel-go JIT — Form recipe → Go source.\n")
 	src.WriteString("// Body NodeID: " + nodeIDKey(cl.Body) + "\n")
-	src.WriteString("// Closure name: " + k.nameStr(cl.Name) + "\n")
-	src.WriteString("//\n")
-	src.WriteString("// The recipe stays canonical truth in the Form substrate; this file is a\n")
-	src.WriteString("// throwaway expression of it for one execution. Compiles to plugin.so via\n")
-	src.WriteString("// `go build -buildmode=plugin`, loaded via plugin.Open + plugin.Lookup.\n\n")
-	if isFloat {
-		src.WriteString("import \"math\"\n\n")
-	}
+	src.WriteString("// Closure name: " + k.nameStr(cl.Name) + "\n\n")
 	src.WriteString("package main\n\n")
-	src.WriteString(fmt.Sprintf("func %s(%s) %s {\n", selfFn, paramSig.String(), returnType))
-	src.WriteString("\treturn ")
-	src.WriteString(bodySrc)
-	src.WriteString("\n}\n\n")
-	src.WriteString("// Fn — the exported entry point. Plugin.Lookup loads this symbol.\n")
-	src.WriteString(fmt.Sprintf("func Fn(args []int64) int64 {\n"))
-	// arity check relaxed for Phase 1: list params (e.g. 8-band vectors) are serialized as multiple scalar args in the []int64
-	src.WriteString(fmt.Sprintf("\tif len(args) < %d {\n", len(cl.Params)))
-	src.WriteString("\t\tpanic(\"form-jit: arity mismatch\")\n")
-	src.WriteString("\t}\n")
-	if isFloat {
-		// Phase 1 for geometry: two list params of 8 floats each, serialized as 16 int64 (float bits).
-		// Build the []float64 slices for the list params.
-		src.WriteString("\t// Phase 1 geometry vector reconstruction from serialized float bits\n")
-		src.WriteString("\tv1 := make([]float64, 8)\n")
-		src.WriteString("\tfor i := 0; i < 8; i++ {\n")
-		src.WriteString("\t\tv1[i] = math.Float64frombits(uint64(args[i]))\n")
-		src.WriteString("\t}\n")
-		src.WriteString("\tv2 := make([]float64, 8)\n")
-		src.WriteString("\tfor i := 0; i < 8; i++ {\n")
-		src.WriteString("\t\tv2[i] = math.Float64frombits(uint64(args[8+i]))\n")
-		src.WriteString("\t}\n")
-		src.WriteString("\treturn int64(math.Float64bits(" + selfFn + "(v1, v2)))\n")
-	} else {
-		if len(cl.Params) == 0 {
-			src.WriteString(fmt.Sprintf("\treturn %s()\n", selfFn))
-		} else {
-			src.WriteString(fmt.Sprintf("\treturn %s(%s)\n", selfFn, callArgs.String()))
+	for _, build := range builds {
+		if build.abi == string(goJITABIValue) {
+			src.WriteString("import \"form-kernel-go/jitabi\"\n\n")
+			break
 		}
 	}
-	src.WriteString("}\n")
+	for _, build := range builds {
+		src.WriteString(build.src)
+		src.WriteString("\n")
+	}
 
 	// Write to a temp directory, run `go build -buildmode=plugin`.
 	dir, err := os.MkdirTemp("", "form-jit-")
@@ -290,7 +290,11 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
 	// when plugin.Open inspects the .so. The kernel's own go.mod is the
 	// reference; we read it once and mirror the `go` directive.
 	hostGoVersion := readHostGoVersion()
-	modContents := fmt.Sprintf("module form_jit\n\ngo %s\n", hostGoVersion)
+	modContents := fmt.Sprintf(
+		"module form_jit\n\ngo %s\n\nrequire form-kernel-go v0.0.0\nreplace form-kernel-go => %s\n",
+		hostGoVersion,
+		formKernelModuleDir(),
+	)
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(modContents), 0o644); err != nil {
 		return nil, fmt.Errorf("write go.mod: %w", err)
 	}
@@ -311,23 +315,94 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (func([]int64) int64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("plugin.Open: %w", err)
 	}
-	sym, err := p.Lookup("Fn")
-	if err != nil {
-		return nil, fmt.Errorf("plugin.Lookup: %w", err)
+	out := &GoJITCompiled{}
+	for _, build := range builds {
+		switch build.abi {
+		case string(goJITABIi64):
+			sym, err := p.Lookup("FnI64")
+			if err != nil {
+				return nil, fmt.Errorf("plugin.Lookup FnI64: %w", err)
+			}
+			fn, ok := sym.(func([]int64) int64)
+			if !ok {
+				return nil, fmt.Errorf("plugin.Lookup: FnI64 has wrong type %T", sym)
+			}
+			out.I64 = fn
+		case string(goJITABIf64):
+			sym, err := p.Lookup("FnF64")
+			if err != nil {
+				return nil, fmt.Errorf("plugin.Lookup FnF64: %w", err)
+			}
+			fn, ok := sym.(func([]float64) float64)
+			if !ok {
+				return nil, fmt.Errorf("plugin.Lookup: FnF64 has wrong type %T", sym)
+			}
+			out.F64 = fn
+		case string(goJITABIValue):
+			sym, err := p.Lookup("FnValue")
+			if err != nil {
+				return nil, fmt.Errorf("plugin.Lookup FnValue: %w", err)
+			}
+			fn, ok := sym.(func([]jitabi.Value) jitabi.Value)
+			if !ok {
+				return nil, fmt.Errorf("plugin.Lookup: FnValue has wrong type %T", sym)
+			}
+			out.Value = fn
+		}
 	}
-	fn, ok := sym.(func([]int64) int64)
-	if !ok {
-		return nil, fmt.Errorf("plugin.Lookup: Fn has wrong type %T", sym)
-	}
-	return fn, nil
+	return out, nil
 }
 
-// emitGoExpr — recipe NodeID → Go source string. Returns an `int64`-typed
-// expression. Errors propagate as unsupported when the recipe leaves the
-// emitter's subset.
+func emitGoPluginABI(k *Kernel, cl *Closure, abi goJITABI) (string, error) {
+	selfFn := "fn_" + string(abi)
+	plan := newGoCompilePlan(abi)
+	plan.helpers[cl.Name] = selfFn
+	plan.emitted[cl.Name] = true
+	scope := newGoCompileScope(cl.Name, selfFn, abi, cl.Env, plan)
+	for i, p := range cl.Params {
+		scope.vars[p] = fmt.Sprintf("p%d", i)
+	}
+	bodySrc, err := emitGoExpr(k, cl.Body, scope)
+	if err != nil {
+		return "", err
+	}
+	scalar := scope.scalarType()
+	exported := "FnI64"
+	if abi == goJITABIf64 {
+		exported = "FnF64"
+	} else if abi == goJITABIValue {
+		exported = "FnValue"
+	}
+	var paramSig strings.Builder
+	var callArgs strings.Builder
+	for i := range cl.Params {
+		if i > 0 {
+			paramSig.WriteString(", ")
+			callArgs.WriteString(", ")
+		}
+		paramSig.WriteString(fmt.Sprintf("p%d %s", i, scalar))
+		callArgs.WriteString(fmt.Sprintf("args[%d]", i))
+	}
+	var src strings.Builder
+	src.WriteString(plan.helperSrc.String())
+	src.WriteString(fmt.Sprintf("func %s(%s) %s {\n", selfFn, paramSig.String(), scalar))
+	src.WriteString("\treturn ")
+	src.WriteString(scope.cast(bodySrc))
+	src.WriteString("\n}\n\n")
+	src.WriteString(fmt.Sprintf("func %s(args []%s) %s {\n", exported, scalar, scalar))
+	src.WriteString(fmt.Sprintf("\tif len(args) != %d { panic(\"form-jit: arity mismatch\") }\n", len(cl.Params)))
+	if len(cl.Params) == 0 {
+		src.WriteString(fmt.Sprintf("\treturn %s()\n", selfFn))
+	} else {
+		src.WriteString(fmt.Sprintf("\treturn %s(%s)\n", selfFn, callArgs.String()))
+	}
+	src.WriteString("}\n")
+	return src.String(), nil
+}
+
 func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 	if node.Level == LevelTrivial {
-		return emitGoTrivial(k, node)
+		return emitGoTrivial(k, node, scope)
 	}
 	cat := k.category(node)
 	kids := k.children(node)
@@ -362,14 +437,10 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 
 	case RBasicList:
 		if len(kids) == 0 {
-			if scope.isFloat {
-				return "[]float64{}", nil
+			if scope.abi == goJITABIValue {
+				return "jitabi.List()", nil
 			}
-			return "[]int64{}", nil
-		}
-		elemType := "int64"
-		if scope.isFloat {
-			elemType = "float64"
+			return "[]" + scope.scalarType() + "{}", nil
 		}
 		var elems []string
 		for _, kid := range kids {
@@ -377,9 +448,16 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			elems = append(elems, s)
+			if scope.abi == goJITABIValue {
+				elems = append(elems, s)
+			} else {
+				elems = append(elems, scope.cast(s))
+			}
 		}
-		return "[]" + elemType + "{" + strings.Join(elems, ", ") + "}", nil
+		if scope.abi == goJITABIValue {
+			return "jitabi.List(" + strings.Join(elems, ", ") + ")", nil
+		}
+		return "[]" + scope.scalarType() + "{" + strings.Join(elems, ", ") + "}", nil
 
 	case RBasicFnDef:
 		return "", unsupported("jit: nested defn not in subset")
@@ -387,17 +465,46 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 	return "", unsupported(fmt.Sprintf("jit: unsupported arm type %d", cat.Type))
 }
 
-func emitGoTrivial(k *Kernel, node NodeID) (string, error) {
+func emitGoTrivial(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 	switch node.Type {
 	case TrivInt:
-		// Sign-extend the 32-bit instance back to int64.
 		v := int64(int32(node.Inst))
-		return strconv.FormatInt(v, 10), nil
-	case TrivBool:
-		if node.Inst != 0 {
-			return "int64(1)", nil
+		if scope.abi == goJITABIValue {
+			return fmt.Sprintf("jitabi.Int(%s)", strconv.FormatInt(v, 10)), nil
 		}
-		return "int64(0)", nil
+		if scope.abi == goJITABIf64 {
+			return fmt.Sprintf("float64(%s)", strconv.FormatInt(v, 10)), nil
+		}
+		return fmt.Sprintf("int64(%s)", strconv.FormatInt(v, 10)), nil
+	case TrivBool:
+		if scope.abi == goJITABIValue {
+			return fmt.Sprintf("jitabi.Bool(%t)", node.Inst != 0), nil
+		}
+		if node.Inst != 0 {
+			return scope.scalarOne(), nil
+		}
+		return scope.scalarZero(), nil
+	case TrivString:
+		if scope.abi == goJITABIValue {
+			return "jitabi.Str(" + strconv.Quote(k.nameStr(NameID(node.Inst))) + ")", nil
+		}
+		return "", unsupported("jit: string literal requires value ABI")
+	case TrivFloat32:
+		if scope.abi == goJITABIValue {
+			return fmt.Sprintf("jitabi.Float(%s)", strconv.FormatFloat(float64(k.decodeFloat32(node.Inst)), 'g', -1, 64)), nil
+		}
+		if scope.abi != goJITABIf64 {
+			return "", unsupported("jit: float literal requires f64 ABI")
+		}
+		return strconv.FormatFloat(float64(k.decodeFloat32(node.Inst)), 'g', -1, 64), nil
+	case TrivFloat64:
+		if scope.abi == goJITABIValue {
+			return fmt.Sprintf("jitabi.Float(%s)", strconv.FormatFloat(k.decodeFloat64(node.Inst), 'g', -1, 64)), nil
+		}
+		if scope.abi != goJITABIf64 {
+			return "", unsupported("jit: float literal requires f64 ABI")
+		}
+		return strconv.FormatFloat(k.decodeFloat64(node.Inst), 'g', -1, 64), nil
 	}
 	return "", unsupported(fmt.Sprintf("jit: trivial type %d not in subset", node.Type))
 }
@@ -415,19 +522,28 @@ func emitGoMath(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (str
 		return "", err
 	}
 	var opStr string
+	var valueOp string
 	switch op {
 	case RMathPlus:
 		opStr = "+"
+		valueOp = "jitabi.Add"
 	case RMathMinus:
 		opStr = "-"
+		valueOp = "jitabi.Sub"
 	case RMathMultiply:
 		opStr = "*"
+		valueOp = "jitabi.Mul"
 	case RMathDivide:
 		opStr = "/"
+		valueOp = "jitabi.Div"
 	case RMathModulo:
 		opStr = "%"
+		valueOp = "jitabi.Mod"
 	default:
 		return "", unsupported(fmt.Sprintf("jit: math op %d", op))
+	}
+	if scope.abi == goJITABIValue {
+		return fmt.Sprintf("%s(%s, %s)", valueOp, a, b), nil
 	}
 	return fmt.Sprintf("(%s %s %s)", a, opStr, b), nil
 }
@@ -445,28 +561,35 @@ func emitGoCompare(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (
 		return "", err
 	}
 	var opStr string
+	var valueOp string
 	switch op {
 	case RCompareEq:
 		opStr = "=="
+		valueOp = "jitabi.Eq"
 	case RCompareNe:
 		opStr = "!="
+		valueOp = "jitabi.Ne"
 	case RCompareLt:
 		opStr = "<"
+		valueOp = "jitabi.Lt"
 	case RCompareLe:
 		opStr = "<="
+		valueOp = "jitabi.Le"
 	case RCompareGt:
 		opStr = ">"
+		valueOp = "jitabi.Gt"
 	case RCompareGe:
 		opStr = ">="
+		valueOp = "jitabi.Ge"
 	default:
 		return "", unsupported(fmt.Sprintf("jit: compare op %d", op))
 	}
-	// Form's compare arm returns a bool-shaped int64 (1 / 0) when used in
-	// arithmetic / conditional position. Walker keeps it as a VBool; the
-	// JIT path lowers it to int64 (1/0) so it composes cleanly with the
-	// surrounding integer expressions. The COND emitter knows to read it
-	// as truthy when != 0.
-	return fmt.Sprintf("(func() int64 { if (%s %s %s) { return 1 }; return 0 }())", a, opStr, b), nil
+	if scope.abi == goJITABIValue {
+		return fmt.Sprintf("%s(%s, %s)", valueOp, a, b), nil
+	}
+	scalar := scope.scalarType()
+	return fmt.Sprintf("(func() %s { if (%s %s %s) { return %s }; return %s }())",
+		scalar, a, opStr, b, scope.scalarOne(), scope.scalarZero()), nil
 }
 
 func emitGoCond(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
@@ -489,10 +612,15 @@ func emitGoCond(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (str
 			return "", elsErr
 		}
 	} else {
-		els = "int64(0)" // if-without-else returns null in walker; JIT subset returns 0
+		els = scope.scalarZero() // if-without-else returns null in walker; JIT subset returns 0
 	}
-	// Go has no ternary; use an IIFE.
-	return fmt.Sprintf("(func() int64 { if (%s) != 0 { return (%s) }; return (%s) }())", cond, then, els), nil
+	scalar := scope.scalarType()
+	if scope.abi == goJITABIValue {
+		return fmt.Sprintf("(func() %s { if jitabi.Truthy(%s) { return %s }; return %s }())",
+			scalar, cond, then, els), nil
+	}
+	return fmt.Sprintf("(func() %s { if (%s) != 0 { return %s }; return %s }())",
+		scalar, cond, scope.cast(then), scope.cast(els)), nil
 }
 
 func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
@@ -512,8 +640,8 @@ func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (st
 		nid := NameID(nameNode.Inst)
 		varName := scope.fresh(fmt.Sprintf("let_%s", k.nameStr(nid)))
 		scope.vars[nid] = varName
-		// Block.LET evaluates to the bound value (per walker semantics).
-		return fmt.Sprintf("(func() int64 { %s := int64(%s); _ = %s; return %s }())", varName, valSrc, varName, varName), nil
+		return fmt.Sprintf("(func() %s { %s := %s; _ = %s; return %s }())",
+			scope.scalarType(), varName, scope.cast(valSrc), varName, varName), nil
 	case RBlockDo, RBlockSequence:
 		// Walker semantics: evaluate each child, return the last. For a
 		// pure JIT, we need to thread let bindings across siblings. The
@@ -522,24 +650,39 @@ func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (st
 		// blocks won't leak (they live in their own IIFEs), so block-do
 		// at the top level is only useful when it contains a single expr.
 		if len(kids) == 0 {
-			return "int64(0)", nil
+			return scope.scalarZero(), nil
 		}
 		if len(kids) == 1 {
 			return emitGoExpr(k, kids[0], scope)
 		}
-		// Multi-child block — emit as IIFE with statements. Each
-		// intermediate result is discarded.
 		var b strings.Builder
-		b.WriteString("(func() int64 {\n")
+		b.WriteString("(func() " + scope.scalarType() + " {\n")
 		child := scope.child()
 		for i, c := range kids {
 			isLast := i == len(kids)-1
+			if k.category(c).Type == RBasicBlock && k.category(c).Inst == RBlockLet {
+				letKids := k.children(c)
+				if len(letKids) == 2 && letKids[0].Level == LevelTrivial && letKids[0].Type == TrivString {
+					valSrc, err := emitGoExpr(k, letKids[1], child)
+					if err != nil {
+						return "", err
+					}
+					name := NameID(letKids[0].Inst)
+					varName := child.fresh(fmt.Sprintf("let_%s", k.nameStr(name)))
+					child.vars[name] = varName
+					b.WriteString(fmt.Sprintf("\t%s := %s\n", varName, child.cast(valSrc)))
+					if isLast {
+						b.WriteString(fmt.Sprintf("\treturn %s\n", varName))
+					}
+					continue
+				}
+			}
 			expr, err := emitGoExpr(k, c, child)
 			if err != nil {
 				return "", err
 			}
 			if isLast {
-				b.WriteString(fmt.Sprintf("\treturn (%s)\n", expr))
+				b.WriteString(fmt.Sprintf("\treturn %s\n", child.cast(expr)))
 			} else {
 				b.WriteString(fmt.Sprintf("\t_ = (%s)\n", expr))
 			}
@@ -548,6 +691,74 @@ func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (st
 		return b.String(), nil
 	}
 	return "", unsupported(fmt.Sprintf("jit: block op %d not in subset", op))
+}
+
+func emitGoHelperCall(k *Kernel, nameID NameID, kids []NodeID, scope *goCompileScope) (string, error) {
+	if scope.env == nil || scope.plan == nil {
+		return "", unsupported(fmt.Sprintf("jit: unsupported call %q (no compile env)", k.nameStr(nameID)))
+	}
+	v, ok := scope.env.Lookup(nameID)
+	if !ok || v.Kind != VClosure {
+		return "", unsupported(fmt.Sprintf("jit: unsupported call %q (only static Form helpers in compile env)", k.nameStr(nameID)))
+	}
+	cl := v.Cl
+	if len(kids)-1 != len(cl.Params) {
+		return "", unsupported(fmt.Sprintf("jit: helper %q wants %d args, got %d", k.nameStr(nameID), len(cl.Params), len(kids)-1))
+	}
+	fn, err := emitGoHelperFunction(k, cl, scope)
+	if err != nil {
+		return "", err
+	}
+	args := make([]string, 0, len(kids)-1)
+	for i := 1; i < len(kids); i++ {
+		a, err := emitGoExpr(k, kids[i], scope)
+		if err != nil {
+			return "", err
+		}
+		args = append(args, scope.cast(a))
+	}
+	return fmt.Sprintf("%s(%s)", fn, strings.Join(args, ", ")), nil
+}
+
+func emitGoHelperFunction(k *Kernel, cl *Closure, parent *goCompileScope) (string, error) {
+	plan := parent.plan
+	if fn, ok := plan.helpers[cl.Name]; ok {
+		if plan.emitted[cl.Name] || plan.emitting[cl.Name] {
+			return fn, nil
+		}
+	}
+	fn := fmt.Sprintf("fn_%s_helper_%d", string(parent.abi), cl.Name)
+	plan.helpers[cl.Name] = fn
+	if plan.emitting[cl.Name] {
+		return fn, nil
+	}
+	plan.emitting[cl.Name] = true
+
+	scope := newGoCompileScope(cl.Name, fn, parent.abi, cl.Env, plan)
+	for i, p := range cl.Params {
+		scope.vars[p] = fmt.Sprintf("p%d", i)
+	}
+	bodySrc, err := emitGoExpr(k, cl.Body, scope)
+	if err != nil {
+		delete(plan.emitting, cl.Name)
+		return "", err
+	}
+
+	scalar := scope.scalarType()
+	var paramSig strings.Builder
+	for i := range cl.Params {
+		if i > 0 {
+			paramSig.WriteString(", ")
+		}
+		paramSig.WriteString(fmt.Sprintf("p%d %s", i, scalar))
+	}
+	plan.helperSrc.WriteString(fmt.Sprintf("func %s(%s) %s {\n", fn, paramSig.String(), scalar))
+	plan.helperSrc.WriteString("\treturn ")
+	plan.helperSrc.WriteString(scope.cast(bodySrc))
+	plan.helperSrc.WriteString("\n}\n\n")
+	plan.emitted[cl.Name] = true
+	delete(plan.emitting, cl.Name)
+	return fn, nil
 }
 
 func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, error) {
@@ -582,7 +793,7 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 			if err != nil {
 				return "", err
 			}
-			args = append(args, fmt.Sprintf("int64(%s)", a))
+			args = append(args, scope.cast(a))
 		}
 		return fmt.Sprintf("%s(%s)", scope.selfFn, strings.Join(args, ", ")), nil
 	}
@@ -590,9 +801,9 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 	// have produced a generic FNCALL with these names if the body uses
 	// the s-expression form). Lower to the corresponding operator.
 	switch name {
-	case "add", "sub", "mul", "div", "mod":
+	case "add", "_plus", "sub", "mul", "div", "mod":
 		op := map[string]uint32{
-			"add": RMathPlus, "sub": RMathMinus, "mul": RMathMultiply,
+			"add": RMathPlus, "_plus": RMathPlus, "sub": RMathMinus, "mul": RMathMultiply,
 			"div": RMathDivide, "mod": RMathModulo,
 		}[name]
 		return emitGoMath(k, op, kids[1:], scope)
@@ -613,19 +824,83 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 
 	// List primitives for vector recipes in recipelib (head/tail/len/concat).
 	// Used by vector_add, dot_product etc. Emitted using Go slice ops.
+	if name == "list" {
+		args := make([]string, 0, len(kids)-1)
+		for i := 1; i < len(kids); i++ {
+			a, err := emitGoExpr(k, kids[i], scope)
+			if err != nil {
+				return "", err
+			}
+			if scope.abi == goJITABIValue {
+				args = append(args, a)
+			} else {
+				args = append(args, scope.cast(a))
+			}
+		}
+		if scope.abi == goJITABIValue {
+			return "jitabi.List(" + strings.Join(args, ", ") + ")", nil
+		}
+		return "[]" + scope.scalarType() + "{" + strings.Join(args, ", ") + "}", nil
+	}
+	if name == "empty" {
+		if scope.abi == goJITABIValue {
+			return "jitabi.List()", nil
+		}
+		return "[]" + scope.scalarType() + "{}", nil
+	}
+	if name == "nil?" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: nil? expects list arg")
+		}
+		argSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		if scope.abi == goJITABIValue {
+			return "jitabi.Bool(jitabi.Len(" + argSrc + ") == 0)", nil
+		}
+		if !jitNodeIsListExpr(k, kids[1]) {
+			return "", unsupported("jit: nil? over list-valued parameters needs a list ABI")
+		}
+		return fmt.Sprintf("(func() %s { if len(%s) == 0 { return %s }; return %s }())",
+			scope.scalarType(), argSrc, scope.scalarOne(), scope.scalarZero()), nil
+	}
 	if name == "len" {
 		if len(kids) < 2 {
 			return "", unsupported("jit: len expects list arg")
 		}
+		if scope.abi == goJITABIValue {
+			listSrc, err := emitGoExpr(k, kids[1], scope)
+			if err != nil {
+				return "", err
+			}
+			return "jitabi.Int(jitabi.Len(" + listSrc + "))", nil
+		}
+		if !jitNodeIsListExpr(k, kids[1]) {
+			return "", unsupported("jit: len over list-valued parameters needs a list ABI")
+		}
 		listSrc, err := emitGoExpr(k, kids[1], scope)
 		if err != nil {
 			return "", err
+		}
+		if scope.abi == goJITABIf64 {
+			return "float64(len(" + listSrc + "))", nil
 		}
 		return "int64(len(" + listSrc + "))", nil
 	}
 	if name == "head" {
 		if len(kids) < 2 {
 			return "", unsupported("jit: head expects list arg")
+		}
+		if scope.abi == goJITABIValue {
+			listSrc, err := emitGoExpr(k, kids[1], scope)
+			if err != nil {
+				return "", err
+			}
+			return "jitabi.Head(" + listSrc + ")", nil
+		}
+		if !jitNodeIsListExpr(k, kids[1]) {
+			return "", unsupported("jit: head over list-valued parameters needs a list ABI")
 		}
 		listSrc, err := emitGoExpr(k, kids[1], scope)
 		if err != nil {
@@ -637,6 +912,16 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 		if len(kids) < 2 {
 			return "", unsupported("jit: tail expects list arg")
 		}
+		if scope.abi == goJITABIValue {
+			listSrc, err := emitGoExpr(k, kids[1], scope)
+			if err != nil {
+				return "", err
+			}
+			return "jitabi.Tail(" + listSrc + ")", nil
+		}
+		if !jitNodeIsListExpr(k, kids[1]) {
+			return "", unsupported("jit: tail over list-valued parameters needs a list ABI")
+		}
 		listSrc, err := emitGoExpr(k, kids[1], scope)
 		if err != nil {
 			return "", err
@@ -647,6 +932,20 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 		if len(kids) < 3 {
 			return "", unsupported("jit: concat expects two list args")
 		}
+		if scope.abi == goJITABIValue {
+			aSrc, err := emitGoExpr(k, kids[1], scope)
+			if err != nil {
+				return "", err
+			}
+			bSrc, err := emitGoExpr(k, kids[2], scope)
+			if err != nil {
+				return "", err
+			}
+			return "jitabi.Concat(" + aSrc + ", " + bSrc + ")", nil
+		}
+		if !jitNodeIsListExpr(k, kids[1]) || !jitNodeIsListExpr(k, kids[2]) {
+			return "", unsupported("jit: concat over list-valued parameters needs a list ABI")
+		}
 		aSrc, err := emitGoExpr(k, kids[1], scope)
 		if err != nil {
 			return "", err
@@ -655,12 +954,228 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 		if err != nil {
 			return "", err
 		}
-		elemType := "int64"
-		if scope.isFloat {
-			elemType = "float64"
-		}
+		elemType := scope.scalarType()
 		return "append(append([]" + elemType + "{}, " + aSrc + "...), " + bSrc + "...)", nil
+	}
+	if name == "cons" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: cons expects head and tail")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: cons requires value ABI")
+		}
+		headSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		tailSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.Cons(" + headSrc + ", " + tailSrc + ")", nil
+	}
+	if name == "nth" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: nth expects list and index")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: nth requires value ABI")
+		}
+		listSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		idxSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.Nth(" + listSrc + ", " + idxSrc + ")", nil
+	}
+	if name == "str_len" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: str_len expects string arg")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: str_len requires value ABI")
+		}
+		argSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.StrLen(" + argSrc + ")", nil
+	}
+	if name == "str_concat" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: str_concat expects two string args")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: str_concat requires value ABI")
+		}
+		aSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		bSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.StrConcat(" + aSrc + ", " + bSrc + ")", nil
+	}
+	if name == "str_eq" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: str_eq expects two string args")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: str_eq requires value ABI")
+		}
+		aSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		bSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.StrEq(" + aSrc + ", " + bSrc + ")", nil
+	}
+	if name == "substring" {
+		if len(kids) < 4 {
+			return "", unsupported("jit: substring expects string, start, end")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: substring requires value ABI")
+		}
+		sSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		startSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		endSrc, err := emitGoExpr(k, kids[3], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.Substring(" + sSrc + ", " + startSrc + ", " + endSrc + ")", nil
+	}
+	if name == "char_at" {
+		if len(kids) < 3 {
+			return "", unsupported("jit: char_at expects string and index")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: char_at requires value ABI")
+		}
+		sSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		idxSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.CharAt(" + sSrc + ", " + idxSrc + ")", nil
+	}
+	if name == "ord" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: ord expects string arg")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: ord requires value ABI")
+		}
+		argSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.Ord(" + argSrc + ")", nil
+	}
+	if name == "byte_to_str" {
+		if len(kids) < 2 {
+			return "", unsupported("jit: byte_to_str expects int arg")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: byte_to_str requires value ABI")
+		}
+		argSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.ByteToStr(" + argSrc + ")", nil
+	}
+	if name == "scan_run" {
+		if len(kids) < 4 {
+			return "", unsupported("jit: scan_run expects string, from, class")
+		}
+		if scope.abi != goJITABIValue {
+			return "", unsupported("jit: scan_run requires value ABI")
+		}
+		sSrc, err := emitGoExpr(k, kids[1], scope)
+		if err != nil {
+			return "", err
+		}
+		fromSrc, err := emitGoExpr(k, kids[2], scope)
+		if err != nil {
+			return "", err
+		}
+		classSrc, err := emitGoExpr(k, kids[3], scope)
+		if err != nil {
+			return "", err
+		}
+		return "jitabi.ScanRun(" + sSrc + ", " + fromSrc + ", " + classSrc + ")", nil
+	}
+
+	if scope.env != nil {
+		if v, ok := scope.env.Lookup(nameID); ok && v.Kind == VClosure {
+			return emitGoHelperCall(k, nameID, kids, scope)
+		}
 	}
 
 	return "", unsupported(fmt.Sprintf("jit: unsupported call %q (only self-recursion + arithmetic primitives in subset)", name))
+}
+
+func jitNodeIsListExpr(k *Kernel, node NodeID) bool {
+	if node.Level == LevelTrivial {
+		return false
+	}
+	return k.category(node).Type == RBasicList
+}
+
+func jitRecipeNeedsValueABI(k *Kernel, node NodeID) bool {
+	if node.Level == LevelTrivial {
+		return node.Type == TrivString
+	}
+	cat := k.category(node)
+	if cat.Type == RBasicList {
+		return true
+	}
+	kids := k.children(node)
+	if cat.Type == RBasicFnCall && len(kids) > 0 {
+		if name, ok := jitStaticCallName(k, kids[0]); ok {
+			switch name {
+			case "list", "empty", "cons", "head", "tail", "len", "nil?", "concat", "nth",
+				"str_len", "str_concat", "str_eq", "substring", "char_at", "ord",
+				"byte_to_str", "scan_run":
+				return true
+			}
+		}
+	}
+	for _, kid := range kids {
+		if jitRecipeNeedsValueABI(k, kid) {
+			return true
+		}
+	}
+	return false
+}
+
+func jitStaticCallName(k *Kernel, callee NodeID) (string, bool) {
+	if callee.Level == LevelTrivial && callee.Type == TrivString {
+		return k.nameStr(NameID(callee.Inst)), true
+	}
+	if callee.Level != LevelTrivial {
+		cat := k.category(callee)
+		if cat.Type == RBasicIdent {
+			return k.nameStr(k.identID(callee)), true
+		}
+	}
+	return "", false
 }

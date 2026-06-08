@@ -544,7 +544,7 @@ def _inert_natives(fired: set[str]) -> list[str]:
 # working instrument over the CURRENT attribution snapshot. It reuses the
 # body's OWN structural distance — the Manhattan distance over the NodeID
 # 4-tuple (pkg, level, type, instance) that /api/utils/nodeid_distance
-# computes (see endpoint_nodeid_distance_demo.py / utils.nodeid_distance_py) —
+# computes (see endpoint_nodeid_distance_demo.py / manhattan) —
 # rather than inventing a new metric. Core-abstraction-first: ONE projection
 # mechanism over the fired Blueprint NodeIDs as DATA.
 #
@@ -576,7 +576,7 @@ def _nodeid_distance(
 ) -> float:
     """Manhattan distance over the NodeID 4-tuple — the body's own metric.
 
-    Identical shape to utils.nodeid_distance_py / endpoint_nodeid_distance_demo:
+    Identical shape to endpoint_nodeid_distance_demo.py / manhattan:
     sum of absolute differences across (pkg, level, type, instance). Floats are
     allowed because the embodied center is an activity-weighted centroid (a
     mean position), not a discrete lattice node.

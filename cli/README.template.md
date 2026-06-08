@@ -36,6 +36,10 @@ npx coherence-cli rest POST /api/substrate/form --body '{"expression":"?equivale
 
 The agent can receive the shared invitation, inspect what is moving, query the substrate through Form, and choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
+From the terminal, the living surface is still walkable: move from ideas to flow,
+from flow to substrate, from substrate to proof, from proof to contribution, or
+from your own project back into a returned trace.
+
 ---
 
 ## Why this exists

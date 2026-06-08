@@ -1,11 +1,10 @@
 """Form kernel bridge — run form-kernel-rust inline (PyO3) or via subprocess.
 
-The transmutation gesture, made into a habit: a FastAPI endpoint's body
-is a Form recipe compiled from Python. The route delegates to the kernel
-instead of executing Python inline. FastAPI stays as the HTTP doorway;
-the computation IS a Recipe.
+The compatibility API still hosts the HTTP route, but a transmuted endpoint's
+body is a Form recipe. The route delegates to the kernel instead of executing
+the computation in Python.
 
-Three paths, ordered by speed:
+Two paths, ordered by speed:
 
   1. ``inline``           — PyO3 extension ``form_kernel_rust`` imported
                             once at module load; each request is a C call
@@ -13,12 +12,8 @@ Three paths, ordered by speed:
                             overhead. The hot path when available.
   2. ``subprocess``       — shell out to the ``form-kernel-rust`` binary.
                             Same kernel, but fork+exec ~ms-scale overhead.
-                            Used when the PyO3 module failed to build but
+                            Used when the PyO3 module is unavailable but
                             the binary did.
-  3. ``python-fallback``  — the caller's Python function, semantically
-                            identical to the recipe. Used when neither
-                            kernel surface is reachable. Parity is the
-                            regression gate (parity_suite.sh).
 
 Companion to form/form-kernel-ts/seedbank/python-adapter/examples/
 endpoint_*_demo.py — every endpoint that transmutes its body lands a
@@ -26,12 +21,11 @@ endpoint_*_demo.py — every endpoint that transmutes its body lands a
 
 The habit form. Three layers, each shorter to reach for than the last:
 
-    run_recipe(fk_source)               # raw kernel call — testable
-    run_with_fallback(fk, fb, parse)    # add Python fallback + parse
-    serve_via_kernel(                   # load .fk from disk, inject
-        recipe_path,                    #   inputs as (let ...) bindings,
-        bindings={"x": 5, "ys": [1,2]}, #   shell to kernel or fall back
-        fallback=lambda: my_py_fn(...),
+    run_recipe(fk_source)                 # raw subprocess kernel call
+    run_kernel(fk_source, parse)          # inline or subprocess kernel call
+    serve_via_kernel(                     # load .fk from disk, inject
+        recipe_path,                      #   inputs as (let ...) bindings,
+        bindings={"x": 5, "ys": [1,2]},   #   run through the kernel
         parse=int,
     )
 
@@ -58,9 +52,9 @@ logger = logging.getLogger(__name__)
 #
 # Built from form/form-kernel-rust via `maturin develop --release` (or the
 # wheel installed by the deploy pipeline). If the import fails — extension
-# missing, ABI mismatch, env without Rust — we set _INLINE_KERNEL to None
-# and fall back to the subprocess path. Either way the public API is the
-# same; callers see (value, runtime) and runtime names the path that served.
+# missing, ABI mismatch, env without Rust — we set _INLINE_KERNEL to None and
+# the subprocess carrier may still serve if the binary is present. Either way
+# callers see (value, runtime) and runtime names the path that served.
 # ---------------------------------------------------------------------------
 try:
     import form_kernel_rust as _INLINE_KERNEL  # type: ignore[import-not-found]
@@ -81,7 +75,7 @@ except Exception as _e:  # pragma: no cover — environment-dependent
 # Preloader's root frame) and a `body` part (the trailing call, parsed once);
 # per request only the body is walked with the request's bindings in a child
 # frame. Built only when the PyO3 extension is present; everything below
-# no-ops cleanly to the existing inline/subprocess/fallback ladder otherwise.
+# no-ops cleanly to the inline/subprocess carrier ladder otherwise.
 # ---------------------------------------------------------------------------
 try:
     _PRELOADER = _INLINE_KERNEL.Preloader() if _INLINE_KERNEL is not None else None
@@ -106,7 +100,7 @@ def inline_available() -> bool:
 def active_runtime() -> str:
     """Name the kernel path that would serve the next transmuted endpoint.
 
-    Reads as one of ``inline``, ``subprocess``, ``python-fallback`` — same
+    Reads as one of ``inline``, ``subprocess``, ``unavailable`` — same
     string the per-request ``runtime`` field carries. Used by /api/health
     to give the witness a one-glance view of which path is hot today.
     Lazy: no kernel call is made; this checks availability flags only.
@@ -115,7 +109,7 @@ def active_runtime() -> str:
         return "inline"
     if _kernel_binary_available_lazy():
         return "subprocess"
-    return "python-fallback"
+    return "unavailable"
 
 
 def _kernel_binary_available_lazy() -> bool:
@@ -205,24 +199,22 @@ def run_inline(fk_source: str) -> Any:
     return _INLINE_KERNEL.compile_and_run(fk_source)
 
 
-def run_with_fallback(
+def run_kernel(
     fk_source: str,
-    fallback: Callable[[], Any],
     parse: Callable[[str], Any] = lambda s: s,
     timeout: float = 10.0,
 ) -> tuple[Any, str]:
-    """Run fk_source through the kernel; choose the fastest available path.
+    """Run fk_source through the fastest available kernel carrier.
 
     Returns ``(value, runtime)`` where runtime is one of:
       - ``"inline"``         — PyO3 extension served the request
       - ``"subprocess"``     — fork+exec of the form-kernel-rust binary
-      - ``"python-fallback"`` — the caller's Python function (kernel absent)
 
     The two kernel paths share the same Rust runtime; ``parse`` is applied
     to the kernel's textual output only on the subprocess path (the inline
-    path already returns typed values). Errors beyond a missing
-    binary/extension propagate — the parity_suite guarantees the recipe
-    matches Python; an actual kernel failure is worth surfacing.
+    path already returns typed values). If neither kernel carrier is reachable,
+    this raises RuntimeError; transmuted routes no longer execute Python
+    computation as an alternate runtime path.
     """
     # Hot path: PyO3 inline. Already-typed return — `parse` is a no-op for
     # ints/floats/lists, and the routers' `parse=int` lambdas are safe to
@@ -244,13 +236,10 @@ def run_with_fallback(
         raw = run_recipe(fk_source, timeout=timeout)
         return parse(raw), "subprocess"
 
-    # Cold path: Python.
-    logger.info(
-        "form-kernel: PyO3 extension unavailable and binary missing at %s — "
-        "running Python fallback",
-        kernel_bin_path(),
+    raise RuntimeError(
+        "form-kernel unavailable: PyO3 extension is not loaded and "
+        f"form-kernel-rust binary was not found at {kernel_bin_path()}"
     )
-    return fallback(), "python-fallback"
 
 
 # ---------------------------------------------------------------------------
@@ -606,24 +595,22 @@ def run_preloaded(handle: int, bindings: Mapping[str, Any]) -> Any:
 def serve_via_kernel(
     recipe_path: str | Path,
     bindings: Mapping[str, Any],
-    fallback: Callable[[], Any],
     parse: Callable[[str], Any] = lambda s: s,
     timeout: float = 10.0,
+    fallback: Callable[[], Any] | None = None,
 ) -> tuple[Any, str]:
-    """Load a recipe, inject inputs, run on the kernel — or fall back.
+    """Load a recipe, inject inputs, and run it on the Form kernel.
 
     The end-state ergonomic API for transmuting an endpoint. A handler
-    builds a `bindings` dict from its parsed inputs, names the .fk file,
-    provides a Python fallback, and gets `(value, runtime)` back. The
-    runtime string is the response-model field that lets clients see
-    which path actually served them.
+    builds a `bindings` dict from its parsed inputs, names the .fk file, and
+    gets `(value, runtime)` back. The runtime string is the response-model
+    field that lets clients see which kernel carrier actually served them.
 
     Example:
 
         weight, runtime = serve_via_kernel(
             "endpoint_coherence_weight_demo.fk",
             bindings={"values": parsed, "threshold": threshold},
-            fallback=lambda: coherence_weight_py(parsed, threshold),
             parse=int,
         )
 
@@ -632,14 +619,20 @@ def serve_via_kernel(
         request only the body walks with the bindings in a child frame (no
         per-request tokenize/read/defn-rebind). The hottest path. It is a SUB-
         MODE of the inline carrier, so it still reports ``runtime == "inline"``
-        — the client cares which carrier served (inline PyO3 vs subprocess vs
-        Python), not which inline micro-optimization. The parse-drop is an
+        — the client cares which kernel carrier served (inline PyO3 vs
+        subprocess), not which inline micro-optimization. The parse-drop is an
         internal speedup measured by scripts/kernel_readiness_harness.py.
       - ``inline``       — warm PyO3 kernel, but inject literals + re-parse the
         whole recipe each call (used if preload split/parse failed for this
         recipe).
-      - ``subprocess`` / ``python-fallback`` — as before.
+      - ``subprocess``   — fork+exec kernel carrier when inline is unavailable.
+
+    ``fallback`` is accepted for older route call sites during the native
+    cutover, but it is deliberately not executed. Missing or failing kernel
+    carriers remain hard failures so Python does not silently resume ownership.
     """
+    _ = fallback
+
     # Hottest path: the recipe is parsed once into the warm Preloader and only
     # the trailing call walks per request. Falls through to inline-with-parse if
     # the Preloader is absent or this recipe didn't split/parse cleanly. Reports
@@ -662,18 +655,9 @@ def serve_via_kernel(
                         "inline",
                     )
 
-    # The .fk recipe is a deploy-time-compiled, gitignored artifact (the deploy
-    # pipeline runs python-compile once). When it is absent — a fresh checkout,
-    # CI without the compile step — the recipe simply isn't on disk; that is the
-    # "no kernel reachable" case the python-fallback exists for, not a 500.
-    try:
-        fk_source = load_recipe(recipe_path)
-    except FileNotFoundError:
-        logger.info(
-            "form-kernel: recipe %s absent (not compiled) — python-fallback",
-            recipe_path,
-        )
-        return fallback(), "python-fallback"
+    # The .fk recipe is a deploy-time-compiled artifact. Absence is now a hard
+    # route-deploy failure, not a signal to execute the computation in Python.
+    fk_source = load_recipe(recipe_path)
     if bindings:
         fk_source = inject_bindings(fk_source, bindings)
-    return run_with_fallback(fk_source, fallback=fallback, parse=parse, timeout=timeout)
+    return run_kernel(fk_source, parse=parse, timeout=timeout)

@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Add wellness edge-category cluster sensing for concepts, ideas, specs, and files",
+  "files_owned": [
+    "api/app/services/substrate/sense_edge_categories.py",
+    "api/tests/test_substrate_edge_categories.py",
+    "form/form-stdlib/edge-categories.fk",
+    "form/form-stdlib/tests/edge-categories-band.fk",
+    "scripts/wellness_check.py",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile api/app/services/substrate/sense_edge_categories.py scripts/wellness_check.py",
+      "python3 -m pytest -q api/tests/test_substrate_edge_categories.py",
+      "python3 -m pytest -q api/tests/test_substrate_edge_categories.py api/tests/test_substrate_surprise_adjacency.py",
+      "python3 -m ruff check api/app/services/substrate/sense_edge_categories.py api/tests/test_substrate_edge_categories.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/concept-corpus.fk form-stdlib/edge-categories.fk form-stdlib/tests/edge-categories-band.fk",
+      "make wellness",
+      "git diff --check -- api/app/services/substrate/sense_edge_categories.py api/tests/test_substrate_edge_categories.py form/form-stdlib/edge-categories.fk form/form-stdlib/tests/edge-categories-band.fk scripts/wellness_check.py docs/shared/agent-start-packet.md docs/system_audit/commit_evidence_2026-06-06_edge_category_clusters.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_edge_category_clusters.json"
+    ],
+    "summary": "Form now carries edge category, cluster, reflex-pain, and sampled real concept edge sensing. Wellness reports full source edge categories through a Python bridge, but names that bridge as hot self-inflicted pain while recording that concept_contains_concept sampled sensing has been released into Form through concept-corpus.fk."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/edge-categories.fk form-stdlib/tests/edge-categories-band.fk",
+      "status": "grammar_mismatch",
+      "output": "Initial Form file used BML-style `def`; sibling kernels reported unbound function `def`. The file now uses raw Form `defn` and validates across Go/Rust/TypeScript."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local sensing and tests only; no runtime deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "source-artifact-sensing-graph-integration",
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "edge-category-cluster-sensing"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Focused test proves malformed idea spec links, spec source files, concept body references, and named clusters.",
+    "Form band returns 65535 across Go/Rust/TypeScript, proving category, cluster, hot not-surprised Python-for-Form reflex-pain, and sampled real concept_contains_concept sensing through concept-corpus.fk.",
+    "Real wellness run reported 2301 edge events across 7 named category surfaces.",
+    "Top named clusters included concept:lc-coherence-over-control:concept_contains_concept:inbound and concept:lc-light-hubs:concept_contains_concept:fanout.",
+    "Wellness names the Python source scanner as bridge-only with self_inflicted_pain=hot and release_target=form-substrate-cell, while marking released_slice=concept_contains_concept/sample-via-concept-corpus."
+  ],
+  "change_files": [
+    "api/app/services/substrate/sense_edge_categories.py",
+    "api/tests/test_substrate_edge_categories.py",
+    "form/form-stdlib/edge-categories.fk",
+    "form/form-stdlib/tests/edge-categories-band.fk",
+    "scripts/wellness_check.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-06_edge_category_clusters.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Add wellness edge-category cluster sensing for concepts, ideas, specs, and files",
+    "public_endpoints": [
+      "api/app/services/substrate/sense_edge_categories.py",
+      "form/form-stdlib/edge-categories.fk",
+      "form/form-stdlib/tests/edge-categories-band.fk"
+    ],
+    "test_flows": [
+      "Focused test proves malformed idea spec links, spec source files, concept body references, and named clusters.",
+      "Form band returns 65535 across Go/Rust/TypeScript, proving category, cluster, hot not-surprised Python-for-Form reflex-pain, and sampled real concept_contains_concept sensing through concept-corpus.fk.",
+      "Real wellness run reported 2301 edge events across 7 named category surfaces."
+    ]
+  }
+}

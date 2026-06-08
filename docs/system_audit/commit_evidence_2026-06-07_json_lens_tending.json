@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Add Form JSON lens tending and evidence cell proof",
+  "files_owned": [
+    "form/form-stdlib/json-lens-tissue.fk",
+    "form/form-stdlib/queries/json-lens-tending.fk",
+    "form/form-stdlib/tests/json-lens-tending-band.fk",
+    "Makefile",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make carrier-tending",
+      "make json-lens-tending",
+      "cd form && form-kernel-go/bin-go form-stdlib/json.fk form-stdlib/json-lens-tissue.fk form-stdlib/tests/json-lens-tending-band.fk",
+      "jq empty docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json",
+      "git diff --check -- Makefile form/form-stdlib/json-lens-tissue.fk form/form-stdlib/queries/json-lens-tending.fk form/form-stdlib/tests/json-lens-tending-band.fk docs/shared/agent-start-packet.md docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json"
+    ],
+    "summary": "The JSON lens tending query returned [json-lens-tending, 864, system-audit-evidence, 662, audit evidence cells, parse evidence JSON into Form cells and compress repeated commit proof schema]. The proof band returned 255, proving the target selection and parsing a real commit evidence JSON file into a Form json-evidence-cell with local_validation.status=pass."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local Form-kernel source query only; no deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "source-artifact-sensing-graph-integration",
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "json-lens-tending"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "carrier-tending selected JSON lens load as the next carrier target.",
+    "json-lens-tending classifies repeated JSON surfaces in Form.",
+    "json-lens-tending-band parses a real commit evidence JSON file into a Form evidence cell."
+  ],
+  "change_files": [
+    "Makefile",
+    "form/form-stdlib/json-lens-tissue.fk",
+    "form/form-stdlib/queries/json-lens-tending.fk",
+    "form/form-stdlib/tests/json-lens-tending-band.fk",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Add Form JSON lens tending and evidence cell proof",
+    "public_endpoints": [
+      "form/form-stdlib/json-lens-tissue.fk",
+      "form/form-stdlib/queries/json-lens-tending.fk",
+      "form/form-stdlib/tests/json-lens-tending-band.fk"
+    ],
+    "test_flows": [
+      "carrier-tending selected JSON lens load as the next carrier target.",
+      "json-lens-tending classifies repeated JSON surfaces in Form.",
+      "json-lens-tending-band parses a real commit evidence JSON file into a Form evidence cell."
+    ]
+  }
+}

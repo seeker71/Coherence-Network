@@ -1,0 +1,6 @@
+; carrier-tissue-census.fk - dynamic Form query over repository carrier lenses.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk
+
+(ct-census-counts-from-root "..")

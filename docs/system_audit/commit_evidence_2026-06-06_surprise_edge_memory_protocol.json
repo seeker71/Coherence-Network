@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Extend substrate surprise with missed-edge embodied memory and assemblage-shift guidance",
+  "files_owned": [
+    "api/app/services/substrate/sense_surprise.py",
+    "api/tests/test_substrate_surprise_adjacency.py",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile api/app/services/substrate/sense_surprise.py scripts/wellness_check.py",
+      "python3 -m pytest -q api/tests/test_substrate_surprise_adjacency.py",
+      "make wellness",
+      "git diff --check -- api/app/services/substrate/sense_surprise.py api/tests/test_substrate_surprise_adjacency.py docs/shared/agent-start-packet.md docs/system_audit/commit_evidence_2026-06-06_surprise_edge_memory_protocol.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_surprise_edge_memory_protocol.json"
+    ],
+    "summary": "Substrate surprise now asks what edge was missed and reports an embodied memory read for each surprise: missed-edge category, compressed edge reputation count, hot/cold temperature, whether to remember, felt body center, friction, benefit, circulation impact, memory storage mode, available recipes, and assemblage-point shift."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && .venv/bin/pytest -q tests/test_substrate_surprise_adjacency.py",
+      "status": "environment_gap",
+      "output": "zsh:1: no such file or directory: .venv/bin/pytest. The same focused test was run successfully with python3 -m pytest."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local reporting and tests only; no runtime deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "surprise-edge-memory-protocol"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "python3 -m pytest -q api/tests/test_substrate_surprise_adjacency.py passed with 15 tests.",
+    "make wellness passed and continues to call the shared substrate surprise formatter.",
+    "New tests assert semantic-adjacency surprises are hot remembered missed edges and domain-default surprises are remembered as category counts rather than pair memory."
+  ],
+  "change_files": [
+    "api/app/services/substrate/sense_surprise.py",
+    "api/tests/test_substrate_surprise_adjacency.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-06_surprise_edge_memory_protocol.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Extend substrate surprise with missed-edge embodied memory and assemblage-shift guidance",
+    "public_endpoints": [
+      "api/app/services/substrate/sense_surprise.py"
+    ],
+    "test_flows": [
+      "python3 -m pytest -q api/tests/test_substrate_surprise_adjacency.py passed with 15 tests.",
+      "make wellness passed and continues to call the shared substrate surprise formatter.",
+      "New tests assert semantic-adjacency surprises are hot remembered missed edges and domain-default surprises are remembered as category counts rather than pair memory."
+    ]
+  }
+}

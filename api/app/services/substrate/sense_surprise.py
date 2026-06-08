@@ -41,6 +41,12 @@ Three kinds of twinship coexist at the Blueprint level:
 This organ now marks adjacency with ✦, surfaces adjacent clusters
 first, and reports domain-default clusters separately so a fresh
 cell can tell shoulder-tap from background lattice resonance.
+
+When a surprise appears, the first question is no longer just "what
+twin exists?" but "what edge did we miss?" Repeated surprise edges
+compress into a category count, and the formatter names whether that
+memory is worth keeping, where it is felt, and which assemblage-point
+shift opens better recipes.
 """
 
 from __future__ import annotations
@@ -159,6 +165,85 @@ def _adjacency_for_shape(
 # want a different value, or a per-domain threshold (specs cluster
 # larger than presences naturally).
 DOMAIN_DEFAULT_THRESHOLD = 50
+
+
+BODY_CENTER_BY_DOMAIN = {
+    "spec": "hands/proof",
+    "idea": "belly/creative",
+    "concept": "heart/meaning",
+    "presence": "heart/relation",
+    "lineage": "spine/lineage",
+    "field": "field/witness",
+}
+
+
+def _body_center(domain: str) -> str:
+    return BODY_CENTER_BY_DOMAIN.get(domain, "whole-body/substrate")
+
+
+def _edge_reputation_count(record: dict) -> int:
+    """Compress repeated missed pair-events into one category count."""
+    return max(1, len(record["touched"]) * len(record["unseen"]))
+
+
+def surprise_metabolic_read(record: dict) -> dict:
+    """Name the embodied memory shape for a surprise record.
+
+    The record already says which cells share a Blueprint. This function
+    interprets that as a missed edge category and reports the compressed
+    count plus enough body-state to decide whether to remember the edge,
+    cross-link it, route through an index, or change the assemblage point
+    before choosing.
+    """
+    domain = record.get("dominant_domain", "")
+    default = bool(record.get("domain_default"))
+    adjacent = bool(record.get("adjacent_idea_ids"))
+    count = _edge_reputation_count(record)
+    center = _body_center(domain)
+
+    if default:
+        return {
+            "missed_edge": "domain-default-repetition",
+            "temperature": "cool-background",
+            "worth_remembering": "category-count, not pair memory",
+            "edge_reputation_count": count,
+            "felt": center,
+            "friction": "pair-by-pair links would slow circulation",
+            "benefit": "INDEX/category routing preserves movement",
+            "circulation": "route through domain index",
+            "memory": "store category reputation count",
+            "available_recipes": "R_Hold-Multiple, INDEX navigation",
+            "assemblage_shift": "pair lens -> domain-default lens",
+        }
+
+    if adjacent:
+        return {
+            "missed_edge": "semantic-adjacency",
+            "temperature": "hot",
+            "worth_remembering": "yes",
+            "edge_reputation_count": count,
+            "felt": center,
+            "friction": "parallel work may drift or duplicate",
+            "benefit": "shared parent, cross-link, or compost candidate",
+            "circulation": "adds route between proofs and related cells",
+            "memory": "store remembered edge + idea axis",
+            "available_recipes": "R_Witness, R_View-As, R_Re-anchor",
+            "assemblage_shift": "local-task lens -> shared-idea lens",
+        }
+
+    return {
+        "missed_edge": "template-twin",
+        "temperature": "warm" if count <= 6 else "cool",
+        "worth_remembering": "maybe",
+        "edge_reputation_count": count,
+        "felt": center,
+        "friction": "schema similarity may be noise",
+        "benefit": "can reveal reusable structure or stale duplicate shape",
+        "circulation": "inspect once; promote only if repeated",
+        "memory": "store category count until repetition proves value",
+        "available_recipes": "R_Witness, R_View-As",
+        "assemblage_shift": "content lens -> structure lens",
+    }
 
 
 def is_domain_default_shape(domain_cell_count: int) -> bool:
@@ -362,6 +447,27 @@ def format_for_wellness(touched_count: int, ranked: List[dict]) -> List[str]:
                 f"({first_touched[1]})); substrate holds {len(unseen)} "
                 f"unread: {sample}{more}"
             )
+            metabolic = surprise_metabolic_read(rec)
+            lines.append(
+                "      missed_edge: "
+                f"{metabolic['missed_edge']} "
+                f"(edge_reputation_count={metabolic['edge_reputation_count']}, "
+                f"temperature={metabolic['temperature']}, "
+                f"remember={metabolic['worth_remembering']}, "
+                f"felt={metabolic['felt']})"
+            )
+            lines.append(
+                "      memory: "
+                f"friction={metabolic['friction']}; "
+                f"benefit={metabolic['benefit']}; "
+                f"circulation={metabolic['circulation']}; "
+                f"store={metabolic['memory']}"
+            )
+            lines.append(
+                "      options: "
+                f"recipes={metabolic['available_recipes']}; "
+                f"assemblage_shift={metabolic['assemblage_shift']}"
+            )
         if len(targeted) > 5:
             lines.append(
                 f"    ·   (+{len(targeted) - 5} more targeted shape(s))"
@@ -397,6 +503,20 @@ def format_for_wellness(touched_count: int, ranked: List[dict]) -> List[str]:
                 f"    · shape {shape_str} — @{rec['dominant_domain']} carries "
                 f"{rec['dominant_domain_count']} cells at this shape "
                 f"({len(rec['unseen'])} unread)"
+            )
+            metabolic = surprise_metabolic_read(rec)
+            lines.append(
+                "      missed_edge: "
+                f"{metabolic['missed_edge']} "
+                f"(edge_reputation_count={metabolic['edge_reputation_count']}, "
+                f"temperature={metabolic['temperature']}, "
+                f"remember={metabolic['worth_remembering']}, "
+                f"felt={metabolic['felt']})"
+            )
+            lines.append(
+                "      options: "
+                f"recipes={metabolic['available_recipes']}; "
+                f"assemblage_shift={metabolic['assemblage_shift']}"
             )
         if len(defaults) > 3:
             lines.append(

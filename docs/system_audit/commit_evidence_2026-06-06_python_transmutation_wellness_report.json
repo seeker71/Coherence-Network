@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Report remaining Python-dependent bootstrap surfaces as Form-native transmutation candidates in wellness",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "docs/shared/agent-start-packet.md",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "make wellness",
+      "git diff --check -- scripts/wellness_check.py docs/shared/agent-start-packet.md kernels/BOOTSTRAP_COMPOST_MANIFEST.md docs/system_audit/commit_evidence_2026-06-06_python_transmutation_wellness_report.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_python_transmutation_wellness_report.json"
+    ],
+    "summary": "The Bootstrap compost wellness section now reports named Python transmutation candidates and automatically classifies path-named substrate Python files that are not yet listed in the compost manifest from repeated lexical/path edge attributes into metabolic categories with scores, signals, file names, release gates, and admission/release protocol. Static surfaces now report wants_dynamic rows with edge_reputation counts to dynamic successors, and the manifest is documented as an attested release ledger rather than the complete candidate universe."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local reporting and documentation change only; no runtime deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "python-transmutation-wellness-report"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "make wellness output includes `Python transmutation candidates — 13 named Python-dependent files / 9826 LOC still asking for Form-native release gates`.",
+    "make wellness output includes adapter parser/emitter, adapter CLI/scripts, bridge/runtime, utility endpoint rows, and corrected substrate perimeter math: 28 path-named, manifest-unlisted files / 14623 LOC after subtracting only the 4 Phase C files that live in api/app/services/substrate/.",
+    "make wellness output includes automatic metabolic categories for the manifest-unlisted perimeter: source grammar/parser residue, recipe realization/runtime semantics, domain vocabulary/cell authoring, format/source frontend, substrate identity/persistence infrastructure, and observation/proof metabolism.",
+    "make wellness output includes dynamic admission, manifest admission, and release criteria for path-named, manifest-unlisted cells.",
+    "make wellness output includes `Static-to-dynamic wants` rows for static ledgers/snapshots, and those rows feed `what_wants_attention` through the `wants_dynamic:` marker.",
+    "make wellness output includes `edge_reputation` rows that compress repeated static edge events into a reputation count between a static source cell and dynamic successor cell.",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md now states that dynamic candidate admission happens in wellness and static manifest rows are attested release-ledger entries.",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md now states that repeated static edges release into dynamic edge categories with reputation counts instead of storing every event.",
+    "python3 -m py_compile scripts/wellness_check.py passed."
+  ],
+  "change_files": [
+    "scripts/wellness_check.py",
+    "docs/shared/agent-start-packet.md",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-06_python_transmutation_wellness_report.json"
+  ],
+  "change_intent": "process_only"
+}

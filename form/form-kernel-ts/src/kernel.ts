@@ -28,6 +28,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { join, relative, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
 import { BP_TABLE } from "./bp_table";
 
@@ -85,6 +86,7 @@ export const RBasic = {
   COMPARE: 13,
   LOGIC: 14,
   ACCESS: 15,           // read property / field
+  MATCH: 19,            // match/switch by substrate key
   METHOD: 27,           // transform on a cell-like value
   FNDEF: 31,
   FNCALL: 32,
@@ -201,6 +203,7 @@ export const RCmp = { EQ: 1, NE: 2, LT: 3, LE: 4, GT: 5, GE: 6 } as const;
 export const RLogic = { AND: 1, OR: 2, NOT: 3 } as const;
 export const RCond = { IF_THEN: 1, IF_THEN_ELSE: 2 } as const;
 export const RBlock = { DO: 1, SEQUENCE: 2, LET: 3 } as const;
+export const RMatch = { SWITCH: 1 } as const;
 
 // NameID — interned identifier handle. The same number used to encode a
 // name trivial's NodeID instance is what every runtime name-lookup
@@ -233,6 +236,63 @@ function nodeFromKey(key: string): NodeID {
     .split(".")
     .map((part) => Number(part));
   return { pkg, level, type, inst };
+}
+
+function sourceInventorySkipSet(value: Value): Set<string> {
+  const skip = new Set<string>();
+  if (value.kind !== "list") return skip;
+  for (const item of value.list) {
+    if (item.kind === "str" && item.str !== "") skip.add(item.str);
+  }
+  return skip;
+}
+
+function countTextLines(path: string): number {
+  try {
+    const body = readFileSync(path);
+    if (body.length === 0) return 0;
+    let lines = 0;
+    for (const byte of body) {
+      if (byte === 10) lines += 1;
+    }
+    if (body[body.length - 1] !== 10) lines += 1;
+    return lines;
+  } catch {
+    return -1;
+  }
+}
+
+function sourceInventoryRow(relPath: string, loc: number): Value {
+  return {
+    kind: "list",
+    list: [
+      { kind: "str", str: relPath },
+      { kind: "int", int: loc },
+    ],
+  };
+}
+
+function sourceInventoryWalk(
+  rootAbs: string,
+  dir: string,
+  suffix: string,
+  skip: Set<string>,
+  rows: Value[],
+): void {
+  const entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  for (const entry of entries) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (skip.has(entry.name)) continue;
+      sourceInventoryWalk(rootAbs, path, suffix, skip, rows);
+    } else if (entry.isFile()) {
+      if (suffix !== "" && !entry.name.endsWith(suffix)) continue;
+      const relPath = relative(rootAbs, path).split(/[\\/]+/).join("/");
+      rows.push(sourceInventoryRow(relPath, countTextLines(path)));
+    }
+  }
 }
 
 // Pack a NodeID into a single number for fast Map keys when pkg ≤ 255 and
@@ -284,6 +344,10 @@ export class Trace {
   choiceAttempts = 0;
   choiceSuccesses = 0;
   choiceFailures = 0;
+  matchLookups = 0;
+  matchHits = 0;
+  matchDefaults = 0;
+  matchMisses = 0;
 
   private static encodeKey(ty: number, inst: number): number {
     // ty * 2^32 + inst — fits in JS number safely for our slot ranges.
@@ -309,6 +373,22 @@ export class Trace {
     this.nativeCounts.set(name, (this.nativeCounts.get(name) ?? 0) + 1);
   }
 
+  recordMatchLookup(): void {
+    this.matchLookups++;
+  }
+
+  recordMatchHit(): void {
+    this.matchHits++;
+  }
+
+  recordMatchDefault(): void {
+    this.matchDefaults++;
+  }
+
+  recordMatchMiss(): void {
+    this.matchMisses++;
+  }
+
   static armName(armTy: number): string {
     switch (armTy) {
       case RBasic.BLOCK: return "BLOCK";
@@ -316,6 +396,7 @@ export class Trace {
       case RBasic.MATH: return "MATH";
       case RBasic.COMPARE: return "COMPARE";
       case RBasic.LOGIC: return "LOGIC";
+      case RBasic.MATCH: return "MATCH";
       case RBasic.IDENT: return "IDENT";
       case RBasic.FNDEF: return "FNDEF";
       case RBasic.FNCALL: return "FNCALL";
@@ -419,6 +500,11 @@ export class Trace {
           case RBlock.LET: variant = "LET"; break;
         }
         break;
+      case RBasic.MATCH:
+        switch (armInst) {
+          case RMatch.SWITCH: variant = "SWITCH"; break;
+        }
+        break;
     }
     return variant ? `${base}.${variant}` : base;
   }
@@ -471,8 +557,23 @@ export class Trace {
         this.choiceAttempts > 0
           ? this.choiceSuccesses / this.choiceAttempts
           : 0,
+      match_lookups: this.matchLookups,
+      match_hits: this.matchHits,
+      match_defaults: this.matchDefaults,
+      match_misses: this.matchMisses,
     };
   }
+}
+
+interface SwitchArm {
+  pattern: NodeID;
+  body: NodeID;
+}
+
+interface SwitchTable {
+  cases: Map<string, NodeID>;
+  dynamicArms: SwitchArm[];
+  defaultBody?: NodeID;
 }
 
 // Native-attribution category constructors. Each names the Form-shape a
@@ -613,6 +714,7 @@ export class Kernel {
   private walkCacheHits = 0;
   private walkCacheMisses = 0;
   private activeRoots: NodeID[] = [];
+  private framebufferRoots: NodeID[] = [];
 
   // String table — substrate strings + identifier names share this table.
   // A name's NodeID.inst is its index into `strs`.
@@ -658,6 +760,14 @@ export class Kernel {
   // NodeID, so re-defining the same body re-uses the cached compile.
   // Indexed by stringified NodeID tuple (pkg.level.type.inst).
   jitCompiled = new Map<string, (frame: Frame) => Value>();
+  jitFailedReason = new Map<string, string>();
+  jitDispatchMisses = new Map<string, number>();
+
+  // SWITCH recipe cache — source-level BML/Form `match` lowers to
+  // RBasic.MATCH/RMatch.SWITCH. Literal arms are direct NodeID→body edges,
+  // keyed by the substrate identity of the scrutinee value. The cache key is
+  // the match recipe's own content-addressed NodeID.
+  switchTables = new Map<string, SwitchTable>();
 
   // jitCompileHook — pluggable Form→host-asm compiler. Installed at
   // startup by main.ts via compiler.ts. The kernel holds the hook
@@ -916,6 +1026,7 @@ export class Kernel {
         this.byID.delete(key);
         this.sourceAttr.delete(key);
         this.walkCache.delete(key);
+        this.switchTables.delete(key);
         released += 1;
       }
     }
@@ -931,6 +1042,7 @@ export class Kernel {
     this.strs.length = strLen;
     this.nextInst = next;
     this.walkCache.clear();
+    this.switchTables.clear();
     return released;
   }
 
@@ -1013,6 +1125,7 @@ export class Kernel {
         this.byID.delete(key);
         this.sourceAttr.delete(key);
         this.walkCache.delete(key);
+        this.switchTables.delete(key);
         freed += 1;
       }
     }
@@ -1973,6 +2086,22 @@ export class Kernel {
         return { kind: "null" };
       }
     });
+    // source_inventory(root, suffix, skip-dir-names) — generic source
+    // inventory primitive. Returns rows of [relative-path, line-count].
+    // Form owns classification and aggregation; the kernel only exposes
+    // filesystem walking and text line counts as primitive observation.
+    this.registerNative("source_inventory", catCall(), (_k, args) => {
+      try {
+        const rootAbs = resolve(argStr(args, 0));
+        const suffix = argStr(args, 1);
+        const skip = sourceInventorySkipSet(args[2] ?? { kind: "null" });
+        const rows: Value[] = [];
+        sourceInventoryWalk(rootAbs, rootAbs, suffix, skip, rows);
+        return { kind: "list", list: rows };
+      } catch {
+        return { kind: "null" };
+      }
+    });
     // random_bytes(n) — open the doorway. Reads n bytes from
     // /dev/urandom every call. Different per invocation, per kernel
     // process. lc-divergence-is-the-doorway: this native intentionally
@@ -2130,12 +2259,59 @@ export class Kernel {
       if (v === undefined || v.kind !== "closure") {
         return { kind: "int", int: -1 };
       }
-      const compiled = k.jitCompileHook(k, v.closure.body);
-      k.jitCompiled.set(
-        `${v.closure.body.pkg}.${v.closure.body.level}.${v.closure.body.type}.${v.closure.body.inst}`,
-        compiled,
-      );
+      const bodyKey = `${v.closure.body.pkg}.${v.closure.body.level}.${v.closure.body.type}.${v.closure.body.inst}`;
+      let compiled: (frame: Frame) => Value;
+      try {
+        compiled = k.jitCompileHook(k, v.closure.body);
+      } catch (err) {
+        k.jitFailedReason.set(bodyKey, err instanceof Error ? err.message : String(err));
+        return { kind: "int", int: 0 };
+      }
+      k.jitCompiled.set(bodyKey, compiled);
       return { kind: "int", int: 1 };
+    });
+    // jit-stats -> list(kind, body-nodeid, count, detail). Sibling observer
+    // shape with Go/Rust; TS currently reports compiled bodies.
+    this.registerNative("jit-stats", catWitness(), (k, _args) => {
+      const rows: Value[] = Array.from(k.jitCompiled.keys()).map((body) => ({
+          kind: "list",
+          list: [
+            { kind: "str", str: "compiled" },
+            { kind: "str", str: body },
+            { kind: "int", int: 0 },
+            { kind: "str", str: "" },
+          ],
+        }) as Value);
+      for (const [body, reason] of k.jitFailedReason) {
+        rows.push({
+          kind: "list",
+          list: [
+            { kind: "str", str: "compile-failed" },
+            { kind: "str", str: body },
+            { kind: "int", int: 1 },
+            { kind: "str", str: reason },
+          ],
+        });
+      }
+      for (const [body, count] of k.jitDispatchMisses) {
+        rows.push({
+          kind: "list",
+          list: [
+            { kind: "str", str: "dispatch-miss" },
+            { kind: "str", str: body },
+            { kind: "int", int: count },
+            { kind: "str", str: "compiled artifact guard fell back to walker" },
+          ],
+        });
+      }
+      rows.sort((a, b) => {
+        const al = (a as { kind: "list"; list: Value[] }).list;
+        const bl = (b as { kind: "list"; list: Value[] }).list;
+        const ak = (al[0] as { str: string }).str + ":" + (al[1] as { str: string }).str;
+        const bk = (bl[0] as { str: string }).str + ":" + (bl[1] as { str: string }).str;
+        return ak.localeCompare(bk);
+      });
+      return { kind: "list", list: rows };
     });
     // seeded_bytes(seed, count) — deterministic LCG byte stream.
     // Same (seed, count) → byte-identical output across Go / Rust / TS.
@@ -2554,6 +2730,8 @@ export class Kernel {
         line: argInt(args, 3),
         col: argInt(args, 4),
       });
+      k.activeRoots.push(nid);
+      k.framebufferRoots.push(nid);
       return { kind: "nodeid", nodeid: nid };
     });
     this.registerNative("node_category", catWitness(), (k, args) => ({
@@ -2600,10 +2778,92 @@ export class Kernel {
     });
     this.registerNative("framebuffer-events", catWitness(), (k, _args) => ({
       kind: "list",
-      list: Array.from(k.sourceAttr.keys()).map((key) => {
-        return { kind: "nodeid", nodeid: nodeFromKey(key) } as Value;
-      }),
+      list: k.framebufferRoots
+        .filter((nid) => k.sourceAttr.has(nodeKey(nid)))
+        .map((nid) => ({ kind: "nodeid", nodeid: nid }) as Value),
     }));
+    this.registerNative("framebuffer-event-rows", catWitness(), (k, _args) => {
+      const rows = k.framebufferRoots
+        .filter((nid) => k.sourceAttr.has(nodeKey(nid)))
+        .map((nid) => {
+          const loc = k.sourceAttr.get(nodeKey(nid))!;
+          const children = k.children(nid);
+          const seqNode = children[0];
+          const seq =
+            seqNode !== undefined &&
+            seqNode.level === Level.TRIVIAL &&
+            seqNode.type === Triv.INT
+              ? k.trivialValue(seqNode)
+              : { kind: "int", int: 0 } as Value;
+          return {
+            seq: seq.kind === "int" ? seq.int : 0,
+            nid,
+            loc,
+            children,
+          };
+        })
+        .sort((a, b) => a.seq - b.seq || nodeKey(a.nid).localeCompare(nodeKey(b.nid)));
+      return {
+        kind: "list",
+        list: rows.map((row) => ({
+          kind: "list",
+          list: [
+            { kind: "int", int: row.seq },
+            { kind: "str", str: k.strs[row.loc.file] ?? "" },
+            { kind: "int", int: row.loc.line },
+            { kind: "int", int: row.loc.col },
+            { kind: "str", str: nodeKey(row.nid) },
+            {
+              kind: "list",
+              list: row.children.map((child) => ({ kind: "str", str: nodeKey(child) }) as Value),
+            },
+            {
+              kind: "list",
+              list: row.children.map((child) => ({
+                kind: "str",
+                str: child.level === Level.TRIVIAL ? k.render(k.trivialValue(child)) : nodeKey(child),
+              }) as Value),
+            },
+          ],
+        }) as Value),
+      };
+    });
+    this.registerNative("framebuffer-counts", catWitness(), (k, _args) => {
+      const counts = new Map<string, { file: string; line: number; col: number; count: number }>();
+      for (const nid of k.framebufferRoots) {
+        const loc = k.sourceAttr.get(nodeKey(nid));
+        if (!loc) continue;
+        const file = k.strs[loc.file] ?? "";
+        const key = `${file}\0${loc.line}\0${loc.col}`;
+        const row = counts.get(key) ?? { file, line: loc.line, col: loc.col, count: 0 };
+        row.count += 1;
+        counts.set(key, row);
+      }
+      const rows = Array.from(counts.values()).sort((a, b) => {
+        if (a.count !== b.count) return b.count - a.count;
+        const fileOrder = a.file.localeCompare(b.file);
+        if (fileOrder !== 0) return fileOrder;
+        if (a.line !== b.line) return a.line - b.line;
+        return a.col - b.col;
+      });
+      return {
+        kind: "list",
+        list: rows.map((row) => ({
+          kind: "list",
+          list: [
+            { kind: "str", str: row.file },
+            { kind: "int", int: row.line },
+            { kind: "int", int: row.col },
+            { kind: "int", int: row.count },
+          ],
+        }) as Value),
+      };
+    });
+    this.registerNative("framebuffer-clear", catWitness(), (k, _args) => {
+      k.sourceAttr.clear();
+      k.framebufferRoots = [];
+      return { kind: "null" };
+    });
     // node_eq — structural compare of two NodeIDs by their four
     // components. Sibling parity with Go's node_eq + Rust's node_eq.
     this.registerNative("node_eq", catWitness(), (_k, args) => {
@@ -3441,6 +3701,7 @@ function isParallelPure(k: Kernel, node: NodeID, seen: Set<string>): boolean {
     case RBasic.LOGIC:
     case RBasic.COND:
     case RBasic.LIST:
+    case RBasic.MATCH:
       return k.children(node).every((child) => isParallelPure(k, child, seen));
     default:
       return false;
@@ -3483,6 +3744,10 @@ export function walk(k: Kernel, node: NodeID, frame: Frame): Value {
       return walkCompare(k, cat.inst, kids, frame);
     case RBasic.LOGIC:
       return walkLogic(k, cat.inst, kids, frame);
+    case RBasic.MATCH:
+      return cat.inst === RMatch.SWITCH
+        ? walkMatchSwitch(k, node, kids, frame)
+        : { kind: "nodeid", nodeid: node };
     case RBasic.COND:
       return walkCond(k, cat.inst, kids, frame);
     case RBasic.BLOCK:
@@ -3643,6 +3908,104 @@ function walkChoice(
     }
   }
   throw new Error(`choice: no arm matches constructor ${scrutinee.ctor_name}`);
+}
+
+function isSwitchDefaultPattern(k: Kernel, pattern: NodeID): boolean {
+  if (pattern.level === Level.TRIVIAL) return false;
+  const cat = k.category(pattern);
+  return cat.type === RBasic.IDENT && k.nameStr(k.identID(pattern)) === "_";
+}
+
+function switchTableFor(k: Kernel, node: NodeID, kids: readonly NodeID[]): SwitchTable {
+  const tableKey = nodeKey(node);
+  const cached = k.switchTables.get(tableKey);
+  if (cached !== undefined) return cached;
+  const table: SwitchTable = {
+    cases: new Map<string, NodeID>(),
+    dynamicArms: [],
+  };
+  for (let i = 1; i < kids.length; i += 2) {
+    const pattern = kids[i]!;
+    const body = kids[i + 1]!;
+    if (isSwitchDefaultPattern(k, pattern)) {
+      table.defaultBody = body;
+    } else if (pattern.level === Level.TRIVIAL) {
+      table.cases.set(nodeKey(pattern), body);
+    } else {
+      table.dynamicArms.push({ pattern, body });
+    }
+  }
+  k.switchTables.set(tableKey, table);
+  return table;
+}
+
+function switchKeyFromValue(k: Kernel, value: Value): NodeID | undefined {
+  switch (value.kind) {
+    case "null":
+      return k.internTrivialNull();
+    case "int":
+      return k.internTrivialInt(value.int);
+    case "i8":
+      return k.internTrivialInt8(value.int);
+    case "i16":
+      return k.internTrivialInt16(value.int);
+    case "u8":
+      return k.internTrivialUint8(value.int);
+    case "u16":
+      return k.internTrivialUint16(value.int);
+    case "u32":
+      return k.internTrivialUint32(value.int);
+    case "i64":
+      return k.internTrivialInt64(value.bigint);
+    case "u64":
+      return k.internTrivialUint64(value.bigint);
+    case "f32":
+      return k.internTrivialFloat32(value.float);
+    case "f64":
+      return k.internTrivialFloat64(value.float);
+    case "str":
+      return k.internString(value.str);
+    case "bool":
+      return k.internTrivialBool(value.bool);
+    case "nodeid":
+      return value.nodeid;
+    default:
+      return undefined;
+  }
+}
+
+function walkMatchSwitch(
+  k: Kernel,
+  node: NodeID,
+  kids: readonly NodeID[],
+  frame: Frame,
+): Value {
+  if (kids.length < 1 || (kids.length - 1) % 2 !== 0) {
+    throw new Error("match: SWITCH expects scrutinee plus pattern/body pairs");
+  }
+  k.trace?.recordMatchLookup();
+  const scrutinee = walk(k, kids[0]!, frame);
+  const table = switchTableFor(k, node, kids);
+  const key = switchKeyFromValue(k, scrutinee);
+  if (key !== undefined) {
+    const body = table.cases.get(nodeKey(key));
+    if (body !== undefined) {
+      k.trace?.recordMatchHit();
+      return walk(k, body, frame);
+    }
+  }
+  for (const arm of table.dynamicArms) {
+    if (valueEqual(walk(k, arm.pattern, frame), scrutinee)) {
+      k.trace?.recordMatchHit();
+      return walk(k, arm.body, frame);
+    }
+  }
+  if (table.defaultBody !== undefined) {
+    k.trace?.recordMatchDefault();
+    return walk(k, table.defaultBody, frame);
+  }
+  k.trace?.recordMatchMiss();
+  throw new Error(`match: exhausted without a matching arm for ${k.render(scrutinee)}`);
 }
 
 function expectInt(v: Value, op: string): number {
@@ -3920,6 +4283,10 @@ function valueEqual(a: Value, b: Value): boolean {
       return a.str === (b as { str: string }).str;
     case "bool":
       return a.bool === (b as { bool: boolean }).bool;
+    case "list": {
+      const bl = (b as { list: Value[] }).list;
+      return a.list.length === bl.length && a.list.every((item, idx) => valueEqual(item, bl[idx]!));
+    }
     case "nodeid": {
       const bn = (b as { nodeid: NodeID }).nodeid;
       return (
@@ -4217,8 +4584,17 @@ function invokeClosure(
   // via (jit_compile ...), dispatch through the host-JIT'd function
   // instead of walking the recipe tree. Form recipe stays canonical
   // truth; the compiled fn is opt-in bootstrap to host speed.
-  const compiled = k.jitCompiled.get(nodeIDKey(closure.body));
-  if (compiled !== undefined) return compiled(callFrame);
+  const bodyKey = nodeIDKey(closure.body);
+  const compiled = k.jitCompiled.get(bodyKey);
+  if (compiled !== undefined) {
+    try {
+      return compiled(callFrame);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      k.jitFailedReason.set(bodyKey, reason);
+      k.jitDispatchMisses.set(bodyKey, (k.jitDispatchMisses.get(bodyKey) ?? 0) + 1);
+    }
+  }
   return walk(k, closure.body, callFrame);
 }
 

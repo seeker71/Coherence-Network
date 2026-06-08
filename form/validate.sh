@@ -31,7 +31,7 @@ HOST_STACK_KB="262144"
 
 # --- build compiled sibling kernels if stale -----------------------------
 build_go() {
-    if [[ ! -x "$GO_BIN" || "$GO_DIR/main.go" -nt "$GO_BIN" || "$GO_DIR/numeric_bench.go" -nt "$GO_BIN" || "$GO_DIR/bp_table.go" -nt "$GO_BIN" ]]; then
+    if [[ ! -x "$GO_BIN" ]] || find "$GO_DIR" -name '*.go' -newer "$GO_BIN" -print -quit | grep -q .; then
         echo "  building go kernel..." >&2
         (cd "$GO_DIR" && go build -o bin-go .)
     fi

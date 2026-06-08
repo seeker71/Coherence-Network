@@ -1,9 +1,8 @@
 """Tests for /api/utils/coherence_weight — the first transmuted endpoint.
 
-The body of this endpoint runs as a Form recipe through form-kernel-rust
-when available, with Python fallback when the binary is missing. Either
-runtime returns the same integer for the same inputs — guaranteed by
-form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh.
+The body of this endpoint runs as a Form recipe through a Form-kernel carrier.
+The canonical source example and kernel siblings return the same integer for the
+same inputs — guaranteed by form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh.
 
 The test verifies:
   - the route is wired and returns 200 with the expected shape
@@ -19,7 +18,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import coherence_weight_py
 from app.services.form_kernel_bridge import (
     inline_available,
     kernel_available,
@@ -53,23 +51,11 @@ class TestCoherenceWeightEndpoint:
         assert data["weight"] == 16185
         assert data["threshold"] == 50
         assert data["values"] == [72, 38, 91, 55, 28, 67, 84, 45, 95, 12]
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
-
-    @pytest.mark.anyio
-    async def test_python_fallback_agrees_with_recipe(self):
-        """The Python body (fallback) returns the same integer as the recipe.
-
-        This is the parity claim made directly inside the test, without
-        the HTTP layer — confirms the function in utils.py is what the
-        recipe computes.
-        """
-        values = [72, 38, 91, 55, 28, 67, 84, 45, 95, 12]
-        threshold = 50
-        assert coherence_weight_py(values, threshold) == 16185
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_custom_inputs(self, client: AsyncClient):
-        """Custom values + threshold still pass through the kernel/fallback."""
+        """Custom values + threshold still pass through the kernel."""
         res = await client.get(
             "/api/utils/coherence_weight",
             params={"values": "10,20,30,40,50", "threshold": 25},
@@ -103,27 +89,26 @@ class TestCoherenceWeightEndpoint:
         """The endpoint's .fk resolves on disk — the kernel-served precondition.
 
         The prod regression this guards: the kernel is present (inline PyO3 or
-        the binary) but the recipe .fk is absent from the image, so the bridge
-        silently degrades to python-fallback. load_recipe succeeding is exactly
-        what flips the endpoint from python-fallback to kernel-served. CI may
-        have no kernel built, so we assert the recipe FILE resolves (the part
-        that fails when an image drops the .fk) rather than requiring the kernel.
+        the binary) but the recipe .fk is absent from the image. That must now
+        fail loudly rather than silently executing Python. CI may have no kernel
+        built, so we assert the recipe FILE resolves (the part that fails when
+        an image drops the .fk) rather than requiring the kernel.
         """
         # Does not raise FileNotFoundError → the recipe is where the bridge looks.
         source = load_recipe("endpoint_coherence_weight_demo.fk")
         assert source.strip().startswith("(do"), "recipe is a (do ...) form"
 
     @pytest.mark.anyio
-    async def test_when_kernel_present_endpoint_is_not_python_fallback(
+    async def test_when_kernel_present_endpoint_is_kernel_served(
         self, client: AsyncClient
     ):
         """When a kernel is reachable AND the recipe resolves, serve kernel-side.
 
         This is the direct guard for the production gap that motivated the fix:
         kernel loaded (/api/health shows inline) but endpoints served
-        python-fallback because the recipe was missing from the image. If no
-        kernel is built in this env, the precondition is absent and we skip —
-        the test_recipe_resolves test above still catches the missing-recipe
+        Python because the recipe was missing from the image. If no kernel is
+        built in this env, the precondition is absent and we skip — the
+        test_recipe_resolves test above still catches the missing-recipe
         regression without a kernel.
         """
         if not (inline_available() or kernel_available()):
@@ -131,10 +116,6 @@ class TestCoherenceWeightEndpoint:
         res = await client.get("/api/utils/coherence_weight")
         assert res.status_code == 200, res.text
         runtime = res.json()["runtime"]
-        assert runtime != "python-fallback", (
-            f"kernel is reachable and the recipe resolves, yet the endpoint "
-            f"served {runtime!r} — the recipe is not reaching the kernel path"
-        )
         assert runtime in ("inline", "subprocess")
 
     @pytest.mark.anyio

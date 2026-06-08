@@ -1,9 +1,10 @@
 """Transmuted /api/utils grounded-cost and grounded-value endpoints (bodies run as Form recipes).
 
-Bodies live as Form recipes; the route prefers the native kernel via
-``serve_via_kernel`` and falls back to the value-identical Python ``_py``
-function. Routes decorate the shared ``/utils`` router from
-``app.routers.kernel_shared`` so every path stays ``/api/utils/...``.
+Bodies live as Form recipes; the route requires the native kernel via
+``serve_via_kernel``. This module owns request binding and response shaping;
+the endpoint reductions live in the committed Form recipes. Routes decorate
+the shared ``/utils`` router from ``app.routers.kernel_shared`` so every path
+stays ``/api/utils/...``.
 """
 from __future__ import annotations
 
@@ -22,76 +23,35 @@ from app.routers.kernel_shared import (
 # ---------------------------------------------------------------------------
 # grounded_cost — the GROUNDED-COST REDUCTION of compute_idea_metrics.
 #
-# The richest deferred slice of grounded_idea_metrics_service.compute_idea_metrics,
+# The richest residual slice of grounded_idea_metrics_service.compute_idea_metrics,
 # falling now that the float-field fold (idea_grounded_cost_sum), per-record
 # arithmetic, and structure-access are all banked. compute_idea_metrics takes
 # SIX pre-fetched collections, FILTERS each by idea_id, and computes many
-# outputs. The HONEST DECOMPOSITION: filtering is cheap host-side
-# collection-narrowing (a separate capability the host already does via
-# _filter_by_idea_id / _filter_commits_by_idea); the NUMERIC REDUCTION over the
-# already-relevant records is the kernel computation. This route serves that
-# reduction. Given the already-filtered records for one idea it folds:
+# outputs. Current decomposition: filtering is still resolved before this recipe
+# via _filter_by_idea_id / _filter_commits_by_idea; the NUMERIC REDUCTION over
+# the already-relevant records is the kernel computation. Filtering is not
+# protected territory — it is next native work once the route grammar carries the
+# collection query cleanly. Given the already-filtered records for one idea it folds:
 #   spec_actual_cost_sum    = sum(s["actual_cost"]    for s in specs)
 #   spec_estimated_cost_sum = sum(s["estimated_cost"] for s in specs)
-#   runtime_cost            = the single runtime_cost_estimate (None→0.0 host-side)
+#   runtime_cost            = the single runtime_cost_estimate (None→0.0 before dispatch)
 #   commit_cost_sum         = sum(clamp(0.10 + files*0.15 + lines*0.002, 0.05, 10.0)
 #                                 for c in commits)   — _estimate_commit_cost_sum EXACTLY
 #   lineage_estimated_cost  = sum(l["estimated_cost"] for l in links)
 #   computed_actual_cost    = spec_actual_cost_sum + runtime_cost + commit_cost_sum
-# The seam: the filtering/fetching and six-collection join are host
-# orchestration; the cost reduction is the kernel computation. The function's
-# "deep gate" was never a missing kernel capability — it is host orchestration
-# AROUND now-kernel-served reductions.
+# The residual work: filtering/fetching and the six-collection join still happen
+# before this recipe. The cost reduction is already the kernel computation; the
+# surrounding orchestration is visible backlog, not a stopping point.
 #
 # Surface: GET with parallel-array query params (the established list-route
 # shape). spec_actual_costs / spec_estimated_costs are parallel per-spec arrays;
 # commit_change_files / commit_lines_added are parallel per-commit arrays;
 # lineage_estimated_costs is the per-link array; runtime_cost is the scalar the
-# host already resolved (None→0.0). A real call site hands the route
+# caller already resolved (None→0.0). A real call site hands the route
 # already-filtered dicts/models; the parallel arrays keep the GET surface simple
 # while exercising the real list-of-record marshalling. The bridge marshals each
 # reconstructed record list to a kernel list-of-records; the recipe folds.
 # ---------------------------------------------------------------------------
-
-
-def _grounded_cost_py(
-    specs: list[dict],
-    commits: list[dict],
-    links: list[dict],
-    runtime_cost: float,
-) -> list[float]:
-    """Python fallback — value-identical to endpoint_grounded_cost_demo.fk.
-
-    Mirrors grounded_idea_metrics_service.compute_idea_metrics' cost reduction
-    and _estimate_commit_cost_sum's clamp EXACTLY. Seeds float accumulators so
-    every fold step walks (float, float), matching the recipe's 0.0 seeds.
-    """
-    spec_actual_cost_sum = 0.0
-    for s in specs:
-        spec_actual_cost_sum = spec_actual_cost_sum + float(s.get("actual_cost", 0.0) or 0.0)
-    spec_estimated_cost_sum = 0.0
-    for s in specs:
-        spec_estimated_cost_sum = spec_estimated_cost_sum + float(s.get("estimated_cost", 0.0) or 0.0)
-    commit_cost_sum = 0.0
-    for c in commits:
-        files = max(0, int(c.get("change_files", 0) or 0))
-        lines = max(0, int(c.get("lines_added", 0) or 0))
-        cost = 0.10 + files * 0.15 + lines * 0.002
-        cost = max(0.05, min(10.0, cost))
-        commit_cost_sum = commit_cost_sum + cost
-    lineage_estimated_cost = 0.0
-    for l in links:
-        lineage_estimated_cost = lineage_estimated_cost + float(l.get("estimated_cost", 0.0) or 0.0)
-    computed_actual_cost = spec_actual_cost_sum + runtime_cost + commit_cost_sum
-    return [
-        spec_actual_cost_sum,
-        spec_estimated_cost_sum,
-        runtime_cost,
-        commit_cost_sum,
-        lineage_estimated_cost,
-        computed_actual_cost,
-    ]
-
 
 class GroundedCostResponse(BaseModel):
     """GET /api/utils/grounded_cost response — the grounded-cost reduction outputs."""
@@ -104,7 +64,7 @@ class GroundedCostResponse(BaseModel):
         float, Field(description="Summed estimated_cost across the specs = sum(s['estimated_cost'])")
     ]
     runtime_cost: Annotated[
-        float, Field(description="The idea's runtime_cost_estimate (None resolved to 0.0 host-side)")
+        float, Field(description="The idea's runtime_cost_estimate (None resolved to 0.0 before dispatch)")
     ]
     commit_cost_sum: Annotated[
         float,
@@ -125,7 +85,7 @@ class GroundedCostResponse(BaseModel):
     lineage_count_in: Annotated[int, Field(description="Number of input lineage records, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -136,18 +96,18 @@ class GroundedCostResponse(BaseModel):
     description=(
         "Pure-computation endpoint, body transmuted to a Form recipe — the "
         "GROUNDED-COST REDUCTION of grounded_idea_metrics_service."
-        "compute_idea_metrics, the richest deferred slice now falling. Given one "
+        "compute_idea_metrics, the richest residual slice now falling. Given one "
         "idea's ALREADY-FILTERED records it folds: spec_actual_cost_sum, "
         "spec_estimated_cost_sum, the commit_cost_sum "
         "(sum(max(0.05, min(10.0, 0.10 + files*0.15 + lines*0.002)) per commit) "
         "— _estimate_commit_cost_sum EXACTLY, clamp included), "
         "lineage_estimated_cost, and composes computed_actual_cost = "
-        "spec_actual_cost_sum + runtime_cost + commit_cost_sum. The honest seam: "
-        "FILTERING the six collections by idea_id is cheap host-side "
-        "collection-narrowing (the host already does it) — the kernel runs the "
-        "numeric reduction. The bridge marshals each reconstructed record list to "
+        "spec_actual_cost_sum + runtime_cost + commit_cost_sum. Filtering the six "
+        "collections by idea_id is currently resolved before dispatch; that is "
+        "visible next native work, while the kernel already runs the numeric "
+        "reduction. The bridge marshals each reconstructed record list to "
         "a kernel list-of-records and the recipe folds via the head/tail fold "
-        "with float accumulators and a min2/max2 clamp. Kernel-or-fallback via "
+        "with float accumulators and a min2/max2 clamp. Kernel-only via "
         "serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate."
     ),
 )
@@ -174,7 +134,7 @@ async def grounded_cost(
     ] = "5.25,1.5",
     runtime_cost: Annotated[
         float,
-        Query(description="The idea's runtime_cost_estimate, already None→0.0 resolved host-side"),
+        Query(description="The idea's runtime_cost_estimate, already None→0.0 resolved before dispatch"),
     ] = 2.25,
 ) -> GroundedCostResponse:
     # Reconstruct the already-filtered record lists from the parallel query
@@ -213,7 +173,6 @@ async def grounded_cost(
             "links": links,
             "runtime_cost": runtime_cost,
         },
-        fallback=lambda: _grounded_cost_py(specs, commits, links, runtime_cost),
         parse=_coerce_float_list,
     )
     return GroundedCostResponse(
@@ -235,9 +194,8 @@ async def grounded_cost(
 # compute_idea_metrics. The SECOND and FINAL numeric slice; with the grounded-
 # COST reduction already serving kernel-side (/api/utils/grounded_cost, PR
 # #2331) this completes compute_idea_metrics' COMPUTATION kernel-native. What
-# remains host-side after this is host orchestration BY DESIGN — collection
-# filtering + the boolean-presence derivations — not a missing kernel
-# capability.
+# remains in CPython after this is visible migration work — collection filtering
+# plus boolean-presence derivations — not protected architecture.
 #
 # THE HONEST DECOMPOSITION. compute_idea_metrics derives three families of fact:
 #   (a) NUMERIC REDUCTIONS — max-of-signals, a guarded ratio with a min-clamp, a
@@ -246,10 +204,10 @@ async def grounded_cost(
 #   (b) BOOLEAN / PRESENCE LEVELS — has_specs_with_data, has_lineage,
 #       has_friction. Each is an any(...)-over-records boolean-OR fold or a len>0
 #       presence ladder resolving to a 3-level {1.0, 0.5/0.3, 0.0} value.
-#       Booleans-over-collections is the filtering-adjacent capability; the HOST
-#       resolves these to a float level and passes it in.
-#   (c) the FILTERING of the six collections by idea_id — cheap host-side
-#       collection-narrowing the host already does (_filter_by_idea_id).
+#       Booleans-over-collections is the filtering-adjacent capability; this
+#       route currently receives the resolved float level.
+#   (c) the FILTERING of the six collections by idea_id — currently resolved
+#       before dispatch (_filter_by_idea_id).
 #
 # Given the host-derived scalars for one idea the recipe computes EXACTLY what
 # grounded_idea_metrics_service.compute_idea_metrics computes (verified against
@@ -269,65 +227,11 @@ async def grounded_cost(
 # Weights _WEIGHT_SPECS=0.30, _WEIGHT_RUNTIME=0.25, _WEIGHT_LINEAGE=0.25,
 # _WEIGHT_COMMITS=0.10, _WEIGHT_FRICTION=0.10; the clamp [0.05, 0.95] — never
 # fully certain, never zero. usage_revenue = runtime_event_count *
-# _REVENUE_PER_REQUEST (0.001) is resolved host-side; the kernel receives it as
-# a scalar. The seam: the kernel keeps the most NUMERIC computation; the host
-# keeps the booleans-over-records and the filtering — both held host-side BY
-# DESIGN. Kernel-or-fallback via serve_via_kernel; three-way (CPython/TS/Rust)
-# value-parity is the gate.
+# _REVENUE_PER_REQUEST (0.001) is resolved before dispatch; the kernel receives
+# it as a scalar. The residual work is booleans-over-records and filtering. They
+# are named so they can move native next, not so they stay outside. Kernel-only
+# via serve_via_kernel; three-way (CPython/TS/Rust) value-parity is the gate.
 # ---------------------------------------------------------------------------
-
-
-def _grounded_value_py(
-    lineage_measured_value: float,
-    usage_revenue: float,
-    spec_actual_value_sum: float,
-    spec_estimated_cost_sum: float,
-    lineage_estimated_cost: float,
-    spec_potential_value_sum: float,
-    runtime_event_count: int,
-    commit_count: int,
-    has_specs_with_data: float,
-    has_lineage: float,
-    has_friction: float,
-) -> list[float]:
-    """Python fallback — value-identical to endpoint_grounded_value_demo.fk.
-
-    Mirrors grounded_idea_metrics_service.compute_idea_metrics' value /
-    realization / confidence reduction EXACTLY: the max-of-signals, the guarded
-    ratio with the min(_, 1.0) ceiling, the count→level threshold arithmetic
-    with the zero-guard, the five-term weighted sum, and the [0.05, 0.95] clamp.
-    The weights and clamp bounds are read from the service constants.
-    """
-    computed_actual_value = max(
-        lineage_measured_value, usage_revenue, spec_actual_value_sum
-    )
-    computed_estimated_cost = max(spec_estimated_cost_sum, lineage_estimated_cost)
-    value_realization_pct = 0.0
-    if spec_potential_value_sum > 0:
-        value_realization_pct = min(
-            computed_actual_value / spec_potential_value_sum, 1.0
-        )
-    has_runtime_data = 0.0
-    if runtime_event_count > 0:
-        has_runtime_data = min(1.0, runtime_event_count / 10.0)
-    has_commits = 0.0
-    if commit_count > 0:
-        has_commits = min(1.0, commit_count / 5.0)
-    confidence_raw = (
-        has_specs_with_data * 0.30
-        + has_runtime_data * 0.25
-        + has_lineage * 0.25
-        + has_commits * 0.10
-        + has_friction * 0.10
-    )
-    computed_confidence = max(0.05, min(0.95, confidence_raw))
-    return [
-        computed_actual_value,
-        computed_estimated_cost,
-        value_realization_pct,
-        computed_confidence,
-    ]
-
 
 class GroundedValueResponse(BaseModel):
     """GET /api/utils/grounded_value response — the value/realization/confidence outputs."""
@@ -360,7 +264,7 @@ class GroundedValueResponse(BaseModel):
     ]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -382,11 +286,10 @@ class GroundedValueResponse(BaseModel):
         "potential>0, has_runtime_data/has_commits = min(1.0, count/N) guarded "
         "by count>0, and computed_confidence = clamp(weighted sum, 0.05, 0.95) "
         "with weights 0.30/0.25/0.25/0.10/0.10 (_WEIGHT_* read from source). The "
-        "honest seam: the boolean-presence levels has_specs_with_data / "
-        "has_lineage / has_friction (any(...)-over-records / len>0 ladders) and "
-        "the collection filtering stay host-side BY DESIGN — booleans-over-"
-        "collections is the filtering-adjacent capability, not a missing kernel "
-        "native. Kernel-or-fallback via serve_via_kernel; three-way "
+        "boolean-presence levels has_specs_with_data / has_lineage / has_friction "
+        "(any(...)-over-records / len>0 ladders) and collection filtering are "
+        "currently resolved before dispatch; they are visible next native work. "
+        "Kernel-only via serve_via_kernel; three-way "
         "(CPython/TS/Rust) value-parity is the gate."
     ),
 )
@@ -397,7 +300,7 @@ async def grounded_value(
     ] = 12.5,
     usage_revenue: Annotated[
         float,
-        Query(description="runtime_event_count * _REVENUE_PER_REQUEST (0.001), resolved host-side"),
+        Query(description="runtime_event_count * _REVENUE_PER_REQUEST (0.001), resolved before dispatch"),
     ] = 0.007,
     spec_actual_value_sum: Annotated[
         float,
@@ -461,19 +364,6 @@ async def grounded_value(
     outputs, kernel_runtime = serve_via_kernel(
         "endpoint_grounded_value_demo.fk",
         bindings=bindings,
-        fallback=lambda: _grounded_value_py(
-            lineage_measured_value,
-            usage_revenue,
-            spec_actual_value_sum,
-            spec_estimated_cost_sum,
-            lineage_estimated_cost,
-            spec_potential_value_sum,
-            runtime_event_count,
-            commit_count,
-            has_specs_with_data,
-            has_lineage,
-            has_friction,
-        ),
         parse=_coerce_float_list,
     )
     return GroundedValueResponse(

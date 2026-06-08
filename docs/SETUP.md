@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
-- Python 3.13 recommended (latest stable); 3.9+ minimum supported
+- Python 3.13 recommended for compatibility API/tooling; 3.9+ minimum supported
 - Node.js 20+
 - Docker (optional for local Neo4j/Postgres)
 
-## API Setup
+## Compatibility API Setup
 
 ```bash
 cd api
@@ -15,14 +15,20 @@ source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
 pip install -e ".[dev]"
 ```
 
-## Run API
+## Run Compatibility API
 
 ```bash
 cd api
 uvicorn app.main:app --reload --port 8000
 ```
 
-Open API docs at `http://localhost:8000/docs`.
+Open compatibility API docs at `http://localhost:8000/docs`.
+
+For native kernel/front-door route work, start from
+[`kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md`](../kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md)
+and [`kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md`](../kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md).
+New high-traffic handlers should be BML/domain grammar first; the local API
+process is the bridge/upstream for routes not yet promoted.
 
 ## Run Tests
 
@@ -57,10 +63,13 @@ Copy `api/.env.example` to `api/.env` and fill required keys.
 ## Deployment baseline
 
 Use the managed-hosting baseline from `docs/DEPLOY.md`:
-- API on Railway
-- Web on Railway
-- PostgreSQL on Neon/Supabase
+- API on Hostinger VPS at `https://api.coherencycoin.com`
+- Web on Hostinger VPS at `https://coherencycoin.com`
+- PostgreSQL as the internal Docker Compose service on the VPS
 - Neo4j on AuraDB Free
+
+For credential carriers and native-kernel DB probes, read
+[`PRODUCTION-SUBSTRATE.md`](PRODUCTION-SUBSTRATE.md).
 
 ## Post-deploy smoke tests
 

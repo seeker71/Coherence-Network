@@ -307,6 +307,40 @@ check_url() {
   echo "PASS"
 }
 
+check_web_api_route_provenance() {
+  check_url "Web API proxy health provenance seed" "${WEB_BASE}/api/health" "\"status\""
+  sleep 1
+  python3 - "${API_BASE}" <<'PY'
+import json
+import sys
+import urllib.parse
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+query = urllib.parse.urlencode({"seconds": 3600, "limit": 50, "source": "web_api"})
+url = f"{base}/api/runtime/endpoints/summary?{query}"
+with urllib.request.urlopen(url, timeout=10) as response:
+    payload = json.load(response)
+
+if payload.get("source") != "web_api":
+    raise SystemExit(f"runtime summary source filter not active: {payload.get('source')!r}")
+
+endpoints = payload.get("endpoints", [])
+health_rows = [
+    row for row in endpoints
+    if isinstance(row, dict) and row.get("endpoint") == "/api/health"
+]
+if not health_rows:
+    raise SystemExit("web_api runtime summary missing /api/health after web proxy request")
+
+by_source = health_rows[0].get("by_source", {})
+if not isinstance(by_source, dict) or int(by_source.get("web_api") or 0) < 1:
+    raise SystemExit(f"/api/health row missing by_source.web_api count: {by_source!r}")
+
+print("PASS: web_api runtime summary includes /api/health")
+PY
+}
+
 check_static_url() {
   local name="$1"
   local url="$2"
@@ -649,6 +683,7 @@ run_validations() {
   sleep 2
 
   check_url "Web root" "${WEB_BASE}/" "/ideas"
+  check_web_api_route_provenance
   check_url "Web root nav resonance" "${WEB_BASE}/" "/resonance"
   check_url "Web root nav pipeline" "${WEB_BASE}/" "/pipeline"
   check_url "Web root nav nodes" "${WEB_BASE}/" "/nodes"

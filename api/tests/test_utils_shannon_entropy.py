@@ -1,9 +1,8 @@
 """Tests for /api/utils/shannon_entropy — normalized Shannon entropy as a Form recipe.
 
-The body runs as a Form recipe (endpoint_shannon_entropy_demo.fk) through
-form-kernel-rust when available, with the Python fallback
-breath_service._shannon_entropy_normalized when the binary is missing. Both
-return the same float for the same inputs. Distinct from breath_balance: the
+The body runs as a Form recipe (endpoint_shannon_entropy_demo.fk) through the
+kernel. The source example, breath-service helper, and kernel siblings return
+the same float for the same inputs. Distinct from breath_balance: the
 per-term accumulator SUBTRACTS (so a single nonzero phase yields +0.0, not
 breath_balance's -0.0), the result is wrapped in round(_, 4), and the empty
 guard is `total == 0`. Folds two natives into one recipe — math.log (ln) and
@@ -15,7 +14,7 @@ The test verifies:
   - the canonical balanced case (1,1,1) is round(1.0, 4) = 1.0
   - the log-of-zero guard: a single phase yields entropy 0 → 0.0 (ln(0) never hit)
   - the all-zero (total 0) guard returns 0.0
-  - a skewed distribution matches the fallback exactly
+  - a skewed distribution matches the breath-service helper exactly
   - the runtime field reports which path served the request
 """
 from __future__ import annotations
@@ -52,7 +51,7 @@ class TestShannonEntropyEndpoint:
         data = res.json()
         assert data["entropy"] == 1.0
         assert data["gas"] == 1 and data["water"] == 1 and data["ice"] == 1
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_single_phase_is_log_of_zero_guarded(self, client: AsyncClient):
@@ -73,8 +72,8 @@ class TestShannonEntropyEndpoint:
         assert res.json()["entropy"] == 0.0
 
     @pytest.mark.anyio
-    async def test_skewed_distribution_matches_fallback(self, client: AsyncClient):
-        """A skewed mix returns the recipe's value, matching the fallback exactly."""
+    async def test_skewed_distribution_matches_service_helper(self, client: AsyncClient):
+        """A skewed mix returns the recipe's value, matching the service helper exactly."""
         res = await client.get("/api/utils/shannon_entropy", params={"gas": 10, "water": 5, "ice": 1})
         assert res.status_code == 200, res.text
         assert res.json()["entropy"] == _shannon_entropy_normalized(10, 5, 1)
@@ -86,11 +85,11 @@ class TestShannonEntropyEndpoint:
         assert res.status_code == 422
 
     @pytest.mark.anyio
-    async def test_fallback_agrees_with_recipe_value(self):
-        """The Python fallback returns the same float the recipe does.
+    async def test_service_helper_agrees_with_recipe_value(self):
+        """The service helper returns the same float the recipe anchor does.
 
-        Direct parity claim without the kernel — the fallback's operation
-        order mirrors the .fk so kernel and fallback never diverge.
+        Direct parity claim without the kernel — the helper's operation order
+        mirrors the .fk so kernel and service arithmetic do not diverge.
         """
         assert _shannon_entropy_normalized(1, 1, 1) == 1.0
         assert _shannon_entropy_normalized(5, 0, 0) == 0.0

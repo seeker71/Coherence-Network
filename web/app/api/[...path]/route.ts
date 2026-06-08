@@ -45,6 +45,17 @@ function copyRequestHeaders(request: NextRequest): Headers {
     if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
     headers.set(key, value);
   });
+  headers.set("X-Coherence-Web-Proxy", "next-api-proxy");
+
+  const referer = request.headers.get("referer");
+  if (referer && !headers.has("x-web-route")) {
+    try {
+      const refUrl = new URL(referer);
+      headers.set("X-Web-Route", refUrl.pathname || "/");
+    } catch {
+      headers.set("X-Web-Route", referer.slice(0, 200));
+    }
+  }
 
   // Cookie-borne contributor identity → upstream auth headers.
   // The browser never sees the raw key; it lives only in the httpOnly

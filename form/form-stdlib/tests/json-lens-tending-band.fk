@@ -1,0 +1,26 @@
+; json-lens-tending-band.fk - JSON lens target and real evidence cell proof.
+;
+; preludes: form-stdlib/json.fk form-stdlib/json-lens-tissue.fk
+
+(do
+    (let tending (jlt-tending-from-root ".."))
+    (let evidence
+        (jlt-evidence-cell
+            "../docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json"
+            "docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json"))
+
+    (add
+        (add
+            (add
+                (if (str_eq (nth tending 0) "json-lens-tending") 1 0)
+                (if (gt (nth tending 1) 800) 2 0))
+            (add
+                (if (str_eq (nth tending 2) "system-audit-evidence") 4 0)
+                (if (gt (nth tending 3) 600) 8 0)))
+        (add
+            (add
+                (if (str_eq (nth tending 4) "audit evidence cells") 16 0)
+                (if (str_eq (nth evidence 0) "json-evidence-cell") 32 0))
+            (add
+                (if (str_eq (nth evidence 2) "Add Form-kernel carrier tissue census and generic source inventory primitive") 64 0)
+                (if (str_eq (nth evidence 3) "pass") 128 0)))))

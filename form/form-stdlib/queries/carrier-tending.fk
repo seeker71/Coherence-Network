@@ -1,0 +1,6 @@
+; carrier-tending.fk - Form chooses the next carrier-lens tending target.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tending.fk
+
+(ct-tending-from-root "..")

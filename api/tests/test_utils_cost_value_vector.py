@@ -2,9 +2,8 @@
 
 The first kernel-served routes to use the round_ndigits native (CPython-exact
 round(x, 4), PR #2320). Each body runs as a Form recipe
-(endpoint_cost_vector_demo.fk / endpoint_value_vector_demo.fk) through
-form-kernel-rust when available, with the Python fallback when the binary is
-missing. Both return the SAME named components for the same input — the
+(endpoint_cost_vector_demo.fk / endpoint_value_vector_demo.fk) through the
+kernel. The source examples and kernel siblings return the SAME named components for the same input — the
 recipe returns a LIST of the components in struct order and the route
 assembles the named vector.
 
@@ -15,8 +14,8 @@ NOT 8.3333; infrastructure 4.9999 (from 4.99995), NOT 5.0. These are the
 end-to-end proof the round() unlock is correct in production.
 
 The components must also match idea_scoring._build_cost_vector /
-_build_value_vector exactly — those Python functions are the canonical body
-the recipes were transmuted from, and remain the value-parity fallback.
+_build_value_vector exactly — those domain-service functions are the canonical
+service arithmetic the recipes were transmuted from.
 """
 from __future__ import annotations
 
@@ -64,7 +63,7 @@ class TestCostVectorEndpoint:
         assert data["external_cc"] == 0.0
         assert data["total_cc"] == 33.333
         assert data["estimated_cost"] == 33.333
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_zero_all_components_zero(self, client: AsyncClient):
@@ -120,7 +119,7 @@ class TestValueVectorEndpoint:
         assert data["revenue_cc"] == 0.0
         assert data["total_cc"] == 9.205
         assert data["potential_value"] == 9.205
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_zero_all_components_zero(self, client: AsyncClient):

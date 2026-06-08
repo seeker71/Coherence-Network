@@ -1,0 +1,69 @@
+; edge-categories-band.fk - edge reputation and reflex-pain shape.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/concept-corpus.fk form-stdlib/edge-categories.fk
+
+(do
+    (let category
+        (ec-category
+            "concept_contains_concept"
+            "concept"
+            "concept"
+            40
+            40
+            1
+            "R_Compose.CROSS_REF(body)"
+            "heart/meaning"))
+
+    (let cluster
+        (ec-cluster
+            "concept:lc-coherence-over-control:concept_contains_concept:inbound"
+            "concept_contains_concept"
+            "inbound"
+            "concept"
+            "lc-coherence-over-control"
+            40
+            40
+            1
+            (ec-temperature 40)
+            "heart/meaning"
+            (list "lc-assemblage-point" "lc-bioelectric-pattern")))
+
+    (let pain
+        (ec-reflex-pain
+            "python"
+            "form"
+            "observer-first-python"
+            "not-surprised"
+            "edge-category-sensing"))
+
+    (let real-sources
+        (list
+            "lc-assemblage-point"
+            "lc-bioelectric-pattern"
+            "lc-boundaries-as-loving-truth"
+            "lc-canon-as-sovereignty-surface"))
+    (let real-inbound
+        (ec-concept-inbound-category
+            real-sources
+            "lc-coherence-over-control"))
+    (let real-fanout
+        (ec-concept-cross-ref-fanout-cluster "lc-assemblage-point"))
+
+    (sum
+        (list
+            (if (ec-category? category) 1 0)
+            (if (str_eq (ec-category-name category) "concept_contains_concept") 2 0)
+            (if (eq (ec-category-edge-reputation category) 40) 4 0)
+            (if (str_eq (ec-category-felt category) "heart/meaning") 8 0)
+            (if (ec-cluster? cluster) 16 0)
+            (if (str_eq (ec-cluster-temperature cluster) "hot") 32 0)
+            (if (eq (len (ec-cluster-examples cluster)) 2) 64 0)
+            (if (ec-reflex-pain? pain) 128 0)
+            (if (eq (ec-reflex-pain-score-value pain) 100) 256 0)
+            (if (str_eq (ec-reflex-pain-temperature-value pain) "hot") 512 0)
+            (if (ec-reflex-wants-release? pain) 1024 0)
+            (if (str_eq (ec-reflex-release-target pain) "form-substrate-cell") 2048 0)
+            (if (eq (ec-category-edge-reputation real-inbound) 4) 4096 0)
+            (if (gt (ec-cluster-edge-reputation real-fanout) 5) 8192 0)
+            (if (str_eq (ec-cluster-temperature real-fanout) "warm") 16384 0)
+            (if (str_eq (head (ec-cluster-examples real-fanout)) "lc-perception-as-interface") 32768 0))))

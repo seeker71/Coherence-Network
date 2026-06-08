@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Add Form-kernel carrier tissue census and generic source inventory primitive",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-stdlib/carrier-tissue.fk",
+    "form/form-stdlib/queries/carrier-tissue-census.fk",
+    "form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+    "Makefile",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "gofmt -w form/form-kernel-go/main.go",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "make carrier-tissue-census",
+      "make carrier-vitality",
+      "make carrier-tending",
+      "cd form && form-kernel-go/bin-go form-stdlib/carrier-tissue.fk form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+      "jq empty docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json",
+      "git diff --check -- Makefile form/form-kernel-go/main.go form/form-stdlib/carrier-tissue.fk form/form-stdlib/queries/carrier-tissue-census.fk form/form-stdlib/queries/carrier-vitality.fk form/form-stdlib/queries/carrier-tending.fk form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk docs/shared/agent-start-packet.md docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json"
+    ],
+    "summary": "The source inventory primitive is generic; Form owns carrier/lens classification. Python is no longer the category. The live Form-kernel query returned [form-kernel-source-inventory, false, 5316, 2028334, 737, 3854, 92, 540, 93, 501, 577, 14, 24, 818, 839, 27, 61, 600, 21], meaning 5316 files observed, 737 transparent, 3854 lens-bearing, 92 old wound, 540 misalignment, 93 tenderness, with carrier counts for Python 501, TypeScript 577, Go 14, Rust 24, Markdown 818, JSON 839, YAML 27, shell 61, asset 600, and JavaScript 21. The vitality query returned [carrier-vitality, form-kernel-source-inventory, false, 5316, 737, 138, 4579, 3854, 92, 540, 93, 5934, lens/load: name repeated external carriers into cells]. The tending query returned [carrier-tending, lens/load: name repeated external carriers into cells, json, 839, 839, Form-readable cell data, load repeated schemas/configs as cells or keep as external data with schema]. The dynamic Form proof band returned 2097151."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "make python-tissue-census",
+      "status": "over-specific",
+      "output": "Python-specific census was replaced by carrier-tissue census because every non-transparent carrier has lens cost."
+    },
+    {
+      "command": "go run ./tools/python_tissue_census.go",
+      "status": "misaligned_carrier",
+      "output": "Standalone Go policy tool was deleted. Go now only provides the kernel primitive; Form performs the query."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local Form-kernel source query only; no deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "source-artifact-sensing-graph-integration",
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "carrier-tissue-census"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "The census carrier is form-kernel-source-inventory.",
+    "source_inventory is a generic kernel primitive returning [relative-path, line-count] rows.",
+    "carrier-tissue.fk owns lens classification and aggregation.",
+    "carrier-vitality.fk returns a Form-owned vitality snapshot from the census.",
+    "carrier-tending.fk returns the next repeated carrier lens target and release gate.",
+    "The dynamic Form-kernel proof band returns 2097151."
+  ],
+  "change_files": [
+    "Makefile",
+    "form/form-kernel-go/main.go",
+    "form/form-stdlib/carrier-tissue.fk",
+    "form/form-stdlib/queries/carrier-tissue-census.fk",
+    "form/form-stdlib/queries/carrier-vitality.fk",
+    "form/form-stdlib/queries/carrier-tending.fk",
+    "form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-06_carrier_tissue_census.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Add Form-kernel carrier tissue census and generic source inventory primitive",
+    "public_endpoints": [
+      "form/form-kernel-go/main.go",
+      "form/form-stdlib/carrier-tissue.fk",
+      "form/form-stdlib/queries/carrier-tissue-census.fk",
+      "form/form-stdlib/queries/carrier-vitality.fk",
+      "form/form-stdlib/queries/carrier-tending.fk",
+      "form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk"
+    ],
+    "test_flows": [
+      "The census carrier is form-kernel-source-inventory.",
+      "source_inventory is a generic kernel primitive returning [relative-path, line-count] rows.",
+      "carrier-tissue.fk owns lens classification and aggregation."
+    ]
+  }
+}

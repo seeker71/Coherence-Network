@@ -1,0 +1,34 @@
+; audit-evidence-index-cache-band.fk - dynamic evidence index round-trips as .fkb.
+;
+; preludes: form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk
+
+(do
+    (let cache-path "form-stdlib/.cache/audit-evidence-index-test.fkb")
+    (let first-result (aec-ensure-index-cache ".." cache-path))
+    (let second-result (aec-ensure-index-cache ".." cache-path))
+    (let index (aec-read-index-cache cache-path))
+    (let recipes (node_children index))
+    (let known
+        (aec-find-recipe-by-source
+            recipes
+            "docs/system_audit/commit_evidence_2026-06-07_json_lens_tending.json"))
+
+    (add
+        (add
+            (add
+                (if (aec-cache-result? second-result) 1 0)
+                (if (str_eq (aec-cache-status second-result) "fresh") 2 0))
+            (add
+                (if (eq (file_size cache-path) (aec-cache-bytes second-result)) 4 0)
+                (if (gt (aec-cache-source-count second-result) 600) 8 0)))
+        (add
+            (add
+                (if (ge (aec-cache-mtime second-result) (aec-cache-source-max-mtime second-result)) 16 0)
+                (if (node_eq (node_category index) AEC-BP-EVIDENCE-INDEX) 32 0))
+            (add
+                (if (node_eq (node_category known) AEC-BP-EVIDENCE-CELL) 64 0)
+                (add
+                    (if (str_eq (aec-recipe-local-status known) "pass") 128 0)
+                    (add
+                        (if (eq (aec-recipe-phase-can-move? known) false) 256 0)
+                        (if (or (str_eq (aec-cache-status first-result) "write") (str_eq (aec-cache-status first-result) "fresh")) 512 0)))))))

@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Go native HTTP /api/ideas JIT value ABI pass and memory update",
+  "files_owned": [
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/tests/go-jit-value-list-band.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-value-list-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-band.fk",
+      "curl native /api/ideas?limit=2&sort=marginal_cc",
+      "curl native /api/_form/ideas-observation?limit=2&sort=marginal_cc&event_limit=1&warm=40",
+      "40 request native/public timing probe"
+    ],
+    "summary": "Go value ABI/list-string JIT pass returns 200 on real native /api/ideas, moves warmed JIT stats to 15 compile-failed / 75 warming / 6 compiled / 6 dispatch-hit, and preserves sibling JIT bands."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local native kernel probe used SSH tunnel to production Postgres; no deploy performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime feature validated locally but not committed, pushed, or deployed."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "native-http-jit-value-abi-pass"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "native /api/ideas status 200, body_bytes 4226, pagination.total 1659",
+    "warmed observation: 15 compile-failed, 75 warming, 6 compiled, 6 dispatch-hit",
+    "native timing p50=560.926 ms p95=748.992 ms",
+    "public FastAPI timing p50=263.719 ms p95=1162.181 ms"
+  ],
+  "change_files": [
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-stdlib/tests/go-jit-value-list-band.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "List/string-shaped Form recipes can compile through the Go JIT value ABI and dispatch on the native /api/ideas route; remaining misses are more specific primitive families.",
+    "public_endpoints": [
+      "http://127.0.0.1:19086/api/ideas?limit=2&sort=marginal_cc",
+      "http://127.0.0.1:19086/api/_form/ideas-observation?limit=2&sort=marginal_cc&event_limit=1&warm=40",
+      "https://api.coherencycoin.com/api/ideas?limit=2&sort=marginal_cc"
+    ],
+    "test_flows": [
+      "native route against production Postgres through local SSH tunnel",
+      "same-worker warmed JIT/framebuffer observation",
+      "native/public 40 request p50/p95 timing comparison"
+    ]
+  }
+}

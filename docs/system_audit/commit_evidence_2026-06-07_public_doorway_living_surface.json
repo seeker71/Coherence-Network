@@ -1,0 +1,148 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Thread the living-surface north star through public doorway docs, generated readmes, locale copy, and web entry pages",
+  "files_owned": [
+    "README.template.md",
+    "README.md",
+    "cli/README.template.md",
+    "cli/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/shared/shared-practice.md",
+    "docs/shared/ecosystem-table.md",
+    "docs/VISION.md",
+    "docs/JOIN-NETWORK.md",
+    "docs/doorway-comprehension.md",
+    "docs/field/urs/welcoming-doorway-walk.md",
+    "docs/SITE_MAP.md",
+    "docs/coherence-substrate/form-language.md",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/app/with-us/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/build_readmes.py",
+      "python3 scripts/build_readmes.py --check",
+      "jq empty web/messages/en.json web/messages/de.json web/messages/es.json web/messages/id.json",
+      "git diff --check -- README.template.md README.md cli/README.template.md cli/README.md mcp-server/README.template.md mcp-server/README.md skills/coherence-network/SKILL.template.md skills/coherence-network/SKILL.md docs/shared/shared-practice.md docs/shared/ecosystem-table.md docs/VISION.md docs/JOIN-NETWORK.md docs/doorway-comprehension.md docs/field/urs/welcoming-doorway-walk.md docs/SITE_MAP.md docs/coherence-substrate/form-language.md web/app/page.tsx web/app/come-in/page.tsx web/app/with-us/page.tsx web/messages/en.json web/messages/de.json web/messages/es.json web/messages/id.json",
+      "rg -n \"center, ground, harmonize, return|Walk the fractal surface|fractal surface|simplest welcome|slowest welcome|speaks plainly|speaks to any human|spricht klar|habla llanamente|habla a cualquier humano|berbicara polos|sambutan paling|bienvenido m\u00e1s|einfachste Willkommen|langsamste Willkommen|slowest entry|entry is at \\\\[\\/come-in\\\\]\" README.md README.template.md cli/README.md cli/README.template.md mcp-server/README.md mcp-server/README.template.md skills/coherence-network/SKILL.md skills/coherence-network/SKILL.template.md docs/SITE_MAP.md docs/coherence-substrate/form-language.md docs/doorway-comprehension.md docs/field/urs/welcoming-doorway-walk.md web/app web/messages || true",
+      "cd web && npm run build",
+      "Browser check on http://localhost:3117 for /, /come-in, /begin, /here, /with-us"
+    ],
+    "summary": "Generated readmes are current, locale JSON parses, whitespace checks pass, stale doorway phrases and the old four-step rhythm were removed from the touched public surfaces, and the web production build passes. Browser assertions confirmed the home page exposes /here, /come-in renders the living-surface hinge and route edges, /begin and /with-us point back to /come-in and /here, and /here names the current-attention edge."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "Initial Playwright accessible-name check for the /come-in /here card",
+      "output": "The link check returned false because the assertion assumed the accessible name was only 'Attention'. A follow-up href/text assertion confirmed /here is present."
+    },
+    {
+      "command": "Browser console capture before tending /with-us readArray probing",
+      "output": "Console showed existing [i18n] missing-key warnings from probing past translation-array ends. web/app/with-us/page.tsx now checks message existence before translating sentinel keys; follow-up browser capture showed no i18n missing-key warnings."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy was performed. Browser checks ran against the local Next dev server on port 3117."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local docs, web build, and browser proof passed, but CI and production deploy validation remain pending until this work is committed and shipped."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "form-native-runtime",
+    "living-surface-doorways"
+  ],
+  "spec_ids": [
+    "public-doorway-living-surface"
+  ],
+  "task_ids": [
+    "weave-north-star-through-public-doorways"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "frontend",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "README.template.md and generated README.md add Walk the living surface with concrete edges into /come-in, /practice, /begin, /vision, /presences, /with-us, /here, /ideas, /flow, /resonance, /substrate, and /contributions.",
+    "web/app/come-in/page.tsx now renders the orientation hinge: /begin, /here, /vision, /presences, /practice, /flow, /substrate, and /with-us as distinct edges into the same body.",
+    "docs/field/urs/welcoming-doorway-walk.md and docs/SITE_MAP.md now name distinct doorway roles instead of leaving /come-in, /begin, /here, /with-us, /welcome, /join, /vision/join, and /meet/{type}/{id} as competing or unnamed overlaps.",
+    "web/messages/en.json, de.json, es.json, and id.json align /come-in as the public orientation hinge, /here as current attention, /begin as becoming known, /with-us as deep invitation, and /join as advanced sovereign identity.",
+    "web/app/with-us/page.tsx removes development i18n sentinel warnings by checking message existence before translating array probe keys.",
+    "Browser screenshots: .playwright-cli/home-doorway-edges.png, .playwright-cli/come-in-living-surface.png, .playwright-cli/with-us-doorway-thread-after-warning-fix.png."
+  ],
+  "change_files": [
+    "README.template.md",
+    "README.md",
+    "cli/README.template.md",
+    "cli/README.md",
+    "mcp-server/README.template.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.template.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/shared/shared-practice.md",
+    "docs/shared/ecosystem-table.md",
+    "docs/VISION.md",
+    "docs/JOIN-NETWORK.md",
+    "docs/doorway-comprehension.md",
+    "docs/field/urs/welcoming-doorway-walk.md",
+    "docs/SITE_MAP.md",
+    "docs/coherence-substrate/form-language.md",
+    "web/app/page.tsx",
+    "web/app/come-in/page.tsx",
+    "web/app/with-us/page.tsx",
+    "web/messages/en.json",
+    "web/messages/de.json",
+    "web/messages/es.json",
+    "web/messages/id.json",
+    "docs/system_audit/commit_evidence_2026-06-07_public_doorway_living_surface.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A public visitor or agent can enter through existing public doorways and see a coherent living-surface story: orient at /come-in, become known at /begin, sense current attention at /here, enter the deeper invitation at /with-us, and follow Form/substrate/proof edges without old wording that flattens the doorways into one generic welcome.",
+    "public_endpoints": [
+      "web/app/page.tsx",
+      "web/app/come-in/page.tsx",
+      "web/app/with-us/page.tsx"
+    ],
+    "test_flows": [
+      "Local browser / shows the new See what is alive now /here edge and the five-step rhythm language.",
+      "Local browser /come-in shows Walk the living surface and Every doorway is an edge into the same body, with /begin, /here, and /with-us links present.",
+      "Local browser /begin shows the public-doorway hinge copy and links to /here.",
+      "Local browser /here shows current-attention copy including the next edge that may want attention.",
+      "Local browser /with-us shows orientation copy, /here links, and no [i18n] missing-key warnings after the array-probe fix."
+    ]
+  },
+  "known_runtime_context": {
+    "local_web_url": "http://localhost:3117",
+    "browser_console_notes": "Remaining browser console errors during local dev were 502 responses from local /api proxy calls such as /api/views/ping, /api/workspaces, /api/translations/page/with-us, and /api/meetings/anonymous-traces while no local API backend was running. They are not introduced by this doorway copy pass."
+  }
+}
