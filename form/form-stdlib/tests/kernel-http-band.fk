@@ -2,9 +2,9 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
 ;
-; Band verdict: 33555586 when constructors/accessors, validation, pressure
-; matrices, route choice receipts, eligible route candidates, and highest-score
-; selection all agree.
+; Band verdict: 536872066 when constructors/accessors, validation, pressure
+; matrices, route choice receipts, route-choice signatures, eligible route
+; candidates, and highest-score selection all agree.
 
 section [form.bml] {
     def kh-kernel-http-band-score() {
@@ -32,6 +32,13 @@ section [form.bml] {
         let fallback_decisions = kh-route-choice-decisions(fallback_choice);
         let blocked_decision = head(fallback_decisions);
         let fallback_decision = head(tail(fallback_decisions));
+        let choice_signature = kh-route-choice-signature(choice);
+        let choice_signature_decisions = kh-route-choice-signature-decision-signatures(choice_signature);
+        let exact_signature = head(tail(tail(choice_signature_decisions)));
+        let fallback_signature = kh-route-choice-signature(fallback_choice);
+        let fallback_signature_decisions = kh-route-choice-signature-decision-signatures(fallback_signature);
+        let blocked_signature = head(fallback_signature_decisions);
+        let fallback_decision_signature = head(tail(fallback_signature_decisions));
         sum(list(
             kh-bool-score(kh-request-valid?(request), 1),
             kh-bool-score(kh-response-valid?(response), 2),
@@ -58,6 +65,10 @@ section [form.bml] {
             kh-bool-score(and(if kh-route-decision-eligible?(blocked_decision) then false else true, if kh-route-decision-selected?(blocked_decision) then false else true), 4194304),
             kh-bool-score(kh-route-decision-selected?(fallback_decision), 8388608),
             kh-bool-score(eq(kh-select-route-score(list(blocked_route), request), 0), 16777216),
+            kh-bool-score(kh-route-choice-signature?(choice_signature), 33554432),
+            kh-bool-score(and(eq(kh-route-decision-signature-pressure-bucket(blocked_signature), 3), if kh-route-decision-signature-eligible?(blocked_signature) then false else true), 67108864),
+            kh-bool-score(and(kh-route-decision-signature-selected?(fallback_decision_signature), eq(kh-route-decision-signature-score-bucket(fallback_decision_signature), 3)), 134217728),
+            kh-bool-score(and(kh-route-decision-signature-selected?(exact_signature), eq(kh-route-decision-signature-pressure-bucket(exact_signature), 0)), 268435456),
             kh-route-candidate-score(selected),
             kh-route-candidate-pressure(tail_candidate)
         ));

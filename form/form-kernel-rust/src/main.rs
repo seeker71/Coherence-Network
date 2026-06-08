@@ -6698,6 +6698,8 @@ const KH_TAG_ROUTE_DATA_REF: i64 = 43007;
 const KH_TAG_FIELD: i64 = 43008;
 const KH_TAG_ROUTE_DECISION: i64 = 43009;
 const KH_TAG_ROUTE_CHOICE: i64 = 43010;
+const KH_TAG_ROUTE_DECISION_SIGNATURE: i64 = 43011;
+const KH_TAG_ROUTE_CHOICE_SIGNATURE: i64 = 43012;
 
 fn route_value_string(value: &Value, field: &str) -> Result<String, String> {
     match value {
@@ -9365,6 +9367,48 @@ fn router_pressure_row_value(row: &RoutePressureRow) -> Value {
     )
 }
 
+fn route_pressure_bucket(pressure: i64) -> i64 {
+    if pressure == 0 {
+        0
+    } else if pressure <= 25 {
+        1
+    } else if pressure <= 120 {
+        2
+    } else if pressure <= 400 {
+        3
+    } else if pressure <= 500 {
+        4
+    } else {
+        5
+    }
+}
+
+fn route_score_bucket(score: i64) -> i64 {
+    if score < 0 {
+        0
+    } else if score < 500 {
+        1
+    } else if score < 900 {
+        2
+    } else if score < 1000 {
+        3
+    } else if score < 1100 {
+        4
+    } else {
+        5
+    }
+}
+
+fn router_pressure_code_value(row: &RoutePressureRow) -> Value {
+    Value::List(
+        vec![
+            Value::Str(row.axis.clone().into()),
+            Value::Int(route_pressure_bucket(row.pressure)),
+        ]
+        .into(),
+    )
+}
+
 fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
     Value::List(
         vec![
@@ -9380,6 +9424,51 @@ fn router_route_candidate_value(candidate: &RouteCandidateValue) -> Value {
             )),
             Value::Int(candidate.pressure),
             Value::Int(candidate.score),
+        ]
+        .into(),
+    )
+}
+
+fn router_route_decision_signature_value(decision: &RouteDecisionValue) -> Value {
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE_DECISION_SIGNATURE),
+            Value::Str(decision.candidate.route_name.clone().into()),
+            Value::Str(decision.candidate.route_handler_name.clone().into()),
+            Value::List(Arc::new(
+                decision
+                    .candidate
+                    .pressure_matrix
+                    .iter()
+                    .map(router_pressure_code_value)
+                    .collect(),
+            )),
+            Value::Int(route_pressure_bucket(decision.candidate.pressure)),
+            Value::Int(route_score_bucket(decision.candidate.score)),
+            Value::Bool(decision.eligible),
+            Value::Bool(decision.selected),
+        ]
+        .into(),
+    )
+}
+
+fn router_route_choice_decision_signatures_value(choice: &RouteChoice<'_>) -> Value {
+    Value::List(Arc::new(
+        choice
+            .decisions
+            .iter()
+            .map(router_route_decision_signature_value)
+            .collect(),
+    ))
+}
+
+fn router_route_choice_signature_value(choice: &RouteChoice<'_>) -> Value {
+    Value::List(
+        vec![
+            Value::Int(KH_TAG_ROUTE_CHOICE_SIGNATURE),
+            Value::Str(choice.request.method.clone().into()),
+            Value::Str(choice.request.path.clone().into()),
+            router_route_choice_decision_signatures_value(choice),
         ]
         .into(),
     )
@@ -9553,6 +9642,14 @@ fn router_context_data(
         pairs.push((
             "__router_route_decisions__".to_string(),
             router_route_choice_decisions_value(choice),
+        ));
+        pairs.push((
+            "__router_route_choice_signature__".to_string(),
+            router_route_choice_signature_value(choice),
+        ));
+        pairs.push((
+            "__router_route_decision_signatures__".to_string(),
+            router_route_choice_decision_signatures_value(choice),
         ));
         if let Some(selection) = choice.selected.as_ref() {
             let candidate = &selection.candidate;
@@ -9862,6 +9959,34 @@ mod router_context_tests {
         assert!(matches!(candidates_value, Value::List(xs) if xs.len() == 2));
         let decisions_value = value_for(&pairs, "__router_route_decisions__");
         assert!(matches!(decisions_value, Value::List(xs) if xs.len() == 2));
+        let signature_value = value_for(&pairs, "__router_route_choice_signature__");
+        assert_eq!(list_tag(signature_value), KH_TAG_ROUTE_CHOICE_SIGNATURE);
+        let decision_signatures_value = value_for(&pairs, "__router_route_decision_signatures__");
+        assert!(matches!(decision_signatures_value, Value::List(xs) if xs.len() == 2));
+        let signature_rows = match decision_signatures_value {
+            Value::List(xs) => xs,
+            _ => panic!("route decision signatures must be a Form list value"),
+        };
+        assert_eq!(
+            list_tag(&signature_rows[0]),
+            KH_TAG_ROUTE_DECISION_SIGNATURE
+        );
+        assert!(matches!(
+            &signature_rows[0],
+            Value::List(xs)
+                if matches!(&xs[4], Value::Int(3))
+                    && matches!(&xs[5], Value::Int(5))
+                    && matches!(&xs[6], Value::Bool(false))
+                    && matches!(&xs[7], Value::Bool(false))
+        ));
+        assert!(matches!(
+            &signature_rows[1],
+            Value::List(xs)
+                if matches!(&xs[4], Value::Int(0))
+                    && matches!(&xs[5], Value::Int(4))
+                    && matches!(&xs[6], Value::Bool(true))
+                    && matches!(&xs[7], Value::Bool(true))
+        ));
         let decision_rows = match decisions_value {
             Value::List(xs) => xs,
             _ => panic!("route decisions must be a Form list value"),

@@ -95,6 +95,36 @@
 # vectors (semantic embeddings over cells), AND a sharper substrate now — tolerant
 # equivalence over the geometry signatures we already author.
 #
+# HTTP route-choice use — compress branch pressure without losing the branch
+# -------------------------------------------------------------------------
+#
+# The native HTTP route choice surface now carries every candidate and every
+# rejected/selected branch as `KernelHTTPRouteDecision` values. That is the full
+# receipt. For attention, repeated observation, and content-addressed clustering,
+# the body also wants a smaller stable handle: "this branch pattern again."
+#
+# TurboQuant gives the rule for doing that without introducing corpus-trained
+# state:
+#
+#   full receipt        — candidate, request, pressure matrix, score, yes/no
+#   fixed quantizer     — universal pressure/score buckets, not learned from traffic
+#   compressed handle   — `KernelHTTPRouteChoiceSignature`
+#
+# In Form this lives in `form/form-stdlib/kernel-http.fk`:
+#
+#   kh-pressure-bucket(pressure)
+#   kh-score-bucket(score)
+#   kh-route-decision-signature(decision)
+#   kh-route-choice-signature(choice)
+#
+# The buckets are deliberately simple and data-oblivious: exact, wildcard-small,
+# header/budget-small, method/medium, path-miss, over-budget. The signature is not
+# a replacement for the full route-choice receipt; it is an attention key. Same
+# branch pressure shape -> same signature -> same content-addressable cluster.
+# Later, when source lenses and lattice coordinates attach to each decision row,
+# this signature can become the compressed bridge from hot route-choice patterns
+# back to authored grammar entries.
+#
 # Carrier-last: when this runs operationally, vec-rotate / lloyd-max are Form recipes
 # proven three-way (Go/Rust/TS); a kernel native only where SIMD speed is needed.
 #
