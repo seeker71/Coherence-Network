@@ -11,7 +11,7 @@ source:
   - file: form/scripts/native-mutation-route-side-effects-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_route_side_effect_binding.py
-    symbols: [test_route_side_effect_binding_band_executes_across_sibling_kernels, test_route_side_effect_binding_live_script_runs_or_skips_when_pg_missing, test_ab_gate_next_evidence_is_public_gate_after_route_binding]
+    symbols: [test_route_side_effect_binding_band_executes_across_sibling_kernels, test_route_side_effect_binding_live_script_runs_or_skips_when_pg_missing, test_ab_gate_next_evidence_is_deployed_canary_after_public_gate]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
     symbols: [build_gate_report]
   - file: docs/coherence-substrate/ideas-router.form
@@ -21,7 +21,7 @@ source:
 requirements:
   - "A Form-native route runner composes application graph mutation execution with native side-effect execution."
   - "The route-runner proof executes idea and spec mutation shapes against rollback-safe throwaway Postgres."
-  - "The A/B observation gate now names the reversible public gate as the remaining boundary."
+  - "The A/B observation gate now names the deployed public-gate canary as the remaining boundary."
   - "Ordinary public mutation traffic remains on FastAPI and preview rows remain executes:false."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-route-side-effects.fk")'
@@ -59,8 +59,8 @@ Postgres fixture tables.
 - [ ] **R5**: The live integration returns `1111111` after executing both route
   runners, reading graph rows, revisions, receipts, edge repair, and key audit
   back from throwaway Postgres, cleaning up, and closing the connection.
-- [ ] **R6**: Route docs and A/B observation evidence name the reversible public
-  gate with route-local rollback receipt as the next boundary.
+- [ ] **R6**: Route docs and A/B observation evidence name the deployed
+  `X-Form-Native-Public-Gate` canary as the next boundary.
 
 ## Research Inputs
 
@@ -116,14 +116,17 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-route-side
 
 ## Gaps
 
-- GAP-NMRSB1 follow-up task: `native-mutation-public-flip-gate`. Add a narrow
-  reversible public gate with route-local rollback receipt before ordinary
-  mutable traffic moves.
+- GAP-NMRSB1: closed by `specs/native-mutation-public-gate.md`. A narrow
+  `X-Form-Native-Public-Gate` route now carries route-local rollback receipt
+  proof while no-header traffic remains fanout.
+- GAP-NMRSB2 follow-up task: `native-mutation-deployed-public-canary`. Deploy
+  and observe the public-gate header path before ordinary mutable traffic moves.
 
 ## Risks and Assumptions
 
 - The harness uses throwaway Postgres when available. In environments without
   `initdb`, it exits as SKIP rather than claiming live DB proof.
 - Route-runner binding proves the native flow, not public route activation.
-- The public manifest remains preview-only, so clients do not observe mutation
-  execution until the public gate lands.
+- The public manifest remains no-header fanout by default, so ordinary clients
+  do not observe native mutation execution until a deployed public-gate canary
+  lands and is explicitly promoted.

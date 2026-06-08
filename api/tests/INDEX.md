@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 255
+**Total files**: 256
 
 | File | Purpose |
 |---|---|
@@ -143,6 +143,7 @@
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
 | [test_native_auth_parity_form.py](test_native_auth_parity_form.py) | Proof that mutation auth has a native Form parity carrier. |
 | [test_native_mutation_ab_observation.py](test_native_mutation_ab_observation.py) | Proof for the native mutation A/B observation gate. |
+| [test_native_mutation_public_gate.py](test_native_mutation_public_gate.py) | Proof that native mutation public gates are reversible and receipt-backed. |
 | [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
 | [test_native_mutation_route_side_effect_binding.py](test_native_mutation_route_side_effect_binding.py) | Proof that native mutation route runners bind side-effect execution. |
 | [test_native_mutation_side_effects_form.py](test_native_mutation_side_effects_form.py) | Proof that native mutation side-effect intents have a Form execution carrier. |

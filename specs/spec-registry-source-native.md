@@ -34,7 +34,7 @@ requirements:
   - "The route emits SpecRegistryEntry-shaped JSON rows for each source-index spec row."
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH/DELETE /api/spec-registry without changing default public behavior."
   - "The spec registry Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
-  - "The spec registry Form artifact names the Form-native side-effect execution carrier while keeping route binding and ordinary public traffic movement explicit as the remaining boundary."
+  - "The spec registry Form artifact names the Form-native side-effect execution carrier, route binding, public gate, and deployed-canary boundary while keeping ordinary public traffic movement explicit."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/spec-registry/source-list\" route_specs_source_list)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "read_file_slice \"specs/INDEX.md\"")'
@@ -114,7 +114,7 @@ PY
 
 ## Gaps
 
-- GAP-SRS1 follow-up task: `spec-registry-live-graph-storage-carrier`. The
+- GAP-SRS1 follow-up task: `spec-registry-deployed-public-canary`. The
   source-backed route is native and the Form graph-node mutation carrier now
   exposes create/replace/delete. The Form auth carrier now preserves
   API-key/contributor-key decision parity, and the Form application graph
@@ -124,12 +124,15 @@ PY
   residual, side-effect intents, choice markers, and reversible gate state.
   `native-mutation-side-effects-test.sh` proves parent-edge repair,
   contributor-key audit, cache-invalidation receipt, and rollback receipt
-  execute natively against throwaway Postgres. Public mutable DB-backed spec
+  execute natively against throwaway Postgres.
   `native-mutation-route-side-effects-test.sh` proves application graph mutation
-  plus side-effect execution are bound in one Form-native route runner. Public
+  plus side-effect execution are bound in one Form-native route runner.
+  `native-mutation-public-gate-test.sh` and `mutation_public_gate_harness.py`
+  prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate
+  route rows while preserving fanout for no-header traffic. Public
   mutable DB-backed spec registry behavior still enters through FastAPI by
-  default until a narrow reversible public gate has a route-local rollback
-  receipt.
+  default until a deployed header-gated public canary is observed before any
+  no-header flip.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

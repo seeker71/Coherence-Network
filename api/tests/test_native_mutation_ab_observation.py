@@ -143,10 +143,10 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
 
     assert report["confidence"] == 1.0
     assert report["gate_pass"] is True
-    assert report["recommendation"] == "promote_to_live_db_trial"
+    assert report["recommendation"] == "preview_confidence_complete"
     assert report["ordinary_traffic_flip_performed"] is False
     assert report["next_evidence_needed"] == [
-        "narrow reversible public gate with route-local rollback receipt",
+        "deployed X-Form-Native-Public-Gate canary before any no-header flip",
     ]
 
 
@@ -155,4 +155,5 @@ def test_route_forms_name_the_ab_observation_gate_before_flip():
         text = path.read_text(encoding="utf-8")
         assert "front-door flip -> A/B observation gate before movement" in text
         assert "deploy/kernel-router/mutation_ab_observation_harness.py" in text
-        assert "recommends a live-DB trial only" in text
+        assert "preview confidence is complete" in text
+        assert "deployed public-gate canary" in text

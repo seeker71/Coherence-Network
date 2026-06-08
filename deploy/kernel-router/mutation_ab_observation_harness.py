@@ -308,14 +308,14 @@ def build_gate_report(
         "min_confidence": min_confidence,
         "gate_pass": gate_pass,
         "recommendation": (
-            "promote_to_live_db_trial"
+            "preview_confidence_complete"
             if gate_pass
             else "hold_flip_collect_more_observations"
         ),
         "ordinary_traffic_flip_performed": False,
         "ordinary_traffic_flip_allowed": False,
         "next_evidence_needed": [
-            "narrow reversible public gate with route-local rollback receipt",
+            "deployed X-Form-Native-Public-Gate canary before any no-header flip",
         ],
     }
 

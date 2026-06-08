@@ -56,9 +56,9 @@ service code.
   side-effect wrapper, reading each effect back from throwaway Postgres, cleaning
   up fixture tables, and closing the connection.
 - [ ] **R4**: Route Form docs name the carrier as proven while keeping ordinary
-  public traffic on FastAPI until route binding and a reversible public gate land.
-- [ ] **R5**: The A/B observation report's next evidence moves from "execute
-  side effects" to binding the proven carrier to the mutation route runner.
+  public traffic on FastAPI until the deployed public-gate canary lands.
+- [ ] **R5**: The A/B observation report's next evidence now names the deployed
+  `X-Form-Native-Public-Gate` canary.
 
 ## Research Inputs
 
@@ -120,8 +120,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
 - GAP-NMSE1: closed by `specs/native-mutation-route-side-effect-binding.md`. The
   proven side-effect carrier is now bound to Form-native route-runner execution
   with application graph writes in throwaway Postgres.
-- GAP-NMSE2 follow-up task: `native-mutation-public-flip-gate`. Add a narrow
-  reversible public gate with route-local rollback receipt.
+- GAP-NMSE2: closed by `specs/native-mutation-public-gate.md`. The public gate
+  now carries a route-local rollback receipt in Form and production route
+  selection.
+- GAP-NMSE3 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
+  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
 
 ## Risks and Assumptions
 

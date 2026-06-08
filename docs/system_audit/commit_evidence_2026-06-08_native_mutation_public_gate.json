@@ -1,0 +1,204 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/native-mutation-public-gate-20260608",
+  "commit_scope": "Add a reversible native mutation public gate with route-local rollback receipts and no no-header traffic flip.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_public_gate.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-side-effects.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/method-specific-native-mutation-preview-bindings.md",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_native_mutation_public_gate.json",
+      "git diff --check",
+      "make wellness"
+    ],
+    "summary": "native-mutation-public-gate.fk adds an X-Form-Native-Public-Gate recipe over the proven route-side-effect runner and persists public-gate rollback receipts in throwaway Postgres. production-routes.fk exposes explicit public-gate route rows for mutable ideas/spec paths, higher priority than preview when both headers are present, while no-header traffic remains fanout-python. mutation_public_gate_harness.py observed five mutation shapes with no-header fanout, preview-header non-executing preview, public-gate native selection, both-header public-gate priority, confidence 1.0, and ordinary_traffic_flip_performed=false.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header POST/PATCH/DELETE mutation traffic moved. No-header traffic still fans out to FastAPI."
+      },
+      {
+        "scope": "HTTP-side database execution",
+        "observed": "Public-gate HTTP responses keep executes:false. The header gate executes and emits a rollback receipt shape; DB receipt persistence is proven in the Form live-PG fixture, not claimed for the HTTP route."
+      },
+      {
+        "scope": "production database",
+        "observed": "No production application database writes were attempted."
+      },
+      {
+        "scope": "deployment",
+        "observed": "No public deploy attempted. The next boundary is a deployed X-Form-Native-Public-Gate canary before any no-header flip."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this stacked branch and GitHub checks on a draft PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. Ordinary no-header public mutation traffic remains on FastAPI."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form can now persist public-gate rollback receipts for native mutation route runners, and the production router manifest can select X-Form-Native-Public-Gate routes while preserving fanout for no-header traffic and preview behavior for X-Form-Native-Preview.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "Header X-Form-Native-Preview",
+      "Header X-Form-Native-Public-Gate",
+      "Form nmpg-run-idea-create-public-gate",
+      "Form nmpg-run-spec-update-public-gate",
+      "Form nmpg-record-public-gate-rollback-receipt"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk -> 111111",
+      "form/scripts/native-mutation-public-gate-test.sh -> 11111111",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> 5/5 cases passed, confidence 1.0, public_gate_header_allowed=true, ordinary traffic flip remains false",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> 5/5 cases passed, confidence 1.0, next evidence names deployed public-gate canary",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> 33 passed",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> All checks passed",
+      "python3 scripts/generate_repo_indexes.py --check -> All indexes up to date",
+      "make wellness -> maps aligned and every claimed symbol resolves"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Public-gate local proof is complete; CI, deploy, and deployed header-gated canary evidence remain pending before any no-header flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-mutation-public-gate-20260608",
+    "native-mutation-deployed-public-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_public_gate.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-graph-mutation-live-db-proof.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

@@ -44,6 +44,11 @@
 ;   POST   /api/spec-registry         Header-gated native mutation SQL preview
 ;   PATCH  /api/spec-registry/*       Header-gated native mutation SQL preview
 ;   DELETE /api/spec-registry/*       Header-gated native mutation SQL preview
+;   POST   /api/ideas                 Header-gated native mutation public gate
+;   PATCH  /api/ideas/*               Header-gated native mutation public gate
+;   POST   /api/spec-registry         Header-gated native mutation public gate
+;   PATCH  /api/spec-registry/*       Header-gated native mutation public gate
+;   DELETE /api/spec-registry/*       Header-gated native mutation public gate
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -1798,18 +1803,20 @@
     (igpr-filter-idea-rows (ideas_graph_projection_rows))))
 
 ; ===========================================================================
-; Header-gated native mutation preview bindings.
+; Header-gated native mutation preview and public-gate bindings.
 ;
 ; These rows bind the real public mutable paths and HTTP methods into
 ; KernelHTTPRoute without stealing ordinary production mutations. The required
 ; X-Form-Native-Preview header gives a native preview arm for explicit probes;
-; requests without it exceed the route's pressure budget and fan out to FastAPI.
+; X-Form-Native-Public-Gate gives a narrower reversible public-gate arm with a
+; route-local rollback receipt. Requests without either header exceed the
+; route's pressure budget and fan out to FastAPI.
 ;
 ; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
-; preview response intentionally does not move ordinary traffic yet: live DB
-; execution, response projection, side-effect execution, and route-runner
-; side-effect binding are proven in Form. A reversible public gate with a
-; route-local rollback receipt remains before the front door moves.
+; preview response intentionally does not move ordinary traffic. Live DB
+; execution, response projection, side-effect execution, route-runner
+; side-effect binding, and public-gate rollback receipts are proven in Form.
+; Ordinary no-header traffic remains fanout-python until a deployed canary moves.
 ; ===========================================================================
 
 (defn mpv-join (sep xs)
@@ -1961,6 +1968,67 @@
       ",\"trust_envelope\":" (mpv-trust-envelope-json operation node-id)
       ",\"runtime\":\"inline\"}"))))
 
+(defn mpg-public-gate-header () "X-Form-Native-Public-Gate")
+
+(defn mpg-rollback-receipt-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"route-local-rollback-receipt\""
+    ",\"receipt_id\":" (json_string (str_concat "public-gate-rollback:" (str_concat operation (str_concat ":" node-id))))
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"persistence\":\"proven-in-form-pg-fixture\""
+    ",\"proof\":\"form/scripts/native-mutation-public-gate-test.sh\""
+    "}")))
+
+(defn mpg-reversible-gate-json ()
+  (str_concat_all (list
+    "{\"default_route\":\"fanout-python\""
+    ",\"preview_route\":\"X-Form-Native-Preview\""
+    ",\"public_gate_route\":\"X-Form-Native-Public-Gate\""
+    ",\"public_gate_allowed\":true"
+    ",\"ordinary_traffic_flip_allowed\":false"
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+    "}")))
+
+(defn mpg-trust-envelope-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"embodied-trust-public-gate\""
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"choice_success\":1"
+    ",\"silence\":\"fanout-default\""
+    ",\"protocol\":\"X-Form-Native-Public-Gate\""
+    ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
+    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"bma\":\"native-mutation-public-gate\""
+    ",\"prediction_error\":\"carried_as_residual\""
+    ",\"residual\":\"public gate is header-gated and rollback-receipted while no-header traffic remains fanout\""
+    ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
+    ",\"reversible_gate\":" (mpg-reversible-gate-json)
+    "}")))
+
+(defn mpg-public-gate-response (operation node-id sql body)
+  (respond 202
+    (str_concat_all (list
+      "{\"native_public_gate\":true"
+      ",\"native_preview\":false"
+      ",\"route_binding\":\"kernel-http-public-rollback-gated\""
+      ",\"required_header\":\"X-Form-Native-Public-Gate\""
+      ",\"preview_header\":\"X-Form-Native-Preview\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"executes\":false"
+      ",\"route_local_gate_executes\":true"
+      ",\"db_execution\":\"proven-by-form-native-public-gate-live-fixture\""
+      ",\"sql\":" (json_string sql)
+      ",\"request_body\":" (json_string body)
+      ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
+      ",\"trust_envelope\":" (mpg-trust-envelope-json operation node-id)
+      ",\"runtime\":\"inline\"}"))))
+
 (defn route_ideas_create_native_preview (q)
   (do (let body (mpv-body q))
   (do (let id (mpv-json-value-or body "id" "idea:native-preview"))
@@ -2007,6 +2075,53 @@
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let sql (mpv-delete-node-sql node-id))
       (mpv-preview-response "delete-spec" node-id sql "{}"))))))
+
+(defn route_ideas_create_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let id (mpv-json-value-or body "id" "idea:native-public-gate"))
+  (do (let name (mpv-json-value-or body "name" "Native public gate idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "none"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-create-node-sql "rev-native-public-gate-create-idea" id "idea" name description phase body "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "create-idea" id sql body)))))))))
+
+(defn route_ideas_update_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let path (assoc "__request_path__" q))
+  (do (let id (mpv-path-tail path "/api/ideas/"))
+  (do (let name (mpv-json-value-or body "name" "Native public gate idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "partial"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-update-node-sql "rev-native-public-gate-update-idea" id name description phase body "[\"name\",\"description\",\"phase\",\"properties\"]" "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "update-idea" id sql body))))))))))
+
+(defn route_specs_create_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let spec-id (mpv-json-value-or body "spec_id" "native-public-gate-spec"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-create-node-sql "rev-native-public-gate-create-spec" node-id "spec" title summary "ice" body "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "create-spec" node-id sql body))))))))
+
+(defn route_specs_update_native_public_gate (q)
+  (do (let body (mpv-body q))
+  (do (let path (assoc "__request_path__" q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-update-node-sql "rev-native-public-gate-update-spec" node-id title summary "ice" body "[\"title\",\"summary\",\"properties\"]" "kernel-router-public-gate" "form-native"))
+      (mpg-public-gate-response "update-spec" node-id sql body)))))))))
+
+(defn route_specs_delete_native_public_gate (q)
+  (do (let path (assoc "__request_path__" q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let sql (mpv-delete-node-sql node-id))
+      (mpg-public-gate-response "delete-spec" node-id sql "{}"))))))
 
 ; ===========================================================================
 ; /api/spec-registry/source-list
@@ -2154,6 +2269,11 @@ section [form.route] {
     (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
     (list "/api/ideas/graph-projection"    route_ideas_graph_projection)
     (list "/api/spec-registry/source-list" route_specs_source_list)
+    (kh-route "ideas-create-native-public-gate" "POST" "/api/ideas" 1 "route_ideas_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "ideas-update-native-public-gate" "PATCH" "/api/ideas/*" 1 "route_ideas_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-create-native-public-gate" "POST" "/api/spec-registry" 1 "route_specs_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "specs-update-native-public-gate" "PATCH" "/api/spec-registry/*" 1 "route_specs_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-delete-native-public-gate" "DELETE" "/api/spec-registry/*" 1 "route_specs_delete_native_public_gate" "X-Form-Native-Public-Gate" 25)
     (kh-route "ideas-create-native-preview" "POST" "/api/ideas" 0 "route_ideas_create_native_preview" "X-Form-Native-Preview" 0)
     (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
     (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)

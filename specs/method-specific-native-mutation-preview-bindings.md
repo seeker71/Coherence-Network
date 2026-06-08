@@ -145,8 +145,10 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 - GAP-MSNMPB6: closed by `specs/native-mutation-route-side-effect-binding.md`.
   Native route runners now bind application graph mutation execution to
   side-effect execution in throwaway Postgres.
-- GAP-MSNMPB7 follow-up task: `native-mutation-public-flip-gate`. Add a
-  reversible public gate with route-local rollback receipt before public
+- GAP-MSNMPB7: closed by `specs/native-mutation-public-gate.md`. The public
+  gate now carries route-local rollback receipt proof.
+- GAP-MSNMPB8 follow-up task: `native-mutation-deployed-public-canary`. Deploy
+  and observe the `X-Form-Native-Public-Gate` canary before public no-header
   mutation traffic moves.
 
 ## Risks and Assumptions
@@ -157,4 +159,5 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 - Wildcard route rows need pressure budget `25` because wildcard path matching
   contributes path pressure even when the method and header match.
 - Header-gated preview routes are a capability signal, not a live mutation
-  contract. Ordinary public mutation behavior remains FastAPI.
+  contract. The public-gate header is explicit and reversible; ordinary public
+  mutation behavior remains FastAPI.

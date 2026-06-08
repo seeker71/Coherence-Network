@@ -1,0 +1,13 @@
+; native-mutation-public-gate-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
+;           form-stdlib/native-mutation-side-effects.fk
+;           form-stdlib/native-mutation-route-side-effects.fk
+;           form-stdlib/native-mutation-public-gate.fk
+;
+; Band verdict: 111111 when the public gate carries an explicit header,
+; persisted rollback receipt SQL, route-side-effect runner binding, and an
+; unflipped ordinary-traffic contract.
+
+(do
+    (nmpg-public-gate-test))
