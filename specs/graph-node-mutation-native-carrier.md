@@ -6,6 +6,10 @@ source:
     symbols: [gn-create-node, gn-replace-node, gn-delete-node, gn-node-active?, gn-mutation-test]
   - file: form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
     symbols: []
+  - file: form/form-stdlib/auth-port.fk
+    symbols: [auth-require-api-key]
+  - file: form/form-stdlib/tests/auth-port-band.fk
+    symbols: []
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [mutate_idea_recipe, ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -28,7 +32,7 @@ test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.f
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation paths in this slice."
   - "Do not introduce a parallel public mutation store for live users."
-  - "Keep API-key, contributor-key, and application graph_nodes Postgres parity named before front-door binding."
+  - "Keep native auth parity proven and application graph_nodes Postgres parity named before front-door binding."
 ---
 
 # Spec: Graph Node Mutation Native Carrier
@@ -39,8 +43,8 @@ Ideas and specs can now leave the Python-only mutation vocabulary at the carrier
 level. This spec adds native Form graph-node create, replace, and delete
 operations over the existing storage port and proves that the same mutation
 recipe works over memory and durable file storage. The public HTTP mutation
-paths remain FastAPI until native auth parity and direct application
-`graph_nodes` Postgres writes are exact.
+paths remain FastAPI until direct application `graph_nodes` Postgres writes,
+revision rows, and edge cleanup are exact.
 
 ## Requirements
 
@@ -96,9 +100,9 @@ python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native
 
 ## Gaps
 
-- GAP-GNMC1 follow-up task: `native-api-key-contributor-key-auth-parity`.
-  Kernel handlers can see request headers, but the live front door must preserve
-  shared API key and contributor-key verification before mutating paths flip.
+- GAP-GNMC1: closed by `specs/native-auth-parity-carrier.md`. Kernel handlers
+  can see request headers, and Form now preserves shared API key and
+  contributor-key decision parity before mutating paths flip.
 - GAP-GNMC2 follow-up task: `native-application-graph-nodes-postgres-carrier`.
   The current native storage DB carrier writes `port_kv`; live parity needs
   direct `graph_nodes`, `graph_edges`, and `graph_node_revisions` writes.

@@ -6,6 +6,10 @@ source:
     symbols: [idea_route_shape, idea_route_recipe_shape, ideas_router_structure, browse_ideas_recipe, sense_governance_recipe, choose_next_idea_recipe, mutate_idea_recipe, question_answer_recipe, link_idea_recipe, translate_idea_recipe, invest_in_idea_recipe, rollup_super_idea_recipe, inspect_idea_recipe]
   - file: form/form-stdlib/graph-node-port.fk
     symbols: [gn-create-node, gn-replace-node, gn-delete-node]
+  - file: form/form-stdlib/auth-port.fk
+    symbols: [auth-require-api-key]
+  - file: form/form-stdlib/tests/auth-port-band.fk
+    symbols: []
   - file: form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
@@ -25,6 +29,7 @@ requirements:
   - "The Form artifact names api/app/routers/ideas.py as the FastAPI carrier while preserving existing HTTP behavior."
   - "The kernel-router production manifest exposes native /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection routes for the Form-declared router structure, repo-backed idea source index, source-backed curated portfolio, and fixture-backed graph projection preview."
   - "The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the public mutable front-door gap explicit."
+  - "The Form artifact names the native auth decision carrier for API-key/contributor-key parity while keeping application graph table writes out of scope."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
 done_when:
@@ -113,10 +118,10 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1 follow-up task: `method-specific-ideas-mutation-routes`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable, and `graph-node-port.fk` now exposes create/replace/delete over the storage port. Public mutable DB-backed portfolio routes still enter through FastAPI until method-specific route rows preserve API-key/contributor-key auth and write the application `graph_nodes` table directly.
+- GAP-I1 follow-up task: `method-specific-ideas-mutation-routes`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, and `auth-port.fk` preserves API-key/contributor-key decision parity. Public mutable DB-backed portfolio routes still enter through FastAPI until method-specific route rows write the application `graph_nodes` table directly with revision rows and edge cleanup.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
-- A later native route lift can consume this route recipe now that the graph-node read carrier, mutation carrier, and idea schema projection shapes exist; manifest binding, auth parity, and live application-table storage remain the next boundary.
+- A later native route lift can consume this route recipe now that the graph-node read carrier, mutation carrier, auth carrier, and idea schema projection shapes exist; manifest binding and live application-table storage remain the next boundary.

@@ -1,0 +1,152 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Prove API-key and contributor-key mutation auth decisions as a Form-native carrier before mutable front-door route flips.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_auth_parity_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_auth_parity_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/auth-port.fk",
+    "form/form-stdlib/tests/auth-port-band.fk",
+    "specs/INDEX.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk",
+      "cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "cd api && python3 -m ruff check tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md --file specs/ideas-router-form-expression.md --file specs/graph-node-mutation-native-carrier.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "form/form-stdlib/auth-port.fk now carries the native auth decision shape for mutable routes. It reads X-API-Key from kh-request/kh-header values case-insensitively, allows the configured shared API key, allows active contributor keys by sha256 raw-key hex hash, denies missing/wrong/blank keys with the FastAPI 401 detail, and denies production dev-key misconfiguration with the FastAPI 500 detail. The auth band returned 1111 and includes a Python-known SHA-256 contributor-key fixture.",
+    "known_limitations": [
+      {
+        "scope": "public mutable front doors",
+        "observed": "No POST/PATCH/DELETE /api/ideas or /api/spec-registry route is flipped in this slice."
+      },
+      {
+        "scope": "contributor key side effects",
+        "observed": "The carrier proves allow/deny decisions. Updating contributor_api_keys.last_used_at remains part of the live contributor-key table carrier follow-up."
+      },
+      {
+        "scope": "application graph writes",
+        "observed": "Direct graph_nodes, graph_edges, and graph_node_revisions Postgres writes remain the next blocker before front-door mutation can move."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this native auth parity carrier commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this Form stdlib carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form can now make the same mutation auth allow/deny decisions as FastAPI for shared API keys, active contributor-key hashes, missing/wrong/blank headers, case-insensitive X-API-Key lookup, and production dev-key refusal. Existing public mutation endpoints keep current FastAPI behavior until application graph table writes, revision rows, and edge cleanup are native.",
+    "public_endpoints": [
+      "Form auth-require-api-key",
+      "Form auth-require-api-key-from-headers",
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk -> 1111",
+      "cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py -> 18 passed",
+      "python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md --file specs/ideas-router-form-expression.md --file specs/graph-node-mutation-native-carrier.md --file specs/spec-registry-source-native.md -> OK"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and deployment validation remain pending."
+  },
+  "idea_ids": [
+    "data-infrastructure",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/native-auth-parity-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-auth-parity-carrier-20260608",
+    "native-application-graph-nodes-postgres-carrier",
+    "native-contributor-key-last-used-update",
+    "method-specific-ideas-spec-mutation-routes"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/auth-port.fk",
+    "form/form-stdlib/tests/auth-port-band.fk",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/sha256.fk",
+    "form/form-stdlib/hex.fk",
+    "api/app/middleware/auth.py",
+    "api/app/services/contributor_key_store.py",
+    "api/tests/test_native_auth_parity_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-auth-parity-carrier.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_auth_parity_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_auth_parity_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/auth-port.fk",
+    "form/form-stdlib/tests/auth-port-band.fk",
+    "specs/INDEX.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

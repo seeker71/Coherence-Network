@@ -90,9 +90,10 @@ PY
 
 - GAP-SRS1 follow-up task: `spec-registry-live-graph-storage-carrier`. The
   source-backed route is native and the Form graph-node mutation carrier now
-  exposes create/replace/delete. Public mutable DB-backed spec registry behavior
-  still enters through FastAPI until auth parity and direct application
-  `graph_nodes` Postgres writes are bound.
+  exposes create/replace/delete. The Form auth carrier now preserves
+  API-key/contributor-key decision parity. Public mutable DB-backed spec
+  registry behavior still enters through FastAPI until direct application
+  `graph_nodes` Postgres writes, revision rows, and edge cleanup are bound.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

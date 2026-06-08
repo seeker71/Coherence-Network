@@ -1,0 +1,34 @@
+; tests/auth-port-band.fk -- native auth parity proof.
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk
+;
+; Band verdict: 1111 when the auth carrier proves:
+;   direct parity cases pass           -> 1
+;   kh-request wrapper carries headers -> 10
+;   contributor hash matches Python    -> 100
+;   revoked/missing hash is denied     -> 1000
+
+(do
+    (let parity-ok (if (eq (auth-parity-test) 1111111) 1 0))
+
+    (let request (kh-request "PATCH" "/api/ideas/alpha"
+        (list (kh-header "X-API-Key" "native-secret"))
+        (list)
+        "{\"name\":\"Alpha\"}"))
+    (let wrapped (auth-require-api-key request "native-secret" 0 (list)))
+    (let wrapper-ok (if (if (eq (auth-allowed? wrapped) 1) (str_eq (auth-kind wrapped) "api-key") false) 10 0))
+
+    (let alice-hash (auth-contributor-key-hash "cc_alice_native_auth"))
+    (let hash-ok
+        (if (str_eq alice-hash "25e801e022628647801c76eb9ca9a0da988a83e7699bf0a8c72dd516055adb65")
+            100
+            0))
+
+    (let revoked (auth-require-api-key-from-headers
+        (list (kh-header "X-API-Key" "cc_revoked_native_auth"))
+        "native-secret"
+        0
+        (list alice-hash)))
+    (let revoked-ok (if (eq (auth-status revoked) 401) 1000 0))
+
+    (sum (list parity-ok wrapper-ok hash-ok revoked-ok)))

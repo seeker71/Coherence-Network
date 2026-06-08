@@ -78,9 +78,10 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "stake_compute_service.execute_stake" in text
     assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable" in text
     assert "graph-node-port.fk exposes native get/list/count plus create/replace/delete" in text
+    assert "auth-port.fk preserves API-key/contributor-key decision parity" in text
     assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
     assert "Public mutable DB-backed /api/ideas routes still enter through FastAPI" in text
-    assert "API-key/contributor-key auth" in text
+    assert "revision rows and edge cleanup" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():

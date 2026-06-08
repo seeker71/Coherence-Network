@@ -230,7 +230,14 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
             status: "Form-native mutable carrier proven",
             meaning: "idea/spec create, replace, and delete now have native graph-node operations over the storage port",
-            boundary: "public /api/ideas mutation paths still fan out until method-specific route rows, API-key parity, and application graph_nodes Postgres writes are bound",
+            boundary: "public /api/ideas mutation paths still fan out until method-specific route rows and application graph_nodes Postgres writes are bound",
+        },
+        {
+            path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
+            route_source: "form/form-stdlib/tests/auth-port-band.fk",
+            status: "Form-native auth decision carrier proven",
+            meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
+            boundary: "public mutable /api/ideas paths still wait for direct graph_nodes Postgres writes and revision/edge cleanup before front-door mutation flips",
         },
     ],
     recipes: [
@@ -256,7 +263,7 @@ defn ideas_router_structure() = {
         "graph-node projection proof -> kernel-router native graph-projection route",
         "mutable service calls -> Form-native graph-node mutation carrier",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port, and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read. Public mutable DB-backed /api/ideas routes still enter through FastAPI until method-specific kernel route rows can preserve API-key/contributor-key auth and write the application graph_nodes table directly.",
+    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port, auth-port.fk preserves API-key/contributor-key decision parity, and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read. Public mutable DB-backed /api/ideas routes still enter through FastAPI until method-specific kernel route rows write the application graph_nodes table directly with revision rows and edge cleanup.",
 };
 
 defn ideas_router_reading() = {
