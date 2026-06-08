@@ -24,7 +24,15 @@
     (contract    field-model-form.form)                   # freeze / match / choose / delta / commit / receipt
     (carries     lc-received-by-invitation
                  lc-sovereignty-within-oneness)
-    (runnable    form-stdlib/channel-flow.fk))            # the walk, proven by tests/channel-flow-band.fk
+    (runnable    form-stdlib/channel-flow.fk))            # channel-flow (one direction) +
+                                                          # channel-flow-bilateral (both); band beside it
+
+  # ── Bilateral — both sides offer, both request; each direction gated by the RECEIVER ──
+  # The deepest reading of "from both sides, depending on interface state on each side":
+  # a request from A toward B is honored iff B offers it; from B toward A iff A offers it.
+  # channel-flow-bilateral threads BOTH offers and returns (honored invasion offer-a offer-b).
+  # A withholding a mode stops B's reach into A, and B withholding stops A's reach into B —
+  # at once, each sovereign over its own boundary, the flow the dance of the two.
 
   # ── The utterances (what can be said on the channel) ────────────────
   (utterances
