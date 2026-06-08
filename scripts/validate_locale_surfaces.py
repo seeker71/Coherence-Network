@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate locale surfaces for default-locale parity and English-bias drift."""
+"""Validate locale surfaces for default-locale parity and translation-mode drift."""
 
 from __future__ import annotations
 
@@ -17,13 +17,45 @@ WEB_MESSAGES_DIR = ROOT / "web" / "messages"
 CLI_MESSAGES_DIR = ROOT / "cli" / "lib" / "messages"
 WEB_MANIFEST = WEB_MESSAGES_DIR / "manifest.ts"
 API_MANIFEST = ROOT / "api" / "app" / "data" / "locale_manifest.json"
+TRANSLATION_POLICY_FILES = (
+    ROOT / "api" / "app" / "routers" / "concepts.py",
+    ROOT / "api" / "app" / "routers" / "locales.py",
+    ROOT / "api" / "app" / "routers" / "translations.py",
+    ROOT / "api" / "app" / "services" / "translation_cache_service.py",
+    ROOT / "api" / "app" / "routers" / "INDEX.md",
+    ROOT / "cli" / "lib" / "commands" / "translate.mjs",
+    ROOT / "specs" / "multilingual-web.md",
+    ROOT / "web" / "app" / "settings" / "translations" / "page.tsx",
+)
 
 NON_DEFAULT_BIASED_PHRASES = (
+    "ancla en inglés",
+    "berbahasa inggris",
     "english anchor",
     "english bundle",
+    "englische ankerfassung",
     "falls back to english",
     "fallback to english",
     "seeded from the english",
+)
+
+TRANSLATION_MODE_HIERARCHY_PHRASES = (
+    "author curated",
+    "author translated",
+    "better translation",
+    "human attunement",
+    "human attuned",
+    "human canonical",
+    "human first",
+    "human touched",
+    "human translated",
+    "human translation",
+    "human translations",
+    "human work",
+    "native review",
+    "native speaker",
+    "native voice",
+    "needs native voice",
 )
 
 
@@ -40,6 +72,11 @@ def _flatten(value: Any, prefix: str = "") -> dict[str, Any]:
     else:
         out[prefix] = value
     return out
+
+
+def _searchable_text(text: str) -> str:
+    spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
+    return re.sub(r"[\._\-]+", " ", spaced).lower()
 
 
 def _json_locale_codes(directory: Path) -> list[str]:
@@ -133,16 +170,35 @@ def validate() -> list[str]:
         )
 
     for code, bundle in web_bundles.items():
-        if code == DEFAULT_LOCALE:
-            continue
         for key, value in _flatten(bundle).items():
             if not isinstance(value, str):
                 continue
             lower_value = value.lower()
-            for phrase in NON_DEFAULT_BIASED_PHRASES:
-                if phrase in lower_value:
+            searchable_value = _searchable_text(value)
+            searchable_key = _searchable_text(key)
+            if code != DEFAULT_LOCALE:
+                for phrase in NON_DEFAULT_BIASED_PHRASES:
+                    if phrase in lower_value:
+                        errors.append(
+                            f"web/messages/{code}.json:{key} contains biased phrase {phrase!r}"
+                        )
+            for phrase in TRANSLATION_MODE_HIERARCHY_PHRASES:
+                if phrase in searchable_value or phrase in searchable_key:
                     errors.append(
-                        f"web/messages/{code}.json:{key} contains biased phrase {phrase!r}"
+                        f"web/messages/{code}.json:{key} contains translation hierarchy phrase "
+                        f"{phrase!r}"
+                    )
+
+    for path in TRANSLATION_POLICY_FILES:
+        if not path.exists():
+            continue
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            searchable_line = _searchable_text(line)
+            for phrase in TRANSLATION_MODE_HIERARCHY_PHRASES:
+                if phrase in searchable_line:
+                    rel = path.relative_to(ROOT)
+                    errors.append(
+                        f"{rel}:{line_no} contains translation hierarchy phrase {phrase!r}"
                     )
 
     return errors
@@ -164,7 +220,7 @@ def main() -> int:
     summary = (
         "locale surfaces aligned: "
         f"{len(_json_locale_codes(WEB_MESSAGES_DIR))} web/API/CLI locales, "
-        "message parity clean, non-default bundles free of English-anchor wording"
+        "message parity clean, bundles free of English-anchor and translation-mode hierarchy wording"
     )
     print(summary)
     return 0

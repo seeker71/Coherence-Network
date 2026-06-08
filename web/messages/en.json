@@ -154,7 +154,7 @@
     "name": "English",
     "nativeName": "English",
     "role": "anchor",
-    "notes": "This bundle is the current anchor — keys land here as they're lifted out of components into the data layer. Other locales attune from the freshest anchor view. See feedback_i18n_architecture.md (no privileged source language: any locale can become anchor when human-touched fresher than this one)."
+    "notes": "This bundle is the current anchor — keys land here as they're lifted out of components into the data layer. Other locales attune from the freshest anchor view. See feedback_i18n_architecture.md (no privileged source language: any locale can become anchor when its accepted rendering is fresher than this one)."
   },
   "common": {
     "skipToContent": "Skip to main content",
@@ -295,7 +295,7 @@
     "levelLivingExpression": "Living Expression",
     "visualExpressionsHeading": "Visual expressions",
     "resonantAssetsIntro": "Each expression is a unique contribution. The most resonant rises to the surface.",
-    "needsNativeVoice": "Needs a native voice — propose a better translation",
+    "needsAttunement": "Open for attunement - propose another rendering",
     "pendingTranslation": "No view in this language yet — showing the anchor view",
     "translationPendingTitle": "Translation is being prepared",
     "translationPendingBody": "This concept does not have a complete view in this language yet. The current anchor view is held back here so the page does not mix languages while attunement runs.",
@@ -2552,7 +2552,7 @@
     },
     "noteEyebrow": "A note from this body",
     "editProfileCta": "How to claim, edit, or remove this profile →",
-    "sourceLanguageDisclosure": "Note: this page's longer curated prose has not yet been author-translated for every locale. The site chrome (navigation, headings, labels) and the data layer below (work titles, descriptions, body of evidence) translate automatically into your language; an author-curated translation of the longer prose on this page will follow. In the meantime, your browser's built-in translate-this-page feature can carry the rest."
+    "sourceLanguageDisclosure": "Note: this page's longer curated prose has not yet been rendered for every locale. The site chrome (navigation, headings, labels) and the data layer below (work titles, descriptions, body of evidence) translate automatically into your language; a curated rendering of the longer prose on this page will follow. In the meantime, your browser's built-in translate-this-page feature can carry the rest."
   },
   "presence": {
     "location": {
